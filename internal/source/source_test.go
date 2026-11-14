@@ -139,3 +139,28 @@ func TestPollingStartsRunsAndExplainsDecisions(t *testing.T) {
 		t.Fatalf("annotated tag not resolved to its commit: %+v", refs)
 	}
 }
+
+func TestMirrorFollowsAChangedAddress(t *testing.T) {
+	dir := t.TempDir()
+	repoA, repoB := filepath.Join(dir, "a"), filepath.Join(dir, "b")
+	for _, r := range []string{repoA, repoB} {
+		os.MkdirAll(r, 0o755)
+		run(t, r, "git", "init", "-q", "-b", "main")
+		commit(t, r, pl, "in "+filepath.Base(r))
+	}
+	eng, _ := engine.Open(engine.Options{Path: filepath.Join(dir, "db"), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	defer eng.Close()
+	m, _ := NewManager(eng, dir, []Project{{Name: "app", URL: repoA}}, nil)
+	if _, err := m.Refs(context.Background(), "app"); err != nil {
+		t.Fatal(err)
+	}
+	// Same data directory, project now pointing somewhere else.
+	m2, _ := NewManager(eng, dir, []Project{{Name: "app", URL: repoB}}, nil)
+	refs, err := m2.Refs(context.Background(), "app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if refs[0].Subject != "in b" {
+		t.Fatalf("still reading the old repository: %+v", refs[0])
+	}
+}

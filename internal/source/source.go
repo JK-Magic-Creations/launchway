@@ -337,7 +337,13 @@ func (p *project) fetch(ctx context.Context, fresh time.Duration) error {
 			_, err = gitOut(ctx, "", "clone", "--mirror", "--quiet", p.URL, p.dir)
 		}
 	} else {
-		_, err = gitOut(ctx, p.dir, "remote", "update", "--prune")
+		// The configured address may have changed since the mirror was made.
+		if cur, _ := gitOut(ctx, p.dir, "remote", "get-url", "origin"); strings.TrimSpace(cur) != p.URL {
+			_, err = gitOut(ctx, p.dir, "remote", "set-url", "origin", p.URL)
+		}
+		if err == nil {
+			_, err = gitOut(ctx, p.dir, "remote", "update", "--prune")
+		}
 	}
 	if err != nil {
 		err = fmt.Errorf("fetching %s: %w", p.URL, err)
