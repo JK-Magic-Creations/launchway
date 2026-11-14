@@ -23,8 +23,9 @@ import (
 // database and publishes them to its own hub.
 
 const (
-	noteRun = "run" // a run and some of its steps changed
-	noteLog = "log" // log lines were added
+	noteRun  = "run"  // a run and some of its steps changed
+	noteLog  = "log"  // log lines were added
+	noteWake = "wake" // work may have become available: waiting runners should look
 )
 
 // note is the payload of one notification.
@@ -170,6 +171,8 @@ func (e *Engine) handleNote(n note) {
 			}
 		}
 		e.publishChanges(n.Run, steps)
+	case noteWake:
+		e.notify()
 	case noteLog:
 		lines, err := e.logRange(n.Run, n.Step, n.Attempt, n.FromSeq, n.ToSeq)
 		if err != nil {

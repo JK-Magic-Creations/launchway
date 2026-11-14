@@ -190,9 +190,21 @@
           "properties": {
             "namespace": { "type": "string", "pattern": "^([a-z0-9]([-a-z0-9]*[a-z0-9])?)?$", "maxLength": 63 },
             "createNamespace": { "type": "boolean" },
-            "namespaceLabels": { "$ref": "#/definitions/stringMap" }
+            "namespaceLabels": { "$ref": "#/definitions/stringMap" },
+            "helperImage": { "type": "string" },
+            "serviceAccount": { "type": "string" },
+            "nodeSelector": { "$ref": "#/definitions/stringMap" },
+            "cpu": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
+            "memory": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
+            "memoryLimit": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
+            "imagePullSecrets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "keepFailed": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$" },
+            "startTimeout": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$" }
           }
         },
+        "healthPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "livenessProbe": { "$ref": "#/definitions/probe" },
+        "readinessProbe": { "$ref": "#/definitions/probe" },
         "extraArgs": { "type": "array", "items": { "type": "string" } },
         "secretStores": {
           "type": "object",

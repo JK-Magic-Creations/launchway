@@ -189,18 +189,19 @@ owns may not appear in it.
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
 
-{{/* The runners' secret stores file. */}}
-{{- define "launchway.runnerSecretStores" -}}
-{{- $stores := deepCopy (.Values.runner.secretStores | default dict) -}}
-{{- if not (hasKey $stores "env") -}}
-{{- /*
-`launchway runner` adds an "env" store reading its own environment unless one is defined.
-This one is defined in its place and allows only LAUNCHWAY_* keys, which the env store
-always refuses, so no pipeline can read the runner's environment.
-*/ -}}
-{{- $_ := set $stores "env" (dict "type" "env" "keys" (list "LAUNCHWAY_*")) -}}
+{{/*
+The runners' configuration file, for `launchway runner --config`: the same settings as runner:
+in the server configuration, plus the server URL and the data directory.
+*/}}
+{{- define "launchway.runnerConfig" -}}
+{{- $fullname := include "launchway.fullname" . -}}
+{{- $k := .Values.runner.kubernetes -}}
+{{- $kube := dict "namespace" (include "launchway.stepNamespace" .) -}}
+{{- range $key, $value := dict "helper_image" $k.helperImage "service_account" $k.serviceAccount "node_selector" $k.nodeSelector "cpu" $k.cpu "memory" $k.memory "memory_limit" $k.memoryLimit "image_pull_secrets" $k.imagePullSecrets "keep_failed" $k.keepFailed "start_timeout" $k.startTimeout -}}
+{{- if $value }}{{ $_ := set $kube $key $value }}{{ end -}}
 {{- end -}}
-{{- toYaml $stores -}}
+{{- $server := .Values.runner.serverURL | default (printf "http://%s.%s.svc:%v" $fullname .Release.Namespace .Values.service.port) -}}
+{{- toYaml (dict "server" $server "data" "/var/lib/launchway-runner" "concurrency" .Values.runner.concurrency "executor" "kubernetes" "kubernetes" $kube "secrets" (.Values.runner.secretStores | default dict)) -}}
 {{- end -}}
 
 {{/* Default soft spread across nodes, for one component. Call with (list $ "server"). */}}

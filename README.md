@@ -37,7 +37,11 @@ auth:
 ```
 
 `LAUNCHWAY_DATABASE` overrides the file. Each server exposes `/healthz` (the process is up) and
-`/readyz` (the database answers). Runners may connect to any server. With no `database` setting a
+`/readyz` (the database answers, and the server is not shutting down). A starting server waits up
+to `database_wait` (default `60s`) for the database. On SIGTERM a server reports not ready at
+once, keeps serving for `server.drain_delay` (default `0s`) so that load balancers checking
+`/readyz` move away, and then gives requests in flight up to 15 seconds. Runners may connect to
+any server. With no `database` setting a
 single server keeps its data in an embedded SQLite file, which suits development and small
 installs. Sessions, API tokens and sign-ins in progress are kept in the database too, so a browser
 or script may be sent to any server.
@@ -152,6 +156,13 @@ On Kubernetes, a run is one pod: a container per toolbox plus the services, so s
 instantly once the pod is up. On Podman, services run in a pod per run. Plain `image:` steps still
 work, and each image used that way gets a container of its own.
 
+The workspace lives on one runner, so all of a run's steps go to the runner that took its first
+step, for as long as that runner keeps in touch with the server. The cost is that a run's parallel
+steps share that one runner's concurrency; different runs still spread across runners. If the
+runner stops responding for 90 seconds (three lease periods), or shuts down, another runner takes
+the run over and carries on in a fresh checkout: files that earlier steps wrote are then gone, and
+the step's log says so. Values passed as outputs (below) always survive.
+
 Steps write `key=value` lines to `$LAUNCHWAY_OUTPUTS`. Steps that need them receive
 `LAUNCHWAY_NEEDS_<STEP>_<KEY>`. Every step also gets `LAUNCHWAY_COMMIT`, `LAUNCHWAY_BRANCH`,
 `LAUNCHWAY_RUN_NUMBER` and related variables.
@@ -243,7 +254,8 @@ while the step runs, where the run's other containers could read it. Do not put 
 not trust in a pipeline that uses secrets.
 
 The built-in runner reads its stores from `runner.secrets` in the server's configuration; `launchway
-runner` and `launchway run` read the same map from `--secrets-config FILE`:
+run` reads the same map from `--secrets-config FILE`, and `launchway runner` from either
+`--secrets-config FILE` or the `secrets:` section of its `--config` file (see [Commands](#commands)):
 
 ```yaml
 runner:
@@ -388,11 +400,40 @@ recorded. Launchway only ever adds to it. Admins read it on the **Audit trail** 
 ```
 launchway server   [--config launchway.yaml]   the server, web UI and a built-in runner
 launchway runner   --server URL --token T     a runner on another machine (outbound connections only)
-                   [--secrets-config FILE]
+                   [--config FILE] [--secrets-config FILE] [--health-listen ADDR]
 launchway run      [--secrets-config FILE]    this directory's pipeline, on this machine
 launchway validate [file]                     check a pipeline file
 launchway graph    [file]                     the graph a pipeline produces, as JSON
 ```
+
+`launchway runner --config FILE` reads the same settings as `runner:` in the server's
+configuration, plus where the server is. Unknown settings are refused. Flags given on the command
+line win, then `LAUNCHWAY_SERVER` and `LAUNCHWAY_RUNNER_TOKEN`, then the file. The token is never
+in the file.
+
+```yaml
+# runner.yaml
+server: https://launchway.example.com
+name: build-2                 # default: the host name
+data: /var/lib/launchway-runner
+concurrency: 4
+executor: kubernetes          # auto, container, podman, docker, host or kubernetes
+kubernetes:
+  namespace: builds
+  helper_image: registry.example.com/busybox:1.37
+  service_account: builder    # for step pods; default none
+  node_selector: { pool: builds }
+  cpu: 250m                   # request per container, unless the pipeline asks
+  memory: 256Mi
+  memory_limit: 4Gi
+  image_pull_secrets: [registry-credentials]
+  keep_failed: 2h             # keep a failed run's pod this long, for a resume
+  start_timeout: 10m
+secrets: {}                   # see Secrets
+```
+
+`--health-listen :8081` serves `/healthz` (the process is up) and `/readyz` (the server answered
+within the last two minutes) for probes.
 
 ## How it is built
 

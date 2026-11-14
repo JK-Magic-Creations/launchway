@@ -30,6 +30,9 @@ type Config struct {
 	// share. The environment variable LAUNCHWAY_DATABASE overrides it; the
 	// default is launchway.db in the data directory.
 	Database string `yaml:"database"`
+	// DatabaseWait is how long a starting server keeps trying a database
+	// that does not answer before it gives up; default 60s.
+	DatabaseWait string `yaml:"database_wait"`
 	// User is who every action is recorded as when sign-in is off
 	// (auth.mode: none).
 	User      string          `yaml:"user"`
@@ -46,6 +49,10 @@ type ServerConfig struct {
 	// X-Forwarded-Proto and X-Forwarded-For, and that clients cannot reach
 	// the server except through it.
 	TrustProxy bool `yaml:"trust_proxy"`
+	// DrainDelay is how long a stopping server keeps serving after /readyz
+	// starts to report it is not ready, so that load balancers that check
+	// /readyz stop sending it requests first; default 0s.
+	DrainDelay string `yaml:"drain_delay"`
 }
 
 // AuthConfig controls sign-in and who may do what.
@@ -105,11 +112,52 @@ type ProjectConfig struct {
 
 // RunnerConfig controls the runner built into the server.
 type RunnerConfig struct {
-	Enabled     *bool                      `yaml:"enabled"`
+	Enabled        *bool `yaml:"enabled"`
+	RunnerSettings `yaml:",inline"`
+}
+
+// RunnerSettings are what every runner is configured with: the one built
+// into the server, and `launchway runner` (see RunnerFile).
+type RunnerSettings struct {
 	Concurrency int                        `yaml:"concurrency"`
 	Executor    string                     `yaml:"executor"` // auto, container, podman, docker, host or kubernetes
 	Kubernetes  executor.KubernetesOptions `yaml:"kubernetes"`
 	Secrets     secrets.Config             `yaml:"secrets"` // secret stores, by name
+}
+
+// RunnerFile is the file given to `launchway runner --config`: the same
+// settings as the server's runner section, and where to find the server.
+// The token is not in it; it comes from --token or LAUNCHWAY_RUNNER_TOKEN.
+type RunnerFile struct {
+	Server         string `yaml:"server"` // the server's URL
+	Name           string `yaml:"name"`   // default: the host name
+	Data           string `yaml:"data"`   // directory for workspaces
+	RunnerSettings `yaml:",inline"`
+}
+
+// LoadRunner reads a runner configuration file. Unknown settings are
+// refused, and relative paths in it are relative to the file. Defaults are
+// not filled in: the command line may still override any setting.
+func LoadRunner(path string) (*RunnerFile, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	c := &RunnerFile{}
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(c); err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	base := filepath.Dir(path)
+	if c.Data != "" && !filepath.IsAbs(c.Data) {
+		c.Data = filepath.Join(base, c.Data)
+	}
+	if k := c.Kubernetes.Kubeconfig; k != "" && !filepath.IsAbs(k) {
+		c.Kubernetes.Kubeconfig = filepath.Join(base, k)
+	}
+	c.Secrets.RelativeTo(base)
+	return c, nil
 }
 
 // Load reads path. A missing file gives the defaults.
@@ -203,6 +251,25 @@ func (c *Config) DatabaseAddr() string {
 		return c.Database
 	}
 	return filepath.Join(c.Data, "launchway.db")
+}
+
+// Timings returns the database wait and the drain delay.
+func (c *Config) Timings() (databaseWait, drainDelay time.Duration, err error) {
+	databaseWait, drainDelay = time.Minute, 0
+	for _, v := range []struct {
+		key, s string
+		d      *time.Duration
+	}{{"database_wait", c.DatabaseWait, &databaseWait}, {"server.drain_delay", c.Server.DrainDelay, &drainDelay}} {
+		if v.s == "" {
+			continue
+		}
+		d, err := time.ParseDuration(v.s)
+		if err != nil || d < 0 {
+			return 0, 0, fmt.Errorf("%s: %q is not a duration such as 30s", v.key, v.s)
+		}
+		*v.d = d
+	}
+	return databaseWait, drainDelay, nil
 }
 
 // RunnerEnabled reports whether the built-in runner should start.

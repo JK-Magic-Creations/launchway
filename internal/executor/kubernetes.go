@@ -67,6 +67,7 @@ type Kubernetes struct {
 type runPod struct {
 	mu         sync.Mutex
 	name       string
+	workspace  string            // the Spec.WorkspaceID the pod holds
 	containers map[string]string // image → container name
 	ready      bool
 }
@@ -76,7 +77,7 @@ const (
 	labelRun     = "launchway.dev/run"
 	labelOwner   = "launchway.dev/runner"
 	annoImages   = "launchway.dev/images"
-	annoReady    = "launchway.dev/workspace"
+	annoReady    = "launchway.dev/workspace" // the WorkspaceID, once the workspace is copied in
 	helperName   = "workspace"
 )
 
@@ -269,8 +270,8 @@ func (k *Kubernetes) signal(pod, container, dir, sig string) {
 func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, error) {
 	k.mu.Lock()
 	rp := k.pods[s.RunID]
-	if rp == nil {
-		rp = &runPod{name: podName(s.RunID, k.owner)}
+	if rp == nil || rp.workspace != s.WorkspaceID {
+		rp = &runPod{name: podName(s.RunID, k.owner), workspace: s.WorkspaceID}
 		k.pods[s.RunID] = rp
 	}
 	k.mu.Unlock()
@@ -293,7 +294,7 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 				same = false
 			}
 		}
-		if same && existing.Annotations[annoReady] == "ready" {
+		if same && existing.Annotations[annoReady] == s.WorkspaceID {
 			rp.containers = map[string]string{}
 			for _, c := range s.Containers {
 				rp.containers[c.Name] = c.Name
@@ -333,7 +334,7 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 	if err := k.uploadDir(ctx, rp.name, s.Workspace); err != nil {
 		return nil, infra("copying the workspace: %v", err)
 	}
-	patch := fmt.Sprintf(`{"metadata":{"annotations":{%q:"ready"}}}`, annoReady)
+	patch := fmt.Sprintf(`{"metadata":{"annotations":{%q:%q}}}`, annoReady, s.WorkspaceID)
 	if _, err := pods.Patch(ctx, rp.name, types.MergePatchType, []byte(patch), metav1.PatchOptions{}); err != nil {
 		return nil, infra("marking the pod ready: %v", err)
 	}
@@ -647,11 +648,11 @@ func writeTar(w io.Writer, root string) error {
 	return tw.Close()
 }
 
-// Cleanup deletes this runner's pods for runs that no longer need them:
-// succeeded runs at once, failed and canceled runs after KeepFailed (so a
-// resume can reuse the workspace), and runs the server does not know.
+// Cleanup deletes the step pods in the namespace that no longer need to
+// exist (see removable), whichever runner made them: a runner that was
+// replaced, for example by a Deployment, leaves its pods to the others.
 func (k *Kubernetes) Cleanup(ctx context.Context, lookup RunLookup) error {
-	sel := fmt.Sprintf("%s=launchway,%s=%s", labelManaged, labelOwner, k.owner)
+	sel := fmt.Sprintf("%s=launchway,%s", labelManaged, labelRun)
 	list, err := k.client.CoreV1().Pods(k.o.Namespace).List(ctx, metav1.ListOptions{LabelSelector: sel})
 	if err != nil || len(list.Items) == 0 {
 		return err
@@ -667,16 +668,16 @@ func (k *Kubernetes) Cleanup(ctx context.Context, lookup RunLookup) error {
 	for _, p := range list.Items {
 		id := p.Labels[labelRun]
 		info, known := infos[id]
-		finished := time.UnixMilli(info.FinishedAt)
-		remove := !known || info.Status == "succeeded" ||
-			((info.Status == "failed" || info.Status == "canceled") && time.Since(finished) > k.keepFailed)
-		if !remove {
+		mine := p.Labels[labelOwner] == k.owner
+		if !removable(info, known, mine, k.keepFailed) {
 			continue
 		}
 		if err := k.client.CoreV1().Pods(k.o.Namespace).Delete(ctx, p.Name, metav1.DeleteOptions{GracePeriodSeconds: ptr(int64(0))}); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
-		k.forget(id)
+		if mine {
+			k.forget(id)
+		}
 	}
 	return nil
 }

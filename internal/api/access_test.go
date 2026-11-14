@@ -42,6 +42,7 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/runner/v1/logs":         {"POST", "/api/runner/v1/logs", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"POST /api/runner/v1/finish":       {"POST", "/api/runner/v1/finish", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"POST /api/runner/v1/runs":         {"POST", "/api/runner/v1/runs", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/leave":        {"POST", "/api/runner/v1/leave", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"GET /auth/login":                  {"GET", "/auth/login", "", [6]int{302, 302, 302, 302, 302, 302}},
 	"GET /auth/callback":               {"GET", "/auth/callback", "", [6]int{302, 302, 302, 302, 302, 302}},
 	"POST /auth/logout":                {"POST", "/auth/logout", "", [6]int{204, 204, 204, 204, 204, 204}},

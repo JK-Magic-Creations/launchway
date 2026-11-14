@@ -162,3 +162,55 @@ func TestKubernetesService(t *testing.T) {
 		t.Fatalf("the start message should list the service:\n%s", c.text())
 	}
 }
+
+// A runner removes another runner's pods once their runs no longer need
+// them, but never a pod of an active run, nor one of a run the server does
+// not know (it may belong to someone else).
+func TestKubernetesCleanupAcrossRunners(t *testing.T) {
+	a := kube(t)
+	b, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: "launchway-test"}, "test-other-"+t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	pods := a.client.CoreV1().Pods(a.o.Namespace)
+	stamp := time.Now().UnixNano()
+	finished, active, unknown := fmt.Sprintf("run_kf%d", stamp), fmt.Sprintf("run_ka%d", stamp), fmt.Sprintf("run_ku%d", stamp)
+	for _, id := range []string{finished, active, unknown} {
+		defer pods.Delete(ctx, podName(id, a.owner), metav1.DeleteOptions{})
+		s := kspec(t, id, "s", alpine, "true", t.TempDir())
+		s.Containers, s.Container = twoTools[:1], "alpine"
+		if code, err := a.Run(ctx, s, func(string, string) {}); err != nil || code != 0 {
+			t.Fatalf("run %s: code %d err %v", id, code, err)
+		}
+	}
+	lookup := func(context.Context, []string) (map[string]RunInfo, error) {
+		now := time.Now().UnixMilli()
+		return map[string]RunInfo{
+			finished: {ID: finished, Status: "succeeded", FinishedAt: now},
+			active:   {ID: active, Status: "running"},
+		}, nil
+	}
+	if err := b.Cleanup(ctx, lookup); err != nil {
+		t.Fatal(err)
+	}
+	gone := func(id string) bool {
+		p, err := pods.Get(ctx, podName(id, a.owner), metav1.GetOptions{})
+		return err != nil || p.DeletionTimestamp != nil
+	}
+	if !gone(finished) {
+		t.Fatal("runner B left runner A's pod of a finished run")
+	}
+	if gone(active) {
+		t.Fatal("runner B removed runner A's pod of an active run")
+	}
+	if gone(unknown) {
+		t.Fatal("runner B removed a pod of a run the server does not know")
+	}
+	if err := a.Cleanup(ctx, lookup); err != nil {
+		t.Fatal(err)
+	}
+	if !gone(unknown) || gone(active) {
+		t.Fatalf("runner A's own clean-up: unknown gone %v, active gone %v", gone(unknown), gone(active))
+	}
+}

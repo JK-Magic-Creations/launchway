@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
@@ -48,6 +49,10 @@ type Server struct {
 
 	sealerMu sync.Mutex
 	sealer   *auth.Sealer // seals the state of sign-ins in progress
+
+	draining atomic.Bool // see Drain
+	stopMu   sync.Mutex
+	stopped  chan struct{} // closed by Stop; see longLived
 }
 
 // Auth configures sign-in.
@@ -99,6 +104,7 @@ func (s *Server) routes() []route {
 		{"POST /api/runner/v1/logs", runnerOnly, "", s.logs},
 		{"POST /api/runner/v1/finish", runnerOnly, "", s.finish},
 		{"POST /api/runner/v1/runs", runnerOnly, "", s.runInfos},
+		{"POST /api/runner/v1/leave", runnerOnly, "", s.leave},
 
 		// Signing in and out.
 		{"GET /auth/login", public, "", s.login},
@@ -152,6 +158,55 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.Handle("/", s.ui())
 	return s.recoverer(securityHeaders(mux))
+}
+
+// ---- shutting down ----
+
+// Drain makes /readyz report that this server is not ready, so that load
+// balancers stop sending it new requests. Everything else keeps working.
+func (s *Server) Drain() { s.draining.Store(true) }
+
+// Stop ends the requests that would otherwise stay open for a long time,
+// runners waiting for work and live update streams, so that a graceful
+// shutdown need only wait for ordinary requests. Runners and browsers
+// reconnect, to another server if there is one.
+func (s *Server) Stop() {
+	s.stopMu.Lock()
+	defer s.stopMu.Unlock()
+	ch := s.stoppedLocked()
+	select {
+	case <-ch:
+	default:
+		close(ch)
+	}
+}
+
+func (s *Server) stopping() <-chan struct{} {
+	s.stopMu.Lock()
+	defer s.stopMu.Unlock()
+	return s.stoppedLocked()
+}
+
+func (s *Server) stoppedLocked() chan struct{} {
+	if s.stopped == nil {
+		s.stopped = make(chan struct{})
+	}
+	return s.stopped
+}
+
+// longLived returns a context for a request that may wait a long time: it
+// ends with the request, or when Stop is called.
+func (s *Server) longLived(r *http.Request) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(r.Context())
+	stopped := s.stopping()
+	go func() {
+		select {
+		case <-stopped:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+	return ctx, cancel
 }
 
 // ---- helpers ----
@@ -229,8 +284,12 @@ func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
 }
 
 // readyz reports whether this server can do useful work, which needs the
-// database to answer.
+// database to answer and the server not to be shutting down.
 func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
+	if s.draining.Load() {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "stopping", "error": "the server is shutting down"})
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	if err := s.Engine.Ping(ctx); err != nil {
@@ -251,11 +310,16 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	wait := time.Duration(min(max(in.WaitSeconds, 0), 50)) * time.Second
-	job, err := s.Engine.Lease(r.Context(), in.Runner, wait)
-	if err != nil {
-		if r.Context().Err() != nil {
-			return // the runner went away; nobody to answer
-		}
+	ctx, cancel := s.longLived(r)
+	defer cancel()
+	job, err := s.Engine.Lease(ctx, in.Runner, wait)
+	switch {
+	case err != nil && r.Context().Err() != nil:
+		return // the runner went away; nobody to answer
+	case err != nil && ctx.Err() != nil:
+		w.WriteHeader(http.StatusNoContent) // the server is stopping; ask again
+		return
+	case err != nil:
 		s.fail(w, err)
 		return
 	}
@@ -321,6 +385,22 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.Engine.Finish(in.LeaseID, in.Result); err != nil {
+		s.fail(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// leave forgets a runner that is shutting down, so that other runners may
+// take over its runs at once.
+func (s *Server) leave(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		RunnerID string `json:"runner_id"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if err := s.Engine.RunnerLeft(in.RunnerID); err != nil {
 		s.fail(w, err)
 		return
 	}
@@ -616,6 +696,8 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 		}
 		runProject = p
 	}
+	ctx, cancel := s.longLived(r)
+	defer cancel()
 	ch, stop := s.Engine.Hub().Subscribe(func(m hub.Message) bool {
 		if runID != "" {
 			return m.RunID == runID
@@ -632,7 +714,7 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	defer ping.Stop()
 	for {
 		select {
-		case <-r.Context().Done():
+		case <-ctx.Done():
 			return
 		case <-ping.C:
 			if s.Auth != nil {

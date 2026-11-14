@@ -84,10 +84,15 @@ server:
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
-  # -- How long a stopping server keeps serving after being taken out of the Service, so that
-  # requests already routed to it still succeed. Uses the Kubernetes preStop sleep action.
-  preStopSleepSeconds: 10
-  # -- Time allowed for a server to stop, including preStopSleepSeconds.
+  # -- How long a stopping server keeps serving, unaware, after Kubernetes takes it out of the
+  # Service: the preStop sleep action, before the server is sent SIGTERM. It covers the moment
+  # it takes kube-proxy and ingress controllers to stop routing to the pod, so that requests
+  # already on their way still succeed. After SIGTERM the server reports not ready on /readyz at
+  # once, closes each connection after its current request, waits config.extraConfig.server.
+  # drain_delay (default 0s; set it if a load balancer outside Kubernetes checks /readyz), and
+  # then gives the requests in flight up to 15s.
+  preStopSleepSeconds: 5
+  # -- Time allowed for a server to stop, including preStopSleepSeconds and any drain_delay.
   terminationGracePeriodSeconds: 30
   resources:
     requests:
@@ -175,8 +180,10 @@ httpRoute:
 
 # ---------------------------------------------------------------------------------------------
 # Runners: `launchway runner` with the Kubernetes executor. Each run gets one pod in
-# runner.kubernetes.namespace. Runners only make outbound connections, to the servers and to
-# the Kubernetes API.
+# runner.kubernetes.namespace, held by one runner: all of a run's steps go to that runner while
+# it is alive, so a run's parallel steps share one runner's concurrency. Runners only make
+# outbound connections, to the servers and to the Kubernetes API. The chart renders their
+# settings into a file, /etc/launchway-runner/runner.yaml, passed with --config.
 # ---------------------------------------------------------------------------------------------
 runner:
   # -- Deploy runners. Turn off if your runners live elsewhere (they then need the runner
@@ -199,17 +206,53 @@ runner:
     # the namespace must admit them: Pod Security "baseline" does, "restricted" does not.
     namespaceLabels:
       pod-security.kubernetes.io/enforce: baseline
-  # -- Extra arguments for `launchway runner`. `launchway runner` currently has no flags for
-  # the Kubernetes executor's other settings (helper image, cpu/memory, node selector, image
-  # pull secrets, service account for step pods): steps use the built-in defaults. Pass such
-  # flags here once the runner has them.
+    # -- The image of each step pod's helper container, which holds the workspace. It needs sh
+    # and tar. Default: docker.io/library/busybox:1.37.
+    helperImage: ""
+    # -- The ServiceAccount step pods run as, in the step namespace. Default: none, and no
+    # token is mounted into step pods.
+    serviceAccount: ""
+    # -- Node selector for step pods (runner.nodeSelector is for the runner pods).
+    nodeSelector: {}
+    # -- CPU request of each container in a step pod, unless the pipeline asks for its own.
+    # Default 50m.
+    cpu: ""
+    # -- Memory request of each container in a step pod, unless the pipeline asks for its own.
+    # Default 64Mi.
+    memory: ""
+    # -- Memory limit of each container in a step pod that does not ask for memory. Default:
+    # none.
+    memoryLimit: ""
+    # -- Secrets in the step namespace for pulling step images, by name.
+    imagePullSecrets: []
+    # -- How long a failed or canceled run's pod is kept, so that a resume can reuse its
+    # workspace (a Go duration such as 2h). Default 2h.
+    keepFailed: ""
+    # -- How long to wait for a step pod's images to be pulled and its containers to start.
+    # Default 10m.
+    startTimeout: ""
+  # -- The port runners serve /healthz (process up) and /readyz (the server answered within two
+  # minutes) on, for the probes below. It is not exposed outside the pod.
+  healthPort: 8081
+  livenessProbe:
+    httpGet: { path: /healthz, port: health }
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  # -- A runner that cannot reach the servers is not ready, which holds back a rollout that
+  # would replace working runners with ones that cannot work.
+  readinessProbe:
+    httpGet: { path: /readyz, port: health }
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  # -- Extra arguments for `launchway runner`. Flags override the settings in the rendered
+  # file.
   extraArgs: []
   # -- Secret stores runners may read, the same map as runner.secrets in the server
-  # configuration (see the main README). Rendered to a file passed with --secrets-config.
-  # Mount any token or certificate files they refer to with extraVolumes/extraVolumeMounts.
-  # Unless you define a store called "env", the chart defines one that allows no keys: the
-  # runner would otherwise add an "env" store that lets any pipeline read the runner's
-  # environment.
+  # configuration (see the main README); rendered into the runners' file. Mount any token or
+  # certificate files they refer to with extraVolumes/extraVolumeMounts. Runners have only the
+  # stores defined here: there is no "env" store unless you define one.
   secretStores: {}
   resources:
     requests:

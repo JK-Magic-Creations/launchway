@@ -180,3 +180,26 @@ func TestPodmanService(t *testing.T) {
 		t.Fatal("pod left behind")
 	}
 }
+
+func TestRemovable(t *testing.T) {
+	now := time.Now().UnixMilli()
+	hourAgo := time.Now().Add(-time.Hour).UnixMilli()
+	for _, c := range []struct {
+		info        RunInfo
+		known, mine bool
+		want        bool
+	}{
+		{RunInfo{Status: "running"}, true, true, false},
+		{RunInfo{Status: "queued"}, true, false, false},
+		{RunInfo{Status: "succeeded", FinishedAt: now}, true, false, true},
+		{RunInfo{Status: "failed", FinishedAt: now}, true, false, false},
+		{RunInfo{Status: "failed", FinishedAt: hourAgo}, true, false, true},
+		{RunInfo{Status: "canceled", FinishedAt: hourAgo}, true, true, true},
+		{RunInfo{}, false, false, false},
+		{RunInfo{}, false, true, true},
+	} {
+		if got := removable(c.info, c.known, c.mine, 30*time.Minute); got != c.want {
+			t.Errorf("%+v known %v mine %v: got %v", c.info, c.known, c.mine, got)
+		}
+	}
+}

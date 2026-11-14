@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL, for running several servers
@@ -62,8 +64,9 @@ func isPostgres(addr string) bool {
 }
 
 // openDB opens SQLite at a file path, or PostgreSQL at a postgres:// URL,
-// and brings the schema up to date.
-func openDB(addr string) (*dbx, error) {
+// and brings the schema up to date. A database that does not answer is
+// tried again for up to wait.
+func openDB(addr string, wait time.Duration, log *slog.Logger) (*dbx, error) {
 	var d *dbx
 	if isPostgres(addr) {
 		db, err := sql.Open("pgx", addr)
@@ -88,7 +91,7 @@ func openDB(addr string) (*dbx, error) {
 		db.SetMaxOpenConns(8)
 		d = &dbx{DB: db}
 	}
-	if err := d.Ping(); err != nil {
+	if err := connect(d, wait, log); err != nil {
 		d.Close()
 		return nil, fmt.Errorf("connecting to the database: %w", err)
 	}
@@ -97,6 +100,26 @@ func openDB(addr string) (*dbx, error) {
 		return nil, err
 	}
 	return d, nil
+}
+
+// connect waits for the database to answer, trying again with growing
+// pauses until wait has passed.
+func connect(d *dbx, wait time.Duration, log *slog.Logger) error {
+	deadline := time.Now().Add(wait)
+	pause := 500 * time.Millisecond
+	for attempt := 1; ; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		err := d.PingContext(ctx)
+		cancel()
+		left := time.Until(deadline)
+		if err == nil || left <= 0 {
+			return err
+		}
+		pause = min(pause, left)
+		log.Warn("the database does not answer yet; trying again", "attempt", attempt, "in", pause, "err", err)
+		time.Sleep(pause)
+		pause = min(2*pause, 8*time.Second)
+	}
 }
 
 // render fills in the few types that differ between the two databases.
@@ -300,6 +323,13 @@ CREATE TABLE audit (
 CREATE INDEX audit_at ON audit(at);
 CREATE INDEX audit_username ON audit(username, id);
 CREATE INDEX audit_project ON audit(project, id);
+`,
+	// 6: run affinity. runs.runner is the runner holding the run's
+	//    workspace, so that a run's steps go to it (see Engine.Lease). Runs in
+	//    flight during the upgrade start with none, and go to any runner.
+	`
+ALTER TABLE runs ADD COLUMN runner TEXT NOT NULL DEFAULT '';
+CREATE INDEX leases_runner ON leases(runner);
 `,
 }
 

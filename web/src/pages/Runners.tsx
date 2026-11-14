@@ -30,13 +30,13 @@ export function RunnersPage() {
             <thead><tr><th>Runner</th><th>Executor</th><th>Version</th><th>Last seen</th></tr></thead>
             <tbody>
               {runners.map((r) => {
-                const online = now - r.last_seen < 60_000;
+                const online = r.online;
                 return (
                   <tr key={r.id}>
                     <td><span className={"online " + (online ? "online-on" : "")} aria-label={online ? "online" : "offline"} />{r.name}<div className="faint small mono">{r.id}</div></td>
                     <td>{r.executor}</td>
                     <td><Mono>{r.version}</Mono></td>
-                    <td>{online ? "connected" : ago(r.last_seen, now)}</td>
+                    <td>{online ? "connected" : `offline, last seen ${ago(r.last_seen, now)}`}</td>
                   </tr>
                 );
               })}

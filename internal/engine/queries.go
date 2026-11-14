@@ -88,6 +88,7 @@ type RunnerView struct {
 	Executor string `json:"executor"`
 	Version  string `json:"version"`
 	LastSeen int64  `json:"last_seen"`
+	Online   bool   `json:"online"` // seen within RunnerOffline
 }
 
 const runCols = `id, project, number, pipeline, status, cancel_requested, event, ref, branch, tag, sha,
@@ -365,19 +366,22 @@ func (e *Engine) State(runID string) (*RunState, error) {
 	return Fold(evs), nil
 }
 
-// Runners lists runners, most recently seen first.
+// Runners lists runners, most recently seen first. Runners not seen for a
+// day are forgotten and not listed.
 func (e *Engine) Runners() ([]RunnerView, error) {
 	rows, err := e.db.Query(`SELECT id, name, executor, version, last_seen FROM runners ORDER BY last_seen DESC`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+	online := e.now().Add(-RunnerOffline).UnixMilli()
 	out := []RunnerView{}
 	for rows.Next() {
 		var r RunnerView
 		if err := rows.Scan(&r.ID, &r.Name, &r.Executor, &r.Version, &r.LastSeen); err != nil {
 			return nil, err
 		}
+		r.Online = r.LastSeen >= online
 		out = append(out, r)
 	}
 	return out, rows.Err()

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,18 +71,22 @@ func (r *Runner) Run(ctx context.Context) error {
 	slots := make(chan struct{}, r.Concurrency)
 	var wg sync.WaitGroup
 	backoff := time.Second
+	// The first request does not wait for work, so that whether the server
+	// can be reached is known at once (see Health).
+	wait := time.Duration(0)
 	for {
 		select {
 		case slots <- struct{}{}:
 		case <-ctx.Done():
-			wg.Wait()
+			r.leave(&wg)
 			return nil
 		}
-		job, err := r.Client.Lease(ctx, r.Info, 25*time.Second)
+		job, err := r.Client.Lease(ctx, r.Info, wait)
+		wait = 25 * time.Second
 		if err != nil {
 			<-slots
 			if ctx.Err() != nil {
-				wg.Wait()
+				r.leave(&wg)
 				return nil
 			}
 			r.Log.Warn("could not reach the server; retrying", "err", err, "in", backoff)
@@ -105,6 +110,45 @@ func (r *Runner) Run(ctx context.Context) error {
 		}()
 	}
 }
+
+// leave waits for the steps in progress to be handed back, then tells the
+// server this runner is gone, so that its runs move to other runners at once.
+func (r *Runner) leave(steps *sync.WaitGroup) {
+	steps.Wait()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := r.Client.Leave(ctx, r.Info.ID); err != nil {
+		r.Log.Warn("could not tell the server this runner is leaving; its runs move to other runners once it is missed", "err", err)
+	}
+}
+
+// Health serves /healthz, which answers while the process is up, and
+// /readyz, which answers 200 only if the server answered within the last
+// two minutes. A runner waiting for work asks the server at least every
+// 25 seconds, and one running steps sends heartbeats more often than that.
+func (r *Runner) Health() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintln(w, "ok")
+	})
+	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
+		last := r.Client.LastContact()
+		if last.IsZero() {
+			http.Error(w, "the server has not answered yet", http.StatusServiceUnavailable)
+			return
+		}
+		if ago := time.Since(last); ago > readyWithin {
+			http.Error(w, fmt.Sprintf("the server last answered %s ago", ago.Round(time.Second)), http.StatusServiceUnavailable)
+			return
+		}
+		fmt.Fprintln(w, "ok")
+	})
+	return mux
+}
+
+// readyWithin is how recently the server must have answered for a runner to
+// be ready.
+const readyWithin = 2 * time.Minute
 
 // logBuffer batches lines and sends them every few hundred milliseconds.
 type logBuffer struct {
@@ -241,6 +285,9 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 
 func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, ...any), out executor.Sink) engine.Result {
 	sys("Runner %s, executor %s", r.Info.Name, r.Exec.Name())
+	if job.TakenOverFrom != "" {
+		sys("This run moves here from runner %s, which stopped responding or left. It continues in a fresh workspace: files that earlier steps wrote are not in it.", job.TakenOverFrom)
+	}
 	if job.Attempt > 1 {
 		sys("Attempt %d", job.Attempt)
 	}
@@ -273,7 +320,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	code, err := r.Exec.Run(tctx, executor.Spec{
 		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
 		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: env,
-		Workspace: ws, MetaDir: meta, Mask: mask.Mask,
+		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask,
 	}, func(stream, text string) {
 		if stream == "system" {
 			sys("%s", mask.Mask(text))
@@ -372,8 +419,18 @@ func maskOutputs(outputs map[string]string, mask *secrets.Masker) map[string]str
 	return masked
 }
 
+// workspaceID names the run's workspace on this runner. A server older
+// than run affinity sends none; the run's ID then stands in.
+func workspaceID(job *engine.Job) string {
+	if job.Workspace != "" {
+		return job.Workspace
+	}
+	return job.RunID
+}
+
 // workspace returns the directory a run's steps share on this runner,
-// checking out the commit the first time.
+// checking out the commit the first time. A workspace left from an earlier
+// hold on the run (the run moved to another runner and back) is replaced.
 func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string, ...any)) (string, error) {
 	switch job.Source.Kind {
 	case "dir":
@@ -394,7 +451,7 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 
 	dir := filepath.Join(r.DataDir, "workspaces", job.RunID)
 	ready := filepath.Join(r.DataDir, "workspaces", job.RunID+".ready")
-	if _, err := os.Stat(ready); err == nil {
+	if id, err := os.ReadFile(ready); err == nil && string(id) == workspaceID(job) {
 		sys("Using the run's workspace from an earlier step")
 		return dir, nil
 	}
@@ -411,7 +468,7 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 	}
 	// Containers may run as another user; let them write to the workspace.
 	_ = os.Chmod(dir, 0o777)
-	if err := os.WriteFile(ready, nil, 0o644); err != nil {
+	if err := os.WriteFile(ready, []byte(workspaceID(job)), 0o644); err != nil {
 		return "", err
 	}
 	return dir, nil

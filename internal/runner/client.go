@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -26,6 +27,19 @@ type Client struct {
 	Server string // base URL, e.g. http://127.0.0.1:8080
 	Token  string
 	HTTP   *http.Client
+
+	contact atomic.Int64 // Unix milliseconds of the last good answer; see LastContact
+}
+
+// LastContact is when the server last answered a request in a way that
+// shows the runner can work with it: not an error of the server's own, and
+// not a refused token. It is zero until the first such answer.
+func (c *Client) LastContact() time.Time {
+	ms := c.contact.Load()
+	if ms == 0 {
+		return time.Time{}
+	}
+	return time.UnixMilli(ms)
 }
 
 func NewClient(server, token string) *Client {
@@ -49,6 +63,9 @@ func (c *Client) call(ctx context.Context, path string, in, out any) (int, error
 	}
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	if resp.StatusCode < 500 && resp.StatusCode != http.StatusUnauthorized {
+		c.contact.Store(time.Now().UnixMilli())
+	}
 	switch {
 	case resp.StatusCode == http.StatusGone:
 		return resp.StatusCode, ErrLeaseLost
@@ -114,6 +131,13 @@ func (c *Client) RunInfos(ctx context.Context, ids []string) (map[string]executo
 		out[r.ID] = r
 	}
 	return out, nil
+}
+
+// Leave tells the server that this runner is shutting down and holds no
+// steps, so that other runners may take over its runs at once.
+func (c *Client) Leave(ctx context.Context, runnerID string) error {
+	_, err := c.call(ctx, "leave", map[string]string{"runner_id": runnerID}, nil)
+	return err
 }
 
 func (c *Client) Finish(ctx context.Context, lease string, res engine.Result) error {

@@ -21,7 +21,8 @@ metadata:
   labels:
     {{- include "launchway.componentLabels" (list . "runner") | nindent 4 }}
 data:
-  secret-stores.yaml: |
-    # Rendered by the Launchway Helm chart from runner.secretStores in the values.
-    {{- include "launchway.runnerSecretStores" . | nindent 4 }}
+  runner.yaml: |
+    # Rendered by the Launchway Helm chart from runner.* in the values; read with
+    # `launchway runner --config`. The runner token comes from a Secret, as an environment variable.
+    {{- include "launchway.runnerConfig" . | nindent 4 }}
 {{- end }}

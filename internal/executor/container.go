@@ -190,12 +190,14 @@ func (c *Container) ensurePod(ctx context.Context, s Spec, out Sink) (string, er
 	return pod, nil
 }
 
-// Cleanup removes this runner's pods for runs that have finished.
+// Cleanup removes the Podman pods (which hold a run's services) of runs that
+// have finished, whichever runner on this machine made them (see removable).
+// The workspace is not in the pod, so nothing is kept for a resume.
 func (c *Container) Cleanup(ctx context.Context, lookup RunLookup) error {
 	if !c.isPodman() || c.Owner == "" {
 		return nil
 	}
-	b, err := exec.CommandContext(ctx, c.Bin, "pod", "ps", "--filter", "label=launchway.dev/runner="+c.Owner, "--format", "json").Output()
+	b, err := exec.CommandContext(ctx, c.Bin, "pod", "ps", "--filter", "label=launchway.dev/run", "--format", "json").Output()
 	if err != nil {
 		return err
 	}
@@ -216,10 +218,9 @@ func (c *Container) Cleanup(ctx context.Context, lookup RunLookup) error {
 	}
 	for _, p := range pods {
 		info, known := infos[p.Labels["launchway.dev/run"]]
-		if known && info.Status != "succeeded" && info.Status != "failed" && info.Status != "canceled" {
-			continue
+		if removable(info, known, p.Labels["launchway.dev/runner"] == c.Owner, 0) {
+			_ = exec.CommandContext(ctx, c.Bin, "pod", "rm", "-f", p.Name).Run()
 		}
-		_ = exec.CommandContext(ctx, c.Bin, "pod", "rm", "-f", p.Name).Run()
 	}
 	return nil
 }

@@ -27,7 +27,10 @@ type Spec struct {
 	Script     string            // run with sh -e
 	Env        map[string]string // added to the step's environment
 	Workspace  string            // host directory the step works in
-	MetaDir    string            // host directory for the script and outputs file
+	// WorkspaceID names the run's workspace: the same for the steps that
+	// share it, different when the run starts again in a fresh one.
+	WorkspaceID string
+	MetaDir     string // host directory for the script and outputs file
 	// Mask, if set, hides secret values in stdout and stderr. It is applied
 	// to whole lines, before long lines are split.
 	Mask func(string) string
@@ -78,6 +81,26 @@ type RunLookup func(ctx context.Context, ids []string) (map[string]RunInfo, erro
 // Cleaner is implemented by executors that hold resources per run.
 type Cleaner interface {
 	Cleanup(ctx context.Context, lookup RunLookup) error
+}
+
+// removable decides whether to remove what a run's steps held (a pod), given
+// what the server says about the run. A run that is still active keeps it.
+// A run that succeeded does not need it; a failed or canceled run keeps it
+// for keep after it finished, so that a resume can use it. Any runner may
+// remove what belongs to such runs. A run the server does not know may be
+// another installation's, or a local `launchway run` sharing the namespace,
+// so only the runner that made it (mine) removes it.
+func removable(info RunInfo, known, mine bool, keep time.Duration) bool {
+	if !known {
+		return mine
+	}
+	switch info.Status {
+	case "succeeded":
+		return true
+	case "failed", "canceled":
+		return time.Since(time.UnixMilli(info.FinishedAt)) > keep
+	}
+	return false
 }
 
 // OutputsFile is where a step writes key=value outputs, relative to MetaDir.

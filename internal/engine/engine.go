@@ -48,9 +48,15 @@ type Options struct {
 	Database string        // a SQLite file, or a postgres:// URL that several servers share
 	LeaseTTL time.Duration // how long a runner may go silent; default 30s
 	MaxLost  int           // times a step is requeued after losing its runner; default 3
-	Hub      *hub.Hub      // live updates; optional
-	Logger   *slog.Logger
-	Now      func() time.Time // for tests
+	// RunnerTimeout is how long a runner may go unseen before another runner
+	// may take over its runs (see Lease); default 3 × LeaseTTL.
+	RunnerTimeout time.Duration
+	// ConnectWait is how long Open keeps trying a database that does not
+	// answer, for example because it is still starting; default 0, one try.
+	ConnectWait time.Duration
+	Hub         *hub.Hub // live updates; optional
+	Logger      *slog.Logger
+	Now         func() time.Time // for tests
 	// AllowSelfApproval says whether the person who started a run may
 	// approve its approval steps. Nil means yes, because until there is
 	// sign-in everyone acts as the same configured user.
@@ -59,15 +65,16 @@ type Options struct {
 
 // Engine is safe for concurrent use.
 type Engine struct {
-	db       *dbx
-	hub      *hub.Hub
-	log      *slog.Logger
-	ttl      time.Duration
-	maxLost  int
-	now      func() time.Time
-	selfOK   bool   // AllowSelfApproval
-	instance string // tags this process's notifications, so it can ignore its own
-	channel  string // the PostgreSQL notification channel
+	db            *dbx
+	hub           *hub.Hub
+	log           *slog.Logger
+	ttl           time.Duration
+	runnerTimeout time.Duration
+	maxLost       int
+	now           func() time.Time
+	selfOK        bool   // AllowSelfApproval
+	instance      string // tags this process's notifications, so it can ignore its own
+	channel       string // the PostgreSQL notification channel
 
 	// writeMu serialises writes on SQLite, which allows one writer at a time
 	// anyway; waiting here is fairer and cheaper than SQLite's busy loop. On
@@ -114,6 +121,14 @@ type Job struct {
 	SHA        string                        `json:"sha,omitempty"`
 	Container  string                        `json:"container"`  // which of Containers the step runs in
 	Containers []pipeline.Container          `json:"containers"` // every container the run needs, services included
+	// Workspace names the run's workspace on this runner: the same for every
+	// step the runner takes while it holds the run, and new when it takes
+	// the run over from another runner (see Lease).
+	Workspace string `json:"workspace"`
+	// TakenOverFrom is the runner that held the run until it stopped
+	// responding or left, if this step moved the run to this runner. Files
+	// that the run's earlier steps wrote are not in the new workspace.
+	TakenOverFrom string `json:"taken_over_from,omitempty"`
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -141,6 +156,9 @@ func Open(o Options) (*Engine, error) {
 	if o.MaxLost == 0 {
 		o.MaxLost = 3
 	}
+	if o.RunnerTimeout == 0 {
+		o.RunnerTimeout = 3 * o.LeaseTTL
+	}
 	if o.Now == nil {
 		o.Now = time.Now
 	}
@@ -150,12 +168,12 @@ func Open(o Options) (*Engine, error) {
 	if o.Hub == nil {
 		o.Hub = hub.New()
 	}
-	db, err := openDB(o.Database)
+	db, err := openDB(o.Database, o.ConnectWait, o.Logger)
 	if err != nil {
 		return nil, err
 	}
 	e := &Engine{
-		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, maxLost: o.MaxLost, now: o.Now,
+		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
 		selfOK:   o.AllowSelfApproval == nil || *o.AllowSelfApproval,
 		instance: ids.New("srv"),
 		wake:     make(chan struct{}),
@@ -373,9 +391,21 @@ func (e *Engine) Resume(runID, actor string) error {
 // other servers alone; a missed notification costs at most this long.
 const recheckEvery = 2 * time.Second
 
-// Lease hands the oldest queued step to a runner, waiting up to wait for one
-// to become available. It returns nil, nil if there is none. It stops waiting
-// when ctx ends, for example because the runner disconnected.
+// Lease hands the oldest queued step a runner may take to it, waiting up to
+// wait for one to become available. It returns nil, nil if there is none. It
+// stops waiting when ctx ends, for example because the runner disconnected.
+//
+// The steps of a run share a workspace, which lives on one runner. So once a
+// runner has taken a step of a run, it holds the run: the run's later steps
+// are given only to it, for as long as it is seen (it leases, heartbeats or
+// sends logs) at least every RunnerTimeout. After that, or once it has said
+// it is leaving, any runner may take the run over and carries on in a fresh
+// workspace. All of this is decided from the database, so it holds however
+// many servers there are.
+//
+// Steps of runs nobody holds go to any runner, but a runner that is already
+// working leaves them to a runner that is doing nothing, if one has been
+// seen within the lease TTL, so that runs spread across runners.
 func (e *Engine) Lease(ctx context.Context, r RunnerInfo, wait time.Duration) (*Job, error) {
 	deadline := time.Now().Add(wait)
 	for {
@@ -413,8 +443,24 @@ func (e *Engine) Lease(ctx context.Context, r RunnerInfo, wait time.Duration) (*
 }
 
 func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
-	rows, err := e.db.Query(`SELECT run_id, step_id, attempt FROM steps WHERE status = 'queued'
-		ORDER BY queued_at, run_id, position LIMIT 20`)
+	now := e.now()
+	ownOnly, err := e.leaveNewRunsToIdle(r.ID, now)
+	if err != nil {
+		return nil, err
+	}
+	// Queued steps of runs this runner holds and, unless it should leave
+	// them to others, of runs no live runner holds. The transaction below
+	// checks again, against the run's current state.
+	where, args := `runs.runner = ?`, []any{r.ID}
+	if !ownOnly {
+		where = `(runs.runner = ? OR runs.runner = '' OR o.last_seen IS NULL OR o.last_seen < ?)`
+		args = append(args, now.Add(-e.runnerTimeout).UnixMilli())
+	}
+	rows, err := e.db.Query(`SELECT s.run_id, s.step_id, s.attempt FROM steps s
+		JOIN runs ON runs.id = s.run_id
+		LEFT JOIN runners o ON o.id = runs.runner
+		WHERE s.status = 'queued' AND `+where+`
+		ORDER BY s.queued_at, s.run_id, s.position LIMIT 20`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -443,6 +489,18 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			if s == nil || s.Status != StepQueuedS || s.Attempt != cd.attempt || c.st.CancelRequested {
 				return nil // someone else got it, or it changed
 			}
+			prev := c.st.Runner
+			if prev != r.ID {
+				if ownOnly {
+					return nil
+				}
+				if prev != "" {
+					alive, err := c.runnerAlive(prev)
+					if err != nil || alive {
+						return err // the run is held by another runner
+					}
+				}
+			}
 			leaseID := ids.New("lease")
 			if _, err := c.tx.Exec(`INSERT INTO leases(id, run_id, step_id, attempt, runner, expires_at) VALUES(?,?,?,?,?,?)`,
 				leaseID, cd.run, cd.step, s.Attempt, r.ID, c.leaseUntil()); err != nil {
@@ -450,6 +508,9 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			}
 			c.emit(StepLeased, Payload{Step: cd.step, Attempt: s.Attempt, Lease: leaseID, Runner: r.ID})
 			job = c.job(cd.step, leaseID)
+			if prev != "" && prev != r.ID {
+				job.TakenOverFrom = prev
+			}
 			return nil
 		})
 		if err != nil {
@@ -460,6 +521,29 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 		}
 	}
 	return nil, nil
+}
+
+// leaveNewRunsToIdle reports whether a runner should take steps only of the
+// runs it holds: it holds a lease, and another runner that holds none has
+// been seen within the lease TTL.
+func (e *Engine) leaveNewRunsToIdle(runnerID string, now time.Time) (bool, error) {
+	var n int
+	err := e.db.QueryRow(`SELECT COUNT(*) FROM runners o
+		WHERE o.id <> ? AND o.last_seen >= ?
+		AND NOT EXISTS (SELECT 1 FROM leases WHERE leases.runner = o.id)
+		AND EXISTS (SELECT 1 FROM leases WHERE leases.runner = ?)`,
+		runnerID, now.Add(-e.ttl).UnixMilli(), runnerID).Scan(&n)
+	return n > 0, err
+}
+
+// runnerAlive reports whether a runner has been seen within RunnerTimeout.
+func (c *cmd) runnerAlive(id string) (bool, error) {
+	var seen int64
+	err := c.tx.QueryRow(`SELECT last_seen FROM runners WHERE id = ?`, id).Scan(&seen)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil // it left, or was forgotten
+	}
+	return err == nil && seen >= c.now-c.e.runnerTimeout.Milliseconds(), err
 }
 
 // leaseRef is where a lease points.
@@ -507,17 +591,22 @@ func (e *Engine) Start(leaseID string) (cancel bool, err error) {
 // Heartbeat renews a lease. It reports whether the run has been asked to
 // cancel, in which case the runner should stop the step. A lease stays valid
 // until it is reaped, so a heartbeat that arrives late but before the reaper
-// still counts.
+// still counts. It also records that the lease's runner was seen, so that a
+// runner busy with long steps keeps hold of its runs.
 func (e *Engine) Heartbeat(leaseID string) (cancel bool, err error) {
 	unlock := e.writeLock()
 	defer unlock()
-	var runID string
-	err = e.db.QueryRow(`UPDATE leases SET expires_at = ? WHERE id = ? RETURNING run_id`,
-		e.now().Add(e.ttl).UnixMilli(), leaseID).Scan(&runID)
+	now := e.now()
+	var runID, runnerID string
+	err = e.db.QueryRow(`UPDATE leases SET expires_at = ? WHERE id = ? RETURNING run_id, runner`,
+		now.Add(e.ttl).UnixMilli(), leaseID).Scan(&runID, &runnerID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, ErrLeaseLost
 	}
 	if err != nil {
+		return false, err
+	}
+	if err := sawRunner(e.db, runnerID, now); err != nil {
 		return false, err
 	}
 	var flag int
@@ -609,7 +698,7 @@ const (
 )
 
 // AppendLogs stores output lines for the step held by leaseID. Sending logs
-// also renews the lease.
+// also renews the lease, and records that its runner was seen.
 func (e *Engine) AppendLogs(leaseID string, lines []LogLine) error {
 	if len(lines) == 0 {
 		return nil
@@ -628,13 +717,18 @@ func (e *Engine) AppendLogs(leaseID string, lines []LogLine) error {
 	// for the same lease (on any server) get separate ranges.
 	var l leaseRef
 	var last int
+	var runnerID string
+	now := e.now()
 	err = tx.QueryRow(`UPDATE leases SET log_seq = log_seq + ?, expires_at = ? WHERE id = ?
-		RETURNING run_id, step_id, attempt, log_seq`, len(lines), e.now().Add(e.ttl).UnixMilli(), leaseID).
-		Scan(&l.runID, &l.stepID, &l.attempt, &last)
+		RETURNING run_id, step_id, attempt, log_seq, runner`, len(lines), now.Add(e.ttl).UnixMilli(), leaseID).
+		Scan(&l.runID, &l.stepID, &l.attempt, &last, &runnerID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrLeaseLost
 	}
 	if err != nil {
+		return err
+	}
+	if err := sawRunner(tx, runnerID, now); err != nil {
 		return err
 	}
 	first := last - len(lines) + 1
@@ -677,12 +771,13 @@ type LogBatch struct {
 
 // reaper runs on every server. Each tick it records that a server is alive,
 // expires leases whose runners have gone quiet, and rejects approvals that
-// nobody decided in time.
+// nobody decided in time. Every minute it also forgets runners long gone.
 func (e *Engine) reaper(ctx context.Context) {
 	defer e.bg.Done()
 	interval := min(max(e.ttl/10, 50*time.Millisecond), time.Second)
 	t := time.NewTicker(interval)
 	defer t.Stop()
+	var pruned time.Time
 	for {
 		select {
 		case <-ctx.Done():
@@ -691,6 +786,10 @@ func (e *Engine) reaper(ctx context.Context) {
 			e.markAlive()
 			e.reap()
 			e.expireApprovals()
+			if now := e.now(); now.Sub(pruned) >= time.Minute {
+				pruned = now
+				e.forgetRunners()
+			}
 		}
 	}
 }
@@ -946,12 +1045,13 @@ func (c *cmd) persist() error {
 	st := c.st
 	t := st.Trigger
 	if _, err := c.tx.Exec(`INSERT INTO runs(id, project, number, pipeline, status, cancel_requested, event, ref, branch, tag, sha,
-			actor, message, author, created_at, started_at, finished_at, last_seq)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+			actor, message, author, created_at, started_at, finished_at, last_seq, runner)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(id) DO UPDATE SET status = excluded.status, cancel_requested = excluded.cancel_requested,
-			started_at = excluded.started_at, finished_at = excluded.finished_at, last_seq = excluded.last_seq`,
+			started_at = excluded.started_at, finished_at = excluded.finished_at, last_seq = excluded.last_seq,
+			runner = excluded.runner`,
 		st.ID, st.Project, st.Number, st.Pipeline.Name, st.Status, boolInt(st.CancelRequested), t.Event, t.Ref, t.Branch, t.Tag, t.SHA,
-		t.Actor, t.Message, t.Author, st.CreatedAt, st.StartedAt, st.FinishedAt, st.LastSeq); err != nil {
+		t.Actor, t.Message, t.Author, st.CreatedAt, st.StartedAt, st.FinishedAt, st.LastSeq, st.Runner); err != nil {
 		return err
 	}
 	changed := c.changedSteps()
@@ -1117,7 +1217,7 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: def.Secrets,
-		Timeout: def.Timeout, Source: st.Source, SHA: t.SHA,
+		Timeout: def.Timeout, Source: st.Source, SHA: t.SHA, Workspace: st.Workspace,
 	}
 }
 
@@ -1161,6 +1261,69 @@ func (e *Engine) notify() {
 	close(e.wake)
 	e.wake = make(chan struct{})
 	e.wakeMu.Unlock()
+}
+
+// Runner rows are kept for the runners list and for run affinity (see Lease).
+const (
+	// RunnerOffline is how long a runner may go unseen before it is listed
+	// as offline.
+	RunnerOffline = 2 * time.Minute
+	// forgetRunnerAfter is how long a runner may go unseen before its row is
+	// removed. Several servers may remove the same rows; that is harmless.
+	forgetRunnerAfter = 24 * time.Hour
+	// seenEvery bounds how often heartbeats and log uploads write that their
+	// runner was seen: log batches arrive several times a second.
+	seenEvery = 5 * time.Second
+)
+
+// sawRunner records that a runner was seen at now, unless that was recorded
+// less than seenEvery ago. A runner that has no row is not added: rows are
+// made by Lease, which knows the runner's name.
+func sawRunner(q interface {
+	Exec(string, ...any) (sql.Result, error)
+}, id string, now time.Time) error {
+	_, err := q.Exec(`UPDATE runners SET last_seen = ? WHERE id = ? AND last_seen < ?`,
+		now.UnixMilli(), id, now.Add(-seenEvery).UnixMilli())
+	return err
+}
+
+// RunnerLeft forgets a runner that is shutting down and holds no more steps,
+// so that other runners may take over its runs at once instead of after
+// RunnerTimeout.
+func (e *Engine) RunnerLeft(id string) error {
+	unlock := e.writeLock()
+	defer unlock()
+	tx, err := e.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(`DELETE FROM runners WHERE id = ?`, id); err != nil {
+		return err
+	}
+	// Runners waiting on other servers may now take over its runs.
+	if err := e.notifyOthers(tx, note{Kind: noteWake}); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	e.notify()
+	return nil
+}
+
+// forgetRunners removes runners not seen for forgetRunnerAfter.
+func (e *Engine) forgetRunners() {
+	unlock := e.writeLock()
+	defer unlock()
+	res, err := e.db.Exec(`DELETE FROM runners WHERE last_seen < ?`, e.now().Add(-forgetRunnerAfter).UnixMilli())
+	if err != nil {
+		e.log.Error("forgetting runners that are long gone", "err", err)
+		return
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		e.log.Info("forgot runners not seen for a day", "count", n)
+	}
 }
 
 func (e *Engine) touchRunner(r RunnerInfo) {

@@ -90,7 +90,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       annotations:
-        checksum/secret-stores: {{ include "launchway.runnerSecretStores" . | sha256sum }}
+        checksum/config: {{ include "launchway.runnerConfig" . | sha256sum }}
         {{- with .Values.runner.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -129,12 +129,8 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - runner
-            - --server={{ .Values.runner.serverURL | default (printf "http://%s.%s.svc:%v" $fullname .Release.Namespace .Values.service.port) }}
-            - --executor=kubernetes
-            - --k8s-namespace={{ $stepNamespace }}
-            - --concurrency={{ .Values.runner.concurrency }}
-            - --data=/var/lib/launchway-runner
-            - --secrets-config=/etc/launchway-runner/secret-stores.yaml
+            - --config=/etc/launchway-runner/runner.yaml
+            - --health-listen=:{{ .Values.runner.healthPort }}
             {{- range .Values.runner.extraArgs }}
             - {{ . | quote }}
             {{- end }}
@@ -148,6 +144,18 @@ spec:
             {{- with .Values.runner.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.runner.healthPort }}
+              protocol: TCP
+          {{- with .Values.runner.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.runner.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.runner.resources | nindent 12 }}
           securityContext:

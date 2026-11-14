@@ -68,6 +68,12 @@ runner:
   kubernetes:
     # Created beforehand (see above), so that its quotas and policies are yours to manage.
     namespace: launchway-steps
+    # Each container of a step pod requests this unless its pipeline asks for its own.
+    cpu: 250m
+    memory: 256Mi
+    memoryLimit: 4Gi
+    # A Secret in launchway-steps for pulling build images from a private registry.
+    imagePullSecrets: [registry-credentials]
   resources:
     requests: { cpu: 250m, memory: 256Mi }
     limits: { memory: 2Gi }

@@ -139,7 +139,8 @@ export interface Approval {
   deadline: number;
 }
 
-export interface Runner { id: string; name: string; executor: string; version: string; last_seen: number }
+// online: seen within the last two minutes. Runners not seen for a day are no longer listed.
+export interface Runner { id: string; name: string; executor: string; version: string; last_seen: number; online: boolean }
 
 export interface Problem { line?: number; column?: number; path?: string; message: string }
 

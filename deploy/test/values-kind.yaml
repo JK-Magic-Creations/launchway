@@ -9,6 +9,10 @@ postgresql:
   enabled: true
 
 config:
+  # No sign-in in this throwaway cluster; the servers refuse to listen on 0.0.0.0 without this.
+  extraConfig:
+    auth:
+      allow_anonymous: true
   projects:
     # Served by git-server.yaml in the release namespace.
     - name: demo

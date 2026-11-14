@@ -57,6 +57,13 @@ type RunState struct {
 	Steps           map[string]*StepState
 	Order           []string
 	LastSeq         int64
+	// Runner holds the run's workspace: it took the run's latest step. See
+	// Engine.Lease.
+	Runner string
+	// Workspace names the workspace Runner holds: the lease that began its
+	// hold on the run. It changes whenever the run moves to another runner,
+	// even back to one that held it before.
+	Workspace string
 }
 
 // StepState is one step as its events describe it.
@@ -161,6 +168,9 @@ func (st *RunState) apply(ev Event) {
 		s.Status = StepLeasedS
 		s.LeaseID = p.Lease
 		s.Runner = p.Runner
+		if p.Runner != st.Runner {
+			st.Runner, st.Workspace = p.Runner, p.Lease
+		}
 		if st.Status == RunQueued {
 			st.Status = RunRunning
 			st.StartedAt = ev.At

@@ -4,6 +4,7 @@ package main
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -43,6 +44,7 @@ const usage = `Launchway: build and deliver software.
 Usage:
   launchway server   [--config launchway.yaml]   run the server, its web UI and a built-in runner
   launchway runner   --server URL --token T     run a runner that takes work from a server
+                     [--config runner.yaml] [--health-listen ADDR]
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
   launchway validate [file]                     check a pipeline file
   launchway graph    [file]                     print a pipeline's graph as JSON
@@ -118,6 +120,10 @@ func cmdServer(args []string) error {
 	if err := cfg.CheckExposure(cfg.Listen); err != nil {
 		return err
 	}
+	dbWait, drain, err := cfg.Timings()
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
 	authOpts, err := serverAuth(cfg)
 	if err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
@@ -130,7 +136,7 @@ func cmdServer(args []string) error {
 
 	dbAddr := cfg.DatabaseAddr()
 	allowSelf := cfg.AllowSelfApproval()
-	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf})
+	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait})
 	if err != nil {
 		return err
 	}
@@ -165,10 +171,7 @@ func cmdServer(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	baseCtx, cancelBase := context.WithCancel(context.Background())
-	defer cancelBase()
-	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second,
-		BaseContext: func(net.Listener) context.Context { return baseCtx }}
+	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		if err := httpSrv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("http server", "err", err)
@@ -212,20 +215,43 @@ func cmdServer(args []string) error {
 	if authOpts == nil {
 		signIn = "no sign-in: anyone who can reach it has full access"
 	}
-	fmt.Fprintf(os.Stderr, "\n  Launchway %s is running at %s (%s)\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
-		version, url, signIn, len(projects), cfg.Data, describeDatabase(dbAddr), tokenAt)
+	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
+		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(dbAddr), tokenAt)
 
 	<-ctx.Done()
 	fmt.Fprintln(os.Stderr, "\nStopping. Steps in progress will run again when Launchway starts.")
+	return shutdown(httpSrv, srv, drain, func() {
+		stopRunner()
+		select {
+		case <-runnerDone:
+		case <-time.After(30 * time.Second):
+		}
+	})
+}
+
+// shutdownTimeout bounds how long a stopping server waits for the requests
+// in flight to finish.
+const shutdownTimeout = 15 * time.Second
+
+// shutdown stops serving gracefully. At once, /readyz reports that the
+// server is not ready, and each connection closes after its current request
+// so that clients reconnect, to another server if there is one. The server
+// keeps serving for drain, so that load balancers checking /readyz stop
+// sending it requests first. Then the built-in runner is stopped, requests
+// that wait for a long time (runners waiting for work, live streams) are
+// ended, and the other requests in flight get up to shutdownTimeout.
+func shutdown(hs *http.Server, srv *api.Server, drain time.Duration, stopRunner func()) error {
+	srv.Drain()
+	hs.SetKeepAlivesEnabled(false)
+	time.Sleep(drain)
 	stopRunner()
-	select {
-	case <-runnerDone:
-	case <-time.After(30 * time.Second):
-	}
-	cancelBase()
-	shut, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	srv.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
-	return httpSrv.Shutdown(shut)
+	if err := hs.Shutdown(ctx); err != nil {
+		return fmt.Errorf("requests still in flight after %s were cut off: %w", shutdownTimeout, err)
+	}
+	return nil
 }
 
 // serverAuth builds the sign-in settings, or returns nil if sign-in is off.
@@ -263,6 +289,16 @@ func describeDatabase(addr string) string {
 	return "PostgreSQL database " + u.Redacted()
 }
 
+// listening says where the server listens and, when that is every address,
+// how to reach it from this machine.
+func listening(addr net.Addr) string {
+	host, _, err := net.SplitHostPort(addr.String())
+	if ip := net.ParseIP(host); err == nil && ip != nil && ip.IsUnspecified() {
+		return fmt.Sprintf("%s, every address; from this machine http://%s", addr, loopback(addr.String()))
+	}
+	return "http://" + addr.String()
+}
+
 // loopback turns 0.0.0.0:8080 or [::]:8080 into 127.0.0.1:8080.
 func loopback(addr string) string {
 	host, port, err := net.SplitHostPort(addr)
@@ -277,29 +313,75 @@ func loopback(addr string) string {
 
 // ---- runner ----
 
-func cmdRunner(args []string) error {
-	fs := flag.NewFlagSet("runner", flag.ExitOnError)
-	server := fs.String("server", os.Getenv("LAUNCHWAY_SERVER"), "server URL")
-	token := fs.String("token", os.Getenv("LAUNCHWAY_RUNNER_TOKEN"), "runner token (or LAUNCHWAY_RUNNER_TOKEN)")
+// runnerOptions is what `launchway runner` runs with.
+type runnerOptions struct {
+	config.RunnerFile
+	Token        string
+	HealthListen string
+}
+
+// runnerArgs reads the runner's settings: a flag given on the command line
+// wins, then the environment (LAUNCHWAY_SERVER, LAUNCHWAY_RUNNER_TOKEN), then
+// the --config file, then the defaults.
+func runnerArgs(args []string) (*runnerOptions, error) {
+	fs := flag.NewFlagSet("runner", flag.ContinueOnError)
+	cfgPath := fs.String("config", "", "YAML file of runner settings, the same as runner: in the server's configuration plus server, name and data")
+	server := fs.String("server", "", "server URL (or LAUNCHWAY_SERVER)")
+	token := fs.String("token", "", "runner token (or LAUNCHWAY_RUNNER_TOKEN)")
 	name := fs.String("name", "", "a name for this runner (default: the host name)")
-	data := fs.String("data", "launchway-runner", "directory for workspaces")
-	conc := fs.Int("concurrency", 2, "steps to run at once")
-	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
+	data := fs.String("data", "", "directory for workspaces (default launchway-runner)")
+	conc := fs.Int("concurrency", 0, "steps to run at once (default 2)")
+	exe := fs.String("executor", "", "auto (the default), container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
-	fs.Parse(args)
-	if *server == "" || *token == "" {
-		return errors.New("--server and --token are required")
+	health := fs.String("health-listen", "", "address to serve /healthz and /readyz on, such as :8081 (default: none)")
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil, exitErr(0)
+		}
+		return nil, exitErr(2) // the flag package has explained
 	}
-	secretStores, err := openSecrets(*secretsConfig)
+	o := &runnerOptions{HealthListen: *health}
+	if *cfgPath != "" {
+		f, err := config.LoadRunner(*cfgPath)
+		if err != nil {
+			return nil, err
+		}
+		o.RunnerFile = *f
+	}
+	host, _ := os.Hostname()
+	o.Server = cmp.Or(*server, os.Getenv("LAUNCHWAY_SERVER"), o.Server)
+	o.Token = cmp.Or(*token, os.Getenv("LAUNCHWAY_RUNNER_TOKEN"))
+	o.Name = cmp.Or(*name, o.Name, host)
+	o.Data = cmp.Or(*data, o.Data, "launchway-runner")
+	o.Concurrency = cmp.Or(*conc, o.Concurrency, 2)
+	o.Executor = cmp.Or(*exe, o.Executor, "auto")
+	o.Kubernetes.Context = cmp.Or(k8s.Context, o.Kubernetes.Context)
+	o.Kubernetes.Namespace = cmp.Or(k8s.Namespace, o.Kubernetes.Namespace)
+	if *secretsConfig != "" {
+		c, err := secrets.LoadConfig(*secretsConfig)
+		if err != nil {
+			return nil, err
+		}
+		o.Secrets = c
+	}
+	if o.Server == "" || o.Token == "" {
+		return nil, errors.New("a server URL (--server, LAUNCHWAY_SERVER or server: in --config) and a token (--token or LAUNCHWAY_RUNNER_TOKEN) are required")
+	}
+	return o, nil
+}
+
+func cmdRunner(args []string) error {
+	o, err := runnerArgs(args)
 	if err != nil {
 		return err
 	}
-	host, _ := os.Hostname()
-	if *name == "" {
-		*name = host
+	secretStores, err := secrets.Open(o.Secrets)
+	if err != nil {
+		return fmt.Errorf("secret stores: %w", err)
 	}
-	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "runner-" + *name})
+	id := "runner-" + o.Name
+	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id})
 	if err != nil {
 		return err
 	}
@@ -308,9 +390,18 @@ func cmdRunner(args []string) error {
 	if err := checkExecutor(ctx, ex); err != nil {
 		return err
 	}
-	r := &runner.Runner{Client: runner.NewClient(*server, *token), Exec: ex,
-		Info:    engine.RunnerInfo{ID: "runner-" + *name, Name: *name, Executor: ex.Name(), Version: version},
-		DataDir: *data, Concurrency: *conc, Secrets: secretStores}
+	r := &runner.Runner{Client: runner.NewClient(o.Server, o.Token), Exec: ex,
+		Info:    engine.RunnerInfo{ID: id, Name: o.Name, Executor: ex.Name(), Version: version},
+		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores}
+	if o.HealthListen != "" {
+		ln, err := net.Listen("tcp", o.HealthListen)
+		if err != nil {
+			return fmt.Errorf("--health-listen: %w", err)
+		}
+		hs := &http.Server{Handler: r.Health(), ReadHeaderTimeout: 10 * time.Second}
+		go hs.Serve(ln)
+		defer hs.Close()
+	}
 	return r.Run(ctx)
 }
 

@@ -2,7 +2,7 @@
 # Makes the repository the Kubernetes test pipelines run from: a bare Git repository with two
 # branches, packed as demo-repo.tar.gz for the git-server ConfigMap (see git-server.yaml).
 #
-#   main  a quick two-step pipeline that passes an output from one step to the next
+#   main  a quick two-step pipeline: the second step reads a file the first wrote, and an output
 #   slow  a pipeline whose middle step takes about 90 seconds, for the failover tests
 #
 # Usage: deploy/test/make-test-repo.sh OUTPUT_DIR
@@ -37,13 +37,15 @@ steps:
     run: |
       echo "hello from pod $(hostname)"
       cat README.md
+      echo "written by hello in pod $(hostname)" > shared.txt
       echo greeting=hi >> "$LAUNCHWAY_OUTPUTS"
   check:
     image: docker.io/library/busybox:1.37
     needs: hello
     run: |
       test "$LAUNCHWAY_NEEDS_HELLO_GREETING" = hi
-      echo "output received; running in pod $(hostname)"
+      cat shared.txt
+      echo "output and file received; running in pod $(hostname)"
 EOF
 git add -A
 git commit -q -m "A quick pipeline"
