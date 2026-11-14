@@ -106,3 +106,20 @@ runner:
 		t.Fatalf("a misspelt setting was accepted: %v", err)
 	}
 }
+
+func TestApprovalsConfig(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "launchway.yaml")
+	os.WriteFile(path, []byte("approvals:\n  allow_self: false\n"), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Approvals.AllowSelf == nil || *c.Approvals.AllowSelf {
+		t.Fatalf("allow_self %v", c.Approvals.AllowSelf)
+	}
+	c, err = Load(filepath.Join(dir, "missing.yaml"))
+	if err != nil || c.Approvals.AllowSelf != nil {
+		t.Fatalf("default %v %v", c.Approvals.AllowSelf, err)
+	}
+}

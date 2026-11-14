@@ -35,6 +35,8 @@ var (
 	ErrNotFound  = errors.New("not found")
 	ErrConflict  = errors.New("conflict")
 	ErrLeaseLost = errors.New("the lease is no longer valid")
+	ErrForbidden = errors.New("not allowed")
+	ErrInvalid   = errors.New("invalid")
 	ErrClosed    = errors.New("the engine is shutting down")
 	// ErrAlreadyClaimed means another server has already acted on a change
 	// to a ref (see RefChange).
@@ -49,6 +51,10 @@ type Options struct {
 	Hub      *hub.Hub      // live updates; optional
 	Logger   *slog.Logger
 	Now      func() time.Time // for tests
+	// AllowSelfApproval says whether the person who started a run may
+	// approve its approval steps. Nil means yes, because until there is
+	// sign-in everyone acts as the same configured user.
+	AllowSelfApproval *bool
 }
 
 // Engine is safe for concurrent use.
@@ -59,6 +65,7 @@ type Engine struct {
 	ttl      time.Duration
 	maxLost  int
 	now      func() time.Time
+	selfOK   bool   // AllowSelfApproval
 	instance string // tags this process's notifications, so it can ignore its own
 	channel  string // the PostgreSQL notification channel
 
@@ -149,6 +156,7 @@ func Open(o Options) (*Engine, error) {
 	}
 	e := &Engine{
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, maxLost: o.MaxLost, now: o.Now,
+		selfOK:   o.AllowSelfApproval == nil || *o.AllowSelfApproval,
 		instance: ids.New("srv"),
 		wake:     make(chan struct{}),
 		stop:     make(chan struct{}),
@@ -667,8 +675,9 @@ type LogBatch struct {
 
 // ---- lease expiry ----
 
-// reaper runs on every server. Each tick it records that a server is alive
-// and expires leases whose runners have gone quiet.
+// reaper runs on every server. Each tick it records that a server is alive,
+// expires leases whose runners have gone quiet, and rejects approvals that
+// nobody decided in time.
 func (e *Engine) reaper(ctx context.Context) {
 	defer e.bg.Done()
 	interval := min(max(e.ttl/10, 50*time.Millisecond), time.Second)
@@ -681,6 +690,7 @@ func (e *Engine) reaper(ctx context.Context) {
 		case <-t.C:
 			e.markAlive()
 			e.reap()
+			e.expireApprovals()
 		}
 	}
 }
@@ -952,14 +962,17 @@ func (c *cmd) persist() error {
 			outputs = []byte("{}")
 		}
 		if _, err := c.tx.Exec(`INSERT INTO steps(run_id, step_id, position, status, attempt, queued_at, started_at, finished_at,
-				exit_code, error, skip_kind, runner, lease_id, outputs)
-			VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+				exit_code, error, skip_kind, runner, lease_id, outputs, deadline, decided_by, decided_at, comment)
+			VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 			ON CONFLICT(run_id, step_id) DO UPDATE SET status = excluded.status, attempt = excluded.attempt,
 				queued_at = excluded.queued_at, started_at = excluded.started_at, finished_at = excluded.finished_at,
 				exit_code = excluded.exit_code, error = excluded.error, skip_kind = excluded.skip_kind,
-				runner = excluded.runner, lease_id = excluded.lease_id, outputs = excluded.outputs`,
+				runner = excluded.runner, lease_id = excluded.lease_id, outputs = excluded.outputs,
+				deadline = excluded.deadline, decided_by = excluded.decided_by, decided_at = excluded.decided_at,
+				comment = excluded.comment`,
 			st.ID, id, s.Position, s.Status, s.Attempt, s.QueuedAt, s.StartedAt, s.FinishedAt,
-			s.ExitCode, s.Error, s.SkipKind, s.Runner, s.LeaseID, string(outputs)); err != nil {
+			s.ExitCode, s.Error, s.SkipKind, s.Runner, s.LeaseID, string(outputs),
+			s.Deadline, s.DecidedBy, s.DecidedAt, s.Comment); err != nil {
 			return err
 		}
 	}
@@ -977,9 +990,11 @@ func (c *cmd) changedSteps() []string {
 	return ids
 }
 
-// advance moves the run forward: queue steps whose needs are met, skip steps
-// that cannot run, cancel what remains if a cancel was asked for, and finish
-// the run when nothing is left to do.
+// advance moves the run forward: queue steps whose needs are met (or, for
+// approvals, start waiting for a decision), skip steps that cannot run,
+// cancel what remains if a cancel was asked for, and finish the run when
+// nothing is left to do. A waiting approval is not finished, so neither is
+// its run.
 func (c *cmd) advance() {
 	st := c.st
 	if st.Status.Terminal() {
@@ -990,7 +1005,7 @@ func (c *cmd) advance() {
 		changed = false
 		for _, id := range st.Order {
 			s := st.Steps[id]
-			if st.CancelRequested && (s.Status == StepPending || s.Status == StepQueuedS) {
+			if st.CancelRequested && (s.Status == StepPending || s.Status == StepQueuedS || s.Status == StepWaitingS) {
 				c.emit(StepCanceled, Payload{Step: id, Reason: "the run was canceled"})
 				changed = true
 				continue
@@ -1018,6 +1033,9 @@ func (c *cmd) advance() {
 			case !ready:
 			case !def.When.Match(ctx):
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: "its when condition did not match"})
+				changed = true
+			case def.IsApproval():
+				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
 				changed = true
 			default:
 				c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1})

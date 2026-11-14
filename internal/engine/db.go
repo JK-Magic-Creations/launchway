@@ -247,6 +247,14 @@ CREATE TABLE run_counters (
 );
 INSERT INTO run_counters(project, last) SELECT project, MAX(number) FROM runs GROUP BY project;
 `,
+	// 4: approvals. A waiting approval has a deadline, found by every
+	//    server's reaper; a decided one records who decided, when and why.
+	`
+ALTER TABLE steps ADD COLUMN deadline {{BIG}} NOT NULL DEFAULT 0;
+ALTER TABLE steps ADD COLUMN decided_by TEXT NOT NULL DEFAULT '';
+ALTER TABLE steps ADD COLUMN decided_at {{BIG}} NOT NULL DEFAULT 0;
+ALTER TABLE steps ADD COLUMN comment TEXT NOT NULL DEFAULT '';
+`,
 }
 
 func migrate(d *dbx) error {

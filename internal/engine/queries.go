@@ -30,6 +30,7 @@ type RunSummary struct {
 	StartedAt       int64       `json:"started_at"`
 	FinishedAt      int64       `json:"finished_at"`
 	Steps           []StepBrief `json:"steps"`
+	Waiting         []string    `json:"waiting"` // approval steps waiting for a decision
 }
 
 // StepBrief is just enough of a step to draw a status strip.
@@ -61,6 +62,14 @@ type StepView struct {
 	Secrets    map[string]pipeline.SecretRef `json:"secrets,omitempty"` // references, never values
 	Retry      int                           `json:"retry"`
 	Timeout    pipeline.Duration             `json:"timeout"`
+	// Approvals only. Kind and Message come from the definition; the rest
+	// is the current wait and decision.
+	Kind      string `json:"kind,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Deadline  int64  `json:"deadline"`
+	DecidedBy string `json:"decided_by"`
+	DecidedAt int64  `json:"decided_at"`
+	Comment   string `json:"comment"`
 }
 
 // RunDetail is everything about one run.
@@ -168,6 +177,7 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 	for i, r := range runs {
 		byID[r.ID] = r
 		r.Steps = []StepBrief{}
+		r.Waiting = []string{}
 		args[i] = r.ID
 		marks[i] = "?"
 	}
@@ -183,20 +193,24 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		if err := rows.Scan(&runID, &b.ID, &b.Status); err != nil {
 			return err
 		}
-		byID[runID].Steps = append(byID[runID].Steps, b)
+		r := byID[runID]
+		r.Steps = append(r.Steps, b)
+		if b.Status == StepWaitingS {
+			r.Waiting = append(r.Waiting, b.ID)
+		}
 	}
 	return rows.Err()
 }
 
 const stepCols = `run_id, step_id, position, status, attempt, queued_at, started_at, finished_at, exit_code,
-	error, skip_kind, runner, outputs`
+	error, skip_kind, runner, outputs, deadline, decided_by, decided_at, comment`
 
 func scanStep(sc interface{ Scan(...any) error }) (*StepView, error) {
 	v := &StepView{}
 	var exit sql.NullInt64
 	var outputs string
 	if err := sc.Scan(&v.RunID, &v.ID, &v.Position, &v.Status, &v.Attempt, &v.QueuedAt, &v.StartedAt, &v.FinishedAt,
-		&exit, &v.Error, &v.SkipKind, &v.Runner, &outputs); err != nil {
+		&exit, &v.Error, &v.SkipKind, &v.Runner, &outputs, &v.Deadline, &v.DecidedBy, &v.DecidedAt, &v.Comment); err != nil {
 		return nil, err
 	}
 	if exit.Valid {
@@ -244,6 +258,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout
 			v.Secrets = def.Secrets
 			v.Container = created.Pipeline.ContainerFor(def)
+			v.Kind, v.Message = def.Kind, def.Message
 		}
 		d.StepList = append(d.StepList, *v)
 	}

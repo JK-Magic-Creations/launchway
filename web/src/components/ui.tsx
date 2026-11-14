@@ -5,7 +5,7 @@ import { onLink } from "../router";
 type AnyStatus = RunStatus | StepStatus;
 
 const LABEL: Record<AnyStatus, string> = {
-  queued: "Queued", pending: "Waiting", leased: "Starting", running: "Running",
+  queued: "Queued", pending: "Waiting", leased: "Starting", running: "Running", waiting: "Waiting for approval",
   succeeded: "Succeeded", failed: "Failed", skipped: "Skipped", canceled: "Canceled",
 };
 
@@ -15,6 +15,7 @@ export function tone(s: AnyStatus): string {
     case "failed": return "bad";
     case "running": case "leased": return "run";
     case "canceled": return "warn";
+    case "waiting": return "wait";
     default: return "idle";
   }
 }
@@ -30,6 +31,8 @@ export function StatusIcon({ status, size = 16 }: { status: AnyStatus; size?: nu
       return <svg {...common} className="ic ic-run spin"><circle cx="8" cy="8" r="6" fill="none" strokeOpacity=".25" /><path d="M8 2a6 6 0 0 1 6 6" fill="none" /></svg>;
     case "canceled":
       return <svg {...common} className="ic ic-warn"><circle cx="8" cy="8" r="7" /><path d="M5 8h6" fill="none" /></svg>;
+    case "waiting":
+      return <svg {...common} className="ic ic-wait"><circle cx="8" cy="8" r="7" /><path d="M6.3 5.2v5.6M9.7 5.2v5.6" fill="none" /></svg>;
     case "skipped":
       return <svg {...common} className="ic ic-idle"><circle cx="8" cy="8" r="6.5" fill="none" /><path d="M5 11L11 5" fill="none" /></svg>;
     default:

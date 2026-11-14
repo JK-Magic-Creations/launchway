@@ -22,6 +22,10 @@ const (
 	StepLost     EventType = "step.lost"     // the runner stopped responding
 	StepCanceled EventType = "step.canceled"
 	StepReset    EventType = "step.reset" // made pending again by a resume
+
+	StepWaiting  EventType = "step.waiting"  // an approval is waiting for a person to decide
+	StepApproved EventType = "step.approved" // a person approved it; it succeeds
+	StepRejected EventType = "step.rejected" // a person rejected it, or nobody decided in time; it fails
 )
 
 // Event is one entry in the log.
@@ -51,6 +55,8 @@ type Payload struct {
 	ExitCode *int              `json:"exit_code,omitempty"`
 	Outputs  map[string]string `json:"outputs,omitempty"`
 	SkipKind string            `json:"skip_kind,omitempty"` // condition or upstream
+	Deadline int64             `json:"deadline,omitempty"`  // step.waiting: when nobody deciding rejects it (Unix ms)
+	Comment  string            `json:"comment,omitempty"`   // step.approved and step.rejected
 
 	// shared
 	Reason string `json:"reason,omitempty"`

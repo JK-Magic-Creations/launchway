@@ -89,10 +89,12 @@ function isDone(s: RunStatus) { return s === "succeeded" || s === "failed" || s 
 function RunRow({ r, now }: { r: RunSummary; now: number }) {
   const title = r.message || r.pipeline;
   const who = r.event === "push" ? `pushed by ${r.author || r.actor}` : `started by ${r.actor || "someone"}`;
+  const waits = !isDone(r.status) && (r.waiting?.length ?? 0) > 0;
+  const shown = waits ? "waiting" : r.status;
   return (
     <li>
-      <Link href={`/runs/${r.id}`} className={`runrow t-${r.status}`}>
-        <span className="runrow-status" title={statusLabel(r.status)}><StatusIcon status={r.status} size={20} /></span>
+      <Link href={waits ? `/runs/${r.id}?step=${encodeURIComponent(r.waiting[0])}` : `/runs/${r.id}`} className={`runrow t-${r.status}`}>
+        <span className="runrow-status" title={statusLabel(shown)}><StatusIcon status={shown} size={20} /></span>
         <span className="runrow-main">
           <span className="runrow-title">
             <span className="runrow-project">{r.project}</span>
@@ -103,6 +105,7 @@ function RunRow({ r, now }: { r: RunSummary; now: number }) {
             {(r.branch || r.tag) && <span className="meta"><BranchIcon />{r.branch || r.tag}</span>}
             {r.sha && <span className="meta mono"><CommitIcon />{shortSha(r.sha)}</span>}
             <span className="meta">{who}</span>
+            {waits && <span className="meta wait">waiting for approval: {r.waiting.join(", ")}</span>}
             {r.cancel_requested && !isDone(r.status) && <span className="meta warn">canceling…</span>}
           </span>
         </span>

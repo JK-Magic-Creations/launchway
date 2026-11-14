@@ -23,9 +23,8 @@ type printer struct {
 var palette = []string{"36", "35", "34", "33", "32", "96", "95", "94"}
 
 func newPrinter(p *pipeline.Pipeline) *printer {
-	fi, _ := os.Stdout.Stat()
 	pr := &printer{
-		color:   fi != nil && fi.Mode()&os.ModeCharDevice != 0 && os.Getenv("NO_COLOR") == "",
+		color:   isTerminal(os.Stdout) && os.Getenv("NO_COLOR") == "",
 		colorOf: map[string]string{}, status: map[string]engine.StepStatus{},
 		attempt: map[string]int{}, seq: map[string]int{},
 	}
@@ -83,7 +82,13 @@ func (pr *printer) update(eng *engine.Engine, d *engine.RunDetail) {
 		}
 		pr.status[s.ID], pr.attempt[s.ID] = s.Status, s.Attempt
 		switch s.Status {
+		case engine.StepWaitingS:
+			fmt.Println(pr.prefix(s.ID) + pr.c("33;1", "⏸ waiting for approval: ") + s.Message)
 		case engine.StepSucceeded:
+			if s.Kind == pipeline.KindApproval {
+				fmt.Println(pr.prefix(s.ID) + pr.c("32", "✓ approved by "+s.DecidedBy))
+				break
+			}
 			fmt.Println(pr.prefix(s.ID) + pr.c("32", "✓ succeeded "+took(s)))
 		case engine.StepFailed:
 			fmt.Println(pr.prefix(s.ID) + pr.c("31;1", "✗ failed: "+s.Error))

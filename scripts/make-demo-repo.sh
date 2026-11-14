@@ -80,9 +80,17 @@ steps:
       fi
       echo "GET /healthz → 200 OK"
 
+  # Pauses the run until someone approves it, on main only.
+  approve-dev:
+    kind: approval
+    needs: smoke-test
+    when: { branch: main }
+    message: Deploy this build to dev?
+    timeout: 24h
+
   deploy-dev:
     image: docker.io/library/alpine:3.22
-    needs: smoke-test
+    needs: approve-dev
     when: { branch: main }
     run: |
       echo "Would deploy $LAUNCHWAY_NEEDS_BUILD_IMAGE to dev"

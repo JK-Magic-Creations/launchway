@@ -65,6 +65,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/runs/{id}/steps/{step}/logs", s.stepLogs)
 	mux.HandleFunc("POST /api/v1/runs/{id}/cancel", s.cancelRun)
 	mux.HandleFunc("POST /api/v1/runs/{id}/resume", s.resumeRun)
+	mux.HandleFunc("POST /api/v1/runs/{id}/steps/{step}/approve", s.decide(true))
+	mux.HandleFunc("POST /api/v1/runs/{id}/steps/{step}/reject", s.decide(false))
+	mux.HandleFunc("GET /api/v1/approvals", s.listApprovals)
 	mux.HandleFunc("GET /api/v1/runners", s.listRunners)
 	mux.HandleFunc("POST /api/v1/validate", s.validate)
 	mux.HandleFunc("GET /api/v1/stream", s.stream)
@@ -97,6 +100,10 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusNotFound, err.Error())
 	case errors.Is(err, engine.ErrConflict):
 		writeErr(w, http.StatusConflict, strings.TrimPrefix(err.Error(), "conflict: "))
+	case errors.Is(err, engine.ErrForbidden):
+		writeErr(w, http.StatusForbidden, strings.TrimPrefix(err.Error(), "not allowed: "))
+	case errors.Is(err, engine.ErrInvalid):
+		writeErr(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "invalid: "))
 	case errors.Is(err, engine.ErrClosed):
 		writeErr(w, http.StatusServiceUnavailable, err.Error())
 	default:
@@ -420,6 +427,33 @@ func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// decide approves or rejects an approval step, as the configured user. The
+// body is optional: {"comment": "..."}.
+func (s *Server) decide(approve bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Comment string `json:"comment"`
+		}
+		if !decode(w, r, &in) {
+			return
+		}
+		if err := s.Engine.Decide(r.PathValue("id"), r.PathValue("step"), approve, s.Actor, in.Comment); err != nil {
+			s.fail(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	}
+}
+
+func (s *Server) listApprovals(w http.ResponseWriter, r *http.Request) {
+	list, err := s.Engine.Approvals()
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, list)
 }
 
 func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {

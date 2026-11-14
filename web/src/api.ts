@@ -2,7 +2,7 @@
 
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
 export type StepStatus =
-  | "pending" | "queued" | "leased" | "running"
+  | "pending" | "queued" | "leased" | "running" | "waiting"
   | "succeeded" | "failed" | "skipped" | "canceled";
 
 export interface StepBrief { id: string; status: StepStatus }
@@ -26,6 +26,8 @@ export interface RunSummary {
   started_at: number;
   finished_at: number;
   steps: StepBrief[];
+  /** Approval steps waiting for someone to decide. */
+  waiting: string[];
 }
 
 export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
@@ -55,6 +57,13 @@ export interface StepView {
   secrets?: Record<string, SecretRef>;
   retry: number;
   timeout: string;
+  // Approvals only. A waiting approval started waiting at started_at.
+  kind?: "approval";
+  message?: string;
+  deadline: number;
+  decided_by: string;
+  decided_at: number;
+  comment: string;
 }
 
 export interface GraphContainer {
@@ -63,6 +72,8 @@ export interface GraphContainer {
 
 export interface GraphStep {
   id: string;
+  kind?: "approval";
+  message?: string;
   container?: string;
   image: string;
   run: string;
@@ -113,6 +124,21 @@ export interface Project {
 
 export interface Ref { name: string; kind: "branch" | "tag"; sha: string; subject: string; author: string; committed_at: number }
 
+export interface Approval {
+  run_id: string;
+  project: string;
+  run_number: number;
+  step_id: string;
+  message: string;
+  started_by: string;
+  commit_subject: string;
+  short_sha: string;
+  branch: string;
+  tag?: string;
+  waiting_since: number;
+  deadline: number;
+}
+
 export interface Runner { id: string; name: string; executor: string; version: string; last_seen: number }
 
 export interface Problem { line?: number; column?: number; path?: string; message: string }
@@ -162,6 +188,11 @@ export const api = {
       `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/logs?attempt=${attempt}&after=${after}`),
   cancel: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/cancel`),
   resume: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/resume`),
+  approve: (id: string, step: string, comment: string) =>
+    call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/approve`, { comment }),
+  reject: (id: string, step: string, comment: string) =>
+    call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/reject`, { comment }),
+  approvals: () => call<Approval[]>("GET", "/api/v1/approvals"),
   projects: () => call<Project[]>("GET", "/api/v1/projects"),
   refs: (name: string) => call<Ref[]>("GET", `/api/v1/projects/${name}/refs`),
   startRun: (name: string, ref: string) => call<RunSummary>("POST", `/api/v1/projects/${name}/runs`, { ref }),

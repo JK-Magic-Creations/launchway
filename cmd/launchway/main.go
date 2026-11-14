@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/term"
 
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/config"
@@ -118,7 +121,7 @@ func cmdServer(args []string) error {
 	slog.SetDefault(log)
 
 	dbAddr := cfg.DatabaseAddr()
-	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log})
+	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: cfg.Approvals.AllowSelf})
 	if err != nil {
 		return err
 	}
@@ -405,12 +408,14 @@ func cmdRun(args []string) error {
 	pr := newPrinter(p)
 	pr.header(p, ex.Name(), dir, trig)
 	canceled := false
+	ask := newAsker(eng, run.ID, trig.Actor, pr)
 	for {
 		d, err := eng.GetRun(run.ID)
 		if err != nil {
 			return err
 		}
 		pr.update(eng, d)
+		ask.update(d)
 		if d.Status.Terminal() {
 			// A local run ends with this process, so release what it held.
 			if cl, ok := ex.(executor.Cleaner); ok {
@@ -435,10 +440,103 @@ func cmdRun(args []string) error {
 			} else {
 				return exitErr(130)
 			}
+		case line, ok := <-ask.answers():
+			ask.answer(line, ok)
 		case <-time.After(150 * time.Millisecond):
 		}
 	}
 }
+
+// asker decides approval steps in a local run: it asks on the terminal, one
+// at a time, or rejects them if there is no terminal to ask on.
+type asker struct {
+	eng      *engine.Engine
+	runID    string
+	actor    string
+	pr       *printer
+	lines    chan string // what is typed on stdin; nil if stdin is not a terminal
+	asked    map[string]bool
+	question string // the step whose answer is awaited, or ""
+}
+
+func newAsker(eng *engine.Engine, runID, actor string, pr *printer) *asker {
+	a := &asker{eng: eng, runID: runID, actor: actor, pr: pr, asked: map[string]bool{}}
+	if isTerminal(os.Stdin) {
+		a.lines = make(chan string)
+		go func() {
+			sc := bufio.NewScanner(os.Stdin)
+			for sc.Scan() {
+				a.lines <- sc.Text()
+			}
+			close(a.lines)
+		}()
+	}
+	return a
+}
+
+// update asks about the next approval that is waiting, if nothing is being
+// asked already, and notices when the one being asked about stops waiting.
+func (a *asker) update(d *engine.RunDetail) {
+	for i := range d.StepList {
+		s := &d.StepList[i]
+		if s.ID == a.question && s.Status != engine.StepWaitingS {
+			fmt.Println() // it was decided another way (canceled, or it expired)
+			a.question = ""
+		}
+	}
+	for i := range d.StepList {
+		s := &d.StepList[i]
+		key := fmt.Sprintf("%s#%d", s.ID, s.Attempt)
+		if a.question != "" || s.Status != engine.StepWaitingS || a.asked[key] {
+			continue
+		}
+		a.asked[key] = true
+		if a.lines == nil {
+			a.decide(s.ID, false, byCommand, "approvals need a terminal to answer in, or a Launchway server")
+			continue
+		}
+		a.question = s.ID
+		fmt.Print(a.pr.prefix(s.ID) + "Approve? [y/N] ")
+	}
+}
+
+// answers is where typed answers arrive while a question is open.
+func (a *asker) answers() <-chan string {
+	if a.question == "" {
+		return nil
+	}
+	return a.lines
+}
+
+func (a *asker) answer(line string, ok bool) {
+	id := a.question
+	a.question = ""
+	if !ok {
+		fmt.Println()
+		a.lines = nil // stdin is closed: nobody can answer any more
+		a.decide(id, false, byCommand, "stdin was closed before anyone answered")
+		return
+	}
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "y", "yes":
+		a.decide(id, true, a.actor, "")
+	default:
+		a.decide(id, false, a.actor, "")
+	}
+}
+
+// byCommand is the actor recorded when nobody could be asked.
+const byCommand = "launchway run"
+
+func (a *asker) decide(stepID string, approve bool, actor, comment string) {
+	if err := a.eng.Decide(a.runID, stepID, approve, actor, comment); err != nil {
+		fmt.Fprintln(os.Stderr, a.pr.prefix(stepID)+err.Error())
+	}
+}
+
+// isTerminal reports whether f is an interactive terminal (not merely a
+// character device such as /dev/null).
+func isTerminal(f *os.File) bool { return term.IsTerminal(int(f.Fd())) }
 
 // k8sFlags adds the Kubernetes executor's command-line settings.
 func k8sFlags(fs *flag.FlagSet) *executor.KubernetesOptions {

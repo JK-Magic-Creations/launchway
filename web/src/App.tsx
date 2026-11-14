@@ -1,32 +1,38 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
+import { useApprovals } from "./live";
 import { match, onLink, usePath } from "./router";
 import { RunsPage } from "./pages/Runs";
 import { RunPage } from "./pages/Run";
 import { ProjectsPage } from "./pages/Projects";
 import { RunnersPage } from "./pages/Runners";
 import { PlaygroundPage } from "./pages/Playground";
+import { ApprovalsPage } from "./pages/Approvals";
 import { Empty, Link } from "./components/ui";
 
 const NAV = [
   { href: "/", label: "Runs", active: (p: string) => p === "/" || p.startsWith("/runs") },
+  { href: "/approvals", label: "Approvals", active: (p: string) => p.startsWith("/approvals") },
   { href: "/projects", label: "Projects", active: (p: string) => p.startsWith("/projects") },
   { href: "/runners", label: "Runners", active: (p: string) => p.startsWith("/runners") },
   { href: "/playground", label: "Playground", active: (p: string) => p.startsWith("/playground") },
 ];
 
 // Shown so people can see where this is going; none of these work yet.
-const NEXT = ["Environments", "Releases", "Approvals", "Infrastructure", "Policy"];
+const NEXT = ["Environments", "Releases", "Infrastructure", "Policy"];
 
 export function App() {
   const path = usePath();
   const [version, setVersion] = useState("");
+  const approvals = useApprovals();
+  const waiting = approvals.list?.length ?? 0;
   useEffect(() => { api.info().then((i) => setVersion(i.version)).catch(() => {}); }, []);
 
   let page;
   let m;
   if (path === "/") page = <RunsPage />;
   else if ((m = match("/runs/:id", path))) page = <RunPage id={m.id} />;
+  else if (path === "/approvals") page = <ApprovalsPage approvals={approvals} />;
   else if (path === "/projects") page = <ProjectsPage />;
   else if (path === "/runners") page = <RunnersPage />;
   else if (path === "/playground") page = <PlaygroundPage />;
@@ -47,7 +53,12 @@ export function App() {
         <div className="nav-links">
           {NAV.map((n) => (
             <a key={n.href} href={n.href} onClick={onLink} className={"nav-link" + (n.active(path) ? " nav-on" : "")}
-              aria-current={n.active(path) ? "page" : undefined}>{n.label}</a>
+              aria-current={n.active(path) ? "page" : undefined}>
+              {n.label}
+              {n.href === "/approvals" && waiting > 0 && (
+                <span className="nav-badge" aria-label={`${waiting} waiting`}>{waiting}</span>
+              )}
+            </a>
           ))}
         </div>
         <div className="nav-next">

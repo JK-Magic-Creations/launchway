@@ -80,6 +80,9 @@ export function Graph({ levels, steps, selected, onSelect, now, compact, describ
                 {describe ? describe(s) : s.status === "skipped" ? (s.skip_kind === "condition" ? "condition not met" : "skipped")
                   : s.status === "pending" ? "waiting"
                   : s.status === "queued" ? "waiting for a runner"
+                  : s.status === "waiting" ? "waiting for approval"
+                  : s.kind === "approval" && s.status === "succeeded" ? `approved by ${s.decided_by}`
+                  : s.kind === "approval" && s.status === "failed" ? (s.decided_by ? `rejected by ${s.decided_by}` : "nobody decided")
                   : t || statusLabel(s.status)}
               </span>
             </button>

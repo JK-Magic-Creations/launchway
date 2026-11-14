@@ -1,19 +1,42 @@
 # Launchway
 
-A build and delivery platform: one binary that runs your pipelines on a laptop, a home server, a
-Kubernetes cluster or a fleet of runners, with a live web UI.
+A build and delivery platform for teams and enterprises, run as a shared service on Kubernetes or
+on your own servers.
 
 What Launchway is built around:
 
-- a real delivery model (releases, promotion, verification, rollback);
-- pipelines that run the same on a laptop as on the server;
-- runs that survive crashes and resume from the failed step;
-- runners that only ever connect outbound.
+- **High availability from the ground up.** Several servers share one PostgreSQL database with no
+  leader. Nothing is held in a server's memory, so losing one loses no work.
+- **Durable runs.** Every change to a run is recorded as an event. A run survives crashes and
+  restarts, and resumes from the step that failed.
+- **Runners that only connect outbound**, in any network, cluster or cloud. Steps run in Kubernetes
+  pods or containers, with named toolbox containers and services sharing a workspace.
+- **Secrets that never reach the server.** Pipelines hold references; the runner fetches values
+  from Vault or OpenBao just before a step and masks them in output.
+- **A delivery model, not only builds:** approvals today; environments, releases, promotion,
+  verification and rollback are next.
+- **Pipelines you can check and run anywhere**, with line-numbered errors before anything starts.
 
-It is early. The foundation described below works and is tested; much of the rest is designed
-but not built yet (see [Status](#status)).
+It is early. What is described below works and is tested, including with several servers and with
+real Kubernetes, PostgreSQL and OpenBao. Much of the rest is designed but not built yet (see
+[Status](#status)). There is no sign-in yet, so do not expose it to an untrusted network.
 
-## Try it
+## Running several servers
+
+Point every server at the same PostgreSQL database and put them behind a load balancer:
+
+```yaml
+# launchway.yaml
+listen: 0.0.0.0:8080
+database: postgres://launchway:...@db.internal:5432/launchway
+```
+
+`LAUNCHWAY_DATABASE` overrides the file. Each server exposes `/healthz` (the process is up) and
+`/readyz` (the database answers). Runners may connect to any server. With no `database` setting a
+single server keeps its data in an embedded SQLite file, which suits development and small
+installs.
+
+## Try it on one machine
 
 You need Go 1.27+, Node 24+, Git, and Podman or Docker.
 
@@ -35,6 +58,8 @@ Things to try:
 - **Resume a failed run.** The demo's `smoke-test` fails on its first attempt on purpose while a
   file called `FLAKY` exists. Press *Resume from smoke-test*. Only that step and the ones after it
   run again; the earlier results are kept.
+- **Approve a deployment.** On `main`, the demo waits for approval before `deploy-dev`. Open
+  **Approvals**, or the run, and approve or reject it.
 - **Push to trigger a run.** Commit to `../launchway-demo` on `main` or `feature/*` and push. A run
   starts within a few seconds, and *Recent pushes* on the project explains every decision.
 - **Survive a restart.** Stop the server while a step is running and start it again. The step is
@@ -81,7 +106,9 @@ steps:
 | `secrets` | Environment variables whose values a runner looks up; see [Secrets](#secrets) |
 | `container` | A named container from the `containers` section, instead of `image` |
 | `retry` | Extra attempts after a failure |
-| `timeout` | Per attempt; default 1h |
+| `timeout` | Per attempt; default 1h, at most 24h. For an approval, how long to wait for a decision; default 24h, at most 30 days |
+| `kind` | `step` (the default) or `approval`; see [Approvals](#approvals) |
+| `message` | For an approval: the question to decide, one line of at most 500 characters |
 
 ### Containers and services
 
@@ -114,6 +141,42 @@ Mistakes are reported with line numbers, before anything runs:
 ```
 $ launchway validate
 .launchway/pipeline.yaml:14: steps.build.needs: needs "tests", but there is no step with that name
+```
+
+## Approvals
+
+An approval step pauses the run until a person decides:
+
+```yaml
+steps:
+  approve-prod:
+    kind: approval
+    needs: smoke-test
+    when: { branch: main }
+    message: Deploy 2.14 to production?
+    timeout: 24h
+  deploy-prod:
+    image: alpine:3.22
+    needs: approve-prod
+    run: ./deploy.sh
+```
+
+An approval takes `needs`, `when`, `message` and `timeout`, and runs nothing, so it has no image or
+script. When its needs have succeeded it waits, and every pending approval is listed on the
+**Approvals** page. Approving lets the steps after it run. Rejecting, or nobody deciding before the
+timeout, fails it: the steps after it are skipped, and resuming the run asks again. Each decision
+is kept with the run: who made it, when, and their comment.
+
+Decide in the web UI, or over the API with `POST /api/v1/runs/{id}/steps/{step}/approve` (or
+`/reject`) and an optional `{"comment": "..."}`. `launchway run` asks in the terminal, and rejects
+the approval if there is no terminal to ask in.
+
+Until there is sign-in, everyone acts as the server's configured `user`, who may approve runs they
+started. To forbid that once separate users exist, set:
+
+```yaml
+approvals:
+  allow_self: false   # the person who started a run may reject it, but not approve it
 ```
 
 ## Secrets
@@ -193,7 +256,7 @@ launchway graph    [file]                     the graph a pipeline produces, as 
 | Package | What it does |
 |---|---|
 | `internal/pipeline` | Parses and validates the pipeline file into a typed graph |
-| `internal/engine` | The durable run engine. Every change is an event in SQLite and state is rebuilt from events. Runners hold steps on leases; a lost runner's step is run again. Handles retries, cancel and resume. |
+| `internal/engine` | The durable run engine. Every change is an event in the database (PostgreSQL, or SQLite for one server) and state is rebuilt from events. Runners hold steps on leases; a lost runner's step is run again. Handles retries, cancel, resume and approvals. |
 | `internal/executor` | Runs a step in a Podman or Docker container, in a Kubernetes pod, or on the host |
 | `internal/runner` | Takes steps from the server over HTTP, streams logs, sends heartbeats |
 | `internal/secrets` | Secret stores (env, file, Vault/OpenBao) and masking, used only by runners |
@@ -207,6 +270,7 @@ launchway graph    [file]                     the graph a pipeline produces, as 
 - lost and killed runners;
 - many runners competing for the same steps;
 - retries, cancel and resume;
+- approvals, including two servers deciding or expiring the same one at once;
 - real Git repositories;
 - secrets kept out of the database, events, logs and API (`make test-vault` adds a real OpenBao);
 - real containers (`make test-containers`);
@@ -221,6 +285,7 @@ Built so far:
 - the Podman, Docker, host and Kubernetes executors;
 - named containers and services;
 - secrets (environment, files, Vault and OpenBao);
+- approvals;
 - Git polling;
 - the web UI.
 
@@ -229,7 +294,7 @@ Not built yet, in the order planned:
 - Image builds
 - Releases and promotion
 - The Argo CD driver
-- Approvals and inputs
+- Inputs
 - Policy
 - Infrastructure runs
 - VM fleets

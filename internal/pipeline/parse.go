@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 )
@@ -17,6 +18,10 @@ const (
 	DefaultTimeout = time.Hour
 	MaxTimeout     = 24 * time.Hour
 	MaxRetry       = 10
+
+	DefaultApprovalTimeout = 24 * time.Hour
+	MaxApprovalTimeout     = 30 * 24 * time.Hour
+	MaxMessageLen          = 500 // characters in an approval's message
 )
 
 var (
@@ -148,7 +153,6 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 var notYet = map[string]string{
 	"uses":     "templates and libraries arrive in a later milestone",
 	"with":     "templates and libraries arrive in a later milestone",
-	"kind":     "release, promote, approval and input nodes arrive in a later milestone",
 	"outputs":  "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
 	"runs_on":  "runner pools arrive in a later milestone",
 	"matrix":   "matrix expansion arrives in a later milestone",
@@ -178,7 +182,13 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 }
 
 var (
-	stepKeys      = []string{"container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout"}
+	stepKeys = []string{"kind", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "message"}
+	// approvalOnly and runOnly are the keys that make sense for one kind of
+	// step and not the other.
+	approvalOnly = []string{"message"}
+	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry"}
+	// Kinds from the design that are recognised but not implemented yet.
+	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
 	storeNameRe   = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
 	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command"}
@@ -267,11 +277,17 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		if !stepIDRe.MatchString(k.Value) {
 			ps.add(k, at, "%q is not a valid step name: use lower-case letters, digits, hyphens and underscores", k.Value)
 		}
-		s := &Step{ID: k.Value, Line: k.Line, Timeout: Duration(DefaultTimeout)}
-		var secretsNode *yaml.Node
+		s := &Step{ID: k.Value, Line: k.Line}
+		var secretsNode, kindNode, timeoutNode *yaml.Node
+		var timeout time.Duration
+		keys := map[string]*yaml.Node{} // the keys written, for checks that depend on the kind
 		ps.eachKey(v, at, stepKeys, func(k2, v2 *yaml.Node) {
+			keys[k2.Value] = k2
 			where := at + "." + k2.Value
 			switch k2.Value {
+			case "kind":
+				kindNode = v2
+				s.Kind = ps.str(v2, where)
 			case "container":
 				s.Container = ps.str(v2, where)
 			case "image":
@@ -294,43 +310,91 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				}
 			case "timeout":
 				d, err := time.ParseDuration(ps.str(v2, where))
-				switch {
-				case err != nil:
+				if err != nil {
 					ps.add(v2, where, "write a duration such as 30s, 10m or 1h")
-				case d < time.Second || d > MaxTimeout:
-					ps.add(v2, where, "timeout must be between 1s and %s", MaxTimeout)
-				default:
-					s.Timeout = Duration(d)
+				} else {
+					timeoutNode, timeout = v2, d
 				}
+			case "message":
+				s.Message = strings.TrimSpace(ps.str(v2, where))
 			}
 		})
 		switch {
-		case s.Container != "" && s.Image != "":
-			ps.add(k, at, "give either container or image, not both")
-		case s.Container != "":
-			switch c := p.Container(s.Container); {
-			case c == nil:
-				ps.add(k, at+".container", "there is no container called %q under containers", s.Container)
-			case c.Service:
-				ps.add(k, at+".container", "%q is a service; steps cannot run in it", s.Container)
-			default:
-				s.Image = c.Image
-			}
-		case strings.TrimSpace(s.Image) == "":
-			ps.add(k, at, "say what to run in, for example: image: alpine:3.22, or container: one of the containers above")
+		case s.Kind == "" || s.Kind == KindStep:
+			s.Kind = "" // the default is not written into the graph
+			ps.parseRunStep(k, at, s, p, keys, secretsNode)
+		case s.Kind == KindApproval:
+			ps.parseApproval(k, at, s, keys)
+		case kindsNotYet[s.Kind]:
+			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote and input steps arrive in a later milestone)", s.Kind)
+		default:
+			ps.add(kindNode, at+".kind", "unknown kind %q; use step or approval", s.Kind)
 		}
-		if strings.TrimSpace(s.Run) == "" {
-			ps.add(k, at+".run", "a script to run is required")
+		def, most := DefaultTimeout, MaxTimeout
+		if s.IsApproval() {
+			def, most = DefaultApprovalTimeout, MaxApprovalTimeout
 		}
-		if secretsNode != nil && secretsNode.Kind == yaml.MappingNode {
-			for i := 0; i < len(secretsNode.Content); i += 2 {
-				name := secretsNode.Content[i]
-				if _, ok := s.Env[name.Value]; ok {
-					ps.add(name, at+".secrets."+name.Value, "%q is also set under env; a variable comes from one or the other", name.Value)
-				}
+		s.Timeout = Duration(def)
+		if timeoutNode != nil {
+			if timeout < time.Second || timeout > most {
+				ps.add(timeoutNode, at+".timeout", "timeout must be between 1s and %s", Duration(most).Short())
+			} else {
+				s.Timeout = Duration(timeout)
 			}
 		}
 		p.Steps = append(p.Steps, s)
+	}
+}
+
+// parseRunStep checks a step that runs a script.
+func (ps *parser) parseRunStep(k *yaml.Node, at string, s *Step, p *Pipeline, keys map[string]*yaml.Node, secretsNode *yaml.Node) {
+	for _, key := range approvalOnly {
+		if n := keys[key]; n != nil {
+			ps.add(n, at+"."+key, "%q is only for approval steps (kind: approval)", key)
+		}
+	}
+	switch {
+	case s.Container != "" && s.Image != "":
+		ps.add(k, at, "give either container or image, not both")
+	case s.Container != "":
+		switch c := p.Container(s.Container); {
+		case c == nil:
+			ps.add(k, at+".container", "there is no container called %q under containers", s.Container)
+		case c.Service:
+			ps.add(k, at+".container", "%q is a service; steps cannot run in it", s.Container)
+		default:
+			s.Image = c.Image
+		}
+	case strings.TrimSpace(s.Image) == "":
+		ps.add(k, at, "say what to run in, for example: image: alpine:3.22, or container: one of the containers above")
+	}
+	if strings.TrimSpace(s.Run) == "" {
+		ps.add(k, at+".run", "a script to run is required")
+	}
+	if secretsNode != nil && secretsNode.Kind == yaml.MappingNode {
+		for i := 0; i < len(secretsNode.Content); i += 2 {
+			name := secretsNode.Content[i]
+			if _, ok := s.Env[name.Value]; ok {
+				ps.add(name, at+".secrets."+name.Value, "%q is also set under env; a variable comes from one or the other", name.Value)
+			}
+		}
+	}
+}
+
+// parseApproval checks a step that waits for a person to decide.
+func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[string]*yaml.Node) {
+	for _, key := range runOnly {
+		if n := keys[key]; n != nil {
+			ps.add(n, at+"."+key, "an approval runs nothing, so it takes no %s", key)
+		}
+	}
+	switch {
+	case s.Message == "":
+		ps.add(k, at+".message", "an approval needs a message saying what to decide, for example: message: Deploy to production?")
+	case strings.ContainsAny(s.Message, "\r\n"):
+		ps.add(keys["message"], at+".message", "the message must be one line")
+	case utf8.RuneCountInString(s.Message) > MaxMessageLen:
+		ps.add(keys["message"], at+".message", "the message is longer than %d characters", MaxMessageLen)
 	}
 }
 

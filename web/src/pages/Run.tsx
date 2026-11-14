@@ -6,6 +6,11 @@ import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
 
+// stepFromURL is the step named by ?step= in the address, if any.
+function stepFromURL(): string | null {
+  return new URLSearchParams(location.search).get("step");
+}
+
 type Tab = "graph" | "events" | "definition";
 
 export function RunPage({ id }: { id: string }) {
@@ -20,13 +25,20 @@ export function RunPage({ id }: { id: string }) {
   const load = useCallback(() => {
     api.run(id).then((r) => { setRun(r); setError(null); }).catch(setError);
   }, [id]);
-  useEffect(() => { setRun(null); setSelected(null); setTab("graph"); load(); }, [id, load]);
+  useEffect(() => { setRun(null); setSelected(stepFromURL()); setTab("graph"); load(); }, [id, load]);
 
-  // Pick a sensible step to show: the first failed one, else a running one,
-  // else the last that ran.
+  // Keep the selected step in the address, so it can be shared and reloaded.
+  const select = useCallback((step: string) => {
+    setSelected(step);
+    history.replaceState(null, "", `${location.pathname}?step=${encodeURIComponent(step)}`);
+  }, []);
+
+  // Pick a sensible step to show: one waiting for approval, else the first
+  // failed one, else a running one, else the last that ran.
   useEffect(() => {
-    if (!run || selected) return;
-    const s = run.step_list.find((x) => x.status === "failed")
+    if (!run || (selected && run.step_list.some((x) => x.id === selected))) return;
+    const s = run.step_list.find((x) => x.status === "waiting")
+      ?? run.step_list.find((x) => x.status === "failed")
       ?? run.step_list.find((x) => x.status === "running")
       ?? [...run.step_list].reverse().find((x) => x.attempt > 0)
       ?? run.step_list[0];
@@ -39,7 +51,8 @@ export function RunPage({ id }: { id: string }) {
       const s = d as StepView;
       setRun((prev) => {
         if (!prev) return prev;
-        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets } : x)) };
+        // Live step updates carry the step's state, not its definition.
+        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets, kind: x.kind, message: x.message } : x)) };
       });
     },
     log: (d) => {
@@ -64,6 +77,7 @@ export function RunPage({ id }: { id: string }) {
   const step = run.step_list.find((s) => s.id === selected) ?? null;
   const failedCount = run.step_list.filter((s) => s.status === "failed").length;
   const firstFailed = run.step_list.find((s) => s.status === "failed");
+  const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting");
 
   return (
     <div className="page page-wide">
@@ -74,7 +88,9 @@ export function RunPage({ id }: { id: string }) {
       <header className="run-head">
         <div className="run-head-main">
           <div className="run-title-row">
-            <StatusPill status={run.status} label={run.cancel_requested && !done ? "Canceling" : undefined} />
+            {run.cancel_requested && !done ? <StatusPill status={run.status} label="Canceling" />
+              : waitingStep ? <StatusPill status="waiting" />
+              : <StatusPill status={run.status} />}
             <h1>{run.message || run.pipeline}</h1>
           </div>
           <div className="run-meta">
@@ -93,13 +109,20 @@ export function RunPage({ id }: { id: string }) {
           )}
           {(run.status === "failed" || run.status === "canceled") && (
             <button type="button" className="btn btn-primary" disabled={busy}
-              onClick={() => act(async () => { await api.resume(run.id); if (firstFailed) setSelected(firstFailed.id); })}>
+              onClick={() => act(async () => { await api.resume(run.id); if (firstFailed) select(firstFailed.id); })}>
               {firstFailed ? `Resume from ${firstFailed.id}` : "Resume"}
             </button>
           )}
         </div>
       </header>
       <ErrorBox error={actionErr} />
+
+      {waitingStep && selected !== waitingStep.id && (
+        <div className="callout callout-wait">
+          <span><strong>{waitingStep.id}</strong> is waiting for approval: {waitingStep.message}</span>
+          <button type="button" className="btn" onClick={() => select(waitingStep.id)}>Decide</button>
+        </div>
+      )}
 
       {run.status === "failed" && firstFailed && (
         <div className="callout callout-bad">
@@ -117,9 +140,11 @@ export function RunPage({ id }: { id: string }) {
       {tab === "graph" && (
         <>
           <section className="card card-flush">
-            <Graph levels={run.levels} steps={run.step_list} selected={selected} onSelect={setSelected} now={now} />
+            <Graph levels={run.levels} steps={run.step_list} selected={selected} onSelect={select} now={now} />
           </section>
-          {step && <StepPanel run={run} step={step} now={now} sink={logSink} />}
+          {step && (step.kind === "approval"
+            ? <ApprovalPanel run={run} step={step} now={now} />
+            : <StepPanel run={run} step={step} now={now} sink={logSink} />)}
         </>
       )}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
@@ -225,6 +250,93 @@ function StepPanel({ run, step, now, sink }: {
   );
 }
 
+// ApprovalPanel shows an approval step: what it asks, the context to decide
+// in, and the decision, or the buttons to make one.
+function ApprovalPanel({ run, step, now }: { run: RunDetail; step: StepView; now: number }) {
+  const [comment, setComment] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  useEffect(() => { setComment(""); setError(null); }, [step.id, step.attempt]);
+
+  const decide = async (approve: boolean) => {
+    setBusy(true); setError(null);
+    try {
+      await (approve ? api.approve : api.reject)(run.id, step.id, comment);
+      setComment("");
+    } catch (e) { setError(e); } finally { setBusy(false); }
+  };
+
+  const waiting = step.status === "waiting";
+  // What had succeeded when it asked, not what ran after a decision.
+  const succeeded = run.step_list.filter((s) => s.status === "succeeded" && s.id !== step.id &&
+    (!step.started_at || s.finished_at <= step.started_at));
+  const starter = run.event === "push" ? `pushed by ${run.author || run.actor}` : `started by ${run.actor || "someone"}`;
+  const said = step.comment && <blockquote className="approval-comment">{step.comment}</blockquote>;
+
+  return (
+    <section className="steppanel">
+      <div className="steppanel-head">
+        <div>
+          <h2>{step.id}</h2>
+          <div className="run-meta">
+            <StatusPill status={step.status} />
+            <span className="meta">approval</span>
+            {step.attempt > 1 && <span className="meta">asked {step.attempt} times</span>}
+          </div>
+        </div>
+      </div>
+      <div className="card approval">
+        <p className="approval-q">{step.message}</p>
+        <div className="run-meta">
+          {step.started_at > 0 && <span className="meta" title={clock(step.started_at)}>asked {ago(step.started_at, now)}</span>}
+          <span className="meta">run {starter}</span>
+          {waiting && (
+            <span className="meta wait" title={clock(step.deadline)}>
+              {step.deadline > now ? `expires in ${duration(step.deadline - now)}, ${clock(step.deadline)}` : "expiring now"}
+            </span>
+          )}
+        </div>
+        <dl className="kv approval-ctx">
+          {run.message && <><dt>Commit</dt><dd>{run.message}</dd></>}
+          {(run.branch || run.tag) && <><dt>{run.branch ? "Branch" : "Tag"}</dt><dd><span className="meta"><BranchIcon />{run.branch || run.tag}</span></dd></>}
+          {run.sha && <><dt>Commit id</dt><dd><span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span></dd></>}
+          <dt>Succeeded so far</dt><dd>{succeeded.length ? succeeded.map((s) => s.id).join(", ") : "nothing yet"}</dd>
+        </dl>
+
+        {waiting && (
+          <form className="approval-form" onSubmit={(e) => e.preventDefault()}>
+            <label className="field">
+              <span>Comment <span className="faint">(optional, kept with the decision)</span></span>
+              <textarea value={comment} maxLength={2000} rows={3} onChange={(e) => setComment(e.target.value)} />
+            </label>
+            <ErrorBox error={error} />
+            <div className="approval-actions">
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)}>Approve</button>
+              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)}>Reject</button>
+            </div>
+          </form>
+        )}
+        {step.status === "succeeded" && (
+          <div className="callout callout-ok"><strong>Approved by {step.decided_by}</strong>, {clock(step.decided_at)}{said}</div>
+        )}
+        {step.status === "failed" && (
+          <div className="callout callout-bad">
+            {step.decided_by
+              ? <><strong>Rejected by {step.decided_by}</strong>, {clock(step.decided_at)}{said}</>
+              : <><strong>{step.error}</strong>, so it was rejected at {clock(step.decided_at)}.</>}
+            {run.status === "failed" && <div>Resuming the run asks again.</div>}
+          </div>
+        )}
+        {step.status === "canceled" && <p className="sub">The run was canceled before anyone decided.</p>}
+        {step.status === "skipped" && <p className="sub">{step.error || "Skipped."} Nobody was asked.</p>}
+        {step.status === "pending" && (
+          <p className="sub">Asks once {step.needs?.length ? step.needs.join(", ") : "the run"} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "run.created": (d) => `Run created (${(d.trigger as { event?: string })?.event ?? "manual"})`,
   "run.cancel_requested": (d) => `Cancel requested by ${d.actor ?? "someone"}`,
@@ -238,6 +350,9 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "step.lost": (d) => `${d.step}: ${d.reason}`,
   "step.canceled": (d) => `${d.step}: canceled`,
   "step.reset": (d) => `${d.step}: reset to run again`,
+  "step.waiting": (d) => `${d.step}: waiting for approval until ${clock(d.deadline as number)}`,
+  "step.approved": (d) => `${d.step}: approved by ${d.actor}${d.comment ? `: ${d.comment}` : ""}`,
+  "step.rejected": (d) => `${d.step}: ${d.reason}`,
 };
 
 function EventsTab({ id, version }: { id: string; version: string }) {

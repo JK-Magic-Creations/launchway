@@ -61,6 +61,7 @@ export function PlaygroundPage() {
     run_id: "", id: s.id, position: i, status: "pending", attempt: 0, queued_at: 0, started_at: 0, finished_at: 0,
     exit_code: null, error: "", skip_kind: "", runner: "", outputs: {}, container: s.container, image: s.image, run: s.run, needs: s.needs,
     when: s.when, retry: s.retry, timeout: s.timeout,
+    kind: s.kind, message: s.message, deadline: 0, decided_by: "", decided_at: 0, comment: "",
   })), [res]);
   const chosen = res?.graph?.steps.find((s) => s.id === sel);
   const lines = text.split("\n").length;
@@ -118,7 +119,8 @@ export function PlaygroundPage() {
               </section>
               <section className="card card-flush">
                 <Graph levels={res.levels} steps={steps} selected={sel} onSelect={setSel} now={0} compact
-                  describe={(s) => (s.when ? "conditional · " : "") + (s.container ?? (s.image ?? "").replace(/^docker\.io\/library\//, ""))} />
+                  describe={(s) => (s.when ? "conditional · " : "") +
+                    (s.kind === "approval" ? "approval" : s.container ?? (s.image ?? "").replace(/^docker\.io\/library\//, ""))} />
               </section>
               {res.graph.containers && res.graph.containers.length > 0 && (
                 <section className="card">
@@ -137,14 +139,15 @@ export function PlaygroundPage() {
                 <section className="card">
                   <h2 className="h-sm">{chosen.id}</h2>
                   <dl className="kv">
+                    {chosen.kind === "approval" && <><dt>Approval</dt><dd>{chosen.message}</dd></>}
                     {chosen.container && <><dt>Container</dt><dd>{chosen.container}</dd></>}
-                    <dt>Image</dt><dd className="mono">{chosen.image}</dd>
+                    {chosen.kind !== "approval" && <><dt>Image</dt><dd className="mono">{chosen.image}</dd></>}
                     {chosen.needs && <><dt>Needs</dt><dd>{chosen.needs.join(", ")}</dd></>}
                     {chosen.when && <><dt>When</dt><dd className="mono">{JSON.stringify(chosen.when)}</dd></>}
-                    <dt>Retry</dt><dd>{chosen.retry}</dd>
-                    <dt>Timeout</dt><dd>{chosen.timeout}</dd>
+                    {chosen.kind !== "approval" && <><dt>Retry</dt><dd>{chosen.retry}</dd></>}
+                    <dt>{chosen.kind === "approval" ? "Expires after" : "Timeout"}</dt><dd>{chosen.timeout}</dd>
                   </dl>
-                  <pre className="code">{chosen.run}</pre>
+                  {chosen.kind !== "approval" && <pre className="code">{chosen.run}</pre>}
                 </section>
               )}
             </>

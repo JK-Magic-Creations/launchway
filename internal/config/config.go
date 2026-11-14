@@ -29,10 +29,19 @@ type Config struct {
 	// Database is a SQLite file, or a postgres:// URL that several servers
 	// share. The environment variable LAUNCHWAY_DATABASE overrides it; the
 	// default is launchway.db in the data directory.
-	Database string          `yaml:"database"`
-	User     string          `yaml:"user"` // recorded as the actor for UI actions, until sign-in exists
-	Projects []ProjectConfig `yaml:"projects"`
-	Runner   RunnerConfig    `yaml:"runner"`
+	Database  string          `yaml:"database"`
+	User      string          `yaml:"user"` // recorded as the actor for UI actions, until sign-in exists
+	Projects  []ProjectConfig `yaml:"projects"`
+	Runner    RunnerConfig    `yaml:"runner"`
+	Approvals ApprovalsConfig `yaml:"approvals"`
+}
+
+// ApprovalsConfig controls approval steps.
+type ApprovalsConfig struct {
+	// AllowSelf lets the person who started a run approve it. The default
+	// is true, because until there is sign-in every action is recorded as
+	// the same user.
+	AllowSelf *bool `yaml:"allow_self"`
 }
 
 // ProjectConfig is one repository to watch.

@@ -30,6 +30,7 @@ const (
 	StepFailed    StepStatus = "failed"
 	StepSkippedS  StepStatus = "skipped"
 	StepCanceledS StepStatus = "canceled"
+	StepWaitingS  StepStatus = "waiting" // an approval waiting for a person; no runner holds it
 )
 
 // Terminal reports whether the step will not change again without a resume.
@@ -75,6 +76,17 @@ type StepState struct {
 	Runner     string
 	LeaseID    string
 	Outputs    map[string]string
+	// Approvals only.
+	Deadline  int64  // when a waiting approval is rejected because nobody decided
+	DecidedBy string // who approved or rejected it; empty if it expired
+	DecidedAt int64
+	Comment   string
+}
+
+// clearDecision forgets an approval's last wait and decision.
+func (s *StepState) clearDecision() {
+	s.Deadline, s.DecidedAt = 0, 0
+	s.DecidedBy, s.Comment = "", ""
 }
 
 // Fold rebuilds a run's state from its events, in order.
@@ -188,5 +200,31 @@ func (st *RunState) apply(ev Event) {
 		s.Error, s.SkipKind = "", ""
 		s.ExitCode = nil
 		s.StartedAt, s.FinishedAt = 0, 0
+		s.clearDecision()
+
+	case StepWaiting:
+		s.Status = StepWaitingS
+		s.Attempt = p.Attempt
+		// It starts waiting now; how long it waited is shown like a step's run time.
+		s.QueuedAt, s.StartedAt, s.FinishedAt = ev.At, ev.At, 0
+		s.Error = ""
+		s.clearDecision()
+		s.Deadline = p.Deadline
+		if st.Status == RunQueued {
+			st.Status = RunRunning
+			st.StartedAt = ev.At
+		}
+
+	case StepApproved, StepRejected:
+		if ev.Type == StepApproved {
+			s.Status = StepSucceeded
+			s.Error = ""
+		} else {
+			s.Status = StepFailed
+			s.Failures++
+			s.Error = p.Reason
+		}
+		s.FinishedAt = ev.At
+		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, ev.At, p.Comment
 	}
 }

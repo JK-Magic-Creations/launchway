@@ -231,3 +231,104 @@ func TestSecretProblemLine(t *testing.T) {
 		t.Fatalf("got %v, want one problem on line 8", err)
 	}
 }
+
+func TestApprovalStep(t *testing.T) {
+	p, err := Parse([]byte(`
+pipeline: app
+containers:
+  tools: { image: alpine:3.22 }
+steps:
+  smoke-test:
+    image: alpine:3.22
+    run: ./smoke.sh
+  approve-prod:
+    kind: approval
+    needs: smoke-test
+    when: { branch: main }
+    message: "  Deploy 2.14 to production?  "
+  approve-later:
+    kind: approval
+    message: Again?
+    timeout: 720h
+  deploy-prod:
+    kind: step
+    container: tools
+    needs: [approve-prod, approve-later]
+    run: ./deploy.sh
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := p.Step("approve-prod")
+	if !a.IsApproval() || a.Message != "Deploy 2.14 to production?" || a.Timeout.D() != DefaultApprovalTimeout {
+		t.Fatalf("approval %+v", a)
+	}
+	if len(a.Needs) != 1 || a.When == nil || a.Image != "" || a.Run != "" {
+		t.Fatalf("approval %+v", a)
+	}
+	if p.Step("approve-later").Timeout.D() != MaxApprovalTimeout {
+		t.Fatalf("timeout %s", p.Step("approve-later").Timeout.D())
+	}
+	if d := p.Step("deploy-prod"); d.IsApproval() || d.Kind != "" {
+		t.Fatalf("kind: step should be a plain step with no kind written: %+v", d)
+	}
+	// Approvals need no container, and no executor ever sees one.
+	names := []string{}
+	for _, c := range p.RunContainers() {
+		names = append(names, c.Name)
+	}
+	if strings.Join(names, ",") != "tools,image-1" {
+		t.Fatalf("run containers %v", names)
+	}
+	if p.ContainerFor(a) != "" || p.ContainerFor(p.Step("smoke-test")) != "image-1" {
+		t.Fatal("ContainerFor is wrong")
+	}
+	// The kind and message are part of the graph and survive a round trip.
+	var back Pipeline
+	if err := json.Unmarshal([]byte(mustJSON(p)), &back); err != nil || mustJSON(&back) != mustJSON(p) {
+		t.Fatalf("round trip: %v", err)
+	}
+	if !back.Step("approve-prod").IsApproval() {
+		t.Fatal("kind lost on a round trip")
+	}
+	if strings.Contains(mustJSON(p.Step("smoke-test")), `"kind"`) {
+		t.Fatal("a plain step should not write a kind")
+	}
+}
+
+func TestApprovalProblems(t *testing.T) {
+	long := strings.Repeat("x", MaxMessageLen+1)
+	cases := []struct {
+		name, src, want string
+		line            int
+	}{
+		{"no message", "pipeline: a\nsteps:\n  a:\n    kind: approval\n", "needs a message", 3},
+		{"empty message", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: \"  \"\n", "needs a message", 3},
+		{"two lines", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: |\n      one\n      two\n", "one line", 5},
+		{"too long", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: " + long + "\n", "longer than 500", 5},
+		{"image", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    image: alpine\n", "takes no image", 6},
+		{"container", "pipeline: a\ncontainers:\n  m: {image: x}\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    container: m\n", "takes no container", 8},
+		{"run", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    run: echo\n", "takes no run", 6},
+		{"env", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    env: {A: b}\n", "takes no env", 6},
+		{"secrets", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    secrets: {T: {store: env, key: K}}\n", "takes no secrets", 6},
+		{"retry", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    retry: 1\n", "takes no retry", 6},
+		{"timeout too long", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    timeout: 721h\n", "between 1s and 720h", 6},
+		{"step timeout over a day", "pipeline: a\nsteps:\n  a:\n    image: x\n    run: y\n    timeout: 25h\n", "between 1s and 24h", 6},
+		{"message on a step", "pipeline: a\nsteps:\n  a:\n    image: x\n    run: y\n    message: hi\n", "only for approval steps", 6},
+		{"kind not yet", "pipeline: a\nsteps:\n  a:\n    kind: release\n", `kind "release" is not supported yet`, 4},
+		{"unknown kind", "pipeline: a\nsteps:\n  a:\n    kind: gate\n", `unknown kind "gate"`, 4},
+		{"approval need missing", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    needs: b\n", "no step with that name", 3},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := Parse([]byte(c.src))
+			ps, ok := err.(Problems)
+			if !ok {
+				t.Fatalf("got %v, want Problems", err)
+			}
+			if len(ps) != 1 || !strings.Contains(ps[0].Message, c.want) || ps[0].Line != c.line {
+				t.Fatalf("got %q, want one problem on line %d containing %q", err.Error(), c.line, c.want)
+			}
+		})
+	}
+}

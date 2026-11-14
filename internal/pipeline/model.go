@@ -7,6 +7,7 @@ package pipeline
 import (
 	"encoding/json"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -43,9 +44,19 @@ type PushTrigger struct {
 	Tags     []string `json:"tags,omitempty"`
 }
 
-// Step runs a script in a container image.
+// Step kinds. A plain step runs a script; an approval pauses the run until a
+// person decides.
+const (
+	KindStep     = "step"
+	KindApproval = "approval"
+)
+
+// Step runs a script in a container image, or, if it is an approval, waits
+// for a person to approve or reject the run going further.
 type Step struct {
 	ID        string               `json:"id"`
+	Kind      string               `json:"kind,omitempty"`      // empty for a plain step, or KindApproval
+	Message   string               `json:"message,omitempty"`   // approvals: the question to decide
 	Container string               `json:"container,omitempty"` // a named container; Image is then filled from it
 	Image     string               `json:"image"`
 	Run       string               `json:"run"`
@@ -54,9 +65,12 @@ type Step struct {
 	Env       map[string]string    `json:"env,omitempty"`
 	Secrets   map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
 	Retry     int                  `json:"retry"`             // extra attempts after a failure
-	Timeout   Duration             `json:"timeout"`           // per attempt
+	Timeout   Duration             `json:"timeout"`           // per attempt; for an approval, how long to wait for a decision
 	Line      int                  `json:"-"`                 // where it was written, for messages
 }
+
+// IsApproval reports whether the step waits for a person instead of running.
+func (s *Step) IsApproval() bool { return s.Kind == KindApproval }
 
 // SecretRef says where a secret is kept. It never holds the value: the
 // runner looks the value up just before the step runs.
@@ -142,13 +156,14 @@ func (p *Pipeline) Container(name string) *Container {
 
 // RunContainers is every container a run needs: the named ones, then one
 // for each image that steps use directly, named image-1, image-2 and so on.
+// Approvals run nothing, so they need no container.
 func (p *Pipeline) RunContainers() []Container {
 	var out []Container
 	for _, c := range p.Containers {
 		out = append(out, *c)
 	}
 	for _, s := range p.Steps {
-		if s.Container == "" && p.containerForImage(out, s.Image) == "" {
+		if !s.IsApproval() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
 			out = append(out, Container{Name: "image-" + itoa(len(out)-len(p.Containers)+1), Image: s.Image})
 		}
 	}
@@ -156,7 +171,11 @@ func (p *Pipeline) RunContainers() []Container {
 }
 
 // ContainerFor names the container a step runs in, matching RunContainers.
+// It is empty for an approval.
 func (p *Pipeline) ContainerFor(s *Step) string {
+	if s.IsApproval() {
+		return ""
+	}
 	if s.Container != "" {
 		return s.Container
 	}
@@ -227,6 +246,18 @@ type Duration time.Duration
 
 // D returns the value as a time.Duration.
 func (d Duration) D() time.Duration { return time.Duration(d) }
+
+// Short writes the duration without trailing zero parts: 24h, 1h30m, 45s.
+func (d Duration) Short() string {
+	s := time.Duration(d).String()
+	if strings.HasSuffix(s, "m0s") {
+		s = strings.TrimSuffix(s, "0s")
+	}
+	if strings.HasSuffix(s, "h0m") {
+		s = strings.TrimSuffix(s, "0m")
+	}
+	return s
+}
 
 func (d Duration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Duration(d).String())
