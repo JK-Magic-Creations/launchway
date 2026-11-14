@@ -26,6 +26,7 @@ steps:
     image: docker.io/library/golang:1.27
     needs: ui
     run: |
-      CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${SLIPWAY_COMMIT:0:8}" -o bin/slipway ./cmd/slipway
+      version=$(echo "$SLIPWAY_COMMIT" | cut -c1-8)
+      CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$version" -o bin/slipway ./cmd/slipway
       ls -lh bin/slipway
       echo "size=$(du -h bin/slipway | cut -f1)" >> "$SLIPWAY_OUTPUTS"
