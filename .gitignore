@@ -1,0 +1,9 @@
+/slipway
+/bin/
+/slipway-data/
+/web/node_modules/
+/web/dist/*
+!/web/dist/.keep
+*.db
+*.db-shm
+*.db-wal
