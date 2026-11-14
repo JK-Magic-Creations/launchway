@@ -568,10 +568,10 @@ func TestLeaseStopsWaitingWhenCallerGoesAway(t *testing.T) {
 
 func TestLostOutcomeRequeues(t *testing.T) {
 	e, _ := newEngine(t)
-	id := create(t, e, "pipeline: demo\nsteps:\n  a: {image: x, run: y}\n  b: {image: z, run: y, needs: a}\n", Trigger{})
+	id := create(t, e, "pipeline: demo\ncontainers:\n  m: {image: mvn, env: {A: from-container, B: from-container}}\nsteps:\n  a: {image: x, run: y}\n  b: {container: m, run: y, needs: a, env: {B: from-step}}\n", Trigger{})
 	j := take(t, e)
-	if len(j.Images) != 2 || j.Images[0] != "x" || j.Images[1] != "z" {
-		t.Fatalf("images %v", j.Images)
+	if len(j.Containers) != 2 || j.Containers[0].Name != "m" || j.Containers[1].Name != "image-1" || j.Container != "image-1" {
+		t.Fatalf("containers %+v, container %s", j.Containers, j.Container)
 	}
 	if err := e.Finish(j.LeaseID, Result{Outcome: "lost", Error: "pod disappeared"}); err != nil {
 		t.Fatal(err)
@@ -581,6 +581,10 @@ func TestLostOutcomeRequeues(t *testing.T) {
 		t.Fatalf("got %s attempt %d", j2.StepID, j2.Attempt)
 	}
 	ok(t, e, j2, nil)
+	jb := take(t, e)
+	if jb.Container != "m" || jb.Env["A"] != "from-container" || jb.Env["B"] != "from-step" {
+		t.Fatalf("container env not merged under step env: %s %v", jb.Container, jb.Env)
+	}
 	infos, _ := e.RunInfos([]string{id, "run_missing"})
 	if len(infos) != 1 || infos[0].ID != id || infos[0].Status != RunRunning {
 		t.Fatalf("infos %+v", infos)

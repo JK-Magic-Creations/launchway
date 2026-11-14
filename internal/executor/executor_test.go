@@ -128,3 +128,31 @@ func TestContainerRejectsRelativePaths(t *testing.T) {
 		t.Fatalf("err %v", err)
 	}
 }
+
+func TestPodmanService(t *testing.T) {
+	if os.Getenv("SLIPWAY_TEST_CONTAINERS") == "" {
+		t.Skip("set SLIPWAY_TEST_CONTAINERS=1 to run container tests")
+	}
+	bin, err := exec.LookPath("podman")
+	if err != nil {
+		t.Skip("podman not installed")
+	}
+	c := &Container{Bin: bin, Owner: "test" + strings.ToLower(time.Now().Format("150405"))}
+	runID := "run_ps" + time.Now().Format("150405.000")
+	s := spec(t, reachService)
+	s.RunID = runID
+	s.Containers = []ContainerSpec{{Name: "alpine", Image: s.Image}, webService}
+	s.Container = "alpine"
+	var out capture
+	code, err := c.Run(context.Background(), s, out.sink)
+	if err != nil || code != 0 || !strings.Contains(out.text(), "service reachable") {
+		t.Fatalf("code %d err %v\n%s", code, err, out.text())
+	}
+	// Cleanup removes the pod once the run is unknown or finished.
+	if err := c.Cleanup(context.Background(), func(context.Context, []string) (map[string]RunInfo, error) { return nil, nil }); err != nil {
+		t.Fatal(err)
+	}
+	if exec.Command(bin, "pod", "exists", c.podName(runID)).Run() == nil {
+		t.Fatal("pod left behind")
+	}
+}

@@ -94,7 +94,8 @@ type Job struct {
 	Timeout   pipeline.Duration `json:"timeout"`
 	Source    Source            `json:"source"`
 	SHA       string            `json:"sha,omitempty"`
-	Images    []string          `json:"images"` // every image the run's pipeline uses
+	Container  string               `json:"container"`  // which of Containers the step runs in
+	Containers []pipeline.Container `json:"containers"` // every container the run needs, services included
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -852,6 +853,12 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	s := st.Steps[stepID]
 	t := st.Trigger
 	env := map[string]string{}
+	container := st.Pipeline.ContainerFor(def)
+	if c := st.Pipeline.Container(container); c != nil {
+		for k, v := range c.Env {
+			env[k] = v
+		}
+	}
 	for k, v := range def.Env {
 		env[k] = v
 	}
@@ -870,16 +877,8 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	} {
 		env[k] = v
 	}
-	var images []string
-	seen := map[string]bool{}
-	for _, ps := range st.Pipeline.Steps {
-		if !seen[ps.Image] {
-			seen[ps.Image] = true
-			images = append(images, ps.Image)
-		}
-	}
 	return &Job{
-		Images:  images,
+		Container: container, Containers: st.Pipeline.RunContainers(),
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env,

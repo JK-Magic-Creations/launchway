@@ -159,6 +159,7 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	if s.RunID == "" {
 		return -1, errors.New("kubernetes: the step has no run")
 	}
+	s = withDefaultContainer(s)
 	rp, err := k.ensurePod(ctx, s, out)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -166,10 +167,10 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		}
 		return -1, err
 	}
-	container := rp.containers[s.Image]
+	container := rp.containers[s.Container]
 	if container == "" {
 		k.forget(s.RunID)
-		return -1, infra("the run's pod has no container for %s", s.Image)
+		return -1, infra("the run's pod has no container called %s", s.Container)
 	}
 
 	key := containerName(s.Name)
@@ -281,20 +282,23 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 	sys := func(format string, a ...any) { out("system", fmt.Sprintf(format, a...)) }
 	pods := k.client.CoreV1().Pods(k.o.Namespace)
 
-	images := uniq(append(append([]string{}, s.Images...), s.Image))
 	existing, err := pods.Get(ctx, rp.name, metav1.GetOptions{})
 	switch {
 	case err == nil && existing.DeletionTimestamp == nil && existing.Status.Phase == corev1.PodRunning && allReady(existing):
-		var have map[string]string
+		var have map[string]string // container name → image
 		_ = json.Unmarshal([]byte(existing.Annotations[annoImages]), &have)
-		missing := false
-		for _, img := range images {
-			if have[img] == "" {
-				missing = true
+		same := len(have) == len(s.Containers)
+		for _, c := range s.Containers {
+			if have[c.Name] != c.Image {
+				same = false
 			}
 		}
-		if !missing && existing.Annotations[annoReady] == "ready" {
-			rp.containers, rp.ready = have, true
+		if same && existing.Annotations[annoReady] == "ready" {
+			rp.containers = map[string]string{}
+			for _, c := range s.Containers {
+				rp.containers[c.Name] = c.Name
+			}
+			rp.ready = true
 			sys("Using the run's pod %s/%s", k.o.Namespace, rp.name)
 			return rp, nil
 		}
@@ -308,12 +312,20 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 		return nil, infra("looking up pod %s: %v", rp.name, err)
 	}
 
-	pod, containers := k.podSpec(rp.name, s.RunID, images)
-	sys("Starting pod %s/%s with %d container(s)", k.o.Namespace, rp.name, len(images)+1)
+	pod, containers := k.podSpec(rp.name, s.RunID, s.Containers)
+	var names []string
+	for _, c := range s.Containers {
+		kind := ""
+		if c.Service {
+			kind = " (service)"
+		}
+		names = append(names, c.Name+kind)
+	}
+	sys("Starting pod %s/%s: %s", k.o.Namespace, rp.name, strings.Join(names, ", "))
 	if _, err := pods.Create(ctx, pod, metav1.CreateOptions{}); err != nil {
 		return nil, fmt.Errorf("creating pod %s: %w", rp.name, err)
 	}
-	if err := k.waitRunning(ctx, rp.name, sys); err != nil {
+	if err := k.waitRunning(ctx, rp.name, s.Containers, sys); err != nil {
 		_ = pods.Delete(context.Background(), rp.name, metav1.DeleteOptions{GracePeriodSeconds: ptr(int64(0))})
 		return nil, err
 	}
@@ -329,24 +341,54 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 	return rp, nil
 }
 
-func (k *Kubernetes) podSpec(name, runID string, images []string) (*corev1.Pod, map[string]string) {
+func (k *Kubernetes) resources(cpu, memory string) corev1.ResourceRequirements {
+	res := corev1.ResourceRequirements{Requests: corev1.ResourceList{}, Limits: corev1.ResourceList{}}
+	if cpu == "" {
+		cpu = k.o.CPU
+	}
+	res.Requests[corev1.ResourceCPU] = resource.MustParse(cpu)
+	switch {
+	case memory != "": // asked for explicitly: guarantee it, and cap at it
+		res.Requests[corev1.ResourceMemory] = resource.MustParse(memory)
+		res.Limits[corev1.ResourceMemory] = resource.MustParse(memory)
+	default:
+		res.Requests[corev1.ResourceMemory] = resource.MustParse(k.o.Memory)
+		if k.o.MemoryLimit != "" {
+			res.Limits[corev1.ResourceMemory] = resource.MustParse(k.o.MemoryLimit)
+		}
+	}
+	return res
+}
+
+func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1.Pod, map[string]string) {
 	keepAlive := []string{"sh", "-c", "trap 'exit 0' TERM INT; while true; do sleep 3600 & wait $!; done"}
 	mounts := []corev1.VolumeMount{{Name: "workspace", MountPath: "/workspace"}, {Name: "slipway", MountPath: "/slipway"}}
-	res := corev1.ResourceRequirements{Requests: corev1.ResourceList{
-		corev1.ResourceCPU: resource.MustParse(k.o.CPU), corev1.ResourceMemory: resource.MustParse(k.o.Memory)}}
-	if k.o.MemoryLimit != "" {
-		res.Limits = corev1.ResourceList{corev1.ResourceMemory: resource.MustParse(k.o.MemoryLimit)}
-	}
 	containers := map[string]string{}
+	images := map[string]string{}
 	cs := []corev1.Container{{Name: helperName, Image: k.o.HelperImage, Command: keepAlive, WorkingDir: "/workspace",
-		VolumeMounts: mounts, Resources: res}}
-	for i, img := range images {
-		cn := fmt.Sprintf("step-%d", i)
-		containers[img] = cn
-		cs = append(cs, corev1.Container{Name: cn, Image: img, Command: keepAlive, WorkingDir: "/workspace",
-			VolumeMounts: mounts, Resources: res, ImagePullPolicy: corev1.PullIfNotPresent})
+		VolumeMounts: mounts, Resources: k.resources("", "")}}
+	for _, sp := range specs {
+		images[sp.Name] = sp.Image
+		c := corev1.Container{Name: sp.Name, Image: sp.Image, WorkingDir: "/workspace", VolumeMounts: mounts,
+			Resources: k.resources(sp.CPU, sp.Memory), ImagePullPolicy: corev1.PullIfNotPresent}
+		if sp.Service {
+			c.Command = sp.Command // nil: the image's own entrypoint
+			c.WorkingDir = ""
+			keys := make([]string, 0, len(sp.Env))
+			for key := range sp.Env {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+			for _, key := range keys {
+				c.Env = append(c.Env, corev1.EnvVar{Name: key, Value: sp.Env[key]})
+			}
+		} else {
+			c.Command = keepAlive
+			containers[sp.Name] = sp.Name
+		}
+		cs = append(cs, c)
 	}
-	imgJSON, _ := json.Marshal(containers)
+	imgJSON, _ := json.Marshal(images)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -374,7 +416,11 @@ func (k *Kubernetes) podSpec(name, runID string, images []string) (*corev1.Pod, 
 
 // waitRunning waits for every container to start, explaining what it is
 // waiting for, and gives up with a clear reason if an image cannot be used.
-func (k *Kubernetes) waitRunning(ctx context.Context, name string, sys func(string, ...any)) error {
+func (k *Kubernetes) waitRunning(ctx context.Context, name string, specs []ContainerSpec, sys func(string, ...any)) error {
+	service := map[string]bool{}
+	for _, c := range specs {
+		service[c.Name] = c.Service
+	}
 	deadline := time.Now().Add(k.startWait)
 	lastNote := ""
 	for {
@@ -398,7 +444,10 @@ func (k *Kubernetes) waitRunning(ctx context.Context, name string, sys func(stri
 				}
 			}
 			if t := st.State.Terminated; t != nil {
-				return fmt.Errorf("the container for %s stopped at once (exit %d). The image needs /bin/sh", st.Image, t.ExitCode)
+				if service[st.Name] {
+					return fmt.Errorf("the service %s stopped (exit %d): %s", st.Name, t.ExitCode, k.tail(ctx, name, st.Name))
+				}
+				return fmt.Errorf("the container %s (%s) stopped at once (exit %d). Its image needs /bin/sh", st.Name, st.Image, t.ExitCode)
 			}
 		}
 		if note := podProblem(pod); note != lastNote {
@@ -414,6 +463,26 @@ func (k *Kubernetes) waitRunning(ctx context.Context, name string, sys func(stri
 		case <-time.After(time.Second):
 		}
 	}
+}
+
+// tail returns the last lines a container printed, for explaining failures.
+func (k *Kubernetes) tail(ctx context.Context, pod, container string) string {
+	n := int64(15)
+	b, err := k.client.CoreV1().Pods(k.o.Namespace).GetLogs(pod, &corev1.PodLogOptions{Container: container, TailLines: &n}).DoRaw(ctx)
+	if err != nil || len(bytes.TrimSpace(b)) == 0 {
+		return "no output"
+	}
+	return strings.TrimSpace(string(b))
+}
+
+// withDefaultContainer fills in a single container for callers that only
+// give an image.
+func withDefaultContainer(s Spec) Spec {
+	if len(s.Containers) == 0 {
+		s.Containers = []ContainerSpec{{Name: "image-1", Image: s.Image}}
+		s.Container = "image-1"
+	}
+	return s
 }
 
 func allReady(p *corev1.Pod) bool {
@@ -628,18 +697,6 @@ func oneLine(s string) string {
 		s = s[:300] + "…"
 	}
 	return s
-}
-
-func uniq(in []string) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, s := range in {
-		if s != "" && !seen[s] {
-			seen[s] = true
-			out = append(out, s)
-		}
-	}
-	return out
 }
 
 func ptr[T any](v T) *T { return &v }

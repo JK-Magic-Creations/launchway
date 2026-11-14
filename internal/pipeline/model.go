@@ -12,9 +12,24 @@ import (
 
 // Pipeline is a validated, typed pipeline graph.
 type Pipeline struct {
-	Name  string   `json:"name"`
-	On    Triggers `json:"on"`
-	Steps []*Step  `json:"steps"` // in the order they were written
+	Name       string       `json:"name"`
+	On         Triggers     `json:"on"`
+	Containers []*Container `json:"containers,omitempty"` // named toolboxes and services
+	Steps      []*Step      `json:"steps"`                // in the order they were written
+}
+
+// Container is a named image that steps run in, or a service that runs
+// alongside them for the whole run (a database for tests, say). All of a
+// run's containers share the workspace; on Kubernetes they share a pod, so
+// services are reachable at localhost.
+type Container struct {
+	Name    string            `json:"name"`
+	Image   string            `json:"image"`
+	Env     map[string]string `json:"env,omitempty"`
+	CPU     string            `json:"cpu,omitempty"`     // e.g. 500m or 2
+	Memory  string            `json:"memory,omitempty"`  // e.g. 512Mi or 2Gi
+	Service bool              `json:"service,omitempty"` // runs its own command for the whole run
+	Command []string          `json:"command,omitempty"` // services only; default: the image's own
 }
 
 // Triggers says which events start a run. A run can always be started by hand.
@@ -30,8 +45,9 @@ type PushTrigger struct {
 
 // Step runs a script in a container image.
 type Step struct {
-	ID      string            `json:"id"`
-	Image   string            `json:"image"`
+	ID        string            `json:"id"`
+	Container string            `json:"container,omitempty"` // a named container; Image is then filled from it
+	Image     string            `json:"image"`
 	Run     string            `json:"run"`
 	Needs   []string          `json:"needs,omitempty"`
 	When    *Condition        `json:"when,omitempty"`
@@ -94,6 +110,55 @@ func matchAny(patterns []string, value string) bool {
 		}
 	}
 	return false
+}
+
+// Container returns the named container, or nil.
+func (p *Pipeline) Container(name string) *Container {
+	for _, c := range p.Containers {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
+// RunContainers is every container a run needs: the named ones, then one
+// for each image that steps use directly, named image-1, image-2 and so on.
+func (p *Pipeline) RunContainers() []Container {
+	var out []Container
+	for _, c := range p.Containers {
+		out = append(out, *c)
+	}
+	for _, s := range p.Steps {
+		if s.Container == "" && p.containerForImage(out, s.Image) == "" {
+			out = append(out, Container{Name: "image-" + itoa(len(out)-len(p.Containers)+1), Image: s.Image})
+		}
+	}
+	return out
+}
+
+// ContainerFor names the container a step runs in, matching RunContainers.
+func (p *Pipeline) ContainerFor(s *Step) string {
+	if s.Container != "" {
+		return s.Container
+	}
+	return p.containerForImage(p.RunContainers(), s.Image)
+}
+
+func (p *Pipeline) containerForImage(cs []Container, image string) string {
+	for _, c := range cs {
+		if p.Container(c.Name) == nil && c.Image == image {
+			return c.Name
+		}
+	}
+	return ""
+}
+
+func itoa(n int) string {
+	if n < 10 {
+		return string(rune('0' + n))
+	}
+	return itoa(n/10) + string(rune('0'+n%10))
 }
 
 // Step returns the step with the given id, or nil.

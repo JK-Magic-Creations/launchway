@@ -34,8 +34,14 @@ func kube(t *testing.T) *Kubernetes {
 
 const alpine = "docker.io/library/alpine:3.22"
 
+var twoTools = []ContainerSpec{{Name: "alpine", Image: alpine}, {Name: "busybox", Image: "docker.io/library/busybox:1.37"}}
+
 func kspec(t *testing.T, runID, name, image, script string, ws string) Spec {
-	return Spec{RunID: runID, Images: []string{alpine, "docker.io/library/busybox:1.37"}, Name: name, Image: image,
+	container := "alpine"
+	if image != alpine {
+		container = "busybox"
+	}
+	return Spec{RunID: runID, Containers: twoTools, Container: container, Name: name, Image: image,
 		Script: script, Env: map[string]string{"GREETING": "it's working"}, Workspace: ws, MetaDir: t.TempDir()}
 }
 
@@ -126,10 +132,32 @@ func TestKubernetesBadImageIsExplained(t *testing.T) {
 	runID := fmt.Sprintf("run_kb%d", time.Now().UnixNano())
 	defer k.client.CoreV1().Pods(k.o.Namespace).Delete(context.Background(), podName(runID, k.owner), metav1.DeleteOptions{})
 	s := kspec(t, runID, "x", "docker.io/library/no-such-image-slipway:never", "true", t.TempDir())
-	s.Images = []string{s.Image}
+	s.Containers = []ContainerSpec{{Name: "bad", Image: s.Image}}
+	s.Container = "bad"
 	var c capture
 	_, err := k.Run(context.Background(), s, c.sink)
 	if err == nil || !strings.Contains(err.Error(), "cannot pull docker.io/library/no-such-image-slipway:never") {
 		t.Fatalf("err %v", err)
+	}
+}
+
+// A service runs beside the steps and is reachable at localhost.
+var webService = ContainerSpec{Name: "web", Image: "docker.io/library/nginx:1.29-alpine", Service: true}
+
+const reachService = `for i in $(seq 1 30); do wget -q -O - http://localhost:80/ 2>/dev/null | grep -q nginx && { echo service reachable; exit 0; }; sleep 1; done; exit 1`
+
+func TestKubernetesService(t *testing.T) {
+	k := kube(t)
+	runID := fmt.Sprintf("run_ks%d", time.Now().UnixNano())
+	defer k.client.CoreV1().Pods(k.o.Namespace).Delete(context.Background(), podName(runID, k.owner), metav1.DeleteOptions{})
+	s := kspec(t, runID, "s", alpine, reachService, t.TempDir())
+	s.Containers = append(append([]ContainerSpec{}, twoTools...), webService)
+	var c capture
+	code, err := k.Run(context.Background(), s, c.sink)
+	if err != nil || code != 0 || !strings.Contains(c.text(), "service reachable") {
+		t.Fatalf("code %d err %v\n%s", code, err, c.text())
+	}
+	if !strings.Contains(c.text(), "web (service)") {
+		t.Fatalf("the start message should list the service:\n%s", c.text())
 	}
 }

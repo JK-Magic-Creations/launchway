@@ -239,7 +239,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	defer cancel()
 	start := time.Now()
 	code, err := r.Exec.Run(tctx, executor.Spec{
-		RunID: job.RunID, Images: job.Images,
+		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
 		Name: "slipway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: job.Env,
 		Workspace: ws, MetaDir: meta,
 	}, func(stream, text string) {
@@ -354,6 +354,15 @@ func (r *Runner) collectGarbage(ctx context.Context) {
 		case <-t.C:
 		}
 	}
+}
+
+func containerSpecs(job *engine.Job) []executor.ContainerSpec {
+	out := make([]executor.ContainerSpec, len(job.Containers))
+	for i, c := range job.Containers {
+		out[i] = executor.ContainerSpec{Name: c.Name, Image: c.Image, Env: c.Env, CPU: c.CPU, Memory: c.Memory,
+			Service: c.Service, Command: c.Command}
+	}
+	return out
 }
 
 func git(ctx context.Context, dir string, args ...string) error {

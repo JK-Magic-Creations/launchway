@@ -4,6 +4,8 @@ package executor
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"context"
 	"errors"
 	"io"
@@ -17,10 +19,11 @@ import (
 
 // Spec is one step attempt to execute.
 type Spec struct {
-	RunID     string            // the run it belongs to
-	Images    []string          // every image the run uses (the Kubernetes executor starts them together)
-	Name      string            // unique, safe for a container name
-	Image     string            // ignored by the host executor
+	RunID      string            // the run it belongs to
+	Containers []ContainerSpec   // every container the run needs, services included
+	Container  string            // which of Containers this step runs in
+	Name       string            // unique, safe for a container name
+	Image      string            // the image of Container; ignored by the host executor
 	Script    string            // run with sh -e
 	Env       map[string]string // added to the step's environment
 	Workspace string            // host directory the step works in
@@ -35,6 +38,28 @@ type Sink func(stream, text string)
 type Executor interface {
 	Name() string
 	Run(ctx context.Context, s Spec, out Sink) (exitCode int, err error)
+}
+
+// ContainerSpec is one of a run's containers.
+type ContainerSpec struct {
+	Name    string
+	Image   string
+	Env     map[string]string // services only; a step's environment already includes its container's
+	CPU     string
+	Memory  string
+	Service bool
+	Command []string
+}
+
+// services returns the service containers.
+func (s Spec) services() []ContainerSpec {
+	var out []ContainerSpec
+	for _, c := range s.Containers {
+		if c.Service {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // RunInfo is what the server says about a run, for cleaning up after it.
@@ -101,6 +126,21 @@ func ByName(name string, o Options) (Executor, error) {
 	switch name {
 	case "kubernetes", "k8s":
 		return NewKubernetes(o.Kubernetes, o.RunnerID)
+	}
+	ex, err := byNameLocal(name)
+	if c, ok := ex.(*Container); ok {
+		c.Owner = ownerID(o.RunnerID)
+	}
+	return ex, err
+}
+
+func ownerID(runnerID string) string {
+	sum := sha256.Sum256([]byte(runnerID))
+	return hex.EncodeToString(sum[:])[:10]
+}
+
+func byNameLocal(name string) (Executor, error) {
+	switch name {
 	case "", "auto":
 		return Auto(), nil
 	case "container", "podman", "docker":

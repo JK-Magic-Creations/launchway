@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,9 @@ type Host struct{}
 func (*Host) Name() string { return "host" }
 
 func (*Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
+	if len(s.services()) > 0 {
+		return -1, errors.New("services need the container or kubernetes executor")
+	}
 	script, err := writeScript(s)
 	if err != nil {
 		return -1, err

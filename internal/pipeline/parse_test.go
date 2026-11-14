@@ -97,7 +97,13 @@ func TestParseProblems(t *testing.T) {
 		{"unknown top key", "pipeline: a\nstages: {}\nsteps:\n  a: {image: x, run: y}\n", `unknown key "stages"`},
 		{"unknown step key", "pipeline: a\nsteps:\n  a: {image: x, run: y, script: z}\n", `unknown key "script"`},
 		{"not yet", "pipeline: a\nsteps:\n  a: {image: x, run: y, uses: lib/t}\n", "not supported yet"},
-		{"missing image", "pipeline: a\nsteps:\n  a: {run: y}\n", "an image is required"},
+		{"missing image", "pipeline: a\nsteps:\n  a: {run: y}\n", "say what to run in"},
+		{"unknown container", "pipeline: a\nsteps:\n  a: {container: maven, run: y}\n", `no container called "maven"`},
+		{"both", "pipeline: a\ncontainers:\n  m: {image: x}\nsteps:\n  a: {container: m, image: x, run: y}\n", "not both"},
+		{"step in service", "pipeline: a\ncontainers:\n  db: {image: pg, service: true}\nsteps:\n  a: {container: db, run: y}\n", "is a service"},
+		{"bad size", "pipeline: a\ncontainers:\n  m: {image: x, memory: lots}\nsteps:\n  a: {container: m, run: y}\n", "not a size"},
+		{"reserved name", "pipeline: a\ncontainers:\n  workspace: {image: x}\nsteps:\n  a: {image: x, run: y}\n", "reserved"},
+		{"command on tool", "pipeline: a\ncontainers:\n  m: {image: x, command: [run]}\nsteps:\n  a: {container: m, run: y}\n", "only a service"},
 		{"missing run", "pipeline: a\nsteps:\n  a: {image: x}\n", "a script to run is required"},
 		{"unknown need", "pipeline: a\nsteps:\n  a: {image: x, run: y, needs: [b]}\n", `no step with that name`},
 		{"self need", "pipeline: a\nsteps:\n  a: {image: x, run: y, needs: [a]}\n", "cannot need itself"},
@@ -139,4 +145,39 @@ func mustJSON(v any) string {
 		panic(err)
 	}
 	return string(b)
+}
+
+func TestContainers(t *testing.T) {
+	p, err := Parse([]byte(`
+pipeline: app
+containers:
+  maven: { image: maven:3.9, memory: 2Gi, cpu: "1", env: { MAVEN_OPTS: -Xmx1g } }
+  gcloud: { image: gcr.io/cloud-sdk }
+  db: { image: postgres:17, service: true, env: { POSTGRES_PASSWORD: test } }
+steps:
+  build: { container: maven, run: mvn package }
+  lint: { image: alpine:3.22, run: echo }
+  more: { image: alpine:3.22, run: echo }
+  ship: { container: gcloud, run: gcloud version, needs: [build] }
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Step("build").Image != "maven:3.9" {
+		t.Fatalf("image not filled from the container: %q", p.Step("build").Image)
+	}
+	rc := p.RunContainers()
+	names := []string{}
+	for _, c := range rc {
+		names = append(names, c.Name)
+	}
+	if strings.Join(names, ",") != "maven,gcloud,db,image-1" {
+		t.Fatalf("run containers %v", names)
+	}
+	if p.ContainerFor(p.Step("lint")) != "image-1" || p.ContainerFor(p.Step("more")) != "image-1" || p.ContainerFor(p.Step("ship")) != "gcloud" {
+		t.Fatal("ContainerFor is wrong")
+	}
+	if c := p.Container("db"); !c.Service || c.Env["POSTGRES_PASSWORD"] != "test" {
+		t.Fatalf("service %+v", c)
+	}
 }

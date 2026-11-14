@@ -2,11 +2,14 @@ package executor
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -14,7 +17,11 @@ import (
 // Container runs each step in a fresh container with Podman or Docker.
 // The workspace is mounted at /workspace and the step's own files at /slipway.
 type Container struct {
-	Bin string // path to podman or docker
+	Bin   string // path to podman or docker
+	Owner string // identifies this runner's pods, for cleaning up
+
+	mu    sync.Mutex
+	locks map[string]*sync.Mutex
 }
 
 // DetectContainer finds Podman, then Docker.
@@ -38,6 +45,14 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		return -1, err
 	}
 	s.Name = containerName(s.Name)
+	var podArgs []string
+	if len(s.services()) > 0 {
+		pod, err := c.ensurePod(ctx, s, out)
+		if err != nil {
+			return -1, err
+		}
+		podArgs = []string{"--pod", pod}
+	}
 	args := []string{"run", "--rm", "--init",
 		"--name", s.Name,
 		"--label", "slipway=true",
@@ -50,6 +65,7 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		"-w", "/workspace",
 		"--entrypoint", "/bin/sh",
 	}
+	args = append(args, podArgs...)
 	// Pass values through the environment of the podman process rather than
 	// the command line, so they never appear in a process list.
 	env := os.Environ()
@@ -105,6 +121,109 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		}
 		return -1, ctx.Err()
 	}
+}
+
+func (c *Container) isPodman() bool { return strings.Contains(filepath.Base(c.Bin), "podman") }
+
+func (c *Container) podName(runID string) string {
+	return containerName("slipway-" + strings.ToLower(strings.ReplaceAll(runID, "_", "-")) + "-" + c.Owner)
+}
+
+// ensurePod starts a Podman pod for the run with its services, so steps can
+// reach them at localhost, the same as on Kubernetes.
+func (c *Container) ensurePod(ctx context.Context, s Spec, out Sink) (string, error) {
+	if !c.isPodman() {
+		return "", errors.New("services need Podman or Kubernetes; Docker is not supported for services yet")
+	}
+	c.mu.Lock()
+	if c.locks == nil {
+		c.locks = map[string]*sync.Mutex{}
+	}
+	lock := c.locks[s.RunID]
+	if lock == nil {
+		lock = &sync.Mutex{}
+		c.locks[s.RunID] = lock
+	}
+	c.mu.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
+
+	pod := c.podName(s.RunID)
+	labels := []string{"--label", "slipway.dev/run=" + s.RunID, "--label", "slipway.dev/runner=" + c.Owner}
+	if exec.CommandContext(ctx, c.Bin, "pod", "exists", pod).Run() != nil {
+		args := append([]string{"pod", "create", "--name", pod}, labels...)
+		if b, err := exec.CommandContext(ctx, c.Bin, args...).CombinedOutput(); err != nil {
+			return "", fmt.Errorf("creating pod %s: %s", pod, strings.TrimSpace(string(b)))
+		}
+	}
+	for _, svc := range s.services() {
+		name := containerName(pod + "-" + svc.Name)
+		running, _ := exec.CommandContext(ctx, c.Bin, "inspect", "-f", "{{.State.Running}}", name).Output()
+		if strings.TrimSpace(string(running)) == "true" {
+			continue
+		}
+		_ = exec.CommandContext(ctx, c.Bin, "rm", "-f", name).Run()
+		args := append([]string{"run", "-d", "--pod", pod, "--name", name, "--pull=missing",
+			"--security-opt", "label=disable", "-v", s.Workspace + ":/workspace"}, labels...)
+		env := os.Environ()
+		keys := make([]string, 0, len(svc.Env))
+		for k := range svc.Env {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			args = append(args, "-e", k)
+			env = append(env, k+"="+svc.Env[k])
+		}
+		args = append(args, svc.Image)
+		args = append(args, svc.Command...)
+		cmd := exec.CommandContext(ctx, c.Bin, args...)
+		cmd.Env = env
+		if b, err := cmd.CombinedOutput(); err != nil {
+			return "", fmt.Errorf("starting service %s: %s", svc.Name, lastLine(string(b)))
+		}
+		out("system", fmt.Sprintf("Started service %s (%s); reach it at localhost", svc.Name, svc.Image))
+	}
+	return pod, nil
+}
+
+// Cleanup removes this runner's pods for runs that have finished.
+func (c *Container) Cleanup(ctx context.Context, lookup RunLookup) error {
+	if !c.isPodman() || c.Owner == "" {
+		return nil
+	}
+	b, err := exec.CommandContext(ctx, c.Bin, "pod", "ps", "--filter", "label=slipway.dev/runner="+c.Owner, "--format", "json").Output()
+	if err != nil {
+		return err
+	}
+	var pods []struct {
+		Name   string            `json:"Name"`
+		Labels map[string]string `json:"Labels"`
+	}
+	if err := json.Unmarshal(b, &pods); err != nil || len(pods) == 0 {
+		return err
+	}
+	ids := make([]string, 0, len(pods))
+	for _, p := range pods {
+		ids = append(ids, p.Labels["slipway.dev/run"])
+	}
+	infos, err := lookup(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for _, p := range pods {
+		info, known := infos[p.Labels["slipway.dev/run"]]
+		if known && info.Status != "succeeded" && info.Status != "failed" && info.Status != "canceled" {
+			continue
+		}
+		_ = exec.CommandContext(ctx, c.Bin, "pod", "rm", "-f", p.Name).Run()
+	}
+	return nil
+}
+
+func lastLine(s string) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	return lines[len(lines)-1]
 }
 
 // containerName makes name acceptable to Podman and Docker:

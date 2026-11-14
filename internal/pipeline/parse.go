@@ -87,12 +87,14 @@ func Parse(data []byte) (*Pipeline, error) {
 
 	p := &Pipeline{}
 	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "steps"}, func(k, v *yaml.Node) {
+	ps.eachKey(root, "", []string{"pipeline", "on", "containers", "steps"}, func(k, v *yaml.Node) {
 		switch k.Value {
 		case "pipeline":
 			p.Name = ps.str(v, "pipeline")
 		case "on":
 			ps.parseOn(v, p)
+		case "containers":
+			ps.parseContainers(v, p)
 		case "steps":
 			stepsNode = v
 		}
@@ -176,7 +178,72 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 	})
 }
 
-var stepKeys = []string{"image", "run", "needs", "when", "env", "retry", "timeout"}
+var (
+	stepKeys      = []string{"container", "image", "run", "needs", "when", "env", "retry", "timeout"}
+	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command"}
+	containerRe   = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$`)
+	quantityRe    = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?(m|k|M|G|T|Ki|Mi|Gi|Ti)?$`)
+	reservedNames = map[string]bool{"workspace": true}
+)
+
+func (ps *parser) parseContainers(n *yaml.Node, p *Pipeline) {
+	if n.Kind != yaml.MappingNode {
+		ps.add(n, "containers", "containers is a mapping of names to containers")
+		return
+	}
+	seen := map[string]bool{}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		k, v := n.Content[i], n.Content[i+1]
+		at := "containers." + k.Value
+		switch {
+		case seen[k.Value]:
+			ps.add(k, at, "container %q is written twice", k.Value)
+			continue
+		case !containerRe.MatchString(k.Value):
+			ps.add(k, at, "%q is not a valid container name: use lower-case letters, digits and hyphens", k.Value)
+		case reservedNames[k.Value] || strings.HasPrefix(k.Value, "image-"):
+			ps.add(k, at, "%q is reserved; choose another name", k.Value)
+		}
+		seen[k.Value] = true
+		c := &Container{Name: k.Value}
+		ps.eachKey(v, at, containerKeys, func(k2, v2 *yaml.Node) {
+			where := at + "." + k2.Value
+			switch k2.Value {
+			case "image":
+				c.Image = ps.str(v2, where)
+			case "env":
+				c.Env = ps.parseEnv(v2, where)
+			case "cpu", "memory":
+				q := ps.str(v2, where)
+				if !quantityRe.MatchString(q) {
+					ps.add(v2, where, "%q is not a size; write for example 500m or 2 for cpu, 512Mi or 2Gi for memory", q)
+				}
+				if k2.Value == "cpu" {
+					c.CPU = q
+				} else {
+					c.Memory = q
+				}
+			case "service":
+				switch ps.str(v2, where) {
+				case "true", "yes":
+					c.Service = true
+				case "false", "no":
+				default:
+					ps.add(v2, where, "write true or false")
+				}
+			case "command":
+				c.Command = ps.strList(v2, where)
+			}
+		})
+		if strings.TrimSpace(c.Image) == "" {
+			ps.add(k, at+".image", "an image is required")
+		}
+		if len(c.Command) > 0 && !c.Service {
+			ps.add(k, at+".command", "only a service has its own command; steps say what to run with run")
+		}
+		p.Containers = append(p.Containers, c)
+	}
+}
 
 func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 	if n.Kind != yaml.MappingNode {
@@ -203,6 +270,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		ps.eachKey(v, at, stepKeys, func(k2, v2 *yaml.Node) {
 			where := at + "." + k2.Value
 			switch k2.Value {
+			case "container":
+				s.Container = ps.str(v2, where)
 			case "image":
 				s.Image = ps.str(v2, where)
 			case "run":
@@ -230,8 +299,20 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				}
 			}
 		})
-		if strings.TrimSpace(s.Image) == "" {
-			ps.add(k, at+".image", "an image is required, for example: image: alpine:3.22")
+		switch {
+		case s.Container != "" && s.Image != "":
+			ps.add(k, at, "give either container or image, not both")
+		case s.Container != "":
+			switch c := p.Container(s.Container); {
+			case c == nil:
+				ps.add(k, at+".container", "there is no container called %q under containers", s.Container)
+			case c.Service:
+				ps.add(k, at+".container", "%q is a service; steps cannot run in it", s.Container)
+			default:
+				s.Image = c.Image
+			}
+		case strings.TrimSpace(s.Image) == "":
+			ps.add(k, at, "say what to run in, for example: image: alpine:3.22, or container: one of the containers above")
 		}
 		if strings.TrimSpace(s.Run) == "" {
 			ps.add(k, at+".run", "a script to run is required")
