@@ -149,7 +149,7 @@ var notYet = map[string]string{
 	"uses":     "templates and libraries arrive in a later milestone",
 	"with":     "templates and libraries arrive in a later milestone",
 	"kind":     "release, promote, approval and input nodes arrive in a later milestone",
-	"outputs":  "write outputs to the file named by $SLIPWAY_OUTPUTS instead",
+	"outputs":  "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
 	"runs_on":  "runner pools arrive in a later milestone",
 	"secrets":  "secret references arrive in a later milestone",
 	"matrix":   "matrix expansion arrives in a later milestone",
@@ -356,8 +356,8 @@ func (ps *parser) parseEnv(n *yaml.Node, at string) map[string]string {
 		switch {
 		case !envKeyRe.MatchString(k.Value):
 			ps.add(k, at+"."+k.Value, "%q is not a valid variable name", k.Value)
-		case strings.HasPrefix(strings.ToUpper(k.Value), "SLIPWAY_"):
-			ps.add(k, at+"."+k.Value, "names starting with SLIPWAY_ are reserved")
+		case strings.HasPrefix(strings.ToUpper(k.Value), "LAUNCHWAY_"):
+			ps.add(k, at+"."+k.Value, "names starting with LAUNCHWAY_ are reserved")
 		}
 		env[k.Value] = ps.str(v, at+"."+k.Value)
 	}

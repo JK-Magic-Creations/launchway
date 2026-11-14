@@ -29,7 +29,7 @@ func (c *capture) text() string {
 
 func spec(t *testing.T, script string) Spec {
 	return Spec{
-		Name: "slipway-test-" + strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-")),
+		Name:  "launchway-test-" + strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-")),
 		Image: "docker.io/library/alpine:3.22", Script: script,
 		Env: map[string]string{"GREETING": "hello world"}, Workspace: t.TempDir(), MetaDir: t.TempDir(),
 	}
@@ -38,7 +38,7 @@ func spec(t *testing.T, script string) Spec {
 func exercise(t *testing.T, ex Executor) {
 	t.Run("output, env and outputs", func(t *testing.T) {
 		var c capture
-		s := spec(t, "echo \"$GREETING\"\necho oops >&2\necho digest=sha256:abc >> \"$SLIPWAY_OUTPUTS\"\ntouch made-here")
+		s := spec(t, "echo \"$GREETING\"\necho oops >&2\necho digest=sha256:abc >> \"$LAUNCHWAY_OUTPUTS\"\ntouch made-here")
 		code, err := ex.Run(context.Background(), s, c.sink)
 		if err != nil || code != 0 {
 			t.Fatalf("code %d err %v\n%s", code, err, c.text())
@@ -81,8 +81,8 @@ func exercise(t *testing.T, ex Executor) {
 func TestHost(t *testing.T) { exercise(t, &Host{}) }
 
 func TestContainer(t *testing.T) {
-	if testing.Short() || os.Getenv("SLIPWAY_TEST_CONTAINERS") == "" {
-		t.Skip("set SLIPWAY_TEST_CONTAINERS=1 to run container tests")
+	if testing.Short() || os.Getenv("LAUNCHWAY_TEST_CONTAINERS") == "" {
+		t.Skip("set LAUNCHWAY_TEST_CONTAINERS=1 to run container tests")
 	}
 	c, err := DetectContainer()
 	if err != nil {
@@ -130,8 +130,8 @@ func TestContainerRejectsRelativePaths(t *testing.T) {
 }
 
 func TestPodmanService(t *testing.T) {
-	if os.Getenv("SLIPWAY_TEST_CONTAINERS") == "" {
-		t.Skip("set SLIPWAY_TEST_CONTAINERS=1 to run container tests")
+	if os.Getenv("LAUNCHWAY_TEST_CONTAINERS") == "" {
+		t.Skip("set LAUNCHWAY_TEST_CONTAINERS=1 to run container tests")
 	}
 	bin, err := exec.LookPath("podman")
 	if err != nil {

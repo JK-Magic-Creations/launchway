@@ -31,7 +31,7 @@ func (*Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		"PATH=" + os.Getenv("PATH"),
 		"HOME=" + os.Getenv("HOME"),
 		"LANG=C.UTF-8",
-		"SLIPWAY_OUTPUTS=" + filepath.Join(s.MetaDir, OutputsFile),
+		"LAUNCHWAY_OUTPUTS=" + filepath.Join(s.MetaDir, OutputsFile),
 	}
 	for k, v := range s.Env {
 		cmd.Env = append(cmd.Env, k+"="+v)

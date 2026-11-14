@@ -16,8 +16,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"slipway/internal/executor"
-	"slipway/internal/source"
+	"github.com/launchway-dev/launchway/internal/executor"
+	"github.com/launchway-dev/launchway/internal/source"
 )
 
 // Config is the whole server configuration. One file describes an
@@ -77,7 +77,7 @@ func Load(path string) (*Config, error) {
 		c.Listen = "127.0.0.1:8080"
 	}
 	if c.Data == "" {
-		c.Data = "slipway-data"
+		c.Data = "launchway-data"
 	}
 	// Runners and container runtimes may work from another directory, so
 	// every local path is made absolute.

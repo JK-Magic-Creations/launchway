@@ -129,7 +129,7 @@ func migrate(db *sql.DB) error {
 	}
 	current, _ := strconv.Atoi(v)
 	if current > len(migrations) {
-		return fmt.Errorf("the database was written by a newer version of slipway (schema %d, this build knows %d)", current, len(migrations))
+		return fmt.Errorf("the database was written by a newer version of launchway (schema %d, this build knows %d)", current, len(migrations))
 	}
 	for i := current; i < len(migrations); i++ {
 		tx, err := db.Begin()

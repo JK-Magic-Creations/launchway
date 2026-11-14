@@ -44,6 +44,7 @@ export interface StepView {
   skip_kind: string;
   runner: string;
   outputs: Record<string, string>;
+  container?: string;
   image?: string;
   run?: string;
   needs?: string[];
@@ -52,8 +53,13 @@ export interface StepView {
   timeout: string;
 }
 
+export interface GraphContainer {
+  name: string; image: string; env?: Record<string, string>; cpu?: string; memory?: string; service?: boolean; command?: string[];
+}
+
 export interface GraphStep {
   id: string;
+  container?: string;
   image: string;
   run: string;
   needs?: string[];
@@ -66,6 +72,7 @@ export interface GraphStep {
 export interface Graph {
   name: string;
   on: { push?: { branches?: string[]; tags?: string[] } };
+  containers?: GraphContainer[];
   steps: GraphStep[];
 }
 

@@ -9,7 +9,7 @@ web:
 	cd web && npm ci --no-audit --no-fund && npm run build
 
 build:
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/slipway ./cmd/slipway
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/launchway ./cmd/launchway
 
 test:
 	go vet ./...
@@ -17,20 +17,20 @@ test:
 	cd web && npx tsc --noEmit
 
 test-containers:
-	SLIPWAY_TEST_CONTAINERS=1 go test -count=1 ./internal/executor/
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 ./internal/executor/
 
-# Needs a cluster: kind create cluster --name slipway-test
-#                  kubectl --context kind-slipway-test create namespace slipway-test
+# Needs a cluster: kind create cluster --name launchway-test
+#                  kubectl --context kind-launchway-test create namespace launchway-test
 test-kubernetes:
-	SLIPWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-slipway-test} go test -count=1 -run Kubernetes ./internal/executor/
+	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -run Kubernetes ./internal/executor/
 
-# Creates ../slipway-demo, a small repository to play with.
+# Creates ../launchway-demo, a small repository to play with.
 demo:
-	./scripts/make-demo-repo.sh ../slipway-demo
+	./scripts/make-demo-repo.sh ../launchway-demo
 
-# Runs the server with the demo repository and Slipway itself as projects.
+# Runs the server with the demo repository and Launchway itself as projects.
 run: all demo
-	./bin/slipway server --config examples/local.yaml
+	./bin/launchway server --config examples/local.yaml
 
 clean:
 	rm -rf bin web/dist/assets web/dist/index.html

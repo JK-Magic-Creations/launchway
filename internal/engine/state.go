@@ -1,6 +1,6 @@
 package engine
 
-import "slipway/internal/pipeline"
+import "github.com/launchway-dev/launchway/internal/pipeline"
 
 // RunStatus is the state of a whole run.
 type RunStatus string

@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"slipway/internal/engine"
-	"slipway/internal/executor"
-	"slipway/internal/pipeline"
-	"slipway/internal/runner"
+	"github.com/launchway-dev/launchway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/executor"
+	"github.com/launchway-dev/launchway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/runner"
 )
 
 func quiet() *slog.Logger {
@@ -95,12 +95,12 @@ steps:
   hello:
     image: none
     run: |
-      echo "hello from $SLIPWAY_STEP"
-      echo greeting=hi >> "$SLIPWAY_OUTPUTS"
+      echo "hello from $LAUNCHWAY_STEP"
+      echo greeting=hi >> "$LAUNCHWAY_OUTPUTS"
   after:
     image: none
     needs: hello
-    run: test "$SLIPWAY_NEEDS_HELLO_GREETING" = hi
+    run: test "$LAUNCHWAY_NEEDS_HELLO_GREETING" = hi
   broken:
     image: none
     run: exit 3
@@ -155,8 +155,8 @@ steps:
   slow:
     image: none
     run: |
-      if [ "$SLIPWAY_ATTEMPT" = 1 ]; then sleep 60; fi
-      echo finished on attempt $SLIPWAY_ATTEMPT
+      if [ "$LAUNCHWAY_ATTEMPT" = 1 ]; then sleep 60; fi
+      echo finished on attempt $LAUNCHWAY_ATTEMPT
 `)
 	// Wait until the first runner is running the step, then kill it in a way
 	// that cannot report back: stop it and make its lease look abandoned.
@@ -225,7 +225,7 @@ func TestValidateEndpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out struct {
-		OK       bool                `json:"ok"`
+		OK       bool               `json:"ok"`
 		Problems []pipeline.Problem `json:"problems"`
 	}
 	json.NewDecoder(resp.Body).Decode(&out)

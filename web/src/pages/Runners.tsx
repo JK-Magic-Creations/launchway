@@ -46,8 +46,8 @@ export function RunnersPage() {
       )}
       <section className="card">
         <h2 className="h-sm">Add a runner on another machine</h2>
-        <p className="sub">Copy the <Mono>slipway</Mono> binary to the machine, then run it with this server's address and the token in <Mono>slipway-data/runner-token</Mono>:</p>
-        <pre className="code">{`slipway runner --server ${location.origin} --token <token> --name build-2`}</pre>
+        <p className="sub">Copy the <Mono>launchway</Mono> binary to the machine, then run it with this server's address and the token in <Mono>launchway-data/runner-token</Mono>:</p>
+        <pre className="code">{`launchway runner --server ${location.origin} --token <token> --name build-2`}</pre>
       </section>
     </div>
   );

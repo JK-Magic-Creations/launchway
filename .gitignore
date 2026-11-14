@@ -1,6 +1,6 @@
-/slipway
+/launchway
 /bin/
-/slipway-data/
+/launchway-data/
 /web/node_modules/
 /web/dist/*
 !/web/dist/.keep

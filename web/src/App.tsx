@@ -34,7 +34,7 @@ export function App() {
 
   useEffect(() => {
     const title = NAV.find((n) => n.active(path))?.label;
-    document.title = title ? `${title} · Slipway` : "Slipway";
+    document.title = title ? `${title} · Launchway` : "Launchway";
   }, [path]);
 
   return (
@@ -42,7 +42,7 @@ export function App() {
       <nav className="nav" aria-label="Main">
         <a href="/" onClick={onLink} className="brand">
           <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2563eb" /><path d="M8 22l8-12 8 12" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          <span>Slipway</span>
+          <span>Launchway</span>
         </a>
         <div className="nav-links">
           {NAV.map((n) => (
@@ -54,7 +54,7 @@ export function App() {
           <div className="nav-next-title">Coming next</div>
           {NEXT.map((n) => <div key={n} className="nav-soon" title="Designed, not built yet">{n}</div>)}
         </div>
-        <div className="nav-foot">{version && <span>Slipway {version}</span>}</div>
+        <div className="nav-foot">{version && <span>Launchway {version}</span>}</div>
       </nav>
       <main className="main">{page}</main>
     </div>

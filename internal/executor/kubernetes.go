@@ -34,18 +34,18 @@ import (
 
 // KubernetesOptions configure the Kubernetes executor.
 type KubernetesOptions struct {
-	Kubeconfig       string            `yaml:"kubeconfig"`         // default: the usual rules, or in-cluster
-	Context          string            `yaml:"context"`            // default: the current context
-	Namespace        string            `yaml:"namespace"`          // must exist
-	HelperImage      string            `yaml:"helper_image"`       // holds the workspace; needs sh and tar
-	ServiceAccount   string            `yaml:"service_account"`    // default: none mounted
+	Kubeconfig       string            `yaml:"kubeconfig"`      // default: the usual rules, or in-cluster
+	Context          string            `yaml:"context"`         // default: the current context
+	Namespace        string            `yaml:"namespace"`       // must exist
+	HelperImage      string            `yaml:"helper_image"`    // holds the workspace; needs sh and tar
+	ServiceAccount   string            `yaml:"service_account"` // default: none mounted
 	NodeSelector     map[string]string `yaml:"node_selector"`
-	CPU              string            `yaml:"cpu"`                // request per container
-	Memory           string            `yaml:"memory"`             // request per container
-	MemoryLimit      string            `yaml:"memory_limit"`       // optional limit per container
+	CPU              string            `yaml:"cpu"`          // request per container
+	Memory           string            `yaml:"memory"`       // request per container
+	MemoryLimit      string            `yaml:"memory_limit"` // optional limit per container
 	ImagePullSecrets []string          `yaml:"image_pull_secrets"`
-	KeepFailed       string            `yaml:"keep_failed"`        // how long to keep a failed run's pod for a resume; default 2h
-	StartTimeout     string            `yaml:"start_timeout"`      // how long to wait for images to pull; default 10m
+	KeepFailed       string            `yaml:"keep_failed"`   // how long to keep a failed run's pod for a resume; default 2h
+	StartTimeout     string            `yaml:"start_timeout"` // how long to wait for images to pull; default 10m
 }
 
 // Kubernetes runs each run in one pod: a helper container that holds the
@@ -73,10 +73,10 @@ type runPod struct {
 
 const (
 	labelManaged = "app.kubernetes.io/managed-by"
-	labelRun     = "slipway.dev/run"
-	labelOwner   = "slipway.dev/runner"
-	annoImages   = "slipway.dev/images"
-	annoReady    = "slipway.dev/workspace"
+	labelRun     = "launchway.dev/run"
+	labelOwner   = "launchway.dev/runner"
+	annoImages   = "launchway.dev/images"
+	annoReady    = "launchway.dev/workspace"
 	helperName   = "workspace"
 )
 
@@ -174,7 +174,7 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	}
 
 	key := containerName(s.Name)
-	dir := "/slipway/" + key
+	dir := "/launchway/" + key
 	var env strings.Builder
 	keys := make([]string, 0, len(s.Env))
 	for k := range s.Env {
@@ -184,7 +184,7 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	for _, name := range keys {
 		fmt.Fprintf(&env, "export %s=%s\n", name, shellQuote(s.Env[name]))
 	}
-	fmt.Fprintf(&env, "export SLIPWAY_OUTPUTS=%s/outputs\n", dir)
+	fmt.Fprintf(&env, "export LAUNCHWAY_OUTPUTS=%s/outputs\n", dir)
 	files := map[string][]byte{"script.sh": []byte(s.Script + "\n"), "env": []byte(env.String()), "outputs": nil}
 	if err := k.upload(ctx, rp.name, dir, files); err != nil {
 		return -1, k.podGone(ctx, s.RunID, rp, err)
@@ -362,7 +362,7 @@ func (k *Kubernetes) resources(cpu, memory string) corev1.ResourceRequirements {
 
 func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1.Pod, map[string]string) {
 	keepAlive := []string{"sh", "-c", "trap 'exit 0' TERM INT; while true; do sleep 3600 & wait $!; done"}
-	mounts := []corev1.VolumeMount{{Name: "workspace", MountPath: "/workspace"}, {Name: "slipway", MountPath: "/slipway"}}
+	mounts := []corev1.VolumeMount{{Name: "workspace", MountPath: "/workspace"}, {Name: "launchway", MountPath: "/launchway"}}
 	containers := map[string]string{}
 	images := map[string]string{}
 	cs := []corev1.Container{{Name: helperName, Image: k.o.HelperImage, Command: keepAlive, WorkingDir: "/workspace",
@@ -391,8 +391,8 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 	imgJSON, _ := json.Marshal(images)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{labelManaged: "slipway", labelRun: runID, labelOwner: k.owner},
+			Name:        name,
+			Labels:      map[string]string{labelManaged: "launchway", labelRun: runID, labelOwner: k.owner},
 			Annotations: map[string]string{annoImages: string(imgJSON)},
 		},
 		Spec: corev1.PodSpec{
@@ -404,7 +404,7 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 			Containers:                    cs,
 			Volumes: []corev1.Volume{
 				{Name: "workspace", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
-				{Name: "slipway", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{Medium: corev1.StorageMediumMemory}}},
+				{Name: "launchway", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{Medium: corev1.StorageMediumMemory}}},
 			},
 		},
 	}
@@ -651,7 +651,7 @@ func writeTar(w io.Writer, root string) error {
 // succeeded runs at once, failed and canceled runs after KeepFailed (so a
 // resume can reuse the workspace), and runs the server does not know.
 func (k *Kubernetes) Cleanup(ctx context.Context, lookup RunLookup) error {
-	sel := fmt.Sprintf("%s=slipway,%s=%s", labelManaged, labelOwner, k.owner)
+	sel := fmt.Sprintf("%s=launchway,%s=%s", labelManaged, labelOwner, k.owner)
 	list, err := k.client.CoreV1().Pods(k.o.Namespace).List(ctx, metav1.ListOptions{LabelSelector: sel})
 	if err != nil || len(list.Items) == 0 {
 		return err
@@ -682,7 +682,7 @@ func (k *Kubernetes) Cleanup(ctx context.Context, lookup RunLookup) error {
 }
 
 func podName(runID, owner string) string {
-	n := "slipway-" + strings.ToLower(strings.ReplaceAll(runID, "_", "-")) + "-" + owner
+	n := "launchway-" + strings.ToLower(strings.ReplaceAll(runID, "_", "-")) + "-" + owner
 	if len(n) > 63 {
 		n = n[:63]
 	}

@@ -1,4 +1,4 @@
-// Package runner takes steps from a Slipway server and executes them.
+// Package runner takes steps from a Launchway server and executes them.
 // It only ever makes outbound connections to the server.
 package runner
 
@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"slipway/internal/engine"
-	"slipway/internal/executor"
+	"github.com/launchway-dev/launchway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/executor"
 )
 
 // ErrLeaseLost means the server no longer recognises the lease; the step

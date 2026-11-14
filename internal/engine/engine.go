@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
-	"slipway/internal/hub"
-	"slipway/internal/ids"
-	"slipway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/hub"
+	"github.com/launchway-dev/launchway/internal/ids"
+	"github.com/launchway-dev/launchway/internal/pipeline"
 )
 
 var (
@@ -80,20 +80,20 @@ type RunnerInfo struct {
 
 // Job is everything a runner needs to execute one step attempt.
 type Job struct {
-	LeaseID   string            `json:"lease_id"`
-	LeaseTTL  pipeline.Duration `json:"lease_ttl"`
-	RunID     string            `json:"run_id"`
-	Project   string            `json:"project"`
-	RunNumber int               `json:"run_number"`
-	Pipeline  string            `json:"pipeline"`
-	StepID    string            `json:"step_id"`
-	Attempt   int               `json:"attempt"`
-	Image     string            `json:"image"`
-	Script    string            `json:"script"`
-	Env       map[string]string `json:"env"`
-	Timeout   pipeline.Duration `json:"timeout"`
-	Source    Source            `json:"source"`
-	SHA       string            `json:"sha,omitempty"`
+	LeaseID    string               `json:"lease_id"`
+	LeaseTTL   pipeline.Duration    `json:"lease_ttl"`
+	RunID      string               `json:"run_id"`
+	Project    string               `json:"project"`
+	RunNumber  int                  `json:"run_number"`
+	Pipeline   string               `json:"pipeline"`
+	StepID     string               `json:"step_id"`
+	Attempt    int                  `json:"attempt"`
+	Image      string               `json:"image"`
+	Script     string               `json:"script"`
+	Env        map[string]string    `json:"env"`
+	Timeout    pipeline.Duration    `json:"timeout"`
+	Source     Source               `json:"source"`
+	SHA        string               `json:"sha,omitempty"`
 	Container  string               `json:"container"`  // which of Containers the step runs in
 	Containers []pipeline.Container `json:"containers"` // every container the run needs, services included
 }
@@ -864,16 +864,16 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	}
 	for _, n := range def.Needs {
 		for k, v := range st.Steps[n].Outputs {
-			env["SLIPWAY_NEEDS_"+envName(n)+"_"+envName(k)] = v
+			env["LAUNCHWAY_NEEDS_"+envName(n)+"_"+envName(k)] = v
 		}
 	}
 	for k, v := range map[string]string{
-		"CI": "true", "SLIPWAY": "true",
-		"SLIPWAY_RUN_ID": st.ID, "SLIPWAY_RUN_NUMBER": strconv.Itoa(st.Number),
-		"SLIPWAY_PROJECT": st.Project, "SLIPWAY_PIPELINE": st.Pipeline.Name,
-		"SLIPWAY_STEP": stepID, "SLIPWAY_ATTEMPT": strconv.Itoa(s.Attempt),
-		"SLIPWAY_EVENT": t.Event, "SLIPWAY_REF": t.Ref, "SLIPWAY_BRANCH": t.Branch,
-		"SLIPWAY_TAG": t.Tag, "SLIPWAY_COMMIT": t.SHA,
+		"CI": "true", "LAUNCHWAY": "true",
+		"LAUNCHWAY_RUN_ID": st.ID, "LAUNCHWAY_RUN_NUMBER": strconv.Itoa(st.Number),
+		"LAUNCHWAY_PROJECT": st.Project, "LAUNCHWAY_PIPELINE": st.Pipeline.Name,
+		"LAUNCHWAY_STEP": stepID, "LAUNCHWAY_ATTEMPT": strconv.Itoa(s.Attempt),
+		"LAUNCHWAY_EVENT": t.Event, "LAUNCHWAY_REF": t.Ref, "LAUNCHWAY_BRANCH": t.Branch,
+		"LAUNCHWAY_TAG": t.Tag, "LAUNCHWAY_COMMIT": t.SHA,
 	} {
 		env[k] = v
 	}

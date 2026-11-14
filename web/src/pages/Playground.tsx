@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { api, type StepView, type ValidateResult } from "../api";
 import { Graph } from "../components/Graph";
 import { ErrorBox } from "../components/ui";
@@ -7,13 +7,19 @@ const SAMPLE = `pipeline: my-service
 on:
   push: { branches: [main, "release/*"] }
 
+# Toolboxes, named once and shared by steps. Services run
+# beside the steps and are reachable at localhost.
+containers:
+  go:    { image: golang:1.27, memory: 2Gi }
+  db:    { image: postgres:17, service: true, env: { POSTGRES_PASSWORD: test } }
+
 steps:
   lint:
-    image: golang:1.24
+    container: go
     run: go vet ./...
 
   test:
-    image: golang:1.24
+    container: go
     run: go test ./...
     retry: 1
 
@@ -21,17 +27,17 @@ steps:
     image: alpine:3.22
     needs: [lint, test]
     run: |
-      echo "building $SLIPWAY_COMMIT"
-      echo digest=sha256:example >> "$SLIPWAY_OUTPUTS"
+      echo "building $LAUNCHWAY_COMMIT"
+      echo digest=sha256:example >> "$LAUNCHWAY_OUTPUTS"
 
   deploy:
     image: alpine:3.22
     needs: build
     when: { branch: main }
-    run: echo "deploying $SLIPWAY_NEEDS_BUILD_DIGEST"
+    run: echo "deploying $LAUNCHWAY_NEEDS_BUILD_DIGEST"
 `;
 
-const KEY = "slipway.playground";
+const KEY = "launchway.playground";
 
 // The playground checks a pipeline as you type and draws the graph it
 // produces. Nothing runs.
@@ -53,7 +59,7 @@ export function PlaygroundPage() {
 
   const steps: StepView[] = useMemo(() => (res?.graph?.steps ?? []).map((s, i) => ({
     run_id: "", id: s.id, position: i, status: "pending", attempt: 0, queued_at: 0, started_at: 0, finished_at: 0,
-    exit_code: null, error: "", skip_kind: "", runner: "", outputs: {}, image: s.image, run: s.run, needs: s.needs,
+    exit_code: null, error: "", skip_kind: "", runner: "", outputs: {}, container: s.container, image: s.image, run: s.run, needs: s.needs,
     when: s.when, retry: s.retry, timeout: s.timeout,
   })), [res]);
   const chosen = res?.graph?.steps.find((s) => s.id === sel);
@@ -112,12 +118,26 @@ export function PlaygroundPage() {
               </section>
               <section className="card card-flush">
                 <Graph levels={res.levels} steps={steps} selected={sel} onSelect={setSel} now={0} compact
-                  describe={(s) => s.when ? "conditional" : (s.image ?? "").replace(/^docker\.io\/library\//, "")} />
+                  describe={(s) => (s.when ? "conditional · " : "") + (s.container ?? (s.image ?? "").replace(/^docker\.io\/library\//, ""))} />
               </section>
+              {res.graph.containers && res.graph.containers.length > 0 && (
+                <section className="card">
+                  <h2 className="h-sm">Containers in each run</h2>
+                  <dl className="kv">
+                    {res.graph.containers.map((c) => (
+                      <Fragment key={c.name}>
+                        <dt>{c.name}{c.service ? " (service)" : ""}</dt>
+                        <dd className="mono">{c.image}{c.memory ? ` · ${c.memory}` : ""}{c.cpu ? ` · ${c.cpu} cpu` : ""}</dd>
+                      </Fragment>
+                    ))}
+                  </dl>
+                </section>
+              )}
               {chosen && (
                 <section className="card">
                   <h2 className="h-sm">{chosen.id}</h2>
                   <dl className="kv">
+                    {chosen.container && <><dt>Container</dt><dd>{chosen.container}</dd></>}
                     <dt>Image</dt><dd className="mono">{chosen.image}</dd>
                     {chosen.needs && <><dt>Needs</dt><dd>{chosen.needs.join(", ")}</dd></>}
                     {chosen.when && <><dt>When</dt><dd className="mono">{JSON.stringify(chosen.when)}</dd></>}

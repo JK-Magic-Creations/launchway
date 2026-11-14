@@ -21,16 +21,16 @@ import (
 	"sync"
 	"time"
 
-	"slipway/internal/engine"
-	"slipway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/pipeline"
 )
 
 // PipelinePaths are where a repository's pipeline file is looked for.
-var PipelinePaths = []string{".slipway/pipeline.yaml", ".slipway/pipeline.yml"}
+var PipelinePaths = []string{".launchway/pipeline.yaml", ".launchway/pipeline.yml"}
 
-var ErrNoPipeline = errors.New("the commit has no .slipway/pipeline.yaml")
+var ErrNoPipeline = errors.New("the commit has no .launchway/pipeline.yaml")
 
-// Project is one repository Slipway watches.
+// Project is one repository Launchway watches.
 type Project struct {
 	Name          string
 	URL           string // anything git clone accepts, including a local path
@@ -283,7 +283,7 @@ func (m *Manager) poll(ctx context.Context, p *project) error {
 		pl, err := p.pipelineAt(ctx, r.SHA)
 		switch {
 		case errors.Is(err, ErrNoPipeline):
-			d.Outcome, d.Detail = "ignored", "no .slipway/pipeline.yaml at this commit"
+			d.Outcome, d.Detail = "ignored", "no .launchway/pipeline.yaml at this commit"
 		case err != nil:
 			d.Outcome, d.Detail = "error", "the pipeline file has problems:\n"+err.Error()
 		case !pl.On.MatchPush(branchOf(r), tagOf(r)):

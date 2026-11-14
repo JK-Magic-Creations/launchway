@@ -1,4 +1,4 @@
-// Command slipway is the whole product in one binary: the server, the
+// Command launchway is the whole product in one binary: the server, the
 // runner, and a local runner for trying pipelines on your own machine.
 package main
 
@@ -20,29 +20,29 @@ import (
 	"syscall"
 	"time"
 
-	"slipway/internal/api"
-	"slipway/internal/config"
-	"slipway/internal/engine"
-	"slipway/internal/executor"
-	"slipway/internal/pipeline"
-	"slipway/internal/runner"
-	"slipway/internal/source"
-	"slipway/web"
+	"github.com/launchway-dev/launchway/internal/api"
+	"github.com/launchway-dev/launchway/internal/config"
+	"github.com/launchway-dev/launchway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/executor"
+	"github.com/launchway-dev/launchway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/runner"
+	"github.com/launchway-dev/launchway/internal/source"
+	"github.com/launchway-dev/launchway/web"
 )
 
 var version = "dev"
 
-const usage = `Slipway: build and deliver software.
+const usage = `Launchway: build and deliver software.
 
 Usage:
-  slipway server   [--config slipway.yaml]   run the server, its web UI and a built-in runner
-  slipway runner   --server URL --token T     run a runner that takes work from a server
-  slipway run      [--file F] [--executor E]  run this directory's pipeline on this machine
-  slipway validate [file]                     check a pipeline file
-  slipway graph    [file]                     print a pipeline's graph as JSON
-  slipway version
+  launchway server   [--config launchway.yaml]   run the server, its web UI and a built-in runner
+  launchway runner   --server URL --token T     run a runner that takes work from a server
+  launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
+  launchway validate [file]                     check a pipeline file
+  launchway graph    [file]                     print a pipeline's graph as JSON
+  launchway version
 
-The pipeline file defaults to .slipway/pipeline.yaml.
+The pipeline file defaults to .launchway/pipeline.yaml.
 `
 
 func main() {
@@ -64,7 +64,7 @@ func main() {
 	case "graph":
 		err = cmdGraph(args)
 	case "version", "--version", "-v":
-		fmt.Println("slipway", version)
+		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
 		fmt.Print(usage)
 	default:
@@ -76,7 +76,7 @@ func main() {
 		if errors.As(err, &ex) {
 			os.Exit(int(ex))
 		}
-		fmt.Fprintln(os.Stderr, "slipway:", err)
+		fmt.Fprintln(os.Stderr, "launchway:", err)
 		os.Exit(1)
 	}
 }
@@ -89,7 +89,7 @@ func (e exitErr) Error() string { return fmt.Sprintf("exit %d", int(e)) }
 
 func cmdServer(args []string) error {
 	fs := flag.NewFlagSet("server", flag.ExitOnError)
-	cfgPath := fs.String("config", "slipway.yaml", "configuration file")
+	cfgPath := fs.String("config", "launchway.yaml", "configuration file")
 	listen := fs.String("listen", "", "address to listen on (overrides the config)")
 	data := fs.String("data", "", "data directory (overrides the config)")
 	fs.Parse(args)
@@ -110,7 +110,7 @@ func cmdServer(args []string) error {
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
 
-	eng, err := engine.Open(engine.Options{Path: filepath.Join(cfg.Data, "slipway.db"), Logger: log})
+	eng, err := engine.Open(engine.Options{Path: filepath.Join(cfg.Data, "launchway.db"), Logger: log})
 	if err != nil {
 		return err
 	}
@@ -170,11 +170,11 @@ func cmdServer(args []string) error {
 		close(runnerDone)
 	}
 
-	fmt.Fprintf(os.Stderr, "\n  Slipway %s is running at %s\n  %d project(s), data in %s\n  Runner token for other machines: %s\n\n",
+	fmt.Fprintf(os.Stderr, "\n  Launchway %s is running at %s\n  %d project(s), data in %s\n  Runner token for other machines: %s\n\n",
 		version, url, len(projects), cfg.Data, filepath.Join(cfg.Data, "runner-token"))
 
 	<-ctx.Done()
-	fmt.Fprintln(os.Stderr, "\nStopping. Steps in progress will run again when Slipway starts.")
+	fmt.Fprintln(os.Stderr, "\nStopping. Steps in progress will run again when Launchway starts.")
 	stopRunner()
 	select {
 	case <-runnerDone:
@@ -202,10 +202,10 @@ func loopback(addr string) string {
 
 func cmdRunner(args []string) error {
 	fs := flag.NewFlagSet("runner", flag.ExitOnError)
-	server := fs.String("server", os.Getenv("SLIPWAY_SERVER"), "server URL")
-	token := fs.String("token", os.Getenv("SLIPWAY_RUNNER_TOKEN"), "runner token (or SLIPWAY_RUNNER_TOKEN)")
+	server := fs.String("server", os.Getenv("LAUNCHWAY_SERVER"), "server URL")
+	token := fs.String("token", os.Getenv("LAUNCHWAY_RUNNER_TOKEN"), "runner token (or LAUNCHWAY_RUNNER_TOKEN)")
 	name := fs.String("name", "", "a name for this runner (default: the host name)")
-	data := fs.String("data", "slipway-runner", "directory for workspaces")
+	data := fs.String("data", "launchway-runner", "directory for workspaces")
 	conc := fs.Int("concurrency", 2, "steps to run at once")
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
@@ -297,7 +297,7 @@ func cmdGraph(args []string) error {
 
 func cmdRun(args []string) error {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
-	file := fs.String("file", "", "pipeline file (default .slipway/pipeline.yaml)")
+	file := fs.String("file", "", "pipeline file (default .launchway/pipeline.yaml)")
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
 	fs.Parse(args)
@@ -320,7 +320,7 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.MkdirTemp("", "slipway-run-")
+	tmp, err := os.MkdirTemp("", "launchway-run-")
 	if err != nil {
 		return err
 	}

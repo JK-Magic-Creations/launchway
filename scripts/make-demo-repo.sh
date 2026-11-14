@@ -1,18 +1,23 @@
 #!/bin/sh
-# Creates a small Git repository with a pipeline that shows what Slipway does.
+# Creates a small Git repository with a pipeline that shows what Launchway does.
 set -e
-dir=${1:-../slipway-demo}
+dir=${1:-../launchway-demo}
 if [ -d "$dir/.git" ]; then
   echo "$dir already exists; leaving it alone."
   exit 0
 fi
-mkdir -p "$dir/.slipway"
+mkdir -p "$dir/.launchway"
 cd "$dir"
 git init -q -b main
-cat > .slipway/pipeline.yaml <<'EOF'
+cat > .launchway/pipeline.yaml <<'EOF'
 pipeline: demo-app
 on:
   push: { branches: [main, "feature/*"] }
+
+# Named containers: a toolbox, and a cache that runs beside the steps.
+containers:
+  tools: { image: docker.io/library/alpine:3.22 }
+  cache: { image: docker.io/library/redis:7-alpine, service: true }
 
 steps:
   lint:
@@ -29,7 +34,20 @@ steps:
         sleep 0.6
         printf '\033[32mPASS\033[0m  %s\n' "$t"
       done
-      echo "coverage=84%" >> "$SLIPWAY_OUTPUTS"
+      echo "coverage=84%" >> "$LAUNCHWAY_OUTPUTS"
+
+  integration-tests:
+    container: tools
+    needs: unit-tests
+    run: |
+      echo "Talking to the cache service at localhost:6379"
+      for i in $(seq 1 30); do
+        reply=$(printf 'PING\r\n' | nc -w 1 localhost 6379 2>/dev/null | tr -d '\r') || true
+        if [ "$reply" = "+PONG" ]; then printf '\033[32mPASS\033[0m  cache answered %s\n' "$reply"; exit 0; fi
+        sleep 1
+      done
+      echo "the cache never answered" >&2
+      exit 1
 
   security-scan:
     image: docker.io/library/alpine:3.22
@@ -40,23 +58,23 @@ steps:
 
   build:
     image: docker.io/library/alpine:3.22
-    needs: [lint, unit-tests, security-scan]
+    needs: [lint, integration-tests, security-scan]
     run: |
-      echo "Building $SLIPWAY_PROJECT at $SLIPWAY_COMMIT (coverage $SLIPWAY_NEEDS_UNIT_TESTS_COVERAGE)"
+      echo "Building $LAUNCHWAY_PROJECT at $LAUNCHWAY_COMMIT (coverage $LAUNCHWAY_NEEDS_UNIT_TESTS_COVERAGE)"
       sleep 2
-      digest=$(echo "$SLIPWAY_COMMIT" | sha256sum | cut -c1-16)
-      echo "image=registry.example.com/demo-app@sha256:$digest" >> "$SLIPWAY_OUTPUTS"
+      digest=$(echo "$LAUNCHWAY_COMMIT" | sha256sum | cut -c1-16)
+      echo "image=registry.example.com/demo-app@sha256:$digest" >> "$LAUNCHWAY_OUTPUTS"
       echo "Pushed registry.example.com/demo-app@sha256:$digest"
 
   smoke-test:
     image: docker.io/library/alpine:3.22
     needs: build
     run: |
-      echo "Testing $SLIPWAY_NEEDS_BUILD_IMAGE"
+      echo "Testing $LAUNCHWAY_NEEDS_BUILD_IMAGE"
       sleep 1
       # Fails on the first attempt while a file called FLAKY exists, so you
       # can try "Resume". Delete FLAKY and push to make it pass first time.
-      if [ "$SLIPWAY_ATTEMPT" = "1" ] && [ -f FLAKY ]; then
+      if [ "$LAUNCHWAY_ATTEMPT" = "1" ] && [ -f FLAKY ]; then
         echo "GET /healthz → 503 Service Unavailable" >&2
         exit 1
       fi
@@ -67,15 +85,15 @@ steps:
     needs: smoke-test
     when: { branch: main }
     run: |
-      echo "Would deploy $SLIPWAY_NEEDS_BUILD_IMAGE to dev"
+      echo "Would deploy $LAUNCHWAY_NEEDS_BUILD_IMAGE to dev"
 EOF
-echo "A demo app for trying Slipway." > README.md
+echo "A demo app for trying Launchway." > README.md
 echo "Delete this file to make the smoke test pass first time." > FLAKY
 git add -A
-git -c user.name=Slipway -c user.email=demo@localhost commit -q -m "Initial demo app"
+git -c user.name=Launchway -c user.email=demo@localhost commit -q -m "Initial demo app"
 git checkout -q -b feature/new-button
 echo "button" > button.txt
 git add -A
-git -c user.name=Slipway -c user.email=demo@localhost commit -q -m "Add a new button"
+git -c user.name=Launchway -c user.email=demo@localhost commit -q -m "Add a new button"
 git checkout -q main
 echo "Created $dir"

@@ -1,4 +1,4 @@
-// Package api serves Slipway's HTTP API: one part for runners, one for the
+// Package api serves Launchway's HTTP API: one part for runners, one for the
 // web UI and the command line, and the UI itself.
 package api
 
@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"slipway/internal/engine"
-	"slipway/internal/hub"
-	"slipway/internal/pipeline"
-	"slipway/internal/source"
+	"github.com/launchway-dev/launchway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/hub"
+	"github.com/launchway-dev/launchway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/source"
 )
 
 // Server holds what the handlers need.
@@ -497,5 +497,5 @@ func (s *Server) ui() http.Handler {
 
 func noUI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprintln(w, "Slipway is running, but this build has no web UI. Build it with: make web")
+	fmt.Fprintln(w, "Launchway is running, but this build has no web UI. Build it with: make web")
 }

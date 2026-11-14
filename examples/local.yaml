@@ -1,17 +1,17 @@
-# A configuration for trying Slipway on your own machine.
+# A configuration for trying Launchway on your own machine.
 # Paths are relative to this file.
 listen: 127.0.0.1:8080
-data: ../slipway-data
+data: ../launchway-data
 
 projects:
   # A small repository made by `make demo`, to play with freely.
   - name: demo-app
-    repo: ../../slipway-demo
+    repo: ../../launchway-demo
     branch: main
     poll: 5s
 
-  # Slipway builds and tests itself.
-  - name: slipway
+  # Launchway builds and tests itself.
+  - name: launchway
     repo: ..
     branch: main
     poll: 15s

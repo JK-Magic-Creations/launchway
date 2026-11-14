@@ -111,7 +111,7 @@ func TestParseProblems(t *testing.T) {
 		{"duplicate step", "pipeline: a\nsteps:\n  a: {image: x, run: y}\n  a: {image: x, run: y}\n", "written twice"},
 		{"bad retry", "pipeline: a\nsteps:\n  a: {image: x, run: y, retry: 99}\n", "retry must be"},
 		{"bad timeout", "pipeline: a\nsteps:\n  a: {image: x, run: y, timeout: soon}\n", "duration"},
-		{"reserved env", "pipeline: a\nsteps:\n  a: {image: x, run: y, env: {SLIPWAY_X: 1}}\n", "reserved"},
+		{"reserved env", "pipeline: a\nsteps:\n  a: {image: x, run: y, env: {LAUNCHWAY_X: 1}}\n", "reserved"},
 		{"bad event", "pipeline: a\nsteps:\n  a: {image: x, run: y, when: {event: pr}}\n", "not known"},
 		{"empty push", "pipeline: a\non: {push: {}}\nsteps:\n  a: {image: x, run: y}\n", "list branches or tags"},
 	}

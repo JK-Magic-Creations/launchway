@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"slipway/internal/engine"
-	"slipway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/pipeline"
 )
 
 // printer shows a local run in the terminal as it happens.

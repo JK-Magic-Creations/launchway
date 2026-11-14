@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"slipway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/engine"
 )
 
 func run(t *testing.T, dir string, args ...string) {
@@ -26,9 +26,9 @@ func run(t *testing.T, dir string, args ...string) {
 
 func commit(t *testing.T, repo, pipelineYAML, msg string) {
 	t.Helper()
-	os.MkdirAll(filepath.Join(repo, ".slipway"), 0o755)
+	os.MkdirAll(filepath.Join(repo, ".launchway"), 0o755)
 	if pipelineYAML != "" {
-		os.WriteFile(filepath.Join(repo, ".slipway", "pipeline.yaml"), []byte(pipelineYAML), 0o644)
+		os.WriteFile(filepath.Join(repo, ".launchway", "pipeline.yaml"), []byte(pipelineYAML), 0o644)
 	}
 	os.WriteFile(filepath.Join(repo, "change.txt"), []byte(msg), 0o644)
 	run(t, repo, "git", "add", "-A")

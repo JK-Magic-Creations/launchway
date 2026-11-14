@@ -1,5 +1,5 @@
-# Slipway's own pipeline.
-pipeline: slipway
+# Launchway's own pipeline.
+pipeline: launchway
 on:
   push: { branches: [main] }
 
@@ -26,7 +26,7 @@ steps:
     image: docker.io/library/golang:1.27
     needs: ui
     run: |
-      version=$(echo "$SLIPWAY_COMMIT" | cut -c1-8)
-      CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$version" -o bin/slipway ./cmd/slipway
-      ls -lh bin/slipway
-      echo "size=$(du -h bin/slipway | cut -f1)" >> "$SLIPWAY_OUTPUTS"
+      version=$(echo "$LAUNCHWAY_COMMIT" | cut -c1-8)
+      CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$version" -o bin/launchway ./cmd/launchway
+      ls -lh bin/launchway
+      echo "size=$(du -h bin/launchway | cut -f1)" >> "$LAUNCHWAY_OUTPUTS"

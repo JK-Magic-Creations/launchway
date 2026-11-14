@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"slipway/internal/engine"
-	"slipway/internal/executor"
+	"github.com/launchway-dev/launchway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/executor"
 )
 
 // Runner leases steps and executes them, Concurrency at a time.
@@ -240,7 +240,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	start := time.Now()
 	code, err := r.Exec.Run(tctx, executor.Spec{
 		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
-		Name: "slipway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: job.Env,
+		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: job.Env,
 		Workspace: ws, MetaDir: meta,
 	}, func(stream, text string) {
 		if stream == "system" {

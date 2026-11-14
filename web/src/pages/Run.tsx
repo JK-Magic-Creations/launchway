@@ -190,6 +190,7 @@ function StepPanel({ run, step, now, sink }: {
             {step.started_at > 0 && <span className="meta">{elapsed(step.started_at, step.finished_at, now)}</span>}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
             {step.runner && <span className="meta">on {step.runner}</span>}
+            {step.container && !step.container.startsWith("image-") && <span className="meta">in <strong>{step.container}</strong></span>}
             {step.image && <span className="meta mono">{step.image}</span>}
           </div>
         </div>
@@ -271,7 +272,7 @@ function DefinitionTab({ run }: { run: RunDetail }) {
   return (
     <div className="split">
       <section className="card">
-        <h2 className="h-sm">.slipway/pipeline.yaml at {shortSha(run.sha) || "this run"}</h2>
+        <h2 className="h-sm">.launchway/pipeline.yaml at {shortSha(run.sha) || "this run"}</h2>
         {text !== null ? <pre className="code">{text}</pre> : failed ? <p className="sub">The file is only kept for runs from a Git project.</p> : <div className="loading">Loading…</div>}
       </section>
       <section className="card">

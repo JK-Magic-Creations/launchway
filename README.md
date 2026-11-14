@@ -1,10 +1,17 @@
-# Slipway
+# Launchway
 
-A build and delivery platform: one binary that runs your pipelines on a laptop, a home server or a
-fleet of runners, with a live web UI. *Slipway* is a working name.
+A build and delivery platform: one binary that runs your pipelines on a laptop, a home server, a
+Kubernetes cluster or a fleet of runners, with a live web UI.
 
-The design lives in a separate repository, `cicd-platform-design`. This repository is the
-implementation, built foundation first.
+Launchway aims to take the best of Harness, Jenkins and GitHub Actions:
+
+- a real delivery model (releases, promotion, verification, rollback);
+- pipelines that run the same on a laptop as on the server;
+- runs that survive crashes and resume from the failed step;
+- runners that only ever connect outbound.
+
+It is early. The foundation described below works and is tested; much of the rest is designed
+but not built yet (see [Status](#status)).
 
 ## Try it
 
@@ -17,9 +24,9 @@ make run
 `make run` does four things:
 
 - builds the UI and the binary;
-- creates a demo repository at `../slipway-demo`;
+- creates a demo repository at `../launchway-demo`;
 - starts the server at **http://127.0.0.1:8080**;
-- watches two projects: the demo repository, and Slipway itself.
+- watches two projects: the demo repository, and Launchway itself.
 
 Things to try:
 
@@ -28,18 +35,18 @@ Things to try:
 - **Resume a failed run.** The demo's `smoke-test` fails on its first attempt on purpose while a
   file called `FLAKY` exists. Press *Resume from smoke-test*. Only that step and the ones after it
   run again; the earlier results are kept.
-- **Push to trigger a run.** Commit to `../slipway-demo` on `main` or `feature/*` and push. A run
+- **Push to trigger a run.** Commit to `../launchway-demo` on `main` or `feature/*` and push. A run
   starts within a few seconds, and *Recent pushes* on the project explains every decision.
 - **Survive a restart.** Stop the server while a step is running and start it again. The step is
   run again, and nothing that had finished runs twice.
 - **Open the Playground.** Write a pipeline and watch it validate and draw as you type.
-- **Run locally.** In any repository with a `.slipway/pipeline.yaml`, run `bin/slipway run`. It
+- **Run locally.** In any repository with a `.launchway/pipeline.yaml`, run `bin/launchway run`. It
   uses the same engine, on your machine, against your working copy.
 
 ## A pipeline
 
 ```yaml
-# .slipway/pipeline.yaml
+# .launchway/pipeline.yaml
 pipeline: my-service
 on:
   push: { branches: [main, "release/*"] }
@@ -54,14 +61,14 @@ steps:
     image: alpine:3.22
     needs: test
     run: |
-      echo "building $SLIPWAY_COMMIT"
-      echo digest=sha256:... >> "$SLIPWAY_OUTPUTS"
+      echo "building $LAUNCHWAY_COMMIT"
+      echo digest=sha256:... >> "$LAUNCHWAY_OUTPUTS"
 
   deploy:
     image: alpine:3.22
     needs: build
     when: { branch: main }
-    run: echo "deploying $SLIPWAY_NEEDS_BUILD_DIGEST"
+    run: echo "deploying $LAUNCHWAY_NEEDS_BUILD_DIGEST"
 ```
 
 | Key | Meaning |
@@ -71,28 +78,51 @@ steps:
 | `needs` | Steps that must succeed first; steps with no unmet needs run in parallel |
 | `when` | `branch`, `tag` and `event` (`push`, `manual`) patterns; the step is skipped if they do not match |
 | `env` | Extra environment variables |
+| `container` | A named container from the `containers` section, instead of `image` |
 | `retry` | Extra attempts after a failure |
 | `timeout` | Per attempt; default 1h |
 
-Steps write `key=value` lines to `$SLIPWAY_OUTPUTS`. Steps that need them receive
-`SLIPWAY_NEEDS_<STEP>_<KEY>`. Every step also gets `SLIPWAY_COMMIT`, `SLIPWAY_BRANCH`,
-`SLIPWAY_RUN_NUMBER` and related variables.
+### Containers and services
+
+Name the toolboxes a pipeline needs once, then use them by name. Every container in a run shares
+the workspace. Services run beside the steps for the whole run and are reachable at `localhost`.
+
+```yaml
+containers:
+  maven:    { image: maven:3.9-eclipse-temurin-21, memory: 2Gi, cpu: "1" }
+  dotnet:   { image: mcr.microsoft.com/dotnet/sdk:9.0 }
+  gcloud:   { image: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable }
+  postgres: { image: postgres:17, service: true, env: { POSTGRES_PASSWORD: test } }
+
+steps:
+  build:  { container: maven,  run: mvn -B package }
+  test:   { container: dotnet, run: dotnet test, needs: build }
+  deploy: { container: gcloud, run: gcloud run deploy ..., needs: test, when: { branch: main } }
+```
+
+On Kubernetes, a run is one pod: a container per toolbox plus the services, so steps start
+instantly once the pod is up. On Podman, services run in a pod per run. Plain `image:` steps still
+work, and each image used that way gets a container of its own.
+
+Steps write `key=value` lines to `$LAUNCHWAY_OUTPUTS`. Steps that need them receive
+`LAUNCHWAY_NEEDS_<STEP>_<KEY>`. Every step also gets `LAUNCHWAY_COMMIT`, `LAUNCHWAY_BRANCH`,
+`LAUNCHWAY_RUN_NUMBER` and related variables.
 
 Mistakes are reported with line numbers, before anything runs:
 
 ```
-$ slipway validate
-.slipway/pipeline.yaml:14: steps.build.needs: needs "tests", but there is no step with that name
+$ launchway validate
+.launchway/pipeline.yaml:14: steps.build.needs: needs "tests", but there is no step with that name
 ```
 
 ## Commands
 
 ```
-slipway server   [--config slipway.yaml]   the server, web UI and a built-in runner
-slipway runner   --server URL --token T     a runner on another machine (outbound connections only)
-slipway run                                 this directory's pipeline, on this machine
-slipway validate [file]                     check a pipeline file
-slipway graph    [file]                     the graph a pipeline produces, as JSON
+launchway server   [--config launchway.yaml]   the server, web UI and a built-in runner
+launchway runner   --server URL --token T     a runner on another machine (outbound connections only)
+launchway run                                 this directory's pipeline, on this machine
+launchway validate [file]                     check a pipeline file
+launchway graph    [file]                     the graph a pipeline produces, as JSON
 ```
 
 ## How it is built
@@ -101,7 +131,7 @@ slipway graph    [file]                     the graph a pipeline produces, as JS
 |---|---|
 | `internal/pipeline` | Parses and validates the pipeline file into a typed graph |
 | `internal/engine` | The durable run engine. Every change is an event in SQLite and state is rebuilt from events. Runners hold steps on leases; a lost runner's step is run again. Handles retries, cancel and resume. |
-| `internal/executor` | Runs a step in a Podman or Docker container, or on the host |
+| `internal/executor` | Runs a step in a Podman or Docker container, in a Kubernetes pod, or on the host |
 | `internal/runner` | Takes steps from the server over HTTP, streams logs, sends heartbeats |
 | `internal/source` | Mirrors Git repositories, starts runs on matching pushes, records why |
 | `internal/api` | Runner API, UI API and the live event stream |
@@ -114,13 +144,23 @@ slipway graph    [file]                     the graph a pipeline produces, as JS
 - many runners competing for the same steps;
 - retries, cancel and resume;
 - real Git repositories;
-- real containers (`make test-containers`).
+- real containers (`make test-containers`);
+- a real Kubernetes cluster (`make test-kubernetes`).
 
 ## Status
 
-This is the foundation. Not built yet, in the order planned:
+Built so far:
 
-- Kubernetes executor and toolbox images
+- the pipeline model;
+- the durable engine;
+- the Podman, Docker, host and Kubernetes executors;
+- named containers and services;
+- Git polling;
+- the web UI.
+
+Not built yet, in the order planned:
+
+- Image builds and secrets (Vault, OpenBao)
 - Releases and promotion
 - The Argo CD driver
 - Approvals and inputs
@@ -131,3 +171,11 @@ This is the foundation. Not built yet, in the order planned:
 
 Not suitable for untrusted networks yet: the web UI has no sign-in and listens on localhost by
 default.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security problems: [SECURITY.md](SECURITY.md).
+
+## Licence
+
+Apache 2.0. See [LICENSE](LICENSE).

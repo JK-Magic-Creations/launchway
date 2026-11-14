@@ -72,7 +72,7 @@ export function RunsPage() {
       {runs === null && !error && <div className="loading">Loading…</div>}
       {runs && runs.length === 0 && (
         <Empty title={status || project ? "No runs match" : "No runs yet"}>
-          {status || project ? "Try another filter." : <>Start one from <Link href="/projects">Projects</Link>, push to a watched branch, or try <span className="mono">slipway run</span> in a repository.</>}
+          {status || project ? "Try another filter." : <>Start one from <Link href="/projects">Projects</Link>, push to a watched branch, or try <span className="mono">launchway run</span> in a repository.</>}
         </Empty>
       )}
       {runs && runs.length > 0 && (

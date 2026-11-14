@@ -4,9 +4,9 @@ package executor
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"context"
 	"errors"
 	"io"
 	"os"
@@ -24,10 +24,10 @@ type Spec struct {
 	Container  string            // which of Containers this step runs in
 	Name       string            // unique, safe for a container name
 	Image      string            // the image of Container; ignored by the host executor
-	Script    string            // run with sh -e
-	Env       map[string]string // added to the step's environment
-	Workspace string            // host directory the step works in
-	MetaDir   string            // host directory for the script and outputs file
+	Script     string            // run with sh -e
+	Env        map[string]string // added to the step's environment
+	Workspace  string            // host directory the step works in
+	MetaDir    string            // host directory for the script and outputs file
 }
 
 // Sink receives output lines as they are produced.

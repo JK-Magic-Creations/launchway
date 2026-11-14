@@ -48,13 +48,13 @@ type Step struct {
 	ID        string            `json:"id"`
 	Container string            `json:"container,omitempty"` // a named container; Image is then filled from it
 	Image     string            `json:"image"`
-	Run     string            `json:"run"`
-	Needs   []string          `json:"needs,omitempty"`
-	When    *Condition        `json:"when,omitempty"`
-	Env     map[string]string `json:"env,omitempty"`
-	Retry   int               `json:"retry"`   // extra attempts after a failure
-	Timeout Duration          `json:"timeout"` // per attempt
-	Line    int               `json:"-"`       // where it was written, for messages
+	Run       string            `json:"run"`
+	Needs     []string          `json:"needs,omitempty"`
+	When      *Condition        `json:"when,omitempty"`
+	Env       map[string]string `json:"env,omitempty"`
+	Retry     int               `json:"retry"`   // extra attempts after a failure
+	Timeout   Duration          `json:"timeout"` // per attempt
+	Line      int               `json:"-"`       // where it was written, for messages
 }
 
 // Condition is a closed set of tests, deliberately not an expression language.

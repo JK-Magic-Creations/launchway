@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"slipway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/pipeline"
 )
 
 // EventType names something that happened to a run. Events are never changed

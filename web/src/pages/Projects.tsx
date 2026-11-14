@@ -24,14 +24,14 @@ export function ProjectsPage() {
       <header className="page-head">
         <div>
           <h1>Projects</h1>
-          <p className="sub">Repositories Slipway watches. A push that matches a pipeline's trigger starts a run; every push is explained below.</p>
+          <p className="sub">Repositories Launchway watches. A push that matches a pipeline's trigger starts a run; every push is explained below.</p>
         </div>
       </header>
       <ErrorBox error={error} />
       {projects === null && !error && <div className="loading">Loading…</div>}
       {projects && projects.length === 0 && (
         <Empty title="No projects yet">
-          Add repositories to <Mono>slipway.yaml</Mono> and restart the server:
+          Add repositories to <Mono>launchway.yaml</Mono> and restart the server:
           <pre className="code">{`projects:
   - name: my-service
     repo: https://git.example.com/me/my-service.git
@@ -64,7 +64,7 @@ export function ProjectsPage() {
             )}
             <details className="decisions" open={p.decisions.length > 0 && p.decisions.length <= 3}>
               <summary>Recent pushes ({p.decisions.length})</summary>
-              {p.decisions.length === 0 && <p className="sub">No pushes seen since the server started. Slipway records where every branch is the first time it looks, and reacts to changes after that.</p>}
+              {p.decisions.length === 0 && <p className="sub">No pushes seen since the server started. Launchway records where every branch is the first time it looks, and reacts to changes after that.</p>}
               <ul>
                 {p.decisions.map((d, i) => (
                   <li key={i} className={"decision d-" + d.outcome}>

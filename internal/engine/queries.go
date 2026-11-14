@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"slipway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/pipeline"
 )
 
 // RunSummary is a run as shown in lists.
@@ -53,6 +53,7 @@ type StepView struct {
 	SkipKind   string              `json:"skip_kind"`
 	Runner     string              `json:"runner"`
 	Outputs    map[string]string   `json:"outputs"`
+	Container  string              `json:"container,omitempty"`
 	Image      string              `json:"image,omitempty"`
 	Run        string              `json:"run,omitempty"`
 	Needs      []string            `json:"needs,omitempty"`
@@ -240,6 +241,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		}
 		if def := created.Pipeline.Step(v.ID); def != nil {
 			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout
+			v.Container = created.Pipeline.ContainerFor(def)
 		}
 		d.StepList = append(d.StepList, *v)
 	}

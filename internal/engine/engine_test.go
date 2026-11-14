@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"slipway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/pipeline"
 )
 
 // clock is a fake time source the tests move by hand.
@@ -40,7 +40,7 @@ func open(t *testing.T, path string, clk *clock) *Engine {
 func newEngine(t *testing.T) (*Engine, *clock) {
 	t.Helper()
 	clk := &clock{t: time.Date(2026, 11, 14, 9, 0, 0, 0, time.UTC)}
-	e := open(t, filepath.Join(t.TempDir(), "slipway.db"), clk)
+	e := open(t, filepath.Join(t.TempDir(), "launchway.db"), clk)
 	t.Cleanup(func() { e.Close() })
 	return e, clk
 }
@@ -244,10 +244,10 @@ func TestOutputsReachDependents(t *testing.T) {
 	create(t, e, linear, Trigger{Event: "push", Branch: "main", SHA: "abc123"})
 	ok(t, e, take(t, e), map[string]string{"image-digest": "sha256:1"})
 	j := take(t, e)
-	if j.Env["SLIPWAY_NEEDS_A_IMAGE_DIGEST"] != "sha256:1" {
+	if j.Env["LAUNCHWAY_NEEDS_A_IMAGE_DIGEST"] != "sha256:1" {
 		t.Fatalf("output not passed on: %v", j.Env)
 	}
-	if j.Env["SLIPWAY_COMMIT"] != "abc123" || j.Env["SLIPWAY_BRANCH"] != "main" || j.Env["CI"] != "true" {
+	if j.Env["LAUNCHWAY_COMMIT"] != "abc123" || j.Env["LAUNCHWAY_BRANCH"] != "main" || j.Env["CI"] != "true" {
 		t.Fatalf("standard variables missing: %v", j.Env)
 	}
 }
@@ -283,7 +283,7 @@ func TestLostRunnerIsRequeuedThenGivenUp(t *testing.T) {
 // The core durability test: the server stops in the middle of a run.
 func TestCrashRecovery(t *testing.T) {
 	clk := &clock{t: time.Date(2026, 11, 14, 9, 0, 0, 0, time.UTC)}
-	path := filepath.Join(t.TempDir(), "slipway.db")
+	path := filepath.Join(t.TempDir(), "launchway.db")
 
 	e := open(t, path, clk)
 	id := create(t, e, linear, Trigger{})
@@ -322,7 +322,7 @@ func TestCrashRecovery(t *testing.T) {
 	if j.StepID != "c" || j.Attempt != 2 {
 		t.Fatalf("got %s attempt %d, want c attempt 2", j.StepID, j.Attempt)
 	}
-	if j.Env["SLIPWAY_NEEDS_A_K"] != "" {
+	if j.Env["LAUNCHWAY_NEEDS_A_K"] != "" {
 		t.Fatalf("c does not need a, so a's outputs should not be passed")
 	}
 	if err := e.Finish(jc.LeaseID, Result{Outcome: "succeeded"}); !errors.Is(err, ErrLeaseLost) {

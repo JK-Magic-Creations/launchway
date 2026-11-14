@@ -13,16 +13,17 @@ import (
 )
 
 // These tests need a real cluster, for example:
-//   kind create cluster --name slipway-test
-//   kubectl --context kind-slipway-test create namespace slipway-test
-//   SLIPWAY_TEST_KUBE_CONTEXT=kind-slipway-test go test ./internal/executor/ -run Kubernetes
+//
+//	kind create cluster --name launchway-test
+//	kubectl --context kind-launchway-test create namespace launchway-test
+//	LAUNCHWAY_TEST_KUBE_CONTEXT=kind-launchway-test go test ./internal/executor/ -run Kubernetes
 func kube(t *testing.T) *Kubernetes {
 	t.Helper()
-	ctxName := os.Getenv("SLIPWAY_TEST_KUBE_CONTEXT")
+	ctxName := os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT")
 	if ctxName == "" {
-		t.Skip("set SLIPWAY_TEST_KUBE_CONTEXT to run Kubernetes tests")
+		t.Skip("set LAUNCHWAY_TEST_KUBE_CONTEXT to run Kubernetes tests")
 	}
-	k, err := NewKubernetes(KubernetesOptions{Context: ctxName, Namespace: "slipway-test", StartTimeout: "5m"}, "test-"+t.Name())
+	k, err := NewKubernetes(KubernetesOptions{Context: ctxName, Namespace: "launchway-test", StartTimeout: "5m"}, "test-"+t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +61,7 @@ func TestKubernetesRunSharesWorkspaceAcrossSteps(t *testing.T) {
 	s1 := kspec(t, runID, "s1", alpine, `cat from-checkout.txt; cat sub/link
 echo "$GREETING"
 echo made-by-step-1 > shared.txt
-echo answer=42 >> "$SLIPWAY_OUTPUTS"
+echo answer=42 >> "$LAUNCHWAY_OUTPUTS"
 echo to-stderr >&2`, ws)
 	code, err := k.Run(ctx, s1, c.sink)
 	if err != nil || code != 0 {
@@ -131,12 +132,12 @@ func TestKubernetesBadImageIsExplained(t *testing.T) {
 	k := kube(t)
 	runID := fmt.Sprintf("run_kb%d", time.Now().UnixNano())
 	defer k.client.CoreV1().Pods(k.o.Namespace).Delete(context.Background(), podName(runID, k.owner), metav1.DeleteOptions{})
-	s := kspec(t, runID, "x", "docker.io/library/no-such-image-slipway:never", "true", t.TempDir())
+	s := kspec(t, runID, "x", "docker.io/library/no-such-image-launchway:never", "true", t.TempDir())
 	s.Containers = []ContainerSpec{{Name: "bad", Image: s.Image}}
 	s.Container = "bad"
 	var c capture
 	_, err := k.Run(context.Background(), s, c.sink)
-	if err == nil || !strings.Contains(err.Error(), "cannot pull docker.io/library/no-such-image-slipway:never") {
+	if err == nil || !strings.Contains(err.Error(), "cannot pull docker.io/library/no-such-image-launchway:never") {
 		t.Fatalf("err %v", err)
 	}
 }

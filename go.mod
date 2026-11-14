@@ -1,4 +1,4 @@
-module slipway
+module github.com/launchway-dev/launchway
 
 go 1.27.4
 

@@ -15,7 +15,7 @@ import (
 )
 
 // Container runs each step in a fresh container with Podman or Docker.
-// The workspace is mounted at /workspace and the step's own files at /slipway.
+// The workspace is mounted at /workspace and the step's own files at /launchway.
 type Container struct {
 	Bin   string // path to podman or docker
 	Owner string // identifies this runner's pods, for cleaning up
@@ -55,13 +55,13 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	}
 	args := []string{"run", "--rm", "--init",
 		"--name", s.Name,
-		"--label", "slipway=true",
+		"--label", "launchway=true",
 		"--pull=missing",
 		// Do not relabel the workspace for SELinux; it may be a directory
-		// the user owns, such as their own checkout with `slipway run`.
+		// the user owns, such as their own checkout with `launchway run`.
 		"--security-opt", "label=disable",
 		"-v", s.Workspace + ":/workspace",
-		"-v", s.MetaDir + ":/slipway",
+		"-v", s.MetaDir + ":/launchway",
 		"-w", "/workspace",
 		"--entrypoint", "/bin/sh",
 	}
@@ -78,9 +78,9 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		args = append(args, "-e", k)
 		env = append(env, k+"="+s.Env[k])
 	}
-	args = append(args, "-e", "SLIPWAY_OUTPUTS")
-	env = append(env, "SLIPWAY_OUTPUTS=/slipway/"+OutputsFile)
-	args = append(args, s.Image, "-e", "/slipway/script.sh")
+	args = append(args, "-e", "LAUNCHWAY_OUTPUTS")
+	env = append(env, "LAUNCHWAY_OUTPUTS=/launchway/"+OutputsFile)
+	args = append(args, s.Image, "-e", "/launchway/script.sh")
 
 	cmd := exec.Command(c.Bin, args...)
 	cmd.Env = env
@@ -126,7 +126,7 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 func (c *Container) isPodman() bool { return strings.Contains(filepath.Base(c.Bin), "podman") }
 
 func (c *Container) podName(runID string) string {
-	return containerName("slipway-" + strings.ToLower(strings.ReplaceAll(runID, "_", "-")) + "-" + c.Owner)
+	return containerName("launchway-" + strings.ToLower(strings.ReplaceAll(runID, "_", "-")) + "-" + c.Owner)
 }
 
 // ensurePod starts a Podman pod for the run with its services, so steps can
@@ -149,7 +149,7 @@ func (c *Container) ensurePod(ctx context.Context, s Spec, out Sink) (string, er
 	defer lock.Unlock()
 
 	pod := c.podName(s.RunID)
-	labels := []string{"--label", "slipway.dev/run=" + s.RunID, "--label", "slipway.dev/runner=" + c.Owner}
+	labels := []string{"--label", "launchway.dev/run=" + s.RunID, "--label", "launchway.dev/runner=" + c.Owner}
 	if exec.CommandContext(ctx, c.Bin, "pod", "exists", pod).Run() != nil {
 		args := append([]string{"pod", "create", "--name", pod}, labels...)
 		if b, err := exec.CommandContext(ctx, c.Bin, args...).CombinedOutput(); err != nil {
@@ -192,7 +192,7 @@ func (c *Container) Cleanup(ctx context.Context, lookup RunLookup) error {
 	if !c.isPodman() || c.Owner == "" {
 		return nil
 	}
-	b, err := exec.CommandContext(ctx, c.Bin, "pod", "ps", "--filter", "label=slipway.dev/runner="+c.Owner, "--format", "json").Output()
+	b, err := exec.CommandContext(ctx, c.Bin, "pod", "ps", "--filter", "label=launchway.dev/runner="+c.Owner, "--format", "json").Output()
 	if err != nil {
 		return err
 	}
@@ -205,14 +205,14 @@ func (c *Container) Cleanup(ctx context.Context, lookup RunLookup) error {
 	}
 	ids := make([]string, 0, len(pods))
 	for _, p := range pods {
-		ids = append(ids, p.Labels["slipway.dev/run"])
+		ids = append(ids, p.Labels["launchway.dev/run"])
 	}
 	infos, err := lookup(ctx, ids)
 	if err != nil {
 		return err
 	}
 	for _, p := range pods {
-		info, known := infos[p.Labels["slipway.dev/run"]]
+		info, known := infos[p.Labels["launchway.dev/run"]]
 		if known && info.Status != "succeeded" && info.Status != "failed" && info.Status != "canceled" {
 			continue
 		}
@@ -243,7 +243,7 @@ func containerName(name string) string {
 		b = b[:128]
 	}
 	if len(b) == 0 {
-		return "slipway-step"
+		return "launchway-step"
 	}
 	return string(b)
 }
