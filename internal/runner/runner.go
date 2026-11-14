@@ -39,6 +39,11 @@ func (r *Runner) Run(ctx context.Context) error {
 		r.Log = slog.Default()
 	}
 	r.wsLocks = map[string]*sync.Mutex{}
+	abs, err := filepath.Abs(r.DataDir)
+	if err != nil {
+		return err
+	}
+	r.DataDir = abs
 	if err := os.MkdirAll(r.DataDir, 0o755); err != nil {
 		return err
 	}

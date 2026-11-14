@@ -1,0 +1,31 @@
+# Slipway's own pipeline.
+pipeline: slipway
+on:
+  push: { branches: [main] }
+
+steps:
+  vet:
+    image: docker.io/library/golang:1.27
+    run: go vet ./...
+
+  test:
+    image: docker.io/library/golang:1.27
+    needs: vet
+    run: go test -count=1 ./...
+    timeout: 20m
+
+  ui:
+    image: docker.io/library/node:24-alpine
+    needs: test   # after test, because building the UI rewrites web/dist
+    run: |
+      cd web
+      npm ci --no-audit --no-fund
+      npm run build
+
+  build:
+    image: docker.io/library/golang:1.27
+    needs: ui
+    run: |
+      CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${SLIPWAY_COMMIT:0:8}" -o bin/slipway ./cmd/slipway
+      ls -lh bin/slipway
+      echo "size=$(du -h bin/slipway | cut -f1)" >> "$SLIPWAY_OUTPUTS"

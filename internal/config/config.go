@@ -77,6 +77,18 @@ func Load(path string) (*Config, error) {
 	if c.Data == "" {
 		c.Data = "slipway-data"
 	}
+	// Runners and container runtimes may work from another directory, so
+	// every local path is made absolute.
+	if abs, err := filepath.Abs(c.Data); err == nil {
+		c.Data = abs
+	}
+	for i, p := range c.Projects {
+		if isLocalPath(p.Repo) {
+			if abs, err := filepath.Abs(p.Repo); err == nil {
+				c.Projects[i].Repo = abs
+			}
+		}
+	}
 	if c.User == "" {
 		if u, err := user.Current(); err == nil {
 			c.User = u.Username

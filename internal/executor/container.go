@@ -30,6 +30,10 @@ func DetectContainer() (*Container, error) {
 func (c *Container) Name() string { return "container (" + filepath.Base(c.Bin) + ")" }
 
 func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
+	// A relative path would be taken as the name of a volume.
+	if !filepath.IsAbs(s.Workspace) || !filepath.IsAbs(s.MetaDir) {
+		return -1, errors.New("the workspace and step directories must be absolute paths")
+	}
 	if _, err := writeScript(s); err != nil {
 		return -1, err
 	}

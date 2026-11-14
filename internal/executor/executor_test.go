@@ -120,3 +120,11 @@ func TestLongLinesAreSplit(t *testing.T) {
 		}
 	}
 }
+
+func TestContainerRejectsRelativePaths(t *testing.T) {
+	c := &Container{Bin: "/bin/false"}
+	_, err := c.Run(context.Background(), Spec{Name: "x", Image: "i", Script: "true", Workspace: "relative/dir", MetaDir: t.TempDir()}, func(string, string) {})
+	if err == nil || !strings.Contains(err.Error(), "absolute") {
+		t.Fatalf("err %v", err)
+	}
+}

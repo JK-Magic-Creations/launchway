@@ -1,0 +1,117 @@
+import { useCallback, useEffect, useState } from "react";
+import { api, type Project, type RunStatus, type RunSummary } from "../api";
+import { ago, elapsed, shortSha } from "../format";
+import { useNow, useStream } from "../live";
+import { BranchIcon, CommitIcon, Empty, ErrorBox, Link, StatusIcon, StepStrip, statusLabel } from "../components/ui";
+
+const FILTERS: { key: string; label: string }[] = [
+  { key: "", label: "All" },
+  { key: "running", label: "Running" },
+  { key: "failed", label: "Failed" },
+  { key: "succeeded", label: "Succeeded" },
+];
+
+export function RunsPage() {
+  const [runs, setRuns] = useState<RunSummary[] | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [project, setProject] = useState("");
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState<unknown>(null);
+  const now = useNow(1000, !!runs?.some((r) => !isDone(r.status)));
+
+  const load = useCallback(() => {
+    api.runs({ project, status, limit: 100 }).then((r) => { setRuns(r); setError(null); }).catch(setError);
+  }, [project, status]);
+
+  useEffect(load, [load]);
+  useEffect(() => { api.projects().then(setProjects).catch(() => {}); }, []);
+
+  const live = useStream("/api/v1/stream", {
+    run: (d) => {
+      const r = d as RunSummary;
+      if (project && r.project !== project) return;
+      setRuns((prev) => {
+        if (!prev) return prev;
+        const i = prev.findIndex((x) => x.id === r.id);
+        if (status && r.status !== status) return i >= 0 ? prev.filter((x) => x.id !== r.id) : prev;
+        if (i >= 0) { const next = prev.slice(); next[i] = r; return next; }
+        return [r, ...prev];
+      });
+    },
+  }, load);
+
+  return (
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <h1>Runs</h1>
+          <p className="sub">Every run on every project, newest first. Updates live.</p>
+        </div>
+        <span className={"live " + (live ? "live-on" : "")}><span className="dot" />{live ? "Live" : "Connecting…"}</span>
+      </header>
+
+      <div className="toolbar">
+        <div className="chips" role="group" aria-label="Filter by status">
+          {FILTERS.map((f) => (
+            <button key={f.key} type="button" className={"chip" + (status === f.key ? " chip-on" : "")}
+              aria-pressed={status === f.key} onClick={() => setStatus(f.key)}>{f.label}</button>
+          ))}
+        </div>
+        {projects.length > 1 && (
+          <label className="select">
+            <span className="visually-hidden">Project</span>
+            <select value={project} onChange={(e) => setProject(e.target.value)}>
+              <option value="">All projects</option>
+              {projects.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+            </select>
+          </label>
+        )}
+      </div>
+
+      <ErrorBox error={error} />
+      {runs === null && !error && <div className="loading">Loading…</div>}
+      {runs && runs.length === 0 && (
+        <Empty title={status || project ? "No runs match" : "No runs yet"}>
+          {status || project ? "Try another filter." : <>Start one from <Link href="/projects">Projects</Link>, push to a watched branch, or try <span className="mono">slipway run</span> in a repository.</>}
+        </Empty>
+      )}
+      {runs && runs.length > 0 && (
+        <ul className="runlist">
+          {runs.map((r) => <RunRow key={r.id} r={r} now={now} />)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function isDone(s: RunStatus) { return s === "succeeded" || s === "failed" || s === "canceled"; }
+
+function RunRow({ r, now }: { r: RunSummary; now: number }) {
+  const title = r.message || r.pipeline;
+  const who = r.event === "push" ? `pushed by ${r.author || r.actor}` : `started by ${r.actor || "someone"}`;
+  return (
+    <li>
+      <Link href={`/runs/${r.id}`} className={`runrow t-${r.status}`}>
+        <span className="runrow-status" title={statusLabel(r.status)}><StatusIcon status={r.status} size={20} /></span>
+        <span className="runrow-main">
+          <span className="runrow-title">
+            <span className="runrow-project">{r.project}</span>
+            <span className="runrow-num">#{r.number}</span>
+            <span className="runrow-msg">{title}</span>
+          </span>
+          <span className="runrow-meta">
+            {(r.branch || r.tag) && <span className="meta"><BranchIcon />{r.branch || r.tag}</span>}
+            {r.sha && <span className="meta mono"><CommitIcon />{shortSha(r.sha)}</span>}
+            <span className="meta">{who}</span>
+            {r.cancel_requested && !isDone(r.status) && <span className="meta warn">canceling…</span>}
+          </span>
+        </span>
+        <span className="runrow-strip"><StepStrip steps={r.steps} /></span>
+        <span className="runrow-time">
+          <span>{elapsed(r.started_at || r.created_at, r.finished_at, now) || "—"}</span>
+          <span className="faint">{ago(r.created_at, now)}</span>
+        </span>
+      </Link>
+    </li>
+  );
+}

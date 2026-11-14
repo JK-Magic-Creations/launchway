@@ -1,0 +1,21 @@
+# A configuration for trying Slipway on your own machine.
+# Paths are relative to this file.
+listen: 127.0.0.1:8080
+data: ../slipway-data
+
+projects:
+  # A small repository made by `make demo`, to play with freely.
+  - name: demo-app
+    repo: ../../slipway-demo
+    branch: main
+    poll: 5s
+
+  # Slipway builds and tests itself.
+  - name: slipway
+    repo: ..
+    branch: main
+    poll: 15s
+
+runner:
+  concurrency: 3
+  executor: auto   # podman or docker if installed, otherwise the host
