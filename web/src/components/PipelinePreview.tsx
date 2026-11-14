@@ -1,0 +1,99 @@
+import { Fragment, useMemo, useState, type ReactNode } from "react";
+import type { Problem, StepView, ValidateResult } from "../api";
+import { Graph } from "./Graph";
+import { ErrorBox } from "./ui";
+
+interface Props {
+  res: ValidateResult | null;
+  error: unknown;
+  /** Called when a problem's line is chosen, to show it in the editor. */
+  onJump?: (line: number) => void;
+  /** Extra notes shown under the summary of a valid pipeline. */
+  notes?: ReactNode;
+}
+
+// PipelinePreview shows what the server's parser made of pipeline text: its
+// problems, or the graph it becomes, with the chosen step's details.
+export function PipelinePreview({ res, error, onJump, notes }: Props) {
+  const [sel, setSel] = useState<string | null>(null);
+  const steps: StepView[] = useMemo(() => (res?.graph?.steps ?? []).map((s, i) => ({
+    run_id: "", id: s.id, position: i, status: "pending", attempt: 0, queued_at: 0, started_at: 0, finished_at: 0,
+    exit_code: null, error: "", excerpt: "", skip_kind: "", runner: "", outputs: {}, container: s.container, image: s.image, run: s.run,
+    needs: s.needs, when: s.when, retry: s.retry, timeout: s.timeout, description: s.description,
+    kind: s.kind, message: s.message, deadline: 0, decided_by: "", decided_at: 0, comment: "",
+  })), [res]);
+  const chosen = res?.graph?.steps.find((s) => s.id === sel);
+
+  return (
+    <div className="play-right">
+      <ErrorBox error={error} />
+      {res && !res.ok && <ProblemList problems={res.problems ?? []} onJump={onJump} />}
+      {res?.ok && res.graph && res.levels && (
+        <>
+          <section className="card">
+            <h2 className="h-sm ok">Valid: {res.graph.name}, {res.graph.steps.length} steps in {res.levels.length} stages</h2>
+            <p className="sub">
+              {res.graph.on.push
+                ? <>Starts on pushes to {[...(res.graph.on.push.branches ?? []), ...(res.graph.on.push.tags ?? []).map((t) => "tag " + t)].join(", ")}, and by hand.</>
+                : <>Starts only by hand: there is no push trigger.</>}
+            </p>
+            {notes}
+          </section>
+          <section className="card card-flush">
+            <Graph levels={res.levels} steps={steps} selected={sel} onSelect={setSel} now={0} compact
+              describe={(s) => (s.when ? "conditional · " : "") +
+                (s.kind === "approval" ? "approval" : s.container ?? (s.image ?? "").replace(/^docker\.io\/library\//, ""))} />
+          </section>
+          {res.graph.containers && res.graph.containers.length > 0 && (
+            <section className="card">
+              <h2 className="h-sm">Containers in each run</h2>
+              <dl className="kv">
+                {res.graph.containers.map((c) => (
+                  <Fragment key={c.name}>
+                    <dt>{c.name}{c.service ? " (service)" : ""}</dt>
+                    <dd className="mono">{c.image}{c.memory ? ` · ${c.memory}` : ""}{c.cpu ? ` · ${c.cpu} cpu` : ""}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            </section>
+          )}
+          {chosen && (
+            <section className="card">
+              <h2 className="h-sm">{chosen.id}</h2>
+              {chosen.description && <p className="sub step-desc">{chosen.description}</p>}
+              <dl className="kv">
+                {chosen.kind === "approval" && <><dt>Approval</dt><dd>{chosen.message}</dd></>}
+                {chosen.container && <><dt>Container</dt><dd>{chosen.container}</dd></>}
+                {chosen.kind !== "approval" && <><dt>Image</dt><dd className="mono">{chosen.image}</dd></>}
+                {chosen.needs && <><dt>Needs</dt><dd>{chosen.needs.join(", ")}</dd></>}
+                {chosen.when && <><dt>When</dt><dd className="mono">{JSON.stringify(chosen.when)}</dd></>}
+                {chosen.secrets && <><dt>Secrets</dt><dd className="mono">{Object.keys(chosen.secrets).sort().join(", ")}</dd></>}
+                {chosen.kind !== "approval" && <><dt>Retry</dt><dd>{chosen.retry}</dd></>}
+                <dt>{chosen.kind === "approval" ? "Expires after" : "Timeout"}</dt><dd>{chosen.timeout}</dd>
+              </dl>
+              {chosen.kind !== "approval" && <pre className="code">{chosen.run}</pre>}
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export function ProblemList({ problems, onJump, title }: { problems: Problem[]; onJump?: (line: number) => void; title?: string }) {
+  return (
+    <section className="card" role="status">
+      <h2 className="h-sm bad">{title ?? `${problems.length} problem${problems.length === 1 ? "" : "s"}`}</h2>
+      <ul className="problems">
+        {problems.map((p, i) => (
+          <li key={i}>
+            {p.line ? (onJump
+              ? <button type="button" className="linkbtn mono" onClick={() => onJump(p.line!)}>line {p.line}</button>
+              : <span className="mono faint">line {p.line}</span>) : null}{" "}
+            {p.path && <span className="mono">{p.path}</span>} {p.message}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

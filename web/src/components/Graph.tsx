@@ -70,7 +70,8 @@ export function Graph({ levels, steps, selected, onSelect, now, compact, describ
               style={{ left: p.x, top: p.y, width: W, height: H }}
               onClick={() => onSelect(s.id)}
               aria-pressed={selected === s.id}
-              aria-label={`${s.id}: ${statusLabel(s.status)}`}>
+              title={s.description || undefined}
+              aria-label={`${s.id}: ${statusLabel(s.status)}${s.description ? `. ${s.description}` : ""}`}>
               <span className="node-top">
                 <StatusIcon status={s.status} />
                 <span className="node-name">{s.id}</span>

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type Project, type Ref } from "../api";
 import { ago, shortSha } from "../format";
 import { navigate } from "../router";
 import { useNow } from "../live";
 import { canOperate, useMe } from "../auth";
 import { BranchIcon, Empty, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
+import { RefPicker } from "../components/RefPicker";
 
 export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -49,7 +50,10 @@ export function ProjectsPage() {
                 <h2>{p.name}</h2>
                 <div className="faint mono small">{p.url}</div>
               </div>
-              {canOperate(me, p.name) && <button type="button" className="btn btn-primary" onClick={() => setStarting(p)}>Start a run</button>}
+              <div className="project-actions">
+                <Link href={`/projects/${encodeURIComponent(p.name)}/pipeline?ref=${encodeURIComponent(p.default_branch)}`} className="btn">Edit pipeline</Link>
+                {canOperate(me, p.name) && <button type="button" className="btn btn-primary" onClick={() => setStarting(p)}>Start a run</button>}
+              </div>
             </div>
             {p.error && <div className="callout callout-bad">Cannot reach the repository: {p.error}</div>}
             <div className="project-facts">
@@ -91,31 +95,17 @@ export function ProjectsPage() {
 
 function StartDialog({ project, onClose }: { project: Project; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const [refs, setRefs] = useState<Ref[] | null>(null);
-  const [loadErr, setLoadErr] = useState<unknown>(null);
-  const [query, setQuery] = useState("");
-  const [chosen, setChosen] = useState<string>("");
+  const [pick, setPick] = useState<Ref | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => { dialog.current?.showModal(); }, []);
-  useEffect(() => {
-    api.refs(project.name).then((r) => {
-      setRefs(r);
-      setChosen((c) => c || r.find((x) => x.name === project.default_branch)?.name || r[0]?.name || "");
-    }).catch(setLoadErr);
-  }, [project.name, project.default_branch]);
-
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return (refs ?? []).filter((r) => !q || r.name.toLowerCase().includes(q) || r.subject.toLowerCase().includes(q)).slice(0, 50);
-  }, [refs, query]);
-  const pick = refs?.find((r) => r.name === chosen);
 
   const start = async () => {
+    if (!pick) return;
     setBusy(true); setError(null);
     try {
-      const run = await api.startRun(project.name, chosen);
+      const run = await api.startRun(project.name, pick.name);
       dialog.current?.close();
       onClose();
       navigate(`/runs/${run.id}`);
@@ -124,28 +114,10 @@ function StartDialog({ project, onClose }: { project: Project; onClose: () => vo
 
   return (
     <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="start-title">
-      <form method="dialog" onSubmit={(e) => { e.preventDefault(); if (chosen) start(); }}>
+      <form method="dialog" onSubmit={(e) => { e.preventDefault(); start(); }}>
         <h2 id="start-title">Start a run of {project.name}</h2>
         <p className="sub">Branches and tags are read from the repository now. The pipeline file at the chosen commit is what runs.</p>
-        <label className="field">
-          <span>Branch or tag</span>
-          <input type="search" placeholder="Search branches, tags and commit messages" value={query}
-            onChange={(e) => setQuery(e.target.value)} autoFocus />
-        </label>
-        <ErrorBox error={loadErr} />
-        {refs === null && !loadErr && <div className="loading">Reading the repository…</div>}
-        <div className="reflist" role="listbox" aria-label="Branches and tags">
-          {shown.map((r) => (
-            <button key={r.kind + r.name} type="button" role="option" aria-selected={chosen === r.name}
-              className={"refrow" + (chosen === r.name ? " refrow-on" : "")} onClick={() => setChosen(r.name)}>
-              <span className={"refkind refkind-" + r.kind}>{r.kind}</span>
-              <span className="refname mono">{r.name}</span>
-              <span className="refsubj">{r.subject}</span>
-              <span className="faint small">{r.author} · {ago(r.committed_at)}</span>
-            </button>
-          ))}
-          {refs && shown.length === 0 && <div className="sub">Nothing matches.</div>}
-        </div>
+        <RefPicker project={project.name} defaultBranch={project.default_branch} chosen={pick?.name ?? ""} onChoose={setPick} />
         {pick && (
           <div className="refpick">
             Will run <strong>{pick.name}</strong> at <Mono>{shortSha(pick.sha)}</Mono>, "{pick.subject}"
@@ -154,7 +126,7 @@ function StartDialog({ project, onClose }: { project: Project; onClose: () => vo
         <ErrorBox error={error} />
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={!chosen || busy}>{busy ? "Starting…" : "Start run"}</button>
+          <button type="submit" className="btn btn-primary" disabled={!pick || busy}>{busy ? "Starting…" : "Start run"}</button>
         </div>
       </form>
     </dialog>

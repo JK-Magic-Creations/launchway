@@ -105,6 +105,7 @@ type envOpts struct {
 	redirectURL string // default this server's own /auth/callback
 	trustProxy  bool
 	ping        time.Duration
+	drafts      *auth.DraftRules // who may start draft runs; default the built-in rule
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -128,14 +129,15 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	dir := t.TempDir()
 	repos := filepath.Join(dir, "repos")
 	mgr, err := source.NewManager(eng, filepath.Join(dir, "data"), []source.Project{
-		{Name: "pay-api", URL: gitRepo(t, filepath.Join(repos, "pay"), gatedPipeline), Poll: time.Hour},
+		// The editor may save to pay-api (new branches only), not to web.
+		{Name: "pay-api", URL: gitRepo(t, filepath.Join(repos, "pay"), gatedPipeline), Poll: time.Hour, Push: &source.PushSettings{}},
 		{Name: "web", URL: gitRepo(t, filepath.Join(repos, "web"), gatedPipeline), Poll: time.Hour},
 	}, quiet())
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, Projects: mgr, RunnerToken: "runner-secret", Log: quiet(), Now: o.clk.Now,
-		TrustProxy: o.trustProxy, StreamPing: o.ping}
+		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts}
 	srv := httptest.NewUnstartedServer(nil)
 	redirect := o.redirectURL
 	if redirect == "" {

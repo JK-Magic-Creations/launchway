@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jk-magic-creations/launchway/internal/auth"
 )
 
 // store is a SharedStore in memory.
@@ -121,5 +123,63 @@ func TestApprovalsConfig(t *testing.T) {
 	c, err = Load(filepath.Join(dir, "missing.yaml"))
 	if err != nil || c.Approvals.AllowSelf != nil {
 		t.Fatalf("default %v %v", c.Approvals.AllowSelf, err)
+	}
+}
+
+func TestDraftsAndPushSettings(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "launchway.yaml")
+	os.WriteFile(path, []byte(`
+drafts:
+  allow: admin
+projects:
+  - name: web
+    repo: ./web
+    push: { branch_prefix: "edits/", allow_direct: ["main", "release/*"] }
+  - name: pay
+    repo: ./pay
+    drafts: { allow: operator, secrets: true }
+  - name: docs
+    repo: ./docs
+    drafts: { allow: none }
+`), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rules, err := c.DraftRules()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for project, want := range map[string]auth.DraftRule{
+		"web":   {Allow: auth.Admin},
+		"pay":   {Allow: auth.Operator, Secrets: true},
+		"docs":  {Allow: auth.NoRole},
+		"other": {Allow: auth.Admin},
+	} {
+		if got := rules.For(project); got != want {
+			t.Errorf("%s: %+v, want %+v", project, got, want)
+		}
+	}
+	projects, err := c.SourceProjects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p := projects[0].Push; p == nil || p.BranchPrefix != "edits/" || strings.Join(p.AllowDirect, ",") != "main,release/*" || projects[1].Push != nil {
+		t.Fatalf("push %+v", projects)
+	}
+
+	// Without a setting: operators, no secrets.
+	empty, _ := Load(filepath.Join(dir, "missing.yaml"))
+	if r, _ := empty.DraftRules(); r.For("x") != auth.DefaultDraftRule || auth.DefaultDraftRule != (auth.DraftRule{Allow: auth.Operator}) {
+		t.Fatalf("default %+v", r.For("x"))
+	}
+
+	for _, bad := range []string{"drafts: { allow: viewer }\n", "drafts: { allow: everyone }\n",
+		"projects: [{ name: a, repo: ./a, drafts: { allow: sometimes } }]\n", "projects: [{ name: a, repo: ./a, push: { token: x } }]\n"} {
+		os.WriteFile(path, []byte(bad), 0o644)
+		if _, err := Load(path); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
 	}
 }

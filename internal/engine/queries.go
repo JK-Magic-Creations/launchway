@@ -31,6 +31,10 @@ type RunSummary struct {
 	FinishedAt      int64       `json:"finished_at"`
 	Steps           []StepBrief `json:"steps"`
 	Waiting         []string    `json:"waiting"` // approval steps waiting for a decision
+	// Draft marks a run of pipeline text that is not in Git (event draft);
+	// PipelineHash names that text.
+	Draft        bool   `json:"draft"`
+	PipelineHash string `json:"pipeline_hash,omitempty"`
 }
 
 // StepBrief is just enough of a step to draw a status strip.
@@ -54,6 +58,7 @@ type StepView struct {
 	SkipKind   string                        `json:"skip_kind"`
 	Runner     string                        `json:"runner"`
 	Outputs    map[string]string             `json:"outputs"`
+	Excerpt    string                        `json:"excerpt"` // a failed attempt's last lines of output
 	Container  string                        `json:"container,omitempty"`
 	Image      string                        `json:"image,omitempty"`
 	Run        string                        `json:"run,omitempty"`
@@ -64,12 +69,13 @@ type StepView struct {
 	Timeout    pipeline.Duration             `json:"timeout"`
 	// Approvals only. Kind and Message come from the definition; the rest
 	// is the current wait and decision.
-	Kind      string `json:"kind,omitempty"`
-	Message   string `json:"message,omitempty"`
-	Deadline  int64  `json:"deadline"`
-	DecidedBy string `json:"decided_by"`
-	DecidedAt int64  `json:"decided_at"`
-	Comment   string `json:"comment"`
+	Kind        string `json:"kind,omitempty"`
+	Message     string `json:"message,omitempty"`
+	Description string `json:"description,omitempty"`
+	Deadline    int64  `json:"deadline"`
+	DecidedBy   string `json:"decided_by"`
+	DecidedAt   int64  `json:"decided_at"`
+	Comment     string `json:"comment"`
 }
 
 // RunDetail is everything about one run.
@@ -92,14 +98,15 @@ type RunnerView struct {
 }
 
 const runCols = `id, project, number, pipeline, status, cancel_requested, event, ref, branch, tag, sha,
-	actor, message, author, created_at, started_at, finished_at`
+	actor, message, author, created_at, started_at, finished_at, draft, pipeline_hash`
 
 func scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error) {
 	r := &RunSummary{}
-	var cancel int
+	var cancel, draft int
 	err := sc.Scan(&r.ID, &r.Project, &r.Number, &r.Pipeline, &r.Status, &cancel, &r.Event, &r.Ref, &r.Branch,
-		&r.Tag, &r.SHA, &r.Actor, &r.Message, &r.Author, &r.CreatedAt, &r.StartedAt, &r.FinishedAt)
+		&r.Tag, &r.SHA, &r.Actor, &r.Message, &r.Author, &r.CreatedAt, &r.StartedAt, &r.FinishedAt, &draft, &r.PipelineHash)
 	r.CancelRequested = cancel != 0
+	r.Draft = draft != 0
 	return r, err
 }
 
@@ -116,6 +123,9 @@ func (e *Engine) runSummary(id string) (*RunSummary, error) {
 	}
 	return r, nil
 }
+
+// Summary returns a run as shown in lists.
+func (e *Engine) Summary(id string) (*RunSummary, error) { return e.runSummary(id) }
 
 // RunFilter narrows a list of runs.
 type RunFilter struct {
@@ -218,14 +228,14 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 }
 
 const stepCols = `run_id, step_id, position, status, attempt, queued_at, started_at, finished_at, exit_code,
-	error, skip_kind, runner, outputs, deadline, decided_by, decided_at, comment`
+	error, skip_kind, runner, outputs, deadline, decided_by, decided_at, comment, excerpt`
 
 func scanStep(sc interface{ Scan(...any) error }) (*StepView, error) {
 	v := &StepView{}
 	var exit sql.NullInt64
 	var outputs string
 	if err := sc.Scan(&v.RunID, &v.ID, &v.Position, &v.Status, &v.Attempt, &v.QueuedAt, &v.StartedAt, &v.FinishedAt,
-		&exit, &v.Error, &v.SkipKind, &v.Runner, &outputs, &v.Deadline, &v.DecidedBy, &v.DecidedAt, &v.Comment); err != nil {
+		&exit, &v.Error, &v.SkipKind, &v.Runner, &outputs, &v.Deadline, &v.DecidedBy, &v.DecidedAt, &v.Comment, &v.Excerpt); err != nil {
 		return nil, err
 	}
 	if exit.Valid {
@@ -273,7 +283,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout
 			v.Secrets = def.Secrets
 			v.Container = created.Pipeline.ContainerFor(def)
-			v.Kind, v.Message = def.Kind, def.Message
+			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
 		}
 		d.StepList = append(d.StepList, *v)
 	}

@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
@@ -314,6 +315,8 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	tctx, cancel := context.WithTimeout(ctx, job.Timeout.D())
 	defer cancel()
 	start := time.Now()
+	// The last lines of output, already masked, say why a failed step failed.
+	tail := &outputTail{}
 	// The executor masks stdout and stderr before splitting long lines; the
 	// sink masks again so that nothing reaches the server unmasked even if
 	// an executor does not.
@@ -325,14 +328,16 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		if stream == "system" {
 			sys("%s", mask.Mask(text))
 		} else {
-			out(stream, mask.Mask(text))
+			masked := mask.Mask(text)
+			tail.add(stream, masked)
+			out(stream, masked)
 		}
 	})
 	took := time.Since(start).Round(100 * time.Millisecond)
 	switch {
 	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
 		sys("Timed out after %s", job.Timeout.D())
-		return engine.Result{Outcome: "failed", Error: fmt.Sprintf("timed out after %s", job.Timeout.D())}
+		return engine.Result{Outcome: "failed", Error: fmt.Sprintf("timed out after %s", job.Timeout.D()), Excerpt: tail.excerpt()}
 	case err != nil && ctx.Err() != nil:
 		return engine.Result{Outcome: "canceled"}
 	case errors.Is(err, executor.ErrInfrastructure):
@@ -348,10 +353,62 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	ec := code
 	if code != 0 {
 		sys("Failed with exit code %d after %s", code, took)
-		return engine.Result{Outcome: "failed", ExitCode: &ec, Error: fmt.Sprintf("exit code %d", code), Outputs: outputs}
+		return engine.Result{Outcome: "failed", ExitCode: &ec, Error: fmt.Sprintf("exit code %d", code), Outputs: outputs,
+			Excerpt: tail.excerpt()}
 	}
 	sys("Succeeded in %s", took)
 	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs}
+}
+
+// Limits on a failed step's excerpt, as sent to the server.
+const (
+	excerptLines    = 5
+	excerptLineSize = 300
+)
+
+// outputTail keeps the last few non-empty lines a step wrote, per stream.
+type outputTail struct {
+	mu     sync.Mutex
+	stdout []string
+	stderr []string
+}
+
+func (t *outputTail) add(stream, text string) {
+	text = strings.TrimRight(text, " \t\r")
+	if strings.TrimSpace(text) == "" {
+		return
+	}
+	if len(text) > excerptLineSize {
+		cut := excerptLineSize
+		for cut > 0 && !utf8.RuneStart(text[cut]) {
+			cut--
+		}
+		text = text[:cut] + "…"
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	keep := func(lines []string) []string {
+		lines = append(lines, text)
+		if len(lines) > excerptLines {
+			lines = lines[len(lines)-excerptLines:]
+		}
+		return lines
+	}
+	if stream == "stderr" {
+		t.stderr = keep(t.stderr)
+	} else {
+		t.stdout = keep(t.stdout)
+	}
+}
+
+// excerpt is the last lines on stderr, or on stdout if there were none.
+func (t *outputTail) excerpt() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if len(t.stderr) > 0 {
+		return strings.Join(t.stderr, "\n")
+	}
+	return strings.Join(t.stdout, "\n")
 }
 
 // resolveSecrets looks up the values of the job's secrets. If one cannot be

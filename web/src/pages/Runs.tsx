@@ -88,7 +88,7 @@ function isDone(s: RunStatus) { return s === "succeeded" || s === "failed" || s 
 
 function RunRow({ r, now }: { r: RunSummary; now: number }) {
   const title = r.message || r.pipeline;
-  const who = r.event === "push" ? `pushed by ${r.author || r.actor}` : `started by ${r.actor || "someone"}`;
+  const who = r.event === "push" ? `pushed by ${r.author || r.actor}` : r.draft ? `draft by ${r.actor || "someone"}` : `started by ${r.actor || "someone"}`;
   const waits = !isDone(r.status) && (r.waiting?.length ?? 0) > 0;
   const shown = waits ? "waiting" : r.status;
   return (
@@ -99,6 +99,7 @@ function RunRow({ r, now }: { r: RunSummary; now: number }) {
           <span className="runrow-title">
             <span className="runrow-project">{r.project}</span>
             <span className="runrow-num">#{r.number}</span>
+            {r.draft && <span className="badge-draft" title="A draft run: pipeline text from the editor, not from Git">Draft</span>}
             <span className="runrow-msg">{title}</span>
           </span>
           <span className="runrow-meta">

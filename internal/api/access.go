@@ -22,8 +22,9 @@ import (
 type identity struct {
 	User    string
 	Groups  []string
-	Via     string // "none" (sign-in is off), "session" or "token"
-	session string // the session's hash, when Via is "session"
+	Profile engine.Profile // display name and e-mail, when the provider gave them
+	Via     string         // "none" (sign-in is off), "session" or "token"
+	session string         // the session's hash, when Via is "session"
 }
 
 const (
@@ -64,6 +65,18 @@ func identityFrom(r *http.Request) *identity {
 
 // authorize is the one place that decides whether someone may do something.
 func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
+	if a == auth.RunDraft {
+		// The drafts setting applies with sign-in off too: none turns
+		// drafts off for everyone, who is then an admin.
+		role := auth.Admin
+		if s.Auth != nil {
+			if id == nil || id.Via == viaNone || id.User == "" {
+				return false
+			}
+			role = s.Auth.Policy.RoleOn(id.User, id.Groups, project)
+		}
+		return s.Drafts.For(project).AllowsDraft(role)
+	}
 	if s.Auth == nil {
 		return true // sign-in is off: everyone has every right
 	}
@@ -71,6 +84,16 @@ func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
 		return false
 	}
 	return s.Auth.Policy.Allows(id.User, id.Groups, a, project)
+}
+
+// draftRefusal explains why someone may not start a draft run of a project.
+func (s *Server) draftRefusal(project string) string {
+	switch rule := s.Drafts.For(project); rule.Allow {
+	case auth.NoRole:
+		return fmt.Sprintf("draft runs are turned off for %s (drafts.allow: none); save the pipeline to a branch and run that", project)
+	default:
+		return fmt.Sprintf("you need the %s role on %s to start draft runs, which run pipeline text that is not in Git", rule.Allow, project)
+	}
 }
 
 // identify works out who a request is from: nil if nobody valid. With
@@ -101,7 +124,7 @@ func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 				s.Log.Warn("recording that a token was used", "err", err)
 			}
 		}
-		return &identity{User: t.User, Groups: groups, Via: viaToken}, nil
+		return &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken}, nil
 	}
 	c, err := r.Cookie(sessionCookie)
 	if err != nil || c.Value == "" {
@@ -127,7 +150,7 @@ func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 			s.Log.Warn("recording that a session was used", "err", err)
 		}
 	}
-	return &identity{User: sess.User, Groups: sess.Groups, Via: viaSession, session: hash}, nil
+	return &identity{User: sess.User, Groups: sess.Groups, Profile: sess.Profile, Via: viaSession, session: hash}, nil
 }
 
 // guard wraps a route's handler with everything access needs: who is
@@ -169,7 +192,7 @@ func (s *Server) guard(rt route) http.Handler {
 		}
 		project := ""
 		switch rt.access {
-		case projectRead, projectOperate:
+		case projectRead, projectOperate, projectDraft:
 			project = r.PathValue("name")
 		case runRead, runOperate:
 			if project, err = s.Engine.RunProject(r.PathValue("id")); err != nil {
@@ -242,6 +265,13 @@ func (s *Server) check(id *identity, a access, project string, r *http.Request) 
 		}
 		if !s.authorize(id, auth.Operate, project) {
 			return http.StatusForbidden, fmt.Sprintf("you need the operator role on %s to do this", project)
+		}
+	case projectDraft:
+		if !s.authorize(id, auth.Read, project) {
+			return notFound()
+		}
+		if !s.authorize(id, auth.RunDraft, project) {
+			return http.StatusForbidden, s.draftRefusal(project)
 		}
 	default:
 		return http.StatusForbidden, "not allowed"

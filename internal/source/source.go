@@ -40,6 +40,7 @@ type Project struct {
 	URL           string // anything git clone accepts, including a local path
 	DefaultBranch string
 	Poll          time.Duration
+	Push          *PushSettings // nil: pipelines cannot be saved to this repository
 }
 
 // Ref is a branch or tag and the commit it points at.
@@ -73,6 +74,8 @@ type ProjectStatus struct {
 	LastFetch     int64      `json:"last_fetch"`
 	Error         string     `json:"error,omitempty"`
 	Decisions     []Decision `json:"decisions"`
+	// Push is how the editor may save to the repository; nil if it may not.
+	Push *PushSettings `json:"push"`
 }
 
 type project struct {
@@ -120,9 +123,17 @@ func NewManager(eng *engine.Engine, dataDir string, projects []Project, log *slo
 		if p.Poll < 5*time.Second {
 			p.Poll = 5 * time.Second
 		}
+		if p.Push != nil {
+			push := *p.Push
+			if err := push.check(); err != nil {
+				return nil, fmt.Errorf("project %s: %w", p.Name, err)
+			}
+			p.Push = &push
+		}
 		m.projects[p.Name] = &project{Project: p, dir: filepath.Join(dataDir, "repos", p.Name+".git")}
 		m.order = append(m.order, p.Name)
 	}
+	removeStaleSaves(dataDir, time.Hour)
 	return m, nil
 }
 
@@ -177,7 +188,7 @@ func (m *Manager) status(p *project) ProjectStatus {
 		last = p.lastFetch.UnixMilli()
 	}
 	return ProjectStatus{Name: p.Name, URL: redact.URLs(p.URL), DefaultBranch: p.DefaultBranch, PollSeconds: int(p.Poll / time.Second),
-		LastFetch: last, Error: redact.URLs(p.lastErr), Decisions: d}
+		LastFetch: last, Error: redact.URLs(p.lastErr), Decisions: d, Push: m.Push(p.Name)}
 }
 
 func (p *project) setErr(err error) {
@@ -428,13 +439,27 @@ func (m *Manager) ReadPipeline(ctx context.Context, name, sha string) (string, e
 }
 
 func gitOut(ctx context.Context, dir string, args ...string) (string, error) {
+	out, err := gitRun(ctx, dir, nil, "", args...)
+	if err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
+// gitRun runs git in dir with extra environment and stdin. It returns what
+// git wrote to stdout, even when it fails; the error is what it wrote to
+// stderr.
+func gitRun(ctx context.Context, dir string, env []string, stdin string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", args...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C")
+	cmd.Env = append(append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C"), env...)
+	if stdin != "" {
+		cmd.Stdin = strings.NewReader(stdin)
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
@@ -442,7 +467,7 @@ func gitOut(ctx context.Context, dir string, args ...string) (string, error) {
 		if msg == "" {
 			msg = err.Error()
 		}
-		return "", errors.New(msg)
+		return stdout.String(), errors.New(msg)
 	}
 	return stdout.String(), nil
 }

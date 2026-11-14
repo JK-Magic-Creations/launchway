@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError, type LogLine, type RunDetail, type RunEvent, type StepView } from "../api";
+import { api, ApiError, type LogLine, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, shortSha } from "../format";
 import { useNow, useStream } from "../live";
 import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
+import { openInEditor } from "./EditPipeline";
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
@@ -53,7 +54,7 @@ export function RunPage({ id }: { id: string }) {
       setRun((prev) => {
         if (!prev) return prev;
         // Live step updates carry the step's state, not its definition.
-        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets, kind: x.kind, message: x.message } : x)) };
+        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets, kind: x.kind, message: x.message, description: x.description, retry: x.retry, timeout: x.timeout } : x)) };
       });
     },
     log: (d) => {
@@ -94,13 +95,14 @@ export function RunPage({ id }: { id: string }) {
             {run.cancel_requested && !done ? <StatusPill status={run.status} label="Canceling" />
               : waitingStep ? <StatusPill status="waiting" />
               : <StatusPill status={run.status} />}
+            {run.draft && <span className="badge-draft" title="Pipeline text from the editor, not from Git">Draft</span>}
             <h1>{run.message || run.pipeline}</h1>
           </div>
           <div className="run-meta">
             <span className="meta"><strong>{run.project}</strong> #{run.number}</span>
             {(run.branch || run.tag) && <span className="meta"><BranchIcon />{run.branch || run.tag}</span>}
             {run.sha && <span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span>}
-            <span className="meta">{run.event === "push" ? `pushed by ${run.author || run.actor}` : `started by ${run.actor}`}</span>
+            <span className="meta">{run.event === "push" ? `pushed by ${run.author || run.actor}` : run.draft ? `draft run by ${run.actor}` : `started by ${run.actor}`}</span>
             <span className="meta" title={clock(run.created_at)}>{ago(run.created_at, now)}</span>
             {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
             <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
@@ -120,6 +122,13 @@ export function RunPage({ id }: { id: string }) {
       </header>
       <ErrorBox error={actionErr} />
 
+      {run.draft && (
+        <div className="callout callout-draft">
+          <strong>Draft run.</strong> It ran pipeline text from the editor that is not in Git, against {run.branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono>.
+          {" "}See it on the <button type="button" className="linkbtn" onClick={() => setTab("definition")}>Pipeline</button> tab.
+        </div>
+      )}
+
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
           <span><strong>{waitingStep.id}</strong> is waiting for approval: {waitingStep.message}</span>
@@ -131,6 +140,7 @@ export function RunPage({ id }: { id: string }) {
         <div className="callout callout-bad">
           <strong>{failedCount === 1 ? `${firstFailed.id} failed` : `${failedCount} steps failed`}.</strong>{" "}
           {firstFailed.error}. Steps that succeeded are kept: resuming runs only what did not finish, using the same commit.
+          {firstFailed.excerpt && <Excerpt step={firstFailed} />}
         </div>
       )}
 
@@ -214,6 +224,7 @@ function StepPanel({ run, step, now, sink }: {
       <div className="steppanel-head">
         <div>
           <h2>{step.id}</h2>
+          {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={step.status} />
             {step.started_at > 0 && <span className="meta">{elapsed(step.started_at, step.finished_at, now)}</span>}
@@ -232,7 +243,12 @@ function StepPanel({ run, step, now, sink }: {
           </div>
         )}
       </div>
-      {step.status === "failed" && step.error && following && !/^exit code \d+$/.test(step.error) && <div className="callout callout-bad">{step.error}</div>}
+      {step.status === "failed" && following && (step.excerpt || (step.error && !/^exit code \d+$/.test(step.error))) && (
+        <div className="callout callout-bad">
+          {step.error && !/^exit code \d+$/.test(step.error) && <div>{step.error}</div>}
+          {step.excerpt && <Excerpt step={step} />}
+        </div>
+      )}
       <LogView lines={lines} live={isLive} empty={empty} />
       <div className="stepinfo">
         <details>
@@ -281,6 +297,7 @@ function ApprovalPanel({ run, step, now, mayDecide }: { run: RunDetail; step: St
       <div className="steppanel-head">
         <div>
           <h2>{step.id}</h2>
+          {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={step.status} />
             <span className="meta">approval</span>
@@ -384,19 +401,46 @@ function EventsTab({ id, version }: { id: string; version: string }) {
   );
 }
 
+// Excerpt shows the last lines a failed step wrote, as the runner kept them
+// (secrets masked).
+function Excerpt({ step }: { step: StepView }) {
+  return (
+    <figure className="excerpt">
+      <figcaption>The last lines {step.id} wrote{step.exit_code !== null && step.exit_code !== undefined ? ` before exit code ${step.exit_code}` : ""}:</figcaption>
+      <pre>{step.excerpt}</pre>
+    </figure>
+  );
+}
+
+// DefinitionTab shows the pipeline text the run ran. For a draft run that is
+// the text kept with the run, which is in no commit; otherwise the file in
+// Git at the run's commit.
 function DefinitionTab({ run }: { run: RunDetail }) {
-  const [text, setText] = useState<string | null>(null);
+  const [file, setFile] = useState<RunPipelineText | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (run.source.kind !== "git") { setFailed(true); return; }
-    api.pipelineFile(run.id).then((r) => setText(r.text)).catch(() => setFailed(true));
+    api.pipelineFile(run.id).then(setFile).catch(() => setFailed(true));
   }, [run.id, run.source.kind]);
   const graph = useMemo(() => JSON.stringify(run.graph, null, 2), [run.graph]);
+  const branch = run.branch;
+  const editHref = `/projects/${encodeURIComponent(run.project)}/pipeline?ref=${encodeURIComponent(branch)}`;
   return (
     <div className="split">
       <section className="card">
-        <h2 className="h-sm">.launchway/pipeline.yaml at {shortSha(run.sha) || "this run"}</h2>
-        {text !== null ? <pre className="code">{text}</pre> : failed ? <p className="sub">The file is only kept for runs from a Git project.</p> : <div className="loading">Loading…</div>}
+        <div className="card-head">
+          <h2 className="h-sm">
+            {file?.draft ? "The draft text this run ran" : `.launchway/pipeline.yaml at ${shortSha(run.sha) || "this run"}`}
+          </h2>
+          {run.source.kind === "git" && branch && (file?.draft
+            ? <button type="button" className="btn btn-sm" onClick={() => openInEditor(run.project, branch, run.sha, file.text)}>Edit this draft</button>
+            : <Link href={editHref} className="btn btn-sm">Edit this pipeline</Link>)}
+        </div>
+        {file?.draft && (
+          <p className="sub">Not in Git: it was typed in the editor and is kept only with this run.
+            It is named <Mono>{file.hash}</Mono> in the audit trail. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
+        )}
+        {file !== null ? <pre className="code">{file.text}</pre> : failed ? <p className="sub">The file is only kept for runs from a Git project.</p> : <div className="loading">Loading…</div>}
       </section>
       <section className="card">
         <h2 className="h-sm">The graph it produced</h2>

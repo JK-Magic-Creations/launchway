@@ -78,10 +78,13 @@ func TestRunStaysOnItsRunner(t *testing.T) {
 // A runner that is already working leaves a new run to a runner doing
 // nothing; with no such runner, it takes the new run itself.
 func TestDifferentRunsSpread(t *testing.T) {
-	e, _ := newEngine(t)
+	e, clk := newEngine(t)
 	const one = "pipeline: demo\nsteps:\n  a: {image: x, run: a}\n"
 	noLease(t, e, r2) // r2 is waiting for work
 	run1 := create(t, e, one, Trigger{})
+	// Steps are taken oldest first. Runs created in the same millisecond
+	// have no order, so the second is made a moment later.
+	clk.Add(time.Millisecond)
 	run2 := create(t, e, one, Trigger{})
 	if j := mustLease(t, e, r1); j.RunID != run1 {
 		t.Fatalf("r1 got run %s, want the oldest, %s", j.RunID, run1)

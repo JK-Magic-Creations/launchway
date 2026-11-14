@@ -11,6 +11,7 @@ import { PlaygroundPage } from "./pages/Playground";
 import { ApprovalsPage } from "./pages/Approvals";
 import { TokensPage } from "./pages/Tokens";
 import { AuditPage } from "./pages/Audit";
+import { EditPipelinePage } from "./pages/EditPipeline";
 import { nextFromHere, SignInPage } from "./pages/SignIn";
 import { Empty, ErrorBox, Link } from "./components/ui";
 
@@ -75,6 +76,7 @@ function Shell({ me }: { me: Me }) {
   else if ((m = match("/runs/:id", path))) page = <RunPage id={m.id} />;
   else if (path === "/approvals") page = <ApprovalsPage approvals={approvals} />;
   else if (path === "/projects") page = <ProjectsPage />;
+  else if ((m = match("/projects/:name/pipeline", path))) page = <EditPipelinePage key={m.name} name={m.name} />;
   else if (path === "/runners") page = <RunnersPage />;
   else if (path === "/playground") page = <PlaygroundPage />;
   else if (path === "/tokens") page = <TokensPage />;

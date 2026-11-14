@@ -153,7 +153,11 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts,
+	drafts, err := cfg.DraftRules()
+	if err != nil {
+		return err
+	}
+	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
 	if authOpts != nil {
 		// Find the provider now, so a mistake shows at once; sign-in tries

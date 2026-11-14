@@ -54,19 +54,21 @@ const (
 // Step runs a script in a container image, or, if it is an approval, waits
 // for a person to approve or reject the run going further.
 type Step struct {
-	ID        string               `json:"id"`
-	Kind      string               `json:"kind,omitempty"`      // empty for a plain step, or KindApproval
-	Message   string               `json:"message,omitempty"`   // approvals: the question to decide
-	Container string               `json:"container,omitempty"` // a named container; Image is then filled from it
-	Image     string               `json:"image"`
-	Run       string               `json:"run"`
-	Needs     []string             `json:"needs,omitempty"`
-	When      *Condition           `json:"when,omitempty"`
-	Env       map[string]string    `json:"env,omitempty"`
-	Secrets   map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
-	Retry     int                  `json:"retry"`             // extra attempts after a failure
-	Timeout   Duration             `json:"timeout"`           // per attempt; for an approval, how long to wait for a decision
-	Line      int                  `json:"-"`                 // where it was written, for messages
+	ID          string               `json:"id"`
+	Description string               `json:"description,omitempty"` // one line saying what the step is for
+	Kind        string               `json:"kind,omitempty"`        // empty for a plain step, or KindApproval
+	Message     string               `json:"message,omitempty"`     // approvals: the question to decide
+	Container   string               `json:"container,omitempty"`   // a named container; Image is then filled from it
+	Image       string               `json:"image"`
+	Run         string               `json:"run"`
+	Needs       []string             `json:"needs,omitempty"`
+	When        *Condition           `json:"when,omitempty"`
+	Env         map[string]string    `json:"env,omitempty"`
+	Secrets     map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
+	Retry       int                  `json:"retry"`             // extra attempts after a failure
+	Timeout     Duration             `json:"timeout"`           // per attempt; for an approval, how long to wait for a decision
+	Line        int                  `json:"-"`                 // where it was written, for messages
+	NeedsLine   int                  `json:"-"`                 // where its needs were written, for messages
 }
 
 // IsApproval reports whether the step waits for a person instead of running.
@@ -97,14 +99,31 @@ type Condition struct {
 	Event  []string `json:"event,omitempty"`
 }
 
+// The events a run can be started by.
+const (
+	EventPush   = "push"   // a push matched the pipeline's trigger
+	EventManual = "manual" // someone started it by hand, from a branch or tag
+	// EventDraft is a run of pipeline text that is not in Git: someone is
+	// trying out an edit. A step with a when condition runs in a draft only
+	// if its event list names draft, so deployments guarded by when do not
+	// run from unsaved, unreviewed text.
+	EventDraft = "draft"
+)
+
+// Events lists every event, in the order they are documented.
+var Events = []string{EventPush, EventManual, EventDraft}
+
 // Context is what a condition is tested against.
 type Context struct {
-	Event  string // "push" or "manual"
+	Event  string // push, manual or draft
 	Branch string // empty when the run is for a tag
 	Tag    string
 }
 
 // Match reports whether the condition holds. A nil condition always holds.
+//
+// In a draft run, a condition holds only if it lists the draft event
+// explicitly: when: { branch: main } alone does not run in a draft of main.
 func (c *Condition) Match(ctx Context) bool {
 	if c == nil {
 		return true
@@ -115,10 +134,10 @@ func (c *Condition) Match(ctx Context) bool {
 	if len(c.Tag) > 0 && !matchAny(c.Tag, ctx.Tag) {
 		return false
 	}
-	if len(c.Event) > 0 && !matchAny(c.Event, ctx.Event) {
-		return false
+	if len(c.Event) > 0 {
+		return matchAny(c.Event, ctx.Event)
 	}
-	return true
+	return ctx.Event != EventDraft
 }
 
 // MatchPush reports whether a push to the given branch or tag starts a run.

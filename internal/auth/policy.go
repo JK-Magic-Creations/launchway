@@ -53,10 +53,15 @@ type Binding struct {
 type Action int
 
 const (
-	Read       Action = iota // see one project and its runs: viewer on it
-	Operate                  // change its runs: operator on it
-	ReadAny                  // see something that belongs to no project, such as the runners: viewer on any project
-	Administer               // see the audit trail: admin on every project
+	Read              Action = iota // see one project and its runs: viewer on it
+	Operate                         // change its runs: operator on it
+	ReadAny                         // see something that belongs to no project, such as the runners: viewer on any project
+	Administer                      // see the audit trail: admin on every project
+	AdministerProject               // override checks on one project, such as saving an invalid pipeline: admin on it
+	// RunDraft starts a draft run, of pipeline text that is not in Git, on
+	// a project. It needs the role a DraftRule asks for, so Policy alone
+	// cannot decide it: Allows always refuses it.
+	RunDraft
 )
 
 // Policy holds the bindings from the server's configuration. A nil or
@@ -168,6 +173,62 @@ func (p *Policy) Allows(user string, groups []string, a Action, project string) 
 		return p.RoleAnywhere(user, groups) >= Viewer
 	case Administer:
 		return p.RoleEverywhere(user, groups) >= Admin
+	case AdministerProject:
+		return p.RoleOn(user, groups, project) >= Admin
 	}
 	return false
+}
+
+// Draft runs run pipeline text that is not in Git: steps nobody reviewed,
+// with whatever the runners can reach. So who may start them is a setting of
+// its own, per project.
+
+// DraftRule says who may start draft runs on a project, and whether their
+// steps may read secrets.
+type DraftRule struct {
+	// Allow is the role needed on the project: Operator (the default) or
+	// Admin. NoRole means nobody may.
+	Allow Role
+	// Secrets lets the steps of draft runs read secrets. Off by default: a
+	// step that declares secrets then fails before any runner sees it.
+	Secrets bool
+}
+
+// DefaultDraftRule is the rule when nothing is configured.
+var DefaultDraftRule = DraftRule{Allow: Operator}
+
+// DraftRules is the server's rule and the projects that override it.
+type DraftRules struct {
+	Default  DraftRule
+	Projects map[string]DraftRule // by project name
+}
+
+// For returns the rule for a project. A nil DraftRules gives the default.
+func (d *DraftRules) For(project string) DraftRule {
+	if d == nil {
+		return DefaultDraftRule
+	}
+	if r, ok := d.Projects[project]; ok {
+		return r
+	}
+	return d.Default
+}
+
+// AllowsDraft reports whether someone with role on a project may start a
+// draft run there under rule.
+func (r DraftRule) AllowsDraft(role Role) bool {
+	return r.Allow != NoRole && role >= r.Allow
+}
+
+// ParseDraftAllow reads the drafts.allow setting: admin, operator or none.
+func ParseDraftAllow(s string) (Role, error) {
+	switch s {
+	case "admin":
+		return Admin, nil
+	case "operator":
+		return Operator, nil
+	case "none":
+		return NoRole, nil
+	}
+	return NoRole, fmt.Errorf("allow %q is not one of admin, operator, none", s)
 }

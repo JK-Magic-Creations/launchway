@@ -36,6 +36,10 @@ type Server struct {
 	// Auth turns sign-in on. Nil means none: every request acts as Actor,
 	// with full rights.
 	Auth *Auth
+	// Drafts says who may start draft runs on each project, and whether
+	// their steps may read secrets. Nil gives auth.DefaultDraftRule
+	// everywhere. It applies with or without sign-in.
+	Drafts *auth.DraftRules
 	// TrustProxy believes X-Forwarded-Proto and X-Forwarded-For, as set by a
 	// reverse proxy that every client must go through.
 	TrustProxy bool
@@ -77,6 +81,7 @@ const (
 	readAny                      // a viewer of at least one project
 	projectRead                  // a viewer of the project in {name}
 	projectOperate               // an operator of the project in {name}
+	projectDraft                 // whoever the drafts setting allows to start draft runs of the project in {name}
 	runRead                      // a viewer of the project of the run in {id}
 	runOperate                   // an operator of the project of the run in {id}
 	administer                   // an admin of every project
@@ -118,6 +123,9 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/projects/{name}", projectRead, "", s.getProject},
 		{"GET /api/v1/projects/{name}/refs", projectRead, "", s.projectRefs},
 		{"POST /api/v1/projects/{name}/runs", projectOperate, "run.start", s.startRun},
+		{"GET /api/v1/projects/{name}/pipeline", projectRead, "", s.readPipeline},
+		{"POST /api/v1/projects/{name}/pipeline", projectOperate, "pipeline.save", s.savePipeline},
+		{"POST /api/v1/projects/{name}/draft-runs", projectDraft, "run.draft", s.startDraft},
 		{"GET /api/v1/runs", signedIn, "", s.listRuns},
 		{"GET /api/v1/runs/{id}", runRead, "", s.getRun},
 		{"GET /api/v1/runs/{id}/events", runRead, "", s.runEvents},
@@ -236,6 +244,10 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "invalid: "))
 	case errors.Is(err, engine.ErrClosed):
 		writeErr(w, http.StatusServiceUnavailable, err.Error())
+	case errors.As(err, new(pipeline.Problems)):
+		var ps pipeline.Problems
+		errors.As(err, &ps)
+		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "the pipeline has problems; fix them first", "problems": ps})
 	default:
 		// The details go to the log, not to the caller: they can name
 		// hosts, paths or queries the caller has no business seeing.
@@ -447,6 +459,31 @@ func (s *Server) projects() []source.ProjectStatus {
 type projectView struct {
 	source.ProjectStatus
 	LastRun *engine.RunSummary `json:"last_run"`
+	// What the caller may do with the pipeline editor, so the UI can say
+	// so. The server checks every request regardless.
+	Editor editorRights `json:"editor"`
+}
+
+type editorRights struct {
+	DraftsAllow  string `json:"drafts_allow"`  // admin, operator or none: who may start draft runs
+	MayDraft     bool   `json:"may_draft"`     // the caller may start draft runs
+	DraftSecrets bool   `json:"draft_secrets"` // steps of draft runs may read secrets
+	MaySave      bool   `json:"may_save"`      // the project can be saved to, and the caller may
+	MayForce     bool   `json:"may_force"`     // the caller may save a pipeline that has problems
+}
+
+func (s *Server) view(id *identity, p source.ProjectStatus) projectView {
+	v := projectView{ProjectStatus: p}
+	if runs, err := s.Engine.ListRuns(engine.RunFilter{Project: p.Name, Limit: 1}); err == nil && len(runs) > 0 {
+		v.LastRun = runs[0]
+	}
+	rule := s.Drafts.For(p.Name)
+	v.Editor = editorRights{DraftsAllow: "none", MayDraft: s.authorize(id, auth.RunDraft, p.Name), DraftSecrets: rule.Secrets,
+		MaySave: p.Push != nil && s.authorize(id, auth.Operate, p.Name), MayForce: s.authorize(id, auth.AdministerProject, p.Name)}
+	if rule.Allow != auth.NoRole {
+		v.Editor.DraftsAllow = rule.Allow.String()
+	}
+	return v
 }
 
 func (s *Server) listProjects(w http.ResponseWriter, r *http.Request) {
@@ -456,11 +493,7 @@ func (s *Server) listProjects(w http.ResponseWriter, r *http.Request) {
 		if !s.authorize(id, auth.Read, p.Name) {
 			continue
 		}
-		v := projectView{ProjectStatus: p}
-		if runs, err := s.Engine.ListRuns(engine.RunFilter{Project: p.Name, Limit: 1}); err == nil && len(runs) > 0 {
-			v.LastRun = runs[0]
-		}
-		out = append(out, v)
+		out = append(out, s.view(id, p))
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -475,7 +508,7 @@ func (s *Server) getProject(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, p)
+	writeJSON(w, http.StatusOK, s.view(identityFrom(r), p))
 }
 
 func (s *Server) projectRefs(w http.ResponseWriter, r *http.Request) {
@@ -547,10 +580,14 @@ func (s *Server) runEvents(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	// The first event carries the whole pipeline; the UI shows that elsewhere.
+	// The first event carries the whole pipeline, and a draft run's text;
+	// the UI shows those elsewhere (pipeline-file). The draft's hash stays.
 	out := make([]engine.Event, len(evs))
 	for i, ev := range evs {
 		ev.Data.Pipeline = nil
+		if ev.Data.Draft != nil {
+			ev.Data.Draft = &engine.Draft{Hash: ev.Data.Draft.Hash, Secrets: ev.Data.Draft.Secrets}
+		}
 		if ev.Data.Source != nil {
 			src := *ev.Data.Source
 			src.URL = redact.URLs(src.URL)
@@ -561,7 +598,19 @@ func (s *Server) runEvents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
+// runPipelineFile returns the pipeline text a run ran: for a draft run, the
+// text kept with the run, which is in no commit; otherwise the file in Git
+// at the run's commit.
 func (s *Server) runPipelineFile(w http.ResponseWriter, r *http.Request) {
+	draft, isDraft, err := s.Engine.DraftText(r.PathValue("id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if isDraft {
+		writeJSON(w, http.StatusOK, map[string]any{"text": draft.Text, "draft": true, "hash": draft.Hash})
+		return
+	}
 	d, err := s.Engine.GetRun(r.PathValue("id"))
 	if err != nil {
 		s.fail(w, err)
@@ -576,7 +625,7 @@ func (s *Server) runPipelineFile(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, fmt.Errorf("%w: %v", engine.ErrNotFound, err))
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"text": text})
+	writeJSON(w, http.StatusOK, map[string]any{"text": text, "draft": false})
 }
 
 func (s *Server) stepLogs(w http.ResponseWriter, r *http.Request) {
@@ -600,8 +649,28 @@ func (s *Server) cancelRun(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+// resumeRun resumes a failed or canceled run. Resuming a draft run runs its
+// unsaved text again, so it needs the right to start draft runs, and
+// whether its steps may read secrets is decided again by the current
+// setting.
 func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
-	if err := s.Engine.Resume(r.PathValue("id"), identityFrom(r).User); err != nil {
+	id := identityFrom(r)
+	sum, err := s.Engine.Summary(r.PathValue("id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	if sum.Draft {
+		if !s.authorize(id, auth.RunDraft, sum.Project) {
+			writeErr(w, http.StatusForbidden, s.draftRefusal(sum.Project))
+			return
+		}
+		setAudit(r, "", "draft run, pipeline "+sum.PipelineHash)
+		err = s.Engine.ResumeDraft(sum.ID, id.User, s.Drafts.For(sum.Project).Secrets)
+	} else {
+		err = s.Engine.Resume(sum.ID, id.User)
+	}
+	if err != nil {
 		s.fail(w, err)
 		return
 	}

@@ -49,6 +49,7 @@ type RunState struct {
 	Pipeline        *pipeline.Pipeline
 	Trigger         Trigger
 	Source          Source
+	Draft           *Draft // nil unless this is a draft run
 	Status          RunStatus
 	CancelRequested bool
 	CreatedAt       int64
@@ -83,6 +84,7 @@ type StepState struct {
 	Runner     string
 	LeaseID    string
 	Outputs    map[string]string
+	Excerpt    string // a failed attempt: the last lines of its output, masked by the runner
 	// Approvals only.
 	Deadline  int64  // when a waiting approval is rejected because nobody decided
 	DecidedBy string // who approved or rejected it; empty if it expired
@@ -129,6 +131,10 @@ func (st *RunState) apply(ev Event) {
 		if p.Source != nil {
 			st.Source = *p.Source
 		}
+		if p.Draft != nil {
+			d := *p.Draft
+			st.Draft = &d
+		}
 		st.Status = RunQueued
 		st.CreatedAt = ev.At
 		st.Steps = map[string]*StepState{}
@@ -142,6 +148,11 @@ func (st *RunState) apply(ev Event) {
 		st.CancelRequested = true
 
 	case RunResumed:
+		if st.Draft != nil && p.DraftSecrets != nil {
+			d := *st.Draft
+			d.Secrets = *p.DraftSecrets
+			st.Draft = &d
+		}
 		st.CancelRequested = false
 		st.Status = RunRunning
 		st.FinishedAt = 0
@@ -157,6 +168,7 @@ func (st *RunState) apply(ev Event) {
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.ExitCode, s.Error, s.Runner, s.LeaseID = nil, "", "", ""
 		s.Outputs = nil
+		s.Excerpt = ""
 
 	case StepSkipped:
 		s.Status = StepSkippedS
@@ -189,6 +201,7 @@ func (st *RunState) apply(ev Event) {
 		}
 		s.ExitCode = p.ExitCode
 		s.Error = p.Reason
+		s.Excerpt = p.Excerpt
 		s.Outputs = p.Outputs
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
@@ -207,7 +220,7 @@ func (st *RunState) apply(ev Event) {
 	case StepReset:
 		s.Status = StepPending
 		s.Failures, s.Lost = 0, 0
-		s.Error, s.SkipKind = "", ""
+		s.Error, s.SkipKind, s.Excerpt = "", "", ""
 		s.ExitCode = nil
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.clearDecision()

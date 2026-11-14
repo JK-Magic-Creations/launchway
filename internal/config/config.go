@@ -16,6 +16,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
@@ -41,6 +42,31 @@ type Config struct {
 	Projects  []ProjectConfig `yaml:"projects"`
 	Runner    RunnerConfig    `yaml:"runner"`
 	Approvals ApprovalsConfig `yaml:"approvals"`
+	// Drafts controls draft runs, which run pipeline text from the editor
+	// that is not in Git. Each project may override it.
+	Drafts DraftsConfig `yaml:"drafts"`
+}
+
+// DraftsConfig says who may start draft runs and whether their steps may
+// read secrets.
+type DraftsConfig struct {
+	// Allow is admin, operator (the default) or none: the role needed on a
+	// project to start a draft run there. In a project's drafts, empty means
+	// the server's setting.
+	Allow string `yaml:"allow"`
+	// Secrets lets steps of draft runs read secrets; default false. In a
+	// project's drafts, unset means the server's setting.
+	Secrets *bool `yaml:"secrets"`
+}
+
+// PushConfig lets the pipeline editor save to a project's repository. It
+// uses the credentials the server reads the repository with.
+type PushConfig struct {
+	// BranchPrefix starts every branch a save creates; default launchway/.
+	BranchPrefix string `yaml:"branch_prefix"`
+	// AllowDirect lists branch patterns that may be saved to directly,
+	// without a new branch. Default: none.
+	AllowDirect []string `yaml:"allow_direct"`
 }
 
 // ServerConfig holds settings about how the server is reached.
@@ -108,6 +134,11 @@ type ProjectConfig struct {
 	Repo   string `yaml:"repo"`
 	Branch string `yaml:"branch"` // default branch for manual runs
 	Poll   string `yaml:"poll"`   // how often to look for pushes, e.g. 30s
+	// Drafts overrides the server's drafts setting for this project.
+	Drafts *DraftsConfig `yaml:"drafts"`
+	// Push lets the pipeline editor commit to this repository. Without it,
+	// edited pipelines can be copied or downloaded, not saved.
+	Push *PushConfig `yaml:"push"`
 }
 
 // RunnerConfig controls the runner built into the server.
@@ -232,7 +263,47 @@ func Load(path string) (*Config, error) {
 		}
 		return nil, fmt.Errorf("%s: %w", where, err)
 	}
+	if _, err := c.DraftRules(); err != nil {
+		if path != "" {
+			err = fmt.Errorf("%s: %w", path, err)
+		}
+		return nil, err
+	}
 	return c, nil
+}
+
+// DraftRules works out who may start draft runs on each project.
+func (c *Config) DraftRules() (*auth.DraftRules, error) {
+	def := auth.DefaultDraftRule
+	if c.Drafts.Allow != "" {
+		role, err := auth.ParseDraftAllow(c.Drafts.Allow)
+		if err != nil {
+			return nil, fmt.Errorf("drafts: %w", err)
+		}
+		def.Allow = role
+	}
+	if c.Drafts.Secrets != nil {
+		def.Secrets = *c.Drafts.Secrets
+	}
+	rules := &auth.DraftRules{Default: def, Projects: map[string]auth.DraftRule{}}
+	for _, p := range c.Projects {
+		if p.Drafts == nil {
+			continue
+		}
+		r := def
+		if p.Drafts.Allow != "" {
+			role, err := auth.ParseDraftAllow(p.Drafts.Allow)
+			if err != nil {
+				return nil, fmt.Errorf("project %s: drafts: %w", p.Name, err)
+			}
+			r.Allow = role
+		}
+		if p.Drafts.Secrets != nil {
+			r.Secrets = *p.Drafts.Secrets
+		}
+		rules.Projects[p.Name] = r
+	}
+	return rules, nil
 }
 
 func isURL(s string) bool { return strings.Contains(s, "://") }
@@ -287,7 +358,11 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 			}
 			poll = d
 		}
-		out = append(out, source.Project{Name: p.Name, URL: p.Repo, DefaultBranch: p.Branch, Poll: poll})
+		sp := source.Project{Name: p.Name, URL: p.Repo, DefaultBranch: p.Branch, Poll: poll}
+		if p.Push != nil {
+			sp.Push = &source.PushSettings{BranchPrefix: p.Push.BranchPrefix, AllowDirect: p.Push.AllowDirect}
+		}
+		out = append(out, sp)
 	}
 	return out, nil
 }

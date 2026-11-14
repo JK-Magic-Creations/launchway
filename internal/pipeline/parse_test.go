@@ -317,7 +317,7 @@ func TestApprovalProblems(t *testing.T) {
 		{"message on a step", "pipeline: a\nsteps:\n  a:\n    image: x\n    run: y\n    message: hi\n", "only for approval steps", 6},
 		{"kind not yet", "pipeline: a\nsteps:\n  a:\n    kind: release\n", `kind "release" is not supported yet`, 4},
 		{"unknown kind", "pipeline: a\nsteps:\n  a:\n    kind: gate\n", `unknown kind "gate"`, 4},
-		{"approval need missing", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    needs: b\n", "no step with that name", 3},
+		{"approval need missing", "pipeline: a\nsteps:\n  a:\n    kind: approval\n    message: ok?\n    needs: b\n", "no step with that name", 6},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -330,5 +330,119 @@ func TestApprovalProblems(t *testing.T) {
 				t.Fatalf("got %q, want one problem on line %d containing %q", err.Error(), c.line, c.want)
 			}
 		})
+	}
+}
+
+func TestStepDescription(t *testing.T) {
+	p, err := Parse([]byte(`pipeline: a
+steps:
+  build:
+    description: "  Compile the server  "
+    image: x
+    run: y
+  gate:
+    kind: approval
+    description: Ask before going on
+    message: Go on?
+    needs: build
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := p.Step("build").Description; got != "Compile the server" {
+		t.Fatalf("description %q", got)
+	}
+	if got := p.Step("gate").Description; got != "Ask before going on" {
+		t.Fatalf("approval description %q", got)
+	}
+	if !strings.Contains(mustJSON(p), `"description":"Compile the server"`) {
+		t.Fatalf("the description is not in the graph: %s", mustJSON(p))
+	}
+	for name, src := range map[string]string{
+		"two lines": "pipeline: a\nsteps:\n  a:\n    description: |\n      one\n      two\n    image: x\n    run: y\n",
+		"too long":  "pipeline: a\nsteps:\n  a:\n    description: " + strings.Repeat("x", MaxDescriptionLen+1) + "\n    image: x\n    run: y\n",
+		"a list":    "pipeline: a\nsteps:\n  a:\n    description: [x]\n    image: x\n    run: y\n",
+	} {
+		_, err := Parse([]byte(src))
+		ps, ok := err.(Problems)
+		if !ok || ps[0].Line != 4 || !strings.Contains(ps[0].Path, "description") {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+}
+
+func TestDraftEvent(t *testing.T) {
+	p, err := Parse([]byte(`pipeline: a
+steps:
+  always: {image: x, run: y}
+  branch-only: {image: x, run: y, when: {branch: main}}
+  pushes: {image: x, run: y, when: {event: push}}
+  manual: {image: x, run: y, when: {event: [push, manual]}}
+  drafts: {image: x, run: y, when: {event: draft}}
+  draft-main: {image: x, run: y, when: {event: [manual, draft], branch: main}}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runs := func(ctx Context) []string {
+		var out []string
+		for _, s := range p.Steps {
+			if s.When.Match(ctx) {
+				out = append(out, s.ID)
+			}
+		}
+		return out
+	}
+	for _, c := range []struct {
+		ctx  Context
+		want string
+	}{
+		{Context{Event: EventDraft, Branch: "main"}, "always drafts draft-main"},
+		{Context{Event: EventDraft, Branch: "dev"}, "always drafts"},
+		{Context{Event: EventManual, Branch: "main"}, "always branch-only manual draft-main"},
+		{Context{Event: EventPush, Branch: "main"}, "always branch-only pushes manual"},
+	} {
+		if got := strings.Join(runs(c.ctx), " "); got != c.want {
+			t.Errorf("%+v runs %q, want %q", c.ctx, got, c.want)
+		}
+	}
+	_, err = Parse([]byte("pipeline: a\nsteps:\n  a: {image: x, run: y, when: {event: drafts}}\n"))
+	if err == nil || !strings.Contains(err.Error(), "use push, manual, draft") {
+		t.Fatalf("unknown event: %v", err)
+	}
+}
+
+func TestSyntaxErrorsHaveLines(t *testing.T) {
+	_, err := Parse([]byte("pipeline: a\nsteps:\n  a:\n    image: x\n   run: y\n"))
+	ps, ok := err.(Problems)
+	if !ok || len(ps) != 1 || ps[0].Line == 0 || strings.HasPrefix(ps[0].Message, "line") {
+		t.Fatalf("%#v", err)
+	}
+}
+
+func TestFileSizeLimit(t *testing.T) {
+	big := "pipeline: a\nsteps:\n  a: {image: x, run: y}\n# " + strings.Repeat("x", MaxFileBytes)
+	if _, err := Parse([]byte(big)); err == nil || !strings.Contains(err.Error(), "larger than") {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestStarterIsValid(t *testing.T) {
+	for _, name := range []string{"pay-api", "Not A Name"} {
+		p, err := Parse([]byte(Starter(name)))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if name == "pay-api" && p.Name != "pay-api" {
+			t.Fatalf("named %q", p.Name)
+		}
+	}
+}
+
+func TestNeedsProblemsPointAtNeeds(t *testing.T) {
+	_, err := Parse([]byte("pipeline: a\nsteps:\n  a: {image: x, run: y}\n  b:\n    image: x\n    run: y\n    needs: [a, nope]\n"))
+	ps, ok := err.(Problems)
+	if !ok || ps[0].Line != 7 || !strings.Contains(ps[0].Message, `"nope"`) {
+		t.Fatalf("%#v", err)
 	}
 }

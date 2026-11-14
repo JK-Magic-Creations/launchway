@@ -28,6 +28,10 @@ export interface RunSummary {
   steps: StepBrief[];
   /** Approval steps waiting for someone to decide. */
   waiting: string[];
+  /** A run of pipeline text from the editor that is not in Git (event "draft"). */
+  draft: boolean;
+  /** Names the draft's text: sha256:… */
+  pipeline_hash?: string;
 }
 
 export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
@@ -49,6 +53,8 @@ export interface StepView {
   skip_kind: string;
   runner: string;
   outputs: Record<string, string>;
+  /** A failed attempt's last lines of output, masked like the log. */
+  excerpt: string;
   container?: string;
   image?: string;
   run?: string;
@@ -57,6 +63,7 @@ export interface StepView {
   secrets?: Record<string, SecretRef>;
   retry: number;
   timeout: string;
+  description?: string;
   // Approvals only. A waiting approval started waiting at started_at.
   kind?: "approval";
   message?: string;
@@ -72,6 +79,7 @@ export interface GraphContainer {
 
 export interface GraphStep {
   id: string;
+  description?: string;
   kind?: "approval";
   message?: string;
   container?: string;
@@ -111,6 +119,17 @@ export interface RunEvent {
 
 export interface Decision { at: number; ref: string; sha: string; outcome: "started" | "ignored" | "error"; detail: string; run_id?: string }
 
+export interface PushSettings { branch_prefix: string; allow_direct: string[] | null }
+
+/** What the caller may do with the pipeline editor on a project. */
+export interface EditorRights {
+  drafts_allow: "admin" | "operator" | "none";
+  may_draft: boolean;
+  draft_secrets: boolean;
+  may_save: boolean;
+  may_force: boolean;
+}
+
 export interface Project {
   name: string;
   url: string;
@@ -120,7 +139,47 @@ export interface Project {
   error?: string;
   decisions: Decision[];
   last_run: RunSummary | null;
+  /** How the editor may save to the repository; null if it may not. */
+  push: PushSettings | null;
+  editor: EditorRights;
 }
+
+/** The pipeline file at the tip of a branch, as the editor opens it. */
+export interface PipelineFile {
+  ref: string;
+  kind: "branch" | "tag";
+  sha: string;
+  subject: string;
+  author: string;
+  committed_at: number;
+  path: string;
+  /** False: the branch has no pipeline yet, and text is a starting point. */
+  exists: boolean;
+  text: string;
+}
+
+export interface SaveRequest {
+  base_ref: string;
+  base_sha: string;
+  pipeline: string;
+  message: string;
+  /** Empty for a new branch, or base_ref to commit to it directly. */
+  branch: string;
+  force?: boolean;
+}
+
+export interface SaveResult {
+  branch: string;
+  sha: string;
+  base_ref: string;
+  base_sha: string;
+  path: string;
+  direct: boolean;
+  pull_request_url?: string;
+}
+
+/** The pipeline text a run ran: from Git, or kept with a draft run. */
+export interface RunPipelineText { text: string; draft: boolean; hash?: string }
 
 export interface Ref { name: string; kind: "branch" | "tag"; sha: string; subject: string; author: string; committed_at: number }
 
@@ -147,7 +206,7 @@ export interface Problem { line?: number; column?: number; path?: string; messag
 export interface ValidateResult { ok: boolean; problems?: Problem[]; graph?: Graph; levels?: string[][] }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  constructor(public status: number, message: string, public problems?: Problem[]) { super(message); }
 }
 
 /** Who is signed in, and what they may do. The server checks every request
@@ -204,8 +263,8 @@ async function call<T>(method: string, path: string, body?: unknown, opts: CallO
   try { data = text ? JSON.parse(text) : undefined; } catch { /* not JSON */ }
   if (!resp.ok) {
     if (resp.status === 401) window.dispatchEvent(new Event(SIGNED_OUT));
-    const msg = (data as { error?: string } | undefined)?.error ?? (text || resp.statusText);
-    throw new ApiError(resp.status, msg);
+    const body = data as { error?: string; problems?: Problem[] } | undefined;
+    throw new ApiError(resp.status, body?.error ?? (text || resp.statusText), body?.problems);
   }
   return data as T;
 }
@@ -223,7 +282,7 @@ export const api = {
   },
   run: (id: string, background = false) => call<RunDetail>("GET", `/api/v1/runs/${id}`, undefined, { background }),
   events: (id: string) => call<RunEvent[]>("GET", `/api/v1/runs/${id}/events`),
-  pipelineFile: (id: string) => call<{ text: string }>("GET", `/api/v1/runs/${id}/pipeline-file`),
+  pipelineFile: (id: string) => call<RunPipelineText>("GET", `/api/v1/runs/${id}/pipeline-file`),
   logs: (id: string, step: string, attempt: number, after = 0) =>
     call<{ attempt: number; lines: LogLine[] }>("GET",
       `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/logs?attempt=${attempt}&after=${after}`),
@@ -235,7 +294,14 @@ export const api = {
     call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/reject`, { comment }),
   approvals: (background = false) => call<Approval[]>("GET", "/api/v1/approvals", undefined, { background }),
   projects: (background = false) => call<Project[]>("GET", "/api/v1/projects", undefined, { background }),
+  project: (name: string) => call<Project>("GET", `/api/v1/projects/${encodeURIComponent(name)}`),
   refs: (name: string) => call<Ref[]>("GET", `/api/v1/projects/${name}/refs`),
+  pipeline: (name: string, ref: string) =>
+    call<PipelineFile>("GET", `/api/v1/projects/${encodeURIComponent(name)}/pipeline?ref=${encodeURIComponent(ref)}`),
+  draftRun: (name: string, ref: string, pipeline: string) =>
+    call<RunSummary>("POST", `/api/v1/projects/${encodeURIComponent(name)}/draft-runs`, { ref, pipeline }),
+  savePipeline: (name: string, req: SaveRequest) =>
+    call<SaveResult>("POST", `/api/v1/projects/${encodeURIComponent(name)}/pipeline`, req),
   startRun: (name: string, ref: string) => call<RunSummary>("POST", `/api/v1/projects/${name}/runs`, { ref }),
   runners: (background = false) => call<Runner[]>("GET", "/api/v1/runners", undefined, { background }),
   validate: (yaml: string) => call<ValidateResult>("POST", "/api/v1/validate", yaml, { raw: true }),

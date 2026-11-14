@@ -143,7 +143,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 	}
 	entry.User = claims.Username
 	raw := auth.RandomString(32)
-	if err := s.Engine.SignIn(claims.Username, claims.Groups, auth.Hash(raw), now.UnixMilli(),
+	if err := s.Engine.SignIn(claims.Username, claims.Groups, engine.Profile{Name: claims.Name, Email: claims.Email}, auth.Hash(raw), now.UnixMilli(),
 		now.Add(s.Auth.Lifetime).UnixMilli(), now.Add(-s.Auth.IdleTimeout).UnixMilli()); err != nil {
 		s.Log.Error("recording a sign-in", "err", err)
 		fail("unavailable", "the session could not be stored")

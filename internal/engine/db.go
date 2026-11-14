@@ -331,6 +331,18 @@ CREATE INDEX audit_project ON audit(project, id);
 ALTER TABLE runs ADD COLUMN runner TEXT NOT NULL DEFAULT '';
 CREATE INDEX leases_runner ON leases(runner);
 `,
+	// 7: the pipeline editor. A draft run is marked, with the hash of the
+	//    text it ran (the text itself is in its run.created event); a failed
+	//    step keeps the last lines of its output; and people's display
+	//    names and e-mail addresses, as their provider last gave them, are
+	//    kept to author the commits they save.
+	`
+ALTER TABLE runs ADD COLUMN draft INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE runs ADD COLUMN pipeline_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE steps ADD COLUMN excerpt TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT '';
+`,
 }
 
 func migrate(d *dbx) error {

@@ -9,6 +9,8 @@ projects:
     repo: ../../launchway-demo
     branch: main
     poll: 5s
+    # The pipeline editor may save to the demo, on new branches.
+    push: { branch_prefix: launchway/ }
 
   # Launchway builds and tests itself.
   - name: launchway

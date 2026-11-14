@@ -53,6 +53,11 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/projects/{name}/refs": {"GET", "/api/v1/projects/pay-api/refs", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"POST /api/v1/projects/{name}/runs": {"POST", "/api/v1/projects/pay-api/runs", `{"ref":"main"}`,
 		[6]int{401, 404, 403, 201, 404, 201}},
+	"GET /api/v1/projects/{name}/pipeline": {"GET", "/api/v1/projects/pay-api/pipeline?ref=main", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// An empty save is refused by the handler (no base commit), after the permission check.
+	"POST /api/v1/projects/{name}/pipeline": {"POST", "/api/v1/projects/pay-api/pipeline", `{}`, [6]int{401, 404, 403, 400, 404, 400}},
+	// Draft runs need the role drafts.allow names: operator by default.
+	"POST /api/v1/projects/{name}/draft-runs":     {"POST", "/api/v1/projects/pay-api/draft-runs", draftBody, [6]int{401, 404, 403, 201, 404, 201}},
 	"GET /api/v1/runs":                            {"GET", "/api/v1/runs", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/runs/{id}":                       {"GET", "/api/v1/runs/{pay}", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/runs/{id}/events":                {"GET", "/api/v1/runs/{pay}/events", "", [6]int{401, 404, 200, 200, 404, 200}},
@@ -71,6 +76,10 @@ var permissionTable = map[string]matrixRow{
 	"DELETE /api/v1/tokens/{id}":                  {"DELETE", "/api/v1/tokens/tok_nope", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/audit":                           {"GET", "/api/v1/audit", "", [6]int{401, 403, 403, 403, 403, 200}},
 }
+
+// draftBody starts a draft run that waits for an approval, so it needs no
+// runner.
+const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {kind: approval, message: Ship it}\n"}`
 
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).

@@ -21,6 +21,7 @@ containers:
 
 steps:
   lint:
+    description: Check the code style
     image: docker.io/library/alpine:3.22
     run: |
       echo "Checking style in $(ls | wc -l) files"
@@ -28,6 +29,7 @@ steps:
       printf '\033[32m✓ no problems found\033[0m\n'
 
   unit-tests:
+    description: Run the fast tests
     image: docker.io/library/alpine:3.22
     run: |
       for t in parser engine api runner ui; do
@@ -37,6 +39,7 @@ steps:
       echo "coverage=84%" >> "$LAUNCHWAY_OUTPUTS"
 
   integration-tests:
+    description: Test against the cache service
     container: tools
     needs: unit-tests
     run: |
@@ -50,6 +53,7 @@ steps:
       exit 1
 
   security-scan:
+    description: Look for known problems in dependencies
     image: docker.io/library/alpine:3.22
     run: |
       echo "Scanning dependencies…"
@@ -57,6 +61,7 @@ steps:
       printf '\033[33m2 low-severity findings\033[0m\n'
 
   build:
+    description: Build and push the image
     image: docker.io/library/alpine:3.22
     needs: [lint, integration-tests, security-scan]
     run: |
@@ -67,6 +72,7 @@ steps:
       echo "Pushed registry.example.com/demo-app@sha256:$digest"
 
   smoke-test:
+    description: Check that the built image answers
     image: docker.io/library/alpine:3.22
     needs: build
     run: |
@@ -82,6 +88,7 @@ steps:
 
   # Pauses the run until someone approves it, on main only.
   approve-dev:
+    description: A person decides whether this build goes to dev
     kind: approval
     needs: smoke-test
     when: { branch: main }
@@ -89,6 +96,7 @@ steps:
     timeout: 24h
 
   deploy-dev:
+    description: Deploy the image to the dev environment
     image: docker.io/library/alpine:3.22
     needs: approve-dev
     when: { branch: main }

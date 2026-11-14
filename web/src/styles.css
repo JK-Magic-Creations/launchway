@@ -321,11 +321,24 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
 .online-on { background: var(--ok); }
 
 /* ---- playground ---- */
-.split-play > .editor { flex: 1 1 460px; }
-.editor { display: flex; min-height: 560px; }
-.editor-gutter { flex: 0 0 44px; padding: 14px 8px 14px 0; text-align: right; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--text-3); background: var(--surface-2); user-select: none; }
-.gutter-bad { color: #fff; background: var(--bad); border-radius: 0 4px 4px 0; }
-.editor textarea { flex: 1; min-width: 0; border: 0; resize: vertical; padding: 14px; font-family: var(--mono); font-size: 13px; line-height: 1.6; background: var(--surface); color: var(--text); outline: none; white-space: pre; overflow: auto; tab-size: 2; }
+.split-play > .card:first-child { flex: 1 1 460px; }
+/* The pipeline editor: a gutter of line numbers, and a text area over a
+   layer that marks lines with problems. All three scroll together. */
+.editor { display: flex; height: 600px; min-height: 320px; position: relative; }
+.editor-gutter { flex: 0 0 46px; overflow: hidden; text-align: right; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--text-3); background: var(--surface-2); user-select: none; }
+.editor-gutter-inner { padding: 14px 8px 40px 0; }
+.gutter-bad { color: #fff; background: var(--bad); border-radius: 0 4px 4px 0; font-weight: 700; cursor: help; }
+.editor-area { flex: 1; min-width: 0; position: relative; background: var(--surface); }
+.editor-marks { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.editor-marks-inner { padding: 14px 0 40px; font-size: 13px; line-height: 1.6; }
+.editor-marks-inner > div { height: 1.6em; }
+.mark-bad { background: var(--bad-soft); box-shadow: inset 3px 0 0 var(--bad); }
+.editor textarea { position: relative; display: block; width: 100%; height: 100%; border: 0; resize: none; padding: 14px 14px 40px; font-family: var(--mono); font-size: 13px; line-height: 1.6; background: transparent; color: var(--text); outline: none; white-space: pre; overflow: auto; tab-size: 2; }
+.editor textarea:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.editor-card { display: flex; flex-direction: column; }
+.editor-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.editor-bar-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 760px) { .editor { height: 420px; } }
 .play-right { display: flex; flex-direction: column; gap: 14px; }
 .problems { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
 
@@ -380,3 +393,29 @@ a.btn-primary:hover { text-decoration: none; color: #fff; }
 .outcome-ok { background: var(--ok-soft); color: var(--ok-ink); }
 .outcome-denied { background: var(--warn-soft); color: var(--warn-ink); }
 .outcome-failed { background: var(--bad-soft); color: var(--bad-ink); }
+
+/* ---- pipeline editor page ---- */
+a.btn:hover { text-decoration: none; }
+.linkbtn { border: 0; padding: 0; background: none; color: var(--accent-ink); font: inherit; cursor: pointer; }
+.linkbtn:hover { text-decoration: underline; }
+.callout-info { background: var(--accent-soft); color: var(--text); }
+.callout-draft { background: var(--warn-soft); color: var(--warn-ink); }
+.callout-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.callout-row > span { flex: 1 1 320px; }
+.badge-draft { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; border: 1px dashed var(--warn); background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
+.runrow-title .badge-draft { margin-right: 6px; font-size: 10.5px; padding: 1px 6px; }
+.refbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.refbtn:hover { background: var(--surface-2); }
+.project-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.step-desc { margin: 2px 0 6px; }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.card-head .h-sm { margin: 0; }
+.excerpt { margin: 10px 0 0; }
+.excerpt figcaption { font-size: 12.5px; font-weight: 600; margin-bottom: 4px; }
+.excerpt pre { margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--log-bg); color: var(--log-err); font-family: var(--mono); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; }
+.choices { border: 0; padding: 0; margin: 0; gap: 8px; }
+.choices legend { padding: 0; margin-bottom: 6px; }
+.choice { display: flex; align-items: flex-start; gap: 8px; font-weight: 400; cursor: pointer; }
+.choice input { margin-top: 3px; }
+.choice-off { color: var(--text-3); cursor: default; }
+.dialog-actions-left { justify-content: flex-start; flex-wrap: wrap; }

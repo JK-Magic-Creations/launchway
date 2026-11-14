@@ -232,6 +232,7 @@ func (p *Provider) token(w http.ResponseWriter, r *http.Request) {
 		"iss": p.URL, "sub": "sub-" + g.user, "aud": p.ClientID, "nonce": g.nonce,
 		"iat": now.Unix(), "exp": now.Add(5 * time.Minute).Unix(),
 		"preferred_username": g.user, "email": g.user + "@example.com", "groups": g.groups,
+		"name": DisplayName(g.user),
 	}
 	key, kid := p.key, "k1"
 	switch g.fail {
@@ -273,6 +274,15 @@ func (p *Provider) userinfo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{"sub": "sub-" + g.user, "preferred_username": g.user, "groups": g.groups})
+}
+
+// DisplayName is the name claim the provider gives a user: their username
+// with a capital letter, and "Example" after it.
+func DisplayName(user string) string {
+	if user == "" {
+		return ""
+	}
+	return strings.ToUpper(user[:1]) + user[1:] + " Example"
 }
 
 func sign(key *rsa.PrivateKey, kid string, claims map[string]any) (string, error) {

@@ -4,17 +4,20 @@ on:
   push: { branches: [main] }
 
 steps:
-  vet:
+  check-code:
+    description: Look for common mistakes with go vet
     image: docker.io/library/golang:1.27
     run: go vet ./...
 
   test:
+    description: Run every Go test
     image: docker.io/library/golang:1.27
-    needs: vet
+    needs: check-code
     run: go test -count=1 ./...
     timeout: 20m
 
-  ui:
+  build-ui:
+    description: Build the web UI into web/dist
     image: docker.io/library/node:24-alpine
     needs: test   # after test, because building the UI rewrites web/dist
     run: |
@@ -22,9 +25,10 @@ steps:
       npm ci --no-audit --no-fund
       npm run build
 
-  build:
+  build-binary:
+    description: Build the launchway binary, with the UI inside it
     image: docker.io/library/golang:1.27
-    needs: ui
+    needs: build-ui
     run: |
       version=$(echo "$LAUNCHWAY_COMMIT" | cut -c1-8)
       CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$version" -o bin/launchway ./cmd/launchway

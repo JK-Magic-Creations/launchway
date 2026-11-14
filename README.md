@@ -88,6 +88,9 @@ Things to try:
   starts within a few seconds, and *Recent pushes* on the project explains every decision.
 - **Survive a restart.** Stop the server while a step is running and start it again. The step is
   run again, and nothing that had finished runs twice.
+- **Edit a pipeline.** *Projects → demo-app → Edit pipeline* opens the file from a branch. Change
+  it, press *Run this draft* to try the change without saving it, then *Save…* to commit it (the
+  example configuration lets the demo be saved; see [Editing pipelines](#editing-pipelines)).
 - **Open the Playground.** Write a pipeline and watch it validate and draw as you type.
 - **Run locally.** In any repository with a `.launchway/pipeline.yaml`, run `bin/launchway run`. It
   uses the same engine, on your machine, against your working copy.
@@ -122,10 +125,11 @@ steps:
 
 | Key | Meaning |
 |---|---|
+| `description` | One line saying what the step is for, shown under its name and on the graph |
 | `image` | Container image the step runs in |
 | `run` | Shell script, run with `sh -e` in the repository checkout |
 | `needs` | Steps that must succeed first; steps with no unmet needs run in parallel |
-| `when` | `branch`, `tag` and `event` (`push`, `manual`) patterns; the step is skipped if they do not match |
+| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`) patterns; the step is skipped if they do not match. In a [draft run](#editing-pipelines), a step with a `when` runs only if its `event` names `draft` |
 | `env` | Extra environment variables |
 | `secrets` | Environment variables whose values a runner looks up; see [Secrets](#secrets) |
 | `container` | A named container from the `containers` section, instead of `image` |
@@ -173,6 +177,84 @@ Mistakes are reported with line numbers, before anything runs:
 $ launchway validate
 .launchway/pipeline.yaml:14: steps.build.needs: needs "tests", but there is no step with that name
 ```
+
+When a step fails, its last few lines of output (on stderr if it wrote any there, else on stdout,
+with secrets masked as in the log) are kept with the step and shown where the run says it failed,
+so "exit code 1" comes with its reason.
+
+## Editing pipelines
+
+Git is the only place a pipeline is kept. Launchway never holds a copy of its own: the editor
+(*Projects → Edit pipeline*, or *Edit this pipeline* on a run's *Pipeline* tab) reads
+`.launchway/pipeline.yaml` from the tip of a branch, checks it as you type with the same parser
+the server uses, marks problems on their lines and draws the graph. It shows which branch and
+commit the text came from and whether you have changed it. Unsaved edits stay in that browser tab
+only. A branch without a pipeline opens with a starting point.
+
+**Run this draft** runs the edited text against the branch's current commit without saving it.
+The run is marked *Draft* everywhere; it records who started it and the SHA-256 of the text, and
+keeps the text itself (which is in no commit) so that its *Pipeline* tab shows exactly what ran.
+A draft is its own trigger event, `draft`:
+
+- a step with no `when` runs as usual;
+- a step with a `when` runs only if its `event` list names `draft`. `when: { branch: main }` or
+  `when: { event: [push, manual] }` does not run in a draft of `main`, so a deployment guarded by
+  `when` does not run from unsaved, unreviewed text;
+- a step that declares `secrets` fails before any runner sees it, unless the project allows
+  drafts to read secrets (below). Its runner never looks a secret up.
+
+A draft lets someone run steps nobody has reviewed, with whatever the runners can reach, so who
+may start one is a setting of its own, checked on the server with or without sign-in:
+
+```yaml
+drafts:
+  allow: operator      # admin, operator (the default) or none: the role needed on a project
+  secrets: false       # the default: steps of drafts may not read secrets
+projects:
+  - name: payments
+    repo: https://git.example.com/team/payments.git
+    drafts: { allow: admin, secrets: true }   # overrides, per project
+```
+
+Resuming a failed draft run runs its text again, so it needs the same right, and whether its
+steps may read secrets is decided again by the setting at that moment.
+
+**Save…** commits the file as you: the author is your name and e-mail address as your sign-in
+provider gave them (an address the provider says is unverified is not used; without one it is
+`<you>@users.noreply.launchway`), the committer is Launchway, and only the pipeline file changes.
+By default it goes to a new branch, `<branch_prefix><you>/<date-time>`, with a link to open a pull
+request when the repository is on GitHub, GitLab, Gitea or Forgejo (judged by its host name;
+Launchway calls no Git host API). A save is refused, and nothing is pushed, if the branch has
+moved on since the text was opened, so two people cannot overwrite each other; or if the text has
+problems, unless an admin of the project chooses to save it anyway. Saving needs the operator role
+and a `push` section for the project:
+
+```yaml
+projects:
+  - name: payments
+    repo: https://git.example.com/team/payments.git
+    push:
+      branch_prefix: launchway/          # the default
+      allow_direct: ["release/*"]        # branches that may be committed to directly; default none
+```
+
+Pushing uses the server's Git credentials, exactly as fetching does: in the repository URL, or in
+Git settings in the server's environment, such as `GIT_CONFIG_COUNT=1`,
+`GIT_CONFIG_KEY_0=http.https://git.example.com/.extraHeader` and
+`GIT_CONFIG_VALUE_0=Authorization: Bearer ...`. Give that credential only the rights it needs,
+and protect the branches that matter on the Git host: Launchway refuses direct saves outside
+`allow_direct`, but the credential itself could push anywhere it is allowed to. A project without
+`push` cannot be saved to; the editor offers *Copy* and *Download* instead. Each save works in a
+temporary clone of the server's mirror, which is removed whatever happens, and pushes with a
+lease, so saves on several servers at once are safe. If the push fails, Git's own message is
+shown, with any credentials in it removed.
+
+Over the API: `GET /api/v1/projects/{name}/pipeline?ref=main` reads the file;
+`POST /api/v1/projects/{name}/draft-runs` with `{"ref": "main", "pipeline": "..."}` starts a draft
+run (problems answer `422` with their lines); `POST /api/v1/projects/{name}/pipeline` with
+`{"base_ref", "base_sha", "pipeline", "message", "branch", "force"}` saves (`branch` empty for a
+new branch, or `base_ref` itself to commit to it directly; a stale `base_sha` answers `409`). The
+text may be at most 256 KiB.
 
 ## Approvals
 
@@ -331,9 +413,9 @@ is on.
 
 | Role | May |
 |---|---|
-| `viewer` | see a project and its runs, logs, events, pipeline files and approvals; see the runners; use the Playground |
-| `operator` | everything a viewer may, and start, cancel and resume runs, and approve and reject approvals |
-| `admin` | everything an operator may, and read the audit trail |
+| `viewer` | see a project and its runs, logs, events, pipeline files and approvals; see the runners; use the Playground; open the pipeline editor |
+| `operator` | everything a viewer may, and start, cancel and resume runs, approve and reject approvals, save pipelines, and start draft runs if `drafts.allow` is `operator` |
+| `admin` | everything an operator may, read the audit trail, start draft runs if `drafts.allow` is `admin`, and save a pipeline that has problems |
 
 Each entry in `access` grants a role to one `group` (from `groups_claim`) or one `user` (from
 `username_claim`), on the projects matching one of `projects`, or on every project if there are
@@ -386,11 +468,13 @@ whenever `redirect_url` starts with `https://`.
 
 ### Audit trail
 
-Every call that changes something (starting, canceling and resuming runs, approving and rejecting,
-making and revoking tokens) by someone signed in, allowed or refused, and every sign-in, failed sign-in and sign-out is
+Every call that changes something (starting, canceling and resuming runs, starting draft runs
+(`run.draft`), saving pipelines (`pipeline.save`), approving and rejecting, making and revoking
+tokens) by someone signed in, allowed or refused, and every sign-in, failed sign-in and sign-out is
 recorded with its time, who, their address, the action, project, target (run, step or token name),
-outcome (`ok`, `denied` or `failed`) and a short detail. Secrets, tokens and session ids are never
-recorded. Launchway only ever adds to it. Admins read it on the **Audit trail** page or with
+outcome (`ok`, `denied` or `failed`) and a short detail. A draft run is recorded with the SHA-256
+of its text and a save with its branch and commit; the pipeline text itself is never in the
+trail, nor are secrets, tokens and session ids. Launchway only ever adds to it. Admins read it on the **Audit trail** page or with
 `GET /api/v1/audit?user=&project=&action=&from=&to=&before=&limit=` (times in Unix milliseconds;
 `before` is the `next_before` of the previous page). It is kept until you remove old rows from the
 `audit` table yourself.
@@ -457,7 +541,8 @@ within the last two minutes) for probes.
 - many runners competing for the same steps;
 - retries, cancel and resume;
 - approvals, including two servers deciding or expiring the same one at once;
-- real Git repositories;
+- real Git repositories, including saves racing from two servers, stale saves and pushes the
+  repository refuses;
 - secrets kept out of the database, events, logs and API (`make test-vault` adds a real OpenBao);
 - sign-in against a fake OpenID Connect provider: forged state, stolen codes (PKCE), bad ID tokens,
   open redirects, CSRF, session expiry, API tokens, a permission matrix over every route, the live
@@ -476,6 +561,7 @@ Built so far:
 - secrets (environment, files, Vault and OpenBao);
 - approvals;
 - Git polling;
+- the pipeline editor: draft runs of unsaved text, and saving to Git as the person who saved;
 - sign-in with OpenID Connect, roles per project, API tokens and an audit trail;
 - the web UI.
 

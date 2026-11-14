@@ -46,6 +46,8 @@ type Claims struct {
 	Subject  string
 	Username string
 	Groups   []string
+	Name     string // the name claim, if any: for showing and for authoring commits
+	Email    string // the email claim, unless the provider says it is unverified
 }
 
 // NewOIDC fills in defaults. It does not contact the provider.
@@ -186,12 +188,29 @@ func (c *OIDC) claims(subject string, m map[string]any) (*Claims, error) {
 			out.Groups = []string{g}
 		}
 	}
+	if s, ok := m["name"].(string); ok && ValidName(strings.TrimSpace(s)) {
+		out.Name = strings.TrimSpace(s)
+	}
+	if s, ok := m["email"].(string); ok && m["email_verified"] != false && validEmail(s) {
+		out.Email = s
+	}
 	slices.Sort(out.Groups)
 	out.Groups = slices.Compact(out.Groups)
 	if out.Groups == nil {
 		out.Groups = []string{}
 	}
 	return out, nil
+}
+
+// validEmail accepts a plain address: no spaces, angle brackets or control
+// characters, one @ with something on both sides, at most 254 bytes. It is
+// only ever written into a commit's author line, never sent mail.
+func validEmail(s string) bool {
+	if len(s) > 254 || strings.ContainsAny(s, " <>\"\\,;") || !ValidName(s) {
+		return false
+	}
+	at := strings.LastIndexByte(s, '@')
+	return at > 0 && at < len(s)-1 && strings.Count(s, "@") == 1
 }
 
 // ValidName reports whether s is acceptable as a username, group or token

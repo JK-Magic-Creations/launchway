@@ -155,11 +155,37 @@ Runners being replaced stop their steps, which are then run again by another run
 are run again from the start, in a fresh workspace, so long steps are interrupted by runner
 upgrades.
 
+## Saving pipelines from the editor
+
+The pipeline editor can commit to a project's repository if the project has a `push` section
+(see the main README's *Editing pipelines*):
+
+```yaml
+config:
+  projects:
+    - name: payments
+      repo: https://git.example.com/team/payments.git
+      push: { branch_prefix: launchway/ }
+server:
+  extraEnv:
+    # The servers' Git credential, used to fetch and to push. Keep the value in a Secret.
+    - { name: GIT_CONFIG_COUNT, value: "1" }
+    - { name: GIT_CONFIG_KEY_0, value: "http.https://git.example.com/.extraHeader" }
+    - name: GIT_CONFIG_VALUE_0
+      valueFrom: { secretKeyRef: { name: launchway-git, key: header } }
+```
+
+The servers then need a credential that may push, not only fetch. Give it as little as the host
+allows (one repository, no admin rights) and protect important branches on the host itself.
+Saves are made in temporary clones under the data directory (`server.dataVolume`), which are
+removed after each save. Who may start draft runs, and whether drafts may read secrets, is
+`drafts:` in `config.extraConfig` and per project.
+
 ## What is kept where
 
 | Data | Where | Lost when |
 |---|---|---|
-| Runs, steps, events, logs, approvals, runner list, the runner token (unless you set one) | PostgreSQL | Only with the database: back it up |
+| Runs, steps, events, logs, approvals, runner list, the runner token (unless you set one), the text of draft runs | PostgreSQL | Only with the database: back it up |
 | Mirrors of project repositories | Each server's `emptyDir` (`server.dataVolume`) | The pod goes; rebuilt from the repository on start |
 | Checkouts for running steps | Each runner's `emptyDir` (`runner.dataVolume`) | The pod goes; steps then run again elsewhere |
 | A run's workspace | Its step pod in the step namespace | The run succeeds (at once) or fails (after `keepFailed`, 2 hours, to allow a resume); any runner removes it, including the pods of runners that were replaced |

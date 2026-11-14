@@ -22,6 +22,11 @@ const (
 	DefaultApprovalTimeout = 24 * time.Hour
 	MaxApprovalTimeout     = 30 * 24 * time.Hour
 	MaxMessageLen          = 500 // characters in an approval's message
+	MaxDescriptionLen      = 200 // characters in a step's description
+
+	// MaxFileBytes bounds a pipeline file. The server refuses larger text
+	// from the editor; a file in Git that is larger is refused too.
+	MaxFileBytes = 256 << 10
 )
 
 var (
@@ -75,9 +80,12 @@ func (ps *parser) add(n *yaml.Node, at, format string, args ...any) {
 
 // Parse reads and validates a pipeline file. On failure the error is Problems.
 func Parse(data []byte) (*Pipeline, error) {
+	if len(data) > MaxFileBytes {
+		return nil, Problems{{Message: fmt.Sprintf("the file is larger than %d KiB", MaxFileBytes>>10)}}
+	}
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return nil, Problems{{Message: strings.TrimPrefix(err.Error(), "yaml: ")}}
+		return nil, Problems{syntaxProblem(err)}
 	}
 	ps := &parser{}
 	if len(doc.Content) == 0 {
@@ -120,6 +128,22 @@ func Parse(data []byte) (*Pipeline, error) {
 		return nil, ps.problems
 	}
 	return p, nil
+}
+
+// yamlLine finds the line number in a YAML error, such as
+// "yaml: line 4: did not find expected key".
+var yamlLine = regexp.MustCompile(`^(?:yaml: )?line (\d+): (.*)$`)
+
+// syntaxProblem turns a YAML syntax error into a problem, with its line
+// when the error names one.
+func syntaxProblem(err error) Problem {
+	msg := strings.TrimPrefix(err.Error(), "yaml: ")
+	if m := yamlLine.FindStringSubmatch(msg); m != nil {
+		if n, convErr := strconv.Atoi(m[1]); convErr == nil {
+			return Problem{Line: n, Message: m[2]}
+		}
+	}
+	return Problem{Message: msg}
 }
 
 // eachKey walks a mapping, reporting unknown and repeated keys.
@@ -182,7 +206,7 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 }
 
 var (
-	stepKeys = []string{"kind", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "message"}
+	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "message"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
@@ -296,6 +320,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				s.Run = ps.str(v2, where)
 			case "needs":
 				s.Needs = ps.strList(v2, where)
+				s.NeedsLine = v2.Line
 			case "when":
 				s.When = ps.parseWhen(v2, where)
 			case "env":
@@ -317,6 +342,14 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				}
 			case "message":
 				s.Message = strings.TrimSpace(ps.str(v2, where))
+			case "description":
+				s.Description = strings.TrimSpace(ps.str(v2, where))
+				switch {
+				case strings.ContainsAny(s.Description, "\r\n"):
+					ps.add(v2, where, "a description is one line; put longer notes in a comment")
+				case utf8.RuneCountInString(s.Description) > MaxDescriptionLen:
+					ps.add(v2, where, "the description is longer than %d characters", MaxDescriptionLen)
+				}
 			}
 		})
 		switch {
@@ -409,8 +442,8 @@ func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 			c.Tag = list
 		case "event":
 			for _, e := range list {
-				if e != "push" && e != "manual" {
-					ps.add(v, at+".event", "event %q is not known; use push or manual", e)
+				if !contains(Events, e) {
+					ps.add(v, at+".event", "event %q is not known; use %s", e, strings.Join(Events, ", "))
 				}
 			}
 			c.Event = list
@@ -541,15 +574,19 @@ func (ps *parser) check(p *Pipeline) {
 	}
 	for _, s := range p.Steps {
 		seen := map[string]bool{}
+		line := s.Line
+		if s.NeedsLine > 0 {
+			line = s.NeedsLine
+		}
 		for _, n := range s.Needs {
 			at := "steps." + s.ID + ".needs"
 			switch {
 			case n == s.ID:
-				ps.problems = append(ps.problems, Problem{Line: s.Line, Path: at, Message: "a step cannot need itself"})
+				ps.problems = append(ps.problems, Problem{Line: line, Path: at, Message: "a step cannot need itself"})
 			case ids[n] == nil:
-				ps.problems = append(ps.problems, Problem{Line: s.Line, Path: at, Message: fmt.Sprintf("needs %q, but there is no step with that name", n)})
+				ps.problems = append(ps.problems, Problem{Line: line, Path: at, Message: fmt.Sprintf("needs %q, but there is no step with that name", n)})
 			case seen[n]:
-				ps.problems = append(ps.problems, Problem{Line: s.Line, Path: at, Message: fmt.Sprintf("%q is listed twice", n)})
+				ps.problems = append(ps.problems, Problem{Line: line, Path: at, Message: fmt.Sprintf("%q is listed twice", n)})
 			}
 			seen[n] = true
 		}

@@ -16,15 +16,24 @@ import (
 type Session struct {
 	User      string
 	Groups    []string // from the person's latest sign-in
+	Profile   Profile  // likewise
 	CreatedAt int64
 	LastSeen  int64
 	ExpiresAt int64
 }
 
-// SignIn records a person's groups as their provider gave them now, and a
-// new session for them. Sessions that ended before staleBefore (idle) or
-// now (absolute) are forgotten in passing.
-func (e *Engine) SignIn(user string, groups []string, sessionHash string, now, expiresAt, staleBefore int64) error {
+// Profile is what the provider said about a person at their latest sign-in,
+// beyond their username: used to author the commits they save. Either may
+// be empty.
+type Profile struct {
+	Name  string // display name
+	Email string // only an address the provider has not said is unverified
+}
+
+// SignIn records a person's groups and profile as their provider gave them
+// now, and a new session for them. Sessions that ended before staleBefore
+// (idle) or now (absolute) are forgotten in passing.
+func (e *Engine) SignIn(user string, groups []string, profile Profile, sessionHash string, now, expiresAt, staleBefore int64) error {
 	g, err := json.Marshal(groups)
 	if err != nil {
 		return err
@@ -36,9 +45,10 @@ func (e *Engine) SignIn(user string, groups []string, sessionHash string, now, e
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.Exec(`INSERT INTO users(username, group_list, last_login) VALUES(?,?,?)
-		ON CONFLICT(username) DO UPDATE SET group_list = excluded.group_list, last_login = excluded.last_login`,
-		user, string(g), now); err != nil {
+	if _, err := tx.Exec(`INSERT INTO users(username, group_list, last_login, display_name, email) VALUES(?,?,?,?,?)
+		ON CONFLICT(username) DO UPDATE SET group_list = excluded.group_list, last_login = excluded.last_login,
+			display_name = excluded.display_name, email = excluded.email`,
+		user, string(g), now, profile.Name, profile.Email); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(`INSERT INTO sessions(id_hash, username, created_at, last_seen, expires_at) VALUES(?,?,?,?,?)`,
@@ -54,10 +64,10 @@ func (e *Engine) SignIn(user string, groups []string, sessionHash string, now, e
 // SessionByHash looks a session up. It returns ErrNotFound if there is none.
 func (e *Engine) SessionByHash(hash string) (*Session, error) {
 	s := &Session{}
-	var groups sql.NullString
-	err := e.db.QueryRow(`SELECT s.username, u.group_list, s.created_at, s.last_seen, s.expires_at
+	var groups, name, email sql.NullString
+	err := e.db.QueryRow(`SELECT s.username, u.group_list, u.display_name, u.email, s.created_at, s.last_seen, s.expires_at
 		FROM sessions s LEFT JOIN users u ON u.username = s.username WHERE s.id_hash = ?`, hash).
-		Scan(&s.User, &groups, &s.CreatedAt, &s.LastSeen, &s.ExpiresAt)
+		Scan(&s.User, &groups, &name, &email, &s.CreatedAt, &s.LastSeen, &s.ExpiresAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: session", ErrNotFound)
 	}
@@ -65,6 +75,7 @@ func (e *Engine) SessionByHash(hash string) (*Session, error) {
 		return nil, err
 	}
 	s.Groups = decodeGroups(groups)
+	s.Profile = Profile{Name: name.String, Email: email.String}
 	return s, nil
 }
 
@@ -101,12 +112,13 @@ func decodeGroups(s sql.NullString) []string {
 
 // APIToken describes a token. The token itself is never stored.
 type APIToken struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	User      string `json:"-"`
-	CreatedAt int64  `json:"created_at"`
-	ExpiresAt int64  `json:"expires_at"`
-	LastUsed  int64  `json:"last_used"`
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	User      string  `json:"-"`
+	Owner     Profile `json:"-"` // the owner's profile as of their latest sign-in
+	CreatedAt int64   `json:"created_at"`
+	ExpiresAt int64   `json:"expires_at"`
+	LastUsed  int64   `json:"last_used"`
 }
 
 // CreateToken stores a token under the hash of its value. A person's
@@ -126,16 +138,17 @@ func (e *Engine) CreateToken(t APIToken, hash string) error {
 // groups as of their latest sign-in.
 func (e *Engine) TokenByHash(hash string) (*APIToken, []string, error) {
 	t := &APIToken{}
-	var groups sql.NullString
-	err := e.db.QueryRow(`SELECT t.id, t.name, t.username, t.created_at, t.expires_at, t.last_used, u.group_list
+	var groups, name, email sql.NullString
+	err := e.db.QueryRow(`SELECT t.id, t.name, t.username, t.created_at, t.expires_at, t.last_used, u.group_list, u.display_name, u.email
 		FROM api_tokens t LEFT JOIN users u ON u.username = t.username WHERE t.hash = ?`, hash).
-		Scan(&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &groups)
+		Scan(&t.ID, &t.Name, &t.User, &t.CreatedAt, &t.ExpiresAt, &t.LastUsed, &groups, &name, &email)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil, fmt.Errorf("%w: token", ErrNotFound)
 	}
 	if err != nil {
 		return nil, nil, err
 	}
+	t.Owner = Profile{Name: name.String, Email: email.String}
 	return t, decodeGroups(groups), nil
 }
 

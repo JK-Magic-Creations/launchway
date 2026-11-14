@@ -137,6 +137,10 @@ type Result struct {
 	ExitCode *int              `json:"exit_code,omitempty"`
 	Error    string            `json:"error,omitempty"`
 	Outputs  map[string]string `json:"outputs,omitempty"`
+	// Excerpt is, for a failed step, the last few lines it wrote: on stderr
+	// if it wrote any, else on stdout. The runner masks secrets in it as in
+	// the log; the server keeps at most MaxExcerptBytes of it.
+	Excerpt string `json:"excerpt,omitempty"`
 }
 
 // LogLine is one line of a step's output.
@@ -298,6 +302,10 @@ type NewRun struct {
 	Pipeline *pipeline.Pipeline
 	Trigger  Trigger
 	Source   Source
+	// Draft, if set, makes this a draft run of pipeline text that is not in
+	// Git. Its trigger event is always draft, and its hash is worked out
+	// here from the text.
+	Draft *Draft
 	// Push, if set, is the change to a ref that this run is for. The change
 	// is claimed in the same transaction that creates the run, and a
 	// "started" decision is recorded; if another server claimed it first,
@@ -311,7 +319,18 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		return nil, fmt.Errorf("%w: a run needs a project and a pipeline with steps", ErrConflict)
 	}
 	if nr.Trigger.Event == "" {
-		nr.Trigger.Event = "manual"
+		nr.Trigger.Event = pipeline.EventManual
+	}
+	var draft *Draft
+	switch {
+	case nr.Draft != nil:
+		if nr.Push != nil {
+			return nil, fmt.Errorf("%w: a draft run is never started by a push", ErrConflict)
+		}
+		draft = &Draft{Text: nr.Draft.Text, Hash: DraftHash(nr.Draft.Text), Secrets: nr.Draft.Secrets}
+		nr.Trigger.Event = pipeline.EventDraft
+	case nr.Trigger.Event == pipeline.EventDraft:
+		return nil, fmt.Errorf("%w: a draft run needs the text it runs", ErrConflict)
 	}
 	runID := ids.New("run")
 	trig, src := nr.Trigger, nr.Source
@@ -334,7 +353,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			ON CONFLICT(project) DO UPDATE SET last = run_counters.last + 1 RETURNING last`, nr.Project).Scan(&number); err != nil {
 			return err
 		}
-		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: nr.Pipeline, Trigger: &trig, Source: &src})
+		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: nr.Pipeline, Trigger: &trig, Source: &src, Draft: draft})
 		c.advance()
 		if nr.Push != nil {
 			return insertDecision(c.tx, nr.Project, PushDecision{At: c.now, Ref: nr.Push.Ref, SHA: nr.Push.New,
@@ -371,11 +390,25 @@ func (e *Engine) Cancel(runID, actor string) error {
 // Resume restarts a failed or canceled run from the steps that did not
 // succeed. Steps that succeeded are not run again.
 func (e *Engine) Resume(runID, actor string) error {
+	return e.resume(runID, actor, nil)
+}
+
+// ResumeDraft resumes a draft run, saying again whether its steps may read
+// secrets, as the configuration now says. It refuses a run that is not a
+// draft.
+func (e *Engine) ResumeDraft(runID, actor string, secrets bool) error {
+	return e.resume(runID, actor, &secrets)
+}
+
+func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 	return e.withRun(runID, func(c *cmd) error {
 		if c.st.Status != RunFailed && c.st.Status != RunCanceled {
 			return fmt.Errorf("%w: only a failed or canceled run can be resumed", ErrConflict)
 		}
-		c.emit(RunResumed, Payload{Actor: actor})
+		if draftSecrets != nil && c.st.Draft == nil {
+			return fmt.Errorf("%w: run %s is not a draft run", ErrConflict, runID)
+		}
+		c.emit(RunResumed, Payload{Actor: actor, DraftSecrets: draftSecrets})
 		for _, id := range c.st.Order {
 			s := c.st.Steps[id]
 			if s.Status == StepFailed || s.Status == StepCanceledS || (s.Status == StepSkippedS && s.SkipKind == "upstream") {
@@ -654,6 +687,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		default:
 			p.Outcome = string(StepFailed)
 			p.Reason = nonEmpty(res.Error, "the step failed")
+			p.Excerpt = CleanExcerpt(res.Excerpt)
 			c.emit(StepFinished, p)
 			def := c.st.Pipeline.Step(l.stepID)
 			if def != nil && s.Failures <= def.Retry && !c.st.CancelRequested {
@@ -1044,14 +1078,18 @@ func (c *cmd) persist() error {
 	}
 	st := c.st
 	t := st.Trigger
+	draft, hash := 0, ""
+	if st.Draft != nil {
+		draft, hash = 1, st.Draft.Hash
+	}
 	if _, err := c.tx.Exec(`INSERT INTO runs(id, project, number, pipeline, status, cancel_requested, event, ref, branch, tag, sha,
-			actor, message, author, created_at, started_at, finished_at, last_seq, runner)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+			actor, message, author, created_at, started_at, finished_at, last_seq, runner, draft, pipeline_hash)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT(id) DO UPDATE SET status = excluded.status, cancel_requested = excluded.cancel_requested,
 			started_at = excluded.started_at, finished_at = excluded.finished_at, last_seq = excluded.last_seq,
 			runner = excluded.runner`,
 		st.ID, st.Project, st.Number, st.Pipeline.Name, st.Status, boolInt(st.CancelRequested), t.Event, t.Ref, t.Branch, t.Tag, t.SHA,
-		t.Actor, t.Message, t.Author, st.CreatedAt, st.StartedAt, st.FinishedAt, st.LastSeq, st.Runner); err != nil {
+		t.Actor, t.Message, t.Author, st.CreatedAt, st.StartedAt, st.FinishedAt, st.LastSeq, st.Runner, draft, hash); err != nil {
 		return err
 	}
 	changed := c.changedSteps()
@@ -1062,17 +1100,17 @@ func (c *cmd) persist() error {
 			outputs = []byte("{}")
 		}
 		if _, err := c.tx.Exec(`INSERT INTO steps(run_id, step_id, position, status, attempt, queued_at, started_at, finished_at,
-				exit_code, error, skip_kind, runner, lease_id, outputs, deadline, decided_by, decided_at, comment)
-			VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+				exit_code, error, skip_kind, runner, lease_id, outputs, deadline, decided_by, decided_at, comment, excerpt)
+			VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 			ON CONFLICT(run_id, step_id) DO UPDATE SET status = excluded.status, attempt = excluded.attempt,
 				queued_at = excluded.queued_at, started_at = excluded.started_at, finished_at = excluded.finished_at,
 				exit_code = excluded.exit_code, error = excluded.error, skip_kind = excluded.skip_kind,
 				runner = excluded.runner, lease_id = excluded.lease_id, outputs = excluded.outputs,
 				deadline = excluded.deadline, decided_by = excluded.decided_by, decided_at = excluded.decided_at,
-				comment = excluded.comment`,
+				comment = excluded.comment, excerpt = excluded.excerpt`,
 			st.ID, id, s.Position, s.Status, s.Attempt, s.QueuedAt, s.StartedAt, s.FinishedAt,
 			s.ExitCode, s.Error, s.SkipKind, s.Runner, s.LeaseID, string(outputs),
-			s.Deadline, s.DecidedBy, s.DecidedAt, s.Comment); err != nil {
+			s.Deadline, s.DecidedBy, s.DecidedAt, s.Comment, s.Excerpt); err != nil {
 			return err
 		}
 	}
@@ -1136,6 +1174,11 @@ func (c *cmd) advance() {
 				changed = true
 			case def.IsApproval():
 				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
+				changed = true
+			case st.Draft != nil && !st.Draft.Secrets && len(def.Secrets) > 0:
+				// Never handed to a runner, so no runner looks a secret up
+				// for text that nobody reviewed.
+				c.emit(StepFinished, Payload{Step: id, Outcome: string(StepFailed), Reason: draftSecretsRefused(st.Project, def)})
 				changed = true
 			default:
 				c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1})
@@ -1212,11 +1255,17 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	} {
 		env[k] = v
 	}
+	secretRefs := def.Secrets
+	if st.Draft != nil && !st.Draft.Secrets {
+		// advance fails such a step before it is queued; this is a second
+		// guard, so that a runner is never asked to look a secret up for one.
+		secretRefs = nil
+	}
 	return &Job{
 		Container: container, Containers: st.Pipeline.RunContainers(),
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
-		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: def.Secrets,
+		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: secretRefs,
 		Timeout: def.Timeout, Source: st.Source, SHA: t.SHA, Workspace: st.Workspace,
 	}
 }
