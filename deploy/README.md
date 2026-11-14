@@ -116,6 +116,21 @@ expose it. The UI keeps a long-lived request open for live updates (`/api/v1/str
 your proxy's read timeout and turn off response buffering for it (the HA example shows the
 annotations for ingress-nginx).
 
+## Network policies and sign-in behind a gateway
+
+Learned from a real deployment with default-deny Cilium policies and the sign-in provider published
+on the same cluster's Gateway. A server that reaches its OpenID Connect issuer through the gateway
+needs egress rules for all three of these, or discovery fails with `403 Access denied`:
+
+- the gateway itself (in Cilium, `toEntities: [ingress]`);
+- the gateway Service's own address, which Cilium treats as an outside address
+  (`toCIDR: [<gateway ClusterIP>/32]`);
+- the provider's pods and port, because the gateway forwards the request with the caller's
+  identity, so the caller's egress policy is also checked against the final backend.
+
+Do not restrict these by the gateway's Service port. Runners need none of this: they talk to the
+servers, the Kubernetes API and your Git host only.
+
 ## Upgrades
 
 `helm upgrade` replaces servers one at a time: a new server must pass `/readyz` before an old one
