@@ -127,6 +127,7 @@ func TestPollingStartsRunsAndExplainsDecisions(t *testing.T) {
 
 	// Tags work too.
 	run(t, repo, "git", "tag", "-a", "v1.0.0", "-m", "release", "HEAD~1")
+	m.poll(ctx, p) // the branch list reuses a fetch from the last few seconds
 	refs, _ = m.Refs(ctx, "app")
 	found := false
 	for _, r := range refs {
