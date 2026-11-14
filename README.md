@@ -11,6 +11,8 @@ What Launchway is built around:
   restarts, and resumes from the step that failed.
 - **Runners that only connect outbound**, in any network, cluster or cloud. Steps run in Kubernetes
   pods or containers, with named toolbox containers and services sharing a workspace.
+- **Sign-in with your organisation's OpenID Connect provider**, roles per project, API tokens for
+  scripts, and an audit trail of every change.
 - **Secrets that never reach the server.** Pipelines hold references; the runner fetches values
   from Vault or OpenBao just before a step and masks them in output.
 - **A delivery model, not only builds:** approvals today; environments, releases, promotion,
@@ -19,7 +21,7 @@ What Launchway is built around:
 
 It is early. What is described below works and is tested, including with several servers and with
 real Kubernetes, PostgreSQL and OpenBao. Much of the rest is designed but not built yet (see
-[Status](#status)). There is no sign-in yet, so do not expose it to an untrusted network.
+[Status](#status)). Turn on [sign-in](#sign-in-and-access) before anyone else can reach it.
 
 ## Running several servers
 
@@ -29,12 +31,16 @@ Point every server at the same PostgreSQL database and put them behind a load ba
 # launchway.yaml
 listen: 0.0.0.0:8080
 database: postgres://launchway:...@db.internal:5432/launchway
+auth:
+  mode: oidc   # see Sign-in and access
+  # ...
 ```
 
 `LAUNCHWAY_DATABASE` overrides the file. Each server exposes `/healthz` (the process is up) and
 `/readyz` (the database answers). Runners may connect to any server. With no `database` setting a
 single server keeps its data in an embedded SQLite file, which suits development and small
-installs.
+installs. Sessions, API tokens and sign-ins in progress are kept in the database too, so a browser
+or script may be sent to any server.
 
 ## Try it on one machine
 
@@ -171,13 +177,16 @@ Decide in the web UI, or over the API with `POST /api/v1/runs/{id}/steps/{step}/
 `/reject`) and an optional `{"comment": "..."}`. `launchway run` asks in the terminal, and rejects
 the approval if there is no terminal to ask in.
 
-Until there is sign-in, everyone acts as the server's configured `user`, who may approve runs they
-started. To forbid that once separate users exist, set:
+With sign-in on, the person who started a run may reject it but not approve it: someone else must.
+Without sign-in everyone is the same configured `user`, so they may. Either default can be changed:
 
 ```yaml
 approvals:
-  allow_self: false   # the person who started a run may reject it, but not approve it
+  allow_self: false   # true lets people approve runs they started
 ```
+
+A run started by a push records the commit's author name, which anyone can set in Git; it is not
+checked against anyone's sign-in.
 
 ## Secrets
 
@@ -240,6 +249,126 @@ A secret that does not exist or may not be read fails the step, naming the store
 that cannot be reached (no answer, sealed, 5xx) is asked again for 30 seconds, and then the step is
 handed back to be run again later. `launchway run` uses the project name `local`.
 
+## Sign-in and access
+
+Out of the box Launchway has no sign-in (`auth.mode: none`): everything is done as the configured
+`user`, with full rights. That suits a server on your own machine and nothing else, so **a server
+without sign-in refuses to start unless it listens only on a loopback address** (`127.0.0.1`, `::1`,
+`localhost`). If something in front of it already decides who may reach it, say so with
+`auth.allow_anonymous: true`. The UI shows "No sign-in" on every page while this is the case.
+
+### Signing in with OpenID Connect
+
+Any OpenID Connect provider works (Authentik, Keycloak, Okta, Entra ID, Dex and others), through
+discovery, without anything specific to one of them:
+
+```yaml
+listen: 0.0.0.0:8080
+server:
+  trust_proxy: true          # only behind a reverse proxy; see below
+auth:
+  mode: oidc
+  oidc:
+    issuer: https://sso.example.com/realms/acme   # exactly as in the provider's discovery document
+    client_id: launchway
+    client_secret_env: LAUNCHWAY_OIDC_SECRET      # or client_secret_file: /run/secrets/oidc-secret
+    redirect_url: https://launchway.example.com/auth/callback
+    # scopes: [openid, profile, email, groups]    # the default
+    # username_claim: preferred_username          # the default; then email, then sub
+    # groups_claim: groups                        # the default
+  idle_timeout: 8h        # the default: a session unused this long ends
+  session_lifetime: 24h   # the default: every session ends this long after sign-in
+  access:
+    - { group: platform-admins, role: admin }
+    - { group: payments,        role: operator, projects: ["payments-*"] }
+    - { group: everyone,        role: viewer }
+    - { user: dana,             role: operator, projects: [web] }
+```
+
+Register Launchway with the provider as a confidential web application using the authorization
+code flow, with `redirect_url` as its redirect URI. Launchway sends PKCE (S256), `state` and
+`nonce`, and checks the ID token's signature, issuer, audience, expiry and nonce. The client secret
+is read from an environment variable or a file, never from the configuration file.
+
+The provider must put the person's groups in the ID token, or in its userinfo response, under
+`groups_claim`; most providers need a claim mapping for that. Entra ID sends group object IDs
+rather than names (use the IDs in `access`), and leaves groups out for people in more than 200.
+Choose a `username_claim` that people cannot change themselves at the provider: `user:` bindings,
+and every record of who did what, use it.
+
+The endpoints are `GET /auth/login?next=/path` (where to return afterwards; only paths on this
+server are accepted), `GET /auth/callback`, `POST /auth/logout`, and `GET /api/v1/me`, which says
+who you are and what you may do. `GET /api/v1/info` then reports only the version and that sign-in
+is on.
+
+### Roles
+
+| Role | May |
+|---|---|
+| `viewer` | see a project and its runs, logs, events, pipeline files and approvals; see the runners; use the Playground |
+| `operator` | everything a viewer may, and start, cancel and resume runs, and approve and reject approvals |
+| `admin` | everything an operator may, and read the audit trail |
+
+Each entry in `access` grants a role to one `group` (from `groups_claim`) or one `user` (from
+`username_claim`), on the projects matching one of `projects`, or on every project if there are
+none. Patterns use `*` (any characters but `/`), `?` (one character) and `[...]`. Where several entries
+match, the highest role wins. Someone matching none can sign in but sees nothing. The audit trail
+needs `admin` from an entry without `projects`.
+
+Rights are worked out on every request from the configuration and the groups the provider gave at
+the person's latest sign-in, and checked by the server whatever the UI shows. A run, project or
+approval you may not see answers `404`, exactly as if it did not exist; one you may see but not
+change answers `403`. Lists and the live stream contain only what you may see.
+
+### Sessions
+
+Signing in sets a session cookie (`HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` when the
+browser uses HTTPS). The session is a random 256-bit value; the database keeps only its SHA-256, so
+every server accepts it and a copy of the database does not contain it. Signing out ends it on
+every server, and live streams it opened close within 15 seconds. What the UI fetches by itself,
+such as refreshing a list, does not count as activity for `idle_timeout`.
+
+### API tokens
+
+Scripts use API tokens: `Authorization: Bearer lw_...`. Make one on the **API tokens** page with a
+name and an expiry (default 90 days, at most a year). It is shown once; only its SHA-256 is stored.
+A token acts as you, with your rights as of your latest sign-in, and can be revoked at any time.
+Tokens can only be made from a signed-in browser, not with another token. Over the API:
+`GET /api/v1/tokens`, `POST /api/v1/tokens` (`{"name": "...", "expires_in_days": 30}`) and
+`DELETE /api/v1/tokens/{id}`.
+
+Launchway cannot tell when someone leaves your organisation: their tokens keep the groups of their
+last sign-in until they expire. Remove their tokens when they leave, with
+`DELETE FROM api_tokens WHERE username = '...'` in the database.
+
+### Requests from other sites
+
+A request that changes something and is authenticated by the session cookie must carry the header
+`X-Launchway-CSRF: 1`, and if it has an `Origin` header, it must be this server; otherwise it is
+refused with `403`. Browsers do not let another site add that header, so no web page can act with
+a visitor's session. The UI sends it; scripts using a token need not. Without sign-in the header is
+required all the same, so a web page cannot drive a Launchway on `localhost`. Launchway's pages
+cannot be shown in a frame on another site.
+
+### Behind a reverse proxy
+
+Set `server.trust_proxy: true` only if every client reaches Launchway through one reverse proxy.
+Launchway then believes its `X-Forwarded-Proto` (to mark cookies `Secure`) and takes the client's
+address from the last entry of `X-Forwarded-For`, the one the proxy added. The proxy must pass the
+`Host` header through unchanged, and must not buffer `/api/v1/stream`. Cookies are also `Secure`
+whenever `redirect_url` starts with `https://`.
+
+### Audit trail
+
+Every call that changes something (starting, canceling and resuming runs, approving and rejecting,
+making and revoking tokens) by someone signed in, allowed or refused, and every sign-in, failed sign-in and sign-out is
+recorded with its time, who, their address, the action, project, target (run, step or token name),
+outcome (`ok`, `denied` or `failed`) and a short detail. Secrets, tokens and session ids are never
+recorded. Launchway only ever adds to it. Admins read it on the **Audit trail** page or with
+`GET /api/v1/audit?user=&project=&action=&from=&to=&before=&limit=` (times in Unix milliseconds;
+`before` is the `next_before` of the previous page). It is kept until you remove old rows from the
+`audit` table yourself.
+
 ## Commands
 
 ```
@@ -261,7 +390,9 @@ launchway graph    [file]                     the graph a pipeline produces, as 
 | `internal/runner` | Takes steps from the server over HTTP, streams logs, sends heartbeats |
 | `internal/secrets` | Secret stores (env, file, Vault/OpenBao) and masking, used only by runners |
 | `internal/source` | Mirrors Git repositories, starts runs on matching pushes, records why |
-| `internal/api` | Runner API, UI API and the live event stream |
+| `internal/auth` | Roles and access bindings, OpenID Connect sign-in, and the cryptography sessions and tokens need |
+| `internal/api` | Runner API, UI API, sign-in, API tokens, access checks, the audit trail and the live event stream |
+| `internal/fakeidp` | An OpenID Connect provider for tests, which can be made to misbehave |
 | `web/` | The React UI, compiled into the binary |
 
 `make test` runs the Go tests with the race detector and type-checks the UI. The tests cover:
@@ -273,6 +404,9 @@ launchway graph    [file]                     the graph a pipeline produces, as 
 - approvals, including two servers deciding or expiring the same one at once;
 - real Git repositories;
 - secrets kept out of the database, events, logs and API (`make test-vault` adds a real OpenBao);
+- sign-in against a fake OpenID Connect provider: forged state, stolen codes (PKCE), bad ID tokens,
+  open redirects, CSRF, session expiry, API tokens, a permission matrix over every route, the live
+  stream, the audit trail, and sign-in across two servers;
 - real containers (`make test-containers`);
 - a real Kubernetes cluster (`make test-kubernetes`).
 
@@ -287,6 +421,7 @@ Built so far:
 - secrets (environment, files, Vault and OpenBao);
 - approvals;
 - Git polling;
+- sign-in with OpenID Connect, roles per project, API tokens and an audit trail;
 - the web UI.
 
 Not built yet, in the order planned:
@@ -298,9 +433,6 @@ Not built yet, in the order planned:
 - Policy
 - Infrastructure runs
 - VM fleets
-
-Not suitable for untrusted networks yet: the web UI has no sign-in and listens on localhost by
-default.
 
 ## Contributing
 

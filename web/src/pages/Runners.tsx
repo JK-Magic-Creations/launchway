@@ -9,9 +9,9 @@ export function RunnersPage() {
   const [error, setError] = useState<unknown>(null);
   const now = useNow(2000);
   useEffect(() => {
-    const load = () => api.runners().then(setRunners).catch(setError);
-    load();
-    const t = setInterval(load, 3000);
+    const load = (background: boolean) => api.runners(background).then(setRunners).catch(setError);
+    load(false);
+    const t = setInterval(() => load(true), 3000);
     return () => clearInterval(t);
   }, []);
   return (

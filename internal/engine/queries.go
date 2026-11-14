@@ -121,6 +121,9 @@ type RunFilter struct {
 	Project string
 	Status  string
 	Limit   int
+	// OnlyProjects, if not nil, limits the list to runs of these projects;
+	// an empty, non-nil list matches nothing.
+	OnlyProjects []string
 }
 
 // ListRuns returns the newest runs first.
@@ -137,6 +140,17 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 	if f.Status != "" {
 		where = append(where, "status = ?")
 		args = append(args, f.Status)
+	}
+	if f.OnlyProjects != nil {
+		if len(f.OnlyProjects) == 0 {
+			return []*RunSummary{}, nil
+		}
+		marks := make([]string, len(f.OnlyProjects))
+		for i, p := range f.OnlyProjects {
+			marks[i] = "?"
+			args = append(args, p)
+		}
+		where = append(where, "project IN ("+strings.Join(marks, ",")+")")
 	}
 	q := `SELECT ` + runCols + ` FROM runs`
 	if len(where) > 0 {

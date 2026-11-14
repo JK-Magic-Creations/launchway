@@ -3,6 +3,7 @@ import { api, type Project, type Ref } from "../api";
 import { ago, shortSha } from "../format";
 import { navigate } from "../router";
 import { useNow } from "../live";
+import { canOperate, useMe } from "../auth";
 import { BranchIcon, Empty, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
 
 export function ProjectsPage() {
@@ -10,12 +11,13 @@ export function ProjectsPage() {
   const [error, setError] = useState<unknown>(null);
   const [starting, setStarting] = useState<Project | null>(null);
   const now = useNow(5000);
+  const me = useMe();
 
   useEffect(() => {
     let alive = true;
-    const load = () => api.projects().then((p) => { if (alive) { setProjects(p); setError(null); } }).catch((e) => alive && setError(e));
-    load();
-    const t = setInterval(load, 5000);
+    const load = (background: boolean) => api.projects(background).then((p) => { if (alive) { setProjects(p); setError(null); } }).catch((e) => alive && setError(e));
+    load(false);
+    const t = setInterval(() => load(true), 5000);
     return () => { alive = false; clearInterval(t); };
   }, []);
 
@@ -47,7 +49,7 @@ export function ProjectsPage() {
                 <h2>{p.name}</h2>
                 <div className="faint mono small">{p.url}</div>
               </div>
-              <button type="button" className="btn btn-primary" onClick={() => setStarting(p)}>Start a run</button>
+              {canOperate(me, p.name) && <button type="button" className="btn btn-primary" onClick={() => setStarting(p)}>Start a run</button>}
             </div>
             {p.error && <div className="callout callout-bad">Cannot reach the repository: {p.error}</div>}
             <div className="project-facts">

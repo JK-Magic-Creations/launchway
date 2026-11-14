@@ -14,11 +14,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -27,10 +30,106 @@ type Server struct {
 	Engine      *engine.Engine
 	Projects    *source.Manager
 	RunnerToken string
-	Actor       string // who UI actions are recorded as, until sign-in exists
-	UI          fs.FS  // the built web UI; may be nil
-	Version     string
-	Log         *slog.Logger
+	// Actor is who everything is done as when sign-in is off (Auth is nil).
+	Actor string
+	// Auth turns sign-in on. Nil means none: every request acts as Actor,
+	// with full rights.
+	Auth *Auth
+	// TrustProxy believes X-Forwarded-Proto and X-Forwarded-For, as set by a
+	// reverse proxy that every client must go through.
+	TrustProxy bool
+	UI         fs.FS // the built web UI; may be nil
+	Version    string
+	Log        *slog.Logger
+	Now        func() time.Time // for tests
+	// StreamPing is how often the live stream sends a keep-alive and checks
+	// that the caller is still signed in; default 15s.
+	StreamPing time.Duration
+
+	sealerMu sync.Mutex
+	sealer   *auth.Sealer // seals the state of sign-ins in progress
+}
+
+// Auth configures sign-in.
+type Auth struct {
+	OIDC        *auth.OIDC
+	Policy      *auth.Policy
+	IdleTimeout time.Duration // a session unused for this long ends
+	Lifetime    time.Duration // every session ends this long after sign-in
+	// SecureCookies marks cookies Secure even on requests that do not look
+	// like HTTPS, because the site is served over HTTPS (its redirect URL
+	// is https).
+	SecureCookies bool
+}
+
+// access says who may call a route; see guard.
+type access int
+
+const (
+	public         access = iota // anyone; the handler decides
+	runnerOnly                   // the runner token
+	signedIn                     // anyone signed in; lists show only what they may see
+	readAny                      // a viewer of at least one project
+	projectRead                  // a viewer of the project in {name}
+	projectOperate               // an operator of the project in {name}
+	runRead                      // a viewer of the project of the run in {id}
+	runOperate                   // an operator of the project of the run in {id}
+	administer                   // an admin of every project
+)
+
+// route is one endpoint. Every endpoint is listed in routes, with who may
+// call it; a test checks that each one is covered by the permission table.
+type route struct {
+	pattern string
+	access  access
+	audit   string // the action recorded in the audit trail; "" for calls that change nothing
+	handler http.HandlerFunc
+}
+
+func (s *Server) routes() []route {
+	return []route{
+		// Health checks for load balancers and orchestrators.
+		{"GET /healthz", public, "", s.healthz},
+		{"GET /readyz", public, "", s.readyz},
+
+		// Runner API.
+		{"POST /api/runner/v1/lease", runnerOnly, "", s.lease},
+		{"POST /api/runner/v1/start", runnerOnly, "", s.start},
+		{"POST /api/runner/v1/heartbeat", runnerOnly, "", s.heartbeat},
+		{"POST /api/runner/v1/logs", runnerOnly, "", s.logs},
+		{"POST /api/runner/v1/finish", runnerOnly, "", s.finish},
+		{"POST /api/runner/v1/runs", runnerOnly, "", s.runInfos},
+
+		// Signing in and out.
+		{"GET /auth/login", public, "", s.login},
+		{"GET /auth/callback", public, "", s.callback},
+		{"POST /auth/logout", public, "", s.logout},
+
+		// UI and CLI API.
+		{"GET /api/v1/info", public, "", s.info},
+		{"GET /api/v1/me", signedIn, "", s.me},
+		{"GET /api/v1/projects", signedIn, "", s.listProjects},
+		{"GET /api/v1/projects/{name}", projectRead, "", s.getProject},
+		{"GET /api/v1/projects/{name}/refs", projectRead, "", s.projectRefs},
+		{"POST /api/v1/projects/{name}/runs", projectOperate, "run.start", s.startRun},
+		{"GET /api/v1/runs", signedIn, "", s.listRuns},
+		{"GET /api/v1/runs/{id}", runRead, "", s.getRun},
+		{"GET /api/v1/runs/{id}/events", runRead, "", s.runEvents},
+		{"GET /api/v1/runs/{id}/pipeline-file", runRead, "", s.runPipelineFile},
+		{"GET /api/v1/runs/{id}/steps/{step}/logs", runRead, "", s.stepLogs},
+		{"POST /api/v1/runs/{id}/cancel", runOperate, "run.cancel", s.cancelRun},
+		{"POST /api/v1/runs/{id}/resume", runOperate, "run.resume", s.resumeRun},
+		{"POST /api/v1/runs/{id}/steps/{step}/approve", runOperate, "approval.approve", s.decide(true)},
+		{"POST /api/v1/runs/{id}/steps/{step}/reject", runOperate, "approval.reject", s.decide(false)},
+		{"GET /api/v1/approvals", signedIn, "", s.listApprovals},
+		{"GET /api/v1/runners", readAny, "", s.listRunners},
+		{"POST /api/v1/validate", readAny, "", s.validate},
+		{"GET /api/v1/stream", signedIn, "", s.stream},
+		{"GET /api/v1/tokens", signedIn, "", s.listTokens},
+		{"POST /api/v1/tokens", signedIn, "token.create", s.createToken},
+		{"DELETE /api/v1/tokens/{id}", signedIn, "token.revoke", s.revokeToken},
+		{"GET /api/v1/audit", administer, "", s.auditLog},
+	}
 }
 
 // Handler returns the full HTTP handler.
@@ -38,45 +137,21 @@ func (s *Server) Handler() http.Handler {
 	if s.Log == nil {
 		s.Log = slog.Default()
 	}
+	if s.Now == nil {
+		s.Now = time.Now
+	}
+	if s.StreamPing <= 0 {
+		s.StreamPing = 15 * time.Second
+	}
 	mux := http.NewServeMux()
-
-	// Health checks for load balancers and orchestrators; no token needed.
-	mux.HandleFunc("GET /healthz", s.healthz)
-	mux.HandleFunc("GET /readyz", s.readyz)
-
-	// Runner API.
-	mux.HandleFunc("POST /api/runner/v1/lease", s.runnerAuth(s.lease))
-	mux.HandleFunc("POST /api/runner/v1/start", s.runnerAuth(s.start))
-	mux.HandleFunc("POST /api/runner/v1/heartbeat", s.runnerAuth(s.heartbeat))
-	mux.HandleFunc("POST /api/runner/v1/logs", s.runnerAuth(s.logs))
-	mux.HandleFunc("POST /api/runner/v1/finish", s.runnerAuth(s.finish))
-	mux.HandleFunc("POST /api/runner/v1/runs", s.runnerAuth(s.runInfos))
-
-	// UI and CLI API.
-	mux.HandleFunc("GET /api/v1/info", s.info)
-	mux.HandleFunc("GET /api/v1/projects", s.listProjects)
-	mux.HandleFunc("GET /api/v1/projects/{name}", s.getProject)
-	mux.HandleFunc("GET /api/v1/projects/{name}/refs", s.projectRefs)
-	mux.HandleFunc("POST /api/v1/projects/{name}/runs", s.startRun)
-	mux.HandleFunc("GET /api/v1/runs", s.listRuns)
-	mux.HandleFunc("GET /api/v1/runs/{id}", s.getRun)
-	mux.HandleFunc("GET /api/v1/runs/{id}/events", s.runEvents)
-	mux.HandleFunc("GET /api/v1/runs/{id}/pipeline-file", s.runPipelineFile)
-	mux.HandleFunc("GET /api/v1/runs/{id}/steps/{step}/logs", s.stepLogs)
-	mux.HandleFunc("POST /api/v1/runs/{id}/cancel", s.cancelRun)
-	mux.HandleFunc("POST /api/v1/runs/{id}/resume", s.resumeRun)
-	mux.HandleFunc("POST /api/v1/runs/{id}/steps/{step}/approve", s.decide(true))
-	mux.HandleFunc("POST /api/v1/runs/{id}/steps/{step}/reject", s.decide(false))
-	mux.HandleFunc("GET /api/v1/approvals", s.listApprovals)
-	mux.HandleFunc("GET /api/v1/runners", s.listRunners)
-	mux.HandleFunc("POST /api/v1/validate", s.validate)
-	mux.HandleFunc("GET /api/v1/stream", s.stream)
+	for _, rt := range s.routes() {
+		mux.Handle(rt.pattern, s.guard(rt))
+	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "no such API endpoint")
 	})
-
 	mux.Handle("/", s.ui())
-	return s.recoverer(mux)
+	return s.recoverer(securityHeaders(mux))
 }
 
 // ---- helpers ----
@@ -107,8 +182,10 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 	case errors.Is(err, engine.ErrClosed):
 		writeErr(w, http.StatusServiceUnavailable, err.Error())
 	default:
+		// The details go to the log, not to the caller: they can name
+		// hosts, paths or queries the caller has no business seeing.
 		s.Log.Error("request failed", "err", err)
-		writeErr(w, http.StatusInternalServerError, err.Error())
+		writeErr(w, http.StatusInternalServerError, "something went wrong on the server; its log has the details")
 	}
 }
 
@@ -271,8 +348,13 @@ func (s *Server) runInfos(w http.ResponseWriter, r *http.Request) {
 
 // ---- UI and CLI API ----
 
+// info is public. With sign-in on it says only what is needed to sign in.
 func (s *Server) info(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "actor": s.Actor, "projects": len(s.projects())})
+	if s.Auth != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "auth_mode": "oidc"})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "auth_mode": "none", "actor": s.Actor, "projects": len(s.projects())})
 }
 
 func (s *Server) projects() []source.ProjectStatus {
@@ -288,8 +370,12 @@ type projectView struct {
 }
 
 func (s *Server) listProjects(w http.ResponseWriter, r *http.Request) {
+	id := identityFrom(r)
 	out := []projectView{}
 	for _, p := range s.projects() {
+		if !s.authorize(id, auth.Read, p.Name) {
+			continue
+		}
 		v := projectView{ProjectStatus: p}
 		if runs, err := s.Engine.ListRuns(engine.RunFilter{Project: p.Name, Limit: 1}); err == nil && len(runs) > 0 {
 			v.LastRun = runs[0]
@@ -339,18 +425,25 @@ func (s *Server) startRun(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	run, err := s.Projects.StartRun(r.Context(), r.PathValue("name"), in.Ref, s.Actor)
+	setAudit(r, "", "ref "+in.Ref)
+	run, err := s.Projects.StartRun(r.Context(), r.PathValue("name"), in.Ref, identityFrom(r).User)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
+	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA)))
 	writeJSON(w, http.StatusCreated, run)
 }
 
 func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	runs, err := s.Engine.ListRuns(engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Limit: limit})
+	only, err := s.visibleProjects(identityFrom(r))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	runs, err := s.Engine.ListRuns(engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Limit: limit, OnlyProjects: only})
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -364,6 +457,7 @@ func (s *Server) getRun(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	d.Source.URL = redact.URLs(d.Source.URL)
 	writeJSON(w, http.StatusOK, d)
 }
 
@@ -377,6 +471,11 @@ func (s *Server) runEvents(w http.ResponseWriter, r *http.Request) {
 	out := make([]engine.Event, len(evs))
 	for i, ev := range evs {
 		ev.Data.Pipeline = nil
+		if ev.Data.Source != nil {
+			src := *ev.Data.Source
+			src.URL = redact.URLs(src.URL)
+			ev.Data.Source = &src
+		}
 		out[i] = ev
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -414,7 +513,7 @@ func (s *Server) stepLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) cancelRun(w http.ResponseWriter, r *http.Request) {
-	if err := s.Engine.Cancel(r.PathValue("id"), s.Actor); err != nil {
+	if err := s.Engine.Cancel(r.PathValue("id"), identityFrom(r).User); err != nil {
 		s.fail(w, err)
 		return
 	}
@@ -422,15 +521,15 @@ func (s *Server) cancelRun(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
-	if err := s.Engine.Resume(r.PathValue("id"), s.Actor); err != nil {
+	if err := s.Engine.Resume(r.PathValue("id"), identityFrom(r).User); err != nil {
 		s.fail(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// decide approves or rejects an approval step, as the configured user. The
-// body is optional: {"comment": "..."}.
+// decide approves or rejects an approval step. The body is optional:
+// {"comment": "..."}.
 func (s *Server) decide(approve bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
@@ -439,7 +538,8 @@ func (s *Server) decide(approve bool) http.HandlerFunc {
 		if !decode(w, r, &in) {
 			return
 		}
-		if err := s.Engine.Decide(r.PathValue("id"), r.PathValue("step"), approve, s.Actor, in.Comment); err != nil {
+		setAudit(r, r.PathValue("id")+"/"+r.PathValue("step"), "")
+		if err := s.Engine.Decide(r.PathValue("id"), r.PathValue("step"), approve, identityFrom(r).User, in.Comment); err != nil {
 			s.fail(w, err)
 			return
 		}
@@ -453,7 +553,14 @@ func (s *Server) listApprovals(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, list)
+	id := identityFrom(r)
+	out := list[:0]
+	for _, a := range list {
+		if s.authorize(id, auth.Read, a.Project) {
+			out = append(out, a)
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {
@@ -485,14 +592,30 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 }
 
 // stream sends live changes as server-sent events. With ?run=ID it sends only
-// that run's changes, including log lines; otherwise it sends run changes.
+// that run's changes, including log lines; otherwise it sends run changes,
+// for the projects the caller may see. With sign-in on, the caller's
+// session or token is checked again every ping, and the stream ends when it
+// is no longer valid.
 func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeErr(w, http.StatusInternalServerError, "streaming is not supported")
 		return
 	}
+	id := identityFrom(r)
 	runID := r.URL.Query().Get("run")
+	runProject := ""
+	if runID != "" {
+		p, err := s.Engine.RunProject(runID)
+		if err == nil && !s.authorize(id, auth.Read, p) {
+			err = fmt.Errorf("%w: run %s", engine.ErrNotFound, runID)
+		}
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		runProject = p
+	}
 	ch, stop := s.Engine.Hub().Subscribe(func(m hub.Message) bool {
 		if runID != "" {
 			return m.RunID == runID
@@ -505,18 +628,32 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 	fmt.Fprint(w, "retry: 2000\n: connected\n\n")
 	flusher.Flush()
-	ping := time.NewTicker(15 * time.Second)
+	ping := time.NewTicker(s.StreamPing)
 	defer ping.Stop()
 	for {
 		select {
 		case <-r.Context().Done():
 			return
 		case <-ping.C:
+			if s.Auth != nil {
+				// Without recording use: an open page is not activity.
+				again, err := s.identify(r, false)
+				if err != nil || again == nil || (runID != "" && !s.authorize(again, auth.Read, runProject)) {
+					return
+				}
+				id = again
+			}
 			fmt.Fprint(w, ": ping\n\n")
 			flusher.Flush()
 		case m, ok := <-ch:
 			if !ok {
 				return // fell behind; the browser reconnects and refetches
+			}
+			if runID == "" {
+				sum, ok := m.Data.(*engine.RunSummary)
+				if !ok || !s.authorize(id, auth.Read, sum.Project) {
+					continue
+				}
 			}
 			data, err := json.Marshal(m.Data)
 			if err != nil {

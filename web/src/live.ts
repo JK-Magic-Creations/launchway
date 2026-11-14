@@ -70,7 +70,8 @@ export function useApprovals(): Approvals {
   listRef.current = list;
 
   const load = useCallback(() => {
-    api.approvals().then((l) => { setList(l); setError(null); }).catch(setError);
+    // Kept up to date on every page, by the page itself: not activity.
+    api.approvals(true).then((l) => { setList(l); setError(null); }).catch(setError);
   }, []);
   useEffect(() => {
     load();

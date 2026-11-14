@@ -17,6 +17,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 )
 
@@ -401,7 +402,7 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
 		return "", err
 	}
-	sys("Checking out %s at %s", job.Source.URL, short(job.SHA))
+	sys("Checking out %s at %s", redact.URLs(job.Source.URL), short(job.SHA))
 	if err := git(ctx, "", "clone", "--quiet", "--no-checkout", job.Source.URL, dir); err != nil {
 		return "", err
 	}
@@ -471,7 +472,7 @@ func git(ctx context.Context, dir string, args ...string) error {
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(string(out)))
+		return fmt.Errorf("git %s: %s", args[0], redact.URLs(strings.TrimSpace(string(out))))
 	}
 	return nil
 }

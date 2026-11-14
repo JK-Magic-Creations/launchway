@@ -149,15 +149,52 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
-async function call<T>(method: string, path: string, body?: unknown, raw = false): Promise<T> {
-  const init: RequestInit = { method, headers: {} };
+/** Who is signed in, and what they may do. The server checks every request
+ * regardless; the UI uses this only to hide what would be refused. */
+export type Role = "viewer" | "operator" | "admin";
+export interface Me {
+  user: string;
+  groups: string[];
+  auth_mode: "none" | "oidc";
+  via: "none" | "session" | "token";
+  admin: boolean;
+  runners: boolean;
+  roles: Record<string, Role>;
+}
+
+export interface ApiToken { id: string; name: string; created_at: number; expires_at: number; last_used: number }
+
+export interface AuditEntry {
+  id: number; at: number; user: string; source: string; action: string;
+  project: string; target: string; outcome: "ok" | "denied" | "failed"; detail: string;
+}
+
+export interface AuditQuery { user?: string; project?: string; action?: string; from?: number; to?: number; before?: number; limit?: number }
+
+/** Sent when any call finds the caller is not signed in. */
+export const SIGNED_OUT = "launchway:signed-out";
+
+interface CallOptions {
+  raw?: boolean;
+  /** Made by the page on its own (polling, refreshing after a live update),
+   * so it does not keep an idle session alive. */
+  background?: boolean;
+}
+
+async function call<T>(method: string, path: string, body?: unknown, opts: CallOptions = {}): Promise<T> {
+  const headers: Record<string, string> = {};
+  const init: RequestInit = { method, headers, credentials: "same-origin" };
+  // Every request that changes something says it comes from these pages;
+  // the server refuses such requests without it.
+  if (method !== "GET") headers["X-Launchway-CSRF"] = "1";
+  if (opts.background) headers["X-Launchway-Background"] = "1";
   if (body !== undefined) {
-    if (raw) {
+    if (opts.raw) {
       init.body = body as string;
-      (init.headers as Record<string, string>)["Content-Type"] = "text/yaml";
+      headers["Content-Type"] = "text/yaml";
     } else {
       init.body = JSON.stringify(body);
-      (init.headers as Record<string, string>)["Content-Type"] = "application/json";
+      headers["Content-Type"] = "application/json";
     }
   }
   const resp = await fetch(path, init);
@@ -165,6 +202,7 @@ async function call<T>(method: string, path: string, body?: unknown, raw = false
   let data: unknown = undefined;
   try { data = text ? JSON.parse(text) : undefined; } catch { /* not JSON */ }
   if (!resp.ok) {
+    if (resp.status === 401) window.dispatchEvent(new Event(SIGNED_OUT));
     const msg = (data as { error?: string } | undefined)?.error ?? (text || resp.statusText);
     throw new ApiError(resp.status, msg);
   }
@@ -172,15 +210,17 @@ async function call<T>(method: string, path: string, body?: unknown, raw = false
 }
 
 export const api = {
-  info: () => call<{ version: string; actor: string; projects: number }>("GET", "/api/v1/info"),
-  runs: (q: { project?: string; status?: string; limit?: number } = {}) => {
+  info: () => call<{ version: string; auth_mode: "none" | "oidc"; actor?: string }>("GET", "/api/v1/info"),
+  me: () => call<Me>("GET", "/api/v1/me"),
+  logout: () => call<void>("POST", "/auth/logout"),
+  runs: (q: { project?: string; status?: string; limit?: number } = {}, background = false) => {
     const p = new URLSearchParams();
     if (q.project) p.set("project", q.project);
     if (q.status) p.set("status", q.status);
     if (q.limit) p.set("limit", String(q.limit));
-    return call<RunSummary[]>("GET", "/api/v1/runs?" + p.toString());
+    return call<RunSummary[]>("GET", "/api/v1/runs?" + p.toString(), undefined, { background });
   },
-  run: (id: string) => call<RunDetail>("GET", `/api/v1/runs/${id}`),
+  run: (id: string, background = false) => call<RunDetail>("GET", `/api/v1/runs/${id}`, undefined, { background }),
   events: (id: string) => call<RunEvent[]>("GET", `/api/v1/runs/${id}/events`),
   pipelineFile: (id: string) => call<{ text: string }>("GET", `/api/v1/runs/${id}/pipeline-file`),
   logs: (id: string, step: string, attempt: number, after = 0) =>
@@ -192,10 +232,19 @@ export const api = {
     call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/approve`, { comment }),
   reject: (id: string, step: string, comment: string) =>
     call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/reject`, { comment }),
-  approvals: () => call<Approval[]>("GET", "/api/v1/approvals"),
-  projects: () => call<Project[]>("GET", "/api/v1/projects"),
+  approvals: (background = false) => call<Approval[]>("GET", "/api/v1/approvals", undefined, { background }),
+  projects: (background = false) => call<Project[]>("GET", "/api/v1/projects", undefined, { background }),
   refs: (name: string) => call<Ref[]>("GET", `/api/v1/projects/${name}/refs`),
   startRun: (name: string, ref: string) => call<RunSummary>("POST", `/api/v1/projects/${name}/runs`, { ref }),
-  runners: () => call<Runner[]>("GET", "/api/v1/runners"),
-  validate: (yaml: string) => call<ValidateResult>("POST", "/api/v1/validate", yaml, true),
+  runners: (background = false) => call<Runner[]>("GET", "/api/v1/runners", undefined, { background }),
+  validate: (yaml: string) => call<ValidateResult>("POST", "/api/v1/validate", yaml, { raw: true }),
+  tokens: () => call<ApiToken[]>("GET", "/api/v1/tokens"),
+  createToken: (name: string, expiresInDays: number) =>
+    call<ApiToken & { token: string }>("POST", "/api/v1/tokens", { name, expires_in_days: expiresInDays }),
+  revokeToken: (id: string) => call<void>("DELETE", `/api/v1/tokens/${encodeURIComponent(id)}`),
+  audit: (q: AuditQuery) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<{ entries: AuditEntry[]; next_before: number }>("GET", "/api/v1/audit?" + p.toString());
+  },
 };

@@ -1,0 +1,483 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"net/url"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/engine"
+)
+
+// Who is calling, and what they may do.
+
+// identity is the person a request acts for.
+type identity struct {
+	User    string
+	Groups  []string
+	Via     string // "none" (sign-in is off), "session" or "token"
+	session string // the session's hash, when Via is "session"
+}
+
+const (
+	viaNone    = "none"
+	viaSession = "session"
+	viaToken   = "token"
+
+	sessionCookie = "launchway_session"
+	// csrfHeader must be sent with every request that changes something
+	// and is authenticated by a cookie. Browsers do not let another site
+	// add it without asking this server first (CORS), and this server never
+	// agrees.
+	csrfHeader = "X-Launchway-CSRF"
+	// backgroundHeader marks requests the UI makes by itself (polling,
+	// refreshing after a live update), which do not count as activity for
+	// the idle timeout.
+	backgroundHeader = "X-Launchway-Background"
+	// touchEvery bounds how often a session's or token's last use is
+	// written: at most once a minute each.
+	touchEvery = time.Minute
+)
+
+type ctxKey int
+
+const (
+	identityKey ctxKey = iota
+	auditKey
+)
+
+// identityFrom returns the identity guard attached to the request.
+func identityFrom(r *http.Request) *identity {
+	id, _ := r.Context().Value(identityKey).(*identity)
+	if id == nil {
+		return &identity{} // unreachable behind guard; grants nothing
+	}
+	return id
+}
+
+// authorize is the one place that decides whether someone may do something.
+func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
+	if s.Auth == nil {
+		return true // sign-in is off: everyone has every right
+	}
+	if id == nil || id.Via == viaNone || id.User == "" {
+		return false
+	}
+	return s.Auth.Policy.Allows(id.User, id.Groups, a, project)
+}
+
+// identify works out who a request is from: nil if nobody valid. With
+// touch, using a session or token is recorded (at most once a minute).
+func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
+	if s.Auth == nil {
+		return &identity{User: s.Actor, Via: viaNone}, nil
+	}
+	now := s.Now()
+	if h := r.Header.Get("Authorization"); h != "" {
+		// A request that names a token is judged by the token alone.
+		tok, ok := strings.CutPrefix(h, "Bearer ")
+		if !ok || !strings.HasPrefix(tok, tokenPrefix) {
+			return nil, nil
+		}
+		t, groups, err := s.Engine.TokenByHash(auth.Hash(tok))
+		if errors.Is(err, engine.ErrNotFound) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if now.UnixMilli() >= t.ExpiresAt {
+			return nil, nil
+		}
+		if touch {
+			if err := s.Engine.TouchToken(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli()); err != nil {
+				s.Log.Warn("recording that a token was used", "err", err)
+			}
+		}
+		return &identity{User: t.User, Groups: groups, Via: viaToken}, nil
+	}
+	c, err := r.Cookie(sessionCookie)
+	if err != nil || c.Value == "" {
+		return nil, nil
+	}
+	hash := auth.Hash(c.Value)
+	sess, err := s.Engine.SessionByHash(hash)
+	if errors.Is(err, engine.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	ms := now.UnixMilli()
+	if ms >= sess.ExpiresAt || ms-sess.LastSeen >= s.Auth.IdleTimeout.Milliseconds() {
+		if _, err := s.Engine.EndSession(hash); err != nil {
+			s.Log.Warn("ending an expired session", "err", err)
+		}
+		return nil, nil
+	}
+	if touch && r.Header.Get(backgroundHeader) == "" {
+		if err := s.Engine.TouchSession(hash, ms, now.Add(-touchEvery).UnixMilli()); err != nil {
+			s.Log.Warn("recording that a session was used", "err", err)
+		}
+	}
+	return &identity{User: sess.User, Groups: sess.Groups, Via: viaSession, session: hash}, nil
+}
+
+// guard wraps a route's handler with everything access needs: who is
+// calling, the CSRF check, the permission check, and the audit record.
+func (s *Server) guard(rt route) http.Handler {
+	switch rt.access {
+	case public:
+		return rt.handler
+	case runnerOnly:
+		return s.runnerAuth(rt.handler)
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id, err := s.identify(r, true)
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		if id == nil {
+			writeErr(w, http.StatusUnauthorized, "sign in first, or send a valid API token")
+			return
+		}
+		var entry *engine.AuditEntry
+		if rt.audit != "" {
+			entry = &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r),
+				Action: rt.audit, Target: r.PathValue("id")}
+		}
+		deny := func(code int, msg string) {
+			writeErr(w, code, msg)
+			if entry != nil {
+				entry.Outcome, entry.Detail = "denied", msg
+				s.record(entry)
+			}
+		}
+		if !isSafeMethod(r.Method) && id.Via != viaToken {
+			if msg := checkCSRF(r); msg != "" {
+				deny(http.StatusForbidden, msg)
+				return
+			}
+		}
+		project := ""
+		switch rt.access {
+		case projectRead, projectOperate:
+			project = r.PathValue("name")
+		case runRead, runOperate:
+			if project, err = s.Engine.RunProject(r.PathValue("id")); err != nil {
+				if errors.Is(err, engine.ErrNotFound) {
+					deny(http.StatusNotFound, err.Error())
+				} else {
+					s.fail(w, err)
+				}
+				return
+			}
+		}
+		if entry != nil {
+			entry.Project = project
+		}
+		if code, msg := s.check(id, rt.access, project, r); code != 0 {
+			deny(code, msg)
+			return
+		}
+		ctx := context.WithValue(r.Context(), identityKey, id)
+		if entry == nil {
+			rt.handler(w, r.WithContext(ctx))
+			return
+		}
+		rec := &recorder{ResponseWriter: w}
+		rt.handler(rec, r.WithContext(context.WithValue(ctx, auditKey, entry)))
+		entry.Outcome = "ok"
+		if rec.status >= 400 {
+			entry.Outcome = "failed"
+			if rec.status == http.StatusForbidden {
+				entry.Outcome = "denied" // such as approving a run you started
+			}
+			var body struct {
+				Error string `json:"error"`
+			}
+			if json.Unmarshal(rec.body, &body) == nil && body.Error != "" {
+				entry.Detail = body.Error
+			}
+		}
+		s.record(entry)
+	})
+}
+
+// check applies a route's access rule. Something the caller may not see is
+// reported exactly as if it did not exist.
+func (s *Server) check(id *identity, a access, project string, r *http.Request) (int, string) {
+	notFound := func() (int, string) {
+		if a == runRead || a == runOperate {
+			return http.StatusNotFound, fmt.Errorf("%w: run %s", engine.ErrNotFound, r.PathValue("id")).Error()
+		}
+		return http.StatusNotFound, fmt.Errorf("%w: project %s", engine.ErrNotFound, project).Error()
+	}
+	switch a {
+	case signedIn:
+		return 0, ""
+	case readAny:
+		if !s.authorize(id, auth.ReadAny, "") {
+			return http.StatusForbidden, "you have no access to any project"
+		}
+	case administer:
+		if !s.authorize(id, auth.Administer, "") {
+			return http.StatusForbidden, "only admins of every project may do this"
+		}
+	case projectRead, runRead:
+		if !s.authorize(id, auth.Read, project) {
+			return notFound()
+		}
+	case projectOperate, runOperate:
+		if !s.authorize(id, auth.Read, project) {
+			return notFound()
+		}
+		if !s.authorize(id, auth.Operate, project) {
+			return http.StatusForbidden, fmt.Sprintf("you need the operator role on %s to do this", project)
+		}
+	default:
+		return http.StatusForbidden, "not allowed"
+	}
+	return 0, ""
+}
+
+func isSafeMethod(m string) bool {
+	return m == http.MethodGet || m == http.MethodHead || m == http.MethodOptions
+}
+
+// checkCSRF returns why a cookie-authenticated request that changes
+// something must be refused, or "" if it may go ahead: it must carry the
+// CSRF header, and an Origin, if it has one, must be this server.
+func checkCSRF(r *http.Request) string {
+	if r.Header.Get(csrfHeader) != "1" {
+		return "this request did not come from Launchway's own pages (the " + csrfHeader + " header is missing)"
+	}
+	if o := r.Header.Get("Origin"); o != "" {
+		u, err := url.Parse(o)
+		if err != nil || u.Host == "" || !strings.EqualFold(u.Host, r.Host) {
+			return "this request came from another site (Origin " + o + ")"
+		}
+	}
+	return ""
+}
+
+// isHTTPS reports whether the browser reached this server over HTTPS.
+func (s *Server) isHTTPS(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+	if s.TrustProxy {
+		return strings.EqualFold(lastListItem(r.Header.Values("X-Forwarded-Proto")), "https")
+	}
+	return false
+}
+
+// clientAddr is the address of whoever made the request. Behind a trusted
+// proxy it is the last address in X-Forwarded-For: the one the proxy itself
+// saw. Addresses before it were sent by the client and could be anything.
+func (s *Server) clientAddr(r *http.Request) string {
+	if s.TrustProxy {
+		if ip := net.ParseIP(lastListItem(r.Header.Values("X-Forwarded-For"))); ip != nil {
+			return ip.String()
+		}
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
+// lastListItem returns the last item of a comma-separated header that may
+// appear several times.
+func lastListItem(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	items := strings.Split(values[len(values)-1], ",")
+	return strings.TrimSpace(items[len(items)-1])
+}
+
+// cookie returns a cookie with the attributes every Launchway cookie has.
+func (s *Server) cookie(r *http.Request, name, value, path string, maxAge time.Duration) *http.Cookie {
+	c := &http.Cookie{Name: name, Value: value, Path: path, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+		Secure: s.isHTTPS(r) || (s.Auth != nil && s.Auth.SecureCookies)}
+	if maxAge > 0 {
+		c.MaxAge = int(maxAge / time.Second)
+	} else {
+		c.MaxAge = -1 // delete it
+	}
+	return c
+}
+
+// securityHeaders stops other sites framing the UI (so nobody can be
+// tricked into clicking Approve), stops browsers guessing content types,
+// and keeps addresses out of Referer headers sent elsewhere.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Content-Security-Policy", "frame-ancestors 'none'")
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "same-origin")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// visibleProjects returns the projects whose runs the caller may see, or
+// nil if they may see every project's.
+func (s *Server) visibleProjects(id *identity) ([]string, error) {
+	if s.Auth == nil || s.Auth.Policy.RoleEverywhere(id.User, id.Groups) >= auth.Viewer {
+		return nil, nil
+	}
+	known, err := s.knownProjects()
+	if err != nil {
+		return nil, err
+	}
+	out := []string{}
+	for _, p := range known {
+		if s.authorize(id, auth.Read, p) {
+			out = append(out, p)
+		}
+	}
+	return out, nil
+}
+
+// knownProjects lists the configured projects and every project that has
+// had a run.
+func (s *Server) knownProjects() ([]string, error) {
+	names, err := s.Engine.ProjectsWithRuns()
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range s.projects() {
+		names = append(names, p.Name)
+	}
+	slices.Sort(names)
+	return slices.Compact(names), nil
+}
+
+// me says who the caller is and what they may do, so the UI can hide what
+// they cannot. The server still checks every request.
+func (s *Server) me(w http.ResponseWriter, r *http.Request) {
+	id := identityFrom(r)
+	known, err := s.knownProjects()
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	roles := map[string]string{}
+	for _, p := range known {
+		role := auth.Admin
+		if s.Auth != nil {
+			role = s.Auth.Policy.RoleOn(id.User, id.Groups, p)
+		}
+		if role > auth.NoRole {
+			roles[p] = role.String()
+		}
+	}
+	mode := "none"
+	if s.Auth != nil {
+		mode = "oidc"
+	}
+	groups := id.Groups
+	if groups == nil {
+		groups = []string{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"user": id.User, "groups": groups, "auth_mode": mode, "via": id.Via,
+		"admin":   s.authorize(id, auth.Administer, ""),
+		"runners": s.authorize(id, auth.ReadAny, ""),
+		"roles":   roles,
+	})
+}
+
+// ---- the audit trail ----
+
+// recorder notes the status of a response, and the body of an error, for
+// the audit trail.
+type recorder struct {
+	http.ResponseWriter
+	status int
+	body   []byte
+}
+
+func (r *recorder) WriteHeader(code int) {
+	if r.status == 0 {
+		r.status = code
+	}
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *recorder) Write(b []byte) (int, error) {
+	if r.status == 0 {
+		r.status = http.StatusOK
+	}
+	if r.status >= 400 && len(r.body) < 2048 {
+		r.body = append(r.body, b[:min(len(b), 2048-len(r.body))]...)
+	}
+	return r.ResponseWriter.Write(b)
+}
+
+// setAudit lets a handler say what its call acted on. Empty values are
+// left as they were.
+func setAudit(r *http.Request, target, detail string) {
+	if e, ok := r.Context().Value(auditKey).(*engine.AuditEntry); ok {
+		if target != "" {
+			e.Target = target
+		}
+		if detail != "" {
+			e.Detail = detail
+		}
+	}
+}
+
+// maxDetail bounds the detail kept with an audit entry.
+const maxDetail = 300
+
+// record appends an entry to the audit trail. A failure is logged: the
+// action it describes has already happened.
+func (s *Server) record(e *engine.AuditEntry) {
+	e.Detail = clip(e.Detail, maxDetail)
+	e.Target = clip(e.Target, maxDetail)
+	if err := s.Engine.Audit(*e); err != nil {
+		s.Log.Error("writing the audit trail", "action", e.Action, "user", e.User, "err", err)
+	}
+}
+
+// clip shortens s to at most n bytes of valid text, without control
+// characters.
+func clip(s string, n int) string {
+	s = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return ' '
+		}
+		return r
+	}, strings.ToValidUTF8(s, "?"))
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8RuneStart(s[n]) {
+		n--
+	}
+	return s[:n] + "…"
+}
+
+func utf8RuneStart(b byte) bool { return b&0xC0 != 0x80 }
+
+func nonEmpty(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
+func shortSHA(sha string) string { return sha[:min(len(sha), 8)] }

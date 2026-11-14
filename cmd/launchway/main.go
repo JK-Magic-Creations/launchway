@@ -25,6 +25,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/jk-magic-creations/launchway/internal/api"
+	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
@@ -114,6 +115,13 @@ func cmdServer(args []string) error {
 	if *data != "" {
 		cfg.Data = *data
 	}
+	if err := cfg.CheckExposure(cfg.Listen); err != nil {
+		return err
+	}
+	authOpts, err := serverAuth(cfg)
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
 	if err := os.MkdirAll(cfg.Data, 0o755); err != nil {
 		return err
 	}
@@ -121,7 +129,8 @@ func cmdServer(args []string) error {
 	slog.SetDefault(log)
 
 	dbAddr := cfg.DatabaseAddr()
-	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: cfg.Approvals.AllowSelf})
+	allowSelf := cfg.AllowSelfApproval()
+	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf})
 	if err != nil {
 		return err
 	}
@@ -138,7 +147,17 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, UI: web.FS(), Version: version, Log: log}
+	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts,
+		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
+	if authOpts != nil {
+		// Find the provider now, so a mistake shows at once; sign-in tries
+		// again later if it is unreachable.
+		dctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if _, err := authOpts.OIDC.Discover(dctx); err != nil {
+			log.Warn("the sign-in provider cannot be reached yet; sign-in will keep trying", "err", err)
+		}
+		cancel()
+	}
 
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -189,8 +208,12 @@ func cmdServer(args []string) error {
 	if os.Getenv("LAUNCHWAY_RUNNER_TOKEN") != "" {
 		tokenAt = "LAUNCHWAY_RUNNER_TOKEN"
 	}
-	fmt.Fprintf(os.Stderr, "\n  Launchway %s is running at %s\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
-		version, url, len(projects), cfg.Data, describeDatabase(dbAddr), tokenAt)
+	signIn := "sign-in with " + cfg.Auth.OIDC.Issuer
+	if authOpts == nil {
+		signIn = "no sign-in: anyone who can reach it has full access"
+	}
+	fmt.Fprintf(os.Stderr, "\n  Launchway %s is running at %s (%s)\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
+		version, url, signIn, len(projects), cfg.Data, describeDatabase(dbAddr), tokenAt)
 
 	<-ctx.Done()
 	fmt.Fprintln(os.Stderr, "\nStopping. Steps in progress will run again when Launchway starts.")
@@ -203,6 +226,32 @@ func cmdServer(args []string) error {
 	shut, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return httpSrv.Shutdown(shut)
+}
+
+// serverAuth builds the sign-in settings, or returns nil if sign-in is off.
+func serverAuth(cfg *config.Config) (*api.Auth, error) {
+	if cfg.Auth.Mode != config.AuthOIDC {
+		return nil, nil
+	}
+	secret, err := cfg.Auth.OIDC.ClientSecret()
+	if err != nil {
+		return nil, err
+	}
+	policy, err := cfg.Auth.Policy()
+	if err != nil {
+		return nil, err
+	}
+	idle, lifetime, err := cfg.Auth.Sessions()
+	if err != nil {
+		return nil, err
+	}
+	o := cfg.Auth.OIDC
+	return &api.Auth{
+		OIDC: auth.NewOIDC(auth.OIDCOptions{Issuer: o.Issuer, ClientID: o.ClientID, ClientSecret: secret,
+			RedirectURL: o.RedirectURL, Scopes: o.Scopes, UsernameClaim: o.UsernameClaim, GroupsClaim: o.GroupsClaim}),
+		Policy: policy, IdleTimeout: idle, Lifetime: lifetime,
+		SecureCookies: strings.HasPrefix(o.RedirectURL, "https://"),
+	}, nil
 }
 
 // describeDatabase names the database without revealing a password.

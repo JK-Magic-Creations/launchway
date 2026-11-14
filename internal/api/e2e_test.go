@@ -146,7 +146,7 @@ steps:
 	}
 
 	// Resume reruns only the failed step.
-	resp, err := http.Post(e.srv.URL+"/api/v1/runs/"+id+"/resume", "application/json", nil)
+	resp, err := uiPost(e.srv.URL+"/api/v1/runs/"+id+"/resume", "application/json", nil)
 	if err != nil || resp.StatusCode != 200 {
 		t.Fatalf("resume: %v %v", err, resp.Status)
 	}
@@ -204,7 +204,7 @@ func TestCancelStopsRunningStep(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	start := time.Now()
-	resp, err := http.Post(e.srv.URL+"/api/v1/runs/"+id+"/cancel", "application/json", nil)
+	resp, err := uiPost(e.srv.URL+"/api/v1/runs/"+id+"/cancel", "application/json", nil)
 	if err != nil || resp.StatusCode != 200 {
 		t.Fatalf("cancel: %v %v", err, resp.Status)
 	}
@@ -230,7 +230,7 @@ func TestRunnerAPIRequiresToken(t *testing.T) {
 
 func TestValidateEndpoint(t *testing.T) {
 	e := setup(t, time.Second)
-	resp, err := http.Post(e.srv.URL+"/api/v1/validate", "text/yaml", strings.NewReader("pipeline: x\nsteps:\n  a: {image: i}\n"))
+	resp, err := uiPost(e.srv.URL+"/api/v1/validate", "text/yaml", strings.NewReader("pipeline: x\nsteps:\n  a: {image: i}\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,6 +242,18 @@ func TestValidateEndpoint(t *testing.T) {
 	if out.OK || len(out.Problems) != 1 || out.Problems[0].Line != 3 {
 		t.Fatalf("%+v", out)
 	}
+}
+
+// uiPost posts as the web UI does, with the header that shows the request
+// comes from Launchway's own pages.
+func uiPost(url, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set(csrfHeader, "1")
+	return http.DefaultClient.Do(req)
 }
 
 func getJSON(t *testing.T, url string, v any) {

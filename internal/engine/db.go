@@ -255,6 +255,52 @@ ALTER TABLE steps ADD COLUMN decided_by TEXT NOT NULL DEFAULT '';
 ALTER TABLE steps ADD COLUMN decided_at {{BIG}} NOT NULL DEFAULT 0;
 ALTER TABLE steps ADD COLUMN comment TEXT NOT NULL DEFAULT '';
 `,
+	// 5: sign-in. Sessions and API tokens are kept here so that any server
+	//    accepts them; only SHA-256 hashes of their secret values are
+	//    stored. users holds the groups from each person's latest sign-in,
+	//    which API tokens act with. audit is only ever appended to.
+	`
+CREATE TABLE users (
+  username   TEXT PRIMARY KEY,
+  group_list TEXT    NOT NULL,
+  last_login {{BIG}} NOT NULL
+);
+
+CREATE TABLE sessions (
+  id_hash    TEXT PRIMARY KEY,
+  username   TEXT    NOT NULL,
+  created_at {{BIG}} NOT NULL,
+  last_seen  {{BIG}} NOT NULL,
+  expires_at {{BIG}} NOT NULL
+);
+CREATE INDEX sessions_expires ON sessions(expires_at);
+
+CREATE TABLE api_tokens (
+  id         TEXT PRIMARY KEY,
+  hash       TEXT    NOT NULL UNIQUE,
+  username   TEXT    NOT NULL,
+  name       TEXT    NOT NULL,
+  created_at {{BIG}} NOT NULL,
+  expires_at {{BIG}} NOT NULL,
+  last_used  {{BIG}} NOT NULL DEFAULT 0,
+  UNIQUE(username, name)
+);
+
+CREATE TABLE audit (
+  id       {{ID}},
+  at       {{BIG}} NOT NULL,
+  username TEXT    NOT NULL,
+  source   TEXT    NOT NULL,
+  action   TEXT    NOT NULL,
+  project  TEXT    NOT NULL,
+  target   TEXT    NOT NULL,
+  outcome  TEXT    NOT NULL,
+  detail   TEXT    NOT NULL
+);
+CREATE INDEX audit_at ON audit(at);
+CREATE INDEX audit_username ON audit(username, id);
+CREATE INDEX audit_project ON audit(project, id);
+`,
 }
 
 func migrate(d *dbx) error {

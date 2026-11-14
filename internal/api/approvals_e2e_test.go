@@ -22,7 +22,7 @@ func post(t *testing.T, url, body string) (int, string) {
 	if body != "" {
 		rd = strings.NewReader(body)
 	}
-	resp, err := http.Post(url, "application/json", rd)
+	resp, err := uiPost(url, "application/json", rd)
 	if err != nil {
 		t.Fatal(err)
 	}

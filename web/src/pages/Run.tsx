@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, type LogLine, type RunDetail, type RunEvent, type StepView } from "../api";
 import { ago, clock, duration, elapsed, shortSha } from "../format";
 import { useNow, useStream } from "../live";
+import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
@@ -22,8 +23,8 @@ export function RunPage({ id }: { id: string }) {
   const [actionErr, setActionErr] = useState<unknown>(null);
   const logSink = useRef<((step: string, attempt: number, lines: LogLine[]) => void) | null>(null);
 
-  const load = useCallback(() => {
-    api.run(id).then((r) => { setRun(r); setError(null); }).catch(setError);
+  const load = useCallback((background = false) => {
+    api.run(id, background).then((r) => { setRun(r); setError(null); }).catch(setError);
   }, [id]);
   useEffect(() => { setRun(null); setSelected(stepFromURL()); setTab("graph"); load(); }, [id, load]);
 
@@ -59,10 +60,11 @@ export function RunPage({ id }: { id: string }) {
       const b = d as { step: string; attempt: number; lines: LogLine[] };
       logSink.current?.(b.step, b.attempt, b.lines);
     },
-  }, load);
+  }, () => load(true));
 
   const done = run ? ["succeeded", "failed", "canceled"].includes(run.status) : false;
   const now = useNow(1000, !done);
+  const me = useMe();
 
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true); setActionErr(null);
@@ -78,6 +80,7 @@ export function RunPage({ id }: { id: string }) {
   const failedCount = run.step_list.filter((s) => s.status === "failed").length;
   const firstFailed = run.step_list.find((s) => s.status === "failed");
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting");
+  const mayOperate = canOperate(me, run.project);
 
   return (
     <div className="page page-wide">
@@ -104,10 +107,10 @@ export function RunPage({ id }: { id: string }) {
           </div>
         </div>
         <div className="run-actions">
-          {!done && !run.cancel_requested && (
+          {mayOperate && !done && !run.cancel_requested && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
-          {(run.status === "failed" || run.status === "canceled") && (
+          {mayOperate && (run.status === "failed" || run.status === "canceled") && (
             <button type="button" className="btn btn-primary" disabled={busy}
               onClick={() => act(async () => { await api.resume(run.id); if (firstFailed) select(firstFailed.id); })}>
               {firstFailed ? `Resume from ${firstFailed.id}` : "Resume"}
@@ -120,7 +123,7 @@ export function RunPage({ id }: { id: string }) {
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
           <span><strong>{waitingStep.id}</strong> is waiting for approval: {waitingStep.message}</span>
-          <button type="button" className="btn" onClick={() => select(waitingStep.id)}>Decide</button>
+          <button type="button" className="btn" onClick={() => select(waitingStep.id)}>{mayOperate ? "Decide" : "View"}</button>
         </div>
       )}
 
@@ -143,7 +146,7 @@ export function RunPage({ id }: { id: string }) {
             <Graph levels={run.levels} steps={run.step_list} selected={selected} onSelect={select} now={now} />
           </section>
           {step && (step.kind === "approval"
-            ? <ApprovalPanel run={run} step={step} now={now} />
+            ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} />
             : <StepPanel run={run} step={step} now={now} sink={logSink} />)}
         </>
       )}
@@ -252,7 +255,7 @@ function StepPanel({ run, step, now, sink }: {
 
 // ApprovalPanel shows an approval step: what it asks, the context to decide
 // in, and the decision, or the buttons to make one.
-function ApprovalPanel({ run, step, now }: { run: RunDetail; step: StepView; now: number }) {
+function ApprovalPanel({ run, step, now, mayDecide }: { run: RunDetail; step: StepView; now: number; mayDecide: boolean }) {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -303,7 +306,10 @@ function ApprovalPanel({ run, step, now }: { run: RunDetail; step: StepView; now
           <dt>Succeeded so far</dt><dd>{succeeded.length ? succeeded.map((s) => s.id).join(", ") : "nothing yet"}</dd>
         </dl>
 
-        {waiting && (
+        {waiting && !mayDecide && (
+          <p className="sub">Someone with the operator role on {run.project} must decide this.</p>
+        )}
+        {waiting && mayDecide && (
           <form className="approval-form" onSubmit={(e) => e.preventDefault()}>
             <label className="field">
               <span>Comment <span className="faint">(optional, kept with the decision)</span></span>

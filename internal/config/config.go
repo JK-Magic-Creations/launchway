@@ -29,18 +29,69 @@ type Config struct {
 	// Database is a SQLite file, or a postgres:// URL that several servers
 	// share. The environment variable LAUNCHWAY_DATABASE overrides it; the
 	// default is launchway.db in the data directory.
-	Database  string          `yaml:"database"`
-	User      string          `yaml:"user"` // recorded as the actor for UI actions, until sign-in exists
+	Database string `yaml:"database"`
+	// User is who every action is recorded as when sign-in is off
+	// (auth.mode: none).
+	User      string          `yaml:"user"`
+	Server    ServerConfig    `yaml:"server"`
+	Auth      AuthConfig      `yaml:"auth"`
 	Projects  []ProjectConfig `yaml:"projects"`
 	Runner    RunnerConfig    `yaml:"runner"`
 	Approvals ApprovalsConfig `yaml:"approvals"`
 }
 
+// ServerConfig holds settings about how the server is reached.
+type ServerConfig struct {
+	// TrustProxy says that a reverse proxy in front of the server sets
+	// X-Forwarded-Proto and X-Forwarded-For, and that clients cannot reach
+	// the server except through it.
+	TrustProxy bool `yaml:"trust_proxy"`
+}
+
+// AuthConfig controls sign-in and who may do what.
+type AuthConfig struct {
+	// Mode is none (the default: no sign-in, everyone acts as User with
+	// full rights) or oidc.
+	Mode string `yaml:"mode"`
+	// AllowAnonymous lets a server with mode none listen on an address
+	// other than loopback. Without it, such a server refuses to start.
+	AllowAnonymous bool       `yaml:"allow_anonymous"`
+	OIDC           OIDCConfig `yaml:"oidc"`
+	// IdleTimeout ends a session nobody has used for this long; default 8h.
+	IdleTimeout string `yaml:"idle_timeout"`
+	// SessionLifetime ends every session this long after sign-in; default 24h.
+	SessionLifetime string          `yaml:"session_lifetime"`
+	Access          []AccessBinding `yaml:"access"`
+}
+
+// OIDCConfig is the OpenID Connect provider to sign in with.
+type OIDCConfig struct {
+	Issuer      string `yaml:"issuer"`
+	ClientID    string `yaml:"client_id"`
+	RedirectURL string `yaml:"redirect_url"` // https://launchway.example.com/auth/callback
+	// The client secret is read from an environment variable or a file,
+	// never from this file.
+	ClientSecretEnv  string   `yaml:"client_secret_env"`
+	ClientSecretFile string   `yaml:"client_secret_file"`
+	Scopes           []string `yaml:"scopes"`         // default openid profile email groups
+	UsernameClaim    string   `yaml:"username_claim"` // default preferred_username, then email, then sub
+	GroupsClaim      string   `yaml:"groups_claim"`   // default groups
+}
+
+// AccessBinding grants a role to a group or a user, on the projects that
+// match one of Projects, or on every project if there are none.
+type AccessBinding struct {
+	Group    string   `yaml:"group"`
+	User     string   `yaml:"user"`
+	Role     string   `yaml:"role"`
+	Projects []string `yaml:"projects"`
+}
+
 // ApprovalsConfig controls approval steps.
 type ApprovalsConfig struct {
 	// AllowSelf lets the person who started a run approve it. The default
-	// is true, because until there is sign-in every action is recorded as
-	// the same user.
+	// is yes when sign-in is off, where everyone is the same user, and no
+	// when it is on.
 	AllowSelf *bool `yaml:"allow_self"`
 }
 
@@ -90,6 +141,9 @@ func Load(path string) (*Config, error) {
 				}
 			}
 			c.Runner.Secrets.RelativeTo(base)
+			if f := c.Auth.OIDC.ClientSecretFile; f != "" && !filepath.IsAbs(f) {
+				c.Auth.OIDC.ClientSecretFile = filepath.Join(base, f)
+			}
 		}
 	}
 	if c.Listen == "" {
@@ -119,6 +173,16 @@ func Load(path string) (*Config, error) {
 	}
 	if c.Runner.Concurrency <= 0 {
 		c.Runner.Concurrency = 2
+	}
+	if c.Auth.Mode == "" {
+		c.Auth.Mode = AuthNone
+	}
+	if err := c.Auth.check(); err != nil {
+		where := "auth"
+		if path != "" {
+			where = path + ": auth"
+		}
+		return nil, fmt.Errorf("%s: %w", where, err)
 	}
 	return c, nil
 }

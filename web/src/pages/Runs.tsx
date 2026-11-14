@@ -19,11 +19,11 @@ export function RunsPage() {
   const [error, setError] = useState<unknown>(null);
   const now = useNow(1000, !!runs?.some((r) => !isDone(r.status)));
 
-  const load = useCallback(() => {
-    api.runs({ project, status, limit: 100 }).then((r) => { setRuns(r); setError(null); }).catch(setError);
+  const load = useCallback((background = false) => {
+    api.runs({ project, status, limit: 100 }, background).then((r) => { setRuns(r); setError(null); }).catch(setError);
   }, [project, status]);
 
-  useEffect(load, [load]);
+  useEffect(() => load(), [load]);
   useEffect(() => { api.projects().then(setProjects).catch(() => {}); }, []);
 
   const live = useStream("/api/v1/stream", {
@@ -38,7 +38,7 @@ export function RunsPage() {
         return [r, ...prev];
       });
     },
-  }, load);
+  }, () => load(true));
 
   return (
     <div className="page">

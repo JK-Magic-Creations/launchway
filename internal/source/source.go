@@ -26,6 +26,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/redact"
 )
 
 // PipelinePaths are where a repository's pipeline file is looked for.
@@ -175,8 +176,8 @@ func (m *Manager) status(p *project) ProjectStatus {
 	if !p.lastFetch.IsZero() {
 		last = p.lastFetch.UnixMilli()
 	}
-	return ProjectStatus{Name: p.Name, URL: p.URL, DefaultBranch: p.DefaultBranch, PollSeconds: int(p.Poll / time.Second),
-		LastFetch: last, Error: p.lastErr, Decisions: d}
+	return ProjectStatus{Name: p.Name, URL: redact.URLs(p.URL), DefaultBranch: p.DefaultBranch, PollSeconds: int(p.Poll / time.Second),
+		LastFetch: last, Error: redact.URLs(p.lastErr), Decisions: d}
 }
 
 func (p *project) setErr(err error) {
