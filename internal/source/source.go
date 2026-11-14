@@ -3,6 +3,9 @@
 //
 // It works with any Git host by polling a local mirror. Every decision about
 // a push is recorded, so "why did my push not start a run?" has an answer.
+//
+// When several servers share a database, each keeps its own mirror and polls
+// every project. The engine lets exactly one of them act on each push.
 package source
 
 import (
@@ -56,15 +59,9 @@ func (r Ref) FullRef() string {
 	return "refs/heads/" + r.Name
 }
 
-// Decision records what was done about one change on a ref.
-type Decision struct {
-	At      int64  `json:"at"`
-	Ref     string `json:"ref"`
-	SHA     string `json:"sha"`
-	Outcome string `json:"outcome"` // started, ignored, error
-	Detail  string `json:"detail"`
-	RunID   string `json:"run_id,omitempty"`
-}
+// Decision records what was done about one change on a ref. Decisions are
+// kept in the database, so every server shows the same ones.
+type Decision = engine.PushDecision
 
 // ProjectStatus is a project as shown in the UI.
 type ProjectStatus struct {
@@ -82,9 +79,8 @@ type project struct {
 	dir       string
 	mu        sync.Mutex // one git operation at a time per mirror
 	stateMu   sync.Mutex
-	lastFetch time.Time
+	lastFetch time.Time // of this server's mirror
 	lastErr   string
-	decisions []Decision
 }
 
 // Manager owns every project.
@@ -153,7 +149,7 @@ func (m *Manager) watch(ctx context.Context, p *project) {
 func (m *Manager) List() []ProjectStatus {
 	out := make([]ProjectStatus, 0, len(m.order))
 	for _, name := range m.order {
-		out = append(out, m.projects[name].status())
+		out = append(out, m.status(m.projects[name]))
 	}
 	return out
 }
@@ -164,29 +160,23 @@ func (m *Manager) Get(name string) (ProjectStatus, error) {
 	if p == nil {
 		return ProjectStatus{}, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}
-	return p.status(), nil
+	return m.status(p), nil
 }
 
-func (p *project) status() ProjectStatus {
+func (m *Manager) status(p *project) ProjectStatus {
+	d, err := m.eng.PushDecisions(p.Name)
+	if err != nil {
+		m.log.Warn("reading push decisions", "project", p.Name, "err", err)
+		d = []Decision{}
+	}
 	p.stateMu.Lock()
 	defer p.stateMu.Unlock()
-	d := append([]Decision{}, p.decisions...)
 	var last int64
 	if !p.lastFetch.IsZero() {
 		last = p.lastFetch.UnixMilli()
 	}
 	return ProjectStatus{Name: p.Name, URL: p.URL, DefaultBranch: p.DefaultBranch, PollSeconds: int(p.Poll / time.Second),
 		LastFetch: last, Error: p.lastErr, Decisions: d}
-}
-
-func (p *project) record(d Decision) {
-	p.stateMu.Lock()
-	defer p.stateMu.Unlock()
-	d.At = time.Now().UnixMilli()
-	p.decisions = append([]Decision{d}, p.decisions...)
-	if len(p.decisions) > 50 {
-		p.decisions = p.decisions[:50]
-	}
 }
 
 func (p *project) setErr(err error) {
@@ -249,6 +239,8 @@ func (m *Manager) StartRun(ctx context.Context, name, ref, actor string) (*engin
 func (m *Manager) poll(ctx context.Context, p *project) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	// Taken before fetching: whatever the fetch shows is at least this new.
+	seenAt := time.Now().UnixMilli()
 	if err := p.fetch(ctx, 0); err != nil {
 		return err
 	}
@@ -256,29 +248,25 @@ func (m *Manager) poll(ctx context.Context, p *project) error {
 	if err != nil {
 		return err
 	}
+	seen, err := m.eng.SeenRefs(p.Name)
+	if err != nil {
+		return err
+	}
 	// The first time a project is seen, record where everything is without
 	// starting runs for history.
-	first := true
-	for _, r := range refs {
-		if _, ok, _ := m.eng.SeenRef(p.Name, r.FullRef()); ok {
-			first = false
-			break
+	if len(seen) == 0 {
+		all := make(map[string]string, len(refs))
+		for _, r := range refs {
+			all[r.FullRef()] = r.SHA
 		}
+		return m.eng.SeedRefs(p.Name, all, seenAt)
 	}
 	for _, r := range refs {
-		last, seen, err := m.eng.SeenRef(p.Name, r.FullRef())
-		if err != nil {
-			return err
-		}
-		if seen && last == r.SHA {
+		old, known := seen[r.FullRef()]
+		if known && old == r.SHA {
 			continue
 		}
-		if err := m.eng.SetSeenRef(p.Name, r.FullRef(), r.SHA); err != nil {
-			return err
-		}
-		if first {
-			continue
-		}
+		change := engine.RefChange{Ref: r.FullRef(), Old: old, New: r.SHA, SeenAt: seenAt}
 		d := Decision{Ref: r.FullRef(), SHA: r.SHA}
 		pl, err := p.pipelineAt(ctx, r.SHA)
 		switch {
@@ -289,16 +277,23 @@ func (m *Manager) poll(ctx context.Context, p *project) error {
 		case !pl.On.MatchPush(branchOf(r), tagOf(r)):
 			d.Outcome, d.Detail = "ignored", "the pipeline's push trigger does not match "+r.FullRef()
 		default:
+			// Claims the change, creates the run and records the decision
+			// in one transaction.
 			run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: trigger(r, "push", r.Author),
-				Source: engine.Source{Kind: "git", URL: p.URL}})
-			if err != nil {
+				Source: engine.Source{Kind: "git", URL: p.URL}, Push: &change})
+			switch {
+			case errors.Is(err, engine.ErrAlreadyClaimed):
+				continue // another server handled it
+			case err != nil:
 				d.Outcome, d.Detail = "error", err.Error()
-			} else {
-				d.Outcome, d.Detail, d.RunID = "started", fmt.Sprintf("started run #%d", run.Number), run.ID
+			default:
 				m.log.Info("push started a run", "project", p.Name, "ref", r.FullRef(), "run", run.Number)
+				continue
 			}
 		}
-		p.record(d)
+		if _, err := m.eng.RecordPush(p.Name, change, d); err != nil {
+			return err
+		}
 	}
 	return nil
 }

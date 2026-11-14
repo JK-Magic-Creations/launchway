@@ -153,7 +153,10 @@ func (c *Container) ensurePod(ctx context.Context, s Spec, out Sink) (string, er
 	if exec.CommandContext(ctx, c.Bin, "pod", "exists", pod).Run() != nil {
 		args := append([]string{"pod", "create", "--name", pod}, labels...)
 		if b, err := exec.CommandContext(ctx, c.Bin, args...).CombinedOutput(); err != nil {
-			return "", fmt.Errorf("creating pod %s: %s", pod, strings.TrimSpace(string(b)))
+			// Another process may have created it in the meantime.
+			if exec.CommandContext(ctx, c.Bin, "pod", "exists", pod).Run() != nil {
+				return "", fmt.Errorf("creating pod %s: %s", pod, strings.TrimSpace(string(b)))
+			}
 		}
 	}
 	for _, svc := range s.services() {

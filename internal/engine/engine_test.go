@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"sort"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/launchway-dev/launchway/internal/pipeline"
+	"github.com/launchway-dev/launchway/internal/testdb"
 )
 
 // clock is a fake time source the tests move by hand.
@@ -28,9 +28,11 @@ func (c *clock) Add(d time.Duration) {
 
 const ttl = 30 * time.Second
 
-func open(t *testing.T, path string, clk *clock) *Engine {
+// open opens an engine on a database from testdb.New. Opening the same
+// address again is a restart, or, while the first is open, a second server.
+func open(t *testing.T, addr string, clk *clock) *Engine {
 	t.Helper()
-	e, err := Open(Options{Path: path, LeaseTTL: ttl, Now: clk.Now})
+	e, err := Open(Options{Database: addr, LeaseTTL: ttl, Now: clk.Now})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +42,7 @@ func open(t *testing.T, path string, clk *clock) *Engine {
 func newEngine(t *testing.T) (*Engine, *clock) {
 	t.Helper()
 	clk := &clock{t: time.Date(2026, 11, 14, 9, 0, 0, 0, time.UTC)}
-	e := open(t, filepath.Join(t.TempDir(), "launchway.db"), clk)
+	e := open(t, testdb.New(t), clk)
 	t.Cleanup(func() { e.Close() })
 	return e, clk
 }
@@ -283,7 +285,7 @@ func TestLostRunnerIsRequeuedThenGivenUp(t *testing.T) {
 // The core durability test: the server stops in the middle of a run.
 func TestCrashRecovery(t *testing.T) {
 	clk := &clock{t: time.Date(2026, 11, 14, 9, 0, 0, 0, time.UTC)}
-	path := filepath.Join(t.TempDir(), "launchway.db")
+	path := testdb.New(t)
 
 	e := open(t, path, clk)
 	id := create(t, e, linear, Trigger{})

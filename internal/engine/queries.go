@@ -317,7 +317,7 @@ func (e *Engine) RunInfos(ids []string) ([]RunInfo, error) {
 
 // Events returns a run's full event log, oldest first.
 func (e *Engine) Events(runID string) ([]Event, error) {
-	evs, err := loadEvents(e.db, runID)
+	evs, _, err := loadEvents(e.db, runID)
 	if err == nil && len(evs) == 0 {
 		return nil, fmt.Errorf("%w: run %s", ErrNotFound, runID)
 	}
@@ -350,23 +350,4 @@ func (e *Engine) Runners() ([]RunnerView, error) {
 		out = append(out, r)
 	}
 	return out, rows.Err()
-}
-
-// SeenRef returns the last commit recorded for a project's ref.
-func (e *Engine) SeenRef(project, ref string) (string, bool, error) {
-	var sha string
-	err := e.db.QueryRow(`SELECT sha FROM refs_seen WHERE project = ? AND ref = ?`, project, ref).Scan(&sha)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", false, nil
-	}
-	return sha, err == nil, err
-}
-
-// SetSeenRef records the latest commit seen for a project's ref.
-func (e *Engine) SetSeenRef(project, ref, sha string) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	_, err := e.db.Exec(`INSERT INTO refs_seen(project, ref, sha) VALUES(?,?,?)
-		ON CONFLICT(project, ref) DO UPDATE SET sha = excluded.sha`, project, ref, sha)
-	return err
 }

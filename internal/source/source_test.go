@@ -2,15 +2,19 @@ package source
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/launchway-dev/launchway/internal/engine"
+	"github.com/launchway-dev/launchway/internal/testdb"
 )
 
 func run(t *testing.T, dir string, args ...string) {
@@ -50,7 +54,7 @@ func TestPollingStartsRunsAndExplainsDecisions(t *testing.T) {
 	run(t, repo, "git", "init", "-q", "-b", "main")
 	commit(t, repo, pl, "first")
 
-	eng, err := engine.Open(engine.Options{Path: filepath.Join(dir, "db"), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	eng, err := engine.Open(engine.Options{Database: testdb.New(t), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +152,7 @@ func TestMirrorFollowsAChangedAddress(t *testing.T) {
 		run(t, r, "git", "init", "-q", "-b", "main")
 		commit(t, r, pl, "in "+filepath.Base(r))
 	}
-	eng, _ := engine.Open(engine.Options{Path: filepath.Join(dir, "db"), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	eng, _ := engine.Open(engine.Options{Database: testdb.New(t), Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
 	defer eng.Close()
 	m, _ := NewManager(eng, dir, []Project{{Name: "app", URL: repoA}}, nil)
 	if _, err := m.Refs(context.Background(), "app"); err != nil {
@@ -163,4 +167,86 @@ func TestMirrorFollowsAChangedAddress(t *testing.T) {
 	if refs[0].Subject != "in b" {
 		t.Fatalf("still reading the old repository: %+v", refs[0])
 	}
+}
+
+// Two servers polling the same repository start exactly one run per push,
+// and show the same decisions.
+func TestTwoServersStartOneRunPerPush(t *testing.T) {
+	if !testdb.Postgres() {
+		t.Skip("needs PostgreSQL: set " + testdb.EnvVar)
+	}
+	dir := t.TempDir()
+	repo := filepath.Join(dir, "repo")
+	os.MkdirAll(repo, 0o755)
+	run(t, repo, "git", "init", "-q", "-b", "main")
+	commit(t, repo, pl, "first")
+
+	addr := testdb.New(t)
+	var managers []*Manager
+	for _, name := range []string{"a", "b"} {
+		eng, err := engine.Open(engine.Options{Database: addr, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { eng.Close() })
+		m, err := NewManager(eng, filepath.Join(dir, name), []Project{{Name: "app", URL: repo}}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		managers = append(managers, m)
+	}
+	pollBoth := func() {
+		t.Helper()
+		var wg sync.WaitGroup
+		for _, m := range managers {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := m.poll(context.Background(), m.projects["app"]); err != nil {
+					t.Error(err)
+				}
+			}()
+		}
+		wg.Wait()
+	}
+	pollBoth() // first sight: history does not start runs
+	pushes := map[string]bool{}
+	for i := 0; i < 5; i++ {
+		commit(t, repo, "", fmt.Sprintf("push %d", i))
+		pollBoth()
+		pushes[strings.TrimSpace(gitHead(t, repo))] = true
+	}
+	run(t, repo, "git", "checkout", "-q", "-b", "feature/x")
+	commit(t, repo, "", "on a feature branch")
+	pollBoth()
+
+	runs, _ := managers[0].eng.ListRuns(engine.RunFilter{})
+	if len(runs) != len(pushes) {
+		t.Fatalf("%d runs for %d pushes", len(runs), len(pushes))
+	}
+	for _, r := range runs {
+		if !pushes[r.SHA] {
+			t.Fatalf("run for unexpected commit %s", r.SHA)
+		}
+		delete(pushes, r.SHA) // a second run for the same commit fails here
+	}
+	a, _ := managers[0].Get("app")
+	b, _ := managers[1].Get("app")
+	if len(a.Decisions) != 6 || !reflect.DeepEqual(a.Decisions, b.Decisions) {
+		t.Fatalf("decisions differ or are missing:\n%+v\n%+v", a.Decisions, b.Decisions)
+	}
+	if a.Decisions[0].Outcome != "ignored" {
+		t.Fatalf("newest decision %+v", a.Decisions[0])
+	}
+}
+
+func gitHead(t *testing.T, repo string) string {
+	t.Helper()
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = repo
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out)
 }

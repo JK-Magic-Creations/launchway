@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -110,7 +111,8 @@ func cmdServer(args []string) error {
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
 
-	eng, err := engine.Open(engine.Options{Path: filepath.Join(cfg.Data, "launchway.db"), Logger: log})
+	dbAddr := cfg.DatabaseAddr()
+	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log})
 	if err != nil {
 		return err
 	}
@@ -123,7 +125,7 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	token, err := config.RunnerToken(cfg.Data)
+	token, err := config.RunnerToken(cfg.Data, eng)
 	if err != nil {
 		return err
 	}
@@ -153,7 +155,10 @@ func cmdServer(args []string) error {
 	runnerDone := make(chan struct{})
 	if cfg.RunnerEnabled() {
 		host, _ := os.Hostname()
-		ex, err := executor.ByName(cfg.Runner.Executor, executor.Options{Kubernetes: cfg.Runner.Kubernetes, RunnerID: "builtin-" + host})
+		// Unique per server: two servers on one machine must not share an identity.
+		_, port, _ := net.SplitHostPort(ln.Addr().String())
+		runnerID := "builtin-" + host + "-" + port
+		ex, err := executor.ByName(cfg.Runner.Executor, executor.Options{Kubernetes: cfg.Runner.Kubernetes, RunnerID: runnerID})
 		if err != nil {
 			return err
 		}
@@ -162,7 +167,7 @@ func cmdServer(args []string) error {
 		}
 		r := &runner.Runner{
 			Client: runner.NewClient(url, token), Exec: ex,
-			Info:    engine.RunnerInfo{ID: "builtin-" + host, Name: host + " (built in)", Executor: ex.Name(), Version: version},
+			Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
 			DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
 		}
 		go func() { defer close(runnerDone); r.Run(runnerCtx) }()
@@ -170,8 +175,12 @@ func cmdServer(args []string) error {
 		close(runnerDone)
 	}
 
-	fmt.Fprintf(os.Stderr, "\n  Launchway %s is running at %s\n  %d project(s), data in %s\n  Runner token for other machines: %s\n\n",
-		version, url, len(projects), cfg.Data, filepath.Join(cfg.Data, "runner-token"))
+	tokenAt := config.TokenFile(cfg.Data)
+	if os.Getenv("LAUNCHWAY_RUNNER_TOKEN") != "" {
+		tokenAt = "LAUNCHWAY_RUNNER_TOKEN"
+	}
+	fmt.Fprintf(os.Stderr, "\n  Launchway %s is running at %s\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
+		version, url, len(projects), cfg.Data, describeDatabase(dbAddr), tokenAt)
 
 	<-ctx.Done()
 	fmt.Fprintln(os.Stderr, "\nStopping. Steps in progress will run again when Launchway starts.")
@@ -184,6 +193,15 @@ func cmdServer(args []string) error {
 	shut, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return httpSrv.Shutdown(shut)
+}
+
+// describeDatabase names the database without revealing a password.
+func describeDatabase(addr string) string {
+	u, err := neturl.Parse(addr)
+	if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") {
+		return "SQLite database " + addr
+	}
+	return "PostgreSQL database " + u.Redacted()
 }
 
 // loopback turns 0.0.0.0:8080 or [::]:8080 into 127.0.0.1:8080.
@@ -327,7 +345,7 @@ func cmdRun(args []string) error {
 	defer os.RemoveAll(tmp)
 
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	eng, err := engine.Open(engine.Options{Path: filepath.Join(tmp, "run.db"), Logger: quiet})
+	eng, err := engine.Open(engine.Options{Database: filepath.Join(tmp, "run.db"), Logger: quiet})
 	if err != nil {
 		return err
 	}

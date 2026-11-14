@@ -23,8 +23,12 @@ import (
 // Config is the whole server configuration. One file describes an
 // installation completely.
 type Config struct {
-	Listen   string          `yaml:"listen"`
-	Data     string          `yaml:"data"`
+	Listen string `yaml:"listen"`
+	Data   string `yaml:"data"`
+	// Database is a SQLite file, or a postgres:// URL that several servers
+	// share. The environment variable LAUNCHWAY_DATABASE overrides it; the
+	// default is launchway.db in the data directory.
+	Database string          `yaml:"database"`
 	User     string          `yaml:"user"` // recorded as the actor for UI actions, until sign-in exists
 	Projects []ProjectConfig `yaml:"projects"`
 	Runner   RunnerConfig    `yaml:"runner"`
@@ -66,6 +70,9 @@ func Load(path string) (*Config, error) {
 			if c.Data != "" && !filepath.IsAbs(c.Data) {
 				c.Data = filepath.Join(base, c.Data)
 			}
+			if c.Database != "" && !isURL(c.Database) && !filepath.IsAbs(c.Database) {
+				c.Database = filepath.Join(base, c.Database)
+			}
 			for i, p := range c.Projects {
 				if isLocalPath(p.Repo) && !filepath.IsAbs(p.Repo) {
 					c.Projects[i].Repo = filepath.Join(base, p.Repo)
@@ -104,8 +111,22 @@ func Load(path string) (*Config, error) {
 	return c, nil
 }
 
+func isURL(s string) bool { return strings.Contains(s, "://") }
+
 func isLocalPath(repo string) bool {
 	return !strings.Contains(repo, "://") && !strings.Contains(repo, "@")
+}
+
+// DatabaseAddr returns the database to use: LAUNCHWAY_DATABASE if set, else
+// the database setting, else launchway.db in the data directory.
+func (c *Config) DatabaseAddr() string {
+	if v := strings.TrimSpace(os.Getenv("LAUNCHWAY_DATABASE")); v != "" {
+		return v
+	}
+	if c.Database != "" {
+		return c.Database
+	}
+	return filepath.Join(c.Data, "launchway.db")
 }
 
 // RunnerEnabled reports whether the built-in runner should start.
@@ -128,20 +149,48 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 	return out, nil
 }
 
-// RunnerToken returns the token runners use, creating and saving one in the
-// data directory the first time.
-func RunnerToken(dataDir string) (string, error) {
-	path := filepath.Join(dataDir, "runner-token")
-	if b, err := os.ReadFile(path); err == nil && len(bytes.TrimSpace(b)) > 0 {
-		return string(bytes.TrimSpace(b)), nil
+// TokenFile is where the runner token is written in the data directory.
+func TokenFile(dataDir string) string { return filepath.Join(dataDir, "runner-token") }
+
+// SharedStore keeps values that every server sharing a database agrees on.
+// *engine.Engine is one.
+type SharedStore interface {
+	// SharedValue returns the value stored under key, storing proposed
+	// first if there is none.
+	SharedValue(key, proposed string) (string, error)
+}
+
+// RunnerToken returns the token runners use. LAUNCHWAY_RUNNER_TOKEN wins if
+// it is set. Otherwise the token is kept in the database, so that every
+// server sharing it accepts the same runners; the first server to start
+// creates it, offering the token already in its data directory if there is
+// one, so that existing runners keep working. The token in effect is also
+// written to the data directory, for convenience.
+func RunnerToken(dataDir string, store SharedStore) (string, error) {
+	if tok := strings.TrimSpace(os.Getenv("LAUNCHWAY_RUNNER_TOKEN")); tok != "" {
+		return tok, nil
 	}
-	buf := make([]byte, 24)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
+	path := TokenFile(dataDir)
+	local := ""
+	if b, err := os.ReadFile(path); err == nil {
+		local = string(bytes.TrimSpace(b))
 	}
-	tok := hex.EncodeToString(buf)
-	if err := os.WriteFile(path, []byte(tok+"\n"), 0o600); err != nil {
-		return "", err
+	proposed := local
+	if proposed == "" {
+		buf := make([]byte, 24)
+		if _, err := rand.Read(buf); err != nil {
+			return "", err
+		}
+		proposed = hex.EncodeToString(buf)
+	}
+	tok, err := store.SharedValue("runner_token", proposed)
+	if err != nil {
+		return "", fmt.Errorf("reading the runner token from the database: %w", err)
+	}
+	if tok != local {
+		if err := os.WriteFile(path, []byte(tok+"\n"), 0o600); err != nil {
+			return "", err
+		}
 	}
 	return tok, nil
 }

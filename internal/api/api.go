@@ -3,6 +3,7 @@
 package api
 
 import (
+	"context"
 	"crypto/subtle"
 	"encoding/json"
 	"errors"
@@ -38,6 +39,10 @@ func (s *Server) Handler() http.Handler {
 		s.Log = slog.Default()
 	}
 	mux := http.NewServeMux()
+
+	// Health checks for load balancers and orchestrators; no token needed.
+	mux.HandleFunc("GET /healthz", s.healthz)
+	mux.HandleFunc("GET /readyz", s.readyz)
 
 	// Runner API.
 	mux.HandleFunc("POST /api/runner/v1/lease", s.runnerAuth(s.lease))
@@ -130,6 +135,25 @@ func (s *Server) runnerAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+// ---- health ----
+
+// healthz reports that the process is up.
+func (s *Server) healthz(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// readyz reports whether this server can do useful work, which needs the
+// database to answer.
+func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := s.Engine.Ping(ctx); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable", "error": "the database did not answer: " + err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // ---- runner API ----

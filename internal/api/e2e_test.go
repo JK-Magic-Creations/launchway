@@ -17,6 +17,7 @@ import (
 	"github.com/launchway-dev/launchway/internal/executor"
 	"github.com/launchway-dev/launchway/internal/pipeline"
 	"github.com/launchway-dev/launchway/internal/runner"
+	"github.com/launchway-dev/launchway/internal/testdb"
 )
 
 func quiet() *slog.Logger {
@@ -32,7 +33,7 @@ type env struct {
 func setup(t *testing.T, ttl time.Duration) *env {
 	t.Helper()
 	dir := t.TempDir()
-	eng, err := engine.Open(engine.Options{Path: filepath.Join(dir, "db"), LeaseTTL: ttl, Logger: quiet()})
+	eng, err := engine.Open(engine.Options{Database: testdb.New(t), LeaseTTL: ttl, Logger: quiet()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,5 +248,36 @@ func getJSON(t *testing.T, url string, v any) {
 	}
 	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestHealthAndReadiness(t *testing.T) {
+	e := setup(t, time.Second)
+	for _, path := range []string{"/healthz", "/readyz"} {
+		resp, err := http.Get(e.srv.URL + path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("%s: %s", path, resp.Status)
+		}
+	}
+	e.eng.Close() // the database is gone
+	resp, err := http.Get(e.srv.URL + "/readyz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("readyz without a database: %s", resp.Status)
+	}
+	resp, err = http.Get(e.srv.URL + "/healthz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("healthz: %s", resp.Status)
 	}
 }
