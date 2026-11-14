@@ -1,0 +1,48 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: launchway
+          POSTGRES_PASSWORD: launchway
+          POSTGRES_DB: launchway
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U launchway" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the web UI
+        run: cd web && npm ci --no-audit --no-fund && npm run build
+      - name: Vet and test (SQLite)
+        run: |
+          go vet ./...
+          go test -race -count=1 ./...
+      - name: Test with several servers (PostgreSQL)
+        env:
+          LAUNCHWAY_TEST_POSTGRES: postgres://launchway:launchway@127.0.0.1:5432/launchway?sslmode=disable
+        run: go test -race -count=1 ./internal/engine/ ./internal/source/ ./internal/api/
+      - name: Test with real containers
+        env:
+          LAUNCHWAY_TEST_CONTAINERS: "1"
+        run: go test -count=1 ./internal/executor/
+      - name: Build the binary
+        run: CGO_ENABLED=0 go build -trimpath -o bin/launchway ./cmd/launchway
