@@ -27,6 +27,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
+	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
 	"github.com/jk-magic-creations/launchway/web"
 )
@@ -43,7 +44,8 @@ Usage:
   launchway graph    [file]                     print a pipeline's graph as JSON
   launchway version
 
-The pipeline file defaults to .launchway/pipeline.yaml.
+The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
+--secrets-config FILE, the secret stores they may read.
 `
 
 func main() {
@@ -98,6 +100,10 @@ func cmdServer(args []string) error {
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
 		return err
+	}
+	secretStores, err := secrets.Open(cfg.Runner.Secrets)
+	if err != nil {
+		return fmt.Errorf("%s: runner.secrets: %w", *cfgPath, err)
 	}
 	if *listen != "" {
 		cfg.Listen = *listen
@@ -169,6 +175,7 @@ func cmdServer(args []string) error {
 			Client: runner.NewClient(url, token), Exec: ex,
 			Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
 			DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
+			Secrets: secretStores,
 		}
 		go func() { defer close(runnerDone); r.Run(runnerCtx) }()
 	} else {
@@ -227,10 +234,17 @@ func cmdRunner(args []string) error {
 	conc := fs.Int("concurrency", 2, "steps to run at once")
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
+	secretsConfig := secretsFlag(fs)
 	fs.Parse(args)
 	if *server == "" || *token == "" {
 		return errors.New("--server and --token are required")
 	}
+	secretStores, err := openSecrets(*secretsConfig)
+	if err != nil {
+		return err
+	}
+	// On your own machine your environment is yours to use.
+	secretStores.AddLocalEnv()
 	host, _ := os.Hostname()
 	if *name == "" {
 		*name = host
@@ -246,7 +260,7 @@ func cmdRunner(args []string) error {
 	}
 	r := &runner.Runner{Client: runner.NewClient(*server, *token), Exec: ex,
 		Info:    engine.RunnerInfo{ID: "runner-" + *name, Name: *name, Executor: ex.Name(), Version: version},
-		DataDir: *data, Concurrency: *conc}
+		DataDir: *data, Concurrency: *conc, Secrets: secretStores}
 	return r.Run(ctx)
 }
 
@@ -318,7 +332,12 @@ func cmdRun(args []string) error {
 	file := fs.String("file", "", "pipeline file (default .launchway/pipeline.yaml)")
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
+	secretsConfig := secretsFlag(fs)
 	fs.Parse(args)
+	secretStores, err := openSecrets(*secretsConfig)
+	if err != nil {
+		return err
+	}
 	path := *file
 	if path == "" {
 		path = pipelineFile(nil)
@@ -380,7 +399,7 @@ func cmdRun(args []string) error {
 	defer stopRunner()
 	r := &runner.Runner{Client: runner.NewClient("http://"+ln.Addr().String(), token), Exec: ex,
 		Info:    engine.RunnerInfo{ID: "local", Name: "this machine", Executor: ex.Name(), Version: version},
-		DataDir: filepath.Join(tmp, "runner"), Concurrency: 4, Log: quiet}
+		DataDir: filepath.Join(tmp, "runner"), Concurrency: 4, Log: quiet, Secrets: secretStores}
 	go r.Run(runnerCtx)
 
 	pr := newPrinter(p)
@@ -427,6 +446,28 @@ func k8sFlags(fs *flag.FlagSet) *executor.KubernetesOptions {
 	fs.StringVar(&o.Context, "k8s-context", "", "kubeconfig context for the kubernetes executor (default: current)")
 	fs.StringVar(&o.Namespace, "k8s-namespace", "", "namespace for step pods (default: the context's)")
 	return o
+}
+
+// secretsFlag adds --secrets-config, a YAML file mapping store names to
+// settings, the same as runner.secrets in the server's configuration.
+func secretsFlag(fs *flag.FlagSet) *string {
+	return fs.String("secrets-config", "", "YAML file of secret stores")
+}
+
+// openSecrets reads and checks the secret stores in file, if one is given.
+func openSecrets(file string) (*secrets.Resolver, error) {
+	if file == "" {
+		return secrets.NewResolver(), nil
+	}
+	c, err := secrets.LoadConfig(file)
+	if err != nil {
+		return nil, err
+	}
+	r, err := secrets.Open(c)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", file, err)
+	}
+	return r, nil
 }
 
 // checkExecutor lets executors that can verify their setup do so at start-up.

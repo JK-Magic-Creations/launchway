@@ -114,6 +114,16 @@ func TestParseProblems(t *testing.T) {
 		{"reserved env", "pipeline: a\nsteps:\n  a: {image: x, run: y, env: {LAUNCHWAY_X: 1}}\n", "reserved"},
 		{"bad event", "pipeline: a\nsteps:\n  a: {image: x, run: y, when: {event: pr}}\n", "not known"},
 		{"empty push", "pipeline: a\non: {push: {}}\nsteps:\n  a: {image: x, run: y}\n", "list branches or tags"},
+		{"secrets not a mapping", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: [T]}\n", "secrets is a mapping"},
+		{"secret not a mapping", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: {T: vault}}\n", "expected a mapping"},
+		{"secret bad name", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: {1T: {store: env, key: K}}}\n", "not a valid variable name"},
+		{"secret reserved name", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: {launchway_t: {store: env, key: K}}}\n", "reserved"},
+		{"secret no store", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: {T: {key: K}}}\n", "name the store"},
+		{"secret upper-case store", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: {T: {store: Vault, key: K}}}\n", "name the store"},
+		{"secret no key", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: {T: {store: env, key: \" \"}}}\n", "a key is required"},
+		{"secret unknown key", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: {T: {store: env, key: K, path: p}}}\n", `unknown key "path"`},
+		{"secret twice", "pipeline: a\nsteps:\n  a: {image: x, run: y, secrets: {T: {store: env, key: K}, T: {store: env, key: L}}}\n", "written twice"},
+		{"secret also in env", "pipeline: a\nsteps:\n  a: {image: x, run: y, env: {T: 1}, secrets: {T: {store: env, key: K}}}\n", "also set under env"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -179,5 +189,45 @@ steps:
 	}
 	if c := p.Container("db"); !c.Service || c.Env["POSTGRES_PASSWORD"] != "test" {
 		t.Fatalf("service %+v", c)
+	}
+}
+
+func TestSecrets(t *testing.T) {
+	p, err := Parse([]byte(`
+pipeline: app
+steps:
+  push:
+    image: alpine:3.22
+    secrets:
+      REGISTRY_PASSWORD: { store: vault, key: apps/harbor/robot, field: password }
+      NPM_TOKEN:         { store: env,   key: NPM_TOKEN }
+    run: echo "$REGISTRY_PASSWORD" | some-login
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := p.Step("push").Secrets
+	want := map[string]SecretRef{
+		"REGISTRY_PASSWORD": {Store: "vault", Key: "apps/harbor/robot", Field: "password"},
+		"NPM_TOKEN":         {Store: "env", Key: "NPM_TOKEN"},
+	}
+	if mustJSON(got) != mustJSON(want) {
+		t.Fatalf("secrets %s, want %s", mustJSON(got), mustJSON(want))
+	}
+	if s := got["REGISTRY_PASSWORD"].String(); s != "vault:apps/harbor/robot#password" {
+		t.Fatalf("String() = %q", s)
+	}
+	// The references are part of the graph, and survive a round trip.
+	var back Pipeline
+	if err := json.Unmarshal([]byte(mustJSON(p)), &back); err != nil || mustJSON(back.Step("push").Secrets) != mustJSON(want) {
+		t.Fatalf("graph round trip lost the references: %v %s", err, mustJSON(&back))
+	}
+}
+
+func TestSecretProblemLine(t *testing.T) {
+	_, err := Parse([]byte("pipeline: a\nsteps:\n  a:\n    image: x\n    run: y\n    env: {T: 1}\n    secrets:\n      T: {store: env, key: K}\n"))
+	ps, ok := err.(Problems)
+	if !ok || len(ps) != 1 || ps[0].Line != 8 {
+		t.Fatalf("got %v, want one problem on line 8", err)
 	}
 }

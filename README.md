@@ -78,6 +78,7 @@ steps:
 | `needs` | Steps that must succeed first; steps with no unmet needs run in parallel |
 | `when` | `branch`, `tag` and `event` (`push`, `manual`) patterns; the step is skipped if they do not match |
 | `env` | Extra environment variables |
+| `secrets` | Environment variables whose values a runner looks up; see [Secrets](#secrets) |
 | `container` | A named container from the `containers` section, instead of `image` |
 | `retry` | Extra attempts after a failure |
 | `timeout` | Per attempt; default 1h |
@@ -115,12 +116,74 @@ $ launchway validate
 .launchway/pipeline.yaml:14: steps.build.needs: needs "tests", but there is no step with that name
 ```
 
+## Secrets
+
+A step names the secrets it needs. Each one becomes an environment variable:
+
+```yaml
+steps:
+  push:
+    image: alpine:3.22
+    secrets:
+      REGISTRY_PASSWORD: { store: vault, key: apps/harbor/robot, field: password }
+      NPM_TOKEN:         { store: env,   key: NPM_TOKEN }
+    run: echo "$REGISTRY_PASSWORD" | some-login
+```
+
+**The server never sees a secret value.** The pipeline, the server and the UI hold only the
+reference (`vault:apps/harbor/robot#password`); the runner looks the value up just before the step
+runs, inside the network that owns the secret, and replaces it with `***` in the step's logs and
+outputs. Values shorter than 4 characters are not masked, and the log says so.
+
+Each runner has its own stores:
+
+| Type | `key` is | Settings |
+|---|---|---|
+| `env` | an environment variable of the runner process (not `LAUNCHWAY_*`) | none |
+| `file` | a file name in a directory, such as a mounted Kubernetes secret; nothing outside it can be read | `dir` |
+| `vault` | a path in a KV version 2 engine of HashiCorp Vault or OpenBao; `field` is required | `address`, `mount` (default `secret`), `namespace`, `ca_file`, and one of `token_env`, `token_file`, or `role` for Kubernetes auth (with `auth_path`, default `kubernetes`, and `jwt_file`, default the pod's service account token) |
+
+A runner has only the stores you configure. The one exception is `launchway run` on your own
+machine, which also has an `env` store so a pipeline can read your own environment. A server or
+shared runner gets an `env` store only if you define one, because it lets pipelines read the
+runner's environment.
+
+Any pipeline can ask for any key, so every store takes allow-lists, checked on the runner:
+`projects` and `keys`, lists of patterns where `*` does not cross a `/`. An empty list allows
+everything.
+
+On Kubernetes, a step's environment (secrets included) is held in memory inside the run's pod
+while the step runs, where the run's other containers could read it. Do not put containers you do
+not trust in a pipeline that uses secrets.
+
+The built-in runner reads its stores from `runner.secrets` in the server's configuration; `launchway
+runner` and `launchway run` read the same map from `--secrets-config FILE`:
+
+```yaml
+runner:
+  secrets:
+    vault:
+      type: vault
+      address: https://vault.example:8200
+      role: launchway          # Kubernetes auth
+      projects: [payments, "web-*"]
+      keys: ["apps/*/*"]
+    mounted:
+      type: file
+      dir: /var/run/launchway-secrets
+```
+
+A secret that does not exist or may not be read fails the step, naming the store and key. A store
+that cannot be reached (no answer, sealed, 5xx) is asked again for 30 seconds, and then the step is
+handed back to be run again later. `launchway run` uses the project name `local`.
+
 ## Commands
 
 ```
 launchway server   [--config launchway.yaml]   the server, web UI and a built-in runner
 launchway runner   --server URL --token T     a runner on another machine (outbound connections only)
-launchway run                                 this directory's pipeline, on this machine
+                   [--secrets-config FILE]
+launchway run      [--secrets-config FILE]    this directory's pipeline, on this machine
 launchway validate [file]                     check a pipeline file
 launchway graph    [file]                     the graph a pipeline produces, as JSON
 ```
@@ -133,6 +196,7 @@ launchway graph    [file]                     the graph a pipeline produces, as 
 | `internal/engine` | The durable run engine. Every change is an event in SQLite and state is rebuilt from events. Runners hold steps on leases; a lost runner's step is run again. Handles retries, cancel and resume. |
 | `internal/executor` | Runs a step in a Podman or Docker container, in a Kubernetes pod, or on the host |
 | `internal/runner` | Takes steps from the server over HTTP, streams logs, sends heartbeats |
+| `internal/secrets` | Secret stores (env, file, Vault/OpenBao) and masking, used only by runners |
 | `internal/source` | Mirrors Git repositories, starts runs on matching pushes, records why |
 | `internal/api` | Runner API, UI API and the live event stream |
 | `web/` | The React UI, compiled into the binary |
@@ -144,6 +208,7 @@ launchway graph    [file]                     the graph a pipeline produces, as 
 - many runners competing for the same steps;
 - retries, cancel and resume;
 - real Git repositories;
+- secrets kept out of the database, events, logs and API (`make test-vault` adds a real OpenBao);
 - real containers (`make test-containers`);
 - a real Kubernetes cluster (`make test-kubernetes`).
 
@@ -155,16 +220,16 @@ Built so far:
 - the durable engine;
 - the Podman, Docker, host and Kubernetes executors;
 - named containers and services;
+- secrets (environment, files, Vault and OpenBao);
 - Git polling;
 - the web UI.
 
 Not built yet, in the order planned:
 
-- Image builds and secrets (Vault, OpenBao)
+- Image builds
 - Releases and promotion
 - The Argo CD driver
 - Approvals and inputs
-- Secrets with Vault and OpenBao
 - Policy
 - Infrastructure runs
 - VM fleets

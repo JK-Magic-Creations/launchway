@@ -88,22 +88,25 @@ type RunnerInfo struct {
 
 // Job is everything a runner needs to execute one step attempt.
 type Job struct {
-	LeaseID    string               `json:"lease_id"`
-	LeaseTTL   pipeline.Duration    `json:"lease_ttl"`
-	RunID      string               `json:"run_id"`
-	Project    string               `json:"project"`
-	RunNumber  int                  `json:"run_number"`
-	Pipeline   string               `json:"pipeline"`
-	StepID     string               `json:"step_id"`
-	Attempt    int                  `json:"attempt"`
-	Image      string               `json:"image"`
-	Script     string               `json:"script"`
-	Env        map[string]string    `json:"env"`
-	Timeout    pipeline.Duration    `json:"timeout"`
-	Source     Source               `json:"source"`
-	SHA        string               `json:"sha,omitempty"`
-	Container  string               `json:"container"`  // which of Containers the step runs in
-	Containers []pipeline.Container `json:"containers"` // every container the run needs, services included
+	LeaseID   string            `json:"lease_id"`
+	LeaseTTL  pipeline.Duration `json:"lease_ttl"`
+	RunID     string            `json:"run_id"`
+	Project   string            `json:"project"`
+	RunNumber int               `json:"run_number"`
+	Pipeline  string            `json:"pipeline"`
+	StepID    string            `json:"step_id"`
+	Attempt   int               `json:"attempt"`
+	Image     string            `json:"image"`
+	Script    string            `json:"script"`
+	Env       map[string]string `json:"env"`
+	// Secrets are references only. The runner looks the values up, adds
+	// them to the environment and masks them in the step's output.
+	Secrets    map[string]pipeline.SecretRef `json:"secrets,omitempty"`
+	Timeout    pipeline.Duration             `json:"timeout"`
+	Source     Source                        `json:"source"`
+	SHA        string                        `json:"sha,omitempty"`
+	Container  string                        `json:"container"`  // which of Containers the step runs in
+	Containers []pipeline.Container          `json:"containers"` // every container the run needs, services included
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -1095,7 +1098,7 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		Container: container, Containers: st.Pipeline.RunContainers(),
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
-		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env,
+		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: def.Secrets,
 		Timeout: def.Timeout, Source: st.Source, SHA: t.SHA,
 	}
 }

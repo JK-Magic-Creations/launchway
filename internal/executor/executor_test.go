@@ -121,6 +121,30 @@ func TestLongLinesAreSplit(t *testing.T) {
 	}
 }
 
+func TestMaskingSurvivesLineSplit(t *testing.T) {
+	const secret = "SECRET-VALUE"
+	// The secret straddles the 64 KiB point where the line is split.
+	line := strings.Repeat("x", maxLine-5) + secret + strings.Repeat("y", 100)
+	var c capture
+	var wg sync.WaitGroup
+	wg.Add(1)
+	mask := func(s string) string { return strings.ReplaceAll(s, secret, "***") }
+	pipeLines(strings.NewReader(line+"\nafter "+secret+"\r\n"), "stdout", mask, c.sink, &wg)
+	wg.Wait()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	want := strings.Repeat("x", maxLine-5) + "***" + strings.Repeat("y", 100)
+	if len(c.lines) != 3 {
+		t.Fatalf("got %d lines, want the long line in two pieces and one more", len(c.lines))
+	}
+	if got := strings.TrimPrefix(c.lines[0], "stdout: ") + strings.TrimPrefix(c.lines[1], "stdout: "); got != want {
+		t.Fatalf("the long line was not masked whole (%d bytes)", len(got))
+	}
+	if c.lines[2] != "stdout: after ***" {
+		t.Fatalf("got %q", c.lines[2])
+	}
+}
+
 func TestContainerRejectsRelativePaths(t *testing.T) {
 	c := &Container{Bin: "/bin/false"}
 	_, err := c.Run(context.Background(), Spec{Name: "x", Image: "i", Script: "true", Workspace: "relative/dir", MetaDir: t.TempDir()}, func(string, string) {})

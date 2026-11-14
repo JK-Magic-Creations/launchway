@@ -45,16 +45,34 @@ type PushTrigger struct {
 
 // Step runs a script in a container image.
 type Step struct {
-	ID        string            `json:"id"`
-	Container string            `json:"container,omitempty"` // a named container; Image is then filled from it
-	Image     string            `json:"image"`
-	Run       string            `json:"run"`
-	Needs     []string          `json:"needs,omitempty"`
-	When      *Condition        `json:"when,omitempty"`
-	Env       map[string]string `json:"env,omitempty"`
-	Retry     int               `json:"retry"`   // extra attempts after a failure
-	Timeout   Duration          `json:"timeout"` // per attempt
-	Line      int               `json:"-"`       // where it was written, for messages
+	ID        string               `json:"id"`
+	Container string               `json:"container,omitempty"` // a named container; Image is then filled from it
+	Image     string               `json:"image"`
+	Run       string               `json:"run"`
+	Needs     []string             `json:"needs,omitempty"`
+	When      *Condition           `json:"when,omitempty"`
+	Env       map[string]string    `json:"env,omitempty"`
+	Secrets   map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
+	Retry     int                  `json:"retry"`             // extra attempts after a failure
+	Timeout   Duration             `json:"timeout"`           // per attempt
+	Line      int                  `json:"-"`                 // where it was written, for messages
+}
+
+// SecretRef says where a secret is kept. It never holds the value: the
+// runner looks the value up just before the step runs.
+type SecretRef struct {
+	Store string `json:"store"`           // a store configured on the runner, such as env or vault
+	Key   string `json:"key"`             // the secret's name or path in that store
+	Field string `json:"field,omitempty"` // a field within the secret, for stores that have them
+}
+
+// String names the reference as store:key#field.
+func (r SecretRef) String() string {
+	s := r.Store + ":" + r.Key
+	if r.Field != "" {
+		s += "#" + r.Field
+	}
+	return s
 }
 
 // Condition is a closed set of tests, deliberately not an expression language.

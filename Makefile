@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build test test-postgres test-containers test-kubernetes run demo clean
+.PHONY: all web build test test-postgres test-vault test-containers test-kubernetes run demo clean
 
 all: web build
 
@@ -23,6 +23,18 @@ test:
 LAUNCHWAY_TEST_POSTGRES ?= postgres://launchway:launchway@127.0.0.1:55432/launchway?sslmode=disable
 test-postgres:
 	LAUNCHWAY_TEST_POSTGRES='$(LAUNCHWAY_TEST_POSTGRES)' go test -race -count=1 ./internal/engine/ ./internal/source/ ./internal/api/
+
+# Runs the vault secret store against a real server. A throwaway OpenBao in
+# dev mode (KV version 2 at secret/):
+#   podman run --rm -d --name launchway-bao -p 127.0.0.1:58200:8200 \
+#     -e BAO_DEV_ROOT_TOKEN_ID=dev-root quay.io/openbao/openbao:latest \
+#     server -dev -dev-listen-address=0.0.0.0:8200
+# HashiCorp Vault works the same with VAULT_DEV_ROOT_TOKEN_ID.
+LAUNCHWAY_TEST_VAULT_ADDR ?= http://127.0.0.1:58200
+LAUNCHWAY_TEST_VAULT_TOKEN ?= dev-root
+test-vault:
+	LAUNCHWAY_TEST_VAULT_ADDR='$(LAUNCHWAY_TEST_VAULT_ADDR)' LAUNCHWAY_TEST_VAULT_TOKEN='$(LAUNCHWAY_TEST_VAULT_TOKEN)' \
+		go test -race -count=1 -run OpenBao -v ./internal/secrets/
 
 test-containers:
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 ./internal/executor/

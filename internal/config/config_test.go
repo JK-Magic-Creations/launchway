@@ -80,3 +80,29 @@ func TestDatabaseAddr(t *testing.T) {
 		t.Fatalf("env %q", got)
 	}
 }
+
+func TestRunnerSecrets(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "launchway.yaml")
+	os.WriteFile(path, []byte(`
+runner:
+  secrets:
+    mounted: { type: file, dir: secrets, projects: [web-*] }
+    vault:   { type: vault, address: "https://vault.example:8200", role: ci, keys: ["apps/*/*"] }
+`), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := c.Runner.Secrets["mounted"]
+	if m.Type != "file" || m.Dir != filepath.Join(dir, "secrets") || m.Projects[0] != "web-*" {
+		t.Fatalf("mounted %+v", m)
+	}
+	if v := c.Runner.Secrets["vault"]; v.Role != "ci" || v.Keys[0] != "apps/*/*" {
+		t.Fatalf("vault %+v", v)
+	}
+	os.WriteFile(path, []byte("runner:\n  secrets:\n    v: { type: vault, adress: x }\n"), 0o644)
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "adress") {
+		t.Fatalf("a misspelt setting was accepted: %v", err)
+	}
+}

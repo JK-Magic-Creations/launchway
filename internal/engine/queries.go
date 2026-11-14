@@ -40,26 +40,27 @@ type StepBrief struct {
 
 // StepView is a step with its definition and current state.
 type StepView struct {
-	RunID      string              `json:"run_id"`
-	ID         string              `json:"id"`
-	Position   int                 `json:"position"`
-	Status     StepStatus          `json:"status"`
-	Attempt    int                 `json:"attempt"`
-	QueuedAt   int64               `json:"queued_at"`
-	StartedAt  int64               `json:"started_at"`
-	FinishedAt int64               `json:"finished_at"`
-	ExitCode   *int                `json:"exit_code"`
-	Error      string              `json:"error"`
-	SkipKind   string              `json:"skip_kind"`
-	Runner     string              `json:"runner"`
-	Outputs    map[string]string   `json:"outputs"`
-	Container  string              `json:"container,omitempty"`
-	Image      string              `json:"image,omitempty"`
-	Run        string              `json:"run,omitempty"`
-	Needs      []string            `json:"needs,omitempty"`
-	When       *pipeline.Condition `json:"when,omitempty"`
-	Retry      int                 `json:"retry"`
-	Timeout    pipeline.Duration   `json:"timeout"`
+	RunID      string                        `json:"run_id"`
+	ID         string                        `json:"id"`
+	Position   int                           `json:"position"`
+	Status     StepStatus                    `json:"status"`
+	Attempt    int                           `json:"attempt"`
+	QueuedAt   int64                         `json:"queued_at"`
+	StartedAt  int64                         `json:"started_at"`
+	FinishedAt int64                         `json:"finished_at"`
+	ExitCode   *int                          `json:"exit_code"`
+	Error      string                        `json:"error"`
+	SkipKind   string                        `json:"skip_kind"`
+	Runner     string                        `json:"runner"`
+	Outputs    map[string]string             `json:"outputs"`
+	Container  string                        `json:"container,omitempty"`
+	Image      string                        `json:"image,omitempty"`
+	Run        string                        `json:"run,omitempty"`
+	Needs      []string                      `json:"needs,omitempty"`
+	When       *pipeline.Condition           `json:"when,omitempty"`
+	Secrets    map[string]pipeline.SecretRef `json:"secrets,omitempty"` // references, never values
+	Retry      int                           `json:"retry"`
+	Timeout    pipeline.Duration             `json:"timeout"`
 }
 
 // RunDetail is everything about one run.
@@ -241,6 +242,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		}
 		if def := created.Pipeline.Step(v.ID); def != nil {
 			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout
+			v.Secrets = def.Secrets
 			v.Container = created.Pipeline.ContainerFor(def)
 		}
 		d.StepList = append(d.StepList, *v)

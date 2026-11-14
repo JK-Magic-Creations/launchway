@@ -28,6 +28,9 @@ type Spec struct {
 	Env        map[string]string // added to the step's environment
 	Workspace  string            // host directory the step works in
 	MetaDir    string            // host directory for the script and outputs file
+	// Mask, if set, hides secret values in stdout and stderr. It is applied
+	// to whole lines, before long lines are split.
+	Mask func(string) string
 }
 
 // Sink receives output lines as they are produced.
@@ -158,23 +161,42 @@ func byNameLocal(name string) (Executor, error) {
 	return nil, errors.New("unknown executor " + name + "; use auto, container, podman, docker, host or kubernetes")
 }
 
-// pipeLines copies r to out line by line, splitting very long lines.
-func pipeLines(r io.Reader, stream string, out Sink, wg *sync.WaitGroup) {
+const (
+	// maxLine is the longest line sent on; longer lines are split.
+	maxLine = 64 * 1024
+	// maxMaskedLine is how much of a line is gathered before masking.
+	maxMaskedLine = 1024 * 1024
+)
+
+// pipeLines copies r to out line by line, masking each line and splitting
+// lines longer than maxLine. A line is masked whole before it is split, so a
+// split never cuts a secret in two. A line longer than maxMaskedLine is
+// masked in pieces of that size, so a secret that straddles a piece boundary
+// in such a line is not masked; ordinary output never has lines that long.
+func pipeLines(r io.Reader, stream string, mask func(string) string, out Sink, wg *sync.WaitGroup) {
 	defer wg.Done()
-	br := bufio.NewReaderSize(r, 64*1024)
+	br := bufio.NewReaderSize(r, maxLine)
 	var buf []byte
+	emit := func(s string) {
+		if mask != nil {
+			s = mask(s)
+		}
+		for len(s) > maxLine {
+			out(stream, s[:maxLine])
+			s = s[maxLine:]
+		}
+		out(stream, s)
+	}
 	for {
 		chunk, isPrefix, err := br.ReadLine()
-		if len(chunk) > 0 || (err == nil && !isPrefix) {
-			buf = append(buf, chunk...)
-		}
-		if err == nil && (!isPrefix || len(buf) >= 64*1024) {
-			out(stream, strings.TrimRight(string(buf), "\r"))
+		buf = append(buf, chunk...)
+		if err == nil && (!isPrefix || len(buf) >= maxMaskedLine) {
+			emit(strings.TrimRight(string(buf), "\r"))
 			buf = buf[:0]
 		}
 		if err != nil {
 			if len(buf) > 0 {
-				out(stream, string(buf))
+				emit(string(buf))
 			}
 			return
 		}

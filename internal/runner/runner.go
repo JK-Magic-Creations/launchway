@@ -5,15 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/secrets"
 )
 
 // Runner leases steps and executes them, Concurrency at a time.
@@ -24,6 +28,12 @@ type Runner struct {
 	DataDir     string
 	Concurrency int
 	Log         *slog.Logger
+	// Secrets resolves the secrets steps ask for; nil gives the default
+	// env store only.
+	Secrets *secrets.Resolver
+	// SecretWait is how long to keep asking an unavailable secret store
+	// before handing the step back to be run again; default 30s.
+	SecretWait time.Duration
 
 	wsMu    sync.Mutex
 	wsLocks map[string]*sync.Mutex
@@ -37,6 +47,12 @@ func (r *Runner) Run(ctx context.Context) error {
 	}
 	if r.Log == nil {
 		r.Log = slog.Default()
+	}
+	if r.Secrets == nil {
+		r.Secrets = secrets.NewResolver()
+	}
+	if r.SecretWait <= 0 {
+		r.SecretWait = 30 * time.Second
 	}
 	r.wsLocks = map[string]*sync.Mutex{}
 	abs, err := filepath.Abs(r.DataDir)
@@ -227,6 +243,18 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	if job.Attempt > 1 {
 		sys("Attempt %d", job.Attempt)
 	}
+	values, failed := r.resolveSecrets(ctx, job, sys)
+	if failed != nil {
+		return *failed
+	}
+	mask, short := secrets.NewMasker(values)
+	for _, name := range short {
+		sys("%s has a value, or a line of one, shorter than %d characters; it is not masked in the output", name, secrets.MinMaskLen)
+	}
+	env := make(map[string]string, len(job.Env)+len(values))
+	maps.Copy(env, job.Env)
+	maps.Copy(env, values)
+
 	ws, err := r.workspace(ctx, job, sys)
 	if err != nil {
 		sys("Could not prepare the workspace: %v", err)
@@ -238,15 +266,18 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	tctx, cancel := context.WithTimeout(ctx, job.Timeout.D())
 	defer cancel()
 	start := time.Now()
+	// The executor masks stdout and stderr before splitting long lines; the
+	// sink masks again so that nothing reaches the server unmasked even if
+	// an executor does not.
 	code, err := r.Exec.Run(tctx, executor.Spec{
 		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
-		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: job.Env,
-		Workspace: ws, MetaDir: meta,
+		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: env,
+		Workspace: ws, MetaDir: meta, Mask: mask.Mask,
 	}, func(stream, text string) {
 		if stream == "system" {
-			sys("%s", text)
+			sys("%s", mask.Mask(text))
 		} else {
-			out(stream, text)
+			out(stream, mask.Mask(text))
 		}
 	})
 	took := time.Since(start).Round(100 * time.Millisecond)
@@ -257,13 +288,15 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	case err != nil && ctx.Err() != nil:
 		return engine.Result{Outcome: "canceled"}
 	case errors.Is(err, executor.ErrInfrastructure):
-		sys("%v. The step will be run again.", err)
-		return engine.Result{Outcome: "lost", Error: err.Error()}
+		msg := mask.Mask(err.Error())
+		sys("%s. The step will be run again.", msg)
+		return engine.Result{Outcome: "lost", Error: msg}
 	case err != nil:
-		sys("Could not run the step: %v", err)
-		return engine.Result{Outcome: "failed", Error: err.Error()}
+		msg := mask.Mask(err.Error())
+		sys("Could not run the step: %s", msg)
+		return engine.Result{Outcome: "failed", Error: msg}
 	}
-	outputs := executor.ReadOutputs(meta)
+	outputs := maskOutputs(executor.ReadOutputs(meta), mask)
 	ec := code
 	if code != 0 {
 		sys("Failed with exit code %d after %s", code, took)
@@ -271,6 +304,71 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	}
 	sys("Succeeded in %s", took)
 	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs}
+}
+
+// resolveSecrets looks up the values of the job's secrets. If one cannot be
+// had, it returns the result to report instead: failed when the secret does
+// not exist or may not be read, lost (run it again) when the store is
+// unavailable. Messages name the store and key, never a value.
+func (r *Runner) resolveSecrets(ctx context.Context, job *engine.Job, sys func(string, ...any)) (map[string]string, *engine.Result) {
+	values := map[string]string{}
+	for _, name := range slices.Sorted(maps.Keys(job.Secrets)) {
+		ref := job.Secrets[name]
+		sys("Secret %s ← %s", name, ref)
+		v, err := r.lookup(ctx, job.Project, ref, sys)
+		if err == nil {
+			values[name] = v
+			continue
+		}
+		msg := fmt.Sprintf("secret %s (%s): %v", name, ref, err)
+		switch {
+		case ctx.Err() != nil:
+			return nil, &engine.Result{Outcome: "canceled"}
+		case secrets.IsUnavailable(err):
+			sys("%s. The step will be run again.", msg)
+			return nil, &engine.Result{Outcome: "lost", Error: msg}
+		default:
+			sys("%s", msg)
+			return nil, &engine.Result{Outcome: "failed", Error: msg}
+		}
+	}
+	return values, nil
+}
+
+// lookup asks for one secret, trying again with growing pauses for up to
+// SecretWait while the store is unavailable, so that a short outage does not
+// use up the step's tries.
+func (r *Runner) lookup(ctx context.Context, project string, ref pipeline.SecretRef, sys func(string, ...any)) (string, error) {
+	deadline := time.Now().Add(r.SecretWait)
+	pause := time.Second
+	for {
+		v, err := r.Secrets.Lookup(ctx, project, ref)
+		left := time.Until(deadline)
+		if !secrets.IsUnavailable(err) || left <= 0 || ctx.Err() != nil {
+			return v, err
+		}
+		pause = min(pause, left)
+		sys("Secret store %s is unavailable (%v); asking again in %s", ref.Store, err, pause.Round(time.Millisecond))
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(pause):
+		}
+		pause *= 2
+	}
+}
+
+// maskOutputs masks secret values in a step's outputs, which later steps
+// receive and the server stores.
+func maskOutputs(outputs map[string]string, mask *secrets.Masker) map[string]string {
+	if mask == nil || outputs == nil {
+		return outputs
+	}
+	masked := make(map[string]string, len(outputs))
+	for k, v := range outputs {
+		masked[mask.Mask(k)] = mask.Mask(v)
+	}
+	return masked
 }
 
 // workspace returns the directory a run's steps share on this runner,

@@ -17,6 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -48,6 +49,7 @@ type RunnerConfig struct {
 	Concurrency int                        `yaml:"concurrency"`
 	Executor    string                     `yaml:"executor"` // auto, container, podman, docker, host or kubernetes
 	Kubernetes  executor.KubernetesOptions `yaml:"kubernetes"`
+	Secrets     secrets.Config             `yaml:"secrets"` // secret stores, by name
 }
 
 // Load reads path. A missing file gives the defaults.
@@ -78,6 +80,7 @@ func Load(path string) (*Config, error) {
 					c.Projects[i].Repo = filepath.Join(base, p.Repo)
 				}
 			}
+			c.Runner.Secrets.RelativeTo(base)
 		}
 	}
 	if c.Listen == "" {

@@ -39,7 +39,7 @@ export function RunPage({ id }: { id: string }) {
       const s = d as StepView;
       setRun((prev) => {
         if (!prev) return prev;
-        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when } : x)) };
+        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets } : x)) };
       });
     },
     log: (d) => {
@@ -173,6 +173,7 @@ function StepPanel({ run, step, now, sink }: {
 
   const isLive = following && (step.status === "running" || step.status === "leased");
   const outputs = Object.entries(step.outputs ?? {});
+  const secrets = Object.entries(step.secrets ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const empty = !loaded ? "Loading…"
     : step.status === "pending" ? "Waiting for the steps it needs."
     : step.status === "queued" ? "Waiting for a runner."
@@ -213,6 +214,7 @@ function StepPanel({ run, step, now, sink }: {
         <dl className="kv">
           {step.needs && step.needs.length > 0 && <><dt>Needs</dt><dd>{step.needs.join(", ")}</dd></>}
           {step.when && <><dt>When</dt><dd className="mono">{JSON.stringify(step.when)}</dd></>}
+          {secrets.length > 0 && <><dt>Secrets</dt><dd>{secrets.map(([name, r]) => <div key={name}><Mono>{name}</Mono> ← <Mono>{`${r.store}:${r.key}${r.field ? `#${r.field}` : ""}`}</Mono></div>)}</dd></>}
           <dt>Retry</dt><dd>{step.retry ? `up to ${step.retry} more time${step.retry > 1 ? "s" : ""}` : "no"}</dd>
           <dt>Timeout</dt><dd>{step.timeout}</dd>
           {step.queued_at > 0 && step.started_at > 0 && <><dt>Waited</dt><dd>{duration(step.started_at - step.queued_at)} for a runner</dd></>}

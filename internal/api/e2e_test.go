@@ -28,26 +28,35 @@ type env struct {
 	eng *engine.Engine
 	srv *httptest.Server
 	dir string
+	db  string // the database address
 }
 
 func setup(t *testing.T, ttl time.Duration) *env {
 	t.Helper()
 	dir := t.TempDir()
-	eng, err := engine.Open(engine.Options{Database: testdb.New(t), LeaseTTL: ttl, Logger: quiet()})
+	db := testdb.New(t)
+	eng, err := engine.Open(engine.Options{Database: db, LeaseTTL: ttl, Logger: quiet()})
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, RunnerToken: "secret", Actor: "tester", Log: quiet()}
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
-	return &env{eng: eng, srv: srv, dir: dir}
+	return &env{eng: eng, srv: srv, dir: dir, db: db}
 }
 
 func (e *env) runner(t *testing.T, name string) (context.CancelFunc, chan struct{}) {
+	return e.startRunner(t, e.newRunner(name))
+}
+
+func (e *env) newRunner(name string) *runner.Runner {
+	return &runner.Runner{Client: runner.NewClient(e.srv.URL, "secret"), Exec: &executor.Host{},
+		Info: engine.RunnerInfo{ID: name, Name: name}, DataDir: filepath.Join(e.dir, name), Concurrency: 2, Log: quiet()}
+}
+
+func (e *env) startRunner(t *testing.T, r *runner.Runner) (context.CancelFunc, chan struct{}) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	r := &runner.Runner{Client: runner.NewClient(e.srv.URL, "secret"), Exec: &executor.Host{},
-		Info: engine.RunnerInfo{ID: name, Name: name}, DataDir: filepath.Join(e.dir, name), Concurrency: 2, Log: quiet()}
 	go func() { defer close(done); r.Run(ctx) }()
 	t.Cleanup(func() { cancel(); <-done })
 	return cancel, done

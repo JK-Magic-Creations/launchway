@@ -30,6 +30,9 @@ export interface RunSummary {
 
 export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
 
+/** Where a secret is kept. The value itself never leaves the runner. */
+export interface SecretRef { store: string; key: string; field?: string }
+
 export interface StepView {
   run_id: string;
   id: string;
@@ -49,6 +52,7 @@ export interface StepView {
   run?: string;
   needs?: string[];
   when?: Condition;
+  secrets?: Record<string, SecretRef>;
   retry: number;
   timeout: string;
 }
@@ -65,6 +69,7 @@ export interface GraphStep {
   needs?: string[];
   when?: Condition;
   env?: Record<string, string>;
+  secrets?: Record<string, SecretRef>;
   retry: number;
   timeout: string;
 }

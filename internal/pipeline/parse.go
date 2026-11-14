@@ -151,7 +151,6 @@ var notYet = map[string]string{
 	"kind":     "release, promote, approval and input nodes arrive in a later milestone",
 	"outputs":  "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
 	"runs_on":  "runner pools arrive in a later milestone",
-	"secrets":  "secret references arrive in a later milestone",
 	"matrix":   "matrix expansion arrives in a later milestone",
 	"inputs":   "run inputs arrive in a later milestone",
 	"schedule": "scheduled triggers arrive in a later milestone",
@@ -179,7 +178,9 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 }
 
 var (
-	stepKeys      = []string{"container", "image", "run", "needs", "when", "env", "retry", "timeout"}
+	stepKeys      = []string{"container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout"}
+	secretKeys    = []string{"store", "key", "field"}
+	storeNameRe   = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
 	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command"}
 	containerRe   = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$`)
 	quantityRe    = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?(m|k|M|G|T|Ki|Mi|Gi|Ti)?$`)
@@ -267,6 +268,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			ps.add(k, at, "%q is not a valid step name: use lower-case letters, digits, hyphens and underscores", k.Value)
 		}
 		s := &Step{ID: k.Value, Line: k.Line, Timeout: Duration(DefaultTimeout)}
+		var secretsNode *yaml.Node
 		ps.eachKey(v, at, stepKeys, func(k2, v2 *yaml.Node) {
 			where := at + "." + k2.Value
 			switch k2.Value {
@@ -282,6 +284,9 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				s.When = ps.parseWhen(v2, where)
 			case "env":
 				s.Env = ps.parseEnv(v2, where)
+			case "secrets":
+				secretsNode = v2
+				s.Secrets = ps.parseSecrets(v2, where)
 			case "retry":
 				s.Retry = ps.int(v2, where)
 				if s.Retry < 0 || s.Retry > MaxRetry {
@@ -316,6 +321,14 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		}
 		if strings.TrimSpace(s.Run) == "" {
 			ps.add(k, at+".run", "a script to run is required")
+		}
+		if secretsNode != nil && secretsNode.Kind == yaml.MappingNode {
+			for i := 0; i < len(secretsNode.Content); i += 2 {
+				name := secretsNode.Content[i]
+				if _, ok := s.Env[name.Value]; ok {
+					ps.add(name, at+".secrets."+name.Value, "%q is also set under env; a variable comes from one or the other", name.Value)
+				}
+			}
 		}
 		p.Steps = append(p.Steps, s)
 	}
@@ -362,6 +375,52 @@ func (ps *parser) parseEnv(n *yaml.Node, at string) map[string]string {
 		env[k.Value] = ps.str(v, at+"."+k.Value)
 	}
 	return env
+}
+
+// ValidStoreName reports whether name can name a secret store.
+func ValidStoreName(name string) bool { return storeNameRe.MatchString(name) }
+
+// parseSecrets reads a mapping of variable names to secret references.
+func (ps *parser) parseSecrets(n *yaml.Node, at string) map[string]SecretRef {
+	out := map[string]SecretRef{}
+	if n.Kind != yaml.MappingNode {
+		ps.add(n, at, "secrets is a mapping of variable names to references, for example: TOKEN: { store: vault, key: apps/x, field: token }")
+		return out
+	}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		k, v := n.Content[i], n.Content[i+1]
+		where := at + "." + k.Value
+		switch _, dup := out[k.Value]; {
+		case dup:
+			ps.add(k, where, "%q is written twice", k.Value)
+			continue
+		case !envKeyRe.MatchString(k.Value):
+			ps.add(k, where, "%q is not a valid variable name", k.Value)
+		case strings.HasPrefix(strings.ToUpper(k.Value), "LAUNCHWAY_"):
+			ps.add(k, where, "names starting with LAUNCHWAY_ are reserved")
+		}
+		var ref SecretRef
+		ps.eachKey(v, where, secretKeys, func(k2, v2 *yaml.Node) {
+			switch k2.Value {
+			case "store":
+				ref.Store = ps.str(v2, where+".store")
+			case "key":
+				ref.Key = ps.str(v2, where+".key")
+			case "field":
+				ref.Field = ps.str(v2, where+".field")
+			}
+		})
+		if v.Kind == yaml.MappingNode {
+			if !ValidStoreName(ref.Store) {
+				ps.add(v, where+".store", "name the store, in lower case, for example: store: vault")
+			}
+			if strings.TrimSpace(ref.Key) == "" {
+				ps.add(v, where+".key", "a key is required")
+			}
+		}
+		out[k.Value] = ref
+	}
+	return out
 }
 
 func (ps *parser) checkPattern(n *yaml.Node, at, pattern string) {
