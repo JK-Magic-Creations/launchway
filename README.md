@@ -42,6 +42,20 @@ single server keeps its data in an embedded SQLite file, which suits development
 installs. Sessions, API tokens and sign-ins in progress are kept in the database too, so a browser
 or script may be sent to any server.
 
+## Run it on Kubernetes
+
+`make image` builds a container image, and the Helm chart in `deploy/helm/launchway` runs
+several servers against your PostgreSQL database, with runners that execute steps in pods in a
+namespace of your choice:
+
+```sh
+helm install launchway deploy/helm/launchway -n launchway --create-namespace \
+  --set database.existingSecret=launchway-database
+```
+
+See [deploy/README.md](deploy/README.md) for the required values, a high-availability example,
+upgrades, and security notes.
+
 ## Try it on one machine
 
 You need Go 1.27+, Node 24+, Git, and Podman or Docker.

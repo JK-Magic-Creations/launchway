@@ -1,0 +1,291 @@
+# Default values for the Launchway chart. See deploy/README.md for a walk-through and
+# examples/ha.yaml for a production-shaped example.
+#
+# One of these is required, or the install fails:
+#   database.url, database.existingSecret, or postgresql.enabled=true (for trying the chart only).
+
+# -- Overrides the chart name in resource names.
+nameOverride: ""
+# -- Overrides the full resource name prefix (default: <release>-launchway).
+fullnameOverride: ""
+# -- Labels added to every resource the chart creates.
+commonLabels: {}
+
+image:
+  # -- The Launchway image; servers and runners use the same one.
+  repository: ghcr.io/jk-magic-creations/launchway
+  # -- The image tag. Defaults to the chart's appVersion.
+  tag: ""
+  # -- An image digest (sha256:...). When set it is used instead of the tag.
+  digest: ""
+  pullPolicy: IfNotPresent
+
+# -- Secrets for pulling the Launchway (and development PostgreSQL) image, by name.
+imagePullSecrets: []
+
+# ---------------------------------------------------------------------------------------------
+# The server configuration file. The chart renders it into a ConfigMap mounted at
+# /etc/launchway/launchway.yaml; changing it restarts the servers. The database URL and the
+# runner token are never written here: they reach the servers as environment variables from
+# Secrets. Servers always run with their built-in runner disabled; steps run on the runners
+# below.
+# ---------------------------------------------------------------------------------------------
+config:
+  # -- Address the servers listen on, inside the pod. The port is also the container port.
+  listen: 0.0.0.0:8080
+  # -- Repositories to watch. Each needs a URL the servers and runners can clone
+  # (https://... or ssh://...). Example:
+  #   - name: payments
+  #     repo: https://git.example.com/team/payments.git
+  #     branch: main     # default branch for manual runs
+  #     poll: 30s        # how often to look for pushes
+  projects: []
+  # -- Any other top-level settings, merged into the file as they are, so that new settings
+  # need no chart change. For example:
+  #   user: ci-admin
+  #   approvals: { allow_self: false }
+  # The server rejects settings it does not know, so a typo here stops the servers from
+  # starting (the pod logs say which key). listen, data, database and projects are set by
+  # the chart and may not appear here; runner.enabled may not be true.
+  extraConfig: {}
+
+# ---------------------------------------------------------------------------------------------
+# The shared PostgreSQL database. Every server must use the same one.
+# ---------------------------------------------------------------------------------------------
+database:
+  # -- A postgres:// URL. The chart stores it in a Secret of its own. Prefer existingSecret,
+  # so that the password is not in your values.
+  url: ""
+  # -- The name of an existing Secret, in the release namespace, holding the URL.
+  existingSecret: ""
+  # -- The key in existingSecret that holds the URL.
+  existingSecretKey: url
+
+# ---------------------------------------------------------------------------------------------
+# The token runners present to servers. Servers and runners read it from the same Secret.
+# ---------------------------------------------------------------------------------------------
+runnerToken:
+  # -- The name of an existing Secret holding the token. If empty, the chart creates a Secret
+  # with a random token on first install and keeps the same token on every upgrade.
+  existingSecret: ""
+  # -- The key in the Secret that holds the token.
+  existingSecretKey: token
+
+# ---------------------------------------------------------------------------------------------
+# Servers: the API, the web UI and the run engine. They keep nothing that matters on disk;
+# any number can run against the same database.
+# ---------------------------------------------------------------------------------------------
+server:
+  # -- Number of servers. Two or more for high availability.
+  replicas: 2
+  # -- Rolling update settings. maxUnavailable 0 keeps every existing server serving until its
+  # replacement is ready.
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  # -- How long a stopping server keeps serving after being taken out of the Service, so that
+  # requests already routed to it still succeed. Uses the Kubernetes preStop sleep action.
+  preStopSleepSeconds: 10
+  # -- Time allowed for a server to stop, including preStopSleepSeconds.
+  terminationGracePeriodSeconds: 30
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  # -- The data directory holds mirrors of the projects' repositories: a cache that is
+  # rebuilt when a pod starts. Size it to fit every project's repository.
+  dataVolume:
+    sizeLimit: 2Gi
+  # -- Probes. The startup probe allows time for database migrations, which run when a server
+  # starts and are taken in turn under a database lock.
+  startupProbe:
+    httpGet: { path: /healthz, port: http }
+    periodSeconds: 2
+    failureThreshold: 90
+  livenessProbe:
+    httpGet: { path: /healthz, port: http }
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  readinessProbe:
+    httpGet: { path: /readyz, port: http }
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 2
+  # -- Spread servers across nodes when the scheduler can (soft: pods still schedule on one
+  # node). Ignored if topologySpreadConstraints is set.
+  spreadAcrossNodes: true
+  # -- Topology spread constraints, replacing the default spread across nodes. Use this to
+  # spread across zones as well.
+  topologySpreadConstraints: []
+  # -- Affinity rules. The default adds a soft anti-affinity between servers.
+  affinity: {}
+  nodeSelector: {}
+  tolerations: []
+  priorityClassName: ""
+  podAnnotations: {}
+  podLabels: {}
+  # -- Extra environment variables for the servers.
+  extraEnv: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  podDisruptionBudget:
+    enabled: true
+    # -- At most this many servers may be evicted at once (by a node drain, for example).
+    maxUnavailable: 1
+  serviceAccount:
+    # -- Create a ServiceAccount for the servers. It has no API permissions and its token is
+    # not mounted.
+    create: true
+    # -- The name of the ServiceAccount to use (default: <fullname>-server).
+    name: ""
+    annotations: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+ingress:
+  # -- Expose the UI and API through an Ingress. There is no sign-in unless you configure it:
+  # do not expose Launchway to an untrusted network.
+  enabled: false
+  className: ""
+  annotations: {}
+  # -- Each host routes every path to the servers.
+  hosts: []
+  #  - launchway.example.com
+  tls: []
+  #  - secretName: launchway-tls
+  #    hosts: [launchway.example.com]
+
+httpRoute:
+  # -- Expose the UI and API through a Gateway API HTTPRoute (gateway.networking.k8s.io/v1).
+  enabled: false
+  annotations: {}
+  # -- The Gateways to attach to.
+  parentRefs: []
+  #  - name: public
+  #    namespace: gateway-system
+  #    sectionName: https
+  hostnames: []
+
+# ---------------------------------------------------------------------------------------------
+# Runners: `launchway runner` with the Kubernetes executor. Each run gets one pod in
+# runner.kubernetes.namespace. Runners only make outbound connections, to the servers and to
+# the Kubernetes API.
+# ---------------------------------------------------------------------------------------------
+runner:
+  # -- Deploy runners. Turn off if your runners live elsewhere (they then need the runner
+  # token and a URL that reaches the servers).
+  enabled: true
+  # -- Number of runner pods. A run whose runner is lost has its step run again by another.
+  replicas: 2
+  # -- Steps each runner executes at once.
+  concurrency: 2
+  # -- The server URL runners connect to. Default: the chart's Service.
+  serverURL: ""
+  kubernetes:
+    # -- The namespace step pods run in. Default: the release namespace. Runners are granted
+    # access to pods in this namespace only. It must exist unless createNamespace is true.
+    namespace: ""
+    # -- Create the step namespace with the chart (deleted again on uninstall, with any step
+    # pods in it).
+    createNamespace: false
+    # -- Labels for a namespace created by the chart. Step pods set no security context, so
+    # the namespace must admit them: Pod Security "baseline" does, "restricted" does not.
+    namespaceLabels:
+      pod-security.kubernetes.io/enforce: baseline
+  # -- Extra arguments for `launchway runner`. `launchway runner` currently has no flags for
+  # the Kubernetes executor's other settings (helper image, cpu/memory, node selector, image
+  # pull secrets, service account for step pods): steps use the built-in defaults. Pass such
+  # flags here once the runner has them.
+  extraArgs: []
+  # -- Secret stores runners may read, the same map as runner.secrets in the server
+  # configuration (see the main README). Rendered to a file passed with --secrets-config.
+  # Mount any token or certificate files they refer to with extraVolumes/extraVolumeMounts.
+  # Unless you define a store called "env", the chart defines one that allows no keys: the
+  # runner would otherwise add an "env" store that lets any pipeline read the runner's
+  # environment.
+  secretStores: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 1Gi
+  # -- Runners clone each run's commit into this volume and copy it into the step pod.
+  dataVolume:
+    sizeLimit: 10Gi
+  # -- Time allowed for a runner to stop. On SIGTERM it stops its steps (10s grace each) and
+  # hands them back to be run again.
+  terminationGracePeriodSeconds: 60
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  # -- Spread runners across nodes when the scheduler can (soft).
+  spreadAcrossNodes: true
+  topologySpreadConstraints: []
+  priorityClassName: ""
+  podAnnotations: {}
+  podLabels: {}
+  extraEnv: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+  serviceAccount:
+    # -- Create the runners' ServiceAccount. It is bound to a Role in the step namespace.
+    create: true
+    # -- The name of the ServiceAccount to use (default: <fullname>-runner).
+    name: ""
+    annotations: {}
+  rbac:
+    # -- Create the Role and RoleBinding that let runners manage step pods: pods (create, get,
+    # list, delete, patch), pods/exec (create, get) and pods/log (get), in the step namespace
+    # only.
+    create: true
+
+# Security settings shared by servers and runners. The image runs as user 65532.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+# ---------------------------------------------------------------------------------------------
+# A development PostgreSQL, for trying the chart only: one pod, no backups, no high
+# availability, no tuning. Use a managed or operator-run PostgreSQL in production and set
+# database.* instead.
+# ---------------------------------------------------------------------------------------------
+postgresql:
+  enabled: false
+  image:
+    repository: docker.io/library/postgres
+    tag: 17.12-alpine
+    pullPolicy: IfNotPresent
+  database: launchway
+  username: launchway
+  # -- If empty, a random password is generated once and kept across upgrades.
+  password: ""
+  persistence:
+    size: 1Gi
+    # -- The StorageClass for the volume (default: the cluster's default).
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi

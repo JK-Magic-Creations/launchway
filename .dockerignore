@@ -1,0 +1,11 @@
+# Only the sources the image is built from are sent to the builder.
+*
+!go.mod
+!go.sum
+!cmd/
+!internal/
+!web/
+web/node_modules/
+web/dist/
+**/*_test.go
+**/testdata/

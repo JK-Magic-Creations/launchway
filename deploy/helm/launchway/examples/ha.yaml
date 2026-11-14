@@ -1,0 +1,83 @@
+# A production-shaped installation: three servers spread across zones and nodes, an external
+# PostgreSQL, runners in their own namespace, and an Ingress with TLS.
+#
+#   kubectl create namespace launchway
+#   kubectl -n launchway create secret generic launchway-database \
+#     --from-literal=url='postgres://launchway:PASSWORD@db.internal:5432/launchway?sslmode=verify-full'
+#   kubectl create namespace launchway-steps
+#   helm install launchway deploy/helm/launchway -n launchway -f deploy/helm/launchway/examples/ha.yaml
+
+image:
+  repository: ghcr.io/jk-magic-creations/launchway
+  tag: "0.1.0"
+  # Pin by digest in production; it wins over the tag:
+  # digest: sha256:...
+
+database:
+  existingSecret: launchway-database
+  existingSecretKey: url
+
+config:
+  projects:
+    - name: payments
+      repo: https://git.example.com/team/payments.git
+      branch: main
+      poll: 30s
+  extraConfig:
+    approvals:
+      allow_self: false
+
+server:
+  replicas: 3
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { memory: 1Gi }
+  dataVolume:
+    sizeLimit: 10Gi
+  # Spread across zones first, then nodes. Both soft, so a zone outage does not block scheduling.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels: { app.kubernetes.io/name: launchway, app.kubernetes.io/instance: launchway, app.kubernetes.io/component: server }
+      matchLabelKeys: [pod-template-hash]
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels: { app.kubernetes.io/name: launchway, app.kubernetes.io/instance: launchway, app.kubernetes.io/component: server }
+      matchLabelKeys: [pod-template-hash]
+  priorityClassName: ""
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # The UI streams live updates over a long-lived request (/api/v1/stream).
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+  hosts: [launchway.example.com]
+  tls:
+    - secretName: launchway-tls
+      hosts: [launchway.example.com]
+
+runner:
+  replicas: 3
+  concurrency: 4
+  kubernetes:
+    # Created beforehand (see above), so that its quotas and policies are yours to manage.
+    namespace: launchway-steps
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { memory: 2Gi }
+  dataVolume:
+    sizeLimit: 20Gi
+  # Secret stores, read by the runners only. Vault with Kubernetes auth uses the runner's own
+  # service account token.
+  secretStores:
+    vault:
+      type: vault
+      address: https://vault.example.com:8200
+      role: launchway-runner
+      keys: ["ci/*"]

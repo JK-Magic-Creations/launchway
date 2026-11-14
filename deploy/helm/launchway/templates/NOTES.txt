@@ -1,0 +1,38 @@
+Launchway {{ include "launchway.imageTag" . }} is installed as release {{ .Release.Name }} in namespace {{ .Release.Namespace }}:
+  {{ .Values.server.replicas }} server(s) behind the Service {{ include "launchway.fullname" . }}
+{{- if .Values.runner.enabled }}
+  {{ .Values.runner.replicas }} runner(s), running steps in pods in namespace {{ include "launchway.stepNamespace" . }}
+{{- else }}
+  no runners: connect your own with the token in Secret {{ include "launchway.runnerTokenSecretName" . }}
+{{- end }}
+{{- if .Values.postgresql.enabled }}
+
+WARNING: postgresql.enabled=true deploys a single development database with no backups and no
+high availability. It is for trying the chart only.
+{{- end }}
+
+Open the web UI:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ . }}/
+{{- else }}
+  through your Ingress controller's address.
+{{- end }}
+{{- else if .Values.httpRoute.enabled }}
+{{- range .Values.httpRoute.hostnames }}
+  https://{{ . }}/   (through the Gateway)
+{{- else }}
+  through the Gateway's address.
+{{- end }}
+{{- else }}
+  kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "launchway.fullname" . }} 8080:{{ .Values.service.port }}
+  then browse to http://127.0.0.1:8080/
+{{- end }}
+
+Check that the servers are ready and that runners have connected:
+  kubectl --namespace {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+  curl -s http://127.0.0.1:8080/api/v1/runners      (with the port-forward above)
+
+SECURITY: Launchway has no sign-in unless you configure one. Anyone who can reach the Service,
+{{- if or .Values.ingress.enabled .Values.httpRoute.enabled }} the Ingress or the Gateway,{{ end }}
+can start, cancel and approve runs. Keep it on a trusted network.

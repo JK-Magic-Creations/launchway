@@ -1,0 +1,23 @@
+# TEST ONLY: values for trying the chart on a kind cluster with an image loaded into it.
+image:
+  repository: localhost/launchway
+  tag: 0.0.0-k8stest
+  pullPolicy: Never
+
+# A single development database. Never use this in production.
+postgresql:
+  enabled: true
+
+config:
+  projects:
+    # Served by git-server.yaml in the release namespace.
+    - name: demo
+      repo: http://git-server:8080/demo.git
+      branch: main
+      poll: 10s
+
+runner:
+  kubernetes:
+    # Step pods run in a namespace of their own, which the chart creates.
+    namespace: lw-pkg-steps
+    createNamespace: true

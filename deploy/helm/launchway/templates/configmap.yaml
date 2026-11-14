@@ -1,0 +1,27 @@
+{{- include "launchway.validate" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "launchway.fullname" . }}-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+data:
+  launchway.yaml: |
+    # Rendered by the Launchway Helm chart from config.* in the values.
+    # The database URL and the runner token come from Secrets, as environment variables.
+    {{- include "launchway.serverConfig" . | nindent 4 }}
+{{- if .Values.runner.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "launchway.fullname" . }}-runner
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "runner") | nindent 4 }}
+data:
+  secret-stores.yaml: |
+    # Rendered by the Launchway Helm chart from runner.secretStores in the values.
+    {{- include "launchway.runnerSecretStores" . | nindent 4 }}
+{{- end }}

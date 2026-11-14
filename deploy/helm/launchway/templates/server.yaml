@@ -1,0 +1,183 @@
+{{- $fullname := include "launchway.fullname" . -}}
+{{- $sa := include "launchway.serverServiceAccount" . -}}
+{{- if .Values.server.serviceAccount.create }}
+# The servers need no access to the Kubernetes API.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $sa }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+  {{- with .Values.server.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: false
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+spec:
+  replicas: {{ .Values.server.replicas }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    {{- with .Values.server.strategy.rollingUpdate }}
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "launchway.componentLabels" (list . "server") | nindent 8 }}
+        {{- with .Values.server.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include "launchway.serverConfig" . | sha256sum }}
+        {{- with .Values.server.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ $sa }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.server.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.server.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with include "launchway.spread" (list . "server") | trim }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      {{- with .Values.server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: server
+          image: {{ include "launchway.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["server", "--config", "/etc/launchway/launchway.yaml"]
+          env:
+            - name: LAUNCHWAY_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "launchway.databaseSecretName" . }}
+                  key: {{ include "launchway.databaseSecretKey" . }}
+            - name: LAUNCHWAY_RUNNER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "launchway.runnerTokenSecretName" . }}
+                  key: {{ include "launchway.runnerTokenSecretKey" . }}
+            {{- with .Values.server.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ include "launchway.port" . }}
+              protocol: TCP
+          {{- with .Values.server.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.server.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.server.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.server.preStopSleepSeconds }}
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: {{ .Values.server.preStopSleepSeconds }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/launchway
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/launchway
+            - name: tmp
+              mountPath: /tmp
+            {{- with .Values.server.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $fullname }}-server
+        - name: data
+          emptyDir:
+            {{- with .Values.server.dataVolume.sizeLimit }}
+            sizeLimit: {{ . }}
+            {{- end }}
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
+        {{- with .Values.server.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- if .Values.server.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $fullname }}-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+spec:
+  maxUnavailable: {{ .Values.server.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 6 }}
+{{- end }}

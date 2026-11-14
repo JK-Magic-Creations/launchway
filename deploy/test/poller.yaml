@@ -1,0 +1,39 @@
+# TEST ONLY. Asks the Launchway Service for a URL five times a second, from inside the
+# cluster, and logs one line per request: "ok" or "FAIL". Used to show that the API keeps
+# answering while server pods are deleted or rolled.
+#   kubectl logs poller | grep -c ' ok'      kubectl logs poller | grep FAIL
+apiVersion: v1
+kind: Pod
+metadata:
+  name: poller
+  labels: { app.kubernetes.io/name: poller, app.kubernetes.io/part-of: launchway-test }
+spec:
+  automountServiceAccountToken: false
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile: { type: RuntimeDefault }
+  containers:
+    - name: poller
+      image: docker.io/library/busybox:1.37
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: URL
+          value: http://lw-launchway:8080/readyz
+      command:
+        - sh
+        - -c
+        - |
+          while true; do
+            if out=$(wget -q -O- -T 3 "$URL" 2>&1); then
+              echo "$(date +%T) ok $out"
+            else
+              echo "$(date +%T) FAIL $out"
+            fi
+            sleep 0.2
+          done
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: { drop: [ALL] }

@@ -295,8 +295,6 @@ func cmdRunner(args []string) error {
 	if err != nil {
 		return err
 	}
-	// On your own machine your environment is yours to use.
-	secretStores.AddLocalEnv()
 	host, _ := os.Hostname()
 	if *name == "" {
 		*name = host
@@ -386,10 +384,11 @@ func cmdRun(args []string) error {
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
 	fs.Parse(args)
-	secretStores, err := openSecrets(*secretsConfig)
+	secretStores, err := localSecrets(*secretsConfig)
 	if err != nil {
 		return err
 	}
+
 	path := *file
 	if path == "" {
 		path = pipelineFile(nil)
@@ -599,6 +598,18 @@ func k8sFlags(fs *flag.FlagSet) *executor.KubernetesOptions {
 // settings, the same as runner.secrets in the server's configuration.
 func secretsFlag(fs *flag.FlagSet) *string {
 	return fs.String("secrets-config", "", "YAML file of secret stores")
+}
+
+// localSecrets is openSecrets for 'launchway run' on your own machine, where
+// your environment is yours to use: it adds the env store. A server or
+// shared runner must never do this, or any pipeline could read the runner's
+// environment.
+func localSecrets(file string) (*secrets.Resolver, error) {
+	r, err := openSecrets(file)
+	if err != nil {
+		return nil, err
+	}
+	return r.AddLocalEnv(), nil
 }
 
 // openSecrets reads and checks the secret stores in file, if one is given.

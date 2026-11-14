@@ -1,0 +1,18 @@
+apiVersion: v2
+name: launchway
+description: >-
+  Launchway, a build and delivery platform: highly available servers sharing one PostgreSQL
+  database, and runners that execute steps in Kubernetes pods.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.30.0-0"
+home: https://github.com/jk-magic-creations/launchway
+sources:
+  - https://github.com/jk-magic-creations/launchway
+keywords:
+  - ci
+  - cd
+  - pipelines
+annotations:
+  licenses: Apache-2.0

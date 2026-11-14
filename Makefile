@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build test test-postgres test-vault test-containers test-kubernetes run demo clean
+.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes run demo clean
 
 all: web build
 
@@ -10,6 +10,19 @@ web:
 
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/launchway ./cmd/launchway
+
+# Builds the container image (see Dockerfile). Docker works too: CONTAINER=docker.
+CONTAINER ?= podman
+IMAGE ?= launchway:$(VERSION)
+REVISION ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+image:
+	$(CONTAINER) build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) \
+		--build-arg CREATED=$(shell date -u +%Y-%m-%dT%H:%M:%SZ) -t $(IMAGE) .
+
+# Checks the Helm chart in deploy/helm/launchway.
+chart-lint:
+	helm lint deploy/helm/launchway --set postgresql.enabled=true
+	helm template t deploy/helm/launchway -f deploy/helm/launchway/examples/ha.yaml >/dev/null
 
 test:
 	go vet ./...
