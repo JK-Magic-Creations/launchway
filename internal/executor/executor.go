@@ -17,6 +17,8 @@ import (
 
 // Spec is one step attempt to execute.
 type Spec struct {
+	RunID     string            // the run it belongs to
+	Images    []string          // every image the run uses (the Kubernetes executor starts them together)
 	Name      string            // unique, safe for a container name
 	Image     string            // ignored by the host executor
 	Script    string            // run with sh -e
@@ -33,6 +35,21 @@ type Sink func(stream, text string)
 type Executor interface {
 	Name() string
 	Run(ctx context.Context, s Spec, out Sink) (exitCode int, err error)
+}
+
+// RunInfo is what the server says about a run, for cleaning up after it.
+type RunInfo struct {
+	ID         string `json:"id"`
+	Status     string `json:"status"`
+	FinishedAt int64  `json:"finished_at"`
+}
+
+// RunLookup asks the server about runs. Runs it does not know are omitted.
+type RunLookup func(ctx context.Context, ids []string) (map[string]RunInfo, error)
+
+// Cleaner is implemented by executors that hold resources per run.
+type Cleaner interface {
+	Cleanup(ctx context.Context, lookup RunLookup) error
 }
 
 // OutputsFile is where a step writes key=value outputs, relative to MetaDir.
@@ -72,9 +89,18 @@ func Auto() Executor {
 	return &Host{}
 }
 
-// ByName returns the executor with the given name: container, host or auto.
-func ByName(name string) (Executor, error) {
+// Options carry settings that only some executors need.
+type Options struct {
+	Kubernetes KubernetesOptions
+	RunnerID   string
+}
+
+// ByName returns the executor with the given name: auto, container, podman,
+// docker, host or kubernetes.
+func ByName(name string, o Options) (Executor, error) {
 	switch name {
+	case "kubernetes", "k8s":
+		return NewKubernetes(o.Kubernetes, o.RunnerID)
 	case "", "auto":
 		return Auto(), nil
 	case "container", "podman", "docker":
@@ -89,7 +115,7 @@ func ByName(name string) (Executor, error) {
 	case "host":
 		return &Host{}, nil
 	}
-	return nil, errors.New("unknown executor " + name + "; use container, podman, docker, host or auto")
+	return nil, errors.New("unknown executor " + name + "; use auto, container, podman, docker, host or kubernetes")
 }
 
 // pipeLines copies r to out line by line, splitting very long lines.

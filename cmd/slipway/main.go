@@ -152,11 +152,14 @@ func cmdServer(args []string) error {
 	defer stopRunner()
 	runnerDone := make(chan struct{})
 	if cfg.RunnerEnabled() {
-		ex, err := executor.ByName(cfg.Runner.Executor)
+		host, _ := os.Hostname()
+		ex, err := executor.ByName(cfg.Runner.Executor, executor.Options{Kubernetes: cfg.Runner.Kubernetes, RunnerID: "builtin-" + host})
 		if err != nil {
 			return err
 		}
-		host, _ := os.Hostname()
+		if err := checkExecutor(ctx, ex); err != nil {
+			return err
+		}
 		r := &runner.Runner{
 			Client: runner.NewClient(url, token), Exec: ex,
 			Info:    engine.RunnerInfo{ID: "builtin-" + host, Name: host + " (built in)", Executor: ex.Name(), Version: version},
@@ -204,21 +207,25 @@ func cmdRunner(args []string) error {
 	name := fs.String("name", "", "a name for this runner (default: the host name)")
 	data := fs.String("data", "slipway-runner", "directory for workspaces")
 	conc := fs.Int("concurrency", 2, "steps to run at once")
-	exe := fs.String("executor", "auto", "auto, container, podman, docker or host")
+	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
+	k8s := k8sFlags(fs)
 	fs.Parse(args)
 	if *server == "" || *token == "" {
 		return errors.New("--server and --token are required")
-	}
-	ex, err := executor.ByName(*exe)
-	if err != nil {
-		return err
 	}
 	host, _ := os.Hostname()
 	if *name == "" {
 		*name = host
 	}
+	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "runner-" + *name})
+	if err != nil {
+		return err
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if err := checkExecutor(ctx, ex); err != nil {
+		return err
+	}
 	r := &runner.Runner{Client: runner.NewClient(*server, *token), Exec: ex,
 		Info:    engine.RunnerInfo{ID: "runner-" + *name, Name: *name, Executor: ex.Name(), Version: version},
 		DataDir: *data, Concurrency: *conc}
@@ -291,7 +298,8 @@ func cmdGraph(args []string) error {
 func cmdRun(args []string) error {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	file := fs.String("file", "", "pipeline file (default .slipway/pipeline.yaml)")
-	exe := fs.String("executor", "auto", "auto, container, podman, docker or host")
+	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
+	k8s := k8sFlags(fs)
 	fs.Parse(args)
 	path := *file
 	if path == "" {
@@ -301,8 +309,11 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
-	ex, err := executor.ByName(*exe)
+	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "local-" + currentUser()})
 	if err != nil {
+		return err
+	}
+	if err := checkExecutor(context.Background(), ex); err != nil {
 		return err
 	}
 	dir, err := os.Getwd()
@@ -364,6 +375,12 @@ func cmdRun(args []string) error {
 		}
 		pr.update(eng, d)
 		if d.Status.Terminal() {
+			// A local run ends with this process, so release what it held.
+			if cl, ok := ex.(executor.Cleaner); ok {
+				cctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				_ = cl.Cleanup(cctx, func(context.Context, []string) (map[string]executor.RunInfo, error) { return nil, nil })
+				cancel()
+			}
 			pr.summary(d)
 			if d.Status != engine.RunSucceeded {
 				return exitErr(1)
@@ -384,6 +401,24 @@ func cmdRun(args []string) error {
 		case <-time.After(150 * time.Millisecond):
 		}
 	}
+}
+
+// k8sFlags adds the Kubernetes executor's command-line settings.
+func k8sFlags(fs *flag.FlagSet) *executor.KubernetesOptions {
+	o := &executor.KubernetesOptions{}
+	fs.StringVar(&o.Context, "k8s-context", "", "kubeconfig context for the kubernetes executor (default: current)")
+	fs.StringVar(&o.Namespace, "k8s-namespace", "", "namespace for step pods (default: the context's)")
+	return o
+}
+
+// checkExecutor lets executors that can verify their setup do so at start-up.
+func checkExecutor(ctx context.Context, ex executor.Executor) error {
+	if c, ok := ex.(interface{ Check(context.Context) error }); ok {
+		cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		return c.Check(cctx)
+	}
+	return nil
 }
 
 func currentUser() string {

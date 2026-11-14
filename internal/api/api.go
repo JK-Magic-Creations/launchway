@@ -45,6 +45,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/runner/v1/heartbeat", s.runnerAuth(s.heartbeat))
 	mux.HandleFunc("POST /api/runner/v1/logs", s.runnerAuth(s.logs))
 	mux.HandleFunc("POST /api/runner/v1/finish", s.runnerAuth(s.finish))
+	mux.HandleFunc("POST /api/runner/v1/runs", s.runnerAuth(s.runInfos))
 
 	// UI and CLI API.
 	mux.HandleFunc("GET /api/v1/info", s.info)
@@ -216,6 +217,25 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) runInfos(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		IDs []string `json:"ids"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if len(in.IDs) > 5000 {
+		writeErr(w, http.StatusBadRequest, "at most 5000 runs per call")
+		return
+	}
+	infos, err := s.Engine.RunInfos(in.IDs)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, infos)
 }
 
 // ---- UI and CLI API ----

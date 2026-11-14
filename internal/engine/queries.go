@@ -277,6 +277,42 @@ func (e *Engine) Logs(runID, stepID string, attempt, after, limit int) ([]LogLin
 	return out, attempt, rows.Err()
 }
 
+// RunInfo is the little a runner needs to know about a run to tidy up after it.
+type RunInfo struct {
+	ID         string    `json:"id"`
+	Status     RunStatus `json:"status"`
+	FinishedAt int64     `json:"finished_at"`
+}
+
+// RunInfos looks up runs by ID. Unknown IDs are left out.
+func (e *Engine) RunInfos(ids []string) ([]RunInfo, error) {
+	out := []RunInfo{}
+	for len(ids) > 0 {
+		n := min(len(ids), 200)
+		batch := ids[:n]
+		ids = ids[n:]
+		args := make([]any, len(batch))
+		marks := make([]string, len(batch))
+		for i, id := range batch {
+			args[i], marks[i] = id, "?"
+		}
+		rows, err := e.db.Query(`SELECT id, status, finished_at FROM runs WHERE id IN (`+strings.Join(marks, ",")+`)`, args...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var r RunInfo
+			if err := rows.Scan(&r.ID, &r.Status, &r.FinishedAt); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			out = append(out, r)
+		}
+		rows.Close()
+	}
+	return out, nil
+}
+
 // Events returns a run's full event log, oldest first.
 func (e *Engine) Events(runID string) ([]Event, error) {
 	evs, err := loadEvents(e.db, runID)

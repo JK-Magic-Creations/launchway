@@ -239,9 +239,16 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	defer cancel()
 	start := time.Now()
 	code, err := r.Exec.Run(tctx, executor.Spec{
+		RunID: job.RunID, Images: job.Images,
 		Name: "slipway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: job.Env,
 		Workspace: ws, MetaDir: meta,
-	}, out)
+	}, func(stream, text string) {
+		if stream == "system" {
+			sys("%s", text)
+		} else {
+			out(stream, text)
+		}
+	})
 	took := time.Since(start).Round(100 * time.Millisecond)
 	switch {
 	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
@@ -249,6 +256,9 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		return engine.Result{Outcome: "failed", Error: fmt.Sprintf("timed out after %s", job.Timeout.D())}
 	case err != nil && ctx.Err() != nil:
 		return engine.Result{Outcome: "canceled"}
+	case errors.Is(err, executor.ErrInfrastructure):
+		sys("%v. The step will be run again.", err)
+		return engine.Result{Outcome: "lost", Error: err.Error()}
 	case err != nil:
 		sys("Could not run the step: %v", err)
 		return engine.Result{Outcome: "failed", Error: err.Error()}
@@ -308,8 +318,25 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 	return dir, nil
 }
 
-// collectGarbage removes workspaces nobody has touched for a day.
+// collectGarbage removes workspaces nobody has touched for a day, and lets
+// the executor release anything it holds for finished runs.
 func (r *Runner) collectGarbage(ctx context.Context) {
+	if cl, ok := r.Exec.(executor.Cleaner); ok {
+		go func() {
+			t := time.NewTicker(30 * time.Second)
+			defer t.Stop()
+			for {
+				if err := cl.Cleanup(ctx, r.Client.RunInfos); err != nil && ctx.Err() == nil {
+					r.Log.Warn("cleaning up after finished runs", "err", err)
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case <-t.C:
+				}
+			}
+		}()
+	}
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 	for {

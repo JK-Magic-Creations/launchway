@@ -565,3 +565,24 @@ func TestLeaseStopsWaitingWhenCallerGoesAway(t *testing.T) {
 		t.Fatal("Lease kept waiting after its caller left")
 	}
 }
+
+func TestLostOutcomeRequeues(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, "pipeline: demo\nsteps:\n  a: {image: x, run: y}\n  b: {image: z, run: y, needs: a}\n", Trigger{})
+	j := take(t, e)
+	if len(j.Images) != 2 || j.Images[0] != "x" || j.Images[1] != "z" {
+		t.Fatalf("images %v", j.Images)
+	}
+	if err := e.Finish(j.LeaseID, Result{Outcome: "lost", Error: "pod disappeared"}); err != nil {
+		t.Fatal(err)
+	}
+	j2 := take(t, e)
+	if j2.StepID != "a" || j2.Attempt != 2 {
+		t.Fatalf("got %s attempt %d", j2.StepID, j2.Attempt)
+	}
+	ok(t, e, j2, nil)
+	infos, _ := e.RunInfos([]string{id, "run_missing"})
+	if len(infos) != 1 || infos[0].ID != id || infos[0].Status != RunRunning {
+		t.Fatalf("infos %+v", infos)
+	}
+}

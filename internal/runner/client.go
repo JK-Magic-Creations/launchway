@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"slipway/internal/engine"
+	"slipway/internal/executor"
 )
 
 // ErrLeaseLost means the server no longer recognises the lease; the step
@@ -100,6 +101,19 @@ func (c *Client) Heartbeat(ctx context.Context, lease string) (bool, error) {
 func (c *Client) Logs(ctx context.Context, lease string, lines []engine.LogLine) error {
 	_, err := c.call(ctx, "logs", map[string]any{"lease_id": lease, "lines": lines}, nil)
 	return err
+}
+
+// RunInfos asks the server about runs, for tidying up resources held for them.
+func (c *Client) RunInfos(ctx context.Context, ids []string) (map[string]executor.RunInfo, error) {
+	var list []executor.RunInfo
+	if _, err := c.call(ctx, "runs", map[string]any{"ids": ids}, &list); err != nil {
+		return nil, err
+	}
+	out := make(map[string]executor.RunInfo, len(list))
+	for _, r := range list {
+		out[r.ID] = r
+	}
+	return out, nil
 }
 
 func (c *Client) Finish(ctx context.Context, lease string, res engine.Result) error {

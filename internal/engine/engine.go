@@ -94,11 +94,12 @@ type Job struct {
 	Timeout   pipeline.Duration `json:"timeout"`
 	Source    Source            `json:"source"`
 	SHA       string            `json:"sha,omitempty"`
+	Images    []string          `json:"images"` // every image the run's pipeline uses
 }
 
 // Result is how a step attempt ended, as reported by its runner.
 type Result struct {
-	Outcome  string            `json:"outcome"` // succeeded, failed or canceled
+	Outcome  string            `json:"outcome"` // succeeded, failed, canceled, or lost (the machinery failed; run it again)
 	ExitCode *int              `json:"exit_code,omitempty"`
 	Error    string            `json:"error,omitempty"`
 	Outputs  map[string]string `json:"outputs,omitempty"`
@@ -447,6 +448,13 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		case "succeeded":
 			p.Outcome = string(StepSucceeded)
 			c.emit(StepFinished, p)
+		case "lost":
+			if c.st.CancelRequested {
+				p.Reason = "canceled"
+				c.emit(StepCanceled, p)
+			} else {
+				c.lose(l.stepID, nonEmpty(res.Error, "the runner could not run the step"))
+			}
 		case "canceled":
 			if c.st.CancelRequested {
 				p.Reason = "canceled"
@@ -862,7 +870,16 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	} {
 		env[k] = v
 	}
+	var images []string
+	seen := map[string]bool{}
+	for _, ps := range st.Pipeline.Steps {
+		if !seen[ps.Image] {
+			seen[ps.Image] = true
+			images = append(images, ps.Image)
+		}
+	}
 	return &Job{
+		Images:  images,
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env,

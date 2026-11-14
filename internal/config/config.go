@@ -16,6 +16,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"slipway/internal/executor"
 	"slipway/internal/source"
 )
 
@@ -39,9 +40,10 @@ type ProjectConfig struct {
 
 // RunnerConfig controls the runner built into the server.
 type RunnerConfig struct {
-	Enabled     *bool  `yaml:"enabled"`
-	Concurrency int    `yaml:"concurrency"`
-	Executor    string `yaml:"executor"` // auto, container, podman, docker or host
+	Enabled     *bool                      `yaml:"enabled"`
+	Concurrency int                        `yaml:"concurrency"`
+	Executor    string                     `yaml:"executor"` // auto, container, podman, docker, host or kubernetes
+	Kubernetes  executor.KubernetesOptions `yaml:"kubernetes"`
 }
 
 // Load reads path. A missing file gives the defaults.
