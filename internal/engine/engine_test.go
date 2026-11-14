@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -67,7 +68,7 @@ var runner = RunnerInfo{ID: "runner-1", Name: "test"}
 // take leases one step (without waiting) and fails the test if there is none.
 func take(t *testing.T, e *Engine) *Job {
 	t.Helper()
-	j, err := e.Lease(runner, 0)
+	j, err := e.Lease(context.Background(), runner, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +83,7 @@ func take(t *testing.T, e *Engine) *Job {
 
 func none(t *testing.T, e *Engine) {
 	t.Helper()
-	j, err := e.Lease(runner, 0)
+	j, err := e.Lease(context.Background(), runner, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -423,7 +424,7 @@ func TestLongPollWakesWhenWorkArrives(t *testing.T) {
 	e, _ := newEngine(t)
 	got := make(chan *Job)
 	go func() {
-		j, _ := e.Lease(runner, 5*time.Second)
+		j, _ := e.Lease(context.Background(), runner, 5*time.Second)
 		got <- j
 	}()
 	time.Sleep(50 * time.Millisecond)
@@ -460,7 +461,7 @@ steps:
 			defer wg.Done()
 			r := RunnerInfo{ID: fmt.Sprintf("r%d", w)}
 			for {
-				j, err := e.Lease(r, 200*time.Millisecond)
+				j, err := e.Lease(context.Background(), r, 200*time.Millisecond)
 				if err != nil {
 					t.Error(err)
 					return
@@ -530,5 +531,37 @@ func TestLiveUpdatesArePublished(t *testing.T) {
 		case <-timeout:
 			t.Fatalf("missing live updates: %v", types)
 		}
+	}
+}
+
+func TestReleaseRequeuesSameAttempt(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, "pipeline: demo\nsteps:\n  a: {image: x, run: y}\n", Trigger{})
+	j, _ := e.Lease(context.Background(), runner, 0)
+	if err := e.Release(j.LeaseID); err != nil {
+		t.Fatal(err)
+	}
+	j2 := take(t, e)
+	if j2.Attempt != 1 {
+		t.Fatalf("attempt %d, want 1: a handed-back step was never tried", j2.Attempt)
+	}
+	ok(t, e, j2, nil)
+	want(t, statuses(t, e, id), "run", "succeeded")
+}
+
+func TestLeaseStopsWaitingWhenCallerGoesAway(t *testing.T) {
+	e, _ := newEngine(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error)
+	go func() { _, err := e.Lease(ctx, runner, time.Minute); done <- err }()
+	time.Sleep(30 * time.Millisecond)
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("err %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Lease kept waiting after its caller left")
 	}
 }

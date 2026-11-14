@@ -1,0 +1,122 @@
+package executor
+
+import (
+	"context"
+	"os"
+	"os/exec"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+)
+
+type capture struct {
+	mu    sync.Mutex
+	lines []string
+}
+
+func (c *capture) sink(stream, text string) {
+	c.mu.Lock()
+	c.lines = append(c.lines, stream+": "+text)
+	c.mu.Unlock()
+}
+
+func (c *capture) text() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return strings.Join(c.lines, "\n")
+}
+
+func spec(t *testing.T, script string) Spec {
+	return Spec{
+		Name: "slipway-test-" + strings.ToLower(strings.ReplaceAll(t.Name(), "/", "-")),
+		Image: "docker.io/library/alpine:3.22", Script: script,
+		Env: map[string]string{"GREETING": "hello world"}, Workspace: t.TempDir(), MetaDir: t.TempDir(),
+	}
+}
+
+func exercise(t *testing.T, ex Executor) {
+	t.Run("output, env and outputs", func(t *testing.T) {
+		var c capture
+		s := spec(t, "echo \"$GREETING\"\necho oops >&2\necho digest=sha256:abc >> \"$SLIPWAY_OUTPUTS\"\ntouch made-here")
+		code, err := ex.Run(context.Background(), s, c.sink)
+		if err != nil || code != 0 {
+			t.Fatalf("code %d err %v\n%s", code, err, c.text())
+		}
+		if !strings.Contains(c.text(), "stdout: hello world") || !strings.Contains(c.text(), "stderr: oops") {
+			t.Fatalf("output:\n%s", c.text())
+		}
+		if got := ReadOutputs(s.MetaDir)["digest"]; got != "sha256:abc" {
+			t.Fatalf("outputs: %q", got)
+		}
+		if _, err := os.Stat(s.Workspace + "/made-here"); err != nil {
+			t.Fatalf("the step did not run in the workspace: %v", err)
+		}
+	})
+	t.Run("failing command stops the script", func(t *testing.T) {
+		var c capture
+		code, err := ex.Run(context.Background(), spec(t, "false\necho should-not-print"), c.sink)
+		if err != nil || code == 0 {
+			t.Fatalf("code %d err %v", code, err)
+		}
+		if strings.Contains(c.text(), "should-not-print") {
+			t.Fatal("the script carried on after a failure")
+		}
+	})
+	t.Run("cancel stops it", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		var c capture
+		start := time.Now()
+		_, err := ex.Run(ctx, spec(t, "echo started\nsleep 300"), c.sink)
+		if err == nil {
+			t.Fatal("expected the context error")
+		}
+		if time.Since(start) > 30*time.Second {
+			t.Fatalf("took %s to stop", time.Since(start))
+		}
+	})
+}
+
+func TestHost(t *testing.T) { exercise(t, &Host{}) }
+
+func TestContainer(t *testing.T) {
+	if testing.Short() || os.Getenv("SLIPWAY_TEST_CONTAINERS") == "" {
+		t.Skip("set SLIPWAY_TEST_CONTAINERS=1 to run container tests")
+	}
+	c, err := DetectContainer()
+	if err != nil {
+		t.Skip(err)
+	}
+	if err := exec.Command(c.Bin, "pull", "-q", "docker.io/library/alpine:3.22").Run(); err != nil {
+		t.Skipf("cannot pull alpine: %v", err)
+	}
+	exercise(t, c)
+}
+
+func TestReadOutputs(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(dir+"/"+OutputsFile, []byte("a=1\n\nnot-a-pair\n b = 2 \nc=x=y\n"), 0o644)
+	got := ReadOutputs(dir)
+	if got["a"] != "1" || got["b"] != " 2 " || got["c"] != "x=y" || len(got) != 3 {
+		t.Fatalf("%v", got)
+	}
+}
+
+func TestLongLinesAreSplit(t *testing.T) {
+	var c capture
+	s := spec(t, "head -c 200000 /dev/zero | tr '\\0' 'x'; echo; echo done")
+	if code, err := (&Host{}).Run(context.Background(), s, c.sink); err != nil || code != 0 {
+		t.Fatal(code, err)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.lines) < 4 || c.lines[len(c.lines)-1] != "stdout: done" {
+		t.Fatalf("got %d lines", len(c.lines))
+	}
+	for _, l := range c.lines {
+		if len(l) > 64*1024+10 {
+			t.Fatalf("a line of %d bytes was not split", len(l))
+		}
+	}
+}

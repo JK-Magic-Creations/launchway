@@ -8,6 +8,7 @@
 package engine
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -281,8 +282,9 @@ func (e *Engine) Resume(runID, actor string) error {
 }
 
 // Lease hands the oldest queued step to a runner, waiting up to wait for one
-// to become available. It returns nil, nil if there is none.
-func (e *Engine) Lease(r RunnerInfo, wait time.Duration) (*Job, error) {
+// to become available. It returns nil, nil if there is none. It stops waiting
+// when ctx ends, for example because the runner disconnected.
+func (e *Engine) Lease(ctx context.Context, r RunnerInfo, wait time.Duration) (*Job, error) {
 	deadline := time.Now().Add(wait)
 	for {
 		ch := e.waitChan()
@@ -306,11 +308,41 @@ func (e *Engine) Lease(r RunnerInfo, wait time.Duration) (*Job, error) {
 			t.Stop()
 		case <-t.C:
 			return nil, nil
+		case <-ctx.Done():
+			t.Stop()
+			return nil, ctx.Err()
 		case <-e.stop:
 			t.Stop()
 			return nil, ErrClosed
 		}
 	}
+}
+
+// Release hands back a step that was leased but never started, for example
+// because the runner disconnected before receiving it. It is queued again
+// at once, as the same attempt.
+func (e *Engine) Release(leaseID string) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	l := e.leases[leaseID]
+	if l == nil {
+		return ErrLeaseLost
+	}
+	err := e.withRunLocked(l.runID, func(c *cmd) error {
+		s := c.st.Steps[l.stepID]
+		if s == nil || s.LeaseID != leaseID || s.Status != StepLeasedS {
+			return ErrLeaseLost
+		}
+		if c.st.CancelRequested {
+			c.emit(StepCanceled, Payload{Step: l.stepID, Attempt: s.Attempt, Reason: "the run was canceled"})
+		} else {
+			c.emit(StepQueued, Payload{Step: l.stepID, Attempt: s.Attempt, Reason: "handed back before it started"})
+		}
+		c.advance()
+		return nil
+	})
+	delete(e.leases, leaseID)
+	return err
 }
 
 func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
