@@ -238,6 +238,15 @@ CREATE TABLE push_decisions (
 );
 CREATE INDEX push_decisions_project ON push_decisions(project, at DESC);
 `,
+	// 3: a counter per project for run numbers, so that creating many runs
+	//    at once never collides.
+	`
+CREATE TABLE run_counters (
+  project TEXT PRIMARY KEY,
+  last    INTEGER NOT NULL
+);
+INSERT INTO run_counters(project, last) SELECT project, MAX(number) FROM runs GROUP BY project;
+`,
 }
 
 func migrate(d *dbx) error {

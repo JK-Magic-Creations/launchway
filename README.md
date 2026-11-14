@@ -3,7 +3,7 @@
 A build and delivery platform: one binary that runs your pipelines on a laptop, a home server, a
 Kubernetes cluster or a fleet of runners, with a live web UI.
 
-Launchway aims to take the best of Harness, Jenkins and GitHub Actions:
+What Launchway is built around:
 
 - a real delivery model (releases, promotion, verification, rollback);
 - pipelines that run the same on a laptop as on the server;

@@ -44,7 +44,7 @@ steps:
 func TestServersShareWork(t *testing.T) {
 	a, b, _ := pair(t)
 	servers := []*Engine{a, b}
-	const runs = 20
+	const runs = 60
 	var wg sync.WaitGroup
 	for i := 0; i < runs; i++ {
 		wg.Add(1)

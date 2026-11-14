@@ -296,10 +296,13 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 				return ErrAlreadyClaimed
 			}
 		}
-		// Two servers may pick the same number; UNIQUE(project, number)
-		// lets only one of them commit, and the other tries again.
+		// Take the next number from the project's counter. The counter row
+		// is locked until this transaction ends, so servers creating runs
+		// for one project at the same moment queue up briefly instead of
+		// colliding, and a rolled-back creation leaves no gap.
 		var number int
-		if err := c.tx.QueryRow(`SELECT COALESCE(MAX(number), 0) + 1 FROM runs WHERE project = ?`, nr.Project).Scan(&number); err != nil {
+		if err := c.tx.QueryRow(`INSERT INTO run_counters(project, last) VALUES(?, 1)
+			ON CONFLICT(project) DO UPDATE SET last = run_counters.last + 1 RETURNING last`, nr.Project).Scan(&number); err != nil {
 			return err
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: nr.Pipeline, Trigger: &trig, Source: &src})
