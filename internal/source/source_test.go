@@ -13,8 +13,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/launchway-dev/launchway/internal/engine"
-	"github.com/launchway-dev/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
 func run(t *testing.T, dir string, args ...string) {

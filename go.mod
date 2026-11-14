@@ -1,4 +1,4 @@
-module github.com/launchway-dev/launchway
+module github.com/jk-magic-creations/launchway
 
 go 1.27.4
 

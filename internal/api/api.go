@@ -16,10 +16,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/launchway-dev/launchway/internal/engine"
-	"github.com/launchway-dev/launchway/internal/hub"
-	"github.com/launchway-dev/launchway/internal/pipeline"
-	"github.com/launchway-dev/launchway/internal/source"
+	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/hub"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
 // Server holds what the handlers need.

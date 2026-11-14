@@ -1,6 +1,6 @@
 package engine
 
-import "github.com/launchway-dev/launchway/internal/pipeline"
+import "github.com/jk-magic-creations/launchway/internal/pipeline"
 
 // RunStatus is the state of a whole run.
 type RunStatus string

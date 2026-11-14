@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/launchway-dev/launchway/internal/engine"
-	"github.com/launchway-dev/launchway/internal/executor"
-	"github.com/launchway-dev/launchway/internal/pipeline"
-	"github.com/launchway-dev/launchway/internal/runner"
-	"github.com/launchway-dev/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/runner"
+	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
 func quiet() *slog.Logger {

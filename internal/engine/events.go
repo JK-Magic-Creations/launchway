@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"github.com/launchway-dev/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 // EventType names something that happened to a run. Events are never changed

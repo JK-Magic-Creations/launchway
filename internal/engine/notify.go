@@ -11,7 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/launchway-dev/launchway/internal/hub"
+	"github.com/jk-magic-creations/launchway/internal/hub"
 )
 
 // Servers sharing a PostgreSQL database tell each other about changes with

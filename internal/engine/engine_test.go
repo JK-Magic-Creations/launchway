@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/launchway-dev/launchway/internal/pipeline"
-	"github.com/launchway-dev/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
 // clock is a fake time source the tests move by hand.

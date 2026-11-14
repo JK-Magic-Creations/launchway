@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/launchway-dev/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 // RunSummary is a run as shown in lists.

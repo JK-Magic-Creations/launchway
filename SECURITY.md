@@ -7,5 +7,5 @@ to an untrusted network.
 ## Reporting a problem
 
 Please report security problems privately through GitHub's
-[private vulnerability reporting](https://github.com/launchway-dev/launchway/security/advisories/new)
+[private vulnerability reporting](https://github.com/jk-magic-creations/launchway/security/advisories/new)
 rather than in a public issue. We will acknowledge the report and keep you informed.

@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/launchway-dev/launchway/internal/hub"
-	"github.com/launchway-dev/launchway/internal/ids"
-	"github.com/launchway-dev/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/hub"
+	"github.com/jk-magic-creations/launchway/internal/ids"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 var (

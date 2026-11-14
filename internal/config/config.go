@@ -16,8 +16,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/launchway-dev/launchway/internal/executor"
-	"github.com/launchway-dev/launchway/internal/source"
+	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
 // Config is the whole server configuration. One file describes an

@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/launchway-dev/launchway/internal/testdb"
+	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
 // pair opens two engines on one PostgreSQL database: two servers.

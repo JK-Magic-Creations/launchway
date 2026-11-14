@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/launchway-dev/launchway/internal/engine"
-	"github.com/launchway-dev/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/executor"
 )
 
 // Runner leases steps and executes them, Concurrency at a time.
