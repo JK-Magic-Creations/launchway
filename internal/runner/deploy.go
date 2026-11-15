@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +35,9 @@ type DeployRunner struct {
 	ObserveEvery, ReportEvery time.Duration
 	// ActionTimeout bounds one action; default 10m.
 	ActionTimeout time.Duration
+	// IdleEvery is how often it reads an idle service (one nothing is
+	// deploying), reporting it at least every other time; default 30s.
+	IdleEvery time.Duration
 }
 
 // Run takes actions and observes until ctx ends.
@@ -53,11 +57,18 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	if d.ActionTimeout <= 0 {
 		d.ActionTimeout = 10 * time.Minute
 	}
+	if !slices.Contains(d.Info.Capabilities, engine.CapabilityIdle) {
+		d.Info.Capabilities = append(d.Info.Capabilities, engine.CapabilityIdle)
+	}
+	if d.IdleEvery <= 0 {
+		d.IdleEvery = 30 * time.Second
+	}
 	d.Log.Info("deploy runner started", "name", d.Info.Name, "targets", d.Info.Targets, "server", d.Client.Server)
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 	go func() { defer wg.Done(); d.actions(ctx) }()
 	go func() { defer wg.Done(); d.observe(ctx) }()
+	go func() { defer wg.Done(); d.commands(ctx) }()
 	wg.Wait()
 	lctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -309,8 +320,14 @@ func (d *DeployRunner) observe(ctx context.Context) {
 func (d *DeployRunner) watch(ctx context.Context, it engine.WatchItem) {
 	log := d.Log.With("deployment", it.Deployment, "run", it.RunID, "step", it.Step)
 	changed := make(chan struct{}, 1)
-	d.Agent.Watch(ctx, it, changed)
-	tick := time.NewTicker(d.ObserveEvery)
+	every, report := d.ObserveEvery, d.ReportEvery
+	if it.Kind == engine.WatchUnit {
+		// Idle: no watches, and slowly; bounded by the server too.
+		every, report = d.IdleEvery, 2*d.IdleEvery
+	} else {
+		d.Agent.Watch(ctx, it, changed)
+	}
+	tick := time.NewTicker(every)
 	defer tick.Stop()
 	var last []byte
 	var lastSent time.Time
@@ -322,7 +339,7 @@ func (d *DeployRunner) watch(ctx context.Context, it engine.WatchItem) {
 			return
 		}
 		data, _ := json.Marshal(snap)
-		if !slices.Equal(data, last) || time.Since(lastSent) >= d.ReportEvery {
+		if !slices.Equal(data, last) || time.Since(lastSent) >= report {
 			rctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			res, err := d.Client.Observe(rctx, d.Info, []engine.Observation{{Key: it.Key, Snapshot: snap}})
 			cancel()
@@ -349,6 +366,73 @@ func (d *DeployRunner) watch(ctx context.Context, it engine.WatchItem) {
 				return
 			}
 		case <-tick.C:
+		}
+	}
+}
+
+// commands takes commands on rollouts (promote, abort and the like) and
+// applies them, one at a time: they are rare, and each takes a second.
+func (d *DeployRunner) commands(ctx context.Context) {
+	backoff := time.Second
+	for ctx.Err() == nil {
+		job, err := d.Client.TakeCommand(ctx, d.Info, 25*time.Second)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			wait := backoff
+			if strings.Contains(err.Error(), "no such API endpoint") {
+				wait = 5 * time.Minute // a server that does not know commands
+			}
+			d.Log.Warn("could not ask the server for commands; retrying", "err", err, "in", wait)
+			select {
+			case <-time.After(wait):
+			case <-ctx.Done():
+			}
+			backoff = min(backoff*2, 30*time.Second)
+			continue
+		}
+		backoff = time.Second
+		if job == nil {
+			continue
+		}
+		d.command(ctx, job)
+	}
+}
+
+// command applies one command and reports it. A command the cluster could
+// not be reached for is handed back, and the runner pauses before taking
+// another.
+func (d *DeployRunner) command(ctx context.Context, job *engine.CommandJob) {
+	log := d.Log.With("command", job.ID, "action", job.Action, "deployment", job.Deployment)
+	until := time.UnixMilli(job.Until)
+	if time.Until(until) < 5*time.Second {
+		until = time.Now().Add(5 * time.Second)
+	}
+	actx, cancel := context.WithDeadline(context.Background(), until.Add(-2*time.Second))
+	result, detail, err := d.Agent.Command(actx, job, func(f string, a ...any) { log.Info(fmt.Sprintf(f, a...)) })
+	cancel()
+	res := engine.CommandResult{Take: job.Take, Result: result, Detail: detail}
+	pause := false
+	if err != nil {
+		res.Result, res.Detail = engine.CommandReleased, "the deploy runner could not reach the rollout: "+err.Error()
+		pause = true
+	}
+	for i := 0; i < 5; i++ {
+		rctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		err := d.Client.FinishCommand(rctx, d.Info, res)
+		cancel()
+		if err == nil || errors.Is(err, ErrLeaseLost) {
+			log.Info("command finished", "result", res.Result, "detail", res.Detail)
+			break
+		}
+		log.Warn("reporting a command's result failed; retrying", "err", err)
+		time.Sleep(time.Duration(i+1) * time.Second)
+	}
+	if pause {
+		select {
+		case <-time.After(10 * time.Second):
+		case <-ctx.Done():
 		}
 	}
 }

@@ -110,6 +110,10 @@ type envOpts struct {
 	// pipelines may use.
 	projects  []source.Project
 	libraries []source.Library
+	// Environments of deploy steps, and a policy to use instead of
+	// testPolicy.
+	environments []engine.Environment
+	policy       *auth.Policy
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -126,7 +130,7 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	}
 	o.idp.Now = o.clk.Now
 	no := false
-	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no})
+	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no, Environments: o.environments})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,6 +155,9 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 		OIDC: auth.NewOIDC(auth.OIDCOptions{Issuer: o.idp.URL, ClientID: o.idp.ClientID, ClientSecret: o.idp.ClientSecret,
 			RedirectURL: redirect, Now: o.clk.Now}),
 		Policy: testPolicy(t), IdleTimeout: 8 * time.Hour, Lifetime: 24 * time.Hour,
+	}
+	if o.policy != nil {
+		s.Auth.Policy = o.policy
 	}
 	srv.Config.Handler = s.Handler()
 	srv.Start()

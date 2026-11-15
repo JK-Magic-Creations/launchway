@@ -98,7 +98,7 @@ func (a *AuthConfig) Policy() (*auth.Policy, error) {
 			errs = append(errs, fmt.Errorf("access[%d]: %w", i, err))
 			continue
 		}
-		bs = append(bs, auth.Binding{Group: b.Group, User: b.User, Role: role, Projects: b.Projects})
+		bs = append(bs, auth.Binding{Group: b.Group, User: b.User, Role: role, Projects: b.Projects, Environments: b.Environments})
 	}
 	p, err := auth.NewPolicy(bs)
 	return p, errors.Join(append(errs, err)...)

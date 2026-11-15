@@ -292,6 +292,10 @@ type AccessBinding struct {
 	User     string   `yaml:"user"`
 	Role     string   `yaml:"role"`
 	Projects []string `yaml:"projects"`
+	// Environments, if set, limits what the binding grants on deployments
+	// (promote, abort and the like, and approvals that name a deployment)
+	// to these environments.
+	Environments []string `yaml:"environments"`
 }
 
 // ApprovalsConfig controls approval steps.

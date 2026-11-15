@@ -188,3 +188,20 @@ func (c *Client) Observe(ctx context.Context, info engine.RunnerInfo, obs []engi
 	_, err := c.call(ctx, "deploy/observe", map[string]any{"runner": info, "observations": obs}, &out)
 	return out.Results, err
 }
+
+// TakeCommand asks for a command on a rollout of the runner's targets,
+// waiting up to wait for one; nil when there is none.
+func (c *Client) TakeCommand(ctx context.Context, info engine.RunnerInfo, wait time.Duration) (*engine.CommandJob, error) {
+	var job engine.CommandJob
+	code, err := c.call(ctx, "deploy/commands", map[string]any{"runner": info, "wait_seconds": int(wait / time.Second)}, &job)
+	if err != nil || code == http.StatusNoContent {
+		return nil, err
+	}
+	return &job, nil
+}
+
+// FinishCommand reports what was done with a command.
+func (c *Client) FinishCommand(ctx context.Context, info engine.RunnerInfo, res engine.CommandResult) error {
+	_, err := c.call(ctx, "deploy/command-done", map[string]any{"runner": info, "result": res}, nil)
+	return err
+}

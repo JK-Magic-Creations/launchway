@@ -216,3 +216,28 @@ func (c *Cluster) WatchChanges(ctx context.Context, app, rolloutNS, rollout stri
 		go start(analysisRuns, rolloutNS, "")
 	}
 }
+
+// ErrNoStatusRight means the runner may not change the rollout's status.
+var ErrNoStatusRight = errors.New("the deploy runner may not change the rollout's status")
+
+// PatchRolloutStatus sets fields of a rollout's status (promote, abort and
+// the like are status changes), if its resourceVersion is still
+// resourceVersion: a change since it was read fails with a conflict, and
+// the caller reads it again. Only the status subresource is patched, which
+// is all the deploy runner may change on a rollout.
+func (c *Cluster) PatchRolloutStatus(ctx context.Context, ns, name, resourceVersion string, status map[string]any) error {
+	data, err := json.Marshal(map[string]any{"metadata": map[string]any{"resourceVersion": resourceVersion}, "status": status})
+	if err != nil {
+		return err
+	}
+	_, err = c.dyn.Resource(rollouts).Namespace(ns).Patch(ctx, name, types.MergePatchType, data, metav1.PatchOptions{FieldManager: "launchway"}, "status")
+	switch {
+	case err == nil:
+		return nil
+	case apierrors.IsForbidden(err) || apierrors.IsInvalid(err):
+		return fmt.Errorf("%w: %v", ErrNoStatusRight, err)
+	case apierrors.IsConflict(err):
+		return errConflict
+	}
+	return fmt.Errorf("%w: changing rollout %s/%s: %v", ErrUnavailable, ns, name, err)
+}

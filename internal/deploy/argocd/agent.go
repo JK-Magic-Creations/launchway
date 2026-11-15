@@ -182,6 +182,13 @@ func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ..
 	if _, err := a.check(job.Project, d); err != nil {
 		return nil, err
 	}
+	abort := ""
+	if d.AbortFirst && d.Rollout != nil {
+		var err error
+		if abort, err = a.abortFirst(ctx, d, log); err != nil {
+			return nil, err
+		}
+	}
 	repo, _, unlock, err := a.repo(ctx, job.Project, d.Repo, d.Branch, log)
 	if err != nil {
 		return nil, err
@@ -195,7 +202,7 @@ func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ..
 		// Older than the history searched: trust what the server recorded.
 		commit = d.Commit
 	}
-	facts := &engine.DeployFacts{Repo: d.Repo, Branch: d.Branch, Commit: commit}
+	facts := &engine.DeployFacts{Repo: d.Repo, Branch: d.Branch, Commit: commit, Abort: abort}
 	if commit == "" {
 		unlock()
 		log("Deployment %s made no commit on %s, so there is nothing to revert", d.Deployment, d.Branch)

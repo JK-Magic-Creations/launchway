@@ -146,6 +146,12 @@ func (st *RunState) applyControl(ev Event, s *StepState) {
 	case DeployCommandWithdrawn:
 		cs.State, cs.WithdrawnBy, cs.Detail, cs.DoneAt = CommandWithdrawn, ce.Actor, ce.Detail, ev.At
 	case DeployCommandTaken:
+		if ce.Take == "" {
+			// Handed back by a runner that could not reach the rollout: it
+			// waits again, and may be withdrawn.
+			cs.State, cs.Take, cs.Runner, cs.TakenUntil, cs.Detail = CommandPending, "", "", 0, ce.Detail
+			break
+		}
 		cs.State, cs.Take, cs.Runner, cs.TakenUntil = CommandTaken, ce.Take, ce.Runner, ce.Until
 		cs.Tries++
 	case DeployCommandDone:
@@ -423,10 +429,16 @@ type CommandJob struct {
 
 // CommandResult is what a deploy runner did with a command.
 type CommandResult struct {
-	Take   string `json:"take"`
-	Result string `json:"result"` // applied, already_applied, not_applied or failed
+	Take string `json:"take"`
+	// Result is applied, already_applied, not_applied or failed; or
+	// released: the runner could not reach the rollout and hands the
+	// command back, saying why in Detail, without using up a try.
+	Result string `json:"result"`
 	Detail string `json:"detail"`
 }
+
+// CommandReleased is the result a runner gives a command it hands back.
+const CommandReleased = "released"
 
 // TakeCommand hands a deploy runner the oldest command of its targets that
 // no runner holds, waiting up to wait for one.
@@ -546,7 +558,7 @@ func (e *Engine) FinishCommand(r RunnerInfo, targets []string, res CommandResult
 		return fmt.Errorf("%w: this server does not know commands on deployments", ErrConflict)
 	}
 	switch res.Result {
-	case deploy.Applied, deploy.AlreadyApplied, deploy.NotApplied, deploy.CommandFailed:
+	case deploy.Applied, deploy.AlreadyApplied, deploy.NotApplied, deploy.CommandFailed, CommandReleased:
 	default:
 		return fmt.Errorf("%w: result %q", ErrInvalid, res.Result)
 	}
@@ -565,6 +577,11 @@ func (e *Engine) FinishCommand(r RunnerInfo, targets []string, res CommandResult
 		cs := c.st.command(cmdID)
 		if cs == nil || cs.State != CommandTaken || cs.Take != res.Take {
 			return ErrLeaseLost
+		}
+		if res.Result == CommandReleased {
+			c.emit(DeployCommandTaken, Payload{Step: cs.Step, Deploy: &DeployEvent{ID: cs.Deployment,
+				Command: &CommandEvent{ID: cs.ID, Detail: clipText(res.Detail, 1000)}}})
+			return nil
 		}
 		c.commandDone(cs, res.Result, clipText(res.Detail, 1000))
 		return nil
@@ -813,6 +830,11 @@ func (c *cmd) persistControl() error {
 			_, err = c.tx.Exec(`UPDATE deploy_commands SET state = ?, withdrawn_by = ?, detail = ?, done_at = ? WHERE id = ?`,
 				CommandWithdrawn, d.Command.Actor, d.Command.Detail, ev.At, d.Command.ID)
 		case DeployCommandTaken:
+			if d.Command.Take == "" {
+				_, err = c.tx.Exec(`UPDATE deploy_commands SET state = ?, take_id = '', taken_by = '', taken_until = 0, detail = ? WHERE id = ?`,
+					CommandPending, d.Command.Detail, d.Command.ID)
+				break
+			}
 			_, err = c.tx.Exec(`UPDATE deploy_commands SET state = ?, take_id = ?, taken_by = ?, taken_until = ?, tries = tries + 1 WHERE id = ?`,
 				CommandTaken, d.Command.Take, d.Command.Runner, d.Command.Until, d.Command.ID)
 		case DeployCommandDone:

@@ -133,3 +133,38 @@ func TestClaims(t *testing.T) {
 		t.Errorf("custom claims: %+v", got)
 	}
 }
+
+// A binding with environments grants its role on deployments there only;
+// on the project otherwise as usual.
+func TestRoleOnEnvironment(t *testing.T) {
+	p, err := NewPolicy([]Binding{
+		{Group: "sre", Role: Operator, Environments: []string{"prod"}},
+		{Group: "dev", Role: Operator, Projects: []string{"shop"}, Environments: []string{"staging", "dev-*"}},
+		{Group: "all", Role: Viewer},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		group, project, env string
+		want                Role
+	}{
+		{"sre", "shop", "prod", Operator},
+		{"sre", "shop", "staging", NoRole},
+		{"dev", "shop", "staging", Operator},
+		{"dev", "shop", "dev-7", Operator},
+		{"dev", "shop", "prod", NoRole},
+		{"dev", "other", "staging", NoRole},
+		{"all", "shop", "prod", Viewer},
+	} {
+		if got := p.RoleOnEnvironment("u", []string{tc.group}, tc.project, tc.env); got != tc.want {
+			t.Errorf("%+v: %v", tc, got)
+		}
+	}
+	if p.RoleOn("u", []string{"dev"}, "shop") != Operator {
+		t.Error("environments took the project role away")
+	}
+	if _, err := NewPolicy([]Binding{{Group: "x", Role: Viewer, Environments: []string{"["}}}); err == nil {
+		t.Error("a bad environment pattern was accepted")
+	}
+}

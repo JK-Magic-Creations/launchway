@@ -115,6 +115,8 @@ func (s *Server) routes() []route {
 		{"POST /api/runner/v1/deploy/lease", runnerOnly, "", s.deployLease},
 		{"POST /api/runner/v1/deploy/watch", runnerOnly, "", s.deployWatch},
 		{"POST /api/runner/v1/deploy/observe", runnerOnly, "", s.deployObserve},
+		{"POST /api/runner/v1/deploy/commands", runnerOnly, "", s.deployCommands},
+		{"POST /api/runner/v1/deploy/command-done", runnerOnly, "", s.deployCommandDone},
 
 		// Signing in and out.
 		{"GET /auth/login", public, "", s.login},
@@ -151,6 +153,12 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/runners", readAny, "", s.listRunners},
 		{"GET /api/v1/environments", signedIn, "", s.listEnvironments},
 		{"GET /api/v1/deployments", signedIn, "", s.listDeployments},
+		{"GET /api/v1/runs/{id}/deployments/{dep}/controls", runRead, "", s.controls},
+		{"POST /api/v1/runs/{id}/deployments/{dep}/promote", runOperate, "deployment.promote", s.command("promote")},
+		{"POST /api/v1/runs/{id}/deployments/{dep}/promote-full", runOperate, "deployment.promote_full", s.command("promote-full")},
+		{"POST /api/v1/runs/{id}/deployments/{dep}/abort", runOperate, "deployment.abort", s.command("abort")},
+		{"POST /api/v1/runs/{id}/deployments/{dep}/retry", runOperate, "deployment.retry", s.command("retry")},
+		{"POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw", runOperate, "deployment.withdraw", s.withdrawCommand},
 		{"POST /api/v1/validate", readAny, "", s.validate},
 		{"GET /api/v1/stream", signedIn, "", s.stream},
 		{"GET /api/v1/tokens", signedIn, "", s.listTokens},
@@ -868,6 +876,22 @@ func (s *Server) decide(approve bool) http.HandlerFunc {
 			return
 		}
 		setAudit(r, r.PathValue("id")+"/"+r.PathValue("step"), "")
+		// An approval that names a deployment needs the role on its
+		// environment too.
+		if env, err := s.Engine.EnvironmentOf(r.PathValue("id"), r.PathValue("step"), ""); err != nil {
+			s.fail(w, err)
+			return
+		} else if env != "" {
+			project, err := s.Engine.RunProject(r.PathValue("id"))
+			if err != nil {
+				s.fail(w, err)
+				return
+			}
+			if msg := s.envRefusal(identityFrom(r), project, env); msg != "" {
+				writeErr(w, http.StatusForbidden, msg)
+				return
+			}
+		}
 		if err := s.Engine.Decide(r.PathValue("id"), r.PathValue("step"), approve, identityFrom(r).User, in.Comment); err != nil {
 			s.fail(w, err)
 			return

@@ -47,6 +47,11 @@ type Binding struct {
 	User     string
 	Role     Role
 	Projects []string // path.Match patterns
+	// Environments, if not empty, limits what the binding grants on
+	// deployments (commands on a deployment's rollout, and approvals that
+	// name a deployment) to those environments (path.Match patterns). The
+	// binding grants its role on its projects as usual otherwise.
+	Environments []string
 }
 
 // Action is something a person asks to do. Each needs a role.
@@ -84,6 +89,11 @@ func NewPolicy(bs []Binding) (*Policy, error) {
 		for _, p := range b.Projects {
 			if _, err := path.Match(p, ""); err != nil || p == "" {
 				errs = append(errs, fmt.Errorf("%s: project pattern %q is not valid", where, p))
+			}
+		}
+		for _, e := range b.Environments {
+			if _, err := path.Match(e, ""); err != nil || e == "" {
+				errs = append(errs, fmt.Errorf("%s: environment pattern %q is not valid", where, e))
 			}
 		}
 	}
@@ -127,6 +137,36 @@ func (p *Policy) RoleOn(user string, groups []string, project string) Role {
 		}
 	}
 	return best
+}
+
+// RoleOnEnvironment returns the highest role a person has on deployments of
+// a project to an environment: from the bindings that cover the project
+// and either name no environments or name this one.
+func (p *Policy) RoleOnEnvironment(user string, groups []string, project, env string) Role {
+	if p == nil {
+		return NoRole
+	}
+	best := NoRole
+	for i := range p.bindings {
+		b := &p.bindings[i]
+		if b.Role > best && b.applies(user, groups) && b.covers(project) && b.coversEnvironment(env) {
+			best = b.Role
+		}
+	}
+	return best
+}
+
+// coversEnvironment reports whether b grants its role on deployments to env.
+func (b *Binding) coversEnvironment(env string) bool {
+	if len(b.Environments) == 0 {
+		return true
+	}
+	for _, e := range b.Environments {
+		if ok, _ := path.Match(e, env); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // RoleEverywhere returns the highest role a person has on every project,
