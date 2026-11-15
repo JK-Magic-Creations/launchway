@@ -228,6 +228,7 @@ func TestTriggerProblems(t *testing.T) {
 		{"with input unknown", "libraries: { l: { repo: lib, version: v1 } }\nsteps:\n  s:\n    uses: l/t\n    with: { a: { input: nope } }\n", `no input called "nope"`, 5},
 		{"with input format on a number", "inputs:\n  n: { type: number }\nlibraries: { l: { repo: lib, version: v1 } }\nsteps:\n  s:\n    uses: l/t\n    with: { a: { input: n, format: \"x%s\" } }\n", "format is for string and choice inputs", 7},
 		{"matrix", "steps:\n  s:\n    image: x\n    run: x\n    matrix: {}\n", "use for_each", 5},
+		{"upstream", "steps:\n  s:\n    image: x\n    run: x\n    when: { upstream: sometimes }\n", "upstream is succeeded", 5},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

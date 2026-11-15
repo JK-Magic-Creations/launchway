@@ -286,6 +286,11 @@ type Condition struct {
 	// (see Input.Canon), so they compare as text.
 	Input  string   `json:"input,omitempty"`
 	Equals []string `json:"equals,omitempty"`
+	// Upstream says how the steps this one needs must have ended for it
+	// to run (schema 13): succeeded (the default), failed (at least one
+	// failed, was cancelled or was not run because of a failure) or
+	// always (whatever happened). See UpstreamAllows.
+	Upstream string `json:"upstream,omitempty"`
 
 	inputLine int // where input was written, for messages
 }
@@ -344,6 +349,9 @@ func (c *Condition) Match(ctx Context) bool {
 	}
 	if len(c.Event) > 0 {
 		return matchAny(c.Event, ctx.Event)
+	}
+	if c.Upstream != "" && len(c.Branch) == 0 && len(c.Tag) == 0 && c.Input == "" {
+		return true // only about upstream: not a guard that keeps steps out of drafts
 	}
 	return ctx.Event != EventDraft
 }

@@ -430,3 +430,52 @@ const (
 // Triggers reports whether this server knows run inputs, loops, schedules
 // and webhooks (schema 13).
 func (e *Engine) Triggers() bool { return e.knows(schemaTriggers) }
+
+// upstreamGate decides, for a step whose when says upstream: failed or
+// always, whether the steps it needs let it run: it waits until all of them
+// have ended, however they ended. With failed, it runs only if one of them
+// failed, was cancelled, or was not run because of a failure; otherwise
+// condSkip says why it is skipped.
+func (c *cmd) upstreamGate(def *pipeline.Step, rule string) (ready bool, blocked, condSkip string) {
+	failure := false
+	for _, n := range def.Needs {
+		dep := c.st.Steps[n]
+		if !dep.Status.Terminal() {
+			return false, "", ""
+		}
+		if dep.Status == StepFailed || dep.Status == StepCanceledS || (dep.Status == StepSkippedS && dep.SkipKind == "upstream") {
+			failure = true
+		}
+	}
+	if rule == pipeline.UpstreamFailed && !failure {
+		return true, "", "none of the steps it needs failed"
+	}
+	return true, "", ""
+}
+
+// resetAfterUpstream, on a resume, also resets the steps that ran after a
+// step that runs again: steps with when: { upstream: always } or failed,
+// and whatever needs them. A cleanup step that ran after a failure thus
+// runs again after the resumed steps, and decides again whether to run.
+// Only steps whose upstream rule let them run past a failure can have
+// ended while something they need did not succeed, so for pipelines
+// without such steps this changes nothing.
+func (c *cmd) resetAfterUpstream() {
+	for changed := true; changed; {
+		changed = false
+		for _, id := range c.st.Order {
+			s := c.st.Steps[id]
+			if s.Status == StepPending || !s.Status.Terminal() || s.ReusedFrom != "" {
+				continue
+			}
+			def := c.st.Pipeline.Step(id)
+			for _, n := range def.Needs {
+				if c.st.Steps[n].Status == StepPending {
+					c.emit(StepReset, Payload{Step: id})
+					changed = true
+					break
+				}
+			}
+		}
+	}
+}

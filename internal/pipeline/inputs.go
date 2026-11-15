@@ -628,7 +628,7 @@ func (p *Pipeline) UsesSchema13() bool {
 		return true
 	}
 	for _, s := range p.Steps {
-		if s.ForEach != nil || len(s.Each) > 0 || (s.When != nil && (s.When.Input != "" || len(s.When.Equals) > 0)) {
+		if s.ForEach != nil || len(s.Each) > 0 || (s.When != nil && (s.When.Input != "" || len(s.When.Equals) > 0 || s.When.Upstream != "")) {
 			return true
 		}
 		if s.When != nil && (slices.Contains(s.When.Event, EventSchedule) || slices.Contains(s.When.Event, EventWebhook)) {

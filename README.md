@@ -142,7 +142,7 @@ steps:
 | `image` | Container image the step runs in |
 | `run` | Shell script, run with `sh -e` in the repository checkout |
 | `needs` | Steps that must succeed first; steps with no unmet needs run in parallel |
-| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook`) patterns, and `input` with `equals` (see [Run inputs](#run-inputs)); the step is skipped if they do not match. In a [draft run](#editing-pipelines), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](#pull-requests) has no branch, so `when: { branch: main }` never matches it |
+| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook`) patterns, and `input` with `equals` (see [Run inputs](#run-inputs)); the step is skipped if they do not match. `upstream` says how the steps it needs must have ended; see [Cleanup and notification steps](#cleanup-and-notification-steps). In a [draft run](#editing-pipelines), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](#pull-requests) has no branch, so `when: { branch: main }` never matches it |
 | `env` | Extra environment variables |
 | `secrets` | Environment variables whose values a runner looks up; see [Secrets](#secrets) |
 | `container` | A named container from the `containers` section, instead of `image` |
@@ -359,6 +359,31 @@ would fit the engine this way: the producing step's outputs are recorded in its 
 event, so a new event (a loop's members, recorded when that step finishes) would add the member
 steps to the run, and every server would rebuild them from the log as it does now; servers that
 do not know the event would leave such runs alone, as they do any run they do not fully understand.
+
+### Cleanup and notification steps
+
+Normally a step runs only if every step it needs succeeded. `when: { upstream: … }` changes that:
+
+```yaml
+  notify-failure:
+    needs: [build, deploy]
+    when: { upstream: failed }    # only if one of them failed
+    run: ./notify.sh
+  cleanup:
+    needs: [build, deploy]
+    when: { upstream: always }    # whatever happened
+    run: ./tear-down.sh
+```
+
+Such a step waits until every step it needs has ended. With `failed` it runs if one of them
+failed, was cancelled, or was not run because of a failure, and is skipped otherwise; with
+`always` it runs regardless; `succeeded` is the default. It does not change the run's outcome: a
+run with a failed step has failed, even if its cleanup succeeded. A cancel (by hand, or
+[superseding](#superseding-older-runs)) means stop: steps not started, these included, are
+cancelled. Resuming a run runs the failed steps again and then lets these steps decide again, so
+a cleanup runs again after them, and `notify-failure` above is skipped if nothing fails the second
+time. A [re-run](#re-running-from-a-step-and-what-each-step-was-given) from a step runs them again
+like any step after it.
 
 ### Schedules
 

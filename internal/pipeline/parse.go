@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -521,7 +522,14 @@ func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[strin
 
 func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 	c := &Condition{}
-	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "equals"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "equals", "upstream"}, func(k, v *yaml.Node) {
+		if k.Value == "upstream" {
+			c.Upstream = ps.str(v, at+".upstream")
+			if !slices.Contains(Upstreams, c.Upstream) {
+				ps.add(v, at+".upstream", "upstream is succeeded (the default), failed or always")
+			}
+			return
+		}
 		if k.Value == "input" || k.Value == "equals" {
 			ps.parseInputTest(c, k, v, at)
 			return

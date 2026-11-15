@@ -683,6 +683,7 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 				c.emit(StepReset, Payload{Step: id})
 			}
 		}
+		c.resetAfterUpstream()
 		c.advance()
 		return nil
 	})
@@ -1615,11 +1616,18 @@ func (c *cmd) advance() {
 					ready = false
 				}
 			}
+			condSkip := ""
+			if rule := def.When.UpstreamRule(); rule != pipeline.UpstreamSucceeded {
+				ready, blocked, condSkip = c.upstreamGate(def, rule)
+			}
 			switch {
 			case blocked != "":
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "upstream", Reason: "not run because " + blocked})
 				changed = true
 			case !ready:
+			case condSkip != "":
+				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: condSkip})
+				changed = true
 			case !def.When.Match(ctx):
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: "its when condition did not match"})
 				changed = true

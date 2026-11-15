@@ -444,3 +444,91 @@ func twoServers(t *testing.T) (a, b *Engine) {
 	e, _ := newEngine(t)
 	return e, e
 }
+
+const cleanupPipeline = `
+pipeline: cleanup
+steps:
+  build:
+    image: alpine
+    run: make
+  ship:
+    image: alpine
+    needs: build
+    run: ship
+  notify-failure:
+    image: alpine
+    needs: [build, ship]
+    when: { upstream: failed }
+    run: notify
+  cleanup:
+    image: alpine
+    needs: [build, ship]
+    when: { upstream: always }
+    run: rm -rf tmp
+`
+
+func TestUpstreamAlwaysAndFailed(t *testing.T) {
+	t.Run("after a failure", func(t *testing.T) {
+		e, _ := newEngine(t)
+		id := createBound(t, e, cleanupPipeline, nil, Trigger{Event: "manual"})
+		fail(t, e, take(t, e)) // build
+		// ship is skipped; notify-failure and cleanup run, in order.
+		got := []string{}
+		for range 2 {
+			j := take(t, e)
+			got = append(got, j.StepID)
+			ok(t, e, j, nil)
+		}
+		none(t, e)
+		if strings.Join(got, ",") != "notify-failure,cleanup" {
+			t.Fatalf("ran %v", got)
+		}
+		want(t, statuses(t, e, id), "run", "failed", "build", "failed", "ship", "skipped", "notify-failure", "succeeded", "cleanup", "succeeded")
+		// Resume runs build again, then the steps after it decide again:
+		// now nothing failed, so notify-failure is skipped.
+		if err := e.Resume(id, "ann"); err != nil {
+			t.Fatal(err)
+		}
+		for _, step := range []string{"build", "ship", "cleanup"} {
+			j := take(t, e)
+			if j.StepID != step {
+				t.Fatalf("leased %s, want %s", j.StepID, step)
+			}
+			ok(t, e, j, nil)
+		}
+		none(t, e)
+		want(t, statuses(t, e, id), "run", "succeeded", "notify-failure", "skipped", "cleanup", "succeeded")
+	})
+	t.Run("after success", func(t *testing.T) {
+		e, _ := newEngine(t)
+		id := createBound(t, e, cleanupPipeline, nil, Trigger{Event: "manual"})
+		for _, step := range []string{"build", "ship", "cleanup"} {
+			j := take(t, e)
+			if j.StepID != step {
+				t.Fatalf("leased %s, want %s", j.StepID, step)
+			}
+			ok(t, e, j, nil)
+		}
+		want(t, statuses(t, e, id), "run", "succeeded", "notify-failure", "skipped")
+	})
+	t.Run("a cancel stops them too", func(t *testing.T) {
+		e, _ := newEngine(t)
+		id := createBound(t, e, cleanupPipeline, nil, Trigger{Event: "manual"})
+		take(t, e) // build is running
+		if err := e.Cancel(id, "ann"); err != nil {
+			t.Fatal(err)
+		}
+		want(t, statuses(t, e, id), "ship", "canceled", "notify-failure", "canceled", "cleanup", "canceled")
+		none(t, e)
+	})
+	t.Run("in a draft", func(t *testing.T) {
+		c := &pipeline.Condition{Upstream: "always"}
+		if !c.Match(pipeline.Context{Event: pipeline.EventDraft}) {
+			t.Fatal("upstream alone keeps a step out of drafts")
+		}
+		c.Branch = []string{"main"}
+		if c.Match(pipeline.Context{Event: pipeline.EventDraft, Branch: "main"}) {
+			t.Fatal("a branch guard lets a step into a draft")
+		}
+	})
+}
