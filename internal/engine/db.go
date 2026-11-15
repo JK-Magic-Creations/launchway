@@ -78,7 +78,10 @@ func openDB(addr string, wait time.Duration, known int, log *slog.Logger) (*dbx,
 		d = &dbx{DB: db, pg: true, dsn: addr}
 	} else {
 		q := url.Values{}
-		for _, p := range []string{"journal_mode(WAL)", "busy_timeout(10000)", "foreign_keys(1)", "synchronous(NORMAL)"} {
+		// busy_timeout comes first: switching to WAL needs a lock, and without
+		// the timeout already set, several processes opening a new database at
+		// once fail with "database is locked" instead of waiting their turn.
+		for _, p := range []string{"busy_timeout(10000)", "journal_mode(WAL)", "foreign_keys(1)", "synchronous(NORMAL)"} {
 			q.Add("_pragma", p)
 		}
 		// Writers take the lock when they begin, so a transaction never
@@ -112,6 +115,18 @@ func connect(d *dbx, wait time.Duration, log *slog.Logger) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		err := d.PingContext(ctx)
 		cancel()
+		// SQLite reports "database is locked" at once, without waiting, when
+		// another process is switching a new file to WAL at the same moment
+		// (seen with several engines opening a fresh database on one CPU).
+		// That clears in milliseconds, so wait for it quietly, whatever
+		// `wait` says.
+		for busyUntil := time.Now().Add(5 * time.Second); err != nil && !d.pg &&
+			strings.Contains(err.Error(), "database is locked") && time.Now().Before(busyUntil); {
+			time.Sleep(20 * time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			err = d.PingContext(ctx)
+			cancel()
+		}
 		left := time.Until(deadline)
 		if err == nil || left <= 0 {
 			return err
