@@ -110,7 +110,12 @@ type Resource struct {
 type RolloutRef struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
-	Until     string `json:"until"` // healthy
+	Until     string `json:"until"` // healthy or paused (stop at the first indefinite pause)
+	// Pauses says what to do at an indefinite pause on the way to healthy:
+	// wait for a person (the default; empty means wait), promote, or fail.
+	Pauses string `json:"pauses,omitempty"`
+
+	untilLine, pausesLine int // where until: paused and pauses were written
 }
 
 // IsDeploy reports whether the step deploys.
@@ -128,8 +133,10 @@ func (s *Step) EnvironmentLine() int {
 // IsRollback reports whether the step rolls a deployment back.
 func (s *Step) IsRollback() bool { return s.Kind == KindRollback }
 
-// IsDeployKind reports whether a deploy runner does the step's work.
-func (s *Step) IsDeployKind() bool { return s.IsDeploy() || s.IsRollback() }
+// IsDeployKind reports whether the step is about a deployment and done by
+// deploy runners (an action, or what they observe): a deploy, rollback or
+// rollout step.
+func (s *Step) IsDeployKind() bool { return s.IsDeploy() || s.IsRollback() || s.IsRolloutStep() }
 
 // UsesSchema11 reports whether the pipeline has deploy or rollback steps,
 // which servers older than schema 11 do not know.
@@ -143,25 +150,26 @@ func (p *Pipeline) UsesSchema11() bool {
 }
 
 // DeploymentScope is a deploy step's deployment: the deploy step, the
-// rollback step naming it, and every step on a needs path between them, in
-// pipeline order. The environment's lock is held until all of them are done.
+// rollback, rollout and approval steps naming it, and every step on a needs
+// path between the deploy step and them, in pipeline order. The
+// environment's lock is held until all of them are done.
 func (p *Pipeline) DeploymentScope(deployID string) []string {
-	var rollback *Step
-	for _, s := range p.Steps {
-		if s.IsRollback() && s.Deployment == deployID {
-			rollback = s
-		}
-	}
 	in := map[string]bool{deployID: true}
-	if rollback != nil {
-		down := p.Downstream(deployID)
-		up := p.Upstream(rollback.ID)
+	var down map[string]bool
+	for _, member := range p.Steps {
+		if member.Deployment != deployID || member.ID == deployID || !member.namesDeployment() {
+			continue
+		}
+		if down == nil {
+			down = p.Downstream(deployID)
+		}
+		up := p.Upstream(member.ID)
 		for id := range down {
 			if up[id] {
 				in[id] = true
 			}
 		}
-		in[rollback.ID] = true
+		in[member.ID] = true
 	}
 	var out []string
 	for _, s := range p.Steps {
@@ -226,18 +234,17 @@ func (p *Pipeline) RollbackOf(deployID string) *Step {
 
 var (
 	deployKeys   = []string{"kind", "description", "needs", "when", "timeout", "environment", "service", "version", "argocd", "rollout", "on_cancel"}
-	rollbackKeys = []string{"kind", "description", "needs", "timeout", "deployment"}
+	rollbackKeys = []string{"kind", "description", "needs", "timeout", "deployment", "abort_first"}
 	argocdKeys   = []string{"application", "write_back", "sync", "health"}
 	writeKeys    = []string{"repo", "branch", "changes"}
 	changeKeys   = []string{"file", "image", "tag", "set", "value"}
 	syncKeys     = []string{"request", "resources", "prune", "windows"}
 	resourceKeys = []string{"group", "kind", "name", "namespace"}
-	rolloutKeys  = []string{"name", "namespace", "until"}
+	rolloutKeys  = []string{"name", "namespace", "until", "pauses"}
 	// Keys of deploy steps that the design has and a later release brings.
 	deployNotYet = map[string]string{
 		"revision": "syncing an application to a revision without a commit arrives in a later release; use write_back",
 		"source":   "syncing an application to a revision without a commit arrives in a later release; use write_back",
-		"pauses":   "acting at a rollout's indefinite pauses arrives in a later release; until then a deployment waits there until someone promotes the rollout",
 		"target":   "watching a rollout on another target arrives in a later release",
 	}
 	// k8sNameRe is a Kubernetes object name (DNS subdomain).
@@ -287,14 +294,17 @@ func (ps *parser) parseDeployKeys(v *yaml.Node, at string, s *Step) {
 			case "leave":
 				s.OnCancel = c
 			case "abort":
-				ps.add(n, where, "on_cancel: abort is not supported yet (aborting a rollout arrives in a later release); use leave")
+				s.OnCancel = c
+				s.ctl.onCancel = n.Line
 			case "":
 			default:
-				ps.add(n, where, "write leave")
+				ps.add(n, where, "write leave or abort")
 			}
 		case "deployment":
 			s.Deployment = ps.str(n, where)
 			s.deploymentLine = n.Line
+		default:
+			ps.parseControlKey(k, n, where, s)
 		}
 	}
 }
@@ -307,8 +317,11 @@ func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step
 		return
 	}
 	known := deployKeys
-	if s.IsRollback() {
+	switch {
+	case s.IsRollback():
 		known = rollbackKeys
+	case s.IsRolloutStep():
+		known = rolloutStepKeys
 	}
 	if v.Kind == yaml.MappingNode {
 		for i := 0; i+1 < len(v.Content); i += 2 {
@@ -319,12 +332,18 @@ func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step
 				ps.add(key, at+"."+key.Value, "%q is not supported yet (%s)", key.Value, deployNotYet[key.Value])
 			case contains(runOnly, key.Value) || key.Value == "uses" || key.Value == "with":
 				ps.add(key, at+"."+key.Value, "a %s step runs no script, so it takes no %s", s.Kind, key.Value)
+			case key.Value == "when" && s.IsRolloutStep():
+				ps.add(key, at+".when", "a rollout step has no when: it runs when the steps it needs have succeeded")
 			case key.Value == "when" && s.IsRollback():
 				ps.add(key, at+".when", "a rollback step has no when: it runs exactly when its deployment was made and a step it needs did not succeed")
 			default:
 				ps.add(key, at+"."+key.Value, "%q is not a key of %s steps; expected one of: %s", key.Value, s.Kind, strings.Join(known, ", "))
 			}
 		}
+	}
+	if s.IsRolloutStep() {
+		ps.checkRolloutStep(k, at, s)
+		return
 	}
 	if s.IsRollback() {
 		if s.Deployment == "" {
@@ -684,13 +703,13 @@ func (ps *parser) parseRollout(n *yaml.Node, at string) *RolloutRef {
 			}
 		case "until":
 			switch u := ps.str(v, where); u {
-			case "healthy":
-				r.Until = u
-			case "paused":
-				ps.add(v, where, "until: paused is not supported yet (stopping at a rollout's pause arrives in a later release); use healthy")
+			case "healthy", "paused":
+				r.Until, r.untilLine = u, v.Line
 			default:
-				ps.add(v, where, "write healthy")
+				ps.add(v, where, "write healthy or paused (stop at the rollout's first indefinite pause)")
 			}
+		case "pauses":
+			r.Pauses, r.pausesLine = ps.pausesValue(v, where), v.Line
 		}
 	})
 	if n.Kind == yaml.MappingNode && (r.Name == "" || r.Namespace == "") {
@@ -783,6 +802,7 @@ func (ps *parser) checkDeploys(p *Pipeline) {
 			}
 		}
 	}
+	ps.checkControl(p, ids)
 	// Two deploy steps of the same service and environment must be ordered.
 	var deploys []*Step
 	for _, s := range p.Steps {

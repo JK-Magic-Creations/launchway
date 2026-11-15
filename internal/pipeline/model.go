@@ -29,6 +29,11 @@ type Pipeline struct {
 	// too were started by a push or a pull request. Runs started by hand,
 	// drafts and re-runs never supersede and are never superseded.
 	Supersede bool `json:"supersede,omitempty"`
+	// Requires is the schema a server must know to run the pipeline, when
+	// the pipeline uses something older servers would misread rather than
+	// refuse (see control.go). Servers that do not know this field refuse
+	// the pipeline, which is the point.
+	Requires int `json:"requires,omitempty"`
 }
 
 // Origin records that a pipeline came from the server's configuration of
@@ -110,8 +115,16 @@ type Step struct {
 	ArgoCD      *ArgoCD     `json:"argocd,omitempty"`
 	Rollout     *RolloutRef `json:"rollout,omitempty"`
 	OnCancel    string      `json:"on_cancel,omitempty"` // leave
-	// Deployment, for a rollback step, is the deploy step it rolls back.
+	// Deployment, for a rollback step, is the deploy step it rolls back;
+	// for a rollout step, the deploy step whose rollout it acts on; for an
+	// approval, the deploy step whose deployment it shows and guards.
 	Deployment string `json:"deployment,omitempty"`
+	// Rollout steps (kind rollout) and rollback steps only; see control.go.
+	Action     string `json:"action,omitempty"`      // rollout: promote, promote-full, abort or retry
+	Until      string `json:"until,omitempty"`       // rollout: healthy or paused
+	Pauses     string `json:"pauses,omitempty"`      // rollout: wait, promote or fail
+	AbortFirst bool   `json:"abort_first,omitempty"` // rollback: abort the rollout before reverting
+	ctl        controlLines
 
 	environmentLine, deploymentLine, versionLine int
 	Line                                         int `json:"-"` // where it was written, for messages

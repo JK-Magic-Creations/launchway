@@ -145,6 +145,9 @@ func Parse(data []byte) (*Pipeline, error) {
 		sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })
 		return nil, ps.problems
 	}
+	if p.UsesSchemaControl() {
+		p.Requires = SchemaControl
+	}
 	return p, nil
 }
 
@@ -246,7 +249,7 @@ func (ps *parser) parsePullRequest(v *yaml.Node) {
 }
 
 var (
-	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with"}
+	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with", "deployment"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
 	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout"}
@@ -255,7 +258,7 @@ var (
 	approvalOnly = []string{"message"}
 	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports"}
 	// Kinds from the design that are recognised but not implemented yet.
-	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true, "rollout": true, "analysis": true}
+	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true, "analysis": true}
 	secretKeys    = []string{"store", "key", "field"}
 	storeNameRe   = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
 	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command"}
@@ -344,7 +347,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		if !stepIDRe.MatchString(k.Value) {
 			ps.add(k, at, "%q is not a valid step name: use lower-case letters, digits, hyphens and underscores", k.Value)
 		}
-		if kind := mappingValue(v, "kind"); kind == KindDeploy || kind == KindRollback {
+		if kind := mappingValue(v, "kind"); kind == KindDeploy || kind == KindRollback || kind == KindRolloutStep {
 			p.Steps = append(p.Steps, ps.parseDeployStep(k, v, at, kind))
 			continue
 		}
@@ -404,6 +407,9 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				s.ifTest = ps.parseIf(v2, where)
 			case "message":
 				s.Message = strings.TrimSpace(ps.str(v2, where))
+			case "deployment":
+				s.Deployment = ps.str(v2, where)
+				s.deploymentLine = v2.Line
 			case "description":
 				s.Description = strings.TrimSpace(ps.str(v2, where))
 				switch {
@@ -426,9 +432,9 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		case s.Kind == KindApproval:
 			ps.parseApproval(k, at, s, keys)
 		case kindsNotYet[s.Kind]:
-			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote, rollout, analysis and input steps arrive in a later milestone)", s.Kind)
+			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote, analysis and input steps arrive in a later milestone)", s.Kind)
 		default:
-			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, deploy or rollback", s.Kind)
+			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, deploy, rollout or rollback", s.Kind)
 		}
 		def, most := DefaultTimeout, MaxTimeout
 		if s.IsApproval() {
@@ -448,6 +454,9 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 
 // parseRunStep checks a step that runs a script.
 func (ps *parser) parseRunStep(k *yaml.Node, at string, s *Step, p *Pipeline, keys map[string]*yaml.Node, secretsNode *yaml.Node) {
+	if n := keys["deployment"]; n != nil {
+		ps.add(n, at+".deployment", "deployment links an approval, rollout or rollback step to a deploy step; a step that runs a script takes no deployment")
+	}
 	for _, key := range approvalOnly {
 		if n := keys[key]; n != nil {
 			ps.add(n, at+"."+key, "%q is only for approval steps (kind: approval)", key)
@@ -483,6 +492,9 @@ func (ps *parser) parseRunStep(k *yaml.Node, at string, s *Step, p *Pipeline, ke
 
 // parseApproval checks a step that waits for a person to decide.
 func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[string]*yaml.Node) {
+	if n := keys["deployment"]; n != nil && ps.tmpl != nil {
+		ps.add(n, at+".deployment", "an approval in a template cannot name a deployment; write it in the pipeline that uses the template")
+	}
 	for _, key := range runOnly {
 		if n := keys[key]; n != nil {
 			ps.add(n, at+"."+key, "an approval runs nothing, so it takes no %s", key)
