@@ -426,3 +426,7 @@ const (
 	FromInput = "input" // a run input
 	FromEach  = "each"  // a loop member's value
 )
+
+// Triggers reports whether this server knows run inputs, loops, schedules
+// and webhooks (schema 13).
+func (e *Engine) Triggers() bool { return e.knows(schemaTriggers) }

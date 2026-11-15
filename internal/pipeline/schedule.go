@@ -98,11 +98,11 @@ func (s *Schedule) Next(t time.Time) time.Time {
 	return s.cron.Next(t, s.Location())
 }
 
-// Latest is the last time at or before now that the schedule fired, at or
-// after from; the zero time if there was none.
+// Latest is the last time at or before now that the schedule fires,
+// strictly after from; the zero time if there is none.
 func (s *Schedule) Latest(from, now time.Time) time.Time {
 	var last time.Time
-	t := from.Add(-time.Minute)
+	t := from
 	for range maxLatestSteps {
 		n := s.Next(t)
 		if n.IsZero() || n.After(now) {
