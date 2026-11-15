@@ -441,3 +441,27 @@ a.btn:hover { text-decoration: none; }
 
 .checkline { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-weight: 600; cursor: pointer; }
 .project-pipeline { margin-top: 8px; }
+
+/* ---- re-runs and step inputs ---- */
+.node-reused { border-style: dashed; background: var(--surface-2); }
+.node-reused .node-sub { color: var(--text-2); font-style: italic; }
+.badge-reused { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; border: 1px dashed var(--border-strong); background: var(--surface-2); color: var(--text-2); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.steppanel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.rerun-plan { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+.rerun-plan > div { flex: 1 1 220px; min-width: 0; }
+.rerun-plan ul { margin: 6px 0 0; padding-left: 20px; }
+.inputs { flex: 1 1 100%; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.inputs summary { cursor: pointer; font-weight: 600; }
+.inputs .kv { flex: none; }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.inputs-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.inputs-table th { text-align: left; color: var(--text-3); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.inputs-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.inputs-value { overflow-wrap: anywhere; white-space: pre-wrap; max-width: 520px; }
+.inputs-from { color: var(--text-2); white-space: nowrap; }
+@media (max-width: 640px) {
+  .inputs-table thead { display: none; }
+  .inputs-table tr { display: block; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .inputs-table td { display: block; border: 0; padding: 2px 4px; }
+  .inputs-from { white-space: normal; }
+}

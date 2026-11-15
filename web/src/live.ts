@@ -3,8 +3,9 @@ import { api, type Approval, type RunSummary } from "./api";
 
 // useStream subscribes to the server's live event stream. Handlers are kept
 // in a ref so callers can pass inline functions without reconnecting.
-// onOpen runs on every (re)connection, so callers can refetch anything they
-// may have missed while disconnected.
+// onOpen runs on every connection, the first included, so callers can
+// refetch anything that changed before the stream was open: since their
+// first fetch, or while disconnected.
 export function useStream(
   url: string | null,
   handlers: Record<string, (data: unknown) => void>,
@@ -19,11 +20,9 @@ export function useStream(
   useEffect(() => {
     if (!url) return;
     const es = new EventSource(url);
-    let first = true;
     es.onopen = () => {
       setConnected(true);
-      if (!first) openRef.current?.();
-      first = false;
+      openRef.current?.();
     };
     es.onerror = () => setConnected(false);
     const types = ["run", "step", "log"];

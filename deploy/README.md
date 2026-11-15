@@ -147,9 +147,34 @@ A starting server waits up to a minute for the database (`config.extraConfig.dat
 logging each try, so servers that start before the database do not crash and restart.
 
 Database migrations run when a server starts. Servers take them in turn under a PostgreSQL
-advisory lock, so a rolling upgrade is safe; a startup probe allows up to 3 minutes. A server
-refuses to start against a database written by a newer version, so roll back the image only
-together with the database.
+advisory lock, so exactly one applies each migration while the others wait; a startup probe allows
+up to 3 minutes. `/readyz` and `/api/v1/info` report the schema the server knows (`schema.code`),
+the database's (`schema.database`) and the oldest the database still accepts (`schema.minimum`).
+
+**Rolling and canary upgrades, and going back.** During a rolling upgrade, or a canary with Argo
+Rollouts or similar, old and new servers run side by side on the same database, and the new ones
+migrate it as they start. Most migrations are *additive* (new tables, new columns with defaults),
+and an old server keeps running against a database they have been applied to: it starts, logs
+once that the database is newer, and carries on. So aborting a rollout, `kubectl rollout undo` or
+`helm rollback` to the previous image works: the old pods start and serve. Runs that use something
+only the newer version understands (a re-run, for example, when rolling back to a release before
+re-runs existed) are shown as needing a newer server and left alone by the old servers; they carry
+on once a newer server is back. Every other run is unaffected.
+
+After `kubectl rollout undo`, the next `helm upgrade` (Helm 4, server-side apply) fails with a
+field-manager conflict on the image; pass `--force-conflicts`, or go back with `helm rollback`
+instead, which keeps Helm the owner of the Deployments.
+
+This holds between releases from schema 8 on. A release older than schema 8 refuses any newer
+database, as before: rolling back across the upgrade to schema 8 itself needs the database restored
+from a backup taken before it.
+
+**Breaking migrations.** A release whose migration is *breaking* (its release notes say so) raises
+the database's minimum: from then on, older servers refuse to start, saying which version they
+need, and running ones report not ready. Old and new servers cannot overlap, so for that upgrade
+scale the servers to zero first (`kubectl scale deployment <release>-launchway-server --replicas=0`),
+then `helm upgrade`, and do not use a canary. Going back after it means restoring the database
+from a backup taken before the upgrade. Take one before every upgrade anyway.
 
 Runners being replaced stop their steps, which are then run again by another runner. Steps
 are run again from the start, in a fresh workspace, so long steps are interrupted by runner

@@ -64,14 +64,14 @@ func isPostgres(addr string) bool {
 }
 
 // openDB opens SQLite at a file path, or PostgreSQL at a postgres:// URL,
-// and brings the schema up to date. A database that does not answer is
-// tried again for up to wait.
-func openDB(addr string, wait time.Duration, log *slog.Logger) (*dbx, error) {
+// and brings the schema up to the one this build knows (see migrate). A
+// database that does not answer is tried again for up to wait.
+func openDB(addr string, wait time.Duration, known int, log *slog.Logger) (*dbx, SchemaInfo, error) {
 	var d *dbx
 	if isPostgres(addr) {
 		db, err := sql.Open("pgx", addr)
 		if err != nil {
-			return nil, err
+			return nil, SchemaInfo{}, err
 		}
 		db.SetMaxOpenConns(20)
 		db.SetMaxIdleConns(10)
@@ -86,20 +86,21 @@ func openDB(addr string, wait time.Duration, log *slog.Logger) (*dbx, error) {
 		q.Set("_txlock", "immediate")
 		db, err := sql.Open("sqlite", "file:"+addr+"?"+q.Encode())
 		if err != nil {
-			return nil, err
+			return nil, SchemaInfo{}, err
 		}
 		db.SetMaxOpenConns(8)
 		d = &dbx{DB: db}
 	}
 	if err := connect(d, wait, log); err != nil {
 		d.Close()
-		return nil, fmt.Errorf("connecting to the database: %w", err)
+		return nil, SchemaInfo{}, fmt.Errorf("connecting to the database: %w", err)
 	}
-	if err := migrate(d); err != nil {
+	info, err := migrate(d, known, log)
+	if err != nil {
 		d.Close()
-		return nil, err
+		return nil, info, err
 	}
-	return d, nil
+	return d, info, nil
 }
 
 // connect waits for the database to answer, trying again with growing
@@ -136,11 +137,49 @@ func render(pg bool, m string) string {
 	).Replace(m)
 }
 
+// compat says whether a build that knows only the migrations before one can
+// keep running against a database that has it. See
+// docs/development/migrations.md.
+type compat int
+
+const (
+	// additive: older code keeps working. New tables, new columns that
+	// are nullable or have a default, new indexes, and nothing that older
+	// code would misread: no new meaning for old columns, no constraint
+	// that older writes break. Event types and pipeline keys that older
+	// code does not know are allowed from schema 8 on, because servers
+	// from then on leave alone runs they do not fully understand (see
+	// RunState.NotUnderstood).
+	additive compat = iota + 1
+	// breaking: code older than this migration must not run against the
+	// database. Applying one raises the database's minimum code schema.
+	breaking
+)
+
+func (c compat) String() string {
+	if c == breaking {
+		return "breaking"
+	}
+	return "additive"
+}
+
+// migration is one step of the schema.
+type migration struct {
+	compat compat
+	sql    string
+}
+
 // migrations are applied in order, once each. Never edit one that has
-// shipped; add a new one.
-var migrations = []string{
+// shipped; add a new one, and declare honestly whether code that does not
+// know it can keep running (see compat).
+//
+// The classes of 1 to 7 were declared after they shipped. A build older
+// than schema 8 refuses to start against any newer database whatever the
+// class, so they only matter for the minimum stored from schema 8 on.
+var migrations = []migration{
 	// 1: the event log and the tables derived from it.
-	`
+	//    Compatibility: breaking: the first schema: there is nothing older.
+	{breaking, `
 CREATE TABLE events (
   seq    {{ID}},
   run_id TEXT    NOT NULL,
@@ -218,7 +257,7 @@ CREATE TABLE refs_seen (
   sha     TEXT NOT NULL,
   PRIMARY KEY (project, ref)
 );
-`,
+`},
 	// 2: several servers sharing one database.
 	//    run_seq orders each run's events, so two servers changing the same
 	//    run at once cannot both succeed; leases and push decisions
@@ -226,7 +265,9 @@ CREATE TABLE refs_seen (
 	//    refs_seen.seen_at is when the server that recorded a ref's commit
 	//    had fetched the repository, so a server whose mirror is older cannot
 	//    move the ref back.
-	`
+	//    Compatibility: breaking: schema-1 code inserts events without run_seq, so the second
+	//    event of any run breaks the unique index, and it keeps leases in memory.
+	{breaking, `
 ALTER TABLE events ADD COLUMN run_seq {{BIG}} NOT NULL DEFAULT 0;
 UPDATE events SET run_seq = (SELECT COUNT(*) FROM events e2 WHERE e2.run_id = events.run_id AND e2.seq <= events.seq);
 CREATE UNIQUE INDEX events_run_seq ON events(run_id, run_seq);
@@ -260,29 +301,35 @@ CREATE TABLE push_decisions (
   run_id  TEXT    NOT NULL DEFAULT ''
 );
 CREATE INDEX push_decisions_project ON push_decisions(project, at DESC);
-`,
+`},
 	// 3: a counter per project for run numbers, so that creating many runs
 	//    at once never collides.
-	`
+	//    Compatibility: breaking: schema-2 code numbered runs with MAX(number) + 1 without
+	//    moving the counter, so newer code would then hand out numbers already
+	//    taken and fail to create runs for that project.
+	{breaking, `
 CREATE TABLE run_counters (
   project TEXT PRIMARY KEY,
   last    INTEGER NOT NULL
 );
 INSERT INTO run_counters(project, last) SELECT project, MAX(number) FROM runs GROUP BY project;
-`,
+`},
 	// 4: approvals. A waiting approval has a deadline, found by every
 	//    server's reaper; a decided one records who decided, when and why.
-	`
+	//    Compatibility: breaking: the columns are additive, but schema-3 code did not know
+	//    approval steps or their events and would have run straight past them.
+	{breaking, `
 ALTER TABLE steps ADD COLUMN deadline {{BIG}} NOT NULL DEFAULT 0;
 ALTER TABLE steps ADD COLUMN decided_by TEXT NOT NULL DEFAULT '';
 ALTER TABLE steps ADD COLUMN decided_at {{BIG}} NOT NULL DEFAULT 0;
 ALTER TABLE steps ADD COLUMN comment TEXT NOT NULL DEFAULT '';
-`,
+`},
 	// 5: sign-in. Sessions and API tokens are kept here so that any server
 	//    accepts them; only SHA-256 hashes of their secret values are
 	//    stored. users holds the groups from each person's latest sign-in,
 	//    which API tokens act with. audit is only ever appended to.
-	`
+	//    Compatibility: additive: new tables only; older code ignores them.
+	{additive, `
 CREATE TABLE users (
   username   TEXT PRIMARY KEY,
   group_list TEXT    NOT NULL,
@@ -323,78 +370,243 @@ CREATE TABLE audit (
 CREATE INDEX audit_at ON audit(at);
 CREATE INDEX audit_username ON audit(username, id);
 CREATE INDEX audit_project ON audit(project, id);
-`,
+`},
 	// 6: run affinity. runs.runner is the runner holding the run's
 	//    workspace, so that a run's steps go to it (see Engine.Lease). Runs in
 	//    flight during the upgrade start with none, and go to any runner.
-	`
+	//    Compatibility: additive: a new column with a default; older code leases without
+	//    affinity, as it always did.
+	{additive, `
 ALTER TABLE runs ADD COLUMN runner TEXT NOT NULL DEFAULT '';
 CREATE INDEX leases_runner ON leases(runner);
-`,
+`},
 	// 7: the pipeline editor. A draft run is marked, with the hash of the
 	//    text it ran (the text itself is in its run.created event); a failed
 	//    step keeps the last lines of its output; and people's display
 	//    names and e-mail addresses, as their provider last gave them, are
 	//    kept to author the commits they save.
-	`
+	//    Compatibility: breaking: the columns are additive, but schema-6 code did not know
+	//    draft runs: it would run their steps as ordinary ones, with secrets and
+	//    with conditions that keep deployments out of drafts ignored.
+	{breaking, `
 ALTER TABLE runs ADD COLUMN draft INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE runs ADD COLUMN pipeline_hash TEXT NOT NULL DEFAULT '';
 ALTER TABLE steps ADD COLUMN excerpt TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT '';
-`,
+`},
+	// 8: what each step attempt was given, re-runs, and the schema each
+	//    run needs. step_inputs is derived from the inputs in step.leased
+	//    events, one row per value, so that it can be searched; a secret's
+	//    row holds its reference, never a value. runs.min_schema is the
+	//    oldest schema whose servers understand every event of the run (see
+	//    RunState.Schema): servers that know less leave the run alone. A
+	//    re-run names the run it re-runs and the step it starts from; a step
+	//    it reused names the run where that step actually ran.
+	//    Compatibility: additive: new columns with defaults and a new table.
+	//    The re-run's step.reused events are not understood by older servers,
+	//    which from this schema on leave such runs alone.
+	{additive, `
+ALTER TABLE runs ADD COLUMN min_schema INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE runs ADD COLUMN rerun_of TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN rerun_of_number INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE runs ADD COLUMN rerun_from TEXT NOT NULL DEFAULT '';
+CREATE INDEX runs_rerun_of ON runs(rerun_of);
+ALTER TABLE steps ADD COLUMN reused_from TEXT NOT NULL DEFAULT '';
+ALTER TABLE steps ADD COLUMN reused_from_number INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE steps ADD COLUMN reused_attempt INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE step_inputs (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  attempt     INTEGER NOT NULL,
+  kind        TEXT    NOT NULL,
+  name        TEXT    NOT NULL,
+  value       TEXT    NOT NULL,
+  origin      TEXT    NOT NULL DEFAULT '',
+  origin_step TEXT    NOT NULL DEFAULT '',
+  origin_key  TEXT    NOT NULL DEFAULT '',
+  truncated   INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (run_id, step_id, attempt, kind, name)
+);
+`},
 }
 
-func migrate(d *dbx) error {
+// schemaReruns is the schema that brought step inputs, re-runs and
+// runs.min_schema. Code that uses its tables and columns checks that the
+// build knows it (Engine.knows), so that a build limited to older schemas
+// for testing (see schemaLimit) behaves as an older release would.
+const schemaReruns = 8
+
+// schemaLimit, if set when building (-ldflags "-X
+// github.com/jk-magic-creations/launchway/internal/engine.schemaLimit=7"),
+// makes the build behave as one that knows only the first schemaLimit
+// migrations and the events they brought. It exists to test upgrades and
+// their rollback (docs/development/migrations.md); never set it in a release.
+var schemaLimit string
+
+// knownSchema is the newest schema this build knows.
+func knownSchema() (int, error) {
+	if schemaLimit == "" {
+		return len(migrations), nil
+	}
+	n, err := strconv.Atoi(schemaLimit)
+	if err != nil || n < 1 || n > len(migrations) {
+		return 0, fmt.Errorf("this build was made with schemaLimit %q; it must be between 1 and %d", schemaLimit, len(migrations))
+	}
+	return n, nil
+}
+
+// minimumFor is the oldest code schema that can run against a database at
+// schema v: the newest breaking migration up to v.
+func minimumFor(v int) int {
+	m := 0
+	for i := 0; i < v && i < len(migrations); i++ {
+		if migrations[i].compat == breaking {
+			m = i + 1
+		}
+	}
+	return m
+}
+
+// SchemaInfo compares the schema this build knows with the database's.
+type SchemaInfo struct {
+	Code     int `json:"code"`     // the newest schema this build knows
+	Database int `json:"database"` // the schema the database is at
+	// Minimum is the oldest code schema that may run against the database:
+	// its newest breaking migration.
+	Minimum int `json:"minimum"`
+}
+
+// Compatible reports whether this build may run against the database.
+func (s SchemaInfo) Compatible() bool { return s.Code >= s.Minimum }
+
+// Refusal explains why a build may not run against the database, or is ""
+// if it may.
+func (s SchemaInfo) Refusal() string {
+	if s.Compatible() {
+		return ""
+	}
+	return fmt.Sprintf("the database is at schema %d, which needs a Launchway build that knows schema %d or newer; "+
+		"this build knows schema %d. Run a newer version", s.Database, s.Minimum, s.Code)
+}
+
+// readSchema reads the database's schema version and minimum. A database
+// last migrated before schema 8 has no minimum stored; it is worked out.
+func readSchema(q interface {
+	QueryRow(string, ...any) *sql.Row
+}) (SchemaInfo, error) {
+	var info SchemaInfo
+	for key, dst := range map[string]*int{"schema_version": &info.Database, "schema_min": &info.Minimum} {
+		var v string
+		err := q.QueryRow(`SELECT value FROM meta WHERE key = ?`, key).Scan(&v)
+		if errors.Is(err, sql.ErrNoRows) {
+			*dst = -1
+			continue
+		}
+		if err != nil {
+			return info, err
+		}
+		if *dst, err = strconv.Atoi(v); err != nil {
+			return info, fmt.Errorf("meta %s: %q is not a number", key, v)
+		}
+	}
+	if info.Database < 0 {
+		info.Database = 0
+	}
+	if info.Minimum < 0 {
+		info.Minimum = minimumFor(info.Database)
+		if info.Database > len(migrations) {
+			info.Minimum = info.Database // unknown: assume the worst
+		}
+	}
+	return info, nil
+}
+
+// migrate brings the database up to the schema this build knows, unless it
+// is newer already. Each migration is applied in a transaction of its own
+// that checks the version again, so it is applied exactly once; on
+// PostgreSQL servers starting together also take turns under an advisory
+// lock, so the others wait for the one migrating.
+//
+// A database newer than this build is fine if the build is at least its
+// minimum (every migration since is additive): it is logged once. Otherwise
+// migrate refuses, saying which schema is needed.
+func migrate(d *dbx, known int, log *slog.Logger) (SchemaInfo, error) {
 	ctx := context.Background()
 	if d.pg {
 		// Servers starting together take turns.
 		conn, err := d.Conn(ctx)
 		if err != nil {
-			return err
+			return SchemaInfo{}, err
 		}
 		defer conn.Close()
 		if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_lock(7123401)`); err != nil {
-			return err
+			return SchemaInfo{}, err
 		}
 		defer conn.ExecContext(context.Background(), `SELECT pg_advisory_unlock(7123401)`)
 	}
 	if _, err := d.Exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`); err != nil {
-		return err
+		return SchemaInfo{}, err
 	}
-	var v string
-	err := d.QueryRow(`SELECT value FROM meta WHERE key = 'schema_version'`).Scan(&v)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return err
-	}
-	current, _ := strconv.Atoi(v)
-	if current > len(migrations) {
-		return fmt.Errorf("the database was written by a newer version of Launchway (schema %d, this build knows %d)", current, len(migrations))
-	}
-	for i := current; i < len(migrations); i++ {
-		tx, err := d.Begin()
+	for {
+		applied, err := migrateOne(d, known)
 		if err != nil {
-			return err
+			return SchemaInfo{}, err
 		}
-		for _, stmt := range strings.Split(render(d.pg, migrations[i]), ";\n") {
-			if strings.TrimSpace(stmt) == "" {
-				continue
-			}
-			if _, err := tx.Exec(stmt); err != nil {
-				tx.Rollback()
-				return fmt.Errorf("migration %d: %w\n%s", i+1, err, strings.TrimSpace(stmt))
-			}
+		if applied == 0 {
+			break
 		}
-		if _, err := tx.Exec(`INSERT INTO meta(key, value) VALUES('schema_version', ?)
-			ON CONFLICT(key) DO UPDATE SET value = excluded.value`, strconv.Itoa(i+1)); err != nil {
-			tx.Rollback()
-			return err
+		log.Info("applied a database migration", "schema", applied, "compatibility", migrations[applied-1].compat.String(),
+			"minimum", minimumFor(applied))
+	}
+	info, err := readSchema(d)
+	if err != nil {
+		return info, err
+	}
+	info.Code = known
+	if msg := info.Refusal(); msg != "" {
+		return info, errors.New(msg)
+	}
+	if info.Database > known {
+		log.Warn("running against a database written by a newer version of Launchway; every migration since this build's is additive, so it can run, "+
+			"but runs that use what it does not know are left to newer servers",
+			"database_schema", info.Database, "code_schema", known, "minimum", info.Minimum)
+	}
+	return info, nil
+}
+
+// migrateOne applies the next migration, if this build knows one the
+// database lacks, and returns its number; 0 if there was none to apply.
+func migrateOne(d *dbx, known int) (int, error) {
+	tx, err := d.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	info, err := readSchema(tx)
+	if err != nil {
+		return 0, err
+	}
+	if info.Database >= known {
+		return 0, nil
+	}
+	i := info.Database
+	for _, stmt := range strings.Split(render(d.pg, migrations[i].sql), ";\n") {
+		if strings.TrimSpace(stmt) == "" {
+			continue
 		}
-		if err := tx.Commit(); err != nil {
-			return err
+		if _, err := tx.Exec(stmt); err != nil {
+			return 0, fmt.Errorf("migration %d: %w\n%s", i+1, err, strings.TrimSpace(stmt))
 		}
 	}
-	return nil
+	for key, v := range map[string]int{"schema_version": i + 1, "schema_min": max(info.Minimum, minimumFor(i+1))} {
+		if _, err := tx.Exec(`INSERT INTO meta(key, value) VALUES(?, ?)
+			ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, strconv.Itoa(v)); err != nil {
+			return 0, err
+		}
+	}
+	return i + 1, tx.Commit()
 }
 
 // isConflict reports whether err means another transaction got there

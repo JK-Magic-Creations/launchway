@@ -45,7 +45,8 @@ func TestSignIn(t *testing.T) {
 	}
 	var info map[string]any
 	b.get(e.srv.URL+"/api/v1/info").json(t, &info)
-	if len(info) != 2 || info["auth_mode"] != "oidc" || info["version"] == nil {
+	// Only what is needed to sign in, and the schema versions for checking upgrades.
+	if len(info) != 3 || info["auth_mode"] != "oidc" || info["version"] == nil || info["schema"] == nil {
 		t.Fatalf("info %v", info)
 	}
 

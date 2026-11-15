@@ -40,3 +40,9 @@ export function elapsed(start: number, end: number, now: number): string {
   if (!start) return "";
   return duration((end || now) - start);
 }
+
+// shortDuration writes a Go duration without trailing zero parts, as the
+// server's Duration.Short does: "1h0m0s" is "1h", "1h30m0s" is "1h30m".
+export function shortDuration(d: string): string {
+  return d.replace(/m0s$/, "m").replace(/h0m$/, "h");
+}

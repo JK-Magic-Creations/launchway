@@ -29,7 +29,23 @@ const (
 	StepWaiting  EventType = "step.waiting"  // an approval is waiting for a person to decide
 	StepApproved EventType = "step.approved" // a person approved it; it succeeds
 	StepRejected EventType = "step.rejected" // a person rejected it, or nobody decided in time; it fails
+
+	// StepReused records, in a re-run, a step that is not run again: its
+	// outcome and outputs are those it had in an earlier run.
+	StepReused EventType = "step.reused"
 )
+
+// eventSince is the schema version that brought each event type. A server
+// understands the events of the schemas it knows; a run with any other
+// event is left alone (see RunState.NotUnderstood). A new event type comes
+// with a migration, even one with no SQL, so that its schema names it.
+var eventSince = map[EventType]int{
+	RunCreated: 1, RunCancelRequested: 1, RunResumed: 1, RunFinished: 1,
+	StepQueued: 1, StepSkipped: 1, StepLeased: 1, StepStarted: 1, StepFinished: 1,
+	StepLost: 1, StepCanceled: 1, StepReset: 1,
+	StepWaiting: 4, StepApproved: 4, StepRejected: 4,
+	StepReused: 8,
+}
 
 // Event is one entry in the log.
 type Event struct {
@@ -38,6 +54,10 @@ type Event struct {
 	Type  EventType `json:"type"`
 	At    int64     `json:"at"` // Unix milliseconds
 	Data  Payload   `json:"data"`
+
+	// problem, set when the event is read, is what in it this server does
+	// not understand, such as a pipeline key a newer server wrote.
+	problem string
 }
 
 // Payload carries the details of an event. Each type uses a few fields.
@@ -71,6 +91,38 @@ type Payload struct {
 	// run.resumed of a draft run: whether its steps may read secrets from
 	// now on, as the configuration says at the time of the resume.
 	DraftSecrets *bool `json:"draft_secrets,omitempty"`
+
+	// Requires, on any event, is the oldest schema whose servers understand
+	// it. Servers ignore fields they do not know, so a newer server that adds
+	// a field older servers must not ignore sets this; a server that knows
+	// less leaves the run alone. Empty means the event type's own schema.
+	Requires int `json:"requires,omitempty"`
+
+	// step.leased: what the attempt was given (schema 8). Older servers
+	// ignore it, which is harmless: it only records.
+	Inputs *StepInputs `json:"inputs,omitempty"`
+	// run.created of a re-run: the run it re-runs, and from which step.
+	Rerun *Rerun `json:"rerun,omitempty"`
+	// step.reused: where the outcome and outputs come from. Outcome is
+	// succeeded or skipped; Actor and Comment are an approval's decision.
+	Reused *Reused `json:"reused,omitempty"`
+}
+
+// Rerun links a re-run to the run it re-runs.
+type Rerun struct {
+	Of       string `json:"of"`        // the run's ID
+	OfNumber int    `json:"of_number"` // and number
+	From     string `json:"from"`      // the step the re-run starts from
+}
+
+// Reused says where a reused step actually ran: the earlier run, and the
+// attempt there. When the step was itself reused in the run being re-run,
+// this is where it ran, not that run.
+type Reused struct {
+	Run       string `json:"run"`
+	Number    int    `json:"number"`
+	Attempt   int    `json:"attempt"`
+	DecidedAt int64  `json:"decided_at,omitempty"` // approvals: when it was decided
 }
 
 // Draft is the pipeline text a draft run runs. It is not in Git, so it is

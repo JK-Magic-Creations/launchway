@@ -32,6 +32,12 @@ export interface RunSummary {
   draft: boolean;
   /** Names the draft's text: sha256:… */
   pipeline_hash?: string;
+  /** A re-run: the run it re-runs, its number, and the step it started from. */
+  rerun_of?: string;
+  rerun_of_number?: number;
+  rerun_from?: string;
+  /** The run has events or a pipeline written by a newer Launchway than this server, which leaves it alone. */
+  needs_newer_server: boolean;
 }
 
 export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
@@ -75,7 +81,48 @@ export interface StepView {
   decided_by: string;
   decided_at: number;
   comment: string;
+  /** A step a re-run reused: the run where it actually ran, its number, and the attempt there. */
+  reused_from?: string;
+  reused_from_number?: number;
+  reused_attempt?: number;
+  /** What each attempt was given, oldest first. */
+  inputs: AttemptInputs[];
 }
+
+/** Where a variable came from. */
+export type InputOrigin = "step" | "container" | "needs" | "launchway" | "template";
+
+export interface InputVar {
+  name: string;
+  value: string;
+  from: InputOrigin;
+  /** needs: the step the output came from; template: the step that used the template. */
+  step?: string;
+  /** needs: the output's key. */
+  output?: string;
+  /** Shortened to stay within the server's limits (the step received it in full). */
+  truncated?: boolean;
+}
+
+/** What one attempt of a step was given. Secrets by reference only. */
+export interface StepInputs {
+  image?: string;
+  container?: string;
+  script: string;
+  script_truncated?: boolean;
+  library?: { name: string; commit: string };
+  env: InputVar[];
+  params?: InputVar[];
+  secrets?: { name: string; ref: string }[];
+  truncated?: boolean;
+}
+
+export interface AttemptInputs { attempt: number; inputs: StepInputs }
+
+/** What re-running a run from a step would run again and reuse. */
+export interface RerunPlan { run: string[]; reuse: string[] }
+
+export interface RerunBrief { id: string; number: number; from: string; status: RunStatus; actor: string; created_at: number }
 
 export interface GraphContainer {
   name: string; image: string; env?: Record<string, string>; cpu?: string; memory?: string; service?: boolean; command?: string[];
@@ -143,6 +190,10 @@ export interface RunDetail extends RunSummary {
   graph: Graph;
   levels: string[][];
   step_list: StepView[];
+  /** The runs that re-run this one, oldest first. */
+  reruns: RerunBrief[];
+  /** What in the run this server does not understand; empty when it understands all of it. */
+  not_understood: string[];
 }
 
 export interface LogLine { seq: number; at: number; stream: "stdout" | "stderr" | "system"; text: string }
@@ -347,6 +398,8 @@ export const api = {
       `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/logs?attempt=${attempt}&after=${after}`),
   cancel: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/cancel`),
   resume: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/resume`),
+  rerunPlan: (id: string, from: string) => call<RerunPlan>("GET", `/api/v1/runs/${id}/rerun?from=${encodeURIComponent(from)}`),
+  rerun: (id: string, from: string) => call<RunSummary>("POST", `/api/v1/runs/${id}/rerun`, { from }),
   approve: (id: string, step: string, comment: string) =>
     call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/approve`, { comment }),
   reject: (id: string, step: string, comment: string) =>

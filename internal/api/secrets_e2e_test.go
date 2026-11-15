@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -151,6 +152,21 @@ steps:
 		t.Fatalf("no step.lost event naming the store's trouble: %+v", events)
 	}
 
+	// A re-run of the first run from its second step: the masked output is
+	// reused, and next's inputs record it as received.
+	req, _ := http.NewRequest(http.MethodPost, e.srv.URL+"/api/v1/runs/"+used+"/rerun", strings.NewReader(`{"from":"next"}`))
+	req.Header.Set(csrfHeader, "1")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var re engine.RunSummary
+	json.NewDecoder(resp.Body).Decode(&re)
+	resp.Body.Close()
+	if d := e.wait(t, re.ID, 20*time.Second); d.Status != "succeeded" {
+		t.Fatalf("re-run %s: %+v", d.Status, d.StepList)
+	}
+
 	stop()
 	<-done
 
@@ -169,7 +185,7 @@ steps:
 		answers.Write(b)
 	}
 	get("/api/v1/runs")
-	for _, id := range []string{used, missing, refused, flaky} {
+	for _, id := range []string{used, missing, refused, flaky, re.ID} {
 		get("/api/v1/runs/" + id)
 		get("/api/v1/runs/" + id + "/events")
 		run, _ := e.eng.GetRun(id)
@@ -179,8 +195,20 @@ steps:
 			}
 		}
 	}
+	get("/api/v1/runs/" + used + "/rerun?from=use")
 	if !strings.Contains(answers.String(), "login --password=*** --user=robot") {
 		t.Fatal("the answers searched do not include the logs")
+	}
+	// They include what each attempt was given: references for secrets,
+	// and the masked output the second step received, in both runs.
+	for _, want := range []string{`{"name":"TOKEN","ref":"files:robot-password"}`, `{"name":"FROM_ENV","ref":"env:LW_E2E_FROM_ENV"}`,
+		`{"name":"LAUNCHWAY_NEEDS_USE_TOKEN","value":"***","from":"needs","step":"use","output":"token"}`} {
+		if !strings.Contains(answers.String(), want) {
+			t.Fatalf("the answers searched lack the inputs %s", want)
+		}
+	}
+	if !strings.Contains(answers.String(), `"reused_from":"`+used+`"`) {
+		t.Fatal("the answers searched do not include the re-run's reused step")
 	}
 	// …not in the runner's own log…
 	if !strings.Contains(runnerLog.String(), "step finished") {
@@ -190,6 +218,9 @@ steps:
 	dump := dumpDatabase(t, e.db)
 	if !strings.Contains(dump, "Secret TOKEN ← files:robot-password") {
 		t.Fatal("the database dump does not include the logs")
+	}
+	if !strings.Contains(dump, "secret\tTOKEN\tfiles:robot-password\t") || !strings.Contains(dump, `"inputs":{`) {
+		t.Fatal("the database dump does not include the step inputs, in step_inputs and in the events")
 	}
 	for _, v := range []string{fileSecret, envSecret} {
 		for where, text := range map[string]string{"the API": answers.String(), "the runner's log": runnerLog.String(), "the database": dump} {

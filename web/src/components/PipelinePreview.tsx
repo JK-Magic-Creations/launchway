@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import type { Problem, StepView, ValidateResult } from "../api";
+import { shortDuration } from "../format";
 import { Graph } from "./Graph";
 import { LibraryList, TemplateFacts } from "./Libraries";
 import { ErrorBox, Mono } from "./ui";
@@ -19,7 +20,7 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
   const [sel, setSel] = useState<string | null>(null);
   const steps: StepView[] = useMemo(() => (res?.graph?.steps ?? []).map((s, i) => ({
     run_id: "", id: s.id, position: i, status: "pending", attempt: 0, queued_at: 0, started_at: 0, finished_at: 0,
-    exit_code: null, error: "", excerpt: "", skip_kind: "", runner: "", outputs: {}, container: s.container, image: s.image, run: s.run,
+    exit_code: null, error: "", excerpt: "", skip_kind: "", runner: "", outputs: {}, inputs: [], container: s.container, image: s.image, run: s.run,
     needs: s.needs, when: s.when, retry: s.retry, timeout: s.timeout, description: s.description,
     kind: s.kind, message: s.message, deadline: 0, decided_by: "", decided_at: 0, comment: "", group: s.group, uses: s.uses,
   })), [res]);
@@ -87,7 +88,7 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
                 {chosen.when && <><dt>When</dt><dd className="mono">{JSON.stringify(chosen.when)}</dd></>}
                 {chosen.secrets && <><dt>Secrets</dt><dd className="mono">{Object.keys(chosen.secrets).sort().join(", ")}</dd></>}
                 {chosen.kind !== "approval" && !chosen.uses && <><dt>Retry</dt><dd>{chosen.retry}</dd></>}
-                {!chosen.uses && <><dt>{chosen.kind === "approval" ? "Expires after" : "Timeout"}</dt><dd>{chosen.timeout}</dd></>}
+                {!chosen.uses && <><dt>{chosen.kind === "approval" ? "Expires after" : "Timeout"}</dt><dd>{shortDuration(chosen.timeout)}</dd></>}
               </dl>
               {chosen.kind !== "approval" && !chosen.uses && <pre className="code">{chosen.run}</pre>}
             </section>

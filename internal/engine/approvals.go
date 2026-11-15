@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -62,8 +63,14 @@ func (e *Engine) Decide(runID, stepID string, approve bool, actor, comment strin
 // the rejection is an event and two servers cannot both append the same
 // run_seq. The loser retries, finds the step no longer waiting, and stops.
 func (e *Engine) expireApprovals() {
-	rows, err := e.db.Query(`SELECT run_id, step_id FROM steps WHERE status = ? AND deadline <= ?`,
-		StepWaitingS, e.now().UnixMilli())
+	q, args := `SELECT run_id, step_id FROM steps WHERE status = ? AND deadline <= ?`, []any{StepWaitingS, e.now().UnixMilli()}
+	if e.knows(schemaReruns) {
+		// Runs that need a newer server are left to one.
+		q = `SELECT s.run_id, s.step_id FROM steps s JOIN runs r ON r.id = s.run_id
+			WHERE s.status = ? AND s.deadline <= ? AND r.min_schema <= ?`
+		args = append(args, e.schema)
+	}
+	rows, err := e.db.Query(q, args...)
 	if err != nil {
 		e.log.Error("looking for expired approvals", "err", err)
 		return
@@ -92,7 +99,7 @@ func (e *Engine) expireApprovals() {
 			c.advance()
 			return nil
 		})
-		if err != nil {
+		if err != nil && !errors.Is(err, ErrNeedsNewer) {
 			e.log.Error("expiring an approval", "run", d.runID, "step", d.stepID, "err", err)
 		}
 	}

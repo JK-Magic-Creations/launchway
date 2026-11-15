@@ -13,6 +13,7 @@
 package engine
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -38,6 +39,10 @@ var (
 	ErrForbidden = errors.New("not allowed")
 	ErrInvalid   = errors.New("invalid")
 	ErrClosed    = errors.New("the engine is shutting down")
+	// ErrNeedsNewer means a run has events, or a pipeline, written by a
+	// newer version of Launchway than this server: only a newer server may
+	// change it (see RunState.NotUnderstood).
+	ErrNeedsNewer = errors.New("needs a newer Launchway server")
 	// ErrAlreadyClaimed means another server has already acted on a change
 	// to a ref (see RefChange).
 	ErrAlreadyClaimed = errors.New("another server has already handled this change")
@@ -61,6 +66,11 @@ type Options struct {
 	// approve its approval steps. Nil means yes, because until there is
 	// sign-in everyone acts as the same configured user.
 	AllowSelfApproval *bool
+
+	// schema, for tests, makes the engine behave as a build that knows only
+	// the first schema migrations and their events; 0 means every one (or
+	// what the build's schemaLimit says).
+	schema int
 }
 
 // Engine is safe for concurrent use.
@@ -73,6 +83,7 @@ type Engine struct {
 	maxLost       int
 	now           func() time.Time
 	selfOK        bool   // AllowSelfApproval
+	schema        int    // the newest schema this build knows: its tables, columns and events
 	instance      string // tags this process's notifications, so it can ignore its own
 	channel       string // the PostgreSQL notification channel
 
@@ -176,12 +187,20 @@ func Open(o Options) (*Engine, error) {
 	if o.Hub == nil {
 		o.Hub = hub.New()
 	}
-	db, err := openDB(o.Database, o.ConnectWait, o.Logger)
+	known, err := knownSchema()
+	if err != nil {
+		return nil, err
+	}
+	if o.schema > 0 {
+		known = min(o.schema, len(migrations))
+	}
+	db, _, err := openDB(o.Database, o.ConnectWait, known, o.Logger)
 	if err != nil {
 		return nil, err
 	}
 	e := &Engine{
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
+		schema:   known,
 		selfOK:   o.AllowSelfApproval == nil || *o.AllowSelfApproval,
 		instance: ids.New("srv"),
 		wake:     make(chan struct{}),
@@ -240,6 +259,29 @@ func (e *Engine) Ping(ctx context.Context) error {
 	var one int
 	return e.db.QueryRowContext(ctx, `SELECT 1`).Scan(&one)
 }
+
+// Schema compares the schema this build knows with the database's, as the
+// database says now: another server may have migrated it since this one
+// started.
+func (e *Engine) Schema(ctx context.Context) (SchemaInfo, error) {
+	info, err := readSchema(ctxQuerier{e.db, ctx})
+	info.Code = e.schema
+	return info, err
+}
+
+// ctxQuerier runs QueryRow with a context.
+type ctxQuerier struct {
+	d   *dbx
+	ctx context.Context
+}
+
+func (q ctxQuerier) QueryRow(s string, a ...any) *sql.Row {
+	return q.d.QueryRowContext(q.ctx, rebind(q.d.pg, s), a...)
+}
+
+// knows reports whether this build knows schema v, and so its tables,
+// columns and events.
+func (e *Engine) knows(v int) bool { return e.schema >= v }
 
 // writeLock takes the SQLite write lock; on PostgreSQL it does nothing.
 func (e *Engine) writeLock() (unlock func()) {
@@ -523,6 +565,11 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 		where = `(runs.runner = ? OR runs.runner = '' OR o.last_seen IS NULL OR o.last_seen < ?)`
 		args = append(args, now.Add(-e.runnerTimeout).UnixMilli())
 	}
+	if e.knows(schemaReruns) {
+		// Runs that need a newer server are left to one.
+		where += ` AND runs.min_schema <= ?`
+		args = append(args, e.schema)
+	}
 	rows, err := e.db.Query(`SELECT s.run_id, s.step_id, s.attempt FROM steps s
 		JOIN runs ON runs.id = s.run_id
 		LEFT JOIN runners o ON o.id = runs.runner
@@ -573,13 +620,20 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 				leaseID, cd.run, cd.step, s.Attempt, r.ID, c.leaseUntil()); err != nil {
 				return err
 			}
-			c.emit(StepLeased, Payload{Step: cd.step, Attempt: s.Attempt, Lease: leaseID, Runner: r.ID})
+			p := Payload{Step: cd.step, Attempt: s.Attempt, Lease: leaseID, Runner: r.ID}
+			if c.e.knows(schemaReruns) {
+				p.Inputs = c.inputs(cd.step)
+			}
+			c.emit(StepLeased, p)
 			job = c.job(cd.step, leaseID)
 			if prev != "" && prev != r.ID {
 				job.TakenOverFrom = prev
 			}
 			return nil
 		})
+		if errors.Is(err, ErrNeedsNewer) {
+			continue // a newer server will hand it out
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -874,7 +928,14 @@ func (e *Engine) markAlive() {
 // each lease is ended by exactly one of them, because the row is deleted in
 // the same transaction that records the step as lost.
 func (e *Engine) reap() {
-	rows, err := e.db.Query(`SELECT id, run_id, step_id, runner FROM leases WHERE expires_at < ?`, e.now().UnixMilli())
+	q, args := `SELECT id, run_id, step_id, runner FROM leases WHERE expires_at < ?`, []any{e.now().UnixMilli()}
+	if e.knows(schemaReruns) {
+		// Runs that need a newer server are left to one.
+		q = `SELECT l.id, l.run_id, l.step_id, l.runner FROM leases l LEFT JOIN runs r ON r.id = l.run_id
+			WHERE l.expires_at < ? AND (r.min_schema IS NULL OR r.min_schema <= ?)`
+		args = append(args, e.schema)
+	}
+	rows, err := e.db.Query(q, args...)
 	if err != nil {
 		e.log.Error("looking for expired leases", "err", err)
 		return
@@ -910,6 +971,9 @@ func (e *Engine) reap() {
 			}
 			return nil
 		})
+		if errors.Is(err, ErrNeedsNewer) {
+			continue // left to a newer server
+		}
 		if errors.Is(err, ErrNotFound) {
 			// A lease for a run that does not exist: nothing to recover.
 			unlock := e.writeLock()
@@ -935,11 +999,14 @@ type cmd struct {
 	changed map[string]bool
 	queued  bool
 	hooks   []func()
+	// schemaBefore is the run's Schema before this command, so that
+	// runs.min_schema is written only when it changes.
+	schemaBefore int
 }
 
 func (c *cmd) emit(t EventType, p Payload) {
 	if c.st == nil {
-		c.st = &RunState{}
+		c.st = &RunState{vocab: c.e.schema}
 	}
 	ev := Event{RunID: c.runID, Type: t, At: c.now, Data: p}
 	c.st.apply(ev)
@@ -1047,12 +1114,16 @@ func (e *Engine) attemptTx(runID string, create bool, fn func(c *cmd) error) (*c
 	if err != nil {
 		return nil, err
 	}
-	c := &cmd{e: e, tx: tx, runID: runID, st: Fold(evs), runSeq: runSeq, now: e.now().UnixMilli(), changed: map[string]bool{}}
+	c := &cmd{e: e, tx: tx, runID: runID, st: e.fold(evs), runSeq: runSeq, now: e.now().UnixMilli(), changed: map[string]bool{}}
 	if c.st == nil {
 		if !create {
 			return nil, fmt.Errorf("%w: run %s", ErrNotFound, runID)
 		}
-		c.st = &RunState{}
+		c.st = &RunState{vocab: e.schema}
+	}
+	c.schemaBefore = c.st.Schema
+	if err := needsNewer(c.st); err != nil {
+		return nil, err
 	}
 	if err := fn(c); err != nil {
 		return nil, err
@@ -1068,6 +1139,19 @@ func (e *Engine) attemptTx(runID string, create bool, fn func(c *cmd) error) (*c
 	return c, nil
 }
 
+// fold rebuilds a run's state as this server understands it.
+func (e *Engine) fold(evs []Event) *RunState { return fold(evs, e.schema) }
+
+// needsNewer returns ErrNeedsNewer, saying why, for a run this server does
+// not fully understand.
+func needsNewer(st *RunState) error {
+	if len(st.NotUnderstood) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%w: run %s has %s, written by a newer version of Launchway; this server leaves it alone, "+
+		"and a server of that version must handle it", ErrNeedsNewer, st.ID, strings.Join(st.NotUnderstood, ", "))
+}
+
 // loadEvents returns a run's events in order, and the run_seq of the last.
 func loadEvents(q interface {
 	Query(string, ...any) (*sql.Rows, error)
@@ -1080,17 +1164,53 @@ func loadEvents(q interface {
 	var evs []Event
 	var last int64
 	for rows.Next() {
+		var err error
 		ev := Event{RunID: runID}
 		var data string
 		if err := rows.Scan(&ev.Seq, &last, &ev.Type, &ev.At, &data); err != nil {
 			return nil, 0, err
 		}
-		if err := json.Unmarshal([]byte(data), &ev.Data); err != nil {
+		if ev.Data, ev.problem, err = decodePayload(ev.Type, []byte(data)); err != nil {
 			return nil, 0, fmt.Errorf("event %d: %w", ev.Seq, err)
 		}
 		evs = append(evs, ev)
 	}
 	return evs, last, rows.Err()
+}
+
+// decodePayload reads an event's details. Fields it does not know are
+// ignored: a newer server may add fields that only record more (and sets
+// Payload.Requires when older servers must not ignore one). The pipeline of
+// a run.created event is read strictly instead, because a key this build
+// does not know could change what a step does: problem then says so, and
+// the run is left to a newer server.
+func decodePayload(t EventType, data []byte) (p Payload, problem string, err error) {
+	if t != RunCreated {
+		err = json.Unmarshal(data, &p)
+		return p, "", err
+	}
+	var w struct {
+		Payload
+		Pipeline json.RawMessage `json:"pipeline,omitempty"` // shadows Payload.Pipeline
+	}
+	if err := json.Unmarshal(data, &w); err != nil {
+		return p, "", err
+	}
+	p = w.Payload
+	if len(w.Pipeline) == 0 || string(w.Pipeline) == "null" {
+		return p, "", nil
+	}
+	p.Pipeline = new(pipeline.Pipeline)
+	dec := json.NewDecoder(bytes.NewReader(w.Pipeline))
+	dec.DisallowUnknownFields()
+	if strictErr := dec.Decode(p.Pipeline); strictErr != nil {
+		p.Pipeline = new(pipeline.Pipeline)
+		if err := json.Unmarshal(w.Pipeline, p.Pipeline); err != nil {
+			return p, "", err
+		}
+		return p, "the pipeline: " + strings.TrimPrefix(strictErr.Error(), "json: "), nil
+	}
+	return p, "", nil
 }
 
 // persist stores the new events and brings the derived tables up to date.
@@ -1148,7 +1268,50 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaReruns) {
+		if err := c.persistSchema8(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
+}
+
+// persistSchema8 writes what schema 8 added to the derived tables: the
+// schema the run needs, re-run links, reused steps and step inputs. It is
+// separate so that a build limited to older schemas (schemaLimit) writes
+// exactly what an older release would.
+func (c *cmd) persistSchema8() error {
+	st := c.st
+	created := false
+	for _, ev := range c.events {
+		created = created || ev.Type == RunCreated
+	}
+	if created || st.Schema != c.schemaBefore {
+		var of, from string
+		var ofNumber int
+		if st.Rerun != nil {
+			of, ofNumber, from = st.Rerun.Of, st.Rerun.OfNumber, st.Rerun.From
+		}
+		if _, err := c.tx.Exec(`UPDATE runs SET min_schema = ?, rerun_of = ?, rerun_of_number = ?, rerun_from = ? WHERE id = ?`,
+			st.Schema, of, ofNumber, from, st.ID); err != nil {
+			return err
+		}
+	}
+	for _, ev := range c.events {
+		switch {
+		case ev.Type == StepReused:
+			s := st.Steps[ev.Data.Step]
+			if _, err := c.tx.Exec(`UPDATE steps SET reused_from = ?, reused_from_number = ?, reused_attempt = ? WHERE run_id = ? AND step_id = ?`,
+				s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt, st.ID, s.ID); err != nil {
+				return err
+			}
+		case ev.Type == StepLeased && ev.Data.Inputs != nil:
+			if err := storeInputs(c.tx, st.ID, ev.Data.Step, ev.Data.Attempt, ev.Data.Inputs); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // changedSteps returns the IDs of the steps this command changed, sorted so
@@ -1263,60 +1426,19 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 	st := c.st
 	def := st.Pipeline.Step(stepID)
 	s := st.Steps[stepID]
-	t := st.Trigger
 	env := map[string]string{}
-	container := st.Pipeline.ContainerFor(def)
-	if c := st.Pipeline.Container(container); c != nil {
-		for k, v := range c.Env {
-			env[k] = v
-		}
-	}
-	for k, v := range def.Env {
-		env[k] = v
-	}
-	for _, n := range def.Needs {
-		if inGroups(n, def.NeedsGroups) {
-			continue // a template's steps are reached through the outputs it exposes
-		}
-		for k, v := range st.Steps[n].Outputs {
-			env["LAUNCHWAY_NEEDS_"+pipeline.EnvName(localID(def, n))+"_"+pipeline.EnvName(k)] = v
-		}
-	}
-	for _, id := range def.NeedsGroups {
-		g := st.Pipeline.Group(id)
-		if g == nil {
-			continue
-		}
-		for k, ref := range g.Outputs {
-			if dep := st.Steps[ref.Step]; dep != nil {
-				if v, ok := dep.Outputs[ref.Key]; ok {
-					env["LAUNCHWAY_NEEDS_"+pipeline.EnvName(localID(def, id))+"_"+pipeline.EnvName(k)] = v
-				}
-			}
-		}
-	}
-	for k, v := range map[string]string{
-		"CI": "true", "LAUNCHWAY": "true",
-		"LAUNCHWAY_RUN_ID": st.ID, "LAUNCHWAY_RUN_NUMBER": strconv.Itoa(st.Number),
-		"LAUNCHWAY_PROJECT": st.Project, "LAUNCHWAY_PIPELINE": st.Pipeline.Name,
-		"LAUNCHWAY_STEP": stepID, "LAUNCHWAY_ATTEMPT": strconv.Itoa(s.Attempt),
-		"LAUNCHWAY_EVENT": t.Event, "LAUNCHWAY_REF": t.Ref, "LAUNCHWAY_BRANCH": t.Branch,
-		"LAUNCHWAY_TAG": t.Tag, "LAUNCHWAY_COMMIT": t.SHA,
-	} {
-		env[k] = v
-	}
-	secretRefs := def.Secrets
-	if st.Draft != nil && !st.Draft.Secrets {
-		// advance fails such a step before it is queued; this is a second
-		// guard, so that a runner is never asked to look a secret up for one.
-		secretRefs = nil
+	for _, v := range c.stepEnv(stepID) {
+		env[v.Name] = v.Value
 	}
 	return &Job{
-		Container: container, Containers: st.Pipeline.RunContainers(),
+		Container: st.Pipeline.ContainerFor(def), Containers: st.Pipeline.RunContainers(),
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
-		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: secretRefs,
-		Timeout: def.Timeout, Source: st.Source, SHA: t.SHA, Workspace: st.Workspace, Library: def.Library,
+		// advance fails a draft's step that asks for secrets it may not
+		// read before it is queued; stepSecrets is a second guard, so that
+		// a runner is never asked to look a secret up for one.
+		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: c.stepSecrets(def),
+		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Workspace: st.Workspace, Library: def.Library,
 	}
 }
 

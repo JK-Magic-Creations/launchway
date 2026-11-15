@@ -134,6 +134,8 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/runs/{id}/steps/{step}/logs", runRead, "", s.stepLogs},
 		{"POST /api/v1/runs/{id}/cancel", runOperate, "run.cancel", s.cancelRun},
 		{"POST /api/v1/runs/{id}/resume", runOperate, "run.resume", s.resumeRun},
+		{"GET /api/v1/runs/{id}/rerun", runRead, "", s.rerunPlan},
+		{"POST /api/v1/runs/{id}/rerun", runOperate, "run.rerun", s.rerunRun},
 		{"POST /api/v1/runs/{id}/steps/{step}/approve", runOperate, "approval.approve", s.decide(true)},
 		{"POST /api/v1/runs/{id}/steps/{step}/reject", runOperate, "approval.reject", s.decide(false)},
 		{"GET /api/v1/approvals", signedIn, "", s.listApprovals},
@@ -243,6 +245,8 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusForbidden, strings.TrimPrefix(err.Error(), "not allowed: "))
 	case errors.Is(err, engine.ErrInvalid):
 		writeErr(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "invalid: "))
+	case errors.Is(err, engine.ErrNeedsNewer):
+		writeErr(w, http.StatusConflict, err.Error())
 	case errors.Is(err, engine.ErrClosed):
 		writeErr(w, http.StatusServiceUnavailable, err.Error())
 	case errors.As(err, new(pipeline.Problems)):
@@ -305,11 +309,19 @@ func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
-	if err := s.Engine.Ping(ctx); err != nil {
+	// Reading the schema checks that the database answers, and catches a
+	// newer server having applied a breaking migration since this one
+	// started.
+	schema, err := s.Engine.Schema(ctx)
+	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable", "error": "the database did not answer: " + err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	if msg := schema.Refusal(); msg != "" {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "incompatible", "error": msg, "schema": schema})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "schema": schema})
 }
 
 // ---- runner API ----
@@ -442,12 +454,24 @@ func (s *Server) runInfos(w http.ResponseWriter, r *http.Request) {
 // ---- UI and CLI API ----
 
 // info is public. With sign-in on it says only what is needed to sign in.
+// The schema versions (this build's, and the database's) are included, so
+// that an upgrade or its rollback can be checked; the database's is left
+// out if it cannot be read.
 func (s *Server) info(w http.ResponseWriter, r *http.Request) {
-	if s.Auth != nil {
-		writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "auth_mode": "oidc"})
-		return
+	out := map[string]any{"version": s.Version}
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if schema, err := s.Engine.Schema(ctx); err == nil {
+		out["schema"] = schema
+	} else {
+		out["schema"] = map[string]int{"code": schema.Code}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"version": s.Version, "auth_mode": "none", "actor": s.Actor, "projects": len(s.projects())})
+	if s.Auth != nil {
+		out["auth_mode"] = "oidc"
+	} else {
+		out["auth_mode"], out["actor"], out["projects"] = "none", s.Actor, len(s.projects())
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) projects() []source.ProjectStatus {
@@ -645,9 +669,12 @@ func (s *Server) runEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	// The first event carries the whole pipeline, and a draft run's text;
 	// the UI shows those elsewhere (pipeline-file). The draft's hash stays.
+	// Each step.leased event carries what the attempt was given, which the
+	// step view shows (inputs).
 	out := make([]engine.Event, len(evs))
 	for i, ev := range evs {
 		ev.Data.Pipeline = nil
+		ev.Data.Inputs = nil
 		if ev.Data.Draft != nil {
 			ev.Data.Draft = &engine.Draft{Hash: ev.Data.Draft.Hash, Secrets: ev.Data.Draft.Secrets}
 		}
@@ -742,6 +769,62 @@ func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// rerunPlan says what re-running the run from ?from= would run again and
+// reuse, or, as an error, why it cannot be re-run from there.
+func (s *Server) rerunPlan(w http.ResponseWriter, r *http.Request) {
+	plan, err := s.Engine.PlanRerun(r.PathValue("id"), r.URL.Query().Get("from"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, plan)
+}
+
+// rerunRun creates a new run that re-runs a finished one from a step:
+// {"from": "<step>"}. The step and every step after it run again; the
+// others are reused with their outcomes and outputs. A draft run's re-run
+// runs its unsaved text again, so it needs the right to start draft runs,
+// and whether its steps may read secrets is decided by the current setting.
+func (s *Server) rerunRun(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		From string `json:"from"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if in.From == "" {
+		writeErr(w, http.StatusBadRequest, "say which step to re-run from: {\"from\": \"<step>\"}")
+		return
+	}
+	id := identityFrom(r)
+	sum, err := s.Engine.Summary(r.PathValue("id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	rq := engine.RerunRequest{Run: sum.ID, From: in.From, Actor: id.User}
+	detail := fmt.Sprintf("re-run of #%d from step %s", sum.Number, in.From)
+	if sum.Draft {
+		detail += ", draft run, pipeline " + sum.PipelineHash
+	}
+	setAudit(r, "", detail)
+	if sum.Draft {
+		if !s.authorize(id, auth.RunDraft, sum.Project) {
+			writeErr(w, http.StatusForbidden, s.draftRefusal(sum.Project))
+			return
+		}
+		secrets := s.Drafts.For(sum.Project).Secrets
+		rq.DraftSecrets = &secrets
+	}
+	run, err := s.Engine.Rerun(rq)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	setAudit(r, "", fmt.Sprintf("%s: new run #%d %s", detail, run.Number, run.ID))
+	writeJSON(w, http.StatusCreated, run)
 }
 
 // decide approves or rejects an approval step. The body is optional:

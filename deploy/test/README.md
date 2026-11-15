@@ -2,7 +2,7 @@
 
 Everything here is for testing only. It installs the chart with two servers, two runners and
 the development database in a throwaway [kind](https://kind.sigs.k8s.io/) cluster, runs a real
-pipeline, and checks failover and rolling upgrades.
+pipeline, and checks failover, rolling upgrades and rolling one back.
 
 | File | What it is |
 |---|---|
@@ -129,7 +129,40 @@ $K -n lw-pkg logs poller | awk -v t=$T0 '$1>=t' | grep -c FAIL        # expect 0
 curl -s $API/api/v1/info                            # {"actor":"ci-admin",...} after re-forwarding
 ```
 
-## 8. Clean up
+## 8. Rolling back after an upgrade that migrated the database
+
+The previous release must start, and serve, against the database the new one migrated (see
+[Upgrades](../README.md#upgrades) and `docs/development/migrations.md`). The "previous release"
+is this tree built to know one schema less, on top of the image from step 1:
+
+```sh
+N=$(grep -c '^	{\(additive\|breaking\), `' internal/engine/db.go)   # the current schema
+CGO_ENABLED=0 go build -trimpath -o $TMP/launchway \
+  -ldflags "-s -w -X main.version=0.0.0-old -X github.com/jk-magic-creations/launchway/internal/engine.schemaLimit=$((N-1))" ./cmd/launchway
+printf 'FROM localhost/launchway:0.0.0-k8stest\nCOPY launchway /usr/local/bin/launchway\n' > $TMP/Containerfile
+podman build -t localhost/launchway:0.0.0-old $TMP && podman save -o $TMP/old.tar localhost/launchway:0.0.0-old
+kind load image-archive $TMP/old.tar --name launchway-test
+```
+
+Install with `--set image.tag=0.0.0-old` (step 2), run a pipeline (step 4), then:
+
+```sh
+helm --kube-context $CTX upgrade lw deploy/helm/launchway -n lw-pkg -f deploy/test/values-kind.yaml \
+  --set image.tag=0.0.0-k8stest                     # no --wait
+# as soon as one new server is ready (its /readyz says "database": N), abort:
+$K -n lw-pkg rollout undo deployment/lw-launchway-server
+$K -n lw-pkg rollout undo deployment/lw-launchway-runner
+$K -n lw-pkg get pods                               # old servers Running, 0 restarts
+curl -s $API/api/v1/info                            # "schema":{"code":N-1,"database":N,...}
+$K -n lw-pkg logs <an old server started after the undo> | grep 'newer version'   # once
+```
+
+A pipeline started now succeeds on the old servers. A re-run made on the new server before the
+undo is listed with `"needs_newer_server": true` and left alone; upgrading again
+(`helm upgrade ... --force-conflicts`, because `rollout undo` took ownership of the image field)
+carries it on.
+
+## 9. Clean up
 
 ```sh
 kill %1                                             # the port-forward

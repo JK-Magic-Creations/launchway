@@ -44,17 +44,18 @@ export function StatusPill({ status, label }: { status: AnyStatus; label?: strin
   return (
     <span className={`pill pill-${tone(status)}`}>
       <StatusIcon status={status} size={14} />
-      {label ?? LABEL[status]}
+      {label ?? statusLabel(status)}
     </span>
   );
 }
 
-export function statusLabel(s: AnyStatus): string { return LABEL[s]; }
+// A status a newer server introduced is shown as it is called.
+export function statusLabel(s: AnyStatus): string { return LABEL[s] ?? s; }
 
 export function StepStrip({ steps }: { steps: { id: string; status: StepStatus }[] }) {
   return (
-    <span className="strip" role="img" aria-label={steps.map((s) => `${s.id} ${LABEL[s.status]}`).join(", ")}>
-      {steps.map((s) => <span key={s.id} className={`strip-cell t-${tone(s.status)}`} title={`${s.id}: ${LABEL[s.status]}`} />)}
+    <span className="strip" role="img" aria-label={steps.map((s) => `${s.id} ${statusLabel(s.status)}`).join(", ")}>
+      {steps.map((s) => <span key={s.id} className={`strip-cell t-${tone(s.status)}`} title={`${s.id}: ${statusLabel(s.status)}`} />)}
     </span>
   );
 }

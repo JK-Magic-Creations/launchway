@@ -411,7 +411,7 @@ func TestUpgradeFromSchema1(t *testing.T) {
 		}
 	}
 	exec(`CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`)
-	for _, stmt := range strings.Split(render(false, migrations[0]), ";\n") {
+	for _, stmt := range strings.Split(render(false, migrations[0].sql), ";\n") {
 		if strings.TrimSpace(stmt) != "" {
 			exec(stmt)
 		}

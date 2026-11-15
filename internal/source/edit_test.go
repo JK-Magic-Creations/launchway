@@ -342,7 +342,13 @@ func TestPushFailureIsExplained(t *testing.T) {
 		t.Fatalf("refs: %s", got)
 	}
 
-	// A local repository that cannot be written to.
+	// A local repository that cannot be written to. File permissions do not
+	// stop root, which is what tests run as in most step containers, so this
+	// half only means something for an ordinary user.
+	if os.Geteuid() == 0 {
+		t.Log("running as root: skipping the read-only repository check")
+		return
+	}
 	ro := remote(t, filepath.Join(dir, "ro"), pl)
 	if err := filepath.Walk(filepath.Join(ro, "objects"), func(p string, info os.FileInfo, err error) error {
 		if err == nil && info.IsDir() {

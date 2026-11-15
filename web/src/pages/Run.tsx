@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError, type LogLine, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
+import { api, ApiError, type AttemptInputs, type InputVar, type LogLine, type RerunPlan, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, shortSha } from "../format";
 import { useNow, useStream } from "../live";
 import { canOperate, useMe } from "../auth";
@@ -8,6 +8,7 @@ import { LogView } from "../components/LogView";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
 import { LibraryList, TemplateFacts } from "../components/Libraries";
 import { openInEditor } from "./EditPipeline";
+import { navigate } from "../router";
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
@@ -25,9 +26,28 @@ export function RunPage({ id }: { id: string }) {
   const [actionErr, setActionErr] = useState<unknown>(null);
   const logSink = useRef<((step: string, attempt: number, lines: LogLine[]) => void) | null>(null);
 
+  // A fetch answers with the run as it was when the server read it, which
+  // may be older than live updates that arrive while it is on its way. So
+  // if an update arrives meanwhile, fetch again once the fetches in flight
+  // are done, and drop answers for a run no longer shown.
+  const current = useRef(id);
+  current.current = id;
+  const inflight = useRef(0);
+  const stale = useRef(false);
   const load = useCallback((background = false) => {
-    api.run(id, background).then((r) => { setRun(r); setError(null); }).catch(setError);
+    inflight.current++;
+    api.run(id, background)
+      .then((r) => { if (current.current === id) { setRun(r); setError(null); } })
+      .catch((e) => { if (current.current === id) setError(e); })
+      .finally(() => {
+        inflight.current--;
+        if (inflight.current === 0 && stale.current && current.current === id) {
+          stale.current = false;
+          load(true);
+        }
+      });
   }, [id]);
+  const updated = () => { if (inflight.current > 0) stale.current = true; };
   useEffect(() => { setRun(null); setSelected(stepFromURL()); setTab("graph"); load(); }, [id, load]);
 
   // Keep the selected step in the address, so it can be shared and reloaded.
@@ -49,8 +69,12 @@ export function RunPage({ id }: { id: string }) {
   }, [run, selected]);
 
   const live = useStream(`/api/v1/stream?run=${encodeURIComponent(id)}`, {
-    run: (d) => setRun((prev) => (prev ? { ...prev, ...(d as Partial<RunDetail>), step_list: prev.step_list } : prev)),
+    run: (d) => {
+      updated();
+      setRun((prev) => (prev ? { ...prev, ...(d as Partial<RunDetail>), step_list: prev.step_list } : prev));
+    },
     step: (d) => {
+      updated();
       const s = d as StepView;
       setRun((prev) => {
         if (!prev) return prev;
@@ -83,6 +107,8 @@ export function RunPage({ id }: { id: string }) {
   const firstFailed = run.step_list.find((s) => s.status === "failed");
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting");
   const mayOperate = canOperate(me, run.project);
+  // A finished run can be re-run from any step (the server says if not).
+  const mayRerun = done && mayOperate && !run.needs_newer_server;
   const libraries = run.graph.libraries ?? [];
   const overridden = libraries.filter((l) => l.override);
 
@@ -111,6 +137,22 @@ export function RunPage({ id }: { id: string }) {
             {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
             <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
           </div>
+          {(run.rerun_of || run.reruns.length > 0) && (
+            <div className="run-meta">
+              {run.rerun_of && (
+                <span className="meta rerun-of">
+                  Re-run of <Link href={`/runs/${run.rerun_of}?step=${encodeURIComponent(run.rerun_from ?? "")}`}>#{run.rerun_of_number}</Link> from <strong>{run.rerun_from}</strong>
+                </span>
+              )}
+              {run.reruns.length > 0 && (
+                <span className="meta">
+                  Re-run as {run.reruns.map((r, i) => (
+                    <span key={r.id}>{i > 0 && ", "}<Link href={`/runs/${r.id}`}>#{r.number}</Link> from {r.from}</span>
+                  ))}
+                </span>
+              )}
+            </div>
+          )}
           {(libraries.length > 0 || run.graph.origin) && (
             <div className="run-meta">
               {libraries.length > 0 && <><span className="meta">Libraries</span><LibraryList libraries={libraries} /></>}
@@ -122,8 +164,9 @@ export function RunPage({ id }: { id: string }) {
           {mayOperate && !done && !run.cancel_requested && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
-          {mayOperate && (run.status === "failed" || run.status === "canceled") && (
+          {mayOperate && !run.needs_newer_server && (run.status === "failed" || run.status === "canceled") && (
             <button type="button" className="btn btn-primary" disabled={busy}
+              title="Runs again, in this run, only the steps that did not succeed. To start a new run from a step of your choice, open the step and choose Re-run from this step."
               onClick={() => act(async () => { await api.resume(run.id); if (firstFailed) select(firstFailed.id); })}>
               {firstFailed ? `Resume from ${firstFailed.id}` : "Resume"}
             </button>
@@ -131,6 +174,13 @@ export function RunPage({ id }: { id: string }) {
         </div>
       </header>
       <ErrorBox error={actionErr} />
+
+      {run.needs_newer_server && (
+        <div className="callout callout-draft">
+          <strong>Needs a newer server.</strong> A newer version of Launchway wrote parts of this run that this server does not understand
+          {run.not_understood.length > 0 && <> ({run.not_understood.join("; ")})</>}. This server shows it but leaves it alone; a server of the newer version carries it on.
+        </div>
+      )}
 
       {run.draft && (
         <div className="callout callout-draft">
@@ -181,8 +231,8 @@ export function RunPage({ id }: { id: string }) {
             <Graph levels={run.levels} steps={run.step_list} groups={run.graph.groups} selected={selected} onSelect={select} now={now} />
           </section>
           {step && (step.kind === "approval"
-            ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} />
-            : <StepPanel run={run} step={step} now={now} sink={logSink} />)}
+            ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
+            : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun} />)}
         </>
       )}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
@@ -191,9 +241,10 @@ export function RunPage({ id }: { id: string }) {
   );
 }
 
-function StepPanel({ run, step, now, sink }: {
+function StepPanel({ run, step, now, sink, rerun }: {
   run: RunDetail; step: StepView; now: number;
   sink: React.MutableRefObject<((step: string, attempt: number, lines: LogLine[]) => void) | null>;
+  rerun: boolean;
 }) {
   const [attempt, setAttempt] = useState(step.attempt);
   const [lines, setLines] = useState<LogLine[]>([]);
@@ -235,10 +286,12 @@ function StepPanel({ run, step, now, sink }: {
   }, [step.id, attempt, sink]);
 
   const isLive = following && (step.status === "running" || step.status === "leased");
+  const reused = !!step.reused_from;
   const group = step.group ? run.graph.groups?.find((g) => g.id === step.group) : undefined;
   const outputs = Object.entries(step.outputs ?? {});
   const secrets = Object.entries(step.secrets ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const empty = !loaded ? "Loading…"
+    : reused ? `Not run in this run: reused from #${step.reused_from_number}, where its log is.`
     : step.status === "pending" ? "Waiting for the steps it needs."
     : step.status === "queued" ? "Waiting for a runner."
     : step.status === "skipped" ? step.error || "Skipped."
@@ -253,6 +306,7 @@ function StepPanel({ run, step, now, sink }: {
           {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={step.status} />
+            {reused && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.started_at > 0 && <span className="meta">{elapsed(step.started_at, step.finished_at, now)}</span>}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
             {step.runner && <span className="meta">on {step.runner}</span>}
@@ -260,15 +314,19 @@ function StepPanel({ run, step, now, sink }: {
             {step.image && <span className="meta mono">{step.image}</span>}
           </div>
         </div>
-        {step.attempt > 1 && (
-          <div className="chips" role="group" aria-label="Attempt">
-            {Array.from({ length: step.attempt }, (_, i) => i + 1).map((a) => (
-              <button key={a} type="button" className={"chip" + (attempt === a ? " chip-on" : "")} aria-pressed={attempt === a}
-                onClick={() => setAttempt(a)}>Attempt {a}</button>
-            ))}
-          </div>
-        )}
+        <div className="steppanel-actions">
+          {step.attempt > 1 && (
+            <div className="chips" role="group" aria-label="Attempt">
+              {Array.from({ length: step.attempt }, (_, i) => i + 1).map((a) => (
+                <button key={a} type="button" className={"chip" + (attempt === a ? " chip-on" : "")} aria-pressed={attempt === a}
+                  onClick={() => setAttempt(a)}>Attempt {a}</button>
+              ))}
+            </div>
+          )}
+          {rerun && <RerunButton run={run} step={step} />}
+        </div>
       </div>
+      {reused && <ReusedNote run={run} step={step} />}
       {step.status === "failed" && following && (step.excerpt || (step.error && !/^exit code \d+$/.test(step.error))) && (
         <div className="callout callout-bad">
           {step.error && !/^exit code \d+$/.test(step.error) && <div>{step.error}</div>}
@@ -291,6 +349,7 @@ function StepPanel({ run, step, now, sink }: {
           {step.queued_at > 0 && step.started_at > 0 && <><dt>Waited</dt><dd>{duration(step.started_at - step.queued_at)} for a runner</dd></>}
           {outputs.length > 0 && <><dt>Outputs</dt><dd>{outputs.map(([k, v]) => <div key={k}><Mono>{k}</Mono> = <Mono>{v}</Mono></div>)}</dd></>}
         </dl>
+        <InputsView inputs={step.inputs?.find((a) => a.attempt === attempt)} step={step} />
       </div>
     </section>
   );
@@ -298,7 +357,7 @@ function StepPanel({ run, step, now, sink }: {
 
 // ApprovalPanel shows an approval step: what it asks, the context to decide
 // in, and the decision, or the buttons to make one.
-function ApprovalPanel({ run, step, now, mayDecide }: { run: RunDetail; step: StepView; now: number; mayDecide: boolean }) {
+function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; step: StepView; now: number; mayDecide: boolean; rerun: boolean }) {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -328,9 +387,11 @@ function ApprovalPanel({ run, step, now, mayDecide }: { run: RunDetail; step: St
           <div className="run-meta">
             <StatusPill status={step.status} />
             <span className="meta">approval</span>
+            {step.reused_from && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.attempt > 1 && <span className="meta">asked {step.attempt} times</span>}
           </div>
         </div>
+        {rerun && <div className="steppanel-actions"><RerunButton run={run} step={step} /></div>}
       </div>
       <div className="card approval">
         <p className="approval-q">{step.message}</p>
@@ -367,7 +428,11 @@ function ApprovalPanel({ run, step, now, mayDecide }: { run: RunDetail; step: St
           </form>
         )}
         {step.status === "succeeded" && (
-          <div className="callout callout-ok"><strong>Approved by {step.decided_by}</strong>, {clock(step.decided_at)}{said}</div>
+          <div className="callout callout-ok">
+            <strong>Approved by {step.decided_by}</strong>, {clock(step.decided_at)}
+            {step.reused_from && <> in <Link href={`/runs/${step.reused_from}?step=${encodeURIComponent(step.id)}`}>run #{step.reused_from_number}</Link>. This re-run reused that decision; nobody was asked again.</>}
+            {said}
+          </div>
         )}
         {step.status === "failed" && (
           <div className="callout callout-bad">
@@ -403,6 +468,7 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "step.waiting": (d) => `${d.step}: waiting for approval until ${clock(d.deadline as number)}`,
   "step.approved": (d) => `${d.step}: approved by ${d.actor}${d.comment ? `: ${d.comment}` : ""}`,
   "step.rejected": (d) => `${d.step}: ${d.reason}`,
+  "step.reused": (d) => `${d.step}: reused from run #${(d.reused as { number?: number })?.number ?? "?"} (${d.outcome})`,
 };
 
 function EventsTab({ id, version }: { id: string; version: string }) {
@@ -425,6 +491,146 @@ function EventsTab({ id, version }: { id: string; version: string }) {
         </ol>
       )}
     </section>
+  );
+}
+
+// ReusedNote explains a step a re-run did not run, and links to where it ran.
+function ReusedNote({ run, step }: { run: RunDetail; step: StepView }) {
+  const href = `/runs/${step.reused_from}?step=${encodeURIComponent(step.id)}`;
+  return (
+    <div className="callout callout-info">
+      <strong>Reused from run #{step.reused_from_number}.</strong> This re-run did not run {step.id}: it kept the outcome{Object.keys(step.outputs ?? {}).length > 0 ? " and outputs" : ""} it had
+      {" "}there{step.reused_attempt ? ` (attempt ${step.reused_attempt})` : ""}, and passed them on to the steps after it. Files it wrote to that run's workspace are not in this one.
+      {" "}<Link href={href}>See its log in #{step.reused_from_number}</Link>{run.rerun_of !== step.reused_from && run.rerun_of_number ? `, which #${run.rerun_of_number} had reused too` : ""}.
+    </div>
+  );
+}
+
+// fromLabel says where an input came from, in a few words.
+function fromLabel(v: InputVar, container?: string): string {
+  switch (v.from) {
+    case "needs": return `from ${v.step} · ${v.output}`;
+    case "container": return container ? `container ${container}` : "container";
+    case "step": return "the step's env";
+    case "template": return `template parameter, ${v.step}`;
+    case "launchway": return "Launchway";
+    default: return v.from;
+  }
+}
+
+// InputsView shows what one attempt of a step was given: its environment
+// with where each value came from, the secrets it asked for (references,
+// never values), and the image and library commit it ran with.
+function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }) {
+  if (!inputs) {
+    return (
+      <section className="inputs">
+        <h3 className="h-sm">Inputs</h3>
+        <p className="sub">{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 ? "Recorded when a runner takes the step." : "Not recorded for this attempt (it ran on an older server)."}</p>
+      </section>
+    );
+  }
+  const { inputs: inp } = inputs;
+  const custom = inp.env.filter((v) => v.from !== "launchway");
+  const standard = inp.env.filter((v) => v.from === "launchway");
+  const row = (v: InputVar) => (
+    <tr key={v.name}>
+      <td className="mono">{v.name}</td>
+      <td className="mono inputs-value">{v.value}{v.truncated && <span className="faint"> …(shortened in this record)</span>}</td>
+      <td className="inputs-from">{fromLabel(v, inp.container)}</td>
+    </tr>
+  );
+  return (
+    <section className="inputs" aria-label={`Inputs of attempt ${inputs.attempt}`}>
+      <h3 className="h-sm">Inputs <span className="faint">· attempt {inputs.attempt}</span></h3>
+      <dl className="kv">
+        {inp.image && <><dt>Image</dt><dd className="mono">{inp.image}{inp.container && !inp.container.startsWith("image-") ? ` (container ${inp.container})` : ""}</dd></>}
+        {inp.library && <><dt>Library</dt><dd><Mono>{inp.library.name}</Mono> at <Mono>{shortSha(inp.library.commit)}</Mono></dd></>}
+        {inp.secrets && inp.secrets.length > 0 && (
+          <><dt>Secrets</dt><dd>{inp.secrets.map((x) => <div key={x.name}><Mono>{x.name}</Mono> ← <Mono>{x.ref}</Mono> <span className="faint">(the value is never recorded)</span></div>)}</dd></>
+        )}
+      </dl>
+      {(custom.length > 0 || (inp.params?.length ?? 0) > 0) && (
+        <div className="table-scroll">
+          <table className="inputs-table">
+            <thead><tr><th>Variable</th><th>Value</th><th>From</th></tr></thead>
+            <tbody>{inp.params?.map(row)}{custom.map(row)}</tbody>
+          </table>
+        </div>
+      )}
+      <details>
+        <summary>Standard values ({standard.length})</summary>
+        <div className="table-scroll">
+          <table className="inputs-table"><tbody>{standard.map(row)}</tbody></table>
+        </div>
+      </details>
+      {inp.script && inp.script !== step.run && (
+        <details>
+          <summary>Script as given{inp.script_truncated ? " (shortened in this record)" : ""}</summary>
+          <pre className="code">{inp.script}</pre>
+        </details>
+      )}
+    </section>
+  );
+}
+
+// RerunButton offers a new run of a finished run from the step shown, with
+// a preview of what runs again and what is reused.
+function RerunButton({ run, step }: { run: RunDetail; step: StepView }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="btn btn-sm" onClick={() => setOpen(true)}
+        title={`A new run at the same commit: ${step.id} and the steps after it run again; the others are reused.`}>Re-run from this step</button>
+      {open && <RerunDialog run={run} step={step} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function RerunDialog({ run, step, onClose }: { run: RunDetail; step: StepView; onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [plan, setPlan] = useState<RerunPlan | null>(null);
+  const [refusal, setRefusal] = useState<unknown>(null);
+  const [error, setError] = useState<unknown>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { dialog.current?.showModal(); }, []);
+  useEffect(() => { api.rerunPlan(run.id, step.id).then(setPlan).catch(setRefusal); }, [run.id, step.id]);
+
+  const go = async () => {
+    setBusy(true); setError(null);
+    try {
+      const re = await api.rerun(run.id, step.id);
+      dialog.current?.close();
+      onClose();
+      navigate(`/runs/${re.id}?step=${encodeURIComponent(step.id)}`);
+    } catch (e) { setError(e); setBusy(false); }
+  };
+
+  return (
+    <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="rerun-title">
+      <form method="dialog" onSubmit={(e) => { e.preventDefault(); go(); }}>
+        <h2 id="rerun-title">Re-run #{run.number} from {step.id}</h2>
+        <p className="sub">A new run of {run.project} at the same commit, <Mono>{shortSha(run.sha)}</Mono>, with the same pipeline{run.graph.libraries?.length ? " and library commits" : ""}{run.draft ? " (a draft run of the same text)" : ""}.</p>
+        <div className="callout callout-draft">Outputs are kept. Files earlier steps wrote to the workspace are not; steps that need them should be included in the re-run.</div>
+        {refusal ? <ErrorBox error={refusal} /> : !plan ? <div className="loading">Working out what runs…</div> : (
+          <div className="rerun-plan">
+            <div><h3 className="h-sm">Will run</h3><ul>{plan.run.map((id) => <li key={id}><Mono>{id}</Mono></li>)}</ul></div>
+            <div><h3 className="h-sm">Will be reused from #{run.number}</h3>
+              {plan.reuse.length ? <ul>{plan.reuse.map((id) => {
+                const s = run.step_list.find((x) => x.id === id);
+                return <li key={id}><Mono>{id}</Mono>{s?.kind === "approval" && s.decided_by ? <span className="faint"> (approved by {s.decided_by})</span> : s?.status === "skipped" ? <span className="faint"> (skipped)</span> : null}</li>;
+              })}</ul> : <p className="sub">Nothing: every step runs again.</p>}
+            </div>
+          </div>
+        )}
+        <p className="sub">To run again only the steps that did not succeed, in this same run, use Resume instead.</p>
+        <ErrorBox error={error} />
+        <div className="dialog-actions">
+          <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>
+          <button type="submit" className="btn btn-primary" disabled={!plan || busy}>{busy ? "Starting…" : "Re-run"}</button>
+        </div>
+      </form>
+    </dialog>
   );
 }
 

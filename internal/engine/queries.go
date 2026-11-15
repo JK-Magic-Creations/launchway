@@ -35,6 +35,16 @@ type RunSummary struct {
 	// PipelineHash names that text.
 	Draft        bool   `json:"draft"`
 	PipelineHash string `json:"pipeline_hash,omitempty"`
+	// A re-run: the run it re-runs (ID and number) and the step it started
+	// from. Empty otherwise.
+	RerunOf       string `json:"rerun_of,omitempty"`
+	RerunOfNumber int    `json:"rerun_of_number,omitempty"`
+	RerunFrom     string `json:"rerun_from,omitempty"`
+	// MinSchema is the oldest schema whose servers understand the whole
+	// run; NeedsNewerServer says this server is older, so it leaves the
+	// run alone.
+	MinSchema        int  `json:"min_schema"`
+	NeedsNewerServer bool `json:"needs_newer_server"`
 }
 
 // StepBrief is just enough of a step to draw a status strip.
@@ -66,7 +76,7 @@ type StepView struct {
 	When       *pipeline.Condition           `json:"when,omitempty"`
 	Secrets    map[string]pipeline.SecretRef `json:"secrets,omitempty"` // references, never values
 	Retry      int                           `json:"retry"`
-	Timeout    pipeline.Duration             `json:"timeout"`
+	Timeout    string                        `json:"timeout"`         // as written: 1h, 10m, 90s
 	Group      string                        `json:"group,omitempty"` // the uses step it came from, for a template's step
 	// Approvals only. Kind and Message come from the definition; the rest
 	// is the current wait and decision.
@@ -77,6 +87,14 @@ type StepView struct {
 	DecidedBy   string `json:"decided_by"`
 	DecidedAt   int64  `json:"decided_at"`
 	Comment     string `json:"comment"`
+	// A step a re-run reused: the run (ID and number) where it ran, and the
+	// attempt there. Its outcome and outputs are that attempt's.
+	ReusedFrom       string `json:"reused_from,omitempty"`
+	ReusedFromNumber int    `json:"reused_from_number,omitempty"`
+	ReusedAttempt    int    `json:"reused_attempt,omitempty"`
+	// Inputs is what each attempt was given, oldest first; empty for
+	// attempts leased by a server older than schema 8.
+	Inputs []AttemptInputs `json:"inputs"`
 }
 
 // RunDetail is everything about one run.
@@ -86,6 +104,21 @@ type RunDetail struct {
 	Graph    *pipeline.Pipeline `json:"graph"`
 	Levels   [][]string         `json:"levels"`
 	StepList []StepView         `json:"step_list"`
+	// Reruns are the runs that re-run this one, oldest first.
+	Reruns []RerunBrief `json:"reruns"`
+	// NotUnderstood lists what in the run this server does not understand
+	// (see RunState.NotUnderstood); empty when it understands everything.
+	NotUnderstood []string `json:"not_understood"`
+}
+
+// RerunBrief is a re-run as listed with the run it re-runs.
+type RerunBrief struct {
+	ID     string    `json:"id"`
+	Number int       `json:"number"`
+	From   string    `json:"from"`
+	Status RunStatus `json:"status"`
+	Actor  string    `json:"actor"`
+	At     int64     `json:"created_at"`
 }
 
 // RunnerView is a runner as last seen.
@@ -101,18 +134,34 @@ type RunnerView struct {
 const runCols = `id, project, number, pipeline, status, cancel_requested, event, ref, branch, tag, sha,
 	actor, message, author, created_at, started_at, finished_at, draft, pipeline_hash`
 
-func scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error) {
+// runCols8 are the columns of runs that schema 8 added.
+const runCols8 = `, rerun_of, rerun_of_number, rerun_from, min_schema`
+
+// runCols is the columns scanRun reads.
+func (e *Engine) runCols() string {
+	if e.knows(schemaReruns) {
+		return runCols + runCols8
+	}
+	return runCols
+}
+
+func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error) {
 	r := &RunSummary{}
 	var cancel, draft int
-	err := sc.Scan(&r.ID, &r.Project, &r.Number, &r.Pipeline, &r.Status, &cancel, &r.Event, &r.Ref, &r.Branch,
-		&r.Tag, &r.SHA, &r.Actor, &r.Message, &r.Author, &r.CreatedAt, &r.StartedAt, &r.FinishedAt, &draft, &r.PipelineHash)
+	dst := []any{&r.ID, &r.Project, &r.Number, &r.Pipeline, &r.Status, &cancel, &r.Event, &r.Ref, &r.Branch,
+		&r.Tag, &r.SHA, &r.Actor, &r.Message, &r.Author, &r.CreatedAt, &r.StartedAt, &r.FinishedAt, &draft, &r.PipelineHash}
+	if e.knows(schemaReruns) {
+		dst = append(dst, &r.RerunOf, &r.RerunOfNumber, &r.RerunFrom, &r.MinSchema)
+	}
+	err := sc.Scan(dst...)
 	r.CancelRequested = cancel != 0
 	r.Draft = draft != 0
+	r.NeedsNewerServer = r.MinSchema > e.schema
 	return r, err
 }
 
 func (e *Engine) runSummary(id string) (*RunSummary, error) {
-	r, err := scanRun(e.db.QueryRow(`SELECT `+runCols+` FROM runs WHERE id = ?`, id))
+	r, err := e.scanRun(e.db.QueryRow(`SELECT `+e.runCols()+` FROM runs WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: run %s", ErrNotFound, id)
 	}
@@ -164,7 +213,7 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 		}
 		where = append(where, "project IN ("+strings.Join(marks, ",")+")")
 	}
-	q := `SELECT ` + runCols + ` FROM runs`
+	q := `SELECT ` + e.runCols() + ` FROM runs`
 	if len(where) > 0 {
 		q += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -176,7 +225,7 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 	}
 	var out []*RunSummary
 	for rows.Next() {
-		r, err := scanRun(rows)
+		r, err := e.scanRun(rows)
 		if err != nil {
 			rows.Close()
 			return nil, err
@@ -231,12 +280,27 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 const stepCols = `run_id, step_id, position, status, attempt, queued_at, started_at, finished_at, exit_code,
 	error, skip_kind, runner, outputs, deadline, decided_by, decided_at, comment, excerpt`
 
-func scanStep(sc interface{ Scan(...any) error }) (*StepView, error) {
-	v := &StepView{}
+// stepCols8 are the columns of steps that schema 8 added.
+const stepCols8 = `, reused_from, reused_from_number, reused_attempt`
+
+// stepCols is the columns scanStep reads.
+func (e *Engine) stepCols() string {
+	if e.knows(schemaReruns) {
+		return stepCols + stepCols8
+	}
+	return stepCols
+}
+
+func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error) {
+	v := &StepView{Inputs: []AttemptInputs{}}
 	var exit sql.NullInt64
 	var outputs string
-	if err := sc.Scan(&v.RunID, &v.ID, &v.Position, &v.Status, &v.Attempt, &v.QueuedAt, &v.StartedAt, &v.FinishedAt,
-		&exit, &v.Error, &v.SkipKind, &v.Runner, &outputs, &v.Deadline, &v.DecidedBy, &v.DecidedAt, &v.Comment, &v.Excerpt); err != nil {
+	dst := []any{&v.RunID, &v.ID, &v.Position, &v.Status, &v.Attempt, &v.QueuedAt, &v.StartedAt, &v.FinishedAt,
+		&exit, &v.Error, &v.SkipKind, &v.Runner, &outputs, &v.Deadline, &v.DecidedBy, &v.DecidedAt, &v.Comment, &v.Excerpt}
+	if e.knows(schemaReruns) {
+		dst = append(dst, &v.ReusedFrom, &v.ReusedFromNumber, &v.ReusedAttempt)
+	}
+	if err := sc.Scan(dst...); err != nil {
 		return nil, err
 	}
 	if exit.Valid {
@@ -248,8 +312,21 @@ func scanStep(sc interface{ Scan(...any) error }) (*StepView, error) {
 	return v, nil
 }
 
+// stepView is a step's state, with what its attempts were given, as sent
+// in live updates (which leave out the definition).
 func (e *Engine) stepView(runID, stepID string) (*StepView, error) {
-	return scanStep(e.db.QueryRow(`SELECT `+stepCols+` FROM steps WHERE run_id = ? AND step_id = ?`, runID, stepID))
+	v, err := e.scanStep(e.db.QueryRow(`SELECT `+e.stepCols()+` FROM steps WHERE run_id = ? AND step_id = ?`, runID, stepID))
+	if err != nil {
+		return nil, err
+	}
+	inputs, err := e.stepInputs(runID, stepID)
+	if err != nil {
+		return nil, err
+	}
+	if in := inputs[stepID]; in != nil {
+		v.Inputs = in
+	}
+	return v, nil
 }
 
 // GetRun returns a run with its graph and every step.
@@ -258,38 +335,76 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	if err != nil {
 		return nil, err
 	}
-	var data string
-	if err := e.db.QueryRow(`SELECT data FROM events WHERE run_id = ? AND type = ? ORDER BY seq LIMIT 1`, id, RunCreated).Scan(&data); err != nil {
+	// The events say what the run is and whether this server understands
+	// all of it; the tables say how it is doing.
+	evs, _, err := loadEvents(e.db, id)
+	if err != nil {
 		return nil, err
 	}
-	var created Payload
-	if err := json.Unmarshal([]byte(data), &created); err != nil {
+	st := e.fold(evs)
+	if st == nil || st.Pipeline == nil {
+		return nil, fmt.Errorf("%w: run %s", ErrNotFound, id)
+	}
+	d := &RunDetail{RunSummary: *sum, Graph: st.Pipeline, Levels: st.Pipeline.Levels(), Source: st.Source,
+		Reruns: []RerunBrief{}, NotUnderstood: st.NotUnderstood}
+	if d.NotUnderstood == nil {
+		d.NotUnderstood = []string{}
+	}
+	d.NeedsNewerServer = d.NeedsNewerServer || len(st.NotUnderstood) > 0
+	inputs, err := e.stepInputs(id, "")
+	if err != nil {
 		return nil, err
 	}
-	d := &RunDetail{RunSummary: *sum, Graph: created.Pipeline, Levels: created.Pipeline.Levels()}
-	if created.Source != nil {
-		d.Source = *created.Source
-	}
-	rows, err := e.db.Query(`SELECT `+stepCols+` FROM steps WHERE run_id = ? ORDER BY position`, id)
+	rows, err := e.db.Query(`SELECT `+e.stepCols()+` FROM steps WHERE run_id = ? ORDER BY position`, id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		v, err := scanStep(rows)
+		v, err := e.scanStep(rows)
 		if err != nil {
 			return nil, err
 		}
-		if def := created.Pipeline.Step(v.ID); def != nil {
-			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout
+		if def := st.Pipeline.Step(v.ID); def != nil {
+			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout.Short()
 			v.Secrets = def.Secrets
-			v.Container = created.Pipeline.ContainerFor(def)
+			v.Container = st.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
 			v.Group = def.Group
 		}
+		if in := inputs[v.ID]; in != nil {
+			v.Inputs = in
+		}
 		d.StepList = append(d.StepList, *v)
 	}
-	return d, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if e.knows(schemaReruns) {
+		if d.Reruns, err = e.reruns(id); err != nil {
+			return nil, err
+		}
+	}
+	return d, nil
+}
+
+// reruns lists the runs that re-run a run, oldest first.
+func (e *Engine) reruns(runID string) ([]RerunBrief, error) {
+	rows, err := e.db.Query(`SELECT id, number, rerun_from, status, actor, created_at FROM runs WHERE rerun_of = ?
+		ORDER BY created_at, number`, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []RerunBrief{}
+	for rows.Next() {
+		var b RerunBrief
+		if err := rows.Scan(&b.ID, &b.Number, &b.From, &b.Status, &b.Actor, &b.At); err != nil {
+			return nil, err
+		}
+		out = append(out, b)
+	}
+	return out, rows.Err()
 }
 
 // Logs returns log lines for one step attempt after the given sequence number.

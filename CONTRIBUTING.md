@@ -24,6 +24,9 @@ make test-kubernetes    # a real cluster; see the Makefile for a kind one-liner
 - Keep changes focused. A small pull request that does one thing is reviewed quickly.
 - Add or update tests. Durability and correctness are the point of this project. Anything that
   touches the engine needs a test showing what happens when things go wrong, not only when they go right.
+- Changing the database schema, or adding an event type? Read
+  [Writing a migration](docs/development/migrations.md) first: servers of two versions share one
+  database during every upgrade, and a rollback must keep working.
 - Run `make test` before pushing.
 - Write messages and UI text in plain words.
 

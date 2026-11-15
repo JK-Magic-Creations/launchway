@@ -236,19 +236,20 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
           const label = s.group ? s.id.slice(topGroup(s.group).length + 1) : s.id;
           return (
             <button key={s.id} type="button"
-              className={`node t-${tone(s.status)}` + (selected === s.id ? " node-selected" : "") + (s.uses ? " node-template" : "")}
+              className={`node t-${tone(s.status)}` + (selected === s.id ? " node-selected" : "") + (s.uses ? " node-template" : "") + (s.reused_from ? " node-reused" : "")}
               style={{ left: p.x, top: p.y, width: W, height: H }}
               onClick={() => onSelect(s.id)}
               aria-pressed={selected === s.id}
               title={s.description || s.id}
-              aria-label={`${s.id}: ${statusLabel(s.status)}${s.description ? `. ${s.description}` : ""}`}>
+              aria-label={`${s.id}: ${statusLabel(s.status)}${s.reused_from ? `, reused from run #${s.reused_from_number}` : ""}${s.description ? `. ${s.description}` : ""}`}>
               <span className="node-top">
                 <StatusIcon status={s.status} />
                 <span className="node-name">{label}</span>
                 {s.attempt > 1 && <span className="node-attempt" title={`Attempt ${s.attempt}`}>#{s.attempt}</span>}
               </span>
               <span className="node-sub">
-                {describe ? describe(s) : s.status === "skipped" ? (s.skip_kind === "condition" ? "condition not met" : "skipped")
+                {describe ? describe(s) : s.reused_from ? `reused from #${s.reused_from_number}`
+                  : s.status === "skipped" ? (s.skip_kind === "condition" ? "condition not met" : "skipped")
                   : s.status === "pending" ? "waiting"
                   : s.status === "queued" ? "waiting for a runner"
                   : s.status === "waiting" ? "waiting for approval"
