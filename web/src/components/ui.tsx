@@ -68,7 +68,7 @@ export function stepLabel(s: {
     if (s.kind === "approval" || (!s.kind && !s.wait_kind)) return "Waiting for approval";
     const env = s.environment;
     if (s.wait_kind === "lock") return env ? `Waiting for ${env}'s lock` : "Waiting for the environment's lock";
-    const what = s.kind === "rollback" ? "Rolling back" : env ? `Deploying to ${env}` : "Deploying";
+    const what = s.kind === "rollback" ? "Rolling back" : s.kind === "rollout" ? (env ? `Acting on the rollout in ${env}` : "Acting on the rollout") : env ? `Deploying to ${env}` : "Deploying";
     return phase ? `${what}: ${phase}` : what;
   }
   if (s.status === "skipped") {

@@ -146,7 +146,7 @@ export function RunPage({ id }: { id: string }) {
   // Only approvals wait for someone to decide; deploy steps wait for their
   // environment's lock or for the deployment to finish.
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting" && s.kind === "approval");
-  const deploying = done ? undefined : run.step_list.find((s) => s.status === "waiting" && (s.kind === "deploy" || s.kind === "rollback"));
+  const deploying = done ? undefined : run.step_list.find((s) => s.status === "waiting" && (s.kind === "deploy" || s.kind === "rollback" || s.kind === "rollout"));
   const phases = deployPhases(run);
   const mayOperate = canOperate(me, run.project);
   // A finished run can be re-run from any step (the server says if not).
@@ -354,7 +354,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
   }, [step.id, attempt, sink]);
 
   const isLive = following && (step.status === "running" || step.status === "leased");
-  const deploys = step.kind === "deploy" || step.kind === "rollback";
+  const deploys = step.kind === "deploy" || step.kind === "rollback" || step.kind === "rollout";
   const env = deploys ? environmentOf(run, step) : "";
   const reused = !!step.reused_from;
   const group = step.group ? run.graph.groups?.find((g) => g.id === step.group) : undefined;
@@ -378,7 +378,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
           {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={shownStatus(step)} label={stepLabel({ ...step, environment: env || step.environment })} />
-            {deploys && <span className="meta">{step.kind === "rollback" ? `rollback of ${step.deployment}` : `deploy to ${env}`}</span>}
+            {deploys && <span className="meta">{step.kind === "rollback" ? `rollback of ${step.deployment}` : step.kind === "rollout" ? `acts on the rollout of ${step.deployment}` : `deploy to ${env}`}</span>}
             {reused && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.started_at > 0 && <span className="meta">{elapsed(step.started_at, step.finished_at, now)}</span>}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
@@ -466,6 +466,8 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
     (!step.started_at || s.finished_at <= step.started_at));
   const starter = starterLabel(run);
   const said = step.comment && <blockquote className="approval-comment">{step.comment}</blockquote>;
+  // A linked approval guards a deployment: it shows the live rollout.
+  const guarded = step.deployment ? deploymentOf(run, step) : undefined;
 
   return (
     <section className="steppanel">
@@ -484,6 +486,13 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
       </div>
       <div className="card approval">
         <p className="approval-q">{step.message}</p>
+        {step.deployment && (
+          <p className="sub approval-guards">
+            {guarded
+              ? <>This approval guards the deployment of {guarded.service} to {guarded.environment}: it is rejected by itself if the rollout is aborted.</>
+              : <>This approval guards the deployment made by {step.deployment}: it is rejected by itself if the rollout is aborted.</>}
+          </p>
+        )}
         <div className="run-meta">
           {step.started_at > 0 && <span className="meta" title={clock(step.started_at)}>asked {ago(step.started_at, now)}</span>}
           <span className="meta">run {starter}</span>
@@ -537,6 +546,7 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
           <p className="sub">Asks once {step.needs?.length ? step.needs.join(", ") : "the run"} {step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.</p>
         )}
       </div>
+      {guarded && <DeploymentPanel run={run} step={step} />}
     </section>
   );
 }
@@ -584,11 +594,29 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
     return `${d.step}: ${phaseLabel(String(x.phase ?? ""))}${x.detail ? ` (${x.detail})` : ""}`;
   },
   "deploy.closed": (d) => `${d.step}: deployment over, ${verdictLabel(String(deployOf(d).verdict ?? "")).toLowerCase()}; the lock is released`,
+  "deploy.command": (d) => {
+    const c = commandOf(d);
+    const who = c.origin === "step" ? `step ${d.step}` : c.origin === "pauses" ? `step ${d.step} (pauses: promote)` : c.origin === "on_cancel" ? "canceling the run (on_cancel: abort)" : String(c.actor ?? "someone");
+    return `${d.step}: ${c.action === "promote-full" ? "full promotion" : c.action} asked for by ${who}${c.comment ? `: ${c.comment}` : ""}`;
+  },
+  "deploy.command_taken": (d) => {
+    const c = commandOf(d);
+    return c.take ? `${d.step}: command taken by ${c.runner ?? "a deploy runner"}` : `${d.step}: command handed back${c.detail ? `: ${c.detail}` : ""}`;
+  },
+  "deploy.command_done": (d) => {
+    const c = commandOf(d);
+    return `${d.step}: command ${String(c.result ?? "done").replace(/_/g, " ")}${c.detail ? `: ${c.detail}` : ""}`;
+  },
+  "deploy.command_withdrawn": (d) => `${d.step}: command withdrawn by ${commandOf(d).actor ?? "someone"}`,
   "step.reused": (d) => `${d.step}: reused from run #${(d.reused as { number?: number })?.number ?? "?"} (${d.outcome})`,
 };
 
 function deployOf(d: Record<string, unknown>): Record<string, unknown> {
   return (d.deploy as Record<string, unknown> | undefined) ?? {};
+}
+
+function commandOf(d: Record<string, unknown>): Record<string, string | undefined> {
+  return (deployOf(d).command as Record<string, string | undefined> | undefined) ?? {};
 }
 
 // deployPhases says, for each deploy or rollback step at work, where its
@@ -602,7 +630,7 @@ function deployPhases(run: RunDetail): Record<string, string> {
     const d: DeploymentView | undefined = deploymentOf(run, s);
     if (!d) continue;
     const f = freshness(d, now);
-    const where = s.kind === "rollback" ? "rollback" : environmentOf(run, s) || "deploy";
+    const where = s.kind === "rollback" ? "rollback" : s.kind === "rollout" ? "rollout" : environmentOf(run, s) || "deploy";
     out[s.id] = `${where}: ${f.state === "never" ? "not observed" : f.state === "error" ? "cannot see it" : f.state === "stale" ? "out of date" : shortPhase(d.phase)}`;
   }
   return out;

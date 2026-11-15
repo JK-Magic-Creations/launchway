@@ -3,6 +3,7 @@ import { api, type DeployApp, type DeployPhase, type DeploySnapshot, type Deploy
 import { ago, clock, duration, shortSha } from "../format";
 import { useNow } from "../live";
 import { Link, Mono } from "./ui";
+import { DeploymentControls } from "./DeploymentControls";
 
 // What a deploy step did and what deploy runners last observed of it. This
 // is read-only: it shows the deployment, it never changes it.
@@ -24,12 +25,14 @@ const PHASE: Record<DeployPhase, string> = {
   rollout_paused: "the rollout is paused",
   rollout_aborted: "the rollout was aborted",
   healthy: "healthy",
+  command_pending: "waiting for a deploy runner to apply a command",
 };
 
 const SHORT: Partial<Record<DeployPhase, string>> = {
   unobserved: "not observed", app_missing: "no application", source_error: "wrong source", syncing: "syncing",
   sync_blocked: "sync window", sync_failed: "sync failed", progressing: "getting healthy", degraded: "degraded",
   rollout_progressing: "rolling out", rollout_paused: "rollout paused", rollout_aborted: "rollout aborted", healthy: "healthy",
+  command_pending: "command waiting",
 };
 
 /** A phase in a word or two, for small spaces. */
@@ -45,7 +48,7 @@ export function phaseTone(p: string): string {
   switch (p) {
     case "healthy": return "ok";
     case "degraded": case "sync_failed": case "rollout_aborted": case "app_missing": case "source_error": return "bad";
-    case "sync_blocked": case "rollout_paused": return "wait";
+    case "sync_blocked": case "rollout_paused": case "command_pending": return "wait";
     case "syncing": case "progressing": case "rollout_progressing": return "run";
     default: return "idle";
   }
@@ -145,10 +148,36 @@ export function DeployStatePill({ d, now }: { d: DeploymentView; now: number }) 
   return <span className={`dpill dpill-${tone}`} title={d.detail || undefined}>{d.phase ? phaseLabel(d.phase) : "not observed yet"}</span>;
 }
 
+/** Whether no deploy runner observes the deployment's target now: nothing
+ * is observed, and commands wait until one does. */
+export function unserved(d: DeploymentView, now: number): boolean {
+  return !d.verdict && (!d.observer || (d.observer_expires !== undefined && d.observer_expires < now));
+}
+
+/** How long Argo CD has not compared the application while the deployment
+ * waits for it to sync, when that is more than three minutes. */
+export const RECONCILE_MS = 3 * 60_000;
+export function notReconciling(d: DeploymentView, now: number): number {
+  const at = d.snapshot?.app?.reconciled_at;
+  if (d.verdict || d.phase !== "syncing" || !at) return 0;
+  return now - at > RECONCILE_MS ? now - at : 0;
+}
+
 /** Says how fresh the observed data is, naming the case. */
 export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: number; compact?: boolean }) {
   const f = freshness(d, now);
   const by = d.observed_by ? ` by ${d.observed_by}` : "";
+  // No deploy runner serves the target: what was observed (if anything) is
+  // as it was when the last one stopped.
+  if ((f.state === "never" || f.state === "stale") && unserved(d, now)) {
+    return (
+      <span className="dfresh dfresh-warn" data-case="unserved">
+        {compact ? `no deploy runner serves target ${d.target}`
+          : <>No deploy runner serves target <Mono>{d.target}</Mono>: nothing is observed, and commands wait until one does.</>}
+        {f.state === "stale" && <span className="faint"> (last observed {ago(d.observed_at!, now)}{by})</span>}
+      </span>
+    );
+  }
   switch (f.state) {
     case "closed":
       return d.observed_at
@@ -156,6 +185,7 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
         : null;
     case "never":
       return <span className="dfresh dfresh-warn">{compact ? `no deploy runner has observed this yet (target ${d.target})`
+        : d.observer ? <>Not observed yet; {d.observer} serves target <Mono>{d.target}</Mono>.</>
         : <>No deploy runner has observed this yet: is one running for target <Mono>{d.target}</Mono>?</>}</span>;
     case "error":
       return <span className="dfresh dfresh-bad">The runner cannot see the application: {f.error} <span className="faint">({secondsAgo(d.observed_at!, now)}{by})</span></span>;
@@ -166,21 +196,41 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
   }
 }
 
-/** The deployment a deploy or rollback step works on, if it has one. */
+/** The deployment a deploy, rollback or rollout step (or a linked approval) works on, if it has one. */
 export function deploymentOf(run: RunDetail, step: StepView): DeploymentView | undefined {
   const list = run.deployments ?? [];
   if (step.kind === "rollback") return list.find((d) => d.rollback_step === step.id) ?? list.find((d) => d.step === step.deployment);
+  if (step.kind === "rollout" || step.kind === "approval") return step.deployment ? list.find((d) => d.step === step.deployment) : undefined;
   return list.find((d) => d.step === step.id);
 }
 
 /** The environment a deploy or rollback step deploys to. */
 export function environmentOf(run: RunDetail, step: StepView): string {
   if (step.environment) return step.environment;
-  if (step.kind === "rollback" && step.deployment) return run.step_list.find((s) => s.id === step.deployment)?.environment ?? "";
+  if ((step.kind === "rollback" || step.kind === "rollout" || step.kind === "approval") && step.deployment) return run.step_list.find((s) => s.id === step.deployment)?.environment ?? "";
   return "";
 }
 
-// DeploymentPanel is shown with a deploy or rollback step.
+/** What a rollout step does to the rollout, from the pipeline. */
+function rolloutAction(run: RunDetail, step: StepView): string {
+  return run.graph.steps.find((s) => s.id === step.id)?.action ?? "";
+}
+
+/** The panel's title for a rollout step or a linked approval. */
+function controlTitle(run: RunDetail, step: StepView, d: DeploymentView): string {
+  if (step.kind === "approval") return `The rollout this approval guards: ${d.service} in ${d.environment}`;
+  const where = `${d.service} in ${d.environment}`;
+  switch (rolloutAction(run, step)) {
+    case "promote": return `Promoting ${where}`;
+    case "promote-full": return `Fully promoting ${where}`;
+    case "abort": return `Aborting ${where}`;
+    case "retry": return `Retrying ${where}`;
+    default: return `Acting on the rollout of ${where}`;
+  }
+}
+
+// DeploymentPanel is shown with a deploy, rollback or rollout step, and
+// with an approval that guards a deployment.
 export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView }) {
   const d = deploymentOf(run, step);
   const live = !!d && !d.verdict;
@@ -192,7 +242,8 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
     <section className="card dep" aria-label={`Deployment to ${d.environment}`}>
       <div className="dep-head">
         <h3 className="h-sm">
-          {step.kind !== "rollback" ? `Deploying ${d.service} to ${d.environment}`
+          {step.kind === "rollout" || step.kind === "approval" ? controlTitle(run, step, d)
+            : step.kind !== "rollback" ? `Deploying ${d.service} to ${d.environment}`
             : step.status === "skipped" ? `No rollback needed: ${d.service} in ${d.environment}`
             : step.status === "pending" ? `Can roll back ${d.service} in ${d.environment}`
             : `Rolling back ${d.service} in ${d.environment}`}
@@ -240,6 +291,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         <dt>Opened</dt><dd>{clock(d.opened_at)}{d.deployed_at ? <span className="faint">, deployed {clock(d.deployed_at)}</span> : null}</dd>
       </dl>
       <Observed d={d} now={now} />
+      <DeploymentControls run={run} d={d} now={now} />
       {d.timeline && d.timeline.length > 0 && <Timeline d={d} />}
     </section>
   );
@@ -257,6 +309,11 @@ function Observed({ d, now }: { d: DeploymentView; now: number }) {
         <h4 className="h-xs">{d.verdict ? "As last observed" : "What is observed now"}</h4>
         <FreshnessLine d={d} now={now} />
       </div>
+      {notReconciling(d, now) > 0 && (
+        <div className="dep-msg dep-msg-warn" data-case="not-reconciling">
+          Argo CD has not compared the application for {duration(notReconciling(d, now))}: is its application controller running?
+        </div>
+      )}
       <div className={"dep-observed-body" + (muted ? " stale" : "")}>
         {(d.phase || d.detail) && (
           <div className="dep-phase">
@@ -455,6 +512,7 @@ function NoDeployment({ run, step, env, now }: { run: RunDetail; step: StepView;
   } else if (step.status === "pending" || step.status === "queued") {
     body = <p className="sub">{step.kind === "rollback"
       ? "Runs only if a step guarding the deployment fails: it then reverts the deployment's commit."
+      : step.kind === "rollout" ? `Acts on the rollout of ${step.deployment || "its deployment"} once ${step.needs?.length ? step.needs.join(", ") : "the run"} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`
       : `Deploys to ${env || "its environment"} once ${step.needs?.length ? step.needs.join(", ") : "the run"} ${step.needs && step.needs.length > 1 ? "have" : "has"} succeeded.`}</p>;
   } else if (step.status === "canceled") {
     body = <p className="sub">Canceled before it deployed anything.</p>;
@@ -464,7 +522,7 @@ function NoDeployment({ run, step, env, now }: { run: RunDetail; step: StepView;
   return (
     <section className="card dep" aria-label="Deployment">
       <div className="dep-head">
-        <h3 className="h-sm">{step.kind === "rollback" ? "Rollback" : env ? `Deploying to ${env}` : "Deployment"}</h3>
+        <h3 className="h-sm">{step.kind === "rollback" ? "Rollback" : step.kind === "rollout" ? `Rollout of ${step.deployment ?? "a deployment"}` : env ? `Deploying to ${env}` : "Deployment"}</h3>
       </div>
       {body}
     </section>

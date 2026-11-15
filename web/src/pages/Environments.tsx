@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type DeploymentView, type EnvironmentView, type UnitView } from "../api";
+import { api, type DeploymentView, type EnvironmentView, type LiveView, type UnitView } from "../api";
 import { ago, clock } from "../format";
 import { useNow } from "../live";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
@@ -59,7 +59,7 @@ export function EnvironmentsPage() {
                     <th className="envgrid-corner">Service</th>
                     {envs.map((e) => (
                       <th key={e.name} scope="col">
-                        <div className="envgrid-env">{e.name}</div>
+                        <div className="envgrid-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>}</div>
                         <div className="envgrid-target">target <Mono>{e.target}</Mono></div>
                         <ObserverLine env={e} now={now} />
                       </th>
@@ -78,7 +78,7 @@ export function EnvironmentsPage() {
                         const u = e.services.find((x) => x.project === r.project && x.service === r.service);
                         return (
                           <td key={e.name} data-env={e.name}>
-                            <span className="envgrid-cell-env">{e.name} <span className="faint">· {e.target}</span></span>
+                            <span className="envgrid-cell-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>} <span className="faint">· {e.target}</span></span>
                             {u ? <UnitCell env={e} unit={u} now={now} tick={tick} />
                               : allows(e, r.project) ? <span className="faint">Nothing deployed here yet.</span>
                               : <span className="faint">{r.project} may not deploy here.</span>}
@@ -92,6 +92,41 @@ export function EnvironmentsPage() {
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+function ProtectedPill({ env }: { env: string }) {
+  return (
+    <span className="dpill dpill-lock env-protected"
+      title={`${env} is protected: the person who started a run may not promote or retry its deployments here; someone else with the operator role must. Anyone with the operator role may abort.`}>
+      protected
+    </span>
+  );
+}
+
+/** Idle services are observed about every 30 seconds; older than this, what is shown is out of date. */
+const LIVE_STALE_MS = 120_000;
+
+// LiveLine shows what a deploy runner last saw of a service nothing is
+// deploying, and whether it differs from the last deployment.
+function LiveLine({ live, now }: { live: LiveView; now: number }) {
+  const old = now - live.observed_at > LIVE_STALE_MS;
+  return (
+    <div className="unit-live">
+      {live.snapshot?.app && <div className="unit-line"><AppChips app={live.snapshot.app} muted={old} /></div>}
+      {live.snapshot?.error && <div className="unit-line small dep-msg-bad">The runner cannot see the application: {live.snapshot.error}</div>}
+      <div className={"unit-line small " + (old ? "dfresh-warn" : "faint")} data-case={old ? "live-stale" : "live"}>
+        observed {ago(live.observed_at, now)}{live.observed_by ? ` by ${live.observed_by}` : ""}{old ? ": what is shown may be out of date" : ""}
+      </div>
+      {live.drift && (
+        <div className={`callout unit-drift ${live.drift === "missing" ? "callout-bad" : "callout-draft"}${old ? " stale" : ""}`} role="status" aria-label="Drift" data-drift={live.drift}>
+          {live.drift === "out_of_sync" ? <>OutOfSync: Argo CD reports that what runs differs from Git{live.drift_detail ? `: ${live.drift_detail}` : ""}.</>
+            : live.drift === "differs" ? <>Live differs from the last deployment{live.drift_detail ? `: ${live.drift_detail}` : ""}.</>
+            : live.drift === "missing" ? <>The application is gone{live.drift_detail ? `: ${live.drift_detail}` : ""}.</>
+            : <>{live.drift}{live.drift_detail ? `: ${live.drift_detail}` : ""}</>}
+        </div>
       )}
     </div>
   );
@@ -125,6 +160,9 @@ function UnitCell({ env, unit, now, tick }: { env: EnvironmentView; unit: UnitVi
   // The newest deployment, when it is not simply what runs now.
   const showLast = last && (!cur || last.id !== cur.deployment || !last.verdict);
   const f = last ? freshness(last, now) : null;
+  // Nothing deploying it: what a deploy runner sees of it while idle.
+  const idle = !last || !!last.verdict;
+  const live = idle ? unit.live : undefined;
   return (
     <div className="unit">
       {cur ? (
@@ -145,13 +183,17 @@ function UnitCell({ env, unit, now, tick }: { env: EnvironmentView; unit: UnitVi
               <DeployStatePill d={last} now={now} />
             </div>
           )}
-          <div className="unit-line">
-            <AppChips app={last.snapshot?.app} muted={f?.state !== "fresh"} />
-          </div>
+          {!live && (
+            <div className="unit-line">
+              <AppChips app={last.snapshot?.app} muted={f?.state !== "fresh"} />
+            </div>
+          )}
           {!last.verdict && <div className="unit-line small"><FreshnessLine d={last} now={now} compact /></div>}
-          {last.verdict && last.snapshot?.app && <div className="unit-line small faint">as last observed {last.observed_at ? ago(last.observed_at, now) : ""}</div>}
+          {!live && last.verdict && last.snapshot?.app && <div className="unit-line small faint">as last observed {last.observed_at ? ago(last.observed_at, now) : ""}</div>}
         </div>
       )}
+      {live && <LiveLine live={live} now={now} />}
+      {idle && !live && <div className="unit-line small faint">Not observed while idle (needs a deploy runner of this release)</div>}
       {(unit.lock || unit.waiting.length > 0) && (
         <div className="unit-lock">
           {unit.lock && (

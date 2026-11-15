@@ -735,3 +735,27 @@ a.btn:hover { text-decoration: none; }
   .envgrid-svc-proj { display: inline; margin-left: 6px; }
   .envgrid-cell-env { display: block; font-weight: 700; margin-bottom: 6px; }
 }
+
+/* ---- controlling a deployment's rollout ---- */
+.btn-danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn-danger:hover { background: var(--bad-ink); }
+.dctl { display: flex; flex-direction: column; gap: 14px; padding-top: 12px; border-top: 1px solid var(--border); min-width: 0; }
+.dctl .h-xs { margin: 0; }
+.dctl-form { display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
+.dctl-uncertain { margin: 0; font-size: 13px; color: var(--warn-ink); }
+.dctl-why { font-size: 13px; color: var(--text-2); }
+.dctl-why p { margin: 0; }
+.dctl-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; white-space: normal; }
+.dctl-confirm > span:first-child { flex: 1 1 260px; }
+.dctl-confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dcmd-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.dcmd { display: flex; flex-direction: column; gap: 4px; padding: 0 0 0 12px; border-left: 2px solid var(--border); min-width: 0; }
+.dcmd-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.dcmd-state { font-size: 13px; color: var(--text-2); overflow-wrap: anywhere; }
+.dcmd-warn { color: var(--warn-ink); }
+.dcmd-bad { color: var(--bad-ink); font-weight: 600; }
+.dep-msg-warn { color: var(--warn-ink); font-weight: 600; }
+.approval-guards { margin: 0; }
+.env-protected { font-size: 11px; vertical-align: middle; }
+.unit-live { display: flex; flex-direction: column; gap: 4px; }
+.unit-drift { padding: 6px 10px; font-size: 13px; white-space: normal; overflow-wrap: anywhere; }

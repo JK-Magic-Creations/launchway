@@ -119,7 +119,7 @@ export interface TestOverview {
 }
 
 /** What kind of step it is: a step that runs a script has none. */
-export type StepKind = "approval" | "deploy" | "rollback";
+export type StepKind = "approval" | "deploy" | "rollback" | "rollout";
 /** What a waiting deploy step waits for: its environment's lock, or what deploy runners observe. */
 export type WaitKind = "lock" | "observe";
 /** Why a step was skipped: condition, upstream, not_needed (a rollback with nothing to roll back) or superseded. */
@@ -133,7 +133,8 @@ export type Verdict = "deployed" | "failed" | "rolled_back" | "rollback_failed" 
 /** Where a deployment stands, as worked out from what a deploy runner observed. */
 export type DeployPhase =
   | "unobserved" | "app_missing" | "source_error" | "syncing" | "sync_blocked" | "sync_failed"
-  | "progressing" | "degraded" | "rollout_progressing" | "rollout_paused" | "rollout_aborted" | "healthy";
+  | "progressing" | "degraded" | "rollout_progressing" | "rollout_paused" | "rollout_aborted" | "healthy"
+  | "command_pending";
 
 /** Names a deployment, and the run and step that made it. */
 export interface DeployRef { deployment: string; run: string; number: number; step?: string; version?: string }
@@ -183,6 +184,10 @@ export interface DeployRollout {
   pause_reasons?: string[];
   pause_until?: number;
   aborted: boolean;
+  /** Waits at a pause no timer ends: someone (or a command) must promote it. */
+  pause_indefinite?: boolean;
+  /** A full promotion was asked for and is not done yet. */
+  promote_full?: boolean;
   replicas: number;
   ready: number;
   updated: number;
@@ -248,6 +253,13 @@ export interface DeploymentView {
   holding: boolean;
   /** Only on a run's deployments, not in the history. */
   timeline?: TimelineEntry[];
+  /** The deployment's pod template hash, once the rollout has shown it. */
+  pod_hash?: string;
+  /** Commands given to the deployment's rollout, oldest first. */
+  commands?: CommandView[];
+  /** The runner observing the deployment's target, and until when (Unix ms); absent when none does. */
+  observer?: string;
+  observer_expires?: number;
 }
 
 /** What an environment runs, as far as Launchway knows. */
@@ -264,6 +276,8 @@ export interface UnitView {
   waiting: DeployRef[];
   /** The newest deployment, with what was last observed. */
   last?: DeploymentView;
+  /** What a deploy runner last saw of the service while nothing was deploying it. */
+  live?: LiveView;
 }
 
 export interface EnvironmentView {
@@ -275,6 +289,8 @@ export interface EnvironmentView {
   /** The runner that observes the target, and until when; absent when none does. */
   observer?: string;
   observer_expires?: number;
+  /** The person who started a run may not promote or retry its deployments here. */
+  protected?: boolean;
 }
 
 export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
@@ -323,7 +339,9 @@ export interface StepView {
   wait_kind?: WaitKind;
   /** A deploy step: the environment it deploys to. */
   environment?: string;
-  /** A rollback step: the deploy step whose deployment it reverts. */
+  /** A rollback step: the deploy step whose deployment it reverts. A rollout
+   * step: the deploy step whose rollout it acts on. An approval: the deploy
+   * step whose deployment it guards (a linked approval). */
   deployment?: string;
   /** A step a re-run reused: the run where it actually ran, its number, and the attempt there. */
   reused_from?: string;
@@ -398,6 +416,10 @@ export interface GraphStep {
   library?: string;
   needs_groups?: string[];
   reports?: { tests: string[] };
+  /** A rollout, rollback or linked approval step: the deploy step it is about. */
+  deployment?: string;
+  /** A rollout step: what it does to the rollout. */
+  action?: RolloutAction;
 }
 
 /** A library a pipeline uses, and the commit its version resolved to when the run was created. */
@@ -712,9 +734,68 @@ export const api = {
     for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
     return call<DeploymentView[]>("GET", "/api/v1/deployments?" + p.toString(), undefined, { background });
   },
+  deploymentControls: (run: string, dep: string, background = true) =>
+    call<DeploymentControls>("GET", `/api/v1/runs/${run}/deployments/${encodeURIComponent(dep)}/controls`, undefined, { background }),
+  command: (run: string, dep: string, action: RolloutAction, comment: string) =>
+    call<CommandView>("POST", `/api/v1/runs/${run}/deployments/${encodeURIComponent(dep)}/${action}`, { comment }),
+  withdrawCommand: (run: string, dep: string, cmd: string) =>
+    call<{ ok: boolean }>("POST", `/api/v1/runs/${run}/deployments/${encodeURIComponent(dep)}/commands/${encodeURIComponent(cmd)}/withdraw`),
   audit: (q: AuditQuery) => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
     return call<{ entries: AuditEntry[]; next_before: number }>("GET", "/api/v1/audit?" + p.toString());
   },
 };
+
+// ---- controlling deployments ----
+
+/** What can be done to a deployment's rollout. */
+export type RolloutAction = "promote" | "promote-full" | "abort" | "retry";
+
+/** A command given to a deployment's rollout, and what became of it. A
+ * pending command with detail was handed back by a runner that could not
+ * reach the cluster (detail says why). */
+export interface CommandView {
+  id: string;
+  deployment: string;
+  run_id: string;
+  step: string;
+  action: RolloutAction;
+  actor: string;
+  comment?: string;
+  origin: "person" | "step" | "pauses" | "on_cancel";
+  /** Where the rollout was when the command was given: it is applied only if it is still there. step is 0-based. */
+  expect: { pod_hash: string; step?: number; paused?: boolean };
+  state: "pending" | "taken" | "done" | "withdrawn";
+  result?: "applied" | "already_applied" | "not_applied" | "failed";
+  detail?: string;
+  taken_by?: string;
+  taken_until?: number;
+  tries: number;
+  withdrawn_by?: string;
+  at: number;
+  done_at?: number;
+}
+
+/** Whether a command can be given now; forbidden: the reason is who is asking, not where the rollout is. */
+export interface Control { action: RolloutAction; available: boolean; reason?: string; forbidden?: boolean }
+
+export interface DeploymentControls {
+  environment: string;
+  protected: boolean;
+  /** In the order promote, promote-full, abort, retry. */
+  controls: Control[];
+  /** The caller may withdraw a command nobody has taken; else withdraw_reason says why not. */
+  withdraw: boolean;
+  withdraw_reason: string;
+}
+
+/** What a deploy runner last saw of an idle service. */
+export interface LiveView {
+  deployment: string;
+  snapshot?: DeploySnapshot;
+  observed_at: number;
+  observed_by: string;
+  drift?: "" | "out_of_sync" | "differs" | "missing";
+  drift_detail?: string;
+}
