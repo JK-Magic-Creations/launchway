@@ -151,6 +151,7 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/tokens", signedIn, "token.create", s.createToken},
 		{"DELETE /api/v1/tokens/{id}", signedIn, "token.revoke", s.revokeToken},
 		{"GET /api/v1/audit", administer, "", s.auditLog},
+		{"GET /api/v1/projects/{name}/inputs", projectRead, "", s.projectInputs},
 	}
 }
 
@@ -254,6 +255,10 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusConflict, err.Error())
 	case errors.Is(err, engine.ErrClosed):
 		writeErr(w, http.StatusServiceUnavailable, err.Error())
+	case errors.As(err, new(pipeline.InputErrors)):
+		var ie pipeline.InputErrors
+		errors.As(err, &ie)
+		writeInputErrors(w, ie)
 	case errors.As(err, new(pipeline.Problems)):
 		var ps pipeline.Problems
 		errors.As(err, &ps)
@@ -594,17 +599,27 @@ func (s *Server) startRun(w http.ResponseWriter, r *http.Request) {
 		// Libraries overrides the versions of libraries the pipeline uses:
 		// library name → tag, branch or commit.
 		Libraries map[string]string `json:"libraries"`
+		// Inputs are values for the pipeline's inputs, by name; those not
+		// given take their defaults.
+		Inputs map[string]json.RawMessage `json:"inputs"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	setAudit(r, "", "ref "+in.Ref+overridesDetail(in.Libraries))
-	run, err := s.Projects.StartRun(r.Context(), r.PathValue("name"), in.Ref, identityFrom(r).User, in.Libraries)
+	given, ie := inputValues(in.Inputs)
+	setAudit(r, "", "ref "+in.Ref+overridesDetail(in.Libraries)+inputsDetail(given))
+	if ie != nil {
+		writeInputErrors(w, ie)
+		return
+	}
+	run, err := s.Projects.StartRunWith(r.Context(), source.StartRequest{Project: r.PathValue("name"), Ref: in.Ref,
+		Actor: identityFrom(r).User, Libraries: in.Libraries, Inputs: given})
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s%s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), s.libraryDetail(run.ID)))
+	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s%s%s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), s.libraryDetail(run.ID),
+		inputsDetail(given)))
 	writeJSON(w, http.StatusCreated, run)
 }
 

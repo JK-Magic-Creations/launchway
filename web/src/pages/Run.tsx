@@ -11,6 +11,7 @@ import { openInEditor } from "./EditPipeline";
 import { navigate } from "../router";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
+import { RerunInputsNote, RunTrigger } from "../components/RunTrigger";
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
@@ -235,6 +236,8 @@ export function RunPage({ id }: { id: string }) {
           {" "}See it on the <button type="button" className="linkbtn" onClick={() => setTab("definition")}>Pipeline</button> tab.
         </div>
       )}
+
+      <RunTrigger run={run} />
 
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
@@ -677,6 +680,7 @@ function RerunDialog({ run, step, onClose }: { run: RunDetail; step: StepView; o
             </div>
           </div>
         )}
+        <RerunInputsNote run={run} />
         <p className="sub">To run again only the steps that did not succeed, in this same run, use Resume instead.</p>
         <ErrorBox error={error} />
         <div className="dialog-actions">

@@ -403,7 +403,7 @@ export interface ValidateResult {
 export type LibraryOverrides = Record<string, string>;
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public problems?: Problem[]) { super(message); }
+  constructor(public status: number, message: string, public problems?: Problem[], public fields?: Record<string, string>) { super(message); }
 }
 
 /** Who is signed in, and what they may do. The server checks every request
@@ -438,7 +438,7 @@ interface CallOptions {
   background?: boolean;
 }
 
-async function call<T>(method: string, path: string, body?: unknown, opts: CallOptions = {}): Promise<T> {
+export async function call<T>(method: string, path: string, body?: unknown, opts: CallOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   const init: RequestInit = { method, headers, credentials: "same-origin" };
   // Every request that changes something says it comes from these pages;
@@ -460,8 +460,8 @@ async function call<T>(method: string, path: string, body?: unknown, opts: CallO
   try { data = text ? JSON.parse(text) : undefined; } catch { /* not JSON */ }
   if (!resp.ok) {
     if (resp.status === 401) window.dispatchEvent(new Event(SIGNED_OUT));
-    const body = data as { error?: string; problems?: Problem[] } | undefined;
-    throw new ApiError(resp.status, body?.error ?? (text || resp.statusText), body?.problems);
+    const body = data as { error?: string; problems?: Problem[]; fields?: Record<string, string> } | undefined;
+    throw new ApiError(resp.status, body?.error ?? (text || resp.statusText), body?.problems, body?.fields);
   }
   return data as T;
 }
