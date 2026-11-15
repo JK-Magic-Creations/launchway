@@ -47,6 +47,7 @@ Usage:
   launchway runner   --server URL --token T     run a runner that takes work from a server
                      [--config runner.yaml] [--health-listen ADDR]
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
+                     [-i name=value ...]
   launchway validate [file]                     check a pipeline file
   launchway graph    [file]                     print a pipeline's graph as JSON
   launchway login    --server URL               store an API token for a server
@@ -512,6 +513,8 @@ func cmdRun(args []string) error {
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
+	var given multi
+	fs.Var(&given, "i", "an input value, name=value; once for each input (the others take their defaults)")
 	fs.Parse(args)
 	secretStores, err := localSecrets(*secretsConfig)
 	if err != nil {
@@ -523,6 +526,10 @@ func cmdRun(args []string) error {
 		path = pipelineFile(nil)
 	}
 	p, err := load(path)
+	if err != nil {
+		return err
+	}
+	p, inputs, err := bindLocal(p, given)
 	if err != nil {
 		return err
 	}
@@ -559,7 +566,7 @@ func cmdRun(args []string) error {
 	go httpSrv.Serve(ln)
 	defer httpSrv.Close()
 
-	trig := engine.Trigger{Event: "manual", Actor: currentUser()}
+	trig := engine.Trigger{Event: "manual", Actor: currentUser(), Inputs: inputs}
 	if out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err == nil {
 		if b := strings.TrimSpace(string(out)); b != "HEAD" {
 			trig.Branch, trig.Ref = b, "refs/heads/"+b

@@ -168,7 +168,7 @@ owns may not appear in it.
 */}}
 {{- define "launchway.serverConfig" -}}
 {{- $extra := deepCopy (.Values.config.extraConfig | default dict) -}}
-{{- range $key := list "listen" "data" "database" "projects" "tests" -}}
+{{- range $key := list "listen" "data" "database" "projects" "tests" "loops" "schedules" -}}
 {{- if hasKey $extra $key -}}
 {{- if eq $key "database" -}}
 {{- fail "config.extraConfig.database is not allowed: the database URL must not be in the ConfigMap. Use database.existingSecret or database.url." -}}
@@ -192,6 +192,9 @@ owns may not appear in it.
 {{- if $value }}{{ $_ := set $tests $key (int64 $value) }}{{ end -}}
 {{- end -}}
 {{- if $tests }}{{ $_ := set $config "tests" $tests }}{{ end -}}
+{{- with .Values.config.loops }}{{ if .maxMembers }}{{ $_ := set $config "loops" (dict "max_members" (int64 .maxMembers)) }}{{ end }}{{ end -}}
+{{- with .Values.config.schedules }}{{ if not (kindIs "invalid" .enabled) }}{{ $_ := set $config "schedules" (dict "enabled" .enabled) }}{{ end }}{{ end -}}
+{{- with .Values.config.tokens }}{{ if .maxDays }}{{ $_ := set $config "auth" (dict "tokens" (dict "max_days" (int64 .maxDays))) }}{{ end }}{{ end -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
 

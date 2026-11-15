@@ -13,6 +13,15 @@ cat > .launchway/pipeline.yaml <<'EOF'
 pipeline: demo-app
 on:
   push: { branches: [main, "feature/*"] }
+  # Every morning at 06:00 in Chicago, the main branch with a full scan.
+  schedule:
+    - { cron: "0 6 * * *", timezone: America/Chicago, inputs: { scan: full } }
+
+# Values a run is started with: a person starting it sees a form; pushes
+# and the schedule above use the defaults (or the schedule's values).
+inputs:
+  scan: { type: choice, options: [quick, full], default: quick, description: How deep the security scan goes }
+  alpine: { type: list, default: ["3.21", "3.22"], description: Alpine versions to check the build on }
 
 # Named containers: a toolbox, and a cache that runs beside the steps.
 containers:
@@ -60,14 +69,25 @@ steps:
     description: Look for known problems in dependencies
     image: docker.io/library/alpine:3.22
     run: |
-      echo "Scanning dependencies…"
+      echo "Scanning dependencies ($LAUNCHWAY_INPUT_SCAN scan)…"
       sleep 2
       printf '\033[33m2 low-severity findings\033[0m\n'
+
+  # Repeated once for each Alpine version in the alpine input: the run
+  # shows them as one node with a status grid.
+  compat:
+    description: Check the build on each Alpine version
+    needs: lint
+    for_each: { alpine: { input: alpine } }
+    max_parallel: 2
+    image: { each: alpine, format: "docker.io/library/alpine:%s" }
+    run: |
+      echo "Checking on Alpine $LAUNCHWAY_EACH_ALPINE: $(cat /etc/alpine-release 2>/dev/null || echo unknown)"
 
   build:
     description: Build and push the image
     image: docker.io/library/alpine:3.22
-    needs: [lint, integration-tests, security-scan]
+    needs: [lint, integration-tests, security-scan, compat]
     run: |
       echo "Building $LAUNCHWAY_PROJECT at $LAUNCHWAY_COMMIT (coverage $LAUNCHWAY_NEEDS_UNIT_TESTS_COVERAGE)"
       sleep 2

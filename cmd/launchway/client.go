@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"golang.org/x/term"
+
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 // Exit codes of the client commands. With --wait, runs start exits with the
@@ -671,4 +673,29 @@ func (cl *client) logs(args []string) error {
 		}
 		time.Sleep(pollEvery)
 	}
+}
+
+// bindLocal binds a pipeline run on this machine to its input values
+// (given as -i name=value), as a server does.
+func bindLocal(p *pipeline.Pipeline, given []string) (*pipeline.Pipeline, map[string]string, error) {
+	vals := map[string]string{}
+	for _, kv := range given {
+		k, v, ok := strings.Cut(kv, "=")
+		if !ok || k == "" {
+			return nil, nil, fmt.Errorf("-i takes name=value, not %q", kv)
+		}
+		vals[k] = v
+	}
+	resolved, err := pipeline.ResolveInputs(p, vals)
+	if err != nil {
+		return nil, nil, err
+	}
+	b, err := pipeline.Bind(p, resolved, pipeline.BindOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(resolved) == 0 {
+		resolved = nil
+	}
+	return b, resolved, nil
 }

@@ -108,6 +108,21 @@
             "maxCasesPerProject": { "type": ["integer", "null"], "minimum": 1 }
           }
         },
+        "loops": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "maxMembers": { "type": ["integer", "null"], "minimum": 1, "maximum": 500 } }
+        },
+        "schedules": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "enabled": { "type": ["boolean", "null"] } }
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "maxDays": { "type": ["integer", "null"], "minimum": 1, "maximum": 3650 } }
+        },
         "extraConfig": { "type": "object" }
       }
     },
