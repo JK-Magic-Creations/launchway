@@ -61,7 +61,7 @@ func TestStartRunWithInputs(t *testing.T) {
 	var run engine.RunSummary
 	r.json(t, &run)
 	var d engine.RunDetail
-	otto.get(e.srv.URL + "/api/v1/runs/" + run.ID).json(t, &d)
+	otto.get(e.srv.URL+"/api/v1/runs/"+run.ID).json(t, &d)
 	want := map[string]string{"environment": "prod", "version": "v12", "dry_run": "false", "replicas": "5", "systems": `["debian","alpine"]`}
 	for k, v := range want {
 		if d.TriggerDetail == nil || d.TriggerDetail.Inputs[k] != v {

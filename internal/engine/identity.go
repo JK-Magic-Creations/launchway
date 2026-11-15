@@ -119,6 +119,14 @@ type APIToken struct {
 	CreatedAt int64   `json:"created_at"`
 	ExpiresAt int64   `json:"expires_at"`
 	LastUsed  int64   `json:"last_used"`
+	// Schema 13: the role the token is limited to ("" for its owner's),
+	// the project patterns it is limited to (none for every project), and
+	// the address it was last used from.
+	Role         string   `json:"role,omitempty"`
+	Projects     []string `json:"projects,omitempty"`
+	LastUsedFrom string   `json:"last_used_from,omitempty"`
+	// Owner names whose token it is, in lists only admins see.
+	OwnerName string `json:"user,omitempty"`
 }
 
 // CreateToken stores a token under the hash of its value. A person's

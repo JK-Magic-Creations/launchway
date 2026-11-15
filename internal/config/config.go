@@ -56,6 +56,11 @@ type Config struct {
 	PullRequests PullRequestsConfig `yaml:"pull_requests"`
 	// Tests limits what the server keeps of the test reports steps declare.
 	Tests TestsConfig `yaml:"tests"`
+	// Loops limits loops (for_each) in pipelines.
+	Loops LoopsConfig `yaml:"loops"`
+	// Schedules turns pipelines' schedules off for every project; a
+	// project may say otherwise.
+	Schedules SchedulesConfig `yaml:"schedules"`
 }
 
 // TestsConfig limits what the server keeps of test reports. Zero means the
@@ -161,6 +166,8 @@ type AuthConfig struct {
 	// SessionLifetime ends every session this long after sign-in; default 24h.
 	SessionLifetime string          `yaml:"session_lifetime"`
 	Access          []AccessBinding `yaml:"access"`
+	// Tokens limits API tokens.
+	Tokens TokensConfig `yaml:"tokens"`
 }
 
 // OIDCConfig is the OpenID Connect provider to sign in with.
@@ -212,6 +219,14 @@ type ProjectConfig struct {
 	// .launchway/pipeline.yaml: a template of a library. A file in the
 	// repository takes its place.
 	Pipeline *ProjectPipelineConfig `yaml:"pipeline"`
+	// Schedules overrides the server's schedules setting for this project.
+	Schedules *SchedulesConfig `yaml:"schedules"`
+	// GitWebhook lets the project's Git host call a webhook that makes the
+	// server poll the project at once.
+	GitWebhook *GitWebhookConfig `yaml:"git_webhook"`
+	// Webhooks says what callers of the pipeline's webhook triggers must
+	// prove, by trigger name. A trigger not listed here cannot be called.
+	Webhooks map[string]WebhookConfig `yaml:"webhooks"`
 }
 
 // LibraryConfig is a repository of templates and the scripts they use.
@@ -354,6 +369,7 @@ func Load(path string) (*Config, error) {
 				}
 			}
 			c.Runner.Secrets.RelativeTo(base)
+			c.relativeTriggerFiles(base)
 			if f := c.Auth.OIDC.ClientSecretFile; f != "" && !filepath.IsAbs(f) {
 				c.Auth.OIDC.ClientSecretFile = filepath.Join(base, f)
 			}
@@ -409,6 +425,9 @@ func Load(path string) (*Config, error) {
 	}
 	if _, err := c.Runner.Reports.Limits(); err != nil {
 		return nil, fmt.Errorf("%s: runner.%w", path, err)
+	}
+	if err := c.checkTriggers(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.DraftRules(); err != nil {
 		if path != "" {
@@ -520,6 +539,7 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 		if p.Push != nil {
 			sp.Push = &source.PushSettings{BranchPrefix: p.Push.BranchPrefix, AllowDirect: p.Push.AllowDirect}
 		}
+		c.applyTriggers(p, &sp)
 		if pp := p.Pipeline; pp != nil {
 			sp.Pipeline = &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With,
 				Supersede: pp.Supersede}

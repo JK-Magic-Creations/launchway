@@ -51,6 +51,8 @@ type Server struct {
 	// StreamPing is how often the live stream sends a keep-alive and checks
 	// that the caller is still signed in; default 15s.
 	StreamPing time.Duration
+	// TokenMaxDays is the longest an API token may last; 0 is 365 days.
+	TokenMaxDays int
 
 	sealerMu sync.Mutex
 	sealer   *auth.Sealer // seals the state of sign-ins in progress
@@ -152,6 +154,9 @@ func (s *Server) routes() []route {
 		{"DELETE /api/v1/tokens/{id}", signedIn, "token.revoke", s.revokeToken},
 		{"GET /api/v1/audit", administer, "", s.auditLog},
 		{"GET /api/v1/projects/{name}/inputs", projectRead, "", s.projectInputs},
+		{"GET /api/v1/tokens/limits", signedIn, "", s.tokenLimits},
+		{"GET /api/v1/admin/tokens", administer, "", s.listAllTokens},
+		{"DELETE /api/v1/admin/tokens/{id}", administer, "token.revoke", s.revokeAnyToken},
 	}
 }
 

@@ -49,6 +49,9 @@ Usage:
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
   launchway validate [file]                     check a pipeline file
   launchway graph    [file]                     print a pipeline's graph as JSON
+  launchway login    --server URL               store an API token for a server
+  launchway runs     start|list|show|logs|cancel  start and follow runs on a server
+                                                (launchway runs, for more)
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -73,6 +76,10 @@ func main() {
 		err = cmdValidate(args)
 	case "graph":
 		err = cmdGraph(args)
+	case "login":
+		err = cmdLogin(args)
+	case "runs":
+		err = cmdRuns(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -156,6 +163,10 @@ func cmdServer(args []string) error {
 		return err
 	}
 	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, cfg.SourceLibraries(), log)
+	if err == nil {
+		loopLimit, _ := cfg.LoopLimit() // checked when the file was read
+		mgr.SetLoopLimit(loopLimit)
+	}
 	if err != nil {
 		return err
 	}
@@ -169,6 +180,7 @@ func cmdServer(args []string) error {
 	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
+	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
 	if authOpts != nil {
 		// Find the provider now, so a mistake shows at once; sign-in tries
 		// again later if it is unreachable.
