@@ -18,7 +18,17 @@ steps:
     description: Run every Go test
     image: docker.io/library/golang:1.27
     needs: check-code
-    run: go test -count=1 ./...
+    # The results go to a report file as go test -json; the step still fails
+    # when a test fails (the exit status is kept, not lost in a pipe).
+    run: |
+      mkdir -p reports
+      status=0
+      go test -count=1 -json ./... > reports/go-test.json || status=$?
+      # One line per package in the log; every test is in the Tests tab.
+      sed -n 's/.*"Action":"\(pass\|fail\|skip\)","Package":"\([^"]*\)","Elapsed":\([0-9.]*\)}$/\1  \2  \3s/p' reports/go-test.json
+      exit $status
+    reports:
+      tests: reports/go-test.json
     timeout: 20m
 
   build-ui:
