@@ -130,6 +130,10 @@ type RunnerInfo struct {
 	// Pool is the runner pool its token belongs to, set by the server from
 	// the token, never by the runner.
 	Pool string `json:"-"`
+	// Capabilities, for a deploy runner, says what it knows beyond the
+	// first release of deploy steps: "idle" (it observes idle services
+	// slowly, so it may be given them). Older runners send none.
+	Capabilities []string `json:"capabilities,omitempty"`
 }
 
 // Job is everything a runner needs to execute one step attempt.
@@ -685,8 +689,13 @@ func (e *Engine) Cancel(runID, actor string) error {
 		if c.st.CancelRequested {
 			return nil
 		}
+		open := []string(nil)
+		if c.e.knows(schemaControl) {
+			open = c.st.openDeployments()
+		}
 		c.emit(RunCancelRequested, Payload{Actor: actor})
 		c.advance()
+		c.abortOnCancel(open, actor)
 		return nil
 	})
 }
@@ -1575,6 +1584,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaControl) {
+		if err := c.persistControl(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
 }
 
@@ -1704,6 +1718,9 @@ func (c *cmd) advance() {
 					return
 				}
 				changed = len(c.events) > before
+			case def.IsRolloutStep():
+				c.startRolloutStep(id, def)
+				changed = true
 			case def.IsApproval():
 				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
 				changed = true

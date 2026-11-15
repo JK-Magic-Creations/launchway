@@ -83,6 +83,9 @@ type RunState struct {
 	// why. Both are cleared by a resume.
 	CancelReason string
 	SupersededBy *Superseder
+	// Commands are the commands given to the run's deployments' rollouts,
+	// in the order given (schema 14; see control.go).
+	Commands []*CommandState
 
 	// Schema is the oldest schema whose servers understand every event of
 	// the run (runs.min_schema).
@@ -163,6 +166,9 @@ type DeployState struct {
 	Phases     int // deploy.phase events in this attempt
 	Closed     bool
 	Verdict    string
+	// Command, for a rollout step, is the command it gave in this attempt
+	// (schema 14).
+	Command string
 }
 
 // Opened reports whether the deployment was opened (it took the lock).
@@ -224,7 +230,7 @@ func fold(events []Event, vocab int) *RunState {
 
 // Values a server of this version understands, inside events.
 var (
-	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval, pipeline.KindDeploy, pipeline.KindRollback}
+	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval, pipeline.KindDeploy, pipeline.KindRollback, pipeline.KindRolloutStep}
 	knownOutcomes  = []string{string(StepSucceeded), string(StepFailed)}
 	knownRunEnds   = []string{string(RunSucceeded), string(RunFailed), string(RunCanceled)}
 	knownSkipKinds = []string{"condition", "upstream", SkipNotNeeded, SkipSuperseded}
@@ -297,6 +303,13 @@ func (st *RunState) check(ev Event) bool {
 			st.Schema = max(st.Schema, schemaDeploy)
 			if !st.understands(schemaDeploy) {
 				st.notUnderstood("deploy or rollback steps (schema %d)", schemaDeploy)
+			}
+		}
+		// Rollout steps, and the keys that control a rollout.
+		if p.Pipeline.UsesSchemaControl() || p.Pipeline.Requires > 0 {
+			st.Schema = max(st.Schema, schemaControl, p.Pipeline.Requires)
+			if !st.understands(max(schemaControl, p.Pipeline.Requires)) {
+				st.notUnderstood("rollout steps or keys that control a rollout (schema %d)", schemaControl)
 			}
 		}
 		return true

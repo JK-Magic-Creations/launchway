@@ -41,6 +41,14 @@ const (
 	DeployObserving   EventType = "deploy.observing"    // the step waits for what deploy runners observe
 	DeployPhase       EventType = "deploy.phase"        // what is observed moved to another phase
 	DeployClosed      EventType = "deploy.closed"       // every step of the deployment is done; the lock is released
+
+	// Commands on a deployment's rollout (schema 14; see control.go). Step
+	// events, of the step that gave the command (the deploy step, for a
+	// person's).
+	DeployCommand          EventType = "deploy.command"           // promote, promote-full, abort or retry asked for, with what it expects
+	DeployCommandWithdrawn EventType = "deploy.command_withdrawn" // withdrawn before a deploy runner took it
+	DeployCommandTaken     EventType = "deploy.command_taken"     // a deploy runner took it, until a time
+	DeployCommandDone      EventType = "deploy.command_done"      // applied, already applied, not applied, or failed
 )
 
 // eventSince is the schema version that brought each event type. A server
@@ -54,6 +62,7 @@ var eventSince = map[EventType]int{
 	StepWaiting: 4, StepApproved: 4, StepRejected: 4,
 	StepReused:        8,
 	DeployWaitingLock: 11, DeployOpened: 11, DeployActionDone: 11, DeployObserving: 11, DeployPhase: 11, DeployClosed: 11,
+	DeployCommand: 14, DeployCommandWithdrawn: 14, DeployCommandTaken: 14, DeployCommandDone: 14,
 }
 
 // Event is one entry in the log.
@@ -168,6 +177,8 @@ type DeployEvent struct {
 	Detail string `json:"detail,omitempty"`
 	// deploy.closed: how the deployment ended (see Verdicts).
 	Verdict string `json:"verdict,omitempty"`
+	// deploy.command*: the command (schema 14).
+	Command *CommandEvent `json:"command,omitempty"`
 }
 
 // DeployRef names a deployment.
@@ -196,6 +207,10 @@ type DeployFacts struct {
 	// Sync says what was asked of Argo CD: requested, not needed, skipped
 	// (request: never), or why not.
 	Sync string `json:"sync,omitempty"`
+	// Abort, for a revert with abort_first, says what became of aborting
+	// the rollout first (schema 14; older servers ignore it, as it only
+	// records).
+	Abort string `json:"abort,omitempty"`
 }
 
 // Superseder is the run that superseded another.

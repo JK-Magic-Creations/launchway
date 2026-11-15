@@ -112,10 +112,17 @@ type Rollout struct {
 	// PauseUntil is when a timed pause ends (Unix ms), when known.
 	PauseUntil int64 `json:"pause_until,omitempty"`
 	Aborted    bool  `json:"aborted"`
-	Replicas   int   `json:"replicas"`
-	Ready      int   `json:"ready"`
-	Updated    int   `json:"updated"`
-	Available  int   `json:"available"`
+	// PauseIndefinite says the rollout waits at a pause that no timer ends:
+	// a pause step without a duration, a blue-green pause without
+	// automatic promotion, or an inconclusive analysis. Someone (or a
+	// command) must promote it.
+	PauseIndefinite bool `json:"pause_indefinite,omitempty"`
+	// PromoteFull says a full promotion was asked for and not yet done.
+	PromoteFull bool `json:"promote_full,omitempty"`
+	Replicas    int  `json:"replicas"`
+	Ready       int  `json:"ready"`
+	Updated     int  `json:"updated"`
+	Available   int  `json:"available"`
 }
 
 // AnalysisRun is one of a rollout's analysis runs, reduced.
@@ -155,4 +162,11 @@ type Spec struct {
 	Rollout   *pipeline.RolloutRef `json:"rollout,omitempty"`
 	// Windows is wait or fail (see pipeline.Sync).
 	Windows string `json:"windows"`
+	// Until and Pauses, when set, replace Rollout's: they are a rollout
+	// step's (see pipeline.Step). PastStep, for a rollout step that
+	// promoted, is the canary step it promoted: a pause there does not end
+	// until: paused, only a later one does.
+	Until    string `json:"until,omitempty"`
+	Pauses   string `json:"pauses,omitempty"`
+	PastStep *int   `json:"past_step,omitempty"`
 }

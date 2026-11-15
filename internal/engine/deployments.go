@@ -73,6 +73,11 @@ type Environment struct {
 	// Queue is newest (the default: a run waiting for the lock is skipped
 	// when a newer one starts waiting) or all (they deploy in turn).
 	Queue string
+	// Protected: the person who started a run may not promote (or retry)
+	// its deployment here unless approvals.allow_self says they may
+	// approve their own runs; anyone with the operator role here may abort
+	// it (schema 14).
+	Protected bool
 }
 
 // Allows reports whether a project may deploy to the environment.
@@ -264,6 +269,9 @@ func (st *RunState) applyDeploy(ev Event, s *StepState) {
 			s.Dep.Facts = d.Facts
 		}
 	case DeployObserving:
+		if def := st.Pipeline.Step(ev.Data.Step); def != nil && def.IsRolloutStep() && d.ID != "" {
+			st.adoptDeployment(s, d.ID, ev.At)
+		}
 		s.Status = StepWaitingS
 		s.WaitKind = WaitObserve
 		s.LeaseID = ""
@@ -282,6 +290,8 @@ func (st *RunState) applyDeploy(ev Event, s *StepState) {
 		if s.Dep != nil {
 			s.Dep.Closed, s.Dep.Verdict = true, d.Verdict
 		}
+	default:
+		st.applyControl(ev, s)
 	}
 }
 
@@ -526,6 +536,9 @@ func (c *cmd) closeDeployments() {
 			verdict = VerdictRollbackFailed
 		case s.Status == StepSucceeded:
 			verdict = VerdictDeployed
+			if v := st.controlVerdict(id); v != "" {
+				verdict = v
+			}
 		case s.Status == StepCanceledS:
 			verdict = VerdictAbandoned
 		}
@@ -690,7 +703,13 @@ func (c *cmd) deployFinished(ev Event, s *StepState) error {
 		return nil
 	}
 	dep := s.Dep
-	if def.IsDeploy() {
+	if def.IsDeploy() && def.StopsAtPause() {
+		return nil // at a pause: deployed once a rollout step gets it healthy
+	}
+	if def.IsRolloutStep() && (def.Action == "abort" || def.Until != "healthy") {
+		return nil
+	}
+	if def.IsDeploy() || def.IsRolloutStep() {
 		if _, err := c.tx.Exec(`UPDATE deployments SET deployed_at = ? WHERE id = ?`, ev.At, dep.ID); err != nil {
 			return err
 		}
@@ -743,8 +762,15 @@ func (c *cmd) expireDeploy(id string, def *pipeline.Step) error {
 			}
 		}
 		what := "healthy"
-		if def.IsRollback() {
+		switch {
+		case def.IsRollback():
 			what = "healthy on the reverted version"
+		case def.IsRolloutStep() && def.Action == "abort":
+			what = "aborted"
+		case def.IsRolloutStep() && def.Until == "paused":
+			what = "at the rollout's next pause"
+		case def.IsDeploy() && def.StopsAtPause():
+			what = "at the rollout's first pause"
 		}
 		reason = fmt.Sprintf("not %s within %s", what, def.Timeout.Short())
 		if at == 0 {
@@ -795,6 +821,12 @@ type DeployJob struct {
 	// Message is the commit message (subject and body; the runner adds the
 	// trailers).
 	Message string `json:"message"`
+	// AbortFirst, for a revert (schema 14): abort the rollout first, if it
+	// is still on PodHash, the deployment's pod template hash ("" when
+	// never seen: then nothing is aborted).
+	AbortFirst bool                 `json:"abort_first,omitempty"`
+	Rollout    *pipeline.RolloutRef `json:"rollout,omitempty"`
+	PodHash    string               `json:"pod_hash,omitempty"`
 }
 
 // deployJob builds a deploy runner's job for a leased deploy or rollback step.
@@ -832,6 +864,13 @@ func (c *cmd) deployJob(stepID, leaseID string) (*Job, error) {
 		}
 		dj.Message = fmt.Sprintf("Roll back %s in %s to %s\n\nRun #%d of %s, step %s: %s.",
 			dep.Service, dep.Environment, to, st.Number, st.Project, stepID, nonEmpty(s.Error, "a step guarding the deployment did not succeed"))
+		if def.AbortFirst && deployDef.Rollout != nil && c.e.knows(schemaControl) {
+			row, err := c.deploymentRow(dep.ID)
+			if err != nil {
+				return nil, err
+			}
+			dj.AbortFirst, dj.Rollout, dj.PodHash = true, deployDef.Rollout, row.hash
+		}
 	}
 	return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
 		Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Timeout: def.Timeout, Source: st.Source, Deploy: dj}, nil
@@ -935,6 +974,13 @@ type DeploymentView struct {
 	ObservedBy      string          `json:"observed_by,omitempty"`
 	Holding         bool            `json:"holding"` // it holds its environment's lock
 	Timeline        []TimelineEntry `json:"timeline,omitempty"`
+	// Schema 14: the deployment's pod template hash as first seen in its
+	// rollout, the commands given to the rollout, and the runner observing
+	// its target (empty when none does).
+	PodHash         string        `json:"pod_hash,omitempty"`
+	Commands        []CommandView `json:"commands,omitempty"`
+	Observer        string        `json:"observer,omitempty"`
+	ObserverExpires int64         `json:"observer_expires,omitempty"`
 }
 
 // TimelineEntry is one change in what was observed of a deployment.

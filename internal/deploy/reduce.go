@@ -156,6 +156,11 @@ func ReduceRollout(obj map[string]any, workloadGeneration *int64) *Rollout {
 	case mapAt(strategy, "blueGreen") != nil:
 		ro.Strategy = "blueGreen"
 	}
+	ro.PromoteFull, _ = status["promoteFull"].(bool)
+	bgAuto := false
+	if bg := mapAt(strategy, "blueGreen"); bg != nil && integer(bg["autoPromotionSeconds"]) > 0 {
+		bgAuto = true
+	}
 	ro.Steps = len(steps)
 	for _, s := range steps {
 		ro.StepNames = append(ro.StepNames, stepName(asMap(s)))
@@ -183,7 +188,15 @@ func ReduceRollout(obj map[string]any, workloadGeneration *int64) *Rollout {
 				if start := parseTime(str(pm, "startTime")); start > 0 {
 					ro.PauseUntil = start + d.Milliseconds()
 				}
+			} else {
+				ro.PauseIndefinite = true
 			}
+		}
+		switch str(pm, "reason") {
+		case "BlueGreenPause":
+			ro.PauseIndefinite = ro.PauseIndefinite || !bgAuto
+		case "InconclusiveAnalysis", "InconclusiveExperiment":
+			ro.PauseIndefinite = true
 		}
 	}
 	return ro

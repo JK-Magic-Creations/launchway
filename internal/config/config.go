@@ -77,6 +77,11 @@ type EnvironmentConfig struct {
 	// Queue is newest (the default: a run waiting for the lock is skipped
 	// when a newer run of the same service starts waiting) or all.
 	Queue string `yaml:"queue"`
+	// Protected: the person who started a run may not promote its
+	// deployment here (unless approvals.allow_self lets them approve their
+	// own runs); anyone with the operator role here may abort it. Off by
+	// default.
+	Protected bool `yaml:"protected"`
 }
 
 // RunnerPoolConfig is one deploy runner pool. Its token is read from an
@@ -92,7 +97,7 @@ type RunnerPoolConfig struct {
 func (c *Config) EngineEnvironments() []engine.Environment {
 	out := make([]engine.Environment, 0, len(c.Environments))
 	for _, e := range c.Environments {
-		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue})
+		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue, Protected: e.Protected})
 	}
 	return out
 }

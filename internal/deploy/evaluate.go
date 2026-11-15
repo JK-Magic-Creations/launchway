@@ -36,6 +36,10 @@ type Verdict struct {
 	Outcome Outcome `json:"outcome"`
 	Phase   string  `json:"phase"`
 	Detail  string  `json:"detail"` // in plain words, for the run page and the step's reason
+	// Action and Expect, for Outcome Command: the command to give the
+	// rollout, and what it expects (see control.go).
+	Action string  `json:"action,omitempty"`
+	Expect *Expect `json:"expect,omitempty"`
 }
 
 func cont(phase, format string, a ...any) Verdict {
@@ -97,7 +101,12 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		return cont(PhaseSyncing, "%s", what)
 	}
 
-	// The revision is ours. Now the judged resources, or the application.
+	// The revision is ours. A rollback that aborted the rollout first waits
+	// for it to return to the previous version: the abort is its own doing.
+	if ro := s.Rollout; spec.Kind == "rollback" && ro != nil && ro.Found && ro.Aborted {
+		return cont(PhaseAborted, "the rollout is aborted; waiting for it to return to the previous version%s", colon(ro.Message))
+	}
+	// Now the judged resources, or the application.
 	if spec.Health == "resources" && len(spec.Resources) > 0 {
 		for _, want := range spec.Resources {
 			r := findResource(app.Resources, want.Group, want.Kind, want.Namespace, want.Name)
@@ -127,6 +136,9 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 				return v
 			}
 			if s.Rollout != nil && s.Rollout.Found && spec.Rollout != nil {
+				if v, ok := atPause(spec, s); ok {
+					return v
+				}
 				return rolloutProgress(s)
 			}
 			return cont(PhaseProgress, "the application is %s%s", nonEmpty(app.Health, "of unknown health"), colon(app.HealthMessage))
@@ -152,7 +164,20 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		return Verdict{Outcome: Succeeded, Phase: PhaseHealthy,
 			Detail: fmt.Sprintf("synced at %s; rollout healthy on %s (%d/%d ready)", short(app.Revision), ro.CurrentPodHash, ro.Ready, ro.Replicas)}
 	}
+	if v, ok := atPause(spec, s); ok {
+		return v
+	}
 	return rolloutProgress(s)
+}
+
+// atPause is what an indefinite pause of the deployment's version means
+// (see pauseVerdict); only a rollout the controller has seen at the
+// deployment's commit counts.
+func atPause(spec Spec, s Snapshot) (Verdict, bool) {
+	if spec.Rollout == nil || spec.Kind == "rollback" || OurPodHash(s) == "" {
+		return Verdict{}, false
+	}
+	return pauseVerdict(spec, s)
 }
 
 // rolloutFailure reports a rollout that has given up: aborted or Degraded.

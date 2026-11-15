@@ -197,6 +197,11 @@ type WatchItem struct {
 	Branch      string      `json:"branch"`
 	Spec        deploy.Spec `json:"spec"`
 	Deadline    int64       `json:"deadline"`
+	// Kind (schema 14) is "" for a step waiting for what is observed,
+	// "deployment" for an open deployment no step is watching (an approval
+	// may be waiting at its pause), or "unit" for an idle service, which
+	// the runner may observe slowly.
+	Kind string `json:"kind,omitempty"`
 }
 
 // Observation is what a deploy runner saw for one watch.
@@ -261,6 +266,14 @@ func (e *Engine) Watch(ctx context.Context, r RunnerInfo, targets []string, know
 		items, err := e.watchItems(held)
 		if err != nil {
 			return nil, "", err
+		}
+		if e.knows(schemaControl) {
+			more, err := e.controlWatchItems(r, held)
+			if err != nil {
+				return nil, "", err
+			}
+			items = append(items, more...)
+			sort.Slice(items, func(i, j int) bool { return items[i].Key < items[j].Key })
 		}
 		version := watchVersion(items)
 		left := time.Until(deadline)
@@ -363,13 +376,21 @@ func watchItemOf(st *RunState, id string) (WatchItem, bool) {
 		deployDef = st.Pipeline.Step(def.Deployment)
 		kind = pipeline.KindRollback
 	}
+	if def.IsRolloutStep() {
+		deployDef = st.Pipeline.Step(def.Deployment)
+		kind = pipeline.KindRolloutStep
+	}
 	if deployDef == nil || deployDef.ArgoCD == nil || deployDef.ArgoCD.WriteBack == nil {
 		return WatchItem{}, false
+	}
+	spec := deploy.SpecFor(kind, deployDef, s.Dep.Commit)
+	if def.IsRolloutStep() {
+		spec.Until, spec.Pauses = def.Until, def.Pauses
 	}
 	return WatchItem{Key: watchKey(s.Dep.ID, st.ID, id, s.Attempt, s.Dep.Commit), Deployment: s.Dep.ID, RunID: st.ID,
 		RunNumber: st.Number, Project: st.Project, Step: id, Attempt: s.Attempt, Target: s.Dep.Target,
 		Application: s.Dep.Application, Repo: deployDef.ArgoCD.WriteBack.Repo, Branch: deployDef.ArgoCD.WriteBack.Branch,
-		Spec: deploy.SpecFor(kind, deployDef, s.Dep.Commit), Deadline: s.Deadline}, true
+		Spec: spec, Deadline: s.Deadline}, true
 }
 
 // maxSnapshotBytes bounds a stored snapshot.
@@ -412,6 +433,14 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 		res.Reason = "not a watch key"
 		return res, nil
 	}
+	if e.knows(schemaControl) {
+		switch {
+		case parts[0] == "unit":
+			return e.observeUnit(r, held, o, parts)
+		case parts[2] == "-":
+			return e.observeOpen(r, held, o, parts)
+		}
+	}
 	depID, runID, stepID := parts[0], parts[1], parts[2]
 	snap, err := json.Marshal(o.Snapshot)
 	if err != nil {
@@ -450,7 +479,11 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 		res.Reason = "the deployment is no longer watched for this"
 		return res, nil
 	}
-	v := deploy.Evaluate(item.Spec, o.Snapshot)
+	hash, err := e.notePodHash(depID, item.Spec.Kind, o.Snapshot)
+	if err != nil {
+		return res, err
+	}
+	v := st.evaluate(stepID, item.Spec, o.Snapshot, hash, e.now().UnixMilli())
 	res.Accepted, res.Phase, res.Detail = true, v.Phase, v.Detail
 	if err := e.storeObservation(depID, stepID, r, snap, stored, phase, detail, v); err != nil {
 		return res, err
@@ -470,6 +503,15 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 		if c.now >= s.Deadline {
 			return nil // from the deadline on, only expiry decides
 		}
+		// Decided again on the run as it is now: commands may have changed.
+		v = c.st.evaluate(stepID, item.Spec, o.Snapshot, hash, c.now)
+		if v.Outcome == deploy.Command && v.Expect != nil {
+			origin := OriginPauses
+			if c.st.Pipeline.Step(stepID).IsRolloutStep() && s.Dep.Command == "" {
+				origin = OriginStep
+			}
+			c.giveCommand(stepID, s.Dep.ID, v.Action, "launchway", "", origin, *v.Expect)
+		}
 		// The last phase is always recorded, so the events say how it ended.
 		if (v.Phase != s.Dep.Phase && s.Dep.Phases < maxPhaseEvents) || v.Outcome != deploy.Continue {
 			c.emit(DeployPhase, Payload{Step: stepID, Attempt: s.Attempt, Deploy: &DeployEvent{Phase: v.Phase, Detail: v.Detail}})
@@ -483,7 +525,7 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 				if s.Dep.Previous != nil {
 					outputs["previous_version"] = s.Dep.Previous.Version
 				}
-			} else {
+			} else if def.IsRollback() {
 				outputs["revert"] = s.Dep.Commit
 				if s.Dep.Previous != nil {
 					outputs["version"] = s.Dep.Previous.Version
@@ -500,6 +542,9 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 	if errors.Is(err, ErrNeedsNewer) {
 		res.Accepted, res.Reason = false, "the run is not watched by this server"
 		return res, nil
+	}
+	if err == nil && e.knows(schemaControl) && item.Spec.Kind != pipeline.KindRollback {
+		err = e.rejectOnAbort(runID, depID, o.Snapshot, hash)
 	}
 	return res, err
 }
@@ -672,6 +717,9 @@ func (e *Engine) deployments(where string, args []any, limit int, timeline bool)
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	if err := e.addControl(out); err != nil {
+		return nil, err
+	}
 	if timeline {
 		for i := range out {
 			trs, err := e.db.Query(`SELECT at, step_id, phase, detail FROM deployment_timeline WHERE deployment = ? ORDER BY id`, out[i].ID)
@@ -737,6 +785,8 @@ type EnvironmentView struct {
 	Queue    string     `json:"queue"`
 	Projects []string   `json:"projects"`
 	Services []UnitView `json:"services"`
+	// Protected: see Environment.Protected.
+	Protected bool `json:"protected,omitempty"`
 	// Observers says which runner observes the environment's target, and
 	// until when (Unix ms); empty when none does.
 	Observer        string `json:"observer,omitempty"`
@@ -755,6 +805,9 @@ type UnitView struct {
 	Waiting []DeployRef `json:"waiting"`
 	// Last is the newest deployment, with what was last observed.
 	Last *DeploymentView `json:"last,omitempty"`
+	// Live is what deploy runners last saw of the service while nothing
+	// was deploying it, and whether it differs from Current (schema 14).
+	Live *LiveView `json:"live,omitempty"`
 }
 
 // CurrentView is what an environment runs, as far as Launchway knows.
@@ -804,6 +857,9 @@ func (e *Engine) EnvironmentStates(visible func(project string) bool) ([]Environ
 			}
 		}
 		rows.Close()
+		if err := e.unitLive(get); err != nil {
+			return nil, err
+		}
 		rows, err = e.db.Query(`SELECT l.environment, l.project, l.service, l.deployment, l.run_id, l.run_number, l.step_id, COALESCE(d.version, '')
 			FROM deploy_locks l LEFT JOIN deployments d ON d.id = l.deployment`)
 		if err != nil {
@@ -890,7 +946,7 @@ func (e *Engine) EnvironmentStates(visible func(project string) bool) ([]Environ
 		rows.Close()
 	}
 	for _, env := range e.Environments() {
-		v := EnvironmentView{Name: env.Name, Target: env.Target, Queue: env.Queue, Projects: env.Projects, Services: []UnitView{}}
+		v := EnvironmentView{Name: env.Name, Target: env.Target, Queue: env.Queue, Projects: env.Projects, Services: []UnitView{}, Protected: env.Protected}
 		if o, ok := observers[env.Target]; ok && o[1].(int64) >= e.now().UnixMilli() {
 			v.Observer, v.ObserverExpires = o[0].(string), o[1].(int64)
 		}

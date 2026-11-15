@@ -655,7 +655,48 @@ CREATE TABLE target_observers (
   expires_at {{BIG}} NOT NULL
 );
 `},
+	// 12 and 13 are taken by work on other branches (artifacts with security
+	// findings, and triggers). These placeholders hold their places on this
+	// branch only; the merge replaces them with the real migrations.
+	{additive, ``},
+	{additive, ``},
+	// 14: controlling deployments (see control.go). Commands on a
+	//    deployment's Argo Rollouts rollout (promote, promote-full, abort,
+	//    retry) are deploy.command* events; deploy_commands (made empty by
+	//    11) gets the columns deploy runners take them by. Rollout steps
+	//    (kind rollout) and the keys of control.go in internal/pipeline give
+	//    a run min_schema 14, so older servers leave it alone, and a command
+	//    given on an older run raises its min_schema the same way.
+	//    deployments.pod_hash is the deployment's pod template hash, the
+	//    first time a deploy runner saw it in the rollout, and watch_spec
+	//    what to watch it for once its run is over. environment_state gets
+	//    what deploy runners last saw of an idle service, and its drift.
+	//    Compatibility: additive: new columns with defaults and an index.
+	{additive, `
+ALTER TABLE deploy_commands ADD COLUMN project TEXT NOT NULL DEFAULT '';
+ALTER TABLE deploy_commands ADD COLUMN target TEXT NOT NULL DEFAULT '';
+ALTER TABLE deploy_commands ADD COLUMN origin TEXT NOT NULL DEFAULT '';
+ALTER TABLE deploy_commands ADD COLUMN take_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE deploy_commands ADD COLUMN taken_by TEXT NOT NULL DEFAULT '';
+ALTER TABLE deploy_commands ADD COLUMN taken_until {{BIG}} NOT NULL DEFAULT 0;
+ALTER TABLE deploy_commands ADD COLUMN tries INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE deploy_commands ADD COLUMN detail TEXT NOT NULL DEFAULT '';
+ALTER TABLE deploy_commands ADD COLUMN withdrawn_by TEXT NOT NULL DEFAULT '';
+CREATE INDEX deploy_commands_open ON deploy_commands(state, target);
+ALTER TABLE deployments ADD COLUMN pod_hash TEXT NOT NULL DEFAULT '';
+ALTER TABLE deployments ADD COLUMN watch_spec TEXT NOT NULL DEFAULT '';
+ALTER TABLE environment_state ADD COLUMN snapshot TEXT NOT NULL DEFAULT '';
+ALTER TABLE environment_state ADD COLUMN observed_at {{BIG}} NOT NULL DEFAULT 0;
+ALTER TABLE environment_state ADD COLUMN observed_by TEXT NOT NULL DEFAULT '';
+ALTER TABLE environment_state ADD COLUMN observed_deployment TEXT NOT NULL DEFAULT '';
+ALTER TABLE environment_state ADD COLUMN drift TEXT NOT NULL DEFAULT '';
+ALTER TABLE environment_state ADD COLUMN drift_detail TEXT NOT NULL DEFAULT '';
+`},
 }
+
+// schemaControl is the schema that brought commands on deployments, rollout
+// steps, and observing idle services.
+const schemaControl = 14
 
 // schemaDeploy is the schema that brought deploy and rollback steps.
 const schemaDeploy = 11
