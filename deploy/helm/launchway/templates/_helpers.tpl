@@ -219,7 +219,10 @@ in the server configuration, plus the server URL and the data directory.
 {{- range $key, $value := dict "max_files" $r.maxFiles "max_file_mib" $r.maxFileMiB "max_total_mib" $r.maxTotalMiB -}}
 {{- if $value }}{{ $_ := set $reports $key (int64 $value) }}{{ end -}}
 {{- end -}}
-{{- toYaml (dict "server" $server "data" "/var/lib/launchway-runner" "concurrency" .Values.runner.concurrency "executor" "kubernetes" "kubernetes" $kube "secrets" (.Values.runner.secretStores | default dict) "reports" $reports) -}}
+{{- $runner := dict "server" $server "data" "/var/lib/launchway-runner" "concurrency" .Values.runner.concurrency "executor" "kubernetes" "kubernetes" $kube "secrets" (.Values.runner.secretStores | default dict) -}}
+{{- /* Only when set: a runner of the version before does not know the setting (see the note on defaults in values.yaml). */ -}}
+{{- if $reports }}{{ $_ := set $runner "reports" $reports }}{{ end -}}
+{{- toYaml $runner -}}
 {{- end -}}
 
 {{/* Default soft spread across nodes, for one component. Call with (list $ "server"). */}}

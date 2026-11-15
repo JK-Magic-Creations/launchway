@@ -103,9 +103,9 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "maxUploadMiB": { "type": "integer", "minimum": 1, "maximum": 1024 },
-            "maxCasesPerRun": { "type": "integer", "minimum": 1 },
-            "maxCasesPerProject": { "type": "integer", "minimum": 1 }
+            "maxUploadMiB": { "type": ["integer", "null"], "minimum": 1, "maximum": 1024 },
+            "maxCasesPerRun": { "type": ["integer", "null"], "minimum": 1 },
+            "maxCasesPerProject": { "type": ["integer", "null"], "minimum": 1 }
           }
         },
         "extraConfig": { "type": "object" }
@@ -245,9 +245,9 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "maxFiles": { "type": "integer", "minimum": 1 },
-            "maxFileMiB": { "type": "integer", "minimum": 1, "maximum": 1024 },
-            "maxTotalMiB": { "type": "integer", "minimum": 1, "maximum": 1024 }
+            "maxFiles": { "type": ["integer", "null"], "minimum": 1 },
+            "maxFileMiB": { "type": ["integer", "null"], "minimum": 1, "maximum": 1024 },
+            "maxTotalMiB": { "type": ["integer", "null"], "minimum": 1, "maximum": 1024 }
           }
         },
         "secretStores": {

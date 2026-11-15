@@ -112,3 +112,19 @@ test is skipped and `TestBuildBelowTheMinimumRefuses` checks the refusal instead
 
 `deploy/test/README.md` has the same check on a real cluster: install a build limited to N-1,
 upgrade to N, roll the Deployment back half-way, and watch the old pods start and serve.
+
+## New settings and the Helm chart
+
+The same rule that holds for the database holds for the configuration file. During an upgrade,
+and after an aborted one, pods of the old and the new version read the same ConfigMap, and a
+server or runner refuses a setting it does not know. So:
+
+- A new setting is optional in the program, with its default built in.
+- The chart leaves it unset in `values.yaml` (a comment says what the built-in default is) and
+  writes it into the configuration only when the operator sets it. With the chart's default
+  values, the configuration must be readable by the release before.
+- An operator who sets a new setting should do so only once every server and runner is upgraded,
+  and take it out again before rolling back, as with new pipeline keys.
+
+This was learned the hard way: a chart that wrote `tests:` by default left the previous version
+unable to start when a rollout was aborted.

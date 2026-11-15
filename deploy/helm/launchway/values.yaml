@@ -30,6 +30,10 @@ imagePullSecrets: []
 # Secrets. Servers always run with their built-in runner disabled; steps run on the runners
 # below.
 # ---------------------------------------------------------------------------------------------
+# A NOTE ON DEFAULTS. Settings that newer versions added are left unset here and take the
+# program's built-in default, so that the configuration this chart writes by default can still be
+# read by the version before it: during an upgrade, and after an aborted one, pods of both
+# versions read the same ConfigMap, and a server refuses a setting it does not know.
 config:
   # -- Address the servers listen on, inside the pod. The port is also the container port.
   listen: 0.0.0.0:8080
@@ -55,12 +59,15 @@ config:
   tests:
     # -- MiB of report files a server accepts for one step attempt. Runners are told, and
     # collect no more; a result larger than this is refused and reported without its files.
-    maxUploadMiB: 24
+    # Unset: the built-in default, 24.
+    maxUploadMiB:
     # -- Individual test results one run keeps; beyond this only the totals are kept.
-    maxCasesPerRun: 50000
+    # Unset: the built-in default, 50000.
+    maxCasesPerRun:
     # -- Individual test results a project keeps over all its runs. When there are more, the
     # oldest runs' results are removed first (their totals stay). At least maxCasesPerRun.
-    maxCasesPerProject: 1000000
+    # Unset: the built-in default, 1000000.
+    maxCasesPerProject:
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -263,9 +270,11 @@ runner:
     # Security "baseline", see namespaceLabels). Pipelines cannot change this.
     restricted: true
     # -- The user step containers run as when restricted. Not 0 (root).
-    runAsUser: 1000
+    # Unset: the built-in default, 1000.
+    runAsUser:
     # -- The group step containers run as when restricted; it also owns the pod's volumes.
-    runAsGroup: 1000
+    # Unset: the built-in default, 1000.
+    runAsGroup:
   # -- The port runners serve /healthz (process up) and /readyz (the server answered within two
   # minutes) on, for the probes below. It is not exposed outside the pod.
   healthPort: 8081
@@ -293,12 +302,15 @@ runner:
   # step. A step's log says when a file was cut short or left out.
   reports:
     # -- Files per step attempt.
-    maxFiles: 100
+    # Unset: the built-in default, 100.
+    maxFiles:
     # -- MiB read of one file; a larger one is cut to this.
-    maxFileMiB: 10
+    # Unset: the built-in default, 10.
+    maxFileMiB:
     # -- MiB read of all of a step attempt's files together (and at most what the servers
     # accept: config.tests.maxUploadMiB).
-    maxTotalMiB: 20
+    # Unset: the built-in default, 20.
+    maxTotalMiB:
   resources:
     requests:
       cpu: 100m
