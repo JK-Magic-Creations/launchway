@@ -157,6 +157,11 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/tokens/limits", signedIn, "", s.tokenLimits},
 		{"GET /api/v1/admin/tokens", administer, "", s.listAllTokens},
 		{"DELETE /api/v1/admin/tokens/{id}", administer, "token.revoke", s.revokeAnyToken},
+		{"GET /api/v1/projects/{name}/schedules", projectRead, "", s.projectSchedules},
+		// Webhooks prove themselves with a secret, not a session or token;
+		// their handlers check and audit them (see hooks.go).
+		{"POST /api/v1/projects/{name}/git-hook", public, "", s.gitHook},
+		{"POST /api/v1/projects/{name}/webhooks/{trigger}", public, "", s.webhookTrigger},
 	}
 }
 

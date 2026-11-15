@@ -54,3 +54,4 @@
   .run-inputs { grid-template-columns: 1fr; }
   .loop-grid { display: block; overflow-x: auto; }
 }
+.hooks { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; overflow-wrap: anywhere; }
