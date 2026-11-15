@@ -82,6 +82,23 @@ rollback step if it has one. The pipeline keys of deploy steps, and the `environ
 `runner_pools:` settings, carry the same caveat as schema 9's keys: use them only once every server
 knows them.
 
+Schema 14 brings commands on a deployment's rollout and rollout steps (12 and 13 belong to other
+work). It is additive: new columns on `deploy_commands`, `deployments` and `environment_state`, and
+four events, `deploy.command`, `deploy.command_withdrawn`, `deploy.command_taken` and
+`deploy.command_done`. A pipeline with a rollout step, `rollout.until: paused`, `rollout.pauses`, an
+approval's `deployment`, `abort_first` or `on_cancel: abort` has `runs.min_schema` 14 from creation;
+some of these a schema-11 server would misread rather than refuse (it knows `until`, `on_cancel` and
+`deployment` as fields), so such a pipeline also carries `"requires": 14`, a field older servers do
+not know, which makes them read it as not understood. A command given to a deployment of an older
+run raises that run's `min_schema` to 14 the same way. On a rollback to an older release, open
+deployments with such runs keep their locks and are left alone; commands nobody took stay pending
+(and can be withdrawn by a schema-14 server). Older servers ignore the new columns, so what was last
+seen of idle services stops being refreshed but is not lost. A deploy runner of schema 14 talking to
+an older server finds no commands endpoint and asks again only every five minutes; an older deploy
+runner never takes commands and is not given idle services (it does not say it can observe them
+slowly), but observes open deployments as before. `protected:` on environments and `environments:`
+on access bindings are settings older servers refuse: set them only once every server knows them.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what
