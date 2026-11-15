@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "originalUriBaseIds": {
+        "%SRCROOT%": { "uri": "file:///home/runner/work/shop/shop/" }
+      },
+      "results": [
+        {
+          "ruleId": "js/sql-injection",
+          "ruleIndex": 0,
+          "rule": { "id": "js/sql-injection", "index": 0, "toolComponent": { "index": 0 } },
+          "message": { "text": "This query string depends on a [user-provided value](1)." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/db/orders.js", "uriBaseId": "%SRCROOT%", "index": 0 },
+                "region": { "startLine": 42, "startColumn": 18, "endColumn": 61, "snippet": { "text": "db.query(\"SELECT * FROM orders WHERE id=\" + req.params.id)" } },
+                "contextRegion": { "startLine": 40, "endLine": 44, "snippet": { "text": "app.get('/orders/:id', (req, res) => {\n  db.query(\"SELECT * FROM orders WHERE id=\" + req.params.id)\n});" } }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "primaryLocationLineHash": "5f2c8d1a9e7b3c40:1",
+            "primaryLocationStartColumnFingerprint": "13"
+          },
+          "relatedLocations": [
+            {
+              "id": 1,
+              "physicalLocation": {
+                "artifactLocation": { "uri": "src/routes/orders.js", "uriBaseId": "%SRCROOT%" },
+                "region": { "startLine": 12, "startColumn": 9, "endColumn": 22 }
+              },
+              "message": { "text": "user-provided value" }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    { "location": { "physicalLocation": { "artifactLocation": { "uri": "src/routes/orders.js", "uriBaseId": "%SRCROOT%" }, "region": { "startLine": 12 } }, "message": { "text": "req.params.id" } } },
+                    { "location": { "physicalLocation": { "artifactLocation": { "uri": "src/db/orders.js", "uriBaseId": "%SRCROOT%" }, "region": { "startLine": 42 } }, "message": { "text": "query" } } }
+                  ]
+                }
+              ]
+            }
+          ],
+          "baselineState": "new"
+        },
+        {
+          "ruleId": "js/reflected-xss",
+          "rule": { "id": "js/reflected-xss", "index": 1, "toolComponent": { "index": 0 } },
+          "message": { "text": "Cross-site scripting vulnerability due to a [user-provided value](1)." },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "src/routes/search.js", "uriBaseId": "%SRCROOT%" }, "region": { "startLine": 7, "startColumn": 14 } } }
+          ],
+          "partialFingerprints": { "primaryLocationLineHash": "a1b2c3d4e5f60718:1" },
+          "suppressions": [ { "kind": "inSource", "status": "accepted", "justification": "escaped by the template engine" } ]
+        },
+        {
+          "ruleId": "js/reflected-xss",
+          "rule": { "id": "js/reflected-xss", "index": 1, "toolComponent": { "index": 0 } },
+          "message": { "text": "Cross-site scripting vulnerability due to a [user-provided value](1)." },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "src/routes/profile.js", "uriBaseId": "%SRCROOT%" }, "region": { "startLine": 19, "startColumn": 5 } } }
+          ],
+          "partialFingerprints": { "primaryLocationLineHash": "0badc0ffee123456:1" },
+          "suppressions": [ { "kind": "external", "status": "underReview" } ]
+        },
+        {
+          "ruleId": "js/hardcoded-credentials",
+          "rule": { "id": "js/hardcoded-credentials", "index": 2, "toolComponent": { "index": 0 } },
+          "message": { "text": "The hard-coded value \"Sh0pAdm1n-Passw0rd-2026\" is used as [password](1)." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "file:///home/runner/work/shop/shop/src/config/admin.js" },
+                "region": { "startLine": 3, "startColumn": 20, "snippet": { "text": "const password = \"Sh0pAdm1n-Passw0rd-2026\";" } }
+              }
+            }
+          ],
+          "partialFingerprints": { "primaryLocationLineHash": "77e1f0c2d3b4a596:1" }
+        },
+        {
+          "ruleId": "js/unused-local-variable",
+          "ruleIndex": 0,
+          "message": { "text": "Unused variable tmp." },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "./src/util/../util/format.js", "uriBaseId": "%SRCROOT%" }, "region": { "startLine": 8 } } }
+          ],
+          "partialFingerprints": { "primaryLocationLineHash": "1234abcd5678ef90:1" },
+          "baselineState": "unchanged"
+        },
+        {
+          "ruleId": "js/unused-local-variable",
+          "ruleIndex": 0,
+          "message": { "text": "Unused variable old." },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "src/util/legacy.js", "uriBaseId": "%SRCROOT%" }, "region": { "startLine": 2 } } }
+          ],
+          "baselineState": "absent"
+        },
+        {
+          "ruleId": "js/unused-local-variable",
+          "ruleIndex": 0,
+          "kind": "pass",
+          "message": { "text": "No unused variables." }
+        },
+        {
+          "ruleIndex": 99,
+          "message": { "text": "A result whose rule cannot be found." },
+          "locations": [
+            { "logicalLocations": [ { "fullyQualifiedName": "shop.checkout.Total", "kind": "function" } ] }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "organization": "GitHub",
+          "semanticVersion": "2.23.1",
+          "rules": [
+            {
+              "id": "js/unused-local-variable",
+              "name": "js/unused-local-variable",
+              "shortDescription": { "text": "Unused variable, import, function or class" },
+              "defaultConfiguration": { "level": "note" },
+              "properties": { "tags": [ "maintainability" ], "precision": "very-high" }
+            }
+          ]
+        },
+        "extensions": [
+          {
+            "name": "codeql/javascript-queries",
+            "semanticVersion": "2.1.0",
+            "rules": [
+              {
+                "id": "js/sql-injection",
+                "name": "js/sql-injection",
+                "shortDescription": { "text": "Database query built from user-controlled sources" },
+                "fullDescription": { "text": "Building a database query from user-controlled sources is vulnerable to insertion of malicious code by the user." },
+                "defaultConfiguration": { "enabled": true, "level": "error" },
+                "help": { "text": "# Database query built from user-controlled sources\nUse parameterised queries.", "markdown": "# Database query built from user-controlled sources\n<script>alert(1)</script>" },
+                "helpUri": "https://codeql.github.com/codeql-query-help/javascript/js-sql-injection/",
+                "properties": { "tags": [ "security", "external/cwe/cwe-089", "external/cwe/cwe-090" ], "precision": "high", "security-severity": "8.8" }
+              },
+              {
+                "id": "js/reflected-xss",
+                "name": "js/reflected-xss",
+                "shortDescription": { "text": "Reflected cross-site scripting" },
+                "defaultConfiguration": { "level": "error" },
+                "helpUri": "javascript:alert(document.cookie)",
+                "properties": { "tags": [ "security", "external/cwe/cwe-079" ], "security-severity": 6.1 }
+              },
+              {
+                "id": "js/hardcoded-credentials",
+                "name": "js/hardcoded-credentials",
+                "shortDescription": { "text": "Hard-coded credentials" },
+                "defaultConfiguration": { "level": "warning" },
+                "helpUri": "data:text/html,<b>hi</b>",
+                "properties": { "tags": [ "security", "external/cwe/cwe-259", "external/cwe/cwe-321", "external/cwe/cwe-798" ], "security-severity": "9.8" }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

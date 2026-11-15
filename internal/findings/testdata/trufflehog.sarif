@@ -1,0 +1,73 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "TruffleHog",
+          "informationUri": "https://github.com/trufflesecurity/trufflehog",
+          "rules": [
+            { "id": "AWS", "shortDescription": { "text": "AWS access key" } },
+            { "id": "Github", "shortDescription": { "text": "GitHub personal access token" } },
+            { "id": "PrivateKey", "name": "PrivateKey" }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "AWS",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": { "text": "Found verified AWS result: AKIA2E0A8F3B244C9986 / wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY in deploy/.env" },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "deploy/.env" }, "region": { "startLine": 4, "snippet": { "text": "AWS_ACCESS_KEY_ID=AKIA2E0A8F3B244C9986\nAWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY" } } } }
+          ],
+          "partialFingerprints": { "secretHash": "AKIA2E0A8F3B244C9986" }
+        },
+        {
+          "ruleId": "Github",
+          "ruleIndex": 1,
+          "message": { "text": "Found GitHub token ghp_aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5 in scripts/release.sh" },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "scripts/release.sh" }, "region": { "startLine": 12, "snippet": { "text": "export GH_TOKEN=ghp_aB3dE5fG7hI9jK1lM3nO5pQ7rS9tU1vW3xY5" } } } }
+          ]
+        },
+        {
+          "ruleId": "PrivateKey",
+          "ruleIndex": 2,
+          "message": { "text": "Found private key:\n-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8PbnGy0AHB7MhgHcTz6sE2I2yPB\naNYmz5d1Wg2Z4bOqJ8hE1sY0rPZx3eHkX7w5mLcQnV9tUf2jDk3oR8bA1sT6uY4i\n-----END RSA PRIVATE KEY-----" },
+          "locations": [
+            { "physicalLocation": { "artifactLocation": { "uri": "keys/deploy_rsa" }, "region": { "startLine": 1, "snippet": { "text": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF8PbnGy0AHB7MhgHcTz6sE2I2yPB" } } } }
+          ]
+        }
+      ]
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "gitleaks",
+          "semanticVersion": "v7.6.1",
+          "rules": [
+            { "id": "slack-access-token", "shortDescription": { "text": "Slack token" } }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "slack-access-token",
+          "message": { "text": "slack-access-token secret detected: xo@@xb-123456789012-1234567890123-AbCdEfGhIjKlMnOpQrStUvWx" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "file:///home/ci/repo/config/slack.yaml" },
+                "region": { "startLine": 2, "snippet": { "text": "token: xo@@xb-123456789012-1234567890123-AbCdEfGhIjKlMnOpQrStUvWx" } }
+              }
+            }
+          ],
+          "partialFingerprints": { "commitSha": "9fceb02d0ae598e95dc970b74767f19372d61af8", "email": "dev@example.com", "date": "2021-03-04T10:00:00Z" }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1036 @@
+{
+ "version": "2.1.0",
+ "runs": [
+  {
+   "invocations": [
+    {
+     "executionSuccessful": true,
+     "toolExecutionNotifications": []
+    }
+   ],
+   "results": [
+    {
+     "fingerprints": {
+      "matchBasedId/v1": "requires login"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "Dockerfile",
+         "uriBaseId": "%SRCROOT%"
+        },
+        "region": {
+         "endColumn": 24,
+         "endLine": 4,
+         "snippet": {
+          "text": "RUN sudo chmod 777 /app"
+         },
+         "startColumn": 1,
+         "startLine": 4
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "Avoid using sudo in Dockerfiles. Running processes as a non-root user can help  reduce the potential impact of configuration errors and security vulnerabilities."
+     },
+     "properties": {},
+     "ruleId": "dockerfile.security.no-sudo-in-dockerfile.no-sudo-in-dockerfile"
+    },
+    {
+     "fingerprints": {
+      "matchBasedId/v1": "requires login"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "Dockerfile",
+         "uriBaseId": "%SRCROOT%"
+        },
+        "region": {
+         "endColumn": 10,
+         "endLine": 5,
+         "snippet": {
+          "text": "USER root"
+         },
+         "startColumn": 1,
+         "startLine": 5
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "The last user in the container is 'root'. This is a security hazard because if an attacker gains control of the container they will have root access. Switch back to another user after running commands as 'root'."
+     },
+     "properties": {},
+     "ruleId": "dockerfile.security.last-user-is-root.last-user-is-root"
+    },
+    {
+     "fingerprints": {
+      "matchBasedId/v1": "requires login"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "app.py",
+         "uriBaseId": "%SRCROOT%"
+        },
+        "region": {
+         "endColumn": 43,
+         "endLine": 9,
+         "snippet": {
+          "text": "    return subprocess.call(cmd, shell=True)"
+         },
+         "startColumn": 39,
+         "startLine": 9
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "Found 'subprocess' function 'call' with 'shell=True'. This is dangerous because this call will spawn the command using a shell process. Doing so propagates current shell settings and variables, which makes it much easier for a malicious actor to execute commands. Use 'shell=False' instead."
+     },
+     "properties": {},
+     "ruleId": "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+    },
+    {
+     "fingerprints": {
+      "matchBasedId/v1": "requires login"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "app.py",
+         "uriBaseId": "%SRCROOT%"
+        },
+        "region": {
+         "endColumn": 22,
+         "endLine": 17,
+         "snippet": {
+          "text": "    return eval(expr)"
+         },
+         "startColumn": 12,
+         "startLine": 17
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "Detected the use of eval(). eval() can be dangerous if used to evaluate dynamic content. If this content can be input from outside the program, this may be a code injection vulnerability. Ensure evaluated content is not definable by external sources."
+     },
+     "properties": {},
+     "ruleId": "python.lang.security.audit.eval-detected.eval-detected"
+    },
+    {
+     "fingerprints": {
+      "matchBasedId/v1": "requires login"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "deploy/deployment.yaml",
+         "uriBaseId": "%SRCROOT%"
+        },
+        "region": {
+         "endColumn": 9,
+         "endLine": 11,
+         "snippet": {
+          "text": "    spec:"
+         },
+         "startColumn": 5,
+         "startLine": 11
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "When running containers in Kubernetes, it's important to ensure that they  are properly secured to prevent privilege escalation attacks.  One potential vulnerability is when a container is allowed to run  applications as the root user, which could allow an attacker to gain  access to sensitive resources. To mitigate this risk, it's recommended to  add a `securityContext` to the container, with the parameter `runAsNonRoot`  set to `true`. This will ensure that the container runs as a non-root user,  limiting the damage that could be caused by any potential attacks. By  adding a `securityContext` to the container in your Kubernetes pod, you can  help to ensure that your containerized applications are more secure and  less vulnerable to privilege escalation attacks."
+     },
+     "properties": {},
+     "ruleId": "yaml.kubernetes.security.run-as-non-root.run-as-non-root"
+    },
+    {
+     "fingerprints": {
+      "matchBasedId/v1": "requires login"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "deploy/deployment.yaml",
+         "uriBaseId": "%SRCROOT%"
+        },
+        "region": {
+         "endColumn": 24,
+         "endLine": 12,
+         "snippet": {
+          "text": "      hostNetwork: true"
+         },
+         "startColumn": 7,
+         "startLine": 12
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "Pod may use the node network namespace. This gives the pod access to the loopback device, services listening on localhost, and could be used to snoop on network activity of other pods on the same node. Remove the 'hostNetwork' key to disable this functionality."
+     },
+     "properties": {},
+     "ruleId": "yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod"
+    },
+    {
+     "fingerprints": {
+      "matchBasedId/v1": "requires login"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "deploy/deployment.yaml",
+         "uriBaseId": "%SRCROOT%"
+        },
+        "region": {
+         "endColumn": 26,
+         "endLine": 16,
+         "snippet": {
+          "text": "          securityContext:"
+         },
+         "startColumn": 11,
+         "startLine": 16
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "In Kubernetes, each pod runs in its own isolated environment with its own set of security policies. However, certain container images may contain `setuid` or `setgid` binaries that could allow an attacker to perform privilege escalation and gain access to sensitive resources. To mitigate this risk, it's recommended to add a `securityContext` to the container in the pod, with the parameter `allowPrivilegeEscalation` set to `false`. This will prevent the container from running any privileged processes and limit the impact of any potential attacks. By adding the `allowPrivilegeEscalation` parameter to your the `securityContext`, you can help to ensure that your containerized applications are more secure and less vulnerable to privilege escalation attacks."
+     },
+     "properties": {},
+     "ruleId": "yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation"
+    },
+    {
+     "fingerprints": {
+      "matchBasedId/v1": "requires login"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "deploy/deployment.yaml",
+         "uriBaseId": "%SRCROOT%"
+        },
+        "region": {
+         "endColumn": 29,
+         "endLine": 17,
+         "snippet": {
+          "text": "            privileged: true"
+         },
+         "startColumn": 13,
+         "startLine": 17
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "Container or pod is running in privileged mode. This grants the container the equivalent of root capabilities on the host machine. This can lead to container escapes, privilege escalation, and other security concerns. Remove the 'privileged' key to disable this capability."
+     },
+     "properties": {},
+     "ruleId": "yaml.kubernetes.security.privileged-container.privileged-container"
+    }
+   ],
+   "tool": {
+    "driver": {
+     "name": "Semgrep OSS",
+     "rules": [
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Data is being eval'd from a `curl` command. An attacker with control of the server in the `curl` command could inject malicious code into the `eval`, resulting in a system comrpomise. Avoid eval'ing untrusted data if you can. If you must do this, consider checking the SHA sum of the content returned by the server to verify its integrity."
+       },
+       "help": {
+        "markdown": "Data is being eval'd from a `curl` command. An attacker with control of the server in the `curl` command could inject malicious code into the `eval`, resulting in a system comrpomise. Avoid eval'ing untrusted data if you can. If you must do this, consider checking the SHA sum of the content returned by the server to verify its integrity.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/bash.curl.security.curl-eval.curl-eval)\n - [https://owasp.org/Top10/A03_2021-Injection](https://owasp.org/Top10/A03_2021-Injection)\n",
+        "text": "Data is being eval'd from a `curl` command. An attacker with control of the server in the `curl` command could inject malicious code into the `eval`, resulting in a system comrpomise. Avoid eval'ing untrusted data if you can. If you must do this, consider checking the SHA sum of the content returned by the server to verify its integrity.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/bash.curl.security.curl-eval.curl-eval",
+       "id": "bash.curl.security.curl-eval.curl-eval",
+       "name": "bash.curl.security.curl-eval.curl-eval",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')",
+         "MEDIUM CONFIDENCE",
+         "OWASP-A03:2021 - Injection",
+         "OWASP-A05:2025 - Injection",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: bash.curl.security.curl-eval.curl-eval"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Data is being piped into `bash` from a `curl` command. An attacker with control of the server in the `curl` command could inject malicious code into the pipe, resulting in a system compromise. Avoid piping untrusted data into `bash` or any other shell if you can. If you must do this, consider checking the SHA sum of the content returned by the server to verify its integrity."
+       },
+       "help": {
+        "markdown": "Data is being piped into `bash` from a `curl` command. An attacker with control of the server in the `curl` command could inject malicious code into the pipe, resulting in a system compromise. Avoid piping untrusted data into `bash` or any other shell if you can. If you must do this, consider checking the SHA sum of the content returned by the server to verify its integrity.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/bash.curl.security.curl-pipe-bash.curl-pipe-bash)\n - [https://owasp.org/Top10/A03_2021-Injection](https://owasp.org/Top10/A03_2021-Injection)\n",
+        "text": "Data is being piped into `bash` from a `curl` command. An attacker with control of the server in the `curl` command could inject malicious code into the pipe, resulting in a system compromise. Avoid piping untrusted data into `bash` or any other shell if you can. If you must do this, consider checking the SHA sum of the content returned by the server to verify its integrity.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/bash.curl.security.curl-pipe-bash.curl-pipe-bash",
+       "id": "bash.curl.security.curl-pipe-bash.curl-pipe-bash",
+       "name": "bash.curl.security.curl-pipe-bash.curl-pipe-bash",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')",
+         "LOW CONFIDENCE",
+         "OWASP-A03:2021 - Injection",
+         "OWASP-A05:2025 - Injection",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: bash.curl.security.curl-pipe-bash.curl-pipe-bash"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "The special variable IFS affects how splitting takes place when expanding unquoted variables. Don't set it globally. Prefer a dedicated utility such as 'cut' or 'awk' if you need to split input data. If you must use 'read', set IFS locally using e.g. 'IFS=\",\" read -a my_array'."
+       },
+       "help": {
+        "markdown": "The special variable IFS affects how splitting takes place when expanding unquoted variables. Don't set it globally. Prefer a dedicated utility such as 'cut' or 'awk' if you need to split input data. If you must use 'read', set IFS locally using e.g. 'IFS=\",\" read -a my_array'.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/bash.lang.security.ifs-tampering.ifs-tampering)\n - [https://owasp.org/Top10/A03_2021-Injection](https://owasp.org/Top10/A03_2021-Injection)\n",
+        "text": "The special variable IFS affects how splitting takes place when expanding unquoted variables. Don't set it globally. Prefer a dedicated utility such as 'cut' or 'awk' if you need to split input data. If you must use 'read', set IFS locally using e.g. 'IFS=\",\" read -a my_array'.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/bash.lang.security.ifs-tampering.ifs-tampering",
+       "id": "bash.lang.security.ifs-tampering.ifs-tampering",
+       "name": "bash.lang.security.ifs-tampering.ifs-tampering",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-20: Improper Input Validation",
+         "LOW CONFIDENCE",
+         "OWASP-A03:2021 - Injection",
+         "OWASP-A05:2025 - Injection",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: bash.lang.security.ifs-tampering.ifs-tampering"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "fullDescription": {
+        "text": "Avoid 'gets()'. This function does not consider buffer boundaries and can lead to buffer overflows. Use 'fgets()' or 'gets_s()' instead."
+       },
+       "help": {
+        "markdown": "Avoid 'gets()'. This function does not consider buffer boundaries and can lead to buffer overflows. Use 'fgets()' or 'gets_s()' instead.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/c.lang.security.insecure-use-gets-fn.insecure-use-gets-fn)\n - [https://us-cert.cisa.gov/bsi/articles/knowledge/coding-practices/fgets-and-gets_s](https://us-cert.cisa.gov/bsi/articles/knowledge/coding-practices/fgets-and-gets_s)\n",
+        "text": "Avoid 'gets()'. This function does not consider buffer boundaries and can lead to buffer overflows. Use 'fgets()' or 'gets_s()' instead.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/c.lang.security.insecure-use-gets-fn.insecure-use-gets-fn",
+       "id": "c.lang.security.insecure-use-gets-fn.insecure-use-gets-fn",
+       "name": "c.lang.security.insecure-use-gets-fn.insecure-use-gets-fn",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-676: Use of Potentially Dangerous Function",
+         "MEDIUM CONFIDENCE",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: c.lang.security.insecure-use-gets-fn.insecure-use-gets-fn"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Avoid using 'scanf()'. This function, when used improperly, does not consider buffer boundaries and can lead to buffer overflows. Use 'fgets()' instead for reading input."
+       },
+       "help": {
+        "markdown": "Avoid using 'scanf()'. This function, when used improperly, does not consider buffer boundaries and can lead to buffer overflows. Use 'fgets()' instead for reading input.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/c.lang.security.insecure-use-scanf-fn.insecure-use-scanf-fn)\n - [http://sekrit.de/webdocs/c/beginners-guide-away-from-scanf.html](http://sekrit.de/webdocs/c/beginners-guide-away-from-scanf.html)\n",
+        "text": "Avoid using 'scanf()'. This function, when used improperly, does not consider buffer boundaries and can lead to buffer overflows. Use 'fgets()' instead for reading input.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/c.lang.security.insecure-use-scanf-fn.insecure-use-scanf-fn",
+       "id": "c.lang.security.insecure-use-scanf-fn.insecure-use-scanf-fn",
+       "name": "c.lang.security.insecure-use-scanf-fn.insecure-use-scanf-fn",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-676: Use of Potentially Dangerous Function",
+         "LOW CONFIDENCE",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: c.lang.security.insecure-use-scanf-fn.insecure-use-scanf-fn"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently erasing the delimiter character. Use 'strtok_r()' instead."
+       },
+       "help": {
+        "markdown": "Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently erasing the delimiter character. Use 'strtok_r()' instead.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/c.lang.security.insecure-use-strtok-fn.insecure-use-strtok-fn)\n - [https://wiki.sei.cmu.edu/confluence/display/c/STR06-C.+Do+not+assume+that+strtok%28%29+leaves+the+parse+string+unchanged](https://wiki.sei.cmu.edu/confluence/display/c/STR06-C.+Do+not+assume+that+strtok%28%29+leaves+the+parse+string+unchanged)\n - [https://man7.org/linux/man-pages/man3/strtok.3.html#BUGS](https://man7.org/linux/man-pages/man3/strtok.3.html#BUGS)\n - [https://stackoverflow.com/a/40335556](https://stackoverflow.com/a/40335556)\n",
+        "text": "Avoid using 'strtok()'. This function directly modifies the first argument buffer, permanently erasing the delimiter character. Use 'strtok_r()' instead.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/c.lang.security.insecure-use-strtok-fn.insecure-use-strtok-fn",
+       "id": "c.lang.security.insecure-use-strtok-fn.insecure-use-strtok-fn",
+       "name": "c.lang.security.insecure-use-strtok-fn.insecure-use-strtok-fn",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-676: Use of Potentially Dangerous Function",
+         "LOW CONFIDENCE",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: c.lang.security.insecure-use-strtok-fn.insecure-use-strtok-fn"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Call to 'read()' without error checking is susceptible to file descriptor exhaustion. Consider using the 'getrandom()' function."
+       },
+       "help": {
+        "markdown": "Call to 'read()' without error checking is susceptible to file descriptor exhaustion. Consider using the 'getrandom()' function.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/c.lang.security.random-fd-exhaustion.random-fd-exhaustion)\n - [https://lwn.net/Articles/606141/](https://lwn.net/Articles/606141/)\n",
+        "text": "Call to 'read()' without error checking is susceptible to file descriptor exhaustion. Consider using the 'getrandom()' function.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/c.lang.security.random-fd-exhaustion.random-fd-exhaustion",
+       "id": "c.lang.security.random-fd-exhaustion.random-fd-exhaustion",
+       "name": "c.lang.security.random-fd-exhaustion.random-fd-exhaustion",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-774: Allocation of File Descriptors or Handles Without Limits or Throttling",
+         "MEDIUM CONFIDENCE",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: c.lang.security.random-fd-exhaustion.random-fd-exhaustion"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "fullDescription": {
+        "text": "DOCTYPE declarations are enabled for javax.xml.parsers.SAXParserFactory. Without prohibiting external entity declarations, this is vulnerable to XML external entity attacks. Disable this by setting the feature \"http://apache.org/xml/features/disallow-doctype-decl\" to true. Alternatively, allow DOCTYPE declarations and only prohibit external entities declarations. This can be done by setting the features \"http://xml.org/sax/features/external-general-entities\" and \"http://xml.org/sax/features/external-parameter-entities\" to false."
+       },
+       "help": {
+        "markdown": "DOCTYPE declarations are enabled for javax.xml.parsers.SAXParserFactory. Without prohibiting external entity declarations, this is vulnerable to XML external entity attacks. Disable this by setting the feature \"http://apache.org/xml/features/disallow-doctype-decl\" to true. Alternatively, allow DOCTYPE declarations and only prohibit external entities declarations. This can be done by setting the features \"http://xml.org/sax/features/external-general-entities\" and \"http://xml.org/sax/features/external-parameter-entities\" to false.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/clojure.lang.security.documentbuilderfactory-xxe.documentbuilderfactory-xxe)\n - [https://semgrep.dev/blog/2022/xml-security-in-java](https://semgrep.dev/blog/2022/xml-security-in-java)\n - [https://semgrep.dev/docs/cheat-sheets/java-xxe/](https://semgrep.dev/docs/cheat-sheets/java-xxe/)\n - [https://xerces.apache.org/xerces2-j/features.html](https://xerces.apache.org/xerces2-j/features.html)\n",
+        "text": "DOCTYPE declarations are enabled for javax.xml.parsers.SAXParserFactory. Without prohibiting external entity declarations, this is vulnerable to XML external entity attacks. Disable this by setting the feature \"http://apache.org/xml/features/disallow-doctype-decl\" to true. Alternatively, allow DOCTYPE declarations and only prohibit external entities declarations. This can be done by setting the features \"http://xml.org/sax/features/external-general-entities\" and \"http://xml.org/sax/features/external-parameter-entities\" to false.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/clojure.lang.security.documentbuilderfactory-xxe.documentbuilderfactory-xxe",
+       "id": "clojure.lang.security.documentbuilderfactory-xxe.documentbuilderfactory-xxe",
+       "name": "clojure.lang.security.documentbuilderfactory-xxe.documentbuilderfactory-xxe",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-611: Improper Restriction of XML External Entity Reference",
+         "HIGH CONFIDENCE",
+         "OWASP-A02:2025 - Security Misconfiguration",
+         "OWASP-A04:2017 - XML External Entities (XXE)",
+         "OWASP-A05:2021 - Security Misconfiguration",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: clojure.lang.security.documentbuilderfactory-xxe.documentbuilderfactory-xxe"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "MD5 hash algorithm detected. This is not collision resistant and leads to easily-cracked password hashes. Replace with current recommended hashing algorithms."
+       },
+       "help": {
+        "markdown": "MD5 hash algorithm detected. This is not collision resistant and leads to easily-cracked password hashes. Replace with current recommended hashing algorithms.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/clojure.lang.security.use-of-md5.use-of-md5)\n - [https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)\n - [https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)\n",
+        "text": "MD5 hash algorithm detected. This is not collision resistant and leads to easily-cracked password hashes. Replace with current recommended hashing algorithms.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/clojure.lang.security.use-of-md5.use-of-md5",
+       "id": "clojure.lang.security.use-of-md5.use-of-md5",
+       "name": "clojure.lang.security.use-of-md5.use-of-md5",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-328: Use of Weak Hash",
+         "HIGH CONFIDENCE",
+         "OWASP-A02:2021 - Cryptographic Failures",
+         "OWASP-A03:2017 - Sensitive Data Exposure",
+         "OWASP-A04:2025 - Cryptographic Failures",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: clojure.lang.security.use-of-md5.use-of-md5"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is therefore not suitable as a cryptographic signature. Instead, use PBKDF2 for password hashing or SHA256 or SHA512 for other hash function applications."
+       },
+       "help": {
+        "markdown": "Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is therefore not suitable as a cryptographic signature. Instead, use PBKDF2 for password hashing or SHA256 or SHA512 for other hash function applications.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/clojure.lang.security.use-of-sha1.use-of-sha1)\n - [https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)\n - [https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)\n",
+        "text": "Detected SHA1 hash algorithm which is considered insecure. SHA1 is not collision resistant and is therefore not suitable as a cryptographic signature. Instead, use PBKDF2 for password hashing or SHA256 or SHA512 for other hash function applications.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/clojure.lang.security.use-of-sha1.use-of-sha1",
+       "id": "clojure.lang.security.use-of-sha1.use-of-sha1",
+       "name": "clojure.lang.security.use-of-sha1.use-of-sha1",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-327: Use of a Broken or Risky Cryptographic Algorithm",
+         "CWE-328: Use of Weak Hash",
+         "HIGH CONFIDENCE",
+         "OWASP-A02:2021 - Cryptographic Failures",
+         "OWASP-A03:2017 - Sensitive Data Exposure",
+         "OWASP-A04:2025 - Cryptographic Failures",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: clojure.lang.security.use-of-sha1.use-of-sha1"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Mass assignment or Autobinding vulnerability in code allows an attacker to execute over-posting attacks, which could create a new parameter in the binding request and manipulate the underlying object in the application."
+       },
+       "help": {
+        "markdown": "Mass assignment or Autobinding vulnerability in code allows an attacker to execute over-posting attacks, which could create a new parameter in the binding request and manipulate the underlying object in the application.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.dotnet.security.audit.mass-assignment.mass-assignment)\n - [https://cwe.mitre.org/data/definitions/915.html](https://cwe.mitre.org/data/definitions/915.html)\n - [https://github.com/OWASP/API-Security/blob/master/2019/en/src/0xa6-mass-assignment.md](https://github.com/OWASP/API-Security/blob/master/2019/en/src/0xa6-mass-assignment.md)\n",
+        "text": "Mass assignment or Autobinding vulnerability in code allows an attacker to execute over-posting attacks, which could create a new parameter in the binding request and manipulate the underlying object in the application.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.dotnet.security.audit.mass-assignment.mass-assignment",
+       "id": "csharp.dotnet.security.audit.mass-assignment.mass-assignment",
+       "name": "csharp.dotnet.security.audit.mass-assignment.mass-assignment",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes",
+         "MEDIUM CONFIDENCE",
+         "OWASP-A08:2021 - Software and Data Integrity Failures",
+         "OWASP-A08:2025 - Software or Data Integrity Failures",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.dotnet.security.audit.mass-assignment.mass-assignment"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "$METHOD is a state-changing MVC method that does not validate the antiforgery token or do strict content-type checking. State-changing controller methods should either enforce antiforgery tokens or do strict content-type checking to prevent simple HTTP request types from bypassing CORS preflight controls."
+       },
+       "help": {
+        "markdown": "$METHOD is a state-changing MVC method that does not validate the antiforgery token or do strict content-type checking. State-changing controller methods should either enforce antiforgery tokens or do strict content-type checking to prevent simple HTTP request types from bypassing CORS preflight controls.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery)\n - [https://cheatsheetseries.owasp.org/cheatsheets/DotNet_Security_Cheat_Sheet.html#cross-site-request-forgery](https://cheatsheetseries.owasp.org/cheatsheets/DotNet_Security_Cheat_Sheet.html#cross-site-request-forgery)\n - [https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#simple_requests)\n",
+        "text": "$METHOD is a state-changing MVC method that does not validate the antiforgery token or do strict content-type checking. State-changing controller methods should either enforce antiforgery tokens or do strict content-type checking to prevent simple HTTP request types from bypassing CORS preflight controls.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery",
+       "id": "csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery",
+       "name": "csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-352: Cross-Site Request Forgery (CSRF)",
+         "LOW CONFIDENCE",
+         "OWASP-A01:2021 - Broken Access Control",
+         "OWASP-A01:2025 - Broken Access Control",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.dotnet.security.mvc-missing-antiforgery.mvc-missing-antiforgery"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "ASP.NET applications built with `debug` set to true in production may leak debug information to attackers. Debug mode also affects performance and reliability. Set `debug` to `false` or remove it from `<compilation ... />`"
+       },
+       "help": {
+        "markdown": "ASP.NET applications built with `debug` set to true in production may leak debug information to attackers. Debug mode also affects performance and reliability. Set `debug` to `false` or remove it from `<compilation ... />`\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.dotnet.security.net-webconfig-debug.net-webconfig-debug)\n - [https://web.archive.org/web/20190919105353/https://blogs.msdn.microsoft.com/prashant_upadhyay/2011/07/14/why-debugfalse-in-asp-net-applications-in-production-environment/](https://web.archive.org/web/20190919105353/https://blogs.msdn.microsoft.com/prashant_upadhyay/2011/07/14/why-debugfalse-in-asp-net-applications-in-production-environment/)\n - [https://msdn.microsoft.com/en-us/library/e8z01xdh.aspx](https://msdn.microsoft.com/en-us/library/e8z01xdh.aspx)\n",
+        "text": "ASP.NET applications built with `debug` set to true in production may leak debug information to attackers. Debug mode also affects performance and reliability. Set `debug` to `false` or remove it from `<compilation ... />`\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.dotnet.security.net-webconfig-debug.net-webconfig-debug",
+       "id": "csharp.dotnet.security.net-webconfig-debug.net-webconfig-debug",
+       "name": "csharp.dotnet.security.net-webconfig-debug.net-webconfig-debug",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-11: ASP.NET Misconfiguration: Creating Debug Binary",
+         "LOW CONFIDENCE",
+         "OWASP-A02:2025 - Security Misconfiguration",
+         "OWASP-A05:2021 - Security Misconfiguration",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.dotnet.security.net-webconfig-debug.net-webconfig-debug"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "OWASP guidance recommends disabling tracing for production applications to prevent accidental leakage of sensitive application information."
+       },
+       "help": {
+        "markdown": "OWASP guidance recommends disabling tracing for production applications to prevent accidental leakage of sensitive application information.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.dotnet.security.net-webconfig-trace-enabled.net-webconfig-trace-enabled)\n - [https://cheatsheetseries.owasp.org/cheatsheets/DotNet_Security_Cheat_Sheet.html#asp-net-web-forms-guidance](https://cheatsheetseries.owasp.org/cheatsheets/DotNet_Security_Cheat_Sheet.html#asp-net-web-forms-guidance)\n - [https://msdn.microsoft.com/en-us/library/e8z01xdh.aspx](https://msdn.microsoft.com/en-us/library/e8z01xdh.aspx)\n",
+        "text": "OWASP guidance recommends disabling tracing for production applications to prevent accidental leakage of sensitive application information.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.dotnet.security.net-webconfig-trace-enabled.net-webconfig-trace-enabled",
+       "id": "csharp.dotnet.security.net-webconfig-trace-enabled.net-webconfig-trace-enabled",
+       "name": "csharp.dotnet.security.net-webconfig-trace-enabled.net-webconfig-trace-enabled",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-1323: Improper Management of Sensitive Trace Data",
+         "LOW CONFIDENCE",
+         "OWASP-A05:2021 - Security Misconfiguration",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.dotnet.security.net-webconfig-trace-enabled.net-webconfig-trace-enabled"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "User-controllable string passed to Razor.Parse. This leads directly to code execution in the context of the process."
+       },
+       "help": {
+        "markdown": "User-controllable string passed to Razor.Parse. This leads directly to code execution in the context of the process.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.dotnet.security.razor-template-injection.razor-template-injection)\n - [https://clement.notin.org/blog/2020/04/15/Server-Side-Template-Injection-(SSTI)-in-ASP.NET-Razor/](https://clement.notin.org/blog/2020/04/15/Server-Side-Template-Injection-(SSTI)-in-ASP.NET-Razor/)\n",
+        "text": "User-controllable string passed to Razor.Parse. This leads directly to code execution in the context of the process.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.dotnet.security.razor-template-injection.razor-template-injection",
+       "id": "csharp.dotnet.security.razor-template-injection.razor-template-injection",
+       "name": "csharp.dotnet.security.razor-template-injection.razor-template-injection",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-94: Improper Control of Generation of Code ('Code Injection')",
+         "MEDIUM CONFIDENCE",
+         "OWASP-A03:2021 - Injection",
+         "OWASP-A05:2025 - Injection",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.dotnet.security.razor-template-injection.razor-template-injection"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Usage of the insecure ECB mode detected. You should use an authenticated encryption mode instead, which is implemented by the classes AesGcm or ChaCha20Poly1305."
+       },
+       "help": {
+        "markdown": "Usage of the insecure ECB mode detected. You should use an authenticated encryption mode instead, which is implemented by the classes AesGcm or ChaCha20Poly1305.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.dotnet.security.use_ecb_mode.use_ecb_mode)\n - [https://learn.microsoft.com/en-gb/dotnet/api/system.security.cryptography.chacha20poly1305?view=net-6.0](https://learn.microsoft.com/en-gb/dotnet/api/system.security.cryptography.chacha20poly1305?view=net-6.0)\n - [https://learn.microsoft.com/en-gb/dotnet/api/system.security.cryptography.aesgcm?view=net-6.0](https://learn.microsoft.com/en-gb/dotnet/api/system.security.cryptography.aesgcm?view=net-6.0)\n - [https://learn.microsoft.com/en-gb/dotnet/api/system.security.cryptography.ciphermode?view=net-6.0](https://learn.microsoft.com/en-gb/dotnet/api/system.security.cryptography.ciphermode?view=net-6.0)\n - [https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#cipher-modes](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#cipher-modes)\n",
+        "text": "Usage of the insecure ECB mode detected. You should use an authenticated encryption mode instead, which is implemented by the classes AesGcm or ChaCha20Poly1305.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.dotnet.security.use_ecb_mode.use_ecb_mode",
+       "id": "csharp.dotnet.security.use_ecb_mode.use_ecb_mode",
+       "name": "csharp.dotnet.security.use_ecb_mode.use_ecb_mode",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-327: Use of a Broken or Risky Cryptographic Algorithm",
+         "HIGH CONFIDENCE",
+         "OWASP-A02:2021 - Cryptographic Failures",
+         "OWASP-A04:2025 - Cryptographic Failures",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.dotnet.security.use_ecb_mode.use_ecb_mode"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "fullDescription": {
+        "text": "You are using an insecure random number generator (RNG) to create a cryptographic key. System.Random must never be used for cryptographic purposes. Use System.Security.Cryptography.RandomNumberGenerator instead."
+       },
+       "help": {
+        "markdown": "You are using an insecure random number generator (RNG) to create a cryptographic key. System.Random must never be used for cryptographic purposes. Use System.Security.Cryptography.RandomNumberGenerator instead.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.dotnet.security.use_weak_rng_for_keygeneration.use_weak_rng_for_keygeneration)\n - [https://learn.microsoft.com/en-us/dotnet/api/system.random?view=net-6.0#remarks](https://learn.microsoft.com/en-us/dotnet/api/system.random?view=net-6.0#remarks)\n - [https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.randomnumbergenerator?view=net-6.0](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.randomnumbergenerator?view=net-6.0)\n - [https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.aesgcm?view=net-6.0#constructors](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.aesgcm?view=net-6.0#constructors)\n - [https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.symmetricalgorithm.key?view=net-6.0#system-security-cryptography-symmetricalgorithm-key](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.symmetricalgorithm.key?view=net-6.0#system-security-cryptography-symmetricalgorithm-key)\n",
+        "text": "You are using an insecure random number generator (RNG) to create a cryptographic key. System.Random must never be used for cryptographic purposes. Use System.Security.Cryptography.RandomNumberGenerator instead.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.dotnet.security.use_weak_rng_for_keygeneration.use_weak_rng_for_keygeneration",
+       "id": "csharp.dotnet.security.use_weak_rng_for_keygeneration.use_weak_rng_for_keygeneration",
+       "name": "csharp.dotnet.security.use_weak_rng_for_keygeneration.use_weak_rng_for_keygeneration",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator (PRNG)",
+         "HIGH CONFIDENCE",
+         "OWASP-A02:2021 - Cryptographic Failures",
+         "OWASP-A04:2025 - Cryptographic Failures",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.dotnet.security.use_weak_rng_for_keygeneration.use_weak_rng_for_keygeneration"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Cookie Secure flag is explicitly disabled. You should enforce this value to avoid accidentally presenting sensitive cookie values over plaintext HTTP connections."
+       },
+       "help": {
+        "markdown": "Cookie Secure flag is explicitly disabled. You should enforce this value to avoid accidentally presenting sensitive cookie values over plaintext HTTP connections.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.dotnet.security.web-config-insecure-cookie-settings.web-config-insecure-cookie-settings)\n - [https://docs.microsoft.com/en-us/aspnet/web-api/overview/advanced/http-cookies](https://docs.microsoft.com/en-us/aspnet/web-api/overview/advanced/http-cookies)\n - [https://docs.microsoft.com/en-us/dotnet/api/system.web.security.formsauthentication.requiressl?redirectedfrom=MSDN&view=netframework-4.8#System_Web_Security_FormsAuthentication_RequireSSL](https://docs.microsoft.com/en-us/dotnet/api/system.web.security.formsauthentication.requiressl?redirectedfrom=MSDN&view=netframework-4.8#System_Web_Security_FormsAuthentication_RequireSSL)\n - [https://docs.microsoft.com/en-us/dotnet/api/system.web.security.roles.cookierequiressl?redirectedfrom=MSDN&view=netframework-4.8#System_Web_Security_Roles_CookieRequireSSL](https://docs.microsoft.com/en-us/dotnet/api/system.web.security.roles.cookierequiressl?redirectedfrom=MSDN&view=netframework-4.8#System_Web_Security_Roles_CookieRequireSSL)\n",
+        "text": "Cookie Secure flag is explicitly disabled. You should enforce this value to avoid accidentally presenting sensitive cookie values over plaintext HTTP connections.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.dotnet.security.web-config-insecure-cookie-settings.web-config-insecure-cookie-settings",
+       "id": "csharp.dotnet.security.web-config-insecure-cookie-settings.web-config-insecure-cookie-settings",
+       "name": "csharp.dotnet.security.web-config-insecure-cookie-settings.web-config-insecure-cookie-settings",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-614: Sensitive Cookie in HTTPS Session Without 'Secure' Attribute",
+         "LOW CONFIDENCE",
+         "OWASP-A02:2025 - Security Misconfiguration",
+         "OWASP-A05:2021 - Security Misconfiguration",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.dotnet.security.web-config-insecure-cookie-settings.web-config-insecure-cookie-settings"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "The TokenValidationParameters.$LIFETIME is set to $FALSE, this means the JWT tokens lifetime is not validated. This can lead to an JWT token being used after it has expired, which has security implications. It is recommended to validate the JWT lifetime to ensure only valid tokens are used."
+       },
+       "help": {
+        "markdown": "The TokenValidationParameters.$LIFETIME is set to $FALSE, this means the JWT tokens lifetime is not validated. This can lead to an JWT token being used after it has expired, which has security implications. It is recommended to validate the JWT lifetime to ensure only valid tokens are used.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.lang.security.ad.jwt-tokenvalidationparameters-no-expiry-validation.jwt-tokenvalidationparameters-no-expiry-validation)\n - [https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/](https://owasp.org/Top10/A07_2021-Identification_and_Authentication_Failures/)\n - [https://cwe.mitre.org/data/definitions/613.html](https://cwe.mitre.org/data/definitions/613.html)\n - [https://docs.microsoft.com/en-us/dotnet/api/microsoft.identitymodel.tokens.tokenvalidationparameters?view=azure-dotnet](https://docs.microsoft.com/en-us/dotnet/api/microsoft.identitymodel.tokens.tokenvalidationparameters?view=azure-dotnet)\n",
+        "text": "The TokenValidationParameters.$LIFETIME is set to $FALSE, this means the JWT tokens lifetime is not validated. This can lead to an JWT token being used after it has expired, which has security implications. It is recommended to validate the JWT lifetime to ensure only valid tokens are used.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.lang.security.ad.jwt-tokenvalidationparameters-no-expiry-validation.jwt-tokenvalidationparameters-no-expiry-validation",
+       "id": "csharp.lang.security.ad.jwt-tokenvalidationparameters-no-expiry-validation.jwt-tokenvalidationparameters-no-expiry-validation",
+       "name": "csharp.lang.security.ad.jwt-tokenvalidationparameters-no-expiry-validation.jwt-tokenvalidationparameters-no-expiry-validation",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-613: Insufficient Session Expiration",
+         "HIGH CONFIDENCE",
+         "OWASP-A02:2017 - Broken Authentication",
+         "OWASP-A07:2021 - Identification and Authentication Failures",
+         "OWASP-A07:2025 - Authentication Failures",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.lang.security.ad.jwt-tokenvalidationparameters-no-expiry-validation.jwt-tokenvalidationparameters-no-expiry-validation"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Validating certificates based on subject name is bad practice. Use the X509Certificate2.Verify() method instead."
+       },
+       "help": {
+        "markdown": "Validating certificates based on subject name is bad practice. Use the X509Certificate2.Verify() method instead.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/csharp.lang.security.cryptography.x509-subject-name-validation.X509-subject-name-validation)\n - [https://docs.microsoft.com/en-us/dotnet/api/system.identitymodel.tokens.issuernameregistry?view=netframework-4.8](https://docs.microsoft.com/en-us/dotnet/api/system.identitymodel.tokens.issuernameregistry?view=netframework-4.8)\n",
+        "text": "Validating certificates based on subject name is bad practice. Use the X509Certificate2.Verify() method instead.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/csharp.lang.security.cryptography.x509-subject-name-validation.X509-subject-name-validation",
+       "id": "csharp.lang.security.cryptography.x509-subject-name-validation.X509-subject-name-validation",
+       "name": "csharp.lang.security.cryptography.x509-subject-name-validation.X509-subject-name-validation",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-295: Improper Certificate Validation",
+         "MEDIUM CONFIDENCE",
+         "OWASP-A03:2017 - Sensitive Data Exposure",
+         "OWASP-A07:2021 - Identification and Authentication Failures",
+         "OWASP-A07:2025 - Authentication Failures",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: csharp.lang.security.cryptography.x509-subject-name-validation.X509-subject-name-validation"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "fullDescription": {
+        "text": "The last user in the container is 'root'. This is a security hazard because if an attacker gains control of the container they will have root access. Switch back to another user after running commands as 'root'."
+       },
+       "help": {
+        "markdown": "The last user in the container is 'root'. This is a security hazard because if an attacker gains control of the container they will have root access. Switch back to another user after running commands as 'root'.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/dockerfile.security.last-user-is-root.last-user-is-root)\n - [https://github.com/hadolint/hadolint/wiki/DL3002](https://github.com/hadolint/hadolint/wiki/DL3002)\n",
+        "text": "The last user in the container is 'root'. This is a security hazard because if an attacker gains control of the container they will have root access. Switch back to another user after running commands as 'root'.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/dockerfile.security.last-user-is-root.last-user-is-root",
+       "id": "dockerfile.security.last-user-is-root.last-user-is-root",
+       "name": "dockerfile.security.last-user-is-root.last-user-is-root",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-269: Improper Privilege Management",
+         "MEDIUM CONFIDENCE",
+         "OWASP-A04:2021 - Insecure Design",
+         "OWASP-A06:2025 - Insecure Design",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: dockerfile.security.last-user-is-root.last-user-is-root"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Avoid using sudo in Dockerfiles. Running processes as a non-root user can help  reduce the potential impact of configuration errors and security vulnerabilities."
+       },
+       "help": {
+        "markdown": "Avoid using sudo in Dockerfiles. Running processes as a non-root user can help  reduce the potential impact of configuration errors and security vulnerabilities.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/dockerfile.security.no-sudo-in-dockerfile.no-sudo-in-dockerfile)\n - [https://cwe.mitre.org/data/definitions/250.html](https://cwe.mitre.org/data/definitions/250.html)\n - [https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user)\n",
+        "text": "Avoid using sudo in Dockerfiles. Running processes as a non-root user can help  reduce the potential impact of configuration errors and security vulnerabilities.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/dockerfile.security.no-sudo-in-dockerfile.no-sudo-in-dockerfile",
+       "id": "dockerfile.security.no-sudo-in-dockerfile.no-sudo-in-dockerfile",
+       "name": "dockerfile.security.no-sudo-in-dockerfile.no-sudo-in-dockerfile",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-250: Execution with Unnecessary Privileges",
+         "HIGH CONFIDENCE",
+         "OWASP-A02:2025 - Security Misconfiguration",
+         "OWASP-A05:2021 - Security Misconfiguration",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: dockerfile.security.no-sudo-in-dockerfile.no-sudo-in-dockerfile"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Detected the use of eval(). eval() can be dangerous if used to evaluate dynamic content. If this content can be input from outside the program, this may be a code injection vulnerability. Ensure evaluated content is not definable by external sources."
+       },
+       "help": {
+        "markdown": "Detected the use of eval(). eval() can be dangerous if used to evaluate dynamic content. If this content can be input from outside the program, this may be a code injection vulnerability. Ensure evaluated content is not definable by external sources.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/python.lang.security.audit.eval-detected.eval-detected)\n - [https://owasp.org/Top10/A03_2021-Injection](https://owasp.org/Top10/A03_2021-Injection)\n",
+        "text": "Detected the use of eval(). eval() can be dangerous if used to evaluate dynamic content. If this content can be input from outside the program, this may be a code injection vulnerability. Ensure evaluated content is not definable by external sources.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/python.lang.security.audit.eval-detected.eval-detected",
+       "id": "python.lang.security.audit.eval-detected.eval-detected",
+       "name": "python.lang.security.audit.eval-detected.eval-detected",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code ('Eval Injection')",
+         "LOW CONFIDENCE",
+         "OWASP-A03:2021 - Injection",
+         "OWASP-A05:2025 - Injection",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: python.lang.security.audit.eval-detected.eval-detected"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "fullDescription": {
+        "text": "Found 'subprocess' function '$FUNC' with 'shell=True'. This is dangerous because this call will spawn the command using a shell process. Doing so propagates current shell settings and variables, which makes it much easier for a malicious actor to execute commands. Use 'shell=False' instead."
+       },
+       "help": {
+        "markdown": "Found 'subprocess' function '$FUNC' with 'shell=True'. This is dangerous because this call will spawn the command using a shell process. Doing so propagates current shell settings and variables, which makes it much easier for a malicious actor to execute commands. Use 'shell=False' instead.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/python.lang.security.audit.subprocess-shell-true.subprocess-shell-true)\n - [https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess](https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess)\n - [https://docs.python.org/3/library/subprocess.html](https://docs.python.org/3/library/subprocess.html)\n",
+        "text": "Found 'subprocess' function '$FUNC' with 'shell=True'. This is dangerous because this call will spawn the command using a shell process. Doing so propagates current shell settings and variables, which makes it much easier for a malicious actor to execute commands. Use 'shell=False' instead.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+       "id": "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+       "name": "python.lang.security.audit.subprocess-shell-true.subprocess-shell-true",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')",
+         "MEDIUM CONFIDENCE",
+         "OWASP-A01:2017 - Injection",
+         "OWASP-A03:2021 - Injection",
+         "OWASP-A05:2025 - Injection",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: python.lang.security.audit.subprocess-shell-true.subprocess-shell-true"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "In Kubernetes, each pod runs in its own isolated environment with its own set of security policies. However, certain container images may contain `setuid` or `setgid` binaries that could allow an attacker to perform privilege escalation and gain access to sensitive resources. To mitigate this risk, it's recommended to add a `securityContext` to the container in the pod, with the parameter `allowPrivilegeEscalation` set to `false`. This will prevent the container from running any privileged processes and limit the impact of any potential attacks. By adding the `allowPrivilegeEscalation` parameter to your the `securityContext`, you can help to ensure that your containerized applications are more secure and less vulnerable to privilege escalation attacks."
+       },
+       "help": {
+        "markdown": "In Kubernetes, each pod runs in its own isolated environment with its own set of security policies. However, certain container images may contain `setuid` or `setgid` binaries that could allow an attacker to perform privilege escalation and gain access to sensitive resources. To mitigate this risk, it's recommended to add a `securityContext` to the container in the pod, with the parameter `allowPrivilegeEscalation` set to `false`. This will prevent the container from running any privileged processes and limit the impact of any potential attacks. By adding the `allowPrivilegeEscalation` parameter to your the `securityContext`, you can help to ensure that your containerized applications are more secure and less vulnerable to privilege escalation attacks.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation)\n - [https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privilege-escalation)\n - [https://kubernetes.io/docs/tasks/configure-pod-container/security-context/](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)\n - [https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt](https://www.kernel.org/doc/Documentation/prctl/no_new_privs.txt)\n - [https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-4-add-no-new-privileges-flag)\n",
+        "text": "In Kubernetes, each pod runs in its own isolated environment with its own set of security policies. However, certain container images may contain `setuid` or `setgid` binaries that could allow an attacker to perform privilege escalation and gain access to sensitive resources. To mitigate this risk, it's recommended to add a `securityContext` to the container in the pod, with the parameter `allowPrivilegeEscalation` set to `false`. This will prevent the container from running any privileged processes and limit the impact of any potential attacks. By adding the `allowPrivilegeEscalation` parameter to your the `securityContext`, you can help to ensure that your containerized applications are more secure and less vulnerable to privilege escalation attacks.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation",
+       "id": "yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation",
+       "name": "yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-732: Incorrect Permission Assignment for Critical Resource",
+         "MEDIUM CONFIDENCE",
+         "OWASP-A02:2025 - Security Misconfiguration",
+         "OWASP-A05:2021 - Security Misconfiguration",
+         "OWASP-A06:2017 - Security Misconfiguration",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: yaml.kubernetes.security.allow-privilege-escalation.allow-privilege-escalation"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Pod may use the node network namespace. This gives the pod access to the loopback device, services listening on localhost, and could be used to snoop on network activity of other pods on the same node. Remove the 'hostNetwork' key to disable this functionality."
+       },
+       "help": {
+        "markdown": "Pod may use the node network namespace. This gives the pod access to the loopback device, services listening on localhost, and could be used to snoop on network activity of other pods on the same node. Remove the 'hostNetwork' key to disable this functionality.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod)\n - [https://kubernetes.io/docs/concepts/policy/pod-security-policy/#host-namespaces](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#host-namespaces)\n",
+        "text": "Pod may use the node network namespace. This gives the pod access to the loopback device, services listening on localhost, and could be used to snoop on network activity of other pods on the same node. Remove the 'hostNetwork' key to disable this functionality.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod",
+       "id": "yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod",
+       "name": "yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-406: Insufficient Control of Network Message Volume (Network Amplification)",
+         "LOW CONFIDENCE",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: yaml.kubernetes.security.hostnetwork-pod.hostnetwork-pod"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "warning"
+       },
+       "fullDescription": {
+        "text": "Container or pod is running in privileged mode. This grants the container the equivalent of root capabilities on the host machine. This can lead to container escapes, privilege escalation, and other security concerns. Remove the 'privileged' key to disable this capability."
+       },
+       "help": {
+        "markdown": "Container or pod is running in privileged mode. This grants the container the equivalent of root capabilities on the host machine. This can lead to container escapes, privilege escalation, and other security concerns. Remove the 'privileged' key to disable this capability.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/yaml.kubernetes.security.privileged-container.privileged-container)\n - [https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privileged](https://kubernetes.io/docs/concepts/policy/pod-security-policy/#privileged)\n - [https://kubernetes.io/docs/tasks/configure-pod-container/security-context/](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/)\n - [https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html)\n",
+        "text": "Container or pod is running in privileged mode. This grants the container the equivalent of root capabilities on the host machine. This can lead to container escapes, privilege escalation, and other security concerns. Remove the 'privileged' key to disable this capability.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/yaml.kubernetes.security.privileged-container.privileged-container",
+       "id": "yaml.kubernetes.security.privileged-container.privileged-container",
+       "name": "yaml.kubernetes.security.privileged-container.privileged-container",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-250: Execution with Unnecessary Privileges",
+         "MEDIUM CONFIDENCE",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: yaml.kubernetes.security.privileged-container.privileged-container"
+       }
+      },
+      {
+       "defaultConfiguration": {
+        "level": "note"
+       },
+       "fullDescription": {
+        "text": "When running containers in Kubernetes, it's important to ensure that they  are properly secured to prevent privilege escalation attacks.  One potential vulnerability is when a container is allowed to run  applications as the root user, which could allow an attacker to gain  access to sensitive resources. To mitigate this risk, it's recommended to  add a `securityContext` to the container, with the parameter `runAsNonRoot`  set to `true`. This will ensure that the container runs as a non-root user,  limiting the damage that could be caused by any potential attacks. By  adding a `securityContext` to the container in your Kubernetes pod, you can  help to ensure that your containerized applications are more secure and  less vulnerable to privilege escalation attacks."
+       },
+       "help": {
+        "markdown": "When running containers in Kubernetes, it's important to ensure that they  are properly secured to prevent privilege escalation attacks.  One potential vulnerability is when a container is allowed to run  applications as the root user, which could allow an attacker to gain  access to sensitive resources. To mitigate this risk, it's recommended to  add a `securityContext` to the container, with the parameter `runAsNonRoot`  set to `true`. This will ensure that the container runs as a non-root user,  limiting the damage that could be caused by any potential attacks. By  adding a `securityContext` to the container in your Kubernetes pod, you can  help to ensure that your containerized applications are more secure and  less vulnerable to privilege escalation attacks.\n\n#### 💎 Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/yaml.kubernetes.security.run-as-non-root.run-as-non-root)\n - [https://kubernetes.io/blog/2016/08/security-best-practices-kubernetes-deployment/](https://kubernetes.io/blog/2016/08/security-best-practices-kubernetes-deployment/)\n - [https://kubernetes.io/docs/concepts/policy/pod-security-policy/](https://kubernetes.io/docs/concepts/policy/pod-security-policy/)\n - [https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-2-set-a-user](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-2-set-a-user)\n",
+        "text": "When running containers in Kubernetes, it's important to ensure that they  are properly secured to prevent privilege escalation attacks.  One potential vulnerability is when a container is allowed to run  applications as the root user, which could allow an attacker to gain  access to sensitive resources. To mitigate this risk, it's recommended to  add a `securityContext` to the container, with the parameter `runAsNonRoot`  set to `true`. This will ensure that the container runs as a non-root user,  limiting the damage that could be caused by any potential attacks. By  adding a `securityContext` to the container in your Kubernetes pod, you can  help to ensure that your containerized applications are more secure and  less vulnerable to privilege escalation attacks.\n💎 Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/yaml.kubernetes.security.run-as-non-root.run-as-non-root",
+       "id": "yaml.kubernetes.security.run-as-non-root.run-as-non-root",
+       "name": "yaml.kubernetes.security.run-as-non-root.run-as-non-root",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-250: Execution with Unnecessary Privileges",
+         "LOW CONFIDENCE",
+         "OWASP-A02:2025 - Security Misconfiguration",
+         "OWASP-A05:2021 - Security Misconfiguration",
+         "OWASP-A06:2017 - Security Misconfiguration",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: yaml.kubernetes.security.run-as-non-root.run-as-non-root"
+       }
+      }
+     ],
+     "semanticVersion": "1.182.1"
+    }
+   }
+  }
+ ],
+ "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json"
+}
