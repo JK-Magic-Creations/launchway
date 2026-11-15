@@ -704,7 +704,7 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 		return p, nil
 	}
 	x := &expander{load: load, used: map[string]bool{}, containerNames: map[string]bool{}}
-	out := &Pipeline{Name: p.Name, On: p.On, Origin: p.Origin}
+	out := &Pipeline{Name: p.Name, On: p.On, Origin: p.Origin, Supersede: p.Supersede}
 	for _, l := range p.Libraries {
 		c := *l
 		out.Libraries = append(out.Libraries, &c)

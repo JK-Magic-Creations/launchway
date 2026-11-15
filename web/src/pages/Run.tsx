@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, type AttemptInputs, type InputVar, type LogLine, type RerunPlan, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
-import { ago, clock, duration, elapsed, shortSha } from "../format";
+import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { useNow, useStream } from "../live";
 import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
@@ -130,9 +130,9 @@ export function RunPage({ id }: { id: string }) {
           </div>
           <div className="run-meta">
             <span className="meta"><strong>{run.project}</strong> #{run.number}</span>
-            {(run.branch || run.tag) && <span className="meta"><BranchIcon />{run.branch || run.tag}</span>}
+            {refLabel(run) && <span className="meta" title={run.ref}><BranchIcon />{refLabel(run)}</span>}
             {run.sha && <span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span>}
-            <span className="meta">{run.event === "push" ? `pushed by ${run.author || run.actor}` : run.draft ? `draft run by ${run.actor}` : `started by ${run.actor}`}</span>
+            <span className="meta">{starterLabel(run)}</span>
             <span className="meta" title={clock(run.created_at)}>{ago(run.created_at, now)}</span>
             {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
             <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
@@ -179,6 +179,13 @@ export function RunPage({ id }: { id: string }) {
         <div className="callout callout-draft">
           <strong>Needs a newer server.</strong> A newer version of Launchway wrote parts of this run that this server does not understand
           {run.not_understood.length > 0 && <> ({run.not_understood.join("; ")})</>}. This server shows it but leaves it alone; a server of the newer version carries it on.
+        </div>
+      )}
+
+      {run.cancel_requested && run.superseded_by && (
+        <div className="callout callout-draft">
+          <strong>Superseded.</strong> Run <Link href={`/runs/${run.superseded_by}`}>#{run.superseded_by_number}</Link> of the same {run.pull_request ? "pull request" : "branch or tag"} started
+          {" "}with <Mono>supersede: true</Mono> in its pipeline, so this older run was canceled.
         </div>
       )}
 
@@ -375,7 +382,7 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
   // What had succeeded when it asked, not what ran after a decision.
   const succeeded = run.step_list.filter((s) => s.status === "succeeded" && s.id !== step.id &&
     (!step.started_at || s.finished_at <= step.started_at));
-  const starter = run.event === "push" ? `pushed by ${run.author || run.actor}` : `started by ${run.actor || "someone"}`;
+  const starter = starterLabel(run);
   const said = step.comment && <blockquote className="approval-comment">{step.comment}</blockquote>;
 
   return (
@@ -406,7 +413,7 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
         </div>
         <dl className="kv approval-ctx">
           {run.message && <><dt>Commit</dt><dd>{run.message}</dd></>}
-          {(run.branch || run.tag) && <><dt>{run.branch ? "Branch" : "Tag"}</dt><dd><span className="meta"><BranchIcon />{run.branch || run.tag}</span></dd></>}
+          {refLabel(run) && <><dt>{run.pull_request ? "Pull request" : run.branch ? "Branch" : "Tag"}</dt><dd><span className="meta"><BranchIcon />{refLabel(run)}</span></dd></>}
           {run.sha && <><dt>Commit id</dt><dd><span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span></dd></>}
           <dt>Succeeded so far</dt><dd>{succeeded.length ? succeeded.map((s) => s.id).join(", ") : "nothing yet"}</dd>
         </dl>
@@ -454,7 +461,7 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
 
 const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "run.created": (d) => `Run created (${(d.trigger as { event?: string })?.event ?? "manual"})`,
-  "run.cancel_requested": (d) => `Cancel requested by ${d.actor ?? "someone"}`,
+  "run.cancel_requested": (d) => d.reason ? `Canceled: ${d.reason}` : `Cancel requested by ${d.actor ?? "someone"}`,
   "run.resumed": (d) => `Resumed by ${d.actor ?? "someone"}`,
   "run.finished": (d) => `Run ${d.status}`,
   "step.queued": (d) => `${d.step}: queued, attempt ${d.attempt}${d.reason ? ` (${d.reason})` : ""}`,

@@ -65,7 +65,7 @@ export function ProjectsPage() {
             {p.pipeline && (
               <p className="sub project-pipeline">
                 Pipeline from the library <Mono>{p.pipeline.library}@{p.pipeline.version}</Mono>, template <Mono>{p.pipeline.template}</Mono>,
-                configured on the server{p.pipeline.on.push?.branches?.length ? <>, on pushes to {p.pipeline.on.push.branches.join(", ")}</> : null}.
+                configured on the server{p.pipeline.on.push?.branches?.length ? <>, on pushes to {p.pipeline.on.push.branches.join(", ")}</> : null}{p.pipeline.on.pull_request ? <>, on pull requests</> : null}.
                 {" "}A <Mono>.launchway/pipeline.yaml</Mono> in the repository takes its place.
               </p>
             )}

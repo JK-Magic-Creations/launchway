@@ -130,15 +130,18 @@ func (c *cmd) stepEnv(stepID string) []InputVar {
 	} {
 		vars[k] = InputVar{Name: k, Value: v, From: FromLaunchway}
 	}
+	if t.Event == pipeline.EventPullRequest {
+		vars["LAUNCHWAY_PULL_REQUEST"] = InputVar{Name: "LAUNCHWAY_PULL_REQUEST", Value: strconv.Itoa(t.PullRequest), From: FromLaunchway}
+	}
 	out := slices.Collect(maps.Values(vars))
 	slices.SortFunc(out, func(a, b InputVar) int { return strings.Compare(a.Name, b.Name) })
 	return out
 }
 
 // stepSecrets returns the secrets a step may ask the runner for: none in a
-// draft run whose steps may not read secrets.
+// draft or pull-request run whose steps may not read secrets.
 func (c *cmd) stepSecrets(def *pipeline.Step) map[string]pipeline.SecretRef {
-	if c.st.Draft != nil && !c.st.Draft.Secrets {
+	if !c.st.secretsAllowed() {
 		return nil
 	}
 	return def.Secrets

@@ -204,7 +204,8 @@ The servers then need a credential that may push, not only fetch. Give it as lit
 allows (one repository, no admin rights) and protect important branches on the host itself.
 Saves are made in temporary clones under the data directory (`server.dataVolume`), which are
 removed after each save. Who may start draft runs, and whether drafts may read secrets, is
-`drafts:` in `config.extraConfig` and per project.
+`drafts:` in `config.extraConfig` and per project. Whether the steps of pull-request runs may read secrets
+(no, by default) is `pull_requests:` in `config.extraConfig` and per project.
 
 ## What is kept where
 

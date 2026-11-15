@@ -50,6 +50,17 @@ type Config struct {
 	// Drafts controls draft runs, which run pipeline text from the editor
 	// that is not in Git. Each project may override it.
 	Drafts DraftsConfig `yaml:"drafts"`
+	// PullRequests controls runs of pull requests, whose code may come from
+	// anyone who can open one. Each project may override it.
+	PullRequests PullRequestsConfig `yaml:"pull_requests"`
+}
+
+// PullRequestsConfig says whether the steps of pull-request runs may read
+// secrets.
+type PullRequestsConfig struct {
+	// Secrets lets steps of pull-request runs read secrets; default false.
+	// In a project's pull_requests, unset means the server's setting.
+	Secrets *bool `yaml:"secrets"`
 }
 
 // DraftsConfig says who may start draft runs and whether their steps may
@@ -141,6 +152,9 @@ type ProjectConfig struct {
 	Poll   string `yaml:"poll"`   // how often to look for pushes, e.g. 30s
 	// Drafts overrides the server's drafts setting for this project.
 	Drafts *DraftsConfig `yaml:"drafts"`
+	// PullRequests overrides the server's pull_requests setting for this
+	// project.
+	PullRequests *PullRequestsConfig `yaml:"pull_requests"`
 	// Push lets the pipeline editor commit to this repository. Without it,
 	// edited pipelines can be copied or downloaded, not saved.
 	Push *PushConfig `yaml:"push"`
@@ -163,6 +177,9 @@ type ProjectPipelineConfig struct {
 	Template string            `yaml:"template"`
 	With     map[string]string `yaml:"with"`
 	On       ProjectPipelineOn `yaml:"on"`
+	// Supersede: a new run of a push or pull request cancels the older runs
+	// of the same ref that are still going (see the pipeline key).
+	Supersede bool `yaml:"supersede"`
 	// Tools that read YAML 1.1 (Helm values among them) turn a bare `on`
 	// key into the boolean true and write it back as "true". Take that
 	// spelling for what it was meant to be rather than refusing to start.
@@ -175,6 +192,24 @@ type ProjectPipelineOn struct {
 		Branches []string `yaml:"branches"`
 		Tags     []string `yaml:"tags"`
 	} `yaml:"push"`
+	// PullRequest, written pull_request: {} (or with no value), starts runs
+	// for pull requests. It takes no settings.
+	PullRequest yaml.Node `yaml:"pull_request"`
+}
+
+// pullRequests reports whether on.pull_request is written, and checks that
+// it has no settings.
+func (o ProjectPipelineOn) pullRequests() (bool, error) {
+	n := o.PullRequest
+	switch {
+	case n.Kind == 0:
+		return false, nil
+	case n.Kind == yaml.ScalarNode && n.Tag == "!!null":
+		return true, nil
+	case n.Kind == yaml.MappingNode && len(n.Content) == 0:
+		return true, nil
+	}
+	return false, fmt.Errorf("pipeline.on.pull_request takes no settings (pull requests cannot be filtered by branch); write pull_request: {}")
 }
 
 // RunnerConfig controls the runner built into the server.
@@ -252,7 +287,7 @@ func Load(path string) (*Config, error) {
 			}
 			for i, p := range c.Projects {
 				if pp := p.Pipeline; pp != nil && pp.OnAsTrue != nil {
-					if pp.On.Push != nil {
+					if pp.On.Push != nil || pp.On.PullRequest.Kind != 0 {
 						return nil, fmt.Errorf("%s: project %s: pipeline has both `on` and `true` (an unquoted on); keep one", path, p.Name)
 					}
 					pp.On, pp.OnAsTrue = *pp.OnAsTrue, nil
@@ -322,6 +357,17 @@ func Load(path string) (*Config, error) {
 			err = fmt.Errorf("%s: %w", path, err)
 		}
 		return nil, err
+	}
+	for _, p := range c.Projects {
+		if p.Pipeline == nil {
+			continue
+		}
+		if _, err := p.Pipeline.On.pullRequests(); err != nil {
+			if path != "" {
+				return nil, fmt.Errorf("%s: project %s: %w", path, p.Name, err)
+			}
+			return nil, fmt.Errorf("project %s: %w", p.Name, err)
+		}
 	}
 	return c, nil
 }
@@ -412,19 +458,36 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 			}
 			poll = d
 		}
-		sp := source.Project{Name: p.Name, URL: p.Repo, DefaultBranch: p.Branch, Poll: poll}
+		sp := source.Project{Name: p.Name, URL: p.Repo, DefaultBranch: p.Branch, Poll: poll, PullRequestSecrets: c.pullRequestSecrets(p)}
 		if p.Push != nil {
 			sp.Push = &source.PushSettings{BranchPrefix: p.Push.BranchPrefix, AllowDirect: p.Push.AllowDirect}
 		}
 		if pp := p.Pipeline; pp != nil {
-			sp.Pipeline = &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With}
+			sp.Pipeline = &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With,
+				Supersede: pp.Supersede}
 			if t := pp.On.Push; t != nil {
 				sp.Pipeline.On.Push = &pipeline.PushTrigger{Branches: t.Branches, Tags: t.Tags}
+			}
+			prs, err := pp.On.pullRequests()
+			if err != nil {
+				return nil, fmt.Errorf("project %s: %w", p.Name, err)
+			}
+			if prs {
+				sp.Pipeline.On.PullRequest = &pipeline.PullRequestTrigger{}
 			}
 		}
 		out = append(out, sp)
 	}
 	return out, nil
+}
+
+// pullRequestSecrets says whether the steps of a project's pull-request runs
+// may read secrets: the project's setting, else the server's, else no.
+func (c *Config) pullRequestSecrets(p ProjectConfig) bool {
+	if p.PullRequests != nil && p.PullRequests.Secrets != nil {
+		return *p.PullRequests.Secrets
+	}
+	return c.PullRequests.Secrets != nil && *c.PullRequests.Secrets
 }
 
 // SourceLibraries converts the library list for the source package.

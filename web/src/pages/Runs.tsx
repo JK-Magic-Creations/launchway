@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type Project, type RunStatus, type RunSummary } from "../api";
-import { ago, elapsed, shortSha } from "../format";
+import { ago, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { useNow, useStream } from "../live";
 import { BranchIcon, CommitIcon, Empty, ErrorBox, Link, StatusIcon, StepStrip, statusLabel } from "../components/ui";
 
@@ -88,7 +88,8 @@ function isDone(s: RunStatus) { return s === "succeeded" || s === "failed" || s 
 
 function RunRow({ r, now }: { r: RunSummary; now: number }) {
   const title = r.message || r.pipeline;
-  const who = r.event === "push" ? `pushed by ${r.author || r.actor}` : r.draft ? `draft by ${r.actor || "someone"}` : `started by ${r.actor || "someone"}`;
+  const who = starterLabel(r);
+  const where = refLabel(r);
   const waits = !isDone(r.status) && (r.waiting?.length ?? 0) > 0;
   const shown = waits ? "waiting" : r.status;
   return (
@@ -103,11 +104,12 @@ function RunRow({ r, now }: { r: RunSummary; now: number }) {
             <span className="runrow-msg">{title}</span>
           </span>
           <span className="runrow-meta">
-            {(r.branch || r.tag) && <span className="meta"><BranchIcon />{r.branch || r.tag}</span>}
+            {where && <span className="meta"><BranchIcon />{where}</span>}
             {r.sha && <span className="meta mono"><CommitIcon />{shortSha(r.sha)}</span>}
             <span className="meta">{who}</span>
             {waits && <span className="meta wait">waiting for approval: {r.waiting.join(", ")}</span>}
             {r.cancel_requested && !isDone(r.status) && <span className="meta warn">canceling…</span>}
+            {r.cancel_requested && r.cancel_reason && <span className="meta">{r.cancel_reason}</span>}
           </span>
         </span>
         <span className="runrow-strip"><StepStrip steps={r.steps} /></span>

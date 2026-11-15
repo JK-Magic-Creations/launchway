@@ -447,3 +447,56 @@ func TestNeedsProblemsPointAtNeeds(t *testing.T) {
 		t.Fatalf("%#v", err)
 	}
 }
+
+// Pull requests are a trigger with no settings, and a when condition can
+// name them. supersede is a top-level switch.
+func TestPullRequestsAndSupersede(t *testing.T) {
+	for _, on := range []string{"pull_request: {}", "pull_request:", "{ push: { branches: [main] }, pull_request: {} }"} {
+		src := "pipeline: a\non:\n  " + on + "\nsupersede: true\nsteps:\n  a: {image: x, run: y, when: { event: pull_request }}\n"
+		if strings.HasPrefix(on, "{") {
+			src = "pipeline: a\non: " + on + "\nsupersede: true\nsteps:\n  a: {image: x, run: y, when: { event: pull_request }}\n"
+		}
+		p, err := Parse([]byte(src))
+		if err != nil {
+			t.Fatalf("%s: %v", on, err)
+		}
+		if !p.On.MatchPullRequest() || !p.Supersede || !p.UsesSchema9() {
+			t.Fatalf("%s: %+v", on, p)
+		}
+		a := p.Step("a")
+		if !a.When.Match(Context{Event: EventPullRequest}) || a.When.Match(Context{Event: EventPush, Branch: "main"}) {
+			t.Fatalf("%s: when %+v", on, a.When)
+		}
+		j := mustJSON(p)
+		if !strings.Contains(j, `"pull_request":{}`) || !strings.Contains(j, `"supersede":true`) {
+			t.Fatalf("%s: %s", on, j)
+		}
+	}
+	// Without them, the graph's JSON is as before, so older servers read it.
+	p, err := Parse([]byte(good))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if j := mustJSON(p); strings.Contains(j, "pull_request") || strings.Contains(j, "supersede") || p.UsesSchema9() || p.On.MatchPullRequest() {
+		t.Fatalf("%s", j)
+	}
+	// A branch condition never matches a pull request: it has no branch.
+	if p.Step("deploy").When.Match(Context{Event: EventPullRequest}) {
+		t.Fatal("deploy's when matched a pull request")
+	}
+	for name, c := range map[string]struct{ src, want string }{
+		"branches":      {"pipeline: a\non: { pull_request: { branches: [main] } }\nsteps:\n  a: {image: x, run: y}\n", "cannot be filtered by branch"},
+		"another key":   {"pipeline: a\non: { pull_request: { types: [opened] } }\nsteps:\n  a: {image: x, run: y}\n", "takes no settings"},
+		"a value":       {"pipeline: a\non: { pull_request: yes }\nsteps:\n  a: {image: x, run: y}\n", "write pull_request: {}"},
+		"supersede":     {"pipeline: a\nsupersede: sometimes\nsteps:\n  a: {image: x, run: y}\n", "write true or false"},
+		"unknown event": {"pipeline: a\nsteps:\n  a: {image: x, run: y, when: { event: pull-request }}\n", "pull_request"},
+	} {
+		_, err := Parse([]byte(c.src))
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: %v, want %q", name, err, c.want)
+		}
+		if ps, ok := err.(Problems); ok && ps[0].Line == 0 {
+			t.Errorf("%s: no line: %v", name, ps)
+		}
+	}
+}

@@ -106,6 +106,23 @@ type Payload struct {
 	// step.reused: where the outcome and outputs come from. Outcome is
 	// succeeded or skipped; Actor and Comment are an approval's decision.
 	Reused *Reused `json:"reused,omitempty"`
+
+	// run.created of a pull-request run (schema 9): whether its steps may
+	// read secrets, as the project's configuration said when it was
+	// created. Older servers would hand secrets out regardless; they leave
+	// such runs alone because the pipeline of a pull-request run always has
+	// on.pull_request, a key they do not know (see RunState.check).
+	PullRequestSecrets *bool `json:"pull_request_secrets,omitempty"`
+	// run.cancel_requested (schema 9): the newer run that superseded this
+	// one, if that is why it is cancelled; Reason says so in words. Older
+	// servers ignore it, which is harmless: it only records.
+	SupersededBy *Superseder `json:"superseded_by,omitempty"`
+}
+
+// Superseder is the run that superseded another.
+type Superseder struct {
+	Run    string `json:"run"`
+	Number int    `json:"number"`
 }
 
 // Rerun links a re-run to the run it re-runs.
@@ -143,14 +160,16 @@ func DraftHash(text string) string {
 
 // Trigger records why a run started.
 type Trigger struct {
-	Event   string `json:"event"`            // push, manual or draft
-	Ref     string `json:"ref,omitempty"`    // refs/heads/main
+	Event   string `json:"event"`            // push, manual, draft or pull_request
+	Ref     string `json:"ref,omitempty"`    // refs/heads/main, or refs/pull/12/head
 	Branch  string `json:"branch,omitempty"` // main
 	Tag     string `json:"tag,omitempty"`
 	SHA     string `json:"sha,omitempty"`
 	Actor   string `json:"actor,omitempty"`
 	Message string `json:"message,omitempty"` // commit subject
 	Author  string `json:"author,omitempty"`
+	// PullRequest is the pull request's number, for event pull_request.
+	PullRequest int `json:"pull_request,omitempty"`
 }
 
 // Context returns what step conditions are tested against.

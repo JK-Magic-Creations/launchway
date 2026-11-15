@@ -64,8 +64,10 @@ func TestMigrationsDeclareTheirCompatibility(t *testing.T) {
 
 // The heart of it: a database at schema N, written by this build, is
 // opened by a build that knows N-1. It starts, says once that the database
-// is newer, runs a run end to end, and leaves alone a re-run, whose events
-// it does not know, while a server of schema N finishes it.
+// is newer, runs a run end to end, and leaves alone a pull-request run,
+// which it does not know, while a server of schema N finishes it. A run of
+// its own that a newer server cancelled by superseding it reads as an
+// ordinary cancelled run.
 func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	n := len(migrations)
 	if migrations[n-1].compat != additive {
@@ -75,17 +77,14 @@ func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	addr := testdb.New(t)
 
 	// This build creates the database and a finished run, and starts a
-	// re-run of it from its second step.
+	// run of a pull request.
 	var newLog syncBuffer
 	cur := mustOpenAs(t, addr, clk, 0, &newLog)
 	orig := create(t, cur, linear, Trigger{Event: "manual"})
 	for range 3 {
 		ok(t, cur, take(t, cur), map[string]string{"v": "1"})
 	}
-	re, err := cur.Rerun(RerunRequest{Run: orig, From: "b", Actor: "ann"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	re := struct{ ID string }{create(t, cur, prLinear, prTrigger(7, "c7"))}
 	if info, _ := cur.Schema(context.Background()); info.Database != n || info.Minimum > n-1 {
 		t.Fatalf("schema after migrating: %+v", info)
 	}
@@ -101,24 +100,38 @@ func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 		t.Fatalf("the older build said %d times that the database is newer:\n%s", c, oldLog.String())
 	}
 
-	// It sees the re-run but does not understand it, and leaves it alone.
+	// It reads the newer build's ordinary run as its own.
+	want(t, statuses(t, old, orig), "run", "succeeded")
+
+	// It sees the pull-request run but does not understand it, and leaves
+	// it alone: it would not keep secrets from its steps.
 	d, err := old.GetRun(re.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !d.NeedsNewerServer || len(d.NotUnderstood) == 0 || !strings.Contains(d.NotUnderstood[0], "step.reused") {
-		t.Fatalf("older build's view of the re-run: needs newer %v, not understood %v", d.NeedsNewerServer, d.NotUnderstood)
+	if !d.NeedsNewerServer || len(d.NotUnderstood) == 0 || !strings.Contains(d.NotUnderstood[0], "on.pull_request") {
+		t.Fatalf("older build's view of the pull-request run: needs newer %v, not understood %v", d.NeedsNewerServer, d.NotUnderstood)
 	}
 	if err := old.Cancel(re.ID, "ann"); !errors.Is(err, ErrNeedsNewer) {
 		t.Fatalf("older build canceled a run it does not understand: %v", err)
 	}
-	if _, err := old.Rerun(RerunRequest{Run: orig, From: "a", Actor: "ann"}); err == nil {
-		t.Fatal("older build made a re-run, which it does not know")
+	if _, err := old.CreateRun(NewRun{Project: "demo", Pipeline: parse(t, prLinear), Trigger: prTrigger(8, "c8"),
+		Source: Source{Kind: "dir", Path: "/tmp"}}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("older build made a pull-request run, which it does not know: %v", err)
+	}
+
+	// A push run the older build made is superseded by the newer build;
+	// the older build reads it as cancelled, and lists every run.
+	pushed := create(t, old, linear, Trigger{Event: "push", Ref: "refs/heads/dev", Branch: "dev", SHA: "d1"})
+	create(t, cur, "supersede: true\n"+linear, Trigger{Event: "push", Ref: "refs/heads/dev", Branch: "dev", SHA: "d2"})
+	want(t, statuses(t, old, pushed), "run", "canceled", "a", "canceled")
+	if runs, err := old.ListRuns(RunFilter{}); err != nil || len(runs) != 4 {
+		t.Fatalf("older build's list: %d runs, %v", len(runs), err)
 	}
 
 	// A normal run, end to end, on the older build alone: created, every
 	// step leased, started, logged and finished, outputs passed on. It
-	// never gets the re-run's queued step.
+	// never gets the queued steps of the runs it does not understand.
 	id := create(t, old, linear, Trigger{Event: "manual"})
 	for _, step := range []string{"a", "b", "c"} {
 		j := take(t, old)
@@ -138,19 +151,23 @@ func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	if lines, _, _ := old.Logs(id, "c", 0, 0, 0); len(lines) != 1 {
 		t.Fatalf("logs on the older build: %+v", lines)
 	}
-	// Inputs are a schema-N feature: the older build records none.
-	if s := stepOf(t, old, id, "b"); len(s.Inputs) != 0 {
-		t.Fatalf("older build recorded inputs: %+v", s.Inputs)
+	// Why a run was cancelled is a schema-N column: the newer build
+	// reads it for the run it superseded; the older build does not.
+	if sum, _ := cur.Summary(pushed); sum.CancelReason == "" || sum.SupersededBy == "" {
+		t.Fatalf("newer build's view of the superseded run: %+v", sum)
 	}
 
-	// Meanwhile the newer build carries the re-run on, and reads the older
-	// build's run as it would its own.
-	j := take(t, cur)
-	if j.RunID != re.ID || j.StepID != "b" {
-		t.Fatalf("newer build leased %s/%s", j.RunID, j.StepID)
+	// Meanwhile the newer build carries the pull-request run on (and the
+	// run that superseded the push), and reads the older build's run as it
+	// would its own.
+	for range 6 {
+		j := take(t, cur)
+		if j.RunID == re.ID && j.Env["LAUNCHWAY_PULL_REQUEST"] != "7" {
+			t.Fatalf("pull-request step's environment: %v", j.Env)
+		}
+		ok(t, cur, j, nil)
 	}
-	ok(t, cur, j, nil)
-	ok(t, cur, take(t, cur), nil)
+	none(t, cur)
 	want(t, statuses(t, cur, re.ID), "run", "succeeded", "a", "succeeded", "b", "succeeded", "c", "succeeded")
 	want(t, statuses(t, cur, id), "run", "succeeded")
 

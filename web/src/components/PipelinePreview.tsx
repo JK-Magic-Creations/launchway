@@ -38,8 +38,10 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
             <h2 className="h-sm ok">Valid: {res.graph.name}, {res.graph.steps.length} steps in {res.levels.length} stages</h2>
             <p className="sub">
               {res.graph.on.push
-                ? <>Starts on pushes to {[...(res.graph.on.push.branches ?? []), ...(res.graph.on.push.tags ?? []).map((t) => "tag " + t)].join(", ")}, and by hand.</>
-                : <>Starts only by hand: there is no push trigger.</>}
+                ? <>Starts on pushes to {[...(res.graph.on.push.branches ?? []), ...(res.graph.on.push.tags ?? []).map((t) => "tag " + t)].join(", ")}{res.graph.on.pull_request ? ", on pull requests" : ""}, and by hand.</>
+                : res.graph.on.pull_request ? <>Starts on pull requests, and by hand.</>
+                : <>Starts only by hand: there is no push or pull request trigger.</>}
+              {res.graph.supersede && <> A new run of a push or pull request cancels the older ones of the same ref that are still going.</>}
             </p>
             {res.graph.libraries && res.graph.libraries.length > 0 && (
               <p className="sub libs">Libraries: <LibraryList libraries={res.graph.libraries} /></p>

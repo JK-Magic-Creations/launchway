@@ -188,8 +188,15 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 			ON CONFLICT(project) DO UPDATE SET last = run_counters.last + 1 RETURNING last`, orig.Project).Scan(&number); err != nil {
 			return err
 		}
+		var prSecrets *bool
+		if trig.Event == pipeline.EventPullRequest {
+			// A pull-request run's re-run may read secrets only if the
+			// original could: it runs the same code.
+			allowed := orig.PullRequestSecrets
+			prSecrets = &allowed
+		}
 		c.emit(RunCreated, Payload{Project: orig.Project, Number: number, Pipeline: orig.Pipeline, Trigger: &trig, Source: &src,
-			Draft: draft, Rerun: rerun})
+			Draft: draft, Rerun: rerun, PullRequestSecrets: prSecrets})
 		for _, id := range plan.Reuse {
 			s := orig.Steps[id]
 			from := &Reused{Run: orig.ID, Number: orig.Number, Attempt: s.Attempt, DecidedAt: s.DecidedAt}

@@ -69,6 +69,16 @@ func draftSecretsRefused(project string, def *pipeline.Step) string {
 		project, strings.Join(names, ", "))
 }
 
+// pullRequestSecretsRefused explains why a step of a pull-request run failed
+// without running.
+func pullRequestSecretsRefused(project string, def *pipeline.Step) string {
+	names := slices.Sorted(maps.Keys(def.Secrets))
+	return fmt.Sprintf("not run: this run is for a pull request, whose code may come from anyone who can open one, and pull-request runs of %s "+
+		"may not read secrets (the step asks for %s). Guard the step with when: { event: [push, manual] }, or ask an administrator "+
+		"to set pull_requests.secrets: true for the project",
+		project, strings.Join(names, ", "))
+}
+
 // DraftText returns the pipeline text a draft run ran, and its hash. ok is
 // false for a run that is not a draft.
 func (e *Engine) DraftText(runID string) (d Draft, ok bool, err error) {

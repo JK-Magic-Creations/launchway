@@ -111,10 +111,12 @@ func Parse(data []byte) (*Pipeline, error) {
 
 	p := &Pipeline{}
 	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "libraries", "containers", "steps"}, func(k, v *yaml.Node) {
+	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps"}, func(k, v *yaml.Node) {
 		switch k.Value {
 		case "pipeline":
 			p.Name = ps.str(v, "pipeline")
+		case "supersede":
+			p.Supersede = ps.bool(v, "supersede")
 		case "on":
 			ps.parseOn(v, p)
 		case "libraries":
@@ -197,7 +199,12 @@ var notYet = map[string]string{
 }
 
 func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
-	ps.eachKey(n, "on", []string{"push"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, "on", []string{"push", "pull_request"}, func(k, v *yaml.Node) {
+		if k.Value == "pull_request" {
+			ps.parsePullRequest(v)
+			p.On.PullRequest = &PullRequestTrigger{}
+			return
+		}
 		t := &PushTrigger{}
 		ps.eachKey(v, "on.push", []string{"branches", "tags"}, func(k2, v2 *yaml.Node) {
 			list := ps.strList(v2, "on.push."+k2.Value)
@@ -215,6 +222,25 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 		}
 		p.On.Push = t
 	})
+}
+
+// parsePullRequest checks on.pull_request, which takes no settings: written
+// as pull_request: {} or with no value at all.
+func (ps *parser) parsePullRequest(v *yaml.Node) {
+	switch {
+	case v.Kind == yaml.ScalarNode && v.Tag == "!!null":
+	case v.Kind == yaml.MappingNode && len(v.Content) == 0:
+	case v.Kind == yaml.MappingNode:
+		k := v.Content[0]
+		if k.Value == "branches" || k.Value == "tags" {
+			ps.add(k, "on.pull_request."+k.Value, "pull requests cannot be filtered by branch: the server sees only each pull request's head "+
+				"(refs/pull/<n>/head), not the branch it targets. Write pull_request: {}")
+		} else {
+			ps.add(k, "on.pull_request."+k.Value, "unknown key %q; pull_request takes no settings: write pull_request: {}", k.Value)
+		}
+	default:
+		ps.add(v, "on.pull_request", "write pull_request: {}")
+	}
 }
 
 var (
@@ -569,6 +595,17 @@ func (ps *parser) str(n *yaml.Node, at string) string {
 		return ""
 	}
 	return n.Value
+}
+
+func (ps *parser) bool(n *yaml.Node, at string) bool {
+	switch ps.str(n, at) {
+	case "true", "yes":
+		return true
+	case "false", "no":
+		return false
+	}
+	ps.add(n, at, "write true or false")
+	return false
 }
 
 func (ps *parser) int(n *yaml.Node, at string) int {

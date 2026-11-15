@@ -24,6 +24,11 @@ type Pipeline struct {
 	// Origin says where the pipeline came from when it was not the
 	// repository's own file or a draft; nil otherwise.
 	Origin *Origin `json:"origin,omitempty"`
+	// Supersede says that a new run started by a push or a pull request
+	// cancels the older runs of the same ref that are still going, if they
+	// too were started by a push or a pull request. Runs started by hand,
+	// drafts and re-runs never supersede and are never superseded.
+	Supersede bool `json:"supersede,omitempty"`
 }
 
 // Origin records that a pipeline came from the server's configuration of
@@ -55,7 +60,15 @@ type Container struct {
 // Triggers says which events start a run. A run can always be started by hand.
 type Triggers struct {
 	Push *PushTrigger `json:"push,omitempty"`
+	// PullRequest, if set, starts a run when a pull request is opened or
+	// its head moves. It has no settings: the server sees only each pull
+	// request's head (refs/pull/<n>/head), not the branch it targets, so
+	// it cannot filter by branch.
+	PullRequest *PullRequestTrigger `json:"pull_request,omitempty"`
 }
+
+// PullRequestTrigger starts a run for pull requests. It is empty for now.
+type PullRequestTrigger struct{}
 
 // PushTrigger starts a run when matching branches or tags are pushed.
 type PushTrigger struct {
@@ -236,14 +249,18 @@ const (
 	// if its event list names draft, so deployments guarded by when do not
 	// run from unsaved, unreviewed text.
 	EventDraft = "draft"
+	// EventPullRequest is a run of a pull request's head commit, which may
+	// come from someone who cannot push to the repository. It has no branch
+	// or tag, so when: { branch: ... } never matches it.
+	EventPullRequest = "pull_request"
 )
 
 // Events lists every event, in the order they are documented.
-var Events = []string{EventPush, EventManual, EventDraft}
+var Events = []string{EventPush, EventManual, EventDraft, EventPullRequest}
 
 // Context is what a condition is tested against.
 type Context struct {
-	Event  string // push, manual or draft
+	Event  string // push, manual, draft or pull_request
 	Branch string // empty when the run is for a tag
 	Tag    string
 }
@@ -278,6 +295,13 @@ func (t Triggers) MatchPush(branch, tag string) bool {
 	}
 	return matchAny(t.Push.Tags, tag)
 }
+
+// MatchPullRequest reports whether pull requests start a run.
+func (t Triggers) MatchPullRequest() bool { return t.PullRequest != nil }
+
+// UsesSchema9 reports whether the pipeline uses keys that servers older
+// than schema 9 do not know: on.pull_request and supersede.
+func (p *Pipeline) UsesSchema9() bool { return p.On.PullRequest != nil || p.Supersede }
 
 func matchAny(patterns []string, value string) bool {
 	if value == "" {

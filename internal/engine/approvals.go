@@ -117,6 +117,7 @@ type Approval struct {
 	ShortSHA      string `json:"short_sha"`
 	Branch        string `json:"branch"`
 	Tag           string `json:"tag,omitempty"`
+	PullRequest   int    `json:"pull_request,omitempty"` // for a run of a pull request
 	WaitingSince  int64  `json:"waiting_since"`
 	Deadline      int64  `json:"deadline"`
 }
@@ -125,7 +126,7 @@ type Approval struct {
 // the most recent first.
 func (e *Engine) Approvals() ([]Approval, error) {
 	rows, err := e.db.Query(`SELECT s.run_id, r.project, r.number, s.step_id, r.actor, r.message, r.sha, r.branch, r.tag,
-			s.queued_at, s.deadline
+			r.event, r.ref, s.queued_at, s.deadline
 		FROM steps s JOIN runs r ON r.id = s.run_id
 		WHERE s.status = ?
 		ORDER BY s.queued_at DESC, s.run_id DESC, s.position`, StepWaitingS)
@@ -135,12 +136,13 @@ func (e *Engine) Approvals() ([]Approval, error) {
 	out := []Approval{}
 	for rows.Next() {
 		var a Approval
-		var sha string
+		var sha, event, ref string
 		if err := rows.Scan(&a.RunID, &a.Project, &a.RunNumber, &a.StepID, &a.StartedBy, &a.CommitSubject, &sha,
-			&a.Branch, &a.Tag, &a.WaitingSince, &a.Deadline); err != nil {
+			&a.Branch, &a.Tag, &event, &ref, &a.WaitingSince, &a.Deadline); err != nil {
 			rows.Close()
 			return nil, err
 		}
+		a.PullRequest = pullRequestNumber(event, ref)
 		a.ShortSHA = sha[:min(len(sha), 8)]
 		out = append(out, a)
 	}

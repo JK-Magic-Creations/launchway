@@ -445,7 +445,33 @@ CREATE TABLE step_inputs (
   PRIMARY KEY (run_id, step_id, attempt, kind, name)
 );
 `},
+	// 9: pull requests and superseding. Runs started by a pull request
+	//    (trigger event pull_request) need a server that knows them: their
+	//    steps read no secrets unless the project allows it, which older
+	//    servers would not enforce. Their pipeline always has
+	//    on.pull_request, which older servers do not know, so they leave
+	//    such runs alone, as they do runs whose pipeline uses supersede;
+	//    runs.min_schema says 9 for both. A run cancelled
+	//    because a newer run of the same ref superseded it records why, and
+	//    which run: cancel_reason and superseded_by are derived from the
+	//    run.cancel_requested event, whose new fields older servers ignore
+	//    (a cancel is a cancel to them). The index finds the runs of a ref
+	//    to supersede.
+	//    Compatibility: additive: new columns with defaults and an index;
+	//    no new event type. Older servers never write the new columns: if
+	//    one resumes a superseded run and it is then cancelled by hand, the
+	//    old reason stays in the row (the events still tell the truth).
+	{additive, `
+ALTER TABLE runs ADD COLUMN cancel_reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN superseded_by TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN superseded_by_number INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX runs_project_ref ON runs(project, ref);
+`},
 }
+
+// schemaPullRequests is the schema that brought pull-request runs,
+// superseding, and the columns that record why a run was cancelled.
+const schemaPullRequests = 9
 
 // schemaReruns is the schema that brought step inputs, re-runs and
 // runs.min_schema. Code that uses its tables and columns checks that the

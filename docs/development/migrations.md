@@ -56,6 +56,15 @@ event type, or a new field whose meaning older servers must not ignore, is a sch
 - `runs.min_schema` holds the newest schema among a run's events, so older servers skip such runs
   in SQL instead of reading them first.
 
+New pipeline keys need care beyond the database. A server that does not know a key cannot parse
+a pipeline file that uses it: when it polls a repository whose pipeline uses the key, it records
+an error for the push and starts nothing, and since one server acts on each push, a push may be
+lost that way during a rolling upgrade. Start using new keys in pipeline files only once every
+server runs the release that knows them, and stop before rolling back. Schema 9's
+`on.pull_request` and `supersede` are such keys; their runs are left to servers of schema 9 as
+described above (a pull-request run's pipeline always has `on.pull_request`, which keeps older
+servers from running it without the secrets rule they do not know).
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

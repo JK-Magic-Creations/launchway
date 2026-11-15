@@ -113,6 +113,8 @@ Things to try:
 pipeline: my-service
 on:
   push: { branches: [main, "release/*"] }
+  pull_request: {}
+supersede: true
 
 steps:
   test:
@@ -140,7 +142,7 @@ steps:
 | `image` | Container image the step runs in |
 | `run` | Shell script, run with `sh -e` in the repository checkout |
 | `needs` | Steps that must succeed first; steps with no unmet needs run in parallel |
-| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`) patterns; the step is skipped if they do not match. In a [draft run](#editing-pipelines), a step with a `when` runs only if its `event` names `draft` |
+| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`) patterns; the step is skipped if they do not match. In a [draft run](#editing-pipelines), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](#pull-requests) has no branch, so `when: { branch: main }` never matches it |
 | `env` | Extra environment variables |
 | `secrets` | Environment variables whose values a runner looks up; see [Secrets](#secrets) |
 | `container` | A named container from the `containers` section, instead of `image` |
@@ -152,7 +154,9 @@ steps:
 | `with` | Values for the template's parameters |
 
 At the top level, beside `pipeline`, `on`, `containers` and `steps`, `libraries` names the
-[shared libraries](#shared-libraries) the pipeline's templates come from.
+[shared libraries](#shared-libraries) the pipeline's templates come from, and `supersede: true`
+lets a new run [cancel the older runs](#superseding-older-runs) of the same branch or pull
+request. `on` takes `push` (with `branches` and `tags` patterns) and `pull_request: {}`.
 
 ### Containers and services
 
@@ -185,7 +189,8 @@ the step's log says so. Values passed as outputs (below) always survive.
 
 Steps write `key=value` lines to `$LAUNCHWAY_OUTPUTS`. Steps that need them receive
 `LAUNCHWAY_NEEDS_<STEP>_<KEY>`. Every step also gets `LAUNCHWAY_COMMIT`, `LAUNCHWAY_BRANCH`,
-`LAUNCHWAY_RUN_NUMBER` and related variables.
+`LAUNCHWAY_EVENT`, `LAUNCHWAY_REF`, `LAUNCHWAY_RUN_NUMBER` and related variables, and the steps of
+a pull-request run get `LAUNCHWAY_PULL_REQUEST`, the pull request's number.
 
 Mistakes are reported with line numbers, before anything runs:
 
@@ -197,6 +202,62 @@ $ launchway validate
 When a step fails, its last few lines of output (on stderr if it wrote any there, else on stdout,
 with secrets masked as in the log) are kept with the step and shown where the run says it failed,
 so "exit code 1" comes with its reason.
+
+### Pull requests
+
+`on: { pull_request: {} }` runs the pipeline for pull requests. There are no webhooks yet:
+Launchway polls, as it does for pushes. Git hosts such as GitHub, Gitea and Forgejo publish each
+pull request's head commit as the ref `refs/pull/<number>/head`; the server's mirror fetches it
+with everything else, and a run starts when one appears or moves.
+
+- **What runs.** The pipeline at the pull request's head commit, at that commit. The run is
+  marked *pull request #12* wherever runs are shown, its event is `pull_request`, and its steps
+  get `LAUNCHWAY_EVENT=pull_request`, `LAUNCHWAY_REF=refs/pull/12/head` and
+  `LAUNCHWAY_PULL_REQUEST=12`. `LAUNCHWAY_BRANCH` is empty.
+- **Who decides.** A pull request runs only if the pipeline at the tip of the project's default
+  branch asks for pull requests, and so does the pipeline at its head. The default branch decides
+  because it has been reviewed: a pull request cannot turn pull-request runs on for itself. When
+  a pull request asks but the default branch does not, *Recent pushes* says so.
+- **Pull requests that already exist do not run.** Git hosts keep these refs after a pull
+  request is closed or merged. The first time a server looks for a project's pull requests (a new
+  project, or the first poll after upgrading), it records every pull request's head and runs
+  none of them. After that only new pull requests, and ones pushed to, run. Heads are recorded
+  even while the default branch does not ask for pull requests, so turning them on later does
+  not run the old ones either. As with pushes, this is kept in the database, and exactly one
+  server acts on each change.
+- **No target branch.** The ref says which commit a pull request is at, not which branch it
+  targets, so `pull_request` takes no `branches` filter, and `when: { branch: ... }` never matches
+  a pull-request run. Use `when: { event: pull_request }` for steps only pull requests run, and
+  `when: { event: [push, manual] }` to keep a step out of them.
+- **No secrets, by default.** A pull request's code may come from anyone who can open one, so a
+  step of a pull-request run that declares `secrets` fails before any runner sees it, unless the
+  project allows it. The setting is read when the run is created; resuming the run and re-running
+  it keep that decision.
+
+  ```yaml
+  pull_requests:
+    secrets: false          # the default
+  projects:
+    - name: payments
+      repo: https://git.example.com/team/payments.git
+      pull_requests: { secrets: true }   # overrides, per project
+  ```
+
+- **Not there yet:** reporting a run's outcome back to the pull request as a commit status, and
+  webhooks.
+
+### Superseding older runs
+
+With `supersede: true` at the top of the pipeline, a new run started by a push or a pull request
+cancels the older runs of the same project and ref (the same branch, tag or pull request) that
+are still queued, running or waiting for approval, if they too were started by a push or a pull
+request. They are cancelled as if by hand (running steps are stopped by their runners), and say
+why: *superseded by run #N*, in the run list, on the run page, and in the API (`cancel_reason`,
+`superseded_by`, `superseded_by_number`). The push decision that started the new run names the
+runs it superseded. Runs started by hand, draft runs and re-runs never supersede and are never
+superseded, and the new run's own pipeline is what decides. The cancelling happens in the same
+database transaction that creates the new run, so it is exact however many servers there are.
+A superseded run can be resumed like any cancelled run.
 
 ## Editing pipelines
 
@@ -399,7 +460,8 @@ projects:
       version: v3
       template: python-service
       with: { test_command: "pytest -q tests/" }
-      on: { push: { branches: [main, develop] } }
+      on: { push: { branches: [main, develop] }, pull_request: {} }
+      supersede: true          # optional; see Superseding older runs
 ```
 
 At a commit that has its own `.launchway/pipeline.yaml`, that file wins; otherwise the configured
@@ -741,7 +803,7 @@ within the last two minutes) for probes.
 | `internal/executor` | Runs a step in a Podman or Docker container, in a Kubernetes pod, or on the host |
 | `internal/runner` | Takes steps from the server over HTTP, streams logs, sends heartbeats |
 | `internal/secrets` | Secret stores (env, file, Vault/OpenBao) and masking, used only by runners |
-| `internal/source` | Mirrors Git repositories, starts runs on matching pushes, records why |
+| `internal/source` | Mirrors Git repositories, starts runs on matching pushes and pull requests, records why |
 | `internal/auth` | Roles and access bindings, OpenID Connect sign-in, and the cryptography sessions and tokens need |
 | `internal/api` | Runner API, UI API, sign-in, API tokens, access checks, the audit trail and the live event stream |
 | `internal/fakeidp` | An OpenID Connect provider for tests, which can be made to misbehave |
@@ -758,6 +820,10 @@ within the last two minutes) for probes.
 - upgrades that can be rolled back: a build one schema older running against the newer database,
   runs it does not understand left alone, and servers migrating at the same moment;
 - approvals, including two servers deciding or expiring the same one at once;
+- pull requests from real repositories: closed ones not run, the default branch deciding, no
+  secrets by default, and two servers polling the same pull requests;
+- superseding: what is and is not superseded, all or nothing, and runs of one branch created at
+  once on two servers while runners work on them;
 - real Git repositories, including saves racing from two servers, stale saves and pushes the
   repository refuses;
 - shared libraries: version resolution against real repositories, moving tags, overrides, a
@@ -781,7 +847,7 @@ Built so far:
 - secrets (environment, files, Vault and OpenBao);
 - approvals;
 - re-runs from any step, and a record of what each step attempt was given;
-- Git polling;
+- Git polling, for pushes and pull requests, and superseding older runs;
 - the pipeline editor: draft runs of unsaved text, and saving to Git as the person who saved;
 - shared libraries of templates and scripts, pinned by Git tag, branch or commit, with
   per-run overrides and pipelines configured on the server for repositories without a file;

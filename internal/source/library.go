@@ -43,6 +43,9 @@ type ProjectPipeline struct {
 	Template string            `json:"template"`
 	With     map[string]string `json:"with,omitempty"`
 	On       pipeline.Triggers `json:"on"`
+	// Supersede is the pipeline's supersede: a new run of a push or pull
+	// request cancels the older ones of the same ref still going.
+	Supersede bool `json:"supersede,omitempty"`
 }
 
 // MaxOverrides bounds the library overrides one start may ask for.
@@ -106,7 +109,8 @@ func configuredText(project string, pp *ProjectPipeline) (string, error) {
 		Tags     []string `yaml:"tags,omitempty,flow"`
 	}
 	type on struct {
-		Push *push `yaml:"push,omitempty"`
+		Push        *push     `yaml:"push,omitempty"`
+		PullRequest *struct{} `yaml:"pull_request,omitempty"`
 	}
 	type lib struct {
 		Repo    string `yaml:"repo"`
@@ -119,15 +123,23 @@ func configuredText(project string, pp *ProjectPipeline) (string, error) {
 	doc := struct {
 		Pipeline  string         `yaml:"pipeline"`
 		On        *on            `yaml:"on,omitempty"`
+		Supersede bool           `yaml:"supersede,omitempty"`
 		Libraries map[string]lib `yaml:"libraries"`
 		Steps     map[string]use `yaml:"steps"`
 	}{
 		Pipeline:  project,
+		Supersede: pp.Supersede,
 		Libraries: map[string]lib{pp.Library: {Repo: pp.Library, Version: pp.Version}},
 		Steps:     map[string]use{pp.Template: {Uses: pp.Library + "/" + pp.Template, With: pp.With}},
 	}
 	if t := pp.On.Push; t != nil {
 		doc.On = &on{Push: &push{Branches: t.Branches, Tags: t.Tags}}
+	}
+	if pp.On.PullRequest != nil {
+		if doc.On == nil {
+			doc.On = &on{}
+		}
+		doc.On.PullRequest = &struct{}{}
 	}
 	out, err := yaml.Marshal(doc)
 	if err != nil {

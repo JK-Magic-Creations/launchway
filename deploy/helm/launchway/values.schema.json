@@ -88,6 +88,13 @@
                   "allow": { "enum": ["admin", "operator", "none"] },
                   "secrets": { "type": "boolean" }
                 }
+              },
+              "pull_requests": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "secrets": { "type": "boolean" }
+                }
               }
             }
           }

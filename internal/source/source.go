@@ -44,25 +44,36 @@ type Project struct {
 	// Pipeline, if set, is the project's pipeline whenever its repository
 	// has no pipeline file at a commit.
 	Pipeline *ProjectPipeline
+	// PullRequestSecrets lets the steps of pull-request runs read secrets.
+	// Off by default: a pull request's code may come from anyone who can
+	// open one.
+	PullRequestSecrets bool
 }
 
-// Ref is a branch or tag and the commit it points at.
+// Ref is a branch or tag and the commit it points at, or a pull request's
+// head.
 type Ref struct {
-	Name        string `json:"name"` // main, v1.2.0
-	Kind        string `json:"kind"` // branch or tag
+	Name        string `json:"name"` // main, v1.2.0, or a pull request's number
+	Kind        string `json:"kind"` // branch, tag or pull_request
 	SHA         string `json:"sha"`
 	Subject     string `json:"subject"`
 	Author      string `json:"author"`
 	CommittedAt int64  `json:"committed_at"`
 }
 
-// FullRef returns refs/heads/... or refs/tags/....
+// FullRef returns refs/heads/..., refs/tags/... or refs/pull/<n>/head.
 func (r Ref) FullRef() string {
-	if r.Kind == "tag" {
+	switch r.Kind {
+	case "tag":
 		return "refs/tags/" + r.Name
+	case kindPull:
+		return "refs/pull/" + r.Name + "/head"
 	}
 	return "refs/heads/" + r.Name
 }
+
+// kindPull is the Kind of a pull request's head.
+const kindPull = "pull_request"
 
 // Decision records what was done about one change on a ref. Decisions are
 // kept in the database, so every server shows the same ones.
@@ -298,15 +309,38 @@ func (m *Manager) poll(ctx context.Context, p *project) error {
 	if err != nil {
 		return err
 	}
+	var pulls []Ref
+	if m.eng.PullRequests() {
+		if pulls, err = p.pullRefs(ctx); err != nil {
+			return err
+		}
+	}
 	// The first time a project is seen, record where everything is without
 	// starting runs for history.
 	if len(seen) == 0 {
-		all := make(map[string]string, len(refs))
+		all := make(map[string]string, len(refs)+len(pulls)+1)
 		for _, r := range refs {
 			all[r.FullRef()] = r.SHA
 		}
+		if m.eng.PullRequests() {
+			for _, r := range pulls {
+				all[r.FullRef()] = r.SHA
+			}
+			all[engine.PullRequestsSeeded] = ""
+		}
 		return m.eng.SeedRefs(p.Name, all, seenAt)
 	}
+	if err := m.pollPushes(ctx, p, refs, seen, seenAt); err != nil {
+		return err
+	}
+	if m.eng.PullRequests() {
+		return m.pollPullRequests(ctx, p, refs, pulls, seen, seenAt)
+	}
+	return nil
+}
+
+// pollPushes starts runs for the branches and tags that moved.
+func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen map[string]string, seenAt int64) error {
 	for _, r := range refs {
 		old, known := seen[r.FullRef()]
 		if known && old == r.SHA {
@@ -353,6 +387,125 @@ func (m *Manager) poll(ctx context.Context, p *project) error {
 		}
 	}
 	return nil
+}
+
+// pollPullRequests starts runs for pull requests that were opened or whose
+// head moved, as Git hosts publish them: refs/pull/<n>/head.
+//
+// The rule:
+//
+//   - The first time a server that knows pull requests looks at a project
+//     (the project is new, or it was watched by an older version), every
+//     pull request's head is recorded and nothing runs. Git hosts keep
+//     these refs after a pull request is closed or merged, so otherwise
+//     every old pull request would run at once.
+//   - After that, a pull request whose head is new or has moved runs if
+//     the pipeline at the tip of the project's default branch asks for
+//     pull requests (on: { pull_request: {} }), and so does the pipeline
+//     at the pull request's head, which is what runs. The default branch
+//     decides because it has been reviewed: a pull request cannot turn
+//     pull-request runs on for itself.
+//   - The heads of pull requests that do not run are still recorded, so
+//     turning pull requests on later does not run the old ones either.
+//
+// Like pushes, each change is acted on by one server, through the
+// database.
+func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls []Ref, seen map[string]string, seenAt int64) error {
+	if _, ok := seen[engine.PullRequestsSeeded]; !ok {
+		all := make(map[string]string, len(pulls)+1)
+		for _, r := range pulls {
+			all[r.FullRef()] = r.SHA
+		}
+		all[engine.PullRequestsSeeded] = ""
+		return m.eng.SeedRefs(p.Name, all, seenAt)
+	}
+	gateRead := false
+	var gateOn bool
+	var gateWhy string
+	for _, r := range pulls {
+		old, known := seen[r.FullRef()]
+		if known && old == r.SHA {
+			continue
+		}
+		if !gateRead {
+			gateOn, gateWhy = m.pullRequestsOn(ctx, p, refs)
+			gateRead = true
+		}
+		change := engine.RefChange{Ref: r.FullRef(), Old: old, New: r.SHA, SeenAt: seenAt}
+		d := Decision{Ref: r.FullRef(), SHA: r.SHA}
+		pl, from, err := p.parsedAt(ctx, r.SHA)
+		asks := err == nil && pl.On.MatchPullRequest()
+		if !gateOn {
+			if !asks {
+				// Nobody asked for pull requests: just record the head.
+				if _, err := m.eng.MoveRef(p.Name, change); err != nil {
+					return err
+				}
+				continue
+			}
+			d.Outcome, d.Detail = "ignored", "the pull request's pipeline asks for pull requests, but "+gateWhy+
+				"; pull requests run once the default branch's pipeline has on: { pull_request: {} }"
+		} else {
+			var libs []engine.LibrarySource
+			if asks {
+				pl, libs, err = m.Expand(ctx, pl, nil)
+			}
+			switch {
+			case errors.Is(err, ErrNoPipeline):
+				d.Outcome, d.Detail = "ignored", "no .launchway/pipeline.yaml at the pull request's head"
+			case err != nil:
+				what := "the pipeline file at the pull request's head has problems"
+				if from == fromServer {
+					what = fmt.Sprintf("the pipeline configured on the server (%s@%s, template %s) has problems",
+						p.Pipeline.Library, p.Pipeline.Version, p.Pipeline.Template)
+				}
+				d.Outcome, d.Detail = "error", what+":\n"+redact.URLs(err.Error())
+			case !asks:
+				d.Outcome, d.Detail = "ignored", strings.TrimSpace("the pipeline at the pull request's head does not ask for pull requests "+p.note(from))
+			default:
+				n, _ := strconv.Atoi(r.Name)
+				t := trigger(r, pipeline.EventPullRequest, r.Author)
+				t.PullRequest = n
+				run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
+					Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: p.note(from),
+					PullRequestSecrets: p.PullRequestSecrets})
+				switch {
+				case errors.Is(err, engine.ErrAlreadyClaimed):
+					continue // another server handled it
+				case err != nil:
+					d.Outcome, d.Detail = "error", err.Error()
+				default:
+					m.log.Info("pull request started a run", "project", p.Name, "pull_request", n, "run", run.Number)
+					continue
+				}
+			}
+		}
+		if _, err := m.eng.RecordPush(p.Name, change, d); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// pullRequestsOn reports whether the pipeline at the tip of the project's
+// default branch asks for pull requests, and if not, says why in words.
+func (m *Manager) pullRequestsOn(ctx context.Context, p *project, refs []Ref) (bool, string) {
+	for _, r := range refs {
+		if r.Kind != "branch" || r.Name != p.DefaultBranch {
+			continue
+		}
+		pl, _, err := p.parsedAt(ctx, r.SHA)
+		switch {
+		case errors.Is(err, ErrNoPipeline):
+			return false, "the default branch, " + p.DefaultBranch + ", has no pipeline"
+		case err != nil:
+			return false, "the pipeline on the default branch, " + p.DefaultBranch + ", has problems"
+		case !pl.On.MatchPullRequest():
+			return false, "the pipeline on the default branch, " + p.DefaultBranch + ", does not ask for them"
+		}
+		return true, ""
+	}
+	return false, "the default branch, " + p.DefaultBranch + ", does not exist"
 }
 
 func trigger(r Ref, event, actor string) engine.Trigger {
@@ -404,10 +557,53 @@ func (p *project) fetch(ctx context.Context, fresh time.Duration) error {
 	return err
 }
 
+// refs lists the branches and tags: the default branch first, then other
+// branches newest first, then tags.
 func (p *project) refs(ctx context.Context) ([]Ref, error) {
-	out, err := gitOut(ctx, p.dir, "for-each-ref", "--sort=-committerdate",
-		"--format=%(refname)%00%(objectname)%00%(*objectname)%00%(committerdate:unix)%00%(*committerdate:unix)%00%(authorname)%00%(*authorname)%00%(subject)%00%(*subject)",
-		"refs/heads", "refs/tags")
+	refs, err := p.listRefs(ctx, "refs/heads", "refs/tags")
+	if err != nil {
+		return nil, err
+	}
+	// The default branch first, then other branches newest first, then tags.
+	rank := func(r Ref) int {
+		switch {
+		case r.Kind == "branch" && r.Name == p.DefaultBranch:
+			return 0
+		case r.Kind == "branch":
+			return 1
+		}
+		return 2
+	}
+	sort.SliceStable(refs, func(i, j int) bool {
+		if a, b := rank(refs[i]), rank(refs[j]); a != b {
+			return a < b
+		}
+		return refs[i].CommittedAt > refs[j].CommittedAt
+	})
+	return refs, nil
+}
+
+// pullRefs lists the heads of the repository's pull requests, as Git hosts
+// publish them (refs/pull/<n>/head), oldest pull request first. The mirror
+// fetches every ref, so they are there whenever the host has them.
+func (p *project) pullRefs(ctx context.Context) ([]Ref, error) {
+	refs, err := p.listRefs(ctx, "refs/pull")
+	if err != nil {
+		return nil, err
+	}
+	sort.SliceStable(refs, func(i, j int) bool {
+		a, _ := strconv.Atoi(refs[i].Name)
+		b, _ := strconv.Atoi(refs[j].Name)
+		return a < b
+	})
+	return refs, nil
+}
+
+// listRefs lists the refs under the given prefixes, newest commit first.
+func (p *project) listRefs(ctx context.Context, prefixes ...string) ([]Ref, error) {
+	out, err := gitOut(ctx, p.dir, append([]string{"for-each-ref", "--sort=-committerdate",
+		"--format=%(refname)%00%(objectname)%00%(*objectname)%00%(committerdate:unix)%00%(*committerdate:unix)%00%(authorname)%00%(*authorname)%00%(subject)%00%(*subject)"},
+		prefixes...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -429,27 +625,18 @@ func (p *project) refs(ctx context.Context) ([]Ref, error) {
 			r.Kind, r.Name = "branch", strings.TrimPrefix(f[0], "refs/heads/")
 		case strings.HasPrefix(f[0], "refs/tags/"):
 			r.Kind, r.Name = "tag", strings.TrimPrefix(f[0], "refs/tags/")
+		case strings.HasPrefix(f[0], "refs/pull/"):
+			// Only heads: GitHub also publishes refs/pull/<n>/merge.
+			n, ok := engine.ParsePullRequestRef(f[0])
+			if !ok {
+				continue
+			}
+			r.Kind, r.Name = kindPull, strconv.Itoa(n)
 		default:
 			continue
 		}
 		refs = append(refs, r)
 	}
-	// The default branch first, then other branches newest first, then tags.
-	rank := func(r Ref) int {
-		switch {
-		case r.Kind == "branch" && r.Name == p.DefaultBranch:
-			return 0
-		case r.Kind == "branch":
-			return 1
-		}
-		return 2
-	}
-	sort.SliceStable(refs, func(i, j int) bool {
-		if a, b := rank(refs[i]), rank(refs[j]); a != b {
-			return a < b
-		}
-		return refs[i].CommittedAt > refs[j].CommittedAt
-	})
 	return refs, nil
 }
 

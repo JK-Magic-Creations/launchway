@@ -1,6 +1,6 @@
 import type { Approvals } from "../live";
 import { useNow } from "../live";
-import { ago, clock, duration } from "../format";
+import { ago, clock, duration, refLabel } from "../format";
 import { BranchIcon, CommitIcon, Empty, ErrorBox, Link, StatusIcon } from "../components/ui";
 
 // ApprovalsPage lists every approval step waiting for someone to decide.
@@ -38,7 +38,7 @@ export function ApprovalsPage({ approvals }: { approvals: Approvals }) {
                   </span>
                   <span className="runrow-msg">{a.message}</span>
                   <span className="runrow-meta">
-                    {(a.branch || a.tag) && <span className="meta"><BranchIcon />{a.branch || a.tag}</span>}
+                    {refLabel(a) && <span className="meta"><BranchIcon />{refLabel(a)}</span>}
                     {a.short_sha && <span className="meta mono"><CommitIcon />{a.short_sha}</span>}
                     {a.commit_subject && <span className="meta">{a.commit_subject}</span>}
                     {a.started_by && <span className="meta">started by {a.started_by}</span>}

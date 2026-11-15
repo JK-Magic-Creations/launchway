@@ -360,7 +360,22 @@ type NewRun struct {
 	// Note is added to the "started" decision of a push, to say more about
 	// what started, such as where the pipeline came from.
 	Note string
+	// PullRequestSecrets, for a run whose trigger event is pull_request,
+	// says whether its steps may read secrets. Such runs come from code
+	// anyone who can open a pull request may have written.
+	PullRequestSecrets bool
 }
+
+// checkPullRequest checks the trigger of a pull-request run.
+func checkPullRequest(t Trigger) error {
+	if t.PullRequest <= 0 || t.Ref != PullRequestRef(t.PullRequest) || t.Branch != "" || t.Tag != "" {
+		return fmt.Errorf("%w: a pull-request run needs the pull request's number and its ref, refs/pull/<number>/head", ErrConflict)
+	}
+	return nil
+}
+
+// PullRequestRef is the ref a Git host keeps a pull request's head at.
+func PullRequestRef(number int) string { return "refs/pull/" + strconv.Itoa(number) + "/head" }
 
 // checkLibraries checks that a pipeline is ready to run and that the source
 // says where to fetch every library it was expanded from, at the same commit.
@@ -408,8 +423,27 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	case nr.Trigger.Event == pipeline.EventDraft:
 		return nil, fmt.Errorf("%w: a draft run needs the text it runs", ErrConflict)
 	}
+	var prSecrets *bool
+	if nr.Trigger.Event == pipeline.EventPullRequest {
+		if !e.knows(schemaPullRequests) {
+			return nil, fmt.Errorf("%w: this server does not know pull-request runs (schema %d)", ErrConflict, schemaPullRequests)
+		}
+		if err := checkPullRequest(nr.Trigger); err != nil {
+			return nil, err
+		}
+		// Servers older than schema 9 do not know on.pull_request, so they
+		// leave such a run alone instead of running it with secrets.
+		if !nr.Pipeline.On.MatchPullRequest() {
+			return nil, fmt.Errorf("%w: a pull-request run's pipeline must ask for pull requests (on: { pull_request: {} })", ErrConflict)
+		}
+		prSecrets = &nr.PullRequestSecrets
+	}
 	runID := ids.New("run")
 	trig, src := nr.Trigger, nr.Source
+	// Superseding: a new run started by a push or a pull request cancels
+	// the older ones of the same ref, in the transaction that creates it.
+	supersede := nr.Pipeline.Supersede && draft == nil && e.knows(schemaPullRequests) &&
+		(trig.Event == pipeline.EventPush || trig.Event == pipeline.EventPullRequest) && trig.Ref != ""
 	err := e.runTx(runID, true, func(c *cmd) error {
 		if nr.Push != nil {
 			claimed, err := claimRef(c.tx, nr.Project, *nr.Push)
@@ -429,11 +463,27 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			ON CONFLICT(project) DO UPDATE SET last = run_counters.last + 1 RETURNING last`, nr.Project).Scan(&number); err != nil {
 			return err
 		}
-		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: nr.Pipeline, Trigger: &trig, Source: &src, Draft: draft})
+		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: nr.Pipeline, Trigger: &trig, Source: &src, Draft: draft,
+			PullRequestSecrets: prSecrets})
 		c.advance()
+		var superseded []int
+		if supersede {
+			var err error
+			if superseded, err = c.supersede(nr.Project, trig.Ref, number); err != nil {
+				return err
+			}
+		}
 		if nr.Push != nil {
+			detail := fmt.Sprintf("started run #%d", number)
+			if len(superseded) > 0 {
+				nums := make([]string, len(superseded))
+				for i, n := range superseded {
+					nums[i] = "#" + strconv.Itoa(n)
+				}
+				detail += ", superseding " + strings.Join(nums, ", ")
+			}
 			return insertDecision(c.tx, nr.Project, PushDecision{At: c.now, Ref: nr.Push.Ref, SHA: nr.Push.New,
-				Outcome: "started", Detail: strings.TrimSpace(fmt.Sprintf("started run #%d %s", number, nr.Note)), RunID: runID})
+				Outcome: "started", Detail: strings.TrimSpace(detail + " " + nr.Note), RunID: runID})
 		}
 		return nil
 	})
@@ -444,6 +494,84 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		e.pruneDecisions(nr.Project)
 	}
 	return e.runSummary(runID)
+}
+
+// supersede cancels the runs of a project's ref that a new run, number,
+// supersedes: those still queued or running that were started by a push or
+// a pull request and are not drafts or re-runs. It runs in the transaction
+// that creates the new run, after the run's number was taken: the project's
+// counter row is then locked until the transaction ends, so a run created
+// for the project at the same moment on another server is either seen here
+// or sees this one. Each older run gets a run.cancel_requested event in the
+// same transaction; if another server changes one of them first, the whole
+// creation is tried again. It returns the numbers of the runs it cancelled.
+func (c *cmd) supersede(project, ref string, number int) ([]int, error) {
+	rows, err := c.tx.Query(`SELECT id FROM runs WHERE project = ? AND ref = ? AND event IN (?, ?) AND status IN (?, ?)
+		AND cancel_requested = 0 AND draft = 0 AND rerun_of = '' AND number < ? AND min_schema <= ? ORDER BY number`,
+		project, ref, pipeline.EventPush, pipeline.EventPullRequest, RunQueued, RunRunning, number, c.e.schema)
+	if err != nil {
+		return nil, err
+	}
+	var older []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		older = append(older, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	var done []int
+	for _, id := range older {
+		err := c.alsoRun(id, func(o *cmd) error {
+			// The events decide, not the row read above.
+			st := o.st
+			if st.Status.Terminal() || st.CancelRequested || st.Draft != nil || st.Rerun != nil || st.Project != project ||
+				st.Trigger.Ref != ref || (st.Trigger.Event != pipeline.EventPush && st.Trigger.Event != pipeline.EventPullRequest) {
+				return nil
+			}
+			o.emit(RunCancelRequested, Payload{Reason: fmt.Sprintf("superseded by run #%d", number),
+				SupersededBy: &Superseder{Run: c.runID, Number: number}})
+			o.advance()
+			done = append(done, st.Number)
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return done, nil
+}
+
+// alsoRun changes another run in the same transaction as this command: fn
+// sees that run's current state and what it emits is stored with this
+// command's events, all or nothing. A run this server does not fully
+// understand is left alone.
+func (c *cmd) alsoRun(runID string, fn func(o *cmd) error) error {
+	evs, runSeq, err := loadEvents(c.tx, runID)
+	if err != nil {
+		return err
+	}
+	st := c.e.fold(evs)
+	if st == nil || needsNewer(st) != nil {
+		return nil
+	}
+	o := &cmd{e: c.e, tx: c.tx, runID: runID, st: st, runSeq: runSeq, now: c.now, changed: map[string]bool{}, schemaBefore: st.Schema}
+	if err := fn(o); err != nil {
+		return err
+	}
+	if len(o.events) == 0 {
+		return nil
+	}
+	if err := o.persist(); err != nil {
+		return err
+	}
+	c.others = append(c.others, o)
+	return nil
 }
 
 // Cancel asks a run to stop. Steps not yet running are canceled at once;
@@ -758,14 +886,14 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			c.emit(StepFinished, p)
 		case "lost":
 			if c.st.CancelRequested {
-				p.Reason = "canceled"
+				p.Reason = c.st.stoppedBecause()
 				c.emit(StepCanceled, p)
 			} else {
 				c.lose(l.stepID, nonEmpty(res.Error, "the runner could not run the step"))
 			}
 		case "canceled":
 			if c.st.CancelRequested {
-				p.Reason = "canceled"
+				p.Reason = c.st.stoppedBecause()
 				c.emit(StepCanceled, p)
 			} else {
 				// The runner gave up without being asked, for example
@@ -804,7 +932,7 @@ func (e *Engine) Release(leaseID string) error {
 			return err
 		}
 		if c.st.CancelRequested {
-			c.emit(StepCanceled, Payload{Step: l.stepID, Attempt: s.Attempt, Reason: "the run was canceled"})
+			c.emit(StepCanceled, Payload{Step: l.stepID, Attempt: s.Attempt, Reason: c.st.canceledBecause()})
 		} else {
 			c.emit(StepQueued, Payload{Step: l.stepID, Attempt: s.Attempt, Reason: "handed back before it started"})
 		}
@@ -999,6 +1127,8 @@ type cmd struct {
 	changed map[string]bool
 	queued  bool
 	hooks   []func()
+	// others are the other runs this command changed (see alsoRun).
+	others []*cmd
 	// schemaBefore is the run's Schema before this command, so that
 	// runs.min_schema is written only when it changes.
 	schemaBefore int
@@ -1078,13 +1208,15 @@ func (e *Engine) runTx(runID string, create bool, fn func(c *cmd) error) error {
 	for attempt := 1; ; attempt++ {
 		c, err := e.attemptTx(runID, create, fn)
 		if err == nil {
-			for _, h := range c.hooks {
-				h()
-			}
-			if len(c.events) > 0 {
-				e.publishChanges(runID, c.changed)
-				if c.queued {
-					e.notify()
+			for _, x := range append([]*cmd{c}, c.others...) {
+				for _, h := range x.hooks {
+					h()
+				}
+				if len(x.events) > 0 {
+					e.publishChanges(x.runID, x.changed)
+					if x.queued {
+						e.notify()
+					}
 				}
 			}
 			return nil
@@ -1273,6 +1405,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaPullRequests) {
+		if err := c.persistSchema9(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
 }
 
@@ -1314,6 +1451,24 @@ func (c *cmd) persistSchema8() error {
 	return nil
 }
 
+// persistSchema9 writes why the run was asked to cancel, when that changes.
+func (c *cmd) persistSchema9() error {
+	for _, ev := range c.events {
+		switch ev.Type {
+		case RunCreated, RunCancelRequested, RunResumed:
+			st := c.st
+			by, byNumber := "", 0
+			if st.SupersededBy != nil {
+				by, byNumber = st.SupersededBy.Run, st.SupersededBy.Number
+			}
+			_, err := c.tx.Exec(`UPDATE runs SET cancel_reason = ?, superseded_by = ?, superseded_by_number = ? WHERE id = ?`,
+				st.CancelReason, by, byNumber, st.ID)
+			return err
+		}
+	}
+	return nil
+}
+
 // changedSteps returns the IDs of the steps this command changed, sorted so
 // that rows are always written in the same order.
 func (c *cmd) changedSteps() []string {
@@ -1341,7 +1496,7 @@ func (c *cmd) advance() {
 		for _, id := range st.Order {
 			s := st.Steps[id]
 			if st.CancelRequested && (s.Status == StepPending || s.Status == StepQueuedS || s.Status == StepWaitingS) {
-				c.emit(StepCanceled, Payload{Step: id, Reason: "the run was canceled"})
+				c.emit(StepCanceled, Payload{Step: id, Reason: st.canceledBecause()})
 				changed = true
 				continue
 			}
@@ -1372,10 +1527,14 @@ func (c *cmd) advance() {
 			case def.IsApproval():
 				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
 				changed = true
-			case st.Draft != nil && !st.Draft.Secrets && len(def.Secrets) > 0:
+			case !st.secretsAllowed() && len(def.Secrets) > 0:
 				// Never handed to a runner, so no runner looks a secret up
 				// for text that nobody reviewed.
-				c.emit(StepFinished, Payload{Step: id, Outcome: string(StepFailed), Reason: draftSecretsRefused(st.Project, def)})
+				reason := draftSecretsRefused(st.Project, def)
+				if st.Draft == nil {
+					reason = pullRequestSecretsRefused(st.Project, def)
+				}
+				c.emit(StepFinished, Payload{Step: id, Outcome: string(StepFailed), Reason: reason})
 				changed = true
 			default:
 				c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1})
@@ -1412,7 +1571,7 @@ func (c *cmd) lose(stepID, reason string) {
 	c.emit(StepLost, Payload{Step: stepID, Attempt: s.Attempt, Reason: reason})
 	switch {
 	case c.st.CancelRequested:
-		c.emit(StepCanceled, Payload{Step: stepID, Attempt: s.Attempt, Reason: "the run was canceled"})
+		c.emit(StepCanceled, Payload{Step: stepID, Attempt: s.Attempt, Reason: c.st.canceledBecause()})
 	case s.Lost <= c.e.maxLost:
 		c.emit(StepQueued, Payload{Step: stepID, Attempt: s.Attempt + 1, Reason: "requeued after: " + reason})
 	default:

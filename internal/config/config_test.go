@@ -258,3 +258,68 @@ projects:
 		t.Fatalf("on = %+v", pp.On)
 	}
 }
+
+// Pull requests: a configured pipeline may ask for them and supersede, and
+// whether their steps may read secrets is off unless the server or the
+// project says otherwise.
+func TestPullRequestSettings(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "launchway.yaml")
+	os.WriteFile(path, []byte(`
+libraries:
+  - name: lib
+    repo: https://git.example.com/lib.git
+projects:
+  - name: a
+    repo: https://git.example.com/a.git
+    pipeline:
+      library: lib
+      version: v1
+      template: ci
+      supersede: true
+      on: { push: { branches: [main] }, pull_request: {} }
+  - name: b
+    repo: https://git.example.com/b.git
+    pull_requests: { secrets: true }
+    pipeline:
+      library: lib
+      version: v1
+      template: ci
+      "true": { pull_request: }
+  - name: c
+    repo: https://git.example.com/c.git
+`), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ps, err := c.SourceProjects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, b := ps[0].Pipeline, ps[1].Pipeline
+	if !a.Supersede || a.On.PullRequest == nil || a.On.Push == nil || b.Supersede || b.On.PullRequest == nil || b.On.Push != nil {
+		t.Fatalf("pipelines %+v %+v", a, b)
+	}
+	if ps[0].PullRequestSecrets || !ps[1].PullRequestSecrets || ps[2].PullRequestSecrets {
+		t.Fatalf("secrets: %v %v %v", ps[0].PullRequestSecrets, ps[1].PullRequestSecrets, ps[2].PullRequestSecrets)
+	}
+
+	// The server's setting applies where a project has none.
+	os.WriteFile(path, []byte("pull_requests: { secrets: true }\nprojects:\n  - name: a\n    repo: r\n  - name: b\n    repo: r\n    pull_requests: { secrets: false }\n"), 0o644)
+	if c, err = Load(path); err != nil {
+		t.Fatal(err)
+	}
+	if ps, _ = c.SourceProjects(); !ps[0].PullRequestSecrets || ps[1].PullRequestSecrets {
+		t.Fatalf("secrets: %v %v", ps[0].PullRequestSecrets, ps[1].PullRequestSecrets)
+	}
+
+	// Pull requests take no settings; there is no branch to filter on.
+	os.WriteFile(path, []byte("projects:\n  - name: a\n    repo: r\n    pipeline: { library: l, version: v1, template: t, on: { pull_request: { branches: [main] } } }\n"), 0o644)
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "takes no settings") {
+		t.Fatalf("err %v", err)
+	}
+	os.WriteFile(path, []byte("projects:\n  - name: a\n    repo: r\n    pull_requests: { secret: true }\n"), 0o644)
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "secret") {
+		t.Fatalf("err %v", err)
+	}
+}

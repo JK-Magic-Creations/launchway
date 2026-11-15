@@ -46,3 +46,17 @@ export function elapsed(start: number, end: number, now: number): string {
 export function shortDuration(d: string): string {
   return d.replace(/m0s$/, "m").replace(/h0m$/, "h");
 }
+
+/** Where a run came from, as shown beside it: "pull request #12", a branch or a tag. */
+export function refLabel(r: { branch?: string; tag?: string; pull_request?: number }): string {
+  if (r.pull_request) return `pull request #${r.pull_request}`;
+  return r.branch || r.tag || "";
+}
+
+/** Who started a run, in words. */
+export function starterLabel(r: { event: string; author: string; actor: string; draft: boolean }): string {
+  if (r.event === "push") return `pushed by ${r.author || r.actor}`;
+  if (r.event === "pull_request") return `pull request by ${r.author || r.actor}`;
+  if (r.draft) return `draft run by ${r.actor || "someone"}`;
+  return `started by ${r.actor || "someone"}`;
+}

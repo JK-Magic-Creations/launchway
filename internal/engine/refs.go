@@ -1,6 +1,10 @@
 package engine
 
-import "database/sql"
+import (
+	"database/sql"
+	"maps"
+	"slices"
+)
 
 // Every server polls every project's repository, so each change to a ref is
 // seen by all of them. A change is acted on by the one server that claims
@@ -57,13 +61,43 @@ func (e *Engine) SeedRefs(project string, refs map[string]string, seenAt int64) 
 		return err
 	}
 	defer tx.Rollback()
-	for ref, sha := range refs {
+	// In order, so that servers seeding the same project at once take the
+	// rows' locks in the same order and cannot deadlock.
+	for _, ref := range slices.Sorted(maps.Keys(refs)) {
 		if _, err := tx.Exec(`INSERT INTO refs_seen(project, ref, sha, seen_at) VALUES(?,?,?,?)
-			ON CONFLICT(project, ref) DO NOTHING`, project, ref, sha, seenAt); err != nil {
+			ON CONFLICT(project, ref) DO NOTHING`, project, ref, refs[ref], seenAt); err != nil {
 			return err
 		}
 	}
 	return tx.Commit()
+}
+
+// PullRequestsSeeded is a key kept in refs_seen beside a project's refs
+// (no Git ref can contain a colon). It records that the project's
+// pull-request refs have been seeded, so that the pull requests that
+// already exist when a server first looks for them, open or long closed,
+// do not start runs. Older servers ignore it.
+const PullRequestsSeeded = ":pull-requests-seeded"
+
+// PullRequests reports whether this server knows pull-request runs.
+func (e *Engine) PullRequests() bool { return e.knows(schemaPullRequests) }
+
+// MoveRef claims a change without recording a decision: for changes that
+// nobody asked to hear about, such as the pull requests of a project that
+// does not run them. It reports whether this server claimed it.
+func (e *Engine) MoveRef(project string, ch RefChange) (bool, error) {
+	unlock := e.writeLock()
+	defer unlock()
+	tx, err := e.db.Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	claimed, err := claimRef(tx, project, ch)
+	if err != nil || !claimed {
+		return false, err
+	}
+	return true, tx.Commit()
 }
 
 // RecordPush claims a change and records the decision made about it, in one

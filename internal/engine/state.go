@@ -72,6 +72,14 @@ type RunState struct {
 	Workspace string
 	// Rerun, for a re-run, is the run it re-runs and the step it started from.
 	Rerun *Rerun
+	// PullRequestSecrets says whether the steps of a pull-request run may
+	// read secrets. It means nothing for other runs.
+	PullRequestSecrets bool
+	// CancelReason is why the run was asked to cancel, when it was not by
+	// hand, and SupersededBy the newer run that superseded it, if that is
+	// why. Both are cleared by a resume.
+	CancelReason string
+	SupersededBy *Superseder
 
 	// Schema is the oldest schema whose servers understand every event of
 	// the run (runs.min_schema).
@@ -115,6 +123,37 @@ type StepState struct {
 	ReusedFrom    string
 	ReusedNumber  int
 	ReusedAttempt int
+}
+
+// secretsAllowed reports whether the run's steps may read secrets: not in a
+// draft run or a pull-request run unless the project allowed it when the run
+// was created (for a draft, or when it was last resumed).
+func (st *RunState) secretsAllowed() bool {
+	switch {
+	case st.Draft != nil:
+		return st.Draft.Secrets
+	case st.Trigger.Event == pipeline.EventPullRequest:
+		return st.PullRequestSecrets
+	}
+	return true
+}
+
+// canceledBecause is the reason given to steps canceled because the run
+// was asked to cancel.
+func (st *RunState) canceledBecause() string {
+	if st.CancelReason != "" {
+		return "the run was canceled: " + st.CancelReason
+	}
+	return "the run was canceled"
+}
+
+// stoppedBecause is the reason given to a running step its runner stopped
+// because the run was asked to cancel.
+func (st *RunState) stoppedBecause() string {
+	if st.CancelReason != "" {
+		return "canceled: " + st.CancelReason
+	}
+	return "canceled"
 }
 
 // clearDecision forgets an approval's last wait and decision.
@@ -190,6 +229,16 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("step kind %q", s.Kind)
 			}
 		}
+		// Pull-request runs and the pipeline keys of schema 9. A release
+		// older than that does not know these keys, so it reads the
+		// pipeline as not understood (see decodePayload); a build limited
+		// to an older schema for testing says the same here.
+		if p.Pipeline.UsesSchema9() || (p.Trigger != nil && p.Trigger.Event == pipeline.EventPullRequest) {
+			st.Schema = max(st.Schema, schemaPullRequests)
+			if !st.understands(schemaPullRequests) {
+				st.notUnderstood("a pipeline key of schema %d (on.pull_request or supersede), or a pull-request run", schemaPullRequests)
+			}
+		}
 		return true
 	}
 	if st.Steps == nil {
@@ -254,6 +303,7 @@ func (st *RunState) apply(ev Event) {
 			r := *p.Rerun
 			st.Rerun = &r
 		}
+		st.PullRequestSecrets = p.PullRequestSecrets != nil && *p.PullRequestSecrets
 		st.Status = RunQueued
 		st.CreatedAt = ev.At
 		st.Steps = map[string]*StepState{}
@@ -265,6 +315,12 @@ func (st *RunState) apply(ev Event) {
 
 	case RunCancelRequested:
 		st.CancelRequested = true
+		st.CancelReason = p.Reason
+		st.SupersededBy = nil
+		if p.SupersededBy != nil {
+			by := *p.SupersededBy
+			st.SupersededBy = &by
+		}
 
 	case RunResumed:
 		if st.Draft != nil && p.DraftSecrets != nil {
@@ -273,6 +329,7 @@ func (st *RunState) apply(ev Event) {
 			st.Draft = &d
 		}
 		st.CancelRequested = false
+		st.CancelReason, st.SupersededBy = "", nil
 		st.Status = RunRunning
 		st.FinishedAt = 0
 

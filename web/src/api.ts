@@ -38,6 +38,13 @@ export interface RunSummary {
   rerun_from?: string;
   /** The run has events or a pipeline written by a newer Launchway than this server, which leaves it alone. */
   needs_newer_server: boolean;
+  /** A run of a pull request (event "pull_request"): its number. */
+  pull_request?: number;
+  /** Why the run was asked to cancel, when not by hand, such as "superseded by run #12". */
+  cancel_reason?: string;
+  /** The newer run that superseded this one, and its number. */
+  superseded_by?: string;
+  superseded_by_number?: number;
 }
 
 export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
@@ -176,7 +183,9 @@ export interface GraphGroup {
 
 export interface Graph {
   name: string;
-  on: { push?: { branches?: string[]; tags?: string[] } };
+  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: Record<string, never> };
+  /** A new run of a push or pull request cancels the older ones of the same ref still going. */
+  supersede?: boolean;
   libraries?: GraphLibrary[];
   containers?: GraphContainer[];
   steps: GraphStep[];
@@ -216,7 +225,8 @@ export interface ProjectPipeline {
   version: string;
   template: string;
   with?: Record<string, string> | null;
-  on: { push?: { branches?: string[]; tags?: string[] } };
+  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: Record<string, never> };
+  supersede?: boolean;
 }
 
 /** What the caller may do with the pipeline editor on a project. */
@@ -296,6 +306,7 @@ export interface Approval {
   short_sha: string;
   branch: string;
   tag?: string;
+  pull_request?: number;
   waiting_since: number;
   deadline: number;
 }

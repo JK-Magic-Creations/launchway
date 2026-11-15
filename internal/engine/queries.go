@@ -45,6 +45,15 @@ type RunSummary struct {
 	// run alone.
 	MinSchema        int  `json:"min_schema"`
 	NeedsNewerServer bool `json:"needs_newer_server"`
+	// PullRequest is the pull request's number, for a run of one (event
+	// pull_request); 0 otherwise.
+	PullRequest int `json:"pull_request,omitempty"`
+	// CancelReason says why the run was asked to cancel when it was not by
+	// hand, such as "superseded by run #12", and SupersededBy (with its
+	// number) the run that superseded it. Empty unless it was.
+	CancelReason       string `json:"cancel_reason,omitempty"`
+	SupersededBy       string `json:"superseded_by,omitempty"`
+	SupersededByNumber int    `json:"superseded_by_number,omitempty"`
 }
 
 // StepBrief is just enough of a step to draw a status strip.
@@ -137,9 +146,15 @@ const runCols = `id, project, number, pipeline, status, cancel_requested, event,
 // runCols8 are the columns of runs that schema 8 added.
 const runCols8 = `, rerun_of, rerun_of_number, rerun_from, min_schema`
 
+// runCols9 are the columns of runs that schema 9 added.
+const runCols9 = `, cancel_reason, superseded_by, superseded_by_number`
+
 // runCols is the columns scanRun reads.
 func (e *Engine) runCols() string {
-	if e.knows(schemaReruns) {
+	switch {
+	case e.knows(schemaPullRequests):
+		return runCols + runCols8 + runCols9
+	case e.knows(schemaReruns):
 		return runCols + runCols8
 	}
 	return runCols
@@ -153,11 +168,48 @@ func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error
 	if e.knows(schemaReruns) {
 		dst = append(dst, &r.RerunOf, &r.RerunOfNumber, &r.RerunFrom, &r.MinSchema)
 	}
+	if e.knows(schemaPullRequests) {
+		dst = append(dst, &r.CancelReason, &r.SupersededBy, &r.SupersededByNumber)
+	}
 	err := sc.Scan(dst...)
+	r.PullRequest = pullRequestNumber(r.Event, r.Ref)
 	r.CancelRequested = cancel != 0
 	r.Draft = draft != 0
 	r.NeedsNewerServer = r.MinSchema > e.schema
 	return r, err
+}
+
+// pullRequestNumber is the number of the pull request a run's ref is the
+// head of, for a pull-request run; 0 otherwise.
+func pullRequestNumber(event, ref string) int {
+	if event != pipeline.EventPullRequest {
+		return 0
+	}
+	n, ok := ParsePullRequestRef(ref)
+	if !ok {
+		return 0
+	}
+	return n
+}
+
+// ParsePullRequestRef reads refs/pull/<number>/head.
+func ParsePullRequestRef(ref string) (int, bool) {
+	rest, ok := strings.CutPrefix(ref, "refs/pull/")
+	if !ok {
+		return 0, false
+	}
+	num, ok := strings.CutSuffix(rest, "/head")
+	if !ok || num == "" || len(num) > 9 || num[0] == '0' {
+		return 0, false
+	}
+	n := 0
+	for _, r := range num {
+		if r < '0' || r > '9' {
+			return 0, false
+		}
+		n = n*10 + int(r-'0')
+	}
+	return n, true
 }
 
 func (e *Engine) runSummary(id string) (*RunSummary, error) {
