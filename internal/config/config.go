@@ -18,6 +18,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
@@ -36,10 +37,14 @@ type Config struct {
 	DatabaseWait string `yaml:"database_wait"`
 	// User is who every action is recorded as when sign-in is off
 	// (auth.mode: none).
-	User      string          `yaml:"user"`
-	Server    ServerConfig    `yaml:"server"`
-	Auth      AuthConfig      `yaml:"auth"`
-	Projects  []ProjectConfig `yaml:"projects"`
+	User     string          `yaml:"user"`
+	Server   ServerConfig    `yaml:"server"`
+	Auth     AuthConfig      `yaml:"auth"`
+	Projects []ProjectConfig `yaml:"projects"`
+	// Libraries are the repositories of templates that pipelines may use,
+	// by name. A pipeline can use no other: it names one of these, never an
+	// address.
+	Libraries []LibraryConfig `yaml:"libraries"`
 	Runner    RunnerConfig    `yaml:"runner"`
 	Approvals ApprovalsConfig `yaml:"approvals"`
 	// Drafts controls draft runs, which run pipeline text from the editor
@@ -139,6 +144,30 @@ type ProjectConfig struct {
 	// Push lets the pipeline editor commit to this repository. Without it,
 	// edited pipelines can be copied or downloaded, not saved.
 	Push *PushConfig `yaml:"push"`
+	// Pipeline is the project's pipeline at commits that have no
+	// .launchway/pipeline.yaml: a template of a library. A file in the
+	// repository takes its place.
+	Pipeline *ProjectPipelineConfig `yaml:"pipeline"`
+}
+
+// LibraryConfig is a repository of templates and the scripts they use.
+type LibraryConfig struct {
+	Name string `yaml:"name"`
+	Repo string `yaml:"repo"` // fetched with the same credentials as projects
+}
+
+// ProjectPipelineConfig runs a library's template as a project's pipeline.
+type ProjectPipelineConfig struct {
+	Library  string            `yaml:"library"`
+	Version  string            `yaml:"version"` // a tag, branch or full commit id
+	Template string            `yaml:"template"`
+	With     map[string]string `yaml:"with"`
+	On       struct {
+		Push *struct {
+			Branches []string `yaml:"branches"`
+			Tags     []string `yaml:"tags"`
+		} `yaml:"push"`
+	} `yaml:"on"`
 }
 
 // RunnerConfig controls the runner built into the server.
@@ -219,6 +248,11 @@ func Load(path string) (*Config, error) {
 					c.Projects[i].Repo = filepath.Join(base, p.Repo)
 				}
 			}
+			for i, l := range c.Libraries {
+				if isLocalPath(l.Repo) && !filepath.IsAbs(l.Repo) {
+					c.Libraries[i].Repo = filepath.Join(base, l.Repo)
+				}
+			}
 			c.Runner.Secrets.RelativeTo(base)
 			if f := c.Auth.OIDC.ClientSecretFile; f != "" && !filepath.IsAbs(f) {
 				c.Auth.OIDC.ClientSecretFile = filepath.Join(base, f)
@@ -240,6 +274,13 @@ func Load(path string) (*Config, error) {
 		if isLocalPath(p.Repo) {
 			if abs, err := filepath.Abs(p.Repo); err == nil {
 				c.Projects[i].Repo = abs
+			}
+		}
+	}
+	for i, l := range c.Libraries {
+		if isLocalPath(l.Repo) {
+			if abs, err := filepath.Abs(l.Repo); err == nil {
+				c.Libraries[i].Repo = abs
 			}
 		}
 	}
@@ -362,9 +403,24 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 		if p.Push != nil {
 			sp.Push = &source.PushSettings{BranchPrefix: p.Push.BranchPrefix, AllowDirect: p.Push.AllowDirect}
 		}
+		if pp := p.Pipeline; pp != nil {
+			sp.Pipeline = &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With}
+			if t := pp.On.Push; t != nil {
+				sp.Pipeline.On.Push = &pipeline.PushTrigger{Branches: t.Branches, Tags: t.Tags}
+			}
+		}
 		out = append(out, sp)
 	}
 	return out, nil
+}
+
+// SourceLibraries converts the library list for the source package.
+func (c *Config) SourceLibraries() []source.Library {
+	out := make([]source.Library, 0, len(c.Libraries))
+	for _, l := range c.Libraries {
+		out = append(out, source.Library{Name: l.Name, URL: l.Repo})
+	}
+	return out
 }
 
 // TokenFile is where the runner token is written in the data directory.

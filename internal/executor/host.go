@@ -17,6 +17,9 @@ type Host struct{}
 
 func (*Host) Name() string { return "host" }
 
+// WorkspacePath is hostDir: the host executor runs steps in it directly.
+func (*Host) WorkspacePath(hostDir string) string { return hostDir }
+
 func (*Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	if len(s.services()) > 0 {
 		return -1, errors.New("services need the container or kubernetes executor")

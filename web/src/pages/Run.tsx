@@ -6,6 +6,7 @@ import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
+import { LibraryList, TemplateFacts } from "../components/Libraries";
 import { openInEditor } from "./EditPipeline";
 
 // stepFromURL is the step named by ?step= in the address, if any.
@@ -54,7 +55,7 @@ export function RunPage({ id }: { id: string }) {
       setRun((prev) => {
         if (!prev) return prev;
         // Live step updates carry the step's state, not its definition.
-        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets, kind: x.kind, message: x.message, description: x.description, retry: x.retry, timeout: x.timeout } : x)) };
+        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets, kind: x.kind, message: x.message, description: x.description, retry: x.retry, timeout: x.timeout, group: x.group } : x)) };
       });
     },
     log: (d) => {
@@ -82,6 +83,8 @@ export function RunPage({ id }: { id: string }) {
   const firstFailed = run.step_list.find((s) => s.status === "failed");
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting");
   const mayOperate = canOperate(me, run.project);
+  const libraries = run.graph.libraries ?? [];
+  const overridden = libraries.filter((l) => l.override);
 
   return (
     <div className="page page-wide">
@@ -96,6 +99,7 @@ export function RunPage({ id }: { id: string }) {
               : waitingStep ? <StatusPill status="waiting" />
               : <StatusPill status={run.status} />}
             {run.draft && <span className="badge-draft" title="Pipeline text from the editor, not from Git">Draft</span>}
+            {overridden.length > 0 && <span className="badge-override" title="Started with another version of a library than the pipeline names">Library override</span>}
             <h1>{run.message || run.pipeline}</h1>
           </div>
           <div className="run-meta">
@@ -107,6 +111,12 @@ export function RunPage({ id }: { id: string }) {
             {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
             <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
           </div>
+          {(libraries.length > 0 || run.graph.origin) && (
+            <div className="run-meta">
+              {libraries.length > 0 && <><span className="meta">Libraries</span><LibraryList libraries={libraries} /></>}
+              {run.graph.origin && <span className="meta">pipeline configured on the server</span>}
+            </div>
+          )}
         </div>
         <div className="run-actions">
           {mayOperate && !done && !run.cancel_requested && (
@@ -125,6 +135,21 @@ export function RunPage({ id }: { id: string }) {
       {run.draft && (
         <div className="callout callout-draft">
           <strong>Draft run.</strong> It ran pipeline text from the editor that is not in Git, against {run.branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono>.
+          {" "}See it on the <button type="button" className="linkbtn" onClick={() => setTab("definition")}>Pipeline</button> tab.
+        </div>
+      )}
+
+      {overridden.length > 0 && (
+        <div className="callout callout-draft">
+          <strong>Library override.</strong> Started with {overridden.map((l, i) => (
+            <span key={l.name}>{i > 0 && ", "}<Mono>{l.name}</Mono> at <Mono>{l.override}</Mono> ({l.commit ? <Mono>{shortSha(l.commit)}</Mono> : "?"}) instead of <Mono>{l.version}</Mono></span>
+          ))}, the version{overridden.length > 1 ? "s" : ""} the pipeline names. Steps of its templates ran with those files.
+        </div>
+      )}
+
+      {run.graph.origin && (
+        <div className="callout callout-info">
+          The repository has no <Mono>.launchway/pipeline.yaml</Mono> at this commit, so the run used the pipeline configured for {run.project} on the server.
           {" "}See it on the <button type="button" className="linkbtn" onClick={() => setTab("definition")}>Pipeline</button> tab.
         </div>
       )}
@@ -153,7 +178,7 @@ export function RunPage({ id }: { id: string }) {
       {tab === "graph" && (
         <>
           <section className="card card-flush">
-            <Graph levels={run.levels} steps={run.step_list} selected={selected} onSelect={select} now={now} />
+            <Graph levels={run.levels} steps={run.step_list} groups={run.graph.groups} selected={selected} onSelect={select} now={now} />
           </section>
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} />
@@ -210,6 +235,7 @@ function StepPanel({ run, step, now, sink }: {
   }, [step.id, attempt, sink]);
 
   const isLive = following && (step.status === "running" || step.status === "leased");
+  const group = step.group ? run.graph.groups?.find((g) => g.id === step.group) : undefined;
   const outputs = Object.entries(step.outputs ?? {});
   const secrets = Object.entries(step.secrets ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const empty = !loaded ? "Loading…"
@@ -256,6 +282,7 @@ function StepPanel({ run, step, now, sink }: {
           <pre className="code">{step.run}</pre>
         </details>
         <dl className="kv">
+          {group && <TemplateFacts group={group} libraries={run.graph.libraries} />}
           {step.needs && step.needs.length > 0 && <><dt>Needs</dt><dd>{step.needs.join(", ")}</dd></>}
           {step.when && <><dt>When</dt><dd className="mono">{JSON.stringify(step.when)}</dd></>}
           {secrets.length > 0 && <><dt>Secrets</dt><dd>{secrets.map(([name, r]) => <div key={name}><Mono>{name}</Mono> ← <Mono>{`${r.store}:${r.key}${r.field ? `#${r.field}` : ""}`}</Mono></div>)}</dd></>}
@@ -430,12 +457,18 @@ function DefinitionTab({ run }: { run: RunDetail }) {
       <section className="card">
         <div className="card-head">
           <h2 className="h-sm">
-            {file?.draft ? "The draft text this run ran" : `.launchway/pipeline.yaml at ${shortSha(run.sha) || "this run"}`}
+            {file?.draft ? "The draft text this run ran"
+              : file?.origin === "server" ? `The pipeline configured for ${run.project} on the server`
+              : `.launchway/pipeline.yaml at ${shortSha(run.sha) || "this run"}`}
           </h2>
           {run.source.kind === "git" && branch && (file?.draft
             ? <button type="button" className="btn btn-sm" onClick={() => openInEditor(run.project, branch, run.sha, file.text)}>Edit this draft</button>
             : <Link href={editHref} className="btn btn-sm">Edit this pipeline</Link>)}
         </div>
+        {file?.origin === "server" && (
+          <p className="sub">The repository had no pipeline file at <Mono>{shortSha(run.sha)}</Mono>, so this is what ran: the project's configuration, kept with the run.
+            A <Mono>.launchway/pipeline.yaml</Mono> in the repository takes its place.</p>
+        )}
         {file?.draft && (
           <p className="sub">Not in Git: it was typed in the editor and is kept only with this run.
             It is named <Mono>{file.hash}</Mono> in the audit trail. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>

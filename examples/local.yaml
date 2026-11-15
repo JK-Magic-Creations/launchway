@@ -12,11 +12,39 @@ projects:
     # The pipeline editor may save to the demo, on new branches.
     push: { branch_prefix: launchway/ }
 
+  # An app whose pipeline uses templates from the demo library, made by
+  # `make demo`.
+  - name: demo-lib-app
+    repo: ../../launchway-demo-lib-app
+    branch: main
+    poll: 5s
+    push: { branch_prefix: launchway/ }
+
+  # A repository with no pipeline file: the server gives it one, the check
+  # template of the demo library. A .launchway/pipeline.yaml in it would
+  # take this one's place.
+  - name: demo-plain
+    repo: ../../launchway-demo-plain
+    branch: main
+    poll: 5s
+    pipeline:
+      library: demo-library
+      version: v2
+      template: check
+      with: { strict: false }
+      on: { push: { branches: [main] } }
+
   # Launchway builds and tests itself.
   - name: launchway
     repo: ..
     branch: main
     poll: 15s
+
+# Repositories of templates (and the scripts they run) that pipelines may
+# use. A pipeline names one of these; it cannot name any other address.
+libraries:
+  - name: demo-library
+    repo: ../../launchway-demo-library
 
 runner:
   concurrency: 3

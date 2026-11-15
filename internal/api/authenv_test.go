@@ -106,6 +106,10 @@ type envOpts struct {
 	trustProxy  bool
 	ping        time.Duration
 	drafts      *auth.DraftRules // who may start draft runs; default the built-in rule
+	// More projects, beside pay-api and web, and the libraries their
+	// pipelines may use.
+	projects  []source.Project
+	libraries []source.Library
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -128,11 +132,11 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	}
 	dir := t.TempDir()
 	repos := filepath.Join(dir, "repos")
-	mgr, err := source.NewManager(eng, filepath.Join(dir, "data"), []source.Project{
+	mgr, err := source.NewManagerWithLibraries(eng, filepath.Join(dir, "data"), append([]source.Project{
 		// The editor may save to pay-api (new branches only), not to web.
 		{Name: "pay-api", URL: gitRepo(t, filepath.Join(repos, "pay"), gatedPipeline), Poll: time.Hour, Push: &source.PushSettings{}},
 		{Name: "web", URL: gitRepo(t, filepath.Join(repos, "web"), gatedPipeline), Poll: time.Hour},
-	}, quiet())
+	}, o.projects...), o.libraries, quiet())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +162,7 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 // test people, so anyone may approve it.
 func (e *authEnv) startRun(t *testing.T, project string) string {
 	t.Helper()
-	r, err := e.api.Projects.StartRun(context.Background(), project, "main", "someone-else")
+	r, err := e.api.Projects.StartRun(context.Background(), project, "main", "someone-else", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

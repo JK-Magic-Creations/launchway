@@ -37,6 +37,11 @@ var (
 
 // Problem is one thing wrong with a pipeline file, with where it is.
 type Problem struct {
+	// File is set when the problem is in a template rather than in the
+	// pipeline file: the template's file, in Library (the name the pipeline
+	// gives the library). Line and Column are then in that file.
+	File    string `json:"file,omitempty"`
+	Library string `json:"library,omitempty"`
 	Line    int    `json:"line,omitempty"`
 	Column  int    `json:"column,omitempty"`
 	Path    string `json:"path,omitempty"`
@@ -45,6 +50,9 @@ type Problem struct {
 
 func (p Problem) String() string {
 	var b strings.Builder
+	if p.File != "" {
+		fmt.Fprintf(&b, "%s (library %s): ", p.File, p.Library)
+	}
 	if p.Line > 0 {
 		fmt.Fprintf(&b, "line %d: ", p.Line)
 	}
@@ -68,6 +76,9 @@ func (ps Problems) Error() string {
 
 type parser struct {
 	problems Problems
+	// tmpl is set while reading a template: the parameters it declares and
+	// the values they have for the use being expanded.
+	tmpl *paramScope
 }
 
 func (ps *parser) add(n *yaml.Node, at, format string, args ...any) {
@@ -100,12 +111,14 @@ func Parse(data []byte) (*Pipeline, error) {
 
 	p := &Pipeline{}
 	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "containers", "steps"}, func(k, v *yaml.Node) {
+	ps.eachKey(root, "", []string{"pipeline", "on", "libraries", "containers", "steps"}, func(k, v *yaml.Node) {
 		switch k.Value {
 		case "pipeline":
 			p.Name = ps.str(v, "pipeline")
 		case "on":
 			ps.parseOn(v, p)
+		case "libraries":
+			ps.parseLibraries(v, p)
 		case "containers":
 			ps.parseContainers(v, p)
 		case "steps":
@@ -123,6 +136,7 @@ func Parse(data []byte) (*Pipeline, error) {
 		ps.parseSteps(stepsNode, p)
 	}
 	ps.check(p)
+	ps.checkUses(p)
 	if len(ps.problems) > 0 {
 		sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })
 		return nil, ps.problems
@@ -175,8 +189,6 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 
 // Keys from the design that are recognised but not implemented yet.
 var notYet = map[string]string{
-	"uses":     "templates and libraries arrive in a later milestone",
-	"with":     "templates and libraries arrive in a later milestone",
 	"outputs":  "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
 	"runs_on":  "runner pools arrive in a later milestone",
 	"matrix":   "matrix expansion arrives in a later milestone",
@@ -206,7 +218,10 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 }
 
 var (
-	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "message"}
+	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "message", "uses", "with"}
+	// useKeys are the keys a step that uses a template may have; the
+	// template says everything else.
+	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
@@ -245,7 +260,7 @@ func (ps *parser) parseContainers(n *yaml.Node, p *Pipeline) {
 			where := at + "." + k2.Value
 			switch k2.Value {
 			case "image":
-				c.Image = ps.str(v2, where)
+				c.Image = ps.scalar(v2, where)
 			case "env":
 				c.Env = ps.parseEnv(v2, where)
 			case "cpu", "memory":
@@ -305,7 +320,11 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		var secretsNode, kindNode, timeoutNode *yaml.Node
 		var timeout time.Duration
 		keys := map[string]*yaml.Node{} // the keys written, for checks that depend on the kind
-		ps.eachKey(v, at, stepKeys, func(k2, v2 *yaml.Node) {
+		known := stepKeys
+		if ps.tmpl != nil {
+			known = append(append([]string{}, stepKeys...), "if")
+		}
+		ps.eachKey(v, at, known, func(k2, v2 *yaml.Node) {
 			keys[k2.Value] = k2
 			where := at + "." + k2.Value
 			switch k2.Value {
@@ -315,7 +334,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			case "container":
 				s.Container = ps.str(v2, where)
 			case "image":
-				s.Image = ps.str(v2, where)
+				s.Image = ps.scalar(v2, where)
 			case "run":
 				s.Run = ps.str(v2, where)
 			case "needs":
@@ -330,16 +349,25 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				s.Secrets = ps.parseSecrets(v2, where)
 			case "retry":
 				s.Retry = ps.int(v2, where)
+				s.retrySet = true
 				if s.Retry < 0 || s.Retry > MaxRetry {
 					ps.add(v2, where, "retry must be between 0 and %d", MaxRetry)
 				}
 			case "timeout":
-				d, err := time.ParseDuration(ps.str(v2, where))
+				d, err := time.ParseDuration(ps.scalar(v2, where))
 				if err != nil {
 					ps.add(v2, where, "write a duration such as 30s, 10m or 1h")
 				} else {
 					timeoutNode, timeout = v2, d
+					s.timeoutSet = true
 				}
+			case "uses":
+				s.Uses = ps.str(v2, where)
+				s.usesLine = v2.Line
+			case "with":
+				s.With, s.withLines = ps.parseWith(v2, where)
+			case "if":
+				s.ifTest = ps.parseIf(v2, where)
 			case "message":
 				s.Message = strings.TrimSpace(ps.str(v2, where))
 			case "description":
@@ -352,7 +380,12 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				}
 			}
 		})
+		if keys["with"] != nil && keys["uses"] == nil {
+			ps.add(keys["with"], at+".with", "with passes values to a template, so it goes with uses")
+		}
 		switch {
+		case keys["uses"] != nil:
+			ps.parseUseStep(at, s, keys)
 		case s.Kind == "" || s.Kind == KindStep:
 			s.Kind = "" // the default is not written into the graph
 			ps.parseRunStep(k, at, s, p, keys, secretsNode)
@@ -434,7 +467,7 @@ func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[strin
 func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 	c := &Condition{}
 	ps.eachKey(n, at, []string{"branch", "tag", "event"}, func(k, v *yaml.Node) {
-		list := ps.strList(v, at+"."+k.Value)
+		list := ps.valueList(v, at+"."+k.Value)
 		switch k.Value {
 		case "branch":
 			c.Branch = list
@@ -468,8 +501,10 @@ func (ps *parser) parseEnv(n *yaml.Node, at string) map[string]string {
 			ps.add(k, at+"."+k.Value, "%q is not a valid variable name", k.Value)
 		case strings.HasPrefix(strings.ToUpper(k.Value), "LAUNCHWAY_"):
 			ps.add(k, at+"."+k.Value, "names starting with LAUNCHWAY_ are reserved")
+		case ps.tmpl != nil && strings.HasPrefix(strings.ToUpper(k.Value), ParamEnvPrefix):
+			ps.add(k, at+"."+k.Value, "in a template, names starting with %s are the template's parameters", ParamEnvPrefix)
 		}
-		env[k.Value] = ps.str(v, at+"."+k.Value)
+		env[k.Value] = ps.scalar(v, at+"."+k.Value)
 	}
 	return env
 }
@@ -495,6 +530,8 @@ func (ps *parser) parseSecrets(n *yaml.Node, at string) map[string]SecretRef {
 			ps.add(k, where, "%q is not a valid variable name", k.Value)
 		case strings.HasPrefix(strings.ToUpper(k.Value), "LAUNCHWAY_"):
 			ps.add(k, where, "names starting with LAUNCHWAY_ are reserved")
+		case ps.tmpl != nil && strings.HasPrefix(strings.ToUpper(k.Value), ParamEnvPrefix):
+			ps.add(k, where, "in a template, names starting with %s are the template's parameters", ParamEnvPrefix)
 		}
 		var ref SecretRef
 		ps.eachKey(v, where, secretKeys, func(k2, v2 *yaml.Node) {
@@ -535,7 +572,7 @@ func (ps *parser) str(n *yaml.Node, at string) string {
 }
 
 func (ps *parser) int(n *yaml.Node, at string) int {
-	v, err := strconv.Atoi(ps.str(n, at))
+	v, err := strconv.Atoi(ps.scalar(n, at))
 	if err != nil {
 		ps.add(n, at, "expected a whole number")
 	}

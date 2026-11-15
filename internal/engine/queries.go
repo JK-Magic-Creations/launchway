@@ -67,6 +67,7 @@ type StepView struct {
 	Secrets    map[string]pipeline.SecretRef `json:"secrets,omitempty"` // references, never values
 	Retry      int                           `json:"retry"`
 	Timeout    pipeline.Duration             `json:"timeout"`
+	Group      string                        `json:"group,omitempty"` // the uses step it came from, for a template's step
 	// Approvals only. Kind and Message come from the definition; the rest
 	// is the current wait and decision.
 	Kind        string `json:"kind,omitempty"`
@@ -284,6 +285,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Secrets = def.Secrets
 			v.Container = created.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
+			v.Group = def.Group
 		}
 		d.StepList = append(d.StepList, *v)
 	}

@@ -41,6 +41,9 @@ type Project struct {
 	DefaultBranch string
 	Poll          time.Duration
 	Push          *PushSettings // nil: pipelines cannot be saved to this repository
+	// Pipeline, if set, is the project's pipeline whenever its repository
+	// has no pipeline file at a commit.
+	Pipeline *ProjectPipeline
 }
 
 // Ref is a branch or tag and the commit it points at.
@@ -76,6 +79,9 @@ type ProjectStatus struct {
 	Decisions     []Decision `json:"decisions"`
 	// Push is how the editor may save to the repository; nil if it may not.
 	Push *PushSettings `json:"push"`
+	// Pipeline is the pipeline configured on the server for commits that
+	// have no pipeline file; nil if there is none.
+	Pipeline *ProjectPipeline `json:"pipeline,omitempty"`
 }
 
 type project struct {
@@ -94,16 +100,28 @@ type Manager struct {
 	dataDir  string
 	order    []string
 	projects map[string]*project
+	// libraries are mirrors of the libraries pipelines may use, by name.
+	libraries map[string]*project
+	libOrder  []string
 }
 
 var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
 
 // NewManager checks the projects and prepares their mirror directories.
 func NewManager(eng *engine.Engine, dataDir string, projects []Project, log *slog.Logger) (*Manager, error) {
+	return NewManagerWithLibraries(eng, dataDir, projects, nil, log)
+}
+
+// NewManagerWithLibraries is NewManager for a server whose pipelines may use
+// templates from the given libraries.
+func NewManagerWithLibraries(eng *engine.Engine, dataDir string, projects []Project, libraries []Library, log *slog.Logger) (*Manager, error) {
 	if log == nil {
 		log = slog.Default()
 	}
 	m := &Manager{eng: eng, log: log, dataDir: dataDir, projects: map[string]*project{}}
+	if err := m.addLibraries(libraries); err != nil {
+		return nil, err
+	}
 	for _, p := range projects {
 		if !nameRe.MatchString(p.Name) {
 			return nil, fmt.Errorf("project name %q: use lower-case letters, digits and hyphens", p.Name)
@@ -129,6 +147,11 @@ func NewManager(eng *engine.Engine, dataDir string, projects []Project, log *slo
 				return nil, fmt.Errorf("project %s: %w", p.Name, err)
 			}
 			p.Push = &push
+		}
+		if p.Pipeline != nil {
+			if err := m.checkProjectPipeline(&p); err != nil {
+				return nil, err
+			}
 		}
 		m.projects[p.Name] = &project{Project: p, dir: filepath.Join(dataDir, "repos", p.Name+".git")}
 		m.order = append(m.order, p.Name)
@@ -188,7 +211,7 @@ func (m *Manager) status(p *project) ProjectStatus {
 		last = p.lastFetch.UnixMilli()
 	}
 	return ProjectStatus{Name: p.Name, URL: redact.URLs(p.URL), DefaultBranch: p.DefaultBranch, PollSeconds: int(p.Poll / time.Second),
-		LastFetch: last, Error: redact.URLs(p.lastErr), Decisions: d, Push: m.Push(p.Name)}
+		LastFetch: last, Error: redact.URLs(p.lastErr), Decisions: d, Push: m.Push(p.Name), Pipeline: p.Pipeline}
 }
 
 func (p *project) setErr(err error) {
@@ -216,11 +239,16 @@ func (m *Manager) Refs(ctx context.Context, name string) ([]Ref, error) {
 	return p.refs(ctx)
 }
 
-// StartRun starts a run by hand on a branch or tag.
-func (m *Manager) StartRun(ctx context.Context, name, ref, actor string) (*engine.RunSummary, error) {
+// StartRun starts a run by hand on a branch or tag. Libraries, if given,
+// overrides the versions of the libraries the pipeline uses: library name →
+// tag, branch or commit, to try a change to a library before releasing it.
+func (m *Manager) StartRun(ctx context.Context, name, ref, actor string, libraries map[string]string) (*engine.RunSummary, error) {
 	p := m.projects[name]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
+	}
+	if err := CheckOverrides(libraries); err != nil {
+		return nil, err
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -236,12 +264,18 @@ func (m *Manager) StartRun(ctx context.Context, name, ref, actor string) (*engin
 	}
 	for _, r := range refs {
 		if r.Name == ref || r.FullRef() == ref {
-			pl, err := p.pipelineAt(ctx, r.SHA)
-			if err != nil {
+			pl, libs, _, err := m.pipelineFor(ctx, p, r.SHA, libraries)
+			var problems pipeline.Problems
+			switch {
+			case errors.As(err, &problems):
+				return nil, err
+			case errors.Is(err, engine.ErrInvalid):
+				return nil, err
+			case err != nil:
 				return nil, fmt.Errorf("%w: %s at %s: %v", engine.ErrConflict, r.Name, short(r.SHA), err)
 			}
 			return m.eng.CreateRun(engine.NewRun{Project: name, Pipeline: pl, Trigger: trigger(r, "manual", actor),
-				Source: engine.Source{Kind: "git", URL: p.URL}})
+				Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}})
 		}
 	}
 	return nil, fmt.Errorf("%w: no branch or tag called %q", engine.ErrNotFound, ref)
@@ -280,19 +314,30 @@ func (m *Manager) poll(ctx context.Context, p *project) error {
 		}
 		change := engine.RefChange{Ref: r.FullRef(), Old: old, New: r.SHA, SeenAt: seenAt}
 		d := Decision{Ref: r.FullRef(), SHA: r.SHA}
-		pl, err := p.pipelineAt(ctx, r.SHA)
+		// The trigger is read before templates are expanded, so that a push
+		// the pipeline ignores fetches no library.
+		pl, from, err := p.parsedAt(ctx, r.SHA)
+		var libs []engine.LibrarySource
+		if err == nil && pl.On.MatchPush(branchOf(r), tagOf(r)) {
+			pl, libs, err = m.Expand(ctx, pl, nil)
+		}
 		switch {
 		case errors.Is(err, ErrNoPipeline):
 			d.Outcome, d.Detail = "ignored", "no .launchway/pipeline.yaml at this commit"
 		case err != nil:
-			d.Outcome, d.Detail = "error", "the pipeline file has problems:\n"+err.Error()
+			what := "the pipeline file has problems"
+			if from == fromServer {
+				what = fmt.Sprintf("the pipeline configured on the server (%s@%s, template %s) has problems",
+					p.Pipeline.Library, p.Pipeline.Version, p.Pipeline.Template)
+			}
+			d.Outcome, d.Detail = "error", what+":\n"+redact.URLs(err.Error())
 		case !pl.On.MatchPush(branchOf(r), tagOf(r)):
-			d.Outcome, d.Detail = "ignored", "the pipeline's push trigger does not match "+r.FullRef()
+			d.Outcome, d.Detail = "ignored", strings.TrimSpace("the pipeline's push trigger does not match "+r.FullRef()+" "+p.note(from))
 		default:
 			// Claims the change, creates the run and records the decision
 			// in one transaction.
 			run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: trigger(r, "push", r.Author),
-				Source: engine.Source{Kind: "git", URL: p.URL}, Push: &change})
+				Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: p.note(from)})
 			switch {
 			case errors.Is(err, engine.ErrAlreadyClaimed):
 				continue // another server handled it
@@ -406,20 +451,6 @@ func (p *project) refs(ctx context.Context) ([]Ref, error) {
 		return refs[i].CommittedAt > refs[j].CommittedAt
 	})
 	return refs, nil
-}
-
-func (p *project) pipelineAt(ctx context.Context, sha string) (*pipeline.Pipeline, error) {
-	for _, path := range PipelinePaths {
-		data, err := gitOut(ctx, p.dir, "show", sha+":"+path)
-		if err != nil {
-			if strings.Contains(err.Error(), "does not exist") || strings.Contains(err.Error(), "exists on disk, but not in") {
-				continue
-			}
-			return nil, err
-		}
-		return pipeline.Parse([]byte(data))
-	}
-	return nil, ErrNoPipeline
 }
 
 // ReadPipeline returns the pipeline file at a commit, for showing in the UI.

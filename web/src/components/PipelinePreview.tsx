@@ -1,7 +1,8 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import type { Problem, StepView, ValidateResult } from "../api";
 import { Graph } from "./Graph";
-import { ErrorBox } from "./ui";
+import { LibraryList, TemplateFacts } from "./Libraries";
+import { ErrorBox, Mono } from "./ui";
 
 interface Props {
   res: ValidateResult | null;
@@ -20,8 +21,10 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
     run_id: "", id: s.id, position: i, status: "pending", attempt: 0, queued_at: 0, started_at: 0, finished_at: 0,
     exit_code: null, error: "", excerpt: "", skip_kind: "", runner: "", outputs: {}, container: s.container, image: s.image, run: s.run,
     needs: s.needs, when: s.when, retry: s.retry, timeout: s.timeout, description: s.description,
-    kind: s.kind, message: s.message, deadline: 0, decided_by: "", decided_at: 0, comment: "",
+    kind: s.kind, message: s.message, deadline: 0, decided_by: "", decided_at: 0, comment: "", group: s.group, uses: s.uses,
   })), [res]);
+  const unexpanded = (res?.graph?.steps ?? []).filter((s) => s.uses).length;
+  const chosenGroup = sel ? res?.graph?.groups?.find((g) => g.id === res.graph?.steps.find((s) => s.id === sel)?.group) : undefined;
   const chosen = res?.graph?.steps.find((s) => s.id === sel);
 
   return (
@@ -37,11 +40,22 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
                 ? <>Starts on pushes to {[...(res.graph.on.push.branches ?? []), ...(res.graph.on.push.tags ?? []).map((t) => "tag " + t)].join(", ")}, and by hand.</>
                 : <>Starts only by hand: there is no push trigger.</>}
             </p>
+            {res.graph.libraries && res.graph.libraries.length > 0 && (
+              <p className="sub libs">Libraries: <LibraryList libraries={res.graph.libraries} /></p>
+            )}
+            {res.expanded && (res.graph.groups?.length ?? 0) > 0 && (
+              <p className="sub">Templates are expanded from the libraries' current versions, as a run started now would expand them.</p>
+            )}
+            {unexpanded > 0 && (
+              <p className="sub">{unexpanded === 1 ? "One step uses a template; it is" : `${unexpanded} steps use templates; they are`} drawn
+                as one node{unexpanded === 1 ? "" : " each"}, not expanded. Templates come from the server's libraries, which are read when a pipeline is
+                checked for a project, or here with Expand templates.</p>
+            )}
             {notes}
           </section>
           <section className="card card-flush">
-            <Graph levels={res.levels} steps={steps} selected={sel} onSelect={setSel} now={0} compact
-              describe={(s) => (s.when ? "conditional · " : "") +
+            <Graph levels={res.levels} steps={steps} groups={res.graph.groups} selected={sel} onSelect={setSel} now={0} compact
+              describe={(s) => s.uses ? "template (not expanded)" : (s.when ? "conditional · " : "") +
                 (s.kind === "approval" ? "approval" : s.container ?? (s.image ?? "").replace(/^docker\.io\/library\//, ""))} />
           </section>
           {res.graph.containers && res.graph.containers.length > 0 && (
@@ -62,16 +76,20 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
               <h2 className="h-sm">{chosen.id}</h2>
               {chosen.description && <p className="sub step-desc">{chosen.description}</p>}
               <dl className="kv">
+                {chosenGroup && <TemplateFacts group={chosenGroup} libraries={res.graph.libraries} />}
+                {chosen.uses && <><dt>Uses</dt><dd><Mono>{chosen.uses}</Mono> (template, not expanded here)</dd></>}
+                {chosen.uses && chosen.with && <><dt>With</dt><dd>{Object.entries(chosen.with).sort(([a], [b]) => a.localeCompare(b))
+                  .map(([k, v]) => <div key={k}><Mono>{k}</Mono> = <Mono>{v}</Mono></div>)}</dd></>}
                 {chosen.kind === "approval" && <><dt>Approval</dt><dd>{chosen.message}</dd></>}
                 {chosen.container && <><dt>Container</dt><dd>{chosen.container}</dd></>}
-                {chosen.kind !== "approval" && <><dt>Image</dt><dd className="mono">{chosen.image}</dd></>}
+                {chosen.kind !== "approval" && !chosen.uses && <><dt>Image</dt><dd className="mono">{chosen.image}</dd></>}
                 {chosen.needs && <><dt>Needs</dt><dd>{chosen.needs.join(", ")}</dd></>}
                 {chosen.when && <><dt>When</dt><dd className="mono">{JSON.stringify(chosen.when)}</dd></>}
                 {chosen.secrets && <><dt>Secrets</dt><dd className="mono">{Object.keys(chosen.secrets).sort().join(", ")}</dd></>}
-                {chosen.kind !== "approval" && <><dt>Retry</dt><dd>{chosen.retry}</dd></>}
-                <dt>{chosen.kind === "approval" ? "Expires after" : "Timeout"}</dt><dd>{chosen.timeout}</dd>
+                {chosen.kind !== "approval" && !chosen.uses && <><dt>Retry</dt><dd>{chosen.retry}</dd></>}
+                {!chosen.uses && <><dt>{chosen.kind === "approval" ? "Expires after" : "Timeout"}</dt><dd>{chosen.timeout}</dd></>}
               </dl>
-              {chosen.kind !== "approval" && <pre className="code">{chosen.run}</pre>}
+              {chosen.kind !== "approval" && !chosen.uses && <pre className="code">{chosen.run}</pre>}
             </section>
           )}
         </>
@@ -87,7 +105,11 @@ export function ProblemList({ problems, onJump, title }: { problems: Problem[]; 
       <ul className="problems">
         {problems.map((p, i) => (
           <li key={i}>
-            {p.line ? (onJump
+            {p.file ? (
+              <span className="problem-file" title={`In the template file ${p.file} of the library ${p.library}, not in this pipeline`}>
+                {p.library}: {p.file}{p.line ? `:${p.line}` : ""}
+              </span>
+            ) : p.line ? (onJump
               ? <button type="button" className="linkbtn mono" onClick={() => onJump(p.line!)}>line {p.line}</button>
               : <span className="mono faint">line {p.line}</span>) : null}{" "}
             {p.path && <span className="mono">{p.path}</span>} {p.message}

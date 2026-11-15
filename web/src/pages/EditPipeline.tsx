@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, ApiError, type PipelineFile, type Problem, type Project, type Ref, type SaveResult } from "../api";
+import { api, ApiError, type LibraryOverrides, type PipelineFile, type Problem, type Project, type Ref, type SaveResult } from "../api";
 import { ago, shortSha } from "../format";
 import { navigate } from "../router";
 import { useMe } from "../auth";
@@ -7,6 +7,7 @@ import { useValidation } from "../validation";
 import { PipelineEditor, type PipelineEditorHandle } from "../components/PipelineEditor";
 import { PipelinePreview, ProblemList } from "../components/PipelinePreview";
 import { RefPicker } from "../components/RefPicker";
+import { OverridesEditor } from "../components/Libraries";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono } from "../components/ui";
 
 // Git is the only place a pipeline is kept. This page reads the file from a
@@ -74,6 +75,7 @@ export function EditPipelinePage({ name }: { name: string }) {
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionErr, setActionErr] = useState<unknown>(null);
+  const [overrides, setOverrides] = useState<LibraryOverrides>({});
   const [copied, setCopied] = useState(false);
   const editor = useRef<PipelineEditorHandle>(null);
   const me = useMe();
@@ -125,7 +127,8 @@ export function EditPipelinePage({ name }: { name: string }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  const { res, error: checkErr, checking } = useValidation(text);
+  const { res, error: checkErr, checking } = useValidation(text, { project: name });
+  const libraryNames = (res?.graph?.libraries ?? []).map((l) => l.name);
   const valid = !!res?.ok && !checking;
   const problems = res && !res.ok ? res.problems ?? [] : [];
 
@@ -143,7 +146,7 @@ export function EditPipelinePage({ name }: { name: string }) {
   const runDraft = async () => {
     setBusy(true); setActionErr(null);
     try {
-      const run = await api.draftRun(name, file.ref, text);
+      const run = await api.draftRun(name, file.ref, text, Object.keys(overrides).length ? overrides : undefined);
       navigate(`/runs/${run.id}`);
     } catch (e) { setActionErr(e); setBusy(false); }
   };
@@ -201,10 +204,23 @@ export function EditPipelinePage({ name }: { name: string }) {
       {actionErr instanceof ApiError && actionErr.problems
         ? <ProblemList problems={actionErr.problems} title="The server found problems; nothing was started" onJump={(l) => editor.current?.goToLine(l)} />
         : <ErrorBox error={actionErr} />}
-      {!file.exists && (
+      {!file.exists && !file.configured && (
         <div className="callout callout-info">
           <strong>{file.ref} has no pipeline yet.</strong> Below is a starting point. Nothing is in the repository until you save it.
         </div>
+      )}
+      {!file.exists && file.configured && (
+        <div className="callout callout-info">
+          <strong>{file.ref} has no pipeline file, so {name} runs the pipeline configured for it on the server</strong>
+          {project.pipeline && <>: the template <Mono>{project.pipeline.template}</Mono> of <Mono>{project.pipeline.library}@{project.pipeline.version}</Mono></>}.
+          {" "}Below is that pipeline written as a file. Saving it puts the file in the repository, where it takes the configuration's place.
+        </div>
+      )}
+      {rights.may_draft && libraryNames.length > 0 && (
+        <details className="advanced card">
+          <summary>Advanced: run the draft with other library versions{Object.keys(overrides).length > 0 && ` (${Object.keys(overrides).length} set)`}</summary>
+          <OverridesEditor value={overrides} onChange={setOverrides} names={libraryNames} />
+        </details>
       )}
       {restored && (
         <div className="callout callout-info callout-row">

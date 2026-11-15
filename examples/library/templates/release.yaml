@@ -1,0 +1,39 @@
+# Checks, builds and deploys a service: the whole pipeline of a small
+# service in one step. A step that uses it:
+#
+#   release:
+#     uses: platform/release
+#     with: { environment: prod }
+#
+# Steps that need the step get $LAUNCHWAY_NEEDS_<STEP>_DIGEST and _URL.
+template: release
+description: Check, build and deploy a service
+params:
+  environment: { type: string, default: dev, options: [dev, prod], description: Where to deploy }
+  approve:     { type: boolean, default: true, description: Ask a person before deploying }
+  image:       { type: string, default: docker.io/library/alpine:3.22 }
+steps:
+  checks:
+    uses: check
+    with: { image: { param: image } }
+  build:
+    description: Build the service and record its digest
+    image: { param: image }
+    needs: checks
+    run: "$LAUNCHWAY_LIB/scripts/build.sh"
+  approve:
+    kind: approval
+    needs: build
+    if: { param: approve }
+    message: Deploy this build?
+  deploy:
+    description: Deploy the build
+    image: { param: image }
+    needs: approve
+    env:
+      TARGET: { param: environment, format: "%s.example.internal" }
+    run: "$LAUNCHWAY_LIB/scripts/deploy.sh"
+outputs:
+  digest: { from: build.digest }
+  url:    { from: deploy.url }
+  notes:  { from: checks.notes }

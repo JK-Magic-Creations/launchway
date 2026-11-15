@@ -29,7 +29,7 @@ export const PipelineEditor = forwardRef<PipelineEditorHandle, Props>(function P
   const byLine = useMemo(() => {
     const m = new Map<number, string[]>();
     for (const p of problems ?? []) {
-      if (!p.line) continue;
+      if (!p.line || p.file) continue; // a problem in a template's file is not on this text's lines
       m.set(p.line, [...(m.get(p.line) ?? []), (p.path ? p.path + ": " : "") + p.message]);
     }
     return m;

@@ -1,0 +1,23 @@
+# Checks a repository's shell scripts and notes. A step that uses it:
+#
+#   checks:
+#     uses: platform/check
+#     with: { strict: true }
+template: check
+description: Check shell scripts and count notes left in the code
+params:
+  strict: { type: boolean, default: false, description: Fail when notes such as TODO are found }
+  image:  { type: string, default: docker.io/library/alpine:3.22, description: The image the checks run in }
+containers:
+  tools: { image: { param: image } }
+steps:
+  syntax:
+    description: Every shell script parses
+    container: tools
+    run: "$LAUNCHWAY_LIB/scripts/check-syntax.sh"
+  notes:
+    description: Count TODO and FIXME notes
+    container: tools
+    run: "$LAUNCHWAY_LIB/scripts/count-notes.sh"
+outputs:
+  notes: { from: notes.count }

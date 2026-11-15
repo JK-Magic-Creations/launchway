@@ -36,6 +36,9 @@ func DetectContainer() (*Container, error) {
 
 func (c *Container) Name() string { return "container (" + filepath.Base(c.Bin) + ")" }
 
+// WorkspacePath is /workspace, where the workspace is mounted.
+func (c *Container) WorkspacePath(string) string { return ContainerWorkspace }
+
 func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	// A relative path would be taken as the name of a volume.
 	if !filepath.IsAbs(s.Workspace) || !filepath.IsAbs(s.MetaDir) {

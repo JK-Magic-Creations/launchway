@@ -40,6 +40,7 @@ steps:
 `;
 
 const KEY = "launchway.playground";
+const EXPAND_KEY = "launchway.playground.expand";
 
 // The playground checks a pipeline as you type and draws the graph it
 // produces. Nothing runs, and nothing is saved anywhere but this browser.
@@ -47,7 +48,15 @@ export function PlaygroundPage() {
   const [text, setText] = useState(() => {
     try { return localStorage.getItem(KEY) || SAMPLE; } catch { return SAMPLE; }
   });
-  const { res, error } = useValidation(text);
+  // Expanding reads the server's libraries; it is a choice, since a pipeline
+  // written here may name libraries the server does not have.
+  const [expand, setExpand] = useState(() => {
+    try { return localStorage.getItem(EXPAND_KEY) === "1"; } catch { return false; }
+  });
+  const { res, error } = useValidation(text, { expand });
+  useEffect(() => {
+    try { localStorage.setItem(EXPAND_KEY, expand ? "1" : "0"); } catch { /* private mode */ }
+  }, [expand]);
   const editor = useRef<PipelineEditorHandle>(null);
   useEffect(() => {
     try { localStorage.setItem(KEY, text); } catch { /* private mode */ }
@@ -61,7 +70,12 @@ export function PlaygroundPage() {
           <p className="sub">Write a pipeline and see the graph it becomes. Checked by the same code the server uses; nothing runs.
             To change a project's pipeline, open it from <Link href="/projects">Projects</Link>.</p>
         </div>
-        <button type="button" className="btn" onClick={() => setText(SAMPLE)}>Reset example</button>
+        <div className="run-actions">
+          <label className="checkline" title="Steps that say uses: library/template are expanded from the libraries this server allows">
+            <input type="checkbox" checked={expand} onChange={(e) => setExpand(e.target.checked)} /> Expand templates
+          </label>
+          <button type="button" className="btn" onClick={() => setText(SAMPLE)}>Reset example</button>
+        </div>
       </header>
       <div className="split split-play">
         <section className="card card-flush">

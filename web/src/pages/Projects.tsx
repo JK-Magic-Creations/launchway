@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type Project, type Ref } from "../api";
+import { api, ApiError, type LibraryOverrides, type Project, type Ref } from "../api";
 import { ago, shortSha } from "../format";
 import { navigate } from "../router";
 import { useNow } from "../live";
 import { canOperate, useMe } from "../auth";
 import { BranchIcon, Empty, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
 import { RefPicker } from "../components/RefPicker";
+import { OverridesEditor } from "../components/Libraries";
 
 export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -61,6 +62,13 @@ export function ProjectsPage() {
               <span className="meta">checks every {p.poll_seconds}s</span>
               {p.last_fetch > 0 && <span className="meta">last checked {ago(p.last_fetch, now)}</span>}
             </div>
+            {p.pipeline && (
+              <p className="sub project-pipeline">
+                Pipeline from the library <Mono>{p.pipeline.library}@{p.pipeline.version}</Mono>, template <Mono>{p.pipeline.template}</Mono>,
+                configured on the server{p.pipeline.on.push?.branches?.length ? <>, on pushes to {p.pipeline.on.push.branches.join(", ")}</> : null}.
+                {" "}A <Mono>.launchway/pipeline.yaml</Mono> in the repository takes its place.
+              </p>
+            )}
             {p.last_run && (
               <Link href={`/runs/${p.last_run.id}`} className="lastrun">
                 <StatusPill status={p.last_run.status} />
@@ -98,6 +106,7 @@ function StartDialog({ project, onClose }: { project: Project; onClose: () => vo
   const [pick, setPick] = useState<Ref | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [overrides, setOverrides] = useState<LibraryOverrides>({});
 
   useEffect(() => { dialog.current?.showModal(); }, []);
 
@@ -105,7 +114,7 @@ function StartDialog({ project, onClose }: { project: Project; onClose: () => vo
     if (!pick) return;
     setBusy(true); setError(null);
     try {
-      const run = await api.startRun(project.name, pick.name);
+      const run = await api.startRun(project.name, pick.name, Object.keys(overrides).length ? overrides : undefined);
       dialog.current?.close();
       onClose();
       navigate(`/runs/${run.id}`);
@@ -116,14 +125,20 @@ function StartDialog({ project, onClose }: { project: Project; onClose: () => vo
     <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="start-title">
       <form method="dialog" onSubmit={(e) => { e.preventDefault(); start(); }}>
         <h2 id="start-title">Start a run of {project.name}</h2>
-        <p className="sub">Branches and tags are read from the repository now. The pipeline file at the chosen commit is what runs.</p>
+        <p className="sub">Branches and tags are read from the repository now. The pipeline file at the chosen commit is what runs{project.pipeline ? ", or, if it has none, the pipeline configured on the server" : ""}.</p>
         <RefPicker project={project.name} defaultBranch={project.default_branch} chosen={pick?.name ?? ""} onChoose={setPick} />
         {pick && (
           <div className="refpick">
             Will run <strong>{pick.name}</strong> at <Mono>{shortSha(pick.sha)}</Mono>, "{pick.subject}"
           </div>
         )}
-        <ErrorBox error={error} />
+        <details className="advanced">
+          <summary>Advanced{Object.keys(overrides).length > 0 && `: ${Object.keys(overrides).length} library override${Object.keys(overrides).length > 1 ? "s" : ""}`}</summary>
+          <OverridesEditor value={overrides} onChange={setOverrides} names={project.pipeline ? [project.pipeline.library] : undefined} />
+        </details>
+        <ErrorBox error={error instanceof ApiError && error.problems
+          ? error.message + ":\n" + error.problems.map((p) => (p.file ? `${p.library}: ${p.file}` : "") + (p.line ? ` line ${p.line}` : "") + ": " + p.message).join("\n")
+          : error} />
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>
           <button type="submit" className="btn btn-primary" disabled={!pick || busy}>{busy ? "Starting…" : "Start run"}</button>

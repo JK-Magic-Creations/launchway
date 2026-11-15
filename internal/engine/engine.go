@@ -129,6 +129,10 @@ type Job struct {
 	// responding or left, if this step moved the run to this runner. Files
 	// that the run's earlier steps wrote are not in the new workspace.
 	TakenOverFrom string `json:"taken_over_from,omitempty"`
+	// Library is the library of the template the step came from, if any:
+	// its files are what LAUNCHWAY_LIB points at. Source.Libraries says
+	// where every library of the run is fetched from.
+	Library string `json:"library,omitempty"`
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -311,6 +315,33 @@ type NewRun struct {
 	// "started" decision is recorded; if another server claimed it first,
 	// CreateRun returns ErrAlreadyClaimed and creates nothing.
 	Push *RefChange
+	// Note is added to the "started" decision of a push, to say more about
+	// what started, such as where the pipeline came from.
+	Note string
+}
+
+// checkLibraries checks that a pipeline is ready to run and that the source
+// says where to fetch every library it was expanded from, at the same commit.
+func checkLibraries(p *pipeline.Pipeline, src Source) error {
+	if !p.Expanded() {
+		return fmt.Errorf("%w: the pipeline uses templates that have not been expanded; "+
+			"templates come from libraries the server knows, so run it on a server", ErrConflict)
+	}
+	for _, l := range p.Libraries {
+		found := false
+		for _, ls := range src.Libraries {
+			if ls.Name == l.Name {
+				found = ls.Commit == l.Commit && pipeline.IsCommitID(ls.Commit) && ls.URL != ""
+			}
+		}
+		if !found {
+			return fmt.Errorf("%w: the source does not say where to fetch library %s at %s", ErrConflict, l.Name, l.Commit)
+		}
+	}
+	if len(src.Libraries) > 0 && src.Kind != "git" {
+		return fmt.Errorf("%w: libraries are only for runs from a Git repository", ErrConflict)
+	}
+	return nil
 }
 
 // CreateRun records a new run and queues the steps that can start.
@@ -320,6 +351,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	}
 	if nr.Trigger.Event == "" {
 		nr.Trigger.Event = pipeline.EventManual
+	}
+	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
+		return nil, err
 	}
 	var draft *Draft
 	switch {
@@ -357,7 +391,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		c.advance()
 		if nr.Push != nil {
 			return insertDecision(c.tx, nr.Project, PushDecision{At: c.now, Ref: nr.Push.Ref, SHA: nr.Push.New,
-				Outcome: "started", Detail: fmt.Sprintf("started run #%d", number), RunID: runID})
+				Outcome: "started", Detail: strings.TrimSpace(fmt.Sprintf("started run #%d %s", number, nr.Note)), RunID: runID})
 		}
 		return nil
 	})
@@ -1241,8 +1275,24 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		env[k] = v
 	}
 	for _, n := range def.Needs {
+		if inGroups(n, def.NeedsGroups) {
+			continue // a template's steps are reached through the outputs it exposes
+		}
 		for k, v := range st.Steps[n].Outputs {
-			env["LAUNCHWAY_NEEDS_"+envName(n)+"_"+envName(k)] = v
+			env["LAUNCHWAY_NEEDS_"+pipeline.EnvName(localID(def, n))+"_"+pipeline.EnvName(k)] = v
+		}
+	}
+	for _, id := range def.NeedsGroups {
+		g := st.Pipeline.Group(id)
+		if g == nil {
+			continue
+		}
+		for k, ref := range g.Outputs {
+			if dep := st.Steps[ref.Step]; dep != nil {
+				if v, ok := dep.Outputs[ref.Key]; ok {
+					env["LAUNCHWAY_NEEDS_"+pipeline.EnvName(localID(def, id))+"_"+pipeline.EnvName(k)] = v
+				}
+			}
 		}
 	}
 	for k, v := range map[string]string{
@@ -1266,21 +1316,35 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: secretRefs,
-		Timeout: def.Timeout, Source: st.Source, SHA: t.SHA, Workspace: st.Workspace,
+		Timeout: def.Timeout, Source: st.Source, SHA: t.SHA, Workspace: st.Workspace, Library: def.Library,
 	}
 }
 
-func envName(s string) string {
-	return strings.Map(func(r rune) rune {
-		switch {
-		case r >= 'a' && r <= 'z':
-			return r - 'a' + 'A'
-		case r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
-			return r
-		default:
-			return '_'
+// localID is how a step refers to another: by the ID it has within the
+// template the step is in, as the template's author wrote it, or by its full
+// ID if it is not in that template.
+func localID(def *pipeline.Step, id string) string {
+	for g := def.Group; g != ""; {
+		if rest, ok := strings.CutPrefix(id, g+"/"); ok {
+			return rest
 		}
-	}, s)
+		i := strings.LastIndex(g, "/")
+		if i < 0 {
+			break
+		}
+		g = g[:i]
+	}
+	return id
+}
+
+// inGroups reports whether a step is one of the groups' steps.
+func inGroups(id string, groups []string) bool {
+	for _, g := range groups {
+		if strings.HasPrefix(id, g+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // ---- live updates and wake-ups ----

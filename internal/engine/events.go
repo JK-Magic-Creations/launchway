@@ -111,4 +111,15 @@ type Source struct {
 	Kind string `json:"kind"`           // git or dir
 	URL  string `json:"url,omitempty"`  // git: what to clone
 	Path string `json:"path,omitempty"` // dir: a local directory used as-is
+	// Libraries are the shared libraries the run's templates came from, at
+	// the commits they were expanded from. The runner puts each one's files
+	// in the workspace, at .launchway/lib/<name>.
+	Libraries []LibrarySource `json:"libraries,omitempty"`
+}
+
+// LibrarySource is where a runner gets one library's files.
+type LibrarySource struct {
+	Name   string `json:"name"`   // as the pipeline calls it
+	URL    string `json:"url"`    // what to fetch
+	Commit string `json:"commit"` // the commit the run uses, always
 }

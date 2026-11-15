@@ -18,6 +18,9 @@ What Launchway is built around:
 - **A delivery model, not only builds:** approvals today; environments, releases, promotion,
   verification and rollback are next.
 - **Pipelines you can check and run anywhere**, with line-numbered errors before anything starts.
+- **Shared pipelines as Git repositories.** Templates and the scripts they run live in one
+  repository, released with Git tags; pipelines pin a tag, branch or commit, and every run records
+  the commit it used.
 
 It is early. What is described below works and is tested, including with several servers and with
 real Kubernetes, PostgreSQL and OpenBao. Much of the rest is designed but not built yet (see
@@ -71,9 +74,10 @@ make run
 `make run` does four things:
 
 - builds the UI and the binary;
-- creates a demo repository at `../launchway-demo`;
+- creates a demo repository at `../launchway-demo`, and a demo [shared library](#shared-libraries)
+  at `../launchway-demo-library` with two repositories that use it;
 - starts the server at **http://127.0.0.1:8080**;
-- watches two projects: the demo repository, and Launchway itself.
+- watches four projects: the demo repository, the two that use the library, and Launchway itself.
 
 Things to try:
 
@@ -92,6 +96,10 @@ Things to try:
   it, press *Run this draft* to try the change without saving it, then *Save…* to commit it (the
   example configuration lets the demo be saved; see [Editing pipelines](#editing-pipelines)).
 - **Open the Playground.** Write a pipeline and watch it validate and draw as you type.
+- **Use a shared library.** *demo-lib-app* runs the library's `release` template at tag `v1`:
+  its steps are framed as one group on the graph, and the run says which commit `v1` was. Start a
+  run with *Advanced → library override* `platform` = `main` to try the library's unreleased work.
+  *demo-plain* has no pipeline file at all; the server runs the library's `check` template for it.
 - **Run locally.** In any repository with a `.launchway/pipeline.yaml`, run `bin/launchway run`. It
   uses the same engine, on your machine, against your working copy.
 
@@ -137,6 +145,11 @@ steps:
 | `timeout` | Per attempt; default 1h, at most 24h. For an approval, how long to wait for a decision; default 24h, at most 30 days |
 | `kind` | `step` (the default) or `approval`; see [Approvals](#approvals) |
 | `message` | For an approval: the question to decide, one line of at most 500 characters |
+| `uses` | `library/template`: the step is replaced by a template's steps; see [Shared libraries](#shared-libraries) |
+| `with` | Values for the template's parameters |
+
+At the top level, beside `pipeline`, `on`, `containers` and `steps`, `libraries` names the
+[shared libraries](#shared-libraries) the pipeline's templates come from.
 
 ### Containers and services
 
@@ -255,6 +268,166 @@ run (problems answer `422` with their lines); `POST /api/v1/projects/{name}/pipe
 `{"base_ref", "base_sha", "pipeline", "message", "branch", "force"}` saves (`branch` empty for a
 new branch, or `base_ref` itself to commit to it directly; a stale `base_sha` answers `409`). The
 text may be at most 256 KiB.
+
+## Shared libraries
+
+A shared library is a Git repository of pipeline templates and the scripts they run, developed
+like any application and released with Git tags. A pipeline names the library and a tag, branch
+or commit; nothing is imported into Launchway or registered with it, and the template and its
+scripts always come from the same commit, so there is no second version to keep in step.
+
+```
+templates/python-service.yaml   # a pipeline fragment with typed parameters
+templates/release.yaml
+scripts/lint.sh                 # any files; executable as committed
+scripts/scan.sh
+```
+
+A template:
+
+```yaml
+template: python-service
+description: Lint, test and scan a Python service
+params:
+  test_command: { type: string,  default: "python3 -m pytest -q", description: How to run the tests }
+  scan:         { type: boolean, default: true }
+  python:       { type: string,  default: "3.13", options: ["3.12", "3.13"] }
+containers:
+  py: { image: { param: python, format: "docker.io/library/python:%s-slim" } }
+steps:
+  lint: { container: py, run: "$LAUNCHWAY_LIB/scripts/lint.sh" }
+  test: { container: py, needs: lint, run: "$PARAM_TEST_COMMAND" }
+  scan: { container: py, needs: lint, if: { param: scan }, run: "$LAUNCHWAY_LIB/scripts/scan.sh" }
+outputs:
+  coverage: { from: test.coverage }
+```
+
+A pipeline that uses it:
+
+```yaml
+pipeline: mcp-weather
+libraries:
+  platform: { repo: ci-templates, version: v3 }   # a tag, a branch, or a full commit id
+steps:
+  ci:
+    uses: platform/python-service
+    with: { test_command: "pytest -q tests/" }
+  deploy:
+    image: alpine:3.22
+    needs: ci
+    run: echo "coverage was $LAUNCHWAY_NEEDS_CI_COVERAGE"
+```
+
+`examples/library` is a small working library (a `check` template, a `release` template that uses
+it, and their scripts), and `make demo` makes a repository of it with two releases.
+
+**Which repositories may be libraries** is server configuration. A pipeline's `repo:` must name
+one of them; it can never be an address, so a pipeline cannot make the server fetch from anywhere
+with its credentials. Libraries are fetched exactly as projects are, with the same
+[credentials](#editing-pipelines) (in the URL, or `GIT_CONFIG_*` settings in the environment of
+the server and the runners):
+
+```yaml
+libraries:
+  - name: ci-templates
+    repo: https://git.example.com/platform/ci-templates.git
+```
+
+**Versions.** When a run is created, the server fetches its mirror of each library the pipeline
+names and resolves the version to a commit: a tag first, then a branch, then a full commit id (so
+a tag and a branch with the same name give the tag). Moving tags and branches is allowed; the run
+records the library, the version as written and the commit it pointed at, and its *run.created*
+event, the run page (*Libraries* in the header) and every runner use that commit. Resuming a run
+never resolves anything again. A version that does not exist, or a library the server does not
+list, is reported at its line and starts nothing.
+
+**Expansion.** A step that `uses` a template becomes the template's steps, with ids
+`<step>/<template-step>` (`ci/lint`, `ci/test`), drawn on the run page as one group that can be
+collapsed. Template steps that need nothing in the template need what the `uses` step needs; a
+step that needs the `uses` step waits for all of its steps, and is skipped if any of them fails,
+as usual. The `uses` step's `when`, `retry` and `timeout` apply to every step of the template that
+does not set its own. The template's containers are added to the run under new names
+(`ci-py`). A template can use templates of its own library, written by name alone
+(`uses: check`), from the same commit; using another library's templates from a template is not
+supported yet. A step whose `if` is false is left out, and what needed it needs what it needed.
+
+**Parameters**, with no expression language. Each has a `type` (`string`, the default, `number` or
+`boolean`), an optional `default` (without one it is required), `options` and a `description`.
+`with:` values are checked against them, with line numbers; unknown names are refused. A
+parameter reaches a template in exactly three ways, all resolved when the run is created, so the
+graph a run keeps holds plain values only:
+
+1. every step of the template receives it as the variable `PARAM_<NAME>` (upper case, `-` as
+   `_`); in a template, names starting with `PARAM_` are reserved for this;
+2. where a plain value is written, `{ param: name }` stands for it, and for strings
+   `{ param: name, format: "text %s text" }`: in a container's or step's `image`, `env` values,
+   `timeout`, `retry` and `when` lists (and in the `with` of a template the template uses);
+3. `if: { param: name }` (a boolean) or `if: { param: name, equals: value }` on a template step
+   leaves the step out when false.
+
+**Outputs.** A template's `outputs:` names which step outputs it exposes; a step that needs the
+`uses` step gets them as `LAUNCHWAY_NEEDS_<STEP>_<KEY>`. Other outputs of the template's steps do
+not reach it. Inside a template, steps refer to each other by the names the template gives them,
+so `LAUNCHWAY_NEEDS_LINT_...` works there as anywhere.
+
+**Files at run time.** For every library a run uses, the runner puts the library's files at the
+recorded commit in the workspace, at `.launchway/lib/<name>/`, so they reach steps the same way in
+a container, a Kubernetes pod or on the host. A template's steps get `LAUNCHWAY_LIB`, the
+directory of their own library (`/workspace/.launchway/lib/<name>` in a container), and every
+step gets `LAUNCHWAY_LIB_<NAME>` for each library. The directory is listed in the checkout's
+`.git/info/exclude`, so `git status` in a step does not report it; it replaces anything the
+repository itself has at that path. A runner that takes a run over restores the same commit.
+
+**Trying a library change before releasing it.** Starting a run by hand (*Start a run →
+Advanced*, or `POST /api/v1/projects/{name}/runs` with `{"ref": "main", "libraries":
+{"platform": "my-branch"}}`) and draft runs (the same `libraries` field, or *Advanced* in the
+editor) may use another version of any library the pipeline names. The run records both versions
+and is marked *Library override*. It needs only the right to start the run.
+
+**One pipeline for many repositories.** A project may get its pipeline from a library instead of
+a file in its repository:
+
+```yaml
+projects:
+  - name: weather-service
+    repo: https://git.example.com/team/weather-service.git
+    pipeline:
+      library: ci-templates
+      version: v3
+      template: python-service
+      with: { test_command: "pytest -q tests/" }
+      on: { push: { branches: [main, develop] } }
+```
+
+At a commit that has its own `.launchway/pipeline.yaml`, that file wins; otherwise the configured
+template is the pipeline, named after the project. The push decisions under *Recent pushes* and
+the run page say which was used, and the run keeps the configuration as the pipeline file it
+amounts to, shown on its *Pipeline* tab. The editor opens that text for such a repository, so
+saving it turns it into a file.
+
+**In the editor**, pipelines are checked against the project's libraries as you type: the graph
+shows the expanded template, parameter problems are marked on their lines, problems in a template
+are listed with its file, and the resolved commit of each library is shown.
+`POST /api/v1/validate?project=NAME` (or `?expand=1`) does the same over the API; without either,
+and in `launchway validate`, a `uses` step is one node, marked as not expanded. `launchway run`
+cannot run templates, which come from a server's libraries.
+
+**Security.**
+
+- Only configured libraries can be fetched, by name; versions and overrides are at most 128
+  characters of letters, digits and `. _ / + -`, never start with `-`, and are compared with the
+  names Git lists; only a full commit id, checked to be one, is ever passed to Git. Library names
+  are at most 40 characters,
+  parameter values at most 4 KiB, and a template may have at most 50 parameters.
+- A template's steps run as part of the using project's run: a step's secrets are looked up for
+  that project, so a secret store's `projects` allow-list applies to templates as to any step, and
+  expansion cannot change whose job a step is. Draft runs that may not read secrets refuse
+  template steps that ask for them, too.
+- Manual and draft starts record in the audit trail each library's version, any override, the
+  commit it resolved to, and the templates used.
+- Whoever can push to a library, or move its tags, changes what every pipeline that uses it runs.
+  Protect its tags and branches on the Git host as you would a deployment script, and pin
+  pipelines to tags or commits rather than branches where that matters.
 
 ## Approvals
 
@@ -543,6 +716,9 @@ within the last two minutes) for probes.
 - approvals, including two servers deciding or expiring the same one at once;
 - real Git repositories, including saves racing from two servers, stale saves and pushes the
   repository refuses;
+- shared libraries: version resolution against real repositories, moving tags, overrides, a
+  private library behind credentials, and a library script run at its pinned commit on the host,
+  in containers and on Kubernetes;
 - secrets kept out of the database, events, logs and API (`make test-vault` adds a real OpenBao);
 - sign-in against a fake OpenID Connect provider: forged state, stolen codes (PKCE), bad ID tokens,
   open redirects, CSRF, session expiry, API tokens, a permission matrix over every route, the live
@@ -562,6 +738,8 @@ Built so far:
 - approvals;
 - Git polling;
 - the pipeline editor: draft runs of unsaved text, and saving to Git as the person who saved;
+- shared libraries of templates and scripts, pinned by Git tag, branch or commit, with
+  per-run overrides and pipelines configured on the server for repositories without a file;
 - sign-in with OpenID Connect, roles per project, API tokens and an audit trail;
 - the web UI.
 

@@ -145,7 +145,7 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	mgr, err := source.NewManager(eng, cfg.Data, projects, log)
+	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, cfg.SourceLibraries(), log)
 	if err != nil {
 		return err
 	}
@@ -457,6 +457,11 @@ func cmdValidate(args []string) error {
 		return err
 	}
 	fmt.Printf("%s: pipeline %q is valid, %d step(s) in %d level(s)\n", path, p.Name, len(p.Steps), len(p.Levels()))
+	if !p.Expanded() {
+		// Templates come from the libraries a server knows; this command
+		// reads only the file.
+		fmt.Printf("Steps that use templates are not expanded here: check the pipeline in a server's editor to see them.\n")
+	}
 	return nil
 }
 

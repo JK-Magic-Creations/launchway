@@ -57,9 +57,11 @@ test-containers:
 test-kubernetes:
 	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -run Kubernetes ./internal/executor/
 
-# Creates ../launchway-demo, a small repository to play with.
+# Creates ../launchway-demo, a small repository to play with, and a demo
+# shared library with an app that uses it (see examples/local.yaml).
 demo:
 	./scripts/make-demo-repo.sh ../launchway-demo
+	./scripts/make-demo-library.sh ../launchway-demo-library ../launchway-demo-lib-app ../launchway-demo-plain
 
 # Runs the server with the demo repository and Launchway itself as projects.
 run: all demo

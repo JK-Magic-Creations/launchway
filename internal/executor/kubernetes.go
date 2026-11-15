@@ -147,6 +147,9 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 
 func (k *Kubernetes) Name() string { return "kubernetes (" + k.o.Namespace + ")" }
 
+// WorkspacePath is /workspace, where the pod's copy of the workspace is.
+func (k *Kubernetes) WorkspacePath(string) string { return ContainerWorkspace }
+
 // Check verifies the namespace is reachable, so mistakes show at start-up.
 func (k *Kubernetes) Check(ctx context.Context) error {
 	_, err := k.client.CoreV1().Pods(k.o.Namespace).List(ctx, metav1.ListOptions{Limit: 1})

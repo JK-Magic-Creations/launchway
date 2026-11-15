@@ -15,9 +15,28 @@ import (
 type Pipeline struct {
 	Name       string       `json:"name"`
 	On         Triggers     `json:"on"`
+	Libraries  []*Library   `json:"libraries,omitempty"`  // shared libraries its steps use templates from
 	Containers []*Container `json:"containers,omitempty"` // named toolboxes and services
 	Steps      []*Step      `json:"steps"`                // in the order they were written
+	// Groups are the steps that used a template, once expanded: each names
+	// the steps the template became. Empty until Expand.
+	Groups []*Group `json:"groups,omitempty"`
+	// Origin says where the pipeline came from when it was not the
+	// repository's own file or a draft; nil otherwise.
+	Origin *Origin `json:"origin,omitempty"`
 }
+
+// Origin records that a pipeline came from the server's configuration of
+// the project, because the repository has no pipeline file of its own.
+type Origin struct {
+	Kind string `json:"kind"` // OriginServer
+	// Text is the pipeline file the configuration amounts to, kept with the
+	// run because the configuration may change later.
+	Text string `json:"text"`
+}
+
+// OriginServer is the Origin.Kind of a pipeline configured on the server.
+const OriginServer = "server"
 
 // Container is a named image that steps run in, or a service that runs
 // alongside them for the whole run (a database for tests, say). All of a
@@ -54,7 +73,7 @@ const (
 // Step runs a script in a container image, or, if it is an approval, waits
 // for a person to approve or reject the run going further.
 type Step struct {
-	ID          string               `json:"id"`
+	ID          string               `json:"id"`                    // after expansion, <uses-step>/<template-step> for a template's steps
 	Description string               `json:"description,omitempty"` // one line saying what the step is for
 	Kind        string               `json:"kind,omitempty"`        // empty for a plain step, or KindApproval
 	Message     string               `json:"message,omitempty"`     // approvals: the question to decide
@@ -69,6 +88,115 @@ type Step struct {
 	Timeout     Duration             `json:"timeout"`           // per attempt; for an approval, how long to wait for a decision
 	Line        int                  `json:"-"`                 // where it was written, for messages
 	NeedsLine   int                  `json:"-"`                 // where its needs were written, for messages
+
+	// Uses names the template a step is replaced by, as library/template
+	// (or, in a template, a template of the same library). Only a pipeline
+	// that has not been expanded has such steps; With is what it passes to
+	// the template's parameters, as written.
+	Uses string            `json:"uses,omitempty"`
+	With map[string]string `json:"with,omitempty"`
+	// Group is the uses step a template's step came from (the innermost,
+	// when templates use templates); empty for a step written in the
+	// pipeline itself.
+	Group string `json:"group,omitempty"`
+	// Library is the library whose files the step works with
+	// (LAUNCHWAY_LIB): the library of the template it came from.
+	Library string `json:"library,omitempty"`
+	// NeedsGroups lists the uses steps this step needs as a whole. Needs
+	// already lists their steps; these are named so the step receives the
+	// outputs each template exposes, as LAUNCHWAY_NEEDS_<GROUP>_<KEY>.
+	NeedsGroups []string `json:"needs_groups,omitempty"`
+
+	withLines map[string]*yamlPos // where each with value was written
+	usesLine  int
+	ifTest    *paramTest // templates only: removes the step when false
+	// What was written, so that a uses step's settings apply only where the
+	// template step does not set its own.
+	retrySet, timeoutSet bool
+}
+
+// IsUse reports whether the step is replaced by a template.
+func (s *Step) IsUse() bool { return s.Uses != "" }
+
+// Library is a shared library a pipeline uses templates from: a Git
+// repository the server's configuration allows, at a version.
+type Library struct {
+	Name    string `json:"name"`    // what the pipeline calls it, as in uses: name/template
+	Repo    string `json:"repo"`    // the server's name for the repository
+	Version string `json:"version"` // a tag, branch or full commit id, as written
+	// Override is the version the person who started the run asked for
+	// instead of Version; empty if none.
+	Override string `json:"override,omitempty"`
+	// Commit is what the version (or override) pointed at when the run was
+	// created, and RefKind says what it was: tag, branch or commit. Every
+	// step of the run, and every resume, uses this commit.
+	Commit  string `json:"commit,omitempty"`
+	RefKind string `json:"ref_kind,omitempty"`
+	Line    int    `json:"-"`
+}
+
+// Wanted is the version to resolve: the override if there is one.
+func (l *Library) Wanted() string {
+	if l.Override != "" {
+		return l.Override
+	}
+	return l.Version
+}
+
+// Library returns the library the pipeline calls name, or nil.
+func (p *Pipeline) Library(name string) *Library {
+	for _, l := range p.Libraries {
+		if l.Name == name {
+			return l
+		}
+	}
+	return nil
+}
+
+// Group is a step that used a template, after expansion: the template's
+// steps carry its ID as their Group, and steps that needed it need them all.
+type Group struct {
+	ID          string `json:"id"`                    // the uses step's ID
+	Parent      string `json:"parent,omitempty"`      // the group it is in, when a template used a template
+	Description string `json:"description,omitempty"` // the uses step's, else the template's
+	Uses        string `json:"uses"`                  // as written
+	Library     string `json:"library"`
+	Template    string `json:"template"`
+	// Params are the values the template was expanded with, defaults
+	// included.
+	Params map[string]string `json:"params,omitempty"`
+	// Steps are the steps it became, in order, including those of
+	// templates it used. Empty if every step's if was false.
+	Steps []string `json:"steps"`
+	// Outputs are the step outputs the template exposes: key → step.key.
+	Outputs map[string]OutputRef `json:"outputs,omitempty"`
+}
+
+// OutputRef names one output of one step.
+type OutputRef struct {
+	Step string `json:"step"`
+	Key  string `json:"key"`
+}
+
+// Group returns the group with the given ID, or nil.
+func (p *Pipeline) Group(id string) *Group {
+	for _, g := range p.Groups {
+		if g.ID == id {
+			return g
+		}
+	}
+	return nil
+}
+
+// Expanded reports whether the pipeline can run as it is: no step still
+// waits to be replaced by its template.
+func (p *Pipeline) Expanded() bool {
+	for _, s := range p.Steps {
+		if s.IsUse() {
+			return false
+		}
+	}
+	return true
 }
 
 // IsApproval reports whether the step waits for a person instead of running.
@@ -182,7 +310,7 @@ func (p *Pipeline) RunContainers() []Container {
 		out = append(out, *c)
 	}
 	for _, s := range p.Steps {
-		if !s.IsApproval() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
+		if !s.IsApproval() && !s.IsUse() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
 			out = append(out, Container{Name: "image-" + itoa(len(out)-len(p.Containers)+1), Image: s.Image})
 		}
 	}
@@ -190,9 +318,9 @@ func (p *Pipeline) RunContainers() []Container {
 }
 
 // ContainerFor names the container a step runs in, matching RunContainers.
-// It is empty for an approval.
+// It is empty for an approval, and for a step not yet replaced by a template.
 func (p *Pipeline) ContainerFor(s *Step) string {
-	if s.IsApproval() {
+	if s.IsApproval() || s.IsUse() {
 		return ""
 	}
 	if s.Container != "" {

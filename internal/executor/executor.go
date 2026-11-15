@@ -44,7 +44,13 @@ type Sink func(stream, text string)
 type Executor interface {
 	Name() string
 	Run(ctx context.Context, s Spec, out Sink) (exitCode int, err error)
+	// WorkspacePath is where a step sees the workspace that is hostDir on
+	// the runner: /workspace in a container, hostDir itself on the host.
+	WorkspacePath(hostDir string) string
 }
+
+// ContainerWorkspace is where the workspace is in a step's container.
+const ContainerWorkspace = "/workspace"
 
 // ContainerSpec is one of a run's containers.
 type ContainerSpec struct {

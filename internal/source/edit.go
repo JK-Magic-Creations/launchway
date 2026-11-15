@@ -92,7 +92,10 @@ type PipelineFile struct {
 	CommittedAt int64  `json:"committed_at"`
 	Path        string `json:"path"`   // .launchway/pipeline.yaml, or .yml if that is what the repository has
 	Exists      bool   `json:"exists"` // false: there is no file yet, and Text is a starting point
-	Text        string `json:"text"`
+	// Configured is true when there is no file and the project runs the
+	// pipeline configured on the server; Text is then that pipeline.
+	Configured bool   `json:"configured"`
+	Text       string `json:"text"`
 }
 
 // ReadPipelineFile reads the pipeline file at the tip of a branch or tag,
@@ -113,6 +116,11 @@ func (m *Manager) ReadPipelineFile(ctx context.Context, name, ref string) (*Pipe
 	f := &PipelineFile{Ref: r.Name, Kind: r.Kind, SHA: r.SHA, Subject: r.Subject, Author: r.Author, CommittedAt: r.CommittedAt}
 	f.Path, f.Text, err = p.fileAt(ctx, r.SHA)
 	switch {
+	case errors.Is(err, ErrNoPipeline) && p.Pipeline != nil:
+		f.Configured = true
+		if f.Text, err = configuredText(name, p.Pipeline); err != nil {
+			return nil, err
+		}
 	case errors.Is(err, ErrNoPipeline):
 		f.Text = pipeline.Starter(name)
 	case err != nil:
@@ -176,6 +184,9 @@ type DraftRequest struct {
 	Text    string
 	Actor   string // who asked
 	Secrets bool   // whether its steps may read secrets
+	// Libraries overrides the versions of libraries the text uses, as for
+	// StartRun.
+	Libraries map[string]string
 }
 
 // StartDraft checks the text with the same parser as every pipeline, finds
@@ -185,6 +196,9 @@ func (m *Manager) StartDraft(ctx context.Context, d DraftRequest) (*engine.RunSu
 	p := m.projects[d.Project]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, d.Project)
+	}
+	if err := CheckOverrides(d.Libraries); err != nil {
+		return nil, err
 	}
 	pl, err := pipeline.Parse([]byte(d.Text))
 	if err != nil {
@@ -196,8 +210,12 @@ func (m *Manager) StartDraft(ctx context.Context, d DraftRequest) (*engine.RunSu
 	if err != nil {
 		return nil, err
 	}
+	pl, libs, err := m.Expand(ctx, pl, d.Libraries)
+	if err != nil {
+		return nil, err
+	}
 	return m.eng.CreateRun(engine.NewRun{Project: d.Project, Pipeline: pl, Trigger: trigger(r, pipeline.EventDraft, d.Actor),
-		Source: engine.Source{Kind: "git", URL: p.URL}, Draft: &engine.Draft{Text: d.Text, Secrets: d.Secrets}})
+		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Draft: &engine.Draft{Text: d.Text, Secrets: d.Secrets}})
 }
 
 // ---- saving ----

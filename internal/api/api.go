@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -534,18 +535,66 @@ func (s *Server) startRun(w http.ResponseWriter, r *http.Request) {
 	}
 	var in struct {
 		Ref string `json:"ref"`
+		// Libraries overrides the versions of libraries the pipeline uses:
+		// library name → tag, branch or commit.
+		Libraries map[string]string `json:"libraries"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	setAudit(r, "", "ref "+in.Ref)
-	run, err := s.Projects.StartRun(r.Context(), r.PathValue("name"), in.Ref, identityFrom(r).User)
+	setAudit(r, "", "ref "+in.Ref+overridesDetail(in.Libraries))
+	run, err := s.Projects.StartRun(r.Context(), r.PathValue("name"), in.Ref, identityFrom(r).User, in.Libraries)
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA)))
+	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s%s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), s.libraryDetail(run.ID)))
 	writeJSON(w, http.StatusCreated, run)
+}
+
+// overridesDetail describes requested library overrides for the audit
+// trail, before anything is resolved.
+func overridesDetail(libs map[string]string) string {
+	if len(libs) == 0 {
+		return ""
+	}
+	names := make([]string, 0, len(libs))
+	for n := range libs {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	parts := make([]string, len(names))
+	for i, n := range names {
+		parts[i] = n + "=" + libs[n]
+	}
+	return ", library overrides " + strings.Join(parts, " ")
+}
+
+// libraryDetail describes, for the audit trail, the libraries a run's
+// templates came from (with overrides and the commits they resolved to) and
+// the templates it used. It is empty for a run that uses none.
+func (s *Server) libraryDetail(runID string) string {
+	d, err := s.Engine.GetRun(runID)
+	if err != nil || d.Graph == nil || len(d.Graph.Libraries) == 0 {
+		return ""
+	}
+	var libs, templates []string
+	for _, l := range d.Graph.Libraries {
+		v := l.Version
+		if l.Override != "" {
+			v += " overridden by " + l.Override
+		}
+		libs = append(libs, fmt.Sprintf("%s=%s@%s at %s", l.Name, l.Repo, v, l.Commit))
+	}
+	seen := map[string]bool{}
+	for _, g := range d.Graph.Groups {
+		u := g.Library + "/" + g.Template
+		if !seen[u] {
+			seen[u] = true
+			templates = append(templates, u)
+		}
+	}
+	return "; libraries " + strings.Join(libs, ", ") + "; templates " + strings.Join(templates, ", ")
 }
 
 func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
@@ -570,8 +619,22 @@ func (s *Server) getRun(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	d.Source.URL = redact.URLs(d.Source.URL)
+	d.Source = redactSource(d.Source)
 	writeJSON(w, http.StatusOK, d)
+}
+
+// redactSource removes credentials from the addresses in a run's source.
+func redactSource(src engine.Source) engine.Source {
+	src.URL = redact.URLs(src.URL)
+	if len(src.Libraries) > 0 {
+		libs := make([]engine.LibrarySource, len(src.Libraries))
+		for i, l := range src.Libraries {
+			l.URL = redact.URLs(l.URL)
+			libs[i] = l
+		}
+		src.Libraries = libs
+	}
+	return src
 }
 
 func (s *Server) runEvents(w http.ResponseWriter, r *http.Request) {
@@ -589,8 +652,7 @@ func (s *Server) runEvents(w http.ResponseWriter, r *http.Request) {
 			ev.Data.Draft = &engine.Draft{Hash: ev.Data.Draft.Hash, Secrets: ev.Data.Draft.Secrets}
 		}
 		if ev.Data.Source != nil {
-			src := *ev.Data.Source
-			src.URL = redact.URLs(src.URL)
+			src := redactSource(*ev.Data.Source)
 			ev.Data.Source = &src
 		}
 		out[i] = ev
@@ -614,6 +676,11 @@ func (s *Server) runPipelineFile(w http.ResponseWriter, r *http.Request) {
 	d, err := s.Engine.GetRun(r.PathValue("id"))
 	if err != nil {
 		s.fail(w, err)
+		return
+	}
+	if o := d.Graph.Origin; o != nil {
+		// The pipeline configured on the server, kept with the run.
+		writeJSON(w, http.StatusOK, map[string]any{"text": o.Text, "draft": false, "origin": o.Kind})
 		return
 	}
 	if d.Source.Kind != "git" || s.Projects == nil {
@@ -721,23 +788,44 @@ func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rs)
 }
 
-// validate checks a pipeline file without running it.
+// validate checks a pipeline file without running it. With ?project=NAME
+// (which the caller must be able to see) or ?expand=1, templates are
+// expanded from the libraries' current versions, as a run would expand
+// them; otherwise a step that uses a template is one node of the graph.
 func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	p, err := pipeline.Parse(body)
+	q := r.URL.Query()
+	project := q.Get("project")
+	expand := (project != "" || q.Get("expand") == "1") && s.Projects != nil
+	if project != "" {
+		if _, err := s.Projects.Get(project); err != nil || !s.authorize(identityFrom(r), auth.Read, project) {
+			s.fail(w, fmt.Errorf("%w: project %s", engine.ErrNotFound, project))
+			return
+		}
+	}
+	var p *pipeline.Pipeline
+	if expand {
+		p, err = s.Projects.Check(r.Context(), string(body), nil)
+	} else {
+		p, err = pipeline.Parse(body)
+	}
 	if err != nil {
 		var ps pipeline.Problems
 		if !errors.As(err, &ps) {
-			ps = pipeline.Problems{{Message: err.Error()}}
+			if !errors.Is(err, engine.ErrInvalid) {
+				s.fail(w, err)
+				return
+			}
+			ps = pipeline.Problems{{Message: strings.TrimPrefix(err.Error(), "invalid: ")}}
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps})
+		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "graph": p, "levels": p.Levels()})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "graph": p, "levels": p.Levels(), "expanded": expand})
 }
 
 // stream sends live changes as server-sent events. With ?run=ID it sends only

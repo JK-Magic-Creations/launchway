@@ -470,14 +470,18 @@ func setAudit(r *http.Request, target, detail string) {
 	}
 }
 
-// maxDetail bounds the detail kept with an audit entry.
-const maxDetail = 300
+// maxDetail and maxTarget bound what an audit entry keeps. The detail is
+// long enough for a run's libraries with the full commits they resolved to.
+const (
+	maxDetail = 1000
+	maxTarget = 300
+)
 
 // record appends an entry to the audit trail. A failure is logged: the
 // action it describes has already happened.
 func (s *Server) record(e *engine.AuditEntry) {
 	e.Detail = clip(e.Detail, maxDetail)
-	e.Target = clip(e.Target, maxDetail)
+	e.Target = clip(e.Target, maxTarget)
 	if err := s.Engine.Audit(*e); err != nil {
 		s.Log.Error("writing the audit trail", "action", e.Action, "user", e.User, "err", err)
 	}

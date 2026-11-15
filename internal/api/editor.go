@@ -68,6 +68,8 @@ func (s *Server) startDraft(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Ref      string `json:"ref"`
 		Pipeline string `json:"pipeline"`
+		// Libraries overrides the versions of libraries the text uses.
+		Libraries map[string]string `json:"libraries"`
 	}
 	if !decodeEditor(w, r, &in, &in.Pipeline) {
 		return
@@ -76,14 +78,15 @@ func (s *Server) startDraft(w http.ResponseWriter, r *http.Request) {
 	hash := engine.DraftHash(in.Pipeline)
 	// The audit trail names the text by its hash; the text itself is kept
 	// with the run, never in the trail.
-	setAudit(r, "", fmt.Sprintf("ref %s, pipeline %s", in.Ref, hash))
+	setAudit(r, "", fmt.Sprintf("ref %s, pipeline %s%s", in.Ref, hash, overridesDetail(in.Libraries)))
 	run, err := s.Projects.StartDraft(r.Context(), source.DraftRequest{Project: name, Ref: in.Ref, Text: in.Pipeline,
-		Actor: identityFrom(r).User, Secrets: s.Drafts.For(name).Secrets})
+		Actor: identityFrom(r).User, Secrets: s.Drafts.For(name).Secrets, Libraries: in.Libraries})
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	setAudit(r, run.ID, fmt.Sprintf("draft run #%d of %s at %s, pipeline %s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), hash))
+	setAudit(r, run.ID, fmt.Sprintf("draft run #%d of %s at %s, pipeline %s%s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), hash,
+		s.libraryDetail(run.ID)))
 	writeJSON(w, http.StatusCreated, run)
 }
 

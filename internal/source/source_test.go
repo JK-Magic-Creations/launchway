@@ -115,17 +115,17 @@ func TestPollingStartsRunsAndExplainsDecisions(t *testing.T) {
 	if strings.Join(names, ",") != "main,feature/x" {
 		t.Fatalf("refs %v", names)
 	}
-	r, err := m.StartRun(ctx, "app", "feature/x", "tester")
+	r, err := m.StartRun(ctx, "app", "feature/x", "tester", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if r.Event != "manual" || r.Branch != "feature/x" || r.Actor != "tester" {
 		t.Fatalf("manual run %+v", r)
 	}
-	if _, err := m.StartRun(ctx, "app", "main", "tester"); err == nil || !strings.Contains(err.Error(), "a script to run is required") {
+	if _, err := m.StartRun(ctx, "app", "main", "tester", nil); err == nil || !strings.Contains(err.Error(), "a script to run is required") {
 		t.Fatalf("starting a broken pipeline should explain why: %v", err)
 	}
-	if _, err := m.StartRun(ctx, "app", "nope", "tester"); err == nil {
+	if _, err := m.StartRun(ctx, "app", "nope", "tester", nil); err == nil {
 		t.Fatal("expected an error for a missing branch")
 	}
 

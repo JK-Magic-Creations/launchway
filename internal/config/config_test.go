@@ -183,3 +183,52 @@ projects:
 		}
 	}
 }
+
+func TestLibrariesAndProjectPipelines(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "launchway.yaml")
+	os.WriteFile(path, []byte(`
+libraries:
+  - name: ci-templates
+    repo: ../ci-templates
+  - name: remote
+    repo: https://git.example.com/platform/templates.git
+projects:
+  - name: svc
+    repo: https://git.example.com/team/svc.git
+    pipeline:
+      library: ci-templates
+      version: v3
+      template: python-service
+      with: { scan: false, retries: 2, test_command: "pytest -q" }
+      on: { push: { branches: [main, develop] } }
+  - name: plain
+    repo: https://git.example.com/team/plain.git
+`), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	libs := c.SourceLibraries()
+	if len(libs) != 2 || libs[0].URL != filepath.Join(filepath.Dir(dir), "ci-templates") || libs[1].URL != "https://git.example.com/platform/templates.git" {
+		t.Fatalf("libraries %+v", libs)
+	}
+	ps, err := c.SourceProjects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pp := ps[0].Pipeline
+	if pp == nil || pp.Library != "ci-templates" || pp.Version != "v3" || pp.Template != "python-service" ||
+		pp.With["scan"] != "false" || pp.With["retries"] != "2" || pp.With["test_command"] != "pytest -q" ||
+		pp.On.Push == nil || strings.Join(pp.On.Push.Branches, ",") != "main,develop" {
+		t.Fatalf("pipeline %+v", pp)
+	}
+	if ps[1].Pipeline != nil {
+		t.Fatalf("plain has a pipeline: %+v", ps[1].Pipeline)
+	}
+	// Unknown settings are refused, as everywhere in the file.
+	os.WriteFile(path, []byte("projects:\n  - name: x\n    repo: y\n    pipeline: { library: a, versoin: v1 }\n"), 0o644)
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "versoin") {
+		t.Fatalf("err %v", err)
+	}
+}

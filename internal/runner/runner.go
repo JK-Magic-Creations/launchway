@@ -40,6 +40,9 @@ type Runner struct {
 
 	wsMu    sync.Mutex
 	wsLocks map[string]*sync.Mutex
+	// One fetch at a time per library mirror; see libraryRepo.
+	libMu    sync.Mutex
+	libLocks map[string]*sync.Mutex
 }
 
 // Run takes and executes steps until ctx ends. Steps still running when ctx
@@ -309,6 +312,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		sys("Could not prepare the workspace: %v", err)
 		return engine.Result{Outcome: "failed", Error: "preparing the workspace: " + err.Error()}
 	}
+	libraryEnv(env, job, r.Exec.WorkspacePath(ws))
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
 	defer os.RemoveAll(meta)
 	sys("Image %s", job.Image)
@@ -491,6 +495,9 @@ func workspaceID(job *engine.Job) string {
 func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string, ...any)) (string, error) {
 	switch job.Source.Kind {
 	case "dir":
+		if len(job.Source.Libraries) > 0 {
+			return "", errors.New("libraries need a run from a Git repository")
+		}
 		return job.Source.Path, nil
 	case "git":
 	default:
@@ -521,6 +528,9 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 		return "", err
 	}
 	if err := git(ctx, dir, "checkout", "--quiet", "--detach", job.SHA); err != nil {
+		return "", err
+	}
+	if err := r.addLibraries(ctx, job, dir, sys); err != nil {
 		return "", err
 	}
 	// Containers may run as another user; let them write to the workspace.

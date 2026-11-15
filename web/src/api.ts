@@ -64,6 +64,10 @@ export interface StepView {
   retry: number;
   timeout: string;
   description?: string;
+  /** For a template's step: the uses step it came from. */
+  group?: string;
+  /** For a step not expanded (the editor without libraries): the template it uses. */
+  uses?: string;
   // Approvals only. A waiting approval started waiting at started_at.
   kind?: "approval";
   message?: string;
@@ -91,17 +95,51 @@ export interface GraphStep {
   secrets?: Record<string, SecretRef>;
   retry: number;
   timeout: string;
+  /** Not expanded: the template the step is replaced by, and the values it passes. */
+  uses?: string;
+  with?: Record<string, string>;
+  /** Expanded: the uses step it came from, and the library whose files it works with. */
+  group?: string;
+  library?: string;
+  needs_groups?: string[];
+}
+
+/** A library a pipeline uses, and the commit its version resolved to when the run was created. */
+export interface GraphLibrary {
+  name: string;
+  repo: string;
+  version: string;
+  override?: string;
+  commit?: string;
+  ref_kind?: "tag" | "branch" | "commit";
+}
+
+/** A step that used a template, once expanded. */
+export interface GraphGroup {
+  id: string;
+  parent?: string;
+  description?: string;
+  uses: string;
+  library: string;
+  template: string;
+  params?: Record<string, string>;
+  steps: string[];
+  outputs?: Record<string, { step: string; key: string }>;
 }
 
 export interface Graph {
   name: string;
   on: { push?: { branches?: string[]; tags?: string[] } };
+  libraries?: GraphLibrary[];
   containers?: GraphContainer[];
   steps: GraphStep[];
+  groups?: GraphGroup[];
+  /** Set when the pipeline is the one configured on the server, not a file in the repository. */
+  origin?: { kind: "server"; text: string };
 }
 
 export interface RunDetail extends RunSummary {
-  source: { kind: string; url?: string; path?: string };
+  source: { kind: string; url?: string; path?: string; libraries?: { name: string; url: string; commit: string }[] };
   graph: Graph;
   levels: string[][];
   step_list: StepView[];
@@ -120,6 +158,15 @@ export interface RunEvent {
 export interface Decision { at: number; ref: string; sha: string; outcome: "started" | "ignored" | "error"; detail: string; run_id?: string }
 
 export interface PushSettings { branch_prefix: string; allow_direct: string[] | null }
+
+/** The pipeline the server runs for a project whose repository has no pipeline file. */
+export interface ProjectPipeline {
+  library: string;
+  version: string;
+  template: string;
+  with?: Record<string, string> | null;
+  on: { push?: { branches?: string[]; tags?: string[] } };
+}
 
 /** What the caller may do with the pipeline editor on a project. */
 export interface EditorRights {
@@ -141,6 +188,8 @@ export interface Project {
   last_run: RunSummary | null;
   /** How the editor may save to the repository; null if it may not. */
   push: PushSettings | null;
+  /** The pipeline configured on the server, used when a commit has no pipeline file. */
+  pipeline?: ProjectPipeline;
   editor: EditorRights;
 }
 
@@ -155,6 +204,8 @@ export interface PipelineFile {
   path: string;
   /** False: the branch has no pipeline yet, and text is a starting point. */
   exists: boolean;
+  /** No file, and the project runs the pipeline configured on the server: text is that pipeline. */
+  configured: boolean;
   text: string;
 }
 
@@ -179,7 +230,7 @@ export interface SaveResult {
 }
 
 /** The pipeline text a run ran: from Git, or kept with a draft run. */
-export interface RunPipelineText { text: string; draft: boolean; hash?: string }
+export interface RunPipelineText { text: string; draft: boolean; hash?: string; origin?: "server" }
 
 export interface Ref { name: string; kind: "branch" | "tag"; sha: string; subject: string; author: string; committed_at: number }
 
@@ -201,9 +252,17 @@ export interface Approval {
 // online: seen within the last two minutes. Runners not seen for a day are no longer listed.
 export interface Runner { id: string; name: string; executor: string; version: string; last_seen: number; online: boolean }
 
-export interface Problem { line?: number; column?: number; path?: string; message: string }
+/** A problem in pipeline text; with file set, in that template of the library instead. */
+export interface Problem { file?: string; library?: string; line?: number; column?: number; path?: string; message: string }
 
-export interface ValidateResult { ok: boolean; problems?: Problem[]; graph?: Graph; levels?: string[][] }
+export interface ValidateResult {
+  ok: boolean; problems?: Problem[]; graph?: Graph; levels?: string[][];
+  /** Templates were expanded from the libraries' current versions. */
+  expanded?: boolean;
+}
+
+/** Library name → tag, branch or commit, used instead of the version the pipeline names. */
+export type LibraryOverrides = Record<string, string>;
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public problems?: Problem[]) { super(message); }
@@ -298,13 +357,21 @@ export const api = {
   refs: (name: string) => call<Ref[]>("GET", `/api/v1/projects/${name}/refs`),
   pipeline: (name: string, ref: string) =>
     call<PipelineFile>("GET", `/api/v1/projects/${encodeURIComponent(name)}/pipeline?ref=${encodeURIComponent(ref)}`),
-  draftRun: (name: string, ref: string, pipeline: string) =>
-    call<RunSummary>("POST", `/api/v1/projects/${encodeURIComponent(name)}/draft-runs`, { ref, pipeline }),
+  draftRun: (name: string, ref: string, pipeline: string, libraries?: LibraryOverrides) =>
+    call<RunSummary>("POST", `/api/v1/projects/${encodeURIComponent(name)}/draft-runs`, { ref, pipeline, libraries }),
   savePipeline: (name: string, req: SaveRequest) =>
     call<SaveResult>("POST", `/api/v1/projects/${encodeURIComponent(name)}/pipeline`, req),
-  startRun: (name: string, ref: string) => call<RunSummary>("POST", `/api/v1/projects/${name}/runs`, { ref }),
+  startRun: (name: string, ref: string, libraries?: LibraryOverrides) =>
+    call<RunSummary>("POST", `/api/v1/projects/${encodeURIComponent(name)}/runs`, { ref, libraries }),
   runners: (background = false) => call<Runner[]>("GET", "/api/v1/runners", undefined, { background }),
-  validate: (yaml: string) => call<ValidateResult>("POST", "/api/v1/validate", yaml, { raw: true }),
+  /** With a project (or expand), templates are expanded from the server's libraries. */
+  validate: (yaml: string, opts: { project?: string; expand?: boolean } = {}) => {
+    const p = new URLSearchParams();
+    if (opts.project) p.set("project", opts.project);
+    else if (opts.expand) p.set("expand", "1");
+    const q = p.toString();
+    return call<ValidateResult>("POST", "/api/v1/validate" + (q ? "?" + q : ""), yaml, { raw: true });
+  },
   tokens: () => call<ApiToken[]>("GET", "/api/v1/tokens"),
   createToken: (name: string, expiresInDays: number) =>
     call<ApiToken & { token: string }>("POST", "/api/v1/tokens", { name, expires_in_days: expiresInDays }),
