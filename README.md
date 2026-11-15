@@ -650,6 +650,134 @@ With the Helm chart these are `config.tests.*` and `runner.reports.*` in the val
 older than the one that brought test reports cannot read a pipeline with `reports:`; use the key
 once every server is upgraded (see [docs/development/migrations.md](docs/development/migrations.md)).
 
+## Artifacts
+
+A step can keep files once it has run: people download them from the run, and later steps of
+the run fetch them into their workspace, on whichever runner they run.
+
+```yaml
+steps:
+  build:
+    image: golang:1.27
+    run: make dist
+    artifacts:
+      - name: binary
+        paths: [bin/app, "dist/*.tar.gz"]   # globs as for reports; a directory keeps all below it
+        retain: 30d                         # optional: 2w, 12h…; the server has a default and a maximum
+        when: success                       # the default; or failure (screenshots, logs), or always
+
+  deploy:
+    image: alpine:3.22
+    needs: [build]                          # the step must have run first
+    fetch:
+      - { from: build, name: binary, into: out }   # into is optional: default, where the files were
+    run: ./out/bin/app --version
+```
+
+- **What is kept**: regular files only, copied out of the workspace by the runner and checked by
+  SHA-256 end to end. Symbolic links are not followed. An artifact is kept whole or not at all: a
+  file over the size limit, too many files, or paths that match nothing mean none is kept, and the
+  step's log says why. Keeping files never changes the step's outcome.
+- **Fetching** puts the files in the workspace before the step runs, on any executor, also when
+  the step runs on another runner than the one that kept them, or in a re-run that reused the
+  step. A fetch of an artifact that was not kept, has expired or was deleted fails the step and
+  says so. A step can fetch only from steps it needs, directly or through others; in a template,
+  from a step of the same template.
+- **Secrets are not masked in artifacts.** Secret values are hidden in a step's log, but files a
+  step keeps are kept exactly as written. Do not put secrets in them.
+- **The Artifacts tab** of a run lists each artifact with its files, sizes, SHA-256 and how long it
+  is kept, with a download for each file and for all of them as a zip. Operators of the project may
+  delete one; the audit trail records who did. Files are always served as downloads, never shown
+  as pages.
+- **Storage**: a directory (the default, under the data directory) for one server, or
+  S3-compatible object storage, which several servers need. A file kept twice is stored once.
+  Uploads go in 8 MiB chunks that any server can take, and carry on after a broken connection.
+  Each server checks that it shares the store with the others (a small marker object), and keeps
+  no artifacts, saying why, if it does not.
+- **API**: `GET /api/v1/runs/{id}/artifacts`, `GET /api/v1/runs/{id}/artifacts/{artifact}/file?path=`
+  (ranges supported), `GET /api/v1/runs/{id}/artifacts/{artifact}/archive` (zip),
+  `DELETE /api/v1/runs/{id}/artifacts/{artifact}` (operators). Run summaries carry `artifacts`,
+  the number kept.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `artifacts.store` | filesystem | `filesystem` or `s3` |
+| `artifacts.dir` | `<data>/artifacts` | the filesystem store's directory |
+| `artifacts.s3.endpoint`, `bucket`, `region`, `prefix`, `path_style`, `ca_file` | – | the S3 store; credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or `*_FILE`), never from the file |
+| `artifacts.max_file_mib` | 1024 | the largest file an artifact may hold |
+| `artifacts.max_run_mib` | 4096 | how much one run may keep |
+| `artifacts.max_project_gib` | 50 | how much a project may keep over all its runs |
+| `artifacts.retain` | 30d | how long artifacts are kept when the pipeline does not say |
+| `artifacts.max_retain` | 90d | the longest any is kept, whatever the pipeline says |
+
+Expired artifacts are removed once their run has finished; contents nothing refers to any more are
+removed an hour later. Every server does this; they never get in each other's way. A runner needs
+disk space for a copy of what a step keeps or fetches. Runners older than this feature are not
+given steps that keep or fetch artifacts. `make test-s3` checks the S3 store against a real
+S3-compatible server.
+
+## Security findings and SBOMs
+
+Steps can declare the results of security scanners and software bills of materials:
+
+```yaml
+steps:
+  scan:
+    image: registry.example.com/scanners:1
+    run: |
+      gitleaks detect --report-format sarif --report-path reports/security/gitleaks.sarif || true
+      semgrep scan --sarif --output reports/security/semgrep.sarif || true
+      trivy fs --format cyclonedx --output reports/sbom.cdx.json .
+    reports:
+      findings: reports/security/*.sarif   # SARIF 2.1.0, from any scanner
+      sbom: reports/sbom.cdx.json           # CycloneDX JSON
+```
+
+- **Findings** are read from SARIF 2.1.0, as gitleaks, semgrep, CodeQL, bandit, hadolint, trivy,
+  govulncheck and most other scanners write it, whether the step passed or failed. A file that is
+  not SARIF is shown as such, with the reason; it never fails the step.
+- **Severity** is one of critical, high, medium, low or unknown, taken from the first of: a
+  `security-severity` score on the result or its rule (9.0 and over critical, 7.0 high, 4.0 medium,
+  0.1 low); the tool's own severity word (`issue_severity`, `severity`, or a rule tag such as
+  `HIGH`); the SARIF level (error high, warning medium, note low, none unknown). A finding about a
+  secret is never below high.
+- **Secrets that scanners find are never stored or shown**: only where they are and which rule
+  found them. Code snippets in SARIF files are never kept for any finding, the message of a
+  finding about a secret is replaced by its rule's description, and every message is cleared of
+  anything shaped like a key or token. SARIF files themselves are not kept.
+- **New, still there, fixed.** Each finding gets a fingerprint (its tool, rule and file, with the
+  scanner's own fingerprints when it gives real ones, else the line and message), and a run's
+  findings are compared with the previous run of the same branch: new, still there, or fixed.
+  Only scanners that ran both times are compared. A finding whose code moved up or down a file
+  shows as fixed and new again, unless its scanner gives line-independent fingerprints, as
+  CodeQL does.
+- **The Security tab** of a run shows a bar of counts by severity, then every finding, the most
+  severe first, with filters by severity, tool and status and a search box; each opens to the
+  rule, its description, the location and a link to the rule's documentation. Run lists show the
+  counts. **A project's Security page** shows the counts over a branch's recent runs, and the
+  findings still open, each with the run where it was first seen.
+- **SBOMs** are kept whole as the step's artifact `sbom` and summarised: the number of components
+  and the licences. **Components** can be searched across projects (`/components` in the UI): which
+  runs and projects contain a package, at a version.
+- **API** (anyone who may see the run or project):
+  `GET /api/v1/runs/{id}/findings?severity=&tool=&status=new|existing|fixed&q=&step=&limit=&offset=`,
+  `GET /api/v1/projects/{name}/security?ref=&runs=`,
+  `GET /api/v1/components?name=&version=&limit=` (only projects the caller may see). Run summaries
+  carry `findings`, the counts by severity, for checks that later act on them.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `findings.max_upload_mib` | 32 | MiB of SARIF files accepted per step attempt; runners are told |
+| `findings.max_per_run` | 20000 | findings one run keeps; beyond it, only the counts |
+| `findings.max_per_project` | 500000 | findings a project keeps; the oldest runs' go first |
+| `findings.max_components_per_run` | 20000 | SBOM components one run keeps for searching |
+| `findings.max_components_per_project` | 1000000 | SBOM components a project keeps |
+| `findings.max_sbom_mib` | 64 | MiB of a step's SBOM files read to summarise them |
+
+With the Helm chart these are `config.artifacts.*` and `config.findings.*` in the values, unset by
+default. A server older than the one that brought these keys cannot read a pipeline that uses
+`artifacts`, `fetch`, `reports.findings` or `reports.sbom`; use them once every server is upgraded.
+
 ## Secrets
 
 A step names the secrets it needs. Each one becomes an environment variable:
@@ -903,6 +1031,8 @@ within the last two minutes) for probes.
 | `internal/auth` | Roles and access bindings, OpenID Connect sign-in, and the cryptography sessions and tokens need |
 | `internal/api` | Runner API, UI API, sign-in, API tokens, access checks, the audit trail and the live event stream |
 | `internal/fakeidp` | An OpenID Connect provider for tests, which can be made to misbehave |
+| `internal/blobstore` | Where artifacts are kept: a directory, or S3-compatible object storage |
+| `internal/findings`, `internal/sbom` | Read SARIF scanner results and CycloneDX SBOMs, treating them as hostile input |
 | `web/` | The React UI, compiled into the binary |
 
 `make test` runs the Go tests with the race detector and type-checks the UI. The tests cover:
@@ -929,6 +1059,10 @@ within the last two minutes) for probes.
 - sign-in against a fake OpenID Connect provider: forged state, stolen codes (PKCE), bad ID tokens,
   open redirects, CSRF, session expiry, API tokens, a permission matrix over every route, the live
   stream, the audit trail, and sign-in across two servers;
+- artifacts: chunked uploads that break off and carry on, checksum mismatches, quotas, pruning by
+  two servers at once, fetching in a fresh workspace, and downloads that are never shown as pages
+  (`make test-s3` adds a real S3-compatible server);
+- security findings: real scanner output, hostile and fuzzed files, and secrets never stored;
 - real containers (`make test-containers`);
 - a real Kubernetes cluster (`make test-kubernetes`).
 
@@ -945,6 +1079,9 @@ Built so far:
 - re-runs from any step, and a record of what each step attempt was given;
 - test reports: JUnit XML and `go test -json`, with flaky and new-failure detection, history and
   trends;
+- artifacts, kept in a directory or S3-compatible storage and fetched by later steps on any runner;
+- security findings from SARIF, new and fixed across runs, with secrets never stored; SBOMs and a
+  component search;
 - Git polling, for pushes and pull requests, and superseding older runs;
 - the pipeline editor: draft runs of unsaved text, and saving to Git as the person who saved;
 - shared libraries of templates and scripts, pinned by Git tag, branch or commit, with

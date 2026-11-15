@@ -90,6 +90,17 @@ spec:
                 secretKeyRef:
                   name: {{ include "launchway.runnerTokenSecretName" . }}
                   key: {{ include "launchway.runnerTokenSecretKey" . }}
+            {{- with ((.Values.config.artifacts | default dict).s3 | default dict).existingSecret }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef: { name: {{ . }}, key: AWS_ACCESS_KEY_ID }
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: { name: {{ . }}, key: AWS_SECRET_ACCESS_KEY }
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef: { name: {{ . }}, key: AWS_SESSION_TOKEN, optional: true }
+            {{- end }}
             {{- with .Values.server.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

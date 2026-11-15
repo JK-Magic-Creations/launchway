@@ -67,7 +67,11 @@ servers from running it without the secrets rule they do not know). Schema 10's
 `reports` is another: a run whose pipeline declares test reports has `runs.min_schema` 10, so a
 schema-9 server leaves it alone rather than run its steps without collecting their reports. The
 test summary schema 10 adds to `step.finished` and `step.canceled` events is a field older servers
-may safely ignore, so it needs no `requires`.
+may safely ignore, so it needs no `requires`. Schema 12's `artifacts`, `fetch`, `reports.findings` and
+`reports.sbom` are handled the same way: runs whose pipeline uses them have `runs.min_schema` 12,
+and the summaries schema 12 adds to finishing events (`findings`, `sbom`, `artifacts`) only
+record. Runners are part of this too: a runner that does not report the feature `artifacts` is
+never given a step that keeps or fetches artifacts, which it would silently skip.
 
 ## Writing a migration
 
