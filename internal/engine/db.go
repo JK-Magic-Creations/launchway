@@ -527,7 +527,71 @@ CREATE INDEX test_cases_run ON test_cases(run_id, step_id, attempt);
 CREATE INDEX test_cases_history ON test_cases(project, test_key, run_number);
 CREATE INDEX test_cases_prune ON test_cases(project, run_number);
 `},
+	// 11 and 12 are taken by work on other branches (deployments, and
+	// artifacts with security findings). These placeholders hold their
+	// places on this branch only; the merge replaces them with the real
+	// migrations.
+	{additive, ``},
+	{additive, ``},
+	// 13: run inputs, loops, schedules, webhooks, and API tokens that are
+	//    limited. A run's input values are in its run.created event (in the
+	//    trigger); its pipeline then declares inputs, so runs.min_schema is
+	//    13 and older servers leave it alone, as they do runs with loops,
+	//    and runs started by a schedule or a webhook.
+	//    schedule_seen records when each schedule (by its key, a hash of what
+	//    it says) was first seen, so it never fires for times before that.
+	//    schedule_fires claims each firing: the primary key lets exactly one
+	//    server act on it, as refs_seen does for pushes, and the row says
+	//    what came of it. webhook_deliveries remembers the deliveries of Git
+	//    host webhooks (to refuse replays) and the idempotency keys of
+	//    webhook triggers (to answer a repeat with the run the first call
+	//    started).
+	//    api_tokens gains the role and projects a token is limited to, and
+	//    where it was last used from. A limited token's hash is stored with
+	//    a "v2:" prefix, which servers older than this never look up: they
+	//    refuse the token rather than grant it its owner's full rights.
+	//    Compatibility: additive: new tables, and new columns with defaults
+	//    that older servers do not need. No new event type.
+	{additive, `
+CREATE TABLE schedule_seen (
+  project    TEXT    NOT NULL,
+  sched_key  TEXT    NOT NULL,
+  first_seen {{BIG}} NOT NULL,
+  PRIMARY KEY (project, sched_key)
+);
+
+CREATE TABLE schedule_fires (
+  project   TEXT    NOT NULL,
+  sched_key TEXT    NOT NULL,
+  fire_at   {{BIG}} NOT NULL,
+  at        {{BIG}} NOT NULL,
+  outcome   TEXT    NOT NULL,
+  detail    TEXT    NOT NULL DEFAULT '',
+  run_id    TEXT    NOT NULL DEFAULT '',
+  PRIMARY KEY (project, sched_key, fire_at)
+);
+CREATE INDEX schedule_fires_project ON schedule_fires(project, at);
+
+CREATE TABLE webhook_deliveries (
+  project   TEXT    NOT NULL,
+  hook      TEXT    NOT NULL,
+  delivery  TEXT    NOT NULL,
+  at        {{BIG}} NOT NULL,
+  body_hash TEXT    NOT NULL DEFAULT '',
+  run_id    TEXT    NOT NULL DEFAULT '',
+  PRIMARY KEY (project, hook, delivery)
+);
+CREATE INDEX webhook_deliveries_at ON webhook_deliveries(at);
+
+ALTER TABLE api_tokens ADD COLUMN role TEXT NOT NULL DEFAULT '';
+ALTER TABLE api_tokens ADD COLUMN projects TEXT NOT NULL DEFAULT '';
+ALTER TABLE api_tokens ADD COLUMN last_used_from TEXT NOT NULL DEFAULT '';
+`},
 }
+
+// schemaTriggers is the schema that brought run inputs, loops, schedules,
+// webhooks and limited API tokens.
+const schemaTriggers = 13
 
 // schemaTests is the schema that brought test reports.
 const schemaTests = 10

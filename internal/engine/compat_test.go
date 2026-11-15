@@ -68,8 +68,10 @@ func TestMigrationsDeclareTheirCompatibility(t *testing.T) {
 // declares test reports, which it does not know, while a server of schema N
 // finishes it and stores its results. A run of its own that a newer server
 // cancelled by superseding it reads as an ordinary cancelled run.
+// It checks schema 10 (test reports) against a build of schema 9;
+// TestOlderBuildLeavesTriggerRunsAlone checks schema 13 against 12.
 func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
-	n := len(migrations)
+	n := schemaTests
 	if migrations[n-1].compat != additive {
 		t.Skipf("migration %d is breaking: no older build may run against it", n)
 	}
@@ -79,7 +81,7 @@ func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	// This build creates the database and a finished run with test
 	// results, and starts a run whose pipeline declares test reports.
 	var newLog syncBuffer
-	cur := mustOpenAs(t, addr, clk, 0, &newLog)
+	cur := mustOpenAs(t, addr, clk, n, &newLog)
 	orig := create(t, cur, reportsLinear, Trigger{Event: "manual"})
 	for range 3 {
 		finishTests(t, cur, take(t, cur), "succeeded", junitFile("reports/unit.xml", "pass", "fail"))

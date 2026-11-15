@@ -126,6 +126,9 @@ type RunDetail struct {
 	// NotUnderstood lists what in the run this server does not understand
 	// (see RunState.NotUnderstood); empty when it understands everything.
 	NotUnderstood []string `json:"not_understood"`
+	// TriggerDetail is what the run was started with: its input values,
+	// and the schedule or webhook that started it. Nil if none.
+	TriggerDetail *TriggerDetail `json:"trigger_detail,omitempty"`
 }
 
 // RerunBrief is a re-run as listed with the run it re-runs.
@@ -420,6 +423,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		d.NotUnderstood = []string{}
 	}
 	d.NeedsNewerServer = d.NeedsNewerServer || len(st.NotUnderstood) > 0
+	d.TriggerDetail = triggerDetail(st.Trigger)
 	inputs, err := e.stepInputs(id, "")
 	if err != nil {
 		return nil, err

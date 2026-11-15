@@ -411,6 +411,12 @@ type NewRun struct {
 	// says whether its steps may read secrets. Such runs come from code
 	// anyone who can open a pull request may have written.
 	PullRequestSecrets bool
+	// Fire, for a run of event schedule, is the firing it is for, claimed
+	// with the run like Push; Delivery, for a run of event webhook, is the
+	// caller's idempotency key, if it sent one. CreateRun returns
+	// ErrAlreadyClaimed if another server or call claimed it first.
+	Fire     *Firing
+	Delivery *Delivery
 }
 
 // checkPullRequest checks the trigger of a pull-request run.
@@ -457,6 +463,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		nr.Trigger.Event = pipeline.EventManual
 	}
 	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
+		return nil, err
+	}
+	if err := e.checkNewRun(&nr); err != nil {
 		return nil, err
 	}
 	if nr.Pipeline.UsesSchema10() && !e.knows(schemaTests) {
@@ -513,6 +522,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		var number int
 		if err := c.tx.QueryRow(`INSERT INTO run_counters(project, last) VALUES(?, 1)
 			ON CONFLICT(project) DO UPDATE SET last = run_counters.last + 1 RETURNING last`, nr.Project).Scan(&number); err != nil {
+			return err
+		}
+		if err := c.claimNewRun(&nr, number); err != nil {
 			return err
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: nr.Pipeline, Trigger: &trig, Source: &src, Draft: draft,
@@ -1111,6 +1123,7 @@ func (e *Engine) reaper(ctx context.Context) {
 				pruned = now
 				e.forgetRunners()
 				e.pruneTests()
+				e.PruneTriggers(now.Add(-7 * 24 * time.Hour).UnixMilli())
 			}
 		}
 	}
@@ -1207,6 +1220,9 @@ type cmd struct {
 	// schemaBefore is the run's Schema before this command, so that
 	// runs.min_schema is written only when it changes.
 	schemaBefore int
+	// failed is an error met where it could not be returned (in advance);
+	// the transaction is rolled back with it.
+	failed error
 }
 
 func (c *cmd) emit(t EventType, p Payload) {
@@ -1334,6 +1350,9 @@ func (e *Engine) attemptTx(runID string, create bool, fn func(c *cmd) error) (*c
 	}
 	if err := fn(c); err != nil {
 		return nil, err
+	}
+	if c.failed != nil {
+		return nil, c.failed
 	}
 	if len(c.events) > 0 {
 		if err := c.persist(); err != nil {
@@ -1572,7 +1591,7 @@ func (c *cmd) advance() {
 	}
 	ctx := st.Trigger.Context()
 	for changed := true; changed; {
-		changed = false
+		changed = c.failFast()
 		for _, id := range st.Order {
 			s := st.Steps[id]
 			if st.CancelRequested && (s.Status == StepPending || s.Status == StepQueuedS || s.Status == StepWaitingS) {
@@ -1604,6 +1623,8 @@ func (c *cmd) advance() {
 			case !def.When.Match(ctx):
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: "its when condition did not match"})
 				changed = true
+			case c.loopHolds(id):
+				// Its loop has max_parallel members going; it waits its turn.
 			case def.IsApproval():
 				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
 				changed = true

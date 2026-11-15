@@ -248,6 +248,13 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("a pipeline key of schema %d (reports)", schemaTests)
 			}
 		}
+		// Run inputs, loops, schedules and webhooks (see usesSchema13).
+		if usesSchema13(p) {
+			st.Schema = max(st.Schema, schemaTriggers)
+			if !st.understands(schemaTriggers) {
+				st.notUnderstood("a pipeline key or trigger of schema %d (inputs, for_each, a schedule or a webhook)", schemaTriggers)
+			}
+		}
 		return true
 	}
 	if st.Steps == nil {
