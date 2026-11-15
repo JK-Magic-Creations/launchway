@@ -734,6 +734,7 @@ a.btn:hover { text-decoration: none; }
   .envgrid-svc { background: var(--surface-2); }
   .envgrid-svc-proj { display: inline; margin-left: 6px; }
   .envgrid-cell-env { display: block; font-weight: 700; margin-bottom: 6px; }
+}
 
 /* ---- artifacts, security findings and SBOMs ---- */
 :root {
