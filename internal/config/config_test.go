@@ -232,3 +232,29 @@ projects:
 		t.Fatalf("err %v", err)
 	}
 }
+
+// Helm reads values as YAML 1.1 and renders an unquoted `on` as "true".
+func TestUnquotedOnFromHelmIsUnderstood(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "launchway.yaml")
+	os.WriteFile(path, []byte(`
+libraries:
+  - name: lib
+    repo: https://git.example.com/lib.git
+projects:
+  - name: svc
+    repo: https://git.example.com/svc.git
+    pipeline:
+      library: lib
+      version: v1
+      template: ci
+      "true": { push: { branches: [main] } }
+`), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pp := c.Projects[0].Pipeline
+	if pp.On.Push == nil || len(pp.On.Push.Branches) != 1 || pp.On.Push.Branches[0] != "main" {
+		t.Fatalf("on = %+v", pp.On)
+	}
+}

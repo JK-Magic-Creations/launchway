@@ -162,12 +162,19 @@ type ProjectPipelineConfig struct {
 	Version  string            `yaml:"version"` // a tag, branch or full commit id
 	Template string            `yaml:"template"`
 	With     map[string]string `yaml:"with"`
-	On       struct {
-		Push *struct {
-			Branches []string `yaml:"branches"`
-			Tags     []string `yaml:"tags"`
-		} `yaml:"push"`
-	} `yaml:"on"`
+	On       ProjectPipelineOn `yaml:"on"`
+	// Tools that read YAML 1.1 (Helm values among them) turn a bare `on`
+	// key into the boolean true and write it back as "true". Take that
+	// spelling for what it was meant to be rather than refusing to start.
+	OnAsTrue *ProjectPipelineOn `yaml:"true"`
+}
+
+// ProjectPipelineOn says which events start a configured pipeline.
+type ProjectPipelineOn struct {
+	Push *struct {
+		Branches []string `yaml:"branches"`
+		Tags     []string `yaml:"tags"`
+	} `yaml:"push"`
 }
 
 // RunnerConfig controls the runner built into the server.
@@ -244,6 +251,12 @@ func Load(path string) (*Config, error) {
 				c.Database = filepath.Join(base, c.Database)
 			}
 			for i, p := range c.Projects {
+				if pp := p.Pipeline; pp != nil && pp.OnAsTrue != nil {
+					if pp.On.Push != nil {
+						return nil, fmt.Errorf("%s: project %s: pipeline has both `on` and `true` (an unquoted on); keep one", path, p.Name)
+					}
+					pp.On, pp.OnAsTrue = *pp.OnAsTrue, nil
+				}
 				if isLocalPath(p.Repo) && !filepath.IsAbs(p.Repo) {
 					c.Projects[i].Repo = filepath.Join(base, p.Repo)
 				}
