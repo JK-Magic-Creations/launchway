@@ -121,6 +121,13 @@ type Payload struct {
 	// reports said, in brief; the individual results are in test_cases.
 	// Older servers ignore it, which is harmless: it only records.
 	Tests *TestSummary `json:"tests,omitempty"`
+	// step.finished and step.canceled (schema 12): what the attempt's SARIF
+	// files and SBOM said, in brief, and the artifacts it kept; the details
+	// are in findings, sbom_components and artifacts. Older servers ignore
+	// them, which is harmless: they only record.
+	Findings  *FindingsSummary  `json:"findings,omitempty"`
+	SBOM      *SBOMSummary      `json:"sbom,omitempty"`
+	Artifacts []ArtifactSummary `json:"artifacts,omitempty"`
 }
 
 // Superseder is the run that superseded another.

@@ -248,6 +248,14 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("a pipeline key of schema %d (reports)", schemaTests)
 			}
 		}
+		// Artifacts, fetch, and findings and SBOM reports: a server that
+		// does not know them would run a step without the files it fetches.
+		if p.Pipeline.UsesSchema12() {
+			st.Schema = max(st.Schema, schemaArtifacts)
+			if !st.understands(schemaArtifacts) {
+				st.notUnderstood("a pipeline key of schema %d (artifacts, fetch, reports.findings or reports.sbom)", schemaArtifacts)
+			}
+		}
 		return true
 	}
 	if st.Steps == nil {

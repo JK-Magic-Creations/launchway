@@ -527,10 +527,193 @@ CREATE INDEX test_cases_run ON test_cases(run_id, step_id, attempt);
 CREATE INDEX test_cases_history ON test_cases(project, test_key, run_number);
 CREATE INDEX test_cases_prune ON test_cases(project, run_number);
 `},
+	// 11: RESERVED for deployments, built on another branch at the same
+	//    time; that branch's migration 11 replaces this placeholder when the
+	//    two are merged. On its own it changes nothing.
+	//    Compatibility: additive: no SQL.
+	{additive, ``},
+	// 12: artifacts, security findings and SBOMs (see artifacts.go,
+	//    findings.go). Artifacts are files a step keeps: their content is in
+	//    a blob store (a directory, or S3-compatible object storage when
+	//    several servers run), described here. artifacts has one row per
+	//    artifact of a step attempt; artifact_files its files; artifact_blobs
+	//    the stored contents, found again by SHA-256 so that a file kept twice
+	//    is stored once, with the state of uploads in progress so that any
+	//    server can take the next chunk; artifact_usage the bytes each project
+	//    keeps, for its quota. Findings and SBOM components are kept like
+	//    test results: a summary in the step.finished or step.canceled event
+	//    (Payload.Findings, Payload.SBOM, Payload.Artifacts) and derived
+	//    tables beside the events, pruned oldest run first per project.
+	//    Compatibility: additive: new tables only, and no new event type.
+	//    Older servers ignore the tables and the summary fields (they only
+	//    record). Runs whose pipeline uses artifacts, fetch, reports.findings
+	//    or reports.sbom have min_schema 12, so older servers leave them
+	//    alone, as they would have to: they cannot read those keys.
+	{additive, `
+CREATE TABLE artifacts (
+  id          TEXT    PRIMARY KEY,
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  attempt     INTEGER NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  name        TEXT    NOT NULL,
+  kind        TEXT    NOT NULL DEFAULT '',
+  status      TEXT    NOT NULL,
+  files       INTEGER NOT NULL DEFAULT 0,
+  bytes       {{BIG}} NOT NULL DEFAULT 0,
+  retain_ms   {{BIG}} NOT NULL DEFAULT 0,
+  created_at  {{BIG}} NOT NULL,
+  kept_at     {{BIG}} NOT NULL DEFAULT 0,
+  expires_at  {{BIG}} NOT NULL DEFAULT 0,
+  ended_at    {{BIG}} NOT NULL DEFAULT 0,
+  ended_by    TEXT    NOT NULL DEFAULT '',
+  note        TEXT    NOT NULL DEFAULT '',
+  UNIQUE (run_id, step_id, attempt, name)
+);
+CREATE INDEX artifacts_status ON artifacts(status, expires_at);
+CREATE INDEX artifacts_project ON artifacts(project, run_number);
+
+CREATE TABLE artifact_files (
+  artifact_id TEXT    NOT NULL,
+  path        TEXT    NOT NULL,
+  size        {{BIG}} NOT NULL,
+  sha256      TEXT    NOT NULL,
+  mode        INTEGER NOT NULL DEFAULT 420,
+  blob_id     TEXT    NOT NULL DEFAULT '',
+  PRIMARY KEY (artifact_id, path)
+);
+CREATE INDEX artifact_files_blob ON artifact_files(blob_id);
+
+CREATE TABLE artifact_blobs (
+  id          TEXT    PRIMARY KEY,
+  sha256      TEXT    NOT NULL,
+  size        {{BIG}} NOT NULL,
+  store_key   TEXT    NOT NULL,
+  state       TEXT    NOT NULL,
+  upload_id   TEXT    NOT NULL DEFAULT '',
+  received    {{BIG}} NOT NULL DEFAULT 0,
+  hash_state  TEXT    NOT NULL DEFAULT '',
+  parts       TEXT    NOT NULL DEFAULT '[]',
+  created_at  {{BIG}} NOT NULL,
+  used_at     {{BIG}} NOT NULL
+);
+CREATE INDEX artifact_blobs_sha ON artifact_blobs(sha256, size);
+CREATE INDEX artifact_blobs_state ON artifact_blobs(state, used_at);
+
+CREATE TABLE artifact_usage (
+  project     TEXT    PRIMARY KEY,
+  bytes       {{BIG}} NOT NULL DEFAULT 0
+);
+
+CREATE TABLE finding_reports (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  attempt     INTEGER NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  at          {{BIG}} NOT NULL,
+  total       INTEGER NOT NULL DEFAULT 0,
+  critical    INTEGER NOT NULL DEFAULT 0,
+  high        INTEGER NOT NULL DEFAULT 0,
+  medium      INTEGER NOT NULL DEFAULT 0,
+  low         INTEGER NOT NULL DEFAULT 0,
+  unknown     INTEGER NOT NULL DEFAULT 0,
+  suppressed  INTEGER NOT NULL DEFAULT 0,
+  truncated   INTEGER NOT NULL DEFAULT 0,
+  stored      INTEGER NOT NULL DEFAULT 0,
+  pruned      INTEGER NOT NULL DEFAULT 0,
+  tools       TEXT    NOT NULL DEFAULT '[]',
+  detail      TEXT    NOT NULL DEFAULT '{}',
+  PRIMARY KEY (run_id, step_id, attempt)
+);
+CREATE INDEX finding_reports_project ON finding_reports(project, run_number);
+
+CREATE TABLE findings (
+  id           {{ID}},
+  run_id       TEXT    NOT NULL,
+  step_id      TEXT    NOT NULL,
+  attempt      INTEGER NOT NULL,
+  project      TEXT    NOT NULL,
+  run_number   INTEGER NOT NULL,
+  fingerprint  TEXT    NOT NULL,
+  tool         TEXT    NOT NULL,
+  rule_id      TEXT    NOT NULL,
+  severity     TEXT    NOT NULL,
+  level        TEXT    NOT NULL DEFAULT '',
+  message      TEXT    NOT NULL DEFAULT '',
+  file         TEXT    NOT NULL DEFAULT '',
+  start_line   INTEGER NOT NULL DEFAULT 0,
+  end_line     INTEGER NOT NULL DEFAULT 0,
+  start_column INTEGER NOT NULL DEFAULT 0,
+  secret       INTEGER NOT NULL DEFAULT 0,
+  report_file  TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX findings_run ON findings(run_id, step_id, attempt);
+CREATE INDEX findings_history ON findings(project, fingerprint, run_number);
+CREATE INDEX findings_prune ON findings(project, run_number);
+
+CREATE TABLE finding_rules (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  attempt     INTEGER NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  tool        TEXT    NOT NULL,
+  rule_id     TEXT    NOT NULL,
+  name        TEXT    NOT NULL DEFAULT '',
+  short       TEXT    NOT NULL DEFAULT '',
+  full_text   TEXT    NOT NULL DEFAULT '',
+  help        TEXT    NOT NULL DEFAULT '',
+  help_uri    TEXT    NOT NULL DEFAULT '',
+  tags        TEXT    NOT NULL DEFAULT '[]',
+  PRIMARY KEY (run_id, step_id, attempt, tool, rule_id)
+);
+CREATE INDEX finding_rules_prune ON finding_rules(project, run_number);
+
+CREATE TABLE sbom_reports (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  attempt     INTEGER NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  at          {{BIG}} NOT NULL,
+  components  INTEGER NOT NULL DEFAULT 0,
+  stored      INTEGER NOT NULL DEFAULT 0,
+  truncated   INTEGER NOT NULL DEFAULT 0,
+  pruned      INTEGER NOT NULL DEFAULT 0,
+  licences    TEXT    NOT NULL DEFAULT '{}',
+  detail      TEXT    NOT NULL DEFAULT '{}',
+  PRIMARY KEY (run_id, step_id, attempt)
+);
+CREATE INDEX sbom_reports_project ON sbom_reports(project, run_number);
+
+CREATE TABLE sbom_components (
+  id          {{ID}},
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  attempt     INTEGER NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  name        TEXT    NOT NULL,
+  name_key    TEXT    NOT NULL,
+  version     TEXT    NOT NULL DEFAULT '',
+  type        TEXT    NOT NULL DEFAULT '',
+  purl        TEXT    NOT NULL DEFAULT '',
+  licences    TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX sbom_components_run ON sbom_components(run_id, step_id, attempt);
+CREATE INDEX sbom_components_name ON sbom_components(name_key, version);
+CREATE INDEX sbom_components_prune ON sbom_components(project, run_number);
+`},
 }
 
 // schemaTests is the schema that brought test reports.
 const schemaTests = 10
+
+// schemaArtifacts is the schema that brought artifacts, security findings
+// and SBOMs.
+const schemaArtifacts = 12
 
 // schemaPullRequests is the schema that brought pull-request runs,
 // superseding, and the columns that record why a run was cancelled.

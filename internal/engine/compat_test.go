@@ -65,7 +65,7 @@ func TestMigrationsDeclareTheirCompatibility(t *testing.T) {
 // The heart of it: a database at schema N, written by this build, is
 // opened by a build that knows N-1. It starts, says once that the database
 // is newer, runs a run end to end, and leaves alone a run whose pipeline
-// declares test reports, which it does not know, while a server of schema N
+// uses the newest schema's keys (findings, now), which it does not know, while a server of schema N
 // finishes it and stores its results. A run of its own that a newer server
 // cancelled by superseding it reads as an ordinary cancelled run.
 func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
@@ -80,11 +80,11 @@ func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	// results, and starts a run whose pipeline declares test reports.
 	var newLog syncBuffer
 	cur := mustOpenAs(t, addr, clk, 0, &newLog)
-	orig := create(t, cur, reportsLinear, Trigger{Event: "manual"})
+	orig := create(t, cur, newestLinear, Trigger{Event: "manual"})
 	for range 3 {
 		finishTests(t, cur, take(t, cur), "succeeded", junitFile("reports/unit.xml", "pass", "fail"))
 	}
-	re := struct{ ID string }{create(t, cur, reportsLinear, Trigger{Event: "manual"})}
+	re := struct{ ID string }{create(t, cur, newestLinear, Trigger{Event: "manual"})}
 	if info, _ := cur.Schema(context.Background()); info.Database != n || info.Minimum > n-1 {
 		t.Fatalf("schema after migrating: %+v", info)
 	}
@@ -110,14 +110,14 @@ func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 		if !d.NeedsNewerServer || len(d.NotUnderstood) == 0 || !strings.Contains(d.NotUnderstood[0], "reports") {
 			t.Fatalf("older build's view of a run with reports: needs newer %v, not understood %v", d.NeedsNewerServer, d.NotUnderstood)
 		}
-		if d.Tests != nil {
-			t.Fatalf("older build read test totals it does not know: %+v", d.Tests)
+		if d.Findings != nil {
+			t.Fatalf("older build read finding counts it does not know: %+v", d.Findings)
 		}
 	}
 	if err := old.Cancel(re.ID, "ann"); !errors.Is(err, ErrNeedsNewer) {
 		t.Fatalf("older build canceled a run it does not understand: %v", err)
 	}
-	if _, err := old.CreateRun(NewRun{Project: "demo", Pipeline: parse(t, reportsLinear), Trigger: Trigger{Event: "manual"},
+	if _, err := old.CreateRun(NewRun{Project: "demo", Pipeline: parse(t, newestLinear), Trigger: Trigger{Event: "manual"},
 		Source: Source{Kind: "dir", Path: "/tmp"}}); !errors.Is(err, ErrConflict) {
 		t.Fatalf("older build made a run with reports, which it does not know: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	// A push run the older build made is superseded by the newer build;
 	// the older build reads it as cancelled, and lists every run.
 	pushed := create(t, old, linear, Trigger{Event: "push", Ref: "refs/heads/dev", Branch: "dev", SHA: "d1"})
-	create(t, cur, "supersede: true\n"+reportsLinear, Trigger{Event: "push", Ref: "refs/heads/dev", Branch: "dev", SHA: "d2"})
+	create(t, cur, "supersede: true\n"+newestLinear, Trigger{Event: "push", Ref: "refs/heads/dev", Branch: "dev", SHA: "d2"})
 	want(t, statuses(t, old, pushed), "run", "canceled", "a", "canceled")
 	if runs, err := old.ListRuns(RunFilter{}); err != nil || len(runs) != 4 {
 		t.Fatalf("older build's list: %d runs, %v", len(runs), err)
@@ -176,7 +176,7 @@ func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	for range 6 {
 		j := take(t, cur)
 		if j.RunID == re.ID {
-			if j.Reports == nil || j.Reports.Tests[0] != "reports/*.xml" {
+			if j.Reports == nil || j.Reports.Tests[0] != "reports/*.xml" || j.Reports.Findings[0] != "reports/*.sarif" {
 				t.Fatalf("the newer build's job for a step with reports: %+v", j.Reports)
 			}
 			finishTests(t, cur, j, "succeeded", junitFile("reports/unit.xml", "pass", "pass", "skip"))

@@ -85,6 +85,23 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/tokens":                         {"POST", "/api/v1/tokens", `{"name":"matrix"}`, [6]int{401, 201, 201, 201, 201, 201}},
 	"DELETE /api/v1/tokens/{id}":                  {"DELETE", "/api/v1/tokens/tok_nope", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/audit":                           {"GET", "/api/v1/audit", "", [6]int{401, 403, 403, 403, 403, 200}},
+
+	// Artifacts, findings and SBOMs. {pay} keeps no artifact: 404 after the
+	// permission check (see TestArtifactAccess).
+	"POST /api/runner/v1/artifacts/begin":    {"POST", "/api/runner/v1/artifacts/begin", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"PUT /api/runner/v1/artifacts/chunk":     {"PUT", "/api/runner/v1/artifacts/chunk?offset=0", "x", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/artifacts/commit":   {"POST", "/api/runner/v1/artifacts/commit", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/artifacts/download": {"POST", "/api/runner/v1/artifacts/download", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"GET /api/v1/runs/{id}/artifacts":        {"GET", "/api/v1/runs/{pay}/artifacts", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/artifacts/{artifact}/file": {"GET", "/api/v1/runs/{pay}/artifacts/art_nope/file?path=a", "",
+		[6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/runs/{id}/artifacts/{artifact}/archive": {"GET", "/api/v1/runs/{pay}/artifacts/art_nope/archive", "",
+		[6]int{401, 404, 404, 404, 404, 404}},
+	"DELETE /api/v1/runs/{id}/artifacts/{artifact}": {"DELETE", "/api/v1/runs/{pay}/artifacts/art_nope", "",
+		[6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/runs/{id}/findings":       {"GET", "/api/v1/runs/{pay}/findings", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/security": {"GET", "/api/v1/projects/pay-api/security", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/components":               {"GET", "/api/v1/components?name=left-pad", "", [6]int{401, 200, 200, 200, 200, 200}},
 }
 
 // draftBody starts a draft run that waits for an approval, so it needs no

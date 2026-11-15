@@ -69,6 +69,10 @@ type Options struct {
 	// Tests limits what is kept of test reports; zero fields take the
 	// defaults (see TestLimits).
 	Tests TestLimits
+	// Artifacts configures where artifacts are kept and their limits;
+	// Findings limits what is kept of security findings and SBOMs.
+	Artifacts ArtifactOptions
+	Findings  FindingLimits
 
 	// schema, for tests, makes the engine behave as a build that knows only
 	// the first schema migrations and their events; 0 means every one (or
@@ -90,6 +94,8 @@ type Engine struct {
 	instance      string // tags this process's notifications, so it can ignore its own
 	channel       string // the PostgreSQL notification channel
 	tests         TestLimits
+	arts          ArtifactOptions
+	finds         FindingLimits
 
 	// writeMu serialises writes on SQLite, which allows one writer at a time
 	// anyway; waiting here is fairer and cheaper than SQLite's busy loop. On
@@ -113,6 +119,10 @@ type RunnerInfo struct {
 	Name     string `json:"name"`
 	Executor string `json:"executor"`
 	Version  string `json:"version"`
+	// Features are what the runner can do beyond the basics, separated by
+	// spaces, such as FeatureArtifacts; steps that need a feature go only
+	// to runners that have it. (A string keeps RunnerInfo comparable.)
+	Features string `json:"features,omitempty"`
 }
 
 // Job is everything a runner needs to execute one step attempt.
@@ -152,6 +162,10 @@ type Job struct {
 	// runner collects once the step ends, and how much the server accepts.
 	// A runner that does not know it collects nothing.
 	Reports *JobReports `json:"reports,omitempty"`
+	// Artifacts says what the runner keeps once the step has run, and Fetch
+	// what it puts in the workspace before (schema 12).
+	Artifacts *JobArtifacts `json:"artifacts,omitempty"`
+	Fetch     []JobFetch    `json:"fetch,omitempty"`
 }
 
 // JobReports is what a runner collects after a step.
@@ -160,6 +174,10 @@ type JobReports struct {
 	// MaxBytes is how many bytes of report files the server accepts for
 	// one attempt; the runner sends no more.
 	MaxBytes int64 `json:"max_bytes"`
+	// Findings are globs of SARIF files, and FindingsMaxBytes how many
+	// bytes of them the server accepts (schema 12).
+	Findings         []string `json:"findings,omitempty"`
+	FindingsMaxBytes int64    `json:"findings_max_bytes,omitempty"`
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -177,6 +195,9 @@ type Result struct {
 	// collected nothing (a runner that does not know reports, or one that is
 	// shutting down).
 	Tests *CollectedReports `json:"tests,omitempty"`
+	// Findings, for a step that declares reports.findings, are the SARIF
+	// files the runner collected, like Tests (schema 12).
+	Findings *CollectedReports `json:"findings,omitempty"`
 }
 
 // CollectedReports are the report files a runner found after a step, and
@@ -237,6 +258,14 @@ func Open(o Options) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+	arts, err := o.Artifacts.withDefaults()
+	if err != nil {
+		return nil, err
+	}
+	finds, err := o.Findings.withDefaults()
+	if err != nil {
+		return nil, err
+	}
 	if o.schema > 0 {
 		known = min(o.schema, len(migrations))
 	}
@@ -248,6 +277,8 @@ func Open(o Options) (*Engine, error) {
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
 		schema:   known,
 		tests:    tests,
+		arts:     arts,
+		finds:    finds,
 		selfOK:   o.AllowSelfApproval == nil || *o.AllowSelfApproval,
 		instance: ids.New("srv"),
 		wake:     make(chan struct{}),
@@ -262,6 +293,10 @@ func Open(o Options) (*Engine, error) {
 		e.channel = channelFor(schema)
 	}
 	if err := e.recoverLeases(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := e.checkArtifactStore(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -458,6 +493,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	}
 	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
 		return nil, err
+	}
+	if nr.Pipeline.UsesSchema12() && !e.knows(schemaArtifacts) {
+		return nil, fmt.Errorf("%w: this server does not know artifacts, fetch or findings (schema %d)", ErrConflict, schemaArtifacts)
 	}
 	if nr.Pipeline.UsesSchema10() && !e.knows(schemaTests) {
 		// A release that old cannot even read the pipeline; a build limited
@@ -784,6 +822,9 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 				return nil // someone else got it, or it changed
 			}
 			prev := c.st.Runner
+			if !c.runnerCan(r, cd.step) {
+				return nil // it needs a runner that knows artifacts
+			}
 			if prev != r.ID {
 				if ownOnly {
 					return nil
@@ -806,6 +847,9 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			}
 			c.emit(StepLeased, p)
 			job = c.job(cd.step, leaseID)
+			if err := c.addArtifactsToJob(job); err != nil {
+				return err
+			}
 			if prev != "" && prev != r.ID {
 				job.TakenOverFrom = prev
 			}
@@ -932,6 +976,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 	if res.Tests != nil && e.knows(schemaTests) && (res.Outcome == "succeeded" || res.Outcome == "failed" || res.Outcome == "canceled") {
 		tests = e.parseTests(res.Tests)
 	}
+	prep12 := e.prepare12(l, res)
 	return e.withRun(l.runID, func(c *cmd) error {
 		s := c.st.Steps[l.stepID]
 		if s == nil || s.LeaseID != leaseID || !s.Status.Active() {
@@ -947,6 +992,9 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 				return err
 			}
 		}
+		if err := c.finish12(l, res, &p, prep12); err != nil {
+			return err
+		}
 		switch res.Outcome {
 		case "succeeded":
 			p.Outcome = string(StepSucceeded)
@@ -955,6 +1003,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
 				p.Tests = nil // the machinery failed; nothing it collected is kept
+				p.Findings, p.SBOM, p.Artifacts = nil, nil, nil
 				c.dropTests(l.stepID, l.attempt)
 				c.emit(StepCanceled, p)
 			} else {
@@ -1111,6 +1160,8 @@ func (e *Engine) reaper(ctx context.Context) {
 				pruned = now
 				e.forgetRunners()
 				e.pruneTests()
+				e.pruneFindings()
+				e.pruneArtifacts()
 			}
 		}
 	}
@@ -1204,6 +1255,8 @@ type cmd struct {
 	// tests are the test results to store with this command's events, by
 	// step attempt (see keepTests).
 	tests map[stepAttempt][]storedCase
+	// schema12 is what schema 12 stores with the command's events.
+	schema12 *schema12Data
 	// schemaBefore is the run's Schema before this command, so that
 	// runs.min_schema is written only when it changes.
 	schemaBefore int
@@ -1487,6 +1540,11 @@ func (c *cmd) persist() error {
 	}
 	if c.e.knows(schemaTests) {
 		if err := c.persistSchema10(); err != nil {
+			return err
+		}
+	}
+	if c.e.knows(schemaArtifacts) {
+		if err := c.persistSchema12(); err != nil {
 			return err
 		}
 	}

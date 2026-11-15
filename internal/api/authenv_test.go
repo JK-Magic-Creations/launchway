@@ -110,6 +110,8 @@ type envOpts struct {
 	// pipelines may use.
 	projects  []source.Project
 	libraries []source.Library
+	// artifacts, if set, is where artifacts are kept and how.
+	artifacts *engine.ArtifactOptions
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -126,7 +128,11 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	}
 	o.idp.Now = o.clk.Now
 	no := false
-	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no})
+	var arts engine.ArtifactOptions
+	if o.artifacts != nil {
+		arts = *o.artifacts
+	}
+	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no, Artifacts: arts})
 	if err != nil {
 		t.Fatal(err)
 	}

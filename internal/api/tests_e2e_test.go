@@ -126,7 +126,7 @@ steps:
 // read; the runner then reports the outcome without its files.
 func TestOversizedResultsAreRefused(t *testing.T) {
 	e := setup(t, 5*time.Second)
-	limit := e.eng.TestLimits().MaxUploadBytes*4/3 + 4<<20
+	limit := e.eng.ResultLimit()
 	req, _ := http.NewRequest(http.MethodPost, e.srv.URL+"/api/runner/v1/finish", io.LimitReader(zeros{}, limit+1))
 	req.ContentLength = limit + 1
 	req.Header.Set("Authorization", "Bearer secret")

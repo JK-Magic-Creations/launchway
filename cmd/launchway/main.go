@@ -28,6 +28,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
@@ -145,8 +146,12 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return fmt.Errorf("%s: runner.%w", *cfgPath, err)
 	}
+	artifactOpts, findingLimits, err := artifactSettings(cfg, log)
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
 	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
-		Tests: testLimits})
+		Tests: testLimits, Artifacts: artifactOpts, Findings: findingLimits})
 	if err != nil {
 		return err
 	}
@@ -532,7 +537,12 @@ func cmdRun(args []string) error {
 	defer os.RemoveAll(tmp)
 
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	eng, err := engine.Open(engine.Options{Database: filepath.Join(tmp, "run.db"), Logger: quiet})
+	localStore, err := blobstore.NewFilesystem(filepath.Join(tmp, "artifacts"))
+	if err != nil {
+		return err
+	}
+	eng, err := engine.Open(engine.Options{Database: filepath.Join(tmp, "run.db"), Logger: quiet,
+		Artifacts: engine.ArtifactOptions{Store: localStore}})
 	if err != nil {
 		return err
 	}

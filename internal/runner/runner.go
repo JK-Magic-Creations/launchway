@@ -64,6 +64,9 @@ func (r *Runner) Run(ctx context.Context) error {
 		r.SecretWait = 30 * time.Second
 	}
 	r.wsLocks = map[string]*sync.Mutex{}
+	if !r.Info.Has(engine.FeatureArtifacts) {
+		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureArtifacts)
+	}
 	abs, err := filepath.Abs(r.DataDir)
 	if err != nil {
 		return err
@@ -268,7 +271,8 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	// canceled or timed out; not when the server has moved on, nor when the
 	// runner is shutting down (the step will run again elsewhere).
 	if collect != nil && !wasLost && parent.Err() == nil {
-		res.Tests = collect()
+		got := collect(outcomeOf(res, wasRequested))
+		res.Tests, res.Findings = got.tests, got.findings
 	}
 	close(bgStop)
 	<-bgDone
@@ -279,7 +283,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	case wasLost:
 		res = engine.Result{} // the server already moved on; nothing to report
 	case wasRequested:
-		res = engine.Result{Outcome: "canceled", Error: "canceled", Tests: res.Tests}
+		res = engine.Result{Outcome: "canceled", Error: "canceled", Tests: res.Tests, Findings: res.Findings}
 	case parent.Err() != nil:
 		res = engine.Result{Outcome: "canceled", Error: "the runner is shutting down"}
 		sys("The runner is shutting down; the step will be run again.")
@@ -290,6 +294,12 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	}
 	for i := 0; i < 5; i++ {
 		err := r.Client.Finish(report, job.LeaseID, res)
+		if errors.Is(err, ErrTooLarge) && res.Findings != nil {
+			log.Warn("the server refused the step's SARIF files as too large; reporting the result without them", "err", err)
+			res.Findings = &engine.CollectedReports{Files: []engine.ReportFile{},
+				Notes: append(res.Findings.Notes, "the server refused the SARIF files as too large, so none were kept")}
+			continue
+		}
 		if errors.Is(err, ErrTooLarge) && res.Tests != nil {
 			// The server would not take the report files; the outcome
 			// matters more. Report it without them.
@@ -312,7 +322,27 @@ const collectTimeout = 2 * time.Minute
 
 // collector returns what collects a step's report files once it has run,
 // or nil if the step declares none.
-func (r *Runner) collector(job *engine.Job, spec executor.Spec, sys func(string, ...any)) func() *engine.CollectedReports {
+func (r *Runner) collector(job *engine.Job, spec executor.Spec, sys func(string, ...any)) func(outcome string) collected {
+	tests := r.testCollector(job, spec, sys)
+	findings := r.findingCollector(job, spec, sys)
+	if tests == nil && findings == nil && job.Artifacts == nil {
+		return nil
+	}
+	return func(outcome string) collected {
+		var c collected
+		if tests != nil {
+			c.tests = tests()
+		}
+		if findings != nil {
+			c.findings = findings()
+		}
+		r.keepArtifacts(job, spec, outcome, sys)
+		return c
+	}
+}
+
+// testCollector returns what collects a step's test report files, or nil.
+func (r *Runner) testCollector(job *engine.Job, spec executor.Spec, sys func(string, ...any)) func() *engine.CollectedReports {
 	if job.Reports == nil || len(job.Reports.Tests) == 0 {
 		return nil
 	}
@@ -371,7 +401,7 @@ func sizeText(n int64) string {
 
 // runStep runs one attempt. Once the step has been handed to the executor,
 // it also returns what collects its report files, if it declares any.
-func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, ...any), out executor.Sink) (engine.Result, func() *engine.CollectedReports) {
+func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, ...any), out executor.Sink) (engine.Result, func(string) collected) {
 	sys("Runner %s, executor %s", r.Info.Name, r.Exec.Name())
 	if job.TakenOverFrom != "" {
 		sys("This run moves here from runner %s, which stopped responding or left. It continues in a fresh workspace: files that earlier steps wrote are not in it.", job.TakenOverFrom)
@@ -414,6 +444,9 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask,
 	}
 	collect := r.collector(job, spec, sys)
+	if failed := r.fetch(ctx, job, spec, sys, out); failed != nil {
+		return *failed, nil
+	}
 	code, err := r.Exec.Run(tctx, spec, func(stream, text string) {
 		if stream == "system" {
 			sys("%s", mask.Mask(text))

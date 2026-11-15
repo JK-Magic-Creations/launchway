@@ -56,6 +56,10 @@ type Config struct {
 	PullRequests PullRequestsConfig `yaml:"pull_requests"`
 	// Tests limits what the server keeps of the test reports steps declare.
 	Tests TestsConfig `yaml:"tests"`
+	// Artifacts says where the files steps keep are stored, and limits
+	// them; Findings limits what is kept of security findings and SBOMs.
+	Artifacts ArtifactsConfig `yaml:"artifacts"`
+	Findings  FindingsConfig  `yaml:"findings"`
 }
 
 // TestsConfig limits what the server keeps of test reports. Zero means the
@@ -409,6 +413,15 @@ func Load(path string) (*Config, error) {
 	}
 	if _, err := c.Runner.Reports.Limits(); err != nil {
 		return nil, fmt.Errorf("%s: runner.%w", path, err)
+	}
+	if c.Artifacts.Dir != "" && !filepath.IsAbs(c.Artifacts.Dir) && path != "" {
+		c.Artifacts.Dir = filepath.Join(filepath.Dir(path), c.Artifacts.Dir)
+	}
+	if _, err := c.ArtifactLimits(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if _, err := c.FindingLimits(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.DraftRules(); err != nil {
 		if path != "" {

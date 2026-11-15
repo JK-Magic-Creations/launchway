@@ -286,14 +286,24 @@ func (c *cmd) keepTests(step string, attempt int, t *parsedTests) (*TestSummary,
 
 // dropTests forgets results kept for an attempt that is not recorded as
 // having ended after all (its runner failed).
-func (c *cmd) dropTests(step string, attempt int) { delete(c.tests, stepAttempt{step, attempt}) }
+func (c *cmd) dropTests(step string, attempt int) {
+	delete(c.tests, stepAttempt{step, attempt})
+	c.drop12(step, attempt)
+}
 
 // jobReports says what a runner collects after a step, or nil if nothing.
 func (c *cmd) jobReports(def *pipeline.Step) *JobReports {
-	if !c.e.knows(schemaTests) || def.Reports == nil || len(def.Reports.Tests) == 0 {
+	if !c.e.knows(schemaTests) || def.Reports == nil {
 		return nil
 	}
-	return &JobReports{Tests: append([]string(nil), def.Reports.Tests...), MaxBytes: c.e.tests.MaxUploadBytes}
+	jr := &JobReports{Tests: append([]string(nil), def.Reports.Tests...), MaxBytes: c.e.tests.MaxUploadBytes}
+	if c.e.knows(schemaArtifacts) && len(def.Reports.Findings) > 0 {
+		jr.Findings, jr.FindingsMaxBytes = append([]string(nil), def.Reports.Findings...), c.e.finds.MaxUploadBytes
+	}
+	if len(jr.Tests) == 0 && len(jr.Findings) == 0 {
+		return nil
+	}
+	return jr
 }
 
 // persistSchema10 writes what schema 10 added to the derived tables: the

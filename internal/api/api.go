@@ -151,6 +151,19 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/tokens", signedIn, "token.create", s.createToken},
 		{"DELETE /api/v1/tokens/{id}", signedIn, "token.revoke", s.revokeToken},
 		{"GET /api/v1/audit", administer, "", s.auditLog},
+
+		// Artifacts, findings and SBOMs (schema 12).
+		{"POST /api/runner/v1/artifacts/begin", runnerOnly, "", s.beginArtifact},
+		{"PUT /api/runner/v1/artifacts/chunk", runnerOnly, "", s.artifactChunk},
+		{"POST /api/runner/v1/artifacts/commit", runnerOnly, "", s.commitArtifact},
+		{"POST /api/runner/v1/artifacts/download", runnerOnly, "", s.fetchArtifact},
+		{"GET /api/v1/runs/{id}/artifacts", runRead, "", s.runArtifacts},
+		{"GET /api/v1/runs/{id}/artifacts/{artifact}/file", runRead, "", s.downloadArtifactFile},
+		{"GET /api/v1/runs/{id}/artifacts/{artifact}/archive", runRead, "", s.downloadArtifactArchive},
+		{"DELETE /api/v1/runs/{id}/artifacts/{artifact}", runOperate, "artifact.delete", s.deleteArtifact},
+		{"GET /api/v1/runs/{id}/findings", runRead, "", s.runFindings},
+		{"GET /api/v1/projects/{name}/security", projectRead, "", s.projectSecurity},
+		{"GET /api/v1/components", signedIn, "", s.searchComponents},
 	}
 }
 
@@ -415,7 +428,7 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 // one is refused with 413, and the runner then reports the result without
 // its files. Only a few large ones are read at once.
 func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
-	limit := s.Engine.TestLimits().MaxUploadBytes*4/3 + 4<<20
+	limit := s.Engine.ResultLimit()
 	if r.ContentLength > limit {
 		writeErr(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("the result is larger than the %d MiB this server accepts", limit>>20))
 		return

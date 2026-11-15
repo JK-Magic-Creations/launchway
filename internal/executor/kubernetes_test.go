@@ -337,3 +337,18 @@ func TestKubernetesCleanupAcrossRunners(t *testing.T) {
 		t.Fatalf("runner A's own clean-up: unknown gone %v, active gone %v", gone(unknown), gone(active))
 	}
 }
+
+// Artifacts on Kubernetes: kept from one run's pod, and put into another
+// run's pod, as when a later step runs on another runner.
+func TestKubernetesArtifacts(t *testing.T) {
+	k := kube(t)
+	ctx := context.Background()
+	run1 := fmt.Sprintf("run_ka%d", time.Now().UnixNano())
+	run2 := run1 + "b"
+	defer k.client.CoreV1().Pods(k.o.Namespace).Delete(ctx, podName(run1, k.owner), metav1.DeleteOptions{})
+	defer k.client.CoreV1().Pods(k.o.Namespace).Delete(ctx, podName(run2, k.owner), metav1.DeleteOptions{})
+	s1 := kspec(t, run1, "keep", alpine, artifactScript, t.TempDir())
+	s2 := kspec(t, run2, "fetch", alpine, readFetched, t.TempDir())
+	s2.WorkspaceID = "ws2"
+	artifactsAcrossSteps(t, k, s1, s2)
+}

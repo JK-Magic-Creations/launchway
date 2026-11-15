@@ -57,6 +57,11 @@ type RunSummary struct {
 	// Tests adds up the run's test results (see RunTests); nil when no step
 	// has reported any.
 	Tests *TestTotals `json:"tests,omitempty"`
+	// Findings adds up the run's security findings (see RunFindings); nil
+	// when no step has reported any. Artifacts counts the artifacts it
+	// keeps.
+	Findings  *FindingCounts `json:"findings,omitempty"`
+	Artifacts int            `json:"artifacts,omitempty"`
 }
 
 // StepBrief is just enough of a step to draw a status strip.
@@ -338,7 +343,10 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		return err
 	}
 	rows.Close()
-	return e.attachTests(runs)
+	if err := e.attachTests(runs); err != nil {
+		return err
+	}
+	return e.attachSchema12(runs)
 }
 
 const stepCols = `run_id, step_id, position, status, attempt, queued_at, started_at, finished_at, exit_code,
