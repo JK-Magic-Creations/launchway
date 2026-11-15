@@ -168,7 +168,7 @@ owns may not appear in it.
 */}}
 {{- define "launchway.serverConfig" -}}
 {{- $extra := deepCopy (.Values.config.extraConfig | default dict) -}}
-{{- range $key := list "listen" "data" "database" "projects" -}}
+{{- range $key := list "listen" "data" "database" "projects" "tests" -}}
 {{- if hasKey $extra $key -}}
 {{- if eq $key "database" -}}
 {{- fail "config.extraConfig.database is not allowed: the database URL must not be in the ConfigMap. Use database.existingSecret or database.url." -}}
@@ -186,6 +186,12 @@ owns may not appear in it.
 {{- $_ := set $runner "enabled" false -}}
 {{- $_ := set $extra "runner" $runner -}}
 {{- $config := dict "listen" .Values.config.listen "data" "/var/lib/launchway" "projects" (.Values.config.projects | default list) -}}
+{{- $t := .Values.config.tests | default dict -}}
+{{- $tests := dict -}}
+{{- range $key, $value := dict "max_upload_mib" $t.maxUploadMiB "max_cases_per_run" $t.maxCasesPerRun "max_cases_per_project" $t.maxCasesPerProject -}}
+{{- if $value }}{{ $_ := set $tests $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- if $tests }}{{ $_ := set $config "tests" $tests }}{{ end -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
 
@@ -208,7 +214,12 @@ in the server configuration, plus the server URL and the data directory.
 {{- end -}}
 {{- end -}}
 {{- $server := .Values.runner.serverURL | default (printf "http://%s.%s.svc:%v" $fullname .Release.Namespace .Values.service.port) -}}
-{{- toYaml (dict "server" $server "data" "/var/lib/launchway-runner" "concurrency" .Values.runner.concurrency "executor" "kubernetes" "kubernetes" $kube "secrets" (.Values.runner.secretStores | default dict)) -}}
+{{- $r := .Values.runner.reports | default dict -}}
+{{- $reports := dict -}}
+{{- range $key, $value := dict "max_files" $r.maxFiles "max_file_mib" $r.maxFileMiB "max_total_mib" $r.maxTotalMiB -}}
+{{- if $value }}{{ $_ := set $reports $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- toYaml (dict "server" $server "data" "/var/lib/launchway-runner" "concurrency" .Values.runner.concurrency "executor" "kubernetes" "kubernetes" $kube "secrets" (.Values.runner.secretStores | default dict) "reports" $reports) -}}
 {{- end -}}
 
 {{/* Default soft spread across nodes, for one component. Call with (list $ "server"). */}}

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.example.FooTest" time="1.234" tests="6" errors="1" skipped="1" failures="2">
+  <properties>
+    <property name="java.specification.version" value="21"/>
+    <property name="java.version" value="21.0.4"/>
+    <property name="os.name" value="Linux"/>
+    <property name="user.dir" value="/home/runner/work/app"/>
+    <property name="surefire.test.class.path" value="/home/runner/work/app/target/test-classes:/home/runner/work/app/target/classes"/>
+  </properties>
+  <testcase name="addsNumbers" classname="com.example.FooTest" time="0.002"/>
+  <testcase name="dividesByZero" classname="com.example.FooTest" time="0.015">
+    <failure message="expected: &lt;4&gt; but was: &lt;5&gt;" type="org.opentest4j.AssertionFailedError"><![CDATA[org.opentest4j.AssertionFailedError: expected: <4> but was: <5>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:150)
+	at com.example.FooTest.dividesByZero(FooTest.java:31)
+]]></failure>
+    <system-out><![CDATA[computing 10 / 2
+]]></system-out>
+    <system-err><![CDATA[WARN rounding mode not set, using HALF_UP
+]]></system-err>
+  </testcase>
+  <testcase name="readsConfig" classname="com.example.FooTest" time="0.004">
+    <error message="config.yaml (No such file or directory)" type="java.io.FileNotFoundException"><![CDATA[java.io.FileNotFoundException: config.yaml (No such file or directory)
+	at java.base/java.io.FileInputStream.open0(Native Method)
+	at java.base/java.io.FileInputStream.open(FileInputStream.java:213)
+	at com.example.FooTest.readsConfig(FooTest.java:44)
+]]></error>
+  </testcase>
+  <testcase name="slowNetwork" classname="com.example.FooTest" time="0">
+    <skipped message="Disabled until the mock server is fixed"/>
+  </testcase>
+  <testcase name="retriesConnection" classname="com.example.FooTest" time="0.120">
+    <flakyFailure message="Connection reset" type="java.net.SocketException">
+      <stackTrace><![CDATA[java.net.SocketException: Connection reset
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:318)
+	at com.example.FooTest.retriesConnection(FooTest.java:60)
+]]></stackTrace>
+      <system-out><![CDATA[attempt 1
+]]></system-out>
+    </flakyFailure>
+    <system-out><![CDATA[attempt 2 ok
+]]></system-out>
+  </testcase>
+  <testcase name="parsesDates" classname="com.example.FooTest" time="0.030">
+    <failure message="expected: &lt;2026-01-01&gt; but was: &lt;2025-12-31&gt;" type="org.opentest4j.AssertionFailedError"><![CDATA[org.opentest4j.AssertionFailedError: expected: <2026-01-01> but was: <2025-12-31>
+	at com.example.FooTest.parsesDates(FooTest.java:72)
+]]></failure>
+    <rerunFailure message="expected: &lt;2026-01-01&gt; but was: &lt;2025-12-31&gt;" type="org.opentest4j.AssertionFailedError">
+      <stackTrace><![CDATA[org.opentest4j.AssertionFailedError: expected: <2026-01-01> but was: <2025-12-31>
+	at com.example.FooTest.parsesDates(FooTest.java:72)
+]]></stackTrace>
+    </rerunFailure>
+  </testcase>
+</testsuite>

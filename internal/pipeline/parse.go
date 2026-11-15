@@ -244,14 +244,14 @@ func (ps *parser) parsePullRequest(v *yaml.Node) {
 }
 
 var (
-	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "message", "uses", "with"}
+	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
 	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
-	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry"}
+	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports"}
 	// Kinds from the design that are recognised but not implemented yet.
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
@@ -387,6 +387,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 					timeoutNode, timeout = v2, d
 					s.timeoutSet = true
 				}
+			case "reports":
+				s.Reports = ps.parseReports(v2, where)
 			case "uses":
 				s.Uses = ps.str(v2, where)
 				s.usesLine = v2.Line

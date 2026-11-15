@@ -9,19 +9,40 @@ import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill } from "../com
 import { LibraryList, TemplateFacts } from "../components/Libraries";
 import { openInEditor } from "./EditPipeline";
 import { navigate } from "../router";
+import { TestsTab } from "./RunTests";
+import { TestCounts, failing } from "../components/Tests";
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
   return new URLSearchParams(location.search).get("step");
 }
 
-type Tab = "graph" | "events" | "definition";
+type Tab = "graph" | "tests" | "events" | "definition";
+
+// tabFromURL is the tab named by ?tab= in the address.
+function tabFromURL(): Tab {
+  const t = new URLSearchParams(location.search).get("tab");
+  return t === "tests" || t === "events" || t === "definition" ? t : "graph";
+}
+
+// setQuery changes the address's query without a new history entry.
+function setQuery(changes: Record<string, string>) {
+  const q = new URLSearchParams(location.search);
+  for (const [k, v] of Object.entries(changes)) {
+    if (v) q.set(k, v); else q.delete(k);
+  }
+  const qs = q.toString();
+  history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
+}
 
 export function RunPage({ id }: { id: string }) {
   const [run, setRun] = useState<RunDetail | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("graph");
+  const [tab, setTabState] = useState<Tab>(tabFromURL);
+  const [testStep, setTestStepState] = useState(() => new URLSearchParams(location.search).get("tests_step") ?? "");
+  const setTab = useCallback((t: Tab) => { setTabState(t); setQuery({ tab: t === "graph" ? "" : t }); }, []);
+  const setTestStep = useCallback((s: string) => { setTestStepState(s); setQuery({ tests_step: s }); }, []);
   const [busy, setBusy] = useState(false);
   const [actionErr, setActionErr] = useState<unknown>(null);
   const logSink = useRef<((step: string, attempt: number, lines: LogLine[]) => void) | null>(null);
@@ -48,12 +69,16 @@ export function RunPage({ id }: { id: string }) {
       });
   }, [id]);
   const updated = () => { if (inflight.current > 0) stale.current = true; };
-  useEffect(() => { setRun(null); setSelected(stepFromURL()); setTab("graph"); load(); }, [id, load]);
+  useEffect(() => {
+    setRun(null); setSelected(stepFromURL()); setTabState(tabFromURL());
+    setTestStepState(new URLSearchParams(location.search).get("tests_step") ?? "");
+    load();
+  }, [id, load]);
 
   // Keep the selected step in the address, so it can be shared and reloaded.
   const select = useCallback((step: string) => {
     setSelected(step);
-    history.replaceState(null, "", `${location.pathname}?step=${encodeURIComponent(step)}`);
+    setQuery({ step });
   }, []);
 
   // Pick a sensible step to show: one waiting for approval, else the first
@@ -227,8 +252,13 @@ export function RunPage({ id }: { id: string }) {
       )}
 
       <div className="tabs" role="tablist">
-        {([["graph", "Steps and logs"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
-          <button key={k} role="tab" type="button" aria-selected={tab === k} className={"tab" + (tab === k ? " tab-on" : "")} onClick={() => setTab(k)}>{label}</button>
+        {([["graph", "Steps and logs"], ["tests", "Tests"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
+          <button key={k} role="tab" type="button" aria-selected={tab === k} className={"tab" + (tab === k ? " tab-on" : "")} onClick={() => setTab(k)}>
+            {label}
+            {k === "tests" && run.tests && (failing(run.tests) > 0
+              ? <span className="tab-n tab-n-bad">{failing(run.tests)} failed</span>
+              : <span className="tab-n">{run.tests.total}</span>)}
+          </button>
         ))}
       </div>
 
@@ -239,19 +269,23 @@ export function RunPage({ id }: { id: string }) {
           </section>
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
-            : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun} />)}
+            : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun}
+              showTests={(s) => { setTestStep(s); setTab("tests"); }} />)}
         </>
       )}
+      {tab === "tests" && <TestsTab run={run} step={testStep} onStep={setTestStep}
+        version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "definition" && <DefinitionTab run={run} />}
     </div>
   );
 }
 
-function StepPanel({ run, step, now, sink, rerun }: {
+function StepPanel({ run, step, now, sink, rerun, showTests }: {
   run: RunDetail; step: StepView; now: number;
   sink: React.MutableRefObject<((step: string, attempt: number, lines: LogLine[]) => void) | null>;
   rerun: boolean;
+  showTests: (step: string) => void;
 }) {
   const [attempt, setAttempt] = useState(step.attempt);
   const [lines, setLines] = useState<LogLine[]>([]);
@@ -334,6 +368,19 @@ function StepPanel({ run, step, now, sink, rerun }: {
         </div>
       </div>
       {reused && <ReusedNote run={run} step={step} />}
+      {step.tests && (
+        <div className={"callout tstep-callout " + (failing(step.tests) > 0 ? "callout-bad" : "callout-info")}>
+          <span>
+            <strong>{failing(step.tests) > 0 ? `${failing(step.tests)} of ${step.tests.total} tests failed`
+              : step.tests.total === 0 ? "Its reports held no tests" : `All ${step.tests.passed} tests that ran passed`}</strong>
+            {step.tests.skipped > 0 && `, ${step.tests.skipped} skipped`}
+          </span>
+          <TestCounts t={step.tests} />
+          <button type="button" className="btn btn-sm" onClick={() => showTests(step.id)}>
+            {failing(step.tests) > 0 ? "See the failed tests" : "See the tests"}
+          </button>
+        </div>
+      )}
       {step.status === "failed" && following && (step.excerpt || (step.error && !/^exit code \d+$/.test(step.error))) && (
         <div className="callout callout-bad">
           {step.error && !/^exit code \d+$/.test(step.error) && <div>{step.error}</div>}

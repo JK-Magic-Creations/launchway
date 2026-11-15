@@ -32,25 +32,29 @@ steps:
     description: Run the fast tests
     image: docker.io/library/alpine:3.22
     run: |
-      for t in parser engine api runner ui; do
-        sleep 0.6
-        printf '\033[32mPASS\033[0m  %s\n' "$t"
-      done
+      sh tests/unit.sh
       echo "coverage=84%" >> "$LAUNCHWAY_OUTPUTS"
+    # Read after the step, passed or failed: JUnit XML and go test -json.
+    reports:
+      tests: [reports/unit.xml, reports/api.json]
 
   integration-tests:
     description: Test against the cache service
     container: tools
     needs: unit-tests
+    retry: 1
     run: |
       echo "Talking to the cache service at localhost:6379"
       for i in $(seq 1 30); do
         reply=$(printf 'PING\r\n' | nc -w 1 localhost 6379 2>/dev/null | tr -d '\r') || true
-        if [ "$reply" = "+PONG" ]; then printf '\033[32mPASS\033[0m  cache answered %s\n' "$reply"; exit 0; fi
+        if [ "$reply" = "+PONG" ]; then printf '\033[32mPASS\033[0m  cache answered %s\n' "$reply"; break; fi
         sleep 1
       done
-      echo "the cache never answered" >&2
-      exit 1
+      # One test is flaky: it fails on the first attempt and passes on the
+      # retry, so the run shows it as flaky.
+      sh tests/integration.sh
+    reports:
+      tests: reports/integration.xml
 
   security-scan:
     description: Look for known problems in dependencies
@@ -103,6 +107,90 @@ steps:
     run: |
       echo "Would deploy $LAUNCHWAY_NEEDS_BUILD_IMAGE to dev"
 EOF
+mkdir -p tests
+# The demo's tests only print results: a real project runs its own, such as
+# pytest --junitxml=reports/unit.xml or go test -json ./... > reports/api.json.
+cat > tests/unit.sh <<'EOF2'
+#!/bin/sh
+# Writes the unit test results as JUnit XML (as pytest does) and the API
+# tests' as go test -json output. On a branch with button.txt, the new
+# button's test fails.
+set -e
+mkdir -p reports
+fail=0
+case_ok() { printf '    <testcase classname="%s" name="%s" file="%s" time="%s"/>\n' "$1" "$2" "$3" "$4"; }
+{
+  echo '<?xml version="1.0" encoding="utf-8"?>'
+  echo '<testsuites><testsuite name="pytest" tests="14">'
+  case_ok tests.test_parser test_reads_empty_file tests/test_parser.py 0.004
+  case_ok tests.test_parser test_reads_nested_lists tests/test_parser.py 0.011
+  case_ok tests.test_parser test_rejects_tabs tests/test_parser.py 0.003
+  case_ok tests.test_parser test_unicode_names tests/test_parser.py 0.006
+  case_ok tests.test_engine test_runs_in_order tests/test_engine.py 0.240
+  case_ok tests.test_engine test_retries_failed_steps tests/test_engine.py 0.512
+  case_ok tests.test_engine test_resumes_after_restart tests/test_engine.py 1.204
+  case_ok tests.test_api test_lists_runs tests/test_api.py 0.087
+  case_ok tests.test_api test_paginates tests/test_api.py 0.065
+  case_ok tests.test_api test_hides_other_projects tests/test_api.py 0.091
+  case_ok tests.test_ui test_renders_run_list tests/test_ui.py 0.430
+  echo '    <testcase classname="tests.test_ui" name="test_dark_mode_contrast" file="tests/test_ui.py" time="0.000">'
+  echo '      <skipped type="pytest.skip" message="needs a browser with forced colours">tests/test_ui.py:41: needs a browser with forced colours</skipped>'
+  echo '    </testcase>'
+  if [ -f button.txt ]; then
+    fail=1
+    echo '    <testcase classname="tests.test_ui" name="test_button_renders" file="tests/test_ui.py" time="0.318">'
+    echo '      <failure message="AssertionError: expected &quot;Save&quot;, got &quot;Sav&quot;">def test_button_renders():'
+    echo '        html = render(Button(label="Save"))'
+    echo '&gt;       assert "Save" in html'
+    echo 'E       AssertionError: expected "Save", got "Sav"'
+    echo ''
+    echo 'tests/test_ui.py:58: AssertionError</failure>'
+    echo '      <system-out>rendering Button(label=Save) at width 320
+truncating label to fit: Sav</system-out>'
+    echo '    </testcase>'
+  else
+    case_ok tests.test_ui test_button_renders tests/test_ui.py 0.302
+  fi
+  case_ok tests.test_ui test_keyboard_navigation tests/test_ui.py 0.188
+  echo '</testsuite></testsuites>'
+} > reports/unit.xml
+{
+  for t in TestHealth TestCreateRun TestListRuns TestCancel; do
+    printf '{"Action":"run","Package":"example.com/demo/api","Test":"%s"}\n' "$t"
+    printf '{"Action":"output","Package":"example.com/demo/api","Test":"%s","Output":"=== RUN   %s\\n"}\n' "$t" "$t"
+    printf '{"Action":"pass","Package":"example.com/demo/api","Test":"%s","Elapsed":0.0%s}\n' "$t" "${#t}"
+  done
+  printf '{"Action":"pass","Package":"example.com/demo/api","Elapsed":0.21}\n'
+} > reports/api.json
+for t in parser engine api ui; do sleep 0.4; printf '\033[32mPASS\033[0m  %s\n' "$t"; done
+if [ "$fail" = 1 ]; then echo "1 test failed: tests/test_ui.py::test_button_renders" >&2; exit 1; fi
+EOF2
+cat > tests/integration.sh <<'EOF2'
+#!/bin/sh
+# Writes the integration test results. test_cache_survives_restart fails on
+# the first attempt of each run and passes on the retry: a flaky test.
+set -e
+mkdir -p reports
+if [ "$LAUNCHWAY_ATTEMPT" = 1 ]; then
+  restart='<testcase classname="tests.integration.CacheTest" name="test_cache_survives_restart" time="5.012"><failure message="TimeoutError: the cache did not come back within 5s">Traceback (most recent call last):
+  File "tests/integration/test_cache.py", line 33, in test_cache_survives_restart
+    wait_for(cache.ping, timeout=5)
+TimeoutError: the cache did not come back within 5s</failure></testcase>'
+else
+  restart='<testcase classname="tests.integration.CacheTest" name="test_cache_survives_restart" time="2.418"/>'
+fi
+cat > reports/integration.xml <<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="integration" tests="4">
+  <testcase classname="tests.integration.CacheTest" name="test_ping" time="0.012"/>
+  <testcase classname="tests.integration.CacheTest" name="test_set_and_get" time="0.031"/>
+  $restart
+  <testcase classname="tests.integration.CacheTest" name="test_expiry" time="1.507"/>
+</testsuite>
+XML
+if [ "$LAUNCHWAY_ATTEMPT" = 1 ]; then echo "test_cache_survives_restart failed; the step will be retried" >&2; exit 1; fi
+echo "4 integration tests passed"
+EOF2
 echo "A demo app for trying Launchway." > README.md
 echo "Delete this file to make the smoke test pass first time." > FLAKY
 git add -A

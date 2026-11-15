@@ -99,8 +99,11 @@ type Step struct {
 	Secrets     map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
 	Retry       int                  `json:"retry"`             // extra attempts after a failure
 	Timeout     Duration             `json:"timeout"`           // per attempt; for an approval, how long to wait for a decision
-	Line        int                  `json:"-"`                 // where it was written, for messages
-	NeedsLine   int                  `json:"-"`                 // where its needs were written, for messages
+	// Reports are files the step writes that Launchway reads once it ends,
+	// whether it passed or failed: test results, for now.
+	Reports   *Reports `json:"reports,omitempty"`
+	Line      int      `json:"-"` // where it was written, for messages
+	NeedsLine int      `json:"-"` // where its needs were written, for messages
 
 	// Uses names the template a step is replaced by, as library/template
 	// (or, in a template, a template of the same library). Only a pipeline
@@ -126,6 +129,14 @@ type Step struct {
 	// What was written, so that a uses step's settings apply only where the
 	// template step does not set its own.
 	retrySet, timeoutSet bool
+}
+
+// Reports names the files a step writes for Launchway to read after it.
+type Reports struct {
+	// Tests are globs, relative to the workspace, of test result files:
+	// JUnit XML, or the output of go test -json. A path part ** matches any
+	// number of directories.
+	Tests []string `json:"tests"`
 }
 
 // IsUse reports whether the step is replaced by a template.
@@ -302,6 +313,17 @@ func (t Triggers) MatchPullRequest() bool { return t.PullRequest != nil }
 // UsesSchema9 reports whether the pipeline uses keys that servers older
 // than schema 9 do not know: on.pull_request and supersede.
 func (p *Pipeline) UsesSchema9() bool { return p.On.PullRequest != nil || p.Supersede }
+
+// UsesSchema10 reports whether the pipeline uses keys that servers older
+// than schema 10 do not know: a step's reports.
+func (p *Pipeline) UsesSchema10() bool {
+	for _, s := range p.Steps {
+		if s.Reports != nil {
+			return true
+		}
+	}
+	return false
+}
 
 func matchAny(patterns []string, value string) bool {
 	if value == "" {

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="5" failures="2" errors="0" time="1.032000">
+	<testsuite tests="3" failures="1" time="0.512000" name="example.com/app/store" timestamp="2026-11-14T10:24:00Z">
+		<properties>
+			<property name="go.version" value="go1.27.4 linux/amd64"></property>
+		</properties>
+		<testcase classname="example.com/app/store" name="TestPut" time="0.000000"></testcase>
+		<testcase classname="example.com/app/store" name="TestGet" time="0.010000">
+			<failure message="Failed" type="">=== RUN   TestGet&#xA;    store_test.go:41: got &#34;b&#34;, want &#34;a&#34;&#xA;--- FAIL: TestGet (0.01s)&#xA;</failure>
+		</testcase>
+		<testcase classname="example.com/app/store" name="TestSlow" time="0.000000">
+			<skipped message="=== RUN   TestSlow&#xA;    store_test.go:60: skipping in short mode&#xA;--- SKIP: TestSlow (0.00s)&#xA;"></skipped>
+		</testcase>
+	</testsuite>
+	<testsuite tests="0" failures="1" time="0.000000" name="example.com/app/db" timestamp="2026-11-14T10:24:00Z">
+		<properties>
+			<property name="go.version" value="go1.27.4 linux/amd64"></property>
+		</properties>
+		<testcase classname="example.com/app/db" name="TestMain" time="0.000000">
+			<failure message="Failed" type="">db_test.go:15: cannot connect to postgres: dial tcp 127.0.0.1:5432: connect: connection refused&#xA;FAIL&#x9;example.com/app/db&#x9;0.004s&#xA;</failure>
+		</testcase>
+	</testsuite>
+</testsuites>

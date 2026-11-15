@@ -37,6 +37,9 @@ type Runner struct {
 	// SecretWait is how long to keep asking an unavailable secret store
 	// before handing the step back to be run again; default 30s.
 	SecretWait time.Duration
+	// Reports limits the report files collected after a step; zero fields
+	// take the defaults (see executor.CollectLimits).
+	Reports executor.CollectLimits
 
 	wsMu    sync.Mutex
 	wsLocks map[string]*sync.Mutex
@@ -256,18 +259,27 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		}
 	}()
 
-	res := r.runStep(ctx, job, sys, logs.add)
+	res, collect := r.runStep(ctx, job, sys, logs.add)
 
+	mu.Lock()
+	wasRequested, wasLost := requested, lost
+	mu.Unlock()
+	// Report files are collected whether the step passed or failed, was
+	// canceled or timed out; not when the server has moved on, nor when the
+	// runner is shutting down (the step will run again elsewhere).
+	if collect != nil && !wasLost && parent.Err() == nil {
+		res.Tests = collect()
+	}
 	close(bgStop)
 	<-bgDone
 	mu.Lock()
-	wasRequested, wasLost := requested, lost
+	wasRequested, wasLost = requested, lost
 	mu.Unlock()
 	switch {
 	case wasLost:
 		res = engine.Result{} // the server already moved on; nothing to report
 	case wasRequested:
-		res = engine.Result{Outcome: "canceled", Error: "canceled"}
+		res = engine.Result{Outcome: "canceled", Error: "canceled", Tests: res.Tests}
 	case parent.Err() != nil:
 		res = engine.Result{Outcome: "canceled", Error: "the runner is shutting down"}
 		sys("The runner is shutting down; the step will be run again.")
@@ -278,6 +290,14 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	}
 	for i := 0; i < 5; i++ {
 		err := r.Client.Finish(report, job.LeaseID, res)
+		if errors.Is(err, ErrTooLarge) && res.Tests != nil {
+			// The server would not take the report files; the outcome
+			// matters more. Report it without them.
+			log.Warn("the server refused the step's report files as too large; reporting the result without them", "err", err)
+			res.Tests = &engine.CollectedReports{Files: []engine.ReportFile{},
+				Notes: append(res.Tests.Notes, "the server refused the report files as too large, so none were kept")}
+			continue
+		}
 		if err == nil || errors.Is(err, ErrLeaseLost) {
 			log.Info("step finished", "outcome", res.Outcome)
 			return
@@ -287,7 +307,71 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	}
 }
 
-func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, ...any), out executor.Sink) engine.Result {
+// collectTimeout bounds how long collecting a step's report files may take.
+const collectTimeout = 2 * time.Minute
+
+// collector returns what collects a step's report files once it has run,
+// or nil if the step declares none.
+func (r *Runner) collector(job *engine.Job, spec executor.Spec, sys func(string, ...any)) func() *engine.CollectedReports {
+	if job.Reports == nil || len(job.Reports.Tests) == 0 {
+		return nil
+	}
+	return func() *engine.CollectedReports {
+		lim := r.Reports.WithDefaults()
+		if job.Reports.MaxBytes > 0 {
+			// The server says how much it accepts; JSON carries the bytes
+			// as base64, so a little room is left for that and the rest.
+			lim.MaxBytes = min(lim.MaxBytes, job.Reports.MaxBytes)
+			lim.MaxFileBytes = min(lim.MaxFileBytes, lim.MaxBytes)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), collectTimeout)
+		defer cancel()
+		got, err := executor.Collect(ctx, r.Exec, spec, job.Reports.Tests, lim)
+		out := &engine.CollectedReports{Files: []engine.ReportFile{}}
+		if got != nil {
+			for _, f := range got.Files {
+				out.Files = append(out.Files, engine.ReportFile{Path: f.Path, Data: f.Data, Size: f.Size, Cut: f.Cut})
+			}
+			out.Notes = got.Notes
+		}
+		if err != nil {
+			msg := "Could not collect the test reports: " + spec.Mask(err.Error())
+			if errors.Is(err, context.DeadlineExceeded) {
+				msg = fmt.Sprintf("Collecting the test reports took longer than %s; stopped", collectTimeout)
+			}
+			out.Notes = append(out.Notes, msg)
+		}
+		var size int64
+		for _, f := range out.Files {
+			size += int64(len(f.Data))
+		}
+		switch n := len(out.Files); {
+		case n == 1:
+			sys("Test reports: collected %s (%s)", out.Files[0].Path, sizeText(size))
+		case n > 1:
+			sys("Test reports: collected %d files (%s)", n, sizeText(size))
+		}
+		for _, note := range out.Notes {
+			sys("Test reports: %s", note)
+		}
+		return out
+	}
+}
+
+func sizeText(n int64) string {
+	switch {
+	case n < 1024:
+		return fmt.Sprintf("%d bytes", n)
+	case n < 1<<20:
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(n)/1024), ".0") + " KiB"
+	default:
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(n)/(1<<20)), ".0") + " MiB"
+	}
+}
+
+// runStep runs one attempt. Once the step has been handed to the executor,
+// it also returns what collects its report files, if it declares any.
+func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, ...any), out executor.Sink) (engine.Result, func() *engine.CollectedReports) {
 	sys("Runner %s, executor %s", r.Info.Name, r.Exec.Name())
 	if job.TakenOverFrom != "" {
 		sys("This run moves here from runner %s, which stopped responding or left. It continues in a fresh workspace: files that earlier steps wrote are not in it.", job.TakenOverFrom)
@@ -297,7 +381,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	}
 	values, failed := r.resolveSecrets(ctx, job, sys)
 	if failed != nil {
-		return *failed
+		return *failed, nil
 	}
 	mask, short := secrets.NewMasker(values)
 	for _, name := range short {
@@ -310,7 +394,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	ws, err := r.workspace(ctx, job, sys)
 	if err != nil {
 		sys("Could not prepare the workspace: %v", err)
-		return engine.Result{Outcome: "failed", Error: "preparing the workspace: " + err.Error()}
+		return engine.Result{Outcome: "failed", Error: "preparing the workspace: " + err.Error()}, nil
 	}
 	libraryEnv(env, job, r.Exec.WorkspacePath(ws))
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
@@ -324,11 +408,13 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	// The executor masks stdout and stderr before splitting long lines; the
 	// sink masks again so that nothing reaches the server unmasked even if
 	// an executor does not.
-	code, err := r.Exec.Run(tctx, executor.Spec{
+	spec := executor.Spec{
 		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
 		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: env,
 		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask,
-	}, func(stream, text string) {
+	}
+	collect := r.collector(job, spec, sys)
+	code, err := r.Exec.Run(tctx, spec, func(stream, text string) {
 		if stream == "system" {
 			sys("%s", mask.Mask(text))
 		} else {
@@ -341,27 +427,27 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	switch {
 	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
 		sys("Timed out after %s", job.Timeout.D())
-		return engine.Result{Outcome: "failed", Error: fmt.Sprintf("timed out after %s", job.Timeout.D()), Excerpt: tail.excerpt()}
+		return engine.Result{Outcome: "failed", Error: fmt.Sprintf("timed out after %s", job.Timeout.D()), Excerpt: tail.excerpt()}, collect
 	case err != nil && ctx.Err() != nil:
-		return engine.Result{Outcome: "canceled"}
+		return engine.Result{Outcome: "canceled"}, collect
 	case errors.Is(err, executor.ErrInfrastructure):
 		msg := mask.Mask(err.Error())
 		sys("%s. The step will be run again.", msg)
-		return engine.Result{Outcome: "lost", Error: msg}
+		return engine.Result{Outcome: "lost", Error: msg}, nil
 	case err != nil:
 		msg := mask.Mask(err.Error())
 		sys("Could not run the step: %s", msg)
-		return engine.Result{Outcome: "failed", Error: msg}
+		return engine.Result{Outcome: "failed", Error: msg}, collect
 	}
 	outputs := maskOutputs(executor.ReadOutputs(meta), mask)
 	ec := code
 	if code != 0 {
 		sys("Failed with exit code %d after %s", code, took)
 		return engine.Result{Outcome: "failed", ExitCode: &ec, Error: fmt.Sprintf("exit code %d", code), Outputs: outputs,
-			Excerpt: tail.excerpt()}
+			Excerpt: tail.excerpt()}, collect
 	}
 	sys("Succeeded in %s", took)
-	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs}
+	return engine.Result{Outcome: "succeeded", ExitCode: &ec, Outputs: outputs}, collect
 }
 
 // Limits on a failed step's excerpt, as sent to the server.

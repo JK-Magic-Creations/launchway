@@ -117,6 +117,10 @@ type Payload struct {
 	// one, if that is why it is cancelled; Reason says so in words. Older
 	// servers ignore it, which is harmless: it only records.
 	SupersededBy *Superseder `json:"superseded_by,omitempty"`
+	// step.finished and step.canceled (schema 10): what the attempt's test
+	// reports said, in brief; the individual results are in test_cases.
+	// Older servers ignore it, which is harmless: it only records.
+	Tests *TestSummary `json:"tests,omitempty"`
 }
 
 // Superseder is the run that superseded another.

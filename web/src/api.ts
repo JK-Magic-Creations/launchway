@@ -45,6 +45,77 @@ export interface RunSummary {
   /** The newer run that superseded this one, and its number. */
   superseded_by?: string;
   superseded_by_number?: number;
+  /** The run's test results added up; absent when no step has reported any. */
+  tests?: TestTotals;
+}
+
+/** Test results counted. Flaky: passed only after the test tool ran them again. */
+export interface TestTotals {
+  total: number; passed: number; failed: number; errored: number; skipped: number; flaky: number;
+  duration_ms: number;
+  /** Not every result was kept: a file was cut short, or there were more than a run keeps. */
+  truncated?: boolean;
+}
+
+export interface TestFile {
+  path: string; format?: "junit" | "go-test-json"; bytes: number; cases: number; error?: string; warning?: string;
+}
+
+export interface StepTests extends TestTotals {
+  step: string;
+  attempt: number;
+  reused_from?: string;
+  reused_from_number?: number;
+  stored: number;
+  pruned?: boolean;
+  files: TestFile[];
+  notes?: string[];
+  attempts: ({ attempt: number } & TestTotals)[];
+}
+
+export interface RunTests {
+  totals: TestTotals | null;
+  steps: StepTests[];
+  /** Steps whose definition asks for test reports. */
+  declared: string[];
+  flaky: number;
+  new_failures: number;
+  previous?: { id: string; number: number };
+}
+
+export type TestStatus = "passed" | "failed" | "errored" | "skipped";
+
+export interface TestCase {
+  id: number; key: string; run_id: string; step: string; attempt: number;
+  suite: string; name: string; file?: string; status: TestStatus; duration_ms: number;
+  message?: string; has_details: boolean; report_file?: string;
+  flaky?: boolean; new_failure?: boolean;
+  details?: string; output?: string;
+}
+
+export interface CasePage {
+  cases: TestCase[]; matching: number; counts: Record<string, number>; offset: number; limit: number;
+}
+
+export interface CaseQuery { status?: string; q?: string; step?: string; attempt?: number; limit?: number; offset?: number }
+
+export interface HistoryResult {
+  run_id: string; number: number; sha: string; ref: string; created_at: number; step: string; attempt: number;
+  status: TestStatus; duration_ms: number; message?: string; flaky?: boolean;
+}
+
+export interface TestHistory { key: string; suite: string; name: string; file?: string; ref: string; results: HistoryResult[] }
+
+export interface TestStat {
+  key: string; suite: string; name: string; file?: string; runs: number;
+  avg_ms?: number; max_ms?: number; failures?: number; last_failed?: number;
+  commits?: number; tool_retry?: boolean; last_seen?: number;
+}
+
+export interface OverviewRun { id: string; number: number; sha: string; status: RunStatus; created_at: number; tests: TestTotals | null }
+
+export interface TestOverview {
+  ref: string; runs: OverviewRun[]; slowest: TestStat[]; failing: TestStat[]; flaky: TestStat[]; refs: string[];
 }
 
 export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
@@ -94,6 +165,10 @@ export interface StepView {
   reused_attempt?: number;
   /** What each attempt was given, oldest first. */
   inputs: AttemptInputs[];
+  /** The test result files the step declares, as globs. */
+  reports?: string[];
+  /** The step's test results, from the attempt that counts. */
+  tests?: TestTotals;
 }
 
 /** Where a variable came from. */
@@ -156,6 +231,7 @@ export interface GraphStep {
   group?: string;
   library?: string;
   needs_groups?: string[];
+  reports?: { tests: string[] };
 }
 
 /** A library a pipeline uses, and the commit its version resolved to when the run was created. */
@@ -440,6 +516,24 @@ export const api = {
   createToken: (name: string, expiresInDays: number) =>
     call<ApiToken & { token: string }>("POST", "/api/v1/tokens", { name, expires_in_days: expiresInDays }),
   revokeToken: (id: string) => call<void>("DELETE", `/api/v1/tokens/${encodeURIComponent(id)}`),
+  runTests: (id: string, background = false) => call<RunTests>("GET", `/api/v1/runs/${id}/tests`, undefined, { background }),
+  testCases: (id: string, q: CaseQuery, background = false) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<CasePage>("GET", `/api/v1/runs/${id}/tests/cases?` + p.toString(), undefined, { background });
+  },
+  testCase: (id: string, caseId: number) => call<TestCase>("GET", `/api/v1/runs/${id}/tests/cases/${caseId}`),
+  projectTests: (name: string, ref?: string, runs?: number) => {
+    const p = new URLSearchParams();
+    if (ref) p.set("ref", ref);
+    if (runs) p.set("runs", String(runs));
+    return call<TestOverview>("GET", `/api/v1/projects/${encodeURIComponent(name)}/tests?` + p.toString());
+  },
+  testHistory: (name: string, key: string, ref?: string) => {
+    const p = new URLSearchParams({ key });
+    if (ref) p.set("ref", ref);
+    return call<TestHistory>("GET", `/api/v1/projects/${encodeURIComponent(name)}/tests/history?` + p.toString());
+  },
   audit: (q: AuditQuery) => {
     const p = new URLSearchParams();
     for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));

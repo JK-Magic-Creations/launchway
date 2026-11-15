@@ -17,6 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
@@ -53,6 +54,55 @@ type Config struct {
 	// PullRequests controls runs of pull requests, whose code may come from
 	// anyone who can open one. Each project may override it.
 	PullRequests PullRequestsConfig `yaml:"pull_requests"`
+	// Tests limits what the server keeps of the test reports steps declare.
+	Tests TestsConfig `yaml:"tests"`
+}
+
+// TestsConfig limits what the server keeps of test reports. Zero means the
+// default.
+type TestsConfig struct {
+	// MaxUploadMiB is how many MiB of report files the server accepts for
+	// one step attempt; runners are told and send no more. Default 24.
+	MaxUploadMiB int `yaml:"max_upload_mib"`
+	// MaxCasesPerRun is how many individual test results one run keeps;
+	// beyond it, only the totals. Default 50000.
+	MaxCasesPerRun int `yaml:"max_cases_per_run"`
+	// MaxCasesPerProject is how many a project keeps over all its runs: the
+	// oldest runs' are removed first, keeping their totals. Default 1000000.
+	MaxCasesPerProject int `yaml:"max_cases_per_project"`
+}
+
+// TestLimits converts the tests settings for the engine.
+func (c *Config) TestLimits() (engine.TestLimits, error) {
+	t := c.Tests
+	if t.MaxUploadMiB < 0 || t.MaxCasesPerRun < 0 || t.MaxCasesPerProject < 0 {
+		return engine.TestLimits{}, errors.New("tests: limits cannot be negative")
+	}
+	if t.MaxUploadMiB > 1024 {
+		return engine.TestLimits{}, errors.New("tests: max_upload_mib is at most 1024")
+	}
+	return engine.TestLimits{MaxUploadBytes: int64(t.MaxUploadMiB) << 20, MaxCasesPerRun: t.MaxCasesPerRun,
+		MaxCasesPerProject: t.MaxCasesPerProject}, nil
+}
+
+// ReportsConfig limits the report files a runner collects after a step.
+// Zero means the default.
+type ReportsConfig struct {
+	MaxFiles    int `yaml:"max_files"`     // files per step attempt; default 100
+	MaxFileMiB  int `yaml:"max_file_mib"`  // MiB read of one file; a larger one is cut; default 10
+	MaxTotalMiB int `yaml:"max_total_mib"` // MiB of all of them together; default 20
+}
+
+// Limits converts the reports settings for the runner.
+func (r ReportsConfig) Limits() (executor.CollectLimits, error) {
+	if r.MaxFiles < 0 || r.MaxFileMiB < 0 || r.MaxTotalMiB < 0 {
+		return executor.CollectLimits{}, errors.New("reports: limits cannot be negative")
+	}
+	if r.MaxFileMiB > 1024 || r.MaxTotalMiB > 1024 {
+		return executor.CollectLimits{}, errors.New("reports: max_file_mib and max_total_mib are at most 1024")
+	}
+	return executor.CollectLimits{MaxFiles: r.MaxFiles, MaxFileBytes: int64(r.MaxFileMiB) << 20,
+		MaxBytes: int64(r.MaxTotalMiB) << 20}.WithDefaults(), nil
 }
 
 // PullRequestsConfig says whether the steps of pull-request runs may read
@@ -225,6 +275,8 @@ type RunnerSettings struct {
 	Executor    string                     `yaml:"executor"` // auto, container, podman, docker, host or kubernetes
 	Kubernetes  executor.KubernetesOptions `yaml:"kubernetes"`
 	Secrets     secrets.Config             `yaml:"secrets"` // secret stores, by name
+	// Reports limits the report files collected after each step.
+	Reports ReportsConfig `yaml:"reports"`
 }
 
 // RunnerFile is the file given to `launchway runner --config`: the same
@@ -351,6 +403,12 @@ func Load(path string) (*Config, error) {
 			where = path + ": auth"
 		}
 		return nil, fmt.Errorf("%s: %w", where, err)
+	}
+	if _, err := c.TestLimits(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if _, err := c.Runner.Reports.Limits(); err != nil {
+		return nil, fmt.Errorf("%s: runner.%w", path, err)
 	}
 	if _, err := c.DraftRules(); err != nil {
 		if path != "" {

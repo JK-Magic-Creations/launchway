@@ -467,7 +467,70 @@ ALTER TABLE runs ADD COLUMN superseded_by TEXT NOT NULL DEFAULT '';
 ALTER TABLE runs ADD COLUMN superseded_by_number INTEGER NOT NULL DEFAULT 0;
 CREATE INDEX runs_project_ref ON runs(project, ref);
 `},
+	// 10: test reports. A step may declare test result files (reports.tests
+	//    in its pipeline), which its runner collects when it ends and the
+	//    server parses. The step.finished or step.canceled event of the
+	//    attempt carries a short summary (Payload.Tests): the events stay the
+	//    truth, and stay small. test_reports is derived from those events,
+	//    one row per step attempt. test_cases holds the individual results,
+	//    written in the same transaction as the event; like logs, they are
+	//    kept beside the events rather than in them, and are pruned oldest
+	//    run first when a project has more than the configured number.
+	//    Compatibility: additive: new tables only, and no new event type.
+	//    Older servers ignore the tables and the summary field (it only
+	//    records). Runs whose pipeline uses reports have min_schema 10: older
+	//    servers do not know the key, so they leave such runs alone, as they
+	//    would have to anyway (their strict reading of the pipeline fails).
+	{additive, `
+CREATE TABLE test_reports (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  attempt     INTEGER NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  at          {{BIG}} NOT NULL,
+  total       INTEGER NOT NULL DEFAULT 0,
+  passed      INTEGER NOT NULL DEFAULT 0,
+  failed      INTEGER NOT NULL DEFAULT 0,
+  errored     INTEGER NOT NULL DEFAULT 0,
+  skipped     INTEGER NOT NULL DEFAULT 0,
+  flaky       INTEGER NOT NULL DEFAULT 0,
+  duration_ms {{BIG}} NOT NULL DEFAULT 0,
+  truncated   INTEGER NOT NULL DEFAULT 0,
+  stored      INTEGER NOT NULL DEFAULT 0,
+  pruned      INTEGER NOT NULL DEFAULT 0,
+  detail      TEXT    NOT NULL DEFAULT '{}',
+  PRIMARY KEY (run_id, step_id, attempt)
+);
+CREATE INDEX test_reports_project ON test_reports(project, run_number);
+
+CREATE TABLE test_cases (
+  id          {{ID}},
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  attempt     INTEGER NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  test_key    TEXT    NOT NULL,
+  suite       TEXT    NOT NULL,
+  name        TEXT    NOT NULL,
+  file        TEXT    NOT NULL DEFAULT '',
+  status      TEXT    NOT NULL,
+  duration_ms {{BIG}} NOT NULL DEFAULT 0,
+  message     TEXT    NOT NULL DEFAULT '',
+  details     TEXT    NOT NULL DEFAULT '',
+  output      TEXT    NOT NULL DEFAULT '',
+  flaky       INTEGER NOT NULL DEFAULT 0,
+  report_file TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX test_cases_run ON test_cases(run_id, step_id, attempt);
+CREATE INDEX test_cases_history ON test_cases(project, test_key, run_number);
+CREATE INDEX test_cases_prune ON test_cases(project, run_number);
+`},
 }
+
+// schemaTests is the schema that brought test reports.
+const schemaTests = 10
 
 // schemaPullRequests is the schema that brought pull-request runs,
 // superseding, and the columns that record why a run was cancelled.

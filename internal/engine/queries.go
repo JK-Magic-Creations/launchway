@@ -54,6 +54,9 @@ type RunSummary struct {
 	CancelReason       string `json:"cancel_reason,omitempty"`
 	SupersededBy       string `json:"superseded_by,omitempty"`
 	SupersededByNumber int    `json:"superseded_by_number,omitempty"`
+	// Tests adds up the run's test results (see RunTests); nil when no step
+	// has reported any.
+	Tests *TestTotals `json:"tests,omitempty"`
 }
 
 // StepBrief is just enough of a step to draw a status strip.
@@ -104,6 +107,11 @@ type StepView struct {
 	// Inputs is what each attempt was given, oldest first; empty for
 	// attempts leased by a server older than schema 8.
 	Inputs []AttemptInputs `json:"inputs"`
+	// Reports are the test result files the step declares, as globs.
+	Reports []string `json:"reports,omitempty"`
+	// Tests are the step's test results, from the attempt that counts (see
+	// RunTests); nil when it has none.
+	Tests *TestTotals `json:"tests,omitempty"`
 }
 
 // RunDetail is everything about one run.
@@ -326,7 +334,11 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 			r.Waiting = append(r.Waiting, b.ID)
 		}
 	}
-	return rows.Err()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	rows.Close()
+	return e.attachTests(runs)
 }
 
 const stepCols = `run_id, step_id, position, status, attempt, queued_at, started_at, finished_at, exit_code,
@@ -378,6 +390,11 @@ func (e *Engine) stepView(runID, stepID string) (*StepView, error) {
 	if in := inputs[stepID]; in != nil {
 		v.Inputs = in
 	}
+	steps := []StepView{*v}
+	if err := e.stepTests(runID, steps); err != nil {
+		return nil, err
+	}
+	v.Tests = steps[0].Tests
 	return v, nil
 }
 
@@ -423,6 +440,9 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Container = st.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
 			v.Group = def.Group
+			if def.Reports != nil {
+				v.Reports = def.Reports.Tests
+			}
 		}
 		if in := inputs[v.ID]; in != nil {
 			v.Inputs = in
@@ -436,6 +456,9 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		if d.Reruns, err = e.reruns(id); err != nil {
 			return nil, err
 		}
+	}
+	if err := e.stepTests(id, d.StepList); err != nil {
+		return nil, err
 	}
 	return d, nil
 }

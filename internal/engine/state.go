@@ -239,6 +239,15 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("a pipeline key of schema %d (on.pull_request or supersede), or a pull-request run", schemaPullRequests)
 			}
 		}
+		// Test reports. A step that declares them has its files collected
+		// and stored, which a server that does not know reports would
+		// silently skip.
+		if p.Pipeline.UsesSchema10() {
+			st.Schema = max(st.Schema, schemaTests)
+			if !st.understands(schemaTests) {
+				st.notUnderstood("a pipeline key of schema %d (reports)", schemaTests)
+			}
+		}
 		return true
 	}
 	if st.Steps == nil {

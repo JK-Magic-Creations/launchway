@@ -112,7 +112,17 @@ func (pr *printer) summary(d *engine.RunDetail) {
 			engine.StepSucceeded: pr.c("32", "✓"), engine.StepFailed: pr.c("31", "✗"),
 			engine.StepSkippedS: pr.c("2", "↷"), engine.StepCanceledS: pr.c("33", "■"),
 		}[s.Status]
-		fmt.Printf("  %s %-*s  %-9s %s\n", mark, pr.width, s.ID, s.Status, pr.c("2", took(s)))
+		tests := ""
+		if t := s.Tests; t != nil {
+			tests = fmt.Sprintf("  tests: %d passed", t.Passed)
+			if bad := t.Failed + t.Errored; bad > 0 {
+				tests += ", " + pr.c("31", fmt.Sprintf("%d failed", bad))
+			}
+			if t.Skipped > 0 {
+				tests += fmt.Sprintf(", %d skipped", t.Skipped)
+			}
+		}
+		fmt.Printf("  %s %-*s  %-9s %s%s\n", mark, pr.width, s.ID, s.Status, pr.c("2", took(s)), tests)
 	}
 	total := time.Duration(d.FinishedAt-d.CreatedAt) * time.Millisecond
 	label := map[engine.RunStatus]string{

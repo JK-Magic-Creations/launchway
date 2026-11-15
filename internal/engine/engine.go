@@ -66,6 +66,9 @@ type Options struct {
 	// approve its approval steps. Nil means yes, because until there is
 	// sign-in everyone acts as the same configured user.
 	AllowSelfApproval *bool
+	// Tests limits what is kept of test reports; zero fields take the
+	// defaults (see TestLimits).
+	Tests TestLimits
 
 	// schema, for tests, makes the engine behave as a build that knows only
 	// the first schema migrations and their events; 0 means every one (or
@@ -86,6 +89,7 @@ type Engine struct {
 	schema        int    // the newest schema this build knows: its tables, columns and events
 	instance      string // tags this process's notifications, so it can ignore its own
 	channel       string // the PostgreSQL notification channel
+	tests         TestLimits
 
 	// writeMu serialises writes on SQLite, which allows one writer at a time
 	// anyway; waiting here is fairer and cheaper than SQLite's busy loop. On
@@ -144,6 +148,18 @@ type Job struct {
 	// its files are what LAUNCHWAY_LIB points at. Source.Libraries says
 	// where every library of the run is fetched from.
 	Library string `json:"library,omitempty"`
+	// Reports, for a step that declares test reports, says which files the
+	// runner collects once the step ends, and how much the server accepts.
+	// A runner that does not know it collects nothing.
+	Reports *JobReports `json:"reports,omitempty"`
+}
+
+// JobReports is what a runner collects after a step.
+type JobReports struct {
+	Tests []string `json:"tests"` // globs, relative to the workspace
+	// MaxBytes is how many bytes of report files the server accepts for
+	// one attempt; the runner sends no more.
+	MaxBytes int64 `json:"max_bytes"`
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -156,6 +172,32 @@ type Result struct {
 	// if it wrote any, else on stdout. The runner masks secrets in it as in
 	// the log; the server keeps at most MaxExcerptBytes of it.
 	Excerpt string `json:"excerpt,omitempty"`
+	// Tests, for a step that declares test reports, is what the runner
+	// collected once the step ended, whether it passed or failed: nil if it
+	// collected nothing (a runner that does not know reports, or one that is
+	// shutting down).
+	Tests *CollectedReports `json:"tests,omitempty"`
+}
+
+// CollectedReports are the report files a runner found after a step, and
+// what it has to say about collecting them.
+type CollectedReports struct {
+	Files []ReportFile `json:"files"`
+	// Notes say what was not collected and why: globs that matched no
+	// file, files cut short, limits reached. The runner also writes them in
+	// the step's log.
+	Notes []string `json:"notes,omitempty"`
+}
+
+// ReportFile is one report file, as the runner read it.
+type ReportFile struct {
+	Path string `json:"path"` // relative to the workspace
+	Data []byte `json:"data"`
+	// Size is the file's size when the runner knows it. Cut says the runner
+	// kept only the start of the file, len(Data) bytes, because of its
+	// limits.
+	Size int64 `json:"size,omitempty"`
+	Cut  bool  `json:"cut,omitempty"`
 }
 
 // LogLine is one line of a step's output.
@@ -191,6 +233,10 @@ func Open(o Options) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+	tests, err := o.Tests.withDefaults()
+	if err != nil {
+		return nil, err
+	}
 	if o.schema > 0 {
 		known = min(o.schema, len(migrations))
 	}
@@ -201,6 +247,7 @@ func Open(o Options) (*Engine, error) {
 	e := &Engine{
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
 		schema:   known,
+		tests:    tests,
 		selfOK:   o.AllowSelfApproval == nil || *o.AllowSelfApproval,
 		instance: ids.New("srv"),
 		wake:     make(chan struct{}),
@@ -411,6 +458,11 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	}
 	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
 		return nil, err
+	}
+	if nr.Pipeline.UsesSchema10() && !e.knows(schemaTests) {
+		// A release that old cannot even read the pipeline; a build limited
+		// to it for testing refuses in the same place.
+		return nil, fmt.Errorf("%w: this server does not know test reports (schema %d)", ErrConflict, schemaTests)
 	}
 	var draft *Draft
 	switch {
@@ -866,10 +918,19 @@ func (e *Engine) Heartbeat(leaseID string) (cancel bool, err error) {
 }
 
 // Finish records how a step attempt ended.
+//
+// For a step that declares test reports, the files the runner collected
+// are parsed first, outside the transaction; the attempt's summary goes in
+// the event that ends it and the individual results in test_cases, in the
+// same transaction. Nothing about the reports changes the step's outcome.
 func (e *Engine) Finish(leaseID string, res Result) error {
 	l, err := e.findLease(leaseID)
 	if err != nil {
 		return err
+	}
+	var tests *parsedTests
+	if res.Tests != nil && e.knows(schemaTests) && (res.Outcome == "succeeded" || res.Outcome == "failed" || res.Outcome == "canceled") {
+		tests = e.parseTests(res.Tests)
 	}
 	return e.withRun(l.runID, func(c *cmd) error {
 		s := c.st.Steps[l.stepID]
@@ -880,6 +941,12 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			return err
 		}
 		p := Payload{Step: l.stepID, Attempt: l.attempt, Lease: leaseID, ExitCode: res.ExitCode, Outputs: res.Outputs}
+		if def := c.st.Pipeline.Step(l.stepID); tests != nil && def != nil && def.Reports != nil {
+			var err error
+			if p.Tests, err = c.keepTests(l.stepID, l.attempt, tests); err != nil {
+				return err
+			}
+		}
 		switch res.Outcome {
 		case "succeeded":
 			p.Outcome = string(StepSucceeded)
@@ -887,8 +954,11 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		case "lost":
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
+				p.Tests = nil // the machinery failed; nothing it collected is kept
+				c.dropTests(l.stepID, l.attempt)
 				c.emit(StepCanceled, p)
 			} else {
+				c.dropTests(l.stepID, l.attempt)
 				c.lose(l.stepID, nonEmpty(res.Error, "the runner could not run the step"))
 			}
 		case "canceled":
@@ -898,6 +968,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			} else {
 				// The runner gave up without being asked, for example
 				// because it is shutting down. Treat it like a lost runner.
+				c.dropTests(l.stepID, l.attempt)
 				c.lose(l.stepID, nonEmpty(res.Error, "the runner stopped the step"))
 			}
 		default:
@@ -1039,6 +1110,7 @@ func (e *Engine) reaper(ctx context.Context) {
 			if now := e.now(); now.Sub(pruned) >= time.Minute {
 				pruned = now
 				e.forgetRunners()
+				e.pruneTests()
 			}
 		}
 	}
@@ -1129,6 +1201,9 @@ type cmd struct {
 	hooks   []func()
 	// others are the other runs this command changed (see alsoRun).
 	others []*cmd
+	// tests are the test results to store with this command's events, by
+	// step attempt (see keepTests).
+	tests map[stepAttempt][]storedCase
 	// schemaBefore is the run's Schema before this command, so that
 	// runs.min_schema is written only when it changes.
 	schemaBefore int
@@ -1410,6 +1485,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaTests) {
+		if err := c.persistSchema10(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
 }
 
@@ -1598,6 +1678,7 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		// a runner is never asked to look a secret up for one.
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: c.stepSecrets(def),
 		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Workspace: st.Workspace, Library: def.Library,
+		Reports: c.jobReports(def),
 	}
 }
 

@@ -63,7 +63,11 @@ lost that way during a rolling upgrade. Start using new keys in pipeline files o
 server runs the release that knows them, and stop before rolling back. Schema 9's
 `on.pull_request` and `supersede` are such keys; their runs are left to servers of schema 9 as
 described above (a pull-request run's pipeline always has `on.pull_request`, which keeps older
-servers from running it without the secrets rule they do not know).
+servers from running it without the secrets rule they do not know). Schema 10's
+`reports` is another: a run whose pipeline declares test reports has `runs.min_schema` 10, so a
+schema-9 server leaves it alone rather than run its steps without collecting their reports. The
+test summary schema 10 adds to `step.finished` and `step.canceled` events is a field older servers
+may safely ignore, so it needs no `requires`.
 
 ## Writing a migration
 

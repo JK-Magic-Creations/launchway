@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="1" skipped="2" tests="6" time="0.412" timestamp="2026-11-14T10:21:07.123456+00:00" hostname="runner-7f9c"><testcase classname="tests.test_api" name="test_health" file="tests/test_api.py" line="11" time="0.003" /><testcase classname="tests.test_api" name="test_create_user" file="tests/test_api.py" line="19" time="0.011"><failure message="AssertionError: assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code">client = &lt;FlaskClient &lt;Flask 'app'&gt;&gt;
+
+    def test_create_user(client):
+        resp = client.post("/users", json={"name": "ada"})
+&gt;       assert resp.status_code == 201
+E       AssertionError: assert 500 == 201
+E        +  where 500 = &lt;Response [500]&gt;.status_code
+
+tests/test_api.py:23: AssertionError</failure><system-out>--------------------------------- Captured stdout call ---------------------------------
+creating user ada
+db error: duplicate key value violates unique constraint "users_name_key"
+</system-out></testcase><testcase classname="tests.test_api" name="test_parse[a-b]" file="tests/test_api.py" line="30" time="0.001" /><testcase classname="tests.test_db" name="test_migrate" file="tests/test_db.py" line="7" time="0.000"><error message="failed on setup with &quot;psycopg.OperationalError: connection failed: Connection refused&quot;">@pytest.fixture
+    def db():
+&gt;       conn = psycopg.connect(DSN)
+
+tests/conftest.py:14:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+E   psycopg.OperationalError: connection failed: Connection refused
+
+.venv/lib/python3.12/site-packages/psycopg/connection.py:119: OperationalError</error></testcase><testcase classname="tests.test_paths" name="test_windows_paths" file="tests/test_paths.py" line="4" time="0.000"><skipped type="pytest.skip" message="only runs on Windows">/home/runner/work/app/tests/test_paths.py:5: only runs on Windows</skipped></testcase><testcase classname="tests.test_text" name="test_unicode_slug" file="tests/test_text.py" line="9" time="0.002"><skipped type="pytest.xfail" message="slugify drops accents, see #42" /></testcase></testsuite></testsuites>

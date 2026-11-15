@@ -137,7 +137,16 @@ func cmdServer(args []string) error {
 
 	dbAddr := cfg.DatabaseAddr()
 	allowSelf := cfg.AllowSelfApproval()
-	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait})
+	testLimits, err := cfg.TestLimits()
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
+	reportLimits, err := cfg.Runner.Reports.Limits()
+	if err != nil {
+		return fmt.Errorf("%s: runner.%w", *cfgPath, err)
+	}
+	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
+		Tests: testLimits})
 	if err != nil {
 		return err
 	}
@@ -205,7 +214,7 @@ func cmdServer(args []string) error {
 			Client: runner.NewClient(url, token), Exec: ex,
 			Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
 			DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
-			Secrets: secretStores,
+			Secrets: secretStores, Reports: reportLimits,
 		}
 		go func() { defer close(runnerDone); r.Run(runnerCtx) }()
 	} else {
@@ -388,6 +397,10 @@ func cmdRunner(args []string) error {
 	if err != nil {
 		return fmt.Errorf("secret stores: %w", err)
 	}
+	reportLimits, err := o.Reports.Limits()
+	if err != nil {
+		return fmt.Errorf("runner settings: %w", err)
+	}
 	id := "runner-" + o.Name
 	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id})
 	if err != nil {
@@ -400,7 +413,7 @@ func cmdRunner(args []string) error {
 	}
 	r := &runner.Runner{Client: runner.NewClient(o.Server, o.Token), Exec: ex,
 		Info:    engine.RunnerInfo{ID: id, Name: o.Name, Executor: ex.Name(), Version: version},
-		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores}
+		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores, Reports: reportLimits}
 	if o.HealthListen != "" {
 		ln, err := net.Listen("tcp", o.HealthListen)
 		if err != nil {

@@ -7,6 +7,7 @@ import { canOperate, useMe } from "../auth";
 import { BranchIcon, Empty, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
 import { RefPicker } from "../components/RefPicker";
 import { OverridesEditor } from "../components/Libraries";
+import { TestCounts } from "../components/Tests";
 
 export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -52,6 +53,7 @@ export function ProjectsPage() {
                 <div className="faint mono small">{p.url}</div>
               </div>
               <div className="project-actions">
+                <Link href={`/projects/${encodeURIComponent(p.name)}/tests`} className="btn">Tests</Link>
                 <Link href={`/projects/${encodeURIComponent(p.name)}/pipeline?ref=${encodeURIComponent(p.default_branch)}`} className="btn">Edit pipeline</Link>
                 {canOperate(me, p.name) && <button type="button" className="btn btn-primary" onClick={() => setStarting(p)}>Start a run</button>}
               </div>
@@ -73,6 +75,7 @@ export function ProjectsPage() {
               <Link href={`/runs/${p.last_run.id}`} className="lastrun">
                 <StatusPill status={p.last_run.status} />
                 <span>#{p.last_run.number} {p.last_run.message || p.last_run.pipeline}</span>
+                {p.last_run.tests && <TestCounts t={p.last_run.tests} />}
                 <span className="faint">{ago(p.last_run.created_at, now)}</span>
               </Link>
             )}

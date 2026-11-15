@@ -3,6 +3,7 @@ import { api, type Project, type RunStatus, type RunSummary } from "../api";
 import { ago, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { useNow, useStream } from "../live";
 import { BranchIcon, CommitIcon, Empty, ErrorBox, Link, StatusIcon, StepStrip, statusLabel } from "../components/ui";
+import { TestCounts } from "../components/Tests";
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "", label: "All" },
@@ -112,6 +113,7 @@ function RunRow({ r, now }: { r: RunSummary; now: number }) {
             {r.cancel_requested && r.cancel_reason && <span className="meta">{r.cancel_reason}</span>}
           </span>
         </span>
+        {r.tests && <span className="runrow-tests"><TestCounts t={r.tests} /></span>}
         <span className="runrow-strip"><StepStrip steps={r.steps} /></span>
         <span className="runrow-time">
           <span>{elapsed(r.started_at || r.created_at, r.finished_at, now) || "—"}</span>

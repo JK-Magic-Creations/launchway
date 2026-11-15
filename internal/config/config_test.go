@@ -323,3 +323,37 @@ projects:
 		t.Fatalf("err %v", err)
 	}
 }
+
+func TestTestReportSettings(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "launchway.yaml")
+	os.WriteFile(path, []byte(`
+tests: { max_upload_mib: 8, max_cases_per_run: 1000, max_cases_per_project: 5000 }
+runner:
+  reports: { max_files: 5, max_file_mib: 2, max_total_mib: 4 }
+`), 0o644)
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tl, err := c.TestLimits()
+	if err != nil || tl.MaxUploadBytes != 8<<20 || tl.MaxCasesPerRun != 1000 || tl.MaxCasesPerProject != 5000 {
+		t.Fatalf("test limits %+v %v", tl, err)
+	}
+	rl, err := c.Runner.Reports.Limits()
+	if err != nil || rl.MaxFiles != 5 || rl.MaxFileBytes != 2<<20 || rl.MaxBytes != 4<<20 {
+		t.Fatalf("report limits %+v %v", rl, err)
+	}
+	// Left out, the defaults.
+	c, _ = Load(filepath.Join(dir, "missing.yaml"))
+	if rl, _ := c.Runner.Reports.Limits(); rl.MaxFiles != 100 || rl.MaxFileBytes != 10<<20 || rl.MaxBytes != 20<<20 {
+		t.Fatalf("default report limits %+v", rl)
+	}
+	for _, bad := range []string{"tests: { max_upload_mib: -1 }\n", "tests: { max_upload_mib: 5000 }\n",
+		"runner: { reports: { max_files: -3 } }\n", "runner: { reports: { max_file_mb: 3 } }\n"} {
+		os.WriteFile(path, []byte(bad), 0o644)
+		if _, err := Load(path); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
+	}
+}

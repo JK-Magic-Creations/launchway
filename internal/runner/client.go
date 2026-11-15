@@ -22,6 +22,10 @@ import (
 // has been given to someone else or canceled, and this runner must stop it.
 var ErrLeaseLost = errors.New("lease lost")
 
+// ErrTooLarge means the server refused a request as too large: a result
+// with more report data than it accepts.
+var ErrTooLarge = errors.New("too large for the server")
+
 // Client talks to the server's runner API.
 type Client struct {
 	Server string // base URL, e.g. http://127.0.0.1:8080
@@ -69,6 +73,8 @@ func (c *Client) call(ctx context.Context, path string, in, out any) (int, error
 	switch {
 	case resp.StatusCode == http.StatusGone:
 		return resp.StatusCode, ErrLeaseLost
+	case resp.StatusCode == http.StatusRequestEntityTooLarge:
+		return resp.StatusCode, fmt.Errorf("%s: %w (HTTP 413)", path, ErrTooLarge)
 	case resp.StatusCode == http.StatusNoContent:
 		return resp.StatusCode, nil
 	case resp.StatusCode >= 300:

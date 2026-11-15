@@ -63,8 +63,15 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/runs/{id}/events":            {"GET", "/api/v1/runs/{pay}/events", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/runs/{id}/pipeline-file":     {"GET", "/api/v1/runs/{pay}/pipeline-file", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/runs/{id}/steps/{step}/logs": {"GET", "/api/v1/runs/{pay}/steps/gate/logs", "", [6]int{401, 404, 200, 200, 404, 200}},
-	"POST /api/v1/runs/{id}/cancel":           {"POST", "/api/v1/runs/{pay}/cancel", "", [6]int{401, 404, 403, allowed, 404, allowed}},
-	"POST /api/v1/runs/{id}/resume":           {"POST", "/api/v1/runs/{pay}/resume", "", [6]int{401, 404, 403, allowed, 404, allowed}},
+	"GET /api/v1/runs/{id}/tests":             {"GET", "/api/v1/runs/{pay}/tests", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/tests/cases":       {"GET", "/api/v1/runs/{pay}/tests/cases", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// {pay} has no test results: 404 after the permission check too (see TestTestResultsFollowAccess).
+	"GET /api/v1/runs/{id}/tests/cases/{case}": {"GET", "/api/v1/runs/{pay}/tests/cases/1", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/tests":        {"GET", "/api/v1/projects/pay-api/tests", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// No test has run: 404 after the permission check too (see TestTestResultsFollowAccess).
+	"GET /api/v1/projects/{name}/tests/history": {"GET", "/api/v1/projects/pay-api/tests/history?key=k", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/runs/{id}/cancel":             {"POST", "/api/v1/runs/{pay}/cancel", "", [6]int{401, 404, 403, allowed, 404, allowed}},
+	"POST /api/v1/runs/{id}/resume":             {"POST", "/api/v1/runs/{pay}/resume", "", [6]int{401, 404, 403, allowed, 404, allowed}},
 	// {pay} is waiting for an approval, so it cannot be re-run yet: 409 after the permission check.
 	"GET /api/v1/runs/{id}/rerun":                 {"GET", "/api/v1/runs/{pay}/rerun?from=gate", "", [6]int{401, 404, 409, 409, 404, 409}},
 	"POST /api/v1/runs/{id}/rerun":                {"POST", "/api/v1/runs/{pay}/rerun", `{"from":"gate"}`, [6]int{401, 404, 403, allowed, 404, allowed}},

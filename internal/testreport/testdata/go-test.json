@@ -1,0 +1,71 @@
+go: downloading github.com/google/go-cmp v0.7.0
+{"ImportPath":"example.com/app/broken [example.com/app/broken.test]","Action":"build-output","Output":"# example.com/app/broken [example.com/app/broken.test]\n"}
+{"ImportPath":"example.com/app/broken [example.com/app/broken.test]","Action":"build-output","Output":"broken/parse.go:9:6: undefined: strings.Cutt\n"}
+{"ImportPath":"example.com/app/broken [example.com/app/broken.test]","Action":"build-output","Output":"broken/parse.go:14:2: declared and not used: n\n"}
+{"ImportPath":"example.com/app/broken [example.com/app/broken.test]","Action":"build-fail"}
+{"Time":"2026-11-14T10:25:00.000137+00:00","Action":"start","Package":"example.com/app/calc"}
+{"Time":"2026-11-14T10:25:00.000274+00:00","Action":"run","Package":"example.com/app/calc","Test":"TestAdd"}
+{"Time":"2026-11-14T10:25:00.000411+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestAdd","Output":"=== RUN   TestAdd\n"}
+{"Time":"2026-11-14T10:25:00.000548+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestAdd","Output":"--- PASS: TestAdd (0.00s)\n"}
+{"Time":"2026-11-14T10:25:00.000685+00:00","Action":"pass","Package":"example.com/app/calc","Test":"TestAdd","Elapsed":0}
+{"Time":"2026-11-14T10:25:00.000822+00:00","Action":"run","Package":"example.com/app/calc","Test":"TestDiv"}
+{"Time":"2026-11-14T10:25:00.000959+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestDiv","Output":"=== RUN   TestDiv\n"}
+{"Time":"2026-11-14T10:25:00.001096+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestDiv","Output":"    calc_test.go:22: Div(1, 0) = 0, want an error\n"}
+{"Time":"2026-11-14T10:25:00.001233+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestDiv","Output":"--- FAIL: TestDiv (0.00s)\n"}
+{"Time":"2026-11-14T10:25:00.001370+00:00","Action":"fail","Package":"example.com/app/calc","Test":"TestDiv","Elapsed":0.001}
+{"Time":"2026-11-14T10:25:00.001507+00:00","Action":"run","Package":"example.com/app/calc","Test":"TestTable"}
+{"Time":"2026-11-14T10:25:00.001644+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable","Output":"=== RUN   TestTable\n"}
+{"Time":"2026-11-14T10:25:00.001781+00:00","Action":"run","Package":"example.com/app/calc","Test":"TestTable/one"}
+{"Time":"2026-11-14T10:25:00.001918+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable/one","Output":"=== RUN   TestTable/one\n"}
+{"Time":"2026-11-14T10:25:00.002055+00:00","Action":"run","Package":"example.com/app/calc","Test":"TestTable/two"}
+{"Time":"2026-11-14T10:25:00.002192+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable/two","Output":"=== RUN   TestTable/two\n"}
+{"Time":"2026-11-14T10:25:00.002329+00:00","Action":"run","Package":"example.com/app/calc","Test":"TestTable/three"}
+{"Time":"2026-11-14T10:25:00.002466+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable/three","Output":"=== RUN   TestTable/three\n"}
+{"Time":"2026-11-14T10:25:00.002603+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable/three","Output":"    calc_test.go:40: Sum(2, 5) = 7, want 9\n"}
+{"Time":"2026-11-14T10:25:00.002740+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable","Output":"--- FAIL: TestTable (0.00s)\n"}
+{"Time":"2026-11-14T10:25:00.002877+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable/one","Output":"    --- PASS: TestTable/one (0.00s)\n"}
+{"Time":"2026-11-14T10:25:00.003014+00:00","Action":"pass","Package":"example.com/app/calc","Test":"TestTable/one","Elapsed":0}
+{"Time":"2026-11-14T10:25:00.003151+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable/two","Output":"    --- PASS: TestTable/two (0.00s)\n"}
+{"Time":"2026-11-14T10:25:00.003288+00:00","Action":"pass","Package":"example.com/app/calc","Test":"TestTable/two","Elapsed":0}
+{"Time":"2026-11-14T10:25:00.003425+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestTable/three","Output":"    --- FAIL: TestTable/three (0.00s)\n"}
+{"Time":"2026-11-14T10:25:00.003562+00:00","Action":"fail","Package":"example.com/app/calc","Test":"TestTable/three","Elapsed":0}
+{"Time":"2026-11-14T10:25:00.003699+00:00","Action":"fail","Package":"example.com/app/calc","Test":"TestTable","Elapsed":0.002}
+{"Time":"2026-11-14T10:25:00.003836+00:00","Action":"run","Package":"example.com/app/calc","Test":"TestNetwork"}
+{"Time":"2026-11-14T10:25:00.003973+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestNetwork","Output":"=== RUN   TestNetwork\n"}
+{"Time":"2026-11-14T10:25:00.004110+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestNetwork","Output":"    calc_test.go:55: needs network access; set CALC_NET=1\n"}
+{"Time":"2026-11-14T10:25:00.004247+00:00","Action":"output","Package":"example.com/app/calc","Test":"TestNetwork","Output":"--- SKIP: TestNetwork (0.00s)\n"}
+{"Time":"2026-11-14T10:25:00.004384+00:00","Action":"skip","Package":"example.com/app/calc","Test":"TestNetwork","Elapsed":0}
+{"Time":"2026-11-14T10:25:00.004521+00:00","Action":"output","Package":"example.com/app/calc","Output":"FAIL\n"}
+{"Time":"2026-11-14T10:25:00.004658+00:00","Action":"output","Package":"example.com/app/calc","Output":"FAIL\texample.com/app/calc\t0.012s\n"}
+{"Time":"2026-11-14T10:25:00.004795+00:00","Action":"fail","Package":"example.com/app/calc","Elapsed":0.012}
+{"Time":"2026-11-14T10:25:00.004932+00:00","Action":"start","Package":"example.com/app/util"}
+{"Time":"2026-11-14T10:25:00.005069+00:00","Action":"output","Package":"example.com/app/util","Output":"?   \texample.com/app/util\t[no test files]\n"}
+{"Time":"2026-11-14T10:25:00.005206+00:00","Action":"skip","Package":"example.com/app/util","Elapsed":0}
+{"Time":"2026-11-14T10:25:00.005343+00:00","Action":"start","Package":"example.com/app/crash"}
+{"Time":"2026-11-14T10:25:00.005480+00:00","Action":"run","Package":"example.com/app/crash","Test":"TestOK"}
+{"Time":"2026-11-14T10:25:00.005617+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestOK","Output":"=== RUN   TestOK\n"}
+{"Time":"2026-11-14T10:25:00.005754+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestOK","Output":"--- PASS: TestOK (0.00s)\n"}
+{"Time":"2026-11-14T10:25:00.005891+00:00","Action":"pass","Package":"example.com/app/crash","Test":"TestOK","Elapsed":0}
+{"Time":"2026-11-14T10:25:00.006028+00:00","Action":"run","Package":"example.com/app/crash","Test":"TestWorkerStop"}
+{"Time":"2026-11-14T10:25:00.006165+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"=== RUN   TestWorkerStop\n"}
+{"Time":"2026-11-14T10:25:00.006302+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"    crash_test.go:30: starting 4 workers\n"}
+{"Time":"2026-11-14T10:25:00.006439+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"panic: close of closed channel\n"}
+{"Time":"2026-11-14T10:25:00.006576+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"\n"}
+{"Time":"2026-11-14T10:25:00.006713+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"goroutine 23 [running]:\n"}
+{"Time":"2026-11-14T10:25:00.006850+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"example.com/app/crash.(*Pool).Stop(0xc0000a4000)\n"}
+{"Time":"2026-11-14T10:25:00.006987+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"\t/home/runner/work/app/crash/pool.go:61 +0x2c\n"}
+{"Time":"2026-11-14T10:25:00.007124+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"created by example.com/app/crash.(*Pool).Start in goroutine 22\n"}
+{"Time":"2026-11-14T10:25:00.007261+00:00","Action":"output","Package":"example.com/app/crash","Test":"TestWorkerStop","Output":"\t/home/runner/work/app/crash/pool.go:40 +0x85\n"}
+{"Time":"2026-11-14T10:25:00.007398+00:00","Action":"output","Package":"example.com/app/crash","Output":"FAIL\texample.com/app/crash\t0.007s\n"}
+{"Time":"2026-11-14T10:25:00.007535+00:00","Action":"fail","Package":"example.com/app/crash","Elapsed":0.007}
+{"Time":"2026-11-14T10:25:00.007672+00:00","Action":"start","Package":"example.com/app/broken"}
+{"Time":"2026-11-14T10:25:00.007809+00:00","Action":"output","Package":"example.com/app/broken","Output":"FAIL\texample.com/app/broken [build failed]\n"}
+{"Time":"2026-11-14T10:25:00.007946+00:00","Action":"fail","Package":"example.com/app/broken","Elapsed":0,"FailedBuild":"example.com/app/broken [example.com/app/broken.test]"}
+{"Time":"2026-11-14T10:25:00.008083+00:00","Action":"start","Package":"example.com/app/ok"}
+{"Time":"2026-11-14T10:25:00.008220+00:00","Action":"run","Package":"example.com/app/ok","Test":"TestA"}
+{"Time":"2026-11-14T10:25:00.008357+00:00","Action":"output","Package":"example.com/app/ok","Test":"TestA","Output":"=== RUN   TestA\n"}
+{"Time":"2026-11-14T10:25:00.008494+00:00","Action":"output","Package":"example.com/app/ok","Test":"TestA","Output":"--- PASS: TestA (0.03s)\n"}
+{"Time":"2026-11-14T10:25:00.008631+00:00","Action":"pass","Package":"example.com/app/ok","Test":"TestA","Elapsed":0.03}
+{"Time":"2026-11-14T10:25:00.008768+00:00","Action":"output","Package":"example.com/app/ok","Output":"PASS\n"}
+{"Time":"2026-11-14T10:25:00.008905+00:00","Action":"output","Package":"example.com/app/ok","Output":"ok  \texample.com/app/ok\t0.041s\n"}
+{"Time":"2026-11-14T10:25:00.009042+00:00","Action":"pass","Package":"example.com/app/ok","Elapsed":0.041}

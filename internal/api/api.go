@@ -125,6 +125,8 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/projects/{name}/refs", projectRead, "", s.projectRefs},
 		{"POST /api/v1/projects/{name}/runs", projectOperate, "run.start", s.startRun},
 		{"GET /api/v1/projects/{name}/pipeline", projectRead, "", s.readPipeline},
+		{"GET /api/v1/projects/{name}/tests", projectRead, "", s.projectTests},
+		{"GET /api/v1/projects/{name}/tests/history", projectRead, "", s.testHistory},
 		{"POST /api/v1/projects/{name}/pipeline", projectOperate, "pipeline.save", s.savePipeline},
 		{"POST /api/v1/projects/{name}/draft-runs", projectDraft, "run.draft", s.startDraft},
 		{"GET /api/v1/runs", signedIn, "", s.listRuns},
@@ -132,6 +134,9 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/runs/{id}/events", runRead, "", s.runEvents},
 		{"GET /api/v1/runs/{id}/pipeline-file", runRead, "", s.runPipelineFile},
 		{"GET /api/v1/runs/{id}/steps/{step}/logs", runRead, "", s.stepLogs},
+		{"GET /api/v1/runs/{id}/tests", runRead, "", s.runTests},
+		{"GET /api/v1/runs/{id}/tests/cases", runRead, "", s.runTestCases},
+		{"GET /api/v1/runs/{id}/tests/cases/{case}", runRead, "", s.runTestCase},
 		{"POST /api/v1/runs/{id}/cancel", runOperate, "run.cancel", s.cancelRun},
 		{"POST /api/v1/runs/{id}/resume", runOperate, "run.resume", s.resumeRun},
 		{"GET /api/v1/runs/{id}/rerun", runRead, "", s.rerunPlan},
@@ -404,9 +409,33 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// finish records how a step attempt ended. Its body may carry the step's
+// report files, so it may be larger than other requests: up to what the
+// engine accepts of them (base64 in JSON), with room for the rest. A larger
+// one is refused with 413, and the runner then reports the result without
+// its files. Only a few large ones are read at once.
 func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
+	limit := s.Engine.TestLimits().MaxUploadBytes*4/3 + 4<<20
+	if r.ContentLength > limit {
+		writeErr(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("the result is larger than the %d MiB this server accepts", limit>>20))
+		return
+	}
+	if r.ContentLength < 0 || r.ContentLength > 1<<20 {
+		select {
+		case largeFinishes <- struct{}{}:
+			defer func() { <-largeFinishes }()
+		case <-r.Context().Done():
+			return
+		}
+	}
 	var in leaseReq
-	if !decode(w, r, &in) {
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, limit))
+	if err := dec.Decode(&in); err != nil && err != io.EOF {
+		if errors.As(err, new(*http.MaxBytesError)) {
+			writeErr(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("the result is larger than the %d MiB this server accepts", limit>>20))
+			return
+		}
+		writeErr(w, http.StatusBadRequest, "the request body is not valid JSON: "+err.Error())
 		return
 	}
 	if err := s.Engine.Finish(in.LeaseID, in.Result); err != nil {
@@ -415,6 +444,9 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// largeFinishes bounds how many large results one server reads at once.
+var largeFinishes = make(chan struct{}, 4)
 
 // leave forgets a runner that is shutting down, so that other runners may
 // take over its runs at once.

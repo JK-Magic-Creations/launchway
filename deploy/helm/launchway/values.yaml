@@ -49,6 +49,18 @@ config:
   #     # pull_requests: in extraConfig; the default is no).
   #     pull_requests: { secrets: false }
   projects: []
+  # -- What the servers keep of the test reports steps declare (reports.tests in a pipeline).
+  # Each step attempt's summary is kept with the run's events; individual results go in a table
+  # of their own, within these limits.
+  tests:
+    # -- MiB of report files a server accepts for one step attempt. Runners are told, and
+    # collect no more; a result larger than this is refused and reported without its files.
+    maxUploadMiB: 24
+    # -- Individual test results one run keeps; beyond this only the totals are kept.
+    maxCasesPerRun: 50000
+    # -- Individual test results a project keeps over all its runs. When there are more, the
+    # oldest runs' results are removed first (their totals stay). At least maxCasesPerRun.
+    maxCasesPerProject: 1000000
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -56,8 +68,8 @@ config:
   #   drafts: { allow: operator, secrets: false }   # the defaults
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
-  # starting (the pod logs say which key). listen, data, database and projects are set by
-  # the chart and may not appear here; runner.enabled may not be true.
+  # starting (the pod logs say which key). listen, data, database, projects and tests are set
+  # by the chart and may not appear here; runner.enabled may not be true.
   extraConfig: {}
 
 # ---------------------------------------------------------------------------------------------
@@ -277,6 +289,16 @@ runner:
   # certificate files they refer to with extraVolumes/extraVolumeMounts. Runners have only the
   # stores defined here: there is no "env" store unless you define one.
   secretStores: {}
+  # -- Limits on the report files (test results) runners collect from a step pod after each
+  # step. A step's log says when a file was cut short or left out.
+  reports:
+    # -- Files per step attempt.
+    maxFiles: 100
+    # -- MiB read of one file; a larger one is cut to this.
+    maxFileMiB: 10
+    # -- MiB read of all of a step attempt's files together (and at most what the servers
+    # accept: config.tests.maxUploadMiB).
+    maxTotalMiB: 20
   resources:
     requests:
       cpu: 100m
