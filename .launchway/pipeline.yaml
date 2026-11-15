@@ -2,6 +2,11 @@
 pipeline: launchway
 on:
   push: { branches: [main] }
+  pull_request: {}
+
+# A newer push to the same branch, or a new commit on the same pull request,
+# cancels the older run still going.
+supersede: true
 
 steps:
   check-code:
