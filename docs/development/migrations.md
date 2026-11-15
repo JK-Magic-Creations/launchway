@@ -69,6 +69,14 @@ schema-9 server leaves it alone rather than run its steps without collecting the
 test summary schema 10 adds to `step.finished` and `step.canceled` events is a field older servers
 may safely ignore, so it needs no `requires`.
 
+Schema 13's `inputs`, `for_each` (with `each` on the steps a loop makes, and `loops` in the
+graph), `when: { input: … }`, `on.schedule` and `on.webhook` are such keys too. A run whose
+pipeline uses any of them, whose trigger carries input values, or whose event is `schedule` or
+`webhook` has `runs.min_schema` 13, so a server of schema 12 leaves it alone
+(`TestOlderBuildLeavesTriggerRunsAlone`). Schema 13 adds no event type. Its API tokens limited to
+a role or projects are stored under a `v2:` hash that older servers never look up, so a rollback
+refuses such tokens instead of granting their owner's full rights.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what
