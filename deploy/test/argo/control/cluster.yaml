@@ -1,0 +1,114 @@
+# What the control tests add to the kind cluster of deploy/test/argo, all under names of
+# their own so they never touch the phase-1 objects: namespace lw-ctl, AppProject lw-ctl,
+# repository control.git, Application ctl-canary, and Roles named lw-ctl-deployer for the
+# same deploy runner identity (argocd/lw-deployer), so the phase-1 admission policy on
+# Applications applies to it too.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lw-ctl
+  labels:
+    app.kubernetes.io/part-of: launchway-test-argo-control
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lw-ctl
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo-control }
+spec:
+  description: Launchway control tests (kind only)
+  sourceRepos:
+    - http://git.lw-git.svc:8080/lwtest/control.git
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: lw-ctl }
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - { group: "", kind: Service }
+    - { group: argoproj.io, kind: Rollout }
+    - { group: argoproj.io, kind: AnalysisTemplate }
+---
+# Test-only credentials (the same as lw-git/git-credentials).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-lw-control
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+    app.kubernetes.io/part-of: launchway-test-argo-control
+type: Opaque
+stringData:
+  type: git
+  url: http://git.lw-git.svc:8080/lwtest/control.git
+  username: lwtest
+  password: lwtest-not-a-secret
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ctl-canary
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo-control }
+spec:
+  project: lw-ctl
+  source:
+    repoURL: http://git.lw-git.svc:8080/lwtest/control.git
+    targetRevision: main
+    path: apps/ctl
+  destination: { server: https://kubernetes.default.svc, namespace: lw-ctl }
+  syncPolicy:
+    automated: { selfHeal: true, prune: false }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lw-ctl-deployer
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo-control }
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    resourceNames: [ctl-canary]
+    verbs: [get, list, watch, patch]
+  - apiGroups: [argoproj.io]
+    resources: [appprojects]
+    resourceNames: [lw-ctl]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lw-ctl-deployer
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo-control }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: lw-ctl-deployer }
+subjects:
+  - { kind: ServiceAccount, name: lw-deployer, namespace: argocd }
+---
+# As the chart grants with delivery.deployRunner.rbac.controlRollouts: { lw-ctl: [ctl] }.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lw-ctl-deployer
+  namespace: lw-ctl
+  labels: { app.kubernetes.io/part-of: launchway-test-argo-control }
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [rollouts, analysisruns]
+    verbs: [get, list, watch]
+  - apiGroups: [argoproj.io]
+    resources: [rollouts/status]
+    resourceNames: [ctl]
+    verbs: [patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lw-ctl-deployer
+  namespace: lw-ctl
+  labels: { app.kubernetes.io/part-of: launchway-test-argo-control }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: lw-ctl-deployer }
+subjects:
+  - { kind: ServiceAccount, name: lw-deployer, namespace: argocd }
