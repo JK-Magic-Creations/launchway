@@ -104,7 +104,7 @@ export function TokensPage() {
             </label>
             <label className="field">
               <span>Projects</span>
-              <input value={projects} placeholder="all; or names and patterns: pay-*, web" onChange={(e) => setProjects(e.target.value)} />
+              <input value={projects} placeholder="every project, or: pay-*, web" onChange={(e) => setProjects(e.target.value)} />
             </label>
           </div>
           <p className="sub">Every token expires, after at most {maxDays} days on this server. The role can be no higher than your own.</p>
