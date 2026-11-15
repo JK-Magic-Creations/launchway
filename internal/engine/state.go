@@ -35,7 +35,10 @@ const (
 	StepFailed    StepStatus = "failed"
 	StepSkippedS  StepStatus = "skipped"
 	StepCanceledS StepStatus = "canceled"
-	StepWaitingS  StepStatus = "waiting" // an approval waiting for a person; no runner holds it
+	// StepWaitingS: no runner holds the step, and it waits: an approval for
+	// a person, a deploy step for its environment's lock or for what deploy
+	// runners observe (StepState.WaitKind says which).
+	StepWaitingS StepStatus = "waiting"
 )
 
 // Terminal reports whether the step will not change again without a resume.
@@ -123,7 +126,47 @@ type StepState struct {
 	ReusedFrom    string
 	ReusedNumber  int
 	ReusedAttempt int
+	// Deploy and rollback steps only. WaitKind is what a waiting step waits
+	// for (WaitLock or WaitObserve; empty for an approval), and Dep is the
+	// step's deployment, once it waits for the lock or has one.
+	WaitKind string
+	Dep      *DeployState
 }
+
+// What a waiting deploy or rollback step waits for.
+const (
+	WaitLock    = "lock"    // the environment's lock, held by another deployment
+	WaitObserve = "observe" // deploy runners to observe that it is done
+)
+
+// DeployState is a deploy or rollback step's deployment, as its events
+// describe it. A rollback step's has the ID of the deployment it rolls back.
+type DeployState struct {
+	ID          string
+	Environment string
+	Service     string
+	Target      string
+	Application string
+	Mode        string
+	Version     string
+	Previous    *DeployRef
+	Holder      *DeployRef // waiting for the lock: who holds it
+	OpenedAt    int64
+	// Action is the action queued, running or last done (apply or revert),
+	// ActionDone whether it is done, and Facts what the runner did.
+	Action     string
+	ActionDone bool
+	Facts      *DeployFacts
+	Commit     string // observing: the commit Argo CD must have synced
+	Phase      string
+	Detail     string
+	Phases     int // deploy.phase events in this attempt
+	Closed     bool
+	Verdict    string
+}
+
+// Opened reports whether the deployment was opened (it took the lock).
+func (d *DeployState) Opened() bool { return d != nil && d.ID != "" }
 
 // secretsAllowed reports whether the run's steps may read secrets: not in a
 // draft run or a pull-request run unless the project allowed it when the run
@@ -181,10 +224,10 @@ func fold(events []Event, vocab int) *RunState {
 
 // Values a server of this version understands, inside events.
 var (
-	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval}
+	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval, pipeline.KindDeploy, pipeline.KindRollback}
 	knownOutcomes  = []string{string(StepSucceeded), string(StepFailed)}
 	knownRunEnds   = []string{string(RunSucceeded), string(RunFailed), string(RunCanceled)}
-	knownSkipKinds = []string{"condition", "upstream"}
+	knownSkipKinds = []string{"condition", "upstream", SkipNotNeeded, SkipSuperseded}
 )
 
 // understands reports whether this state's server knows events of schema v.
@@ -248,12 +291,27 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("a pipeline key of schema %d (reports)", schemaTests)
 			}
 		}
+		// Deploy and rollback steps hold locks and change environments; a
+		// server that does not know them must leave the whole run alone.
+		if p.Pipeline.UsesSchema11() {
+			st.Schema = max(st.Schema, schemaDeploy)
+			if !st.understands(schemaDeploy) {
+				st.notUnderstood("deploy or rollback steps (schema %d)", schemaDeploy)
+			}
+		}
 		// Artifacts, fetch, and findings and SBOM reports: a server that
 		// does not know them would run a step without the files it fetches.
 		if p.Pipeline.UsesSchema12() {
 			st.Schema = max(st.Schema, schemaArtifacts)
 			if !st.understands(schemaArtifacts) {
 				st.notUnderstood("a pipeline key of schema %d (artifacts, fetch, reports.findings or reports.sbom)", schemaArtifacts)
+			}
+		}
+		// Run inputs, loops, schedules and webhooks (see usesSchema13).
+		if usesSchema13(p) {
+			st.Schema = max(st.Schema, schemaTriggers)
+			if !st.understands(schemaTriggers) {
+				st.notUnderstood("a pipeline key or trigger of schema %d (inputs, for_each, a schedule or a webhook)", schemaTriggers)
 			}
 		}
 		return true
@@ -355,7 +413,14 @@ func (st *RunState) apply(ev Event) {
 		st.FinishedAt = ev.At
 
 	case StepQueued:
+		if p.Attempt != s.Attempt && s.Dep != nil {
+			s.Dep.Phases = 0
+		}
 		s.Status = StepQueuedS
+		s.WaitKind = ""
+		if d := p.Deploy; d != nil {
+			st.queueAction(s, d)
+		}
 		s.Attempt = p.Attempt
 		s.QueuedAt = ev.At
 		s.StartedAt, s.FinishedAt = 0, 0
@@ -365,6 +430,7 @@ func (st *RunState) apply(ev Event) {
 
 	case StepSkipped:
 		s.Status = StepSkippedS
+		s.WaitKind = ""
 		s.Error = p.Reason
 		s.SkipKind = p.SkipKind
 		s.FinishedAt = ev.At
@@ -373,6 +439,11 @@ func (st *RunState) apply(ev Event) {
 		s.Status = StepLeasedS
 		s.LeaseID = p.Lease
 		s.Runner = p.Runner
+		// A deploy runner's actions need no workspace: they do not move the
+		// run to that runner.
+		if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
+			break
+		}
 		if p.Runner != st.Runner {
 			st.Runner, st.Workspace = p.Runner, p.Lease
 		}
@@ -386,6 +457,7 @@ func (st *RunState) apply(ev Event) {
 		s.StartedAt = ev.At
 
 	case StepFinished:
+		s.WaitKind = ""
 		if p.Outcome == string(StepSucceeded) {
 			s.Status = StepSucceeded
 		} else {
@@ -406,6 +478,7 @@ func (st *RunState) apply(ev Event) {
 
 	case StepCanceled:
 		s.Status = StepCanceledS
+		s.WaitKind = ""
 		s.Error = p.Reason
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
@@ -417,6 +490,7 @@ func (st *RunState) apply(ev Event) {
 		s.ExitCode = nil
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.clearDecision()
+		s.WaitKind, s.Dep = "", nil
 
 	case StepWaiting:
 		s.Status = StepWaitingS
@@ -454,5 +528,8 @@ func (st *RunState) apply(ev Event) {
 		s.FinishedAt = ev.At
 		s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt = p.Reused.Run, p.Reused.Number, p.Reused.Attempt
 		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, p.Reused.DecidedAt, p.Comment
+
+	default:
+		st.applyDeploy(ev, s)
 	}
 }

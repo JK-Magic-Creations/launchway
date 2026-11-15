@@ -47,6 +47,7 @@ const (
 	paramTypeString   = "string"
 	paramTypeNumber   = "number"
 	paramTypeBoolean  = "boolean"
+	paramTypeList     = "list"
 	templatesDir      = "templates/"
 	templateExtension = ".yaml"
 )
@@ -125,6 +126,10 @@ func (p *Param) check(v string) string {
 	case paramTypeBoolean:
 		if v != "true" && v != "false" {
 			return fmt.Sprintf("%s is true or false; %q is neither", p.Name, v)
+		}
+	case paramTypeList:
+		if _, msg := ParseList(v); msg != "" {
+			return fmt.Sprintf("%s is a list: %s", p.Name, msg)
 		}
 	default:
 		switch {
@@ -247,7 +252,9 @@ func (ps *parser) parseWith(n *yaml.Node, at string) (map[string]string, map[str
 			ps.add(k, where, "%q is written twice", k.Value)
 			continue
 		}
-		val := ps.scalar(v, where)
+		ps.curField, ps.curName = "with", k.Value
+		val := ps.withValue(ps.cur, k.Value, v, where)
+		ps.curField, ps.curName = "", ""
 		if len(val) > MaxParamValueLen {
 			ps.add(v, where, "the value is longer than %d bytes", MaxParamValueLen)
 		}
@@ -322,6 +329,9 @@ func (ps *parser) parseIf(n *yaml.Node, at string) *paramTest {
 // reference to a parameter: { param: name }, or { param: name, format:
 // "text with one %s" } for a string parameter.
 func (ps *parser) scalar(n *yaml.Node, at string) string {
+	if n.Kind == yaml.MappingNode && hasKey(n, "each") {
+		return ps.eachValue(n, at)
+	}
 	if n.Kind != yaml.MappingNode || !hasKey(n, "param") {
 		return ps.str(n, at)
 	}
@@ -440,6 +450,7 @@ type Template struct {
 	Containers  []*Container
 	Steps       []*Step // uses steps included; steps whose if is false are marked
 	Outputs     []templateOutput
+	Loops       []*Loop // the template's loops, expanded; IDs without the use's prefix
 }
 
 type templateOutput struct {
@@ -453,7 +464,7 @@ var templateKeys = []string{"template", "description", "params", "containers", "
 // use passes are reported through withProblem, in the file that has the
 // use; problems in the template itself are returned.
 func readTemplate(data []byte, name string, with map[string]string, withLines map[string]*yamlPos, usesLine int,
-	withProblem func(line, col int, path, msg string)) (*Template, Problems) {
+	withProblem func(line, col int, path, msg string), loopLimit int, prefix string) (*Template, Problems) {
 	if len(data) > MaxFileBytes {
 		return nil, Problems{{Message: fmt.Sprintf("the template is larger than %d KiB", MaxFileBytes>>10)}}
 	}
@@ -520,6 +531,9 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 			continue
 		}
 		scope.values[k] = with[k]
+		if p.Type == paramTypeList {
+			scope.values[k] = canonList(with[k])
+		}
 	}
 	for _, p := range t.Params {
 		if _, ok := scope.values[p.Name]; ok {
@@ -556,6 +570,18 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 	t.Containers, t.Steps = p.Containers, p.Steps
 	if v := nodes["outputs"]; v != nil {
 		t.Outputs = ps.parseOutputs(v, p)
+	}
+	for _, o := range t.Outputs {
+		if s := p.Step(o.Step); s != nil && s.ForEach != nil {
+			ps.problems = append(ps.problems, Problem{Line: o.Line, Path: "outputs." + o.Key,
+				Message: fmt.Sprintf("%s is repeated by for_each, so it is several steps; an output names one step", o.Step)})
+		}
+	}
+	if len(ps.problems) == 0 {
+		// Every list is known here: written in place, or a parameter's.
+		steps, loops, lps := expandLoops(t.Steps, prefix, loopLimit, func(l LoopList) ([]string, bool, string) { return l.Values, true, "" }, false)
+		ps.problems = append(ps.problems, lps...)
+		t.Steps, t.Loops = steps, loops
 	}
 	sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })
 	return t, ps.problems
@@ -603,12 +629,17 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 			switch k2.Value {
 			case "type":
 				p.Type = ps.str(v2, where)
-				if p.Type != paramTypeString && p.Type != paramTypeNumber && p.Type != paramTypeBoolean {
-					ps.add(v2, where, "the type is string, number or boolean")
+				if p.Type != paramTypeString && p.Type != paramTypeNumber && p.Type != paramTypeBoolean && p.Type != paramTypeList {
+					ps.add(v2, where, "the type is string, number, boolean or list")
 					p.Type = paramTypeString
 				}
 			case "default":
-				d := ps.str(v2, where)
+				var d string
+				if v2.Kind == yaml.SequenceNode {
+					d, _ = ps.inputLiteral(v2, where, InputList)
+				} else {
+					d = ps.str(v2, where)
+				}
 				p.Default, defNode = &d, v2
 			case "description":
 				p.Description = strings.TrimSpace(ps.str(v2, where))
@@ -620,8 +651,8 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 			}
 		})
 		if optNode != nil {
-			if p.Type == paramTypeBoolean {
-				ps.add(optNode, at+".options", "a boolean is true or false already; options are for strings and numbers")
+			if p.Type == paramTypeBoolean || p.Type == paramTypeList {
+				ps.add(optNode, at+".options", "options are for strings and numbers")
 			}
 			opts := p.Options
 			p.Options = nil // check each against the type alone
@@ -635,6 +666,9 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 		if defNode != nil {
 			if msg := p.check(*p.Default); msg != "" {
 				ps.add(defNode, at+".default", "the default does not fit: %s", msg)
+			} else if p.Type == paramTypeList {
+				d := canonList(*p.Default)
+				p.Default = &d
 			}
 		}
 		out = append(out, p)
@@ -704,8 +738,14 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	if p.Expanded() && len(p.Libraries) == 0 {
 		return p, nil
 	}
-	x := &expander{load: load, used: map[string]bool{}, containerNames: map[string]bool{}}
-	out := &Pipeline{Name: p.Name, On: p.On, Origin: p.Origin, Supersede: p.Supersede}
+	x := &expander{load: load, used: map[string]bool{}, containerNames: map[string]bool{}, loopLimit: p.maxLoop}
+	if x.loopLimit <= 0 {
+		x.loopLimit = DefaultMaxLoopMembers
+	}
+	out := &Pipeline{Name: p.Name, On: p.On, Origin: p.Origin, Supersede: p.Supersede, Inputs: p.Inputs, Loops: p.Loops, maxLoop: p.maxLoop}
+	if !p.Bound() {
+		return nil, Problems{{Message: "the pipeline has loops or input references that have not been bound to a run's values"}}
+	}
 	for _, l := range p.Libraries {
 		c := *l
 		out.Libraries = append(out.Libraries, &c)
@@ -763,6 +803,7 @@ type expander struct {
 	problems       Problems
 	used           map[string]bool // libraries some step used
 	containerNames map[string]bool
+	loopLimit      int
 }
 
 // scope is one file's steps: the pipeline's, or a template's for one use.
@@ -784,6 +825,7 @@ type scope struct {
 	when          *Condition
 	retry         *int
 	timeout       *Duration
+	each          map[string]string // the loop values of the uses step, and of those around it
 }
 
 func (x *expander) problem(sc *scope, line, col int, path, format string, args ...any) {
@@ -842,7 +884,7 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 		before := len(x.problems)
 		t, tps := readTemplate(data, name, s.With, s.withLines, s.usesLine, func(line, col int, path, msg string) {
 			x.problem(sc, line, col, at+"."+path, "%s", msg)
-		})
+		}, x.loopLimit, sc.prefix+s.ID+"/")
 		if len(tps) > 0 {
 			for _, tp := range tps {
 				tp.File, tp.Library = TemplatePath(name), lib.Name
@@ -955,6 +997,7 @@ func nonNil(list []string) []string {
 // emit adds a scope's steps, groups and containers to the run's pipeline.
 func (x *expander) emit(sc *scope) {
 	if sc.tmpl != nil {
+		x.out.Loops = append(x.out.Loops, sc.tmpl.Loops...)
 		for _, c := range sc.tmpl.Containers {
 			cc := *c
 			cc.Name = x.containerName(sc.prefix, c.Name)
@@ -991,6 +1034,7 @@ func (x *expander) emit(sc *scope) {
 			child.group = g
 			child.inherit, child.inheritGroups = needs, groups
 			child.when, child.retry, child.timeout = sc.when, sc.retry, sc.timeout
+			child.each = mergeEach(sc.each, s.Each)
 			if s.When != nil {
 				child.when = s.When
 			}
@@ -1015,6 +1059,7 @@ func (x *expander) emit(sc *scope) {
 		c.ID = id
 		c.Needs, c.NeedsGroups = needs, groups
 		c.Fetch = x.fetchesOf(sc, s)
+		c.Each = mergeEach(sc.each, s.Each)
 		c.withLines, c.ifTest = nil, nil
 		if sc.group != nil {
 			c.Group = sc.group.ID
@@ -1098,4 +1143,20 @@ func (x *expander) containerName(prefix, name string) string {
 	}
 	x.containerNames[base] = true
 	return base
+}
+
+// mergeEach combines the loop values around a step with its own; its own
+// win. It is nil when there are none.
+func mergeEach(outer, own map[string]string) map[string]string {
+	if len(outer) == 0 {
+		return own
+	}
+	out := make(map[string]string, len(outer)+len(own))
+	for k, v := range outer {
+		out[k] = v
+	}
+	for k, v := range own {
+		out[k] = v
+	}
+	return out
 }

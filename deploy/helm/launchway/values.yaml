@@ -52,6 +52,15 @@ config:
   #     # Optional: let steps of pull-request runs read secrets here (overrides
   #     # pull_requests: in extraConfig; the default is no).
   #     pull_requests: { secrets: false }
+  #     # Optional: turn this project's schedules off (overrides config.schedules.enabled).
+  #     schedules: { enabled: false }
+  #     # Optional: the Git host's webhook, which makes the servers poll at once. The secret
+  #     # comes from an environment variable (server.extraEnv, from a Secret) or a file.
+  #     git_webhook: { kind: github, secret_env: PAYMENTS_HOOK_SECRET }
+  #     # Optional: what callers of the pipeline's webhook triggers must prove, by name:
+  #     # one of token_env, token_file, hmac_secret_env, hmac_secret_file.
+  #     webhooks:
+  #       deploy-request: { hmac_secret_env: PAYMENTS_DEPLOY_HMAC }
   projects: []
   # -- What the servers keep of the test reports steps declare (reports.tests in a pipeline).
   # Each step attempt's summary is kept with the run's events; individual results go in a table
@@ -117,6 +126,22 @@ config:
     maxComponentsPerProject:
     # -- MiB of a step's SBOM files read to summarise them (they are kept whole anyway). Unset: 64.
     maxSbomMiB:
+  # -- Loops in pipelines (for_each).
+  loops:
+    # -- Combinations one loop may have; a run whose loop has more is refused.
+    # Unset: the built-in default, 64 (at most 500).
+    maxMembers:
+  # -- Schedules in pipelines (on.schedule).
+  schedules:
+    # -- false turns every project's schedules off (a project's schedules: setting may turn
+    # its own back on); their firings are recorded as skipped.
+    # Unset: the built-in default, on.
+    enabled:
+  # -- API tokens.
+  tokens:
+    # -- The longest an API token may last, in days. Written as auth.tokens.max_days.
+    # Unset: the built-in default, 365 (at most 3650).
+    maxDays:
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -124,8 +149,9 @@ config:
   #   drafts: { allow: operator, secrets: false }   # the defaults
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
-  # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts and findings are set
-  # by the chart and may not appear here; runner.enabled may not be true.
+  # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts,
+  # findings, loops and schedules are set by the chart and may not appear here; runner.enabled may
+  # not be true.
   extraConfig: {}
 
 # ---------------------------------------------------------------------------------------------
@@ -438,3 +464,78 @@ postgresql:
       memory: 128Mi
     limits:
       memory: 512Mi
+
+# ---------------------------------------------------------------------------------------------
+# Delivery: deploy and rollback steps (pipelines with kind: deploy). Off unless set. A deploy
+# step commits a version to a GitOps repository, asks Argo CD to sync if it must, and waits
+# until the application (and its Argo Rollouts rollout) is healthy. The deploy runner below
+# does that work with its own Kubernetes identity; the servers hold no cluster credentials.
+# Set these only once every server and runner runs a release that knows them, and take them
+# out again before rolling back to one that does not.
+# ---------------------------------------------------------------------------------------------
+delivery:
+  # -- Environments deploy steps may deploy to, written into the servers' configuration only
+  # when set. Default: none, and deploy steps are refused. Example:
+  #   - name: prod
+  #     target: homelab          # the cluster: deployRunner.target serves it
+  #     projects: [shop, "mcp-*"]
+  #     queue: newest            # or all; default newest
+  environments: null
+  deployRunner:
+    # -- Run a deploy runner in this cluster, with a runner pool token of its own. It serves
+    # deployRunner.target, which must be this cluster.
+    enabled: false
+    # -- The target this cluster is, as delivery.environments names it.
+    target: ""
+    replicas: 1
+    # -- Where the Argo CD Applications are.
+    argocdNamespace: argocd
+    # -- Which projects may deploy which applications. Names must be written out (no
+    # patterns): the RBAC rules name each application.
+    #   - { projects: [shop], names: [shop] }
+    applications: []
+    # -- Namespaces whose Argo Rollouts rollouts deploy steps may watch.
+    rolloutNamespaces: []
+    # -- GitOps repositories deploy steps may commit to, by name: the same map as deploy.repos
+    # in a deploy runner's file (url, argocd_url, credentials, username, paths, author).
+    # Credentials name a secret in secretStores, never a value.
+    repos: {}
+    # -- Secret stores the deploy runner may read (as runner.secretStores).
+    secretStores: {}
+    # -- Ask Argo CD to look at the repository at once after a commit (the refresh
+    # annotation). Default (unset): true.
+    refresh: null
+    rbac:
+      # -- Create the Roles below and bind them to the deploy runner.
+      create: true
+      # -- Grant patch on the named Applications, needed to request syncs and refreshes. With
+      # automated sync and a Git webhook it may be turned off (deploy steps then need
+      # sync.request: auto or never). The admission policy below limits what the patch may
+      # change.
+      patchApplications: true
+      # -- Grant get on Deployments in the rollout namespaces, needed only for rollouts that
+      # take their pod template from a Deployment (workloadRef). Off by default: a Deployment
+      # holds its pod spec.
+      readDeployments: false
+    # -- A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the deploy runner change
+    # only an Application's operation and refresh annotation, never its spec.
+    admissionPolicy:
+      enabled: true
+    # -- The pool token. Generated on first install and kept on upgrade, unless an existing
+    # Secret is named.
+    poolToken:
+      existingSecret: ""
+      existingSecretKey: token
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    healthPort: 8081
+    nodeSelector: {}
+    tolerations: []
+    podAnnotations: {}
+    extraEnv: []
+    extraVolumes: []
+    extraVolumeMounts: []

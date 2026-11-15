@@ -67,11 +67,35 @@ servers from running it without the secrets rule they do not know). Schema 10's
 `reports` is another: a run whose pipeline declares test reports has `runs.min_schema` 10, so a
 schema-9 server leaves it alone rather than run its steps without collecting their reports. The
 test summary schema 10 adds to `step.finished` and `step.canceled` events is a field older servers
-may safely ignore, so it needs no `requires`. Schema 12's `artifacts`, `fetch`, `reports.findings` and
-`reports.sbom` are handled the same way: runs whose pipeline uses them have `runs.min_schema` 12,
-and the summaries schema 12 adds to finishing events (`findings`, `sbom`, `artifacts`) only
-record. Runners are part of this too: a runner that does not report the feature `artifacts` is
-never given a step that keeps or fetches artifacts, which it would silently skip.
+may safely ignore, so it needs no `requires`.
+
+Schema 11 brings deploy and rollback steps (`kind: deploy`, `kind: rollback`) and the `deploy.*`
+events. It is additive: new tables and new columns with defaults. A run with such steps has
+`runs.min_schema` 11 from creation, so a schema-10 server leaves it alone entirely: it does not
+lease its steps (deploy steps are only ever leased to deploy runners anyway), expire its waits,
+cancel, resume or re-run it, and it ignores the new tables, the environment locks among them. An
+older server does list a waiting deploy step among its approvals, because it cannot tell the two
+waits apart, but refuses to decide it. On a rollback to schema 10, open deployments keep their
+locks and stay as they are; when a schema-11 server runs again they resume, and a deployment
+whose deadline passed meanwhile is failed at once, saying what was last observed, which runs its
+rollback step if it has one. The pipeline keys of deploy steps, and the `environments:` and
+`runner_pools:` settings, carry the same caveat as schema 9's keys: use them only once every server
+knows them.
+
+Schema 12's `artifacts`, `fetch`, `reports.findings` and `reports.sbom` are handled the same way
+as schema 10's `reports`: runs whose pipeline uses them have `runs.min_schema` 12, so a schema-11
+server leaves them alone (`TestOlderBuildLeavesArtifactRunsAlone`), and the summaries schema 12
+adds to finishing events (`findings`, `sbom`, `artifacts`) only record. Its tables are new and
+ignored by older servers. Runners are part of this too: a runner that does not report the feature
+`artifacts` is never given a step that keeps or fetches artifacts, which it would silently skip.
+
+Schema 13's `inputs`, `for_each` (with `each` on the steps a loop makes, and `loops` in the
+graph), `when: { input: … }`, `on.schedule` and `on.webhook` are such keys too. A run whose
+pipeline uses any of them, whose trigger carries input values, or whose event is `schedule` or
+`webhook` has `runs.min_schema` 13, so a server of schema 12 leaves it alone
+(`TestOlderBuildLeavesTriggerRunsAlone`). Schema 13 adds no event type. Its API tokens limited to
+a role or projects are stored under a `v2:` hash that older servers never look up, so a rollback
+refuses such tokens instead of granting their owner's full rights.
 
 ## Writing a migration
 

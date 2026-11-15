@@ -13,6 +13,15 @@ cat > .launchway/pipeline.yaml <<'EOF'
 pipeline: demo-app
 on:
   push: { branches: [main, "feature/*"] }
+  # Every morning at 06:00 in Chicago, the main branch with a full scan.
+  schedule:
+    - { cron: "0 6 * * *", timezone: America/Chicago, inputs: { scan: full } }
+
+# Values a run is started with: a person starting it sees a form; pushes
+# and the schedule above use the defaults (or the schedule's values).
+inputs:
+  scan: { type: choice, options: [quick, full], default: quick, description: How deep the security scan goes }
+  alpine: { type: list, default: ["3.21", "3.22"], description: Alpine versions to check the build on }
 
 # Named containers: a toolbox, and a cache that runs beside the steps.
 containers:
@@ -59,17 +68,32 @@ steps:
   security-scan:
     description: Scan the code, its secrets and its dependencies
     image: docker.io/library/alpine:3.22
-    run: sh tests/scan.sh
+    run: sh tests/scan.sh        # the scan input says how deep: quick or full
     # SARIF from any scanner, and a CycloneDX SBOM. The SBOM is kept as the
     # step's artifact "sbom"; secrets a scanner finds are never shown.
     reports:
       findings: reports/security/*.sarif
       sbom: reports/sbom.cdx.json
 
+  # Repeated once for each Alpine version in the alpine input: the run
+  # shows them as one node with a status grid.
+  compat:
+    description: Check the build on each Alpine version
+    needs: lint
+    for_each: { alpine: { input: alpine } }
+    max_parallel: 2
+    image: { each: alpine, format: "docker.io/library/alpine:%s" }
+    run: |
+      echo "Checking on Alpine $LAUNCHWAY_EACH_ALPINE: $(cat /etc/alpine-release 2>/dev/null || echo unknown)"
+      echo "alpine $LAUNCHWAY_EACH_ALPINE: ok" > compat.txt
+    # Each member keeps its own report, under its own step.
+    artifacts:
+      - { name: report, paths: [compat.txt], retain: 7d }
+
   build:
     description: Build and push the image
     image: docker.io/library/alpine:3.22
-    needs: [lint, integration-tests, security-scan]
+    needs: [lint, integration-tests, security-scan, compat]
     run: |
       echo "Building $LAUNCHWAY_PROJECT at $LAUNCHWAY_COMMIT (coverage $LAUNCHWAY_NEEDS_UNIT_TESTS_COVERAGE)"
       sleep 2
@@ -213,7 +237,7 @@ cat > tests/scan.sh <<'EOF2'
 # scan finds one more problem, which the run shows as new.
 set -e
 mkdir -p reports/security
-echo "Scanning for secrets, code problems and vulnerable dependencies…"
+echo "Scanning for secrets, code problems and vulnerable dependencies (${LAUNCHWAY_INPUT_SCAN:-quick} scan)…"
 sleep 1
 cat > reports/security/secrets.sarif <<'JSON'
 {"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0.json","runs":[{"tool":{"driver":{"name":"gitleaks","version":"8.24.0",
@@ -236,6 +260,8 @@ cat > reports/security/code.sarif <<JSON
 {"ruleId":"python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load","message":{"text":"Detected a possible YAML deserialization vulnerability: yaml.load(config_text)."},"level":"warning","locations":[{"physicalLocation":{"artifactLocation":{"uri":"app/config.py"},"region":{"startLine":9,"startColumn":12,"endLine":9,"endColumn":35}}}],"properties":{}}$extra
 ]}]}
 JSON
+# A full scan also checks the dependencies.
+if [ "${LAUNCHWAY_INPUT_SCAN:-quick}" = full ]; then
 cat > reports/security/dependencies.sarif <<'JSON'
 {"version":"2.1.0","runs":[{"tool":{"driver":{"name":"Trivy","version":"0.61.0","informationUri":"https://github.com/aquasecurity/trivy","rules":[
 {"id":"CVE-2023-32681","name":"LanguageSpecificPackageVulnerability","shortDescription":{"text":"python-requests: Unintended leak of Proxy-Authorization header"},"fullDescription":{"text":"Requests is a HTTP library. Since Requests 2.3.0, Requests has been leaking Proxy-Authorization headers to destination servers when redirected to an HTTPS endpoint."},"defaultConfiguration":{"level":"warning"},"helpUri":"https://avd.aquasec.com/nvd/cve-2023-32681","help":{"text":"Vulnerability CVE-2023-32681\nSeverity: MEDIUM\nPackage: requests\nFixed Version: 2.31.0"},"properties":{"precision":"very-high","security-severity":"6.1","tags":["vulnerability","security","MEDIUM"]}},
@@ -247,6 +273,7 @@ cat > reports/security/dependencies.sarif <<'JSON'
 {"ruleId":"CVE-2022-42969","ruleIndex":2,"level":"note","message":{"text":"Package: py\nInstalled Version: 1.11.0\nVulnerability CVE-2022-42969\nSeverity: LOW"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"requirements.txt","uriBaseId":"ROOTPATH"},"region":{"startLine":7,"startColumn":1,"endLine":7,"endColumn":1}}}]}
 ]}]}
 JSON
+fi
 comp() { printf '{"type":"library","name":"%s","version":"%s","purl":"pkg:pypi/%s@%s","licenses":[{"license":{"id":"%s"}}]}' "$1" "$2" "$1" "$2" "$3"; }
 {
   printf '{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"metadata":{"component":{"type":"application","name":"demo-app"}},"components":['

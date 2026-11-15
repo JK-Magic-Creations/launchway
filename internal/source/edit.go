@@ -187,6 +187,9 @@ type DraftRequest struct {
 	// Libraries overrides the versions of libraries the text uses, as for
 	// StartRun.
 	Libraries map[string]string
+	// Inputs are values for the pipeline's inputs; those not given take
+	// their defaults.
+	Inputs map[string]string
 }
 
 // StartDraft checks the text with the same parser as every pipeline, finds
@@ -210,11 +213,13 @@ func (m *Manager) StartDraft(ctx context.Context, d DraftRequest) (*engine.RunSu
 	if err != nil {
 		return nil, err
 	}
-	pl, libs, err := m.Expand(ctx, pl, d.Libraries)
+	pl, libs, vals, err := m.prepare(ctx, pl, d.Inputs, d.Libraries)
 	if err != nil {
 		return nil, err
 	}
-	return m.eng.CreateRun(engine.NewRun{Project: d.Project, Pipeline: pl, Trigger: trigger(r, pipeline.EventDraft, d.Actor),
+	t := trigger(r, pipeline.EventDraft, d.Actor)
+	t.Inputs = vals
+	return m.eng.CreateRun(engine.NewRun{Project: d.Project, Pipeline: pl, Trigger: t,
 		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Draft: &engine.Draft{Text: d.Text, Secrets: d.Secrets}})
 }
 

@@ -357,3 +357,74 @@ runner:
 		}
 	}
 }
+
+func TestRunnerPools(t *testing.T) {
+	dir := t.TempDir()
+	tok := strings.Repeat("a", 40)
+	os.WriteFile(filepath.Join(dir, "pool-token"), []byte(tok+"\n"), 0o600)
+	t.Setenv("LW_TEST_POOL", strings.Repeat("b", 40))
+	write := func(body string) string {
+		p := filepath.Join(dir, "launchway.yaml")
+		os.WriteFile(p, []byte(body), 0o644)
+		return p
+	}
+	base := "environments:\n  - { name: prod, target: homelab, projects: [shop] }\n"
+	c, err := Load(write(base + "runner_pools:\n  - { name: a, token_file: pool-token, targets: [homelab] }\n  - { name: b, token_env: LW_TEST_POOL, targets: [homelab] }\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pools, err := c.Pools("shared")
+	if err != nil || len(pools) != 2 || pools[0].Token != tok || pools[1].Token != strings.Repeat("b", 40) {
+		t.Fatalf("pools: %+v %v", pools, err)
+	}
+	if envs := c.EngineEnvironments(); len(envs) != 1 || envs[0].Target != "homelab" {
+		t.Fatalf("environments: %+v", envs)
+	}
+	for body, want := range map[string]string{
+		"runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [elsewhere] }\n":                                                             "no environment has target",
+		"runner_pools:\n  - { name: a, token_env: LW_NOT_SET, targets: [homelab] }\n":                                                                 "is not set",
+		"runner_pools:\n  - { name: a, targets: [homelab] }\n":                                                                                        "exactly one of token_env or token_file",
+		"runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [homelab] }\n  - { name: b, token_env: LW_TEST_POOL, targets: [homelab] }\n": "also the token of pool a",
+	} {
+		c, err := Load(write(base + body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.Pools("shared"); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: got %v, want %s", body, err, want)
+		}
+	}
+	c, _ = Load(write(base + "runner_pools:\n  - { name: a, token_env: LW_TEST_POOL, targets: [homelab] }\n"))
+	if _, err := c.Pools(strings.Repeat("b", 40)); err == nil || !strings.Contains(err.Error(), "shared runner token") {
+		t.Errorf("a pool with the shared token: %v", err)
+	}
+}
+
+func TestDeployRunnerFile(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "runner.yaml")
+	os.WriteFile(p, []byte(`server: http://x
+deploy:
+  targets:
+    homelab:
+      kubernetes: { kubeconfig: kube.yaml, context: kind-launchway-test }
+      applications: [ { projects: [shop], names: [shop] } ]
+  repos:
+    gitops:
+      url: http://git.example/gitops.git
+      credentials: { store: vault, key: ci/gitops, field: token }
+      paths: [ { projects: [shop], files: ["apps/**"] } ]
+`), 0o644)
+	f, err := LoadRunner(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.Deploy.Targets["homelab"].Kubernetes.Kubeconfig != filepath.Join(dir, "kube.yaml") || f.Deploy.Targets["homelab"].ArgoCDNamespace != "argocd" {
+		t.Fatalf("deploy: %+v", f.Deploy)
+	}
+	// A target must name its cluster: the current context is never used.
+	os.WriteFile(p, []byte("deploy:\n  targets:\n    homelab:\n      applications: [ { projects: [shop], names: [shop] } ]\n"), 0o644)
+	if _, err := LoadRunner(p); err == nil || !strings.Contains(err.Error(), "the current context is never used") {
+		t.Fatalf("got %v", err)
+	}
+}

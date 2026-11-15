@@ -58,5 +58,7 @@ export function starterLabel(r: { event: string; author: string; actor: string; 
   if (r.event === "push") return `pushed by ${r.author || r.actor}`;
   if (r.event === "pull_request") return `pull request by ${r.author || r.actor}`;
   if (r.draft) return `draft run by ${r.actor || "someone"}`;
+  if (r.event === "schedule") return "started by a schedule";
+  if (r.event === "webhook") return `started by the webhook ${r.actor.replace(/^webhook:/, "")}`;
   return `started by ${r.actor || "someone"}`;
 }

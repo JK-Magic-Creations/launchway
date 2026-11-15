@@ -527,11 +527,134 @@ CREATE INDEX test_cases_run ON test_cases(run_id, step_id, attempt);
 CREATE INDEX test_cases_history ON test_cases(project, test_key, run_number);
 CREATE INDEX test_cases_prune ON test_cases(project, run_number);
 `},
-	// 11: RESERVED for deployments, built on another branch at the same
-	//    time; that branch's migration 11 replaces this placeholder when the
-	//    two are merged. On its own it changes nothing.
-	//    Compatibility: additive: no SQL.
-	{additive, ``},
+	// 11: deployments. Deploy and rollback steps (kinds deploy and rollback)
+	//    and their deploy.* events. steps.target is the target a deploy
+	//    step's actions go to (only deploy runners serving it lease them),
+	//    and steps.wait_kind says what a waiting step waits for: '' for an
+	//    approval, lock or observe for a deploy step. runners.targets and
+	//    runners.pool are what a deploy runner serves. deployments,
+	//    environment_state, deploy_locks and deploy_queue are derived from
+	//    the events, in the transaction that stores them; the snapshot
+	//    columns of deployments and deployment_timeline hold what deploy
+	//    runners observe, which is not in the events (it changes too often).
+	//    target_observers picks one runner to observe each target.
+	//    deploy_commands is for a later release's commands (promote, abort);
+	//    nothing writes it yet.
+	//    Compatibility: additive: new tables, and new columns with defaults.
+	//    Runs with deploy steps have min_schema 11 from creation: older
+	//    servers do not know the step kinds (nor the pipeline keys), so they
+	//    leave such runs alone, their locks included.
+	{additive, `
+ALTER TABLE steps ADD COLUMN target TEXT NOT NULL DEFAULT '';
+ALTER TABLE steps ADD COLUMN wait_kind TEXT NOT NULL DEFAULT '';
+CREATE INDEX steps_target ON steps(target, status, queued_at);
+ALTER TABLE runners ADD COLUMN targets TEXT NOT NULL DEFAULT '';
+ALTER TABLE runners ADD COLUMN pool TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE deployments (
+  id               TEXT PRIMARY KEY,
+  run_id           TEXT    NOT NULL,
+  run_number       INTEGER NOT NULL,
+  project          TEXT    NOT NULL,
+  step_id          TEXT    NOT NULL,
+  environment      TEXT    NOT NULL,
+  service          TEXT    NOT NULL,
+  target           TEXT    NOT NULL,
+  application      TEXT    NOT NULL,
+  mode             TEXT    NOT NULL,
+  version          TEXT    NOT NULL,
+  previous_id      TEXT    NOT NULL DEFAULT '',
+  previous_version TEXT    NOT NULL DEFAULT '',
+  repo             TEXT    NOT NULL DEFAULT '',
+  branch           TEXT    NOT NULL DEFAULT '',
+  commit_sha       TEXT    NOT NULL DEFAULT '',
+  changed          INTEGER NOT NULL DEFAULT 0,
+  revert_sha       TEXT    NOT NULL DEFAULT '',
+  rollback_step    TEXT    NOT NULL DEFAULT '',
+  phase            TEXT    NOT NULL DEFAULT '',
+  detail           TEXT    NOT NULL DEFAULT '',
+  verdict          TEXT    NOT NULL DEFAULT '',
+  opened_at        {{BIG}} NOT NULL,
+  deployed_at      {{BIG}} NOT NULL DEFAULT 0,
+  closed_at        {{BIG}} NOT NULL DEFAULT 0,
+  snapshot         TEXT    NOT NULL DEFAULT '',
+  snapshot_key     TEXT    NOT NULL DEFAULT '',
+  observed_at      {{BIG}} NOT NULL DEFAULT 0,
+  observed_by      TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX deployments_run ON deployments(run_id);
+CREATE INDEX deployments_unit ON deployments(environment, project, service, opened_at);
+
+CREATE TABLE environment_state (
+  environment        TEXT    NOT NULL,
+  project            TEXT    NOT NULL,
+  service            TEXT    NOT NULL,
+  current_deployment TEXT    NOT NULL DEFAULT '',
+  current_version    TEXT    NOT NULL DEFAULT '',
+  current_run        TEXT    NOT NULL DEFAULT '',
+  current_run_number INTEGER NOT NULL DEFAULT 0,
+  since              {{BIG}} NOT NULL DEFAULT 0,
+  PRIMARY KEY (environment, project, service)
+);
+
+CREATE TABLE deploy_locks (
+  environment TEXT    NOT NULL,
+  project     TEXT    NOT NULL,
+  service     TEXT    NOT NULL,
+  deployment  TEXT    NOT NULL,
+  run_id      TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  step_id     TEXT    NOT NULL,
+  since       {{BIG}} NOT NULL,
+  PRIMARY KEY (environment, project, service)
+);
+CREATE INDEX deploy_locks_deployment ON deploy_locks(deployment);
+
+CREATE TABLE deploy_queue (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  environment TEXT    NOT NULL,
+  project     TEXT    NOT NULL,
+  service     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  since       {{BIG}} NOT NULL,
+  PRIMARY KEY (run_id, step_id)
+);
+CREATE INDEX deploy_queue_unit ON deploy_queue(environment, project, service, run_number);
+
+CREATE TABLE deployment_timeline (
+  id         {{ID}},
+  deployment TEXT    NOT NULL,
+  step_id    TEXT    NOT NULL,
+  at         {{BIG}} NOT NULL,
+  phase      TEXT    NOT NULL,
+  detail     TEXT    NOT NULL
+);
+CREATE INDEX deployment_timeline_dep ON deployment_timeline(deployment, id);
+
+CREATE TABLE deploy_commands (
+  id         TEXT PRIMARY KEY,
+  deployment TEXT    NOT NULL,
+  run_id     TEXT    NOT NULL,
+  step_id    TEXT    NOT NULL,
+  action     TEXT    NOT NULL,
+  actor      TEXT    NOT NULL,
+  comment    TEXT    NOT NULL DEFAULT '',
+  expect     TEXT    NOT NULL DEFAULT '{}',
+  state      TEXT    NOT NULL DEFAULT '',
+  result     TEXT    NOT NULL DEFAULT '',
+  created_at {{BIG}} NOT NULL,
+  done_at    {{BIG}} NOT NULL DEFAULT 0
+);
+CREATE INDEX deploy_commands_dep ON deploy_commands(deployment, created_at);
+
+CREATE TABLE target_observers (
+  target     TEXT PRIMARY KEY,
+  runner     TEXT    NOT NULL,
+  since      {{BIG}} NOT NULL,
+  expires_at {{BIG}} NOT NULL
+);
+`},
 	// 12: artifacts, security findings and SBOMs (see artifacts.go,
 	//    findings.go). Artifacts are files a step keeps: their content is in
 	//    a blob store (a directory, or S3-compatible object storage when
@@ -706,7 +829,68 @@ CREATE INDEX sbom_components_run ON sbom_components(run_id, step_id, attempt);
 CREATE INDEX sbom_components_name ON sbom_components(name_key, version);
 CREATE INDEX sbom_components_prune ON sbom_components(project, run_number);
 `},
+	// 13: run inputs, loops, schedules, webhooks, and API tokens that are
+	//    limited. A run's input values are in its run.created event (in the
+	//    trigger); its pipeline then declares inputs, so runs.min_schema is
+	//    13 and older servers leave it alone, as they do runs with loops,
+	//    and runs started by a schedule or a webhook.
+	//    schedule_seen records when each schedule (by its key, a hash of what
+	//    it says) was first seen, so it never fires for times before that.
+	//    schedule_fires claims each firing: the primary key lets exactly one
+	//    server act on it, as refs_seen does for pushes, and the row says
+	//    what came of it. webhook_deliveries remembers the deliveries of Git
+	//    host webhooks (to refuse replays) and the idempotency keys of
+	//    webhook triggers (to answer a repeat with the run the first call
+	//    started).
+	//    api_tokens gains the role and projects a token is limited to, and
+	//    where it was last used from. A limited token's hash is stored with
+	//    a "v2:" prefix, which servers older than this never look up: they
+	//    refuse the token rather than grant it its owner's full rights.
+	//    Compatibility: additive: new tables, and new columns with defaults
+	//    that older servers do not need. No new event type.
+	{additive, `
+CREATE TABLE schedule_seen (
+  project    TEXT    NOT NULL,
+  sched_key  TEXT    NOT NULL,
+  first_seen {{BIG}} NOT NULL,
+  PRIMARY KEY (project, sched_key)
+);
+
+CREATE TABLE schedule_fires (
+  project   TEXT    NOT NULL,
+  sched_key TEXT    NOT NULL,
+  fire_at   {{BIG}} NOT NULL,
+  at        {{BIG}} NOT NULL,
+  outcome   TEXT    NOT NULL,
+  detail    TEXT    NOT NULL DEFAULT '',
+  run_id    TEXT    NOT NULL DEFAULT '',
+  PRIMARY KEY (project, sched_key, fire_at)
+);
+CREATE INDEX schedule_fires_project ON schedule_fires(project, at);
+
+CREATE TABLE webhook_deliveries (
+  project   TEXT    NOT NULL,
+  hook      TEXT    NOT NULL,
+  delivery  TEXT    NOT NULL,
+  at        {{BIG}} NOT NULL,
+  body_hash TEXT    NOT NULL DEFAULT '',
+  run_id    TEXT    NOT NULL DEFAULT '',
+  PRIMARY KEY (project, hook, delivery)
+);
+CREATE INDEX webhook_deliveries_at ON webhook_deliveries(at);
+
+ALTER TABLE api_tokens ADD COLUMN role TEXT NOT NULL DEFAULT '';
+ALTER TABLE api_tokens ADD COLUMN projects TEXT NOT NULL DEFAULT '';
+ALTER TABLE api_tokens ADD COLUMN last_used_from TEXT NOT NULL DEFAULT '';
+`},
 }
+
+// schemaDeploy is the schema that brought deploy and rollback steps.
+const schemaDeploy = 11
+
+// schemaTriggers is the schema that brought run inputs, loops, schedules,
+// webhooks and limited API tokens.
+const schemaTriggers = 13
 
 // schemaTests is the schema that brought test reports.
 const schemaTests = 10

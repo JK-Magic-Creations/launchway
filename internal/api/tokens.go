@@ -25,7 +25,7 @@ func (s *Server) listTokens(w http.ResponseWriter, r *http.Request) {
 	if !s.tokensOn(w) {
 		return
 	}
-	list, err := s.Engine.Tokens(identityFrom(r).User)
+	list, err := s.Engine.TokenList(identityFrom(r).User)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -41,6 +41,11 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Name          string `json:"name"`
 		ExpiresInDays int    `json:"expires_in_days"`
+		// Role limits the token to viewer or operator (or admin); empty is
+		// whatever its owner has when it is used. Projects limits it to
+		// projects matching these patterns.
+		Role     string   `json:"role"`
+		Projects []string `json:"projects"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -57,23 +62,28 @@ func (s *Server) createToken(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "give the token a name of 1 to 100 characters")
 		return
 	}
+	most := s.tokenMaxDays()
 	days := in.ExpiresInDays
 	if days == 0 {
-		days = defaultTokenDays
+		days = min(defaultTokenDays, most)
 	}
-	if days < 1 || days > maxTokenDays {
-		writeErr(w, http.StatusBadRequest, "a token must expire in 1 to "+strconv.Itoa(maxTokenDays)+" days")
+	if days < 1 || days > most {
+		writeErr(w, http.StatusBadRequest, "a token must expire in 1 to "+strconv.Itoa(most)+" days")
+		return
+	}
+	if msg := s.checkTokenLimits(id, in.Role, in.Projects); msg != "" {
+		writeErr(w, http.StatusBadRequest, msg)
 		return
 	}
 	now := s.Now()
 	value := tokenPrefix + auth.RandomString(32)
 	t := engine.APIToken{ID: ids.New("tok"), Name: in.Name, User: id.User, CreatedAt: now.UnixMilli(),
-		ExpiresAt: now.Add(time.Duration(days) * 24 * time.Hour).UnixMilli()}
-	if err := s.Engine.CreateToken(t, auth.Hash(value)); err != nil {
+		ExpiresAt: now.Add(time.Duration(days) * 24 * time.Hour).UnixMilli(), Role: in.Role, Projects: in.Projects}
+	if err := s.Engine.CreateLimitedToken(t, auth.Hash(value)); err != nil {
 		s.fail(w, err)
 		return
 	}
-	setAudit(r, "", "expires in "+strconv.Itoa(days)+" days")
+	setAudit(r, "", "expires in "+strconv.Itoa(days)+" days"+tokenLimitsDetail(in.Role, in.Projects))
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusCreated, struct {
 		engine.APIToken

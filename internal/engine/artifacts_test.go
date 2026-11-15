@@ -644,3 +644,57 @@ func TestServersMustShareTheStore(t *testing.T) {
 		t.Fatalf("a server sharing the store: %q", c.ArtifactOptions().StoreProblem)
 	}
 }
+
+// Each member of a loop keeps its own artifact of the same name, and a
+// step that runs after a failure fetches what a failed step kept on
+// failure.
+func TestArtifactsOfLoopsAndCleanupSteps(t *testing.T) {
+	e, _ := newStoreEngine(t, ArtifactOptions{})
+	id := createBound(t, e, `
+pipeline: demo
+steps:
+  test:
+    for_each: { py: ["3.12", "3.13"] }
+    image: x
+    run: t
+    artifacts: [{name: logs, paths: [log.txt], when: always}]
+  build:
+    image: x
+    run: b
+    needs: test
+    artifacts: [{name: dump, paths: [core], when: failure}]
+  report:
+    image: x
+    run: r
+    needs: build
+    when: { upstream: failed }
+    fetch: [{from: build, name: dump}]
+`, nil, Trigger{Event: "manual"})
+	for i := range 2 {
+		j := take(t, e)
+		if !strings.HasPrefix(j.StepID, "test[") || j.Artifacts == nil {
+			t.Fatalf("job %s %+v", j.StepID, j.Artifacts)
+		}
+		keep(t, e, j.LeaseID, "logs", []upFile{{"log.txt", big(10, byte(i)), 0}})
+		ok(t, e, j, nil)
+	}
+	b := take(t, e)
+	keep(t, e, b.LeaseID, "dump", []upFile{{"core", []byte("core dump"), 0}})
+	fail(t, e, b)
+	r := take(t, e)
+	if r.StepID != "report" || len(r.Fetch) != 1 || r.Fetch[0].Problem != "" {
+		t.Fatalf("report %s fetch %+v", r.StepID, r.Fetch)
+	}
+	if got := readFetch(t, e, r.LeaseID, r.Fetch[0].ArtifactID, "core"); string(got) != "core dump" {
+		t.Fatalf("fetched %q", got)
+	}
+	ok(t, e, r, nil)
+	list, _ := e.RunArtifacts(id)
+	names := map[string]int{}
+	for _, a := range list.Artifacts {
+		names[a.Step+"/"+a.Name]++
+	}
+	if len(list.Artifacts) != 3 || names["test[py=3.12]/logs"] != 1 || names["test[py=3.13]/logs"] != 1 || names["build/dump"] != 1 {
+		t.Fatalf("artifacts %v", names)
+	}
+}

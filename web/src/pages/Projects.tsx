@@ -8,6 +8,9 @@ import { BranchIcon, Empty, ErrorBox, Link, Mono, StatusPill } from "../componen
 import { RefPicker } from "../components/RefPicker";
 import { OverridesEditor } from "../components/Libraries";
 import { TestCounts } from "../components/Tests";
+import { StartInputs, useStartInputs } from "../components/StartInputs";
+import { triggersApi } from "../triggers";
+import { ProjectTriggers } from "../components/ProjectTriggers";
 import { ArtifactCount, FindingCountBadge } from "../components/Security";
 
 export function ProjectsPage() {
@@ -83,6 +86,7 @@ export function ProjectsPage() {
                 <span className="faint">{ago(p.last_run.created_at, now)}</span>
               </Link>
             )}
+            <ProjectTriggers project={p.name} />
             <details className="decisions" open={p.decisions.length > 0 && p.decisions.length <= 3}>
               <summary>Recent pushes ({p.decisions.length})</summary>
               {p.decisions.length === 0 && <p className="sub">No pushes seen since the server started. Launchway records where every branch is the first time it looks, and reacts to changes after that.</p>}
@@ -114,18 +118,23 @@ function StartDialog({ project, onClose }: { project: Project; onClose: () => vo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [overrides, setOverrides] = useState<LibraryOverrides>({});
+  const inputs = useStartInputs(project.name, pick?.name ?? "");
 
   useEffect(() => { dialog.current?.showModal(); }, []);
 
   const start = async () => {
-    if (!pick) return;
-    setBusy(true); setError(null);
+    if (!pick || !inputs.ready) return;
+    if (!inputs.checkAll()) return;
+    setBusy(true); setError(null); inputs.setServerErrors(undefined);
     try {
-      const run = await api.startRun(project.name, pick.name, Object.keys(overrides).length ? overrides : undefined);
+      const run = await triggersApi.startRun(project.name, pick.name, inputs.wire(), Object.keys(overrides).length ? overrides : undefined);
       dialog.current?.close();
       onClose();
       navigate(`/runs/${run.id}`);
-    } catch (e) { setError(e); setBusy(false); }
+    } catch (e) {
+      if (e instanceof ApiError && e.fields) inputs.setServerErrors(e.fields);
+      setError(e); setBusy(false);
+    }
   };
 
   return (
@@ -139,6 +148,7 @@ function StartDialog({ project, onClose }: { project: Project; onClose: () => vo
             Will run <strong>{pick.name}</strong> at <Mono>{shortSha(pick.sha)}</Mono>, "{pick.subject}"
           </div>
         )}
+        <StartInputs state={inputs} />
         <details className="advanced">
           <summary>Advanced{Object.keys(overrides).length > 0 && `: ${Object.keys(overrides).length} library override${Object.keys(overrides).length > 1 ? "s" : ""}`}</summary>
           <OverridesEditor value={overrides} onChange={setOverrides} names={project.pipeline ? [project.pipeline.library] : undefined} />
@@ -148,7 +158,7 @@ function StartDialog({ project, onClose }: { project: Project; onClose: () => vo
           : error} />
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={!pick || busy}>{busy ? "Starting…" : "Start run"}</button>
+          <button type="submit" className="btn btn-primary" disabled={!pick || busy || !inputs.ready}>{busy ? "Starting…" : "Start run"}</button>
         </div>
       </form>
     </dialog>

@@ -34,7 +34,15 @@ export function RunnersPage() {
                 return (
                   <tr key={r.id}>
                     <td><span className={"online " + (online ? "online-on" : "")} aria-label={online ? "online" : "offline"} />{r.name}<div className="faint small mono">{r.id}</div></td>
-                    <td>{r.executor}</td>
+                    <td>
+                      {r.executor === "deploy" ? "deploy runner" : r.executor}
+                      {(r.pool || (r.targets?.length ?? 0) > 0) && (
+                        <div className="faint small">
+                          {r.pool && <>pool <Mono>{r.pool}</Mono></>}{r.pool && r.targets?.length ? ", " : ""}
+                          {r.targets?.length ? <>serves {r.targets.map((t, i) => <span key={t}>{i > 0 && ", "}<Mono>{t}</Mono></span>)}</> : null}
+                        </div>
+                      )}
+                    </td>
                     <td><Mono>{r.version}</Mono></td>
                     <td>{online ? "connected" : `offline, last seen ${ago(r.last_seen, now)}`}</td>
                   </tr>

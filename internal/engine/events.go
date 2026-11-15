@@ -33,6 +33,14 @@ const (
 	// StepReused records, in a re-run, a step that is not run again: its
 	// outcome and outputs are those it had in an earlier run.
 	StepReused EventType = "step.reused"
+
+	// Deployments (schema 11; see deployments.go). All are step events.
+	DeployWaitingLock EventType = "deploy.waiting_lock" // a deploy step waits for its environment's lock
+	DeployOpened      EventType = "deploy.opened"       // a deploy step took the lock and opened a deployment
+	DeployActionDone  EventType = "deploy.action_done"  // a deploy runner finished an action (commit and sync, or revert)
+	DeployObserving   EventType = "deploy.observing"    // the step waits for what deploy runners observe
+	DeployPhase       EventType = "deploy.phase"        // what is observed moved to another phase
+	DeployClosed      EventType = "deploy.closed"       // every step of the deployment is done; the lock is released
 )
 
 // eventSince is the schema version that brought each event type. A server
@@ -44,7 +52,8 @@ var eventSince = map[EventType]int{
 	StepQueued: 1, StepSkipped: 1, StepLeased: 1, StepStarted: 1, StepFinished: 1,
 	StepLost: 1, StepCanceled: 1, StepReset: 1,
 	StepWaiting: 4, StepApproved: 4, StepRejected: 4,
-	StepReused: 8,
+	StepReused:        8,
+	DeployWaitingLock: 11, DeployOpened: 11, DeployActionDone: 11, DeployObserving: 11, DeployPhase: 11, DeployClosed: 11,
 }
 
 // Event is one entry in the log.
@@ -128,6 +137,72 @@ type Payload struct {
 	Findings  *FindingsSummary  `json:"findings,omitempty"`
 	SBOM      *SBOMSummary      `json:"sbom,omitempty"`
 	Artifacts []ArtifactSummary `json:"artifacts,omitempty"`
+	// deploy.* events, and step.queued of a deploy or rollback step (schema
+	// 11): the deployment and what happened to it. Never a credential.
+	Deploy *DeployEvent `json:"deploy,omitempty"`
+}
+
+// DeployEvent carries the details of the deploy.* events. Each type uses a
+// few fields.
+type DeployEvent struct {
+	// deploy.opened, and step.queued of a deploy or rollback step: the
+	// deployment's ID (dep_...). step.queued also says which Action.
+	ID          string `json:"id,omitempty"`
+	Environment string `json:"environment,omitempty"` // waiting_lock, opened
+	Service     string `json:"service,omitempty"`     // waiting_lock, opened
+	// deploy.waiting_lock: the deployment that holds the lock.
+	Holder *DeployRef `json:"holder,omitempty"`
+	// deploy.opened
+	Target      string     `json:"target,omitempty"`
+	Application string     `json:"application,omitempty"`
+	Mode        string     `json:"mode,omitempty"` // write_back
+	Version     string     `json:"version,omitempty"`
+	Previous    *DeployRef `json:"previous,omitempty"` // what the environment ran before, if Launchway knows
+	// deploy.opened and deploy.observing: when the whole step fails if it is
+	// not done (Unix ms).
+	Deadline int64 `json:"deadline,omitempty"`
+	// deploy.action_done, and step.queued: apply (commit and sync) or
+	// revert (revert and sync).
+	Action  string       `json:"action,omitempty"`
+	Outcome string       `json:"outcome,omitempty"` // action_done: succeeded or failed
+	Facts   *DeployFacts `json:"facts,omitempty"`
+	// deploy.observing: what the step waits for (healthy), and the commit
+	// that must be synced.
+	Until  string `json:"until,omitempty"`
+	Commit string `json:"commit,omitempty"`
+	// deploy.phase
+	Phase  string `json:"phase,omitempty"`
+	Detail string `json:"detail,omitempty"`
+	// deploy.closed: how the deployment ended (see Verdicts).
+	Verdict string `json:"verdict,omitempty"`
+}
+
+// DeployRef names a deployment.
+type DeployRef struct {
+	Deployment string `json:"deployment"`
+	Run        string `json:"run"`
+	Number     int    `json:"number"`
+	Step       string `json:"step,omitempty"`
+	Version    string `json:"version,omitempty"`
+}
+
+// DeployFacts are what a deploy runner did in an action.
+type DeployFacts struct {
+	Repo   string `json:"repo,omitempty"`
+	Branch string `json:"branch,omitempty"`
+	// Commit carries the change: made now, found from an earlier try, or,
+	// when Git already held the version (Changed false), the branch's tip.
+	Commit   string   `json:"commit,omitempty"`
+	Changed  bool     `json:"changed"`
+	Existing bool     `json:"existing,omitempty"`
+	Files    []string `json:"files,omitempty"`
+	// Revert, for a revert: the revert commit; Reverted false means there
+	// was nothing to revert.
+	Revert   string `json:"revert,omitempty"`
+	Reverted bool   `json:"reverted,omitempty"`
+	// Sync says what was asked of Argo CD: requested, not needed, skipped
+	// (request: never), or why not.
+	Sync string `json:"sync,omitempty"`
 }
 
 // Superseder is the run that superseded another.
@@ -181,11 +256,20 @@ type Trigger struct {
 	Author  string `json:"author,omitempty"`
 	// PullRequest is the pull request's number, for event pull_request.
 	PullRequest int `json:"pull_request,omitempty"`
+	// Inputs are the run's input values, canonical, by name: every input
+	// the pipeline declares (schema 13).
+	Inputs map[string]string `json:"inputs,omitempty"`
+	// Schedule, for event schedule, is the schedule's cron expression and
+	// time zone, and ScheduledFor the time it fired for (Unix ms).
+	Schedule     string `json:"schedule,omitempty"`
+	ScheduledFor int64  `json:"scheduled_for,omitempty"`
+	// Webhook, for event webhook, is the webhook trigger's name.
+	Webhook string `json:"webhook,omitempty"`
 }
 
 // Context returns what step conditions are tested against.
 func (t Trigger) Context() pipeline.Context {
-	return pipeline.Context{Event: t.Event, Branch: t.Branch, Tag: t.Tag}
+	return pipeline.Context{Event: t.Event, Branch: t.Branch, Tag: t.Tag, Inputs: t.Inputs}
 }
 
 // Source says where a runner gets the files a run works on.

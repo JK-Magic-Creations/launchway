@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -30,6 +31,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/config"
+	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -48,8 +50,12 @@ Usage:
   launchway runner   --server URL --token T     run a runner that takes work from a server
                      [--config runner.yaml] [--health-listen ADDR]
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
+                     [-i name=value ...]
   launchway validate [file]                     check a pipeline file
   launchway graph    [file]                     print a pipeline's graph as JSON
+  launchway login    --server URL               store an API token for a server
+  launchway runs     start|list|show|logs|cancel  start and follow runs on a server
+                                                (launchway runs, for more)
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -74,6 +80,10 @@ func main() {
 		err = cmdValidate(args)
 	case "graph":
 		err = cmdGraph(args)
+	case "login":
+		err = cmdLogin(args)
+	case "runs":
+		err = cmdRuns(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -151,7 +161,7 @@ func cmdServer(args []string) error {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
 	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
-		Tests: testLimits, Artifacts: artifactOpts, Findings: findingLimits})
+		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits})
 	if err != nil {
 		return err
 	}
@@ -161,6 +171,10 @@ func cmdServer(args []string) error {
 		return err
 	}
 	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, cfg.SourceLibraries(), log)
+	if err == nil {
+		loopLimit, _ := cfg.LoopLimit() // checked when the file was read
+		mgr.SetLoopLimit(loopLimit)
+	}
 	if err != nil {
 		return err
 	}
@@ -172,8 +186,16 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
+	pools, err := cfg.Pools(token)
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
+	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
+	for _, p := range pools {
+		srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets})
+	}
 	if authOpts != nil {
 		// Find the provider now, so a mistake shows at once; sign-in tries
 		// again later if it is unreachable.
@@ -407,6 +429,9 @@ func cmdRunner(args []string) error {
 		return fmt.Errorf("runner settings: %w", err)
 	}
 	id := "runner-" + o.Name
+	if o.Deploy != nil {
+		return runDeployRunner(o, id, secretStores)
+	}
 	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id})
 	if err != nil {
 		return err
@@ -505,6 +530,8 @@ func cmdRun(args []string) error {
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
+	var given multi
+	fs.Var(&given, "i", "an input value, name=value; once for each input (the others take their defaults)")
 	fs.Parse(args)
 	secretStores, err := localSecrets(*secretsConfig)
 	if err != nil {
@@ -516,6 +543,10 @@ func cmdRun(args []string) error {
 		path = pipelineFile(nil)
 	}
 	p, err := load(path)
+	if err != nil {
+		return err
+	}
+	p, inputs, err := bindLocal(p, given)
 	if err != nil {
 		return err
 	}
@@ -557,7 +588,7 @@ func cmdRun(args []string) error {
 	go httpSrv.Serve(ln)
 	defer httpSrv.Close()
 
-	trig := engine.Trigger{Event: "manual", Actor: currentUser()}
+	trig := engine.Trigger{Event: "manual", Actor: currentUser(), Inputs: inputs}
 	if out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err == nil {
 		if b := strings.TrimSpace(string(out)); b != "HEAD" {
 			trig.Branch, trig.Ref = b, "refs/heads/"+b
@@ -778,4 +809,31 @@ func currentUser() string {
 		return u.Username
 	}
 	return "local"
+}
+
+// runDeployRunner runs `launchway runner` with a deploy section: a deploy
+// runner, which does the work of deploy and rollback steps only.
+func runDeployRunner(o *runnerOptions, id string, secretStores *secrets.Resolver) error {
+	targets := make([]string, 0, len(o.Deploy.Targets))
+	for name := range o.Deploy.Targets {
+		targets = append(targets, name)
+	}
+	sort.Strings(targets)
+	d := &runner.DeployRunner{
+		Client: runner.NewClient(o.Server, o.Token),
+		Agent:  &argocd.Agent{Config: *o.Deploy, DataDir: o.Data, Secrets: secretStores},
+		Info:   engine.RunnerInfo{ID: id, Name: o.Name, Executor: "deploy", Version: version, Targets: targets},
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if o.HealthListen != "" {
+		ln, err := net.Listen("tcp", o.HealthListen)
+		if err != nil {
+			return fmt.Errorf("--health-listen: %w", err)
+		}
+		hs := &http.Server{Handler: d.Health(), ReadHeaderTimeout: 10 * time.Second}
+		go hs.Serve(ln)
+		defer hs.Close()
+	}
+	return d.Run(ctx)
 }

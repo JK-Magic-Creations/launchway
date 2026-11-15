@@ -4,7 +4,6 @@ package api
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +31,8 @@ type Server struct {
 	Engine      *engine.Engine
 	Projects    *source.Manager
 	RunnerToken string
+	// RunnerPools are the deploy runner pools, each with its own token.
+	RunnerPools []RunnerPool
 	// Actor is who everything is done as when sign-in is off (Auth is nil).
 	Actor string
 	// Auth turns sign-in on. Nil means none: every request acts as Actor,
@@ -51,6 +52,8 @@ type Server struct {
 	// StreamPing is how often the live stream sends a keep-alive and checks
 	// that the caller is still signed in; default 15s.
 	StreamPing time.Duration
+	// TokenMaxDays is the longest an API token may last; 0 is 365 days.
+	TokenMaxDays int
 
 	sealerMu sync.Mutex
 	sealer   *auth.Sealer // seals the state of sign-ins in progress
@@ -111,6 +114,9 @@ func (s *Server) routes() []route {
 		{"POST /api/runner/v1/finish", runnerOnly, "", s.finish},
 		{"POST /api/runner/v1/runs", runnerOnly, "", s.runInfos},
 		{"POST /api/runner/v1/leave", runnerOnly, "", s.leave},
+		{"POST /api/runner/v1/deploy/lease", runnerOnly, "", s.deployLease},
+		{"POST /api/runner/v1/deploy/watch", runnerOnly, "", s.deployWatch},
+		{"POST /api/runner/v1/deploy/observe", runnerOnly, "", s.deployObserve},
 
 		// Signing in and out.
 		{"GET /auth/login", public, "", s.login},
@@ -145,12 +151,23 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/runs/{id}/steps/{step}/reject", runOperate, "approval.reject", s.decide(false)},
 		{"GET /api/v1/approvals", signedIn, "", s.listApprovals},
 		{"GET /api/v1/runners", readAny, "", s.listRunners},
+		{"GET /api/v1/environments", signedIn, "", s.listEnvironments},
+		{"GET /api/v1/deployments", signedIn, "", s.listDeployments},
 		{"POST /api/v1/validate", readAny, "", s.validate},
 		{"GET /api/v1/stream", signedIn, "", s.stream},
 		{"GET /api/v1/tokens", signedIn, "", s.listTokens},
 		{"POST /api/v1/tokens", signedIn, "token.create", s.createToken},
 		{"DELETE /api/v1/tokens/{id}", signedIn, "token.revoke", s.revokeToken},
 		{"GET /api/v1/audit", administer, "", s.auditLog},
+		{"GET /api/v1/projects/{name}/inputs", projectRead, "", s.projectInputs},
+		{"GET /api/v1/tokens/limits", signedIn, "", s.tokenLimits},
+		{"GET /api/v1/admin/tokens", administer, "", s.listAllTokens},
+		{"DELETE /api/v1/admin/tokens/{id}", administer, "token.revoke", s.revokeAnyToken},
+		{"GET /api/v1/projects/{name}/schedules", projectRead, "", s.projectSchedules},
+		// Webhooks prove themselves with a secret, not a session or token;
+		// their handlers check and audit them (see hooks.go).
+		{"POST /api/v1/projects/{name}/git-hook", public, "", s.gitHook},
+		{"POST /api/v1/projects/{name}/webhooks/{trigger}", public, "", s.webhookTrigger},
 
 		// Artifacts, findings and SBOMs (schema 12).
 		{"POST /api/runner/v1/artifacts/begin", runnerOnly, "", s.beginArtifact},
@@ -267,6 +284,10 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusConflict, err.Error())
 	case errors.Is(err, engine.ErrClosed):
 		writeErr(w, http.StatusServiceUnavailable, err.Error())
+	case errors.As(err, new(pipeline.InputErrors)):
+		var ie pipeline.InputErrors
+		errors.As(err, &ie)
+		writeInputErrors(w, ie)
 	case errors.As(err, new(pipeline.Problems)):
 		var ps pipeline.Problems
 		errors.As(err, &ps)
@@ -298,17 +319,6 @@ func (s *Server) recoverer(next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(w, r)
 	})
-}
-
-func (s *Server) runnerAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if s.RunnerToken == "" || subtle.ConstantTimeCompare([]byte(got), []byte(s.RunnerToken)) != 1 {
-			writeErr(w, http.StatusUnauthorized, "a valid runner token is required")
-			return
-		}
-		next(w, r)
-	}
 }
 
 // ---- health ----
@@ -349,7 +359,7 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 		Runner      engine.RunnerInfo `json:"runner"`
 		WaitSeconds int               `json:"wait_seconds"`
 	}
-	if !decode(w, r, &in) {
+	if !decode(w, r, &in) || refusePools(w, r) {
 		return
 	}
 	wait := time.Duration(min(max(in.WaitSeconds, 0), 50)) * time.Second
@@ -386,7 +396,7 @@ type leaseReq struct {
 
 func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 	var in leaseReq
-	if !decode(w, r, &in) {
+	if !decode(w, r, &in) || !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	cancel, err := s.Engine.Start(in.LeaseID)
@@ -399,7 +409,7 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) heartbeat(w http.ResponseWriter, r *http.Request) {
 	var in leaseReq
-	if !decode(w, r, &in) {
+	if !decode(w, r, &in) || !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	cancel, err := s.Engine.Heartbeat(in.LeaseID)
@@ -412,7 +422,7 @@ func (s *Server) heartbeat(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	var in leaseReq
-	if !decode(w, r, &in) {
+	if !decode(w, r, &in) || !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	if err := s.Engine.AppendLogs(in.LeaseID, in.Lines); err != nil {
@@ -449,6 +459,9 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "the request body is not valid JSON: "+err.Error())
+		return
+	}
+	if !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	if err := s.Engine.Finish(in.LeaseID, in.Result); err != nil {
@@ -607,17 +620,27 @@ func (s *Server) startRun(w http.ResponseWriter, r *http.Request) {
 		// Libraries overrides the versions of libraries the pipeline uses:
 		// library name → tag, branch or commit.
 		Libraries map[string]string `json:"libraries"`
+		// Inputs are values for the pipeline's inputs, by name; those not
+		// given take their defaults.
+		Inputs map[string]json.RawMessage `json:"inputs"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	setAudit(r, "", "ref "+in.Ref+overridesDetail(in.Libraries))
-	run, err := s.Projects.StartRun(r.Context(), r.PathValue("name"), in.Ref, identityFrom(r).User, in.Libraries)
+	given, ie := inputValues(in.Inputs)
+	setAudit(r, "", "ref "+in.Ref+overridesDetail(in.Libraries)+inputsDetail(given))
+	if ie != nil {
+		writeInputErrors(w, ie)
+		return
+	}
+	run, err := s.Projects.StartRunWith(r.Context(), source.StartRequest{Project: r.PathValue("name"), Ref: in.Ref,
+		Actor: identityFrom(r).User, Libraries: in.Libraries, Inputs: given})
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s%s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), s.libraryDetail(run.ID)))
+	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s%s%s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), s.libraryDetail(run.ID),
+		inputsDetail(given)))
 	writeJSON(w, http.StatusCreated, run)
 }
 
@@ -950,6 +973,12 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 			}
 			ps = pipeline.Problems{{Message: strings.TrimPrefix(err.Error(), "invalid: ")}}
 		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
+		return
+	}
+	// The second pass, against this server's configuration: the
+	// environments deploy steps name.
+	if ps := s.Engine.CheckDeploys(project, p); len(ps) > 0 {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
 		return
 	}

@@ -173,6 +173,8 @@ func (e *Engine) handleNote(n note) {
 		e.publishChanges(n.Run, steps)
 	case noteWake:
 		e.notify()
+	case noteDeploy:
+		e.publishDeployment(n.Run, n.Step) // Step carries the deployment's ID
 	case noteLog:
 		lines, err := e.logRange(n.Run, n.Step, n.Attempt, n.FromSeq, n.ToSeq)
 		if err != nil {

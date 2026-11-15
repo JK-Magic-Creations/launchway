@@ -9,6 +9,7 @@ import { ProjectsPage } from "./pages/Projects";
 import { RunnersPage } from "./pages/Runners";
 import { PlaygroundPage } from "./pages/Playground";
 import { ApprovalsPage } from "./pages/Approvals";
+import { EnvironmentsPage } from "./pages/Environments";
 import { TokensPage } from "./pages/Tokens";
 import { AuditPage } from "./pages/Audit";
 import { EditPipelinePage } from "./pages/EditPipeline";
@@ -23,6 +24,7 @@ interface NavItem { href: string; label: string; active: (p: string) => boolean;
 const NAV: NavItem[] = [
   { href: "/", label: "Runs", active: (p) => p === "/" || p.startsWith("/runs") },
   { href: "/approvals", label: "Approvals", active: (p) => p.startsWith("/approvals") },
+  { href: "/environments", label: "Environments", active: (p) => p.startsWith("/environments") },
   { href: "/projects", label: "Projects", active: (p) => p.startsWith("/projects") },
   { href: "/runners", label: "Runners", active: (p) => p.startsWith("/runners"), show: (me) => me.runners },
   { href: "/playground", label: "Playground", active: (p) => p.startsWith("/playground"), show: (me) => me.runners },
@@ -32,7 +34,7 @@ const NAV: NavItem[] = [
 ];
 
 // Shown so people can see where this is going; none of these work yet.
-const NEXT = ["Environments", "Releases", "Infrastructure", "Policy"];
+const NEXT = ["Releases", "Infrastructure", "Policy"];
 
 type Who = { state: "loading" } | { state: "out"; next: string } | { state: "in"; me: Me } | { state: "error"; error: unknown };
 
@@ -79,6 +81,7 @@ function Shell({ me }: { me: Me }) {
   if (path === "/") page = <RunsPage />;
   else if ((m = match("/runs/:id", path))) page = <RunPage id={m.id} />;
   else if (path === "/approvals") page = <ApprovalsPage approvals={approvals} />;
+  else if (path === "/environments") page = <EnvironmentsPage />;
   else if (path === "/projects") page = <ProjectsPage />;
   else if ((m = match("/projects/:name/pipeline", path))) page = <EditPipelinePage key={m.name} name={m.name} />;
   else if ((m = match("/projects/:name/tests", path))) page = <ProjectTestsPage key={m.name} name={m.name} />;

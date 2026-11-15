@@ -1,21 +1,10 @@
 package config
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
-
-func loadText(t *testing.T, text string) (*Config, error) {
-	t.Helper()
-	p := filepath.Join(t.TempDir(), "launchway.yaml")
-	if err := os.WriteFile(p, []byte(text), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	return Load(p)
-}
 
 func TestArtifactAndFindingSettings(t *testing.T) {
 	// What the Helm chart writes when everything is set.
@@ -68,5 +57,43 @@ findings: {max_upload_mib: 8, max_per_run: 100, max_per_project: 1000, max_compo
 		if _, err := loadText(t, text); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: %v, want %q", text, err, want)
 		}
+	}
+}
+
+// With the chart's default values, the configuration has none of the
+// settings of schema 12 (so the release before can read it); with them set,
+// the server's file loads and says what was set, and the S3 credentials
+// come from a Secret, never the ConfigMap.
+func TestChartArtifactSettings(t *testing.T) {
+	def := renderChart(t, "postgresql: { enabled: true }\n")
+	for _, key := range []string{"artifacts:", "findings:", "max_sbom_mib", "store:"} {
+		if strings.Contains(def["server"], key) {
+			t.Errorf("the default server configuration has %s:\n%s", key, def["server"])
+		}
+	}
+	files := renderChart(t, `postgresql: { enabled: true }
+config:
+  artifacts:
+    store: s3
+    s3: { endpoint: "https://s3.example.com", bucket: builds, prefix: launchway/, pathStyle: false, existingSecret: s3-creds }
+    maxFileMiB: 2048
+    retain: 14d
+  findings: { maxPerRun: 100, maxSbomMiB: 8 }
+`)
+	srv := files["server"]
+	if strings.Contains(srv, "s3-creds") || strings.Contains(srv, "AWS_") {
+		t.Fatalf("credentials in the ConfigMap:\n%s", srv)
+	}
+	c, err := Load(writeTemp(t, srv))
+	if err != nil {
+		t.Fatalf("server: %v\n%s", err, srv)
+	}
+	o, err := c.ArtifactLimits()
+	if err != nil || c.Artifacts.Store != "s3" || c.Artifacts.S3.Bucket != "builds" || c.Artifacts.S3.PathStyle == nil || *c.Artifacts.S3.PathStyle ||
+		o.MaxFileBytes != 2048<<20 || o.DefaultRetain != 14*24*time.Hour {
+		t.Fatalf("rendered: %+v %v\n%s", c.Artifacts, err, srv)
+	}
+	if l, _ := c.FindingLimits(); l.MaxPerRun != 100 || l.MaxSBOMBytes != 8<<20 {
+		t.Fatalf("findings: %+v", l)
 	}
 }

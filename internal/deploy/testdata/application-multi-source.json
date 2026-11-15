@@ -1,0 +1,322 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "demo-multi",
+    "namespace": "argocd",
+    "uid": "dcf2aa4d-6844-4d8c-8134-27bcb3ea875c",
+    "generation": 49,
+    "resourceVersion": "68727",
+    "creationTimestamp": "2026-11-15T18:45:21Z",
+    "labels": {
+      "app.kubernetes.io/part-of": "launchway-test-argo"
+    }
+  },
+  "spec": {
+    "destination": {
+      "namespace": "lw-demo-multi",
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "lw-test",
+    "sources": [
+      {
+        "path": "apps/multi/workload",
+        "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+        "targetRevision": "main"
+      },
+      {
+        "path": "apps/multi/config",
+        "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+        "targetRevision": "main"
+      }
+    ]
+  },
+  "operation": null,
+  "status": {
+    "controllerNamespace": "argocd",
+    "health": {
+      "lastTransitionTime": "2026-11-15T19:08:57Z",
+      "status": "Healthy"
+    },
+    "history": [
+      {
+        "deployStartedAt": "2026-11-15T18:45:24Z",
+        "deployedAt": "2026-11-15T18:45:24Z",
+        "id": 0,
+        "initiatedBy": {
+          "username": "launchway-test"
+        },
+        "revisions": [
+          "2479e99687e8d7f12a53554096356af6ef64d164",
+          "2479e99687e8d7f12a53554096356af6ef64d164"
+        ],
+        "source": {
+          "repoURL": ""
+        },
+        "sources": [
+          {
+            "path": "apps/multi/workload",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          },
+          {
+            "path": "apps/multi/config",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        ]
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:51:39Z",
+        "deployedAt": "2026-11-15T18:51:40Z",
+        "id": 1,
+        "initiatedBy": {
+          "username": "launchway-test"
+        },
+        "revisions": [
+          "b9e586df56158f5b5ec76b1b1959e991ee0bcb74",
+          "b9e586df56158f5b5ec76b1b1959e991ee0bcb74"
+        ],
+        "source": {
+          "repoURL": ""
+        },
+        "sources": [
+          {
+            "path": "apps/multi/workload",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          },
+          {
+            "path": "apps/multi/config",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        ]
+      },
+      {
+        "deployStartedAt": "2026-11-15T19:08:51Z",
+        "deployedAt": "2026-11-15T19:08:51Z",
+        "id": 2,
+        "initiatedBy": {
+          "username": "launchway"
+        },
+        "revisions": [
+          "e66ec86aa199364bd70aae9c0bf06d4d1dd709ac",
+          "ddc7a51fa3b0dda30fb6167a62d2a596d9468878"
+        ],
+        "source": {
+          "repoURL": ""
+        },
+        "sources": [
+          {
+            "path": "apps/multi/workload",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          },
+          {
+            "path": "apps/multi/config",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        ]
+      },
+      {
+        "deployStartedAt": "2026-11-15T19:09:06Z",
+        "deployedAt": "2026-11-15T19:09:07Z",
+        "id": 3,
+        "initiatedBy": {
+          "username": "launchway"
+        },
+        "revisions": [
+          "e66ec86aa199364bd70aae9c0bf06d4d1dd709ac",
+          "b9e586df56158f5b5ec76b1b1959e991ee0bcb74"
+        ],
+        "source": {
+          "repoURL": ""
+        },
+        "sources": [
+          {
+            "path": "apps/multi/workload",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          },
+          {
+            "path": "apps/multi/config",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        ]
+      },
+      {
+        "deployStartedAt": "2026-11-15T19:09:12Z",
+        "deployedAt": "2026-11-15T19:09:12Z",
+        "id": 4,
+        "initiatedBy": {
+          "username": "launchway"
+        },
+        "revisions": [
+          "e66ec86aa199364bd70aae9c0bf06d4d1dd709ac",
+          "e66ec86aa199364bd70aae9c0bf06d4d1dd709ac"
+        ],
+        "source": {
+          "repoURL": ""
+        },
+        "sources": [
+          {
+            "path": "apps/multi/workload",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          },
+          {
+            "path": "apps/multi/config",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        ]
+      },
+      {
+        "deployStartedAt": "2026-11-15T19:12:57Z",
+        "deployedAt": "2026-11-15T19:12:58Z",
+        "id": 5,
+        "initiatedBy": {
+          "username": "launchway-test"
+        },
+        "revisions": [
+          "114501755462993ad548ce50f0dc69f351620c2c",
+          "114501755462993ad548ce50f0dc69f351620c2c"
+        ],
+        "source": {
+          "repoURL": ""
+        },
+        "sources": [
+          {
+            "path": "apps/multi/workload",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          },
+          {
+            "path": "apps/multi/config",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        ]
+      }
+    ],
+    "operationState": {
+      "finishedAt": "2026-11-15T19:12:58Z",
+      "message": "successfully synced (all tasks run)",
+      "operation": {
+        "initiatedBy": {
+          "username": "launchway-test"
+        },
+        "retry": {},
+        "sync": {
+          "revisions": [
+            "b9e586df56158f5b5ec76b1b1959e991ee0bcb74"
+          ]
+        }
+      },
+      "phase": "Succeeded",
+      "startedAt": "2026-11-15T19:12:57Z",
+      "syncResult": {
+        "resources": [
+          {
+            "group": "",
+            "hookPhase": "Running",
+            "kind": "ConfigMap",
+            "message": "configmap/multi-config unchanged",
+            "name": "multi-config",
+            "namespace": "lw-demo-multi",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          },
+          {
+            "group": "argoproj.io",
+            "hookPhase": "Running",
+            "images": [
+              "docker.io/library/busybox:1.37.0"
+            ],
+            "kind": "Rollout",
+            "message": "rollout.argoproj.io/multi configured",
+            "name": "multi",
+            "namespace": "lw-demo-multi",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1alpha1"
+          }
+        ],
+        "revision": "",
+        "revisions": [
+          "114501755462993ad548ce50f0dc69f351620c2c",
+          "114501755462993ad548ce50f0dc69f351620c2c"
+        ],
+        "source": {
+          "path": "apps/multi/workload",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        },
+        "sources": [
+          {
+            "path": "apps/multi/workload",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          },
+          {
+            "path": "apps/multi/config",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        ]
+      }
+    },
+    "reconciledAt": "2026-11-15T19:12:58Z",
+    "resourceHealthSource": "appTree",
+    "resources": [
+      {
+        "kind": "ConfigMap",
+        "name": "multi-config",
+        "namespace": "lw-demo-multi",
+        "status": "Synced",
+        "version": "v1"
+      },
+      {
+        "group": "argoproj.io",
+        "kind": "Rollout",
+        "name": "multi",
+        "namespace": "lw-demo-multi",
+        "status": "Synced",
+        "version": "v1alpha1"
+      }
+    ],
+    "sourceTypes": [
+      "Directory",
+      "Directory"
+    ],
+    "sync": {
+      "comparedTo": {
+        "destination": {
+          "namespace": "lw-demo-multi",
+          "server": "https://kubernetes.default.svc"
+        },
+        "sources": [
+          {
+            "path": "apps/multi/workload",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          },
+          {
+            "path": "apps/multi/config",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        ]
+      },
+      "revisions": [
+        "114501755462993ad548ce50f0dc69f351620c2c",
+        "114501755462993ad548ce50f0dc69f351620c2c"
+      ],
+      "status": "Synced"
+    }
+  }
+}

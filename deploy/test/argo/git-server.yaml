@@ -1,0 +1,139 @@
+# A push-capable Git server for the Argo CD tests: Gitea (rootless image,
+# SQLite, no SSH), smart HTTP on port 8080, HTTP basic auth.
+#
+# In the cluster:  http://git.lw-git.svc:8080/lwtest/gitops.git
+# From the host:   deploy/test/argo/git-url.sh  (port-forward, prints the URL)
+#
+# The user and password are test-only values and are documented in README.md.
+# The repository is created by the first push (push-to-create) and is private,
+# so Argo CD reads it with the same credentials (see argocd/repo-secret in up.sh).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lw-git
+  labels:
+    app.kubernetes.io/part-of: launchway-test-argo
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: git-credentials
+  namespace: lw-git
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+type: kubernetes.io/basic-auth
+stringData:
+  username: lwtest
+  password: lwtest-not-a-secret
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: git-data
+  namespace: lw-git
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: git
+  namespace: lw-git
+  labels: { app.kubernetes.io/name: git, app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app.kubernetes.io/name: git }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: git, app.kubernetes.io/part-of: launchway-test-argo }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        # Prepares the database and makes sure the test user exists with the
+        # password from the Secret (idempotent across restarts).
+        - name: setup
+          image: docker.io/gitea/gitea:1.27.2-rootless@sha256:c7953964c6e8fe532cf7fc3f3efdea1d0b161d7859c47e04f5e05489d494dea0
+          command:
+            - /usr/local/bin/docker-entrypoint.sh
+            - sh
+            - -c
+            - |
+              set -e
+              gitea migrate
+              if gitea admin user list --admin | awk 'NR>1 {print $2}' | grep -qx "$GIT_USER"; then
+                gitea admin user change-password --username "$GIT_USER" --password "$GIT_PASSWORD" --must-change-password=false
+              else
+                gitea admin user create --username "$GIT_USER" --password "$GIT_PASSWORD" \
+                  --email "$GIT_USER@example.invalid" --admin --must-change-password=false
+              fi
+          env: &env
+            - { name: GIT_USER, valueFrom: { secretKeyRef: { name: git-credentials, key: username } } }
+            - { name: GIT_PASSWORD, valueFrom: { secretKeyRef: { name: git-credentials, key: password } } }
+            - { name: HTTP_PORT, value: "8080" }
+            - { name: ROOT_URL, value: "http://git.lw-git.svc:8080/" }
+            - { name: DISABLE_SSH, value: "true" }
+            - { name: INSTALL_LOCK, value: "true" }
+            - { name: DISABLE_REGISTRATION, value: "true" }
+            - { name: GITEA__server__START_SSH_SERVER, value: "false" }
+            - { name: GITEA__server__OFFLINE_MODE, value: "true" }
+            - { name: GITEA__security__PASSWORD_COMPLEXITY, value: "off" }
+            - { name: GITEA__security__MIN_PASSWORD_LENGTH, value: "6" }
+            - { name: GITEA__repository__ENABLE_PUSH_CREATE_USER, value: "true" }
+            - { name: GITEA__repository__DEFAULT_PUSH_CREATE_PRIVATE, value: "true" }
+            - { name: GITEA__repository__DEFAULT_BRANCH, value: "main" }
+            - { name: GITEA__log__LEVEL, value: "Warn" }
+            - { name: GITEA__metrics__ENABLED, value: "false" }
+            - { name: GITEA__cron__ENABLED, value: "false" }
+            # seed.sh adds a push webhook to Argo CD's API server (in-cluster,
+            # self-signed certificate).
+            - { name: GITEA__webhook__ALLOWED_HOST_LIST, value: "argocd-server.argocd.svc" }
+            - { name: GITEA__webhook__SKIP_TLS_VERIFY, value: "true" }
+          securityContext: &restricted
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          volumeMounts: &mounts
+            - { name: data, mountPath: /var/lib/gitea }
+            - { name: config, mountPath: /etc/gitea }
+            - { name: tmp, mountPath: /tmp }
+      containers:
+        - name: gitea
+          image: docker.io/gitea/gitea:1.27.2-rootless@sha256:c7953964c6e8fe532cf7fc3f3efdea1d0b161d7859c47e04f5e05489d494dea0
+          env: *env
+          ports:
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /api/healthz, port: http }
+            periodSeconds: 2
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { memory: 512Mi }
+          securityContext: *restricted
+          volumeMounts: *mounts
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: git-data }
+        - name: config
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: git
+  namespace: lw-git
+  labels: { app.kubernetes.io/name: git, app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  selector: { app.kubernetes.io/name: git }
+  ports:
+    - { name: http, port: 8080, targetPort: http }

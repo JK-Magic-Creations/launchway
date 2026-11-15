@@ -200,17 +200,6 @@ func (p *project) parsedAt(ctx context.Context, sha string) (*pipeline.Pipeline,
 	return pl, from, nil
 }
 
-// pipelineFor reads, checks and expands the pipeline a commit runs, with
-// the given library overrides. Problems are pipeline.Problems.
-func (m *Manager) pipelineFor(ctx context.Context, p *project, sha string, overrides map[string]string) (*pipeline.Pipeline, []engine.LibrarySource, pipelineSource, error) {
-	pl, from, err := p.parsedAt(ctx, sha)
-	if err != nil {
-		return nil, nil, from, err
-	}
-	pl, libs, err := m.Expand(ctx, pl, overrides)
-	return pl, libs, from, err
-}
-
 // CheckOverrides checks library overrides as a caller gave them, before
 // anything is fetched.
 func CheckOverrides(overrides map[string]string) error {
@@ -311,6 +300,9 @@ func (m *Manager) expand(ctx context.Context, pl *pipeline.Pipeline, overrides m
 func (m *Manager) Check(ctx context.Context, text string, overrides map[string]string) (*pipeline.Pipeline, error) {
 	pl, err := pipeline.Parse([]byte(text))
 	if err != nil {
+		return nil, err
+	}
+	if pl, err = m.preview(pl); err != nil {
 		return nil, err
 	}
 	pl, _, err = m.expand(ctx, pl, overrides, checkFresh)

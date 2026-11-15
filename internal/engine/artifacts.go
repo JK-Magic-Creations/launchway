@@ -284,7 +284,7 @@ func (c *cmd) addArtifactsToJob(job *Job) error {
 	}
 	job.Artifacts = c.jobArtifacts(def)
 	for _, f := range def.Fetch {
-		jf, err := c.resolveFetch(f)
+		jf, err := c.resolveFetch(def, f)
 		if err != nil {
 			return err
 		}
@@ -296,13 +296,19 @@ func (c *cmd) addArtifactsToJob(job *Job) error {
 // fetchSource is the step attempt whose artifacts a fetch reads: the
 // attempt of the step that succeeded in this run, or, for a step a re-run
 // reused, the attempt in the run where it ran.
-func fetchSource(st *RunState, from string) (run string, attempt int, problem string) {
+//
+// A step that runs after a failure (when: { upstream: failed | always })
+// may fetch from a step that failed: from its last attempt, which keeps
+// what its artifacts' when: failure or always says.
+func fetchSource(st *RunState, def *pipeline.Step, from string) (run string, attempt int, problem string) {
 	s := st.Steps[from]
 	switch {
 	case s == nil:
 		return "", 0, from + " is not a step of this run"
 	case s.ReusedFrom != "":
 		return s.ReusedFrom, s.ReusedAttempt, ""
+	case s.Status == StepFailed && def != nil && def.When.UpstreamRule() != pipeline.UpstreamSucceeded:
+		return st.ID, s.Attempt, ""
 	case s.Status != StepSucceeded:
 		return "", 0, fmt.Sprintf("%s has not succeeded (it is %s), so it kept nothing to fetch", from, s.Status)
 	}
@@ -310,13 +316,13 @@ func fetchSource(st *RunState, from string) (run string, attempt int, problem st
 }
 
 // resolveFetch finds the artifact a fetch names, and its files.
-func (c *cmd) resolveFetch(f *pipeline.Fetch) (JobFetch, error) {
+func (c *cmd) resolveFetch(def *pipeline.Step, f *pipeline.Fetch) (JobFetch, error) {
 	jf := JobFetch{From: f.From, Name: f.Name, Into: f.Into}
 	if c.e.arts.Store == nil {
 		jf.Problem = "this server keeps no artifacts: " + c.e.arts.StoreProblem
 		return jf, nil
 	}
-	run, attempt, problem := fetchSource(c.st, f.From)
+	run, attempt, problem := fetchSource(c.st, def, f.From)
 	if problem != "" {
 		jf.Problem = problem
 		return jf, nil
@@ -1126,7 +1132,7 @@ func (e *Engine) OpenFetch(ctx context.Context, leaseID, artifactID, filePath st
 	allowed := false
 	if def != nil {
 		for _, f := range def.Fetch {
-			run, attempt, problem := fetchSource(st, f.From)
+			run, attempt, problem := fetchSource(st, def, f.From)
 			if problem == "" && a.RunID == run && a.StepID == f.From && a.Attempt == attempt && a.Name == f.Name {
 				allowed = true
 			}

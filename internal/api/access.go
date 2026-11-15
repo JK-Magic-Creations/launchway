@@ -25,6 +25,11 @@ type identity struct {
 	Profile engine.Profile // display name and e-mail, when the provider gave them
 	Via     string         // "none" (sign-in is off), "session" or "token"
 	session string         // the session's hash, when Via is "session"
+	// A token may be limited to a role and to projects (see limit).
+	tokenID  string
+	capRole  auth.Role
+	scope    []string
+	tokenTag string // the token's name, for the audit trail
 }
 
 const (
@@ -73,7 +78,7 @@ func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
 			if id == nil || id.Via == viaNone || id.User == "" {
 				return false
 			}
-			role = s.Auth.Policy.RoleOn(id.User, id.Groups, project)
+			role = s.roleOn(id, project)
 		}
 		return s.Drafts.For(project).AllowsDraft(role)
 	}
@@ -82,6 +87,9 @@ func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
 	}
 	if id == nil || id.Via == viaNone || id.User == "" {
 		return false
+	}
+	if id.limited() {
+		return s.limitedAllows(id, a, project)
 	}
 	return s.Auth.Policy.Allows(id.User, id.Groups, a, project)
 }
@@ -107,24 +115,33 @@ func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 		// A request that names a token is judged by the token alone.
 		tok, ok := strings.CutPrefix(h, "Bearer ")
 		if !ok || !strings.HasPrefix(tok, tokenPrefix) {
+			s.tokenDenied(r, touch, "", "", "the Authorization header holds no Launchway API token")
 			return nil, nil
 		}
-		t, groups, err := s.Engine.TokenByHash(auth.Hash(tok))
+		t, groups, err := s.Engine.LookupToken(auth.Hash(tok))
 		if errors.Is(err, engine.ErrNotFound) {
+			s.tokenDenied(r, touch, "", "", "an unknown or revoked token")
 			return nil, nil
 		}
 		if err != nil {
 			return nil, err
 		}
 		if now.UnixMilli() >= t.ExpiresAt {
+			s.tokenDenied(r, touch, t.User, t.Name, "the token "+t.Name+" has expired")
 			return nil, nil
 		}
 		if touch {
-			if err := s.Engine.TouchToken(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli()); err != nil {
+			if err := s.Engine.TouchTokenFrom(t.ID, now.UnixMilli(), now.Add(-touchEvery).UnixMilli(), s.clientAddr(r)); err != nil {
 				s.Log.Warn("recording that a token was used", "err", err)
 			}
 		}
-		return &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken}, nil
+		id := &identity{User: t.User, Groups: groups, Profile: t.Owner, Via: viaToken, tokenID: t.ID, scope: t.Projects, tokenTag: t.Name}
+		if t.Role != "" {
+			if id.capRole, err = auth.ParseRole(t.Role); err != nil {
+				return nil, nil // a role this server does not know: refuse rather than guess
+			}
+		}
+		return id, nil
 	}
 	c, err := r.Cookie(sessionCookie)
 	if err != nil || c.Value == "" {
@@ -163,6 +180,9 @@ func (s *Server) guard(rt route) http.Handler {
 		return s.runnerAuth(rt.handler)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "" && s.tooManyFailures(w, r) {
+			return
+		}
 		id, err := s.identify(r, true)
 		if err != nil {
 			s.fail(w, err)
@@ -182,6 +202,9 @@ func (s *Server) guard(rt route) http.Handler {
 			if entry != nil {
 				entry.Outcome, entry.Detail = "denied", msg
 				s.record(entry)
+			} else if id.Via == viaToken {
+				s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), Action: "token.use",
+					Project: r.PathValue("name"), Target: id.tokenTag, Outcome: "denied", Detail: r.Method + " " + r.URL.Path + ": " + msg})
 			}
 		}
 		if !isSafeMethod(r.Method) && id.Via != viaToken {
@@ -365,7 +388,7 @@ func securityHeaders(next http.Handler) http.Handler {
 // visibleProjects returns the projects whose runs the caller may see, or
 // nil if they may see every project's.
 func (s *Server) visibleProjects(id *identity) ([]string, error) {
-	if s.Auth == nil || s.Auth.Policy.RoleEverywhere(id.User, id.Groups) >= auth.Viewer {
+	if s.Auth == nil || (!id.limited() && s.Auth.Policy.RoleEverywhere(id.User, id.Groups) >= auth.Viewer) {
 		return nil, nil
 	}
 	known, err := s.knownProjects()
@@ -408,7 +431,7 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	for _, p := range known {
 		role := auth.Admin
 		if s.Auth != nil {
-			role = s.Auth.Policy.RoleOn(id.User, id.Groups, p)
+			role = s.roleOn(id, p)
 		}
 		if role > auth.NoRole {
 			roles[p] = role.String()

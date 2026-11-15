@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -79,6 +80,14 @@ type parser struct {
 	// tmpl is set while reading a template: the parameters it declares and
 	// the values they have for the use being expanded.
 	tmpl *paramScope
+
+	// cur is the step being read, and curField and curName the value in it
+	// being read, for { each: } (see loops.go).
+	cur               *Step
+	curField, curName string
+	// References to inputs, checked once every input is known (bind.go).
+	loopInputs []loopInputRef
+	withInputs []withInputRef
 }
 
 func (ps *parser) add(n *yaml.Node, at, format string, args ...any) {
@@ -111,7 +120,7 @@ func Parse(data []byte) (*Pipeline, error) {
 
 	p := &Pipeline{}
 	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps"}, func(k, v *yaml.Node) {
+	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs"}, func(k, v *yaml.Node) {
 		switch k.Value {
 		case "pipeline":
 			p.Name = ps.str(v, "pipeline")
@@ -125,6 +134,8 @@ func Parse(data []byte) (*Pipeline, error) {
 			ps.parseContainers(v, p)
 		case "steps":
 			stepsNode = v
+		case "inputs":
+			ps.parseInputs(v, p)
 		}
 	})
 	if p.Name == "" {
@@ -137,8 +148,11 @@ func Parse(data []byte) (*Pipeline, error) {
 	} else {
 		ps.parseSteps(stepsNode, p)
 	}
-	ps.check(p)
+	if ps.check(p) {
+		ps.checkDeploys(p)
+	}
 	ps.checkUses(p)
+	ps.checkInputs(p)
 	ps.checkArtifacts(p)
 	if len(ps.problems) > 0 {
 		sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })
@@ -192,15 +206,21 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 
 // Keys from the design that are recognised but not implemented yet.
 var notYet = map[string]string{
-	"outputs":  "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
-	"runs_on":  "runner pools arrive in a later milestone",
-	"matrix":   "matrix expansion arrives in a later milestone",
-	"inputs":   "run inputs arrive in a later milestone",
-	"schedule": "scheduled triggers arrive in a later milestone",
+	"outputs": "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
+	"runs_on": "runner pools arrive in a later milestone",
+	"matrix":  "to repeat a step over lists, use for_each",
 }
 
 func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
-	ps.eachKey(n, "on", []string{"push", "pull_request"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, "on", []string{"push", "pull_request", "schedule", "webhook"}, func(k, v *yaml.Node) {
+		switch k.Value {
+		case "schedule":
+			ps.parseSchedules(v, p)
+			return
+		case "webhook":
+			ps.parseWebhooks(v, p)
+			return
+		}
 		if k.Value == "pull_request" {
 			ps.parsePullRequest(v)
 			p.On.PullRequest = &PullRequestTrigger{}
@@ -245,16 +265,17 @@ func (ps *parser) parsePullRequest(v *yaml.Node) {
 }
 
 var (
-	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with", "artifacts", "fetch"}
+	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
+		"for_each", "exclude", "max_parallel", "fail_fast", "artifacts", "fetch"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
-	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout"}
+	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
 	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch"}
 	// Kinds from the design that are recognised but not implemented yet.
-	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
+	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true, "rollout": true, "analysis": true}
 	secretKeys    = []string{"store", "key", "field"}
 	storeNameRe   = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
 	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command"}
@@ -343,25 +364,36 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		if !stepIDRe.MatchString(k.Value) {
 			ps.add(k, at, "%q is not a valid step name: use lower-case letters, digits, hyphens and underscores", k.Value)
 		}
+		if kind := mappingValue(v, "kind"); kind == KindDeploy || kind == KindRollback {
+			p.Steps = append(p.Steps, ps.parseDeployStep(k, v, at, kind))
+			continue
+		}
 		s := &Step{ID: k.Value, Line: k.Line}
 		var secretsNode, kindNode, timeoutNode *yaml.Node
 		var timeout time.Duration
 		keys := map[string]*yaml.Node{} // the keys written, for checks that depend on the kind
+		vals := map[string]*yaml.Node{} // and their values
+		ps.cur = s
 		known := stepKeys
 		if ps.tmpl != nil {
 			known = append(append([]string{}, stepKeys...), "if")
 		}
 		ps.eachKey(v, at, known, func(k2, v2 *yaml.Node) {
 			keys[k2.Value] = k2
+			vals[k2.Value] = v2
 			where := at + "." + k2.Value
 			switch k2.Value {
+			case "for_each":
+				s.ForEach = ps.parseForEach(v2, where)
 			case "kind":
 				kindNode = v2
 				s.Kind = ps.str(v2, where)
 			case "container":
 				s.Container = ps.str(v2, where)
 			case "image":
+				ps.curField = "image"
 				s.Image = ps.scalar(v2, where)
+				ps.curField = ""
 			case "run":
 				s.Run = ps.str(v2, where)
 			case "needs":
@@ -413,6 +445,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				}
 			}
 		})
+		ps.parseLoopSettings(s, at, keys, vals)
+		ps.cur = nil
 		if keys["with"] != nil && keys["uses"] == nil {
 			ps.add(keys["with"], at+".with", "with passes values to a template, so it goes with uses")
 		}
@@ -425,9 +459,9 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		case s.Kind == KindApproval:
 			ps.parseApproval(k, at, s, keys)
 		case kindsNotYet[s.Kind]:
-			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote and input steps arrive in a later milestone)", s.Kind)
+			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote, rollout, analysis and input steps arrive in a later milestone)", s.Kind)
 		default:
-			ps.add(kindNode, at+".kind", "unknown kind %q; use step or approval", s.Kind)
+			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, deploy or rollback", s.Kind)
 		}
 		def, most := DefaultTimeout, MaxTimeout
 		if s.IsApproval() {
@@ -499,7 +533,18 @@ func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[strin
 
 func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 	c := &Condition{}
-	ps.eachKey(n, at, []string{"branch", "tag", "event"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "equals", "upstream"}, func(k, v *yaml.Node) {
+		if k.Value == "upstream" {
+			c.Upstream = ps.str(v, at+".upstream")
+			if !slices.Contains(Upstreams, c.Upstream) {
+				ps.add(v, at+".upstream", "upstream is succeeded (the default), failed or always")
+			}
+			return
+		}
+		if k.Value == "input" || k.Value == "equals" {
+			ps.parseInputTest(c, k, v, at)
+			return
+		}
 		list := ps.valueList(v, at+"."+k.Value)
 		switch k.Value {
 		case "branch":
@@ -537,7 +582,11 @@ func (ps *parser) parseEnv(n *yaml.Node, at string) map[string]string {
 		case ps.tmpl != nil && strings.HasPrefix(strings.ToUpper(k.Value), ParamEnvPrefix):
 			ps.add(k, at+"."+k.Value, "in a template, names starting with %s are the template's parameters", ParamEnvPrefix)
 		}
+		if ps.cur != nil {
+			ps.curField, ps.curName = "env", k.Value
+		}
 		env[k.Value] = ps.scalar(v, at+"."+k.Value)
+		ps.curField, ps.curName = "", ""
 	}
 	return env
 }
@@ -647,8 +696,11 @@ func (ps *parser) strList(n *yaml.Node, at string) []string {
 	}
 }
 
-// check validates the graph as a whole.
-func (ps *parser) check(p *Pipeline) {
+// check validates the graph as a whole. It reports whether the needs are
+// sound (every one names a step, and there is no loop), so that checks that
+// walk the graph can follow.
+func (ps *parser) check(p *Pipeline) bool {
+	before := len(ps.problems)
 	ids := map[string]*Step{}
 	for _, s := range p.Steps {
 		ids[s.ID] = s
@@ -713,10 +765,80 @@ func (ps *parser) check(p *Pipeline) {
 		if color[s.ID] == white {
 			stack = stack[:0]
 			if visit(s) {
-				return
+				return false
 			}
 		}
 	}
+	return len(ps.problems) == before
+}
+
+// mappingValue returns the scalar value of a key in a mapping, or "".
+func mappingValue(m *yaml.Node, key string) string {
+	if m.Kind != yaml.MappingNode {
+		return ""
+	}
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key && m.Content[i+1].Kind == yaml.ScalarNode {
+			return m.Content[i+1].Value
+		}
+	}
+	return ""
+}
+
+// parseDeployStep reads a deploy or rollback step.
+func (ps *parser) parseDeployStep(k, v *yaml.Node, at, kind string) *Step {
+	s := &Step{ID: k.Value, Line: k.Line, Kind: kind}
+	var timeoutNode *yaml.Node
+	var timeout time.Duration
+	seen := map[string]bool{}
+	for i := 0; i+1 < len(v.Content); i += 2 {
+		key, n := v.Content[i], v.Content[i+1]
+		where := at + "." + key.Value
+		if seen[key.Value] {
+			ps.add(key, where, "%q is written twice", key.Value)
+			continue
+		}
+		seen[key.Value] = true
+		switch key.Value {
+		case "needs":
+			s.Needs = ps.strList(n, where)
+			s.NeedsLine = n.Line
+		case "when":
+			if kind == KindDeploy {
+				s.When = ps.parseWhen(n, where)
+			}
+		case "timeout":
+			d, err := time.ParseDuration(ps.scalar(n, where))
+			if err != nil {
+				ps.add(n, where, "write a duration such as 30s, 10m or 1h")
+			} else {
+				timeoutNode, timeout = n, d
+			}
+		case "description":
+			s.Description = strings.TrimSpace(ps.str(n, where))
+			switch {
+			case strings.ContainsAny(s.Description, "\r\n"):
+				ps.add(n, where, "a description is one line; put longer notes in a comment")
+			case utf8.RuneCountInString(s.Description) > MaxDescriptionLen:
+				ps.add(n, where, "the description is longer than %d characters", MaxDescriptionLen)
+			}
+		}
+	}
+	ps.parseDeployKeys(v, at, s)
+	ps.checkDeployStep(k, v, at, s)
+	def := DefaultDeployTimeout
+	if kind == KindRollback {
+		def = DefaultRollbackTimeout
+	}
+	s.Timeout = Duration(def)
+	if timeoutNode != nil {
+		if timeout < time.Minute || timeout > MaxDeployTimeout {
+			ps.add(timeoutNode, at+".timeout", "timeout must be between 1m and %s", Duration(MaxDeployTimeout).Short())
+		} else {
+			s.Timeout = Duration(timeout)
+		}
+	}
+	return s
 }
 
 func join(a, b string) string {

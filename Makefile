@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes run demo clean test-s3
+.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo run demo clean test-s3
 
 all: web build
 
@@ -61,6 +61,14 @@ test-kubernetes:
 	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace launchway-test \
 		pod-security.kubernetes.io/enforce=restricted
 	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -run Kubernetes ./internal/executor/
+
+# Runs the deploy integration tests against Argo CD and Argo Rollouts in a kind
+# cluster (see deploy/test/argo/README.md). Refuses any context not starting
+# with kind-. Installs or updates the environment first.
+test-argo:
+	deploy/test/argo/test-env.sh --context $${KUBE_CONTEXT:-kind-launchway-test}
+	deploy/test/argo/up.sh --context $${KUBE_CONTEXT:-kind-launchway-test}
+	LAUNCHWAY_TEST_ARGO_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -timeout 60m -run Argo -v ./internal/deploy/integration/
 
 # Creates ../launchway-demo, a small repository to play with, and a demo
 # shared library with an app that uses it (see examples/local.yaml).

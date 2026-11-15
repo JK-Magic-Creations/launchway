@@ -154,7 +154,7 @@ func TestApprovalExpires(t *testing.T) {
 	e, clk := newEngine(t)
 	id := toApproval(t, e)
 	clk.Add(24*time.Hour - time.Second)
-	e.expireApprovals()
+	e.expireWaits()
 	want(t, statuses(t, e, id), "approve", "waiting")
 
 	clk.Add(time.Second)
@@ -163,13 +163,13 @@ func TestApprovalExpires(t *testing.T) {
 	if err := e.Decide(id, "approve", true, "sam", ""); !errors.Is(err, ErrConflict) || !strings.Contains(err.Error(), "nobody decided within 24h") {
 		t.Fatalf("deciding after the deadline: %v", err)
 	}
-	e.expireApprovals()
+	e.expireWaits()
 	want(t, statuses(t, e, id), "run", "failed", "approve", "failed", "deploy", "skipped")
 	s := stepOf(t, e, id, "approve")
 	if s.Error != "nobody decided within 24h" || s.DecidedBy != "" {
 		t.Fatalf("expired step %+v", s)
 	}
-	e.expireApprovals()
+	e.expireWaits()
 	if n := countEvents(t, e, id, StepRejected); n != 1 {
 		t.Fatalf("%d rejections, want 1", n)
 	}
@@ -349,7 +349,7 @@ func TestExpiryHappensOnce(t *testing.T) {
 	for i, e := range []*Engine{a, b, a, b} {
 		go func() {
 			defer func() { done <- struct{}{} }()
-			e.expireApprovals()
+			e.expireWaits()
 			errs[i] = e.Decide(racing, "ok", i%2 == 0, "sam", "")
 		}()
 	}

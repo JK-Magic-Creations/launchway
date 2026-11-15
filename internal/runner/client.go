@@ -150,3 +150,41 @@ func (c *Client) Finish(ctx context.Context, lease string, res engine.Result) er
 	_, err := c.call(ctx, "finish", map[string]any{"lease_id": lease, "result": res}, nil)
 	return err
 }
+
+// LeaseDeploy waits up to wait for a deploy action of the runner's targets.
+// It returns nil when there is none.
+func (c *Client) LeaseDeploy(ctx context.Context, info engine.RunnerInfo, wait time.Duration) (*engine.Job, error) {
+	var job engine.Job
+	code, err := c.call(ctx, "deploy/lease", map[string]any{"runner": info, "wait_seconds": int(wait / time.Second)}, &job)
+	if err != nil || code == http.StatusNoContent {
+		return nil, err
+	}
+	return &job, nil
+}
+
+// WatchList is what a deploy runner should observe.
+type WatchList struct {
+	Items   []engine.WatchItem `json:"items"`
+	Version string             `json:"version"`
+	Targets []string           `json:"targets"` // the targets the server lets it serve
+}
+
+// Watch asks which deployments to observe, waiting up to wait for the list
+// to differ from known. A nil list means the server is stopping; ask again.
+func (c *Client) Watch(ctx context.Context, info engine.RunnerInfo, known string, wait time.Duration) (*WatchList, error) {
+	var out WatchList
+	code, err := c.call(ctx, "deploy/watch", map[string]any{"runner": info, "known": known, "wait_seconds": int(wait / time.Second)}, &out)
+	if err != nil || code == http.StatusNoContent {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// Observe reports what the runner saw.
+func (c *Client) Observe(ctx context.Context, info engine.RunnerInfo, obs []engine.Observation) ([]engine.ObserveResult, error) {
+	var out struct {
+		Results []engine.ObserveResult `json:"results"`
+	}
+	_, err := c.call(ctx, "deploy/observe", map[string]any{"runner": info, "observations": obs}, &out)
+	return out.Results, err
+}

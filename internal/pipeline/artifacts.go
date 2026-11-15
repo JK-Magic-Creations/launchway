@@ -126,6 +126,21 @@ func ParseRetain(s string) (time.Duration, bool) {
 	return d, err == nil
 }
 
+// artifactText reads an artifact's name, a path or a fetch's into: text,
+// or in a template a { param: … }. Run inputs and loop values are not
+// allowed: an artifact's name and paths are fixed when the pipeline is
+// written, and each member of a loop keeps its own artifacts anyway (they
+// belong to its step). A script sees those values as LAUNCHWAY_INPUT_<NAME>
+// and LAUNCHWAY_EACH_<KEY>, and can write its files to fixed paths.
+func (ps *parser) artifactText(n *yaml.Node, at string) string {
+	if n.Kind == yaml.MappingNode && (hasKey(n, "input") || hasKey(n, "each")) {
+		ps.add(n, at, "artifact names and paths are written as text; { input: … } and { each: … } are not allowed here "+
+			"(the step's script sees them as LAUNCHWAY_INPUT_<NAME> and LAUNCHWAY_EACH_<KEY>, and each member of a loop keeps its own artifacts)")
+		return ""
+	}
+	return ps.scalar(n, at)
+}
+
 // parseArtifacts reads a step's artifacts: a list of { name, paths, retain,
 // when }.
 func (ps *parser) parseArtifacts(n *yaml.Node, at string) []*Artifact {
@@ -156,7 +171,7 @@ func (ps *parser) parseArtifacts(n *yaml.Node, at string) []*Artifact {
 			w := where + "." + k.Value
 			switch k.Value {
 			case "name":
-				a.Name = ps.scalar(v, w)
+				a.Name = ps.artifactText(v, w)
 				if a.Name != "" && !ValidArtifactName(a.Name) {
 					ps.add(v, w, "%q is not a valid artifact name: use lower-case letters, digits, '.', '-' and '_', at most 64", clipText(a.Name, 60))
 				}
@@ -215,11 +230,19 @@ func (ps *parser) artifactGlobs(v *yaml.Node, where string) []string {
 			ps.add(item, where, "expected a glob or a list of globs")
 			continue
 		}
-		list := ps.valueList(item, where)
+		var list []string
+		if item.Kind == yaml.MappingNode {
+			list = []string{ps.artifactText(item, where)}
+		} else {
+			list = ps.valueList(item, where)
+		}
 		if len(list) == 0 && item.Kind == yaml.ScalarNode {
 			list = []string{""}
 		}
 		for _, g := range list {
+			if g == "" && item.Kind == yaml.MappingNode {
+				continue // said why above
+			}
 			clean, msg := checkGlob(g, "artifact files")
 			if msg != "" {
 				ps.add(item, where, "%s", msg)
@@ -267,9 +290,9 @@ func (ps *parser) parseFetch(n *yaml.Node, at string) []*Fetch {
 			case "from":
 				f.From = ps.str(v, w)
 			case "name":
-				f.Name = ps.scalar(v, w)
+				f.Name = ps.artifactText(v, w)
 			case "into":
-				into, msg := CheckInto(ps.scalar(v, w))
+				into, msg := CheckInto(ps.artifactText(v, w))
 				if msg != "" {
 					ps.add(v, w, "%s", msg)
 				}
@@ -364,10 +387,16 @@ func (ps *parser) checkArtifacts(p *Pipeline) {
 				problem = "fetches from " + quoteText(f.From) + ", but there is no step with that name"
 			case from.IsUse():
 				problem = f.From + " uses a template; fetching an artifact a template's step keeps is not supported yet"
+			case from.ForEach != nil:
+				problem = f.From + " is a loop: each of its members keeps its own artifacts, and fetching them is not supported yet; " +
+					"have a step after the loop gather what it needs, or fetch from a step that is not repeated"
 			case !upstream[f.From]:
 				problem = "fetches from " + f.From + ", which this step does not need; add it to needs so it has run first"
 			case !keeps(from, f.Name):
 				problem = f.From + " keeps no artifact called " + quoteText(f.Name)
+			case s.When.UpstreamRule() == UpstreamFailed && keptOnlyOnSuccess(from, f.Name):
+				problem = "this step runs only when a step it needs failed, but " + f.From + " keeps " + f.Name +
+					" only when it succeeds; keep it with when: failure or when: always"
 			case fetched[f.From+"\x00"+f.Name]:
 				problem = f.From + "'s " + f.Name + " is fetched twice"
 			}
@@ -377,6 +406,17 @@ func (ps *parser) checkArtifacts(p *Pipeline) {
 			fetched[f.From+"\x00"+f.Name] = true
 		}
 	}
+}
+
+// keptOnlyOnSuccess reports whether a step keeps the artifact only after
+// it succeeds.
+func keptOnlyOnSuccess(s *Step, name string) bool {
+	for _, a := range s.Artifacts {
+		if a.Name == name {
+			return a.When == "" || a.When == ArtifactOnSuccess
+		}
+	}
+	return false // the SBOM is kept whatever happened
 }
 
 // keeps reports whether a step keeps an artifact of that name.

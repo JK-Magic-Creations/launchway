@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError, type AttemptInputs, type InputVar, type LogLine, type RerunPlan, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
+import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RerunPlan, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { useNow, useStream } from "../live";
 import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
-import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
+import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill, shownStatus, stepLabel } from "../components/ui";
+import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, freshness, phaseLabel, shortPhase, verdictLabel } from "../components/Deployment";
 import { LibraryList, TemplateFacts } from "../components/Libraries";
 import { openInEditor } from "./EditPipeline";
 import { navigate } from "../router";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
+import { RerunInputsNote, RunTrigger } from "../components/RunTrigger";
+import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 import { ArtifactsTab } from "./RunArtifacts";
 import { SecurityTab } from "./RunSecurity";
 import { serious, seriousLabel } from "../components/Security";
@@ -87,7 +90,7 @@ export function RunPage({ id }: { id: string }) {
   // Pick a sensible step to show: one waiting for approval, else the first
   // failed one, else a running one, else the last that ran.
   useEffect(() => {
-    if (!run || (selected && run.step_list.some((x) => x.id === selected))) return;
+    if (!run || (selected && (run.step_list.some((x) => x.id === selected) || loopById(run, selected)))) return;
     const s = run.step_list.find((x) => x.status === "waiting")
       ?? run.step_list.find((x) => x.status === "failed")
       ?? run.step_list.find((x) => x.status === "running")
@@ -108,6 +111,18 @@ export function RunPage({ id }: { id: string }) {
         if (!prev) return prev;
         // Live step updates carry the step's state, not its definition.
         return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets, kind: x.kind, message: x.message, description: x.description, retry: x.retry, timeout: x.timeout, group: x.group } : x)) };
+      });
+    },
+    deployment: (d) => {
+      // What a deploy runner observes; it is not in the run's events, so a
+      // fetch in flight need not be repeated for it.
+      const v = d as DeploymentView;
+      setRun((prev) => {
+        if (!prev) return prev;
+        const list = prev.deployments ?? [];
+        const old = list.find((x) => x.id === v.id);
+        const merged = { ...v, timeline: v.timeline ?? old?.timeline };
+        return { ...prev, deployments: old ? list.map((x) => (x.id === v.id ? merged : x)) : [merged, ...list] };
       });
     },
     log: (d) => {
@@ -131,9 +146,15 @@ export function RunPage({ id }: { id: string }) {
   if (!run) return <div className="page"><div className="loading">Loading…</div></div>;
 
   const step = run.step_list.find((s) => s.id === selected) ?? null;
+  const loopView = collapseLoops(run);
+  const loop = loopFor(run, selected);
   const failedCount = run.step_list.filter((s) => s.status === "failed").length;
   const firstFailed = run.step_list.find((s) => s.status === "failed");
-  const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting");
+  // Only approvals wait for someone to decide; deploy steps wait for their
+  // environment's lock or for the deployment to finish.
+  const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting" && s.kind === "approval");
+  const deploying = done ? undefined : run.step_list.find((s) => s.status === "waiting" && (s.kind === "deploy" || s.kind === "rollback"));
+  const phases = deployPhases(run);
   const mayOperate = canOperate(me, run.project);
   // A finished run can be re-run from any step (the server says if not).
   const mayRerun = done && mayOperate && !run.needs_newer_server;
@@ -150,7 +171,8 @@ export function RunPage({ id }: { id: string }) {
         <div className="run-head-main">
           <div className="run-title-row">
             {run.cancel_requested && !done ? <StatusPill status={run.status} label="Canceling" />
-              : waitingStep ? <StatusPill status="waiting" />
+              : waitingStep ? <StatusPill status="waiting" label="Waiting for approval" />
+              : deploying ? <StatusPill status={shownStatus(deploying)} label={stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying))} />
               : <StatusPill status={run.status} />}
             {run.draft && <span className="badge-draft" title="Pipeline text from the editor, not from Git">Draft</span>}
             {overridden.length > 0 && <span className="badge-override" title="Started with another version of a library than the pipeline names">Library override</span>}
@@ -239,10 +261,19 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
+      <RunTrigger run={run} />
+
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
           <span><strong>{waitingStep.id}</strong> is waiting for approval: {waitingStep.message}</span>
           <button type="button" className="btn" onClick={() => select(waitingStep.id)}>{mayOperate ? "Decide" : "View"}</button>
+        </div>
+      )}
+
+      {deploying && selected !== deploying.id && (
+        <div className="callout callout-info callout-row">
+          <span><strong>{deploying.id}</strong>: {stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying)).replace(/^./, (c) => c.toLowerCase())}</span>
+          <button type="button" className="btn btn-sm" onClick={() => select(deploying.id)}>View</button>
         </div>
       )}
 
@@ -254,8 +285,10 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
+      <DeploymentSummary run={run} onSelect={(s) => { select(s); setTab("graph"); }} />
+
       <div className="tabs" role="tablist">
-        {([["graph", "Steps and logs"], ["tests", "Tests"], ["artifacts", "Artifacts"], ["security", "Security"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
+        {([["graph", "Steps and logs"], ["tests", "Tests"], ["security", "Security"], ["artifacts", "Artifacts"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
           <button key={k} role="tab" type="button" aria-selected={tab === k} className={"tab" + (tab === k ? " tab-on" : "")} onClick={() => setTab(k)}>
             {label}
             {k === "tests" && run.tests && (failing(run.tests) > 0
@@ -272,8 +305,9 @@ export function RunPage({ id }: { id: string }) {
       {tab === "graph" && (
         <>
           <section className="card card-flush">
-            <Graph levels={run.levels} steps={run.step_list} groups={run.graph.groups} selected={selected} onSelect={select} now={now} />
+            <Graph levels={loopView.levels} steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} />
           </section>
+          {loop && <LoopPanel run={run} loop={loop} selected={selected} onSelect={select} />}
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
             : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun}
@@ -336,6 +370,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
   }, [step.id, attempt, sink]);
 
   const isLive = following && (step.status === "running" || step.status === "leased");
+  const deploys = step.kind === "deploy" || step.kind === "rollback";
+  const env = deploys ? environmentOf(run, step) : "";
   const reused = !!step.reused_from;
   const group = step.group ? run.graph.groups?.find((g) => g.id === step.group) : undefined;
   const outputs = Object.entries(step.outputs ?? {});
@@ -345,6 +381,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
     : step.status === "pending" ? "Waiting for the steps it needs."
     : step.status === "queued" ? "Waiting for a runner."
     : step.status === "skipped" ? step.error || "Skipped."
+    : deploys && step.status === "waiting" && step.wait_kind === "lock" ? `Waiting for ${env}'s lock: nothing is deployed yet.`
+    : deploys && step.status === "waiting" ? "The deploy runner's part is done; the step waits for what deploy runners observe (above)."
     : step.status === "canceled" && step.attempt === 0 ? "Canceled before it started."
     : "No output.";
 
@@ -355,7 +393,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
           <h2>{step.id}</h2>
           {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
-            <StatusPill status={step.status} />
+            <StatusPill status={shownStatus(step)} label={stepLabel({ ...step, environment: env || step.environment })} />
+            {deploys && <span className="meta">{step.kind === "rollback" ? `rollback of ${step.deployment}` : `deploy to ${env}`}</span>}
             {reused && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.started_at > 0 && <span className="meta">{elapsed(step.started_at, step.finished_at, now)}</span>}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
@@ -377,6 +416,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
         </div>
       </div>
       {reused && <ReusedNote run={run} step={step} />}
+      {deploys && <DeploymentPanel run={run} step={step} />}
       {step.tests && (
         <div className={"callout tstep-callout " + (failing(step.tests) > 0 ? "callout-bad" : "callout-info")}>
           <span>
@@ -396,12 +436,14 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
           {step.excerpt && <Excerpt step={step} />}
         </div>
       )}
-      <LogView lines={lines} live={isLive} empty={empty} />
+      {!(deploys && step.attempt === 0) && <LogView lines={lines} live={isLive} empty={empty} />}
       <div className="stepinfo">
-        <details>
-          <summary>Script</summary>
-          <pre className="code">{step.run}</pre>
-        </details>
+        {step.run && (
+          <details>
+            <summary>Script</summary>
+            <pre className="code">{step.run}</pre>
+          </details>
+        )}
         <dl className="kv">
           {group && <TemplateFacts group={group} libraries={run.graph.libraries} />}
           {step.needs && step.needs.length > 0 && <><dt>Needs</dt><dd>{step.needs.join(", ")}</dd></>}
@@ -409,10 +451,10 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
           {secrets.length > 0 && <><dt>Secrets</dt><dd>{secrets.map(([name, r]) => <div key={name}><Mono>{name}</Mono> ← <Mono>{`${r.store}:${r.key}${r.field ? `#${r.field}` : ""}`}</Mono></div>)}</dd></>}
           <dt>Retry</dt><dd>{step.retry ? `up to ${step.retry} more time${step.retry > 1 ? "s" : ""}` : "no"}</dd>
           <dt>Timeout</dt><dd>{step.timeout}</dd>
-          {step.queued_at > 0 && step.started_at > 0 && <><dt>Waited</dt><dd>{duration(step.started_at - step.queued_at)} for a runner</dd></>}
+          {!deploys && step.queued_at > 0 && step.started_at > 0 && <><dt>Waited</dt><dd>{duration(step.started_at - step.queued_at)} for a runner</dd></>}
           {outputs.length > 0 && <><dt>Outputs</dt><dd>{outputs.map(([k, v]) => <div key={k}><Mono>{k}</Mono> = <Mono>{v}</Mono></div>)}</dd></>}
         </dl>
-        <InputsView inputs={step.inputs?.find((a) => a.attempt === attempt)} step={step} />
+        {!deploys && <InputsView inputs={step.inputs?.find((a) => a.attempt === attempt)} step={step} />}
       </div>
     </section>
   );
@@ -531,8 +573,66 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "step.waiting": (d) => `${d.step}: waiting for approval until ${clock(d.deadline as number)}`,
   "step.approved": (d) => `${d.step}: approved by ${d.actor}${d.comment ? `: ${d.comment}` : ""}`,
   "step.rejected": (d) => `${d.step}: ${d.reason}`,
+  "deploy.waiting_lock": (d) => {
+    const x = deployOf(d);
+    const h = x.holder as { number?: number; step?: string } | undefined;
+    return `${d.step}: waiting for ${x.environment}'s lock${h ? `, held by run #${h.number}${h.step ? ` (${h.step})` : ""}` : ""}`;
+  },
+  "deploy.opened": (d) => {
+    const x = deployOf(d);
+    const prev = x.previous as { version?: string } | undefined;
+    return `${d.step}: took ${x.environment}'s lock and started deploying ${x.service} ${x.version}${prev?.version ? ` (it ran ${prev.version})` : ""}`;
+  },
+  "deploy.action_done": (d) => {
+    const x = deployOf(d);
+    const f = (x.facts ?? {}) as { repo?: string; branch?: string; commit?: string; changed?: boolean; revert?: string; reverted?: boolean; sync?: string };
+    const sync = f.sync ? `; sync: ${f.sync}` : "";
+    if (x.outcome !== "succeeded") return `${d.step}: the deploy runner could not ${x.action === "revert" ? "revert the commit" : "commit the version"}`;
+    if (x.action === "revert") return f.reverted ? `${d.step}: reverted with commit ${shortSha(f.revert ?? "")} on ${f.branch}${sync}` : `${d.step}: there was nothing to revert${sync}`;
+    return f.changed ? `${d.step}: committed ${shortSha(f.commit ?? "")} to ${f.repo} on ${f.branch}${sync}` : `${d.step}: ${f.repo} on ${f.branch} already held this version${sync}`;
+  },
+  "deploy.observing": (d) => {
+    const x = deployOf(d);
+    return `${d.step}: waiting until Argo CD has synced ${shortSha(String(x.commit ?? ""))} and it is ${x.until ?? "healthy"}${x.deadline ? `, until ${clock(x.deadline as number)} at most` : ""}`;
+  },
+  "deploy.phase": (d) => {
+    const x = deployOf(d);
+    return `${d.step}: ${phaseLabel(String(x.phase ?? ""))}${x.detail ? ` (${x.detail})` : ""}`;
+  },
+  "deploy.closed": (d) => `${d.step}: deployment over, ${verdictLabel(String(deployOf(d).verdict ?? "")).toLowerCase()}; the lock is released`,
   "step.reused": (d) => `${d.step}: reused from run #${(d.reused as { number?: number })?.number ?? "?"} (${d.outcome})`,
 };
+
+function deployOf(d: Record<string, unknown>): Record<string, unknown> {
+  return (d.deploy as Record<string, unknown> | undefined) ?? {};
+}
+
+// deployPhases says, for each deploy or rollback step at work, where its
+// deployment stands, in words. Out-of-date observations say so instead.
+function deployPhases(run: RunDetail): Record<string, string> {
+  const out: Record<string, string> = {};
+  const now = Date.now();
+  for (const s of run.step_list) {
+    if (s.status === "waiting" && s.wait_kind === "lock") { out[s.id] = "waiting for lock"; continue; }
+    if (s.status !== "waiting" || s.wait_kind !== "observe") continue;
+    const d: DeploymentView | undefined = deploymentOf(run, s);
+    if (!d) continue;
+    const f = freshness(d, now);
+    const where = s.kind === "rollback" ? "rollback" : environmentOf(run, s) || "deploy";
+    out[s.id] = `${where}: ${f.state === "never" ? "not observed" : f.state === "error" ? "cannot see it" : f.state === "stale" ? "out of date" : shortPhase(d.phase)}`;
+  }
+  return out;
+}
+
+// deployingPhase is where a deploy step's deployment stands, in words, only
+// if what was observed is current (the panel explains the other cases).
+function deployingPhase(run: RunDetail, s: StepView): string | undefined {
+  if (s.wait_kind !== "observe") return undefined;
+  const d = deploymentOf(run, s);
+  if (!d) return undefined;
+  const f = freshness(d, Date.now());
+  return f.state === "fresh" ? phaseLabel(d.phase) : undefined;
+}
 
 function EventsTab({ id, version }: { id: string; version: string }) {
   const [events, setEvents] = useState<RunEvent[] | null>(null);
@@ -686,6 +786,7 @@ function RerunDialog({ run, step, onClose }: { run: RunDetail; step: StepView; o
             </div>
           </div>
         )}
+        <RerunInputsNote run={run} />
         <p className="sub">To run again only the steps that did not succeed, in this same run, use Resume instead.</p>
         <ErrorBox error={error} />
         <div className="dialog-actions">

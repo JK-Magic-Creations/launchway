@@ -101,6 +101,13 @@ spec:
               valueFrom:
                 secretKeyRef: { name: {{ . }}, key: AWS_SESSION_TOKEN, optional: true }
             {{- end }}
+            {{- if .Values.delivery.deployRunner.enabled }}
+            - name: LAUNCHWAY_DEPLOY_POOL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "launchway.deployPoolSecretName" . }}
+                  key: {{ include "launchway.deployPoolSecretKey" . }}
+            {{- end }}
             {{- with .Values.server.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

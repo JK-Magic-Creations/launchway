@@ -215,3 +215,101 @@ steps:
 		t.Fatalf("got %v", err)
 	}
 }
+
+// Where artifacts meet loops, run inputs, conditions on upstream steps and
+// deploy steps.
+func TestArtifactsWithOtherFeatures(t *testing.T) {
+	head := "pipeline: app\ninputs:\n  dir: { type: string, default: out }\nsteps:\n"
+	for _, tc := range []struct {
+		name, steps, want string
+		line              int
+	}{
+		{"fetch from a loop",
+			"  test:\n    for_each: { py: [\"3.12\", \"3.13\"] }\n    image: x\n    run: y\n    artifacts: [{name: cov, paths: [c.xml]}]\n" +
+				"  after:\n    image: x\n    run: y\n    needs: test\n    fetch: [{from: test, name: cov}]\n",
+			"test is a loop: each of its members keeps its own artifacts", 14},
+		{"a loop value in a name",
+			"  test:\n    for_each: { py: [\"3.12\"] }\n    image: x\n    run: y\n    artifacts: [{name: {each: py}, paths: [c.xml]}]\n",
+			"artifact names and paths are written as text", 9},
+		{"a loop value in a path",
+			"  test:\n    for_each: { py: [\"3.12\"] }\n    image: x\n    run: y\n    artifacts: [{name: cov, paths: [{each: py}]}]\n",
+			"artifact names and paths are written as text", 9},
+		{"an input in a path",
+			"  b:\n    image: x\n    run: y\n    artifacts: [{name: out, paths: {input: dir}}]\n",
+			"{ input: … } and { each: … } are not allowed here", 8},
+		{"an input in into",
+			"  b:\n    image: x\n    run: y\n    artifacts: [{name: out, paths: [o]}]\n" +
+				"  c:\n    image: x\n    run: y\n    needs: b\n    fetch: [{from: b, name: out, into: {input: dir}}]\n",
+			"not allowed here", 13},
+		{"a cleanup step fetching what is kept only on success",
+			"  b:\n    image: x\n    run: y\n    artifacts: [{name: out, paths: [o]}]\n" +
+				"  c:\n    image: x\n    run: y\n    needs: b\n    when: { upstream: failed }\n    fetch: [{from: b, name: out}]\n",
+			"keeps out only when it succeeds; keep it with when: failure", 14},
+		{"artifacts on a deploy step",
+			"  ship:\n    kind: deploy\n    environment: dev\n    service: web\n    version: \"1\"\n    artifacts: [{name: out, paths: [o]}]\n",
+			"artifacts", 10},
+		{"fetch on a rollback step",
+			"  b:\n    image: x\n    run: y\n    artifacts: [{name: out, paths: [o]}]\n" +
+				"  back:\n    kind: rollback\n    needs: b\n    environment: dev\n    service: web\n    fetch: [{from: b, name: out}]\n",
+			"fetch", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse([]byte(head + tc.steps))
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("got %v, want %q", err, tc.want)
+			}
+			if tc.line > 0 {
+				ps, _ := err.(Problems)
+				found := false
+				for _, p := range ps {
+					if strings.Contains(p.Message, tc.want) && p.Line == tc.line {
+						found = true
+					}
+				}
+				if !found {
+					t.Fatalf("no problem on line %d: %v", tc.line, ps)
+				}
+			}
+		})
+	}
+	// Allowed: a loop whose members each keep an artifact of the same
+	// name, a looped step fetching from a step that is not repeated, and a
+	// cleanup step fetching what a failed step keeps on failure.
+	p, err := Parse([]byte(head + `  build:
+    image: x
+    run: y
+    artifacts: [{name: bin, paths: [bin], when: always}]
+  test:
+    for_each: { py: ["3.12", "3.13"] }
+    image: { each: py, format: "python:%s" }
+    run: y
+    needs: build
+    fetch: [{from: build, name: bin}]
+    artifacts: [{name: coverage, paths: [cov.xml]}]
+  report:
+    image: x
+    run: y
+    needs: build
+    when: { upstream: failed }
+    fetch: [{from: build, name: bin}]
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := Bind(p, nil, BindOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, s := range b.Steps {
+		if strings.HasPrefix(s.ID, "test[") {
+			n++
+			if len(s.Artifacts) != 1 || s.Artifacts[0].Name != "coverage" || len(s.Fetch) != 1 || s.Fetch[0].From != "build" {
+				t.Fatalf("member %s: %+v %+v", s.ID, s.Artifacts, s.Fetch)
+			}
+		}
+	}
+	if n != 2 {
+		t.Fatalf("%d members", n)
+	}
+}
