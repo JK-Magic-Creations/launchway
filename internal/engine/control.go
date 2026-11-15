@@ -803,12 +803,22 @@ func (st *RunState) openDeployments() []string {
 // ---- persisting ----
 
 // persistControl brings deploy_commands and the schema-14 columns up to
-// date with the command's events.
+// date with the command's events, and has the deployments whose commands
+// changed published to browsers, here and on other servers.
 func (c *cmd) persistControl() error {
 	st := c.st
+	published := map[string]bool{}
 	for _, ev := range c.events {
 		d := ev.Data.Deploy
 		var err error
+		if d != nil && d.Command != nil && !published[d.ID] {
+			published[d.ID] = true
+			depID := d.ID
+			if err := c.e.notifyOthers(c.tx, note{Kind: noteDeploy, Run: st.ID, Step: depID}); err != nil {
+				return err
+			}
+			c.after(func() { c.e.publishDeployment(st.ID, depID) })
+		}
 		switch ev.Type {
 		case DeployOpened:
 			if def := st.Pipeline.Step(ev.Data.Step); def != nil {
