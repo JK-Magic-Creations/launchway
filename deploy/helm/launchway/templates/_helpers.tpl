@@ -200,6 +200,13 @@ in the server configuration, plus the server URL and the data directory.
 {{- range $key, $value := dict "helper_image" $k.helperImage "service_account" $k.serviceAccount "node_selector" $k.nodeSelector "cpu" $k.cpu "memory" $k.memory "memory_limit" $k.memoryLimit "image_pull_secrets" $k.imagePullSecrets "keep_failed" $k.keepFailed "start_timeout" $k.startTimeout -}}
 {{- if $value }}{{ $_ := set $kube $key $value }}{{ end -}}
 {{- end -}}
+{{- if eq (toString $k.restricted) "false" }}
+{{- $_ := set $kube "restricted" false -}}
+{{- else }}
+{{- range $key, $value := dict "run_as_user" $k.runAsUser "run_as_group" $k.runAsGroup -}}
+{{- if not (kindIs "invalid" $value) }}{{ $_ := set $kube $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- end -}}
 {{- $server := .Values.runner.serverURL | default (printf "http://%s.%s.svc:%v" $fullname .Release.Namespace .Values.service.port) -}}
 {{- toYaml (dict "server" $server "data" "/var/lib/launchway-runner" "concurrency" .Values.runner.concurrency "executor" "kubernetes" "kubernetes" $kube "secrets" (.Values.runner.secretStores | default dict)) -}}
 {{- end -}}

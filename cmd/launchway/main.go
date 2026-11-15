@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -362,6 +363,9 @@ func runnerArgs(args []string) (*runnerOptions, error) {
 	o.Executor = cmp.Or(*exe, o.Executor, "auto")
 	o.Kubernetes.Context = cmp.Or(k8s.Context, o.Kubernetes.Context)
 	o.Kubernetes.Namespace = cmp.Or(k8s.Namespace, o.Kubernetes.Namespace)
+	if k8s.Restricted != nil {
+		o.Kubernetes.Restricted, o.Kubernetes.RunAsUser, o.Kubernetes.RunAsGroup = k8s.Restricted, nil, nil
+	}
 	if *secretsConfig != "" {
 		c, err := secrets.LoadConfig(*secretsConfig)
 		if err != nil {
@@ -691,6 +695,14 @@ func k8sFlags(fs *flag.FlagSet) *executor.KubernetesOptions {
 	o := &executor.KubernetesOptions{}
 	fs.StringVar(&o.Context, "k8s-context", "", "kubeconfig context for the kubernetes executor (default: current)")
 	fs.StringVar(&o.Namespace, "k8s-namespace", "", "namespace for step pods (default: the context's)")
+	fs.BoolFunc("k8s-unrestricted", "run step pods' containers as their images' own users (often root), "+
+		"without the restricted security context (kubernetes.restricted: false)", func(v string) error {
+		b, err := strconv.ParseBool(v)
+		if err == nil && b {
+			o.Restricted = new(bool)
+		}
+		return err
+	})
 	return o
 }
 

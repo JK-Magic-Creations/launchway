@@ -213,10 +213,10 @@ runner:
     # -- Create the step namespace with the chart (deleted again on uninstall, with any step
     # pods in it).
     createNamespace: false
-    # -- Labels for a namespace created by the chart. Step pods set no security context, so
-    # the namespace must admit them: Pod Security "baseline" does, "restricted" does not.
+    # -- Labels for a namespace created by the chart. Step pods meet Pod Security "restricted"
+    # unless runner.kubernetes.restricted is false; then use "baseline" here.
     namespaceLabels:
-      pod-security.kubernetes.io/enforce: baseline
+      pod-security.kubernetes.io/enforce: restricted
     # -- The image of each step pod's helper container, which holds the workspace. It needs sh
     # and tar. Default: docker.io/library/busybox:1.37.
     helperImage: ""
@@ -242,6 +242,18 @@ runner:
     # -- How long to wait for a step pod's images to be pulled and its containers to start.
     # Default 10m.
     startTimeout: ""
+    # -- Run every container of a step pod, services included, as runAsUser/runAsGroup rather
+    # than as its image's user, with no privilege escalation, no capabilities and the
+    # RuntimeDefault seccomp profile, so step pods meet Pod Security "restricted". Each
+    # container gets a writable HOME (/home/launchway) and /tmp. Steps that need root, such as
+    # `apt-get install`, then fail: use images that already hold their tools. Set false to run
+    # images as their own users (often root); the step namespace must then admit that (Pod
+    # Security "baseline", see namespaceLabels). Pipelines cannot change this.
+    restricted: true
+    # -- The user step containers run as when restricted. Not 0 (root).
+    runAsUser: 1000
+    # -- The group step containers run as when restricted; it also owns the pod's volumes.
+    runAsGroup: 1000
   # -- The port runners serve /healthz (process up) and /readyz (the server answered within two
   # minutes) on, for the probes below. It is not exposed outside the pod.
   healthPort: 8081

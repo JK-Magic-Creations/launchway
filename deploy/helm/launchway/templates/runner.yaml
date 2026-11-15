@@ -2,6 +2,9 @@
 {{- $fullname := include "launchway.fullname" . -}}
 {{- $sa := include "launchway.runnerServiceAccount" . -}}
 {{- $stepNamespace := include "launchway.stepNamespace" . -}}
+{{- if and .Values.runner.kubernetes.createNamespace (eq (toString .Values.runner.kubernetes.restricted) "false") (eq (index (.Values.runner.kubernetes.namespaceLabels | default dict) "pod-security.kubernetes.io/enforce") "restricted") }}
+{{- fail "runner.kubernetes.restricted is false, so step pods run as their images' users and do not meet Pod Security \"restricted\", which runner.kubernetes.namespaceLabels enforces on the step namespace. Set namespaceLabels.\"pod-security.kubernetes.io/enforce\" to baseline." }}
+{{- end }}
 {{- if and .Values.runner.kubernetes.createNamespace (ne $stepNamespace .Release.Namespace) }}
 apiVersion: v1
 kind: Namespace

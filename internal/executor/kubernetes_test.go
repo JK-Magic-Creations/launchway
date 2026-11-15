@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,10 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// These tests need a real cluster, for example:
+// These tests need a real cluster whose test namespace enforces Pod Security
+// "restricted", for example:
 //
 //	kind create cluster --name launchway-test
 //	kubectl --context kind-launchway-test create namespace launchway-test
+//	kubectl --context kind-launchway-test label --overwrite namespace launchway-test pod-security.kubernetes.io/enforce=restricted
 //	LAUNCHWAY_TEST_KUBE_CONTEXT=kind-launchway-test go test ./internal/executor/ -run Kubernetes
 func kube(t *testing.T) *Kubernetes {
 	t.Helper()
@@ -147,19 +150,139 @@ var webService = ContainerSpec{Name: "web", Image: "docker.io/library/nginx:1.29
 
 const reachService = `for i in $(seq 1 30); do wget -q -O - http://localhost:80/ 2>/dev/null | grep -q nginx && { echo service reachable; exit 0; }; sleep 1; done; exit 1`
 
+// On Kubernetes the service runs as the pod's user like the steps, so it is
+// one that can (nginx's official image cannot): BusyBox's httpd on a high
+// port, serving a page that says which user it runs as.
+var kubeWebService = ContainerSpec{Name: "web", Image: "docker.io/library/busybox:1.37", Service: true,
+	Command: []string{"sh", "-c", "mkdir -p /tmp/www && echo served-by-uid-$(id -u) > /tmp/www/index.html && exec httpd -f -p 8080 -h /tmp/www"}}
+
+const reachKubeService = `for i in $(seq 1 30); do wget -q -O - http://localhost:8080/ 2>/dev/null | grep served-by && exit 0; sleep 1; done; exit 1`
+
 func TestKubernetesService(t *testing.T) {
 	k := kube(t)
 	runID := fmt.Sprintf("run_ks%d", time.Now().UnixNano())
 	defer k.client.CoreV1().Pods(k.o.Namespace).Delete(context.Background(), podName(runID, k.owner), metav1.DeleteOptions{})
-	s := kspec(t, runID, "s", alpine, reachService, t.TempDir())
-	s.Containers = append(append([]ContainerSpec{}, twoTools...), webService)
+	s := kspec(t, runID, "s", alpine, reachKubeService, t.TempDir())
+	s.Containers = append(append([]ContainerSpec{}, twoTools...), kubeWebService)
 	var c capture
 	code, err := k.Run(context.Background(), s, c.sink)
-	if err != nil || code != 0 || !strings.Contains(c.text(), "service reachable") {
+	if err != nil || code != 0 || !strings.Contains(c.text(), "stdout: served-by-uid-1000") {
 		t.Fatalf("code %d err %v\n%s", code, err, c.text())
 	}
 	if !strings.Contains(c.text(), "web (service)") {
 		t.Fatalf("the start message should list the service:\n%s", c.text())
+	}
+}
+
+// requireRestrictedNamespace makes sure the tests below really ran under
+// Pod Security "restricted" (make test-kubernetes labels the namespace).
+func requireRestrictedNamespace(t *testing.T, k *Kubernetes) {
+	t.Helper()
+	ns, err := k.client.CoreV1().Namespaces().Get(context.Background(), k.o.Namespace, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ns.Labels["pod-security.kubernetes.io/enforce"] != "restricted" {
+		t.Fatalf("namespace %s must enforce Pod Security restricted: kubectl --context <test context> label --overwrite ns %s pod-security.kubernetes.io/enforce=restricted",
+			k.o.Namespace, k.o.Namespace)
+	}
+}
+
+// Steps run in real build images, admitted by a namespace that enforces Pod
+// Security "restricted", as a user the images do not know: the checkout is
+// theirs to change and Git accepts it, and HOME, /tmp and the package
+// managers' caches are writable.
+func TestKubernetesRestrictedRealImages(t *testing.T) {
+	k := kube(t)
+	requireRestrictedNamespace(t, k)
+	ctx := context.Background()
+	runID := fmt.Sprintf("run_kr%d", time.Now().UnixNano())
+	defer k.client.CoreV1().Pods(k.o.Namespace).Delete(ctx, podName(runID, k.owner), metav1.DeleteOptions{})
+
+	ws := t.TempDir()
+	os.WriteFile(filepath.Join(ws, "from-checkout.txt"), []byte("checked out\n"), 0o644)
+	gitCmd := func(args ...string) {
+		cmd := exec.Command("git", append([]string{"-C", ws, "-c", "user.name=t", "-c", "user.email=t@example.com"}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	gitCmd("init", "-q", "-b", "main")
+	gitCmd("add", ".")
+	gitCmd("commit", "-q", "-m", "first")
+
+	containers := []ContainerSpec{
+		{Name: "python", Image: "docker.io/library/python:3.12-slim"},
+		{Name: "node", Image: "docker.io/library/node:24-alpine"},
+		{Name: "git", Image: "docker.io/alpine/git:v2.52.0"},
+	}
+	step := func(name, container, script string, env map[string]string) string {
+		t.Helper()
+		var c capture
+		s := Spec{RunID: runID, Containers: containers, Container: container, Name: name, Script: script, Env: env,
+			Workspace: ws, MetaDir: t.TempDir()}
+		code, err := k.Run(ctx, s, c.sink)
+		if err != nil || code != 0 {
+			t.Fatalf("step %s: code %d err %v\n%s", name, code, err, c.text())
+		}
+		t.Logf("step %s:\n%s", name, c.text())
+		return c.text()
+	}
+
+	out := step("files", "python", `test "$(id -u)" = 1000 && test "$(id -g)" = 1000
+echo "HOME=$HOME; /workspace is owned by $(stat -c %u:%g /workspace)"
+echo edited >> from-checkout.txt
+mkdir -p build && echo made > build/out.txt
+echo in-home > "$HOME/note" && cat "$HOME/note"
+echo in-tmp > /tmp/note && cat /tmp/note
+python3 -c 'import tempfile; tempfile.NamedTemporaryFile(); print("python tempfile ok")'`, nil)
+	for _, want := range []string{"stdout: HOME=" + stepHome + ";", "stdout: in-home", "stdout: in-tmp", "stdout: python tempfile ok",
+		"system: Containers run as user 1000 (group 1000), not as root"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q in:\n%s", want, out)
+		}
+	}
+
+	// Git, in another image, accepts the checkout and sees the change.
+	out = step("git", "git", `git status --porcelain; git rev-parse --abbrev-ref HEAD`, nil)
+	if !strings.Contains(out, "stdout:  M from-checkout.txt") || !strings.Contains(out, "stdout: main") || strings.Contains(out, "dubious") {
+		t.Fatalf("git:\n%s", out)
+	}
+
+	// A step's own HOME wins over the pod's.
+	out = step("own-home", "node", `echo "HOME=$HOME"`, map[string]string{"HOME": "/workspace/.myhome"})
+	if !strings.Contains(out, "stdout: HOME=/workspace/.myhome") {
+		t.Fatalf("own HOME:\n%s", out)
+	}
+
+	// The package managers, if the cluster can reach their registries.
+	out = step("pip", "python", `pip install --user --disable-pip-version-check -q six && python3 -c 'import six; print("six", six.__version__)'
+ls "$PIP_CACHE_DIR" >/dev/null && echo pip cache in $PIP_CACHE_DIR`, nil)
+	if !strings.Contains(out, "stdout: pip cache in "+stepHome+"/.cache/pip") {
+		t.Fatalf("pip:\n%s", out)
+	}
+	out = step("npm", "node", `npm install --no-audit --no-fund --loglevel=error is-number@7 && node -e 'console.log("is-number", require("is-number")(5))'
+echo "npm cache: $(npm config get cache)"`, nil)
+	if !strings.Contains(out, "stdout: is-number true") || !strings.Contains(out, "stdout: npm cache: "+stepHome+"/.npm") {
+		t.Fatalf("npm:\n%s", out)
+	}
+}
+
+// Without the restricted security context, a namespace that enforces Pod
+// Security "restricted" refuses the pod, and the step's error says why.
+func TestKubernetesUnrestrictedRefusedByRestrictedNamespace(t *testing.T) {
+	k := kube(t)
+	requireRestrictedNamespace(t, k)
+	u, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: "launchway-test",
+		Restricted: ptr(false)}, "test-"+t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	runID := fmt.Sprintf("run_ku%d", time.Now().UnixNano())
+	defer u.client.CoreV1().Pods(u.o.Namespace).Delete(context.Background(), podName(runID, u.owner), metav1.DeleteOptions{})
+	_, err = u.Run(context.Background(), kspec(t, runID, "s", alpine, "true", t.TempDir()), func(string, string) {})
+	if err == nil || !strings.Contains(err.Error(), `violates PodSecurity "restricted`) {
+		t.Fatalf("err %v", err)
 	}
 }
 

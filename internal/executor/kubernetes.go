@@ -46,6 +46,37 @@ type KubernetesOptions struct {
 	ImagePullSecrets []string          `yaml:"image_pull_secrets"`
 	KeepFailed       string            `yaml:"keep_failed"`   // how long to keep a failed run's pod for a resume; default 2h
 	StartTimeout     string            `yaml:"start_timeout"` // how long to wait for images to pull; default 10m
+
+	// Restricted, true unless set to false, makes step pods meet the Pod
+	// Security Standard "restricted": every container, services included,
+	// runs as RunAsUser and RunAsGroup instead of the image's own user, with
+	// no privilege escalation, no capabilities and the RuntimeDefault seccomp
+	// profile, and gets a writable home directory (see stepHome). Set it to
+	// false to run images as their own user, root for many, as before; the
+	// step namespace must then admit such pods (Pod Security "baseline").
+	// Only the runner's operator decides this: nothing in a pipeline file
+	// changes a pod's security context.
+	Restricted *bool  `yaml:"restricted"`
+	RunAsUser  *int64 `yaml:"run_as_user"`  // default 1000; never 0
+	RunAsGroup *int64 `yaml:"run_as_group"` // default 1000; also owns the pod's volumes (fsGroup)
+}
+
+// restricted reports whether step pods get the restricted security context.
+func (o KubernetesOptions) restricted() bool { return o.Restricted == nil || *o.Restricted }
+
+// stepHome is the writable home directory of every container of a
+// restricted step pod: an emptyDir, so that tools that keep files or caches
+// under $HOME work for a user the image does not know.
+const stepHome = "/home/launchway"
+
+// homeEnv is set in every container of a restricted step pod, unless the
+// container's own settings or the step set the variable. The caches point
+// into stepHome so that they stay writable when a step moves HOME.
+var homeEnv = []corev1.EnvVar{
+	{Name: "HOME", Value: stepHome},
+	{Name: "PIP_CACHE_DIR", Value: stepHome + "/.cache/pip"},
+	{Name: "npm_config_cache", Value: stepHome + "/.npm"},
+	{Name: "GOCACHE", Value: stepHome + "/.cache/go-build"},
 }
 
 // Kubernetes runs each run in one pod: a helper container that holds the
@@ -108,14 +139,8 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 			o.Namespace = "default"
 		}
 	}
-	if o.HelperImage == "" {
-		o.HelperImage = "docker.io/library/busybox:1.37"
-	}
-	if o.CPU == "" {
-		o.CPU = "50m"
-	}
-	if o.Memory == "" {
-		o.Memory = "64Mi"
+	if err := o.setDefaults(); err != nil {
+		return nil, err
 	}
 	k := &Kubernetes{o: o, cfg: cfg, pods: map[string]*runPod{}, keepFailed: 2 * time.Hour, startWait: 10 * time.Minute}
 	for _, v := range []struct {
@@ -143,6 +168,41 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 	sum := sha256.Sum256([]byte(runnerID))
 	k.owner = hex.EncodeToString(sum[:])[:10]
 	return k, nil
+}
+
+// setDefaults fills in the settings that were left out, and refuses
+// security settings that would not mean what they say.
+func (o *KubernetesOptions) setDefaults() error {
+	if o.HelperImage == "" {
+		o.HelperImage = "docker.io/library/busybox:1.37"
+	}
+	if o.CPU == "" {
+		o.CPU = "50m"
+	}
+	if o.Memory == "" {
+		o.Memory = "64Mi"
+	}
+	if !o.restricted() {
+		if o.RunAsUser != nil || o.RunAsGroup != nil {
+			return errors.New("kubernetes: run_as_user and run_as_group apply only when restricted is true; " +
+				"with restricted: false, containers run as their image's user")
+		}
+		return nil
+	}
+	if o.RunAsUser != nil && *o.RunAsUser <= 0 {
+		return fmt.Errorf("kubernetes: run_as_user %d is not allowed: it must be a user other than root (0); "+
+			"set restricted: false to run images as their own user", *o.RunAsUser)
+	}
+	if o.RunAsGroup != nil && *o.RunAsGroup < 0 {
+		return fmt.Errorf("kubernetes: run_as_group %d is not a group", *o.RunAsGroup)
+	}
+	if o.RunAsUser == nil {
+		o.RunAsUser = ptr(int64(1000))
+	}
+	if o.RunAsGroup == nil {
+		o.RunAsGroup = ptr(int64(1000))
+	}
+	return nil
 }
 
 func (k *Kubernetes) Name() string { return "kubernetes (" + k.o.Namespace + ")" }
@@ -204,7 +264,7 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	streamCtx, stopStream := context.WithCancel(context.Background())
 	defer stopStream()
 	done := make(chan error, 1)
-	script := fmt.Sprintf(`echo $$ > %[1]s/pid; cd /workspace; . %[1]s/env; exec sh -e %[1]s/script.sh`, dir)
+	script := stepScript(dir)
 	go func() {
 		err := k.exec(streamCtx, rp.name, container, []string{"sh", "-c", script}, nil, stdoutW, stderrW)
 		stdoutW.Close()
@@ -244,6 +304,13 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		return ee.ExitStatus(), nil
 	}
 	return -1, k.podGone(ctx, s.RunID, rp, runErr)
+}
+
+// stepScript is the command that runs a step whose files are in dir. The
+// step's environment is exported from the env file, so it wins over the
+// variables the container started with.
+func stepScript(dir string) string {
+	return fmt.Sprintf(`echo $$ > %[1]s/pid; cd /workspace; . %[1]s/env; exec sh -e %[1]s/script.sh`, dir)
 }
 
 // podGone turns an error talking to the pod into an infrastructure error,
@@ -326,6 +393,11 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 		names = append(names, c.Name+kind)
 	}
 	sys("Starting pod %s/%s: %s", k.o.Namespace, rp.name, strings.Join(names, ", "))
+	if k.o.restricted() {
+		sys("Containers run as user %d (group %d), not as root, with HOME=%s: commands that need root, "+
+			"such as installing packages with apt-get or apk, fail. The runner's operator can change this "+
+			"(kubernetes.restricted)", *k.o.RunAsUser, *k.o.RunAsGroup, stepHome)
+	}
 	if _, err := pods.Create(ctx, pod, metav1.CreateOptions{}); err != nil {
 		return nil, fmt.Errorf("creating pod %s: %w", rp.name, err)
 	}
@@ -366,7 +438,18 @@ func (k *Kubernetes) resources(cpu, memory string) corev1.ResourceRequirements {
 
 func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1.Pod, map[string]string) {
 	keepAlive := []string{"sh", "-c", "trap 'exit 0' TERM INT; while true; do sleep 3600 & wait $!; done"}
+	restricted := k.o.restricted()
 	mounts := []corev1.VolumeMount{{Name: "workspace", MountPath: "/workspace"}, {Name: "launchway", MountPath: "/launchway"}}
+	volumes := []corev1.Volume{
+		{Name: "workspace", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
+		{Name: "launchway", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{Medium: corev1.StorageMediumMemory}}},
+	}
+	if restricted {
+		mounts = append(mounts, corev1.VolumeMount{Name: "home", MountPath: stepHome}, corev1.VolumeMount{Name: "tmp", MountPath: "/tmp"})
+		volumes = append(volumes,
+			corev1.Volume{Name: "home", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
+			corev1.Volume{Name: "tmp", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}})
+	}
 	containers := map[string]string{}
 	images := map[string]string{}
 	cs := []corev1.Container{{Name: helperName, Image: k.o.HelperImage, Command: keepAlive, WorkingDir: "/workspace",
@@ -392,6 +475,29 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 		}
 		cs = append(cs, c)
 	}
+	var podSecurity *corev1.PodSecurityContext
+	if restricted {
+		podSecurity = &corev1.PodSecurityContext{
+			RunAsNonRoot:   ptr(true),
+			RunAsUser:      ptr(*k.o.RunAsUser),
+			RunAsGroup:     ptr(*k.o.RunAsGroup),
+			FSGroup:        ptr(*k.o.RunAsGroup),
+			SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
+		}
+		for i := range cs {
+			cs[i].SecurityContext = &corev1.SecurityContext{
+				AllowPrivilegeEscalation: ptr(false),
+				Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
+			}
+			// A step's own environment is exported when it starts, so it
+			// wins over these; a service's settings are kept as they are.
+			for _, e := range homeEnv {
+				if !hasEnv(cs[i].Env, e.Name) {
+					cs[i].Env = append(cs[i].Env, e)
+				}
+			}
+		}
+	}
 	imgJSON, _ := json.Marshal(images)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -405,17 +511,24 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 			AutomountServiceAccountToken:  ptr(k.o.ServiceAccount != ""),
 			ServiceAccountName:            k.o.ServiceAccount,
 			NodeSelector:                  k.o.NodeSelector,
+			SecurityContext:               podSecurity,
 			Containers:                    cs,
-			Volumes: []corev1.Volume{
-				{Name: "workspace", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
-				{Name: "launchway", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{Medium: corev1.StorageMediumMemory}}},
-			},
+			Volumes:                       volumes,
 		},
 	}
 	for _, s := range k.o.ImagePullSecrets {
 		pod.Spec.ImagePullSecrets = append(pod.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: s})
 	}
 	return pod, containers
+}
+
+func hasEnv(env []corev1.EnvVar, name string) bool {
+	for _, e := range env {
+		if e.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // waitRunning waits for every container to start, explaining what it is
@@ -591,9 +704,17 @@ func (k *Kubernetes) upload(ctx context.Context, pod, dir string, files map[stri
 func (k *Kubernetes) uploadDir(ctx context.Context, pod, dir string) error {
 	pr, pw := io.Pipe()
 	go func() { pw.CloseWithError(writeTar(pw, dir)) }()
+	// Without a security context the containers may run as different users
+	// (root, or each image's own), so everything is made writable by all.
+	// In a restricted pod every container runs as the user that extracts the
+	// files, so they are its own; only /workspace itself, the volume, is not
+	// (it belongs to root and the pod's group), so Git is told it is safe.
+	cmd := "tar xf - -C /workspace && chmod -R a+rwX /workspace"
+	if k.o.restricted() {
+		cmd = fmt.Sprintf(`tar xf - -C /workspace && { [ -e %[1]s/.gitconfig ] || printf '[safe]\n\tdirectory = /workspace\n' > %[1]s/.gitconfig; }`, stepHome)
+	}
 	var stderr bytes.Buffer
-	err := k.exec(ctx, pod, helperName,
-		[]string{"sh", "-c", "tar xf - -C /workspace && chmod -R a+rwX /workspace"}, pr, io.Discard, &stderr)
+	err := k.exec(ctx, pod, helperName, []string{"sh", "-c", cmd}, pr, io.Discard, &stderr)
 	pr.Close()
 	if err != nil {
 		return fmt.Errorf("%v: %s", err, strings.TrimSpace(stderr.String()))

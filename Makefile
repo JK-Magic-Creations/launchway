@@ -54,7 +54,12 @@ test-containers:
 
 # Needs a cluster: kind create cluster --name launchway-test
 #                  kubectl --context kind-launchway-test create namespace launchway-test
+# The test namespace is labelled to enforce Pod Security "restricted", which
+# step pods must pass. Some tests pull python:3.12-slim and node:24-alpine and
+# install a package from PyPI and from npm.
 test-kubernetes:
+	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace launchway-test \
+		pod-security.kubernetes.io/enforce=restricted
 	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -run Kubernetes ./internal/executor/
 
 # Creates ../launchway-demo, a small repository to play with, and a demo

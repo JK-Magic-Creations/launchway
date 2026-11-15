@@ -177,8 +177,10 @@ steps:
 ```
 
 On Kubernetes, a run is one pod: a container per toolbox plus the services, so steps start
-instantly once the pod is up. On Podman, services run in a pod per run. Plain `image:` steps still
-work, and each image used that way gets a container of its own.
+instantly once the pod is up. Its containers run as an ordinary user, not root, unless the
+runner's operator chose otherwise (see [Commands](#commands)). On Podman, services run in a pod
+per run. Plain `image:` steps still work, and each image used that way gets a container of its
+own.
 
 The workspace lives on one runner, so all of a run's steps go to the runner that took its first
 step, for as long as that runner keeps in touch with the server. The cost is that a run's parallel
@@ -788,8 +790,20 @@ kubernetes:
   image_pull_secrets: [registry-credentials]
   keep_failed: 2h             # keep a failed run's pod this long, for a resume
   start_timeout: 10m
+  restricted: true            # the default: steps run as run_as_user, not root (see below)
+  run_as_user: 1000
+  run_as_group: 1000
 secrets: {}                   # see Secrets
 ```
+
+With the Kubernetes executor, every container of a step pod runs as `run_as_user` (default
+1000, never root) with no privileges, so the step namespace can enforce Pod Security
+`restricted`. `HOME` is a writable `/home/launchway`, and `/tmp` and the checkout are writable.
+Steps that need root, such as `apt-get install`, fail; use images that already have their tools.
+`restricted: false` (or `--k8s-unrestricted`) runs images as their own users, often root, and
+needs a namespace that allows that. Pipelines cannot change this setting.
+[deploy/README.md](deploy/README.md#step-pods-and-pod-security) has the details, including
+service images that expect root.
 
 `--health-listen :8081` serves `/healthz` (the process is up) and `/readyz` (the server answered
 within the last two minutes) for probes.

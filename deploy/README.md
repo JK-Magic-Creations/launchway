@@ -76,9 +76,6 @@ with exactly what the executor uses: `pods` (create, get, list, delete, patch), 
 (create, get) and `pods/log` (get). Set `runner.kubernetes.createNamespace=true` to have the
 chart create the namespace (it is then deleted on uninstall).
 
-Step pods set no security context of their own, because they run arbitrary build images. The
-step namespace must admit them: Pod Security `baseline` does, `restricted` does not.
-
 The chart renders the runners' settings into a file, `/etc/launchway-runner/runner.yaml`, read
 with `launchway runner --config`. Step pods are configured under `runner.kubernetes`: the helper
 image, CPU and memory requests and the memory limit per container, a node selector, image pull
@@ -93,6 +90,48 @@ as described in the main [README](../README.md#secrets). Add volumes for token o
 Runners serve `/healthz` and `/readyz` on `runner.healthPort` (8081, inside the pod only), used by
 their liveness and readiness probes. A runner is ready while the servers have answered it within
 the last two minutes, so a rollout of runners that cannot reach the servers stops.
+
+#### Step pods and Pod Security
+
+By default step pods meet the Pod Security Standard `restricted`, so the step namespace can
+enforce it (`pod-security.kubernetes.io/enforce=restricted`; a namespace the chart creates gets
+that label). Every container of a step pod, the helper and services included:
+
+- runs as user 1000 and group 1000 (`runner.kubernetes.runAsUser` and `runAsGroup`), whatever
+  user its image names, and never as root;
+- has no privilege escalation, no Linux capabilities, and the RuntimeDefault seccomp profile;
+- has a writable home directory, `HOME=/home/launchway`, and a writable `/tmp`, both empty
+  volumes of the pod. `PIP_CACHE_DIR`, `npm_config_cache` and `GOCACHE` point inside that home.
+  A step that sets one of these variables itself keeps its own value, and so does a service that
+  sets it in its `env`.
+
+The checkout belongs to that user, so steps can change it, and Git accepts it (the pod's
+`~/.gitconfig` marks `/workspace` as a safe directory; a step that moves `HOME` loses that).
+Official images such as `python`, `node` and `golang` work as an unknown user with a writable
+home. What does not work is anything that needs root: `apt-get install`, `apk add`, writing
+under `/usr` or `/etc`, and on many clusters listening on a port below 1024. Such a step fails
+with the tool's own "permission denied" or "are you root?" message; the log of the step that
+starts the pod says which user the containers run as. Use an image that already has the tools,
+or build one.
+
+Services run the same way, and some service images expect to start as root. The step that
+starts the pod then fails with the service's last lines of output. The official `postgres` image
+works when its data directory is writable: give the service `env: { PGDATA: /tmp/pgdata }`. The
+official `nginx` image does not work; use a variant made to run as any user, such as
+`nginxinc/nginx-unprivileged` (which listens on port 8080), or give the service a `command` that
+works as an ordinary user. Databases and other servers often have such a variant.
+
+Only the operator decides this; nothing in a pipeline file can change a step pod's user or make
+it privileged. To pick another user, set `runner.kubernetes.runAsUser` (any user but 0) and
+`runAsGroup`. To run images as their own users, root for many, as Launchway did before, set
+`runner.kubernetes.restricted=false`; the step namespace must then admit such pods, so label it
+Pod Security `baseline` (with `createNamespace`, set
+`runner.kubernetes.namespaceLabels."pod-security.kubernetes.io/enforce"=baseline`; the chart
+refuses to create a `restricted` namespace for pods that cannot run in it). A runner started by
+hand takes `kubernetes.restricted: false` in its file, or `--k8s-unrestricted`.
+
+**Upgrading:** this is on by default. Pipelines whose steps install packages or otherwise need
+root fail until their images are changed or `restricted` is turned off.
 
 #### Which runner runs a step
 
@@ -228,6 +267,8 @@ Nothing else is persisted. Secrets values never reach the servers or the databas
   privilege escalation and the RuntimeDefault seccomp profile. The image has no shell and no
   package manager.
 - Servers have a ServiceAccount with no permissions and no token mounted.
+- Step pods run as an ordinary user under Pod Security `restricted` unless you turn that off
+  (see [Step pods and Pod Security](#step-pods-and-pod-security)); a pipeline cannot.
 - Runners can manage pods in the step namespace only. Anyone who can run a pipeline can run any
   image there, so treat that namespace as untrusted: give it a ResourceQuota, a LimitRange and a
   NetworkPolicy suited to builds, and keep other workloads out of it.

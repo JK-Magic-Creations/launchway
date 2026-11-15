@@ -222,7 +222,10 @@
             "memoryLimit": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
             "imagePullSecrets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
             "keepFailed": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$" },
-            "startTimeout": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$" }
+            "startTimeout": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$" },
+            "restricted": { "type": "boolean" },
+            "runAsUser": { "type": ["integer", "null"], "minimum": 1 },
+            "runAsGroup": { "type": ["integer", "null"], "minimum": 0 }
           }
         },
         "healthPort": { "type": "integer", "minimum": 1, "maximum": 65535 },

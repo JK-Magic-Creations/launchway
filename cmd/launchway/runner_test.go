@@ -33,6 +33,8 @@ kubernetes:
   image_pull_secrets: [regcred]
   keep_failed: 30m
   start_timeout: 5m
+  run_as_user: 2000
+  run_as_group: 3000
 secrets:
   files: {type: file, dir: secrets}
 `
@@ -53,7 +55,8 @@ func TestRunnerConfigFile(t *testing.T) {
 	}
 	if k.Namespace != "file-ns" || k.HelperImage != "registry.example/busybox:1" || k.ServiceAccount != "builder" ||
 		k.NodeSelector["pool"] != "builds" || k.CPU != "250m" || k.Memory != "512Mi" || k.MemoryLimit != "2Gi" ||
-		len(k.ImagePullSecrets) != 1 || k.ImagePullSecrets[0] != "regcred" || k.KeepFailed != "30m" || k.StartTimeout != "5m" {
+		len(k.ImagePullSecrets) != 1 || k.ImagePullSecrets[0] != "regcred" || k.KeepFailed != "30m" || k.StartTimeout != "5m" ||
+		k.Restricted != nil || *k.RunAsUser != 2000 || *k.RunAsGroup != 3000 {
 		t.Fatalf("kubernetes settings %+v", k)
 	}
 	if s := o.Secrets["files"]; s.Type != "file" || s.Dir != filepath.Join(dir, "secrets") {
@@ -89,8 +92,20 @@ func TestRunnerSettingsPrecedence(t *testing.T) {
 	if o.Kubernetes.Namespace != "flag-ns" || o.Kubernetes.Context != "kind-x" || o.Kubernetes.HelperImage != "registry.example/busybox:1" {
 		t.Fatalf("kubernetes: %+v; the flags replace their own settings only", o.Kubernetes)
 	}
+	if o.Kubernetes.Restricted != nil || *o.Kubernetes.RunAsUser != 2000 {
+		t.Fatalf("without --k8s-unrestricted the file's user should stay: %+v", o.Kubernetes)
+	}
 	if _, ok := o.Secrets["files"]; ok || o.Secrets["vaulty"].Type != "env" {
 		t.Fatalf("--secrets-config should replace the file's stores: %+v", o.Secrets)
+	}
+	// --k8s-unrestricted turns the restricted security context off, and with
+	// it the file's user and group, which apply only to restricted pods.
+	o, err = runnerArgs([]string{"--config", path, "--k8s-unrestricted"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k := o.Kubernetes; k.Restricted == nil || *k.Restricted || k.RunAsUser != nil || k.RunAsGroup != nil {
+		t.Fatalf("--k8s-unrestricted: %+v", k)
 	}
 
 	t.Setenv("LAUNCHWAY_SERVER", "")
