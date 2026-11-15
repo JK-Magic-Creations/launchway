@@ -57,12 +57,14 @@ steps:
       tests: reports/integration.xml
 
   security-scan:
-    description: Look for known problems in dependencies
+    description: Scan the code, its secrets and its dependencies
     image: docker.io/library/alpine:3.22
-    run: |
-      echo "Scanning dependencies…"
-      sleep 2
-      printf '\033[33m2 low-severity findings\033[0m\n'
+    run: sh tests/scan.sh
+    # SARIF from any scanner, and a CycloneDX SBOM. The SBOM is kept as the
+    # step's artifact "sbom"; secrets a scanner finds are never shown.
+    reports:
+      findings: reports/security/*.sarif
+      sbom: reports/sbom.cdx.json
 
   build:
     description: Build and push the image
@@ -74,13 +76,26 @@ steps:
       digest=$(echo "$LAUNCHWAY_COMMIT" | sha256sum | cut -c1-16)
       echo "image=registry.example.com/demo-app@sha256:$digest" >> "$LAUNCHWAY_OUTPUTS"
       echo "Pushed registry.example.com/demo-app@sha256:$digest"
+      mkdir -p dist
+      printf '#!/bin/sh\necho "demo-app %s: healthy"\n' "$digest" > dist/demo-app
+      chmod +x dist/demo-app
+      tar -czf dist/demo-app.tar.gz -C dist demo-app
+    # Kept for 14 days: download them from the run, or fetch them in a
+    # later step, on whichever runner it runs.
+    artifacts:
+      - name: binary
+        paths: [dist/demo-app, "dist/*.tar.gz"]
+        retain: 14d
 
   smoke-test:
     description: Check that the built image answers
     image: docker.io/library/alpine:3.22
     needs: build
+    fetch:
+      - { from: build, name: binary, into: smoke }
     run: |
       echo "Testing $LAUNCHWAY_NEEDS_BUILD_IMAGE"
+      ./smoke/dist/demo-app
       sleep 1
       # Fails on the first attempt while a file called FLAKY exists, so you
       # can try "Resume". Delete FLAKY and push to make it pass first time.
@@ -190,6 +205,66 @@ cat > reports/integration.xml <<XML
 XML
 if [ "$LAUNCHWAY_ATTEMPT" = 1 ]; then echo "test_cache_survives_restart failed; the step will be retried" >&2; exit 1; fi
 echo "4 integration tests passed"
+EOF2
+cat > tests/scan.sh <<'EOF2'
+#!/bin/sh
+# Writes what three scanners would: secrets, code and dependencies, as
+# SARIF 2.1.0, and a CycloneDX SBOM. On a branch with button.txt the code
+# scan finds one more problem, which the run shows as new.
+set -e
+mkdir -p reports/security
+echo "Scanning for secrets, code problems and vulnerable dependencies…"
+sleep 1
+cat > reports/security/secrets.sarif <<'JSON'
+{"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0.json","runs":[{"tool":{"driver":{"name":"gitleaks","version":"8.24.0",
+"rules":[{"id":"aws-access-token","shortDescription":{"text":"Identified a pattern that may indicate AWS credentials, risking unauthorized cloud resource access and data breaches on AWS platforms."}}]}},
+"results":[{"ruleId":"aws-access-token","message":{"text":"aws-access-token has detected secret for file config/settings.py: AKIAIOSFODNN7EXAMPLE"},
+"locations":[{"physicalLocation":{"artifactLocation":{"uri":"config/settings.py"},"region":{"startLine":12,"startColumn":19,"endLine":12,"endColumn":39,"snippet":{"text":"AWS_KEY = \"AKIAIOSFODNN7EXAMPLE\""}}}}],
+"partialFingerprints":{"commitSha":"","email":"","author":"","date":"","commitMessage":""}}]}]}
+JSON
+extra=""
+if [ -f button.txt ]; then
+  extra=',{"ruleId":"python.lang.security.audit.eval-detected.eval-detected","message":{"text":"Detected the use of eval(). eval() can be dangerous if used to evaluate dynamic content."},"level":"warning","locations":[{"physicalLocation":{"artifactLocation":{"uri":"app/button.py"},"region":{"startLine":7,"startColumn":12,"endLine":7,"endColumn":30}}}],"properties":{}}'
+fi
+cat > reports/security/code.sarif <<JSON
+{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"Semgrep OSS","semanticVersion":"1.182.1","rules":[
+{"id":"python.lang.security.audit.subprocess-shell-true.subprocess-shell-true","name":"python.lang.security.audit.subprocess-shell-true.subprocess-shell-true","shortDescription":{"text":"Semgrep Finding: subprocess shell=True"},"fullDescription":{"text":"Found 'subprocess' function with 'shell=True'. This is dangerous because this call will spawn the command using a shell process."},"help":{"text":"Use shell=False and pass the arguments as a list."},"helpUri":"https://semgrep.dev/r/python.lang.security.audit.subprocess-shell-true.subprocess-shell-true","defaultConfiguration":{"level":"error"},"properties":{"precision":"very-high","security-severity":"7.5","tags":["CWE-78: OS Command Injection","security"]}},
+{"id":"python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load","name":"python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load","shortDescription":{"text":"Semgrep Finding: avoid-pyyaml-load"},"fullDescription":{"text":"Detected a possible YAML deserialization vulnerability. yaml.load can create arbitrary Python objects."},"help":{"text":"Use yaml.safe_load instead."},"helpUri":"https://semgrep.dev/r/python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load","defaultConfiguration":{"level":"warning"},"properties":{"security-severity":"5.0","tags":["CWE-502: Deserialization of Untrusted Data","security"]}},
+{"id":"python.lang.security.audit.eval-detected.eval-detected","shortDescription":{"text":"Semgrep Finding: eval-detected"},"fullDescription":{"text":"Detected the use of eval(). eval() can be dangerous if used to evaluate dynamic content."},"helpUri":"https://semgrep.dev/r/python.lang.security.audit.eval-detected.eval-detected","defaultConfiguration":{"level":"warning"},"properties":{"security-severity":"5.1","tags":["CWE-95","security"]}}]}},
+"results":[
+{"ruleId":"python.lang.security.audit.subprocess-shell-true.subprocess-shell-true","message":{"text":"Found 'subprocess' function 'run' with 'shell=True'."},"level":"error","locations":[{"physicalLocation":{"artifactLocation":{"uri":"app/deploy.py"},"region":{"startLine":21,"startColumn":5,"endLine":21,"endColumn":52}}}],"properties":{}},
+{"ruleId":"python.lang.security.deserialization.avoid-pyyaml-load.avoid-pyyaml-load","message":{"text":"Detected a possible YAML deserialization vulnerability: yaml.load(config_text)."},"level":"warning","locations":[{"physicalLocation":{"artifactLocation":{"uri":"app/config.py"},"region":{"startLine":9,"startColumn":12,"endLine":9,"endColumn":35}}}],"properties":{}}$extra
+]}]}
+JSON
+cat > reports/security/dependencies.sarif <<'JSON'
+{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"Trivy","version":"0.61.0","informationUri":"https://github.com/aquasecurity/trivy","rules":[
+{"id":"CVE-2023-32681","name":"LanguageSpecificPackageVulnerability","shortDescription":{"text":"python-requests: Unintended leak of Proxy-Authorization header"},"fullDescription":{"text":"Requests is a HTTP library. Since Requests 2.3.0, Requests has been leaking Proxy-Authorization headers to destination servers when redirected to an HTTPS endpoint."},"defaultConfiguration":{"level":"warning"},"helpUri":"https://avd.aquasec.com/nvd/cve-2023-32681","help":{"text":"Vulnerability CVE-2023-32681\nSeverity: MEDIUM\nPackage: requests\nFixed Version: 2.31.0"},"properties":{"precision":"very-high","security-severity":"6.1","tags":["vulnerability","security","MEDIUM"]}},
+{"id":"CVE-2019-11324","name":"LanguageSpecificPackageVulnerability","shortDescription":{"text":"python-urllib3: Certification mishandles certain cases"},"fullDescription":{"text":"The urllib3 library before 1.24.2 for Python mishandles certain cases where the desired set of CA certificates is different from the OS store of CA certificates."},"defaultConfiguration":{"level":"error"},"helpUri":"https://avd.aquasec.com/nvd/cve-2019-11324","properties":{"security-severity":"7.5","tags":["vulnerability","security","HIGH"]}},
+{"id":"CVE-2022-42969","name":"LanguageSpecificPackageVulnerability","shortDescription":{"text":"python-py: ReDoS in the py library"},"defaultConfiguration":{"level":"note"},"helpUri":"https://avd.aquasec.com/nvd/cve-2022-42969","properties":{"security-severity":"2.0","tags":["vulnerability","security","LOW"]}}]}},
+"results":[
+{"ruleId":"CVE-2023-32681","ruleIndex":0,"level":"warning","message":{"text":"Package: requests\nInstalled Version: 2.25.1\nVulnerability CVE-2023-32681\nSeverity: MEDIUM\nFixed Version: 2.31.0"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"requirements.txt","uriBaseId":"ROOTPATH"},"region":{"startLine":3,"startColumn":1,"endLine":3,"endColumn":1}}}]},
+{"ruleId":"CVE-2019-11324","ruleIndex":1,"level":"error","message":{"text":"Package: urllib3\nInstalled Version: 1.24.1\nVulnerability CVE-2019-11324\nSeverity: HIGH\nFixed Version: 1.24.2"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"requirements.txt","uriBaseId":"ROOTPATH"},"region":{"startLine":5,"startColumn":1,"endLine":5,"endColumn":1}}}]},
+{"ruleId":"CVE-2022-42969","ruleIndex":2,"level":"note","message":{"text":"Package: py\nInstalled Version: 1.11.0\nVulnerability CVE-2022-42969\nSeverity: LOW"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"requirements.txt","uriBaseId":"ROOTPATH"},"region":{"startLine":7,"startColumn":1,"endLine":7,"endColumn":1}}}]}
+]}]}
+JSON
+comp() { printf '{"type":"library","name":"%s","version":"%s","purl":"pkg:pypi/%s@%s","licenses":[{"license":{"id":"%s"}}]}' "$1" "$2" "$1" "$2" "$3"; }
+{
+  printf '{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"metadata":{"component":{"type":"application","name":"demo-app"}},"components":['
+  comp requests 2.25.1 Apache-2.0; printf ,
+  comp urllib3 1.24.1 MIT; printf ,
+  comp py 1.11.0 MIT; printf ,
+  comp pyyaml 6.0.1 MIT; printf ,
+  comp flask 3.0.3 BSD-3-Clause; printf ,
+  comp werkzeug 3.0.4 BSD-3-Clause; printf ,
+  comp jinja2 3.1.4 BSD-3-Clause; printf ,
+  comp click 8.1.7 BSD-3-Clause; printf ,
+  comp certifi 2024.8.30 MPL-2.0; printf ,
+  comp idna 3.10 BSD-3-Clause; printf ,
+  comp charset-normalizer 3.4.0 MIT; printf ,
+  printf '{"type":"library","name":"left-pad","version":"1.3.0","purl":"pkg:npm/left-pad@1.3.0","licenses":[{"license":{"id":"WTFPL"}}]}'
+  printf ']}\n'
+} > reports/sbom.cdx.json
+printf '\033[33mFound problems; see the Security tab\033[0m\n'
 EOF2
 echo "A demo app for trying Launchway." > README.md
 echo "Delete this file to make the smoke test pass first time." > FLAKY
