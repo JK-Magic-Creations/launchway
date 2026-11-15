@@ -4,7 +4,6 @@ package api
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -32,6 +31,8 @@ type Server struct {
 	Engine      *engine.Engine
 	Projects    *source.Manager
 	RunnerToken string
+	// RunnerPools are the deploy runner pools, each with its own token.
+	RunnerPools []RunnerPool
 	// Actor is who everything is done as when sign-in is off (Auth is nil).
 	Actor string
 	// Auth turns sign-in on. Nil means none: every request acts as Actor,
@@ -111,6 +112,9 @@ func (s *Server) routes() []route {
 		{"POST /api/runner/v1/finish", runnerOnly, "", s.finish},
 		{"POST /api/runner/v1/runs", runnerOnly, "", s.runInfos},
 		{"POST /api/runner/v1/leave", runnerOnly, "", s.leave},
+		{"POST /api/runner/v1/deploy/lease", runnerOnly, "", s.deployLease},
+		{"POST /api/runner/v1/deploy/watch", runnerOnly, "", s.deployWatch},
+		{"POST /api/runner/v1/deploy/observe", runnerOnly, "", s.deployObserve},
 
 		// Signing in and out.
 		{"GET /auth/login", public, "", s.login},
@@ -145,6 +149,8 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/runs/{id}/steps/{step}/reject", runOperate, "approval.reject", s.decide(false)},
 		{"GET /api/v1/approvals", signedIn, "", s.listApprovals},
 		{"GET /api/v1/runners", readAny, "", s.listRunners},
+		{"GET /api/v1/environments", signedIn, "", s.listEnvironments},
+		{"GET /api/v1/deployments", signedIn, "", s.listDeployments},
 		{"POST /api/v1/validate", readAny, "", s.validate},
 		{"GET /api/v1/stream", signedIn, "", s.stream},
 		{"GET /api/v1/tokens", signedIn, "", s.listTokens},
@@ -287,17 +293,6 @@ func (s *Server) recoverer(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) runnerAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if s.RunnerToken == "" || subtle.ConstantTimeCompare([]byte(got), []byte(s.RunnerToken)) != 1 {
-			writeErr(w, http.StatusUnauthorized, "a valid runner token is required")
-			return
-		}
-		next(w, r)
-	}
-}
-
 // ---- health ----
 
 // healthz reports that the process is up.
@@ -336,7 +331,7 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 		Runner      engine.RunnerInfo `json:"runner"`
 		WaitSeconds int               `json:"wait_seconds"`
 	}
-	if !decode(w, r, &in) {
+	if !decode(w, r, &in) || refusePools(w, r) {
 		return
 	}
 	wait := time.Duration(min(max(in.WaitSeconds, 0), 50)) * time.Second
@@ -373,7 +368,7 @@ type leaseReq struct {
 
 func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 	var in leaseReq
-	if !decode(w, r, &in) {
+	if !decode(w, r, &in) || !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	cancel, err := s.Engine.Start(in.LeaseID)
@@ -386,7 +381,7 @@ func (s *Server) start(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) heartbeat(w http.ResponseWriter, r *http.Request) {
 	var in leaseReq
-	if !decode(w, r, &in) {
+	if !decode(w, r, &in) || !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	cancel, err := s.Engine.Heartbeat(in.LeaseID)
@@ -399,7 +394,7 @@ func (s *Server) heartbeat(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	var in leaseReq
-	if !decode(w, r, &in) {
+	if !decode(w, r, &in) || !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	if err := s.Engine.AppendLogs(in.LeaseID, in.Lines); err != nil {
@@ -436,6 +431,9 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "the request body is not valid JSON: "+err.Error())
+		return
+	}
+	if !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	if err := s.Engine.Finish(in.LeaseID, in.Result); err != nil {
@@ -937,6 +935,12 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 			}
 			ps = pipeline.Problems{{Message: strings.TrimPrefix(err.Error(), "invalid: ")}}
 		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
+		return
+	}
+	// The second pass, against this server's configuration: the
+	// environments deploy steps name.
+	if ps := s.Engine.CheckDeploys(project, p); len(ps) > 0 {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
 		return
 	}

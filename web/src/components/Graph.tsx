@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { GraphGroup, StepStatus, StepView } from "../api";
 import { elapsed } from "../format";
-import { StatusIcon, statusLabel, tone } from "./ui";
+import { shownStatus, StatusIcon, statusLabel, stepLabel, tone } from "./ui";
 
 const PAD = 12;
 const SIZES = {
@@ -22,6 +22,7 @@ interface Props {
   now: number;
   compact?: boolean;      // smaller nodes, for narrow places
   describe?: (s: StepView) => string; // replaces the status line under each name
+  phases?: Record<string, string>; // the status line of a deploy or rollback step at work, by step
 }
 
 // The group a template's step is drawn in: the outermost, so a template that
@@ -42,13 +43,15 @@ export function groupStatus(statuses: StepStatus[]): StepStatus {
   return "succeeded";
 }
 
+function lowerFirst(t: string): string { return t.slice(0, 1).toLowerCase() + t.slice(1); }
+
 interface Node { key: string; step?: StepView; group?: GraphGroup; members?: StepView[] }
 
 // Graph draws the pipeline as columns: each step sits to the right of
 // everything it needs. Edges are drawn underneath in SVG. The steps a
 // template became are framed together under the uses step's name; a frame
 // can be collapsed into one node that shows how its steps are doing.
-export function Graph({ levels, steps, groups, selected, onSelect, now, compact, describe }: Props) {
+export function Graph({ levels, steps, groups, selected, onSelect, now, compact, describe, phases }: Props) {
   const { W, H, GX, GY } = compact ? SIZES.compact : SIZES.normal;
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const toggle = (g: string) => setCollapsed((prev) => {
@@ -236,23 +239,23 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
           const label = s.group ? s.id.slice(topGroup(s.group).length + 1) : s.id;
           return (
             <button key={s.id} type="button"
-              className={`node t-${tone(s.status)}` + (selected === s.id ? " node-selected" : "") + (s.uses ? " node-template" : "") + (s.reused_from ? " node-reused" : "")}
+              className={`node t-${tone(shownStatus(s))}` + (selected === s.id ? " node-selected" : "") + (s.uses ? " node-template" : "") + (s.reused_from ? " node-reused" : "")}
               style={{ left: p.x, top: p.y, width: W, height: H }}
               onClick={() => onSelect(s.id)}
               aria-pressed={selected === s.id}
               title={s.description || s.id}
-              aria-label={`${s.id}: ${statusLabel(s.status)}${s.reused_from ? `, reused from run #${s.reused_from_number}` : ""}${s.description ? `. ${s.description}` : ""}`}>
+              aria-label={`${s.id}: ${phases?.[s.id] ?? stepLabel(s)}${s.reused_from ? `, reused from run #${s.reused_from_number}` : ""}${s.description ? `. ${s.description}` : ""}`}>
               <span className="node-top">
-                <StatusIcon status={s.status} />
+                <StatusIcon status={shownStatus(s)} />
                 <span className="node-name">{label}</span>
                 {s.attempt > 1 && <span className="node-attempt" title={`Attempt ${s.attempt}`}>#{s.attempt}</span>}
               </span>
               <span className="node-sub">
                 {describe ? describe(s) : s.reused_from ? `reused from #${s.reused_from_number}`
-                  : s.status === "skipped" ? (s.skip_kind === "condition" ? "condition not met" : "skipped")
+                  : s.status === "skipped" ? lowerFirst(stepLabel(s))
                   : s.status === "pending" ? "waiting"
                   : s.status === "queued" ? "waiting for a runner"
-                  : s.status === "waiting" ? "waiting for approval"
+                  : s.status === "waiting" ? phases?.[s.id] ?? lowerFirst(stepLabel(s))
                   : s.kind === "approval" && s.status === "succeeded" ? `approved by ${s.decided_by}`
                   : s.kind === "approval" && s.status === "failed" ? (s.decided_by ? `rejected by ${s.decided_by}` : "nobody decided")
                   : t || statusLabel(s.status)}

@@ -58,13 +58,22 @@ func (e *Engine) Decide(runID, stepID string, approve bool, actor, comment strin
 	})
 }
 
-// expireApprovals rejects waiting approvals whose deadline has passed.
-// Every server does this; each approval is rejected exactly once, because
-// the rejection is an event and two servers cannot both append the same
-// run_seq. The loser retries, finds the step no longer waiting, and stops.
-func (e *Engine) expireApprovals() {
-	q, args := `SELECT run_id, step_id FROM steps WHERE status = ? AND deadline <= ?`, []any{StepWaitingS, e.now().UnixMilli()}
-	if e.knows(schemaReruns) {
+// expireWaits ends the waits whose deadline has passed: it rejects
+// approvals nobody decided, and fails deploy and rollback steps that did not
+// get done in time (queued for a deploy runner, or waiting for what deploy
+// runners observe). Every server does this; each step is ended exactly
+// once, because the ending is an event and two servers cannot both append
+// the same run_seq. The loser retries, finds the step no longer waiting, and
+// stops.
+func (e *Engine) expireWaits() {
+	now := e.now().UnixMilli()
+	q, args := `SELECT run_id, step_id FROM steps WHERE status = ? AND deadline <= ?`, []any{StepWaitingS, now}
+	switch {
+	case e.knows(schemaDeploy):
+		q = `SELECT s.run_id, s.step_id FROM steps s JOIN runs r ON r.id = s.run_id
+			WHERE s.deadline > 0 AND s.deadline <= ? AND (s.status = ? OR (s.status = ? AND s.target <> '')) AND r.min_schema <= ?`
+		args = []any{now, StepWaitingS, StepQueuedS, e.schema}
+	case e.knows(schemaReruns):
 		// Runs that need a newer server are left to one.
 		q = `SELECT s.run_id, s.step_id FROM steps s JOIN runs r ON r.id = s.run_id
 			WHERE s.status = ? AND s.deadline <= ? AND r.min_schema <= ?`
@@ -91,8 +100,14 @@ func (e *Engine) expireApprovals() {
 		err := e.withRun(d.runID, func(c *cmd) error {
 			s := c.st.Steps[d.stepID]
 			def := c.st.Pipeline.Step(d.stepID)
-			if s == nil || def == nil || s.Status != StepWaitingS || c.now < s.Deadline {
+			if s == nil || def == nil || s.Deadline == 0 || c.now < s.Deadline {
 				return nil // decided, canceled or expired since the query above
+			}
+			if def.IsDeployKind() {
+				return c.expireDeploy(d.stepID, def)
+			}
+			if s.Status != StepWaitingS || !def.IsApproval() {
+				return nil
 			}
 			c.emit(StepRejected, Payload{Step: d.stepID, Attempt: s.Attempt,
 				Reason: "nobody decided within " + def.Timeout.Short()})
@@ -100,7 +115,7 @@ func (e *Engine) expireApprovals() {
 			return nil
 		})
 		if err != nil && !errors.Is(err, ErrNeedsNewer) {
-			e.log.Error("expiring an approval", "run", d.runID, "step", d.stepID, "err", err)
+			e.log.Error("ending a wait whose deadline passed", "run", d.runID, "step", d.stepID, "err", err)
 		}
 	}
 }
@@ -125,10 +140,14 @@ type Approval struct {
 // Approvals returns every approval waiting for a decision, across all runs,
 // the most recent first.
 func (e *Engine) Approvals() ([]Approval, error) {
+	onlyApprovals := ""
+	if e.knows(schemaDeploy) {
+		onlyApprovals = ` AND s.wait_kind = ''` // deploy steps wait too, for other things
+	}
 	rows, err := e.db.Query(`SELECT s.run_id, r.project, r.number, s.step_id, r.actor, r.message, r.sha, r.branch, r.tag,
 			r.event, r.ref, s.queued_at, s.deadline
 		FROM steps s JOIN runs r ON r.id = s.run_id
-		WHERE s.status = ?
+		WHERE s.status = ?`+onlyApprovals+`
 		ORDER BY s.queued_at DESC, s.run_id DESC, s.position`, StepWaitingS)
 	if err != nil {
 		return nil, err

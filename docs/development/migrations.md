@@ -69,6 +69,19 @@ schema-9 server leaves it alone rather than run its steps without collecting the
 test summary schema 10 adds to `step.finished` and `step.canceled` events is a field older servers
 may safely ignore, so it needs no `requires`.
 
+Schema 11 brings deploy and rollback steps (`kind: deploy`, `kind: rollback`) and the `deploy.*`
+events. It is additive: new tables and new columns with defaults. A run with such steps has
+`runs.min_schema` 11 from creation, so a schema-10 server leaves it alone entirely: it does not
+lease its steps (deploy steps are only ever leased to deploy runners anyway), expire its waits,
+cancel, resume or re-run it, and it ignores the new tables, the environment locks among them. An
+older server does list a waiting deploy step among its approvals, because it cannot tell the two
+waits apart, but refuses to decide it. On a rollback to schema 10, open deployments keep their
+locks and stay as they are; when a schema-11 server runs again they resume, and a deployment
+whose deadline passed meanwhile is failed at once, saying what was last observed, which runs its
+rollback step if it has one. The pipeline keys of deploy steps, and the `environments:` and
+`runner_pools:` settings, carry the same caveat as schema 9's keys: use them only once every server
+knows them.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

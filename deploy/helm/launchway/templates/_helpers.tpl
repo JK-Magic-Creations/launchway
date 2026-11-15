@@ -192,6 +192,7 @@ owns may not appear in it.
 {{- if $value }}{{ $_ := set $tests $key (int64 $value) }}{{ end -}}
 {{- end -}}
 {{- if $tests }}{{ $_ := set $config "tests" $tests }}{{ end -}}
+{{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
 

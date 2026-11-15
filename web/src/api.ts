@@ -118,6 +118,165 @@ export interface TestOverview {
   ref: string; runs: OverviewRun[]; slowest: TestStat[]; failing: TestStat[]; flaky: TestStat[]; refs: string[];
 }
 
+/** What kind of step it is: a step that runs a script has none. */
+export type StepKind = "approval" | "deploy" | "rollback";
+/** What a waiting deploy step waits for: its environment's lock, or what deploy runners observe. */
+export type WaitKind = "lock" | "observe";
+/** Why a step was skipped: condition, upstream, not_needed (a rollback with nothing to roll back) or superseded. */
+export type SkipKind = "" | "condition" | "upstream" | "not_needed" | "superseded";
+
+// ---- deployments ----
+
+/** How a deployment ended. */
+export type Verdict = "deployed" | "failed" | "rolled_back" | "rollback_failed" | "abandoned";
+
+/** Where a deployment stands, as worked out from what a deploy runner observed. */
+export type DeployPhase =
+  | "unobserved" | "app_missing" | "source_error" | "syncing" | "sync_blocked" | "sync_failed"
+  | "progressing" | "degraded" | "rollout_progressing" | "rollout_paused" | "rollout_aborted" | "healthy";
+
+/** Names a deployment, and the run and step that made it. */
+export interface DeployRef { deployment: string; run: string; number: number; step?: string; version?: string }
+
+/** An Argo CD application, as a deploy runner saw it. */
+export interface DeployApp {
+  found: boolean;
+  source_error?: string;
+  sync: string; // Synced, OutOfSync or Unknown
+  health: string; // Healthy, Progressing, Degraded, Suspended, Missing or Unknown
+  health_message?: string;
+  revision?: string;
+  /** Whether revision includes the deployment's commit; absent when it could not be checked. */
+  contains?: boolean;
+  source: number;
+  automated: boolean;
+  operation?: {
+    phase: string; message?: string; revision?: string; contains?: boolean; started_at?: number; finished_at?: number;
+  };
+  reconciled_at?: number;
+  resources?: { group?: string; kind: string; namespace?: string; name: string; found: boolean; sync?: string; health?: string; message?: string }[];
+  conditions?: string[];
+  /** What the deploy runner could not find out, such as the sync windows; never decides anything. */
+  notes?: string[];
+  /** For an application that syncs by itself: why its sync windows hold it now. */
+  window_blocked?: string;
+}
+
+/** An Argo Rollouts rollout, as a deploy runner saw it. */
+export interface DeployRollout {
+  found: boolean;
+  phase?: string; // Healthy, Progressing, Paused, Degraded
+  message?: string;
+  generation: number;
+  observed_generation?: string;
+  observed: boolean;
+  workload_ref?: boolean;
+  current_pod_hash?: string;
+  stable_rs?: string;
+  strategy?: string; // canary or blueGreen
+  /** The current canary step, of steps; absent when there are none. */
+  step?: number;
+  steps: number;
+  step_names?: string[];
+  canary_weight?: number;
+  paused: boolean;
+  pause_reasons?: string[];
+  pause_until?: number;
+  aborted: boolean;
+  replicas: number;
+  ready: number;
+  updated: number;
+  available: number;
+}
+
+export interface DeployMetric {
+  name: string; phase: string; message?: string;
+  count: number; successful: number; failed: number; inconclusive: number; error: number;
+}
+
+/** One of a rollout's own analysis runs. */
+export interface DeployAnalysis {
+  name: string;
+  phase: string; // Pending, Running, Successful, Failed, Error, Inconclusive
+  message?: string;
+  kind?: string; // Step or Background
+  step_index?: number;
+  pod_hash?: string;
+  metrics?: DeployMetric[];
+}
+
+/** What a deploy runner saw of a deployment at one moment. error: it could not see the application at all. */
+export interface DeploySnapshot {
+  error?: string;
+  app?: DeployApp;
+  rollout?: DeployRollout;
+  analysis?: DeployAnalysis[];
+}
+
+export interface TimelineEntry { at: number; step: string; phase: string; detail: string }
+
+export interface DeploymentView {
+  id: string;
+  run_id: string;
+  run_number: number;
+  project: string;
+  step: string;
+  rollback_step?: string;
+  environment: string;
+  service: string;
+  target: string;
+  application: string;
+  mode: string;
+  version: string;
+  previous_id?: string;
+  previous_version?: string;
+  repo?: string;
+  branch?: string;
+  commit?: string;
+  changed: boolean;
+  revert?: string;
+  phase: DeployPhase | "";
+  detail: string;
+  verdict?: Verdict;
+  opened_at: number;
+  deployed_at?: number;
+  closed_at?: number;
+  snapshot?: DeploySnapshot;
+  observed_at?: number;
+  observed_by?: string;
+  /** It holds its environment's lock. */
+  holding: boolean;
+  /** Only on a run's deployments, not in the history. */
+  timeline?: TimelineEntry[];
+}
+
+/** What an environment runs, as far as Launchway knows. */
+export interface CurrentView { deployment: string; version: string; run: string; run_number: number; since: number }
+
+/** One service of a project in an environment. */
+export interface UnitView {
+  project: string;
+  service: string;
+  current?: CurrentView;
+  /** The deployment holding the lock. */
+  lock?: DeployRef;
+  /** Runs waiting for the lock. */
+  waiting: DeployRef[];
+  /** The newest deployment, with what was last observed. */
+  last?: DeploymentView;
+}
+
+export interface EnvironmentView {
+  name: string;
+  target: string;
+  queue: string;
+  projects: string[];
+  services: UnitView[];
+  /** The runner that observes the target, and until when; absent when none does. */
+  observer?: string;
+  observer_expires?: number;
+}
+
 export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
 
 /** Where a secret is kept. The value itself never leaves the runner. */
@@ -153,12 +312,19 @@ export interface StepView {
   /** For a step not expanded (the editor without libraries): the template it uses. */
   uses?: string;
   // Approvals only. A waiting approval started waiting at started_at.
-  kind?: "approval";
+  // kind is also "deploy" or "rollback" for the steps that deploy.
+  kind?: StepKind;
   message?: string;
   deadline: number;
   decided_by: string;
   decided_at: number;
   comment: string;
+  /** A waiting deploy or rollback step: what it waits for. Empty for an approval. */
+  wait_kind?: WaitKind;
+  /** A deploy step: the environment it deploys to. */
+  environment?: string;
+  /** A rollback step: the deploy step whose deployment it reverts. */
+  deployment?: string;
   /** A step a re-run reused: the run where it actually ran, its number, and the attempt there. */
   reused_from?: string;
   reused_from_number?: number;
@@ -213,7 +379,7 @@ export interface GraphContainer {
 export interface GraphStep {
   id: string;
   description?: string;
-  kind?: "approval";
+  kind?: StepKind;
   message?: string;
   container?: string;
   image: string;
@@ -279,6 +445,8 @@ export interface RunDetail extends RunSummary {
   reruns: RerunBrief[];
   /** What in the run this server does not understand; empty when it understands all of it. */
   not_understood: string[];
+  /** The run's deployments, newest first. */
+  deployments?: DeploymentView[];
 }
 
 export interface LogLine { seq: number; at: number; stream: "stdout" | "stderr" | "system"; text: string }
@@ -388,7 +556,11 @@ export interface Approval {
 }
 
 // online: seen within the last two minutes. Runners not seen for a day are no longer listed.
-export interface Runner { id: string; name: string; executor: string; version: string; last_seen: number; online: boolean }
+export interface Runner {
+  id: string; name: string; executor: string; version: string; last_seen: number; online: boolean;
+  /** A deploy runner (executor "deploy"): its pool, and the targets it serves. */
+  pool?: string; targets?: string[];
+}
 
 /** A problem in pipeline text; with file set, in that template of the library instead. */
 export interface Problem { file?: string; library?: string; line?: number; column?: number; path?: string; message: string }
@@ -533,6 +705,12 @@ export const api = {
     const p = new URLSearchParams({ key });
     if (ref) p.set("ref", ref);
     return call<TestHistory>("GET", `/api/v1/projects/${encodeURIComponent(name)}/tests/history?` + p.toString());
+  },
+  environments: (background = false) => call<EnvironmentView[]>("GET", "/api/v1/environments", undefined, { background }),
+  deployments: (q: { environment?: string; project?: string; service?: string; limit?: number }, background = false) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<DeploymentView[]>("GET", "/api/v1/deployments?" + p.toString(), undefined, { background });
   },
   audit: (q: AuditQuery) => {
     const p = new URLSearchParams();

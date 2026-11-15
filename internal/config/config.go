@@ -17,6 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -56,6 +57,108 @@ type Config struct {
 	PullRequests PullRequestsConfig `yaml:"pull_requests"`
 	// Tests limits what the server keeps of the test reports steps declare.
 	Tests TestsConfig `yaml:"tests"`
+	// Environments are where deploy steps may deploy. Every server sharing a
+	// database must have the same ones.
+	Environments []EnvironmentConfig `yaml:"environments"`
+	// RunnerPools are deploy runner pools: each has a token of its own and
+	// the targets its runners may serve. Only a pool's token can take deploy
+	// work.
+	RunnerPools []RunnerPoolConfig `yaml:"runner_pools"`
+}
+
+// EnvironmentConfig is one environment.
+type EnvironmentConfig struct {
+	Name string `yaml:"name"`
+	// Target is what deploy runners serve to reach the environment: in
+	// practice, its cluster.
+	Target string `yaml:"target"`
+	// Projects may deploy here: names or patterns such as mcp-*.
+	Projects []string `yaml:"projects"`
+	// Queue is newest (the default: a run waiting for the lock is skipped
+	// when a newer run of the same service starts waiting) or all.
+	Queue string `yaml:"queue"`
+}
+
+// RunnerPoolConfig is one deploy runner pool. Its token is read from an
+// environment variable or a file, never from this file.
+type RunnerPoolConfig struct {
+	Name      string   `yaml:"name"`
+	TokenEnv  string   `yaml:"token_env"`
+	TokenFile string   `yaml:"token_file"`
+	Targets   []string `yaml:"targets"`
+}
+
+// EngineEnvironments converts the environments for the engine.
+func (c *Config) EngineEnvironments() []engine.Environment {
+	out := make([]engine.Environment, 0, len(c.Environments))
+	for _, e := range c.Environments {
+		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue})
+	}
+	return out
+}
+
+// Pool is a runner pool with its token read.
+type Pool struct {
+	Name    string
+	Token   string
+	Targets []string
+}
+
+// Pools reads the runner pools' tokens and checks them: every pool has a
+// name, a token of at least 32 characters that no other pool (nor the
+// shared runner token) has, and targets that some environment uses.
+func (c *Config) Pools(sharedToken string) ([]Pool, error) {
+	targets := map[string]bool{}
+	for _, e := range c.Environments {
+		targets[e.Target] = true
+	}
+	var out []Pool
+	seen := map[string]bool{}
+	for _, p := range c.RunnerPools {
+		where := "runner_pools: " + p.Name
+		switch {
+		case p.Name == "":
+			return nil, errors.New("runner_pools: every pool needs a name")
+		case seen[p.Name]:
+			return nil, fmt.Errorf("runner_pools: %s is listed twice", p.Name)
+		case len(p.Targets) == 0:
+			return nil, fmt.Errorf("%s: list the targets its runners may serve", where)
+		case (p.TokenEnv == "") == (p.TokenFile == ""):
+			return nil, fmt.Errorf("%s: give the token with exactly one of token_env or token_file", where)
+		}
+		seen[p.Name] = true
+		for _, t := range p.Targets {
+			if !targets[t] {
+				return nil, fmt.Errorf("%s: no environment has target %q", where, t)
+			}
+		}
+		tok := ""
+		if p.TokenEnv != "" {
+			tok = strings.TrimSpace(os.Getenv(p.TokenEnv))
+			if tok == "" {
+				return nil, fmt.Errorf("%s: the variable %s is not set", where, p.TokenEnv)
+			}
+		} else {
+			b, err := os.ReadFile(p.TokenFile)
+			if err != nil {
+				return nil, fmt.Errorf("%s: token_file: %w", where, err)
+			}
+			tok = strings.TrimSpace(string(b))
+		}
+		if len(tok) < 32 {
+			return nil, fmt.Errorf("%s: the token is shorter than 32 characters; make a long random one, for example with: openssl rand -hex 24", where)
+		}
+		if tok == sharedToken {
+			return nil, fmt.Errorf("%s: the token is the shared runner token; a pool needs a token of its own", where)
+		}
+		for _, o := range out {
+			if o.Token == tok {
+				return nil, fmt.Errorf("%s: the token is also the token of pool %s", where, o.Name)
+			}
+		}
+		out = append(out, Pool{Name: p.Name, Token: tok, Targets: p.Targets})
+	}
+	return out, nil
 }
 
 // TestsConfig limits what the server keeps of test reports. Zero means the
@@ -287,6 +390,10 @@ type RunnerFile struct {
 	Name           string `yaml:"name"`   // default: the host name
 	Data           string `yaml:"data"`   // directory for workspaces
 	RunnerSettings `yaml:",inline"`
+	// Deploy makes this a deploy runner: it does the work of deploy and
+	// rollback steps for the targets listed, and runs no other steps. Its
+	// token must be a runner pool's.
+	Deploy *argocd.Config `yaml:"deploy"`
 }
 
 // LoadRunner reads a runner configuration file. Unknown settings are
@@ -311,6 +418,23 @@ func LoadRunner(path string) (*RunnerFile, error) {
 		c.Kubernetes.Kubeconfig = filepath.Join(base, k)
 	}
 	c.Secrets.RelativeTo(base)
+	if c.Deploy != nil {
+		for name, t := range c.Deploy.Targets {
+			if k := t.Kubernetes.Kubeconfig; k != "" && !filepath.IsAbs(k) {
+				t.Kubernetes.Kubeconfig = filepath.Join(base, k)
+				c.Deploy.Targets[name] = t
+			}
+		}
+		for name, r := range c.Deploy.Repos {
+			if isLocalPath(r.URL) && !filepath.IsAbs(r.URL) {
+				r.URL = filepath.Join(base, r.URL)
+				c.Deploy.Repos[name] = r
+			}
+		}
+		if err := c.Deploy.Check(); err != nil {
+			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+	}
 	return c, nil
 }
 
@@ -356,6 +480,11 @@ func Load(path string) (*Config, error) {
 			c.Runner.Secrets.RelativeTo(base)
 			if f := c.Auth.OIDC.ClientSecretFile; f != "" && !filepath.IsAbs(f) {
 				c.Auth.OIDC.ClientSecretFile = filepath.Join(base, f)
+			}
+			for i, p := range c.RunnerPools {
+				if p.TokenFile != "" && !filepath.IsAbs(p.TokenFile) {
+					c.RunnerPools[i].TokenFile = filepath.Join(base, p.TokenFile)
+				}
 			}
 		}
 	}

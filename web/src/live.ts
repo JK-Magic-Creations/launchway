@@ -25,7 +25,7 @@ export function useStream(
       openRef.current?.();
     };
     es.onerror = () => setConnected(false);
-    const types = ["run", "step", "log"];
+    const types = ["run", "step", "log", "deployment"];
     const listeners = types.map((t) => {
       const fn = (e: MessageEvent) => {
         try { ref.current[t]?.(JSON.parse(e.data)); } catch { /* ignore malformed */ }

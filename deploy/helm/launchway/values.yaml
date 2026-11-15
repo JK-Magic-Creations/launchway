@@ -389,3 +389,78 @@ postgresql:
       memory: 128Mi
     limits:
       memory: 512Mi
+
+# ---------------------------------------------------------------------------------------------
+# Delivery: deploy and rollback steps (pipelines with kind: deploy). Off unless set. A deploy
+# step commits a version to a GitOps repository, asks Argo CD to sync if it must, and waits
+# until the application (and its Argo Rollouts rollout) is healthy. The deploy runner below
+# does that work with its own Kubernetes identity; the servers hold no cluster credentials.
+# Set these only once every server and runner runs a release that knows them, and take them
+# out again before rolling back to one that does not.
+# ---------------------------------------------------------------------------------------------
+delivery:
+  # -- Environments deploy steps may deploy to, written into the servers' configuration only
+  # when set. Default: none, and deploy steps are refused. Example:
+  #   - name: prod
+  #     target: homelab          # the cluster: deployRunner.target serves it
+  #     projects: [shop, "mcp-*"]
+  #     queue: newest            # or all; default newest
+  environments: null
+  deployRunner:
+    # -- Run a deploy runner in this cluster, with a runner pool token of its own. It serves
+    # deployRunner.target, which must be this cluster.
+    enabled: false
+    # -- The target this cluster is, as delivery.environments names it.
+    target: ""
+    replicas: 1
+    # -- Where the Argo CD Applications are.
+    argocdNamespace: argocd
+    # -- Which projects may deploy which applications. Names must be written out (no
+    # patterns): the RBAC rules name each application.
+    #   - { projects: [shop], names: [shop] }
+    applications: []
+    # -- Namespaces whose Argo Rollouts rollouts deploy steps may watch.
+    rolloutNamespaces: []
+    # -- GitOps repositories deploy steps may commit to, by name: the same map as deploy.repos
+    # in a deploy runner's file (url, argocd_url, credentials, username, paths, author).
+    # Credentials name a secret in secretStores, never a value.
+    repos: {}
+    # -- Secret stores the deploy runner may read (as runner.secretStores).
+    secretStores: {}
+    # -- Ask Argo CD to look at the repository at once after a commit (the refresh
+    # annotation). Default (unset): true.
+    refresh: null
+    rbac:
+      # -- Create the Roles below and bind them to the deploy runner.
+      create: true
+      # -- Grant patch on the named Applications, needed to request syncs and refreshes. With
+      # automated sync and a Git webhook it may be turned off (deploy steps then need
+      # sync.request: auto or never). The admission policy below limits what the patch may
+      # change.
+      patchApplications: true
+      # -- Grant get on Deployments in the rollout namespaces, needed only for rollouts that
+      # take their pod template from a Deployment (workloadRef). Off by default: a Deployment
+      # holds its pod spec.
+      readDeployments: false
+    # -- A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the deploy runner change
+    # only an Application's operation and refresh annotation, never its spec.
+    admissionPolicy:
+      enabled: true
+    # -- The pool token. Generated on first install and kept on upgrade, unless an existing
+    # Secret is named.
+    poolToken:
+      existingSecret: ""
+      existingSecretKey: token
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    healthPort: 8081
+    nodeSelector: {}
+    tolerations: []
+    podAnnotations: {}
+    extraEnv: []
+    extraVolumes: []
+    extraVolumeMounts: []

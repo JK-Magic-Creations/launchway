@@ -99,6 +99,13 @@ type StepView struct {
 	DecidedBy   string `json:"decided_by"`
 	DecidedAt   int64  `json:"decided_at"`
 	Comment     string `json:"comment"`
+	// WaitKind, for a waiting deploy or rollback step, is what it waits
+	// for: lock or observe. Empty for an approval.
+	WaitKind string `json:"wait_kind,omitempty"`
+	// Environment and Deployment come from a deploy or rollback step's
+	// definition.
+	Environment string `json:"environment,omitempty"`
+	Deployment  string `json:"deployment,omitempty"`
 	// A step a re-run reused: the run (ID and number) where it ran, and the
 	// attempt there. Its outcome and outputs are that attempt's.
 	ReusedFrom       string `json:"reused_from,omitempty"`
@@ -126,6 +133,8 @@ type RunDetail struct {
 	// NotUnderstood lists what in the run this server does not understand
 	// (see RunState.NotUnderstood); empty when it understands everything.
 	NotUnderstood []string `json:"not_understood"`
+	// Deployments are the run's deployments, newest first (schema 11).
+	Deployments []DeploymentView `json:"deployments"`
 }
 
 // RerunBrief is a re-run as listed with the run it re-runs.
@@ -146,6 +155,10 @@ type RunnerView struct {
 	Version  string `json:"version"`
 	LastSeen int64  `json:"last_seen"`
 	Online   bool   `json:"online"` // seen within RunnerOffline
+	// Pool and Targets, for a deploy runner: its runner pool, and the
+	// targets it said it serves.
+	Pool    string   `json:"pool,omitempty"`
+	Targets []string `json:"targets,omitempty"`
 }
 
 const runCols = `id, project, number, pipeline, status, cancel_requested, event, ref, branch, tag, sha,
@@ -316,21 +329,25 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		args[i] = r.ID
 		marks[i] = "?"
 	}
-	rows, err := e.db.Query(`SELECT run_id, step_id, status FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
+	waitKind := `''`
+	if e.knows(schemaDeploy) {
+		waitKind = `wait_kind`
+	}
+	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+` FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
 		ORDER BY run_id, position`, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var runID string
+		var runID, kind string
 		var b StepBrief
-		if err := rows.Scan(&runID, &b.ID, &b.Status); err != nil {
+		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind); err != nil {
 			return err
 		}
 		r := byID[runID]
 		r.Steps = append(r.Steps, b)
-		if b.Status == StepWaitingS {
+		if b.Status == StepWaitingS && kind == "" {
 			r.Waiting = append(r.Waiting, b.ID)
 		}
 	}
@@ -349,7 +366,10 @@ const stepCols8 = `, reused_from, reused_from_number, reused_attempt`
 
 // stepCols is the columns scanStep reads.
 func (e *Engine) stepCols() string {
-	if e.knows(schemaReruns) {
+	switch {
+	case e.knows(schemaDeploy):
+		return stepCols + stepCols8 + `, wait_kind`
+	case e.knows(schemaReruns):
 		return stepCols + stepCols8
 	}
 	return stepCols
@@ -363,6 +383,9 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 		&exit, &v.Error, &v.SkipKind, &v.Runner, &outputs, &v.Deadline, &v.DecidedBy, &v.DecidedAt, &v.Comment, &v.Excerpt}
 	if e.knows(schemaReruns) {
 		dst = append(dst, &v.ReusedFrom, &v.ReusedFromNumber, &v.ReusedAttempt)
+	}
+	if e.knows(schemaDeploy) {
+		dst = append(dst, &v.WaitKind)
 	}
 	if err := sc.Scan(dst...); err != nil {
 		return nil, err
@@ -440,6 +463,10 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Container = st.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
 			v.Group = def.Group
+			v.Environment, v.Deployment = def.Environment, def.Deployment
+			if dd := st.Pipeline.Step(def.Deployment); def.IsRollback() && dd != nil {
+				v.Environment = dd.Environment
+			}
 			if def.Reports != nil {
 				v.Reports = def.Reports.Tests
 			}
@@ -458,6 +485,9 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		}
 	}
 	if err := e.stepTests(id, d.StepList); err != nil {
+		return nil, err
+	}
+	if d.Deployments, err = e.RunDeployments(id); err != nil {
 		return nil, err
 	}
 	return d, nil
@@ -571,7 +601,11 @@ func (e *Engine) State(runID string) (*RunState, error) {
 // Runners lists runners, most recently seen first. Runners not seen for a
 // day are forgotten and not listed.
 func (e *Engine) Runners() ([]RunnerView, error) {
-	rows, err := e.db.Query(`SELECT id, name, executor, version, last_seen FROM runners ORDER BY last_seen DESC`)
+	extra := `, '', ''`
+	if e.knows(schemaDeploy) {
+		extra = `, pool, targets`
+	}
+	rows, err := e.db.Query(`SELECT id, name, executor, version, last_seen` + extra + ` FROM runners ORDER BY last_seen DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -580,8 +614,12 @@ func (e *Engine) Runners() ([]RunnerView, error) {
 	out := []RunnerView{}
 	for rows.Next() {
 		var r RunnerView
-		if err := rows.Scan(&r.ID, &r.Name, &r.Executor, &r.Version, &r.LastSeen); err != nil {
+		var targets string
+		if err := rows.Scan(&r.ID, &r.Name, &r.Executor, &r.Version, &r.LastSeen, &r.Pool, &targets); err != nil {
 			return nil, err
+		}
+		if targets != "" {
+			r.Targets = strings.Split(targets, ",")
 		}
 		r.Online = r.LastSeen >= online
 		out = append(out, r)

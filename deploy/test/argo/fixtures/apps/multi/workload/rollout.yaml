@@ -1,0 +1,65 @@
+# Source 1 of the multi-source Application demo-multi: a Rollout without analysis.
+# Source 2 (apps/multi/config) holds the ConfigMap it reads.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: multi
+  labels: { app.kubernetes.io/name: multi, app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  # A crash-looping canary never becomes ready; after this many seconds without
+  # progress the Rollout is aborted and goes Degraded.
+  progressDeadlineSeconds: 30
+  progressDeadlineAbort: true
+  selector:
+    matchLabels: { app.kubernetes.io/name: multi }
+  strategy:
+    canary:
+      steps:
+        - setWeight: 50
+        - pause: { duration: 5s }
+        - setWeight: 100
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: multi }
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 1
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: docker.io/library/busybox:1.36.1
+          env:
+            - name: MODE
+              value: serve
+          command:
+            - sh
+            - -c
+            - |
+              if [ "$MODE" = crash ]; then echo "MODE=crash: exiting"; exit 1; fi
+              mkdir -p /tmp/www && echo "multi ok" > /tmp/www/index.html
+              exec httpd -f -p 8080 -h /tmp/www
+          ports:
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 2
+          resources:
+            requests: { cpu: 5m, memory: 8Mi }
+            limits: { memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+          envFrom:
+            - configMapRef: { name: multi-config }
+      volumes:
+        - name: tmp
+          emptyDir: {}

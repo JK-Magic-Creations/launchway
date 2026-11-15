@@ -1,0 +1,207 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Rollout",
+  "metadata": {
+    "name": "demo",
+    "namespace": "lw-demo",
+    "uid": "35b2218c-3935-4aa2-9ba6-fe43ad8fda8f",
+    "generation": 22,
+    "resourceVersion": "66775",
+    "creationTimestamp": "2026-11-15T18:45:22Z",
+    "labels": {
+      "app.kubernetes.io/name": "demo",
+      "app.kubernetes.io/part-of": "launchway-test-argo"
+    },
+    "annotations": {
+      "argocd.argoproj.io/tracking-id": "demo:argoproj.io/Rollout:lw-demo/demo",
+      "rollout.argoproj.io/revision": "10"
+    }
+  },
+  "spec": {
+    "progressDeadlineAbort": true,
+    "progressDeadlineSeconds": 30,
+    "replicas": 2,
+    "revisionHistoryLimit": 3,
+    "selector": {
+      "matchLabels": {
+        "app.kubernetes.io/name": "demo"
+      }
+    },
+    "strategy": {
+      "canary": {
+        "steps": [
+          {
+            "setWeight": 50
+          },
+          {
+            "pause": {
+              "duration": "5s"
+            }
+          },
+          {
+            "analysis": {
+              "analysisRunMetadata": {},
+              "args": [
+                {
+                  "name": "verdict",
+                  "value": "pass"
+                },
+                {
+                  "name": "delay",
+                  "value": "0"
+                }
+              ],
+              "templates": [
+                {
+                  "templateName": "demo-verdict"
+                }
+              ]
+            }
+          },
+          {
+            "setWeight": 100
+          }
+        ]
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "demo"
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "command": [
+              "sh",
+              "-c",
+              "if [ \"$MODE\" = crash ]; then echo \"MODE=crash: exiting\"; exit 1; fi\nmkdir -p /tmp/www && echo \"demo ok\" > /tmp/www/index.html\nexec httpd -f -p 8080 -h /tmp/www\n"
+            ],
+            "env": [
+              {
+                "name": "MODE",
+                "value": "serve"
+              }
+            ],
+            "image": "docker.io/library/busybox:1.37.0",
+            "name": "web",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "name": "http",
+                "protocol": "TCP"
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/",
+                "port": "http"
+              },
+              "periodSeconds": 2
+            },
+            "resources": {
+              "limits": {
+                "memory": "32Mi"
+              },
+              "requests": {
+                "cpu": "5m",
+                "memory": "8Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "readOnlyRootFilesystem": true
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp",
+                "name": "tmp"
+              }
+            ]
+          }
+        ],
+        "securityContext": {
+          "runAsGroup": 65534,
+          "runAsNonRoot": true,
+          "runAsUser": 65534,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "terminationGracePeriodSeconds": 1,
+        "volumes": [
+          {
+            "emptyDir": {},
+            "name": "tmp"
+          }
+        ]
+      }
+    }
+  },
+  "status": {
+    "HPAReplicas": 2,
+    "abort": false,
+    "availableReplicas": 2,
+    "blueGreen": {},
+    "canary": {},
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-11-15T18:45:23Z",
+        "lastUpdateTime": "2026-11-15T18:45:23Z",
+        "message": "Rollout has minimum availability",
+        "reason": "AvailableReason",
+        "status": "True",
+        "type": "Available"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T18:59:47Z",
+        "lastUpdateTime": "2026-11-15T18:59:47Z",
+        "message": "Rollout is paused",
+        "reason": "RolloutPaused",
+        "status": "False",
+        "type": "Paused"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T18:59:50Z",
+        "lastUpdateTime": "2026-11-15T18:59:50Z",
+        "message": "Rollout is healthy",
+        "reason": "RolloutHealthy",
+        "status": "True",
+        "type": "Healthy"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T18:59:47Z",
+        "lastUpdateTime": "2026-11-15T18:59:50Z",
+        "message": "ReplicaSet \"demo-54d69959b4\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T18:59:50Z",
+        "lastUpdateTime": "2026-11-15T18:59:50Z",
+        "message": "RolloutCompleted",
+        "reason": "RolloutCompleted",
+        "status": "True",
+        "type": "Completed"
+      }
+    ],
+    "currentPodHash": "54d69959b4",
+    "currentStepHash": "5696c69854",
+    "currentStepIndex": 4,
+    "observedGeneration": "22",
+    "phase": "Healthy",
+    "readyReplicas": 2,
+    "replicas": 2,
+    "selector": "app.kubernetes.io/name=demo",
+    "stableRS": "54d69959b4",
+    "updatedReplicas": 2
+  }
+}

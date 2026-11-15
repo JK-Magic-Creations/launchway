@@ -1,0 +1,155 @@
+# The least access the Launchway deploy runner needs, for the test
+# Applications and Rollouts. Tests use it by impersonation:
+#   kubectl --as=system:serviceaccount:argocd:lw-deployer ...
+# Pair it with admission-policy.yaml, which limits what the "patch" on
+# Applications may change (.operation and the refresh annotation only).
+#
+# Notes from testing on Kubernetes 1.37:
+# - get/list/watch with resourceNames: GET by name works; LIST and WATCH work
+#   only with a single-name field selector (--field-selector metadata.name=demo,
+#   or fieldSelector=metadata.name%3Ddemo); a LIST without it is forbidden.
+# - Promote, promote-full, abort and retry are all patches of the
+#   rollouts/status subresource. Only "promote" of a Rollout paused with
+#   spec.paused=true (kubectl argo rollouts pause) also needs a spec patch,
+#   which this role deliberately does not grant.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lw-deployer
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lw-deployer
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    resourceNames: [demo, demo-manual, plain, demo-multi, demo-wref]
+    verbs: [get, list, watch, patch]
+  - apiGroups: [argoproj.io]
+    resources: [appprojects]
+    resourceNames: [lw-test]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lw-deployer
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: lw-deployer }
+subjects:
+  - { kind: ServiceAccount, name: lw-deployer, namespace: argocd }
+---
+# One Role and RoleBinding per workload namespace. rollouts and analysisruns
+# are readable in full (AnalysisRun names are generated, so they cannot be
+# listed by name); only the named Rollouts' status may be patched.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lw-deployer
+  namespace: lw-demo
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [rollouts, analysisruns]
+    verbs: [get, list, watch]
+  - apiGroups: [argoproj.io]
+    resources: [rollouts/status]
+    resourceNames: [demo]
+    verbs: [patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lw-deployer
+  namespace: lw-demo
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: lw-deployer }
+subjects:
+  - { kind: ServiceAccount, name: lw-deployer, namespace: argocd }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lw-deployer
+  namespace: lw-demo-manual
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [rollouts, analysisruns]
+    verbs: [get, list, watch]
+  - apiGroups: [argoproj.io]
+    resources: [rollouts/status]
+    resourceNames: [demo]
+    verbs: [patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lw-deployer
+  namespace: lw-demo-manual
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: lw-deployer }
+subjects:
+  - { kind: ServiceAccount, name: lw-deployer, namespace: argocd }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lw-deployer
+  namespace: lw-demo-multi
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [rollouts, analysisruns]
+    verbs: [get, list, watch]
+  - apiGroups: [argoproj.io]
+    resources: [rollouts/status]
+    resourceNames: [multi]
+    verbs: [patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lw-deployer
+  namespace: lw-demo-multi
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: lw-deployer }
+subjects:
+  - { kind: ServiceAccount, name: lw-deployer, namespace: argocd }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lw-deployer
+  namespace: lw-demo-wref
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [rollouts, analysisruns]
+    verbs: [get, list, watch]
+  - apiGroups: [argoproj.io]
+    resources: [rollouts/status]
+    resourceNames: [wref]
+    verbs: [patch]
+  # A workloadRef Rollout takes its template from this Deployment; the runner
+  # reads the Deployment's generation to know the template change was seen.
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [wref]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lw-deployer
+  namespace: lw-demo-wref
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: lw-deployer }
+subjects:
+  - { kind: ServiceAccount, name: lw-deployer, namespace: argocd }

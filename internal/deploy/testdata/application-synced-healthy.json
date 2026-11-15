@@ -1,0 +1,295 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Application",
+  "metadata": {
+    "name": "demo",
+    "namespace": "argocd",
+    "uid": "219d79f1-035f-4085-be0d-7c1724081c2b",
+    "generation": 129,
+    "resourceVersion": "68231",
+    "creationTimestamp": "2026-11-15T18:45:21Z",
+    "labels": {
+      "app.kubernetes.io/part-of": "launchway-test-argo"
+    }
+  },
+  "spec": {
+    "destination": {
+      "namespace": "lw-demo",
+      "server": "https://kubernetes.default.svc"
+    },
+    "project": "lw-test",
+    "source": {
+      "path": "apps/demo",
+      "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+      "targetRevision": "main"
+    },
+    "syncPolicy": {
+      "automated": {
+        "selfHeal": true
+      }
+    }
+  },
+  "operation": null,
+  "status": {
+    "controllerNamespace": "argocd",
+    "health": {
+      "lastTransitionTime": "2026-11-15T18:59:50Z",
+      "status": "Healthy"
+    },
+    "history": [
+      {
+        "deployStartedAt": "2026-11-15T18:49:32Z",
+        "deployedAt": "2026-11-15T18:49:33Z",
+        "id": 2,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "27a4e4c1ad9a3babba2d901df55c0e41bc6e5dbd",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:49:59Z",
+        "deployedAt": "2026-11-15T18:50:01Z",
+        "id": 3,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "c9fcc73b89125b8a9bbb45074f8a5938b7e34230",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:50:13Z",
+        "deployedAt": "2026-11-15T18:50:14Z",
+        "id": 4,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "9ac3a4c26218d860d91675aeaccee7e8da15920f",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:50:53Z",
+        "deployedAt": "2026-11-15T18:50:53Z",
+        "id": 5,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "b29e95942de49ed8c24446de433d23295ddc0293",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:51:39Z",
+        "deployedAt": "2026-11-15T18:51:39Z",
+        "id": 6,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "b9e586df56158f5b5ec76b1b1959e991ee0bcb74",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:52:04Z",
+        "deployedAt": "2026-11-15T18:52:05Z",
+        "id": 7,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "d6d3e471f1e26a564da60a59defe7def0bbd3376",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:52:36Z",
+        "deployedAt": "2026-11-15T18:52:37Z",
+        "id": 8,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "77d004ac6f91096d9ef24a4491ff4f5cabe54df8",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:52:50Z",
+        "deployedAt": "2026-11-15T18:52:51Z",
+        "id": 9,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "cc83906ddbc930e3a59ac17ea85dd52b5ff00fd4",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:53:17Z",
+        "deployedAt": "2026-11-15T18:53:17Z",
+        "id": 10,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "4a39d796e844a92b5ef7010ad62a0e723e19893c",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      {
+        "deployStartedAt": "2026-11-15T18:59:42Z",
+        "deployedAt": "2026-11-15T18:59:42Z",
+        "id": 11,
+        "initiatedBy": {
+          "automated": true
+        },
+        "revision": "8e069c9ba811e55c2964a5f626907948f1430a20",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      }
+    ],
+    "operationState": {
+      "finishedAt": "2026-11-15T18:59:42Z",
+      "message": "successfully synced (all tasks run)",
+      "operation": {
+        "initiatedBy": {
+          "automated": true
+        },
+        "retry": {
+          "limit": 5
+        },
+        "sync": {
+          "revision": "8e069c9ba811e55c2964a5f626907948f1430a20",
+          "source": {
+            "path": "apps/demo",
+            "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+            "targetRevision": "main"
+          }
+        }
+      },
+      "phase": "Succeeded",
+      "startedAt": "2026-11-15T18:59:42Z",
+      "syncResult": {
+        "resources": [
+          {
+            "group": "",
+            "hookPhase": "Running",
+            "kind": "Service",
+            "message": "service/demo unchanged",
+            "name": "demo",
+            "namespace": "lw-demo",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1"
+          },
+          {
+            "group": "argoproj.io",
+            "hookPhase": "Running",
+            "images": [
+              "docker.io/library/busybox:1.37.0"
+            ],
+            "kind": "Rollout",
+            "message": "rollout.argoproj.io/demo configured",
+            "name": "demo",
+            "namespace": "lw-demo",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1alpha1"
+          },
+          {
+            "group": "argoproj.io",
+            "hookPhase": "Running",
+            "kind": "AnalysisTemplate",
+            "message": "analysistemplate.argoproj.io/demo-verdict unchanged",
+            "name": "demo-verdict",
+            "namespace": "lw-demo",
+            "status": "Synced",
+            "syncPhase": "Sync",
+            "version": "v1alpha1"
+          }
+        ],
+        "revision": "8e069c9ba811e55c2964a5f626907948f1430a20",
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      }
+    },
+    "reconciledAt": "2026-11-15T19:09:49Z",
+    "resourceHealthSource": "appTree",
+    "resources": [
+      {
+        "kind": "Service",
+        "name": "demo",
+        "namespace": "lw-demo",
+        "status": "Synced",
+        "version": "v1"
+      },
+      {
+        "group": "argoproj.io",
+        "kind": "AnalysisTemplate",
+        "name": "demo-verdict",
+        "namespace": "lw-demo",
+        "status": "Synced",
+        "version": "v1alpha1"
+      },
+      {
+        "group": "argoproj.io",
+        "kind": "Rollout",
+        "name": "demo",
+        "namespace": "lw-demo",
+        "status": "Synced",
+        "version": "v1alpha1"
+      }
+    ],
+    "sourceHydrator": {},
+    "sourceType": "Directory",
+    "summary": {},
+    "sync": {
+      "comparedTo": {
+        "destination": {
+          "namespace": "lw-demo",
+          "server": "https://kubernetes.default.svc"
+        },
+        "source": {
+          "path": "apps/demo",
+          "repoURL": "http://git.lw-git.svc:8080/lwtest/gitops.git",
+          "targetRevision": "main"
+        }
+      },
+      "revision": "86c5f3c31bf0a45a6e7447647fb0c80cc61ae1fb",
+      "status": "Synced"
+    }
+  }
+}
