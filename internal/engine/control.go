@@ -150,6 +150,7 @@ func (st *RunState) applyControl(ev Event, s *StepState) {
 			// Handed back by a runner that could not reach the rollout: it
 			// waits again, and may be withdrawn.
 			cs.State, cs.Take, cs.Runner, cs.TakenUntil, cs.Detail = CommandPending, "", "", 0, ce.Detail
+			cs.Tries = max(cs.Tries-1, 0) // the take is not a lost try
 			break
 		}
 		cs.State, cs.Take, cs.Runner, cs.TakenUntil = CommandTaken, ce.Take, ce.Runner, ce.Until
@@ -852,7 +853,8 @@ func (c *cmd) persistControl() error {
 				CommandWithdrawn, d.Command.Actor, d.Command.Detail, ev.At, d.Command.ID)
 		case DeployCommandTaken:
 			if d.Command.Take == "" {
-				_, err = c.tx.Exec(`UPDATE deploy_commands SET state = ?, take_id = '', taken_by = '', taken_until = 0, detail = ? WHERE id = ?`,
+				_, err = c.tx.Exec(`UPDATE deploy_commands SET state = ?, take_id = '', taken_by = '', taken_until = 0, detail = ?,
+					tries = CASE WHEN tries > 0 THEN tries - 1 ELSE 0 END WHERE id = ?`,
 					CommandPending, d.Command.Detail, d.Command.ID)
 				break
 			}

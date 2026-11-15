@@ -657,3 +657,30 @@ func TestClosingPublishesTheDeployment(t *testing.T) {
 		}
 	}
 }
+
+// A runner that cannot reach the cluster hands the command back: it is
+// pending again, says why, uses up no try, and can be withdrawn.
+func TestCommandHandedBack(t *testing.T) {
+	e, _ := newDeployEngine(t, prodEnv)
+	id := createShop(t, e, waitPipeline, 1)
+	build(t, e, id, "2")
+	applied(t, e, leaseDeploy(t, e, deployer), "c2")
+	observe(t, e, deployer, watchOf(t, e, deployer, "deploy-prod"), paused())
+	c, err := e.RequestCommand(CommandRequest{Run: id, Deployment: onlyDep(t, e, id).ID, Action: "promote", Actor: "alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range maxCommandTries + 2 {
+		j := takeCommand(t, e)
+		if err := e.FinishCommand(deployer, deployer.Targets, CommandResult{Take: j.Take, Result: CommandReleased, Detail: "connection refused"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cs := onlyDep(t, e, id).Commands
+	if len(cs) != 1 || cs[0].State != CommandPending || cs[0].Detail != "connection refused" || cs[0].Tries != 0 {
+		t.Fatalf("commands: %+v", cs)
+	}
+	if err := e.WithdrawCommand(id, c.ID, "bob"); err != nil {
+		t.Fatal(err)
+	}
+}
