@@ -96,7 +96,7 @@ function RunRow({ r, now }: { r: RunSummary; now: number }) {
   return (
     <li>
       <Link href={waits ? `/runs/${r.id}?step=${encodeURIComponent(r.waiting[0])}` : `/runs/${r.id}`} className={`runrow t-${r.status}`}>
-        <span className="runrow-status" title={statusLabel(shown)}><StatusIcon status={shown} size={20} /></span>
+        <span className="runrow-status" title={waits ? "Waiting for approval" : statusLabel(shown)}><StatusIcon status={shown} size={20} /></span>
         <span className="runrow-main">
           <span className="runrow-title">
             <span className="runrow-project">{r.project}</span>

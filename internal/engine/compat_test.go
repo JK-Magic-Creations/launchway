@@ -70,6 +70,7 @@ func TestMigrationsDeclareTheirCompatibility(t *testing.T) {
 // cancelled by superseding it reads as an ordinary cancelled run.
 // It checks schema 10 (test reports) against a build of schema 9;
 // TestOlderBuildLeavesTriggerRunsAlone checks schema 13 against 12.
+// TestOlderBuildLeavesDeployRunsAlone checks schema 11 against 10.
 func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	n := schemaTests
 	if migrations[n-1].compat != additive {
@@ -438,7 +439,7 @@ func TestRunsThisServerDoesNotUnderstandAreLeftAlone(t *testing.T) {
 			none(t, e)
 			clk.Add(time.Hour)
 			e.reap()
-			e.expireApprovals()
+			e.expireWaits()
 			want(t, statuses(t, e, other), "run", "succeeded")
 			after, _ := e.Events(strange)
 			if len(after) != len(before) {

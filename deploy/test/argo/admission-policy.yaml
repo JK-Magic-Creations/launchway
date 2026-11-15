@@ -1,0 +1,85 @@
+# Lets the Launchway deployer change only two things on an Argo CD Application:
+#   - .operation (request a sync; clearing it is allowed too)
+#   - the annotation argocd.argoproj.io/refresh (ask Argo CD to look at Git now)
+# Every other change by that user is denied. Other users, including the Argo CD
+# controller writing status, are not matched and are unaffected.
+#
+# The user name is a literal here; a Helm chart should template it from the
+# deploy runner's service account. Needs admissionregistration.k8s.io/v1
+# (Kubernetes 1.30 or newer). Verified on Kubernetes 1.37 with Argo CD v3.3.7.
+#
+# CEL notes:
+# - metadata.labels, metadata.annotations, metadata.finalizers,
+#   metadata.ownerReferences and status may be absent; read them through has()
+#   with an empty default, or a missing map on one side and an empty one on the
+#   other would compare unequal (or the expression would error and, with
+#   failurePolicy Fail, deny).
+# - The Application CRD has no status subresource, so a plain patch can write
+#   .status. The policy pins it.
+# - Do not compare whole metadata: the API server itself changes
+#   resourceVersion, generation and managedFields on every write.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: launchway-deployer-applications
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [argoproj.io]
+        apiVersions: ["*"]
+        operations: [UPDATE]
+        resources: [applications]
+  matchConditions:
+    - name: launchway-deployer
+      expression: request.userInfo.username == "system:serviceaccount:argocd:lw-deployer"
+  variables:
+    - name: refreshKey
+      expression: "'argocd.argoproj.io/refresh'"
+    - name: newAnnotations
+      expression: "has(object.metadata.annotations) ? object.metadata.annotations : {}"
+    - name: oldAnnotations
+      expression: "has(oldObject.metadata.annotations) ? oldObject.metadata.annotations : {}"
+  validations:
+    - expression: object.spec == oldObject.spec
+      message: "Launchway's deployer may only request syncs and refreshes; it may not change an Application's spec"
+      reason: Forbidden
+    - expression: >-
+        (has(object.status) ? object.status : {}) == (has(oldObject.status) ? oldObject.status : {})
+      message: "Launchway's deployer may not change an Application's status"
+      reason: Forbidden
+    - expression: >-
+        (has(object.metadata.labels) ? object.metadata.labels : {}) ==
+        (has(oldObject.metadata.labels) ? oldObject.metadata.labels : {})
+      message: "Launchway's deployer may not change an Application's labels"
+      reason: Forbidden
+    - expression: >-
+        variables.newAnnotations.all(k, k == variables.refreshKey ||
+          (k in variables.oldAnnotations && variables.oldAnnotations[k] == variables.newAnnotations[k])) &&
+        variables.oldAnnotations.all(k, k == variables.refreshKey || k in variables.newAnnotations)
+      message: "Launchway's deployer may change only the annotation argocd.argoproj.io/refresh"
+      reason: Forbidden
+    - expression: >-
+        (has(object.metadata.finalizers) ? object.metadata.finalizers : []) ==
+        (has(oldObject.metadata.finalizers) ? oldObject.metadata.finalizers : [])
+      message: "Launchway's deployer may not change an Application's finalizers"
+      reason: Forbidden
+    - expression: >-
+        (has(object.metadata.ownerReferences) ? object.metadata.ownerReferences : []) ==
+        (has(oldObject.metadata.ownerReferences) ? oldObject.metadata.ownerReferences : [])
+      message: "Launchway's deployer may not change an Application's owner references"
+      reason: Forbidden
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: launchway-deployer-applications
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  policyName: launchway-deployer-applications
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: argocd

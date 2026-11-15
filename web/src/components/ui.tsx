@@ -5,7 +5,7 @@ import { onLink } from "../router";
 type AnyStatus = RunStatus | StepStatus;
 
 const LABEL: Record<AnyStatus, string> = {
-  queued: "Queued", pending: "Waiting", leased: "Starting", running: "Running", waiting: "Waiting for approval",
+  queued: "Queued", pending: "Waiting", leased: "Starting", running: "Running", waiting: "Waiting",
   succeeded: "Succeeded", failed: "Failed", skipped: "Skipped", canceled: "Canceled",
 };
 
@@ -51,6 +51,33 @@ export function StatusPill({ status, label }: { status: AnyStatus; label?: strin
 
 // A status a newer server introduced is shown as it is called.
 export function statusLabel(s: AnyStatus): string { return LABEL[s] ?? s; }
+
+/** The status a step is drawn with: a deploy step waiting for its
+ * deployment to finish is at work, so it is drawn as running. */
+export function shownStatus(s: { status: StepStatus; wait_kind?: string }): StepStatus {
+  return s.status === "waiting" && s.wait_kind === "observe" ? "running" : s.status;
+}
+
+/** What a step does, in the words its status pill uses: an approval waits
+ * for a decision, a deploy step waits for its environment's lock or for the
+ * deployment to finish. phase, if given, is where a deployment stands. */
+export function stepLabel(s: {
+  status: StepStatus; kind?: string; wait_kind?: string; environment?: string; skip_kind?: string;
+}, phase?: string): string {
+  if (s.status === "waiting") {
+    if (s.kind === "approval" || (!s.kind && !s.wait_kind)) return "Waiting for approval";
+    const env = s.environment;
+    if (s.wait_kind === "lock") return env ? `Waiting for ${env}'s lock` : "Waiting for the environment's lock";
+    const what = s.kind === "rollback" ? "Rolling back" : env ? `Deploying to ${env}` : "Deploying";
+    return phase ? `${what}: ${phase}` : what;
+  }
+  if (s.status === "skipped") {
+    if (s.skip_kind === "not_needed") return "Not needed";
+    if (s.skip_kind === "superseded") return "Superseded by a newer run";
+    if (s.skip_kind === "condition") return "Condition not met";
+  }
+  return statusLabel(s.status);
+}
 
 export function StepStrip({ steps }: { steps: { id: string; status: StepStatus }[] }) {
   return (

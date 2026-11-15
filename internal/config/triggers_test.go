@@ -86,3 +86,29 @@ func TestTriggerSettingsRefused(t *testing.T) {
 		}
 	}
 }
+
+// With the chart's default values, the configuration has none of the
+// settings of schema 13 (so the release before can read it); with them set,
+// the server's file loads and says what was set.
+func TestChartTriggerSettings(t *testing.T) {
+	def := renderChart(t, "postgresql: { enabled: true }\n")
+	for _, key := range []string{"loops:", "schedules:", "tokens:", "max_members", "max_days"} {
+		if strings.Contains(def["server"], key) {
+			t.Errorf("the default server configuration has %s:\n%s", key, def["server"])
+		}
+	}
+	files := renderChart(t, `postgresql: { enabled: true }
+config:
+  loops: { maxMembers: 100 }
+  schedules: { enabled: false }
+  tokens: { maxDays: 30 }
+  extraConfig: { auth: { mode: none, allow_anonymous: true } }
+`)
+	c, err := Load(writeTemp(t, files["server"]))
+	if err != nil {
+		t.Fatalf("server: %v\n%s", err, files["server"])
+	}
+	if n, _ := c.LoopLimit(); n != 100 || c.Schedules.Enabled == nil || *c.Schedules.Enabled || c.Auth.Tokens.MaxDays != 30 || c.Auth.Mode != "none" {
+		t.Fatalf("rendered: %+v\n%s", c, files["server"])
+	}
+}

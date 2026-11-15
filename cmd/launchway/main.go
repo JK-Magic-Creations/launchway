@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -29,6 +30,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/config"
+	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -154,7 +156,7 @@ func cmdServer(args []string) error {
 		return fmt.Errorf("%s: runner.%w", *cfgPath, err)
 	}
 	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
-		Tests: testLimits})
+		Tests: testLimits, Environments: cfg.EngineEnvironments()})
 	if err != nil {
 		return err
 	}
@@ -179,9 +181,16 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
+	pools, err := cfg.Pools(token)
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
 	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
+	for _, p := range pools {
+		srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets})
+	}
 	if authOpts != nil {
 		// Find the provider now, so a mistake shows at once; sign-in tries
 		// again later if it is unreachable.
@@ -415,6 +424,9 @@ func cmdRunner(args []string) error {
 		return fmt.Errorf("runner settings: %w", err)
 	}
 	id := "runner-" + o.Name
+	if o.Deploy != nil {
+		return runDeployRunner(o, id, secretStores)
+	}
 	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id})
 	if err != nil {
 		return err
@@ -787,4 +799,31 @@ func currentUser() string {
 		return u.Username
 	}
 	return "local"
+}
+
+// runDeployRunner runs `launchway runner` with a deploy section: a deploy
+// runner, which does the work of deploy and rollback steps only.
+func runDeployRunner(o *runnerOptions, id string, secretStores *secrets.Resolver) error {
+	targets := make([]string, 0, len(o.Deploy.Targets))
+	for name := range o.Deploy.Targets {
+		targets = append(targets, name)
+	}
+	sort.Strings(targets)
+	d := &runner.DeployRunner{
+		Client: runner.NewClient(o.Server, o.Token),
+		Agent:  &argocd.Agent{Config: *o.Deploy, DataDir: o.Data, Secrets: secretStores},
+		Info:   engine.RunnerInfo{ID: id, Name: o.Name, Executor: "deploy", Version: version, Targets: targets},
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if o.HealthListen != "" {
+		ln, err := net.Listen("tcp", o.HealthListen)
+		if err != nil {
+			return fmt.Errorf("--health-listen: %w", err)
+		}
+		hs := &http.Server{Handler: d.Health(), ReadHeaderTimeout: 10 * time.Second}
+		go hs.Serve(ln)
+		defer hs.Close()
+	}
+	return d.Run(ctx)
 }

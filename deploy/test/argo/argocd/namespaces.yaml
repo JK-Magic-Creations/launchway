@@ -1,0 +1,32 @@
+# Workload namespaces for the test Applications (Pod Security "restricted").
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lw-demo
+  labels:
+    app.kubernetes.io/part-of: launchway-test-argo
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lw-demo-manual
+  labels:
+    app.kubernetes.io/part-of: launchway-test-argo
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lw-demo-multi
+  labels:
+    app.kubernetes.io/part-of: launchway-test-argo
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lw-demo-wref
+  labels:
+    app.kubernetes.io/part-of: launchway-test-argo
+    pod-security.kubernetes.io/enforce: restricted

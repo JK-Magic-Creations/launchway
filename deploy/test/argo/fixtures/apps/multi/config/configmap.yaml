@@ -1,0 +1,9 @@
+# Source 2 of the multi-source Application demo-multi. A test can bump
+# "release" to give this source a commit of its own.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multi-config
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+data:
+  release: "1"

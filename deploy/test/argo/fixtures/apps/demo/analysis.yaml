@@ -1,0 +1,42 @@
+# The analysis step's verdict is the literal argument the Rollout passes:
+# "pass" makes the Job succeed, anything else makes it fail (and the Rollout
+# abort). "delay" (seconds) keeps the analysis running that long first, so a
+# test can observe or act on a Rollout mid-analysis.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: demo-verdict
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  args:
+    - name: verdict
+    - name: delay
+      value: "0"
+  metrics:
+    - name: verdict
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            ttlSecondsAfterFinished: 600
+            template:
+              spec:
+                restartPolicy: Never
+                automountServiceAccountToken: false
+                terminationGracePeriodSeconds: 1
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 65534
+                  runAsGroup: 65534
+                  seccompProfile: { type: RuntimeDefault }
+                containers:
+                  - name: verdict
+                    image: docker.io/library/busybox:1.37.0
+                    command: [sh, -c, 'echo "verdict={{args.verdict}} delay={{args.delay}}"; sleep "{{args.delay}}"; test "{{args.verdict}}" = pass']
+                    resources:
+                      requests: { cpu: 5m, memory: 8Mi }
+                      limits: { memory: 16Mi }
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      readOnlyRootFilesystem: true
+                      capabilities: { drop: [ALL] }

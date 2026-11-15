@@ -1,0 +1,21 @@
+# The project the test Applications belong to. Tests add (and remove) sync
+# windows here; keep spec.syncWindows empty in this file.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lw-test
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  description: Launchway deploy integration tests (kind only)
+  sourceRepos:
+    - http://git.lw-git.svc:8080/lwtest/gitops.git
+  destinations:
+    - { server: https://kubernetes.default.svc, namespace: "lw-demo*" }
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - { group: "", kind: Service }
+    - { group: "", kind: ConfigMap }
+    - { group: apps, kind: Deployment }
+    - { group: argoproj.io, kind: Rollout }
+    - { group: argoproj.io, kind: AnalysisTemplate }

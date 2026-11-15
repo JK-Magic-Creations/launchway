@@ -220,7 +220,7 @@ func (c *cmd) failFast() bool {
 				case StepLeasedS, StepRunning:
 					if s.LeaseID != "" {
 						if _, err := c.tx.Exec(`DELETE FROM leases WHERE id = ?`, s.LeaseID); err != nil {
-							c.failed = errors.Join(c.failed, err)
+							c.dbFail(err)
 						}
 					}
 					c.dropTests(id, s.Attempt)

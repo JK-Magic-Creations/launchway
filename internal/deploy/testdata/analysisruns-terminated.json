@@ -1,0 +1,142 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "kind": "AnalysisRun",
+      "metadata": {
+        "name": "demo-54d69959b4-8-2",
+        "namespace": "lw-demo",
+        "uid": "b1aea41f-cd53-49c7-9d1c-639c2c274929",
+        "generation": 4,
+        "resourceVersion": "65345",
+        "creationTimestamp": "2026-11-15T18:52:18Z",
+        "labels": {
+          "app.kubernetes.io/name": "demo",
+          "rollout-type": "Step",
+          "rollouts-pod-template-hash": "54d69959b4",
+          "step-index": "2"
+        },
+        "annotations": {
+          "rollout.argoproj.io/revision": "8"
+        },
+        "ownerReferences": [
+          {
+            "apiVersion": "argoproj.io/v1alpha1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Rollout",
+            "name": "demo",
+            "uid": "35b2218c-3935-4aa2-9ba6-fe43ad8fda8f"
+          }
+        ]
+      },
+      "spec": {
+        "args": [
+          {
+            "name": "verdict",
+            "value": "pass"
+          },
+          {
+            "name": "delay",
+            "value": "20"
+          }
+        ],
+        "metrics": [
+          {
+            "name": "verdict",
+            "provider": {
+              "job": {
+                "metadata": {},
+                "spec": {
+                  "backoffLimit": 0,
+                  "template": {
+                    "metadata": {},
+                    "spec": {
+                      "automountServiceAccountToken": false,
+                      "containers": [
+                        {
+                          "command": [
+                            "sh",
+                            "-c",
+                            "echo \"verdict={{args.verdict}} delay={{args.delay}}\"; sleep \"{{args.delay}}\"; test \"{{args.verdict}}\" = pass"
+                          ],
+                          "image": "docker.io/library/busybox:1.37.0",
+                          "name": "verdict",
+                          "resources": {
+                            "limits": {
+                              "memory": "16Mi"
+                            },
+                            "requests": {
+                              "cpu": "5m",
+                              "memory": "8Mi"
+                            }
+                          },
+                          "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                              "drop": [
+                                "ALL"
+                              ]
+                            },
+                            "readOnlyRootFilesystem": true
+                          }
+                        }
+                      ],
+                      "restartPolicy": "Never",
+                      "securityContext": {
+                        "runAsGroup": 65534,
+                        "runAsNonRoot": true,
+                        "runAsUser": 65534,
+                        "seccompProfile": {
+                          "type": "RuntimeDefault"
+                        }
+                      },
+                      "terminationGracePeriodSeconds": 1
+                    }
+                  },
+                  "ttlSecondsAfterFinished": 600
+                }
+              }
+            }
+          }
+        ],
+        "terminate": true
+      },
+      "status": {
+        "completedAt": "2026-11-15T18:52:24Z",
+        "dryRunSummary": {},
+        "message": "Run Terminated",
+        "metricResults": [
+          {
+            "consecutiveSuccess": 1,
+            "count": 1,
+            "measurements": [
+              {
+                "finishedAt": "2026-11-15T18:52:24Z",
+                "message": "Metric Terminated",
+                "metadata": {
+                  "job-name": "b1aea41f-cd53-49c7-9d1c-639c2c274929.verdict.1",
+                  "job-namespace": "lw-demo"
+                },
+                "phase": "Successful",
+                "startedAt": "2026-11-15T18:52:18Z"
+              }
+            ],
+            "message": "Metric Terminated",
+            "name": "verdict",
+            "phase": "Successful",
+            "successful": 1
+          }
+        ],
+        "phase": "Successful",
+        "runSummary": {
+          "count": 1,
+          "successful": 1
+        },
+        "startedAt": "2026-11-15T18:52:18Z"
+      }
+    }
+  ]
+}

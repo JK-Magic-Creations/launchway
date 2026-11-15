@@ -69,6 +69,9 @@ type Options struct {
 	// Tests limits what is kept of test reports; zero fields take the
 	// defaults (see TestLimits).
 	Tests TestLimits
+	// Environments are where deploy steps may deploy (schema 11). Every
+	// server sharing a database must be given the same ones.
+	Environments []Environment
 
 	// schema, for tests, makes the engine behave as a build that knows only
 	// the first schema migrations and their events; 0 means every one (or
@@ -90,6 +93,14 @@ type Engine struct {
 	instance      string // tags this process's notifications, so it can ignore its own
 	channel       string // the PostgreSQL notification channel
 	tests         TestLimits
+	envs          map[string]Environment
+
+	// deployKick wakes the reaper to hand free locks to waiting deploy steps
+	// at once (see kickDeploys).
+	deployKick chan struct{}
+	// published throttles live updates of observations (see Observe).
+	pubMu     sync.Mutex
+	published map[string]int64
 
 	// writeMu serialises writes on SQLite, which allows one writer at a time
 	// anyway; waiting here is fairer and cheaper than SQLite's busy loop. On
@@ -113,6 +124,12 @@ type RunnerInfo struct {
 	Name     string `json:"name"`
 	Executor string `json:"executor"`
 	Version  string `json:"version"`
+	// Targets, for a deploy runner, are the targets its configuration
+	// serves. The server only gives it work for those its pool may serve.
+	Targets []string `json:"targets,omitempty"`
+	// Pool is the runner pool its token belongs to, set by the server from
+	// the token, never by the runner.
+	Pool string `json:"-"`
 }
 
 // Job is everything a runner needs to execute one step attempt.
@@ -152,6 +169,9 @@ type Job struct {
 	// runner collects once the step ends, and how much the server accepts.
 	// A runner that does not know it collects nothing.
 	Reports *JobReports `json:"reports,omitempty"`
+	// Deploy, for a deploy or rollback step, is the action a deploy runner
+	// does. Only deploy runners lease such steps.
+	Deploy *DeployJob `json:"deploy,omitempty"`
 }
 
 // JobReports is what a runner collects after a step.
@@ -177,6 +197,8 @@ type Result struct {
 	// collected nothing (a runner that does not know reports, or one that is
 	// shutting down).
 	Tests *CollectedReports `json:"tests,omitempty"`
+	// Deploy, for a deploy runner's action, is what it did.
+	Deploy *DeployFacts `json:"deploy,omitempty"`
 }
 
 // CollectedReports are the report files a runner found after a step, and
@@ -240,18 +262,28 @@ func Open(o Options) (*Engine, error) {
 	if o.schema > 0 {
 		known = min(o.schema, len(migrations))
 	}
+	envs, err := checkEnvironments(o.Environments)
+	if err != nil {
+		return nil, err
+	}
+	if len(envs) > 0 && known < schemaDeploy {
+		return nil, fmt.Errorf("environments need schema %d; this build knows %d", schemaDeploy, known)
+	}
 	db, _, err := openDB(o.Database, o.ConnectWait, known, o.Logger)
 	if err != nil {
 		return nil, err
 	}
 	e := &Engine{
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
-		schema:   known,
-		tests:    tests,
-		selfOK:   o.AllowSelfApproval == nil || *o.AllowSelfApproval,
-		instance: ids.New("srv"),
-		wake:     make(chan struct{}),
-		stop:     make(chan struct{}),
+		schema:     known,
+		tests:      tests,
+		envs:       envs,
+		deployKick: make(chan struct{}, 1),
+		published:  map[string]int64{},
+		selfOK:     o.AllowSelfApproval == nil || *o.AllowSelfApproval,
+		instance:   ids.New("srv"),
+		wake:       make(chan struct{}),
+		stop:       make(chan struct{}),
 	}
 	if db.pg {
 		var schema string
@@ -468,6 +500,14 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if err := e.checkNewRun(&nr); err != nil {
 		return nil, err
 	}
+	if nr.Pipeline.UsesSchema11() {
+		if !e.knows(schemaDeploy) {
+			return nil, fmt.Errorf("%w: this server does not know deploy steps (schema %d)", ErrConflict, schemaDeploy)
+		}
+		if ps := e.CheckDeploys(nr.Project, nr.Pipeline); len(ps) > 0 {
+			return nil, ps
+		}
+	}
 	if nr.Pipeline.UsesSchema10() && !e.knows(schemaTests) {
 		// A release that old cannot even read the pipeline; a build limited
 		// to it for testing refuses in the same place.
@@ -594,6 +634,11 @@ func (c *cmd) supersede(project, ref string, number int) ([]int, error) {
 		err := c.alsoRun(id, func(o *cmd) error {
 			// The events decide, not the row read above.
 			st := o.st
+			// A run that holds an open deployment finishes it; the newer run
+			// waits for the environment's lock.
+			if st.holdsDeployment() {
+				return nil
+			}
 			if st.Status.Terminal() || st.CancelRequested || st.Draft != nil || st.Rerun != nil || st.Project != project ||
 				st.Trigger.Ref != ref || (st.Trigger.Event != pipeline.EventPush && st.Trigger.Event != pipeline.EventPullRequest) {
 				return nil
@@ -627,6 +672,9 @@ func (c *cmd) alsoRun(runID string, fn func(o *cmd) error) error {
 	o := &cmd{e: c.e, tx: c.tx, runID: runID, st: st, runSeq: runSeq, now: c.now, changed: map[string]bool{}, schemaBefore: st.Schema}
 	if err := fn(o); err != nil {
 		return err
+	}
+	if o.err != nil {
+		return o.err
 	}
 	if len(o.events) == 0 {
 		return nil
@@ -675,6 +723,10 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 		}
 		if draftSecrets != nil && c.st.Draft == nil {
 			return fmt.Errorf("%w: run %s is not a draft run", ErrConflict, runID)
+		}
+		if id := c.st.openedDeployment(); id != "" {
+			return fmt.Errorf("%w: %s made a deployment in this run, and deployments are not resumed: "+
+				"start a new run, or re-run this one from %s", ErrConflict, id, id)
 		}
 		c.emit(RunResumed, Payload{Actor: actor, DraftSecrets: draftSecrets})
 		for _, id := range c.st.Order {
@@ -763,6 +815,10 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 		where += ` AND runs.min_schema <= ?`
 		args = append(args, e.schema)
 	}
+	if e.knows(schemaDeploy) {
+		// Deploy and rollback steps go to deploy runners (LeaseDeploy).
+		where += ` AND s.target = ''`
+	}
 	rows, err := e.db.Query(`SELECT s.run_id, s.step_id, s.attempt FROM steps s
 		JOIN runs ON runs.id = s.run_id
 		LEFT JOIN runners o ON o.id = runs.runner
@@ -795,6 +851,9 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			s := c.st.Steps[cd.step]
 			if s == nil || s.Status != StepQueuedS || s.Attempt != cd.attempt || c.st.CancelRequested {
 				return nil // someone else got it, or it changed
+			}
+			if def := c.st.Pipeline.Step(cd.step); def == nil || def.IsDeployKind() {
+				return nil // for deploy runners only
 			}
 			prev := c.st.Runner
 			if prev != r.ID {
@@ -841,9 +900,15 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 // runs it holds: it holds a lease, and another runner that holds none has
 // been seen within the lease TTL.
 func (e *Engine) leaveNewRunsToIdle(runnerID string, now time.Time) (bool, error) {
+	// Deploy runners (of a pool) never take ordinary steps, so they are not
+	// idle runners to leave work to.
+	notPool := ""
+	if e.knows(schemaDeploy) {
+		notPool = ` AND o.pool = ''`
+	}
 	var n int
 	err := e.db.QueryRow(`SELECT COUNT(*) FROM runners o
-		WHERE o.id <> ? AND o.last_seen >= ?
+		WHERE o.id <> ? AND o.last_seen >= ?`+notPool+`
 		AND NOT EXISTS (SELECT 1 FROM leases WHERE leases.runner = o.id)
 		AND EXISTS (SELECT 1 FROM leases WHERE leases.runner = ?)`,
 		runnerID, now.Add(-e.ttl).UnixMilli(), runnerID).Scan(&n)
@@ -952,6 +1017,11 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		}
 		if err := c.endLease(leaseID); err != nil {
 			return err
+		}
+		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.IsDeployKind() {
+			c.finishAction(l.stepID, s, def, leaseID, res)
+			c.advance()
+			return nil
 		}
 		p := Payload{Step: l.stepID, Attempt: l.attempt, Lease: leaseID, ExitCode: res.ExitCode, Outputs: res.Outputs}
 		if def := c.st.Pipeline.Step(l.stepID); tests != nil && def != nil && def.Reports != nil {
@@ -1116,10 +1186,14 @@ func (e *Engine) reaper(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+		case <-e.deployKick:
+			e.dispatchLocks()
+			continue
 		case <-t.C:
 			e.markAlive()
 			e.reap()
-			e.expireApprovals()
+			e.expireWaits()
+			e.dispatchLocks()
 			if now := e.now(); now.Sub(pruned) >= time.Minute {
 				pruned = now
 				e.forgetRunners()
@@ -1221,9 +1295,9 @@ type cmd struct {
 	// schemaBefore is the run's Schema before this command, so that
 	// runs.min_schema is written only when it changes.
 	schemaBefore int
-	// failed is an error met where it could not be returned (in advance);
-	// the transaction is rolled back with it.
-	failed error
+	// err is a database error met while moving the run forward (see
+	// dbFail); the command fails with it.
+	err error
 }
 
 func (c *cmd) emit(t EventType, p Payload) {
@@ -1352,8 +1426,8 @@ func (e *Engine) attemptTx(runID string, create bool, fn func(c *cmd) error) (*c
 	if err := fn(c); err != nil {
 		return nil, err
 	}
-	if c.failed != nil {
-		return nil, c.failed
+	if c.err != nil {
+		return nil, c.err
 	}
 	if len(c.events) > 0 {
 		if err := c.persist(); err != nil {
@@ -1510,6 +1584,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaDeploy) {
+		if err := c.persistSchema11(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
 }
 
@@ -1604,6 +1683,14 @@ func (c *cmd) advance() {
 				continue
 			}
 			def := st.Pipeline.Step(id)
+			if def.IsRollback() {
+				// The rollback rule replaces the usual one: it runs because
+				// a step it needs did not succeed.
+				if c.advanceRollback(id, def) {
+					changed = true
+				}
+				continue
+			}
 			ready, blocked := true, ""
 			for _, n := range def.Needs {
 				switch dep := st.Steps[n]; dep.Status {
@@ -1633,6 +1720,13 @@ func (c *cmd) advance() {
 				changed = true
 			case c.loopHolds(id):
 				// Its loop has max_parallel members going; it waits its turn.
+			case def.IsDeploy():
+				before := len(c.events)
+				c.startDeploy(id, def)
+				if c.err != nil {
+					return
+				}
+				changed = len(c.events) > before
 			case def.IsApproval():
 				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
 				changed = true
@@ -1651,6 +1745,7 @@ func (c *cmd) advance() {
 			}
 		}
 	}
+	c.closeDeployments()
 	failed, canceled := false, false
 	for _, id := range st.Order {
 		switch st.Steps[id].Status {
@@ -1836,6 +1931,15 @@ func (e *Engine) touchRunner(r RunnerInfo) {
 	}
 	unlock := e.writeLock()
 	defer unlock()
+	if e.knows(schemaDeploy) {
+		if _, err := e.db.Exec(`INSERT INTO runners(id, name, executor, version, last_seen, targets, pool) VALUES(?,?,?,?,?,?,?)
+			ON CONFLICT(id) DO UPDATE SET name = excluded.name, executor = excluded.executor,
+				version = excluded.version, last_seen = excluded.last_seen, targets = excluded.targets, pool = excluded.pool`,
+			r.ID, r.Name, r.Executor, r.Version, e.now().UnixMilli(), strings.Join(r.Targets, ","), r.Pool); err != nil {
+			e.log.Error("recording runner", "err", err)
+		}
+		return
+	}
 	if _, err := e.db.Exec(`INSERT INTO runners(id, name, executor, version, last_seen) VALUES(?,?,?,?,?)
 		ON CONFLICT(id) DO UPDATE SET name = excluded.name, executor = excluded.executor,
 			version = excluded.version, last_seen = excluded.last_seen`,

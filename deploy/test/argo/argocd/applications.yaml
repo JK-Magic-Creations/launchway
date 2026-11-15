@@ -1,0 +1,85 @@
+# The test Applications. All read the in-cluster Git server's gitops.git on
+# branch main. No resources-finalizer, so deleting an Application never
+# deletes the workload and never blocks namespace deletion.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  project: lw-test
+  source:
+    repoURL: http://git.lw-git.svc:8080/lwtest/gitops.git
+    targetRevision: main
+    path: apps/demo
+  destination: { server: https://kubernetes.default.svc, namespace: lw-demo }
+  syncPolicy:
+    automated: { selfHeal: true, prune: false }
+---
+# Same workload as demo but no automated sync: a deploy must request a sync.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-manual
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  project: lw-test
+  source:
+    repoURL: http://git.lw-git.svc:8080/lwtest/gitops.git
+    targetRevision: main
+    path: apps/manual
+  destination: { server: https://kubernetes.default.svc, namespace: lw-demo-manual }
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: plain
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  project: lw-test
+  source:
+    repoURL: http://git.lw-git.svc:8080/lwtest/gitops.git
+    targetRevision: main
+    path: apps/plain
+  destination: { server: https://kubernetes.default.svc, namespace: lw-demo }
+  syncPolicy:
+    automated: { selfHeal: true, prune: false }
+---
+# Two sources from the same repository: the workload, and a ConfigMap.
+# Automated sync is off so tests can sync each source to a chosen revision.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-multi
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  project: lw-test
+  sources:
+    - repoURL: http://git.lw-git.svc:8080/lwtest/gitops.git
+      targetRevision: main
+      path: apps/multi/workload
+    - repoURL: http://git.lw-git.svc:8080/lwtest/gitops.git
+      targetRevision: main
+      path: apps/multi/config
+  destination: { server: https://kubernetes.default.svc, namespace: lw-demo-multi }
+---
+# A Rollout using workloadRef (its pod template lives in a Deployment).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-wref
+  namespace: argocd
+  labels: { app.kubernetes.io/part-of: launchway-test-argo }
+spec:
+  project: lw-test
+  source:
+    repoURL: http://git.lw-git.svc:8080/lwtest/gitops.git
+    targetRevision: main
+    path: apps/workloadref
+  destination: { server: https://kubernetes.default.svc, namespace: lw-demo-wref }
+  syncPolicy:
+    automated: { selfHeal: true, prune: false }

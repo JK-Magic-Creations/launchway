@@ -532,3 +532,49 @@ func TestUpstreamAlwaysAndFailed(t *testing.T) {
 		}
 	})
 }
+
+const shopWithInputs = `pipeline: shop
+inputs:
+  target: { type: choice, options: [staging, prod], default: prod }
+  version: { required: true }
+steps:
+  build:
+    image: x
+    run: build
+  deploy-prod:
+    kind: deploy
+    needs: build
+    environment: { input: target }
+    version: { input: version }
+    timeout: 10m
+    argocd:
+      application: shop
+      write_back:
+        repo: gitops
+        branch: main
+        changes:
+          - { file: apps/shop.yaml, image: team/shop, tag: { input: version } }
+`
+
+// A deploy step's environment and version may come from a person's inputs;
+// the environment is then checked against the server's like a written one.
+func TestDeployFromInputs(t *testing.T) {
+	e, _ := newDeployEngine(t, prodEnv)
+	mk := func(given map[string]string) (*RunSummary, error) {
+		p, vals := bound(t, shopWithInputs, given)
+		return e.CreateRun(NewRun{Project: "shop", Pipeline: p, Source: gitSource,
+			Trigger: Trigger{Event: "manual", Ref: "refs/heads/main", Branch: "main", SHA: strings.Repeat("1", 40), Inputs: vals}})
+	}
+	if _, err := mk(map[string]string{"target": "staging", "version": "2.0.0"}); err == nil || !strings.Contains(err.Error(), "staging") {
+		t.Fatalf("an environment the server does not have: %v", err)
+	}
+	r, err := mk(map[string]string{"version": "2.0.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	build(t, e, r.ID, "ignored")
+	j := leaseDeploy(t, e, deployer)
+	if d := j.Deploy; d == nil || d.Version != "2.0.0" || d.Changes[0].Tag != "2.0.0" {
+		t.Fatalf("job: %+v", j.Deploy)
+	}
+}

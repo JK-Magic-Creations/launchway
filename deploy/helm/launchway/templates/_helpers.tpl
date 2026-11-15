@@ -195,6 +195,7 @@ owns may not appear in it.
 {{- with .Values.config.loops }}{{ if .maxMembers }}{{ $_ := set $config "loops" (dict "max_members" (int64 .maxMembers)) }}{{ end }}{{ end -}}
 {{- with .Values.config.schedules }}{{ if not (kindIs "invalid" .enabled) }}{{ $_ := set $config "schedules" (dict "enabled" .enabled) }}{{ end }}{{ end -}}
 {{- with .Values.config.tokens }}{{ if .maxDays }}{{ $_ := set $config "auth" (dict "tokens" (dict "max_days" (int64 .maxDays))) }}{{ end }}{{ end -}}
+{{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
 

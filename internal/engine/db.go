@@ -527,11 +527,137 @@ CREATE INDEX test_cases_run ON test_cases(run_id, step_id, attempt);
 CREATE INDEX test_cases_history ON test_cases(project, test_key, run_number);
 CREATE INDEX test_cases_prune ON test_cases(project, run_number);
 `},
-	// 11 and 12 are taken by work on other branches (deployments, and
-	// artifacts with security findings). These placeholders hold their
-	// places on this branch only; the merge replaces them with the real
-	// migrations.
-	{additive, ``},
+	// 11: deployments. Deploy and rollback steps (kinds deploy and rollback)
+	//    and their deploy.* events. steps.target is the target a deploy
+	//    step's actions go to (only deploy runners serving it lease them),
+	//    and steps.wait_kind says what a waiting step waits for: '' for an
+	//    approval, lock or observe for a deploy step. runners.targets and
+	//    runners.pool are what a deploy runner serves. deployments,
+	//    environment_state, deploy_locks and deploy_queue are derived from
+	//    the events, in the transaction that stores them; the snapshot
+	//    columns of deployments and deployment_timeline hold what deploy
+	//    runners observe, which is not in the events (it changes too often).
+	//    target_observers picks one runner to observe each target.
+	//    deploy_commands is for a later release's commands (promote, abort);
+	//    nothing writes it yet.
+	//    Compatibility: additive: new tables, and new columns with defaults.
+	//    Runs with deploy steps have min_schema 11 from creation: older
+	//    servers do not know the step kinds (nor the pipeline keys), so they
+	//    leave such runs alone, their locks included.
+	{additive, `
+ALTER TABLE steps ADD COLUMN target TEXT NOT NULL DEFAULT '';
+ALTER TABLE steps ADD COLUMN wait_kind TEXT NOT NULL DEFAULT '';
+CREATE INDEX steps_target ON steps(target, status, queued_at);
+ALTER TABLE runners ADD COLUMN targets TEXT NOT NULL DEFAULT '';
+ALTER TABLE runners ADD COLUMN pool TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE deployments (
+  id               TEXT PRIMARY KEY,
+  run_id           TEXT    NOT NULL,
+  run_number       INTEGER NOT NULL,
+  project          TEXT    NOT NULL,
+  step_id          TEXT    NOT NULL,
+  environment      TEXT    NOT NULL,
+  service          TEXT    NOT NULL,
+  target           TEXT    NOT NULL,
+  application      TEXT    NOT NULL,
+  mode             TEXT    NOT NULL,
+  version          TEXT    NOT NULL,
+  previous_id      TEXT    NOT NULL DEFAULT '',
+  previous_version TEXT    NOT NULL DEFAULT '',
+  repo             TEXT    NOT NULL DEFAULT '',
+  branch           TEXT    NOT NULL DEFAULT '',
+  commit_sha       TEXT    NOT NULL DEFAULT '',
+  changed          INTEGER NOT NULL DEFAULT 0,
+  revert_sha       TEXT    NOT NULL DEFAULT '',
+  rollback_step    TEXT    NOT NULL DEFAULT '',
+  phase            TEXT    NOT NULL DEFAULT '',
+  detail           TEXT    NOT NULL DEFAULT '',
+  verdict          TEXT    NOT NULL DEFAULT '',
+  opened_at        {{BIG}} NOT NULL,
+  deployed_at      {{BIG}} NOT NULL DEFAULT 0,
+  closed_at        {{BIG}} NOT NULL DEFAULT 0,
+  snapshot         TEXT    NOT NULL DEFAULT '',
+  snapshot_key     TEXT    NOT NULL DEFAULT '',
+  observed_at      {{BIG}} NOT NULL DEFAULT 0,
+  observed_by      TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX deployments_run ON deployments(run_id);
+CREATE INDEX deployments_unit ON deployments(environment, project, service, opened_at);
+
+CREATE TABLE environment_state (
+  environment        TEXT    NOT NULL,
+  project            TEXT    NOT NULL,
+  service            TEXT    NOT NULL,
+  current_deployment TEXT    NOT NULL DEFAULT '',
+  current_version    TEXT    NOT NULL DEFAULT '',
+  current_run        TEXT    NOT NULL DEFAULT '',
+  current_run_number INTEGER NOT NULL DEFAULT 0,
+  since              {{BIG}} NOT NULL DEFAULT 0,
+  PRIMARY KEY (environment, project, service)
+);
+
+CREATE TABLE deploy_locks (
+  environment TEXT    NOT NULL,
+  project     TEXT    NOT NULL,
+  service     TEXT    NOT NULL,
+  deployment  TEXT    NOT NULL,
+  run_id      TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  step_id     TEXT    NOT NULL,
+  since       {{BIG}} NOT NULL,
+  PRIMARY KEY (environment, project, service)
+);
+CREATE INDEX deploy_locks_deployment ON deploy_locks(deployment);
+
+CREATE TABLE deploy_queue (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  environment TEXT    NOT NULL,
+  project     TEXT    NOT NULL,
+  service     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  since       {{BIG}} NOT NULL,
+  PRIMARY KEY (run_id, step_id)
+);
+CREATE INDEX deploy_queue_unit ON deploy_queue(environment, project, service, run_number);
+
+CREATE TABLE deployment_timeline (
+  id         {{ID}},
+  deployment TEXT    NOT NULL,
+  step_id    TEXT    NOT NULL,
+  at         {{BIG}} NOT NULL,
+  phase      TEXT    NOT NULL,
+  detail     TEXT    NOT NULL
+);
+CREATE INDEX deployment_timeline_dep ON deployment_timeline(deployment, id);
+
+CREATE TABLE deploy_commands (
+  id         TEXT PRIMARY KEY,
+  deployment TEXT    NOT NULL,
+  run_id     TEXT    NOT NULL,
+  step_id    TEXT    NOT NULL,
+  action     TEXT    NOT NULL,
+  actor      TEXT    NOT NULL,
+  comment    TEXT    NOT NULL DEFAULT '',
+  expect     TEXT    NOT NULL DEFAULT '{}',
+  state      TEXT    NOT NULL DEFAULT '',
+  result     TEXT    NOT NULL DEFAULT '',
+  created_at {{BIG}} NOT NULL,
+  done_at    {{BIG}} NOT NULL DEFAULT 0
+);
+CREATE INDEX deploy_commands_dep ON deploy_commands(deployment, created_at);
+
+CREATE TABLE target_observers (
+  target     TEXT PRIMARY KEY,
+  runner     TEXT    NOT NULL,
+  since      {{BIG}} NOT NULL,
+  expires_at {{BIG}} NOT NULL
+);
+`},
+	// 12 is taken by work on another branch (artifacts and security
+	//    findings). This placeholder holds its place on this branch only; the
+	//    merge with that branch replaces it with the real migration.
 	{additive, ``},
 	// 13: run inputs, loops, schedules, webhooks, and API tokens that are
 	//    limited. A run's input values are in its run.created event (in the
@@ -588,6 +714,9 @@ ALTER TABLE api_tokens ADD COLUMN projects TEXT NOT NULL DEFAULT '';
 ALTER TABLE api_tokens ADD COLUMN last_used_from TEXT NOT NULL DEFAULT '';
 `},
 }
+
+// schemaDeploy is the schema that brought deploy and rollback steps.
+const schemaDeploy = 11
 
 // schemaTriggers is the schema that brought run inputs, loops, schedules,
 // webhooks and limited API tokens.

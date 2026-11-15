@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/ids"
@@ -103,6 +104,20 @@ func planRerun(orig *RunState, from string) (RerunPlan, error) {
 			upstream = append(upstream, desc)
 		} else {
 			others = append(others, desc)
+		}
+	}
+	// Deployments: a re-run never reuses a deploy or rollback step, and
+	// starts a deployment from its deploy step.
+	for _, s := range orig.Pipeline.Steps {
+		if s.IsDeploy() && s.ID != from && slices.Contains(orig.Pipeline.DeploymentScope(s.ID), from) {
+			return plan, fmt.Errorf("%w: cannot re-run from %s: it is part of deployment %s, which must be made again; re-run from %s",
+				ErrConflict, from, s.ID, s.ID)
+		}
+	}
+	for _, id := range plan.Reuse {
+		if def := orig.Pipeline.Step(id); def.IsDeployKind() && orig.Steps[id].Status != StepSkippedS {
+			return plan, fmt.Errorf("%w: cannot re-run from %s: deploy step %s would be reused, and deploy steps always run again; "+
+				"re-run from %s or a step it needs", ErrConflict, from, id, id)
 		}
 	}
 	switch {

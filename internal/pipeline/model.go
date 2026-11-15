@@ -96,7 +96,7 @@ type PushTrigger struct {
 }
 
 // Step kinds. A plain step runs a script; an approval pauses the run until a
-// person decides.
+// person decides. Deploy and rollback steps are in deploy.go.
 const (
 	KindStep     = "step"
 	KindApproval = "approval"
@@ -120,9 +120,24 @@ type Step struct {
 	Timeout     Duration             `json:"timeout"`           // per attempt; for an approval, how long to wait for a decision
 	// Reports are files the step writes that Launchway reads once it ends,
 	// whether it passed or failed: test results, for now.
-	Reports   *Reports `json:"reports,omitempty"`
-	Line      int      `json:"-"` // where it was written, for messages
-	NeedsLine int      `json:"-"` // where its needs were written, for messages
+	Reports *Reports `json:"reports,omitempty"`
+
+	// Deploy steps (kind deploy) only; see deploy.go.
+	Environment string      `json:"environment,omitempty"` // a server's environment, which gives the lock and the record
+	Service     string      `json:"service,omitempty"`     // what is deployed there; empty means the project's name
+	Version     *Value      `json:"version,omitempty"`     // what "current version" shows
+	ArgoCD      *ArgoCD     `json:"argocd,omitempty"`
+	Rollout     *RolloutRef `json:"rollout,omitempty"`
+	OnCancel    string      `json:"on_cancel,omitempty"` // leave
+	// Deployment, for a rollback step, is the deploy step it rolls back.
+	Deployment string `json:"deployment,omitempty"`
+
+	environmentLine, deploymentLine, versionLine int
+	// environmentInput is the run input a deploy step's environment comes
+	// from (environment: { input: name }); Bind puts its value in place.
+	environmentInput string
+	Line             int `json:"-"` // where it was written, for messages
+	NeedsLine        int `json:"-"` // where its needs were written, for messages
 
 	// Uses names the template a step is replaced by, as library/template
 	// (or, in a template, a template of the same library). Only a pipeline
@@ -416,7 +431,7 @@ func (p *Pipeline) RunContainers() []Container {
 		out = append(out, *c)
 	}
 	for _, s := range p.Steps {
-		if !s.IsApproval() && !s.IsUse() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
+		if !s.IsApproval() && !s.IsDeployKind() && !s.IsUse() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
 			out = append(out, Container{Name: "image-" + itoa(len(out)-len(p.Containers)+1), Image: s.Image})
 		}
 	}
@@ -426,7 +441,7 @@ func (p *Pipeline) RunContainers() []Container {
 // ContainerFor names the container a step runs in, matching RunContainers.
 // It is empty for an approval, and for a step not yet replaced by a template.
 func (p *Pipeline) ContainerFor(s *Step) string {
-	if s.IsApproval() || s.IsUse() {
+	if s.IsApproval() || s.IsDeployKind() || s.IsUse() {
 		return ""
 	}
 	if s.Container != "" {

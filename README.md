@@ -307,6 +307,10 @@ expression language; an input is used in exactly these places:
 - a template's parameter, `with: { target: { input: environment } }`, or for a string or a
   choice `with: { image: { input: version, format: "registry.example.com/app:%s" } }`;
 - a loop's list, `for_each: { python: { input: pythons } }`.
+- a deploy step's `version`, an image `tag` or a written `value` (`{ input: version }`, from a
+  string, choice or number input), and its `environment` (`{ input: target }`, from a choice
+  input whose options are all environment names). The environment is then checked against the
+  server's environments when the run is created, like a written one.
 
 A run that is resumed keeps its inputs. A re-run copies them and cannot change them: the steps it
 reuses ran with those values, so a re-run with other values would mix two runs. To run with other
@@ -347,6 +351,8 @@ another step reaches one's outputs as `LAUNCHWAY_NEEDS_TEST_PYTHON_3_12_OS_DEBIA
 - Lists are written in place, come from a run input of type `list`, or, in a template, from a
   parameter of type `list` (`{ param: name }`). Values name steps, so they are 1 to 40 letters,
   digits, `.`, `_`, `+` and `-`; put other text around them with `format:`.
+- Deploy and rollback steps cannot be repeated: each deployment holds its environment's lock and
+  is recorded on its own, so write one deploy step for each environment.
 - A loop may have at most 64 combinations (`loops: { max_members: N }` in the server's
   configuration, up to 500), and a run at most 500 steps. An empty list is refused when the run is
   created.
@@ -378,7 +384,10 @@ Normally a step runs only if every step it needs succeeded. `when: { upstream: â
 Such a step waits until every step it needs has ended. With `failed` it runs if one of them
 failed, was cancelled, or was not run because of a failure, and is skipped otherwise; with
 `always` it runs regardless; `succeeded` is the default. It does not change the run's outcome: a
-run with a failed step has failed, even if its cleanup succeeded. A cancel (by hand, or
+run with a failed step has failed, even if its cleanup succeeded. A deploy step takes no `upstream`: it deploys
+only after the steps it needs succeeded. A rollback step decides on the steps it needs, so none of
+them, directly or not, may run after failures (its success would hide the failure the rollback
+is for); let such a cleanup step need the rollback step instead. A cancel (by hand, or
 [superseding](#superseding-older-runs)) means stop: steps not started, these included, are
 cancelled. Resuming a run runs the failed steps again and then lets these steps decide again, so
 a cleanup runs again after them, and `notify-failure` above is skipped if nothing fails the second
@@ -859,6 +868,162 @@ With the Helm chart these are `config.tests.*` and `runner.reports.*` in the val
 older than the one that brought test reports cannot read a pipeline with `reports:`; use the key
 once every server is upgraded (see [docs/development/migrations.md](docs/development/migrations.md)).
 
+## Deployments
+
+A deploy step changes what runs in an environment. It commits the new version to a GitOps
+repository, asks Argo CD to sync if it must, and waits until the application (and its Argo
+Rollouts rollout, if it has one) is healthy on that version. A rollback step reverts that commit
+when a step guarding the deployment does not succeed.
+
+```yaml
+steps:
+  build:
+    container: kaniko
+    run: ./ci/build.sh                 # writes tag=1.4.2 to $LAUNCHWAY_OUTPUTS
+
+  deploy-prod:
+    kind: deploy
+    needs: build
+    when: { branch: main }
+    environment: prod                  # configured on the server: the lock and the record
+    service: shop                      # default: the project's name
+    version: { output: build.tag }     # what "current version" shows; default { run: short_sha }
+    timeout: 30m                       # the whole step, commit to healthy; default 30m
+    argocd:
+      application: shop
+      write_back:
+        repo: gitops                   # a repository the deploy runner's configuration names
+        branch: main
+        changes:
+          - file: apps/shop/rollout.yaml
+            image: team/shop           # every reference to this image; none at all is an error
+            tag: { output: build.tag }
+          - file: helm-values/shop.yaml
+            set: image.tag             # a YAML path; comments and layout are kept
+            value: { output: build.tag }
+      sync:
+        request: auto                  # auto (only if the application does not sync by itself) | always | never
+        resources:                     # sync, and judge, only these; default: the whole application
+          - { kind: Rollout, name: shop, namespace: shop }
+        prune: false
+        windows: wait                  # wait | fail, while a sync window holds the sync; never overridden
+      health: resources                # application | resources; default resources when listed
+    rollout: { name: shop, namespace: shop }   # also wait until this rollout is healthy
+
+  smoke:
+    needs: deploy-prod
+    image: curlimages/curl:8.10.1
+    run: ./ci/smoke.sh https://shop.example
+
+  rollback-prod:
+    kind: rollback
+    deployment: deploy-prod
+    needs: [smoke]                     # the steps that guard the deployment
+    timeout: 15m                       # default 15m
+```
+
+- **Values** are written in place, or are `{ output: step.key }` (an output of a step this step
+  needs), `{ run: sha | short_sha | branch | tag | number }` or `{ input: name }` (a
+  [run input](#run-inputs); `environment` may be `{ input: name }` too, of a choice input). There is
+  no expression language.
+- **"Deployed" means**, in one observation: the revision Argo CD has synced, for the source from
+  the write-back repository, includes the commit; the judged resources (or the whole application)
+  are Synced and Healthy; and the rollout, if one is named, is Healthy with its stable ReplicaSet on
+  the new pod template and its current spec observed. Missing or stale observations are never a
+  pass. A failed sync of the commit, a Degraded application or resource, or an aborted or Degraded
+  rollout (named with its failed analysis run and metric) fails the step; so does the deadline,
+  saying what was last observed. The rollout's own analysis runs are the verdict, shown read-only.
+- **A deployment that changes nothing** (Git already holds the version) commits nothing, and is
+  still synced and verified.
+- **Sync windows** are never overridden. The deploy runner reads the application's AppProject and
+  never asks for a sync a window does not allow: with `windows: wait` the step waits (until its
+  deadline) for a window to allow it; with `windows: fail` it fails, saying which window. Argo CD
+  itself would hold such a sync and then, when the window ends, mark it done without applying
+  anything, so asking anyway is never safe. An application that syncs by itself and is held by a
+  window shows as held.
+- **Argo CD learns of the commit** from the refresh annotation the deploy runner sets right after
+  it (Argo CD does not look at Git again by itself for an application nothing has changed in), or
+  from a Git webhook to Argo CD if you have one; `refresh: false` on a target turns the annotation
+  off.
+- **The rollback rule**: a rollback step runs if and only if its deployment was made and one of the
+  steps it needs did not succeed (it failed, or was skipped or canceled because something failed);
+  otherwise it is skipped as not needed. It reverts the deployment's commit (never a forced reset),
+  asks Argo CD to sync if it must, and waits until the revert is synced and healthy. A revert that
+  does not apply (later commits changed the same lines) fails the step and leaves Git alone; the
+  deployment then says it needs a person. A deployment that changed nothing has nothing to revert.
+- **One deployment at a time**: each service of a project has one lock per environment, taken when
+  its deployment opens and released when the deploy step, its rollback step and every step on a
+  needs path between them are done. A deploy step that finds it held waits. With `queue: newest`
+  (the default), a run waiting for the lock is skipped as superseded when a newer run of the same
+  service starts waiting; with `queue: all` they deploy in turn. `supersede: true` never cancels a
+  run that holds an open deployment: it finishes, and the newer run waits.
+- **Where deploy steps do not run**: draft runs, pull-request runs and `launchway run`. A deploy step
+  is never reused by a re-run, a re-run cannot start inside a deployment (re-run from its deploy
+  step), and a run that made a deployment is not resumed.
+- **Validation** says what is wrong and on which line: a value from a step that is not needed, a
+  rollback that does not need its deploy step, two deploy steps of one service and environment that
+  could run at once, and, against the server's configuration (in `/api/v1/validate` and when a run is
+  created), an unknown environment or a project the environment does not allow.
+- **Not yet**: commands on a running rollout (promote, abort, retry), `kind: rollout`, stopping at a
+  rollout's pause, syncing to a revision without a commit, and `kind: analysis` arrive in later
+  releases. Until then a deployment waits at an indefinite pause until someone promotes the rollout.
+
+**Who does the work.** Deploy steps are done by a **deploy runner**: `launchway runner` with a
+`deploy:` section, in or near the cluster, with the token of a **runner pool**. Only a pool's token
+can take deploy work, and only for the targets the pool may serve; the shared runner token, which
+build runners running anyone's code hold, cannot claim a target or report that a deployment is
+healthy. The deploy runner talks to the cluster through the Kubernetes API with its own identity;
+it never runs a script, and the servers hold no cluster credentials. It reads Applications,
+Rollouts and AnalysisRuns; it changes only an Application's operation (to request a sync) and its
+refresh annotation. One deploy runner observes each target at a time; another takes over within
+a lease period when it stops.
+
+```yaml
+# server: launchway.yaml
+environments:
+  - { name: prod, target: homelab, projects: [shop, "mcp-*"], queue: newest }
+runner_pools:
+  - { name: deploy-homelab, token_env: LAUNCHWAY_POOL_DEPLOY_HOMELAB_TOKEN, targets: [homelab] }
+
+# deploy runner: runner.yaml (launchway runner --config runner.yaml, with the pool's token)
+server: https://launchway.example
+deploy:
+  targets:
+    homelab:
+      kubernetes: { in_cluster: true }     # or { kubeconfig: ..., context: ... }; never the current context
+      argocd_namespace: argocd
+      applications: [ { projects: [shop], names: [shop] } ]
+      rollout_namespaces: [shop]
+  repos:
+    gitops:
+      url: https://git.example/team/gitops.git
+      argocd_url: http://gitea-http.gitea.svc:3000/team/gitops.git   # as Applications write it, if different
+      credentials: { store: vault, key: ci/gitops, field: token }     # a name, never a value
+      paths: [ { projects: [shop], files: ["apps/shop/**", "helm-values/shop.yaml"] } ]
+secrets:
+  vault: { type: vault, address: https://vault.example:8200, role: launchway-deploy }
+```
+
+Pool tokens are at least 32 characters, and every server must have the same environments and
+pools. With the Helm chart, `delivery.environments` and `delivery.deployRunner.*` run a deploy
+runner in the cluster with the least access it needs: get, list and watch on the named
+Applications (and patch, which a ValidatingAdmissionPolicy limits to the operation and the refresh
+annotation), get on AppProjects (for their sync windows), get, list and watch on rollouts and
+analysis runs in the listed namespaces, and nothing on pods or secrets.
+
+**The run page** shows a deployment panel for deploy and rollback steps: environment, application,
+version and previous version, the commit and its revert, sync and health, the rollout's steps with
+the current one, weights and pauses, its analysis runs with each metric's counts, replicas, and the
+timeline of what was observed, with "observed 14s ago by runner X" (stale data is greyed, never
+green). **The Environments page** shows each service by environment: the current version, since
+when and from which run, the lock holder and the runs waiting, the last deployment's state, and its
+history. API: `GET /api/v1/environments`, `GET /api/v1/deployments?environment=&project=&service=`,
+and `deployments` in a run.
+
+Deploy steps need schema 11. Use them, `environments:` and `runner_pools:` only once every server
+and runner is upgraded, and take them out before rolling back (see
+[docs/development/migrations.md](docs/development/migrations.md)).
+
 ## Secrets
 
 A step names the secrets it needs. Each one becomes an environment variable:
@@ -1197,13 +1362,15 @@ Built so far:
 - shared libraries of templates and scripts, pinned by Git tag, branch or commit, with
   per-run overrides and pipelines configured on the server for repositories without a file;
 - sign-in with OpenID Connect, roles per project, API tokens and an audit trail;
+- deployments with Argo CD and Argo Rollouts: GitOps write-back, sync requests, health and rollout
+  watching, rollback by revert, environments with a lock each, deploy runner pools;
 - the web UI.
 
 Not built yet, in the order planned:
 
 - Image builds
 - Releases and promotion
-- The Argo CD driver
+- Deployment control: promote, abort and retry, and rollout steps
 - Inputs
 - Policy
 - Infrastructure runs

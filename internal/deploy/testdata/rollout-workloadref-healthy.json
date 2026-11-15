@@ -1,0 +1,106 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Rollout",
+  "metadata": {
+    "name": "wref",
+    "namespace": "lw-demo-wref",
+    "uid": "9e79b4e5-e26b-401d-adaf-9ec4b56ca06f",
+    "generation": 1,
+    "resourceVersion": "63743",
+    "creationTimestamp": "2026-11-15T18:45:22Z",
+    "labels": {
+      "app.kubernetes.io/name": "wref",
+      "app.kubernetes.io/part-of": "launchway-test-argo"
+    },
+    "annotations": {
+      "argocd.argoproj.io/tracking-id": "demo-wref:argoproj.io/Rollout:lw-demo-wref/wref",
+      "rollout.argoproj.io/revision": "1",
+      "rollout.argoproj.io/workload-generation": "1"
+    }
+  },
+  "spec": {
+    "progressDeadlineAbort": true,
+    "progressDeadlineSeconds": 30,
+    "replicas": 2,
+    "revisionHistoryLimit": 3,
+    "selector": {
+      "matchLabels": {
+        "app.kubernetes.io/name": "wref"
+      }
+    },
+    "strategy": {
+      "canary": {
+        "steps": [
+          {
+            "setWeight": 50
+          },
+          {
+            "pause": {
+              "duration": "5s"
+            }
+          },
+          {
+            "setWeight": 100
+          }
+        ]
+      }
+    },
+    "workloadRef": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "wref",
+      "scaleDown": "never"
+    }
+  },
+  "status": {
+    "HPAReplicas": 2,
+    "availableReplicas": 2,
+    "blueGreen": {},
+    "canary": {},
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-11-15T18:45:22Z",
+        "lastUpdateTime": "2026-11-15T18:45:22Z",
+        "message": "RolloutCompleted",
+        "reason": "RolloutCompleted",
+        "status": "True",
+        "type": "Completed"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T18:45:23Z",
+        "lastUpdateTime": "2026-11-15T18:45:23Z",
+        "message": "Rollout is healthy",
+        "reason": "RolloutHealthy",
+        "status": "True",
+        "type": "Healthy"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T18:45:22Z",
+        "lastUpdateTime": "2026-11-15T18:45:23Z",
+        "message": "ReplicaSet \"wref-5dbcdb7b4f\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T18:45:23Z",
+        "lastUpdateTime": "2026-11-15T18:45:23Z",
+        "message": "Rollout has minimum availability",
+        "reason": "AvailableReason",
+        "status": "True",
+        "type": "Available"
+      }
+    ],
+    "currentPodHash": "5dbcdb7b4f",
+    "currentStepHash": "69dd866499",
+    "currentStepIndex": 3,
+    "observedGeneration": "1",
+    "phase": "Healthy",
+    "readyReplicas": 2,
+    "replicas": 2,
+    "selector": "app.kubernetes.io/name=wref",
+    "stableRS": "5dbcdb7b4f",
+    "updatedReplicas": 2,
+    "workloadObservedGeneration": "1"
+  }
+}

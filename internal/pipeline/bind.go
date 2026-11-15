@@ -62,8 +62,13 @@ func PreviewValues(p *Pipeline) map[string]string {
 // is still to be repeated by a loop.
 func (p *Pipeline) Bound() bool {
 	for _, s := range p.Steps {
-		if s.ForEach != nil || len(s.withInputs) > 0 || len(s.eachRefs) > 0 {
+		if s.ForEach != nil || len(s.withInputs) > 0 || len(s.eachRefs) > 0 || s.environmentInput != "" {
 			return false
+		}
+		for _, v := range deployValues(s) {
+			if v.Input != "" {
+				return false
+			}
 		}
 	}
 	return true
@@ -89,6 +94,15 @@ func Bind(p *Pipeline, values map[string]string, o BindOptions) (*Pipeline, erro
 				c.With[k] = v
 			}
 			c.withInputs = nil
+		}
+		if s.IsDeployKind() {
+			b, msg := bindDeploy(&c, values)
+			if msg != "" {
+				problems = append(problems, Problem{Line: s.Line, Path: "steps." + s.ID, Message: msg})
+				out.Steps[i] = &c
+				continue
+			}
+			c = *b
 		}
 		out.Steps[i] = &c
 	}
@@ -233,4 +247,5 @@ func (ps *parser) checkInputs(p *Pipeline) {
 	ps.checkWebhookInputs(p)
 	ps.checkInputRefs(p)
 	ps.checkTriggeredInputs(p)
+	ps.checkDeployInputs(p)
 }

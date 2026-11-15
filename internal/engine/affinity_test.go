@@ -224,7 +224,7 @@ func TestAffinityAcrossServers(t *testing.T) {
 	}
 	// The run's last step goes to the winner, through either server.
 	for _, r := range []RunnerInfo{r1, r2, r3} {
-		if r != winner {
+		if r.ID != winner.ID {
 			noLease(t, a, r)
 			noLease(t, b, r)
 		}
