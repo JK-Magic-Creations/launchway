@@ -107,11 +107,11 @@ func TestCommandsOverHTTP(t *testing.T) {
 		Protected bool             `json:"protected"`
 		Controls  []engine.Control `json:"controls"`
 	}
-	otto.get(base + "controls").json(t, &ctl)
+	otto.get(base+"controls").json(t, &ctl)
 	if !ctl.Protected || ctl.Controls[0].Available || !strings.Contains(ctl.Controls[0].Reason, "protected") || ctl.Controls[2].Action != "abort" || !ctl.Controls[2].Available {
 		t.Fatalf("otto's controls: %+v", ctl)
 	}
-	dana.get(base + "controls").json(t, &ctl)
+	dana.get(base+"controls").json(t, &ctl)
 	if ctl.Controls[2].Available || !strings.Contains(ctl.Controls[2].Reason, "environment prod") {
 		t.Fatalf("dana's controls: %+v", ctl)
 	}
