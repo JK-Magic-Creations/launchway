@@ -12,6 +12,7 @@ import { navigate } from "../router";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
 import { RerunInputsNote, RunTrigger } from "../components/RunTrigger";
+import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
@@ -85,7 +86,7 @@ export function RunPage({ id }: { id: string }) {
   // Pick a sensible step to show: one waiting for approval, else the first
   // failed one, else a running one, else the last that ran.
   useEffect(() => {
-    if (!run || (selected && run.step_list.some((x) => x.id === selected))) return;
+    if (!run || (selected && (run.step_list.some((x) => x.id === selected) || loopById(run, selected)))) return;
     const s = run.step_list.find((x) => x.status === "waiting")
       ?? run.step_list.find((x) => x.status === "failed")
       ?? run.step_list.find((x) => x.status === "running")
@@ -129,6 +130,8 @@ export function RunPage({ id }: { id: string }) {
   if (!run) return <div className="page"><div className="loading">Loading…</div></div>;
 
   const step = run.step_list.find((s) => s.id === selected) ?? null;
+  const loopView = collapseLoops(run);
+  const loop = loopFor(run, selected);
   const failedCount = run.step_list.filter((s) => s.status === "failed").length;
   const firstFailed = run.step_list.find((s) => s.status === "failed");
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting");
@@ -268,8 +271,9 @@ export function RunPage({ id }: { id: string }) {
       {tab === "graph" && (
         <>
           <section className="card card-flush">
-            <Graph levels={run.levels} steps={run.step_list} groups={run.graph.groups} selected={selected} onSelect={select} now={now} />
+            <Graph levels={loopView.levels} steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} />
           </section>
+          {loop && <LoopPanel run={run} loop={loop} selected={selected} onSelect={select} />}
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
             : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun}
