@@ -7,6 +7,7 @@ package pipeline
 import (
 	"encoding/json"
 	"path"
+	"slices"
 	"strings"
 	"time"
 )
@@ -29,6 +30,17 @@ type Pipeline struct {
 	// too were started by a push or a pull request. Runs started by hand,
 	// drafts and re-runs never supersede and are never superseded.
 	Supersede bool `json:"supersede,omitempty"`
+	// Inputs are the values a run is started with (schema 13), in the order
+	// they were written. A person starting a run gives them; runs started
+	// any other way use the defaults, or what the schedule or webhook says.
+	Inputs []*Input `json:"inputs,omitempty"`
+	// Loops are the steps that were repeated over lists (for_each), once
+	// expanded: each names the steps it became. Empty until Bind.
+	Loops []*Loop `json:"loops,omitempty"`
+
+	// maxLoop is the server's limit on a loop's combinations, for loops in
+	// templates; set by Bind.
+	maxLoop int
 }
 
 // Origin records that a pipeline came from the server's configuration of
@@ -65,6 +77,13 @@ type Triggers struct {
 	// request's head (refs/pull/<n>/head), not the branch it targets, so
 	// it cannot filter by branch.
 	PullRequest *PullRequestTrigger `json:"pull_request,omitempty"`
+	// Schedule starts runs at times written as cron expressions (schema
+	// 13). Only the default branch's pipeline is read for them.
+	Schedule []*Schedule `json:"schedule,omitempty"`
+	// Webhook lets other systems start runs by calling a URL, with inputs
+	// taken from the request's JSON body (schema 13). Only the default
+	// branch's pipeline is read for them.
+	Webhook []*WebhookTrigger `json:"webhook,omitempty"`
 }
 
 // PullRequestTrigger starts a run for pull requests. It is empty for now.
@@ -123,12 +142,25 @@ type Step struct {
 	// outputs each template exposes, as LAUNCHWAY_NEEDS_<GROUP>_<KEY>.
 	NeedsGroups []string `json:"needs_groups,omitempty"`
 
+	// ForEach repeats the step over lists (schema 13). Only a pipeline that
+	// has not been bound has such steps; Bind replaces each by one step per
+	// combination of values.
+	ForEach *ForEach `json:"for_each,omitempty"`
+	// Each, for a step a loop made, is the combination of values it is for:
+	// key → value. Its script receives them as LAUNCHWAY_EACH_<KEY>.
+	Each map[string]string `json:"each,omitempty"`
+
 	withLines map[string]*yamlPos // where each with value was written
 	usesLine  int
 	ifTest    *paramTest // templates only: removes the step when false
 	// What was written, so that a uses step's settings apply only where the
 	// template step does not set its own.
 	retrySet, timeoutSet bool
+
+	// Run inputs and loop values a with, env or image refers to, resolved
+	// by Bind; see bind.go.
+	withInputs map[string]*inputRef
+	eachRefs   []eachRef
 }
 
 // Reports names the files a step writes for Launchway to read after it.
@@ -249,6 +281,13 @@ type Condition struct {
 	Branch []string `json:"branch,omitempty"`
 	Tag    []string `json:"tag,omitempty"`
 	Event  []string `json:"event,omitempty"`
+	// Input tests a run input (schema 13): the step runs only if the input's
+	// value is one of Equals. Values are written in their canonical form
+	// (see Input.Canon), so they compare as text.
+	Input  string   `json:"input,omitempty"`
+	Equals []string `json:"equals,omitempty"`
+
+	inputLine int // where input was written, for messages
 }
 
 // The events a run can be started by.
@@ -264,16 +303,23 @@ const (
 	// come from someone who cannot push to the repository. It has no branch
 	// or tag, so when: { branch: ... } never matches it.
 	EventPullRequest = "pull_request"
+	// EventSchedule is a run started by one of the pipeline's schedules.
+	EventSchedule = "schedule"
+	// EventWebhook is a run started by a call to one of the pipeline's
+	// webhook triggers.
+	EventWebhook = "webhook"
 )
 
 // Events lists every event, in the order they are documented.
-var Events = []string{EventPush, EventManual, EventDraft, EventPullRequest}
+var Events = []string{EventPush, EventManual, EventDraft, EventPullRequest, EventSchedule, EventWebhook}
 
 // Context is what a condition is tested against.
 type Context struct {
 	Event  string // push, manual, draft or pull_request
 	Branch string // empty when the run is for a tag
 	Tag    string
+	// Inputs are the run's input values, canonical, by name.
+	Inputs map[string]string
 }
 
 // Match reports whether the condition holds. A nil condition always holds.
@@ -289,6 +335,12 @@ func (c *Condition) Match(ctx Context) bool {
 	}
 	if len(c.Tag) > 0 && !matchAny(c.Tag, ctx.Tag) {
 		return false
+	}
+	if c.Input != "" {
+		v, ok := ctx.Inputs[c.Input]
+		if !ok || !slices.Contains(c.Equals, v) {
+			return false
+		}
 	}
 	if len(c.Event) > 0 {
 		return matchAny(c.Event, ctx.Event)

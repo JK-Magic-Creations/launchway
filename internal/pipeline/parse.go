@@ -79,6 +79,14 @@ type parser struct {
 	// tmpl is set while reading a template: the parameters it declares and
 	// the values they have for the use being expanded.
 	tmpl *paramScope
+
+	// cur is the step being read, and curField and curName the value in it
+	// being read, for { each: } (see loops.go).
+	cur               *Step
+	curField, curName string
+	// References to inputs, checked once every input is known (bind.go).
+	loopInputs []loopInputRef
+	withInputs []withInputRef
 }
 
 func (ps *parser) add(n *yaml.Node, at, format string, args ...any) {
@@ -111,7 +119,7 @@ func Parse(data []byte) (*Pipeline, error) {
 
 	p := &Pipeline{}
 	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps"}, func(k, v *yaml.Node) {
+	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs"}, func(k, v *yaml.Node) {
 		switch k.Value {
 		case "pipeline":
 			p.Name = ps.str(v, "pipeline")
@@ -125,6 +133,8 @@ func Parse(data []byte) (*Pipeline, error) {
 			ps.parseContainers(v, p)
 		case "steps":
 			stepsNode = v
+		case "inputs":
+			ps.parseInputs(v, p)
 		}
 	})
 	if p.Name == "" {
@@ -139,6 +149,7 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	ps.check(p)
 	ps.checkUses(p)
+	ps.checkInputs(p)
 	if len(ps.problems) > 0 {
 		sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })
 		return nil, ps.problems
@@ -191,15 +202,21 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 
 // Keys from the design that are recognised but not implemented yet.
 var notYet = map[string]string{
-	"outputs":  "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
-	"runs_on":  "runner pools arrive in a later milestone",
-	"matrix":   "matrix expansion arrives in a later milestone",
-	"inputs":   "run inputs arrive in a later milestone",
-	"schedule": "scheduled triggers arrive in a later milestone",
+	"outputs": "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
+	"runs_on": "runner pools arrive in a later milestone",
+	"matrix":  "to repeat a step over lists, use for_each",
 }
 
 func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
-	ps.eachKey(n, "on", []string{"push", "pull_request"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, "on", []string{"push", "pull_request", "schedule", "webhook"}, func(k, v *yaml.Node) {
+		switch k.Value {
+		case "schedule":
+			ps.parseSchedules(v, p)
+			return
+		case "webhook":
+			ps.parseWebhooks(v, p)
+			return
+		}
 		if k.Value == "pull_request" {
 			ps.parsePullRequest(v)
 			p.On.PullRequest = &PullRequestTrigger{}
@@ -244,10 +261,11 @@ func (ps *parser) parsePullRequest(v *yaml.Node) {
 }
 
 var (
-	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with"}
+	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
+		"for_each", "exclude", "max_parallel", "fail_fast"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
-	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout"}
+	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
@@ -346,21 +364,28 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		var secretsNode, kindNode, timeoutNode *yaml.Node
 		var timeout time.Duration
 		keys := map[string]*yaml.Node{} // the keys written, for checks that depend on the kind
+		vals := map[string]*yaml.Node{} // and their values
+		ps.cur = s
 		known := stepKeys
 		if ps.tmpl != nil {
 			known = append(append([]string{}, stepKeys...), "if")
 		}
 		ps.eachKey(v, at, known, func(k2, v2 *yaml.Node) {
 			keys[k2.Value] = k2
+			vals[k2.Value] = v2
 			where := at + "." + k2.Value
 			switch k2.Value {
+			case "for_each":
+				s.ForEach = ps.parseForEach(v2, where)
 			case "kind":
 				kindNode = v2
 				s.Kind = ps.str(v2, where)
 			case "container":
 				s.Container = ps.str(v2, where)
 			case "image":
+				ps.curField = "image"
 				s.Image = ps.scalar(v2, where)
+				ps.curField = ""
 			case "run":
 				s.Run = ps.str(v2, where)
 			case "needs":
@@ -408,6 +433,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				}
 			}
 		})
+		ps.parseLoopSettings(s, at, keys, vals)
+		ps.cur = nil
 		if keys["with"] != nil && keys["uses"] == nil {
 			ps.add(keys["with"], at+".with", "with passes values to a template, so it goes with uses")
 		}
@@ -494,7 +521,11 @@ func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[strin
 
 func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 	c := &Condition{}
-	ps.eachKey(n, at, []string{"branch", "tag", "event"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "equals"}, func(k, v *yaml.Node) {
+		if k.Value == "input" || k.Value == "equals" {
+			ps.parseInputTest(c, k, v, at)
+			return
+		}
 		list := ps.valueList(v, at+"."+k.Value)
 		switch k.Value {
 		case "branch":
@@ -532,7 +563,11 @@ func (ps *parser) parseEnv(n *yaml.Node, at string) map[string]string {
 		case ps.tmpl != nil && strings.HasPrefix(strings.ToUpper(k.Value), ParamEnvPrefix):
 			ps.add(k, at+"."+k.Value, "in a template, names starting with %s are the template's parameters", ParamEnvPrefix)
 		}
+		if ps.cur != nil {
+			ps.curField, ps.curName = "env", k.Value
+		}
 		env[k.Value] = ps.scalar(v, at+"."+k.Value)
+		ps.curField, ps.curName = "", ""
 	}
 	return env
 }
