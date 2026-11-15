@@ -811,9 +811,20 @@ func (c *cmd) persistControl() error {
 	for _, ev := range c.events {
 		d := ev.Data.Deploy
 		var err error
-		if d != nil && d.Command != nil && !published[d.ID] {
-			published[d.ID] = true
-			depID := d.ID
+		// Any event that changes a deployment's row (opened, a commit or a
+		// revert, its phase, closed, a command) is published, so the panel
+		// never shows a deployment as open after it closed.
+		depID := ""
+		switch {
+		case d != nil && d.Command != nil, ev.Type == DeployOpened, ev.Type == DeployClosed:
+			depID = d.ID
+		case d != nil || ev.Type == StepFinished || ev.Type == StepCanceled:
+			if s := st.Steps[ev.Data.Step]; s != nil && s.Dep.Opened() {
+				depID = s.Dep.ID
+			}
+		}
+		if depID != "" && !published[depID] {
+			published[depID] = true
 			if err := c.e.notifyOthers(c.tx, note{Kind: noteDeploy, Run: st.ID, Step: depID}); err != nil {
 				return err
 			}

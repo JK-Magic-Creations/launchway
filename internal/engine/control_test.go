@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/deploy"
+	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
@@ -628,5 +629,31 @@ func TestCommandRaisesMinSchema(t *testing.T) {
 func TestSchemaControlMatchesPipeline(t *testing.T) {
 	if pipeline.SchemaControl != schemaControl || len(migrations) < schemaControl {
 		t.Fatalf("pipeline says %d, the engine %d (%d migrations)", pipeline.SchemaControl, schemaControl, len(migrations))
+	}
+}
+
+// Browsers get the deployment again when it closes, not only when it is
+// observed: seen in a real browser, a run over with its deployment still
+// shown holding the lock.
+func TestClosingPublishesTheDeployment(t *testing.T) {
+	e, _ := newDeployEngine(t, prodEnv)
+	id := createShop(t, e, shopPipeline, 1)
+	build(t, e, id, "1")
+	applied(t, e, leaseDeploy(t, e, deployer), "c1")
+	ch, stop := e.Hub().Subscribe(func(m hub.Message) bool { return m.Type == "deployment" && m.RunID == id })
+	defer stop()
+	if err := e.Cancel(id, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.After(5 * time.Second)
+	for {
+		select {
+		case m := <-ch:
+			if v, ok := m.Data.(DeploymentView); ok && v.Verdict == VerdictAbandoned && !v.Holding {
+				return
+			}
+		case <-deadline:
+			t.Fatal("the closed deployment was not published")
+		}
 	}
 }
