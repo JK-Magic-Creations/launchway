@@ -87,7 +87,8 @@ subjects:
 {{- range $ns := $r.rolloutNamespaces }}
 ---
 # Read rollouts and their analysis runs (analysis runs have generated names, so they cannot
-# be named here). No pods, no secrets, and no changes: this release never changes a rollout.
+# be named here). No pods, no secrets. The only change: the status of the rollouts named in
+# rbac.controlRollouts, if any (promote, abort and the like are status changes).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -103,6 +104,12 @@ rules:
   - apiGroups: [apps]
     resources: [deployments]
     verbs: [get]
+  {{- end }}
+  {{- with (index ($r.rbac.controlRollouts | default dict) $ns) }}
+  - apiGroups: [argoproj.io]
+    resources: [rollouts/status]
+    resourceNames: {{ . | toJson }}
+    verbs: [patch]
   {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1

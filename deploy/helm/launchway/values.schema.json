@@ -325,7 +325,8 @@
               "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
               "target": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
               "projects": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-              "queue": { "type": "string", "enum": ["newest", "all"] }
+              "queue": { "type": "string", "enum": ["newest", "all"] },
+              "protected": { "type": "boolean" }
             }
           }
         },
@@ -359,7 +360,11 @@
               "properties": {
                 "create": { "type": "boolean" },
                 "patchApplications": { "type": "boolean" },
-                "readDeployments": { "type": "boolean" }
+                "readDeployments": { "type": "boolean" },
+                "controlRollouts": {
+                  "type": ["object", "null"],
+                  "additionalProperties": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" } }
+                }
               }
             },
             "admissionPolicy": {

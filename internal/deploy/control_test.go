@@ -133,3 +133,18 @@ func TestPauseVerdicts(t *testing.T) {
 		t.Fatal("AbortedOn")
 	}
 }
+
+// Seen on kind: Argo CD reports the new revision while the application is
+// still OutOfSync, and the rollout, not yet changed, is observed at its old
+// generation: its pod template is then not the deployment's.
+func TestOurPodHashWaitsForSync(t *testing.T) {
+	s := pausedSnap()
+	s.App.Sync = "OutOfSync"
+	if h := OurPodHash(s); h != "" {
+		t.Fatalf("hash %q before the sync", h)
+	}
+	s.App.Resources = []Resource{{Kind: "Rollout", Name: "shop", Found: true, Sync: "Synced"}}
+	if OurPodHash(s) != "h2" {
+		t.Fatal("a synced Rollout resource is enough")
+	}
+}

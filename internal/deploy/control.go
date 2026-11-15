@@ -55,11 +55,23 @@ const (
 const Command Outcome = "command"
 
 // OurPodHash is the deployment's pod template hash, as a snapshot shows
-// it: only once Argo CD has synced the deployment's commit and the rollout
-// controller has seen the new spec is the rollout's current pod template
-// the deployment's. "" when that is not shown.
+// it: only once Argo CD has synced the deployment's commit (the revision
+// includes it, and the application, or the Rollout among the resources
+// judged, is Synced: Argo CD reports the new revision while still
+// applying it) and the rollout controller has seen the new spec is the
+// rollout's current pod template the deployment's. "" when that is not
+// shown.
 func OurPodHash(s Snapshot) string {
 	if s.Error != "" || s.App == nil || !isTrue(s.App.Contains) || s.Rollout == nil || !s.Rollout.Found || !s.Rollout.ObservedKnown {
+		return ""
+	}
+	synced := s.App.Sync == "Synced"
+	for _, r := range s.App.Resources {
+		if r.Kind == "Rollout" && r.Found && r.Sync == "Synced" {
+			synced = true
+		}
+	}
+	if !synced {
 		return ""
 	}
 	return s.Rollout.CurrentPodHash

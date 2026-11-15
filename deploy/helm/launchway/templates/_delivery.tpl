@@ -60,5 +60,16 @@ the configuration stays readable by releases that do not know these settings.
 {{- if not $r.repos -}}
 {{- fail "delivery.deployRunner.repos: list the GitOps repositories deploy steps may commit to" -}}
 {{- end -}}
+{{- range $ns, $names := ($r.rbac.controlRollouts | default dict) -}}
+{{- if not (has $ns ($r.rolloutNamespaces | default list)) -}}
+{{- fail (printf "delivery.deployRunner.rbac.controlRollouts names namespace %s, which is not in delivery.deployRunner.rolloutNamespaces" $ns) -}}
 {{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/* The fields of a rollout's status the deploy runner may not change (Argo Rollouts v1.8
+CRD): everything but pauseConditions (promote), promoteFull and abort (abort, retry). */}}
+{{- define "launchway.rolloutStatusFixed" -}}
+HPAReplicas abortedAt alb albs availableReplicas blueGreen canary collisionCount conditions controllerPause currentPodHash currentStepHash currentStepIndex message observedGeneration phase readyReplicas replicas restartedAt selector stableRS updatedReplicas workloadObservedGeneration
 {{- end -}}

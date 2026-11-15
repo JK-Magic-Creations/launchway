@@ -101,3 +101,62 @@ func writeTemp(t *testing.T, body string) string {
 	os.WriteFile(p, []byte(body), 0o644)
 	return p
 }
+
+// Rollout control in the chart: nothing by default (no status patch right,
+// no policy, and no new setting in any configuration file); with
+// rbac.controlRollouts, a status-only patch right on exactly the named
+// rollouts, and the admission policy holding the patch to the fields that
+// promote, abort and retry set.
+func TestChartRolloutControl(t *testing.T) {
+	if _, err := exec.LookPath("helm"); err != nil {
+		t.Skip("needs helm")
+	}
+	render := func(values string) string {
+		vf := filepath.Join(t.TempDir(), "values.yaml")
+		os.WriteFile(vf, []byte(values), 0o644)
+		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", vf).CombinedOutput()
+		if err != nil {
+			t.Fatalf("helm template: %v\n%s", err, out)
+		}
+		return string(out)
+	}
+	base := `postgresql: { enabled: true }
+delivery:
+  environments:
+    - { name: prod, target: homelab, projects: [shop] }
+  deployRunner:
+    enabled: true
+    target: homelab
+    applications: [ { projects: [shop], names: [shop] } ]
+    rolloutNamespaces: [shop]
+    repos:
+      gitops:
+        url: http://git.example/gitops.git
+        paths: [ { projects: [shop], files: ["apps/shop/**"] } ]
+`
+	for _, out := range []string{render("postgresql: { enabled: true }\n"), render(base)} {
+		if strings.Contains(out, "rollouts/status") || strings.Contains(out, "protected") {
+			t.Fatalf("rendered rollout control without being asked:\n%s", out)
+		}
+	}
+	out := render(base + "    rbac: { controlRollouts: { shop: [shop] } }\n")
+	if !strings.Contains(out, "resources: [rollouts/status]\n    resourceNames: [\"shop\"]\n    verbs: [patch]") {
+		t.Fatalf("no status patch right:\n%s", out)
+	}
+	for _, field := range []string{"stableRS", "currentPodHash", "canary", "phase"} {
+		if !strings.Contains(out, "object.status."+field+" == oldObject.status."+field) {
+			t.Errorf("the policy does not hold status.%s", field)
+		}
+	}
+	for _, field := range []string{"pauseConditions", "promoteFull", "abort =="} {
+		if strings.Contains(out, "object.status."+field+" ==") {
+			t.Errorf("the policy holds status.%s, which commands set", field)
+		}
+	}
+	vf := filepath.Join(t.TempDir(), "values.yaml")
+	os.WriteFile(vf, []byte(base+"    rbac: { controlRollouts: { other: [x] } }\n"), 0o644)
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", vf).CombinedOutput(); err == nil ||
+		!strings.Contains(string(out), "not in delivery.deployRunner.rolloutNamespaces") {
+		t.Fatalf("a namespace outside rolloutNamespaces: %v %s", err, out)
+	}
+}

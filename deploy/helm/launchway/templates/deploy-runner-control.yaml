@@ -1,0 +1,59 @@
+{{- $r := .Values.delivery.deployRunner -}}
+{{- if and $r.enabled $r.rbac.create $r.admissionPolicy.enabled $r.rbac.controlRollouts }}
+{{- $name := include "launchway.deployRunnerName" . -}}
+# The deploy runner may patch the status of the rollouts in rbac.controlRollouts: promote,
+# promote-full, abort and retry are status changes. This policy keeps the patch to the fields
+# those set (pauseConditions, promoteFull, abort): it cannot, say, change which ReplicaSet is
+# stable. The spec cannot change through the status subresource at all. Other users, the
+# Argo Rollouts controller included, are not matched.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $name }}-rollouts-{{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "deploy-runner") | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [argoproj.io]
+        apiVersions: ["*"]
+        operations: [UPDATE]
+        resources: [rollouts, rollouts/status]
+  matchConditions:
+    - name: launchway-deploy-runner
+      expression: request.userInfo.username == {{ printf "system:serviceaccount:%s:%s" .Release.Namespace $name | quote }}
+  validations:
+    - expression: has(object.status) == has(oldObject.status)
+      message: "Launchway's deploy runner may only promote, abort or retry a rollout"
+      reason: Forbidden
+    {{- range (include "launchway.rolloutStatusFixed" . | splitList " ") }}
+    - expression: >-
+        !has(object.status) || !has(oldObject.status) ||
+        (has(object.status.{{ . }}) == has(oldObject.status.{{ . }}) &&
+        (!has(object.status.{{ . }}) || object.status.{{ . }} == oldObject.status.{{ . }}))
+      message: "Launchway's deploy runner may not change a rollout's status.{{ . }}"
+      reason: Forbidden
+    {{- end }}
+    - expression: >-
+        (has(object.metadata.labels) ? object.metadata.labels : {}) == (has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}) &&
+        (has(object.metadata.annotations) ? object.metadata.annotations : {}) == (has(oldObject.metadata.annotations) ? oldObject.metadata.annotations : {})
+      message: "Launchway's deploy runner may not change a rollout's labels or annotations"
+      reason: Forbidden
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $name }}-rollouts-{{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "deploy-runner") | nindent 4 }}
+spec:
+  policyName: {{ $name }}-rollouts-{{ .Release.Namespace }}
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{ keys $r.rbac.controlRollouts | sortAlpha | toJson }}
+{{- end }}
