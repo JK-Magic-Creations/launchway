@@ -452,7 +452,7 @@ func TestGitleaks(t *testing.T) {
 	if !f.Secret || f.RuleID != "github-pat" || f.File != "app.py" || f.StartLine != 5 || f.Level != "warning" {
 		t.Errorf("finding = %+v", f)
 	}
-	if f.Message != "Uncovered a GitHub Personal Access Token, potentially leading to unauthorized repository access and sensitive content exposure."+secretText {
+	if f.Message != "Uncovered a GitHub Personal Access Token, potentially leading to unauthorized repository access and sensitive content exposure"+secretText {
 		t.Errorf("message = %q", f.Message)
 	}
 	if len(r.Rules) != 1 || r.Rules[0].ID != "github-pat" {

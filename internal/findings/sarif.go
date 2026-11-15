@@ -774,7 +774,7 @@ func (p *parser) message(r *sarifResult, ri *ruleInfo, ruleID string, secret boo
 		} else if ri != nil && ri.out.Name != "" {
 			label = ri.out.Name
 		}
-		label = Mask(jsonscan.Line(label, 4*limit))
+		label = strings.TrimRight(Mask(jsonscan.Line(label, 4*limit)), ".:; ")
 		return jsonscan.Cut(label+secretText, limit)
 	}
 	raw := r.Message.Text
