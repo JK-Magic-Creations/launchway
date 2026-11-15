@@ -139,6 +139,7 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	ps.check(p)
 	ps.checkUses(p)
+	ps.checkArtifacts(p)
 	if len(ps.problems) > 0 {
 		sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })
 		return nil, ps.problems
@@ -244,14 +245,14 @@ func (ps *parser) parsePullRequest(v *yaml.Node) {
 }
 
 var (
-	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with"}
+	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with", "artifacts", "fetch"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
 	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
-	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports"}
+	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch"}
 	// Kinds from the design that are recognised but not implemented yet.
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
@@ -389,6 +390,10 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				}
 			case "reports":
 				s.Reports = ps.parseReports(v2, where)
+			case "artifacts":
+				s.Artifacts = ps.parseArtifacts(v2, where)
+			case "fetch":
+				s.Fetch = ps.parseFetch(v2, where)
 			case "uses":
 				s.Uses = ps.str(v2, where)
 				s.usesLine = v2.Line

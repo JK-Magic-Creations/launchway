@@ -122,6 +122,12 @@ type Step struct {
 	// already lists their steps; these are named so the step receives the
 	// outputs each template exposes, as LAUNCHWAY_NEEDS_<GROUP>_<KEY>.
 	NeedsGroups []string `json:"needs_groups,omitempty"`
+	// Artifacts are sets of files the step keeps once it has run, for
+	// people to download and later steps to fetch (see Artifact).
+	Artifacts []*Artifact `json:"artifacts,omitempty"`
+	// Fetch puts artifacts of earlier steps of the run into the workspace
+	// before the step runs (see Fetch).
+	Fetch []*Fetch `json:"fetch,omitempty"`
 
 	withLines map[string]*yamlPos // where each with value was written
 	usesLine  int
@@ -137,6 +143,11 @@ type Reports struct {
 	// JUnit XML, or the output of go test -json. A path part ** matches any
 	// number of directories.
 	Tests []string `json:"tests"`
+	// Findings are globs of security scanner results in SARIF 2.1.0.
+	Findings []string `json:"findings,omitempty"`
+	// SBOM are globs of software bills of materials in CycloneDX JSON. They
+	// are kept as the step's artifact "sbom" and summarised.
+	SBOM []string `json:"sbom,omitempty"`
 }
 
 // IsUse reports whether the step is replaced by a template.

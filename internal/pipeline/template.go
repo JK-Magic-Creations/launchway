@@ -552,6 +552,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 		ps.parseSteps(v, p)
 	}
 	ps.check(p)
+	ps.checkArtifacts(p)
 	t.Containers, t.Steps = p.Containers, p.Steps
 	if v := nodes["outputs"]; v != nil {
 		t.Outputs = ps.parseOutputs(v, p)
@@ -1013,6 +1014,7 @@ func (x *expander) emit(sc *scope) {
 		c := *s
 		c.ID = id
 		c.Needs, c.NeedsGroups = needs, groups
+		c.Fetch = x.fetchesOf(sc, s)
 		c.withLines, c.ifTest = nil, nil
 		if sc.group != nil {
 			c.Group = sc.group.ID
