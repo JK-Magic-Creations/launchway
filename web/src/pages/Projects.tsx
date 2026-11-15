@@ -8,6 +8,7 @@ import { BranchIcon, Empty, ErrorBox, Link, Mono, StatusPill } from "../componen
 import { RefPicker } from "../components/RefPicker";
 import { OverridesEditor } from "../components/Libraries";
 import { TestCounts } from "../components/Tests";
+import { ArtifactCount, FindingCountBadge } from "../components/Security";
 
 export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -54,6 +55,7 @@ export function ProjectsPage() {
               </div>
               <div className="project-actions">
                 <Link href={`/projects/${encodeURIComponent(p.name)}/tests`} className="btn">Tests</Link>
+                <Link href={`/projects/${encodeURIComponent(p.name)}/security`} className="btn">Security</Link>
                 <Link href={`/projects/${encodeURIComponent(p.name)}/pipeline?ref=${encodeURIComponent(p.default_branch)}`} className="btn">Edit pipeline</Link>
                 {canOperate(me, p.name) && <button type="button" className="btn btn-primary" onClick={() => setStarting(p)}>Start a run</button>}
               </div>
@@ -76,6 +78,8 @@ export function ProjectsPage() {
                 <StatusPill status={p.last_run.status} />
                 <span>#{p.last_run.number} {p.last_run.message || p.last_run.pipeline}</span>
                 {p.last_run.tests && <TestCounts t={p.last_run.tests} />}
+                {p.last_run.findings && <FindingCountBadge c={p.last_run.findings} />}
+                {!!p.last_run.artifacts && <ArtifactCount n={p.last_run.artifacts} />}
                 <span className="faint">{ago(p.last_run.created_at, now)}</span>
               </Link>
             )}

@@ -11,18 +11,21 @@ import { openInEditor } from "./EditPipeline";
 import { navigate } from "../router";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
+import { ArtifactsTab } from "./RunArtifacts";
+import { SecurityTab } from "./RunSecurity";
+import { serious, seriousLabel } from "../components/Security";
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
   return new URLSearchParams(location.search).get("step");
 }
 
-type Tab = "graph" | "tests" | "events" | "definition";
+type Tab = "graph" | "tests" | "artifacts" | "security" | "events" | "definition";
 
 // tabFromURL is the tab named by ?tab= in the address.
 function tabFromURL(): Tab {
   const t = new URLSearchParams(location.search).get("tab");
-  return t === "tests" || t === "events" || t === "definition" ? t : "graph";
+  return t === "tests" || t === "artifacts" || t === "security" || t === "events" || t === "definition" ? t : "graph";
 }
 
 // setQuery changes the address's query without a new history entry.
@@ -252,12 +255,16 @@ export function RunPage({ id }: { id: string }) {
       )}
 
       <div className="tabs" role="tablist">
-        {([["graph", "Steps and logs"], ["tests", "Tests"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
+        {([["graph", "Steps and logs"], ["tests", "Tests"], ["artifacts", "Artifacts"], ["security", "Security"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
           <button key={k} role="tab" type="button" aria-selected={tab === k} className={"tab" + (tab === k ? " tab-on" : "")} onClick={() => setTab(k)}>
             {label}
             {k === "tests" && run.tests && (failing(run.tests) > 0
               ? <span className="tab-n tab-n-bad">{failing(run.tests)} failed</span>
               : <span className="tab-n">{run.tests.total}</span>)}
+            {k === "artifacts" && !!run.artifacts && <span className="tab-n">{run.artifacts}</span>}
+            {k === "security" && run.findings && (serious(run.findings) > 0
+              ? <span className="tab-n tab-n-bad">{seriousLabel(run.findings)}</span>
+              : <span className="tab-n">{run.findings.total}</span>)}
           </button>
         ))}
       </div>
@@ -275,6 +282,8 @@ export function RunPage({ id }: { id: string }) {
       )}
       {tab === "tests" && <TestsTab run={run} step={testStep} onStep={setTestStep}
         version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
+      {tab === "artifacts" && <ArtifactsTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
+      {tab === "security" && <SecurityTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "definition" && <DefinitionTab run={run} />}
     </div>
