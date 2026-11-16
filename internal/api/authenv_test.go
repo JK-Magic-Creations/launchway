@@ -114,6 +114,8 @@ type envOpts struct {
 	// testPolicy.
 	environments []engine.Environment
 	policy       *auth.Policy
+	// artifacts, if set, is where artifacts are kept and how.
+	artifacts *engine.ArtifactOptions
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -130,7 +132,11 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	}
 	o.idp.Now = o.clk.Now
 	no := false
-	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no, Environments: o.environments})
+	var arts engine.ArtifactOptions
+	if o.artifacts != nil {
+		arts = *o.artifacts
+	}
+	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no, Artifacts: arts, Environments: o.environments})
 	if err != nil {
 		t.Fatal(err)
 	}

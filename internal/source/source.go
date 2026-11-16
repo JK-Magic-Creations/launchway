@@ -48,6 +48,16 @@ type Project struct {
 	// Off by default: a pull request's code may come from anyone who can
 	// open one.
 	PullRequestSecrets bool
+	// SchedulesOff turns the project's schedules off: their firings are
+	// recorded as skipped (see fireDue).
+	SchedulesOff bool
+	// Hook, if set, lets the project's Git host call a webhook that makes
+	// the server poll the project at once.
+	Hook *GitHook
+	// Triggers says what callers of each of the pipeline's webhook
+	// triggers must prove, by trigger name. A trigger without an entry
+	// cannot be called.
+	Triggers map[string]*TriggerAuth
 }
 
 // Ref is a branch or tag and the commit it points at, or a pull request's
@@ -114,6 +124,9 @@ type Manager struct {
 	// libraries are mirrors of the libraries pipelines may use, by name.
 	libraries map[string]*project
 	libOrder  []string
+	// trig is what schedules and webhooks keep (see triggers.go).
+	trig     *triggerState
+	trigOnce sync.Once
 }
 
 var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
@@ -176,6 +189,7 @@ func (m *Manager) Start(ctx context.Context) {
 	for _, name := range m.order {
 		go m.watch(ctx, m.projects[name])
 	}
+	go m.runSchedules(ctx)
 }
 
 func (m *Manager) watch(ctx context.Context, p *project) {
@@ -187,6 +201,7 @@ func (m *Manager) watch(ctx context.Context, p *project) {
 		case <-ctx.Done():
 			return
 		case <-time.After(p.Poll):
+		case <-m.wakeChan(p.Name):
 		}
 	}
 }
@@ -258,38 +273,8 @@ func (m *Manager) StartRun(ctx context.Context, name, ref, actor string, librari
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}
-	if err := CheckOverrides(libraries); err != nil {
-		return nil, err
-	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if err := p.fetch(ctx, 3*time.Second); err != nil {
-		return nil, err
-	}
-	refs, err := p.refs(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if ref == "" {
-		ref = p.DefaultBranch
-	}
-	for _, r := range refs {
-		if r.Name == ref || r.FullRef() == ref {
-			pl, libs, _, err := m.pipelineFor(ctx, p, r.SHA, libraries)
-			var problems pipeline.Problems
-			switch {
-			case errors.As(err, &problems):
-				return nil, err
-			case errors.Is(err, engine.ErrInvalid):
-				return nil, err
-			case err != nil:
-				return nil, fmt.Errorf("%w: %s at %s: %v", engine.ErrConflict, r.Name, short(r.SHA), err)
-			}
-			return m.eng.CreateRun(engine.NewRun{Project: name, Pipeline: pl, Trigger: trigger(r, "manual", actor),
-				Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}})
-		}
-	}
-	return nil, fmt.Errorf("%w: no branch or tag called %q", engine.ErrNotFound, ref)
+	// The pipeline's inputs take their defaults (see StartRunWith).
+	return m.StartRunWith(ctx, StartRequest{Project: name, Ref: ref, Actor: actor, Libraries: libraries})
 }
 
 // poll fetches the mirror and starts runs for pushes that match.
@@ -304,6 +289,9 @@ func (m *Manager) poll(ctx context.Context, p *project) error {
 	refs, err := p.refs(ctx)
 	if err != nil {
 		return err
+	}
+	if m.eng.Triggers() {
+		m.refreshSchedules(ctx, p, refs)
 	}
 	seen, err := m.eng.SeenRefs(p.Name)
 	if err != nil {
@@ -352,8 +340,9 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 		// the pipeline ignores fetches no library.
 		pl, from, err := p.parsedAt(ctx, r.SHA)
 		var libs []engine.LibrarySource
+		var vals map[string]string
 		if err == nil && pl.On.MatchPush(branchOf(r), tagOf(r)) {
-			pl, libs, err = m.Expand(ctx, pl, nil)
+			pl, libs, vals, err = m.prepare(ctx, pl, nil, nil)
 		}
 		switch {
 		case errors.Is(err, ErrNoPipeline):
@@ -370,7 +359,9 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 		default:
 			// Claims the change, creates the run and records the decision
 			// in one transaction.
-			run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: trigger(r, "push", r.Author),
+			t := trigger(r, "push", r.Author)
+			t.Inputs = vals
+			run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
 				Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: p.note(from)})
 			switch {
 			case errors.Is(err, engine.ErrAlreadyClaimed):
@@ -447,8 +438,9 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				"; pull requests run once the default branch's pipeline has on: { pull_request: {} }"
 		} else {
 			var libs []engine.LibrarySource
+			var vals map[string]string
 			if asks {
-				pl, libs, err = m.Expand(ctx, pl, nil)
+				pl, libs, vals, err = m.prepare(ctx, pl, nil, nil)
 			}
 			switch {
 			case errors.Is(err, ErrNoPipeline):
@@ -466,6 +458,7 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				n, _ := strconv.Atoi(r.Name)
 				t := trigger(r, pipeline.EventPullRequest, r.Author)
 				t.PullRequest = n
+				t.Inputs = vals
 				run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
 					Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: p.note(from),
 					PullRequestSecrets: p.PullRequestSecrets})

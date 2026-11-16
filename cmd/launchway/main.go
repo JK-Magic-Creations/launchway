@@ -29,6 +29,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -49,8 +50,12 @@ Usage:
   launchway runner   --server URL --token T     run a runner that takes work from a server
                      [--config runner.yaml] [--health-listen ADDR]
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
+                     [-i name=value ...]
   launchway validate [file]                     check a pipeline file
   launchway graph    [file]                     print a pipeline's graph as JSON
+  launchway login    --server URL               store an API token for a server
+  launchway runs     start|list|show|logs|cancel  start and follow runs on a server
+                                                (launchway runs, for more)
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -75,6 +80,10 @@ func main() {
 		err = cmdValidate(args)
 	case "graph":
 		err = cmdGraph(args)
+	case "login":
+		err = cmdLogin(args)
+	case "runs":
+		err = cmdRuns(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -147,8 +156,12 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return fmt.Errorf("%s: runner.%w", *cfgPath, err)
 	}
+	artifactOpts, findingLimits, err := artifactSettings(cfg, log)
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
 	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
-		Tests: testLimits, Environments: cfg.EngineEnvironments()})
+		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits})
 	if err != nil {
 		return err
 	}
@@ -158,6 +171,10 @@ func cmdServer(args []string) error {
 		return err
 	}
 	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, cfg.SourceLibraries(), log)
+	if err == nil {
+		loopLimit, _ := cfg.LoopLimit() // checked when the file was read
+		mgr.SetLoopLimit(loopLimit)
+	}
 	if err != nil {
 		return err
 	}
@@ -175,6 +192,7 @@ func cmdServer(args []string) error {
 	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
+	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
 	for _, p := range pools {
 		srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets})
 	}
@@ -512,6 +530,8 @@ func cmdRun(args []string) error {
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
+	var given multi
+	fs.Var(&given, "i", "an input value, name=value; once for each input (the others take their defaults)")
 	fs.Parse(args)
 	secretStores, err := localSecrets(*secretsConfig)
 	if err != nil {
@@ -523,6 +543,10 @@ func cmdRun(args []string) error {
 		path = pipelineFile(nil)
 	}
 	p, err := load(path)
+	if err != nil {
+		return err
+	}
+	p, inputs, err := bindLocal(p, given)
 	if err != nil {
 		return err
 	}
@@ -544,7 +568,12 @@ func cmdRun(args []string) error {
 	defer os.RemoveAll(tmp)
 
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	eng, err := engine.Open(engine.Options{Database: filepath.Join(tmp, "run.db"), Logger: quiet})
+	localStore, err := blobstore.NewFilesystem(filepath.Join(tmp, "artifacts"))
+	if err != nil {
+		return err
+	}
+	eng, err := engine.Open(engine.Options{Database: filepath.Join(tmp, "run.db"), Logger: quiet,
+		Artifacts: engine.ArtifactOptions{Store: localStore}})
 	if err != nil {
 		return err
 	}
@@ -559,7 +588,7 @@ func cmdRun(args []string) error {
 	go httpSrv.Serve(ln)
 	defer httpSrv.Close()
 
-	trig := engine.Trigger{Event: "manual", Actor: currentUser()}
+	trig := engine.Trigger{Event: "manual", Actor: currentUser(), Inputs: inputs}
 	if out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err == nil {
 		if b := strings.TrimSpace(string(out)); b != "HEAD" {
 			trig.Branch, trig.Ref = b, "refs/heads/"+b

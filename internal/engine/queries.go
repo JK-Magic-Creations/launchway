@@ -57,6 +57,11 @@ type RunSummary struct {
 	// Tests adds up the run's test results (see RunTests); nil when no step
 	// has reported any.
 	Tests *TestTotals `json:"tests,omitempty"`
+	// Findings adds up the run's security findings (see RunFindings); nil
+	// when no step has reported any. Artifacts counts the artifacts it
+	// keeps.
+	Findings  *FindingCounts `json:"findings,omitempty"`
+	Artifacts int            `json:"artifacts,omitempty"`
 }
 
 // StepBrief is just enough of a step to draw a status strip.
@@ -133,6 +138,9 @@ type RunDetail struct {
 	// NotUnderstood lists what in the run this server does not understand
 	// (see RunState.NotUnderstood); empty when it understands everything.
 	NotUnderstood []string `json:"not_understood"`
+	// TriggerDetail is what the run was started with: its input values,
+	// and the schedule or webhook that started it. Nil if none.
+	TriggerDetail *TriggerDetail `json:"trigger_detail,omitempty"`
 	// Deployments are the run's deployments, newest first (schema 11).
 	Deployments []DeploymentView `json:"deployments"`
 }
@@ -355,7 +363,10 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		return err
 	}
 	rows.Close()
-	return e.attachTests(runs)
+	if err := e.attachTests(runs); err != nil {
+		return err
+	}
+	return e.attachSchema12(runs)
 }
 
 const stepCols = `run_id, step_id, position, status, attempt, queued_at, started_at, finished_at, exit_code,
@@ -443,6 +454,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		d.NotUnderstood = []string{}
 	}
 	d.NeedsNewerServer = d.NeedsNewerServer || len(st.NotUnderstood) > 0
+	d.TriggerDetail = triggerDetail(st.Trigger)
 	inputs, err := e.stepInputs(id, "")
 	if err != nil {
 		return nil, err

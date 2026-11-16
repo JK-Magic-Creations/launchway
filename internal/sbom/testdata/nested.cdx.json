@@ -1,0 +1,57 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "components": [
+    {
+      "type": "application",
+      "group": "com.example",
+      "name": "shop",
+      "version": "2.4.0",
+      "purl": "pkg:maven/com.example/shop@2.4.0",
+      "licenses": [ { "expression": "Apache-2.0 OR MIT" } ],
+      "components": [
+        {
+          "type": "library",
+          "group": "org.apache.commons",
+          "name": "commons-text",
+          "version": "1.9",
+          "purl": "pkg:maven/org.apache.commons/commons-text@1.9",
+          "licenses": [ { "license": { "id": "Apache-2.0" } } ],
+          "components": [
+            { "type": "library", "name": "inner-shaded", "version": "0.1" }
+          ]
+        },
+        {
+          "type": "library",
+          "name": "no-version-here",
+          "licenses": [ { "license": { "name": "Custom Licence 1.0" } }, { "license": { "id": "MIT" } }, { "license": { "name": "MIT" } } ]
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "@angular",
+      "name": "core",
+      "version": "17.3.1",
+      "purl": "pkg:npm/%40angular/core@17.3.1",
+      "licenses": [ { "license": { "id": "MIT", "url": "https://opensource.org/licenses/MIT" } } ]
+    },
+    {
+      "type": "library",
+      "version": "1.0.0",
+      "purl": "pkg:npm/nameless@1.0.0",
+      "components": [ { "type": "library", "name": "child-of-nameless", "licenses": [ { "license": { "id": "ISC" } } ] } ]
+    },
+    {
+      "type": "operating-system",
+      "name": "alpine",
+      "version": "3.18.0"
+    }
+  ],
+  "metadata": {
+    "timestamp": "2026-11-14T10:00:00Z",
+    "component": { "type": "application", "name": "the-thing-described", "version": "1.0" }
+  },
+  "specVersion": "1.5",
+  "bomFormat": "CycloneDX",
+  "version": 1
+}

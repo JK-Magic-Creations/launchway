@@ -168,7 +168,7 @@ owns may not appear in it.
 */}}
 {{- define "launchway.serverConfig" -}}
 {{- $extra := deepCopy (.Values.config.extraConfig | default dict) -}}
-{{- range $key := list "listen" "data" "database" "projects" "tests" -}}
+{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "loops" "schedules" -}}
 {{- if hasKey $extra $key -}}
 {{- if eq $key "database" -}}
 {{- fail "config.extraConfig.database is not allowed: the database URL must not be in the ConfigMap. Use database.existingSecret or database.url." -}}
@@ -192,6 +192,38 @@ owns may not appear in it.
 {{- if $value }}{{ $_ := set $tests $key (int64 $value) }}{{ end -}}
 {{- end -}}
 {{- if $tests }}{{ $_ := set $config "tests" $tests }}{{ end -}}
+{{- /* Artifacts and findings (schema 12): only what is set, so the version before can still read the file. */ -}}
+{{- $a := .Values.config.artifacts | default dict -}}
+{{- $arts := dict -}}
+{{- range $key, $value := dict "store" $a.store "retain" $a.retain "max_retain" $a.maxRetain -}}
+{{- if $value }}{{ $_ := set $arts $key (toString $value) }}{{ end -}}
+{{- end -}}
+{{- range $key, $value := dict "max_file_mib" $a.maxFileMiB "max_run_mib" $a.maxRunMiB "max_project_gib" $a.maxProjectGiB -}}
+{{- if $value }}{{ $_ := set $arts $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- $s := $a.s3 | default dict -}}
+{{- $s3 := dict -}}
+{{- range $key, $value := dict "endpoint" $s.endpoint "region" $s.region "bucket" $s.bucket "prefix" $s.prefix -}}
+{{- if $value }}{{ $_ := set $s3 $key (toString $value) }}{{ end -}}
+{{- end -}}
+{{- if kindIs "bool" $s.pathStyle }}{{ $_ := set $s3 "path_style" $s.pathStyle }}{{ end -}}
+{{- if $s3 -}}
+{{- if ne (toString $a.store) "s3" }}{{ fail "config.artifacts.s3 is set, but config.artifacts.store is not s3" }}{{ end -}}
+{{- if not $s.existingSecret }}{{ fail "config.artifacts.s3 needs existingSecret: a Secret with AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY" }}{{ end -}}
+{{- $_ := set $arts "s3" $s3 -}}
+{{- else if eq (toString $a.store) "s3" -}}
+{{- fail "config.artifacts.store is s3: set config.artifacts.s3.endpoint, bucket and existingSecret" -}}
+{{- end -}}
+{{- if $arts }}{{ $_ := set $config "artifacts" $arts }}{{ end -}}
+{{- $f := .Values.config.findings | default dict -}}
+{{- $finds := dict -}}
+{{- range $key, $value := dict "max_upload_mib" $f.maxUploadMiB "max_per_run" $f.maxPerRun "max_per_project" $f.maxPerProject "max_components_per_run" $f.maxComponentsPerRun "max_components_per_project" $f.maxComponentsPerProject "max_sbom_mib" $f.maxSbomMiB -}}
+{{- if $value }}{{ $_ := set $finds $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- if $finds }}{{ $_ := set $config "findings" $finds }}{{ end -}}
+{{- with .Values.config.loops }}{{ if .maxMembers }}{{ $_ := set $config "loops" (dict "max_members" (int64 .maxMembers)) }}{{ end }}{{ end -}}
+{{- with .Values.config.schedules }}{{ if not (kindIs "invalid" .enabled) }}{{ $_ := set $config "schedules" (dict "enabled" .enabled) }}{{ end }}{{ end -}}
+{{- with .Values.config.tokens }}{{ if .maxDays }}{{ $_ := set $config "auth" (dict "tokens" (dict "max_days" (int64 .maxDays))) }}{{ end }}{{ end -}}
 {{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}

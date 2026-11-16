@@ -142,7 +142,7 @@ steps:
 | `image` | Container image the step runs in |
 | `run` | Shell script, run with `sh -e` in the repository checkout |
 | `needs` | Steps that must succeed first; steps with no unmet needs run in parallel |
-| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`) patterns; the step is skipped if they do not match. In a [draft run](#editing-pipelines), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](#pull-requests) has no branch, so `when: { branch: main }` never matches it |
+| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook`) patterns, and `input` with `equals` (see [Run inputs](#run-inputs)); the step is skipped if they do not match. `upstream` says how the steps it needs must have ended; see [Cleanup and notification steps](#cleanup-and-notification-steps). In a [draft run](#editing-pipelines), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](#pull-requests) has no branch, so `when: { branch: main }` never matches it |
 | `env` | Extra environment variables |
 | `secrets` | Environment variables whose values a runner looks up; see [Secrets](#secrets) |
 | `container` | A named container from the `containers` section, instead of `image` |
@@ -152,12 +152,15 @@ steps:
 | `kind` | `step` (the default) or `approval`; see [Approvals](#approvals) |
 | `message` | For an approval: the question to decide, one line of at most 500 characters |
 | `uses` | `library/template`: the step is replaced by a template's steps; see [Shared libraries](#shared-libraries) |
-| `with` | Values for the template's parameters |
+| `with` | Values for the template's parameters; a value may be `{ input: name }`, a [run input](#run-inputs) |
+| `for_each` | Repeats the step over lists; with `exclude`, `max_parallel` and `fail_fast`. See [Repeating a step over lists](#repeating-a-step-over-lists) |
 
 At the top level, beside `pipeline`, `on`, `containers` and `steps`, `libraries` names the
 [shared libraries](#shared-libraries) the pipeline's templates come from, and `supersede: true`
 lets a new run [cancel the older runs](#superseding-older-runs) of the same branch or pull
-request. `on` takes `push` (with `branches` and `tags` patterns) and `pull_request: {}`.
+request, and `inputs` declares the [values a run is started with](#run-inputs). `on` takes `push`
+(with `branches` and `tags` patterns), `pull_request: {}`, [`schedule`](#schedules) and
+[`webhook`](#webhooks).
 
 ### Containers and services
 
@@ -246,8 +249,8 @@ with everything else, and a run starts when one appears or moves.
       pull_requests: { secrets: true }   # overrides, per project
   ```
 
-- **Not there yet:** reporting a run's outcome back to the pull request as a commit status, and
-  webhooks.
+- **Not there yet:** reporting a run's outcome back to the pull request as a commit status. A Git
+  host's [webhook](#webhooks) makes the server look at once instead of at its next poll.
 
 ### Superseding older runs
 
@@ -261,6 +264,221 @@ runs it superseded. Runs started by hand, draft runs and re-runs never supersede
 superseded, and the new run's own pipeline is what decides. The cancelling happens in the same
 database transaction that creates the new run, so it is exact however many servers there are.
 A superseded run can be resumed like any cancelled run.
+
+### Run inputs
+
+A pipeline may declare the values a run is started with:
+
+```yaml
+inputs:
+  environment: { type: choice, options: [dev, prod], default: dev, description: Where to deploy }
+  version:     { type: string, pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+$", required: true }
+  dry_run:     { type: boolean, default: true }
+  replicas:    { type: number, min: 1, max: 20, default: 2 }
+  pythons:     { type: list, default: ["3.12", "3.13"] }
+```
+
+| Setting | Meaning |
+|---|---|
+| `type` | `string` (the default), `choice`, `boolean`, `number` or `list` (a list of text values) |
+| `default` | Used when no value is given. A list's default is written as a list |
+| `required` | A value must be given when there is no default; for a string, it may not be empty |
+| `options` | A choice's values |
+| `pattern` | A regular expression (RE2) a string must match; write `^` and `$` to match the whole value |
+| `min`, `max` | A number's bounds |
+| `description` | One line, shown in the form |
+
+Starting a run by hand (**Start a run**, the API, or `launchway runs start -i name=value`) shows
+a form made from the pipeline at the chosen branch or tag: a list of options for a choice, a
+switch for a boolean, a number field with its bounds, and the pattern and description under each
+field. The server checks every value, whoever sends it; a value that does not fit is refused, and
+the form shows why next to the field. Runs started any other way use the defaults: a push, a pull
+request, a draft run. So a pipeline that pushes or pull requests start may not have a required
+input without a default (the file is refused, on that input's line); a
+[schedule](#schedules) or [webhook](#webhooks) must give such an input a value.
+
+The values a run was started with are recorded with it (shown on the run, under *Started with*,
+and in the audit trail), and reach every step as `LAUNCHWAY_INPUT_<NAME>`: `true` or `false`, a
+number in its shortest form (`2`, `2.5`), a list as a JSON array (`["3.12","3.13"]`). There is no
+expression language; an input is used in exactly these places:
+
+- a step's `when: { input: dry_run, equals: false }` (one value or a list; a boolean input alone,
+  `when: { input: deploy }`, means `equals: true`);
+- a template's parameter, `with: { target: { input: environment } }`, or for a string or a
+  choice `with: { image: { input: version, format: "registry.example.com/app:%s" } }`;
+- a loop's list, `for_each: { python: { input: pythons } }`.
+- a deploy step's `version`, an image `tag` or a written `value` (`{ input: version }`, from a
+  string, choice or number input), and its `environment` (`{ input: target }`, from a choice
+  input whose options are all environment names). The environment is then checked against the
+  server's environments when the run is created, like a written one.
+
+A run that is resumed keeps its inputs. A re-run copies them and cannot change them: the steps it
+reuses ran with those values, so a re-run with other values would mix two runs. To run with other
+values, start a new run. Inputs are not for secrets: values are recorded with the run, shown to
+everyone who can see it, and written to the audit trail. Use [secrets](#secrets) for those.
+Choices whose options come from a step or another system (`options_from:`) are not supported yet.
+
+### Repeating a step over lists
+
+`for_each` repeats a step, or a step that uses a template, once for each combination of values:
+
+```yaml
+  test:
+    needs: lint
+    for_each:
+      python: ["3.11", "3.12", "3.13"]
+      os: { input: systems }             # a run input of type list
+    exclude: [ { python: "3.11", os: alpine } ]
+    max_parallel: 3
+    fail_fast: false
+    image: { each: python, format: "python:%s" }
+    env: { TARGET_OS: { each: os } }
+    run: pytest
+```
+
+When a run is created, the step becomes one step per combination, with names that say which:
+`test[python=3.12,os=debian]`. The same lists always give the same names, in the order the lists
+are written, so a resume or a re-run finds the same steps. Each one receives its values as
+`LAUNCHWAY_EACH_<KEY>`, and `{ each: key }` (with `format:` for text around it) puts a value in
+its `image`, an `env` value or a `with` value. A step that `needs: test` waits for all of them;
+another step reaches one's outputs as `LAUNCHWAY_NEEDS_TEST_PYTHON_3_12_OS_DEBIAN_<OUTPUT>`.
+
+- `exclude` leaves out the combinations that match an entry.
+- `max_parallel` bounds how many are queued or running at once.
+- `fail_fast` (on by default): once one fails for good (after its retries), the others that have
+  not started are cancelled and those running are stopped, saying why. Resuming the run runs them
+  again.
+- Lists are written in place, come from a run input of type `list`, or, in a template, from a
+  parameter of type `list` (`{ param: name }`). Values name steps, so they are 1 to 40 letters,
+  digits, `.`, `_`, `+` and `-`; put other text around them with `format:`.
+- Deploy and rollback steps cannot be repeated: each deployment holds its environment's lock and
+  is recorded on its own, so write one deploy step for each environment.
+- A loop may have at most 64 combinations (`loops: { max_members: N }` in the server's
+  configuration, up to 500), and a run at most 500 steps. An empty list is refused when the run is
+  created.
+
+The run page shows a loop as one node whose status sums up its members; choosing it shows them as
+a grid (two lists as rows and columns), and choosing a cell shows that step's log.
+
+Lists produced by an earlier step while the run goes (dynamic fan-out) are not supported. They
+would fit the engine this way: the producing step's outputs are recorded in its `step.finished`
+event, so a new event (a loop's members, recorded when that step finishes) would add the member
+steps to the run, and every server would rebuild them from the log as it does now; servers that
+do not know the event would leave such runs alone, as they do any run they do not fully understand.
+
+### Cleanup and notification steps
+
+Normally a step runs only if every step it needs succeeded. `when: { upstream: … }` changes that:
+
+```yaml
+  notify-failure:
+    needs: [build, deploy]
+    when: { upstream: failed }    # only if one of them failed
+    run: ./notify.sh
+  cleanup:
+    needs: [build, deploy]
+    when: { upstream: always }    # whatever happened
+    run: ./tear-down.sh
+```
+
+Such a step waits until every step it needs has ended. With `failed` it runs if one of them
+failed, was cancelled, or was not run because of a failure, and is skipped otherwise; with
+`always` it runs regardless; `succeeded` is the default. It does not change the run's outcome: a
+run with a failed step has failed, even if its cleanup succeeded. A deploy step takes no `upstream`: it deploys
+only after the steps it needs succeeded. A rollback step decides on the steps it needs, so none of
+them, directly or not, may run after failures (its success would hide the failure the rollback
+is for); let such a cleanup step need the rollback step instead. A cancel (by hand, or
+[superseding](#superseding-older-runs)) means stop: steps not started, these included, are
+cancelled. Resuming a run runs the failed steps again and then lets these steps decide again, so
+a cleanup runs again after them, and `notify-failure` above is skipped if nothing fails the second
+time. A [re-run](#re-running-from-a-step-and-what-each-step-was-given) from a step runs them again
+like any step after it.
+
+### Schedules
+
+```yaml
+on:
+  schedule:
+    - { cron: "0 3 * * *", timezone: America/Chicago, ref: main, inputs: { environment: prod } }
+    - { cron: "*/15 9-17 * * MON-FRI" }
+```
+
+A schedule is a five-field cron expression (minute, hour, day of the month, month, day of the
+week; `@hourly`, `@daily`, `@weekly`, `@monthly` and `@yearly` work too) in a time zone (an IANA
+name; UTC if none). When the clocks go forward, a time that does not exist that day is skipped;
+when they go back, a time that happens twice fires once. `ref` is the branch or tag whose pipeline
+runs (the default branch if none) and `inputs` the run's values (the others take their defaults).
+Schedules are read only from the pipeline on the project's default branch, so a branch cannot
+schedule itself. Runs have event `schedule`.
+
+Each firing is claimed in the database, so however many servers are running, it starts one run.
+A schedule never fires for a time before it was first seen (adding or changing one does not run it
+for the past). If no server was running when a schedule should have fired, the first server to
+look afterwards starts one run, for the latest time that was missed, and none for the earlier
+ones. A firing that cannot start a run (the branch is gone, the pipeline there has problems) is
+recorded with why. The project page lists the schedules, when each fires next, and how its last
+firing went (`GET /api/v1/projects/{name}/schedules`).
+
+`schedules: { enabled: false }` in the server's configuration turns schedules off for every
+project, and a project's own `schedules:` overrides it. While off, firings are recorded as
+skipped, so turning them back on does not catch up.
+
+### Webhooks
+
+Two kinds of webhook reach the server. Both prove themselves with a secret that the server's
+configuration names as an environment variable or a file (a Kubernetes Secret, for example); the
+secret is never in the repository or the database. A caller that cannot prove itself gets the
+same `404` whatever the reason (no such project, no webhook, a wrong secret), is recorded in the
+audit trail, and counts towards the [limit on failed attempts](#api-tokens).
+
+**A Git host's webhook** makes the server poll a project at once, instead of at its next poll. It
+starts nothing by itself: the poll decides, as it always does, so a forged or repeated call could
+at most cause a poll. Point the host's push and pull request webhook at
+`https://launchway.example.com/api/v1/projects/<name>/git-hook`:
+
+```yaml
+projects:
+  - name: payments
+    repo: https://git.example.com/team/payments.git
+    git_webhook: { kind: github, secret_env: PAYMENTS_HOOK_SECRET }   # or secret_file
+```
+
+`kind` is `github` (checks `X-Hub-Signature-256`), `gitea` or `forgejo` (`X-Gitea-Signature` or
+`X-Forgejo-Signature`), or `gitlab` (`X-Gitlab-Token`). Each delivery's ID is remembered for a
+week; a delivery seen before is answered and ignored.
+
+**A webhook trigger** lets another system start a run, with inputs taken from its request's JSON
+body by a closed mapping (no expressions):
+
+```yaml
+on:
+  webhook:
+    name: deploy-request
+    ref: main                        # whose pipeline runs; the default branch if none
+    inputs: { version: body.release.version, environment: body.environment }
+```
+
+`webhook` may also be a list of these. Like schedules, they are read from the default branch. The
+values are checked exactly like a person's: a missing field takes the input's default, and a value
+that does not fit is refused with `422` and a message per input. Runs have event `webhook`. The
+server's configuration says what callers must prove; a trigger it does not list cannot be called:
+
+```yaml
+projects:
+  - name: payments
+    webhooks:
+      deploy-request: { hmac_secret_env: PAYMENTS_DEPLOY_HMAC }   # or hmac_secret_file,
+                                                                   # token_env, token_file
+```
+
+Call it with `POST /api/v1/projects/payments/webhooks/deploy-request` and a JSON body of at most
+64 KiB, either with `Authorization: Bearer <token>`, or signed: `X-Launchway-Timestamp: <Unix
+seconds>` and `X-Launchway-Signature: sha256=<hex HMAC-SHA256 of "<timestamp>.<body>">`. A signed
+request is accepted within five minutes of its timestamp, and only once. Prefer signing: a token
+can be replayed by anyone who sees one request. Send `Idempotency-Key: <up to 200 characters>` to
+make retries safe: a repeat answers `200` with the run the first call started (and
+`Idempotent-Replayed: true`), and the same key with a different body is refused with `409`. Keys
+are remembered for a week. Every call is in the audit trail (`webhook.run`).
 
 ## Editing pipelines
 
@@ -650,6 +868,142 @@ With the Helm chart these are `config.tests.*` and `runner.reports.*` in the val
 older than the one that brought test reports cannot read a pipeline with `reports:`; use the key
 once every server is upgraded (see [docs/development/migrations.md](docs/development/migrations.md)).
 
+## Artifacts
+
+A step can keep files once it has run: people download them from the run, and later steps of
+the run fetch them into their workspace, on whichever runner they run.
+
+```yaml
+steps:
+  build:
+    image: golang:1.27
+    run: make dist
+    artifacts:
+      - name: binary
+        paths: [bin/app, "dist/*.tar.gz"]   # globs as for reports; a directory keeps all below it
+        retain: 30d                         # optional: 2w, 12h…; the server has a default and a maximum
+        when: success                       # the default; or failure (screenshots, logs), or always
+
+  deploy:
+    image: alpine:3.22
+    needs: [build]                          # the step must have run first
+    fetch:
+      - { from: build, name: binary, into: out }   # into is optional: default, where the files were
+    run: ./out/bin/app --version
+```
+
+- **What is kept**: regular files only, copied out of the workspace by the runner and checked by
+  SHA-256 end to end. Symbolic links are not followed. An artifact is kept whole or not at all: a
+  file over the size limit, too many files, or paths that match nothing mean none is kept, and the
+  step's log says why. Keeping files never changes the step's outcome.
+- **Fetching** puts the files in the workspace before the step runs, on any executor, also when
+  the step runs on another runner than the one that kept them, or in a re-run that reused the
+  step. A fetch of an artifact that was not kept, has expired or was deleted fails the step and
+  says so. A step can fetch only from steps it needs, directly or through others; in a template,
+  from a step of the same template.
+- **With the other features**: each member of a loop (`for_each`) keeps its own artifacts, so
+  members may use the same name; fetching from a loop's members is not supported yet (fetch from
+  a step that is not repeated). A step that runs after a failure (`when: { upstream: failed }` or
+  `always`) may fetch from a step that failed what that step keeps with `when: failure` or
+  `always`; one that runs only after a failure and fetches what is kept only on success is
+  refused. Deploy and rollback steps take no `artifacts`, `fetch` or `reports`. Artifact names,
+  paths and `into` are plain text: `{ input: … }` and `{ each: … }` are not allowed there (the
+  script sees those values as `LAUNCHWAY_INPUT_<NAME>` and `LAUNCHWAY_EACH_<KEY>`).
+- **Secrets are not masked in artifacts.** Secret values are hidden in a step's log, but files a
+  step keeps are kept exactly as written. Do not put secrets in them.
+- **The Artifacts tab** of a run lists each artifact with its files, sizes, SHA-256 and how long it
+  is kept, with a download for each file and for all of them as a zip. Operators of the project may
+  delete one; the audit trail records who did. Files are always served as downloads, never shown
+  as pages.
+- **Storage**: a directory (the default, under the data directory) for one server, or
+  S3-compatible object storage, which several servers need. A file kept twice is stored once.
+  Uploads go in 8 MiB chunks that any server can take, and carry on after a broken connection.
+  Each server checks that it shares the store with the others (a small marker object), and keeps
+  no artifacts, saying why, if it does not.
+- **API**: `GET /api/v1/runs/{id}/artifacts`, `GET /api/v1/runs/{id}/artifacts/{artifact}/file?path=`
+  (ranges supported), `GET /api/v1/runs/{id}/artifacts/{artifact}/archive` (zip),
+  `DELETE /api/v1/runs/{id}/artifacts/{artifact}` (operators). Run summaries carry `artifacts`,
+  the number kept.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `artifacts.store` | filesystem | `filesystem` or `s3` |
+| `artifacts.dir` | `<data>/artifacts` | the filesystem store's directory |
+| `artifacts.s3.endpoint`, `bucket`, `region`, `prefix`, `path_style`, `ca_file` | – | the S3 store; credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or `*_FILE`), never from the file |
+| `artifacts.max_file_mib` | 1024 | the largest file an artifact may hold |
+| `artifacts.max_run_mib` | 4096 | how much one run may keep |
+| `artifacts.max_project_gib` | 50 | how much a project may keep over all its runs |
+| `artifacts.retain` | 30d | how long artifacts are kept when the pipeline does not say |
+| `artifacts.max_retain` | 90d | the longest any is kept, whatever the pipeline says |
+
+Expired artifacts are removed once their run has finished; contents nothing refers to any more are
+removed an hour later. Every server does this; they never get in each other's way. A runner needs
+disk space for a copy of what a step keeps or fetches. Runners older than this feature are not
+given steps that keep or fetch artifacts. `make test-s3` checks the S3 store against a real
+S3-compatible server.
+
+## Security findings and SBOMs
+
+Steps can declare the results of security scanners and software bills of materials:
+
+```yaml
+steps:
+  scan:
+    image: registry.example.com/scanners:1
+    run: |
+      gitleaks detect --report-format sarif --report-path reports/security/gitleaks.sarif || true
+      semgrep scan --sarif --output reports/security/semgrep.sarif || true
+      trivy fs --format cyclonedx --output reports/sbom.cdx.json .
+    reports:
+      findings: reports/security/*.sarif   # SARIF 2.1.0, from any scanner
+      sbom: reports/sbom.cdx.json           # CycloneDX JSON
+```
+
+- **Findings** are read from SARIF 2.1.0, as gitleaks, semgrep, CodeQL, bandit, hadolint, trivy,
+  govulncheck and most other scanners write it, whether the step passed or failed. A file that is
+  not SARIF is shown as such, with the reason; it never fails the step.
+- **Severity** is one of critical, high, medium, low or unknown, taken from the first of: a
+  `security-severity` score on the result or its rule (9.0 and over critical, 7.0 high, 4.0 medium,
+  0.1 low); the tool's own severity word (`issue_severity`, `severity`, or a rule tag such as
+  `HIGH`); the SARIF level (error high, warning medium, note low, none unknown). A finding about a
+  secret is never below high.
+- **Secrets that scanners find are never stored or shown**: only where they are and which rule
+  found them. Code snippets in SARIF files are never kept for any finding, the message of a
+  finding about a secret is replaced by its rule's description, and every message is cleared of
+  anything shaped like a key or token. SARIF files themselves are not kept.
+- **New, still there, fixed.** Each finding gets a fingerprint (its tool, rule and file, with the
+  scanner's own fingerprints when it gives real ones, else the line and message), and a run's
+  findings are compared with the previous run of the same branch: new, still there, or fixed.
+  Only scanners that ran both times are compared. A finding whose code moved up or down a file
+  shows as fixed and new again, unless its scanner gives line-independent fingerprints, as
+  CodeQL does.
+- **The Security tab** of a run shows a bar of counts by severity, then every finding, the most
+  severe first, with filters by severity, tool and status and a search box; each opens to the
+  rule, its description, the location and a link to the rule's documentation. Run lists show the
+  counts. **A project's Security page** shows the counts over a branch's recent runs, and the
+  findings still open, each with the run where it was first seen.
+- **SBOMs** are kept whole as the step's artifact `sbom` and summarised: the number of components
+  and the licences. **Components** can be searched across projects (`/components` in the UI): which
+  runs and projects contain a package, at a version.
+- **API** (anyone who may see the run or project):
+  `GET /api/v1/runs/{id}/findings?severity=&tool=&status=new|existing|fixed&q=&step=&limit=&offset=`,
+  `GET /api/v1/projects/{name}/security?ref=&runs=`,
+  `GET /api/v1/components?name=&version=&limit=` (only projects the caller may see). Run summaries
+  carry `findings`, the counts by severity, for checks that later act on them.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `findings.max_upload_mib` | 32 | MiB of SARIF files accepted per step attempt; runners are told |
+| `findings.max_per_run` | 20000 | findings one run keeps; beyond it, only the counts |
+| `findings.max_per_project` | 500000 | findings a project keeps; the oldest runs' go first |
+| `findings.max_components_per_run` | 20000 | SBOM components one run keeps for searching |
+| `findings.max_components_per_project` | 1000000 | SBOM components a project keeps |
+| `findings.max_sbom_mib` | 64 | MiB of a step's SBOM files read to summarise them |
+
+With the Helm chart these are `config.artifacts.*` and `config.findings.*` in the values, unset by
+default. A server older than the one that brought these keys cannot read a pipeline that uses
+`artifacts`, `fetch`, `reports.findings` or `reports.sbom`; use them once every server is upgraded.
+
 ## Deployments
 
 A deploy step changes what runs in an environment. It commits the new version to a GitOps
@@ -705,7 +1059,9 @@ steps:
 ```
 
 - **Values** are written in place, or are `{ output: step.key }` (an output of a step this step
-  needs) or `{ run: sha | short_sha | branch | tag | number }`. There is no expression language.
+  needs), `{ run: sha | short_sha | branch | tag | number }` or `{ input: name }` (a
+  [run input](#run-inputs); `environment` may be `{ input: name }` too, of a choice input). There is
+  no expression language.
 - **"Deployed" means**, in one observation: the revision Argo CD has synced, for the source from
   the write-back repository, includes the commit; the judged resources (or the whole application)
   are Synced and Healthy; and the rollout, if one is named, is Healthy with its stable ReplicaSet on
@@ -1049,12 +1405,35 @@ such as refreshing a list, does not count as activity for `idle_timeout`.
 
 ### API tokens
 
-Scripts use API tokens: `Authorization: Bearer lw_...`. Make one on the **API tokens** page with a
-name and an expiry (default 90 days, at most a year). It is shown once; only its SHA-256 is stored.
-A token acts as you, with your rights as of your latest sign-in, and can be revoked at any time.
-Tokens can only be made from a signed-in browser, not with another token. Over the API:
-`GET /api/v1/tokens`, `POST /api/v1/tokens` (`{"name": "...", "expires_in_days": 30}`) and
-`DELETE /api/v1/tokens/{id}`.
+Scripts and the [command line](#commands) use API tokens: `Authorization: Bearer lw_...`. Make one
+on the **API tokens** page with a name and an expiry. Every token expires: by default after 90
+days, at most after `auth.tokens.max_days` (default 365, up to 3650). It is shown once; only its
+SHA-256 is stored. A token acts as you, with your rights as of your latest sign-in, and can be
+revoked at any time. It may be limited further:
+
+- to a **role** (viewer, operator or admin), no higher than the highest you have: a viewer token
+  of an admin reads and changes nothing;
+- to **projects**, by names or patterns such as `pay-*`: elsewhere it is as if the projects did not
+  exist. A token limited to projects is never an admin of every project, so it cannot read the
+  audit trail.
+
+The page shows when and from which address each token was last used. Admins of every project also
+see everyone's tokens there and may revoke any (`GET /api/v1/admin/tokens`,
+`DELETE /api/v1/admin/tokens/{id}`), for example one that leaked. Tokens can only be made from a
+signed-in browser, not with another token. Over the API: `GET /api/v1/tokens`,
+`POST /api/v1/tokens` (`{"name": "...", "expires_in_days": 30, "role": "viewer", "projects":
+["pay-*"]}`), `DELETE /api/v1/tokens/{id}`, and `GET /api/v1/tokens/limits` for the longest a token
+may last and the highest role you may give it.
+
+A token that is refused (unknown, revoked, expired, or not allowed by its limits) is recorded in
+the audit trail as `token.use`. An address that fails to authenticate 20 times within a minute
+(with tokens or webhook secrets) is refused with `429` and `Retry-After` for the rest of that
+minute; each server counts on its own and remembers at most 10,000 addresses. Behind a reverse
+proxy, the address is the one the proxy saw only with `server.trust_proxy: true`; otherwise
+`X-Forwarded-For` is ignored, so a client cannot dodge the limit by making addresses up.
+
+A limited token works only on servers that know limits: an older server, during a rollback,
+refuses it rather than grant its owner's full rights. Tokens without limits work on both.
 
 Launchway cannot tell when someone leaves your organisation: their tokens keep the groups of their
 last sign-in until they expire. Remove their tokens when they leave, with
@@ -1081,7 +1460,8 @@ whenever `redirect_url` starts with `https://`.
 
 Every call that changes something (starting, canceling and resuming runs, starting draft runs
 (`run.draft`), saving pipelines (`pipeline.save`), approving and rejecting, making and revoking
-tokens) by someone signed in, allowed or refused, and every sign-in, failed sign-in and sign-out is
+tokens) by someone signed in, allowed or refused, every token that is refused (`token.use`), every
+webhook call (`webhook.git`, `webhook.run`), allowed or refused, and every sign-in, failed sign-in and sign-out is
 recorded with its time, who, their address, the action, project, target (run, step or token name),
 outcome (`ok`, `denied` or `failed`) and a short detail. A draft run is recorded with the SHA-256
 of its text and a save with its branch and commit; the pipeline text itself is never in the
@@ -1099,7 +1479,21 @@ launchway runner   --server URL --token T     a runner on another machine (outbo
 launchway run      [--secrets-config FILE]    this directory's pipeline, on this machine
 launchway validate [file]                     check a pipeline file
 launchway graph    [file]                     the graph a pipeline produces, as JSON
+launchway login    --server URL               store an API token for a server
+launchway runs     start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
+launchway runs     list [--project P] [--status S] | show <run-id> | logs <run-id> [--step S] [--follow]
+launchway runs     cancel <run-id>
 ```
+
+`launchway login` reads a token (from `LAUNCHWAY_TOKEN`, or typed, or piped in), checks it with the
+server, and keeps the server and token in `credentials.json` in your configuration directory
+(`~/.config/launchway`, or `LAUNCHWAY_CONFIG_DIR`), readable by you alone. It refuses a plain
+`http://` address that is not on this machine unless given `--allow-http`. `LAUNCHWAY_SERVER` and
+`LAUNCHWAY_TOKEN` override what it stored, for scripts. `runs start --wait` follows the run and
+exits with its outcome: `0` succeeded, `1` failed, `3` canceled; `2` means the command was written
+wrongly, `4` that the server refused (such as an input value that does not fit, named) or could
+not be reached, and `5` that `--timeout` passed (the run goes on). `launchway run -i name=value`
+gives inputs to a pipeline run on this machine.
 
 `launchway runner --config FILE` reads the same settings as `runner:` in the server's
 configuration, plus where the server is. Unknown settings are refused. Flags given on the command
@@ -1159,6 +1553,8 @@ within the last two minutes) for probes.
 | `internal/auth` | Roles and access bindings, OpenID Connect sign-in, and the cryptography sessions and tokens need |
 | `internal/api` | Runner API, UI API, sign-in, API tokens, access checks, the audit trail and the live event stream |
 | `internal/fakeidp` | An OpenID Connect provider for tests, which can be made to misbehave |
+| `internal/blobstore` | Where artifacts are kept: a directory, or S3-compatible object storage |
+| `internal/findings`, `internal/sbom` | Read SARIF scanner results and CycloneDX SBOMs, treating them as hostile input |
 | `web/` | The React UI, compiled into the binary |
 
 `make test` runs the Go tests with the race detector and type-checks the UI. The tests cover:
@@ -1185,6 +1581,10 @@ within the last two minutes) for probes.
 - sign-in against a fake OpenID Connect provider: forged state, stolen codes (PKCE), bad ID tokens,
   open redirects, CSRF, session expiry, API tokens, a permission matrix over every route, the live
   stream, the audit trail, and sign-in across two servers;
+- artifacts: chunked uploads that break off and carry on, checksum mismatches, quotas, pruning by
+  two servers at once, fetching in a fresh workspace, and downloads that are never shown as pages
+  (`make test-s3` adds a real S3-compatible server);
+- security findings: real scanner output, hostile and fuzzed files, and secrets never stored;
 - real containers (`make test-containers`);
 - a real Kubernetes cluster (`make test-kubernetes`).
 
@@ -1201,6 +1601,9 @@ Built so far:
 - re-runs from any step, and a record of what each step attempt was given;
 - test reports: JUnit XML and `go test -json`, with flaky and new-failure detection, history and
   trends;
+- artifacts, kept in a directory or S3-compatible storage and fetched by later steps on any runner;
+- security findings from SARIF, new and fixed across runs, with secrets never stored; SBOMs and a
+  component search;
 - Git polling, for pushes and pull requests, and superseding older runs;
 - the pipeline editor: draft runs of unsaved text, and saving to Git as the person who saved;
 - shared libraries of templates and scripts, pinned by Git tag, branch or commit, with

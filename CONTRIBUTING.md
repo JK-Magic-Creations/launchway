@@ -17,6 +17,7 @@ Two further test suites need real infrastructure and are skipped by default:
 ```sh
 make test-containers    # real Podman or Docker containers
 make test-kubernetes    # a real cluster; see the Makefile for a kind one-liner
+make test-s3            # a real S3-compatible server, for the artifact store
 ```
 
 ## Pull requests

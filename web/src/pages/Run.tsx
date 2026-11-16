@@ -12,18 +12,23 @@ import { openInEditor } from "./EditPipeline";
 import { navigate } from "../router";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
+import { RerunInputsNote, RunTrigger } from "../components/RunTrigger";
+import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
+import { ArtifactsTab } from "./RunArtifacts";
+import { SecurityTab } from "./RunSecurity";
+import { serious, seriousLabel } from "../components/Security";
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
   return new URLSearchParams(location.search).get("step");
 }
 
-type Tab = "graph" | "tests" | "events" | "definition";
+type Tab = "graph" | "tests" | "artifacts" | "security" | "events" | "definition";
 
 // tabFromURL is the tab named by ?tab= in the address.
 function tabFromURL(): Tab {
   const t = new URLSearchParams(location.search).get("tab");
-  return t === "tests" || t === "events" || t === "definition" ? t : "graph";
+  return t === "tests" || t === "artifacts" || t === "security" || t === "events" || t === "definition" ? t : "graph";
 }
 
 // setQuery changes the address's query without a new history entry.
@@ -85,7 +90,7 @@ export function RunPage({ id }: { id: string }) {
   // Pick a sensible step to show: one waiting for approval, else the first
   // failed one, else a running one, else the last that ran.
   useEffect(() => {
-    if (!run || (selected && run.step_list.some((x) => x.id === selected))) return;
+    if (!run || (selected && (run.step_list.some((x) => x.id === selected) || loopById(run, selected)))) return;
     const s = run.step_list.find((x) => x.status === "waiting")
       ?? run.step_list.find((x) => x.status === "failed")
       ?? run.step_list.find((x) => x.status === "running")
@@ -141,6 +146,8 @@ export function RunPage({ id }: { id: string }) {
   if (!run) return <div className="page"><div className="loading">Loading…</div></div>;
 
   const step = run.step_list.find((s) => s.id === selected) ?? null;
+  const loopView = collapseLoops(run);
+  const loop = loopFor(run, selected);
   const failedCount = run.step_list.filter((s) => s.status === "failed").length;
   const firstFailed = run.step_list.find((s) => s.status === "failed");
   // Only approvals wait for someone to decide; deploy steps wait for their
@@ -254,6 +261,8 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
+      <RunTrigger run={run} />
+
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
           <span><strong>{waitingStep.id}</strong> is waiting for approval: {waitingStep.message}</span>
@@ -279,12 +288,16 @@ export function RunPage({ id }: { id: string }) {
       <DeploymentSummary run={run} onSelect={(s) => { select(s); setTab("graph"); }} />
 
       <div className="tabs" role="tablist">
-        {([["graph", "Steps and logs"], ["tests", "Tests"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
+        {([["graph", "Steps and logs"], ["tests", "Tests"], ["security", "Security"], ["artifacts", "Artifacts"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
           <button key={k} role="tab" type="button" aria-selected={tab === k} className={"tab" + (tab === k ? " tab-on" : "")} onClick={() => setTab(k)}>
             {label}
             {k === "tests" && run.tests && (failing(run.tests) > 0
               ? <span className="tab-n tab-n-bad">{failing(run.tests)} failed</span>
               : <span className="tab-n">{run.tests.total}</span>)}
+            {k === "artifacts" && !!run.artifacts && <span className="tab-n">{run.artifacts}</span>}
+            {k === "security" && run.findings && (serious(run.findings) > 0
+              ? <span className="tab-n tab-n-bad">{seriousLabel(run.findings)}</span>
+              : <span className="tab-n">{run.findings.total}</span>)}
           </button>
         ))}
       </div>
@@ -292,8 +305,9 @@ export function RunPage({ id }: { id: string }) {
       {tab === "graph" && (
         <>
           <section className="card card-flush">
-            <Graph levels={run.levels} steps={run.step_list} groups={run.graph.groups} selected={selected} onSelect={select} now={now} phases={phases} />
+            <Graph levels={loopView.levels} steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} />
           </section>
+          {loop && <LoopPanel run={run} loop={loop} selected={selected} onSelect={select} />}
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
             : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun}
@@ -302,6 +316,8 @@ export function RunPage({ id }: { id: string }) {
       )}
       {tab === "tests" && <TestsTab run={run} step={testStep} onStep={setTestStep}
         version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
+      {tab === "artifacts" && <ArtifactsTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
+      {tab === "security" && <SecurityTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "definition" && <DefinitionTab run={run} />}
     </div>
@@ -798,6 +814,7 @@ function RerunDialog({ run, step, onClose }: { run: RunDetail; step: StepView; o
             </div>
           </div>
         )}
+        <RerunInputsNote run={run} />
         <p className="sub">To run again only the steps that did not succeed, in this same run, use Resume instead.</p>
         <ErrorBox error={error} />
         <div className="dialog-actions">

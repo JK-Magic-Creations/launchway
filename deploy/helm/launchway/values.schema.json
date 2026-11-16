@@ -108,6 +108,57 @@
             "maxCasesPerProject": { "type": ["integer", "null"], "minimum": 1 }
           }
         },
+        "artifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "store": { "type": ["string", "null"], "enum": ["filesystem", "s3", "", null] },
+            "s3": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "endpoint": { "type": ["string", "null"], "pattern": "^(https?://[^/]+)?$" },
+                "region": { "type": ["string", "null"] },
+                "bucket": { "type": ["string", "null"] },
+                "prefix": { "type": ["string", "null"] },
+                "pathStyle": { "type": ["boolean", "null"] },
+                "existingSecret": { "type": ["string", "null"] }
+              }
+            },
+            "maxFileMiB": { "type": ["integer", "null"], "minimum": 1, "maximum": 81920 },
+            "maxRunMiB": { "type": ["integer", "null"], "minimum": 1 },
+            "maxProjectGiB": { "type": ["integer", "null"], "minimum": 1 },
+            "retain": { "type": ["string", "null"], "pattern": "^([0-9]+[dwhm]|[0-9hms.]+)?$" },
+            "maxRetain": { "type": ["string", "null"], "pattern": "^([0-9]+[dwhm]|[0-9hms.]+)?$" }
+          }
+        },
+        "findings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxUploadMiB": { "type": ["integer", "null"], "minimum": 1, "maximum": 1024 },
+            "maxPerRun": { "type": ["integer", "null"], "minimum": 1 },
+            "maxPerProject": { "type": ["integer", "null"], "minimum": 1 },
+            "maxComponentsPerRun": { "type": ["integer", "null"], "minimum": 1 },
+            "maxComponentsPerProject": { "type": ["integer", "null"], "minimum": 1 },
+            "maxSbomMiB": { "type": ["integer", "null"], "minimum": 1, "maximum": 1024 }
+          }
+        },
+        "loops": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "maxMembers": { "type": ["integer", "null"], "minimum": 1, "maximum": 500 } }
+        },
+        "schedules": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "enabled": { "type": ["boolean", "null"] } }
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "maxDays": { "type": ["integer", "null"], "minimum": 1, "maximum": 3650 } }
+        },
         "extraConfig": { "type": "object" }
       }
     },

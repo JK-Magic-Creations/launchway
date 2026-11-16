@@ -69,6 +69,7 @@ func TestMigrationsDeclareTheirCompatibility(t *testing.T) {
 // finishes it and stores its results. A run of its own that a newer server
 // cancelled by superseding it reads as an ordinary cancelled run.
 // It checks schema 10 (test reports) against a build of schema 9;
+// TestOlderBuildLeavesTriggerRunsAlone checks schema 13 against 12.
 // TestOlderBuildLeavesDeployRunsAlone checks schema 11 against 10.
 func TestOlderBuildRunsAgainstNewerAdditiveSchema(t *testing.T) {
 	n := schemaTests

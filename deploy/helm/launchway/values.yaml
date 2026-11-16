@@ -52,6 +52,15 @@ config:
   #     # Optional: let steps of pull-request runs read secrets here (overrides
   #     # pull_requests: in extraConfig; the default is no).
   #     pull_requests: { secrets: false }
+  #     # Optional: turn this project's schedules off (overrides config.schedules.enabled).
+  #     schedules: { enabled: false }
+  #     # Optional: the Git host's webhook, which makes the servers poll at once. The secret
+  #     # comes from an environment variable (server.extraEnv, from a Secret) or a file.
+  #     git_webhook: { kind: github, secret_env: PAYMENTS_HOOK_SECRET }
+  #     # Optional: what callers of the pipeline's webhook triggers must prove, by name:
+  #     # one of token_env, token_file, hmac_secret_env, hmac_secret_file.
+  #     webhooks:
+  #       deploy-request: { hmac_secret_env: PAYMENTS_DEPLOY_HMAC }
   projects: []
   # -- What the servers keep of the test reports steps declare (reports.tests in a pipeline).
   # Each step attempt's summary is kept with the run's events; individual results go in a table
@@ -68,6 +77,71 @@ config:
     # oldest runs' results are removed first (their totals stay). At least maxCasesPerRun.
     # Unset: the built-in default, 1000000.
     maxCasesPerProject:
+  # -- Where the files steps keep (artifacts: in a pipeline, and SBOMs) are stored, and limits on
+  # them. Every setting is unset by default, and only written to the configuration when set (a
+  # server of the version before does not know them; see docs/development/migrations.md).
+  # Unset, artifacts go in the pod's data directory, an emptyDir: lost when the pod goes, and not
+  # shared, so with more than one server only the first keeps any (the others say why in their
+  # log). For real use set store: s3 and point it at a bucket all servers share.
+  artifacts:
+    # -- filesystem or s3. Unset: filesystem.
+    store:
+    s3:
+      # -- The endpoint, scheme and host only, such as https://s3.eu-west-1.amazonaws.com or
+      # http://minio.storage:9000.
+      endpoint:
+      # -- Unset: us-east-1.
+      region:
+      bucket:
+      # -- Prepended to every object's name, such as launchway/.
+      prefix:
+      # -- Path-style requests (bucket in the path). Unset: true, which MinIO, Ceph and AWS accept.
+      pathStyle:
+      # -- A Secret with the keys AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (and optionally
+      # AWS_SESSION_TOKEN), given to the servers as environment variables. Credentials are never in
+      # the ConfigMap.
+      existingSecret:
+    # -- The largest file an artifact may hold, in MiB. Unset: 1024.
+    maxFileMiB:
+    # -- How much one run may keep, in MiB. Unset: 4096.
+    maxRunMiB:
+    # -- How much a project may keep over all its runs, in GiB. Unset: 50.
+    maxProjectGiB:
+    # -- How long artifacts are kept when the pipeline does not say (30d, 2w, 12h). Unset: 30d.
+    retain:
+    # -- The longest any artifact is kept, whatever the pipeline says. Unset: 90d.
+    maxRetain:
+  # -- What the servers keep of security findings (reports.findings, SARIF) and SBOMs
+  # (reports.sbom). Unset values take the built-in defaults shown.
+  findings:
+    # -- MiB of SARIF files a server accepts for one step attempt. Unset: 32.
+    maxUploadMiB:
+    # -- Findings one run keeps; beyond this only the counts. Unset: 20000.
+    maxPerRun:
+    # -- Findings a project keeps over all its runs, oldest runs' removed first. Unset: 500000.
+    maxPerProject:
+    # -- SBOM components one run keeps for searching. Unset: 20000.
+    maxComponentsPerRun:
+    # -- SBOM components a project keeps. Unset: 1000000.
+    maxComponentsPerProject:
+    # -- MiB of a step's SBOM files read to summarise them (they are kept whole anyway). Unset: 64.
+    maxSbomMiB:
+  # -- Loops in pipelines (for_each).
+  loops:
+    # -- Combinations one loop may have; a run whose loop has more is refused.
+    # Unset: the built-in default, 64 (at most 500).
+    maxMembers:
+  # -- Schedules in pipelines (on.schedule).
+  schedules:
+    # -- false turns every project's schedules off (a project's schedules: setting may turn
+    # its own back on); their firings are recorded as skipped.
+    # Unset: the built-in default, on.
+    enabled:
+  # -- API tokens.
+  tokens:
+    # -- The longest an API token may last, in days. Written as auth.tokens.max_days.
+    # Unset: the built-in default, 365 (at most 3650).
+    maxDays:
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -75,8 +149,9 @@ config:
   #   drafts: { allow: operator, secrets: false }   # the defaults
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
-  # starting (the pod logs say which key). listen, data, database, projects and tests are set
-  # by the chart and may not appear here; runner.enabled may not be true.
+  # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts,
+  # findings, loops and schedules are set by the chart and may not appear here; runner.enabled may
+  # not be true.
   extraConfig: {}
 
 # ---------------------------------------------------------------------------------------------

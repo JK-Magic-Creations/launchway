@@ -52,6 +52,8 @@ type Server struct {
 	// StreamPing is how often the live stream sends a keep-alive and checks
 	// that the caller is still signed in; default 15s.
 	StreamPing time.Duration
+	// TokenMaxDays is the longest an API token may last; 0 is 365 days.
+	TokenMaxDays int
 
 	sealerMu sync.Mutex
 	sealer   *auth.Sealer // seals the state of sign-ins in progress
@@ -165,6 +167,28 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/tokens", signedIn, "token.create", s.createToken},
 		{"DELETE /api/v1/tokens/{id}", signedIn, "token.revoke", s.revokeToken},
 		{"GET /api/v1/audit", administer, "", s.auditLog},
+		{"GET /api/v1/projects/{name}/inputs", projectRead, "", s.projectInputs},
+		{"GET /api/v1/tokens/limits", signedIn, "", s.tokenLimits},
+		{"GET /api/v1/admin/tokens", administer, "", s.listAllTokens},
+		{"DELETE /api/v1/admin/tokens/{id}", administer, "token.revoke", s.revokeAnyToken},
+		{"GET /api/v1/projects/{name}/schedules", projectRead, "", s.projectSchedules},
+		// Webhooks prove themselves with a secret, not a session or token;
+		// their handlers check and audit them (see hooks.go).
+		{"POST /api/v1/projects/{name}/git-hook", public, "", s.gitHook},
+		{"POST /api/v1/projects/{name}/webhooks/{trigger}", public, "", s.webhookTrigger},
+
+		// Artifacts, findings and SBOMs (schema 12).
+		{"POST /api/runner/v1/artifacts/begin", runnerOnly, "", s.beginArtifact},
+		{"PUT /api/runner/v1/artifacts/chunk", runnerOnly, "", s.artifactChunk},
+		{"POST /api/runner/v1/artifacts/commit", runnerOnly, "", s.commitArtifact},
+		{"POST /api/runner/v1/artifacts/download", runnerOnly, "", s.fetchArtifact},
+		{"GET /api/v1/runs/{id}/artifacts", runRead, "", s.runArtifacts},
+		{"GET /api/v1/runs/{id}/artifacts/{artifact}/file", runRead, "", s.downloadArtifactFile},
+		{"GET /api/v1/runs/{id}/artifacts/{artifact}/archive", runRead, "", s.downloadArtifactArchive},
+		{"DELETE /api/v1/runs/{id}/artifacts/{artifact}", runOperate, "artifact.delete", s.deleteArtifact},
+		{"GET /api/v1/runs/{id}/findings", runRead, "", s.runFindings},
+		{"GET /api/v1/projects/{name}/security", projectRead, "", s.projectSecurity},
+		{"GET /api/v1/components", signedIn, "", s.searchComponents},
 	}
 }
 
@@ -268,6 +292,10 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusConflict, err.Error())
 	case errors.Is(err, engine.ErrClosed):
 		writeErr(w, http.StatusServiceUnavailable, err.Error())
+	case errors.As(err, new(pipeline.InputErrors)):
+		var ie pipeline.InputErrors
+		errors.As(err, &ie)
+		writeInputErrors(w, ie)
 	case errors.As(err, new(pipeline.Problems)):
 		var ps pipeline.Problems
 		errors.As(err, &ps)
@@ -418,7 +446,7 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 // one is refused with 413, and the runner then reports the result without
 // its files. Only a few large ones are read at once.
 func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
-	limit := s.Engine.TestLimits().MaxUploadBytes*4/3 + 4<<20
+	limit := s.Engine.ResultLimit()
 	if r.ContentLength > limit {
 		writeErr(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("the result is larger than the %d MiB this server accepts", limit>>20))
 		return
@@ -600,17 +628,27 @@ func (s *Server) startRun(w http.ResponseWriter, r *http.Request) {
 		// Libraries overrides the versions of libraries the pipeline uses:
 		// library name → tag, branch or commit.
 		Libraries map[string]string `json:"libraries"`
+		// Inputs are values for the pipeline's inputs, by name; those not
+		// given take their defaults.
+		Inputs map[string]json.RawMessage `json:"inputs"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	setAudit(r, "", "ref "+in.Ref+overridesDetail(in.Libraries))
-	run, err := s.Projects.StartRun(r.Context(), r.PathValue("name"), in.Ref, identityFrom(r).User, in.Libraries)
+	given, ie := inputValues(in.Inputs)
+	setAudit(r, "", "ref "+in.Ref+overridesDetail(in.Libraries)+inputsDetail(given))
+	if ie != nil {
+		writeInputErrors(w, ie)
+		return
+	}
+	run, err := s.Projects.StartRunWith(r.Context(), source.StartRequest{Project: r.PathValue("name"), Ref: in.Ref,
+		Actor: identityFrom(r).User, Libraries: in.Libraries, Inputs: given})
 	if err != nil {
 		s.fail(w, err)
 		return
 	}
-	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s%s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), s.libraryDetail(run.ID)))
+	setAudit(r, run.ID, fmt.Sprintf("run #%d of %s at %s%s%s", run.Number, nonEmpty(run.Branch, run.Tag), shortSHA(run.SHA), s.libraryDetail(run.ID),
+		inputsDetail(given)))
 	writeJSON(w, http.StatusCreated, run)
 }
 

@@ -1,0 +1,59 @@
+{
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Bandit",
+          "organization": "PyCQA",
+          "rules": [
+            {
+              "id": "B105",
+              "name": "hardcoded_password_string",
+              "properties": { "tags": [ "security", "external/cwe/cwe-259" ], "precision": "medium" },
+              "helpUri": "https://bandit.readthedocs.io/en/1.9.4/plugins/b105_hardcoded_password_string.html"
+            },
+            {
+              "id": "B608",
+              "name": "hardcoded_sql_expressions",
+              "properties": { "tags": [ "security", "external/cwe/cwe-89" ], "precision": "low" },
+              "helpUri": "https://bandit.readthedocs.io/en/1.9.4/plugins/b608_hardcoded_sql_expressions.html"
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "message": { "text": "Possible hardcoded password: 'Tr0ub4dor&3-xyzzy'" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "region": { "snippet": { "text": "DB_PASSWORD = 'Tr0ub4dor&3-xyzzy'\n" }, "endColumn": 33, "endLine": 4, "startColumn": 15, "startLine": 4 },
+                "artifactLocation": { "uri": "settings.py" },
+                "contextRegion": { "snippet": { "text": "DB_USER = 'shop'\nDB_PASSWORD = 'Tr0ub4dor&3-xyzzy'\nDB_HOST = 'db'\n" }, "endLine": 5, "startLine": 3 }
+              }
+            }
+          ],
+          "properties": { "issue_confidence": "MEDIUM", "issue_severity": "LOW" },
+          "ruleId": "B105",
+          "ruleIndex": 0
+        },
+        {
+          "message": { "text": "Possible SQL injection vector through string-based query construction." },
+          "locations": [
+            {
+              "physicalLocation": {
+                "region": { "snippet": { "text": "    q = \"SELECT * FROM users WHERE name = '%s'\" % name\n" }, "endColumn": 52, "endLine": 9, "startColumn": 9, "startLine": 9 },
+                "artifactLocation": { "uri": "settings.py" }
+              }
+            }
+          ],
+          "properties": { "issue_confidence": "LOW", "issue_severity": "MEDIUM" },
+          "ruleId": "B608",
+          "ruleIndex": 1
+        }
+      ]
+    }
+  ],
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json"
+}

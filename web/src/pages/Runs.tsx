@@ -4,6 +4,7 @@ import { ago, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { useNow, useStream } from "../live";
 import { BranchIcon, CommitIcon, Empty, ErrorBox, Link, StatusIcon, StepStrip, statusLabel } from "../components/ui";
 import { TestCounts } from "../components/Tests";
+import { ArtifactCount, FindingCountBadge } from "../components/Security";
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "", label: "All" },
@@ -114,6 +115,7 @@ function RunRow({ r, now }: { r: RunSummary; now: number }) {
           </span>
         </span>
         {r.tests && <span className="runrow-tests"><TestCounts t={r.tests} /></span>}
+        {(r.findings || !!r.artifacts) && <span className="runrow-sec">{r.findings && <FindingCountBadge c={r.findings} />}{!!r.artifacts && <ArtifactCount n={r.artifacts} />}</span>}
         <span className="runrow-strip"><StepStrip steps={r.steps} /></span>
         <span className="runrow-time">
           <span>{elapsed(r.started_at || r.created_at, r.finished_at, now) || "—"}</span>

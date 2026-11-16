@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo run demo clean
+.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo run demo clean test-s3
 
 all: web build
 
@@ -82,3 +82,22 @@ run: all demo
 
 clean:
 	rm -rf bin web/dist/assets web/dist/index.html
+
+# Runs the S3 artifact store against a real server. A throwaway MinIO:
+#   podman run --rm -d --name launchway-minio -p 127.0.0.1:59000:9000 \
+#     -e MINIO_ROOT_USER=launchway -e MINIO_ROOT_PASSWORD=launchway-secret \
+#     quay.io/minio/minio:latest server /data
+# (MinIO stopped publishing free images in late 2025; if that pull is refused,
+# use a MinIO build you trust or any other S3-compatible server.) With LAUNCHWAY_TEST_S3_CREATE_BUCKET=1 the tests create the bucket
+# themselves (a signed PUT), so no mc client is needed. Stop it with
+#   podman stop launchway-minio
+LAUNCHWAY_TEST_S3_ENDPOINT ?= http://127.0.0.1:59000
+LAUNCHWAY_TEST_S3_BUCKET ?= launchway-test
+LAUNCHWAY_TEST_S3_ACCESS_KEY ?= launchway
+LAUNCHWAY_TEST_S3_SECRET_KEY ?= launchway-secret
+LAUNCHWAY_TEST_S3_CREATE_BUCKET ?= 1
+test-s3:
+	LAUNCHWAY_TEST_S3_ENDPOINT='$(LAUNCHWAY_TEST_S3_ENDPOINT)' LAUNCHWAY_TEST_S3_BUCKET='$(LAUNCHWAY_TEST_S3_BUCKET)' \
+		LAUNCHWAY_TEST_S3_ACCESS_KEY='$(LAUNCHWAY_TEST_S3_ACCESS_KEY)' LAUNCHWAY_TEST_S3_SECRET_KEY='$(LAUNCHWAY_TEST_S3_SECRET_KEY)' \
+		LAUNCHWAY_TEST_S3_CREATE_BUCKET='$(LAUNCHWAY_TEST_S3_CREATE_BUCKET)' \
+		go test -race -count=1 -run S3 -v ./internal/blobstore/

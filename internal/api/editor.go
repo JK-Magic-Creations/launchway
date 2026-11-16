@@ -70,8 +70,16 @@ func (s *Server) startDraft(w http.ResponseWriter, r *http.Request) {
 		Pipeline string `json:"pipeline"`
 		// Libraries overrides the versions of libraries the text uses.
 		Libraries map[string]string `json:"libraries"`
+		// Inputs are values for the text's inputs; those not given take
+		// their defaults.
+		Inputs map[string]json.RawMessage `json:"inputs"`
 	}
 	if !decodeEditor(w, r, &in, &in.Pipeline) {
+		return
+	}
+	given, ie := inputValues(in.Inputs)
+	if ie != nil {
+		writeInputErrors(w, ie)
 		return
 	}
 	name := r.PathValue("name")
@@ -80,7 +88,7 @@ func (s *Server) startDraft(w http.ResponseWriter, r *http.Request) {
 	// with the run, never in the trail.
 	setAudit(r, "", fmt.Sprintf("ref %s, pipeline %s%s", in.Ref, hash, overridesDetail(in.Libraries)))
 	run, err := s.Projects.StartDraft(r.Context(), source.DraftRequest{Project: name, Ref: in.Ref, Text: in.Pipeline,
-		Actor: identityFrom(r).User, Secrets: s.Drafts.For(name).Secrets, Libraries: in.Libraries})
+		Actor: identityFrom(r).User, Secrets: s.Drafts.For(name).Secrets, Libraries: in.Libraries, Inputs: given})
 	if err != nil {
 		s.fail(w, err)
 		return

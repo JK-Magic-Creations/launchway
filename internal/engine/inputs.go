@@ -102,7 +102,7 @@ func (c *cmd) stepEnv(stepID string) []InputVar {
 			continue // a template's steps are reached through the outputs it exposes
 		}
 		for k, v := range st.Steps[n].Outputs {
-			name := "LAUNCHWAY_NEEDS_" + pipeline.EnvName(localID(def, n)) + "_" + pipeline.EnvName(k)
+			name := "LAUNCHWAY_NEEDS_" + pipeline.StepEnvName(localID(def, n)) + "_" + pipeline.EnvName(k)
 			vars[name] = InputVar{Name: name, Value: v, From: FromNeeds, Step: n, Output: k}
 		}
 	}
@@ -133,6 +133,8 @@ func (c *cmd) stepEnv(stepID string) []InputVar {
 	if t.Event == pipeline.EventPullRequest {
 		vars["LAUNCHWAY_PULL_REQUEST"] = InputVar{Name: "LAUNCHWAY_PULL_REQUEST", Value: strconv.Itoa(t.PullRequest), From: FromLaunchway}
 	}
+	inputEnv(t, vars)
+	eachEnv(def, vars)
 	out := slices.Collect(maps.Values(vars))
 	slices.SortFunc(out, func(a, b InputVar) int { return strings.Compare(a.Name, b.Name) })
 	return out

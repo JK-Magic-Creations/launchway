@@ -40,6 +40,11 @@ type Value struct {
 	Literal string     `json:"literal,omitempty"`
 	Output  *OutputRef `json:"output,omitempty"` // { output: step.key }
 	Run     string     `json:"run,omitempty"`    // { run: sha }: one of RunFacts
+	// Input is a run input (schema 13): { input: version }. Bind puts the
+	// run's value in Literal, so a run's graph never holds one.
+	Input string `json:"input,omitempty"`
+
+	inputLine int
 }
 
 // RunFacts are the facts about a run a value may refer to.
@@ -54,6 +59,8 @@ func (v *Value) String() string {
 		return "{ output: " + v.Output.Step + "." + v.Output.Key + " }"
 	case v.Run != "":
 		return "{ run: " + v.Run + " }"
+	case v.Input != "":
+		return "{ input: " + v.Input + " }"
 	}
 	return v.Literal
 }
@@ -278,7 +285,12 @@ func (ps *parser) parseDeployKeys(v *yaml.Node, at string, s *Step) {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "environment":
-			s.Environment = ps.str(n, where)
+			if n.Kind == yaml.MappingNode && hasKey(n, "input") {
+				ps.eachKey(n, where, []string{"input"}, func(_, x *yaml.Node) { s.environmentInput = ps.str(x, where+".input") })
+				s.Environment = "{" + s.environmentInput + "}"
+			} else {
+				s.Environment = ps.str(n, where)
+			}
 			s.environmentLine = n.Line
 		case "service":
 			s.Service = ps.str(n, where)
@@ -330,6 +342,9 @@ func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step
 			case contains(known, key.Value):
 			case deployNotYet[key.Value] != "":
 				ps.add(key, at+"."+key.Value, "%q is not supported yet (%s)", key.Value, deployNotYet[key.Value])
+			case contains(loopKeys, key.Value):
+				ps.add(key, at+"."+key.Value, "a %s step cannot be repeated by for_each: each deployment holds its environment's lock "+
+					"and is recorded on its own; write one %s step for each environment", s.Kind, s.Kind)
 			case contains(runOnly, key.Value) || key.Value == "uses" || key.Value == "with":
 				ps.add(key, at+"."+key.Value, "a %s step runs no script, so it takes no %s", s.Kind, key.Value)
 			case key.Value == "when" && s.IsRolloutStep():
@@ -357,6 +372,9 @@ func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step
 	switch {
 	case s.Environment == "":
 		ps.add(k, at+".environment", "name the environment to deploy to, for example: environment: prod")
+	case s.environmentInput != "":
+		// A choice input, whose options are checked to be environment
+		// names (checkDeployInputs).
 	case !nameRe.MatchString(s.Environment):
 		ps.add(k, at+".environment", "%q is not a valid environment name: use lower-case letters, digits and hyphens", s.Environment)
 	}
@@ -384,14 +402,16 @@ func (ps *parser) value(n *yaml.Node, at string) *Value {
 		return &Value{Literal: n.Value}
 	}
 	if n.Kind != yaml.MappingNode {
-		ps.add(n, at, "write a value, { output: step.key } or { run: sha }")
+		ps.add(n, at, "write a value, { output: step.key }, { run: sha } or { input: name }")
 		return &Value{}
 	}
 	v := &Value{}
 	set := 0
-	ps.eachKey(n, at, []string{"output", "run"}, func(k, x *yaml.Node) {
+	ps.eachKey(n, at, []string{"output", "run", "input"}, func(k, x *yaml.Node) {
 		set++
 		switch k.Value {
+		case "input":
+			v.Input, v.inputLine = ps.str(x, at+".input"), x.Line
 		case "output":
 			ref := ps.str(x, at+".output")
 			step, key, ok := strings.Cut(ref, ".")
@@ -410,7 +430,7 @@ func (ps *parser) value(n *yaml.Node, at string) *Value {
 		}
 	})
 	if set != 1 {
-		ps.add(n, at, "write exactly one of output or run")
+		ps.add(n, at, "write exactly one of output, run or input")
 	}
 	return v
 }

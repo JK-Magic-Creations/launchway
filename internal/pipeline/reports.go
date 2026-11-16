@@ -15,70 +15,84 @@ const (
 	MaxReportGlobLen = 256 // bytes in one glob
 )
 
-// parseReports reads reports: { tests: <glob or list of globs> }. In a
-// template, a glob may be { param: name } or use format:, like any value
-// written in place.
+// parseReports reads reports: { tests: <globs>, findings: <globs>, sbom:
+// <globs> }, each one glob or a list of globs. In a template, a glob may be
+// { param: name } or use format:, like any value written in place.
 func (ps *parser) parseReports(n *yaml.Node, at string) *Reports {
 	r := &Reports{}
 	if n.Kind != yaml.MappingNode {
 		ps.add(n, at, "reports is a mapping, for example: reports: { tests: reports/*.xml }")
 		return r
 	}
-	var testsNode *yaml.Node
-	ps.eachKey(n, at, []string{"tests"}, func(k, v *yaml.Node) {
-		testsNode = v
-		where := at + ".tests"
-		// Each glob is checked where it is written, so a problem points at
-		// its own line.
-		items := []*yaml.Node{v}
-		if v.Kind == yaml.SequenceNode {
-			items = v.Content
-		}
-		before := len(ps.problems)
-		switch {
-		case len(items) == 0:
-			ps.add(v, where, "list at least one file or glob, for example: tests: reports/*.xml")
-		case len(items) > MaxReportGlobs:
-			ps.add(v, where, "at most %d globs", MaxReportGlobs)
-			items = items[:MaxReportGlobs]
-		}
-		seen := map[string]bool{}
-		for _, item := range items {
-			if item.Kind == yaml.SequenceNode {
-				ps.add(item, where, "expected a glob or a list of globs")
-				continue
-			}
-			list := ps.valueList(item, where)
-			if len(list) == 0 && item.Kind == yaml.ScalarNode {
-				list = []string{""}
-			}
-			for _, g := range list {
-				clean, msg := CheckReportGlob(g)
-				if msg != "" {
-					ps.add(item, where, "%s", msg)
-					continue
-				}
-				if !seen[clean] {
-					seen[clean] = true
-					r.Tests = append(r.Tests, clean)
-				}
-			}
-		}
-		if len(r.Tests) == 0 && len(ps.problems) == before {
-			ps.add(v, where, "no glob is left: list at least one file or glob, for example: tests: reports/*.xml")
+	ps.eachKey(n, at, []string{"tests", "findings", "sbom"}, func(k, v *yaml.Node) {
+		switch k.Value {
+		case "tests":
+			r.Tests = ps.reportGlobs(v, at+".tests", "tests: reports/*.xml")
+		case "findings":
+			r.Findings = ps.reportGlobs(v, at+".findings", "findings: reports/*.sarif")
+		case "sbom":
+			r.SBOM = ps.reportGlobs(v, at+".sbom", "sbom: reports/sbom.cdx.json")
 		}
 	})
-	if testsNode == nil && len(n.Content) == 0 {
+	if len(n.Content) == 0 {
 		ps.add(n, at, "say which files, for example: reports: { tests: reports/*.xml }")
 	}
 	return r
+}
+
+// reportGlobs reads one kind of report: a glob or a list of globs, each
+// checked where it is written, so a problem points at its own line.
+func (ps *parser) reportGlobs(v *yaml.Node, where, example string) []string {
+	var out []string
+	items := []*yaml.Node{v}
+	if v.Kind == yaml.SequenceNode {
+		items = v.Content
+	}
+	before := len(ps.problems)
+	switch {
+	case len(items) == 0:
+		ps.add(v, where, "list at least one file or glob, for example: %s", example)
+	case len(items) > MaxReportGlobs:
+		ps.add(v, where, "at most %d globs", MaxReportGlobs)
+		items = items[:MaxReportGlobs]
+	}
+	seen := map[string]bool{}
+	for _, item := range items {
+		if item.Kind == yaml.SequenceNode {
+			ps.add(item, where, "expected a glob or a list of globs")
+			continue
+		}
+		list := ps.valueList(item, where)
+		if len(list) == 0 && item.Kind == yaml.ScalarNode {
+			list = []string{""}
+		}
+		for _, g := range list {
+			clean, msg := CheckReportGlob(g)
+			if msg != "" {
+				ps.add(item, where, "%s", msg)
+				continue
+			}
+			if !seen[clean] {
+				seen[clean] = true
+				out = append(out, clean)
+			}
+		}
+	}
+	if len(out) == 0 && len(ps.problems) == before {
+		ps.add(v, where, "no glob is left: list at least one file or glob, for example: %s", example)
+	}
+	return out
 }
 
 // CheckReportGlob checks a glob naming report files, relative to the
 // workspace, and returns it tidied (without a leading ./), or why it cannot
 // be used. A path part ** matches any number of directories; the others
 // are patterns as in on.push.branches (*, ?, [a-z]).
-func CheckReportGlob(g string) (string, string) {
+func CheckReportGlob(g string) (string, string) { return checkGlob(g, "report files") }
+
+// checkGlob checks a glob naming files of the workspace; what names them in
+// messages, such as "report files".
+func checkGlob(g, what string) (string, string) {
 	quoted := "\"" + clipText(g, 60) + "\""
 	switch {
 	case strings.TrimSpace(g) == "":
@@ -99,7 +113,7 @@ func CheckReportGlob(g string) (string, string) {
 	for i, part := range parts {
 		switch {
 		case part == "..":
-			return "", quoted + " leaves the workspace (..); report files must be inside it"
+			return "", quoted + " leaves the workspace (..); " + what + " must be inside it"
 		case part == "" && i == len(parts)-1:
 			return "", quoted + " ends with /: name the files, such as reports/*.xml"
 		case part == "" || part == ".":

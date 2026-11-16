@@ -139,6 +139,13 @@ type Payload struct {
 	// reports said, in brief; the individual results are in test_cases.
 	// Older servers ignore it, which is harmless: it only records.
 	Tests *TestSummary `json:"tests,omitempty"`
+	// step.finished and step.canceled (schema 12): what the attempt's SARIF
+	// files and SBOM said, in brief, and the artifacts it kept; the details
+	// are in findings, sbom_components and artifacts. Older servers ignore
+	// them, which is harmless: they only record.
+	Findings  *FindingsSummary  `json:"findings,omitempty"`
+	SBOM      *SBOMSummary      `json:"sbom,omitempty"`
+	Artifacts []ArtifactSummary `json:"artifacts,omitempty"`
 	// deploy.* events, and step.queued of a deploy or rollback step (schema
 	// 11): the deployment and what happened to it. Never a credential.
 	Deploy *DeployEvent `json:"deploy,omitempty"`
@@ -264,11 +271,20 @@ type Trigger struct {
 	Author  string `json:"author,omitempty"`
 	// PullRequest is the pull request's number, for event pull_request.
 	PullRequest int `json:"pull_request,omitempty"`
+	// Inputs are the run's input values, canonical, by name: every input
+	// the pipeline declares (schema 13).
+	Inputs map[string]string `json:"inputs,omitempty"`
+	// Schedule, for event schedule, is the schedule's cron expression and
+	// time zone, and ScheduledFor the time it fired for (Unix ms).
+	Schedule     string `json:"schedule,omitempty"`
+	ScheduledFor int64  `json:"scheduled_for,omitempty"`
+	// Webhook, for event webhook, is the webhook trigger's name.
+	Webhook string `json:"webhook,omitempty"`
 }
 
 // Context returns what step conditions are tested against.
 func (t Trigger) Context() pipeline.Context {
-	return pipeline.Context{Event: t.Event, Branch: t.Branch, Tag: t.Tag}
+	return pipeline.Context{Event: t.Event, Branch: t.Branch, Tag: t.Tag, Inputs: t.Inputs}
 }
 
 // Source says where a runner gets the files a run works on.

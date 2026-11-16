@@ -69,6 +69,10 @@ type Options struct {
 	// Tests limits what is kept of test reports; zero fields take the
 	// defaults (see TestLimits).
 	Tests TestLimits
+	// Artifacts configures where artifacts are kept and their limits;
+	// Findings limits what is kept of security findings and SBOMs.
+	Artifacts ArtifactOptions
+	Findings  FindingLimits
 	// Environments are where deploy steps may deploy (schema 11). Every
 	// server sharing a database must be given the same ones.
 	Environments []Environment
@@ -93,6 +97,8 @@ type Engine struct {
 	instance      string // tags this process's notifications, so it can ignore its own
 	channel       string // the PostgreSQL notification channel
 	tests         TestLimits
+	arts          ArtifactOptions
+	finds         FindingLimits
 	envs          map[string]Environment
 
 	// deployKick wakes the reaper to hand free locks to waiting deploy steps
@@ -124,6 +130,10 @@ type RunnerInfo struct {
 	Name     string `json:"name"`
 	Executor string `json:"executor"`
 	Version  string `json:"version"`
+	// Features are what the runner can do beyond the basics, separated by
+	// spaces, such as FeatureArtifacts; steps that need a feature go only
+	// to runners that have it. (A string keeps RunnerInfo comparable.)
+	Features string `json:"features,omitempty"`
 	// Targets, for a deploy runner, are the targets its configuration
 	// serves. The server only gives it work for those its pool may serve.
 	Targets []string `json:"targets,omitempty"`
@@ -173,6 +183,10 @@ type Job struct {
 	// runner collects once the step ends, and how much the server accepts.
 	// A runner that does not know it collects nothing.
 	Reports *JobReports `json:"reports,omitempty"`
+	// Artifacts says what the runner keeps once the step has run, and Fetch
+	// what it puts in the workspace before (schema 12).
+	Artifacts *JobArtifacts `json:"artifacts,omitempty"`
+	Fetch     []JobFetch    `json:"fetch,omitempty"`
 	// Deploy, for a deploy or rollback step, is the action a deploy runner
 	// does. Only deploy runners lease such steps.
 	Deploy *DeployJob `json:"deploy,omitempty"`
@@ -184,6 +198,10 @@ type JobReports struct {
 	// MaxBytes is how many bytes of report files the server accepts for
 	// one attempt; the runner sends no more.
 	MaxBytes int64 `json:"max_bytes"`
+	// Findings are globs of SARIF files, and FindingsMaxBytes how many
+	// bytes of them the server accepts (schema 12).
+	Findings         []string `json:"findings,omitempty"`
+	FindingsMaxBytes int64    `json:"findings_max_bytes,omitempty"`
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -201,6 +219,9 @@ type Result struct {
 	// collected nothing (a runner that does not know reports, or one that is
 	// shutting down).
 	Tests *CollectedReports `json:"tests,omitempty"`
+	// Findings, for a step that declares reports.findings, are the SARIF
+	// files the runner collected, like Tests (schema 12).
+	Findings *CollectedReports `json:"findings,omitempty"`
 	// Deploy, for a deploy runner's action, is what it did.
 	Deploy *DeployFacts `json:"deploy,omitempty"`
 }
@@ -263,6 +284,14 @@ func Open(o Options) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+	arts, err := o.Artifacts.withDefaults()
+	if err != nil {
+		return nil, err
+	}
+	finds, err := o.Findings.withDefaults()
+	if err != nil {
+		return nil, err
+	}
 	if o.schema > 0 {
 		known = min(o.schema, len(migrations))
 	}
@@ -281,6 +310,8 @@ func Open(o Options) (*Engine, error) {
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
 		schema:     known,
 		tests:      tests,
+		arts:       arts,
+		finds:      finds,
 		envs:       envs,
 		deployKick: make(chan struct{}, 1),
 		published:  map[string]int64{},
@@ -298,6 +329,10 @@ func Open(o Options) (*Engine, error) {
 		e.channel = channelFor(schema)
 	}
 	if err := e.recoverLeases(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := e.checkArtifactStore(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -447,6 +482,12 @@ type NewRun struct {
 	// says whether its steps may read secrets. Such runs come from code
 	// anyone who can open a pull request may have written.
 	PullRequestSecrets bool
+	// Fire, for a run of event schedule, is the firing it is for, claimed
+	// with the run like Push; Delivery, for a run of event webhook, is the
+	// caller's idempotency key, if it sent one. CreateRun returns
+	// ErrAlreadyClaimed if another server or call claimed it first.
+	Fire     *Firing
+	Delivery *Delivery
 }
 
 // checkPullRequest checks the trigger of a pull-request run.
@@ -495,6 +536,13 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
 		return nil, err
 	}
+	// What each schema brought, in order: a server, or a build limited to
+	// an older schema for testing, refuses what it does not know.
+	if nr.Pipeline.UsesSchema10() && !e.knows(schemaTests) {
+		// A release that old cannot even read the pipeline; a build limited
+		// to it for testing refuses in the same place.
+		return nil, fmt.Errorf("%w: this server does not know test reports (schema %d)", ErrConflict, schemaTests)
+	}
 	if nr.Pipeline.UsesSchema11() {
 		if !e.knows(schemaDeploy) {
 			return nil, fmt.Errorf("%w: this server does not know deploy steps (schema %d)", ErrConflict, schemaDeploy)
@@ -503,10 +551,11 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			return nil, ps
 		}
 	}
-	if nr.Pipeline.UsesSchema10() && !e.knows(schemaTests) {
-		// A release that old cannot even read the pipeline; a build limited
-		// to it for testing refuses in the same place.
-		return nil, fmt.Errorf("%w: this server does not know test reports (schema %d)", ErrConflict, schemaTests)
+	if nr.Pipeline.UsesSchema12() && !e.knows(schemaArtifacts) {
+		return nil, fmt.Errorf("%w: this server does not know artifacts, fetch or findings (schema %d)", ErrConflict, schemaArtifacts)
+	}
+	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
+		return nil, err
 	}
 	var draft *Draft
 	switch {
@@ -557,6 +606,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		var number int
 		if err := c.tx.QueryRow(`INSERT INTO run_counters(project, last) VALUES(?, 1)
 			ON CONFLICT(project) DO UPDATE SET last = run_counters.last + 1 RETURNING last`, nr.Project).Scan(&number); err != nil {
+			return err
+		}
+		if err := c.claimNewRun(&nr, number); err != nil {
 			return err
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: nr.Pipeline, Trigger: &trig, Source: &src, Draft: draft,
@@ -732,6 +784,7 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 				c.emit(StepReset, Payload{Step: id})
 			}
 		}
+		c.resetAfterUpstream()
 		c.advance()
 		return nil
 	})
@@ -852,6 +905,9 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 				return nil // for deploy runners only
 			}
 			prev := c.st.Runner
+			if !c.runnerCan(r, cd.step) {
+				return nil // it needs a runner that knows artifacts
+			}
 			if prev != r.ID {
 				if ownOnly {
 					return nil
@@ -874,6 +930,9 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			}
 			c.emit(StepLeased, p)
 			job = c.job(cd.step, leaseID)
+			if err := c.addArtifactsToJob(job); err != nil {
+				return err
+			}
 			if prev != "" && prev != r.ID {
 				job.TakenOverFrom = prev
 			}
@@ -1006,6 +1065,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 	if res.Tests != nil && e.knows(schemaTests) && (res.Outcome == "succeeded" || res.Outcome == "failed" || res.Outcome == "canceled") {
 		tests = e.parseTests(res.Tests)
 	}
+	prep12 := e.prepare12(l, res)
 	return e.withRun(l.runID, func(c *cmd) error {
 		s := c.st.Steps[l.stepID]
 		if s == nil || s.LeaseID != leaseID || !s.Status.Active() {
@@ -1026,6 +1086,9 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 				return err
 			}
 		}
+		if err := c.finish12(l, res, &p, prep12); err != nil {
+			return err
+		}
 		switch res.Outcome {
 		case "succeeded":
 			p.Outcome = string(StepSucceeded)
@@ -1034,6 +1097,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
 				p.Tests = nil // the machinery failed; nothing it collected is kept
+				p.Findings, p.SBOM, p.Artifacts = nil, nil, nil
 				c.dropTests(l.stepID, l.attempt)
 				c.emit(StepCanceled, p)
 			} else {
@@ -1194,6 +1258,9 @@ func (e *Engine) reaper(ctx context.Context) {
 				pruned = now
 				e.forgetRunners()
 				e.pruneTests()
+				e.pruneFindings()
+				e.pruneArtifacts()
+				e.PruneTriggers(now.Add(-7 * 24 * time.Hour).UnixMilli())
 			}
 		}
 	}
@@ -1287,6 +1354,8 @@ type cmd struct {
 	// tests are the test results to store with this command's events, by
 	// step attempt (see keepTests).
 	tests map[stepAttempt][]storedCase
+	// schema12 is what schema 12 stores with the command's events.
+	schema12 *schema12Data
 	// schemaBefore is the run's Schema before this command, so that
 	// runs.min_schema is written only when it changes.
 	schemaBefore int
@@ -1584,6 +1653,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaArtifacts) {
+		if err := c.persistSchema12(); err != nil {
+			return err
+		}
+	}
 	if c.e.knows(schemaControl) {
 		if err := c.persistControl(); err != nil {
 			return err
@@ -1671,7 +1745,7 @@ func (c *cmd) advance() {
 	}
 	ctx := st.Trigger.Context()
 	for changed := true; changed; {
-		changed = false
+		changed = c.failFast()
 		for _, id := range st.Order {
 			s := st.Steps[id]
 			if st.CancelRequested && (s.Status == StepPending || s.Status == StepQueuedS || s.Status == StepWaitingS) {
@@ -1703,14 +1777,23 @@ func (c *cmd) advance() {
 					ready = false
 				}
 			}
+			condSkip := ""
+			if rule := def.When.UpstreamRule(); rule != pipeline.UpstreamSucceeded {
+				ready, blocked, condSkip = c.upstreamGate(def, rule)
+			}
 			switch {
 			case blocked != "":
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "upstream", Reason: "not run because " + blocked})
 				changed = true
 			case !ready:
+			case condSkip != "":
+				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: condSkip})
+				changed = true
 			case !def.When.Match(ctx):
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: "its when condition did not match"})
 				changed = true
+			case c.loopHolds(id):
+				// Its loop has max_parallel members going; it waits its turn.
 			case def.IsDeploy():
 				before := len(c.events)
 				c.startDeploy(id, def)

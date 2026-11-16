@@ -597,7 +597,7 @@ export interface ValidateResult {
 export type LibraryOverrides = Record<string, string>;
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public problems?: Problem[]) { super(message); }
+  constructor(public status: number, message: string, public problems?: Problem[], public fields?: Record<string, string>) { super(message); }
 }
 
 /** Who is signed in, and what they may do. The server checks every request
@@ -632,7 +632,7 @@ interface CallOptions {
   background?: boolean;
 }
 
-async function call<T>(method: string, path: string, body?: unknown, opts: CallOptions = {}): Promise<T> {
+export async function call<T>(method: string, path: string, body?: unknown, opts: CallOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   const init: RequestInit = { method, headers, credentials: "same-origin" };
   // Every request that changes something says it comes from these pages;
@@ -654,8 +654,8 @@ async function call<T>(method: string, path: string, body?: unknown, opts: CallO
   try { data = text ? JSON.parse(text) : undefined; } catch { /* not JSON */ }
   if (!resp.ok) {
     if (resp.status === 401) window.dispatchEvent(new Event(SIGNED_OUT));
-    const body = data as { error?: string; problems?: Problem[] } | undefined;
-    throw new ApiError(resp.status, body?.error ?? (text || resp.statusText), body?.problems);
+    const body = data as { error?: string; problems?: Problem[]; fields?: Record<string, string> } | undefined;
+    throw new ApiError(resp.status, body?.error ?? (text || resp.statusText), body?.problems, body?.fields);
   }
   return data as T;
 }
@@ -745,6 +745,26 @@ export const api = {
     for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
     return call<{ entries: AuditEntry[]; next_before: number }>("GET", "/api/v1/audit?" + p.toString());
   },
+  runArtifacts: (id: string, background = false) => call<RunArtifacts>("GET", `/api/v1/runs/${id}/artifacts`, undefined, { background }),
+  deleteArtifact: (id: string, artifactId: string) =>
+    call<ArtifactView>("DELETE", `/api/v1/runs/${id}/artifacts/${encodeURIComponent(artifactId)}`),
+  runFindings: (id: string, q: FindingQuery = {}, background = false) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<RunFindings>("GET", `/api/v1/runs/${id}/findings?` + p.toString(), undefined, { background });
+  },
+  projectSecurity: (name: string, ref?: string, runs?: number) => {
+    const p = new URLSearchParams();
+    if (ref) p.set("ref", ref);
+    if (runs) p.set("runs", String(runs));
+    return call<ProjectSecurity>("GET", `/api/v1/projects/${encodeURIComponent(name)}/security?` + p.toString());
+  },
+  components: (name: string, version?: string, limit?: number) => {
+    const p = new URLSearchParams({ name });
+    if (version) p.set("version", version);
+    if (limit) p.set("limit", String(limit));
+    return call<ComponentSearch>("GET", "/api/v1/components?" + p.toString());
+  },
 };
 
 // ---- controlling deployments ----
@@ -799,3 +819,118 @@ export interface LiveView {
   drift?: "" | "out_of_sync" | "differs" | "missing";
   drift_detail?: string;
 }
+
+// ---- Artifacts, security findings and SBOMs ----
+
+/** Added to the run as listed: its findings added up, and how many artifacts it keeps. */
+export interface RunSummary {
+  /** Absent when no step has reported any findings. */
+  findings?: FindingCounts;
+  /** Artifacts kept; absent when none. */
+  artifacts?: number;
+}
+
+export interface ArtifactFileInfo { path: string; size: number; sha256: string; mode: number }
+
+export type ArtifactStatus = "uploading" | "kept" | "failed" | "expired" | "deleted";
+
+export interface ArtifactView {
+  id: string; run_id: string; run_number: number; step: string; attempt: number; name: string;
+  /** "sbom" for the SBOM a step reports. */
+  kind?: string;
+  status: ArtifactStatus;
+  file_count: number; bytes: number; created_at: number;
+  kept_at?: number; expires_at?: number; ended_at?: number; ended_by?: string; note?: string;
+  /** Belongs to a step this run reused from the run run_id, an earlier one. */
+  reused?: boolean;
+  files: ArtifactFileInfo[];
+  files_truncated?: boolean;
+}
+
+export interface RunArtifacts {
+  artifacts: ArtifactView[];
+  /** Steps that declare artifacts. */
+  declared: string[];
+  available: boolean;
+  problem?: string;
+  max_retain_ms: number;
+}
+
+export type Severity = "critical" | "high" | "medium" | "low" | "unknown";
+
+export interface FindingCounts {
+  total: number; critical: number; high: number; medium: number; low: number; unknown: number;
+  suppressed?: number;
+  truncated?: boolean;
+}
+
+export interface FindingFile {
+  path: string; format?: string; bytes: number; findings: number; tools?: string[]; error?: string; warning?: string;
+}
+
+export interface SBOMFile {
+  path: string; format?: string; spec_version?: string; bytes: number; components: number; error?: string; warning?: string;
+}
+
+export interface RunLink { id: string; number: number }
+
+export interface RuleView { name?: string; short?: string; full?: string; help?: string; help_uri?: string; tags?: string[] }
+
+export type FindingStatus = "new" | "existing" | "fixed";
+
+export interface FindingView {
+  id: number; step: string; attempt: number; run_id: string; run_number: number; fingerprint: string;
+  tool: string; rule_id: string; severity: Severity; level?: string; message: string;
+  file?: string; start_line?: number; end_line?: number; start_column?: number;
+  /** About a secret: its value is never kept. */
+  secret?: boolean;
+  status?: FindingStatus;
+  first_seen?: RunLink;
+  rule?: RuleView;
+}
+
+export interface StatusCounts { new: number; existing: number; fixed: number }
+
+export interface StepFindings {
+  step: string; attempt: number; counts: FindingCounts; tools: string[]; files: FindingFile[];
+  notes?: string[]; stored: number; pruned?: boolean; reused_from?: RunLink;
+}
+
+export interface StepSBOM {
+  step: string; attempt: number; components: number; stored: number; truncated?: boolean; pruned?: boolean;
+  licences: Record<string, number>; files: SBOMFile[]; notes?: string[];
+  /** The artifact that keeps the SBOM file, in the run run_id. */
+  artifact?: string;
+  run_id: string;
+}
+
+export interface FindingQuery {
+  /** Comma separated. */
+  severity?: string; tool?: string; status?: "" | FindingStatus; q?: string; step?: string; limit?: number; offset?: number;
+}
+
+export interface RunFindings {
+  counts: FindingCounts | null;
+  statuses: StatusCounts;
+  previous?: RunLink;
+  steps: StepFindings[];
+  sboms: StepSBOM[];
+  declared: string[];
+  tools: string[];
+  findings: FindingView[];
+  matched: number;
+}
+
+export interface SecurityRun { id: string; number: number; sha: string; status: RunStatus; created_at: number; findings?: FindingCounts }
+
+export interface ProjectSecurity {
+  ref: string; refs: string[]; runs: SecurityRun[];
+  latest?: RunLink; counts?: FindingCounts; statuses: StatusCounts; open: FindingView[]; open_matched: number;
+}
+
+export interface ComponentHit {
+  project: string; run_id: string; run_number: number; ref: string; step: string; name: string;
+  version?: string; type?: string; purl?: string; licences?: string; created_at: number;
+}
+
+export interface ComponentSearch { hits: ComponentHit[]; projects: ComponentHit[]; more?: boolean }

@@ -305,6 +305,21 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("deploy or rollback steps (schema %d)", schemaDeploy)
 			}
 		}
+		// Artifacts, fetch, and findings and SBOM reports: a server that
+		// does not know them would run a step without the files it fetches.
+		if p.Pipeline.UsesSchema12() {
+			st.Schema = max(st.Schema, schemaArtifacts)
+			if !st.understands(schemaArtifacts) {
+				st.notUnderstood("a pipeline key of schema %d (artifacts, fetch, reports.findings or reports.sbom)", schemaArtifacts)
+			}
+		}
+		// Run inputs, loops, schedules and webhooks (see usesSchema13).
+		if usesSchema13(p) {
+			st.Schema = max(st.Schema, schemaTriggers)
+			if !st.understands(schemaTriggers) {
+				st.notUnderstood("a pipeline key or trigger of schema %d (inputs, for_each, a schedule or a webhook)", schemaTriggers)
+			}
+		}
 		// Rollout steps, and the keys that control a rollout.
 		if p.Pipeline.UsesSchemaControl() || p.Pipeline.Requires > 0 {
 			st.Schema = max(st.Schema, schemaControl, p.Pipeline.Requires)
