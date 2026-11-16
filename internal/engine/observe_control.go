@@ -21,15 +21,16 @@ import (
 // (older ones treat them as any other).
 //
 // An idle service (one an environment runs, with nothing deploying it) is
-// observed slowly, only by runners that say they can ("idle"), and at most
+// observed slowly, only by runners that report the feature "idle", and at most
 // maxIdleUnits per target: what they see is kept in its environment_state
 // row with its drift, never in the run's events.
 
 // maxIdleUnits bounds the idle services observed per target.
 const maxIdleUnits = 100
 
-// CapabilityIdle is what a deploy runner says to be given idle services.
-const CapabilityIdle = "idle"
+// FeatureIdle is the feature (RunnerInfo.Features) a deploy runner reports
+// to be given idle services: it observes them slowly.
+const FeatureIdle = "idle"
 
 // Kinds of watch items.
 const (
@@ -90,7 +91,7 @@ func (e *Engine) controlWatchItems(r RunnerInfo, targets []string) ([]WatchItem,
 			}
 		}
 	}
-	if !slices.Contains(r.Capabilities, CapabilityIdle) {
+	if !r.Has(FeatureIdle) {
 		return out, nil
 	}
 	units, err := e.idleWatchItems(targets)

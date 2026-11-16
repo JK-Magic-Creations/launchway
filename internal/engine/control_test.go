@@ -486,7 +486,7 @@ func TestIdleServiceDrift(t *testing.T) {
 		t.Fatalf("an older runner got idle services: %+v", items)
 	}
 	idle := deployer
-	idle.Capabilities = []string{CapabilityIdle}
+	idle.Features = FeatureIdle
 	items, _, err := e.Watch(context.Background(), idle, idle.Targets, "-", 0)
 	if err != nil || len(items) != 1 || items[0].Kind != WatchUnit || items[0].Spec.Commit != "c1" || items[0].Spec.Rollout == nil {
 		t.Fatalf("idle items: %+v %v", items, err)

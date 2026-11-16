@@ -140,10 +140,6 @@ type RunnerInfo struct {
 	// Pool is the runner pool its token belongs to, set by the server from
 	// the token, never by the runner.
 	Pool string `json:"-"`
-	// Capabilities, for a deploy runner, says what it knows beyond the
-	// first release of deploy steps: "idle" (it observes idle services
-	// slowly, so it may be given them). Older runners send none.
-	Capabilities []string `json:"capabilities,omitempty"`
 }
 
 // Job is everything a runner needs to execute one step attempt.

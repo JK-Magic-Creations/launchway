@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -215,6 +216,28 @@ func (ps *parser) checkControl(p *Pipeline, ids map[string]*Step) {
 					Message: fmt.Sprintf("%s: must need %s, directly or through other steps", s.ID, d.ID)})
 			}
 		}
+		// A rollout step or an approval that names a deployment acts only
+		// when the steps it needs succeeded: none of them, directly or not,
+		// may run after failures (when: { upstream: failed | always }), whose
+		// success would let it promote or approve a deployment whose checks
+		// failed. An approval that names a deployment takes no upstream rule.
+		if s.IsRolloutStep() || s.LinksDeployment() {
+			if s.LinksDeployment() && s.When.UpstreamRule() != UpstreamSucceeded {
+				ps.problems = append(ps.problems, Problem{Line: s.Line, Path: "steps." + s.ID + ".when.upstream", Message: fmt.Sprintf(
+					"%s: an approval that names a deployment is asked only after the steps it needs succeeded; it takes no upstream", s.ID)})
+			}
+			what := "promote, abort or retry the rollout"
+			if s.IsApproval() {
+				what = "be approved"
+			}
+			for _, id := range sortedKeys(p.Upstream(s.ID)) {
+				if g := p.Step(id); g != nil && g.When.UpstreamRule() != UpstreamSucceeded {
+					ps.problems = append(ps.problems, Problem{Line: g.Line, Path: "steps." + g.ID + ".when.upstream", Message: fmt.Sprintf(
+						"%s runs after failures (upstream: %s), so %s, which needs it, could %s after a failure; make %s need %s instead",
+						g.ID, g.When.Upstream, s.ID, what, g.ID, s.ID)})
+				}
+			}
+		}
 		// A rollback step cannot guard a rollout step that comes after it.
 		if s.IsRolloutStep() {
 			for _, n := range s.Needs {
@@ -225,4 +248,13 @@ func (ps *parser) checkControl(p *Pipeline, ids map[string]*Step) {
 			}
 		}
 	}
+}
+
+func sortedKeys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

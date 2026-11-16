@@ -57,8 +57,8 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	if d.ActionTimeout <= 0 {
 		d.ActionTimeout = 10 * time.Minute
 	}
-	if !slices.Contains(d.Info.Capabilities, engine.CapabilityIdle) {
-		d.Info.Capabilities = append(d.Info.Capabilities, engine.CapabilityIdle)
+	if !d.Info.Has(engine.FeatureIdle) {
+		d.Info.Features = strings.TrimSpace(d.Info.Features + " " + engine.FeatureIdle)
 	}
 	if d.IdleEvery <= 0 {
 		d.IdleEvery = 30 * time.Second
