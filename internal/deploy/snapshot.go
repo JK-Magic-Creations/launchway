@@ -122,21 +122,21 @@ type Rollout struct {
 	// Revision is the rollout's revision (annotation
 	// rollout.argoproj.io/revision): it moves on whenever a pod template
 	// becomes current, a reused one included.
-	Revision string `json:"revision,omitempty"`
-	Replicas    int  `json:"replicas"`
-	Ready       int  `json:"ready"`
-	Updated     int  `json:"updated"`
-	Available   int  `json:"available"`
+	Revision  string `json:"revision,omitempty"`
+	Replicas  int    `json:"replicas"`
+	Ready     int    `json:"ready"`
+	Updated   int    `json:"updated"`
+	Available int    `json:"available"`
 }
 
 // AnalysisRun is one of a rollout's analysis runs, reduced.
 type AnalysisRun struct {
-	Name      string   `json:"name"`
-	Phase     string   `json:"phase"` // Pending, Running, Successful, Failed, Error, Inconclusive
-	Message   string   `json:"message,omitempty"`
-	Kind      string   `json:"kind,omitempty"` // Step or Background
-	StepIndex *int     `json:"step_index,omitempty"`
-	PodHash   string   `json:"pod_hash,omitempty"`
+	Name      string `json:"name"`
+	Phase     string `json:"phase"` // Pending, Running, Successful, Failed, Error, Inconclusive
+	Message   string `json:"message,omitempty"`
+	Kind      string `json:"kind,omitempty"` // Step or Background
+	StepIndex *int   `json:"step_index,omitempty"`
+	PodHash   string `json:"pod_hash,omitempty"`
 	// Revision is the rollout's revision the run was made for, and
 	// CreatedAt when it was made (Unix ms).
 	Revision  string   `json:"revision,omitempty"`
