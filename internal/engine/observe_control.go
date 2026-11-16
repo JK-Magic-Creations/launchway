@@ -446,3 +446,20 @@ func (e *Engine) unitLive(get func(env, project, service string) *UnitView) erro
 	}
 	return rows.Err()
 }
+
+// ownAnalysis keeps a snapshot's analysis runs that belong to the
+// deployment a watch key names (see deploy.OwnAnalysis).
+func (e *Engine) ownAnalysis(parts []string, s deploy.Snapshot) deploy.Snapshot {
+	if len(s.Analysis) == 0 {
+		return s
+	}
+	depID := parts[0]
+	if parts[0] == WatchUnit {
+		depID = parts[4]
+	}
+	var since int64
+	if err := e.db.QueryRow(`SELECT opened_at FROM deployments WHERE id = ?`, depID).Scan(&since); err != nil {
+		since = 0
+	}
+	return deploy.OwnAnalysis(s, since)
+}

@@ -1,0 +1,666 @@
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "kind": "AnalysisRun",
+      "metadata": {
+        "annotations": {
+          "rollout.argoproj.io/revision": "21"
+        },
+        "creationTimestamp": "2026-11-15T23:03:28Z",
+        "generation": 3,
+        "labels": {
+          "app.kubernetes.io/name": "ctl",
+          "rollout-type": "Step",
+          "rollouts-pod-template-hash": "6cccdd46d8",
+          "step-index": "2"
+        },
+        "name": "ctl-6cccdd46d8-21-2",
+        "namespace": "lw-ctl",
+        "ownerReferences": [
+          {
+            "apiVersion": "argoproj.io/v1alpha1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Rollout",
+            "name": "ctl",
+            "uid": "c21ee8c0-db6f-45b8-85ff-a125c60f65ce"
+          }
+        ],
+        "resourceVersion": "105987",
+        "uid": "55bbad0a-c7f1-4487-8254-aa129e034f28"
+      },
+      "spec": {
+        "args": [
+          {
+            "name": "verdict",
+            "value": "pass"
+          },
+          {
+            "name": "delay",
+            "value": "0"
+          }
+        ],
+        "metrics": [
+          {
+            "name": "verdict",
+            "provider": {
+              "job": {
+                "metadata": {},
+                "spec": {
+                  "backoffLimit": 0,
+                  "template": {
+                    "metadata": {},
+                    "spec": {
+                      "automountServiceAccountToken": false,
+                      "containers": [
+                        {
+                          "command": [
+                            "sh",
+                            "-c",
+                            "echo \"verdict={{args.verdict}} delay={{args.delay}}\"; sleep \"{{args.delay}}\"; test \"{{args.verdict}}\" = pass"
+                          ],
+                          "image": "docker.io/library/busybox:1.37.0",
+                          "name": "verdict",
+                          "resources": {
+                            "limits": {
+                              "memory": "16Mi"
+                            },
+                            "requests": {
+                              "cpu": "5m",
+                              "memory": "8Mi"
+                            }
+                          },
+                          "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                              "drop": [
+                                "ALL"
+                              ]
+                            },
+                            "readOnlyRootFilesystem": true
+                          }
+                        }
+                      ],
+                      "restartPolicy": "Never",
+                      "securityContext": {
+                        "runAsGroup": 65534,
+                        "runAsNonRoot": true,
+                        "runAsUser": 65534,
+                        "seccompProfile": {
+                          "type": "RuntimeDefault"
+                        }
+                      },
+                      "terminationGracePeriodSeconds": 1
+                    }
+                  },
+                  "ttlSecondsAfterFinished": 600
+                }
+              }
+            }
+          }
+        ]
+      },
+      "status": {
+        "completedAt": "2026-11-15T23:03:31Z",
+        "dryRunSummary": {},
+        "metricResults": [
+          {
+            "consecutiveSuccess": 1,
+            "count": 1,
+            "measurements": [
+              {
+                "finishedAt": "2026-11-15T23:03:31Z",
+                "metadata": {
+                  "job-name": "55bbad0a-c7f1-4487-8254-aa129e034f28.verdict.1",
+                  "job-namespace": "lw-ctl"
+                },
+                "phase": "Successful",
+                "startedAt": "2026-11-15T23:03:28Z"
+              }
+            ],
+            "name": "verdict",
+            "phase": "Successful",
+            "successful": 1
+          }
+        ],
+        "phase": "Successful",
+        "runSummary": {
+          "count": 1,
+          "successful": 1
+        },
+        "startedAt": "2026-11-15T23:03:28Z"
+      }
+    },
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "kind": "AnalysisRun",
+      "metadata": {
+        "annotations": {
+          "rollout.argoproj.io/revision": "25"
+        },
+        "creationTimestamp": "2026-11-15T23:03:50Z",
+        "generation": 3,
+        "labels": {
+          "app.kubernetes.io/name": "ctl",
+          "rollout-type": "Step",
+          "rollouts-pod-template-hash": "6cccdd46d8",
+          "step-index": "2"
+        },
+        "name": "ctl-6cccdd46d8-25-2",
+        "namespace": "lw-ctl",
+        "ownerReferences": [
+          {
+            "apiVersion": "argoproj.io/v1alpha1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Rollout",
+            "name": "ctl",
+            "uid": "c21ee8c0-db6f-45b8-85ff-a125c60f65ce"
+          }
+        ],
+        "resourceVersion": "106449",
+        "uid": "90fc3710-8a06-4fd3-b813-19e0b264bd07"
+      },
+      "spec": {
+        "args": [
+          {
+            "name": "verdict",
+            "value": "pass"
+          },
+          {
+            "name": "delay",
+            "value": "0"
+          }
+        ],
+        "metrics": [
+          {
+            "name": "verdict",
+            "provider": {
+              "job": {
+                "metadata": {},
+                "spec": {
+                  "backoffLimit": 0,
+                  "template": {
+                    "metadata": {},
+                    "spec": {
+                      "automountServiceAccountToken": false,
+                      "containers": [
+                        {
+                          "command": [
+                            "sh",
+                            "-c",
+                            "echo \"verdict={{args.verdict}} delay={{args.delay}}\"; sleep \"{{args.delay}}\"; test \"{{args.verdict}}\" = pass"
+                          ],
+                          "image": "docker.io/library/busybox:1.37.0",
+                          "name": "verdict",
+                          "resources": {
+                            "limits": {
+                              "memory": "16Mi"
+                            },
+                            "requests": {
+                              "cpu": "5m",
+                              "memory": "8Mi"
+                            }
+                          },
+                          "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                              "drop": [
+                                "ALL"
+                              ]
+                            },
+                            "readOnlyRootFilesystem": true
+                          }
+                        }
+                      ],
+                      "restartPolicy": "Never",
+                      "securityContext": {
+                        "runAsGroup": 65534,
+                        "runAsNonRoot": true,
+                        "runAsUser": 65534,
+                        "seccompProfile": {
+                          "type": "RuntimeDefault"
+                        }
+                      },
+                      "terminationGracePeriodSeconds": 1
+                    }
+                  },
+                  "ttlSecondsAfterFinished": 600
+                }
+              }
+            }
+          }
+        ]
+      },
+      "status": {
+        "completedAt": "2026-11-15T23:03:53Z",
+        "dryRunSummary": {},
+        "metricResults": [
+          {
+            "consecutiveSuccess": 1,
+            "count": 1,
+            "measurements": [
+              {
+                "finishedAt": "2026-11-15T23:03:53Z",
+                "metadata": {
+                  "job-name": "90fc3710-8a06-4fd3-b813-19e0b264bd07.verdict.1",
+                  "job-namespace": "lw-ctl"
+                },
+                "phase": "Successful",
+                "startedAt": "2026-11-15T23:03:50Z"
+              }
+            ],
+            "name": "verdict",
+            "phase": "Successful",
+            "successful": 1
+          }
+        ],
+        "phase": "Successful",
+        "runSummary": {
+          "count": 1,
+          "successful": 1
+        },
+        "startedAt": "2026-11-15T23:03:50Z"
+      }
+    },
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "kind": "AnalysisRun",
+      "metadata": {
+        "annotations": {
+          "rollout.argoproj.io/revision": "30"
+        },
+        "creationTimestamp": "2026-11-15T23:04:26Z",
+        "generation": 3,
+        "labels": {
+          "app.kubernetes.io/name": "ctl",
+          "rollout-type": "Step",
+          "rollouts-pod-template-hash": "6cccdd46d8",
+          "step-index": "2"
+        },
+        "name": "ctl-6cccdd46d8-30-2",
+        "namespace": "lw-ctl",
+        "ownerReferences": [
+          {
+            "apiVersion": "argoproj.io/v1alpha1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Rollout",
+            "name": "ctl",
+            "uid": "c21ee8c0-db6f-45b8-85ff-a125c60f65ce"
+          }
+        ],
+        "resourceVersion": "106985",
+        "uid": "30ed47cc-91ea-4292-a3ad-e12b5ea67ad9"
+      },
+      "spec": {
+        "args": [
+          {
+            "name": "verdict",
+            "value": "pass"
+          },
+          {
+            "name": "delay",
+            "value": "0"
+          }
+        ],
+        "metrics": [
+          {
+            "name": "verdict",
+            "provider": {
+              "job": {
+                "metadata": {},
+                "spec": {
+                  "backoffLimit": 0,
+                  "template": {
+                    "metadata": {},
+                    "spec": {
+                      "automountServiceAccountToken": false,
+                      "containers": [
+                        {
+                          "command": [
+                            "sh",
+                            "-c",
+                            "echo \"verdict={{args.verdict}} delay={{args.delay}}\"; sleep \"{{args.delay}}\"; test \"{{args.verdict}}\" = pass"
+                          ],
+                          "image": "docker.io/library/busybox:1.37.0",
+                          "name": "verdict",
+                          "resources": {
+                            "limits": {
+                              "memory": "16Mi"
+                            },
+                            "requests": {
+                              "cpu": "5m",
+                              "memory": "8Mi"
+                            }
+                          },
+                          "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                              "drop": [
+                                "ALL"
+                              ]
+                            },
+                            "readOnlyRootFilesystem": true
+                          }
+                        }
+                      ],
+                      "restartPolicy": "Never",
+                      "securityContext": {
+                        "runAsGroup": 65534,
+                        "runAsNonRoot": true,
+                        "runAsUser": 65534,
+                        "seccompProfile": {
+                          "type": "RuntimeDefault"
+                        }
+                      },
+                      "terminationGracePeriodSeconds": 1
+                    }
+                  },
+                  "ttlSecondsAfterFinished": 600
+                }
+              }
+            }
+          }
+        ]
+      },
+      "status": {
+        "completedAt": "2026-11-15T23:04:29Z",
+        "dryRunSummary": {},
+        "metricResults": [
+          {
+            "consecutiveSuccess": 1,
+            "count": 1,
+            "measurements": [
+              {
+                "finishedAt": "2026-11-15T23:04:29Z",
+                "metadata": {
+                  "job-name": "30ed47cc-91ea-4292-a3ad-e12b5ea67ad9.verdict.1",
+                  "job-namespace": "lw-ctl"
+                },
+                "phase": "Successful",
+                "startedAt": "2026-11-15T23:04:26Z"
+              }
+            ],
+            "name": "verdict",
+            "phase": "Successful",
+            "successful": 1
+          }
+        ],
+        "phase": "Successful",
+        "runSummary": {
+          "count": 1,
+          "successful": 1
+        },
+        "startedAt": "2026-11-15T23:04:26Z"
+      }
+    },
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "kind": "AnalysisRun",
+      "metadata": {
+        "annotations": {
+          "rollout.argoproj.io/revision": "18"
+        },
+        "creationTimestamp": "2026-11-15T22:57:16Z",
+        "generation": 3,
+        "labels": {
+          "app.kubernetes.io/name": "ctl",
+          "rollout-type": "Step",
+          "rollouts-pod-template-hash": "7d6657b844",
+          "step-index": "2"
+        },
+        "name": "ctl-7d6657b844-18-2",
+        "namespace": "lw-ctl",
+        "ownerReferences": [
+          {
+            "apiVersion": "argoproj.io/v1alpha1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Rollout",
+            "name": "ctl",
+            "uid": "c21ee8c0-db6f-45b8-85ff-a125c60f65ce"
+          }
+        ],
+        "resourceVersion": "103004",
+        "uid": "f3e2645f-7d47-4162-bf26-3170085c6ec9"
+      },
+      "spec": {
+        "args": [
+          {
+            "name": "verdict",
+            "value": "pass"
+          },
+          {
+            "name": "delay",
+            "value": "0"
+          }
+        ],
+        "metrics": [
+          {
+            "name": "verdict",
+            "provider": {
+              "job": {
+                "metadata": {},
+                "spec": {
+                  "backoffLimit": 0,
+                  "template": {
+                    "metadata": {},
+                    "spec": {
+                      "automountServiceAccountToken": false,
+                      "containers": [
+                        {
+                          "command": [
+                            "sh",
+                            "-c",
+                            "echo \"verdict={{args.verdict}} delay={{args.delay}}\"; sleep \"{{args.delay}}\"; test \"{{args.verdict}}\" = pass"
+                          ],
+                          "image": "docker.io/library/busybox:1.37.0",
+                          "name": "verdict",
+                          "resources": {
+                            "limits": {
+                              "memory": "16Mi"
+                            },
+                            "requests": {
+                              "cpu": "5m",
+                              "memory": "8Mi"
+                            }
+                          },
+                          "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                              "drop": [
+                                "ALL"
+                              ]
+                            },
+                            "readOnlyRootFilesystem": true
+                          }
+                        }
+                      ],
+                      "restartPolicy": "Never",
+                      "securityContext": {
+                        "runAsGroup": 65534,
+                        "runAsNonRoot": true,
+                        "runAsUser": 65534,
+                        "seccompProfile": {
+                          "type": "RuntimeDefault"
+                        }
+                      },
+                      "terminationGracePeriodSeconds": 1
+                    }
+                  },
+                  "ttlSecondsAfterFinished": 600
+                }
+              }
+            }
+          }
+        ]
+      },
+      "status": {
+        "completedAt": "2026-11-15T22:57:19Z",
+        "dryRunSummary": {},
+        "metricResults": [
+          {
+            "consecutiveSuccess": 1,
+            "count": 1,
+            "measurements": [
+              {
+                "finishedAt": "2026-11-15T22:57:19Z",
+                "metadata": {
+                  "job-name": "f3e2645f-7d47-4162-bf26-3170085c6ec9.verdict.1",
+                  "job-namespace": "lw-ctl"
+                },
+                "phase": "Successful",
+                "startedAt": "2026-11-15T22:57:16Z"
+              }
+            ],
+            "name": "verdict",
+            "phase": "Successful",
+            "successful": 1
+          }
+        ],
+        "phase": "Successful",
+        "runSummary": {
+          "count": 1,
+          "successful": 1
+        },
+        "startedAt": "2026-11-15T22:57:16Z"
+      }
+    },
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "kind": "AnalysisRun",
+      "metadata": {
+        "annotations": {
+          "rollout.argoproj.io/revision": "26"
+        },
+        "creationTimestamp": "2026-11-15T23:04:07Z",
+        "generation": 3,
+        "labels": {
+          "app.kubernetes.io/name": "ctl",
+          "rollout-type": "Step",
+          "rollouts-pod-template-hash": "7d6657b844",
+          "step-index": "2"
+        },
+        "name": "ctl-7d6657b844-26-2",
+        "namespace": "lw-ctl",
+        "ownerReferences": [
+          {
+            "apiVersion": "argoproj.io/v1alpha1",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "kind": "Rollout",
+            "name": "ctl",
+            "uid": "c21ee8c0-db6f-45b8-85ff-a125c60f65ce"
+          }
+        ],
+        "resourceVersion": "106611",
+        "uid": "d9b0c0f4-f791-40e4-a794-2dc5ae52680c"
+      },
+      "spec": {
+        "args": [
+          {
+            "name": "verdict",
+            "value": "pass"
+          },
+          {
+            "name": "delay",
+            "value": "0"
+          }
+        ],
+        "metrics": [
+          {
+            "name": "verdict",
+            "provider": {
+              "job": {
+                "metadata": {},
+                "spec": {
+                  "backoffLimit": 0,
+                  "template": {
+                    "metadata": {},
+                    "spec": {
+                      "automountServiceAccountToken": false,
+                      "containers": [
+                        {
+                          "command": [
+                            "sh",
+                            "-c",
+                            "echo \"verdict={{args.verdict}} delay={{args.delay}}\"; sleep \"{{args.delay}}\"; test \"{{args.verdict}}\" = pass"
+                          ],
+                          "image": "docker.io/library/busybox:1.37.0",
+                          "name": "verdict",
+                          "resources": {
+                            "limits": {
+                              "memory": "16Mi"
+                            },
+                            "requests": {
+                              "cpu": "5m",
+                              "memory": "8Mi"
+                            }
+                          },
+                          "securityContext": {
+                            "allowPrivilegeEscalation": false,
+                            "capabilities": {
+                              "drop": [
+                                "ALL"
+                              ]
+                            },
+                            "readOnlyRootFilesystem": true
+                          }
+                        }
+                      ],
+                      "restartPolicy": "Never",
+                      "securityContext": {
+                        "runAsGroup": 65534,
+                        "runAsNonRoot": true,
+                        "runAsUser": 65534,
+                        "seccompProfile": {
+                          "type": "RuntimeDefault"
+                        }
+                      },
+                      "terminationGracePeriodSeconds": 1
+                    }
+                  },
+                  "ttlSecondsAfterFinished": 600
+                }
+              }
+            }
+          }
+        ]
+      },
+      "status": {
+        "completedAt": "2026-11-15T23:04:10Z",
+        "dryRunSummary": {},
+        "metricResults": [
+          {
+            "consecutiveSuccess": 1,
+            "count": 1,
+            "measurements": [
+              {
+                "finishedAt": "2026-11-15T23:04:10Z",
+                "metadata": {
+                  "job-name": "d9b0c0f4-f791-40e4-a794-2dc5ae52680c.verdict.1",
+                  "job-namespace": "lw-ctl"
+                },
+                "phase": "Successful",
+                "startedAt": "2026-11-15T23:04:08Z"
+              }
+            ],
+            "name": "verdict",
+            "phase": "Successful",
+            "successful": 1
+          }
+        ],
+        "phase": "Successful",
+        "runSummary": {
+          "count": 1,
+          "successful": 1
+        },
+        "startedAt": "2026-11-15T23:04:08Z"
+      }
+    }
+  ],
+  "kind": "List"
+}

@@ -128,6 +128,7 @@ func ReduceRollout(obj map[string]any, workloadGeneration *int64) *Rollout {
 	ro := &Rollout{Found: true}
 	meta, spec, status := mapAt(obj, "metadata"), mapAt(obj, "spec"), mapAt(obj, "status")
 	ro.Generation = integer(meta["generation"])
+	ro.Revision = str(mapAt(meta, "annotations"), revisionAnnotation)
 	ro.ObservedGeneration = scalarString(status["observedGeneration"])
 	ro.Phase = str(status, "phase")
 	ro.Message = str(status, "message")
@@ -223,7 +224,8 @@ func ReduceAnalysisRuns(items []map[string]any, rolloutUID string) []AnalysisRun
 		labels := mapAt(meta, "labels")
 		status := mapAt(obj, "status")
 		a := AnalysisRun{Name: str(meta, "name"), Phase: str(status, "phase"), Message: str(status, "message"),
-			Kind: str(labels, "rollout-type"), PodHash: str(labels, "rollouts-pod-template-hash")}
+			Kind: str(labels, "rollout-type"), PodHash: str(labels, "rollouts-pod-template-hash"),
+			Revision: str(mapAt(meta, "annotations"), revisionAnnotation), CreatedAt: parseTime(str(meta, "creationTimestamp"))}
 		if a.Phase == "" {
 			a.Phase = "Pending"
 		}
@@ -255,6 +257,10 @@ func ReduceAnalysisRuns(items []map[string]any, rolloutUID string) []AnalysisRun
 	}
 	return runs
 }
+
+// revisionAnnotation is where Argo Rollouts writes a rollout's revision,
+// and, on an analysis run, the revision it was made for.
+const revisionAnnotation = "rollout.argoproj.io/revision"
 
 // maxAnalysisRuns bounds the analysis runs a snapshot carries.
 const maxAnalysisRuns = 10

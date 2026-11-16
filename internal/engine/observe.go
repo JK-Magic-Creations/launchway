@@ -433,6 +433,9 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 		res.Reason = "not a watch key"
 		return res, nil
 	}
+	// Only the analysis runs of this deployment, for what is stored and for
+	// the verdict alike.
+	o.Snapshot = e.ownAnalysis(parts, o.Snapshot)
 	if e.knows(schemaControl) {
 		switch {
 		case parts[0] == "unit":

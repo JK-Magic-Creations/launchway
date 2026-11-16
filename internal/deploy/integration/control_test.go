@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -334,6 +335,17 @@ func TestArgoControl(t *testing.T) {
 		if s := h.ctl(); s.phase != "Healthy" || s.image != "docker.io/library/busybox:1.37.0" || s.current != s.stable {
 			t.Fatalf("rollout %+v", s)
 		}
+		// Only this deployment's analysis run is shown, though Argo Rollouts
+		// keeps those of earlier deployments (the seed, earlier runs of this
+		// test) of the same pod template.
+		var snap deploy.Snapshot
+		json.Unmarshal(r.Deployments[0].Snapshot, &snap)
+		rev := h.kubectl("-n", "lw-ctl", "get", "rollout", "ctl", "-o", `jsonpath={.metadata.annotations.rollout\.argoproj\.io/revision}`)
+		all := h.kubectl("-n", "lw-ctl", "get", "analysisruns", "-o", "name")
+		if len(snap.Analysis) != 1 || snap.Analysis[0].Revision != rev || snap.Analysis[0].Phase != "Successful" {
+			t.Fatalf("analysis shown: %+v (rollout at revision %s; in the cluster: %s)", snap.Analysis, rev, all)
+		}
+		t.Logf("analysis runs in the cluster: %d; shown for this deployment: %s (revision %s)", len(strings.Fields(all)), snap.Analysis[0].Name, rev)
 	})
 
 	t.Run("promote-full", func(t *testing.T) {

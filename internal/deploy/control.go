@@ -371,3 +371,33 @@ func pauseVerdict(spec Spec, s Snapshot) (Verdict, bool) {
 	}
 	return cont(PhasePaused, "the rollout is %s (%s); waiting for someone to promote it", where, reason), true
 }
+
+// analysisSlack allows for a cluster clock a little behind the server's.
+const analysisSlack = 10_000
+
+// OwnAnalysis keeps, of a snapshot's analysis runs, those of the
+// deployment that opened at since (Unix ms; 0 if unknown): runs of the
+// rollout's current pod template, made for its current revision, and not
+// before the deployment opened. Argo Rollouts keeps the runs of earlier
+// revisions, also of the same pod template when one comes back, and they
+// say nothing about this deployment. Both what the run page shows and
+// which analysis a failure names use this set.
+func OwnAnalysis(s Snapshot, since int64) Snapshot {
+	if len(s.Analysis) == 0 {
+		return s
+	}
+	ro := s.Rollout
+	var out []AnalysisRun
+	for _, a := range s.Analysis {
+		switch {
+		case ro == nil || !ro.Found:
+		case a.PodHash != "" && ro.CurrentPodHash != "" && a.PodHash != ro.CurrentPodHash:
+		case a.Revision != "" && ro.Revision != "" && a.Revision != ro.Revision:
+		case since > 0 && a.CreatedAt > 0 && a.CreatedAt < since-analysisSlack:
+		default:
+			out = append(out, a)
+		}
+	}
+	s.Analysis = out
+	return s
+}

@@ -119,6 +119,10 @@ type Rollout struct {
 	PauseIndefinite bool `json:"pause_indefinite,omitempty"`
 	// PromoteFull says a full promotion was asked for and not yet done.
 	PromoteFull bool `json:"promote_full,omitempty"`
+	// Revision is the rollout's revision (annotation
+	// rollout.argoproj.io/revision): it moves on whenever a pod template
+	// becomes current, a reused one included.
+	Revision string `json:"revision,omitempty"`
 	Replicas    int  `json:"replicas"`
 	Ready       int  `json:"ready"`
 	Updated     int  `json:"updated"`
@@ -133,6 +137,10 @@ type AnalysisRun struct {
 	Kind      string   `json:"kind,omitempty"` // Step or Background
 	StepIndex *int     `json:"step_index,omitempty"`
 	PodHash   string   `json:"pod_hash,omitempty"`
+	// Revision is the rollout's revision the run was made for, and
+	// CreatedAt when it was made (Unix ms).
+	Revision  string   `json:"revision,omitempty"`
+	CreatedAt int64    `json:"created_at,omitempty"`
 	Metrics   []Metric `json:"metrics,omitempty"`
 }
 

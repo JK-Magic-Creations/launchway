@@ -1,0 +1,201 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "Rollout",
+  "metadata": {
+    "annotations": {
+      "argocd.argoproj.io/tracking-id": "ctl-canary:argoproj.io/Rollout:lw-ctl/ctl",
+      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"argoproj.io/v1alpha1\",\"kind\":\"Rollout\",\"metadata\":{\"annotations\":{\"argocd.argoproj.io/tracking-id\":\"ctl-canary:argoproj.io/Rollout:lw-ctl/ctl\"},\"labels\":{\"app.kubernetes.io/name\":\"ctl\",\"app.kubernetes.io/part-of\":\"launchway-test-argo-control\"},\"name\":\"ctl\",\"namespace\":\"lw-ctl\"},\"spec\":{\"progressDeadlineSeconds\":120,\"replicas\":2,\"revisionHistoryLimit\":3,\"selector\":{\"matchLabels\":{\"app.kubernetes.io/name\":\"ctl\"}},\"strategy\":{\"canary\":{\"steps\":[{\"setWeight\":50},{\"pause\":{}},{\"analysis\":{\"args\":[{\"name\":\"verdict\",\"value\":\"pass\"}],\"templates\":[{\"templateName\":\"ctl-verdict\"}]}},{\"setWeight\":100}]}},\"template\":{\"metadata\":{\"labels\":{\"app.kubernetes.io/name\":\"ctl\"}},\"spec\":{\"automountServiceAccountToken\":false,\"containers\":[{\"command\":[\"sh\",\"-c\",\"mkdir -p /tmp/www \\u0026\\u0026 echo \\\"ctl $REV\\\" \\u003e /tmp/www/index.html\\nexec httpd -f -p 8080 -h /tmp/www\\n\"],\"env\":[{\"name\":\"REV\",\"value\":\"0\"}],\"image\":\"docker.io/library/busybox:1.37.0\",\"name\":\"web\",\"ports\":[{\"containerPort\":8080,\"name\":\"http\"}],\"readinessProbe\":{\"httpGet\":{\"path\":\"/\",\"port\":\"http\"},\"periodSeconds\":2},\"resources\":{\"limits\":{\"memory\":\"32Mi\"},\"requests\":{\"cpu\":\"5m\",\"memory\":\"8Mi\"}},\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]},\"readOnlyRootFilesystem\":true},\"volumeMounts\":[{\"mountPath\":\"/tmp\",\"name\":\"tmp\"}]}],\"securityContext\":{\"runAsGroup\":65534,\"runAsNonRoot\":true,\"runAsUser\":65534,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"terminationGracePeriodSeconds\":1,\"volumes\":[{\"emptyDir\":{},\"name\":\"tmp\"}]}}}}\n",
+      "rollout.argoproj.io/revision": "34"
+    },
+    "creationTimestamp": "2026-11-15T22:43:48Z",
+    "generation": 81,
+    "labels": {
+      "app.kubernetes.io/name": "ctl",
+      "app.kubernetes.io/part-of": "launchway-test-argo-control"
+    },
+    "name": "ctl",
+    "namespace": "lw-ctl",
+    "resourceVersion": "107282",
+    "uid": "c21ee8c0-db6f-45b8-85ff-a125c60f65ce"
+  },
+  "spec": {
+    "progressDeadlineSeconds": 120,
+    "replicas": 2,
+    "revisionHistoryLimit": 3,
+    "selector": {
+      "matchLabels": {
+        "app.kubernetes.io/name": "ctl"
+      }
+    },
+    "strategy": {
+      "canary": {
+        "steps": [
+          {
+            "setWeight": 50
+          },
+          {
+            "pause": {}
+          },
+          {
+            "analysis": {
+              "analysisRunMetadata": {},
+              "args": [
+                {
+                  "name": "verdict",
+                  "value": "pass"
+                }
+              ],
+              "templates": [
+                {
+                  "templateName": "ctl-verdict"
+                }
+              ]
+            }
+          },
+          {
+            "setWeight": 100
+          }
+        ]
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "ctl"
+        }
+      },
+      "spec": {
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "command": [
+              "sh",
+              "-c",
+              "mkdir -p /tmp/www && echo \"ctl $REV\" > /tmp/www/index.html\nexec httpd -f -p 8080 -h /tmp/www\n"
+            ],
+            "env": [
+              {
+                "name": "REV",
+                "value": "0"
+              }
+            ],
+            "image": "docker.io/library/busybox:1.37.0",
+            "name": "web",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "name": "http",
+                "protocol": "TCP"
+              }
+            ],
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/",
+                "port": "http"
+              },
+              "periodSeconds": 2
+            },
+            "resources": {
+              "limits": {
+                "memory": "32Mi"
+              },
+              "requests": {
+                "cpu": "5m",
+                "memory": "8Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "readOnlyRootFilesystem": true
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/tmp",
+                "name": "tmp"
+              }
+            ]
+          }
+        ],
+        "securityContext": {
+          "runAsGroup": 65534,
+          "runAsNonRoot": true,
+          "runAsUser": 65534,
+          "seccompProfile": {
+            "type": "RuntimeDefault"
+          }
+        },
+        "terminationGracePeriodSeconds": 1,
+        "volumes": [
+          {
+            "emptyDir": {},
+            "name": "tmp"
+          }
+        ]
+      }
+    }
+  },
+  "status": {
+    "HPAReplicas": 2,
+    "abort": false,
+    "availableReplicas": 2,
+    "blueGreen": {},
+    "canary": {},
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-11-15T22:43:49Z",
+        "lastUpdateTime": "2026-11-15T22:43:49Z",
+        "message": "Rollout has minimum availability",
+        "reason": "AvailableReason",
+        "status": "True",
+        "type": "Available"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T23:04:39Z",
+        "lastUpdateTime": "2026-11-15T23:04:39Z",
+        "message": "Rollout is paused",
+        "reason": "RolloutPaused",
+        "status": "False",
+        "type": "Paused"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T23:04:40Z",
+        "lastUpdateTime": "2026-11-15T23:04:40Z",
+        "message": "RolloutCompleted",
+        "reason": "RolloutCompleted",
+        "status": "True",
+        "type": "Completed"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T23:04:40Z",
+        "lastUpdateTime": "2026-11-15T23:04:40Z",
+        "message": "Rollout is healthy",
+        "reason": "RolloutHealthy",
+        "status": "True",
+        "type": "Healthy"
+      },
+      {
+        "lastTransitionTime": "2026-11-15T23:04:39Z",
+        "lastUpdateTime": "2026-11-15T23:04:40Z",
+        "message": "ReplicaSet \"ctl-6cccdd46d8\" has successfully progressed.",
+        "reason": "NewReplicaSetAvailable",
+        "status": "True",
+        "type": "Progressing"
+      }
+    ],
+    "currentPodHash": "6cccdd46d8",
+    "currentStepHash": "557dbb94b5",
+    "currentStepIndex": 4,
+    "observedGeneration": "81",
+    "phase": "Healthy",
+    "readyReplicas": 2,
+    "replicas": 2,
+    "selector": "app.kubernetes.io/name=ctl",
+    "stableRS": "6cccdd46d8",
+    "updatedReplicas": 2
+  }
+}

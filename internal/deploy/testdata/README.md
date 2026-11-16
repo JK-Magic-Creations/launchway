@@ -13,6 +13,7 @@ Types worth knowing: a Rollout's `status.observedGeneration` is a **string** (`"
 
 | File | Scenario |
 |---|---|
+| `analysisruns-earlier-deployments.json` | the runs Argo Rollouts kept in lw-ctl (control tests) from revisions 18 to 30, three of pod template 6cccdd46d8, none of revision 34 |
 | `analysisruns-failed.json` | the Failed AnalysisRun of rollout-aborted-analysis.json (verdict fail) |
 | `analysisruns-running.json` | the Running AnalysisRun of rollout-analysis-running.json (delay 20) |
 | `analysisruns-successful.json` | the Successful AnalysisRun of the happy canary (s1) |
@@ -30,6 +31,7 @@ Types worth knowing: a Rollout's `status.observedGeneration` is a **string** (`"
 | `rollout-aborted-manual.json` | demo, aborted by the status patch {"status":{"abort":true}} at the indefinite pause |
 | `rollout-analysis-running.json` | demo, indefinite pause promoted, at step 2 with analysis (delay 20) Running |
 | `rollout-degraded-crash.json` | demo, MODE crash: canary never ready, progressDeadlineSeconds 30 with progressDeadlineAbort -> aborted, Degraded |
+| `rollout-healthy-revision-34.json` | ctl (lw-ctl), back on pod template 6cccdd46d8 at revision 34, Healthy (the earlier runs above are not its) |
 | `rollout-healthy.json` | demo, fully promoted on 1.37.0 (pod template, no workloadRef) |
 | `rollout-paused-indefinite.json` | demo, step 1 is pause {} (indefinite), waiting for promote |
 | `rollout-paused-timed.json` | demo, same bump, at step 1 pause {duration: 5s} |
