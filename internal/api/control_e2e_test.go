@@ -40,7 +40,10 @@ func intRef(n int) *int { return &n }
 // deployment's environment, the person who started the run may not
 // promote on a protected environment but may abort, a second promote is
 // refused naming who asked, and everything is in the audit trail.
-func TestCommandsOverHTTP(t *testing.T) {
+// controlSetup is a server with sign-in, protected environment prod, and a
+// run of pay-shop started by otto whose deployment waits at a pause. It
+// returns the deployment's URL base.
+func controlSetup(t *testing.T) (*authEnv, string) {
 	policy, err := auth.NewPolicy([]auth.Binding{
 		{Group: "admins", Role: auth.Admin},
 		{Group: "pay-ops", Role: auth.Operator, Projects: []string{"pay-*"}, Environments: []string{"prod"}},
@@ -91,8 +94,12 @@ func TestCommandsOverHTTP(t *testing.T) {
 	}
 	d, _ := e.eng.GetRun(run.ID)
 	dep := d.Deployments[0].ID
-	base := e.srv.URL + "/api/v1/runs/" + run.ID + "/deployments/" + dep + "/"
+	return e, e.srv.URL + "/api/v1/runs/" + run.ID + "/deployments/" + dep + "/"
+}
 
+
+func TestCommandsOverHTTP(t *testing.T) {
+	e, base := controlSetup(t)
 	otto, ada, dana, vic := e.signIn(t, "otto"), e.signIn(t, "ada"), e.signIn(t, "dana"), e.signIn(t, "vic")
 	if r := vic.do(http.MethodPost, base+"promote", ""); r.status != http.StatusForbidden {
 		t.Fatalf("a viewer promoting: %d %s", r.status, r.body)
@@ -147,6 +154,51 @@ func TestCommandsOverHTTP(t *testing.T) {
 		"dana deployment.promote": "denied", "otto deployment.withdraw": "ok", "otto deployment.abort": "ok"} {
 		if seen[want] != outcome {
 			t.Errorf("audit %q: %q, want %q (all: %v)", want, seen[want], outcome, seen)
+		}
+	}
+}
+
+// A limited token never grants more than its maker has on the
+// deployment's environment, and the protected-environment rule follows the
+// person who started the run, whatever they use.
+func TestCommandsWithLimitedTokens(t *testing.T) {
+	e, base := controlSetup(t)
+	ada, otto, dana := e.signIn(t, "ada"), e.signIn(t, "otto"), e.signIn(t, "dana")
+	cli := newBrowser(t)
+	post := func(tok, action string) response {
+		t.Helper()
+		return cli.do(http.MethodPost, base+action, `{"comment":"from a token"}`, bearer(tok)...)
+	}
+	_, adaView, _ := ada.makeToken(e.srv.URL, `{"name":"view","role":"viewer"}`)
+	_, adaWeb, _ := ada.makeToken(e.srv.URL, `{"name":"web only","role":"operator","projects":["web"]}`)
+	_, danaOp, _ := dana.makeToken(e.srv.URL, `{"name":"dana","role":"operator","projects":["pay-*"]}`)
+	_, ottoOp, _ := otto.makeToken(e.srv.URL, `{"name":"otto","role":"operator","projects":["pay-shop"]}`)
+	_, adaOp, _ := ada.makeToken(e.srv.URL, `{"name":"deployer","role":"operator","projects":["pay-shop"]}`)
+	for _, tc := range []struct {
+		who, tok, action string
+		want             int
+		says             string
+	}{
+		{"ada's viewer token", adaView, "promote", http.StatusForbidden, ""},
+		{"ada's token for web only", adaWeb, "promote", http.StatusNotFound, ""},
+		{"dana's operator token (dana operates staging only)", danaOp, "abort", http.StatusForbidden, "in environment prod"},
+		{"otto's token (otto started the run)", ottoOp, "promote", http.StatusForbidden, "protected"},
+		{"ada's operator token for pay-shop", adaOp, "promote", http.StatusCreated, ""},
+		{"otto's token aborting", ottoOp, "abort", http.StatusCreated, ""},
+	} {
+		r := post(tc.tok, tc.action)
+		if r.status != tc.want || !strings.Contains(string(r.body), tc.says) {
+			t.Errorf("%s, %s: %d %s", tc.who, tc.action, r.status, r.body)
+		}
+	}
+	// The controls say so too.
+	var ctl struct {
+		Controls []engine.Control `json:"controls"`
+	}
+	cli.get(base+"controls", bearer(danaOp)...).json(t, &ctl)
+	for _, c := range ctl.Controls {
+		if c.Available || !strings.Contains(c.Reason, "environment prod") {
+			t.Errorf("dana's token's controls: %+v", ctl.Controls)
 		}
 	}
 }
