@@ -1178,6 +1178,13 @@ A canary can stop at a pause and wait: for a smoke test of the canary, for a per
 - **`on_cancel: abort`** gives an abort command when the run is canceled by hand while the
   deployment is open; the deployment ends as abandoned. Git still names the version: an application
   that syncs by itself keeps it, aborted, until someone reverts it.
+- **With run inputs, loops and cleanup steps.** The deploy step's version and tag may be run inputs.
+  Steps inside the deployment may be loops (`for_each`, a smoke test per region, say); rollout steps
+  and approvals that name a deployment are never repeated, keep or fetch no artifacts and report
+  nothing. Neither may need, directly or not, a step that runs after failures
+  (`when: { upstream: failed | always }`), and such an approval takes no upstream rule itself: a
+  cleanup step's success would let a failed check be promoted past. Make the cleanup step need them
+  instead.
 - **Not yet**: promoting past an analysis step that is still running, and promoting a rollout paused
   through its spec (`spec.paused`), which needs a change to the spec Launchway does not make.
 
@@ -1381,7 +1388,8 @@ needs `admin` from an entry without `projects`.
 An entry may also list `environments` (patterns, as for projects). It then grants its role on
 deployments (the commands of [Controlling a rollout](#controlling-a-rollout-promote-abort-retry),
 and approvals that name a deployment) to those environments only; on its projects otherwise it
-grants as usual. An entry without `environments` covers every environment:
+grants as usual. An entry without `environments` covers every environment. An API token limited to
+a role or projects never grants more there than its maker has:
 
 ```yaml
 auth:
