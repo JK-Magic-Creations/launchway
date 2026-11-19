@@ -83,11 +83,13 @@ type WriteBack struct {
 }
 
 // Change is one edit of one file: either every reference to an image gets a
-// tag, or the scalar at a YAML path gets a value.
+// tag, or a digest (schema 15: the reference becomes image@sha256:..., which
+// no one can move), or the scalar at a YAML path gets a value.
 type Change struct {
-	File  string `json:"file"`
-	Image string `json:"image,omitempty"`
-	Tag   *Value `json:"tag,omitempty"`
+	File   string `json:"file"`
+	Image  string `json:"image,omitempty"`
+	Tag    *Value `json:"tag,omitempty"`
+	Digest *Value `json:"digest,omitempty"`
 	Set   string `json:"set,omitempty"`
 	Value *Value `json:"value,omitempty"`
 	Line  int    `json:"-"`
@@ -244,7 +246,7 @@ var (
 	rollbackKeys = []string{"kind", "description", "needs", "timeout", "deployment", "abort_first"}
 	argocdKeys   = []string{"application", "write_back", "sync", "health"}
 	writeKeys    = []string{"repo", "branch", "changes"}
-	changeKeys   = []string{"file", "image", "tag", "set", "value"}
+	changeKeys   = []string{"file", "image", "tag", "digest", "set", "value"}
 	syncKeys     = []string{"request", "resources", "prune", "windows"}
 	resourceKeys = []string{"group", "kind", "name", "namespace"}
 	rolloutKeys  = []string{"name", "namespace", "until", "pauses"}
@@ -576,6 +578,13 @@ func (ps *parser) parseChange(n *yaml.Node, at string) Change {
 					ps.add(v, where, "%s", err)
 				}
 			}
+		case "digest":
+			c.Digest = ps.value(v, where)
+			if c.Digest.Literal != "" {
+				if err := edit.CheckDigest(c.Digest.Literal); err != nil {
+					ps.add(v, where, "%s", err)
+				}
+			}
 		case "set":
 			c.Set = ps.str(v, where)
 			if c.Set != "" {
@@ -596,12 +605,14 @@ func (ps *parser) parseChange(n *yaml.Node, at string) Change {
 	case !cleanRelPath(c.File):
 		ps.add(keys["file"], at+".file", "%q must be a path relative to the repository's root, without .. or a leading /", c.File)
 	}
-	image, set := keys["image"] != nil || keys["tag"] != nil, keys["set"] != nil || keys["value"] != nil
+	image, set := keys["image"] != nil || keys["tag"] != nil || keys["digest"] != nil, keys["set"] != nil || keys["value"] != nil
 	switch {
 	case image && set:
-		ps.add(n, at, "a change either sets an image's tag (image and tag) or a value at a YAML path (set and value), not both")
-	case image && (c.Image == "" || c.Tag == nil):
-		ps.add(n, at, "an image change needs both image and tag")
+		ps.add(n, at, "a change either sets an image's tag or digest (image and tag, or image and digest) or a value at a YAML path (set and value), not both")
+	case image && c.Tag != nil && c.Digest != nil:
+		ps.add(n, at, "give an image change a tag or a digest, not both: with a digest the reference becomes image@sha256:..., which pins it")
+	case image && (c.Image == "" || (c.Tag == nil && c.Digest == nil)):
+		ps.add(n, at, "an image change needs image, and tag or digest")
 	case set && (c.Set == "" || c.Value == nil):
 		ps.add(n, at, "a set change needs both set and value")
 	case !image && !set:
@@ -770,6 +781,7 @@ func (ps *parser) checkDeploys(p *Pipeline) {
 		if s.ArgoCD != nil && s.ArgoCD.WriteBack != nil {
 			for _, c := range s.ArgoCD.WriteBack.Changes {
 				add(c.Tag, c.Line, "tag")
+				add(c.Digest, c.Line, "digest")
 				add(c.Value, c.Line, "value")
 			}
 		}

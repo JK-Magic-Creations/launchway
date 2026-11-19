@@ -146,6 +146,10 @@ type Payload struct {
 	Findings  *FindingsSummary  `json:"findings,omitempty"`
 	SBOM      *SBOMSummary      `json:"sbom,omitempty"`
 	Artifacts []ArtifactSummary `json:"artifacts,omitempty"`
+	// step.finished and step.canceled of an image step (schema 15): what it
+	// built, pushed and signed. Older servers never read it: runs with image
+	// steps have min_schema 15.
+	Image *ImageRecord `json:"image,omitempty"`
 	// deploy.* events, and step.queued of a deploy or rollback step (schema
 	// 11): the deployment and what happened to it. Never a credential.
 	Deploy *DeployEvent `json:"deploy,omitempty"`

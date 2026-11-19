@@ -3,6 +3,7 @@ package imagebuild
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -214,6 +215,38 @@ func (c *Config) Check() error {
 	}
 	return nil
 }
+
+// RelativeTo makes the relative file paths in c relative to dir.
+func (c *Config) RelativeTo(dir string) {
+	if c == nil {
+		return
+	}
+	abs := func(p *string) {
+		if *p != "" && !filepath.IsAbs(*p) {
+			*p = filepath.Join(dir, *p)
+		}
+	}
+	for i := range c.Builders {
+		b := &c.Builders[i]
+		abs(&b.CAFile)
+		abs(&b.CertFile)
+		abs(&b.KeyFile)
+		if rest, ok := strings.CutPrefix(b.Address, "unix://"); ok && !filepath.IsAbs(rest) {
+			b.Address = "unix://" + filepath.Join(dir, rest)
+		}
+	}
+	for name, r := range c.Registries {
+		abs(&r.CAFile)
+		c.Registries[name] = r
+	}
+	if c.Signing != nil {
+		abs(&c.Signing.KeyFile)
+		abs(&c.Signing.PasswordFile)
+	}
+}
+
+// MaxContextBytes is the largest build context the runner sends.
+func (c *Config) MaxContextBytes() int64 { return c.maxContextBytes() }
 
 func (c *Config) maxContextBytes() int64 {
 	if c.MaxContextMiB > 0 {

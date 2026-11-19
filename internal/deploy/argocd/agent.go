@@ -144,6 +144,13 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 			if data == nil {
 				return nil, fmt.Errorf("%s does not exist on branch %s", path, d.Branch)
 			}
+			if c.Image != "" && c.Digest != "" {
+				out, n, err := edit.ImageDigest(data, c.Image, c.Digest)
+				if err == nil {
+					log("%s: %d reference(s) to %s pinned to %s", path, n, c.Image, c.Digest)
+				}
+				return out, err
+			}
 			if c.Image != "" {
 				out, n, err := edit.Image(data, c.Image, c.Tag)
 				if err == nil {

@@ -43,7 +43,14 @@ func needsArtifacts(def *pipeline.Step) bool {
 // runnerCan reports whether a runner can run a step: whether it knows
 // artifacts, when the step needs them.
 func (c *cmd) runnerCan(r RunnerInfo, stepID string) bool {
-	if !c.e.knows(schemaArtifacts) || !needsArtifacts(c.st.Pipeline.Step(stepID)) {
+	def := c.st.Pipeline.Step(stepID)
+	if c.st.Pipeline.HasImageSteps() && !r.Has(FeatureImages) {
+		// A run's steps share one runner's workspace, and an image step
+		// builds from it: a run with image steps runs, from its first step,
+		// on a runner that can build them.
+		return false
+	}
+	if !c.e.knows(schemaArtifacts) || !needsArtifacts(def) {
 		return true
 	}
 	return r.Has(FeatureArtifacts)

@@ -565,7 +565,9 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 	} else {
 		ps.parseSteps(v, p)
 	}
-	ps.check(p)
+	if ps.check(p) {
+		ps.checkImages(p)
+	}
 	ps.checkArtifacts(p)
 	t.Containers, t.Steps = p.Containers, p.Steps
 	if v := nodes["outputs"]; v != nil {
@@ -1059,6 +1061,7 @@ func (x *expander) emit(sc *scope) {
 		c.ID = id
 		c.Needs, c.NeedsGroups = needs, groups
 		c.Fetch = x.fetchesOf(sc, s)
+		c.ImageBuild = x.imageOf(sc, s)
 		c.Each = mergeEach(sc.each, s.Each)
 		c.withLines, c.ifTest = nil, nil
 		if sc.group != nil {

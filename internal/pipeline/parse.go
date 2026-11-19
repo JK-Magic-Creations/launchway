@@ -150,6 +150,7 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	if ps.check(p) {
 		ps.checkDeploys(p)
+		ps.checkImages(p)
 	}
 	ps.checkUses(p)
 	ps.checkInputs(p)
@@ -160,6 +161,9 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	if p.UsesSchemaControl() {
 		p.Requires = SchemaControl
+	}
+	if p.UsesSchema15() {
+		p.Requires = SchemaImages
 	}
 	return p, nil
 }
@@ -371,6 +375,10 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			p.Steps = append(p.Steps, ps.parseDeployStep(k, v, at, kind))
 			continue
 		}
+		if mappingValue(v, "kind") == KindImage {
+			p.Steps = append(p.Steps, ps.parseImageStep(k, v, at))
+			continue
+		}
 		s := &Step{ID: k.Value, Line: k.Line}
 		var secretsNode, kindNode, timeoutNode *yaml.Node
 		var timeout time.Duration
@@ -467,7 +475,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		case kindsNotYet[s.Kind]:
 			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote, analysis and input steps arrive in a later milestone)", s.Kind)
 		default:
-			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, deploy, rollout or rollback", s.Kind)
+			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, image, deploy, rollout or rollback", s.Kind)
 		}
 		def, most := DefaultTimeout, MaxTimeout
 		if s.IsApproval() {

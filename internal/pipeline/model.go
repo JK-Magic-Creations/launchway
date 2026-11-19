@@ -127,6 +127,10 @@ type Step struct {
 	// whether it passed or failed: test results, for now.
 	Reports *Reports `json:"reports,omitempty"`
 
+	// ImageBuild, for an image step (kind image), is what it builds; see
+	// image.go.
+	ImageBuild *ImageBuild `json:"image_build,omitempty"`
+
 	// Deploy steps (kind deploy) only; see deploy.go.
 	Environment string      `json:"environment,omitempty"` // a server's environment, which gives the lock and the record
 	Service     string      `json:"service,omitempty"`     // what is deployed there; empty means the project's name

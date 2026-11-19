@@ -119,6 +119,17 @@ func CheckTag(tag string) error {
 	return nil
 }
 
+// sha256DigestRe is a digest Launchway pins: sha256 and 64 hex digits.
+var sha256DigestRe = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+
+// CheckDigest reports whether a digest is sha256:<64 lower-case hex digits>.
+func CheckDigest(d string) error {
+	if !sha256DigestRe.MatchString(d) {
+		return fmt.Errorf("digest %q is not a sha256 digest (sha256: and 64 hex digits)", shortDigest(d))
+	}
+	return nil
+}
+
 // shortDigest shortens a digest for an error message.
 func shortDigest(d string) string {
 	if c := strings.IndexByte(d, ':'); c >= 0 && len(d) > c+13 {

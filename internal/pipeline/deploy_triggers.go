@@ -35,6 +35,9 @@ func deployValues(s *Step) []*Value {
 			if c.Tag != nil {
 				out = append(out, c.Tag)
 			}
+			if c.Digest != nil {
+				out = append(out, c.Digest)
+			}
 			if c.Value != nil {
 				out = append(out, c.Value)
 			}
@@ -122,7 +125,7 @@ func bindDeploy(s *Step, values map[string]string) (*Step, string) {
 			w := *s.ArgoCD.WriteBack
 			w.Changes = make([]Change, len(s.ArgoCD.WriteBack.Changes))
 			for i, ch := range s.ArgoCD.WriteBack.Changes {
-				ch.Tag, ch.Value = lit(ch.Tag), lit(ch.Value)
+				ch.Tag, ch.Digest, ch.Value = lit(ch.Tag), lit(ch.Digest), lit(ch.Value)
 				w.Changes[i] = ch
 			}
 			a.WriteBack = &w

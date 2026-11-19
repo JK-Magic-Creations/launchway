@@ -198,7 +198,7 @@ func (r *Runner) keepArtifacts(job *engine.Job, spec executor.Spec, outcome stri
 		}
 		dir := filepath.Join(r.DataDir, "artifacts", job.LeaseID, a.Name)
 		lim := executor.StageLimits{MaxFiles: engine.MaxArtifactFiles, MaxFileBytes: ja.MaxFileBytes, MaxBytes: max(ja.MaxBytes-used, 1)}
-		staged, err := executor.Stage(ctx, r.Exec, spec, a.Paths, lim, dir)
+		staged, err := executor.Stage(ctx, r.execFor(job), spec, a.Paths, lim, dir)
 		if staged != nil {
 			for _, n := range staged.Notes {
 				sys("%s: %s", label, spec.Mask(n))
@@ -474,7 +474,7 @@ func (r *Runner) findingCollector(job *engine.Job, spec executor.Spec, sys func(
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), collectTimeout)
 		defer cancel()
-		got, err := executor.Collect(ctx, r.Exec, spec, job.Reports.Findings, lim)
+		got, err := executor.Collect(ctx, r.execFor(job), spec, job.Reports.Findings, lim)
 		out := &engine.CollectedReports{Files: []engine.ReportFile{}}
 		if got != nil {
 			for _, f := range got.Files {

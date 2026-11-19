@@ -4,6 +4,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"golang.org/x/term"
+	"gopkg.in/yaml.v3"
 
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/auth"
@@ -34,6 +36,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/imagebuild"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
@@ -241,7 +244,7 @@ func cmdServer(args []string) error {
 			Client: runner.NewClient(url, token), Exec: ex,
 			Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
 			DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
-			Secrets: secretStores, Reports: reportLimits,
+			Secrets: secretStores, Reports: reportLimits, Images: cfg.Runner.Images,
 		}
 		go func() { defer close(runnerDone); r.Run(runnerCtx) }()
 	} else {
@@ -443,7 +446,7 @@ func cmdRunner(args []string) error {
 	}
 	r := &runner.Runner{Client: runner.NewClient(o.Server, o.Token), Exec: ex,
 		Info:    engine.RunnerInfo{ID: id, Name: o.Name, Executor: ex.Name(), Version: version},
-		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores, Reports: reportLimits}
+		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores, Reports: reportLimits, Images: o.Images}
 	if o.HealthListen != "" {
 		ln, err := net.Listen("tcp", o.HealthListen)
 		if err != nil {
@@ -530,10 +533,15 @@ func cmdRun(args []string) error {
 	exe := fs.String("executor", "auto", "auto, container, podman, docker, host or kubernetes")
 	k8s := k8sFlags(fs)
 	secretsConfig := secretsFlag(fs)
+	imagesConfig := fs.String("images-config", "", "a file with the runner's images: section (builders and registries), for image steps")
 	var given multi
 	fs.Var(&given, "i", "an input value, name=value; once for each input (the others take their defaults)")
 	fs.Parse(args)
 	secretStores, err := localSecrets(*secretsConfig)
+	if err != nil {
+		return err
+	}
+	images, err := loadImagesConfig(*imagesConfig)
 	if err != nil {
 		return err
 	}
@@ -549,6 +557,14 @@ func cmdRun(args []string) error {
 	p, inputs, err := bindLocal(p, given)
 	if err != nil {
 		return err
+	}
+	if images == nil {
+		for _, s := range p.Steps {
+			if s.IsImage() {
+				return fmt.Errorf("step %s builds an image: give the builders and registries to use with --images-config FILE "+
+					"(an images: section, as in a runner's configuration)", s.ID)
+			}
+		}
 	}
 	ex, err := executor.ByName(*exe, executor.Options{Kubernetes: *k8s, RunnerID: "local-" + currentUser()})
 	if err != nil {
@@ -608,7 +624,7 @@ func cmdRun(args []string) error {
 	defer stopRunner()
 	r := &runner.Runner{Client: runner.NewClient("http://"+ln.Addr().String(), token), Exec: ex,
 		Info:    engine.RunnerInfo{ID: "local", Name: "this machine", Executor: ex.Name(), Version: version},
-		DataDir: filepath.Join(tmp, "runner"), Concurrency: 4, Log: quiet, Secrets: secretStores}
+		DataDir: filepath.Join(tmp, "runner"), Concurrency: 4, Log: quiet, Secrets: secretStores, Images: images}
 	go r.Run(runnerCtx)
 
 	pr := newPrinter(p)
@@ -836,4 +852,31 @@ func runDeployRunner(o *runnerOptions, id string, secretStores *secrets.Resolver
 		defer hs.Close()
 	}
 	return d.Run(ctx)
+}
+
+// loadImagesConfig reads an images: section from a file, for launchway run.
+func loadImagesConfig(path string) (*imagebuild.Config, error) {
+	if path == "" {
+		return nil, nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var f struct {
+		Images *imagebuild.Config `yaml:"images"`
+	}
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(&f); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if f.Images == nil {
+		return nil, fmt.Errorf("%s: no images: section", path)
+	}
+	f.Images.RelativeTo(filepath.Dir(path))
+	if err := f.Images.Check(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return f.Images, nil
 }
