@@ -114,6 +114,19 @@ idle services (it does not say it can observe them slowly), but observes open de
 `protected:` on environments and `environments:` on access bindings are settings older servers
 refuse: set them only once every server knows them.
 
+Schema 15 brings image steps (`kind: image`) and deploy changes that pin an image by `digest`. It is
+additive: two new tables (`images`, `image_refs`, derived from a summary in the event that ends an
+image step's attempt) and no new event type. A pipeline with an image step or a digest change has
+`runs.min_schema` 15 from creation and carries `"requires": 15`, so older servers leave such runs
+alone (`TestOlderBuildLeavesImageRunsAlone`) and refuse to start one; servers before schema 14 cannot
+read the pipeline at all. Runners must say they can build images (`images`), so an older runner is
+never given an image step, nor any step of a run that has one. A deploy change with a digest has no
+tag, so a deploy runner older than this refuses the empty tag instead of writing a tag. The SBOM, the
+findings and the provenance of an image step are ordinary reports and artifacts (schema 12). On a
+rollback, image runs still open are left to a schema-15 server; the runners' `images:` setting and
+the Helm chart's `runner.images` must be taken out first, as older runners refuse a setting they do
+not know.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

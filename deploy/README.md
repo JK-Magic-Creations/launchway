@@ -148,6 +148,34 @@ runner that is already busy leaves a new run to one that is idle.
 
 Runners connected from outside the cluster need only the server URL and the token.
 
+### Image steps
+
+Image steps are built on rootless BuildKit daemons you deploy apart from the step pods, in a
+namespace of their own: nothing that builds a Dockerfile runs under Pod Security "restricted", and
+the step namespace stays restricted. [`buildkit/README.md`](buildkit/README.md) has the evidence,
+the exact relaxations the daemon needs (Pod Security "baseline": privilege escalation for
+`newuidmap`, SETUID and SETGID, and a Localhost seccomp profile installed on the build nodes), the
+manifest and the certificates. Then point the runners at it with `runner.images` (unset by default,
+when runners take no image steps):
+
+```yaml
+runner:
+  images:
+    builders:
+      - { name: shared, address: "tcp://buildkitd.launchway-build.svc:1234", serverName: buildkitd.launchway-build.svc }
+    tlsSecret: buildkit-client          # ca.crt, tls.crt, tls.key: the runners' client certificate
+    registries:
+      harbor:
+        host: harbor.example.com
+        credentials: { username: "robot$ci", password: { store: vault, key: ci/harbor, field: password } }
+        push: [ { projects: [shop], repositories: ["team/**"] } ]
+    signingSecret: launchway-cosign     # optional: cosign.key (and cosign.password), for sign: true
+```
+
+The runner copies each image's layers through its data volume: raise `runner.dataVolume.sizeLimit`
+for large images. The daemon's NetworkPolicy must let the runners' pods in (port 1234); the
+runners must reach the registries.
+
 ### Exposing the UI
 
 The Service is `ClusterIP`. Turn on `ingress.enabled` or `httpRoute.enabled` (Gateway API) to
