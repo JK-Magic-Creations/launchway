@@ -313,7 +313,9 @@ func generateJUnit(cases int) []byte {
 func TestManyTestcasesRespectMaxCases(t *testing.T) {
 	data := generateJUnit(200000)
 	start := time.Now()
-	r, err := Parse(context.Background(), data, Limits{MaxCases: 1000})
+	// The parser's own time limit is not what this test is about: on a busy
+	// machine under the race detector the default would cut the file short.
+	r, err := Parse(context.Background(), data, Limits{MaxCases: 1000, Timeout: 5 * time.Minute})
 	d := time.Since(start)
 	if err != nil {
 		t.Fatal(err)

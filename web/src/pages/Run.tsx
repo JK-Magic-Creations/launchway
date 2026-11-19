@@ -772,7 +772,7 @@ function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }
     return (
       <section className="inputs">
         <h3 className="h-sm">Inputs</h3>
-        <p className="sub">{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 ? "Recorded when a runner takes the step." : "Not recorded for this attempt (it ran on an older server)."}</p>
+        <p className="sub">{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 || step.status === "pending" || step.status === "queued" ? "Recorded when a runner takes the step." : "Not recorded for this attempt (it ran on an older server)."}</p>
       </section>
     );
   }
