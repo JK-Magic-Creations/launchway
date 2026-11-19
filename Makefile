@@ -49,8 +49,13 @@ test-vault:
 	LAUNCHWAY_TEST_VAULT_ADDR='$(LAUNCHWAY_TEST_VAULT_ADDR)' LAUNCHWAY_TEST_VAULT_TOKEN='$(LAUNCHWAY_TEST_VAULT_TOKEN)' \
 		go test -race -count=1 -run OpenBao -v ./internal/secrets/
 
+# Image steps' container tests start a rootless BuildKit (pulled once, its
+# cache kept in Podman volumes launchway-test-buildkit*) and registries, and
+# download the scanner's vulnerability database on first use.
 test-containers:
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 ./internal/executor/
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m ./internal/imagebuild/...
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m -run 'ImageStep' ./internal/api/
 
 # Needs a cluster: kind create cluster --name launchway-test
 #                  kubectl --context kind-launchway-test create namespace launchway-test

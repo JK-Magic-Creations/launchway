@@ -189,6 +189,10 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/runs/{id}/findings", runRead, "", s.runFindings},
 		{"GET /api/v1/projects/{name}/security", projectRead, "", s.projectSecurity},
 		{"GET /api/v1/components", signedIn, "", s.searchComponents},
+
+		// Images (schema 15).
+		{"GET /api/v1/runs/{id}/images", runRead, "", s.runImages},
+		{"GET /api/v1/images", signedIn, "", s.searchImages},
 	}
 }
 
