@@ -644,7 +644,10 @@ func loadSigning(ctx context.Context, cfg *Config, req Request) (*signer, string
 		}
 		var pass []byte
 		if cfg.Signing.PasswordFile != "" {
-			if pass, err = os.ReadFile(cfg.Signing.PasswordFile); err != nil {
+			// A key without a password has no password file (a Secret
+			// without that key mounts no file).
+			pass, err = os.ReadFile(cfg.Signing.PasswordFile)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return nil, "", fmt.Errorf("the runner's signing key's password: %w", err)
 			}
 			pass = []byte(strings.TrimRight(string(pass), "\r\n"))

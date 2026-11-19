@@ -386,6 +386,37 @@ runner:
     # accept: config.tests.maxUploadMiB).
     # Unset: the built-in default, 20.
     maxTotalMiB:
+  # -- Image steps (kind: image). Runners build images on BuildKit daemons you run apart from
+  # the step pods (deploy/buildkit/buildkitd.yaml: rootless BuildKit cannot run under Pod
+  # Security "restricted"), push them to the registries named here, and sign them. Unset (no
+  # builders), runners take no image steps and the runners' file has no images section, so the
+  # release before this one can read it. Set it only once every runner is upgraded.
+  images:
+    # -- The BuildKit daemons, each { name, address: tcp://host:1234, serverName, platforms,
+    # projects }. The runners' client certificate and the daemons' CA come from tlsSecret.
+    builders: []
+    # -- A Secret with ca.crt (the CA that signed the daemons' certificates), tls.crt and
+    # tls.key (the runners' client certificate), mounted at /var/run/launchway/buildkit.
+    tlsSecret: ""
+    # -- Registries by the name pipelines use: { host, credentials: { username, password: {
+    # store, key, field } }, pullCredentials, caFile, insecure, push: [ { projects,
+    # repositories } ] }. Credentials are secret references read from runner.secretStores.
+    # Mount a CA file with extraVolumes and name its path in caFile.
+    registries: {}
+    # -- A Secret with the runners' own cosign key (cosign.key, and cosign.password if it is
+    # encrypted), for steps that say sign: true. Mounted at /var/run/launchway/signing, which
+    # step pods never see. Unset: sign: true fails, saying the runner has no key.
+    signingSecret: ""
+    # -- The scanner image (pinned by digest) and where it downloads its databases from.
+    # Unset: the built-in Trivy, from its public database repositories.
+    scanner:
+      image: ""
+      dbRepository: ""
+      javaDBRepository: ""
+    # -- MiB of build context a step may send. Unset: the built-in default, 2048.
+    maxContextMiB:
+    # -- MiB of image the runner accepts back from a builder. Unset: the built-in default, 20480.
+    maxImageMiB:
   resources:
     requests:
       cpu: 100m

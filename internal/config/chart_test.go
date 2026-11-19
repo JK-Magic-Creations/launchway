@@ -160,3 +160,59 @@ delivery:
 		t.Fatalf("a namespace outside rolloutNamespaces: %v %s", err, out)
 	}
 }
+
+// Image steps in the chart: nothing in any configuration file by default (so
+// the release before can read it); with builders set, the runners' file has
+// an images section that loads, the TLS and signing Secrets are mounted, and
+// a TCP builder without a TLS Secret is refused.
+func TestChartImageSettings(t *testing.T) {
+	for name, f := range renderChart(t, "postgresql: { enabled: true }\n") {
+		if strings.Contains(f, "images:") {
+			t.Errorf("the default %s configuration has images:\n%s", name, f)
+		}
+	}
+	values := `postgresql: { enabled: true }
+runner:
+  secretStores:
+    vault: { type: vault, address: https://vault.example:8200, role: launchway }
+  images:
+    builders:
+      - { name: shared, address: tcp://buildkitd.launchway-build.svc:1234, serverName: buildkitd.launchway-build.svc, platforms: [linux/amd64], projects: [shop] }
+    tlsSecret: buildkit-client
+    registries:
+      harbor:
+        host: harbor.example.com
+        credentials: { username: robot$ci, password: { store: vault, key: ci/harbor, field: password } }
+        pullCredentials: { usernameFrom: { store: vault, key: ci/harbor-ro, field: user }, password: { store: vault, key: ci/harbor-ro, field: password } }
+        push: [ { projects: [shop], repositories: ["homelab/**"] } ]
+    signingSecret: launchway-cosign
+    scanner: { dbRepository: harbor.example.com/mirror/trivy-db }
+    maxImageMiB: 4096
+`
+	files := renderChart(t, values)
+	c, err := LoadRunner(writeTemp(t, files["runner"]))
+	if err != nil {
+		t.Fatalf("runner: %v\n%s", err, files["runner"])
+	}
+	im := c.Images
+	if im == nil || len(im.Builders) != 1 || im.Builders[0].CAFile != "/var/run/launchway/buildkit/ca.crt" ||
+		im.Builders[0].ServerName != "buildkitd.launchway-build.svc" || im.Registries["harbor"].PullCredentials.UsernameFrom.Key != "ci/harbor-ro" ||
+		!im.Registries["harbor"].MayPush("shop", "homelab/shop") || im.Signing.KeyFile != "/var/run/launchway/signing/cosign.key" ||
+		im.Scanner.DBRepository != "harbor.example.com/mirror/trivy-db" || im.MaxImageMiB != 4096 {
+		t.Fatalf("images: %+v", im)
+	}
+	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", writeTemp(t, values)).CombinedOutput()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"secretName: buildkit-client", "mountPath: /var/run/launchway/buildkit", "secretName: launchway-cosign"} {
+		if !strings.Contains(string(out), want) {
+			t.Fatalf("the runner Deployment has no %q", want)
+		}
+	}
+	bad := strings.Replace(values, "    tlsSecret: buildkit-client\n", "", 1)
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", writeTemp(t, bad)).CombinedOutput(); err == nil ||
+		!strings.Contains(string(out), "needs mutual TLS") {
+		t.Fatalf("a TCP builder without TLS: %v %s", err, out)
+	}
+}
