@@ -588,7 +588,6 @@ func imageValues(s *Step) []*Value {
 	return out
 }
 
-
 // checkImages validates what image steps say about other steps and inputs,
 // once every step is known: the outputs they use must come from steps they
 // need, and inputs must exist and be single values.

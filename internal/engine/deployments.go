@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jk-magic-creations/launchway/internal/ids"
 	"github.com/jk-magic-creations/launchway/internal/deploy/edit"
+	"github.com/jk-magic-creations/launchway/internal/ids"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
@@ -802,8 +802,8 @@ type DeployChange struct {
 	// never both, so a deploy runner older than this, which knows only Tag,
 	// refuses the empty tag rather than writing a tag in its place.
 	Digest string `json:"digest,omitempty"`
-	Set   string `json:"set,omitempty"`
-	Value string `json:"value,omitempty"`
+	Set    string `json:"set,omitempty"`
+	Value  string `json:"value,omitempty"`
 }
 
 // DeployJob is what a deploy runner needs for one action.

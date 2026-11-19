@@ -400,7 +400,9 @@ runner:
     tlsSecret: ""
     # -- Registries by the name pipelines use: { host, credentials: { username, password: {
     # store, key, field } }, pullCredentials, caFile, insecure, push: [ { projects,
-    # repositories } ] }. Credentials are secret references read from runner.secretStores.
+    # repositories } ], pullProjects: [ ... ] }. Credentials are secret references read from
+    # runner.secretStores. pullCredentials go to the builds of the projects in pullProjects (empty:
+    # every project), and to pull requests only when they may read secrets.
     # Mount a CA file with extraVolumes and name its path in caFile.
     registries: {}
     # -- A Secret with the runners' own cosign key (cosign.key, and cosign.password if it is

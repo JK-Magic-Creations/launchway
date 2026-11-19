@@ -90,9 +90,9 @@ type Change struct {
 	Image  string `json:"image,omitempty"`
 	Tag    *Value `json:"tag,omitempty"`
 	Digest *Value `json:"digest,omitempty"`
-	Set   string `json:"set,omitempty"`
-	Value *Value `json:"value,omitempty"`
-	Line  int    `json:"-"`
+	Set    string `json:"set,omitempty"`
+	Value  *Value `json:"value,omitempty"`
+	Line   int    `json:"-"`
 }
 
 // Sync says whether and how a deploy step asks Argo CD to sync.

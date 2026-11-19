@@ -327,3 +327,40 @@ func TestImageRunnerHint(t *testing.T) {
 		t.Fatalf("runners: %+v", rs)
 	}
 }
+
+// The server says whether a build may have registries' pull credentials:
+// runs started by a push or by hand may; pull-request and draft runs only
+// when they may read secrets.
+func TestImageJobPullCredentials(t *testing.T) {
+	e, _ := newEngine(t)
+	cases := []struct {
+		name string
+		make func() string
+		want bool
+	}{
+		{"manual", func() string {
+			return create(t, e, imagePipeline, Trigger{Event: "manual", SHA: "0123abcd0123abcd0123abcd0123abcd0123abcd"})
+		}, true},
+		{"pull request without secrets", func() string {
+			return createPR(t, e, imagePipeline, 5, "abcdef0123456789abcdef0123456789abcdef05", false)
+		}, false},
+		{"pull request with secrets", func() string {
+			return createPR(t, e, imagePipeline, 6, "abcdef0123456789abcdef0123456789abcdef06", true)
+		}, true},
+		{"draft without secrets", func() string { return createDraft(t, e, imagePipeline, false) }, false},
+		{"draft with secrets", func() string { return createDraft(t, e, imagePipeline, true) }, true},
+	}
+	for _, c := range cases {
+		id := c.make()
+		ok(t, e, takeAs(t, e, imageRunner), map[string]string{"version": "1"})
+		j := takeAs(t, e, imageRunner)
+		if j.RunID != id || j.ImageBuild == nil || j.ImageBuild.PullCredentials != c.want {
+			t.Fatalf("%s: %s %+v", c.name, j.RunID, j.ImageBuild)
+		}
+		zero := 0
+		if err := e.Finish(j.LeaseID, Result{Outcome: "succeeded", ExitCode: &zero, Image: record()}); err != nil {
+			t.Fatal(err)
+		}
+		ok(t, e, takeAs(t, e, imageRunner), nil)
+	}
+}

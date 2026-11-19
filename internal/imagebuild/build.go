@@ -58,6 +58,11 @@ type Request struct {
 	Tags  []Tag
 	Push  bool
 	Cache *Repo
+	// PullCredentials says the run may have registries' pull credentials:
+	// always for runs started by a push, by hand, a schedule or a webhook;
+	// for pull-request and draft runs only when they may read secrets. The
+	// server decides it.
+	PullCredentials bool
 
 	SBOM       bool
 	Provenance bool
@@ -178,32 +183,8 @@ func Build(ctx context.Context, cfg *Config, req Request) (*Result, error) {
 	}
 
 	// What may be pushed where, before anything is built.
-	regs := map[string]*remoteRegistry{}
-	open := func(regName string, push bool) (*remoteRegistry, error) {
-		if r, ok := regs[regName]; ok {
-			return r, nil
-		}
-		rc, err := cfg.Registry(regName)
-		if err != nil {
-			return nil, err
-		}
-		var user, pass string
-		cr := rc.PullCredentials
-		if push && rc.Credentials != nil {
-			cr = rc.Credentials
-		}
-		if cr != nil {
-			if user, pass, err = readCredentials(ctx, req.Lookup, cr); err != nil {
-				return nil, fmt.Errorf("registry %s: %w", regName, err)
-			}
-		}
-		r, err := newRemote(regName, rc, user, pass)
-		if err != nil {
-			return nil, err
-		}
-		regs[regName] = r
-		return r, nil
-	}
+	rs := &registrySet{cfg: cfg, req: req, regs: map[string]*remoteRegistry{}}
+	open := func(regName string, push bool) (*remoteRegistry, error) { return rs.open(ctx, regName, push) }
 	for _, t := range req.Tags {
 		rc, err := cfg.Registry(t.Registry)
 		if err != nil {
@@ -229,28 +210,12 @@ func Build(ctx context.Context, cfg *Config, req Request) (*Result, error) {
 			log(fmt.Sprintf("The cache %s/%s is only read: project %s may not push there", rc.Host, req.Cache.Repository, req.Project))
 		}
 	}
-	// Credentials for the builder: for every registry the runner knows,
-	// those this run may use.
-	hosts := map[string]hostAuth{}
-	usedForPush := map[string]bool{}
-	if req.Push {
-		for _, t := range req.Tags {
-			usedForPush[t.Registry] = true
-		}
-		if cacheWrite {
-			usedForPush[req.Cache.Registry] = true
-		}
+	hosts, err := rs.builderHosts(ctx, cacheWrite)
+	if err != nil {
+		return res, err
 	}
-	for _, regName := range slices.Sorted(maps.Keys(cfg.Registries)) {
-		rc := cfg.Registries[regName]
-		if rc.PullCredentials == nil && !usedForPush[regName] {
-			continue
-		}
-		r, err := open(regName, usedForPush[regName])
-		if err != nil {
-			return res, err
-		}
-		hosts[trimHost(rc.Host)] = r.hostAuth()
+	for _, n := range rs.notes {
+		log(n)
 	}
 	if req.Push {
 		checked := map[Repo]bool{}
@@ -628,6 +593,101 @@ func Build(ctx context.Context, cfg *Config, req Request) (*Result, error) {
 		log(fmt.Sprintf("Signed %s with key %s (%s)", res.Digest, res.KeyID, res.KeySource))
 	}
 	return res, nil
+}
+
+// registrySet opens the registries a build uses, each once, with the
+// credentials the build may use.
+type registrySet struct {
+	cfg   *Config
+	req   Request
+	regs  map[string]*remoteRegistry
+	notes []string // what the log says once, such as why pull credentials were withheld
+}
+
+// mayPull reports whether this build may have a registry's pull
+// credentials, and if not, why.
+func (rs *registrySet) mayPull(name string, rc RegistryConfig) (bool, string) {
+	req := rs.req
+	switch {
+	case rc.PullCredentials == nil:
+		return false, ""
+	case !rc.MayPull(req.Project):
+		return false, fmt.Sprintf("Registry %s: its pull credentials are not for project %s (images.registries.%s.pull_projects), "+
+			"so the build pulls from it anonymously: private base images there cannot be pulled", name, req.Project, name)
+	case !req.PullCredentials:
+		return false, fmt.Sprintf("Registry %s: this %s run may not read secrets, so the build pulls from it anonymously: "+
+			"private base images there cannot be pulled (the project's setting for secrets in pull requests decides)",
+			name, strings.ReplaceAll(req.Event, "_", "-"))
+	}
+	return true, ""
+}
+
+func (rs *registrySet) open(ctx context.Context, regName string, push bool) (*remoteRegistry, error) {
+	if r, ok := rs.regs[regName]; ok {
+		return r, nil
+	}
+	rc, err := rs.cfg.Registry(regName)
+	if err != nil {
+		return nil, err
+	}
+	var user, pass string
+	var cr *Credentials
+	switch {
+	case push && rc.Credentials != nil:
+		cr = rc.Credentials
+	default:
+		if ok, _ := rs.mayPull(regName, rc); ok {
+			cr = rc.PullCredentials
+		}
+	}
+	if cr != nil {
+		if user, pass, err = readCredentials(ctx, rs.req.Lookup, cr); err != nil {
+			return nil, fmt.Errorf("registry %s: %w", regName, err)
+		}
+	}
+	r, err := newRemote(regName, rc, user, pass)
+	if err != nil {
+		return nil, err
+	}
+	rs.regs[regName] = r
+	return r, nil
+}
+
+// builderHosts is what the builder may be told, by registry host: the push
+// credentials of the registries this build pushes to (its tags, and the
+// cache when it writes it), and the pull credentials of the others when the
+// project and the run may have them. Nothing else, and no secret store is
+// read for credentials the build may not have.
+func (rs *registrySet) builderHosts(ctx context.Context, cacheWrite bool) (map[string]hostAuth, error) {
+	req := rs.req
+	usedForPush := map[string]bool{}
+	if req.Push {
+		for _, t := range req.Tags {
+			usedForPush[t.Registry] = true
+		}
+		if cacheWrite && req.Cache != nil {
+			usedForPush[req.Cache.Registry] = true
+		}
+	}
+	hosts := map[string]hostAuth{}
+	for _, regName := range slices.Sorted(maps.Keys(rs.cfg.Registries)) {
+		rc := rs.cfg.Registries[regName]
+		if !usedForPush[regName] {
+			ok, why := rs.mayPull(regName, rc)
+			if why != "" {
+				rs.notes = append(rs.notes, why)
+			}
+			if !ok {
+				continue
+			}
+		}
+		r, err := rs.open(ctx, regName, usedForPush[regName])
+		if err != nil {
+			return nil, err
+		}
+		hosts[trimHost(rc.Host)] = r.hostAuth()
+	}
+	return hosts, nil
 }
 
 // loadSigning reads the key to sign with: the runner's own, or the one the

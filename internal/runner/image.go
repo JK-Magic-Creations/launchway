@@ -139,7 +139,10 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 		Project: job.Project, Event: b.Event, ContextDir: ctxDir, DockerfilePath: dfPath,
 		ContextName: b.Context, DockerfileName: b.File, Target: b.Target, Platforms: b.Platforms,
 		BuildArgs: b.BuildArgs, Secrets: buildSecrets, Tags: tags, Push: b.Push,
-		SBOM: b.SBOM, Provenance: b.Provenance,
+		// A server older than this field sends none; for a pull-request or
+		// draft run that means no.
+		PullCredentials: b.PullCredentials || (b.Event != pipeline.EventPullRequest && b.Event != pipeline.EventDraft),
+		SBOM:            b.SBOM, Provenance: b.Provenance,
 		Source:   r.imageSource(job),
 		RunnerID: r.runnerURI(),
 		Version:  r.Info.Version,

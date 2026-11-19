@@ -8,7 +8,9 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -31,6 +33,9 @@ import (
 type hostAuth struct {
 	username, secret string
 	tls              *tls.Config // nil: the system's
+	// insecure: the registry is configured insecure (plain HTTP), so its
+	// token service may be too.
+	insecure bool
 }
 
 // sessionAuth implements BuildKit's auth session service.
@@ -69,6 +74,15 @@ func (a *sessionAuth) Credentials(_ context.Context, req *auth.CredentialsReques
 // stays here.
 func (a *sessionAuth) FetchToken(ctx context.Context, req *auth.FetchTokenRequest) (*auth.FetchTokenResponse, error) {
 	h := a.lookup(req.Host)
+	// The realm is the registry's word for where to send credentials: never
+	// in the clear, unless the operator marked the registry insecure.
+	if h.secret != "" && !h.insecure {
+		u, err := url.Parse(req.Realm)
+		if err != nil || u.Scheme != "https" {
+			return nil, fmt.Errorf("registry %s asks for its credentials to be sent to %q, which is not https; refused "+
+				"(mark the registry insecure: true only if it is on the runner's own machine)", req.Host, req.Realm)
+		}
+	}
 	to := authutil.TokenOptions{Realm: req.Realm, Service: req.Service, Scopes: req.Scopes, Username: h.username, Secret: h.secret}
 	client := &http.Client{Timeout: 60 * time.Second}
 	if h.tls != nil {

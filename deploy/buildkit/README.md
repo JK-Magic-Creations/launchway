@@ -49,12 +49,20 @@ for the daemon and no security setting.
 
 The daemon also runs with BuildKit's process sandbox off (`noProcessSandbox`): the sandbox mounts a
 new `/proc`, which needs `procMount: Unmasked`, which Pod Security forbids. Builds on one daemon then
-share its process namespace and can see (and signal) each other's processes. Treat a daemon as one
-trust boundary: run one per team or group of projects, and say in the runners' `images.builders`
-which projects use which (`projects:`). The runner never gives a build credentials it may not use,
-and build secrets are mounted only into the step of the build that asked for them, but a hostile build
-running at the same time on the same daemon could reach another build's processes, and through
-`/proc` their files and mounted secrets.
+share its process namespace and can see (and signal) each other's processes.
+
+The daemon asks the runner for registry credentials while it builds. For a registry that uses
+tokens, an honest daemon asks for a token, which the runner fetches itself, and never sees the
+password; for a registry that takes a user name and password directly (basic authentication), the
+daemon is given the password. The build's session answers both kinds of request, so a daemon that
+someone has taken over can obtain the user name and password of every registry the current build may
+use (its push registries, and the pull credentials its project and run may have).
+
+So treat a daemon as one trust boundary: run one per team or group of projects, and say in the
+runners' `images.builders` which projects use which (`projects:`). The runner never gives a build
+credentials it may not use, and build secrets are mounted only into the step of the build that asked
+for them, but a hostile build running at the same time on the same daemon could reach another
+build's processes, and through `/proc` their files and mounted secrets.
 
 ## Install
 

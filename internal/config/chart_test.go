@@ -184,6 +184,7 @@ runner:
         host: harbor.example.com
         credentials: { username: robot$ci, password: { store: vault, key: ci/harbor, field: password } }
         pullCredentials: { usernameFrom: { store: vault, key: ci/harbor-ro, field: user }, password: { store: vault, key: ci/harbor-ro, field: password } }
+        pullProjects: [shop]
         push: [ { projects: [shop], repositories: ["homelab/**"] } ]
     signingSecret: launchway-cosign
     scanner: { dbRepository: harbor.example.com/mirror/trivy-db }
@@ -197,7 +198,7 @@ runner:
 	im := c.Images
 	if im == nil || len(im.Builders) != 1 || im.Builders[0].CAFile != "/var/run/launchway/buildkit/ca.crt" ||
 		im.Builders[0].ServerName != "buildkitd.launchway-build.svc" || im.Registries["harbor"].PullCredentials.UsernameFrom.Key != "ci/harbor-ro" ||
-		!im.Registries["harbor"].MayPush("shop", "homelab/shop") || im.Signing.KeyFile != "/var/run/launchway/signing/cosign.key" ||
+		!im.Registries["harbor"].MayPush("shop", "homelab/shop") || im.Registries["harbor"].MayPull("other") || im.Signing.KeyFile != "/var/run/launchway/signing/cosign.key" ||
 		im.Scanner.DBRepository != "harbor.example.com/mirror/trivy-db" || im.MaxImageMiB != 4096 {
 		t.Fatalf("images: %+v", im)
 	}

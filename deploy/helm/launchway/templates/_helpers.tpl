@@ -285,6 +285,7 @@ the version before does not know the setting. */}}
 {{- $reg := dict "host" $r.host -}}
 {{- with $r.credentials }}{{ $_ := set $reg "credentials" (include "launchway.imageCredentials" . | fromYaml) }}{{ end -}}
 {{- with $r.pullCredentials }}{{ $_ := set $reg "pull_credentials" (include "launchway.imageCredentials" . | fromYaml) }}{{ end -}}
+{{- with $r.pullProjects }}{{ $_ := set $reg "pull_projects" . }}{{ end -}}
 {{- with $r.caFile }}{{ $_ := set $reg "ca_file" . }}{{ end -}}
 {{- if $r.insecure }}{{ $_ := set $reg "insecure" true }}{{ end -}}
 {{- with $r.push }}{{ $_ := set $reg "push" . }}{{ end -}}

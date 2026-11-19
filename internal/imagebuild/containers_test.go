@@ -53,8 +53,10 @@ func (e *env) config() *Config {
 			"plain": {Host: e.plain.Host, Insecure: true, Push: []PushRule{{Projects: []string{"shop"}, Repositories: []string{"team/**"}}},
 				Credentials: &Credentials{Username: "unused", Password: pipeline.SecretRef{Store: "t", Key: "plain"}}},
 			"secure": {Host: e.secure.Host, CAFile: e.secure.CAFile,
-				Credentials: &Credentials{Username: e.secure.User, Password: pipeline.SecretRef{Store: "t", Key: "secure"}},
-				Push:        []PushRule{{Projects: []string{"shop"}, Repositories: []string{"team/shop", "team/cache/*"}}}},
+				Credentials:     &Credentials{Username: e.secure.User, Password: pipeline.SecretRef{Store: "t", Key: "secure"}},
+				PullCredentials: &Credentials{Username: e.secure.User, Password: pipeline.SecretRef{Store: "t", Key: "secure-pull"}},
+				PullProjects:    []string{"shop"},
+				Push:            []PushRule{{Projects: []string{"shop"}, Repositories: []string{"team/shop", "team/cache/*"}}}},
 		},
 	}
 }
@@ -66,6 +68,7 @@ func startEnv(t *testing.T) *env {
 	e.plain = imagetest.StartRegistry(t, imagetest.RegistryOptions{})
 	e.secure = imagetest.StartRegistry(t, imagetest.RegistryOptions{Auth: true, TLS: ca})
 	e.secrets["t:secure"] = e.secure.Password
+	e.secrets["t:secure-pull"] = e.secure.Password
 	e.secrets["t:plain"] = "anything"
 	o := imagetest.BuildKitOptions{HTTP: []string{e.plain.Host}, CAs: map[string]string{e.secure.Host: e.secure.CAFile}}
 	e.bk = imagetest.StartBuildKit(t, o)
@@ -103,7 +106,7 @@ func (l *logLines) String() string {
 
 func (e *env) request(t *testing.T, dir string, logs *logLines) Request {
 	return Request{
-		Project: "shop", Event: "push", ContextDir: dir, DockerfilePath: filepath.Join(dir, "Dockerfile"),
+		Project: "shop", Event: "push", PullCredentials: true, ContextDir: dir, DockerfilePath: filepath.Join(dir, "Dockerfile"),
 		ContextName: ".", DockerfileName: "Dockerfile",
 		Source: Source{Repository: "https://git.example/team/shop.git", Ref: "refs/heads/main",
 			Commit: "0123456789abcdef0123456789abcdef01234567", Event: "push", Project: "shop", Pipeline: "shop", Run: "run_test", RunNumber: 7,
@@ -311,6 +314,54 @@ RUN --mount=type=secret,id=npm_token sh -c 'test -s /run/secrets/npm_token && sh
 		}
 		if strings.Contains(logs, e.secure.Password) {
 			t.Fatal("the registry password is in the log")
+		}
+	})
+
+	t.Run("private base images: only projects in scope, and pull requests only with secrets", func(t *testing.T) {
+		salt := fmt.Sprint(time.Now().UnixNano())
+		logs := &logLines{}
+		req := e.request(t, workspace(t, "FROM docker.io/library/alpine:3.22\nRUN echo "+salt+" > /base\n", map[string]string{}), logs)
+		req.Tags, req.Push = []Tag{{"secure", "team/shop", "base-" + salt}}, true
+		if _, err := Build(ctx, e.config(), req); err != nil {
+			t.Fatalf("%v\n%s", err, logs)
+		}
+		df := "FROM " + e.secure.Host + "/team/shop:base-" + salt + "\nRUN cat /base\n"
+		build := func(project, event string, pull bool) (string, error) {
+			logs := &logLines{}
+			reads := 0
+			req := e.request(t, workspace(t, df, map[string]string{}), logs)
+			req.Project, req.Event, req.PullCredentials, req.Push = project, event, pull, false
+			inner := req.Lookup
+			req.Lookup = func(ctx context.Context, ref pipeline.SecretRef) (string, error) {
+				if ref.Key == "secure-pull" {
+					reads++
+				}
+				return inner(ctx, ref)
+			}
+			_, err := Build(ctx, e.config(), req)
+			if !pull || project != "shop" {
+				if reads != 0 {
+					t.Fatalf("%s/%s: the pull credentials were read", project, event)
+				}
+			}
+			return logs.String(), err
+		}
+		for _, c := range []struct {
+			project, event string
+			pull           bool
+			note           string
+		}{
+			{"other", "push", true, "not for project other"},
+			{"shop", "pull_request", false, "pull-request run may not read secrets"},
+		} {
+			logs, err := build(c.project, c.event, c.pull)
+			if err == nil || !strings.Contains(logs, c.note) || !strings.Contains(logs, "private base images there cannot be pulled") {
+				t.Fatalf("%s/%s: %v\n%s", c.project, c.event, err, logs)
+			}
+			t.Logf("%s/%s: %v", c.project, c.event, err)
+		}
+		if logs, err := build("shop", "pull_request", true); err != nil {
+			t.Fatalf("a pull request that may read secrets: %v\n%s", err, logs)
 		}
 	})
 

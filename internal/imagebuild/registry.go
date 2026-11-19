@@ -101,7 +101,7 @@ func (h httpsOnly) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // hostAuth is what the builder may be told about this registry.
 func (r *remoteRegistry) hostAuth() hostAuth {
-	return hostAuth{username: r.user, secret: r.pass, tls: r.tls}
+	return hostAuth{username: r.user, secret: r.pass, tls: r.tls, insecure: r.cfg.Insecure}
 }
 
 // explain turns an error talking to a registry into one a person can act

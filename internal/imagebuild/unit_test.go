@@ -10,8 +10,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -61,6 +63,11 @@ func TestConfigCheck(t *testing.T) {
 			c.Registries["harbor"] = r
 		},
 		"scanner not pinned": func(c *Config) { c.Scanner.Image = "aquasec/trivy:latest" },
+		"pull_projects without pull credentials": func(c *Config) {
+			r := c.Registries["harbor"]
+			r.PullProjects = []string{"shop"}
+			c.Registries["harbor"] = r
+		},
 		"signing without key": func(c *Config) { c.Signing = &SigningConfig{} },
 	}
 	for name, edit := range cases {
@@ -217,5 +224,87 @@ func TestHTTPSOnly(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, "http://10.0.0.5:5000/v2/", nil)
 	if _, err := tr.RoundTrip(req); err != errPlainHTTP {
 		t.Fatalf("plain HTTP to a registry not marked insecure: %v", err)
+	}
+}
+
+// Pull credentials go to the builder only for the projects a registry
+// names, and for pull-request and draft runs only when they may read
+// secrets; otherwise no secret store is read for them at all.
+func TestPullCredentialsAreScoped(t *testing.T) {
+	cfg := &Config{Registries: map[string]RegistryConfig{
+		"harbor": {Host: "harbor.example.com",
+			Credentials:     &Credentials{Username: "push", Password: pipeline.SecretRef{Store: "s", Key: "push"}},
+			PullCredentials: &Credentials{Username: "pull", Password: pipeline.SecretRef{Store: "s", Key: "pull"}},
+			PullProjects:    []string{"shop", "web-*"},
+			Push:            []PushRule{{Projects: []string{"shop"}, Repositories: []string{"team/*"}}}},
+	}}
+	for _, c := range []struct {
+		name, project, event string
+		pull, push           bool
+		wantUser             string
+		wantReads            []string
+		wantNote             string
+	}{
+		{"in scope", "shop", "push", true, false, "pull", []string{"s:pull"}, ""},
+		{"pattern", "web-a", "manual", true, false, "pull", []string{"s:pull"}, ""},
+		{"out of scope", "other", "push", true, false, "", nil, "not for project other"},
+		{"pull request without secrets", "shop", "pull_request", false, false, "", nil, "pull-request run may not read secrets"},
+		{"draft without secrets", "shop", "draft", false, false, "", nil, "draft run may not read secrets"},
+		{"pull request with secrets", "shop", "pull_request", true, false, "pull", []string{"s:pull"}, ""},
+		{"push run pushes with push credentials", "shop", "push", true, true, "push", []string{"s:push"}, ""},
+	} {
+		var reads []string
+		req := Request{Project: c.project, Event: c.event, PullCredentials: c.pull, Push: c.push,
+			Lookup: func(_ context.Context, ref pipeline.SecretRef) (string, error) {
+				reads = append(reads, ref.String())
+				return "pw-" + ref.Key, nil
+			}}
+		if c.push {
+			req.Tags = []Tag{{"harbor", "team/shop", "v1"}}
+		}
+		rs := &registrySet{cfg: cfg, req: req, regs: map[string]*remoteRegistry{}}
+		hosts, err := rs.builderHosts(context.Background(), false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		h := hosts["harbor.example.com"]
+		if h.username != c.wantUser || !slices.Equal(reads, c.wantReads) {
+			t.Errorf("%s: user %q reads %v; want %q %v", c.name, h.username, reads, c.wantUser, c.wantReads)
+		}
+		if c.wantNote != "" && (len(rs.notes) != 1 || !strings.Contains(rs.notes[0], c.wantNote)) {
+			t.Errorf("%s: notes %v", c.name, rs.notes)
+		}
+		// What the builder is told when it asks.
+		a := newSessionAuth(hosts)
+		cr, _ := a.Credentials(context.Background(), &auth.CredentialsRequest{Host: "harbor.example.com"})
+		if (c.wantUser == "") != (cr.Username == "" && cr.Secret == "") {
+			t.Errorf("%s: the builder is told %q", c.name, cr.Username)
+		}
+	}
+}
+
+// Credentials are never sent to a token service over plain HTTP, unless
+// the registry is marked insecure.
+func TestTokenRealmMustBeHTTPS(t *testing.T) {
+	var got string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.Method
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"token":"t0k","access_token":"t0k","expires_in":60}`))
+	}))
+	defer srv.Close()
+	req := &auth.FetchTokenRequest{Host: "reg.example.com", Realm: srv.URL + "/token", Service: "reg", Scopes: []string{"repository:a:pull"}}
+	a := newSessionAuth(map[string]hostAuth{"reg.example.com": {username: "u", secret: "p"}})
+	if _, err := a.FetchToken(context.Background(), req); err == nil || !strings.Contains(err.Error(), "not https") || got != "" {
+		t.Fatalf("plain HTTP realm: %v (request made: %q)", err, got)
+	}
+	a = newSessionAuth(map[string]hostAuth{"reg.example.com": {username: "u", secret: "p", insecure: true}})
+	if tok, err := a.FetchToken(context.Background(), req); err != nil || tok.Token != "t0k" {
+		t.Fatalf("insecure registry: %v %+v", err, tok)
+	}
+	// Anonymous requests carry nothing to protect.
+	a = newSessionAuth(nil)
+	if _, err := a.FetchToken(context.Background(), req); err != nil {
+		t.Fatalf("anonymous: %v", err)
 	}
 }

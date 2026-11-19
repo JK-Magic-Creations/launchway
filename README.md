@@ -1079,8 +1079,14 @@ runner's operator runs apart from the steps, rootless (see
 Pod Security "restricted", so the daemon has a namespace of its own with exactly two relaxations,
 and step pods stay restricted). The runner is the daemon's client, over mutual TLS: it sends the
 build context (copied out of the run's pod on Kubernetes), answers the daemon's requests for build
-secrets and registry credentials over the build's session (fetching registry tokens itself, so the
-daemon never sees a password), and receives the image. It then has it scanned, by a pinned
+secrets and registry credentials over the build's session, and receives the image. For registries
+that use tokens, an honest daemon asks the runner for a token, which the runner fetches itself, and
+never sees the password; for registries that take a user name and password directly (basic
+authentication), the daemon is given the password. The session answers both kinds of request, so a
+daemon that someone has taken over can obtain the user name and password of every registry the
+current build may use. That is why a daemon is one trust boundary (see
+[deploy/buildkit/README.md](deploy/buildkit/README.md)) and why the credentials a build may use are
+scoped (see *Who gets which credentials* below). It then has it scanned, by a pinned
 [Trivy](https://trivy.dev) image run inside the daemon on exactly what was built, enforces the
 scan's policy, and pushes and signs it itself. Base images, the build cache and the scanner's
 database are the daemon's business; it keeps them between builds.
@@ -1103,6 +1109,7 @@ images:
       host: harbor.example.com
       credentials: { username: "robot$ci", password: { store: vault, key: ci/harbor, field: password } }
       pull_credentials: { username: "robot$pull", password: { store: vault, key: ci/harbor-pull, field: password } }
+      pull_projects: [shop, "web-*"]          # who gets pull_credentials; empty: every project
       ca_file: /etc/launchway/harbor-ca.crt   # optional
       push:
         - { projects: [shop], repositories: [team/shop, "team/cache/*"] }
@@ -1119,9 +1126,23 @@ images:
   reached fails the step in seconds, saying which.
 - **Pull requests and drafts** never push, never write the cache and never read `credentials`:
   the server tells the runner they may not push, and the runner refuses again on its own. They do
-  build, scan and make the SBOM, so a pull request shows what its image would be. They read
-  `pull_credentials` (give a read-only account) for private base images and the cache. As for any
-  step, their build secrets are refused unless the project allows secrets for pull requests.
+  build, scan and make the SBOM, so a pull request shows what its image would be. Their build
+  secrets and `pull_credentials` are refused unless the project allows secrets for pull requests;
+  without them, they pull anonymously, and the log says once that private base images cannot be
+  pulled. The server decides this and tells the runner; a runner that is not told treats a
+  pull-request or draft run as not allowed.
+- **Who gets which credentials.** A Dockerfile can send anything it can pull to anywhere (a `RUN`
+  line with network access), so any credentials a build gets are as good as the project's. The
+  builder gets `pull_credentials` only for the projects in `pull_projects`; with `pull_projects`
+  empty, **every project's builds, and pull requests that may read secrets, can pull whatever that
+  account can read**, from any repository. Give each registry's pull account read access to what
+  those projects need and nothing more, and name the projects. Push `credentials` are given to the
+  builder only for the registries a build pushes to (for the build cache), and they pull too: a
+  project allowed to push to one repository can pull whatever that account can read. Use a registry
+  account per project or team (robot accounts scoped to their repositories), not one account for
+  everything.
+- **Token services.** A registry names where the runner should send its credentials for a token;
+  the runner sends them only over HTTPS, unless the registry is marked `insecure: true`.
 - **No plain HTTP** to a registry unless it is marked `insecure: true` (for a registry on the
   runner's own machine): the registry client would otherwise fall back to HTTP for private
   addresses when TLS fails, sending the credentials in the clear.

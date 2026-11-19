@@ -71,10 +71,15 @@ type RegistryConfig struct {
 	// Credentials push (and pull). They are never read for a pull-request
 	// or draft run, which never pushes.
 	Credentials *Credentials `yaml:"credentials"`
-	// PullCredentials, if set, are read for every run, pull requests
-	// included, to pull base images and read the build cache. Give a
-	// read-only account here.
+	// PullCredentials, if set, let builds pull base images and read the
+	// build cache: builds of the projects PullProjects names, and of
+	// pull-request and draft runs only when they may read secrets. Give a
+	// read-only account here: a Dockerfile can send whatever it can pull
+	// anywhere.
 	PullCredentials *Credentials `yaml:"pull_credentials"`
+	// PullProjects are the projects whose builds get PullCredentials: names
+	// or patterns such as web-*. Empty means every project.
+	PullProjects []string `yaml:"pull_projects"`
 	// CAFile is a CA the runner trusts for this registry, besides the
 	// system's. The builder has its own (see deploy/buildkit/README.md).
 	CAFile string `yaml:"ca_file"`
@@ -193,6 +198,9 @@ func (c *Config) Check() error {
 				return fmt.Errorf("%s: credentials need a username, written in place or as username_from", at)
 			}
 		}
+		if len(r.PullProjects) > 0 && r.PullCredentials == nil {
+			return fmt.Errorf("%s: pull_projects says who gets pull_credentials, and there are none", at)
+		}
 		for j, rule := range r.Push {
 			if len(rule.Projects) == 0 || len(rule.Repositories) == 0 {
 				return fmt.Errorf("%s.push[%d]: a rule names projects and repositories", at, j)
@@ -278,6 +286,12 @@ func (r RegistryConfig) MayPush(project, repository string) bool {
 		}
 	}
 	return false
+}
+
+// MayPull reports whether a project's builds may have the registry's pull
+// credentials.
+func (r RegistryConfig) MayPull(project string) bool {
+	return len(r.PullProjects) == 0 || matchAny(r.PullProjects, project)
 }
 
 // builderFor reports whether a builder serves a project.

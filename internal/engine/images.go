@@ -32,24 +32,28 @@ const FeatureImages = "images"
 
 // ImageJob is what a runner needs to build an image step's image.
 type ImageJob struct {
-	Context    string            `json:"context"`
-	File       string            `json:"file"`
-	Target     string            `json:"target,omitempty"`
-	Platforms  []string          `json:"platforms,omitempty"`
-	BuildArgs  map[string]string `json:"build_args,omitempty"`
-	Tags       []ImageJobTag     `json:"tags"`
-	Push       bool              `json:"push"`
-	Cache      *ImageJobRepo     `json:"cache,omitempty"`
-	SBOM       bool              `json:"sbom,omitempty"`
-	Provenance bool              `json:"provenance,omitempty"`
-	Sign       *pipeline.ImageSign `json:"sign,omitempty"`
-	Scan       *pipeline.ImageScan `json:"scan,omitempty"`
+	Context   string            `json:"context"`
+	File      string            `json:"file"`
+	Target    string            `json:"target,omitempty"`
+	Platforms []string          `json:"platforms,omitempty"`
+	BuildArgs map[string]string `json:"build_args,omitempty"`
+	Tags      []ImageJobTag     `json:"tags"`
+	Push      bool              `json:"push"`
+	// PullCredentials says the build may have registries' pull credentials
+	// (schema 15): pull-request and draft runs only when they may read
+	// secrets. A runner treats a job without it, for such a run, as no.
+	PullCredentials bool                `json:"pull_credentials,omitempty"`
+	Cache           *ImageJobRepo       `json:"cache,omitempty"`
+	SBOM            bool                `json:"sbom,omitempty"`
+	Provenance      bool                `json:"provenance,omitempty"`
+	Sign            *pipeline.ImageSign `json:"sign,omitempty"`
+	Scan            *pipeline.ImageScan `json:"scan,omitempty"`
 	// What provenance records: the run's event, ref and commit, where its
 	// source and libraries came from (credentials removed).
-	Event      string             `json:"event"`
-	Ref        string             `json:"ref,omitempty"`
-	Repository string             `json:"repository,omitempty"`
-	Libraries  []ImageJobLibrary  `json:"libraries,omitempty"`
+	Event      string            `json:"event"`
+	Ref        string            `json:"ref,omitempty"`
+	Repository string            `json:"repository,omitempty"`
+	Libraries  []ImageJobLibrary `json:"libraries,omitempty"`
 }
 
 // ImageJobTag is one name to push under, its tag worked out.
@@ -234,6 +238,9 @@ func (c *cmd) imageJob(def *pipeline.Step) (*ImageJob, error) {
 	// Pull requests and drafts never push, whatever the pipeline at their
 	// head says; that pipeline is not reviewed.
 	j.Push = b.Pushes() && len(j.Tags) > 0 && st.Trigger.Event != pipeline.EventPullRequest && st.Draft == nil
+	// Pull credentials are secrets too: a Dockerfile can send whatever they
+	// pull anywhere.
+	j.PullCredentials = st.secretsAllowed()
 	for _, l := range st.Source.Libraries {
 		lj := ImageJobLibrary{Name: l.Name, Repo: redact.URLs(l.URL), Commit: l.Commit}
 		if lib := st.Pipeline.Library(l.Name); lib != nil {
