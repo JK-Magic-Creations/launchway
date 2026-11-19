@@ -83,6 +83,14 @@ func TestImageStepParses(t *testing.T) {
 		len(s.Artifacts) != 1 || s.Artifacts[0].Name != ProvenanceArtifact || s.Artifacts[0].When != ArtifactAlways {
 		t.Fatalf("reports %+v artifacts %+v", s.Reports, s.Artifacts)
 	}
+	for _, c := range p.RunContainers() {
+		if c.Image == "" {
+			t.Fatalf("an image step has a container in the run's pod: %+v", p.RunContainers())
+		}
+	}
+	if p.ContainerFor(s) != "" {
+		t.Fatal("an image step runs in a container")
+	}
 	if !p.UsesSchema15() || p.Requires != SchemaImages {
 		t.Fatalf("schema: requires %d", p.Requires)
 	}
