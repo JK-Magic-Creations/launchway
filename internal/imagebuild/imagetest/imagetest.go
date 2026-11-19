@@ -262,7 +262,7 @@ func StartBuildKit(t testing.TB, o BuildKitOptions) *BuildKit {
 		}
 		name := "reg-" + strings.NewReplacer(":", "-", ".", "-").Replace(h) + ".pem"
 		_ = os.WriteFile(filepath.Join(ca.Dir, name), data, 0o644)
-		fmt.Fprintf(&toml, "[registry.%q]\n  ca = [\"/certs/%s\"]\n", h, name)
+		fmt.Fprintf(&toml, "[registry.%q]\n  http = false\n  ca = [\"/certs/%s\"]\n", h, name)
 	}
 	if err := os.WriteFile(filepath.Join(ca.Dir, "buildkitd.toml"), toml.Bytes(), 0o644); err != nil {
 		t.Fatal(err)

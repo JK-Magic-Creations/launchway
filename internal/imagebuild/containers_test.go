@@ -285,6 +285,35 @@ RUN --mount=type=secret,id=npm_token sh -c 'test -s /run/secrets/npm_token && sh
 		}
 	})
 
+	t.Run("the builder reads and writes the cache on a registry with TLS and a password, with the runner's credentials", func(t *testing.T) {
+		salt := fmt.Sprint(time.Now().UnixNano())
+		df := "FROM docker.io/library/alpine:3.22\nCOPY salt.txt /salt.txt\nRUN cat /salt.txt > /copy\n"
+		build := func() (*Result, string) {
+			logs := &logLines{}
+			req := e.request(t, workspace(t, df, map[string]string{"salt.txt": salt}), logs)
+			req.Tags = []Tag{{"secure", "team/shop", "cached-" + salt}}
+			req.Push = true
+			req.Cache = &Repo{"secure", "team/cache/secure"}
+			res, err := Build(ctx, e.config(), req)
+			if err != nil {
+				t.Fatalf("%v\n%s", err, logs)
+			}
+			return res, logs.String()
+		}
+		first, _ := build()
+		if first.Cached != 0 || first.Cache != e.secure.Host+"/team/cache/secure" {
+			t.Fatalf("first build: %+v", first)
+		}
+		pruneBuilder(t, ctx, e)
+		second, logs := build()
+		if second.Cached < 2 {
+			t.Fatalf("second build: %d of %d steps cached\n%s", second.Cached, second.Steps, logs)
+		}
+		if strings.Contains(logs, e.secure.Password) {
+			t.Fatal("the registry password is in the log")
+		}
+	})
+
 	t.Run("a pull-request run never pushes", func(t *testing.T) {
 		logs := &logLines{}
 		req := e.request(t, workspace(t, "FROM docker.io/library/alpine:3.22\nRUN true\n", map[string]string{}), logs)
