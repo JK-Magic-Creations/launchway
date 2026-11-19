@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -143,6 +144,9 @@ type RunDetail struct {
 	TriggerDetail *TriggerDetail `json:"trigger_detail,omitempty"`
 	// Deployments are the run's deployments, newest first (schema 11).
 	Deployments []DeploymentView `json:"deployments"`
+	// RunnerHint says why a run that is waiting for a runner may wait a long
+	// time: it builds images, and no runner that can has been seen lately.
+	RunnerHint string `json:"runner_hint,omitempty"`
 }
 
 // RerunBrief is a re-run as listed with the run it re-runs.
@@ -167,6 +171,8 @@ type RunnerView struct {
 	// targets it said it serves.
 	Pool    string   `json:"pool,omitempty"`
 	Targets []string `json:"targets,omitempty"`
+	// Images says the runner builds images (it has image builders).
+	Images bool `json:"images,omitempty"`
 }
 
 const runCols = `id, project, number, pipeline, status, cancel_requested, event, ref, branch, tag, sha,
@@ -502,6 +508,9 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	if d.Deployments, err = e.RunDeployments(id); err != nil {
 		return nil, err
 	}
+	if d.RunnerHint, err = e.imageRunnerHint(st, d.StepList); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
@@ -613,9 +622,12 @@ func (e *Engine) State(runID string) (*RunState, error) {
 // Runners lists runners, most recently seen first. Runners not seen for a
 // day are forgotten and not listed.
 func (e *Engine) Runners() ([]RunnerView, error) {
-	extra := `, '', ''`
-	if e.knows(schemaDeploy) {
-		extra = `, pool, targets`
+	extra := `, '', '', ''`
+	switch {
+	case e.knows(schemaImages):
+		extra = `, pool, targets, features`
+	case e.knows(schemaDeploy):
+		extra = `, pool, targets, ''`
 	}
 	rows, err := e.db.Query(`SELECT id, name, executor, version, last_seen` + extra + ` FROM runners ORDER BY last_seen DESC`)
 	if err != nil {
@@ -626,10 +638,11 @@ func (e *Engine) Runners() ([]RunnerView, error) {
 	out := []RunnerView{}
 	for rows.Next() {
 		var r RunnerView
-		var targets string
-		if err := rows.Scan(&r.ID, &r.Name, &r.Executor, &r.Version, &r.LastSeen, &r.Pool, &targets); err != nil {
+		var targets, features string
+		if err := rows.Scan(&r.ID, &r.Name, &r.Executor, &r.Version, &r.LastSeen, &r.Pool, &targets, &features); err != nil {
 			return nil, err
 		}
+		r.Images = slices.Contains(strings.Fields(features), FeatureImages)
 		if targets != "" {
 			r.Targets = strings.Split(targets, ",")
 		}

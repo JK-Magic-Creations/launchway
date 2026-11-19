@@ -923,7 +923,8 @@ ALTER TABLE environment_state ADD COLUMN drift_detail TEXT NOT NULL DEFAULT '';
 	//    run built this digest" and "the latest image of this repository".
 	//    The SBOM, the findings and the provenance are the step's reports and
 	//    artifacts, kept as schema 12 keeps any step's. Deploy changes may
-	//    pin an image by digest.
+	//    pin an image by digest. runners.features keeps what each runner
+	//    said it can do, so a run can say it waits for one that builds images.
 	//    Compatibility: additive: new tables only, and no new event type.
 	//    A run whose pipeline has an image step or a digest change has
 	//    min_schema 15 from creation (the pipeline also carries "requires":
@@ -965,6 +966,8 @@ CREATE TABLE image_refs (
 CREATE INDEX image_refs_digest ON image_refs(digest, created_at);
 CREATE INDEX image_refs_repository ON image_refs(repository, created_at);
 CREATE INDEX image_refs_run ON image_refs(run_id, step_id, attempt);
+
+ALTER TABLE runners ADD COLUMN features TEXT NOT NULL DEFAULT '';
 `},
 }
 

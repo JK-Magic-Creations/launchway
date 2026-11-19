@@ -2044,6 +2044,15 @@ func (e *Engine) touchRunner(r RunnerInfo) {
 	}
 	unlock := e.writeLock()
 	defer unlock()
+	if e.knows(schemaImages) {
+		if _, err := e.db.Exec(`INSERT INTO runners(id, name, executor, version, last_seen, targets, pool, features) VALUES(?,?,?,?,?,?,?,?)
+			ON CONFLICT(id) DO UPDATE SET name = excluded.name, executor = excluded.executor, version = excluded.version,
+				last_seen = excluded.last_seen, targets = excluded.targets, pool = excluded.pool, features = excluded.features`,
+			r.ID, r.Name, r.Executor, r.Version, e.now().UnixMilli(), strings.Join(r.Targets, ","), r.Pool, r.Features); err != nil {
+			e.log.Error("recording runner", "err", err)
+		}
+		return
+	}
 	if e.knows(schemaDeploy) {
 		if _, err := e.db.Exec(`INSERT INTO runners(id, name, executor, version, last_seen, targets, pool) VALUES(?,?,?,?,?,?,?)
 			ON CONFLICT(id) DO UPDATE SET name = excluded.name, executor = excluded.executor,

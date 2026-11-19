@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { GraphGroup, StepStatus, StepView } from "../api";
 import { elapsed } from "../format";
+import { ImageIcon } from "./Images";
 import { shownStatus, StatusIcon, statusLabel, stepLabel, tone } from "./ui";
 
 const PAD = 12;
@@ -244,10 +245,11 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
               onClick={() => onSelect(s.id)}
               aria-pressed={selected === s.id}
               title={s.description || s.id}
-              aria-label={`${s.id}: ${phases?.[s.id] ?? stepLabel(s)}${s.reused_from ? `, reused from run #${s.reused_from_number}` : ""}${s.description ? `. ${s.description}` : ""}`}>
+              aria-label={`${s.id}${s.kind === "image" ? ", builds an image" : ""}: ${phases?.[s.id] ?? stepLabel(s)}${s.reused_from ? `, reused from run #${s.reused_from_number}` : ""}${s.description ? `. ${s.description}` : ""}`}>
               <span className="node-top">
                 <StatusIcon status={shownStatus(s)} />
                 <span className="node-name">{label}</span>
+                {s.kind === "image" && <span className="node-kind" title="Builds a container image"><ImageIcon size={11} />image</span>}
                 {s.attempt > 1 && <span className="node-attempt" title={`Attempt ${s.attempt}`}>#{s.attempt}</span>}
               </span>
               <span className="node-sub">

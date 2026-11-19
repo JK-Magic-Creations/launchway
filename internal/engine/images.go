@@ -120,6 +120,7 @@ type ImageScanSum struct {
 var (
 	imgDigestRe = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 	imgRefRe    = regexp.MustCompile(`^[A-Za-z0-9._:/@-]{1,400}$`)
+	purlRe      = regexp.MustCompile(`^pkg:[A-Za-z0-9._:/@?=&%+-]{1,400}$`)
 )
 
 // clean bounds what a runner sent before it is kept, and drops what does
@@ -179,7 +180,14 @@ func (r *ImageRecord) clean() bool {
 		r.Builders = []string{}
 	}
 	r.Cache = line(r.Cache, 300)
-	r.BaseImages = refs(r.BaseImages, 50)
+	var bases []string
+	for _, b := range r.BaseImages {
+		// Package URLs: pkg:docker/alpine@3.22?platform=linux%2Famd64.
+		if purlRe.MatchString(b) && len(bases) < 50 {
+			bases = append(bases, b)
+		}
+	}
+	r.BaseImages = bases
 	if r.Scan != nil {
 		r.Scan.FailOn, r.Scan.Mode = line(r.Scan.FailOn, 10), line(r.Scan.Mode, 10)
 	}
@@ -523,4 +531,30 @@ func (c *cmd) imageRefused(id string, def *pipeline.Step) bool {
 		return true
 	}
 	return false
+}
+
+// imageRunnerHint says, for a run with image steps that has a step waiting
+// for a runner, when no runner that builds images has been seen lately:
+// otherwise the run would wait without saying why.
+func (e *Engine) imageRunnerHint(st *RunState, steps []StepView) (string, error) {
+	if !e.knows(schemaImages) || st.Status.Terminal() || !st.Pipeline.HasImageSteps() {
+		return "", nil
+	}
+	queued := false
+	for _, s := range steps {
+		queued = queued || s.Status == StepQueuedS
+	}
+	if !queued {
+		return "", nil
+	}
+	var n int
+	if err := e.db.QueryRow(`SELECT COUNT(*) FROM runners WHERE last_seen >= ? AND (features = ? OR features LIKE ? OR features LIKE ?)`,
+		e.now().Add(-RunnerOffline).UnixMilli(), FeatureImages, FeatureImages+" %", "% "+FeatureImages+"%").Scan(&n); err != nil {
+		return "", err
+	}
+	if n > 0 {
+		return "", nil
+	}
+	return "This run builds images, so all its steps wait for a runner that can build them, and none has been seen in the last " +
+		RunnerOffline.String() + ". A runner builds images when its configuration names image builders (images.builders).", nil
 }

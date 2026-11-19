@@ -36,6 +36,7 @@ export function RunnersPage() {
                     <td><span className={"online " + (online ? "online-on" : "")} aria-label={online ? "online" : "offline"} />{r.name}<div className="faint small mono">{r.id}</div></td>
                     <td>
                       {r.executor === "deploy" ? "deploy runner" : r.executor}
+                      {r.images && <div className="faint small">builds images</div>}
                       {(r.pool || (r.targets?.length ?? 0) > 0) && (
                         <div className="faint small">
                           {r.pool && <>pool <Mono>{r.pool}</Mono></>}{r.pool && r.targets?.length ? ", " : ""}

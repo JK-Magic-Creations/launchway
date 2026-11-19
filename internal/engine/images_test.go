@@ -59,7 +59,7 @@ func record() *ImageRecord {
 		Tags:      []string{"harbor.example.com/team/shop:0123abcd", "harbor.example.com/team/shop:latest"},
 		Pushed:    true, Signed: true, KeyID: "abcdef0123456789", KeySource: "runner", Provenance: "attached", SBOM: true,
 		Scan:     &ImageScanSum{High: 2, FailOn: "critical", Mode: "enforce"},
-		Builders: []string{"shared"}, Steps: 5, Cached: 3}
+		Builders: []string{"shared"}, Steps: 5, Cached: 3, BaseImages: []string{"pkg:docker/alpine@3.22?platform=linux%2Famd64"}}
 }
 
 func TestImageStepRunsAndIsRecorded(t *testing.T) {
@@ -190,7 +190,8 @@ func TestImageRecordIsCleaned(t *testing.T) {
 	r.Platforms = append(r.Platforms, ImagePlatform{Platform: "linux/arm64", Digest: "nope"})
 	r.Provenance = "made-up"
 	r.NotPushed = strings.Repeat("why ", 200)
-	if !r.clean() || len(r.Tags) != 2 || len(r.Platforms) != 1 || r.Provenance != "" || len(r.NotPushed) > 200 {
+	r.BaseImages = append(r.BaseImages, "not a purl", "pkg:docker/x y")
+	if !r.clean() || len(r.BaseImages) != 1 || len(r.Tags) != 2 || len(r.Platforms) != 1 || r.Provenance != "" || len(r.NotPushed) > 200 {
 		t.Fatalf("cleaned: %+v", r)
 	}
 	if (&ImageRecord{Digest: "sha256:bad"}).clean() || (*ImageRecord)(nil).clean() {
@@ -300,5 +301,29 @@ func TestDeployPinsTheImageByDigest(t *testing.T) {
 	d := leaseDeploy(t, e, deployer)
 	if d.Deploy == nil || len(d.Deploy.Changes) != 1 || d.Deploy.Changes[0].Digest != testDigest || d.Deploy.Changes[0].Tag != "" {
 		t.Fatalf("deploy job: %+v", d.Deploy)
+	}
+}
+
+// A run with image steps says so when no runner that builds images has
+// been seen, and stops saying it once one has.
+func TestImageRunnerHint(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, imagePipeline, Trigger{Event: "manual", SHA: "0123abcd0123abcd0123abcd0123abcd0123abcd"})
+	none(t, e) // a runner without builders asks and is seen
+	d, err := e.GetRun(id)
+	if err != nil || !strings.Contains(d.RunnerHint, "runner that can build them") {
+		t.Fatalf("%v %q", err, d.RunnerHint)
+	}
+	ok(t, e, takeAs(t, e, imageRunner), map[string]string{"version": "1"})
+	if d, _ := e.GetRun(id); d.RunnerHint != "" {
+		t.Fatalf("hint with a runner that builds images: %q", d.RunnerHint)
+	}
+	rs, _ := e.Runners()
+	found := false
+	for _, r := range rs {
+		found = found || (r.ID == imageRunner.ID && r.Images)
+	}
+	if !found {
+		t.Fatalf("runners: %+v", rs)
 	}
 }
