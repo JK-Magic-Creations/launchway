@@ -915,7 +915,64 @@ ALTER TABLE environment_state ADD COLUMN observed_deployment TEXT NOT NULL DEFAU
 ALTER TABLE environment_state ADD COLUMN drift TEXT NOT NULL DEFAULT '';
 ALTER TABLE environment_state ADD COLUMN drift_detail TEXT NOT NULL DEFAULT '';
 `},
+	// 15: image steps (kind image; see images.go). What an image step
+	//    built is a summary in the event that ends its attempt
+	//    (Payload.Image), and derived from it: images, one row per attempt
+	//    with the summary, and image_refs, one row per name it was pushed
+	//    under and per digest (the index's and each platform's), for "which
+	//    run built this digest" and "the latest image of this repository".
+	//    The SBOM, the findings and the provenance are the step's reports and
+	//    artifacts, kept as schema 12 keeps any step's. Deploy changes may
+	//    pin an image by digest. runners.features keeps what each runner
+	//    said it can do, so a run can say it waits for one that builds images.
+	//    Compatibility: additive: new tables only, and no new event type.
+	//    A run whose pipeline has an image step or a digest change has
+	//    min_schema 15 from creation (the pipeline also carries "requires":
+	//    15), so older servers leave it alone: they would not know the step
+	//    kind, and a deploy runner older than this refuses a change with a
+	//    digest and no tag rather than writing a tag.
+	{additive, `
+CREATE TABLE images (
+  run_id     TEXT    NOT NULL,
+  step_id    TEXT    NOT NULL,
+  attempt    INTEGER NOT NULL,
+  project    TEXT    NOT NULL,
+  run_number INTEGER NOT NULL,
+  digest     TEXT    NOT NULL,
+  image      TEXT    NOT NULL DEFAULT '',
+  pushed     INTEGER NOT NULL DEFAULT 0,
+  signed     INTEGER NOT NULL DEFAULT 0,
+  outcome    TEXT    NOT NULL DEFAULT '',
+  summary    TEXT    NOT NULL,
+  created_at {{BIG}} NOT NULL,
+  PRIMARY KEY (run_id, step_id, attempt)
+);
+CREATE INDEX images_project ON images(project, created_at);
+
+CREATE TABLE image_refs (
+  run_id     TEXT    NOT NULL,
+  step_id    TEXT    NOT NULL,
+  attempt    INTEGER NOT NULL,
+  project    TEXT    NOT NULL,
+  run_number INTEGER NOT NULL,
+  kind       TEXT    NOT NULL,
+  repository TEXT    NOT NULL DEFAULT '',
+  tag        TEXT    NOT NULL DEFAULT '',
+  digest     TEXT    NOT NULL,
+  platform   TEXT    NOT NULL DEFAULT '',
+  pushed     INTEGER NOT NULL DEFAULT 0,
+  created_at {{BIG}} NOT NULL
+);
+CREATE INDEX image_refs_digest ON image_refs(digest, created_at);
+CREATE INDEX image_refs_repository ON image_refs(repository, created_at);
+CREATE INDEX image_refs_run ON image_refs(run_id, step_id, attempt);
+
+ALTER TABLE runners ADD COLUMN features TEXT NOT NULL DEFAULT '';
+`},
 }
+
+// schemaImages is the schema that brought image steps.
+const schemaImages = 15
 
 // schemaControl is the schema that brought commands on deployments, rollout
 // steps, and observing idle services.

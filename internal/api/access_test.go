@@ -117,6 +117,11 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/runs/{id}/findings":       {"GET", "/api/v1/runs/{pay}/findings", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/projects/{name}/security": {"GET", "/api/v1/projects/pay-api/security", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/components":               {"GET", "/api/v1/components?name=left-pad", "", [6]int{401, 200, 200, 200, 200, 200}},
+
+	// Images: what a run built; a search over the projects the caller may see.
+	"GET /api/v1/runs/{id}/images": {"GET", "/api/v1/runs/{pay}/images", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/images": {"GET", "/api/v1/images?repository=harbor.example.com/team/shop", "",
+		[6]int{401, 200, 200, 200, 200, 200}},
 }
 
 // draftBody starts a draft run that waits for an approval, so it needs no

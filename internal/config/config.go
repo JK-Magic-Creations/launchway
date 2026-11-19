@@ -20,6 +20,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/imagebuild"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
@@ -408,6 +409,10 @@ type RunnerSettings struct {
 	Secrets     secrets.Config             `yaml:"secrets"` // secret stores, by name
 	// Reports limits the report files collected after each step.
 	Reports ReportsConfig `yaml:"reports"`
+	// Images lets the runner take image steps: the builders it sends builds
+	// to, and the registries it pushes to (see internal/imagebuild). Unset,
+	// the runner takes no image steps.
+	Images *imagebuild.Config `yaml:"images"`
 }
 
 // RunnerFile is the file given to `launchway runner --config`: the same
@@ -446,6 +451,10 @@ func LoadRunner(path string) (*RunnerFile, error) {
 		c.Kubernetes.Kubeconfig = filepath.Join(base, k)
 	}
 	c.Secrets.RelativeTo(base)
+	c.Images.RelativeTo(base)
+	if err := c.Images.Check(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
 	if c.Deploy != nil {
 		for name, t := range c.Deploy.Targets {
 			if k := t.Kubernetes.Kubeconfig; k != "" && !filepath.IsAbs(k) {
@@ -506,6 +515,7 @@ func Load(path string) (*Config, error) {
 				}
 			}
 			c.Runner.Secrets.RelativeTo(base)
+			c.Runner.Images.RelativeTo(base)
 			c.relativeTriggerFiles(base)
 			if f := c.Auth.OIDC.ClientSecretFile; f != "" && !filepath.IsAbs(f) {
 				c.Auth.OIDC.ClientSecretFile = filepath.Join(base, f)
@@ -566,6 +576,9 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.Runner.Reports.Limits(); err != nil {
+		return nil, fmt.Errorf("%s: runner.%w", path, err)
+	}
+	if err := c.Runner.Images.Check(); err != nil {
 		return nil, fmt.Errorf("%s: runner.%w", path, err)
 	}
 	if c.Artifacts.Dir != "" && !filepath.IsAbs(c.Artifacts.Dir) && path != "" {

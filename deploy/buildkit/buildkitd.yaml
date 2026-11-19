@@ -1,0 +1,179 @@
+# Rootless BuildKit for Launchway's image steps: one daemon, in a namespace
+# of its own, reached by runners over mutual TLS. Read README.md in this
+# directory first: it says why this cannot run under Pod Security
+# "restricted", exactly which fields are relaxed, and what to set up on the
+# nodes (the seccomp profile) and in Secrets (the certificates).
+#
+# Change before applying:
+#   - the runners' namespace in the NetworkPolicy (launchway);
+#   - the egress rules, for your registries;
+#   - the image, if you mirror it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: launchway-build
+  labels:
+    # The daemon needs privilege escalation (for newuidmap) and the SETUID
+    # and SETGID capabilities: Pod Security "baseline" allows that,
+    # "restricted" does not. Warnings and audit stay at "restricted", so
+    # anything else that needs more shows up.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: buildkitd
+  namespace: launchway-build
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildkitd
+  namespace: launchway-build
+data:
+  # The user IDs the builds' processes run as on the node, besides the
+  # daemon's own (1000). Pick a range no other workload on the build nodes
+  # uses.
+  subuid: |
+    user:100000:65536
+  buildkitd.toml: |
+    [worker.oci]
+      # The process sandbox needs /proc unmasked, which Pod Security
+      # forbids; builds on this daemon share its process namespace, so give
+      # each trust boundary (team, set of projects) a daemon of its own and
+      # say which projects use which in the runners' images.builders.
+      noProcessSandbox = true
+      gc = true
+    [worker.containerd]
+      enabled = false
+    # A registry with a private CA, for base images and the build cache:
+    # [registry."harbor.example.com"]
+    #   ca = ["/etc/buildkit/registry-ca/ca.crt"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buildkitd
+  namespace: launchway-build
+  labels: { app.kubernetes.io/name: buildkitd, app.kubernetes.io/part-of: launchway }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: buildkitd }
+  strategy: { type: Recreate }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: buildkitd, app.kubernetes.io/part-of: launchway }
+    spec:
+      serviceAccountName: buildkitd
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        # deploy/buildkit/seccomp-rootless-buildkit.json, installed on every
+        # node that may run this pod (see README.md).
+        seccompProfile:
+          type: Localhost
+          localhostProfile: profiles/launchway-rootless-buildkit.json
+      containers:
+        - name: buildkitd
+          image: docker.io/moby/buildkit:v0.35.0-rootless@sha256:5987568f92dafbfb679879de59c1cd8d26597f5f6635c314e166164e2615870c
+          args:
+            - --addr=tcp://0.0.0.0:1234
+            - --tlscacert=/etc/buildkit/tls/ca.crt
+            - --tlscert=/etc/buildkit/tls/tls.crt
+            - --tlskey=/etc/buildkit/tls/tls.key
+            - --config=/etc/buildkit/buildkitd.toml
+          ports:
+            - { name: buildkit, containerPort: 1234 }
+          securityContext:
+            # The relaxation, field by field: newuidmap and newgidmap are
+            # set-user-ID helpers, so privilege escalation stays allowed and
+            # the bounding set keeps SETUID and SETGID. Nothing else is added.
+            allowPrivilegeEscalation: true
+            capabilities:
+              drop: [ALL]
+              add: [SETUID, SETGID]
+            readOnlyRootFilesystem: false
+          readinessProbe:
+            tcpSocket: { port: buildkit }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: buildkit }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests: { cpu: "1", memory: 2Gi }
+            limits: { memory: 8Gi }
+          volumeMounts:
+            - { name: tls, mountPath: /etc/buildkit/tls, readOnly: true }
+            - { name: config, mountPath: /etc/buildkit/buildkitd.toml, subPath: buildkitd.toml, readOnly: true }
+            - { name: config, mountPath: /etc/subuid, subPath: subuid, readOnly: true }
+            - { name: config, mountPath: /etc/subgid, subPath: subuid, readOnly: true }
+            - { name: state, mountPath: /home/user/.local/share/buildkit }
+      volumes:
+        # ca.crt (the CA that signed the runners' client certificates),
+        # tls.crt and tls.key (the daemon's certificate, for the Service's
+        # name).
+        - name: tls
+          secret: { secretName: buildkitd-tls, defaultMode: 0440 }
+        - name: config
+          configMap: { name: buildkitd }
+        # The build cache. An emptyDir is lost when the pod moves; use a
+        # PersistentVolumeClaim (and a StatefulSet) to keep it.
+        - name: state
+          emptyDir: { sizeLimit: 100Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: buildkitd
+  namespace: launchway-build
+spec:
+  selector: { app.kubernetes.io/name: buildkitd }
+  ports:
+    - { name: buildkit, port: 1234, targetPort: buildkit }
+---
+# Only Launchway's runners reach the daemon. Builds run code from
+# repositories, so what the daemon (and the builds in it) may reach is
+# limited too: DNS, and the internet and registries, but not the cluster's
+# other services or the cloud's metadata endpoint. Adjust for your network.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: buildkitd
+  namespace: launchway-build
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: buildkitd }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: launchway }
+          podSelector:
+            matchLabels: { app.kubernetes.io/component: runner }
+      ports:
+        - { port: 1234, protocol: TCP }
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports:
+        - { port: 53, protocol: UDP }
+        - { port: 53, protocol: TCP }
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, 100.64.0.0/10]
+      ports:
+        - { port: 443, protocol: TCP }
+        - { port: 80, protocol: TCP }

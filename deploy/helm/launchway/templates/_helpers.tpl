@@ -255,7 +255,63 @@ in the server configuration, plus the server URL and the data directory.
 {{- $runner := dict "server" $server "data" "/var/lib/launchway-runner" "concurrency" .Values.runner.concurrency "executor" "kubernetes" "kubernetes" $kube "secrets" (.Values.runner.secretStores | default dict) -}}
 {{- /* Only when set: a runner of the version before does not know the setting (see the note on defaults in values.yaml). */ -}}
 {{- if $reports }}{{ $_ := set $runner "reports" $reports }}{{ end -}}
+{{- with include "launchway.runnerImages" . | fromYaml }}{{ if . }}{{ $_ := set $runner "images" . }}{{ end }}{{ end -}}
 {{- toYaml $runner -}}
+{{- end -}}
+
+{{/* The runners' images section (image steps), or nothing when no builder is set: a runner of
+the version before does not know the setting. */}}
+{{- define "launchway.runnerImages" -}}
+{{- $i := .Values.runner.images | default dict -}}
+{{- if $i.builders -}}
+{{- $tls := "/var/run/launchway/buildkit" -}}
+{{- $builders := list -}}
+{{- range $i.builders -}}
+{{- $b := dict "name" .name "address" .address -}}
+{{- if hasPrefix "tcp://" .address -}}
+{{- if not $i.tlsSecret }}{{ fail (printf "runner.images.builders: %s is reached over TCP, which needs mutual TLS: set runner.images.tlsSecret" .name) }}{{ end -}}
+{{- $_ := set $b "ca_file" (printf "%s/ca.crt" $tls) -}}
+{{- $_ := set $b "cert_file" (printf "%s/tls.crt" $tls) -}}
+{{- $_ := set $b "key_file" (printf "%s/tls.key" $tls) -}}
+{{- end -}}
+{{- with .serverName }}{{ $_ := set $b "server_name" . }}{{ end -}}
+{{- with .platforms }}{{ $_ := set $b "platforms" . }}{{ end -}}
+{{- with .projects }}{{ $_ := set $b "projects" . }}{{ end -}}
+{{- $builders = append $builders $b -}}
+{{- end -}}
+{{- $out := dict "builders" $builders -}}
+{{- $regs := dict -}}
+{{- range $name, $r := $i.registries -}}
+{{- $reg := dict "host" $r.host -}}
+{{- with $r.credentials }}{{ $_ := set $reg "credentials" (include "launchway.imageCredentials" . | fromYaml) }}{{ end -}}
+{{- with $r.pullCredentials }}{{ $_ := set $reg "pull_credentials" (include "launchway.imageCredentials" . | fromYaml) }}{{ end -}}
+{{- with $r.pullProjects }}{{ $_ := set $reg "pull_projects" . }}{{ end -}}
+{{- with $r.caFile }}{{ $_ := set $reg "ca_file" . }}{{ end -}}
+{{- if $r.insecure }}{{ $_ := set $reg "insecure" true }}{{ end -}}
+{{- with $r.push }}{{ $_ := set $reg "push" . }}{{ end -}}
+{{- $_ := set $regs $name $reg -}}
+{{- end -}}
+{{- if $regs }}{{ $_ := set $out "registries" $regs }}{{ end -}}
+{{- if $i.signingSecret -}}
+{{- $_ := set $out "signing" (dict "key_file" "/var/run/launchway/signing/cosign.key" "password_file" "/var/run/launchway/signing/cosign.password") -}}
+{{- end -}}
+{{- $sc := $i.scanner | default dict -}}
+{{- $scanner := dict -}}
+{{- with $sc.image }}{{ $_ := set $scanner "image" . }}{{ end -}}
+{{- with $sc.dbRepository }}{{ $_ := set $scanner "db_repository" . }}{{ end -}}
+{{- with $sc.javaDBRepository }}{{ $_ := set $scanner "java_db_repository" . }}{{ end -}}
+{{- if $scanner }}{{ $_ := set $out "scanner" $scanner }}{{ end -}}
+{{- with $i.maxContextMiB }}{{ $_ := set $out "max_context_mib" (int64 .) }}{{ end -}}
+{{- with $i.maxImageMiB }}{{ $_ := set $out "max_image_mib" (int64 .) }}{{ end -}}
+{{- toYaml $out -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "launchway.imageCredentials" -}}
+{{- $c := dict "password" .password -}}
+{{- with .username }}{{ $_ := set $c "username" . }}{{ end -}}
+{{- with .usernameFrom }}{{ $_ := set $c "username_from" . }}{{ end -}}
+{{- toYaml $c -}}
 {{- end -}}
 
 {{/* Default soft spread across nodes, for one component. Call with (list $ "server"). */}}

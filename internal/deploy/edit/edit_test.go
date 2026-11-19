@@ -211,7 +211,7 @@ func TestImageErrors(t *testing.T) {
 		{"zero matches", "image: other/app:1\n", "homelab/beacon", "2", "no reference to image homelab/beacon"},
 		{"empty file", "", "homelab/beacon", "2", "no reference to image homelab/beacon"},
 		{"digest", "a: 1\nb:\n  image: homelab/beacon@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n", "homelab/beacon", "2",
-			"line 3: image homelab/beacon is pinned by digest (@sha256:0123456789ab…); Launchway sets tags only"},
+			"line 3: image homelab/beacon is pinned by digest (@sha256:0123456789ab…); a tag cannot move it"},
 		{"tag and digest", "x: homelab/beacon:1@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\n", "homelab/beacon", "2", "line 1: image homelab/beacon is pinned by digest"},
 		{"anchored value", "image: &i homelab/beacon:1\nb: *i\n", "homelab/beacon", "2", "line 1: the reference to image homelab/beacon has an anchor (&i)"},
 		{"tagged value", "image: !!str homelab/beacon:1\n", "homelab/beacon", "2", "line 1: the reference to image homelab/beacon has an explicit tag"},
@@ -597,4 +597,29 @@ func FuzzSet(f *testing.F) {
 			t.Fatalf("after Set, the target reads %q (%s), want %q\ninput: %q\noutput: %q", n.Value, n.ShortTag(), value, in, out)
 		}
 	})
+}
+
+func TestImageDigest(t *testing.T) {
+	d := "sha256:" + strings.Repeat("ab", 32)
+	in := "# keep me\nspec:\n  containers:\n    - image: harbor.example.com/team/shop:1.2  # pinned below\n    - image: \"team/shop@sha256:" + strings.Repeat("cd", 32) + "\"\n    - image: team/other:1\n"
+	out, n, err := ImageDigest([]byte(in), "team/shop", d)
+	if err != nil || n != 2 {
+		t.Fatalf("%v %d", err, n)
+	}
+	want := "# keep me\nspec:\n  containers:\n    - image: harbor.example.com/team/shop@" + d + "  # pinned below\n    - image: \"team/shop@" + d + "\"\n    - image: team/other:1\n"
+	if string(out) != want {
+		t.Fatalf("got\n%s\nwant\n%s", out, want)
+	}
+	// Again: nothing changes.
+	again, _, err := ImageDigest(out, "team/shop", d)
+	if err != nil || string(again) != string(out) {
+		t.Fatalf("second edit: %v\n%s", err, again)
+	}
+	if _, _, err := ImageDigest([]byte(in), "team/shop", "sha256:short"); err == nil {
+		t.Fatal("a short digest was taken")
+	}
+	// A tag cannot move a reference pinned by digest; the message says how.
+	if _, _, err := Image(out, "team/shop", "v2"); err == nil || !strings.Contains(err.Error(), "digest: instead of tag:") {
+		t.Fatalf("tag over a digest: %v", err)
+	}
 }

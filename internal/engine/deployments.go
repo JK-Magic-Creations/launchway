@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jk-magic-creations/launchway/internal/deploy/edit"
 	"github.com/jk-magic-creations/launchway/internal/ids"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
@@ -603,15 +604,20 @@ func (c *cmd) resolveChanges(def *pipeline.Step) ([]DeployChange, error) {
 	for _, ch := range def.ArgoCD.WriteBack.Changes {
 		dc := DeployChange{File: ch.File, Image: ch.Image, Set: ch.Set}
 		var err error
-		if ch.Image != "" {
+		switch {
+		case ch.Image != "" && ch.Digest != nil:
+			if dc.Digest, err = c.resolve(def, ch.Digest); err == nil {
+				err = edit.CheckDigest(dc.Digest)
+			}
+		case ch.Image != "":
 			dc.Tag, err = c.resolve(def, ch.Tag)
-		} else {
+		default:
 			dc.Value, err = c.resolve(def, ch.Value)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", ch.File, err)
 		}
-		if strings.ContainsAny(dc.Tag+dc.Value, "\r\n") {
+		if strings.ContainsAny(dc.Tag+dc.Digest+dc.Value, "\r\n") {
 			return nil, fmt.Errorf("%s: the value is more than one line", ch.File)
 		}
 		out = append(out, dc)
@@ -792,8 +798,12 @@ type DeployChange struct {
 	File  string `json:"file"`
 	Image string `json:"image,omitempty"`
 	Tag   string `json:"tag,omitempty"`
-	Set   string `json:"set,omitempty"`
-	Value string `json:"value,omitempty"`
+	// Digest pins the image (schema 15). A change has a tag or a digest,
+	// never both, so a deploy runner older than this, which knows only Tag,
+	// refuses the empty tag rather than writing a tag in its place.
+	Digest string `json:"digest,omitempty"`
+	Set    string `json:"set,omitempty"`
+	Value  string `json:"value,omitempty"`
 }
 
 // DeployJob is what a deploy runner needs for one action.

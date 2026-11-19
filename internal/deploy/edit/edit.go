@@ -41,12 +41,28 @@ import (
 // because in a chart's values file (repository: homelab/beacon with a
 // separate tag key) adding a tag would be wrong; set such a tag with Set.
 //
-// A reference pinned by digest is refused: Launchway sets tags only.
+// A reference pinned by digest is refused: a tag cannot move it (see
+// ImageDigest).
 func Image(data []byte, image, tag string) (out []byte, matches int, err error) {
-	if err := CheckImage(image); err != nil {
+	if err := CheckTag(tag); err != nil {
 		return nil, 0, err
 	}
-	if err := CheckTag(tag); err != nil {
+	return imageRef(data, image, tag, "")
+}
+
+// ImageDigest pins every reference to an image to a digest: each becomes
+// [registry/]repository@digest, whatever tag or digest it had. As for
+// Image, a value with neither tag nor digest counts only under a key named
+// image, and zero references is an error.
+func ImageDigest(data []byte, image, digest string) (out []byte, matches int, err error) {
+	if err := CheckDigest(digest); err != nil {
+		return nil, 0, err
+	}
+	return imageRef(data, image, "", digest)
+}
+
+func imageRef(data []byte, image, tag, digest string) (out []byte, matches int, err error) {
+	if err := CheckImage(image); err != nil {
 		return nil, 0, err
 	}
 	want, _ := parseRef(image)
@@ -84,13 +100,17 @@ func Image(data []byte, image, tag string) (out []byte, matches int, err error) 
 		if err != nil {
 			return fmt.Errorf("line %d: the reference to image %s %v", n.Line, image, err)
 		}
-		if r.digest != "" {
-			return fmt.Errorf("line %d: image %s is pinned by digest (@%s); Launchway sets tags only", n.Line, r.name(), shortDigest(r.digest))
+		if r.digest != "" && digest == "" {
+			return fmt.Errorf("line %d: image %s is pinned by digest (@%s); a tag cannot move it. Pin it with digest: instead of tag:",
+				n.Line, r.name(), shortDigest(r.digest))
 		}
 		matches++
 		lead := n.Value[:strings.Index(n.Value, v)]
 		trail := n.Value[len(lead)+len(v):]
 		nv := lead + r.name() + ":" + tag + trail
+		if digest != "" {
+			nv = lead + r.name() + "@" + digest + trail
+		}
 		if nv == n.Value {
 			return nil
 		}

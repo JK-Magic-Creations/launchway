@@ -153,7 +153,8 @@ export function artifactArchiveURL(a: Pick<ArtifactView, "run_id" | "id">): stri
   return `/api/v1/runs/${encodeURIComponent(a.run_id)}/artifacts/${encodeURIComponent(a.id)}/archive`;
 }
 
-async function copyText(text: string) {
+/** Copies text, also where the clipboard API is not allowed. */
+export async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text);
   } catch {

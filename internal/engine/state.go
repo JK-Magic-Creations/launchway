@@ -230,7 +230,8 @@ func fold(events []Event, vocab int) *RunState {
 
 // Values a server of this version understands, inside events.
 var (
-	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval, pipeline.KindDeploy, pipeline.KindRollback, pipeline.KindRolloutStep}
+	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval, pipeline.KindDeploy, pipeline.KindRollback, pipeline.KindRolloutStep,
+		pipeline.KindImage}
 	knownOutcomes  = []string{string(StepSucceeded), string(StepFailed)}
 	knownRunEnds   = []string{string(RunSucceeded), string(RunFailed), string(RunCanceled)}
 	knownSkipKinds = []string{"condition", "upstream", SkipNotNeeded, SkipSuperseded}
@@ -318,6 +319,13 @@ func (st *RunState) check(ev Event) bool {
 			st.Schema = max(st.Schema, schemaTriggers)
 			if !st.understands(schemaTriggers) {
 				st.notUnderstood("a pipeline key or trigger of schema %d (inputs, for_each, a schedule or a webhook)", schemaTriggers)
+			}
+		}
+		// Image steps, and deploy changes that pin a digest.
+		if p.Pipeline.UsesSchema15() {
+			st.Schema = max(st.Schema, schemaImages)
+			if !st.understands(schemaImages) {
+				st.notUnderstood("image steps or deploy changes that pin a digest (schema %d)", schemaImages)
 			}
 		}
 		// Rollout steps, and the keys that control a rollout.

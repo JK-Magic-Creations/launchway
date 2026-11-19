@@ -171,6 +171,18 @@ spec:
               mountPath: /var/lib/launchway-runner
             - name: tmp
               mountPath: /tmp
+            {{- with (.Values.runner.images | default dict) }}
+            {{- if and .builders .tlsSecret }}
+            - name: buildkit-tls
+              mountPath: /var/run/launchway/buildkit
+              readOnly: true
+            {{- end }}
+            {{- if and .builders .signingSecret }}
+            - name: signing
+              mountPath: /var/run/launchway/signing
+              readOnly: true
+            {{- end }}
+            {{- end }}
             {{- with .Values.runner.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -186,6 +198,20 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 256Mi
+        {{- with (.Values.runner.images | default dict) }}
+        {{- if and .builders .tlsSecret }}
+        - name: buildkit-tls
+          secret:
+            secretName: {{ .tlsSecret }}
+            defaultMode: 0440
+        {{- end }}
+        {{- if and .builders .signingSecret }}
+        - name: signing
+          secret:
+            secretName: {{ .signingSecret }}
+            defaultMode: 0440
+        {{- end }}
+        {{- end }}
         {{- with .Values.runner.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

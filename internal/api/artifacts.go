@@ -407,3 +407,39 @@ func (s *Server) searchComponents(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, out)
 }
+
+// runImages lists what a run's image steps built: digest, tags, platforms,
+// signature, provenance, SBOM and scan, for the latest attempt of each.
+func (s *Server) runImages(w http.ResponseWriter, r *http.Request) {
+	out, err := s.Engine.RunImages(r.PathValue("id"))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"images": out})
+}
+
+// searchImages answers "which run built this digest" (?digest=) and "what
+// is the latest image of this repository" (?repository=host/path, with
+// ?tag=), or lists a project's images (?project=); ?limit=. Only projects
+// the caller may see are searched.
+func (s *Server) searchImages(w http.ResponseWriter, r *http.Request) {
+	only, err := s.visibleProjects(identityFrom(r))
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	n, err := intParam(r, "limit")
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	q := r.URL.Query()
+	hits, err := s.Engine.SearchImages(engine.ImageQuery{Digest: q.Get("digest"), Repository: q.Get("repository"), Tag: q.Get("tag"),
+		Project: q.Get("project"), Limit: n}, only)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"hits": hits})
+}

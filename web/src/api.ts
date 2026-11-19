@@ -119,7 +119,7 @@ export interface TestOverview {
 }
 
 /** What kind of step it is: a step that runs a script has none. */
-export type StepKind = "approval" | "deploy" | "rollback" | "rollout";
+export type StepKind = "approval" | "deploy" | "rollback" | "rollout" | "image";
 /** What a waiting deploy step waits for: its environment's lock, or what deploy runners observe. */
 export type WaitKind = "lock" | "observe";
 /** Why a step was skipped: condition, upstream, not_needed (a rollback with nothing to roll back) or superseded. */
@@ -420,6 +420,8 @@ export interface GraphStep {
   deployment?: string;
   /** A rollout step: what it does to the rollout. */
   action?: RolloutAction;
+  /** An image step: the container image it builds. */
+  image_build?: ImageBuild;
 }
 
 /** A library a pipeline uses, and the commit its version resolved to when the run was created. */
@@ -469,6 +471,8 @@ export interface RunDetail extends RunSummary {
   not_understood: string[];
   /** The run's deployments, newest first. */
   deployments?: DeploymentView[];
+  /** Why a run with image steps may wait long: no runner that builds images has been seen. */
+  runner_hint?: string;
 }
 
 export interface LogLine { seq: number; at: number; stream: "stdout" | "stderr" | "system"; text: string }
@@ -582,6 +586,8 @@ export interface Runner {
   id: string; name: string; executor: string; version: string; last_seen: number; online: boolean;
   /** A deploy runner (executor "deploy"): its pool, and the targets it serves. */
   pool?: string; targets?: string[];
+  /** The runner builds images (it has image builders). */
+  images?: boolean;
 }
 
 /** A problem in pipeline text; with file set, in that template of the library instead. */
@@ -759,6 +765,12 @@ export const api = {
     if (runs) p.set("runs", String(runs));
     return call<ProjectSecurity>("GET", `/api/v1/projects/${encodeURIComponent(name)}/security?` + p.toString());
   },
+  runImages: (id: string, background = false) => call<{ images: ImageView[] }>("GET", `/api/v1/runs/${id}/images`, undefined, { background }),
+  images: (q: ImageQuery) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<{ hits: ImageHit[] }>("GET", "/api/v1/images?" + p.toString());
+  },
   components: (name: string, version?: string, limit?: number) => {
     const p = new URLSearchParams({ name });
     if (version) p.set("version", version);
@@ -934,3 +946,85 @@ export interface ComponentHit {
 }
 
 export interface ComponentSearch { hits: ComponentHit[]; projects: ComponentHit[]; more?: boolean }
+
+// ---- Container images ----
+
+/** A value in an image step's settings, as written: text, a step's output, a fact about the run, or an input. */
+export interface ImageValue {
+  literal?: string;
+  output?: { step: string; key: string };
+  run?: "sha" | "short_sha" | "branch" | "tag" | "number";
+  input?: string;
+}
+
+/** What an image step builds and where it pushes it, as the pipeline says. */
+export interface ImageBuild {
+  context: string;
+  file: string;
+  target?: string;
+  platforms?: string[];
+  build_args?: Record<string, ImageValue>;
+  tags: { registry: string; repository: string; tag: ImageValue }[];
+  /** Absent means true. */
+  push?: boolean;
+  cache?: { registry: string; repository: string };
+  sbom?: boolean;
+  provenance?: boolean;
+  sign?: { runner?: boolean; key?: SecretRef; password?: SecretRef };
+  scan?: { fail_on?: ScanLevel; mode: "report" | "enforce" };
+}
+
+export type ScanLevel = "critical" | "high" | "medium" | "low" | "";
+
+export interface ImageScan {
+  critical: number; high: number; medium: number; low: number; unknown: number;
+  fail_on?: ScanLevel; mode?: "report" | "enforce"; failed?: boolean;
+}
+
+/** The image an image step built, from its latest attempt. */
+export interface ImageView {
+  step: string;
+  attempt: number;
+  outcome: "succeeded" | "failed" | "canceled";
+  created_at: number;
+  /** The index's digest, or the single manifest's. */
+  digest: string;
+  media_type?: string;
+  /** Bytes, compressed, every platform together. */
+  size: number;
+  platforms?: { platform: string; digest: string; size: number }[];
+  /** host/repo@sha256:…; empty when not pushed. */
+  image?: string;
+  /** host/repo:tag, pushed or not. */
+  tags?: string[];
+  pushed: boolean;
+  /** Why it was not pushed. */
+  not_pushed?: string;
+  signed: boolean;
+  key_id?: string;
+  /** "runner", or a secret reference. */
+  key_source?: string;
+  signatures?: string[];
+  /** "stored": kept as an artifact only; "attached": also signed and attached to the image. */
+  provenance?: "" | "stored" | "attached";
+  sbom?: boolean;
+  scan?: ImageScan | null;
+  builders?: string[];
+  steps?: number;
+  cached?: number;
+  cache?: string;
+  base_images?: string[];
+  /** Names of the run's artifacts holding the SBOM and the provenance. */
+  sbom_artifact?: string;
+  provenance_artifact?: string;
+}
+
+/** An image found by digest, repository or project; kind says what matched. */
+export interface ImageHit {
+  project: string; run_id: string; run_number: number; ref: string; step: string; attempt: number;
+  kind: "index" | "tag" | "platform";
+  repository: string; tag?: string; digest: string; platform?: string;
+  pushed: boolean; signed: boolean; outcome: "succeeded" | "failed" | "canceled"; created_at: number;
+}
+
+export interface ImageQuery { digest?: string; repository?: string; tag?: string; project?: string; limit?: number }

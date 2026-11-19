@@ -186,6 +186,9 @@ type Job struct {
 	// Deploy, for a deploy or rollback step, is the action a deploy runner
 	// does. Only deploy runners lease such steps.
 	Deploy *DeployJob `json:"deploy,omitempty"`
+	// ImageBuild, for an image step, is what to build (schema 15). Only
+	// runners with FeatureImages lease such steps.
+	ImageBuild *ImageJob `json:"image_build,omitempty"`
 }
 
 // JobReports is what a runner collects after a step.
@@ -220,6 +223,9 @@ type Result struct {
 	Findings *CollectedReports `json:"findings,omitempty"`
 	// Deploy, for a deploy runner's action, is what it did.
 	Deploy *DeployFacts `json:"deploy,omitempty"`
+	// Image, for an image step, is what it made (schema 15): also when it
+	// failed after building (a scan that failed it, a push that failed).
+	Image *ImageRecord `json:"image,omitempty"`
 }
 
 // CollectedReports are the report files a runner found after a step, and
@@ -549,6 +555,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	}
 	if nr.Pipeline.UsesSchema12() && !e.knows(schemaArtifacts) {
 		return nil, fmt.Errorf("%w: this server does not know artifacts, fetch or findings (schema %d)", ErrConflict, schemaArtifacts)
+	}
+	if nr.Pipeline.UsesSchema15() && !e.knows(schemaImages) {
+		return nil, fmt.Errorf("%w: this server does not know image steps or deploy changes that pin a digest (schema %d)", ErrConflict, schemaImages)
 	}
 	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
 		return nil, err
@@ -1076,6 +1085,17 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			return nil
 		}
 		p := Payload{Step: l.stepID, Attempt: l.attempt, Lease: leaseID, ExitCode: res.ExitCode, Outputs: res.Outputs}
+		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.IsImage() && c.e.knows(schemaImages) {
+			// An image step's outputs are what it made, never what anything
+			// else says.
+			p.Outputs = nil
+			if res.Image.clean() {
+				p.Image = res.Image
+				if res.Outcome == "succeeded" {
+					p.Outputs = imageOutputs(res.Image)
+				}
+			}
+		}
 		if def := c.st.Pipeline.Step(l.stepID); tests != nil && def != nil && def.Reports != nil {
 			var err error
 			if p.Tests, err = c.keepTests(l.stepID, l.attempt, tests); err != nil {
@@ -1093,7 +1113,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
 				p.Tests = nil // the machinery failed; nothing it collected is kept
-				p.Findings, p.SBOM, p.Artifacts = nil, nil, nil
+				p.Findings, p.SBOM, p.Artifacts, p.Image = nil, nil, nil, nil
 				c.dropTests(l.stepID, l.attempt)
 				c.emit(StepCanceled, p)
 			} else {
@@ -1659,6 +1679,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaImages) {
+		if err := c.persistImages(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
 }
 
@@ -1803,6 +1828,8 @@ func (c *cmd) advance() {
 			case def.IsApproval():
 				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
 				changed = true
+			case def.IsImage() && c.imageRefused(id, def):
+				changed = true
 			case !st.secretsAllowed() && len(def.Secrets) > 0:
 				// Never handed to a runner, so no runner looks a secret up
 				// for text that nobody reviewed.
@@ -1875,8 +1902,21 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		// a runner is never asked to look a secret up for one.
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: c.stepSecrets(def),
 		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Workspace: st.Workspace, Library: def.Library,
-		Reports: c.jobReports(def),
+		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def),
 	}
+}
+
+// imageJobFor is an image step's job, or nil for other steps. advance
+// checked that its values can be worked out before queueing it.
+func (c *cmd) imageJobFor(def *pipeline.Step) *ImageJob {
+	if !def.IsImage() || !c.e.knows(schemaImages) {
+		return nil
+	}
+	j, err := c.imageJob(def)
+	if err != nil {
+		return nil
+	}
+	return j
 }
 
 // localID is how a step refers to another: by the ID it has within the
@@ -2004,6 +2044,15 @@ func (e *Engine) touchRunner(r RunnerInfo) {
 	}
 	unlock := e.writeLock()
 	defer unlock()
+	if e.knows(schemaImages) {
+		if _, err := e.db.Exec(`INSERT INTO runners(id, name, executor, version, last_seen, targets, pool, features) VALUES(?,?,?,?,?,?,?,?)
+			ON CONFLICT(id) DO UPDATE SET name = excluded.name, executor = excluded.executor, version = excluded.version,
+				last_seen = excluded.last_seen, targets = excluded.targets, pool = excluded.pool, features = excluded.features`,
+			r.ID, r.Name, r.Executor, r.Version, e.now().UnixMilli(), strings.Join(r.Targets, ","), r.Pool, r.Features); err != nil {
+			e.log.Error("recording runner", "err", err)
+		}
+		return
+	}
 	if e.knows(schemaDeploy) {
 		if _, err := e.db.Exec(`INSERT INTO runners(id, name, executor, version, last_seen, targets, pool) VALUES(?,?,?,?,?,?,?)
 			ON CONFLICT(id) DO UPDATE SET name = excluded.name, executor = excluded.executor,

@@ -49,18 +49,27 @@ test-vault:
 	LAUNCHWAY_TEST_VAULT_ADDR='$(LAUNCHWAY_TEST_VAULT_ADDR)' LAUNCHWAY_TEST_VAULT_TOKEN='$(LAUNCHWAY_TEST_VAULT_TOKEN)' \
 		go test -race -count=1 -run OpenBao -v ./internal/secrets/
 
+# Image steps' container tests start a rootless BuildKit (pulled once, its
+# cache kept in Podman volumes launchway-test-buildkit*) and registries, and
+# download the scanner's vulnerability database on first use.
 test-containers:
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 ./internal/executor/
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m ./internal/imagebuild/...
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m -run 'ImageStep' ./internal/api/
 
 # Needs a cluster: kind create cluster --name launchway-test
 #                  kubectl --context kind-launchway-test create namespace launchway-test
 # The test namespace is labelled to enforce Pod Security "restricted", which
-# step pods must pass. Some tests pull python:3.12-slim and node:24-alpine and
+# step pods must pass. The image step test deploys deploy/buildkit/buildkitd.yaml
+# into a namespace of its own (launchway-build-test) and copies the seccomp
+# profile it needs onto the kind node; it refuses any context not kind-*.
+# Some tests pull python:3.12-slim and node:24-alpine and
 # install a package from PyPI and from npm.
 test-kubernetes:
 	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace launchway-test \
 		pod-security.kubernetes.io/enforce=restricted
 	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -run Kubernetes ./internal/executor/
+	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -timeout 40m -run Kubernetes ./internal/api/
 
 # Runs the deploy integration tests against Argo CD and Argo Rollouts in a kind
 # cluster (see deploy/test/argo/README.md). Refuses any context not starting

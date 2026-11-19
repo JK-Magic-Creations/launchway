@@ -16,19 +16,21 @@ import { RerunInputsNote, RunTrigger } from "../components/RunTrigger";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 import { ArtifactsTab } from "./RunArtifacts";
 import { SecurityTab } from "./RunSecurity";
-import { serious, seriousLabel } from "../components/Security";
+import { CopyValue, serious, seriousLabel } from "../components/Security";
+import { ImagesTab, imageSteps } from "./RunImages";
+import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
   return new URLSearchParams(location.search).get("step");
 }
 
-type Tab = "graph" | "tests" | "artifacts" | "security" | "events" | "definition";
+type Tab = "graph" | "tests" | "images" | "artifacts" | "security" | "events" | "definition";
 
 // tabFromURL is the tab named by ?tab= in the address.
 function tabFromURL(): Tab {
   const t = new URLSearchParams(location.search).get("tab");
-  return t === "tests" || t === "artifacts" || t === "security" || t === "events" || t === "definition" ? t : "graph";
+  return t === "tests" || t === "images" || t === "artifacts" || t === "security" || t === "events" || t === "definition" ? t : "graph";
 }
 
 // setQuery changes the address's query without a new history entry.
@@ -160,6 +162,11 @@ export function RunPage({ id }: { id: string }) {
   const mayRerun = done && mayOperate && !run.needs_newer_server;
   const libraries = run.graph.libraries ?? [];
   const overridden = libraries.filter((l) => l.override);
+  const images = imageSteps(run);
+  const builtImages = images.filter((s) => s.outputs?.digest).length;
+  const tabs: [Tab, string][] = [["graph", "Steps and logs"], ["tests", "Tests"], ...(images.length ? [["images", "Images"] as [Tab, string]] : []),
+    ["security", "Security"], ["artifacts", "Artifacts"], ["events", "Event log"], ["definition", "Pipeline"]];
+  const shownTab: Tab = tab === "images" && !images.length ? "graph" : tab;
 
   return (
     <div className="page page-wide">
@@ -232,6 +239,12 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
+      {run.runner_hint && (
+        <div className="callout callout-draft" role="status">
+          <strong>Waiting for a runner that builds images.</strong> {run.runner_hint}
+        </div>
+      )}
+
       {run.cancel_requested && run.superseded_by && (
         <div className="callout callout-draft">
           <strong>Superseded.</strong> Run <Link href={`/runs/${run.superseded_by}`}>#{run.superseded_by_number}</Link> of the same {run.pull_request ? "pull request" : "branch or tag"} started
@@ -288,12 +301,13 @@ export function RunPage({ id }: { id: string }) {
       <DeploymentSummary run={run} onSelect={(s) => { select(s); setTab("graph"); }} />
 
       <div className="tabs" role="tablist">
-        {([["graph", "Steps and logs"], ["tests", "Tests"], ["security", "Security"], ["artifacts", "Artifacts"], ["events", "Event log"], ["definition", "Pipeline"]] as [Tab, string][]).map(([k, label]) => (
-          <button key={k} role="tab" type="button" aria-selected={tab === k} className={"tab" + (tab === k ? " tab-on" : "")} onClick={() => setTab(k)}>
+        {tabs.map(([k, label]) => (
+          <button key={k} role="tab" type="button" aria-selected={shownTab === k} className={"tab" + (shownTab === k ? " tab-on" : "")} onClick={() => setTab(k)}>
             {label}
             {k === "tests" && run.tests && (failing(run.tests) > 0
               ? <span className="tab-n tab-n-bad">{failing(run.tests)} failed</span>
               : <span className="tab-n">{run.tests.total}</span>)}
+            {k === "images" && builtImages > 0 && <span className="tab-n">{builtImages}</span>}
             {k === "artifacts" && !!run.artifacts && <span className="tab-n">{run.artifacts}</span>}
             {k === "security" && run.findings && (serious(run.findings) > 0
               ? <span className="tab-n tab-n-bad">{seriousLabel(run.findings)}</span>
@@ -302,7 +316,7 @@ export function RunPage({ id }: { id: string }) {
         ))}
       </div>
 
-      {tab === "graph" && (
+      {shownTab === "graph" && (
         <>
           <section className="card card-flush">
             <Graph levels={loopView.levels} steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} />
@@ -311,11 +325,13 @@ export function RunPage({ id }: { id: string }) {
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
             : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun}
-              showTests={(s) => { setTestStep(s); setTab("tests"); }} />)}
+              showTests={(s) => { setTestStep(s); setTab("tests"); }} showImages={() => setTab("images")} />)}
         </>
       )}
       {tab === "tests" && <TestsTab run={run} step={testStep} onStep={setTestStep}
         version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
+      {shownTab === "images" && <ImagesTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()}
+        onStep={(s) => { select(s); setTab("graph"); }} onShow={setTab} />}
       {tab === "artifacts" && <ArtifactsTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "security" && <SecurityTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
@@ -324,11 +340,12 @@ export function RunPage({ id }: { id: string }) {
   );
 }
 
-function StepPanel({ run, step, now, sink, rerun, showTests }: {
+function StepPanel({ run, step, now, sink, rerun, showTests, showImages }: {
   run: RunDetail; step: StepView; now: number;
   sink: React.MutableRefObject<((step: string, attempt: number, lines: LogLine[]) => void) | null>;
   rerun: boolean;
   showTests: (step: string) => void;
+  showImages: () => void;
 }) {
   const [attempt, setAttempt] = useState(step.attempt);
   const [lines, setLines] = useState<LogLine[]>([]);
@@ -371,6 +388,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
 
   const isLive = following && (step.status === "running" || step.status === "leased");
   const deploys = step.kind === "deploy" || step.kind === "rollback" || step.kind === "rollout";
+  const build = step.kind === "image" ? run.graph.steps.find((g) => g.id === step.id)?.image_build : undefined;
   const env = deploys ? environmentOf(run, step) : "";
   const reused = !!step.reused_from;
   const group = step.group ? run.graph.groups?.find((g) => g.id === step.group) : undefined;
@@ -394,6 +412,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
           {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={shownStatus(step)} label={stepLabel({ ...step, environment: env || step.environment })} />
+            {step.kind === "image" && <span className="meta step-kind"><ImageIcon />builds a container image</span>}
             {deploys && <span className="meta">{step.kind === "rollback" ? `rollback of ${step.deployment}` : step.kind === "rollout" ? `acts on the rollout of ${step.deployment}` : `deploy to ${env}`}</span>}
             {reused && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.started_at > 0 && <span className="meta">{elapsed(step.started_at, step.finished_at, now)}</span>}
@@ -436,6 +455,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
           {step.excerpt && <Excerpt step={step} />}
         </div>
       )}
+      {step.kind === "image" && <ImageResult run={run} step={step} showImages={showImages} />}
       {!(deploys && step.attempt === 0) && <LogView lines={lines} live={isLive} empty={empty} />}
       <div className="stepinfo">
         {step.run && (
@@ -443,6 +463,12 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
             <summary>Script</summary>
             <pre className="code">{step.run}</pre>
           </details>
+        )}
+        {build && (
+          <section className="imgbuild" aria-label="What it builds">
+            <h3 className="h-sm">What it builds</h3>
+            <dl className="kv"><ImageBuildFacts b={build} /></dl>
+          </section>
         )}
         <dl className="kv">
           {group && <TemplateFacts group={group} libraries={run.graph.libraries} />}
@@ -457,6 +483,35 @@ function StepPanel({ run, step, now, sink, rerun, showTests }: {
         {!deploys && <InputsView inputs={step.inputs?.find((a) => a.attempt === attempt)} step={step} />}
       </div>
     </section>
+  );
+}
+
+// ImageResult sums up what an image step built, from its outputs, with
+// the way to the Images tab, where the rest is.
+function ImageResult({ run, step, showImages }: { run: RunDetail; step: StepView; showImages: () => void }) {
+  const [signed, setSigned] = useState<boolean | null>(null);
+  const o = step.outputs ?? {};
+  const digest = o.digest;
+  useEffect(() => {
+    if (!digest) return;
+    let alive = true;
+    api.runImages(run.id, true).then((d) => alive && setSigned(d.images.find((i) => i.step === step.id)?.signed ?? null)).catch(() => {});
+    return () => { alive = false; };
+  }, [run.id, step.id, digest]);
+  if (!digest) return null;
+  const pushed = o.pushed === "true";
+  return (
+    <div className="callout callout-info imgresult">
+      <div className="imgresult-main">
+        <strong>Built</strong>
+        <CopyValue value={digest} label={`digest of ${step.id}`} keep={DIGEST_KEEP} />
+        {pushed && o.image
+          ? <span>pushed as <span className="mono imgref" title={o.image}>{shortImageRef(o.image)}</span></span>
+          : <span>not pushed</span>}
+        {signed !== null && <span className={"artst" + (signed ? " artst-kept" : "")}>{signed ? "Signed" : "Not signed"}</span>}
+      </div>
+      <button type="button" className="btn btn-sm" onClick={showImages}>See the image</button>
+    </div>
   );
 }
 
@@ -717,7 +772,7 @@ function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }
     return (
       <section className="inputs">
         <h3 className="h-sm">Inputs</h3>
-        <p className="sub">{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 ? "Recorded when a runner takes the step." : "Not recorded for this attempt (it ran on an older server)."}</p>
+        <p className="sub">{step.reused_from ? `Recorded with the step in run #${step.reused_from_number}.` : step.attempt === 0 || step.status === "pending" || step.status === "queued" ? "Recorded when a runner takes the step." : "Not recorded for this attempt (it ran on an older server)."}</p>
       </section>
     );
   }

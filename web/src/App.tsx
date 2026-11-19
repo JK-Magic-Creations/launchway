@@ -17,6 +17,7 @@ import { ProjectTestsPage } from "./pages/ProjectTests";
 import { nextFromHere, SignInPage } from "./pages/SignIn";
 import { ProjectSecurityPage } from "./pages/ProjectSecurity";
 import { ComponentsPage } from "./pages/Components";
+import { ImagesPage } from "./pages/Images";
 import { Empty, ErrorBox, Link } from "./components/ui";
 
 interface NavItem { href: string; label: string; active: (p: string) => boolean; show?: (me: Me) => boolean }
@@ -31,6 +32,7 @@ const NAV: NavItem[] = [
   { href: "/tokens", label: "API tokens", active: (p) => p.startsWith("/tokens"), show: (me) => me.auth_mode === "oidc" },
   { href: "/audit", label: "Audit trail", active: (p) => p.startsWith("/audit"), show: (me) => me.admin },
   { href: "/components", label: "Components", active: (p) => p.startsWith("/components") },
+  { href: "/images", label: "Images", active: (p) => p.startsWith("/images") },
 ];
 
 // Shown so people can see where this is going; none of these work yet.
@@ -91,6 +93,7 @@ function Shell({ me }: { me: Me }) {
   else if (path === "/audit") page = <AuditPage />;
   else if ((m = match("/projects/:name/security", path))) page = <ProjectSecurityPage key={m.name} name={m.name} />;
   else if (path === "/components") page = <ComponentsPage />;
+  else if (path === "/images") page = <ImagesPage />;
   else page = <div className="page"><Empty title="Nothing here">This page does not exist. <Link href="/">Go to runs</Link>.</Empty></div>;
 
   useEffect(() => {

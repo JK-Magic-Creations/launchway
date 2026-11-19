@@ -18,6 +18,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/imagebuild"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
@@ -40,6 +41,8 @@ type Runner struct {
 	// Reports limits the report files collected after a step; zero fields
 	// take the defaults (see executor.CollectLimits).
 	Reports executor.CollectLimits
+	// Images, if it names builders, lets the runner take image steps.
+	Images *imagebuild.Config
 
 	wsMu    sync.Mutex
 	wsLocks map[string]*sync.Mutex
@@ -66,6 +69,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	r.wsLocks = map[string]*sync.Mutex{}
 	if !r.Info.Has(engine.FeatureArtifacts) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureArtifacts)
+	}
+	if r.Images != nil && len(r.Images.Builders) > 0 && !r.Info.Has(engine.FeatureImages) {
+		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureImages)
 	}
 	abs, err := filepath.Abs(r.DataDir)
 	if err != nil {
@@ -356,7 +362,7 @@ func (r *Runner) testCollector(job *engine.Job, spec executor.Spec, sys func(str
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), collectTimeout)
 		defer cancel()
-		got, err := executor.Collect(ctx, r.Exec, spec, job.Reports.Tests, lim)
+		got, err := executor.Collect(ctx, r.execFor(job), spec, job.Reports.Tests, lim)
 		out := &engine.CollectedReports{Files: []engine.ReportFile{}}
 		if got != nil {
 			for _, f := range got.Files {
@@ -402,6 +408,9 @@ func sizeText(n int64) string {
 // runStep runs one attempt. Once the step has been handed to the executor,
 // it also returns what collects its report files, if it declares any.
 func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, ...any), out executor.Sink) (engine.Result, func(string) collected) {
+	if job.ImageBuild != nil {
+		return r.runImage(ctx, job, sys, out)
+	}
 	sys("Runner %s, executor %s", r.Info.Name, r.Exec.Name())
 	if job.TakenOverFrom != "" {
 		sys("This run moves here from runner %s, which stopped responding or left. It continues in a fresh workspace: files that earlier steps wrote are not in it.", job.TakenOverFrom)
