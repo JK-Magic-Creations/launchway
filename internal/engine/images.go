@@ -563,5 +563,5 @@ func (e *Engine) imageRunnerHint(st *RunState, steps []StepView) (string, error)
 		return "", nil
 	}
 	return "This run builds images, so all its steps wait for a runner that can build them, and none has been seen in the last " +
-		RunnerOffline.String() + ". A runner builds images when its configuration names image builders (images.builders).", nil
+		fmt.Sprintf("%d minutes", int(RunnerOffline.Minutes())) + ". A runner builds images when its configuration names image builders (images.builders).", nil
 }
