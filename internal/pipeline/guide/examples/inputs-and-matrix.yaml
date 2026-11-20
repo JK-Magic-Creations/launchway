@@ -1,0 +1,29 @@
+# A pipeline started by hand with inputs, testing on several Python
+# versions, and a nightly schedule.
+pipeline: data-tools
+on:
+  schedule:
+    - { cron: "0 3 * * *", timezone: UTC, ref: main, inputs: { dry_run: true } }
+
+inputs:
+  pythons:  { type: list, default: ["3.12", "3.13"], description: Python versions to test on }
+  dry_run:  { type: boolean, default: true, description: Only say what would be published }
+  channel:  { type: choice, options: [stable, beta], default: beta }
+
+steps:
+  test:
+    for_each:
+      python: { input: pythons }
+    max_parallel: 2
+    image: { each: python, format: "docker.io/library/python:%s-slim" }
+    run: |
+      python -m pip install -q -r requirements.txt
+      python -m pytest -q --junitxml=reports/junit.xml
+    reports:
+      tests: reports/junit.xml
+
+  publish:
+    image: docker.io/library/python:3.13-slim
+    needs: test
+    when: { input: dry_run, equals: false }
+    run: echo "publishing to $LAUNCHWAY_INPUT_CHANNEL"

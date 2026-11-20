@@ -92,7 +92,7 @@ failed run's pod is kept (`keepFailed`) and how long to wait for images (`startT
 `runner.extraArgs` adds flags, which override the file.
 
 `runner.secretStores` configures the secret stores runners read (Vault, OpenBao, mounted files),
-as described in the main [README](../README.md#secrets). Add volumes for token or CA files with
+as described in the [secrets guide](../docs/guide/secrets.md). Add volumes for token or CA files with
 `runner.extraVolumes` and `runner.extraVolumeMounts`. Runners have only the stores defined there.
 
 Runners serve `/healthz` and `/readyz` on `runner.healthPort` (8081, inside the pod only), used by
@@ -203,7 +203,7 @@ policies. Both charts copy these templates from [`helm/shared`](helm/shared)
 
 ```sh
 kubectl create namespace launchway-runners
-kubectl -n launchway-runners create secret generic launchway-runner-token --from-file=token=./runner-token
+kubectl -n launchway-runners create secret generic launchway-runner-token --from-literal=token="$(cat runner-token)"
 helm install runners deploy/helm/launchway-runner -n launchway-runners \
   -f deploy/helm/launchway-runner/examples/remote.yaml        # server.url, the Secret, a step namespace
 ```
@@ -211,13 +211,14 @@ helm install runners deploy/helm/launchway-runner -n launchway-runners \
 | Value | |
 |---|---|
 | `server.url` (required) | the server's URL as the runners reach it |
-| `token.existingSecret` (required for build runners) | a Secret holding the runner token or a runner pool's token; the chart never creates it |
-| `runner.*` | the same as the main chart's `runner.*` (replicas, concurrency, `kubernetes.namespace` and `createNamespace`, which labels the namespace Pod Security "restricted", resources, PDB, secret stores, image steps) |
+| `token.existingSecret` | a Secret holding the runner token or a runner pool's token; required for build runners unless they enrol with `runner.join.existingSecret`; the chart never creates it |
+| `runner.*` | the same as the main chart's `runner.*` (replicas, concurrency, join tokens, labels and `accept`, `kubernetes.namespace` and `createNamespace`, which labels the namespace Pod Security "restricted", resources, PDB, secret stores, image steps) |
 | `deployRunner.*` | the same as the main chart's `delivery.deployRunner.*`, with the pool token in `deployRunner.token.existingSecret`; `runner.enabled: false` for a cluster that only receives deployments ([example](helm/launchway-runner/examples/deploy-runner.yaml)) |
+| `verification.sources` | the same health-source connection entries as the main chart's `delivery.verification.sources`, given only to the deploy runner; register their names, types and projects on the servers too |
 | `proxy.httpsProxy`, `httpProxy`, `noProxy` | a proxy for the runners' connections; its idle timeout must exceed 30 seconds (long polls last 25) |
 | `caBundle.configMap`, `key` | a CA bundle replacing the image's (it must include the public CAs you need) |
 | `networkPolicy.*` | NetworkPolicies, off by default: the runner pods may receive nothing and reach only DNS, the server, the Kubernetes API and `extraEgress`; `steps.enabled` adds one for the step namespace (DNS and `steps.egress` only). See [examples/networkpolicy.yaml](helm/launchway-runner/examples/networkpolicy.yaml) |
-| `join.existingSecret` | reserved for one-time join tokens, which are being built; refused until runners take them |
+| `join.existingSecret` | the original join-token setting, kept as an alias of `runner.join.existingSecret`; setting both is refused |
 
 `values.schema.json` rejects unknown and mistyped values. Runners are ready once the server has
 answered (`/readyz`), so `helm install --wait` fails if they cannot reach it. `make
@@ -268,6 +269,12 @@ once that the database is newer, and carries on. So aborting a rollout, `kubectl
 only the newer version understands (a re-run, for example, when rolling back to a release before
 re-runs existed) are shown as needing a newer server and left alone by the old servers; they carry
 on once a newer server is back. Every other run is unaffected.
+
+Upgrading to schema 17 moves artifacts into the database (with `config.artifacts.store` unset):
+before it, they were kept in each server's `emptyDir` and only one server kept any. Older servers
+next to newer ones keep none and leave runs with artifacts to the newer ones; to roll back with
+artifacts working, copy them to S3 first. See
+[docs/artifacts.md](../docs/artifacts.md#upgrading-to-schema-17-and-rolling-back).
 
 After `kubectl rollout undo`, the next `helm upgrade` (Helm 4, server-side apply) fails with a
 field-manager conflict on the image; pass `--force-conflicts`, or go back with `helm rollback`
@@ -320,6 +327,7 @@ removed after each save. Who may start draft runs, and whether drafts may read s
 | Data | Where | Lost when |
 |---|---|---|
 | Runs, steps, events, logs, approvals, runner list, the runner token (unless you set one), the text of draft runs | PostgreSQL | Only with the database: back it up |
+| Artifacts, and the SBOMs and provenance kept as artifacts | PostgreSQL, unless `config.artifacts.store` says S3 ([docs/artifacts.md](../docs/artifacts.md): limits, backups, when to move to S3) | Their retention ends, or with the database |
 | Mirrors of project repositories | Each server's `emptyDir` (`server.dataVolume`) | The pod goes; rebuilt from the repository on start |
 | Checkouts for running steps | Each runner's `emptyDir` (`runner.dataVolume`) | The pod goes; steps then run again elsewhere |
 | A run's workspace | Its step pod in the step namespace | The run succeeds (at once) or fails (after `keepFailed`, 2 hours, to allow a resume); any runner removes it, including the pods of runners that were replaced |

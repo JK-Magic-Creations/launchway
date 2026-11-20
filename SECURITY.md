@@ -5,7 +5,7 @@ Launchway is early software. Read this before letting anyone but yourself reach 
 ## Running it safely
 
 - **Turn on sign-in** (`auth.mode: oidc`) for any server other people can reach, and grant roles
-  with `auth.access`; see [Sign-in and access](README.md#sign-in-and-access). Without sign-in,
+  with `auth.access`; see [Sign-in and access](docs/guide/access.md). Without sign-in,
   anyone who can reach the server can start pipelines, which run code on its runners, and approve
   deployments. Such a server refuses to listen on anything but a loopback address unless
   `auth.allow_anonymous: true` says something else already restricts who can reach it.

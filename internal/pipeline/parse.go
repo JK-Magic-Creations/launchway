@@ -120,8 +120,10 @@ func Parse(data []byte) (*Pipeline, error) {
 
 	p := &Pipeline{}
 	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs"}, func(k, v *yaml.Node) {
+	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner"}, func(k, v *yaml.Node) {
 		switch k.Value {
+		case "runner":
+			ps.parseRunner(v, p)
 		case "pipeline":
 			p.Name = ps.str(v, "pipeline")
 		case "supersede":
@@ -151,6 +153,8 @@ func Parse(data []byte) (*Pipeline, error) {
 	if ps.check(p) {
 		ps.checkDeploys(p)
 		ps.checkImages(p)
+		ps.checkVerify(p)
+		ps.checkAI(p)
 	}
 	ps.checkUses(p)
 	ps.checkInputs(p)
@@ -164,6 +168,12 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	if p.UsesSchema15() {
 		p.Requires = SchemaImages
+	}
+	if p.UsesSchemaVerify() {
+		p.Requires = SchemaVerify
+	}
+	if p.UsesSchemaPools() {
+		p.Requires = SchemaPools
 	}
 	return p, nil
 }
@@ -214,7 +224,7 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 // Keys from the design that are recognised but not implemented yet.
 var notYet = map[string]string{
 	"outputs": "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
-	"runs_on": "runner pools arrive in a later milestone",
+	"runs_on": "choose runners for the whole pipeline with runner: { pool: …, labels: [ … ] } at its top",
 	"matrix":  "to repeat a step over lists, use for_each",
 }
 
@@ -282,7 +292,7 @@ var (
 	approvalOnly = []string{"message"}
 	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch"}
 	// Kinds from the design that are recognised but not implemented yet.
-	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true, "analysis": true}
+	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
 	storeNameRe   = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
 	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command"}
@@ -379,6 +389,14 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			p.Steps = append(p.Steps, ps.parseImageStep(k, v, at))
 			continue
 		}
+		if mappingValue(v, "kind") == KindVerify {
+			p.Steps = append(p.Steps, ps.parseVerifyStep(k, v, at))
+			continue
+		}
+		if mappingValue(v, "kind") == KindAI {
+			p.Steps = append(p.Steps, ps.parseAIStep(k, v, at))
+			continue
+		}
 		s := &Step{ID: k.Value, Line: k.Line}
 		var secretsNode, kindNode, timeoutNode *yaml.Node
 		var timeout time.Duration
@@ -472,10 +490,12 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			ps.parseRunStep(k, at, s, p, keys, secretsNode)
 		case s.Kind == KindApproval:
 			ps.parseApproval(k, at, s, keys)
+		case s.Kind == "analysis":
+			ps.add(kindNode, at+".kind", "write kind: verify: Launchway judges the metrics and logs itself (see verify steps)")
 		case kindsNotYet[s.Kind]:
 			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote, analysis and input steps arrive in a later milestone)", s.Kind)
 		default:
-			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, image, deploy, rollout or rollback", s.Kind)
+			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, image, deploy, rollout, rollback, verify or ai", s.Kind)
 		}
 		def, most := DefaultTimeout, MaxTimeout
 		if s.IsApproval() {

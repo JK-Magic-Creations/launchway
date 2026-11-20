@@ -67,7 +67,7 @@ func TestReportsProblems(t *testing.T) {
 		{"empty list", "reports:\n      tests: []", "list at least one", 6},
 		{"no tests", "reports: {}", "say which files", 5},
 		{"not a mapping", "reports: reports/*.xml", "reports is a mapping", 5},
-		{"unknown kind", "reports:\n      coverage: cover.out", `unknown key "coverage"`, 6},
+		{"unknown kind", "reports:\n      junit: cover.out", `unknown key "junit"`, 6},
 		{"directory", "reports:\n      tests: reports/", "ends with /", 6},
 		{"double slash", "reports:\n      tests: reports//x.xml", "empty path part", 6},
 		{"stars inside a part", "reports:\n      tests: reports/a**b.xml", "whole path part", 6},

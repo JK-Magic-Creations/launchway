@@ -1,0 +1,32 @@
+# Build, scan and push a container image, with a security scan of the
+# source and an SBOM. Registries (harbor here) are configured on the
+# runners, by name.
+pipeline: shop
+on:
+  push: { branches: [main] }
+
+steps:
+  test:
+    image: docker.io/library/golang:1.27
+    run: |
+      go test ./...
+      echo version=1.4.2 >> "$LAUNCHWAY_OUTPUTS"
+
+  scan-source:
+    image: registry.example.com/scanners:1
+    run: |
+      mkdir -p reports
+      semgrep scan --sarif --output reports/semgrep.sarif || true
+    reports:
+      findings: reports/*.sarif
+
+  image:
+    kind: image
+    needs: [test, scan-source]
+    context: .
+    file: Dockerfile
+    build_args: { VERSION: { output: test.version } }
+    tags:
+      - { registry: harbor, repository: team/shop, tag: { run: short_sha } }
+    sbom: true
+    scan: { fail_on: high, mode: enforce }

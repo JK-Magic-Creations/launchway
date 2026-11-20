@@ -1,0 +1,23 @@
+# The deploy runner: it commits to the GitOps repository, asks Argo CD to
+# sync, watches the rollout and gives it commands. Paths are relative to this file.
+server: http://127.0.0.1:8080
+name: deploy-kind
+data: deploy-runner-data
+secrets:
+  files:
+    type: file
+    dir: secrets
+deploy:
+  targets:
+    kind:
+      kubernetes: { context: kind-launchway-test }   # never the current context
+      argocd_namespace: argocd
+      applications: [ { projects: [shop], names: [shop] } ]
+      rollout_namespaces: [shop]
+  repos:
+    gitops:
+      url: http://127.0.0.1:3000/lwtest/shop-gitops.git          # as this machine reaches it
+      argocd_url: http://git.lw-git.svc:8080/lwtest/shop-gitops.git   # as the Application writes it
+      username: lwtest
+      credentials: { store: files, key: gitops-password }
+      paths: [ { projects: [shop], files: ["apps/shop/**"] } ]

@@ -26,5 +26,5 @@ data:
 ---
 {{- end }}
 {{- /* The rest is shared with the launchway-runner chart (deploy/helm/shared). */ -}}
-{{- include "launchway.shared.deployRunner" (dict "root" . "r" $r "name" $name "sa" $name "component" "deploy-runner" "server" (include "launchway.runnerServerURL" .) "tokenSecret" (include "launchway.deployPoolSecretName" .) "tokenKey" (include "launchway.deployPoolSecretKey" .)) }}
+{{- include "launchway.shared.deployRunner" (dict "root" . "r" $r "name" $name "sa" $name "component" "deploy-runner" "server" (include "launchway.runnerServerURL" .) "verification" .Values.delivery.verification "tokenSecret" (include "launchway.deployPoolSecretName" .) "tokenKey" (include "launchway.deployPoolSecretKey" .)) }}
 {{- end }}

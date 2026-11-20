@@ -13,7 +13,7 @@ priority: optional
 maintainer: Launchway maintainers <security@launchway.invalid>
 vendor: Launchway
 homepage: https://github.com/jk-magic-creations/launchway
-license: Apache-2.0
+license: AGPL-3.0-only
 description: |-
   Launchway runner as a systemd service.
   The runner takes steps from a Launchway server and runs them on this machine, on the host

@@ -1,8 +1,6 @@
 package api
 
 import (
-	"context"
-	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"slices"
@@ -21,8 +19,11 @@ import (
 // healthy.
 type RunnerPool struct {
 	Name    string
-	Token   string
+	Token   string // "" for a pool that takes only enrolled runners
 	Targets []string
+	// RequireIdentity refuses the pool's token: only runners enrolled
+	// with a join token for the pool may serve it.
+	RequireIdentity bool
 }
 
 type poolKey struct{}
@@ -32,30 +33,6 @@ type poolKey struct{}
 func callerPool(r *http.Request) *RunnerPool {
 	p, _ := r.Context().Value(poolKey{}).(*RunnerPool)
 	return p
-}
-
-// runnerAuth accepts the shared runner token or a pool's token. Every token
-// is compared, in constant time, whichever matches.
-func (s *Server) runnerAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		shared := s.RunnerToken != "" && subtle.ConstantTimeCompare([]byte(got), []byte(s.RunnerToken)) == 1
-		var pool *RunnerPool
-		for i := range s.RunnerPools {
-			p := &s.RunnerPools[i]
-			if p.Token != "" && subtle.ConstantTimeCompare([]byte(got), []byte(p.Token)) == 1 {
-				pool = p
-			}
-		}
-		switch {
-		case pool != nil && !shared:
-			next(w, r.WithContext(context.WithValue(r.Context(), poolKey{}, pool)))
-		case shared && pool == nil:
-			next(w, r)
-		default:
-			writeErr(w, http.StatusUnauthorized, "a valid runner token is required")
-		}
-	}
 }
 
 // poolTargets is what a deploy runner may serve: the targets it says it
@@ -68,52 +45,6 @@ func poolTargets(pool *RunnerPool, asked []string) []string {
 		}
 	}
 	return out
-}
-
-// leaseAllowed checks that a runner may act on a lease: deploy work only
-// with the token of a pool serving its target, other work only with the
-// shared token. It writes the refusal and reports false.
-func (s *Server) leaseAllowed(w http.ResponseWriter, r *http.Request, leaseID string) bool {
-	target, err := s.Engine.LeaseTarget(leaseID)
-	if err != nil {
-		s.fail(w, err)
-		return false
-	}
-	pool := callerPool(r)
-	switch {
-	case pool == nil && target != "":
-		writeErr(w, http.StatusForbidden, "this lease is deploy work; only a runner pool serving target "+target+" may act on it")
-		return false
-	case pool != nil && !slices.Contains(pool.Targets, target):
-		writeErr(w, http.StatusForbidden, "runner pool "+pool.Name+" may not act on this lease")
-		return false
-	}
-	return true
-}
-
-// refusePools refuses ordinary runner work to pool tokens.
-func refusePools(w http.ResponseWriter, r *http.Request) bool {
-	if p := callerPool(r); p != nil {
-		writeErr(w, http.StatusForbidden, "this token belongs to runner pool "+p.Name+", which takes deploy work only")
-		return true
-	}
-	return false
-}
-
-// deployRunner reads the runner of a deploy request and works out its
-// targets; it writes the refusal and returns false if it may not.
-func (s *Server) deployRunner(w http.ResponseWriter, r *http.Request, info *engine.RunnerInfo) ([]string, bool) {
-	pool := callerPool(r)
-	if pool == nil {
-		writeErr(w, http.StatusForbidden, "deploy work needs the token of a runner pool (runner_pools in the server's configuration); the shared runner token cannot take it")
-		return nil, false
-	}
-	if info.ID == "" {
-		writeErr(w, http.StatusBadRequest, "the runner has no ID")
-		return nil, false
-	}
-	info.Pool = pool.Name
-	return poolTargets(pool, info.Targets), true
 }
 
 func (s *Server) deployLease(w http.ResponseWriter, r *http.Request) {

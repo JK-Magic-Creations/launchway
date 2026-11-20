@@ -113,9 +113,13 @@ func accessOf(docs []map[string]any, component string) access {
 func TestRunnerChartRendersTheSameRBAC(t *testing.T) {
 	main := helmTemplate(t, mainChart, "lw", `postgresql: { enabled: true }
 runner:
+  labels: [remote]
+  accept: { projects: [shop] }
   kubernetes: { namespace: lw-steps, createNamespace: true }
 delivery:
   environments: [ { name: prod, target: homelab, projects: [shop] } ]
+  verification:
+    sources: [ { name: metrics, type: prometheus, url: http://metrics.monitoring.svc, projects: [shop] } ]
   deployRunner:
     enabled: true
     target: homelab
@@ -127,7 +131,11 @@ delivery:
 	runners := helmTemplate(t, runnerChart, "lw", `server: { url: "http://t-launchway.lw.svc:8080" }
 token: { existingSecret: t-launchway-runner-token }
 runner:
+  labels: [remote]
+  accept: { projects: [shop] }
   kubernetes: { namespace: lw-steps, createNamespace: true }
+verification:
+  sources: [ { name: metrics, type: prometheus, url: http://metrics.monitoring.svc, projects: [shop] } ]
 deployRunner:
   enabled: true
   target: homelab
@@ -232,12 +240,37 @@ func TestRunnerChartRefuses(t *testing.T) {
 	for values, want := range map[string]string{
 		"token: { existingSecret: t }\n": "server.url is required",
 		"server: { url: https://x }\n":   "token.existingSecret is required",
-		"server: { url: https://x }\ntoken: { existingSecret: t }\njoin: { existingSecret: j }\n": "do not take join tokens yet",
-		"server: { url: https://x }\nrunner: { enabled: false }\n":                                "Nothing to run",
+		"server: { url: https://x }\njoin: { existingSecret: old }\nrunner: { join: { existingSecret: new } }\n": "Set only one of join.existingSecret",
+		"server: { url: https://x }\nrunner: { enabled: false }\n":                                               "Nothing to run",
 	} {
 		out, err := exec.Command("helm", "template", "t", runnerChart, "-f", writeTemp(t, values)).CombinedOutput()
 		if err == nil || !strings.Contains(string(out), want) {
 			t.Errorf("%q: want an error saying %q, got %v\n%s", values, want, err, out)
 		}
+	}
+}
+
+func TestRunnerChartJoinTokens(t *testing.T) {
+	if _, err := exec.LookPath("helm"); err != nil {
+		t.Skip("needs helm")
+	}
+	for name, values := range map[string]string{
+		"original alias":              "server: { url: https://x }\njoin: { existingSecret: j }\n",
+		"runner value":                "server: { url: https://x }\nrunner: { join: { existingSecret: j } }\n",
+		"join overrides shared token": "server: { url: https://x }\ntoken: { existingSecret: t }\njoin: { existingSecret: j }\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			out, err := exec.Command("helm", "template", "t", runnerChart, "-f", writeTemp(t, values)).CombinedOutput()
+			if err != nil {
+				t.Fatalf("helm template: %v\n%s", err, out)
+			}
+			text := string(out)
+			if !strings.Contains(text, "name: LAUNCHWAY_JOIN") || !strings.Contains(text, "name: j") {
+				t.Errorf("the join Secret is not mounted:\n%s", text)
+			}
+			if strings.Contains(text, "name: LAUNCHWAY_RUNNER_TOKEN") {
+				t.Errorf("the shared token is mounted as well as the join token:\n%s", text)
+			}
+		})
 	}
 }

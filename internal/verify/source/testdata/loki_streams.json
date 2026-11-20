@@ -1,0 +1,1 @@
+{"status":"success","data":{"resultType":"streams","result":[{"stream":{"pod":"b"},"values":[["1795132801000000000","b first"],["1795132803000000000","b second"]]},{"stream":{"pod":"a"},"values":[["1795132800000000000","a first"],["1795132802000000000","a second"]]}],"stats":{}}}

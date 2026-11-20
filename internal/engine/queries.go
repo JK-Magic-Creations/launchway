@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/jk-magic-creations/launchway/internal/accept"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
@@ -108,8 +109,9 @@ type StepView struct {
 	// WaitKind, for a waiting deploy or rollback step, is what it waits
 	// for: lock or observe. Empty for an approval.
 	WaitKind string `json:"wait_kind,omitempty"`
-	// Environment and Deployment come from a deploy or rollback step's
-	// definition.
+	// Environment and Deployment come from a deploy, rollback or verify
+	// step's definition (a verify step watching a deployment has its
+	// environment).
 	Environment string `json:"environment,omitempty"`
 	Deployment  string `json:"deployment,omitempty"`
 	// A step a re-run reused: the run (ID and number) where it ran, and the
@@ -150,6 +152,9 @@ type RunDetail struct {
 	// RunnerHint says why a run that is waiting for a runner may wait a long
 	// time: it builds images, and no runner that can has been seen lately.
 	RunnerHint string `json:"runner_hint,omitempty"`
+	// PoolHint says why no runner may take the run's waiting steps: no
+	// pool serves it, or none of the runners seen lately may (schema 21).
+	PoolHint string `json:"pool_hint,omitempty"`
 	// Policy sums up the run's policy decisions (schema 16); nil if no
 	// policy judged it.
 	Policy *RunPolicySummary `json:"policy,omitempty"`
@@ -188,6 +193,30 @@ type RunnerView struct {
 	Targets []string `json:"targets,omitempty"`
 	// Images says the runner builds images (it has image builders).
 	Images bool `json:"images,omitempty"`
+
+	// Schema 20 and 21. Kind is build or deploy. Auth is how it
+	// authenticated: identity (an enrolled runner), shared (the shared
+	// runner token, which says nothing about which runner it is) or pool (a
+	// deploy pool's token). Pool is "default" for build runners of the
+	// default pool.
+	Kind   string         `json:"kind,omitempty"`
+	Auth   string         `json:"auth,omitempty"`
+	Labels []string       `json:"labels,omitempty"`
+	OS     string         `json:"os,omitempty"`
+	Arch   string         `json:"arch,omitempty"`
+	Accept *accept.Config `json:"accept,omitempty"`
+	// Identity is the enrolled runner, for one that is.
+	Identity *RunnerIdentity `json:"identity,omitempty"`
+	// Work is what it holds now.
+	Work []RunnerWork `json:"work"`
+}
+
+// RunnerWork is a step a runner holds.
+type RunnerWork struct {
+	Run     string `json:"run"`
+	Project string `json:"project"`
+	Number  int    `json:"number"`
+	Step    string `json:"step"`
 }
 
 const runCols = `id, project, number, pipeline, status, cancel_requested, event, ref, branch, tag, sha,
@@ -287,6 +316,15 @@ type RunFilter struct {
 	// OnlyProjects, if not nil, limits the list to runs of these projects;
 	// an empty, non-nil list matches nothing.
 	OnlyProjects []string
+	// Before, if set, lists only runs after this one in the list's order
+	// (older, or as old with a smaller ID): the next page after it.
+	Before *RunCursor
+}
+
+// RunCursor is a place in the list of runs: a run's creation time and ID.
+type RunCursor struct {
+	CreatedAt int64
+	ID        string
 }
 
 // ListRuns returns the newest runs first.
@@ -314,6 +352,10 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 			args = append(args, p)
 		}
 		where = append(where, "project IN ("+strings.Join(marks, ",")+")")
+	}
+	if b := f.Before; b != nil {
+		where = append(where, "(created_at < ? OR (created_at = ? AND id < ?))")
+		args = append(args, b.CreatedAt, b.CreatedAt, b.ID)
 	}
 	q := `SELECT ` + e.runCols() + ` FROM runs`
 	if len(where) > 0 {
@@ -501,6 +543,9 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			if dd := st.Pipeline.Step(def.Deployment); def.IsRollback() && dd != nil {
 				v.Environment = dd.Environment
 			}
+			if def.IsVerify() {
+				v.Environment, _ = st.Pipeline.VerifyEnvironment(def)
+			}
 			if def.Reports != nil {
 				v.Reports = def.Reports.Tests
 			}
@@ -525,6 +570,9 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		return nil, err
 	}
 	if d.RunnerHint, err = e.imageRunnerHint(st, d.StepList); err != nil {
+		return nil, err
+	}
+	if d.PoolHint, err = e.poolHint(st, d.StepList); err != nil {
 		return nil, err
 	}
 	d.Policy = policySummary(st)
@@ -553,6 +601,25 @@ func (e *Engine) reruns(runID string) ([]RerunBrief, error) {
 // Logs returns log lines for one step attempt after the given sequence number.
 // Attempt 0 means the latest attempt.
 func (e *Engine) Logs(runID, stepID string, attempt, after, limit int) ([]LogLine, int, error) {
+	return e.QueryLogs(runID, stepID, LogQuery{Attempt: attempt, After: after, Limit: limit})
+}
+
+// LogQuery says which of a step attempt's log lines to read.
+type LogQuery struct {
+	Attempt int // 0: the latest attempt
+	After   int // only lines after this sequence number
+	Limit   int // at most this many lines: default 5000, at most 10000
+	// Tail, if set, reads the last Tail lines (after After) instead of the
+	// first ones; the lines are still returned in order.
+	Tail bool
+	// Search, if set, reads only lines that contain it, ignoring case.
+	Search string
+}
+
+// QueryLogs returns log lines for one step attempt, and the attempt they
+// are of.
+func (e *Engine) QueryLogs(runID, stepID string, q LogQuery) ([]LogLine, int, error) {
+	attempt, after, limit := q.Attempt, q.After, q.Limit
 	if limit <= 0 || limit > 10000 {
 		limit = 5000
 	}
@@ -564,8 +631,17 @@ func (e *Engine) Logs(runID, stepID string, attempt, after, limit int) ([]LogLin
 			return nil, 0, err
 		}
 	}
-	rows, err := e.db.Query(`SELECT seq, at, stream, text FROM logs WHERE run_id = ? AND step_id = ? AND attempt = ? AND seq > ?
-		ORDER BY seq LIMIT ?`, runID, stepID, attempt, after, limit)
+	where := `run_id = ? AND step_id = ? AND attempt = ? AND seq > ?`
+	args := []any{runID, stepID, attempt, after}
+	if s := q.Search; s != "" {
+		where += ` AND LOWER(text) LIKE ? ESCAPE '\'`
+		args = append(args, "%"+strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(strings.ToLower(s))+"%")
+	}
+	order := "seq"
+	if q.Tail {
+		order = "seq DESC"
+	}
+	rows, err := e.db.Query(`SELECT seq, at, stream, text FROM logs WHERE `+where+` ORDER BY `+order+` LIMIT ?`, append(args, limit)...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -577,6 +653,9 @@ func (e *Engine) Logs(runID, stepID string, attempt, after, limit int) ([]LogLin
 			return nil, 0, err
 		}
 		out = append(out, l)
+	}
+	if q.Tail {
+		slices.Reverse(out)
 	}
 	return out, attempt, rows.Err()
 }
@@ -639,6 +718,9 @@ func (e *Engine) State(runID string) (*RunState, error) {
 // Runners lists runners, most recently seen first. Runners not seen for a
 // day are forgotten and not listed.
 func (e *Engine) Runners() ([]RunnerView, error) {
+	if e.knows(schemaIdentity) {
+		return e.runnersWithIdentity()
+	}
 	extra := `, '', '', ''`
 	switch {
 	case e.knows(schemaImages):
@@ -667,4 +749,88 @@ func (e *Engine) Runners() ([]RunnerView, error) {
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// runnersWithIdentity lists runners with what schema 20 records: enrolled runners
+// that have not asked for work yet (or were forgotten) included.
+func (e *Engine) runnersWithIdentity() ([]RunnerView, error) {
+	rows, err := e.db.Query(`SELECT id, name, executor, version, last_seen, pool, targets, features, kind, auth, labels, accept, os, arch
+		FROM runners ORDER BY last_seen DESC`)
+	if err != nil {
+		return nil, err
+	}
+	online := e.now().Add(-RunnerOffline).UnixMilli()
+	out := []RunnerView{}
+	at := map[string]int{}
+	for rows.Next() {
+		var r RunnerView
+		var targets, features, labels, acc string
+		if err := rows.Scan(&r.ID, &r.Name, &r.Executor, &r.Version, &r.LastSeen, &r.Pool, &targets, &features, &r.Kind, &r.Auth,
+			&labels, &acc, &r.OS, &r.Arch); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		r.Images = slices.Contains(strings.Fields(features), FeatureImages)
+		if targets != "" {
+			r.Targets = strings.Split(targets, ",")
+		}
+		if r.Kind == "" { // written by an older server
+			r.Kind = PoolBuild
+			if r.Pool != "" {
+				r.Kind, r.Auth = PoolDeploy, AuthPoolToken
+			}
+		}
+		if r.Auth == "" {
+			r.Auth = AuthShared
+		}
+		if r.Kind == PoolBuild && r.Pool == "" {
+			r.Pool = DefaultPool
+		}
+		r.Labels, r.Accept = splitLabels(labels), decodeAccept(acc)
+		r.Online = r.LastSeen >= online
+		r.Work = []RunnerWork{}
+		at[r.ID] = len(out)
+		out = append(out, r)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	idents, err := e.RunnerIdentities()
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range idents {
+		i, ok := at[id.ID]
+		if !ok {
+			// Enrolled, but not asking for work: it has not started, it
+			// was revoked, or it has been gone for a day.
+			i = len(out)
+			at[id.ID] = i
+			out = append(out, RunnerView{ID: id.ID, Name: id.Name, Executor: id.Executor, Version: id.Version, LastSeen: id.LastSeen,
+				Pool: id.Pool, Kind: id.Kind, Auth: AuthIdentity, Labels: id.Labels, OS: id.OS, Arch: id.Arch, Work: []RunnerWork{},
+				Online: id.RevokedAt == 0 && id.LastSeen >= online})
+		}
+		out[i].Identity = id
+		if out[i].Pool == "" {
+			out[i].Pool = id.Pool
+		}
+	}
+	work, err := e.db.Query(`SELECT l.runner, l.run_id, runs.project, runs.number, l.step_id FROM leases l JOIN runs ON runs.id = l.run_id
+		ORDER BY l.run_id, l.step_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer work.Close()
+	for work.Next() {
+		var runner string
+		var w RunnerWork
+		if err := work.Scan(&runner, &w.Run, &w.Project, &w.Number, &w.Step); err != nil {
+			return nil, err
+		}
+		if i, ok := at[runner]; ok {
+			out[i].Work = append(out[i].Work, w)
+		}
+	}
+	return out, work.Err()
 }

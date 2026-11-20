@@ -136,6 +136,11 @@ type TestSummary struct {
 	Notes []string `json:"notes,omitempty"`
 	// Stored is how many results were kept in test_cases.
 	Stored int `json:"stored"`
+	// Attachments is how many attachments of the results can be shown, and
+	// AttachmentsMissing how many the reports named that cannot (schema
+	// 18). Older servers ignore them: they only record.
+	Attachments        int `json:"attachments,omitempty"`
+	AttachmentsMissing int `json:"attachments_missing,omitempty"`
 }
 
 // stepAttempt names one attempt of one step.
@@ -149,6 +154,8 @@ type storedCase struct {
 	testreport.Case
 	key  string
 	file string // the report file it came from
+	// attach are its attachments as kept (schema 18; see attachTests).
+	attach []TestAttachment
 }
 
 // parsedTests is what an attempt's report files said, before the run's
@@ -300,7 +307,10 @@ func (c *cmd) jobReports(def *pipeline.Step) *JobReports {
 	if c.e.knows(schemaArtifacts) && len(def.Reports.Findings) > 0 {
 		jr.Findings, jr.FindingsMaxBytes = append([]string(nil), def.Reports.Findings...), c.e.finds.MaxUploadBytes
 	}
-	if len(jr.Tests) == 0 && len(jr.Findings) == 0 {
+	if c.e.knows(schemaReports) && len(def.Reports.Coverage) > 0 {
+		jr.Coverage, jr.CoverageMaxBytes = append([]string(nil), def.Reports.Coverage...), c.e.reps.CoverageUploadBytes
+	}
+	if len(jr.Tests) == 0 && len(jr.Findings) == 0 && len(jr.Coverage) == 0 {
 		return nil
 	}
 	return jr
@@ -337,7 +347,7 @@ func (c *cmd) persistSchema10() error {
 		if _, err := c.tx.Exec(`DELETE FROM test_cases WHERE run_id = ? AND step_id = ? AND attempt = ?`, st.ID, p.Step, p.Attempt); err != nil {
 			return err
 		}
-		if err := insertCases(c.tx, st, p.Step, p.Attempt, c.tests[stepAttempt{p.Step, p.Attempt}]); err != nil {
+		if err := insertCases(c.tx, st, p.Step, p.Attempt, c.tests[stepAttempt{p.Step, p.Attempt}], c.e.knows(schemaReports)); err != nil {
 			return err
 		}
 	}
@@ -348,23 +358,49 @@ func (c *cmd) persistSchema10() error {
 // for many rows, well within both databases' limits on parameters.
 const casesPerInsert = 200
 
-func insertCases(tx *txx, st *RunState, step string, attempt int, cases []storedCase) error {
-	const cols = 16
-	for len(cases) > 0 {
-		n := min(len(cases), casesPerInsert)
-		batch := cases[:n]
-		cases = cases[n:]
+// insertCases writes an attempt's results; rich adds what schema 18 keeps
+// (tags, variant and extra), failing and flaky results first within the
+// attempt's budget for extra.
+func insertCases(tx *txx, st *RunState, step string, attempt int, cases []storedCase, rich bool) error {
+	cols := 16
+	if rich {
+		cols = 19
+	}
+	extras := make([]string, len(cases))
+	if rich {
+		budget := maxExtraAttemptBytes
+		for pass := 0; pass < 2; pass++ {
+			for i := range cases {
+				tc := &cases[i]
+				failing := tc.Status == testreport.Failed || tc.Status == testreport.Errored || tc.Flaky
+				if failing == (pass == 0) {
+					extras[i] = extraOf(tc, &budget)
+				}
+			}
+		}
+	}
+	marks := "(" + strings.TrimSuffix(strings.Repeat("?,", cols), ",") + ")"
+	for start := 0; start < len(cases); start += casesPerInsert {
+		n := min(len(cases)-start, casesPerInsert)
+		batch := cases[start : start+n]
 		var q strings.Builder
 		q.WriteString(`INSERT INTO test_cases(run_id, step_id, attempt, project, run_number, test_key, suite, name, file, status,
-			duration_ms, message, details, output, flaky, report_file) VALUES `)
+			duration_ms, message, details, output, flaky, report_file`)
+		if rich {
+			q.WriteString(`, tags, variant, extra`)
+		}
+		q.WriteString(`) VALUES `)
 		args := make([]any, 0, n*cols)
 		for i, tc := range batch {
 			if i > 0 {
 				q.WriteString(",")
 			}
-			q.WriteString("(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+			q.WriteString(marks)
 			args = append(args, st.ID, step, attempt, st.Project, st.Number, tc.key, tc.Suite, tc.Name, tc.File, string(tc.Status),
 				tc.DurationMs, tc.Message, tc.Details, tc.Output, boolInt(tc.Flaky), tc.file)
+			if rich {
+				args = append(args, tagsColumn(tc.Tags), tc.Variant, extras[start+i])
+			}
 		}
 		if _, err := tx.Exec(q.String(), args...); err != nil {
 			return err

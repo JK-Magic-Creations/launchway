@@ -1,0 +1,1 @@
+{"took":3,"timed_out":false,"_shards":{"total":1,"successful":1,"skipped":0,"failed":0},"hits":{"total":{"value":3,"relation":"eq"},"max_score":null,"hits":[{"_index":"logs-shop-1","_id":"1","_score":null,"_source":{"message":"first line"},"sort":[1795132800000]},{"_index":"logs-shop-1","_id":"2","_score":null,"_source":{"log":{"message":"nested"}},"sort":[1795132801000]}]}}

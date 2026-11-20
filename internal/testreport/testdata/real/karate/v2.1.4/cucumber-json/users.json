@@ -1,0 +1,409 @@
+[
+  {
+    "id": "users-api",
+    "uri": "users.feature",
+    "name": "Users API",
+    "description": "",
+    "keyword": "Feature",
+    "line": 2,
+    "tags": [
+      {
+        "name": "@api",
+        "line": 2
+      }
+    ],
+    "elements": [
+      {
+        "start_timestamp": "2026-11-20T00:52:14.214Z",
+        "id": "users-api;get-a-single-user",
+        "name": "get a single user",
+        "description": "",
+        "keyword": "Scenario",
+        "line": 8,
+        "type": "scenario",
+        "tags": [
+          {
+            "name": "@smoke",
+            "line": 8
+          }
+        ],
+        "steps": [
+          {
+            "keyword": "* ",
+            "name": "url baseUrl",
+            "line": 5,
+            "result": {
+              "status": "passed",
+              "duration": 641288
+            }
+          },
+          {
+            "keyword": "Given ",
+            "name": "path 'users', 1",
+            "line": 9,
+            "result": {
+              "status": "passed",
+              "duration": 4537863
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "method get",
+            "line": 10,
+            "result": {
+              "status": "passed",
+              "duration": 123009629
+            },
+            "embeddings": [
+              {
+                "mime_type": "text/plain",
+                "data": "cmVxdWVzdDoKMSA+IEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMQoxID4gSG9zdDogMTI3LjAuMC4xOjgwOTkKMSA+IENvbm5lY3Rpb246IGtlZXAtYWxpdmUKMSA+IFVzZXItQWdlbnQ6IEFwYWNoZS1IdHRwQ2xpZW50LzUuNi41IChKYXZhLzIxLjAuMTMpCgpyZXNwb25zZSB0aW1lIGluIG1pbGxpc2Vjb25kczogNgoxIDwgMjAwIEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMQoxIDwgY29udGVudC1sZW5ndGg6IDM2CjEgPCB2YXJ5OiBvcmlnaW4KMSA8IEthcmF0ZS1Nb2NrOiB0cnVlCjEgPCBDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb247IGNoYXJzZXQ9VVRGLTgKewogICJpZCI6IDEsCiAgIm5hbWUiOiAiQWRhIiwKICAicm9sZSI6ICJhZG1pbiIKfQoKR0VUIGh0dHA6Ly8xMjcuMC4wLjE6ODA5OS91c2Vycy8xCjIwMCAoNiBtcykK"
+              }
+            ]
+          },
+          {
+            "keyword": "Then ",
+            "name": "status 200",
+            "line": 11,
+            "result": {
+              "status": "passed",
+              "duration": 13291
+            }
+          },
+          {
+            "keyword": "And ",
+            "name": "match response == { id: 1, name: 'Ada', role: 'admin' }",
+            "line": 12,
+            "result": {
+              "status": "passed",
+              "duration": 8927096
+            }
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-11-20T00:52:14.356Z",
+        "id": "users-api;create-a-user",
+        "name": "create a user",
+        "description": "",
+        "keyword": "Scenario",
+        "line": 15,
+        "type": "scenario",
+        "tags": [
+          {
+            "name": "@smoke",
+            "line": 15
+          }
+        ],
+        "steps": [
+          {
+            "keyword": "* ",
+            "name": "url baseUrl",
+            "line": 5,
+            "result": {
+              "status": "passed",
+              "duration": 94193
+            }
+          },
+          {
+            "keyword": "Given ",
+            "name": "path 'users'",
+            "line": 16,
+            "result": {
+              "status": "passed",
+              "duration": 52094
+            }
+          },
+          {
+            "keyword": "And ",
+            "name": "request { name: 'Grace', role: 'user' }",
+            "line": 17,
+            "result": {
+              "status": "passed",
+              "duration": 137586
+            }
+          },
+          {
+            "keyword": "And ",
+            "name": "header Content-Type = 'application/json'",
+            "line": 18,
+            "result": {
+              "status": "passed",
+              "duration": 94570
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "method post",
+            "line": 19,
+            "result": {
+              "status": "passed",
+              "duration": 8875923
+            },
+            "embeddings": [
+              {
+                "mime_type": "text/plain",
+                "data": "cmVxdWVzdDoKMSA+IFBPU1QgaHR0cDovLzEyNy4wLjAuMTo4MDk5L3VzZXJzCjEgPiBDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb247IGNoYXJzZXQ9VVRGLTgKMSA+IEhvc3Q6IDEyNy4wLjAuMTo4MDk5CjEgPiBDb250ZW50LUxlbmd0aDogMzAKMSA+IENvbm5lY3Rpb246IGtlZXAtYWxpdmUKMSA+IFVzZXItQWdlbnQ6IEFwYWNoZS1IdHRwQ2xpZW50LzUuNi41IChKYXZhLzIxLjAuMTMpCnsKICAibmFtZSI6ICJHcmFjZSIsCiAgInJvbGUiOiAidXNlciIKfQoKcmVzcG9uc2UgdGltZSBpbiBtaWxsaXNlY29uZHM6IDYKMSA8IDIwMSBQT1NUIGh0dHA6Ly8xMjcuMC4wLjE6ODA5OS91c2VycwoxIDwgY29udGVudC1sZW5ndGg6IDM3CjEgPCBYLVJlcXVlc3QtSWQ6IHJlcS0xMjMKMSA8IHZhcnk6IG9yaWdpbgoxIDwgS2FyYXRlLU1vY2s6IHRydWUKMSA8IENvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbjsgY2hhcnNldD1VVEYtOAp7CiAgIm5hbWUiOiAiR3JhY2UiLAogICJyb2xlIjogInVzZXIiLAogICJpZCI6IDMKfQoKUE9TVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMKMjAxICg2IG1zKQo="
+              }
+            ]
+          },
+          {
+            "keyword": "Then ",
+            "name": "status 201",
+            "line": 20,
+            "result": {
+              "status": "passed",
+              "duration": 6317
+            }
+          },
+          {
+            "keyword": "And ",
+            "name": "match response.id == '#number'",
+            "line": 21,
+            "result": {
+              "status": "passed",
+              "duration": 2223587
+            }
+          },
+          {
+            "keyword": "And ",
+            "name": "match responseHeaders['X-Request-Id'][0] == 'req-123'",
+            "line": 22,
+            "result": {
+              "status": "passed",
+              "duration": 382191
+            }
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-11-20T00:52:14.369Z",
+        "id": "users-api;wrong-role-is-reported-fails",
+        "name": "wrong role is reported (fails)",
+        "description": "",
+        "keyword": "Scenario",
+        "line": 25,
+        "type": "scenario",
+        "tags": [
+          {
+            "name": "@regression",
+            "line": 25
+          }
+        ],
+        "steps": [
+          {
+            "keyword": "* ",
+            "name": "url baseUrl",
+            "line": 5,
+            "result": {
+              "status": "passed",
+              "duration": 59475
+            }
+          },
+          {
+            "keyword": "Given ",
+            "name": "path 'users', 2",
+            "line": 26,
+            "result": {
+              "status": "passed",
+              "duration": 85515
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "method get",
+            "line": 27,
+            "result": {
+              "status": "passed",
+              "duration": 4342684
+            },
+            "embeddings": [
+              {
+                "mime_type": "text/plain",
+                "data": "cmVxdWVzdDoKMSA+IEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMgoxID4gSG9zdDogMTI3LjAuMC4xOjgwOTkKMSA+IENvbm5lY3Rpb246IGtlZXAtYWxpdmUKMSA+IFVzZXItQWdlbnQ6IEFwYWNoZS1IdHRwQ2xpZW50LzUuNi41IChKYXZhLzIxLjAuMTMpCgpyZXNwb25zZSB0aW1lIGluIG1pbGxpc2Vjb25kczogMwoxIDwgMjAwIEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMgoxIDwgY29udGVudC1sZW5ndGg6IDM3CjEgPCB2YXJ5OiBvcmlnaW4KMSA8IEthcmF0ZS1Nb2NrOiB0cnVlCjEgPCBDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb247IGNoYXJzZXQ9VVRGLTgKewogICJpZCI6IDIsCiAgIm5hbWUiOiAiTGludXMiLAogICJyb2xlIjogInVzZXIiCn0KCkdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMgoyMDAgKDMgbXMpCg=="
+              }
+            ]
+          },
+          {
+            "keyword": "Then ",
+            "name": "status 200",
+            "line": 28,
+            "result": {
+              "status": "passed",
+              "duration": 8793
+            }
+          },
+          {
+            "keyword": "And ",
+            "name": "match response.role == 'admin'",
+            "line": 29,
+            "result": {
+              "status": "failed",
+              "duration": 862790,
+              "error_message": "match failed: EQUALS\n  $ | not equal (STRING:STRING)\n  'user'\n  'admin'\n"
+            }
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-11-20T00:52:14.378Z",
+        "id": "users-api;lookup-user-1-returns-200",
+        "name": "lookup user 1 returns 200",
+        "description": "",
+        "keyword": "Scenario Outline",
+        "line": 36,
+        "type": "scenario",
+        "steps": [
+          {
+            "keyword": "* ",
+            "name": "url baseUrl",
+            "line": 5,
+            "result": {
+              "status": "passed",
+              "duration": 86612
+            }
+          },
+          {
+            "keyword": "Given ",
+            "name": "path 'users', 1",
+            "line": 32,
+            "result": {
+              "status": "passed",
+              "duration": 124864
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "method get",
+            "line": 33,
+            "result": {
+              "status": "passed",
+              "duration": 4332286
+            },
+            "embeddings": [
+              {
+                "mime_type": "text/plain",
+                "data": "cmVxdWVzdDoKMSA+IEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMQoxID4gSG9zdDogMTI3LjAuMC4xOjgwOTkKMSA+IENvbm5lY3Rpb246IGtlZXAtYWxpdmUKMSA+IFVzZXItQWdlbnQ6IEFwYWNoZS1IdHRwQ2xpZW50LzUuNi41IChKYXZhLzIxLjAuMTMpCgpyZXNwb25zZSB0aW1lIGluIG1pbGxpc2Vjb25kczogMgoxIDwgMjAwIEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMQoxIDwgY29udGVudC1sZW5ndGg6IDM2CjEgPCB2YXJ5OiBvcmlnaW4KMSA8IEthcmF0ZS1Nb2NrOiB0cnVlCjEgPCBDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb247IGNoYXJzZXQ9VVRGLTgKewogICJpZCI6IDEsCiAgIm5hbWUiOiAiQWRhIiwKICAicm9sZSI6ICJhZG1pbiIKfQoKR0VUIGh0dHA6Ly8xMjcuMC4wLjE6ODA5OS91c2Vycy8xCjIwMCAoMiBtcykK"
+              }
+            ]
+          },
+          {
+            "keyword": "Then ",
+            "name": "status 200",
+            "line": 34,
+            "result": {
+              "status": "passed",
+              "duration": 8798
+            }
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-11-20T00:52:14.384Z",
+        "id": "users-api;lookup-user-2-returns-200",
+        "name": "lookup user 2 returns 200",
+        "description": "",
+        "keyword": "Scenario Outline",
+        "line": 36,
+        "type": "scenario",
+        "steps": [
+          {
+            "keyword": "* ",
+            "name": "url baseUrl",
+            "line": 5,
+            "result": {
+              "status": "passed",
+              "duration": 131220
+            }
+          },
+          {
+            "keyword": "Given ",
+            "name": "path 'users', 2",
+            "line": 32,
+            "result": {
+              "status": "passed",
+              "duration": 129649
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "method get",
+            "line": 33,
+            "result": {
+              "status": "passed",
+              "duration": 4160415
+            },
+            "embeddings": [
+              {
+                "mime_type": "text/plain",
+                "data": "cmVxdWVzdDoKMSA+IEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMgoxID4gSG9zdDogMTI3LjAuMC4xOjgwOTkKMSA+IENvbm5lY3Rpb246IGtlZXAtYWxpdmUKMSA+IFVzZXItQWdlbnQ6IEFwYWNoZS1IdHRwQ2xpZW50LzUuNi41IChKYXZhLzIxLjAuMTMpCgpyZXNwb25zZSB0aW1lIGluIG1pbGxpc2Vjb25kczogMgoxIDwgMjAwIEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMgoxIDwgY29udGVudC1sZW5ndGg6IDM3CjEgPCB2YXJ5OiBvcmlnaW4KMSA8IEthcmF0ZS1Nb2NrOiB0cnVlCjEgPCBDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb247IGNoYXJzZXQ9VVRGLTgKewogICJpZCI6IDIsCiAgIm5hbWUiOiAiTGludXMiLAogICJyb2xlIjogInVzZXIiCn0KCkdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvMgoyMDAgKDIgbXMpCg=="
+              }
+            ]
+          },
+          {
+            "keyword": "Then ",
+            "name": "status 200",
+            "line": 34,
+            "result": {
+              "status": "passed",
+              "duration": 9324
+            }
+          }
+        ]
+      },
+      {
+        "start_timestamp": "2026-11-20T00:52:14.389Z",
+        "id": "users-api;lookup-user-99-returns-404",
+        "name": "lookup user 99 returns 404",
+        "description": "",
+        "keyword": "Scenario Outline",
+        "line": 36,
+        "type": "scenario",
+        "steps": [
+          {
+            "keyword": "* ",
+            "name": "url baseUrl",
+            "line": 5,
+            "result": {
+              "status": "passed",
+              "duration": 95969
+            }
+          },
+          {
+            "keyword": "Given ",
+            "name": "path 'users', 99",
+            "line": 32,
+            "result": {
+              "status": "passed",
+              "duration": 98489
+            }
+          },
+          {
+            "keyword": "When ",
+            "name": "method get",
+            "line": 33,
+            "result": {
+              "status": "passed",
+              "duration": 4706258
+            },
+            "embeddings": [
+              {
+                "mime_type": "text/plain",
+                "data": "cmVxdWVzdDoKMSA+IEdFVCBodHRwOi8vMTI3LjAuMC4xOjgwOTkvdXNlcnMvOTkKMSA+IEhvc3Q6IDEyNy4wLjAuMTo4MDk5CjEgPiBDb25uZWN0aW9uOiBrZWVwLWFsaXZlCjEgPiBVc2VyLUFnZW50OiBBcGFjaGUtSHR0cENsaWVudC81LjYuNSAoSmF2YS8yMS4wLjEzKQoKcmVzcG9uc2UgdGltZSBpbiBtaWxsaXNlY29uZHM6IDMKMSA8IDQwNCBHRVQgaHR0cDovLzEyNy4wLjAuMTo4MDk5L3VzZXJzLzk5CjEgPCBjb250ZW50LWxlbmd0aDogMjEKMSA8IHZhcnk6IG9yaWdpbgoxIDwgS2FyYXRlLU1vY2s6IHRydWUKMSA8IENvbnRlbnQtVHlwZTogYXBwbGljYXRpb24vanNvbjsgY2hhcnNldD1VVEYtOAp7CiAgImVycm9yIjogIm5vdCBmb3VuZCIKfQoKR0VUIGh0dHA6Ly8xMjcuMC4wLjE6ODA5OS91c2Vycy85OQo0MDQgKDMgbXMpCg=="
+              }
+            ]
+          },
+          {
+            "keyword": "Then ",
+            "name": "status 404",
+            "line": 34,
+            "result": {
+              "status": "passed",
+              "duration": 8068
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

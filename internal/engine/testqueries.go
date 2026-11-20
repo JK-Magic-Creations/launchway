@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/jk-magic-creations/launchway/internal/testreport"
 )
 
 // Reading test results back. A run's results are, for each step that has
@@ -556,6 +558,19 @@ type TestCase struct {
 	// Details and Output, only when one result is asked for.
 	Details string `json:"details,omitempty"`
 	Output  string `json:"output,omitempty"`
+
+	// Schema 18: its tags and variant (a browser or project), and, with
+	// Attachments counted in lists, in full only when one result is asked
+	// for: retries, earlier attempts, steps, attachments and properties.
+	Tags        []string              `json:"tags,omitempty"`
+	Variant     string                `json:"variant,omitempty"`
+	HasSteps    bool                  `json:"has_steps,omitempty"`
+	Retries     int                   `json:"retries,omitempty"`
+	Attempts    []testreport.Attempt  `json:"attempts,omitempty"`
+	Steps       []testreport.Step     `json:"steps,omitempty"`
+	StepsCut    bool                  `json:"steps_cut,omitempty"`
+	Attachments []TestAttachment      `json:"attachments,omitempty"`
+	Properties  []testreport.Property `json:"properties,omitempty"`
 }
 
 // CaseQuery narrows a run's results.
@@ -567,6 +582,14 @@ type CaseQuery struct {
 	Attempt int
 	Limit   int // default 200, at most 1000
 	Offset  int
+	// Schema 18: only results with this tag, of this suite, or of this
+	// variant (a browser or project); Sort "slowest" lists the slowest
+	// first, "name" by suite and name; the default is failures first, then
+	// the slowest.
+	Tag     string
+	Suite   string
+	Variant string
+	Sort    string
 }
 
 // CasePage is a page of results.
@@ -576,8 +599,14 @@ type CasePage struct {
 	// query would match with each status, for filters.
 	Matching int            `json:"matching"`
 	Counts   map[string]int `json:"counts"`
-	Offset   int            `json:"offset"`
-	Limit    int            `json:"limit"`
+	// Tags, Variants and Suites are the choices the results offer for
+	// filtering, with how many results each has (schema 18; at most 100
+	// each, the commonest first).
+	Tags     []Facet `json:"tags,omitempty"`
+	Variants []Facet `json:"variants,omitempty"`
+	Suites   []Facet `json:"suites,omitempty"`
+	Offset   int     `json:"offset"`
+	Limit    int     `json:"limit"`
 }
 
 // Statuses a query may ask for.
@@ -651,6 +680,26 @@ func (e *Engine) RunTestCases(runID string, q CaseQuery) (*CasePage, error) {
 			OR LOWER(tc.message) LIKE ? ESCAPE '\')`
 		args = append(args, like, like, like, like)
 	}
+	rich := e.knows(schemaReports)
+	if rich {
+		// The facets, before narrowing by them, so the filters can offer
+		// every choice.
+		if err := e.caseFacets(page, base, args); err != nil {
+			return nil, err
+		}
+		if t := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(q.Tag, "@"))); t != "" {
+			base += ` AND tc.tags LIKE ? ESCAPE '\'`
+			args = append(args, "%|"+strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(t)+"|%")
+		}
+		if q.Variant != "" {
+			base += ` AND tc.variant = ?`
+			args = append(args, q.Variant)
+		}
+	}
+	if q.Suite != "" {
+		base += ` AND tc.suite = ?`
+		args = append(args, q.Suite)
+	}
 	// Counts by status, for the filters.
 	rows, err := e.db.Query(`SELECT tc.status, COUNT(*) FROM test_cases tc WHERE `+base+` GROUP BY tc.status`, args...)
 	if err != nil {
@@ -696,11 +745,25 @@ func (e *Engine) RunTestCases(runID string, q CaseQuery) (*CasePage, error) {
 	if err := e.db.QueryRow(`SELECT COUNT(*) FROM test_cases tc WHERE `+where, wargs...).Scan(&page.Matching); err != nil {
 		return nil, err
 	}
+	order := `CASE WHEN tc.status IN ('failed', 'errored') THEN 0 ELSE 1 END, tc.duration_ms DESC, tc.suite, tc.name, tc.id`
+	switch q.Sort {
+	case "", "failures":
+	case "slowest":
+		order = `tc.duration_ms DESC, tc.suite, tc.name, tc.id`
+	case "name":
+		order = `tc.suite, tc.name, tc.id`
+	default:
+		return nil, fmt.Errorf("%w: sort is failures, slowest or name", ErrInvalid)
+	}
+	richCols := `'', '', 0`
+	if rich {
+		richCols = `tc.tags, tc.variant, LENGTH(tc.extra)`
+	}
 	rows, err = e.db.Query(`SELECT tc.id, tc.test_key, tc.run_id, tc.step_id, tc.attempt, tc.suite, tc.name, tc.file, tc.status,
 			tc.duration_ms, SUBSTR(tc.message, 1, ?), (LENGTH(tc.details) > 0 OR LENGTH(tc.output) > 0 OR LENGTH(tc.message) > ?),
-			tc.report_file, tc.flaky
+			tc.report_file, tc.flaky, `+richCols+`
 		FROM test_cases tc WHERE `+where+`
-		ORDER BY CASE WHEN tc.status IN ('failed', 'errored') THEN 0 ELSE 1 END, tc.duration_ms DESC, tc.suite, tc.name, tc.id
+		ORDER BY `+order+`
 		LIMIT ? OFFSET ?`, append(append([]any{messagePreview, messagePreview}, wargs...), q.Limit, q.Offset)...)
 	if err != nil {
 		return nil, err
@@ -710,12 +773,16 @@ func (e *Engine) RunTestCases(runID string, q CaseQuery) (*CasePage, error) {
 		var c TestCase
 		var more bool
 		var toolFlaky int
+		var tags string
+		var extraLen int
 		if err := rows.Scan(&c.ID, &c.Key, &c.Run, &c.Step, &c.Attempt, &c.Suite, &c.Name, &c.File, &c.Status,
-			&c.DurationMs, &c.Message, &more, &c.ReportFile, &toolFlaky); err != nil {
+			&c.DurationMs, &c.Message, &more, &c.ReportFile, &toolFlaky, &tags, &c.Variant, &extraLen); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		c.HasDetails = more
+		c.Tags = tagsFromColumn(tags)
+		c.HasSteps = extraLen > 0
+		c.HasDetails = more || extraLen > 0
 		c.Flaky = toolFlaky != 0 || flaky[c.Step][c.Key]
 		if c.Status == "failed" || c.Status == "errored" {
 			failing[c.Key] = true
@@ -774,6 +841,9 @@ func (e *Engine) TestCase(runID string, id int64) (*TestCase, error) {
 	}
 	c.Flaky = toolFlaky != 0
 	c.HasDetails = c.Details != "" || c.Output != ""
+	if err := e.richCase(&c); err != nil {
+		return nil, err
+	}
 	if c.Run == runID {
 		return &c, nil
 	}
@@ -908,10 +978,11 @@ type OverviewRun struct {
 
 // TestStat is one test and what makes it stand out.
 type TestStat struct {
-	Key   string `json:"key"`
-	Suite string `json:"suite"`
-	Name  string `json:"name"`
-	File  string `json:"file,omitempty"`
+	Key     string `json:"key"`
+	Suite   string `json:"suite"`
+	Name    string `json:"name"`
+	File    string `json:"file,omitempty"`
+	Variant string `json:"variant,omitempty"` // the browser or project it ran as (schema 18)
 	// Runs counts the runs it ran in, of those looked at.
 	Runs int `json:"runs"`
 	// Slowest: the average and longest duration.
@@ -1092,7 +1163,48 @@ func (e *Engine) TestOverview(project, ref string, window int) (*TestOverview, e
 	if len(out.Flaky) > overviewTop {
 		out.Flaky = out.Flaky[:overviewTop]
 	}
+	if err := e.statVariants(project, out.Slowest, out.Failing, out.Flaky); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// statVariants says which browser or project each test ran as (schema 18),
+// so that the same test in two browsers can be told apart.
+func (e *Engine) statVariants(project string, lists ...[]TestStat) error {
+	if !e.knows(schemaReports) {
+		return nil
+	}
+	var keys []string
+	for _, l := range lists {
+		for _, s := range l {
+			keys = append(keys, s.Key)
+		}
+	}
+	keys = slices.Compact(slices.Sorted(slices.Values(keys)))
+	variant := map[string]string{}
+	err := inChunks(keys, func(marks string, args []any) error {
+		rows, err := e.db.Query(`SELECT test_key, MAX(variant) FROM test_cases WHERE project = ? AND test_key IN (`+marks+`) GROUP BY test_key`,
+			append([]any{project}, args...)...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var k, v string
+			if err := rows.Scan(&k, &v); err != nil {
+				return err
+			}
+			variant[k] = v
+		}
+		return rows.Err()
+	})
+	for _, l := range lists {
+		for i := range l {
+			l[i].Variant = variant[l[i].Key]
+		}
+	}
+	return err
 }
 
 // stepTests adds each step's totals to a run's steps.

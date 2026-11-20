@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="CLI Arguments" tests="8" assertions="5" errors="1" failures="2" skipped="2" time="0.000770">
+    <testsuite name="CartTest" file="/work/tests/CartTest.php" tests="8" assertions="5" errors="1" failures="2" skipped="2" time="0.000770">
+      <testcase name="testTotalSums" file="/work/tests/CartTest.php" line="11" class="CartTest" classname="CartTest" assertions="1" time="0.000128"/>
+      <testcase name="testTenDiscountIsWrong" file="/work/tests/CartTest.php" line="16" class="CartTest" classname="CartTest" assertions="1" time="0.000161">
+        <failure type="PHPUnit\Framework\ExpectationFailedException">CartTest::testTenDiscountIsWrong
+TEN discount
+Failed asserting that 20 is identical to 25.
+
+/work/tests/CartTest.php:18</failure>
+      </testcase>
+      <testcase name="testSkipped" file="/work/tests/CartTest.php" line="21" class="CartTest" classname="CartTest" assertions="0" time="0.000060">
+        <skipped/>
+      </testcase>
+      <testcase name="testIncomplete" file="/work/tests/CartTest.php" line="26" class="CartTest" classname="CartTest" assertions="0" time="0.000081">
+        <skipped/>
+      </testcase>
+      <testsuite name="CartTest::testHalf" tests="3" assertions="3" errors="0" failures="1" skipped="0" time="0.000249">
+        <testcase name="testHalf with data set &quot;ten&quot;" file="/work/tests/CartTest.php" line="37" class="CartTest" classname="CartTest" assertions="1" time="0.000065"/>
+        <testcase name="testHalf with data set &quot;four&quot;" file="/work/tests/CartTest.php" line="37" class="CartTest" classname="CartTest" assertions="1" time="0.000056"/>
+        <testcase name="testHalf with data set &quot;three&quot;" file="/work/tests/CartTest.php" line="37" class="CartTest" classname="CartTest" assertions="1" time="0.000128">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">CartTest::testHalf with data set "three"
+Failed asserting that 1 is identical to 2.
+
+/work/tests/CartTest.php:39</failure>
+        </testcase>
+      </testsuite>
+      <testcase name="testError" file="/work/tests/CartTest.php" line="42" class="CartTest" classname="CartTest" assertions="0" time="0.000091">
+        <error type="RuntimeException">CartTest::testError
+RuntimeException: cart service unavailable
+
+/work/tests/CartTest.php:44</error>
+      </testcase>
+    </testsuite>
+  </testsuite>
+</testsuites>

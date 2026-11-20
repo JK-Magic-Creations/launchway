@@ -39,8 +39,8 @@ token:
   existingSecret: ""
   existingSecretKey: token
 
-# -- One-time join tokens (runner identities) are coming; the setting is reserved and refused
-# until runners of this release take them. See templates/_helpers.tpl, JOIN HOOK.
+# -- The original join-token setting, kept as an alias of runner.join. Use runner.join in new
+# values files; setting both is refused.
 join:
   existingSecret: ""
   existingSecretKey: join-token
@@ -68,6 +68,19 @@ runner:
   replicas: 2
   # -- Steps each runner executes at once.
   concurrency: 2
+  # -- Enrol each runner pod with a join token instead of using the shared runner token: a Secret
+  # holding a join token made in the UI (Runners, Add a runner) with enough uses for every pod
+  # start, ideally ephemeral. Unset: token.existingSecret (or the original join.* alias above).
+  #   join: { existingSecret: launchway-runner-join, existingSecretKey: token }
+  join:
+  # -- Labels the runners have, for pipelines that ask for them (runner: { labels }). Written
+  # only when set. Unset: none.
+  labels:
+  # -- The runners' own limits on the work they take (accept: in runner.yaml), checked on the
+  # runner before anything runs. Written only when set; see the server documentation. Unset: no
+  # limits. For example:
+  #   accept: { projects: [shop], images: ["registry.example.com/*"], pull_requests: false }
+  accept:
   kubernetes:
     # -- The namespace step pods run in. Default: the release namespace. Runners are granted
     # access to pods in this namespace only. It must exist unless createNamespace is true.
@@ -187,6 +200,9 @@ runner:
     maxContextMiB:
     # -- MiB of image the runner accepts back from a builder. Unset: the built-in default, 20480.
     maxImageMiB:
+  # -- Let runners take ai steps. The servers must define ai.models; a model's key is read from
+  # runner.secretStores. Written to the runners' file only when true. Unset: false.
+  ai:
   resources:
     requests:
       cpu: 100m
@@ -275,6 +291,14 @@ networkPolicy:
     egress: []
 
 # ---------------------------------------------------------------------------------------------
+# Health sources for verify steps, using the same entries as delivery.verification.sources in the
+# launchway chart. Register the same names, types and projects in the server's configuration;
+# this chart gives their connection details only to the deploy runner.
+# ---------------------------------------------------------------------------------------------
+verification:
+  sources: null
+
+# ---------------------------------------------------------------------------------------------
 # A deploy runner: does the work of deploy and rollback steps for one target cluster (Argo CD
 # Applications, Argo Rollouts) and runs no scripts. The same values as delivery.deployRunner in
 # the launchway chart, except the token, which here must be an existing Secret.
@@ -304,6 +328,9 @@ deployRunner:
   # -- Ask Argo CD to look at the repository at once after a commit (the refresh
   # annotation). Default (unset): true.
   refresh: null
+  # -- Let the deploy runner call models configured on the servers to explain verification
+  # verdicts, with keys read from deployRunner.secretStores. Written only when true. Unset: false.
+  ai: null
   rbac:
     # -- Create the Roles below and bind them to the deploy runner.
     create: true

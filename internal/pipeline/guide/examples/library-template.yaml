@@ -1,0 +1,20 @@
+# A pipeline that uses a template from a shared library. The library name
+# (platform) is chosen here; repo must be a library the server lists, and
+# version a tag, branch or full commit of it. List the library's templates
+# to see what each takes.
+pipeline: weather-service
+on:
+  push: { branches: [main] }
+
+libraries:
+  platform: { repo: ci-templates, version: v3 }
+
+steps:
+  ci:
+    uses: platform/python-service
+    with: { test_command: "pytest -q tests/" }
+
+  report:
+    image: docker.io/library/alpine:3.22
+    needs: ci
+    run: echo "coverage was $LAUNCHWAY_NEEDS_CI_COVERAGE"

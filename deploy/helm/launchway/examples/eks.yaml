@@ -1,0 +1,107 @@
+# Launchway on Amazon EKS: three servers across zones, Amazon RDS or Aurora PostgreSQL, artifacts
+# in Amazon S3, the UI behind an AWS Load Balancer Controller ALB, and step pods on a node group
+# of their own. See docs/howto/install-eks.md for the steps around it.
+#
+#   kubectl create namespace launchway
+#   kubectl create namespace launchway-steps
+#   kubectl label namespace launchway-steps pod-security.kubernetes.io/enforce=restricted
+#   kubectl -n launchway create secret generic launchway-database \
+#     --from-literal=url='postgres://launchway:PASSWORD@launchway.cluster-abc123.eu-west-1.rds.amazonaws.com:5432/launchway?sslmode=verify-full&sslrootcert=/etc/launchway-db-ca/global-bundle.pem'
+#   kubectl -n launchway create configmap launchway-db-ca --from-file=global-bundle.pem
+#   kubectl -n launchway create secret generic launchway-s3 \
+#     --from-literal=AWS_ACCESS_KEY_ID=AKIA... --from-literal=AWS_SECRET_ACCESS_KEY=...
+#   kubectl -n launchway create secret generic launchway-oidc --from-literal=client-secret=...
+#   helm install launchway deploy/helm/launchway -n launchway -f deploy/helm/launchway/examples/eks.yaml
+
+image:
+  # Your copy of the image, in Amazon ECR. Pin a digest in production; it wins over the tag.
+  repository: 123456789012.dkr.ecr.eu-west-1.amazonaws.com/launchway
+  tag: "0.1.0"
+
+database:
+  existingSecret: launchway-database
+  existingSecretKey: url
+
+config:
+  projects:
+    - name: payments
+      repo: https://git.example.com/team/payments.git
+      branch: main
+      poll: 30s
+  # Artifacts and SBOMs in one bucket that every server shares. Only the servers talk to it.
+  artifacts:
+    store: s3
+    s3:
+      endpoint: https://s3.eu-west-1.amazonaws.com
+      region: eu-west-1
+      bucket: acme-launchway-artifacts
+      prefix: launchway/
+      existingSecret: launchway-s3
+  extraConfig:
+    server:
+      trust_proxy: true          # every request arrives through the ALB
+    auth:
+      mode: oidc
+      oidc:
+        issuer: https://sso.example.com/realms/acme
+        client_id: launchway
+        client_secret_env: LAUNCHWAY_OIDC_SECRET
+        redirect_url: https://launchway.example.com/auth/callback
+      access:
+        - { group: platform-admins, role: admin }
+        - { group: payments, role: operator, projects: [payments] }
+        - { group: everyone, role: viewer }
+
+server:
+  replicas: 3
+  extraEnv:
+    - name: LAUNCHWAY_OIDC_SECRET
+      valueFrom:
+        secretKeyRef: { name: launchway-oidc, key: client-secret }
+  # The RDS certificate bundle named by sslrootcert in the database URL.
+  extraVolumes:
+    - name: db-ca
+      configMap: { name: launchway-db-ca }
+  extraVolumeMounts:
+    - { name: db-ca, mountPath: /etc/launchway-db-ca, readOnly: true }
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels: { app.kubernetes.io/name: launchway, app.kubernetes.io/instance: launchway, app.kubernetes.io/component: server }
+      matchLabelKeys: [pod-template-hash]
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-west-1:123456789012:certificate/00000000-0000-0000-0000-000000000000
+    alb.ingress.kubernetes.io/healthcheck-path: /readyz
+    # The UI keeps /api/v1/stream open for live updates.
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=3600
+  hosts: [launchway.example.com]
+
+runner:
+  replicas: 3
+  concurrency: 4
+  kubernetes:
+    namespace: launchway-steps
+    # Step pods go to the node group for builds, by a label its nodes carry. Step pods take no
+    # tolerations, so do not taint that node group.
+    nodeSelector: { launchway.example.com/pool: builds }
+    cpu: 250m
+    memory: 256Mi
+    memoryLimit: 4Gi
+  dataVolume:
+    sizeLimit: 20Gi
+  # Vault with Kubernetes auth, logging in with the runner pods' own service account token.
+  secretStores:
+    vault:
+      type: vault
+      address: https://vault.example.com:8200
+      role: launchway-runner
+      keys: ["ci/*"]

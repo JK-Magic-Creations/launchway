@@ -1,0 +1,6 @@
+1..3
+ok 1 addition works # in 3 ms
+not ok 2 string comparison fails # in 6 ms
+# (in test file cart.bats, line 11)
+#   `[ "$output" = "goodbye" ]' failed
+ok 3 skipped test # skip not implemented

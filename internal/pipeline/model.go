@@ -35,6 +35,10 @@ type Pipeline struct {
 	// refuse (see control.go). Servers that do not know this field refuse
 	// the pipeline, which is the point.
 	Requires int `json:"requires,omitempty"`
+	// Runner chooses the runners the pipeline's steps may run on: a pool,
+	// labels or both (schema 21). Nil: any runner whose pool serves the
+	// project.
+	Runner *RunnerSelector `json:"runner,omitempty"`
 	// Inputs are the values a run is started with (schema 13), in the order
 	// they were written. A person starting a run gives them; runs started
 	// any other way use the defaults, or what the schedule or webhook says.
@@ -131,6 +135,12 @@ type Step struct {
 	// image.go.
 	ImageBuild *ImageBuild `json:"image_build,omitempty"`
 
+	// Verify, for a verify step (kind verify), is what it watches and how
+	// it decides; AI, for an ai step (kind ai), what it asks. See verify.go
+	// and ai.go (schema 19).
+	Verify *Verify `json:"verify,omitempty"`
+	AI     *AIStep `json:"ai,omitempty"`
+
 	// Deploy steps (kind deploy) only; see deploy.go.
 	Environment string      `json:"environment,omitempty"` // a server's environment, which gives the lock and the record
 	Service     string      `json:"service,omitempty"`     // what is deployed there; empty means the project's name
@@ -212,6 +222,40 @@ type Reports struct {
 	// SBOM are globs of software bills of materials in CycloneDX JSON. They
 	// are kept as the step's artifact "sbom" and summarised.
 	SBOM []string `json:"sbom,omitempty"`
+
+	// What schema 18 brought. A server older than that does not know these
+	// fields, so it reads a pipeline that uses them as not understood.
+
+	// TestAttachments is a directory, relative to the workspace, whose
+	// files the test reports may attach to their results (screenshots,
+	// videos, traces). It is kept as the artifact test-attachments, and
+	// only files inside it are ever shown as attachments.
+	TestAttachments string `json:"test_attachments,omitempty"`
+	// Coverage are globs of coverage reports: Cobertura, JaCoCo or Clover
+	// XML, LCOV, Go coverprofiles or Istanbul json-summary.
+	Coverage []string `json:"coverage,omitempty"`
+	// CoverageFailUnder fails the step when its coverage is below it.
+	CoverageFailUnder *CoverageThreshold `json:"coverage_fail_under,omitempty"`
+	// HTML are directories of HTML that a tool generated (Playwright's or
+	// Karate's report, an Allure site, coverage HTML), published with the
+	// run and shown sandboxed.
+	HTML []HTMLReport `json:"html,omitempty"`
+}
+
+// CoverageThreshold is the least coverage a step must have, in percent; a
+// zero field is not checked.
+type CoverageThreshold struct {
+	Lines     float64 `json:"lines,omitempty"`
+	Branches  float64 `json:"branches,omitempty"`
+	Functions float64 `json:"functions,omitempty"`
+}
+
+// HTMLReport is a directory of HTML a step publishes.
+type HTMLReport struct {
+	Name  string `json:"name"`  // its name in the run, and of its artifact report-<name>
+	Path  string `json:"path"`  // the directory, relative to the workspace
+	Index string `json:"index"` // the page it opens on, relative to the directory
+	Line  int    `json:"-"`
 }
 
 // IsUse reports whether the step is replaced by a template.
@@ -459,7 +503,7 @@ func (p *Pipeline) RunContainers() []Container {
 		out = append(out, *c)
 	}
 	for _, s := range p.Steps {
-		if !s.IsApproval() && !s.IsDeployKind() && !s.IsUse() && !s.IsImage() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
+		if !s.IsApproval() && !s.IsDeployKind() && !s.IsUse() && !s.IsImage() && !s.IsVerify() && !s.IsAI() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
 			out = append(out, Container{Name: "image-" + itoa(len(out)-len(p.Containers)+1), Image: s.Image})
 		}
 	}
@@ -470,7 +514,7 @@ func (p *Pipeline) RunContainers() []Container {
 // It is empty for an approval, an image step (the runner builds it, in no
 // container of the run), and a step not yet replaced by a template.
 func (p *Pipeline) ContainerFor(s *Step) string {
-	if s.IsApproval() || s.IsDeployKind() || s.IsUse() || s.IsImage() {
+	if s.IsApproval() || s.IsDeployKind() || s.IsUse() || s.IsImage() || s.IsVerify() || s.IsAI() {
 		return ""
 	}
 	if s.Container != "" {

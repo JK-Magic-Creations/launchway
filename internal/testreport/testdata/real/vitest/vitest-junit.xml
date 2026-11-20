@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="6" failures="1" errors="0" time="0.00768588">
+    <testsuite name="src/cart.test.js" timestamp="2026-11-20T00:53:15.882Z" hostname="ff27b2b5ee28" tests="6" failures="1" errors="0" skipped="2" time="0.00768588">
+        <testcase classname="src/cart.test.js" name="cart &gt; totals items" time="0.001344756">
+        </testcase>
+        <testcase classname="src/cart.test.js" name="cart &gt; applies TEN discount (wrong expectation)" time="0.004531586">
+            <failure message="expected 20 to be 25 // Object.is equality" type="AssertionError">
+AssertionError: expected 20 to be 25 // Object.is equality
+
+- Expected
++ Received
+
+- 25
++ 20
+
+ ❯ src/cart.test.js:10:33
+            </failure>
+        </testcase>
+        <testcase classname="src/cart.test.js" name="cart &gt; free shipping over 50" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/cart.test.js" name="cart &gt; supports currencies" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="src/cart.test.js" name="cart &gt; tagged smoke" time="0.000098418">
+        </testcase>
+        <testcase classname="src/cart.test.js" name="flaky: passes on retry" time="0.000515386">
+        </testcase>
+    </testsuite>
+</testsuites>

@@ -1,0 +1,12 @@
+# Where the shop runs, and where Launchway runs the pipeline's steps as pods.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shop
+  labels: { pod-security.kubernetes.io/enforce: restricted }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: launchway-steps
+  labels: { pod-security.kubernetes.io/enforce: restricted }

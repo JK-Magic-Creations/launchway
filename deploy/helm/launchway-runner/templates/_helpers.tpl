@@ -150,15 +150,12 @@ CAs needed as well as a private one.
 {{- if not (or .Values.runner.enabled .Values.deployRunner.enabled) -}}
 {{- fail "\n\nNothing to run: enable runner.enabled (build runners) or deployRunner.enabled (a deploy runner), or both.\n" -}}
 {{- end -}}
-{{- /* JOIN HOOK. One-time join tokens (runner identities, design 5.3) are being built. When a
-runner release takes them, join.existingSecret will reach each pod as LAUNCHWAY_JOIN (and the
-runner's --join flag) in place of the shared token, and each pod will enrol as an ephemeral
-runner. Until then the setting is refused, so that nobody believes it is in force. */ -}}
-{{- if .Values.join.existingSecret -}}
-{{- fail "\n\njoin.existingSecret: runners of this release do not take join tokens yet. Use token.existingSecret (a runner or runner pool token).\n" -}}
+{{- if and .Values.join.existingSecret .Values.runner.join .Values.runner.join.existingSecret -}}
+{{- fail "\n\nSet only one of join.existingSecret (the original alias) and runner.join.existingSecret.\n" -}}
 {{- end -}}
-{{- if and .Values.runner.enabled (not .Values.token.existingSecret) -}}
-{{- fail "\n\ntoken.existingSecret is required: a Secret in this namespace holding the runner token (or a runner pool's token) from the server's administrator.\n" -}}
+{{- $join := or .Values.join.existingSecret (.Values.runner.join | default dict).existingSecret -}}
+{{- if and .Values.runner.enabled (not .Values.token.existingSecret) (not $join) -}}
+{{- fail "\n\ntoken.existingSecret is required unless runner.join.existingSecret enrols each runner: name a Secret holding a runner token, a runner pool token or a join token.\n" -}}
 {{- end -}}
 {{- if and .Values.deployRunner.enabled (not .Values.deployRunner.token.existingSecret) -}}
 {{- fail "\n\ndeployRunner.token.existingSecret is required: a Secret holding the token of the deploy runner pool (runner_pools in the server's configuration) that serves deployRunner.target.\n" -}}

@@ -73,7 +73,7 @@ func cliServer(t *testing.T, po ...engine.PolicyOptions) (credentials, *engine.E
 		t.Fatal(err)
 	}
 	operator := auth.Operator
-	s := &api.Server{Engine: eng, Projects: mgr, Log: quiet, RunnerToken: "r",
+	s := &api.Server{Engine: eng, Projects: mgr, Log: quiet, RunnerToken: "r", MCP: &api.MCPOptions{},
 		Auth: &api.Auth{Policy: pol, IdleTimeout: time.Hour, Lifetime: time.Hour}, WaiveRole: &operator}
 	srv := httptest.NewServer(s.Handler())
 	ctx, cancel := context.WithCancel(context.Background())
@@ -303,5 +303,61 @@ func TestCLIPolicyAndWaivers(t *testing.T) {
 	out.Reset()
 	if err := cl.waiverRevoke([]string{"app", id, "--reason", "done"}); err != nil || !strings.Contains(out.String(), "revoked") {
 		t.Fatalf("%v\n%s", err, out.String())
+	}
+}
+
+// The reports commands read a run's tests, coverage and HTML reports.
+func TestCLIReports(t *testing.T) {
+	c, eng := cliServer(t)
+	pollEvery = 20 * time.Millisecond
+	var out bytes.Buffer
+	cl := newClient(c, &out)
+	if err := cl.start([]string{"app", "--wait", "-i", "version=v7"}); exitCode(err) != 0 {
+		t.Fatalf("a run: %v", err)
+	}
+	runs, _ := eng.ListRuns(engine.RunFilter{})
+	id := runs[0].ID
+	for cmd, want := range map[string]string{"tests": "No test results.", "coverage": "No coverage.", "reports": "No HTML reports."} {
+		out.Reset()
+		var err error
+		switch cmd {
+		case "tests":
+			err = cl.tests([]string{id})
+		case "coverage":
+			err = cl.coverage([]string{id, "--files"})
+		case "reports":
+			err = cl.reports([]string{id})
+		}
+		if err != nil || strings.TrimSpace(out.String()) != want {
+			t.Errorf("%s: %v %q", cmd, err, out.String())
+		}
+	}
+	out.Reset()
+	if err := cl.coverage([]string{id, "--json"}); err != nil || !strings.Contains(out.String(), `"coverage"`) {
+		t.Errorf("coverage --json: %v %s", err, out.String())
+	}
+	if err := cl.tests(nil); exitCode(err) != exitUsage {
+		t.Errorf("tests without a run: %v", err)
+	}
+	if err := cl.tests([]string{"run_nope"}); exitCode(err) != exitAPI {
+		t.Errorf("tests of a run that does not exist: %v", err)
+	}
+}
+
+// Against a server without sign-in (auth.mode: none) the CLI's changes are
+// accepted: it says it is not a browser, as Launchway's own pages do.
+func TestCLIWithoutSignIn(t *testing.T) {
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	eng, err := engine.Open(engine.Options{Database: testdb.New(t), Logger: quiet})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer((&api.Server{Engine: eng, Log: quiet, RunnerToken: "r", Actor: "ada"}).Handler())
+	t.Cleanup(func() { srv.Close(); eng.Close() })
+	var out bytes.Buffer
+	cl := newClient(credentials{Server: srv.URL}, &out)
+	err = cl.call("POST", "/api/v1/runs/run_nope/cancel", map[string]string{}, nil)
+	if err == nil || strings.Contains(err.Error(), "header is missing") || !strings.Contains(strings.ToLower(err.Error()), "not found") && !strings.Contains(err.Error(), "no run") {
+		t.Fatalf("a change without sign-in: %v", err)
 	}
 }

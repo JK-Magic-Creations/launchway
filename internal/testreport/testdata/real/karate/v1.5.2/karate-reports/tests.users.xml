@@ -1,0 +1,57 @@
+<testsuite failures="2" name="tests/users.feature" skipped="0" tests="6" time="0.313089"><testcase classname="tests.users" name="get a single user" time="0.186642"><system-out>* url baseUrl ............................................................. passed
+Given path 'users', 1 ..................................................... passed
+When method get ........................................................... passed
+Then status 200 ........................................................... passed
+And match response == { id: 1, name: 'Ada', role: 'admin' } ............... passed
+</system-out></testcase>
+<testcase classname="tests.users" name="create a user" time="0.053704"><failure message="match failed: EQUALS&#10;  $ | actual path does not exist (STRING:STRING)&#10;  '#notpresent'&#10;  'req-123'&#10;&#10;tests/users.feature:22">* url baseUrl ............................................................. passed
+Given path 'users' ........................................................ passed
+And request { name: 'Grace', role: 'user' } ............................... passed
+And header Content-Type = 'application/json' .............................. passed
+When method post .......................................................... passed
+Then status 201 ........................................................... passed
+And match response.id == '#number' ........................................ passed
+And match responseHeaders['X-Request-Id'][0] == 'req-123' ................. failed
+
+Stack Trace:
+com.intuit.karate.KarateException: match failed: EQUALS
+  $ | actual path does not exist (STRING:STRING)
+  '#notpresent'
+  'req-123'
+
+tests/users.feature:22
+	at &lt;feature&gt;.: And match responseHeaders['X-Request-Id'][0] == 'req-123' (tests/users.feature:22:22)
+
+</failure></testcase>
+<testcase classname="tests.users" name="wrong role is reported (fails)" time="0.02386"><failure message="match failed: EQUALS&#10;  $ | not equal (STRING:STRING)&#10;  'user'&#10;  'admin'&#10;&#10;tests/users.feature:29">* url baseUrl ............................................................. passed
+Given path 'users', 2 ..................................................... passed
+When method get ........................................................... passed
+Then status 200 ........................................................... passed
+And match response.role == 'admin' ........................................ failed
+
+Stack Trace:
+com.intuit.karate.KarateException: match failed: EQUALS
+  $ | not equal (STRING:STRING)
+  'user'
+  'admin'
+
+tests/users.feature:29
+	at &lt;feature&gt;.: And match response.role == 'admin' (tests/users.feature:29:29)
+
+</failure></testcase>
+<testcase classname="tests.users" name="lookup user 1 returns 200" time="0.016512"><system-out>* url baseUrl ............................................................. passed
+Given path 'users', 1 ..................................................... passed
+When method get ........................................................... passed
+Then status 200 ........................................................... passed
+</system-out></testcase>
+<testcase classname="tests.users" name="lookup user 2 returns 200" time="0.01337"><system-out>* url baseUrl ............................................................. passed
+Given path 'users', 2 ..................................................... passed
+When method get ........................................................... passed
+Then status 200 ........................................................... passed
+</system-out></testcase>
+<testcase classname="tests.users" name="lookup user 99 returns 404" time="0.019001"><system-out>* url baseUrl ............................................................. passed
+Given path 'users', 99 .................................................... passed
+When method get ........................................................... passed
+Then status 404 ........................................................... passed
+</system-out></testcase>
+</testsuite>

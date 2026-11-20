@@ -44,6 +44,10 @@ server configuration, plus the server URL and the data directory. */}}
 {{- /* Only when set: a runner of the version before does not know the setting (see the note on defaults in values.yaml). */ -}}
 {{- if $reports }}{{ $_ := set $runner "reports" $reports }}{{ end -}}
 {{- with include "launchway.shared.runnerImages" .r | fromYaml }}{{ if . }}{{ $_ := set $runner "images" . }}{{ end }}{{ end -}}
+{{- if eq (toString .r.ai) "true" }}{{ $_ := set $runner "ai" true }}{{ end -}}
+{{- /* Labels and the runner's own limits (schemas 20 and 21): only when set. */ -}}
+{{- with .r.labels }}{{ $_ := set $runner "labels" . }}{{ end -}}
+{{- with .r.accept }}{{ $_ := set $runner "accept" . }}{{ end -}}
 {{- toYaml $runner -}}
 {{- end -}}
 
@@ -253,11 +257,21 @@ spec:
             {{- end }}
           # The runner's name (and its identity on the server) defaults to the pod name.
           env:
+            {{- if and $r.join $r.join.existingSecret }}
+            # Each pod enrols with the join token at start (schema 20) and gets an identity of
+            # its own, kept in its data volume.
+            - name: LAUNCHWAY_JOIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $r.join.existingSecret }}
+                  key: {{ $r.join.existingSecretKey | default "token" }}
+            {{- else }}
             - name: LAUNCHWAY_RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ .tokenSecret }}
                   key: {{ .tokenKey }}
+            {{- end }}
             {{- with .env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -360,7 +374,39 @@ spec:
 {{- $r := .r -}}
 {{- $target := dict "kubernetes" (dict "in_cluster" true) "argocd_namespace" $r.argocdNamespace "applications" $r.applications "rollout_namespaces" ($r.rolloutNamespaces | default list) -}}
 {{- if not (kindIs "invalid" $r.refresh) }}{{ $_ := set $target "refresh" $r.refresh }}{{ end -}}
-{{- toYaml (dict "server" .server "data" "/var/lib/launchway-runner" "secrets" ($r.secretStores | default dict) "deploy" (dict "targets" (dict $r.target $target) "repos" $r.repos)) -}}
+{{- $file := dict "server" .server "data" "/var/lib/launchway-runner" "secrets" ($r.secretStores | default dict) "deploy" (dict "targets" (dict $r.target $target) "repos" $r.repos) -}}
+{{- /* Only when set: a deploy runner of the version before does not know these settings. */ -}}
+{{- with include "launchway.shared.healthSources" . | fromYaml }}{{ if . }}{{ $_ := set $file "health_sources" . }}{{ end }}{{ end -}}
+{{- if eq (toString $r.ai) "true" }}{{ $_ := set $file "ai" true }}{{ end -}}
+{{- toYaml $file -}}
+{{- end -}}
+
+{{/* The deploy runner's health_sources: each verification source by name, with where it is and
+how to log in (credentials are secret references only). Empty when none is set. */}}
+{{- define "launchway.shared.healthSources" -}}
+{{- $out := dict -}}
+{{- range (.verification | default dict).sources | default list -}}
+{{- $s := dict "type" .type "url" .url "projects" (.projects | default list) -}}
+{{- with .auth -}}
+{{- $a := dict "secret" .secret -}}
+{{- range $key, $value := dict "type" .type "user" .user "header" .header -}}
+{{- if $value }}{{ $_ := set $a $key $value }}{{ end -}}
+{{- end -}}
+{{- $_ := set $s "auth" $a -}}
+{{- end -}}
+{{- range $key, $value := dict "headers" .headers "ca_file" .caFile "timeout" .timeout "statements" .statements "indices" .indices "time_field" .timeField "message_field" .messageField -}}
+{{- if $value }}{{ $_ := set $s $key $value }}{{ end -}}
+{{- end -}}
+{{- with .limits -}}
+{{- $l := dict -}}
+{{- range $key, $value := dict "max_series" .maxSeries "max_points" .maxPoints "max_lines" .maxLines "max_bytes" .maxBytes -}}
+{{- if $value }}{{ $_ := set $l $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- if $l }}{{ $_ := set $s "limits" $l }}{{ end -}}
+{{- end -}}
+{{- $_ := set $out .name $s -}}
+{{- end -}}
+{{- if $out }}{{ toYaml $out }}{{ end -}}
 {{- end -}}
 
 {{/*

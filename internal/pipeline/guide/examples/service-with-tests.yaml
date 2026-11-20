@@ -1,0 +1,62 @@
+# A service built on pushes and pull requests: tests with a report, a
+# database beside them, the binary kept as an artifact, an approval before
+# release, and a notification when something fails.
+pipeline: orders
+on:
+  push: { branches: [main, "release/*"] }
+  pull_request: {}
+supersede: true
+
+containers:
+  go: { image: docker.io/library/golang:1.27, cpu: "1", memory: 2Gi }
+  postgres: { image: docker.io/library/postgres:17, service: true, env: { POSTGRES_PASSWORD: test } }
+
+steps:
+  lint:
+    container: go
+    run: go vet ./...
+
+  test:
+    description: Unit and database tests, with a report
+    container: go
+    needs: lint
+    env: { DATABASE_URL: "postgres://postgres:test@localhost:5432/postgres?sslmode=disable" }
+    run: |
+      mkdir -p reports
+      status=0
+      go test -json ./... > reports/go.json || status=$?
+      exit $status
+    reports:
+      tests: reports/go.json
+    retry: 1
+    timeout: 20m
+
+  build:
+    container: go
+    needs: test
+    run: |
+      go build -o bin/orders ./cmd/orders
+      echo version=$(git describe --tags --always) >> "$LAUNCHWAY_OUTPUTS"
+    artifacts:
+      - { name: binary, paths: [bin/orders], retain: 14d }
+
+  approve-release:
+    kind: approval
+    needs: build
+    when: { branch: main }
+    message: Publish this build?
+    timeout: 24h
+
+  publish:
+    image: docker.io/library/alpine:3.22
+    needs: approve-release
+    fetch: [ { from: build, name: binary, into: out } ]
+    run: |
+      ls -l out/bin/orders
+      echo "publishing $LAUNCHWAY_NEEDS_BUILD_VERSION"
+
+  notify-failure:
+    image: docker.io/library/alpine:3.22
+    needs: [test, build]
+    when: { upstream: failed }
+    run: echo "run $LAUNCHWAY_RUN_NUMBER failed on $LAUNCHWAY_BRANCH"

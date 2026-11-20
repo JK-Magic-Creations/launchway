@@ -1,29 +1,57 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { api, type CasePage, type RunDetail, type RunTests, type StepTests, type TestCase } from "../api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { api, ApiError, type CasePage, type CaseSort, type CompareCase, type Facet, type RunDetail, type RunTests, type StepTests, type TestCase, type TestCompare } from "../api";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
-import { Badge, CopyBlock, ReportsHowTo, TestBar, TestIcon, failing, passRate, testDuration, testStatusLabel } from "../components/Tests";
+import { Badge, ReportsHowTo, TagPills, TestBar, TestIcon, VariantPill, failing, formatLabel, isBrowser, passRate, testDuration, testStatusLabel, BrowserIcon } from "../components/Tests";
+import { CaseDetail } from "../components/TestCase";
 
 type Filter = "" | "failed" | "passed" | "skipped" | "flaky";
-type Grouping = "none" | "step" | "suite";
+type Grouping = "none" | "step" | "suite" | "variant";
 
 const FILTERS: [Filter, string][] = [["", "All"], ["failed", "Failed"], ["passed", "Passed"], ["skipped", "Skipped"], ["flaky", "Flaky"]];
+const SORTS: [CaseSort, string][] = [["failures", "Failures first"], ["slowest", "Slowest"], ["name", "Name"]];
 const PAGE = 200;
 
-// TestsTab shows a run's test results: a summary, then every result,
-// failures first, each opening to its message, trace and output.
+function caseFromURL(): number {
+  const n = Number(new URLSearchParams(location.search).get("case"));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** The address of one result on the run page. */
+export function caseHref(run: string, id: number): string {
+  return `/runs/${run}?tab=tests&case=${id}`;
+}
+
+// TestsTab shows a run's test results: a summary, how they compare with
+// the previous run, then every result, failures first, each opening to
+// everything recorded about it. ?case= opens one result on its own.
 export function TestsTab({ run, version, step, onStep }: {
   run: RunDetail; version: string; step: string; onStep: (step: string) => void;
 }) {
   const [tests, setTests] = useState<RunTests | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [caseId, setCaseId] = useState(caseFromURL);
   useEffect(() => {
     let alive = true;
     api.runTests(run.id, true).then((t) => { if (alive) { setTests(t); setError(null); } }).catch((e) => alive && setError(e));
     return () => { alive = false; };
   }, [run.id, version]);
+  useEffect(() => {
+    const on = () => setCaseId(caseFromURL());
+    window.addEventListener("popstate", on);
+    return () => window.removeEventListener("popstate", on);
+  }, []);
+  const openCase = useCallback((id: number) => {
+    const q = new URLSearchParams(location.search);
+    q.set("tab", "tests");
+    if (id) q.set("case", String(id)); else q.delete("case");
+    history.pushState(null, "", location.pathname + "?" + q.toString());
+    setCaseId(id);
+    window.scrollTo(0, 0);
+  }, []);
 
   if (error) return <ErrorBox error={error} />;
   if (!tests) return <div className="loading">Loading…</div>;
+  if (caseId) return <CaseView run={run} id={caseId} onBack={() => openCase(0)} />;
   if (!tests.totals) {
     const running = run.step_list.filter((s) => tests.declared.includes(s.id) && !["succeeded", "failed", "skipped", "canceled"].includes(s.status));
     if (tests.declared.length > 0) {
@@ -41,21 +69,27 @@ export function TestsTab({ run, version, step, onStep }: {
       </Empty>
     );
   }
-  return <TestsView run={run} tests={tests} version={version} step={step} onStep={onStep} />;
+  return <TestsView run={run} tests={tests} version={version} step={step} onStep={onStep} openCase={openCase} />;
 }
 
-function TestsView({ run, tests, version, step, onStep }: {
-  run: RunDetail; tests: RunTests; version: string; step: string; onStep: (step: string) => void;
+function TestsView({ run, tests, version, step, onStep, openCase }: {
+  run: RunDetail; tests: RunTests; version: string; step: string; onStep: (step: string) => void; openCase: (id: number) => void;
 }) {
   const t = tests.totals!;
   const bad = failing(t);
   const [filter, setFilter] = useState<Filter>(bad > 0 ? "failed" : "");
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
+  const [tag, setTag] = useState("");
+  const [suite, setSuite] = useState("");
+  const [variant, setVariant] = useState("");
+  const [sort, setSort] = useState<CaseSort>("failures");
   const [grouping, setGrouping] = useState<Grouping>(tests.steps.length > 1 ? "step" : "none");
   const [page, setPage] = useState<CasePage | null>(null);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  // Facets of every result, so a choice does not hide the others.
+  const [facets, setFacets] = useState<{ tags: Facet[]; variants: Facet[]; suites: Facet[] } | null>(null);
 
   // Typing waits a moment before asking the server.
   useEffect(() => {
@@ -63,19 +97,25 @@ function TestsView({ run, tests, version, step, onStep }: {
     return () => window.clearTimeout(id);
   }, [search]);
 
+  const q = { status: filter, q: query, step, tag, suite, variant, sort: sort === "failures" ? "" as const : sort };
   const ask = useRef(0);
   useEffect(() => {
     const n = ++ask.current;
-    api.testCases(run.id, { status: filter, q: query, step, limit: PAGE }, true)
-      .then((p) => { if (ask.current === n) { setPage(p); setError(null); } })
+    api.testCases(run.id, { ...q, limit: PAGE }, true)
+      .then((p) => {
+        if (ask.current !== n) return;
+        setPage(p); setError(null);
+        if (!filter && !query && !tag && !suite && !variant) setFacets({ tags: p.tags ?? [], variants: p.variants ?? [], suites: p.suites ?? [] });
+      })
       .catch((e) => ask.current === n && setError(e));
-  }, [run.id, filter, query, step, version]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run.id, filter, query, step, tag, suite, variant, sort, version]);
 
   const loadMore = async () => {
     if (!page) return;
     setMore(true);
     try {
-      const next = await api.testCases(run.id, { status: filter, q: query, step, limit: PAGE, offset: page.cases.length });
+      const next = await api.testCases(run.id, { ...q, limit: PAGE, offset: page.cases.length });
       setPage({ ...next, cases: page.cases.concat(next.cases) });
     } catch (e) { setError(e); } finally { setMore(false); }
   };
@@ -85,7 +125,7 @@ function TestsView({ run, tests, version, step, onStep }: {
     if (grouping === "none") return [{ key: "", label: "", cases }];
     const by = new Map<string, TestCase[]>();
     for (const c of cases) {
-      const k = grouping === "step" ? c.step : (c.suite || "(no suite)");
+      const k = grouping === "step" ? c.step : grouping === "suite" ? (c.suite || "(no suite)") : (c.variant || "(no browser or variant)");
       by.set(k, [...(by.get(k) ?? []), c]);
     }
     return [...by.entries()].map(([key, cs]) => ({ key, label: key, cases: cs }));
@@ -93,6 +133,11 @@ function TestsView({ run, tests, version, step, onStep }: {
 
   const counts = page?.counts ?? {};
   const shownStep = tests.steps.find((s) => s.step === step);
+  const f = facets ?? { tags: page?.tags ?? [], variants: page?.variants ?? [], suites: page?.suites ?? [] };
+  const withSel = (list: Facet[], v: string) => (v && !list.some((x) => x.value === v) ? [{ value: v, count: 0 }, ...list] : list);
+  const browsers = f.variants.length > 0 && f.variants.every((v) => isBrowser(v.value));
+  const narrowed = !!(tag || suite || variant || query);
+  const clear = () => { setTag(""); setSuite(""); setVariant(""); setSearch(""); setQuery(""); };
 
   return (
     <div className="tests">
@@ -108,19 +153,15 @@ function TestsView({ run, tests, version, step, onStep }: {
             <Stat label="Failed" value={t.failed} icon={<TestIcon status="failed" />} tone={t.failed ? "bad" : undefined} />
             {t.errored > 0 && <Stat label="Errors" value={t.errored} icon={<TestIcon status="errored" />} tone="bad" />}
             <Stat label="Skipped" value={t.skipped} icon={<TestIcon status="skipped" />} />
+            {tests.flaky > 0 && <Stat label="Flaky" value={tests.flaky} icon={<FlakyIcon />} tone="warn" />}
             <Stat label="Time" value={testDuration(t.duration_ms)} />
           </dl>
         </div>
         <TestBar t={t} />
         <div className="tsum-notes">
-          {tests.new_failures > 0 && tests.previous && (
-            <Badge kind="new" title="These passed in the previous run of the same branch">
-              {tests.new_failures} new failure{tests.new_failures > 1 ? "s" : ""} since <Link href={`/runs/${tests.previous.id}?tab=tests`}>#{tests.previous.number}</Link>
-            </Badge>
-          )}
           {tests.flaky > 0 && (
             <button type="button" className="linkbtn" onClick={() => setFilter("flaky")}>
-              <Badge kind="flaky" title="Failed, then passed when run again">{tests.flaky} flaky</Badge>
+              <Badge kind="flaky" title="Failed, then passed when run again">{tests.flaky} flaky: show them</Badge>
             </button>
           )}
           {t.truncated && <span className="faint small">Not every result was kept; see the notes under each step.</span>}
@@ -128,14 +169,20 @@ function TestsView({ run, tests, version, step, onStep }: {
         {tests.steps.length > 0 && <StepReports steps={tests.steps} run={run} active={step} onStep={onStep} />}
       </section>
 
+      {tests.previous && <CompareStrip run={run} version={version} openCase={openCase} />}
+
       <div className="toolbar ttools">
         <div className="chips" role="group" aria-label="Show results">
           {FILTERS.map(([k, label]) => {
             const n = k === "" ? counts.all : counts[k];
-            if (k === "flaky" && !n) return null;
+            if (k === "flaky" && !n && filter !== "flaky") return null;
             return (
-              <button key={k} type="button" aria-pressed={filter === k} className={"chip" + (filter === k ? " chip-on" : "") + (k === "failed" && n ? " chip-bad" : "")}
+              <button key={k} type="button" aria-pressed={filter === k} className={"chip" + (filter === k ? " chip-on" : "") + (k === "failed" && n ? " chip-bad" : "") + (k === "flaky" ? " chip-flaky" : "")}
                 onClick={() => setFilter(k)}>
+                {k === "failed" && <TestIcon status="failed" size={13} />}
+                {k === "passed" && <TestIcon status="passed" size={13} />}
+                {k === "skipped" && <TestIcon status="skipped" size={13} />}
+                {k === "flaky" && <FlakyIcon size={13} />}
                 {label} <span className="chip-n">{n ?? 0}</span>
               </button>
             );
@@ -147,27 +194,85 @@ function TestsView({ run, tests, version, step, onStep }: {
             <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><circle cx="7" cy="7" r="4.6" /><path d="M10.5 10.5L14 14" /></svg>
             <input type="search" placeholder="Search names, suites, messages" value={search} onChange={(e) => setSearch(e.target.value)} />
           </label>
+        </div>
+      </div>
+
+      <div className="tfilters">
+        {f.tags.length > 0 && (f.tags.length <= 8 ? (
+          <div className="tfilter" role="group" aria-label="Tag">
+            <span className="tfilter-label">Tag</span>
+            {f.tags.map((x) => (
+              <button key={x.value} type="button" className={"chip chip-sm" + (tag === x.value ? " chip-on" : "")} aria-pressed={tag === x.value}
+                onClick={() => setTag(tag === x.value ? "" : x.value)}>
+                {x.value.replace(/^@/, "")} <span className="chip-n">{x.count}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <label className="select tfilter">
+            <span className="tfilter-label">Tag</span>
+            <select value={tag} onChange={(e) => setTag(e.target.value)}>
+              <option value="">Any tag</option>
+              {withSel(f.tags, tag).map((x) => <option key={x.value} value={x.value}>{x.value} ({x.count})</option>)}
+            </select>
+          </label>
+        ))}
+        {f.variants.length > 0 && (f.variants.length <= 5 ? (
+          <div className="tfilter" role="group" aria-label={browsers ? "Browser" : "Variant"}>
+            <span className="tfilter-label">{browsers ? "Browser" : "Variant"}</span>
+            {f.variants.map((x) => (
+              <button key={x.value} type="button" className={"chip chip-sm" + (variant === x.value ? " chip-on" : "")} aria-pressed={variant === x.value}
+                onClick={() => setVariant(variant === x.value ? "" : x.value)}>
+                {isBrowser(x.value) && <BrowserIcon />}{x.value} <span className="chip-n">{x.count}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <label className="select tfilter">
+            <span className="tfilter-label">{browsers ? "Browser" : "Variant"}</span>
+            <select value={variant} onChange={(e) => setVariant(e.target.value)}>
+              <option value="">Any</option>
+              {withSel(f.variants, variant).map((x) => <option key={x.value} value={x.value}>{x.value} ({x.count})</option>)}
+            </select>
+          </label>
+        ))}
+        {f.suites.length > 1 && (
+          <label className="select tfilter">
+            <span className="tfilter-label">Suite</span>
+            <select value={suite} onChange={(e) => setSuite(e.target.value)}>
+              <option value="">Every suite</option>
+              {withSel(f.suites, suite).map((x) => <option key={x.value} value={x.value}>{x.value} ({x.count})</option>)}
+            </select>
+          </label>
+        )}
+        <div className="tfilter tfilter-end">
+          <div className="seg" role="group" aria-label="Order">
+            {SORTS.map(([k, label]) => (
+              <button key={k} type="button" className={"seg-btn" + (sort === k ? " seg-on" : "")} aria-pressed={sort === k} onClick={() => setSort(k)}>{label}</button>
+            ))}
+          </div>
           <label className="select">
             <span className="visually-hidden">Group by</span>
             <select value={grouping} onChange={(e) => setGrouping(e.target.value as Grouping)}>
               <option value="none">No grouping</option>
               <option value="step">Group by step</option>
               <option value="suite">Group by suite</option>
+              {f.variants.length > 0 && <option value="variant">Group by {browsers ? "browser" : "variant"}</option>}
             </select>
           </label>
         </div>
       </div>
-      {step && (
+      {(step || narrowed) && (
         <div className="tfilter-note">
-          Showing {step}{shownStep?.reused_from ? <> (reused from #{shownStep.reused_from_number})</> : null} only.{" "}
-          <button type="button" className="linkbtn" onClick={() => onStep("")}>Show every step</button>
+          {step && <>Showing {step}{shownStep?.reused_from ? <> (reused from #{shownStep.reused_from_number})</> : null} only. <button type="button" className="linkbtn" onClick={() => onStep("")}>Show every step</button>{" "}</>}
+          {narrowed && <>{page ? `${page.matching} result${page.matching === 1 ? "" : "s"} match.` : ""} <button type="button" className="linkbtn" onClick={clear}>Clear the filters</button></>}
         </div>
       )}
 
       <ErrorBox error={error} />
       {!page ? <div className="loading">Loading…</div> : page.cases.length === 0 ? (
         <div className="empty empty-sm">
-          {query ? <>No results match <strong>{query}</strong>.</> : filter === "failed" ? "No failures. Every test that ran passed." : "Nothing to show."}
+          {query ? <>No results match <strong>{query}</strong>.</> : filter === "failed" && !narrowed ? "No failures. Every test that ran passed." : "Nothing to show."}
         </div>
       ) : (
         <div className="tgroups">
@@ -175,13 +280,14 @@ function TestsView({ run, tests, version, step, onStep }: {
             <section key={g.key} className="tgroup" aria-label={g.label || "Results"}>
               {g.label && (
                 <h3 className="tgroup-head">
+                  {grouping === "variant" && isBrowser(g.label) && <BrowserIcon />}
                   <span>{g.label}</span>
-                  <span className="faint">{g.cases.length}{g.cases.some((c) => c.status === "failed" || c.status === "errored")
-                    ? `, ${g.cases.filter((c) => c.status === "failed" || c.status === "errored").length} failing` : ""}</span>
+                  <span className="faint">{g.cases.length}{g.cases.some(isBad) ? `, ${g.cases.filter(isBad).length} failing` : ""}</span>
                 </h3>
               )}
               <ul className="tlist">
-                {g.cases.map((c, i) => <CaseRow key={c.id} c={c} run={run} grouped={grouping} open={i === 0 && g === groups[0] && bad > 0 && bad <= 3 && filter === "failed"} />)}
+                {g.cases.map((c, i) => <CaseRow key={c.id} c={c} run={run} grouped={grouping}
+                  open={i === 0 && g === groups[0] && bad > 0 && bad <= 3 && filter === "failed"} />)}
               </ul>
             </section>
           ))}
@@ -196,7 +302,17 @@ function TestsView({ run, tests, version, step, onStep }: {
   );
 }
 
-function Stat({ label, value, icon, tone }: { label: string; value: number | string; icon?: React.ReactNode; tone?: "ok" | "bad" }) {
+function isBad(c: { status: string }) { return c.status === "failed" || c.status === "errored"; }
+
+export function FlakyIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className="ic ic-flaky">
+      <circle cx="8" cy="8" r="7" /><path d="M4.2 9.6c1-2.6 2.2-2.6 3 0s2 2.6 3 0" fill="none" /><path d="M10.6 5.2l1.4.2-.3 1.4" fill="none" />
+    </svg>
+  );
+}
+
+function Stat({ label, value, icon, tone }: { label: string; value: number | string; icon?: React.ReactNode; tone?: "ok" | "bad" | "warn" }) {
   return (
     <div className={"tstat" + (tone ? " tstat-" + tone : "")}>
       <dt>{label}</dt>
@@ -204,6 +320,126 @@ function Stat({ label, value, icon, tone }: { label: string; value: number | str
     </div>
   );
 }
+
+// ---- the previous run ----
+
+function CompareStrip({ run, version, openCase }: { run: RunDetail; version: string; openCase: (id: number) => void }) {
+  const [cmp, setCmp] = useState<TestCompare | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  useEffect(() => {
+    let alive = true;
+    api.testCompare(run.id, true).then((c) => { if (alive) { setCmp(c); setError(null); } }).catch((e) => alive && setError(e));
+    return () => { alive = false; };
+  }, [run.id, version]);
+  if (error) return error instanceof ApiError && error.status === 404 ? null : <ErrorBox error={error} />;
+  if (!cmp?.previous) return null;
+  const n = cmp.counts;
+  const same = n.new_failures + n.fixed + n.still_failing === 0;
+  return (
+    <section className="card tcmp" aria-label={`Compared with run ${cmp.previous.number}`}>
+      <div className="tcmp-head">
+        <h2 className="h-sm">Since <Link href={`/runs/${cmp.previous.id}?tab=tests`}>#{cmp.previous.number}</Link></h2>
+        <span className="faint small">the previous run of {run.branch || run.tag || "this ref"} with test results</span>
+      </div>
+      {same ? <p className="sub tcmp-same">Same results: nothing newly failed, nothing was fixed.</p> : (
+        <div className="tcmp-cols">
+          <CompareGroup kind="new" title="New failures" items={cmp.new_failures} count={n.new_failures} run={run} openCase={openCase}
+            none="Nothing that passed before fails now." />
+          <CompareGroup kind="fixed" title="Fixed" items={cmp.fixed} count={n.fixed} run={run} openCase={openCase}
+            none="Nothing that failed before passes now." />
+          <CompareGroup kind="still" title="Still failing" items={cmp.still_failing} count={n.still_failing} run={run} openCase={openCase}
+            none="Nothing failed in both runs." />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CompareGroup({ kind, title, items, count, run, openCase, none }: {
+  kind: "new" | "fixed" | "still"; title: string; items: CompareCase[]; count: number; run: RunDetail; openCase: (id: number) => void; none: string;
+}) {
+  const icon = kind === "fixed" ? <TestIcon status="passed" size={18} /> : kind === "new" ? <NewIcon /> : <TestIcon status="failed" size={18} />;
+  return (
+    <details className={"tcmp-group tcmp-" + kind + (count ? "" : " tcmp-zero")} open={kind === "new" && count > 0 && count <= 10}>
+      <summary>
+        {icon}
+        <span className="tcmp-n">{count}</span>
+        <span className="tcmp-title">{title}</span>
+      </summary>
+      {items.length === 0 ? <p className="faint small tcmp-none">{none}</p> : (
+        <ul className="tcmp-list">
+          {items.map((x) => (
+            <li key={x.key}>
+              <a href={caseHref(run.id, x.id)} onClick={(e) => { if (e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); openCase(x.id); } }}>
+                <TestIcon status={x.status} size={13} />
+                <span className="tcmp-name">{x.name}</span>
+              </a>
+              <span className="tcmp-sub">
+                {x.suite && x.suite !== x.name && <span className="mono">{x.suite}</span>}
+                {x.variant && <VariantPill variant={x.variant} />}
+                <span className="faint">{x.before ? `was ${testStatusLabel(x.before as TestCase["status"]).toLowerCase()}` : "new test"}</span>
+              </span>
+            </li>
+          ))}
+          {count > items.length && <li className="faint small">and {count - items.length} more</li>}
+        </ul>
+      )}
+    </details>
+  );
+}
+
+function NewIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" className="ic ic-bad">
+      <path d="M8 1.2l1.9 2.3 2.9-.6.3 3 2.6 1.4-1.9 2.3.8 2.9-3 .3-1.4 2.6L8 14l-2.3 1.4-1.4-2.6-3-.3.8-2.9L.2 7.3l2.6-1.4.3-3 2.9.6z" strokeLinejoin="round" />
+      <path d="M8 5v3.6M8 10.8v.2" fill="none" />
+    </svg>
+  );
+}
+
+// ---- one result on its own ----
+
+function CaseView({ run, id, onBack }: { run: RunDetail; id: number; onBack: () => void }) {
+  const [c, setC] = useState<TestCase | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  const head = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    let alive = true;
+    setC(null); setError(null);
+    api.testCase(run.id, id).then((x) => alive && setC(x)).catch((e) => alive && setError(e));
+    return () => { alive = false; };
+  }, [run.id, id]);
+  useEffect(() => { if (c) head.current?.focus(); }, [c]);
+  return (
+    <div className="tests">
+      <div>
+        <button type="button" className="btn btn-sm" onClick={onBack}>
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="ic-line"><path d="M10 3L5 8l5 5" /></svg>
+          All test results
+        </button>
+      </div>
+      {error ? <ErrorBox error={error instanceof ApiError && error.status === 404 ? "This run has no such test result." : error} />
+        : !c ? <div className="loading">Loading…</div> : (
+          <section className={"card tcv tcase-" + c.status} aria-label="Test result">
+            <header className="tcv-head">
+              <TestIcon status={c.status} size={24} />
+              <div className="tcv-title">
+                <h2 ref={head} tabIndex={-1}>{c.name}</h2>
+                <div className="tcase-sub">
+                  {c.suite && c.suite !== c.name && <span className="tcase-suite">{c.suite}</span>}
+                  <VariantPill variant={c.variant} />
+                  <TagPills tags={c.tags} />
+                </div>
+              </div>
+            </header>
+            <CaseDetail c={c} run={run} full={c} error={null} permalink />
+          </section>
+        )}
+    </div>
+  );
+}
+
+// ---- report files ----
 
 // StepReports lists each step's results and report files, with what went
 // wrong reading them.
@@ -233,7 +469,7 @@ function StepReports({ steps, run, active, onStep }: { steps: StepTests[]; run: 
                 <li key={f.path} className={f.error ? "tfile-bad" : undefined}>
                   <Mono>{f.path}</Mono>
                   {f.error ? <span className="tfile-err">{f.error}</span>
-                    : <span className="faint">{f.cases} tests, {f.format === "go-test-json" ? "go test -json" : "JUnit XML"}</span>}
+                    : <span className="faint">{f.cases} tests, <span className="tformat">{formatLabel(f.format)}</span></span>}
                   {f.warning && <span className="tfile-warn">{f.warning}</span>}
                 </li>
               ))}
@@ -248,6 +484,8 @@ function StepReports({ steps, run, active, onStep }: { steps: StepTests[]; run: 
   );
 }
 
+// ---- one row ----
+
 function CaseRow({ c, run, grouped, open: openFirst }: { c: TestCase; run: RunDetail; grouped: Grouping; open: boolean }) {
   const [open, setOpen] = useState(openFirst);
   const [full, setFull] = useState<TestCase | null>(null);
@@ -256,8 +494,9 @@ function CaseRow({ c, run, grouped, open: openFirst }: { c: TestCase; run: RunDe
     if (!open || full || !c.has_details) return;
     api.testCase(run.id, c.id).then(setFull).catch(setError);
   }, [open, full, c.has_details, c.id, run.id]);
-  const bad = c.status === "failed" || c.status === "errored";
+  const bad = isBad(c);
   const detailId = `tcase-${c.id}`;
+  const retries = full?.retries ?? 0;
   return (
     <li className={"tcase tcase-" + c.status + (open ? " tcase-open" : "")}>
       <button type="button" className="tcase-row" aria-expanded={open} aria-controls={detailId} onClick={() => setOpen(!open)}>
@@ -265,14 +504,17 @@ function CaseRow({ c, run, grouped, open: openFirst }: { c: TestCase; run: RunDe
         <span className="tcase-main">
           <span className="tcase-name">{c.name}</span>
           <span className="tcase-sub">
-            {grouped !== "suite" && c.suite && <span className="tcase-suite">{c.suite}</span>}
+            {grouped !== "suite" && c.suite && c.suite !== c.name && <span className="tcase-suite">{c.suite}</span>}
             {grouped !== "step" && run.step_list.length > 1 && <span className="tcase-step">in {c.step}</span>}
-            {bad && c.message && !open && <span className="tcase-msg">{firstLine(c.message)}</span>}
+            {grouped !== "variant" && <VariantPill variant={c.variant} />}
+            <TagPills tags={c.tags} />
           </span>
+          {bad && c.message && !open && <span className="tcase-msg">{firstLine(c.message)}</span>}
         </span>
         <span className="tcase-badges">
           {c.new_failure && <Badge kind="new" title="Passed in the previous run of the same branch">New failure</Badge>}
           {c.flaky && <Badge kind="flaky" title="Failed, then passed when run again">Flaky</Badge>}
+          {retries > 0 && !c.flaky && <Badge kind="info" title="The test tool ran it again">{retries + 1} tries</Badge>}
           <span className="visually-hidden">{testStatusLabel(c.status)}</span>
         </span>
         <span className="tcase-time">{testDuration(c.duration_ms)}</span>
@@ -280,22 +522,7 @@ function CaseRow({ c, run, grouped, open: openFirst }: { c: TestCase; run: RunDe
       </button>
       {open && (
         <div className="tcase-detail" id={detailId}>
-          <dl className="tcase-facts">
-            <dt>Status</dt><dd>{testStatusLabel(c.status)}{c.flaky ? ", flaky" : ""}</dd>
-            {c.suite && <><dt>Suite</dt><dd className="mono">{c.suite}</dd></>}
-            {c.file && <><dt>File</dt><dd className="mono">{c.file}</dd></>}
-            <dt>Step</dt><dd>{c.step}{c.attempt > 1 ? `, attempt ${c.attempt}` : ""}{c.run_id !== run.id ? " (reused from an earlier run)" : ""}</dd>
-            {c.report_file && <><dt>Report</dt><dd className="mono">{c.report_file}</dd></>}
-          </dl>
-          {c.message && <CopyBlock label={c.status === "skipped" ? "Reason" : "Message"} text={(full ?? c).message ?? ""} tone={bad ? "bad" : undefined} />}
-          <ErrorBox error={error} />
-          {c.has_details && !full && !error && <div className="loading">Loading…</div>}
-          {full?.details && <CopyBlock label="Stack trace" text={full.details} />}
-          {full?.output && <CopyBlock label="Captured output" text={full.output} />}
-          {!c.message && !c.has_details && <p className="sub">Nothing more was recorded for this test.</p>}
-          <Link href={`/projects/${encodeURIComponent(run.project)}/tests?test=${c.key}${run.ref ? `&ref=${encodeURIComponent(run.ref)}` : ""}`} className="tcase-history">
-            History of this test
-          </Link>
+          <CaseDetail c={c} run={run} full={full} error={error} />
         </div>
       )}
     </li>

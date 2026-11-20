@@ -1,0 +1,250 @@
+{
+  "updated": "2026-11-20",
+  "available": [
+    [
+      "Pipelines as code",
+      "Typed YAML: steps, dependencies, conditions, loops, run inputs, outputs passed between steps, reusable templates pinned by Git tag."
+    ],
+    [
+      "Triggers",
+      "Push, pull request (new pushes cancel older runs), manual, schedule and webhook."
+    ],
+    [
+      "High availability",
+      "Several servers on PostgreSQL; a run survives a server or runner dying. SQLite for a single server."
+    ],
+    [
+      "Secure step execution",
+      "Non-root step pods under strict Kubernetes pod security; container and host executors."
+    ],
+    [
+      "Test results",
+      "Tests tab from JUnit XML and Go test output, with history and flaky detection."
+    ],
+    [
+      "Security scans",
+      "Secret scan, SAST, dependency, licence, IaC and image findings (SARIF) and SBOM components."
+    ],
+    [
+      "Container image builds",
+      "Build, scan, sign and push images with provenance and SBOM through BuildKit."
+    ],
+    [
+      "GitOps delivery with Argo CD",
+      "Deploy by Git commit, watch sync, control Argo Rollouts (promote, abort, retry), rollback, environment locks."
+    ],
+    [
+      "Approvals and protected environments",
+      "Approval steps; the person who started a run cannot approve its production deploy."
+    ],
+    [
+      "Policy gates",
+      "Rules pipelines cannot opt out of, at run start, before deploys and image pushes; report or enforce; audited, expiring waivers."
+    ],
+    [
+      "Sign-in and access",
+      "OIDC sign-in with groups, roles per project and environment, scoped API tokens, CLI, audit trail."
+    ],
+    [
+      "Built-in artifact storage",
+      "Artifacts kept in the database by default, so several servers need nothing else; S3 or a shared folder optional."
+    ],
+    [
+      "Rich test, coverage and HTML reports",
+      "13 test formats including Karate, Playwright, Cypress, pytest, Jest and .NET, coverage, and the tools' own HTML reports in a sandbox."
+    ],
+    [
+      "MCP server for AI agents",
+      "Agents validate pipelines, start and watch runs and diagnose failures with the same permissions as a user."
+    ],
+    [
+      "Verification step with optional AI",
+      "Canary and post-deploy checks on Prometheus, Loki, ClickHouse and OpenSearch with automatic abort or rollback; AI explains, never overrides a failure."
+    ],
+    [
+      "Runner identity and pools",
+      "Join tokens, a key per runner, pools scoped to projects, and runner-side allow-lists."
+    ],
+    [
+      "Public documentation site and roadmap",
+      "This site: guides, tutorials, reference and security pages, with diagrams."
+    ]
+  ],
+  "items": [
+    {
+      "rank": 1,
+      "status": "planned",
+      "theme": "Platform",
+      "title": "All configuration in the database, one API",
+      "value": "No file-first configuration: projects, pools, environments, policies and more live in the database with history and audit, managed through UI, API, CLI, MCP and Terraform."
+    },
+    {
+      "rank": 2,
+      "status": "planned",
+      "theme": "Platform",
+      "title": "Public demo on the internet",
+      "value": "A separate, safe instance with realistic demo data anyone can explore, isolated from your real pipelines and network."
+    },
+    {
+      "rank": 3,
+      "status": "planned",
+      "theme": "Platform",
+      "title": "Graphical setup wizards",
+      "value": "Every setup task asks plain questions, explains each option and its effect, validates as it goes and shows what it will create."
+    },
+    {
+      "rank": 4,
+      "status": "planned",
+      "theme": "Security & compliance",
+      "title": "Built-in accounts with MFA",
+      "value": "Small teams without an identity provider still get secure sign-in with TOTP or passkeys."
+    },
+    {
+      "rank": 5,
+      "status": "in-progress",
+      "theme": "Platform",
+      "title": "Signed releases and installers",
+      "value": "Verified downloads, deb/rpm packages, a one-line VM install with systemd, and a runner-only Helm chart."
+    },
+    {
+      "rank": 6,
+      "status": "planned",
+      "theme": "Integrations",
+      "title": "Terraform provider",
+      "value": "Projects, environments, pools, policies, roles and more managed as code."
+    },
+    {
+      "rank": 7,
+      "status": "planned",
+      "theme": "Delivery & verification",
+      "title": "Built-in Helm and Kubernetes deploys",
+      "value": "Deploy and roll back without Argo CD; Argo stays first class for long-lived environments."
+    },
+    {
+      "rank": 8,
+      "status": "planned",
+      "theme": "Delivery & verification",
+      "title": "Preview environments per branch or pull request",
+      "value": "Every pull request gets its own environment and URL, tested automatically and cleaned up on merge."
+    },
+    {
+      "rank": 9,
+      "status": "planned",
+      "theme": "Platform",
+      "title": "Organisations (multi-tenant)",
+      "value": "Installation, Organisation, Unit and Project levels with names you can change; unused levels stay hidden."
+    },
+    {
+      "rank": 10,
+      "status": "planned",
+      "theme": "Platform",
+      "title": "Hosted service",
+      "value": "Offer Launchway as SaaS: sign-up, quotas, usage metering, data residency, customer-side logs and artifacts."
+    },
+    {
+      "rank": 11,
+      "status": "planned",
+      "theme": "Security & compliance",
+      "title": "LDAP, Active Directory and custom roles",
+      "value": "Directory groups mapped to roles at each level, automatic removal of leavers, and a 'who can do what, and why' view."
+    },
+    {
+      "rank": 12,
+      "status": "planned",
+      "theme": "Insights",
+      "title": "Delivery metrics and executive dashboards",
+      "value": "Deployment frequency, lead time from commit to production, change failure rate and time to restore, with drill-down."
+    },
+    {
+      "rank": 13,
+      "status": "planned",
+      "theme": "Security & compliance",
+      "title": "Tamper-evident audit and SIEM export",
+      "value": "An audit trail nobody can quietly edit, streamed to your security tools."
+    },
+    {
+      "rank": 14,
+      "status": "planned",
+      "theme": "Delivery & verification",
+      "title": "Change management",
+      "value": "Automatic change records with risk scores, freezes and CAB approval; optional ServiceNow and Jira Service Management."
+    },
+    {
+      "rank": 15,
+      "status": "planned",
+      "theme": "Delivery & verification",
+      "title": "Post-deploy watch, incidents and SLOs",
+      "value": "Keep watching after release, roll back automatically, tie incidents to the change that caused them."
+    },
+    {
+      "rank": 16,
+      "status": "planned",
+      "theme": "Delivery & verification",
+      "title": "Service mesh and traffic control",
+      "value": "Weighted canaries through Gateway API, Istio, Linkerd or Cilium, with mesh metrics as ready-made health checks."
+    },
+    {
+      "rank": 17,
+      "status": "planned",
+      "theme": "Delivery & verification",
+      "title": "Argo CD in depth",
+      "value": "App-of-apps and ApplicationSet trees, a ready Lua health-check library, hosted or bring-your-own Argo CD."
+    },
+    {
+      "rank": 18,
+      "status": "planned",
+      "theme": "Infrastructure",
+      "title": "Terraform/OpenTofu and Ansible steps",
+      "value": "Reviewed plans, gated applies, built-in state with locking, drift detection; Ansible with per-host results."
+    },
+    {
+      "rank": 19,
+      "status": "planned",
+      "theme": "Insights",
+      "title": "Single pane of glass",
+      "value": "One fleet view across VMs, on-prem clusters and clouds: what runs where, its health, drift and evidence."
+    },
+    {
+      "rank": 20,
+      "status": "planned",
+      "theme": "Security & compliance",
+      "title": "Compliance pack (PCI DSS, HIPAA)",
+      "value": "Policy templates and an evidence report mapping controls to requirements. Evidence support, not certification."
+    },
+    {
+      "rank": 21,
+      "status": "planned",
+      "theme": "Security & compliance",
+      "title": "Retention, legal hold, encryption at rest",
+      "value": "Control how long data is kept, prove deletion, encrypt logs and artifacts with rotating keys; FIPS build option."
+    },
+    {
+      "rank": 22,
+      "status": "planned",
+      "theme": "Delivery & verification",
+      "title": "Cloud and serverless targets",
+      "value": "Cloud Run, Lambda, ECS, managed instance groups and auto-scaling groups, with no stored cloud keys."
+    },
+    {
+      "rank": 23,
+      "status": "planned",
+      "theme": "Infrastructure",
+      "title": "VM deploys and Packer images",
+      "value": "Batch deploys over SSH with verification between batches; baked machine images rolled through instance groups."
+    },
+    {
+      "rank": 24,
+      "status": "planned",
+      "theme": "Delivery & verification",
+      "title": "Releases across services",
+      "value": "Ship several services as one ordered, gated release with a promotion view across environments."
+    },
+    {
+      "rank": 25,
+      "status": "planned",
+      "theme": "Integrations",
+      "title": "Smaller integrations",
+      "value": "Chat approvals, feature-flag mitigation, Chef templates, dependency caches, more event sources."
+    }
+  ]
+}

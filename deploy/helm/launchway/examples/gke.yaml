@@ -1,0 +1,103 @@
+# Launchway on Google Kubernetes Engine: three servers across zones, Cloud SQL for PostgreSQL over
+# a private IP, artifacts in Cloud Storage through its S3-compatible XML API, the UI behind a GKE
+# Gateway, and step pods on a node pool of their own. See docs/howto/install-gke.md for the steps
+# around it.
+#
+#   kubectl create namespace launchway
+#   kubectl create namespace launchway-steps
+#   kubectl label namespace launchway-steps pod-security.kubernetes.io/enforce=restricted
+#   kubectl -n launchway create secret generic launchway-database \
+#     --from-literal=url='postgres://launchway:PASSWORD@10.20.0.3:5432/launchway?sslmode=verify-ca&sslrootcert=/etc/launchway-db-ca/server-ca.pem'
+#   kubectl -n launchway create configmap launchway-db-ca --from-file=server-ca.pem
+#   kubectl -n launchway create secret generic launchway-gcs \
+#     --from-literal=AWS_ACCESS_KEY_ID=GOOG1E... --from-literal=AWS_SECRET_ACCESS_KEY=...
+#   kubectl -n launchway create secret generic launchway-oidc --from-literal=client-secret=...
+#   helm install launchway deploy/helm/launchway -n launchway -f deploy/helm/launchway/examples/gke.yaml
+
+image:
+  # Your copy of the image, in Artifact Registry. Pin a digest in production; it wins over the tag.
+  repository: europe-west1-docker.pkg.dev/acme-ci/launchway/launchway
+  tag: "0.1.0"
+
+database:
+  existingSecret: launchway-database
+  existingSecretKey: url
+
+config:
+  projects:
+    - name: payments
+      repo: https://git.example.com/team/payments.git
+      branch: main
+      poll: 30s
+  # Artifacts and SBOMs in one Cloud Storage bucket, through the XML API with an HMAC key.
+  # Only the servers talk to it.
+  artifacts:
+    store: s3
+    s3:
+      endpoint: https://storage.googleapis.com
+      region: auto
+      bucket: acme-launchway-artifacts
+      prefix: launchway/
+      existingSecret: launchway-gcs
+  extraConfig:
+    server:
+      trust_proxy: true          # every request arrives through the Gateway
+    auth:
+      mode: oidc
+      oidc:
+        issuer: https://sso.example.com/realms/acme
+        client_id: launchway
+        client_secret_env: LAUNCHWAY_OIDC_SECRET
+        redirect_url: https://launchway.example.com/auth/callback
+      access:
+        - { group: platform-admins, role: admin }
+        - { group: payments, role: operator, projects: [payments] }
+        - { group: everyone, role: viewer }
+
+server:
+  replicas: 3
+  extraEnv:
+    - name: LAUNCHWAY_OIDC_SECRET
+      valueFrom:
+        secretKeyRef: { name: launchway-oidc, key: client-secret }
+  # The Cloud SQL server CA named by sslrootcert in the database URL.
+  extraVolumes:
+    - name: db-ca
+      configMap: { name: launchway-db-ca }
+  extraVolumeMounts:
+    - { name: db-ca, mountPath: /etc/launchway-db-ca, readOnly: true }
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels: { app.kubernetes.io/name: launchway, app.kubernetes.io/instance: launchway, app.kubernetes.io/component: server }
+      matchLabelKeys: [pod-template-hash]
+
+# A Gateway you run (see the guide), with an HTTPS listener for launchway.example.com.
+httpRoute:
+  enabled: true
+  parentRefs:
+    - name: internal-https
+      namespace: gateway-system
+  hostnames: [launchway.example.com]
+
+runner:
+  replicas: 3
+  concurrency: 4
+  kubernetes:
+    namespace: launchway-steps
+    # Step pods go to the node pool for builds. Step pods take no tolerations, so do not taint it.
+    nodeSelector: { cloud.google.com/gke-nodepool: builds }
+    cpu: 250m
+    memory: 256Mi
+    memoryLimit: 4Gi
+  dataVolume:
+    sizeLimit: 20Gi
+  # Vault with Kubernetes auth, logging in with the runner pods' own service account token.
+  secretStores:
+    vault:
+      type: vault
+      address: https://vault.example.com:8200
+      role: launchway-runner
+      keys: ["ci/*"]

@@ -43,6 +43,10 @@ type Value struct {
 	// Input is a run input (schema 13): { input: version }. Bind puts the
 	// run's value in Literal, so a run's graph never holds one.
 	Input string `json:"input,omitempty"`
+	// Fact, in a verify step's params only, is a fact about the deployment
+	// it watches (schema 19): { deployment: canary_hash }. One of
+	// DeploymentFacts.
+	Fact string `json:"deployment,omitempty"`
 
 	inputLine int
 }
@@ -61,6 +65,8 @@ func (v *Value) String() string {
 		return "{ run: " + v.Run + " }"
 	case v.Input != "":
 		return "{ input: " + v.Input + " }"
+	case v.Fact != "":
+		return "{ deployment: " + v.Fact + " }"
 	}
 	return v.Literal
 }

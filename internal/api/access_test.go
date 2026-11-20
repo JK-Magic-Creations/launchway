@@ -34,20 +34,48 @@ type matrixRow struct {
 // permissionTable has one row for every route. A route missing from it
 // fails TestEveryRouteIsInThePermissionTable. {pay} is a run of pay-api.
 var permissionTable = map[string]matrixRow{
-	"GET /healthz":                            {"GET", "/healthz", "", [6]int{200, 200, 200, 200, 200, 200}},
-	"GET /readyz":                             {"GET", "/readyz", "", [6]int{200, 200, 200, 200, 200, 200}},
-	"POST /api/runner/v1/lease":               {"POST", "/api/runner/v1/lease", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/start":               {"POST", "/api/runner/v1/start", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/heartbeat":           {"POST", "/api/runner/v1/heartbeat", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/logs":                {"POST", "/api/runner/v1/logs", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/finish":              {"POST", "/api/runner/v1/finish", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/runs":                {"POST", "/api/runner/v1/runs", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/leave":               {"POST", "/api/runner/v1/leave", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/deploy/lease":        {"POST", "/api/runner/v1/deploy/lease", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/deploy/watch":        {"POST", "/api/runner/v1/deploy/watch", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/deploy/observe":      {"POST", "/api/runner/v1/deploy/observe", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/deploy/commands":     {"POST", "/api/runner/v1/deploy/commands", "{}", [6]int{401, 401, 401, 401, 401, 401}},
-	"POST /api/runner/v1/deploy/command-done": {"POST", "/api/runner/v1/deploy/command-done", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"GET /healthz":                               {"GET", "/healthz", "", [6]int{200, 200, 200, 200, 200, 200}},
+	"GET /readyz":                                {"GET", "/readyz", "", [6]int{200, 200, 200, 200, 200, 200}},
+	"POST /api/runner/v1/lease":                  {"POST", "/api/runner/v1/lease", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/start":                  {"POST", "/api/runner/v1/start", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/heartbeat":              {"POST", "/api/runner/v1/heartbeat", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/logs":                   {"POST", "/api/runner/v1/logs", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/finish":                 {"POST", "/api/runner/v1/finish", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/runs":                   {"POST", "/api/runner/v1/runs", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/leave":                  {"POST", "/api/runner/v1/leave", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/deploy/lease":           {"POST", "/api/runner/v1/deploy/lease", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/deploy/watch":           {"POST", "/api/runner/v1/deploy/watch", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/deploy/observe":         {"POST", "/api/runner/v1/deploy/observe", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/deploy/commands":        {"POST", "/api/runner/v1/deploy/commands", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/deploy/command-done":    {"POST", "/api/runner/v1/deploy/command-done", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/deploy/verify/lease":    {"POST", "/api/runner/v1/deploy/verify/lease", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/deploy/verify/interval": {"POST", "/api/runner/v1/deploy/verify/interval", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"GET /api/v1/runs/{id}/verifications":        {"GET", "/api/v1/runs/{pay}/verifications", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/verifications":                  {"GET", "/api/v1/verifications", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/runs/{id}/steps/{step}/verify/controls": {"GET", "/api/v1/runs/{pay}/steps/x/verify/controls", "",
+		[6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/runs/{id}/steps/{step}/verify/override": {"POST", "/api/v1/runs/{pay}/steps/x/verify/override", `{"outcome":"passed","reason":"checked by hand"}`,
+		[6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/health-sources":                      {"GET", "/api/v1/health-sources", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/ai/models":                           {"GET", "/api/v1/ai/models", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/runs/{id}/steps/{step}/explanations": {"GET", "/api/v1/runs/{pay}/steps/x/explanations", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/v1/runs/{id}/steps/{step}/explain": {"POST", "/api/v1/runs/{pay}/steps/x/explain", `{"model":"local"}`,
+		[6]int{401, 404, 403, 409, 404, 409}},
+	// Enrolment proves itself with a join token or a signed assertion in
+	// the body: an empty body is refused by the handler.
+	"POST /api/runner/v2/join":   {"POST", "/api/runner/v2/join", "{}", [6]int{400, 400, 400, 400, 400, 400}},
+	"POST /api/runner/v2/token":  {"POST", "/api/runner/v2/token", "{}", [6]int{400, 400, 400, 400, 400, 400}},
+	"POST /api/runner/v2/rotate": {"POST", "/api/runner/v2/rotate", "{}", [6]int{400, 400, 400, 400, 400, 400}},
+	// Pools are seen by whoever sees runners. Managing runners needs the
+	// role runner_admin names (admin by default) on every project.
+	"GET /api/v1/runner-pools":       {"GET", "/api/v1/runner-pools", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/runner-join-tokens": {"GET", "/api/v1/runner-join-tokens", "", [6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/runner-join-tokens": {"POST", "/api/v1/runner-join-tokens", `{"pool":"default"}`,
+		[6]int{401, 403, 403, 403, 403, 201}},
+	"POST /api/v1/runner-join-tokens/{id}/revoke": {"POST", "/api/v1/runner-join-tokens/join_nope/revoke", "",
+		[6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/runners/{id}/revoke": {"POST", "/api/v1/runners/rnr_nope/revoke", "{}", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/runners/{id}/rotate": {"POST", "/api/v1/runners/rnr_nope/rotate", "", [6]int{401, 403, 403, 403, 403, 404}},
 	// Commands on a deployment: operators of the run's project (and of the
 	// environment); the run has no such deployment, so the handler says 404.
 	"GET /api/v1/runs/{id}/deployments/{dep}/controls":                 {"GET", "/api/v1/runs/{pay}/deployments/dep_x/controls", "", [6]int{401, 404, 404, 404, 404, 404}},
@@ -92,6 +120,7 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/runs/{id}/steps/{step}/reject":  {"POST", "/api/v1/runs/{pay}/steps/gate/reject", "", [6]int{401, 404, 403, allowed, 404, allowed}},
 	"GET /api/v1/approvals":                       {"GET", "/api/v1/approvals", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/runners":                         {"GET", "/api/v1/runners", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/artifact-store":                  {"GET", "/api/v1/artifact-store", "", [6]int{401, 403, 200, 200, 200, 200}},
 	"GET /api/v1/environments":                    {"GET", "/api/v1/environments", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/deployments":                     {"GET", "/api/v1/deployments", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"POST /api/v1/validate":                       {"POST", "/api/v1/validate", "pipeline: x", [6]int{401, 403, 200, 200, 200, 200}},
@@ -118,6 +147,11 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/projects/{name}/security": {"GET", "/api/v1/projects/pay-api/security", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/components":               {"GET", "/api/v1/components?name=left-pad", "", [6]int{401, 200, 200, 200, 200, 200}},
 
+	// Shared libraries and their templates: anyone who may see a project.
+	// The test server has no library called nope.
+	"GET /api/v1/libraries":                     {"GET", "/api/v1/libraries", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/libraries/{library}/templates": {"GET", "/api/v1/libraries/nope/templates", "", [6]int{401, 403, 404, 404, 404, 404}},
+
 	// Images: what a run built; a search over the projects the caller may see.
 	"GET /api/v1/runs/{id}/images": {"GET", "/api/v1/runs/{pay}/images", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/images": {"GET", "/api/v1/images?repository=harbor.example.com/team/shop", "",
@@ -134,6 +168,18 @@ var permissionTable = map[string]matrixRow{
 		`{"policy":"gate","rule":"tests","reason":"hotfix","expires_in_hours":1}`, [6]int{401, 404, 403, 403, 404, 400}},
 	"POST /api/v1/projects/{name}/waivers/{waiver}/revoke": {"POST", "/api/v1/projects/pay-api/waivers/wvr_x/revoke", "",
 		[6]int{401, 404, 403, 403, 404, 404}},
+
+	// Schema 18: like the run's and project's tests (see TestReportAccess).
+	"GET /api/v1/runs/{id}/tests/compare": {"GET", "/api/v1/runs/{pay}/tests/compare", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// {pay} has no test results: 404 after the permission check too.
+	"GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}": {"GET", "/api/v1/runs/{pay}/tests/cases/1/attachments/0", "",
+		[6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/runs/{id}/coverage":       {"GET", "/api/v1/runs/{pay}/coverage", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/coverage/files": {"GET", "/api/v1/runs/{pay}/coverage/files", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/coverage": {"GET", "/api/v1/projects/pay-api/coverage", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/reports":        {"GET", "/api/v1/runs/{pay}/reports", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// A hosted report needs its signed link, whoever asks (see TestHostedReports).
+	"GET /hosted/{link}/{path...}": {"GET", "/hosted/art_x.zz.bad/index.html", "", [6]int{404, 404, 404, 404, 404, 404}},
 }
 
 // draftBody starts a draft run that waits for an approval, so it needs no
@@ -142,7 +188,8 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).
-var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info"}
+var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info",
+	"GET /hosted/{link}/{path...}", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate"}
 
 // Every registered route must be in the permission table, and the table
 // must not list routes that no longer exist.
@@ -201,7 +248,7 @@ func (b *browser) statusOf(method, url, body string, header ...string) int {
 }
 
 func TestPermissionMatrix(t *testing.T) {
-	e := setupAuth(t, envOpts{})
+	e := setupAuth(t, envOpts{mcp: &MCPOptions{}})
 	pay := e.startRun(t, "pay-api")
 	e.startRun(t, "web")
 	patterns := make([]string, 0, len(permissionTable))

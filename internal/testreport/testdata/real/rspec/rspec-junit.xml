@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="rspec" tests="5" skipped="2" failures="2" errors="0" time="0.006747" timestamp="2026-11-20T00:50:14+00:00" hostname="608b5cf5c158">
+<properties>
+<property name="seed" value="20225"/>
+</properties>
+<testcase classname="spec.cart_spec" name="Cart sums totals" file="./spec/cart_spec.rb" time="0.000725"></testcase>
+<testcase classname="spec.cart_spec" name="Cart applies the TEN discount (wrong expectation)" file="./spec/cart_spec.rb" time="0.003888"><failure message="
+expected: 25
+     got: 20
+
+(compared using ==)
+" type="RSpec::Expectations::ExpectationNotMetError">Failure/Error: expect(30 - 10).to eq(25)
+
+  expected: 25
+       got: 20
+
+  (compared using ==)
+./spec/cart_spec.rb:7:in &apos;block (2 levels) in &lt;top (required)&gt;&apos;</failure></testcase>
+<testcase classname="spec.cart_spec" name="Cart supports currencies" file="./spec/cart_spec.rb" time="0.000042"><skipped/></testcase>
+<testcase classname="spec.cart_spec" name="Cart is pending" file="./spec/cart_spec.rb" time="0.000106"><skipped/></testcase>
+<testcase classname="spec.cart_spec" name="Cart with errors raises unexpectedly" file="./spec/cart_spec.rb" time="0.000051"><failure message="cart service unavailable" type="ArgumentError">Failure/Error: raise ArgumentError, &apos;cart service unavailable&apos;
+
+ArgumentError:
+  cart service unavailable
+./spec/cart_spec.rb:21:in &apos;block (3 levels) in &lt;top (required)&gt;&apos;</failure></testcase>
+</testsuite>

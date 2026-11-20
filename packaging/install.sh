@@ -69,7 +69,7 @@ Usage:
 Install options:
   --server URL          the Launchway server the runner connects to
   --token-file FILE     a file holding the runner token (or a runner pool's token)
-  --join TOKEN          a one-time join token (needs a release whose runner has --join)
+  --join TOKEN          a one-time join token; the runner enrols and keeps its own identity
   --name NAME           the runner's name (default: the host name)
   --executor E          host (default), podman or docker; podman relaxes the sandbox (see
                         container-executor.conf), docker needs the user in the docker group
@@ -346,11 +346,9 @@ write_if_changed() {
 
 yaml_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"; }
 
-# The join-token hook. The runner does not take join tokens yet (they are being built: runner
-# identities, a one-time `lwj_` token exchanged for a key of the runner's own). The agreed
-# interface is the runner's --join flag; until a release has it, --join is refused here. When it
-# lands, the token reaches the runner once, through LAUNCHWAY_JOIN in the root-only environment
-# file (design 5.3), and the runner keeps its identity in /var/lib/launchway-runner.
+# A one-time `lwj_` token is exchanged for a key of the runner's own through the runner's --join
+# flag. It reaches the runner through LAUNCHWAY_JOIN in the root-only environment file, and the
+# runner keeps its identity in /var/lib/launchway-runner. Refuse a binary too old to enrol.
 join_hook() {
 	if ! "$BIN" runner -h 2>&1 | grep -q -- '-join'; then
 		die "--join needs a Launchway release whose runner supports join tokens; this one ($version) does not. Use --token-file."
@@ -394,8 +392,9 @@ write_settings() {
 		[ -n "$token" ] || die "--token-file $token_file is empty"
 		case $token in *[[:space:]]* | *\"* | *\'* | *\\*) die "the token in $token_file has spaces or quotes" ;; esac
 	elif [ -z "$join_token" ] && [ -f "$CONF_DIR/runner.env" ]; then
-		# Run again without --token-file: keep the token already installed.
+		# Run again without credentials: keep those already installed.
 		token=$(sed -n 's/^LAUNCHWAY_RUNNER_TOKEN=//p' "$CONF_DIR/runner.env")
+		join_token=$(sed -n 's/^LAUNCHWAY_JOIN=//p' "$CONF_DIR/runner.env")
 	fi
 	{
 		echo "# Written by install.sh. Readable by root only; steps never see these variables."
@@ -499,7 +498,9 @@ do_install() {
 		[ -n "$(tr -d '\r\n' <"$token_file")" ] || die "--token-file $token_file is empty"
 	fi
 	[ -z "$ca_file" ] || [ -f "$ca_file" ] || die "--ca-file $ca_file does not exist"
-	if [ -z "$token_file" ] && [ -z "$join_token" ] && ! grep -q '^LAUNCHWAY_RUNNER_TOKEN=.' "$CONF_DIR/runner.env" 2>/dev/null; then
+	if [ -z "$token_file" ] && [ -z "$join_token" ] && \
+		! grep -q '^LAUNCHWAY_RUNNER_TOKEN=.' "$CONF_DIR/runner.env" 2>/dev/null && \
+		! grep -q '^LAUNCHWAY_JOIN=.' "$CONF_DIR/runner.env" 2>/dev/null; then
 		die "--token-file FILE (or --join TOKEN) is required"
 	fi
 	if [ -z "$executor" ] && [ -f "$CONF_DIR/runner.yaml" ]; then

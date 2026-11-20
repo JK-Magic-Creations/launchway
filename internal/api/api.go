@@ -18,11 +18,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
+	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -57,11 +59,28 @@ type Server struct {
 	// WaiveRole is the role needed to waive a policy's rule
 	// (policy.waivers.allow); nil means admin, NoRole nobody.
 	WaiveRole *auth.Role
+	// ReportsOrigin, when set (https://reports.example.com), is a separate
+	// origin that alone serves hosted HTML reports (see reports.go).
+	ReportsOrigin string
+	// AI, when models are configured, lets people ask one to explain a
+	// failed step; the server reads model keys from AISecrets (ai.secrets),
+	// its own stores. Nil: the explain button says it is off.
+	AI        *ai.Client
+	AISecrets *secrets.Resolver
+	// RunnersRole is the role needed on every project to manage runners:
+	// make join tokens, revoke and rotate runners (runner_admin); nil means
+	// admin, NoRole nobody.
+	RunnersRole *auth.Role
 
-	sealerMu sync.Mutex
-	sealer   *auth.Sealer // seals the state of sign-ins in progress
+	sealerMu  sync.Mutex
+	sealer    *auth.Sealer // seals the state of sign-ins in progress
+	reportKey []byte       // signs links to HTML reports
 
-	draining atomic.Bool // see Drain
+	// MCP turns on the Model Context Protocol endpoint, /mcp; nil is off.
+	MCP *MCPOptions
+
+	mux      *http.ServeMux // the routes, which MCP tools call in process
+	draining atomic.Bool    // see Drain
 	stopMu   sync.Mutex
 	stopped  chan struct{} // closed by Stop; see longLived
 }
@@ -122,6 +141,11 @@ func (s *Server) routes() []route {
 		{"POST /api/runner/v1/deploy/observe", runnerOnly, "", s.deployObserve},
 		{"POST /api/runner/v1/deploy/commands", runnerOnly, "", s.deployCommands},
 		{"POST /api/runner/v1/deploy/command-done", runnerOnly, "", s.deployCommandDone},
+		// Enrolment (schema 20): a join token, or an assertion signed by the
+		// runner's key, in the body; the handlers check and audit them.
+		{"POST /api/runner/v2/join", public, "", s.runnerJoin},
+		{"POST /api/runner/v2/token", public, "", s.runnerToken},
+		{"POST /api/runner/v2/rotate", public, "", s.runnerRotate},
 
 		// Signing in and out.
 		{"GET /auth/login", public, "", s.login},
@@ -156,6 +180,14 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/runs/{id}/steps/{step}/reject", runOperate, "approval.reject", s.decide(false)},
 		{"GET /api/v1/approvals", signedIn, "", s.listApprovals},
 		{"GET /api/v1/runners", readAny, "", s.listRunners},
+		{"GET /api/v1/runner-pools", readAny, "", s.listPools},
+		// Managing runners needs the role runner_admin names on every
+		// project, which the handlers check.
+		{"GET /api/v1/runner-join-tokens", signedIn, "", s.listJoinTokens},
+		{"POST /api/v1/runner-join-tokens", signedIn, "runner.join_token.create", s.createJoinToken},
+		{"POST /api/v1/runner-join-tokens/{id}/revoke", signedIn, "runner.join_token.revoke", s.revokeJoinToken},
+		{"POST /api/v1/runners/{id}/revoke", signedIn, "runner.revoke", s.revokeRunner},
+		{"POST /api/v1/runners/{id}/rotate", signedIn, "runner.rotate", s.rotateRunner},
 		{"GET /api/v1/environments", signedIn, "", s.listEnvironments},
 		{"GET /api/v1/deployments", signedIn, "", s.listDeployments},
 		{"GET /api/v1/runs/{id}/deployments/{dep}/controls", runRead, "", s.controls},
@@ -175,6 +207,8 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/admin/tokens", administer, "", s.listAllTokens},
 		{"DELETE /api/v1/admin/tokens/{id}", administer, "token.revoke", s.revokeAnyToken},
 		{"GET /api/v1/projects/{name}/schedules", projectRead, "", s.projectSchedules},
+		{"GET /api/v1/libraries", readAny, "", s.listLibraries},
+		{"GET /api/v1/libraries/{library}/templates", readAny, "", s.libraryTemplates},
 		// Webhooks prove themselves with a secret, not a session or token;
 		// their handlers check and audit them (see hooks.go).
 		{"POST /api/v1/projects/{name}/git-hook", public, "", s.gitHook},
@@ -185,6 +219,7 @@ func (s *Server) routes() []route {
 		{"PUT /api/runner/v1/artifacts/chunk", runnerOnly, "", s.artifactChunk},
 		{"POST /api/runner/v1/artifacts/commit", runnerOnly, "", s.commitArtifact},
 		{"POST /api/runner/v1/artifacts/download", runnerOnly, "", s.fetchArtifact},
+		{"GET /api/v1/artifact-store", readAny, "", s.artifactStore},
 		{"GET /api/v1/runs/{id}/artifacts", runRead, "", s.runArtifacts},
 		{"GET /api/v1/runs/{id}/artifacts/{artifact}/file", runRead, "", s.downloadArtifactFile},
 		{"GET /api/v1/runs/{id}/artifacts/{artifact}/archive", runRead, "", s.downloadArtifactArchive},
@@ -204,6 +239,37 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/waivers", signedIn, "", s.listWaivers},
 		{"POST /api/v1/projects/{name}/waivers", projectRead, "policy.waive", s.grantWaiver},
 		{"POST /api/v1/projects/{name}/waivers/{waiver}/revoke", projectRead, "policy.revoke_waiver", s.revokeWaiver},
+
+		// Richer test results, coverage and HTML reports (schema 18).
+		{"GET /api/v1/runs/{id}/tests/compare", runRead, "", s.runTestCompare},
+		{"GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}", runRead, "", s.testAttachment},
+		{"GET /api/v1/runs/{id}/coverage", runRead, "", s.runCoverage},
+		{"GET /api/v1/runs/{id}/coverage/files", runRead, "", s.runCoverageFiles},
+		{"GET /api/v1/projects/{name}/coverage", projectRead, "", s.projectCoverage},
+		{"GET /api/v1/runs/{id}/reports", runRead, "", s.runReports},
+		// A hosted report takes no session: its signed link is the
+		// permission (see reports.go).
+		{"GET /hosted/{link}/{path...}", public, "", s.hosted},
+
+		// The MCP endpoint for agents. It checks callers itself (only bearer
+		// tokens, with limits of their own; see mcp.go), and its tools call
+		// the routes above in process, through guard.
+		{"POST /mcp", public, "", s.mcpEndpoint},
+		{"GET /mcp", public, "", s.mcpEndpoint},
+		{"DELETE /mcp", public, "", s.mcpEndpoint},
+		{"GET /.well-known/oauth-protected-resource/mcp", public, "", s.protectedResourceMetadata},
+
+		// Verifications and AI models (schema 19).
+		{"POST /api/runner/v1/deploy/verify/lease", runnerOnly, "", s.verifyLease},
+		{"POST /api/runner/v1/deploy/verify/interval", runnerOnly, "", s.verifyInterval},
+		{"GET /api/v1/runs/{id}/verifications", runRead, "", s.runVerifications},
+		{"GET /api/v1/verifications", signedIn, "", s.listVerifications},
+		{"GET /api/v1/runs/{id}/steps/{step}/verify/controls", runRead, "", s.verifyControls},
+		{"POST /api/v1/runs/{id}/steps/{step}/verify/override", runOperate, "verification.override", s.overrideVerify},
+		{"GET /api/v1/health-sources", signedIn, "", s.listHealthSources},
+		{"GET /api/v1/ai/models", signedIn, "", s.listModels},
+		{"GET /api/v1/runs/{id}/steps/{step}/explanations", runRead, "", s.stepExplanations},
+		{"POST /api/v1/runs/{id}/steps/{step}/explain", runOperate, "step.explain", s.explainStep},
 	}
 }
 
@@ -226,7 +292,8 @@ func (s *Server) Handler() http.Handler {
 		writeErr(w, http.StatusNotFound, "no such API endpoint")
 	})
 	mux.Handle("/", s.ui())
-	return s.recoverer(securityHeaders(mux))
+	s.mux = mux
+	return s.recoverer(securityHeaders(s.splitOrigin(mux)))
 }
 
 // ---- shutting down ----
@@ -382,13 +449,14 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 		Runner      engine.RunnerInfo `json:"runner"`
 		WaitSeconds int               `json:"wait_seconds"`
 	}
-	if !decode(w, r, &in) || refusePools(w, r) {
+	if !decode(w, r, &in) || s.refusePools(w, r) {
 		return
 	}
+	info := s.callerInfo(r, in.Runner)
 	wait := time.Duration(min(max(in.WaitSeconds, 0), 50)) * time.Second
 	ctx, cancel := s.longLived(r)
 	defer cancel()
-	job, err := s.Engine.Lease(ctx, in.Runner, wait)
+	job, err := s.Engine.Lease(ctx, info, wait)
 	switch {
 	case err != nil && r.Context().Err() != nil:
 		return // the runner went away; nobody to answer
@@ -487,9 +555,20 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 	if !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
+	var refused *engine.AuditEntry
+	if in.Result.Outcome == engine.OutcomeRefused {
+		// Recorded before the lease ends, while it still says which run.
+		_, _, runID, _, _ := s.Engine.LeaseHolder(in.LeaseID)
+		project, _ := s.Engine.RunProject(runID)
+		refused = &engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r),
+			Action: "runner.refused", Project: project, Target: runID, Outcome: "ok", Detail: in.Result.Error}
+	}
 	if err := s.Engine.Finish(in.LeaseID, in.Result); err != nil {
 		s.fail(w, err)
 		return
+	}
+	if refused != nil {
+		s.record(refused)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -504,6 +583,23 @@ func (s *Server) leave(w http.ResponseWriter, r *http.Request) {
 		RunnerID string `json:"runner_id"`
 	}
 	if !decode(w, r, &in) {
+		return
+	}
+	if id := callerIdentity(r); id != nil {
+		// An enrolled runner leaves as itself, whatever it says.
+		if id.Ephemeral {
+			if _, err := s.Engine.RevokeRunner(id.ID, "runner:"+id.ID, "an ephemeral runner left"); err != nil {
+				s.fail(w, err)
+				return
+			}
+			s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), Action: "runner.revoke",
+				Target: id.ID, Outcome: "ok", Detail: "an ephemeral runner left"})
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		in.RunnerID = id.ID
+	} else if s.Engine.IsEnrolled(in.RunnerID) {
+		writeErr(w, http.StatusForbidden, "runner "+in.RunnerID+" is enrolled; only it may say it leaves")
 		return
 	}
 	if err := s.Engine.RunnerLeft(in.RunnerID); err != nil {
@@ -524,7 +620,13 @@ func (s *Server) runInfos(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "at most 5000 runs per call")
 		return
 	}
-	infos, err := s.Engine.RunInfos(in.IDs)
+	var infos []engine.RunInfo
+	var err error
+	if id := callerIdentity(r); id != nil {
+		infos, err = s.Engine.RunInfosFor(id.Info(engine.RunnerInfo{}), in.IDs)
+	} else {
+		infos, err = s.Engine.RunInfos(in.IDs)
+	}
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -720,7 +822,19 @@ func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	runs, err := s.Engine.ListRuns(engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Limit: limit, OnlyProjects: only})
+	f := engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Limit: limit, OnlyProjects: only}
+	if v := q.Get("before"); v != "" {
+		// The next page: after the run "<created_at>.<id>", as the last run
+		// of the previous page gives them.
+		at, id, ok := strings.Cut(v, ".")
+		ms, err := strconv.ParseInt(at, 10, 64)
+		if !ok || err != nil || id == "" {
+			writeErr(w, http.StatusBadRequest, "before is <created_at>.<id> of the last run of the previous page")
+			return
+		}
+		f.Before = &engine.RunCursor{CreatedAt: ms, ID: id}
+	}
+	runs, err := s.Engine.ListRuns(f)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -818,7 +932,15 @@ func (s *Server) stepLogs(w http.ResponseWriter, r *http.Request) {
 	attempt, _ := strconv.Atoi(q.Get("attempt"))
 	after, _ := strconv.Atoi(q.Get("after"))
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	lines, att, err := s.Engine.Logs(r.PathValue("id"), r.PathValue("step"), attempt, after, limit)
+	// ?tail=1 reads the last lines rather than the first; ?q= only lines
+	// that contain it, ignoring case.
+	search := q.Get("q")
+	if len(search) > 200 {
+		writeErr(w, http.StatusBadRequest, "the search text is longer than 200 bytes")
+		return
+	}
+	lines, att, err := s.Engine.QueryLogs(r.PathValue("id"), r.PathValue("step"),
+		engine.LogQuery{Attempt: attempt, After: after, Limit: limit, Tail: q.Get("tail") == "1", Search: search})
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -976,6 +1098,41 @@ func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, rs)
+}
+
+// listLibraries lists the shared libraries pipelines may use, by name.
+func (s *Server) listLibraries(w http.ResponseWriter, r *http.Request) {
+	type lib struct {
+		Name      string `json:"name"`
+		LastFetch int64  `json:"last_fetch"`
+	}
+	out := []lib{}
+	if s.Projects != nil {
+		for _, l := range s.Projects.Libraries() {
+			out = append(out, lib{Name: l.Name, LastFetch: l.LastFetch})
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// libraryTemplates lists a library's templates at ?version= (default: its
+// newest tag, else its default branch), with their parameters and outputs.
+func (s *Server) libraryTemplates(w http.ResponseWriter, r *http.Request) {
+	if s.Projects == nil {
+		writeErr(w, http.StatusNotFound, "no libraries are configured")
+		return
+	}
+	version := r.URL.Query().Get("version")
+	if version != "" && !pipeline.ValidVersion(version) {
+		writeErr(w, http.StatusBadRequest, "the version is not a tag, branch or commit id")
+		return
+	}
+	out, err := s.Projects.LibraryTemplates(r.Context(), r.PathValue("library"), version)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 // validate checks a pipeline file without running it. With ?project=NAME

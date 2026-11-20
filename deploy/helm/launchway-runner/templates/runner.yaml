@@ -2,9 +2,13 @@
 {{- if .Values.runner.enabled }}
 {{- $name := include "launchway.fullname" . -}}
 {{- $stepNamespace := include "launchway.stepNamespace" . -}}
-{{- $config := include "launchway.shared.runnerConfig" (dict "root" . "r" .Values.runner "server" .Values.server.url "stepNamespace" $stepNamespace) -}}
+{{- $r := deepCopy .Values.runner -}}
+{{- if and .Values.join.existingSecret (not ($r.join | default dict).existingSecret) -}}
+{{- $_ := set $r "join" .Values.join -}}
+{{- end -}}
+{{- $config := include "launchway.shared.runnerConfig" (dict "root" . "r" $r "server" .Values.server.url "stepNamespace" $stepNamespace) -}}
 {{- $conn := include "launchway.connectionVolumes" . | fromYaml -}}
-{{- $ctx := dict "root" . "r" .Values.runner "name" $name "sa" (include "launchway.runnerServiceAccount" .) "component" "runner" "stepNamespace" $stepNamespace "server" .Values.server.url "tokenSecret" .Values.token.existingSecret "tokenKey" .Values.token.existingSecretKey "config" $config "env" (include "launchway.connectionEnv" . | fromYaml).env "volumes" $conn.volumes "mounts" $conn.mounts -}}
+{{- $ctx := dict "root" . "r" $r "name" $name "sa" (include "launchway.runnerServiceAccount" .) "component" "runner" "stepNamespace" $stepNamespace "server" .Values.server.url "tokenSecret" .Values.token.existingSecret "tokenKey" .Values.token.existingSecretKey "config" $config "env" (include "launchway.connectionEnv" . | fromYaml).env "volumes" $conn.volumes "mounts" $conn.mounts -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:

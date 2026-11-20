@@ -51,6 +51,9 @@ func (s *Server) beginArtifact(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
+	if !s.leaseAllowed(w, r, in.LeaseID) {
+		return
+	}
 	out, err := s.Engine.BeginArtifact(in.LeaseID, in.Artifact)
 	if err != nil {
 		s.failArtifact(w, err)
@@ -87,6 +90,9 @@ func (s *Server) artifactChunk(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "reading the chunk: "+err.Error())
 		return
 	}
+	if !s.leaseAllowed(w, r, q.Get("lease_id")) {
+		return
+	}
 	got, err := s.Engine.PutArtifactChunk(r.Context(), q.Get("lease_id"), q.Get("artifact_id"), q.Get("path"), offset, q.Get("sha256"), data)
 	if err != nil {
 		s.failArtifact(w, err)
@@ -104,6 +110,9 @@ func (s *Server) commitArtifact(w http.ResponseWriter, r *http.Request) {
 		ArtifactID string `json:"artifact_id"`
 	}
 	if !decode(w, r, &in) {
+		return
+	}
+	if !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	out, err := s.Engine.CommitArtifact(r.Context(), in.LeaseID, in.ArtifactID)
@@ -124,6 +133,9 @@ func (s *Server) fetchArtifact(w http.ResponseWriter, r *http.Request) {
 		Offset     int64  `json:"offset"`
 	}
 	if !decode(w, r, &in) {
+		return
+	}
+	if !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
 	f, err := s.Engine.OpenFetch(r.Context(), in.LeaseID, in.ArtifactID, in.Path, in.Offset)
@@ -442,4 +454,17 @@ func (s *Server) searchImages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"hits": hits})
+}
+
+// artifactStore says where this server keeps artifacts, why, and how full
+// the store is (for the Runners page, and operators).
+func (s *Server) artifactStore(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	st, err := s.Engine.StoreStatus(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, st)
 }

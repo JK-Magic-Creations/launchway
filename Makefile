@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo run demo clean test-s3 \
+.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean test-s3 \
 	tools release-local release-reproduce release-images vulncheck license-check lint-scripts lint-workflows \
 	charts-sync test-install test-runner-chart bundle test-bundle
 
@@ -62,6 +62,19 @@ test-containers:
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m ./internal/imagebuild/...
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m -run 'ImageStep' ./internal/api/
 
+# Verifications against real health sources in containers (Podman or Docker): Prometheus,
+# Loki, ClickHouse, OpenSearch and PostgreSQL, pulled once by digest. The end-to-end test runs a
+# healthy deploy that passes and a regression that fails and is rolled back, with a real server,
+# build runner and deploy runner.
+test-verify:
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 40m ./internal/verify/...
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 40m -run 'Verify' ./internal/api/
+
+# A real local model: starts Ollama in a container and pulls a small model (about 400 MB,
+# kept in the Podman volume launchway-test-ollama-models). Opt-in; no paid API is called.
+test-local-model:
+	LAUNCHWAY_TEST_LOCAL_MODEL=1 go test -count=1 -timeout 30m -run LocalModel -v ./internal/ai/
+
 # Needs a cluster: kind create cluster --name launchway-test
 #                  kubectl --context kind-launchway-test create namespace launchway-test
 # The test namespace is labelled to enforce Pod Security "restricted", which
@@ -70,11 +83,20 @@ test-containers:
 # profile it needs onto the kind node; it refuses any context not kind-*.
 # Some tests pull python:3.12-slim and node:24-alpine and
 # install a package from PyPI and from npm.
+# KUBE_NAMESPACE and KUBE_BUILD_NAMESPACE name other namespaces than
+# launchway-test and launchway-build-test, so that several checkouts can share
+# one cluster (the build namespace is deleted and made again by the test).
+KUBE_NAMESPACE ?= launchway-test
+KUBE_BUILD_NAMESPACE ?= launchway-build-test
 test-kubernetes:
-	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace launchway-test \
+	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} get namespace $(KUBE_NAMESPACE) >/dev/null 2>&1 || \
+		kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} create namespace $(KUBE_NAMESPACE)
+	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace $(KUBE_NAMESPACE) \
 		pod-security.kubernetes.io/enforce=restricted
-	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -run Kubernetes ./internal/executor/
-	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -timeout 40m -run Kubernetes ./internal/api/
+	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} LAUNCHWAY_TEST_KUBE_NAMESPACE=$(KUBE_NAMESPACE) \
+		go test -count=1 -run Kubernetes ./internal/executor/
+	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} LAUNCHWAY_TEST_KUBE_NAMESPACE=$(KUBE_NAMESPACE) \
+		LAUNCHWAY_TEST_KUBE_BUILD_NAMESPACE=$(KUBE_BUILD_NAMESPACE) go test -count=1 -timeout 40m -run Kubernetes ./internal/api/
 
 # Runs the deploy integration tests against Argo CD and Argo Rollouts in a kind
 # cluster (see deploy/test/argo/README.md). Refuses any context not starting
@@ -208,3 +230,47 @@ bundle: tools
 # Loads the bundle's images into the kind cluster with no registry and installs both charts.
 test-bundle:
 	deploy/test/bundle/test.sh --context $${KUBE_CONTEXT:-kind-launchway-test} dist/launchway-bundle-$(RELEASE_VERSION).tar
+# The documentation site (docs/, built with VitePress; see docs/contributing/docs.md).
+# Needs Node 24+. `make docs` installs the pinned tools once (npm ci), then
+# builds without network access and checks links, anchors, spelling and the
+# roadmap. DOCS_BASE is the path the site is served under.
+DOCS_BASE ?= /launchway/
+docs/node_modules: docs/package-lock.json
+	cd docs && npm ci --no-audit --no-fund
+	touch docs/node_modules
+
+docs: docs/node_modules
+	cd docs && DOCS_BASE='$(DOCS_BASE)' npx vitepress build .
+	node scripts/docs/check-links.mjs docs/.vitepress/dist '$(DOCS_BASE)'
+	node scripts/docs/build-roadmap.mjs --check .
+	cd docs && npx cspell --no-progress --config cspell.json "**/*.md"
+
+# A live preview at http://127.0.0.1:5173/launchway/
+docs-serve: docs/node_modules
+	cd docs && DOCS_BASE='$(DOCS_BASE)' npx vitepress dev . --host 127.0.0.1 --port 5173
+
+.PHONY: docs docs-serve docs-roadmap docs-roadmap-sync docs-diagrams docs-reference
+
+# Renders every Mermaid diagram of the built site in a headless browser, light
+# and dark (run make docs first). Needs a Chromium: `cd docs && npx
+# playwright-core install chromium`, or LAUNCHWAY_DOCS_CHROME=/path/to/chrome.
+docs-diagrams: docs/node_modules
+	node scripts/docs/check-diagrams.mjs docs/.vitepress/dist '$(DOCS_BASE)'
+
+# Checks the reference pages against the code: the keys the parsers accept,
+# routes, events, audit actions, policy rules, and that every pipeline example
+# in docs/reference/pipeline.md is valid.
+docs-reference: build
+	go test -count=1 -run 'Reference|DocsEvents' ./internal/pipeline/ ./internal/config/ ./internal/api/ ./internal/engine/ ./internal/policy/
+	scripts/docs/check-pipeline-examples.sh docs/reference/pipeline.md bin/launchway
+
+# Rebuilds docs/public/roadmap.html and docs/roadmap-list.md from docs/roadmap/.
+docs-roadmap:
+	node scripts/docs/build-roadmap.mjs .
+
+# Writes docs/roadmap/roadmap.json from a maintainer's roadmap file, keeping only the public
+# fields and dropping items that are not about the product (see scripts/docs/build-roadmap.mjs),
+# then rebuilds. Usage: make docs-roadmap-sync ROADMAP_JSON=path/to/roadmap.json
+docs-roadmap-sync:
+	@test -n '$(ROADMAP_JSON)' || { echo 'docs-roadmap-sync: set ROADMAP_JSON=path/to/roadmap.json' >&2; exit 2; }
+	node scripts/docs/build-roadmap.mjs --sync='$(ROADMAP_JSON)' .

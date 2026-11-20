@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="0.004" tests="5" failures="1" skipped="2">
+  <testsuite name="Root Suite" timestamp="2026-11-20T00:47:19" tests="0" time="0.000" failures="0">
+  </testsuite>
+  <testsuite name="cart (mocha)" timestamp="2026-11-20T00:47:19" tests="4" file="/work/test/cart.spec.js" time="0.000" failures="1">
+    <testcase name="cart (mocha) adds numbers @smoke" time="0.000" classname="adds numbers @smoke">
+    </testcase>
+    <testcase name="cart (mocha) fails an assertion" time="0.001" classname="fails an assertion">
+      <failure message="Expected values to be strictly deep-equal:
++ actual - expected
+
+  {
++   total: 20
+-   total: 25
+  }
+" type="AssertionError"><![CDATA[AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  {
++   total: 20
+-   total: 25
+  }
+
+    at Context.<anonymous> (test/cart.spec.js:9:12)
+    at process.processImmediate (node:internal/timers:574:21)
+
+      + expected - actual
+
+       {
+      -  "total": 20
+      +  "total": 25
+       }
+      ]]></failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="nested" timestamp="2026-11-20T00:47:19" tests="1" file="/work/test/cart.spec.js" time="0.000" failures="0">
+    <testcase name="cart (mocha) nested flaky: passes on retry" time="0.000" classname="flaky: passes on retry">
+    </testcase>
+  </testsuite>
+</testsuites>

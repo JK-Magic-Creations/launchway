@@ -1,0 +1,62 @@
+# The shop: BusyBox httpd serving its version, released as a canary.
+# The deploy step changes one line: the value of VERSION.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: shop
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 120
+  selector:
+    matchLabels: { app.kubernetes.io/name: shop }
+  strategy:
+    canary:
+      canaryService: shop-canary   # only the new version's pods
+      stableService: shop          # only the current version's pods
+      steps:
+        - setWeight: 50
+        - pause: {}                # wait here until something promotes the rollout
+        - setWeight: 100
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: shop }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: docker.io/library/busybox:1.37.0
+          env:
+            - name: VERSION
+              value: "1.0.0"
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p /tmp/www
+              echo "shop $VERSION" > /tmp/www/index.html
+              # A planted bug for the tutorial: versions ending in -broken have no health page.
+              case "$VERSION" in *-broken) ;; *) echo ok > /tmp/www/healthz ;; esac
+              exec httpd -f -p 8080 -h /tmp/www
+          ports:
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 2
+          resources:
+            requests: { cpu: 5m, memory: 8Mi }
+            limits: { memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}
