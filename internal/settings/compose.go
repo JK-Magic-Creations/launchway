@@ -529,7 +529,7 @@ func Export(objs []engine.ConfigObject) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if o.Kind == "role-binding" || (k.Levels && o.Unit != "") || o.Kind == "unit" || o.Kind == "organisation" || o.Kind == "secret-store" {
+		if o.Kind == "role-binding" || (k.Levels && o.Unit != "") || o.Kind == "unit" || o.Kind == "organisation" || o.Kind == "secret-store" || o.Kind == "step-resources" {
 			// Kept with its name and level, under objects.
 			entry := map[string]any{"kind": o.Kind, "name": o.Name}
 			if o.Unit != "" {

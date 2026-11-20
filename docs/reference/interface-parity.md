@@ -126,11 +126,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/tests/compare` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
-| `GET /api/v1/step-resources` | `get_step_resources` | `step-resources get` | — | equal |
-| `GET /api/v1/step-resources/defaults/{kind}` | `get_step_resources` | `step-resources get` | — | equal |
-| `PUT /api/v1/step-resources/defaults/{kind}` | `set_step_resource_default` | `step-resources set-default` | — | equal |
-| `GET /api/v1/step-resources/limits` | `get_step_resources` | `step-resources get` | — | equal |
-| `PUT /api/v1/step-resources/limits` | `set_step_resource_limits` | `step-resources set-limits` | — | equal |
+| `GET /api/v1/step-resources` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
+| `GET /api/v1/step-resources/defaults/{kind}` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
+| `PUT /api/v1/step-resources/defaults/{kind}` | `set_step_resource_default` | `step-resources set-default` | `launchway_step_resources` | equal |
+| `GET /api/v1/step-resources/limits` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
+| `PUT /api/v1/step-resources/limits` | `set_step_resource_limits` | `step-resources set-limits` | `launchway_step_resources` | equal |
 | `GET /api/v1/stream` | — | — | — | exempt: live updates for the browser (server-sent events); agents and the CLI poll or wait_for_run |
 | `GET /api/v1/tokens` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `POST /api/v1/tokens` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |

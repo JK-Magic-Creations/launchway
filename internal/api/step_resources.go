@@ -70,9 +70,24 @@ func (s *Server) setStepResourceLimits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, "limits", "")
-	before, after, err := s.Engine.SetStepResourceLimits(engine.ResourceLimits{MaxCPU: in.MaxCPU, MaxMemory: in.MaxMemory, MemoryPerThread: in.MemoryPerThread},
-		identityFrom(r).User)
+	l := engine.ResourceLimits{MaxCPU: in.MaxCPU, MaxMemory: in.MaxMemory, MemoryPerThread: in.MemoryPerThread}
+	var before, after engine.ResourceLimits
+	var err error
+	if s.Settings != nil && s.Settings.Available() {
+		// Through the step-resources object, so the change has a version
+		// and a history like any other configuration.
+		before, _, err = s.Settings.SetStepResourceLimits(identityFrom(r).User, l)
+		if err == nil {
+			var cfg engine.StepResourcesConfig
+			if cfg, err = s.Engine.StepResources(); err == nil {
+				after = cfg.Limits
+			}
+		}
+	} else {
+		before, after, err = s.Engine.SetStepResourceLimits(l, identityFrom(r).User)
+	}
 	if err != nil {
+
 		s.fail(w, err)
 		return
 	}
@@ -106,8 +121,27 @@ func (s *Server) setStepResourceDefault(w http.ResponseWriter, r *http.Request) 
 		}
 		req = rec
 	}
-	before, after, err := s.Engine.SetStepResourceDefault(kind, req, identityFrom(r).User)
+	var before, after engine.ResourceDefault
+	var err error
+	if s.Settings != nil && s.Settings.Available() {
+		var b resources.Request
+		b, _, err = s.Settings.SetStepResourceDefault(identityFrom(r).User, kind, req)
+		if err == nil {
+			var cfg engine.StepResourcesConfig
+			if cfg, err = s.Engine.StepResources(); err == nil {
+				for _, d := range cfg.Defaults {
+					if d.Kind == kind {
+						after = d
+					}
+				}
+			}
+		}
+		before = engine.ResourceDefault{Kind: kind, Request: b}
+	} else {
+		before, after, err = s.Engine.SetStepResourceDefault(kind, req, identityFrom(r).User)
+	}
 	if err != nil {
+
 		s.fail(w, err)
 		return
 	}

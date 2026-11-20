@@ -278,6 +278,9 @@ func (s *Service) reloadLocked(first bool) error {
 	}
 	cp, err := s.composeChecked(objs)
 	if err == nil {
+		err = s.projectStepResources(objs)
+	}
+	if err == nil {
 		err = s.apply(cp.cfg, cp.lay)
 	}
 	if err != nil {
@@ -330,9 +333,18 @@ func (s *Service) List(k *Kind, deleted bool) ([]engine.ConfigObject, error) {
 		return nil, err
 	}
 	out := []engine.ConfigObject{}
+	have := false
 	for _, o := range objs {
 		if (k == nil || o.Kind == k.Name) && (deleted || !o.Deleted()) {
 			out = append(out, o)
+		}
+		have = have || o.Kind == "step-resources"
+	}
+	if !have && (k == nil || k.Name == "step-resources") && s.eng.StepResourcesKnown() {
+		// Never changed through the object: what the tables hold, so an
+		// export has it too.
+		if o, err := s.stepResourcesObject(); err == nil {
+			out = append(out, *o)
 		}
 	}
 	sortObjects(out)
@@ -352,6 +364,10 @@ func (s *Service) Get(k *Kind, name string) (*engine.ConfigObject, error) {
 		if o.Kind == k.Name && o.Name == name {
 			return &o, nil
 		}
+	}
+	if k.Name == "step-resources" && name == k.Singleton {
+		// Never changed through the object: what the tables hold.
+		return s.stepResourcesObject()
 	}
 	if k.Singleton != "" && name == k.Singleton {
 		// Never written: its defaults.
@@ -458,6 +474,8 @@ func checkOwn(k *Kind, v any) error {
 		return t.Levels.check()
 	case *config.ProjectConfig:
 		return t.Normalize()
+	case *StepResources:
+		return checkStepResources(t)
 	case *SecretStore:
 		if !containsString(SecretStoreTypes, t.Type) {
 			return fmt.Errorf("type %q: one of %s", t.Type, strings.Join(SecretStoreTypes, ", "))
@@ -552,6 +570,11 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		s.Refresh()
 		_, now, err := s.eng.ConfigSnapshot()
 		if err != nil {
+			return nil, err
+		}
+		// This server's tables follow at once, whether or not it applies
+		// configuration to a running engine (the others follow within seconds).
+		if err := s.projectStepResources(now); err != nil {
 			return nil, err
 		}
 		results := make([]Result, 0, len(writes))

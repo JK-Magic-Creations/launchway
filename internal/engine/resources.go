@@ -536,3 +536,120 @@ func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourceP
 	}
 	return cs
 }
+
+// stepLimits turns limits written as text into numbers and the canonical
+// text, as SetStepResourceLimits does.
+func stepLimits(l ResourceLimits) (resources.Limits, ResourceLimits, error) {
+	var lim resources.Limits
+	for _, f := range []struct {
+		name string
+		text *string
+		to   *int64
+		fn   func(string) (int64, error)
+		fmt  func(int64) string
+	}{
+		{"max_cpu", &l.MaxCPU, &lim.MaxCPU, resources.ParseCPU, resources.FormatCPU},
+		{"max_memory", &l.MaxMemory, &lim.MaxMemory, resources.ParseMemory, resources.FormatMemory},
+		{"memory_per_thread", &l.MemoryPerThread, &lim.MemoryPerThread, resources.ParseMemory, resources.FormatMemory},
+	} {
+		if *f.text == "" {
+			continue
+		}
+		v, err := f.fn(*f.text)
+		if err != nil {
+			return lim, l, fmt.Errorf("%w: %s: %v", ErrInvalid, f.name, err)
+		}
+		if f.name == "memory_per_thread" && v < 64<<20 {
+			return lim, l, fmt.Errorf("%w: memory_per_thread %s is below 64Mi; no parallel job runs in less", ErrInvalid, *f.text)
+		}
+		*f.to, *f.text = v, f.fmt(v)
+	}
+	return lim, l, nil
+}
+
+// ValidateStepResources checks a whole configuration of step resources,
+// as ReplaceStepResources would, without storing it: every quantity reads,
+// a default's limits are not below what it promises, only kinds that run
+// in a container Launchway sizes have a default, and no default is above
+// the limits. It returns the configuration in its canonical spelling.
+func ValidateStepResources(limits ResourceLimits, defaults map[string]resources.Request) (ResourceLimits, map[string]resources.Request, error) {
+	lim, canon, err := stepLimits(limits)
+	if err != nil {
+		return limits, nil, err
+	}
+	out := map[string]resources.Request{}
+	for kind, req := range defaults {
+		if !slices.Contains(pipeline.ResourceKinds, kind) {
+			return canon, nil, fmt.Errorf("%w: %q has no default resources: only steps that run a script (%s) run in a container Launchway sizes",
+				ErrInvalid, kind, strings.Join(pipeline.ResourceKinds, ", "))
+		}
+		a, err := req.Parse()
+		if err != nil {
+			return canon, nil, fmt.Errorf("%w: default resources of %s: %v", ErrInvalid, kind, err)
+		}
+		if msg := violation(kind+" default", lim, merged(a)); msg != "" {
+			return canon, nil, fmt.Errorf("%w: %s; raise the limit or ask for less", ErrInvalid, msg)
+		}
+		out[kind] = a.Request()
+	}
+	return canon, out, nil
+}
+
+// ReplaceStepResources makes the configuration exactly this: the limits,
+// and the defaults of the kinds listed (a kind not listed has none). It is
+// how a change to the configuration object "step-resources" reaches the
+// tables the engine reads, on every server; it changes nothing, and
+// reports that, when the tables already say so.
+func (e *Engine) ReplaceStepResources(limits ResourceLimits, defaults map[string]resources.Request, actor string) (changed bool, err error) {
+	if !e.knows(schemaResources) {
+		return false, fmt.Errorf("%w: this server does not know step resources (schema %d)", ErrConflict, schemaResources)
+	}
+	canon, canonDefaults, err := ValidateStepResources(limits, defaults)
+	if err != nil {
+		return false, err
+	}
+	err = e.runWrite(func(tx *txx) error {
+		cur, err := e.readStepResources(tx)
+		if err != nil {
+			return err
+		}
+		now := e.now().UnixMilli()
+		have := map[string]resources.Request{}
+		for _, d := range cur.Defaults {
+			have[d.Kind] = d.Request
+		}
+		for _, kind := range pipeline.ResourceKinds {
+			want, wanted := canonDefaults[kind]
+			if !wanted {
+				want = resources.Request{}
+			}
+			if old, ok := have[kind]; ok && old == want {
+				continue
+			}
+			changed = true
+			if _, err := tx.Exec(`INSERT INTO step_resource_defaults(kind, cpu, cpu_limit, memory, memory_limit, updated_at, updated_by)
+				VALUES(?, ?, ?, ?, ?, ?, ?)
+				ON CONFLICT(kind) DO UPDATE SET cpu = excluded.cpu, cpu_limit = excluded.cpu_limit, memory = excluded.memory,
+					memory_limit = excluded.memory_limit, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+				kind, want.CPU, want.CPULimit, want.Memory, want.MemoryLimit, now, actor); err != nil {
+				return err
+			}
+		}
+		if cur.Limits.MaxCPU != canon.MaxCPU || cur.Limits.MaxMemory != canon.MaxMemory || cur.Limits.MemoryPerThread != canon.MemoryPerThread {
+			changed = true
+			if _, err := tx.Exec(`INSERT INTO step_resource_limits(name, max_cpu, max_memory, memory_per_thread, updated_at, updated_by)
+				VALUES(?, ?, ?, ?, ?, ?)
+				ON CONFLICT(name) DO UPDATE SET max_cpu = excluded.max_cpu, max_memory = excluded.max_memory,
+					memory_per_thread = excluded.memory_per_thread, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+				limitsRow, canon.MaxCPU, canon.MaxMemory, canon.MemoryPerThread, now, actor); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return changed, err
+}
+
+// StepResourcesKnown reports whether this server's database has the step
+// resources tables (schema 22).
+func (e *Engine) StepResourcesKnown() bool { return e.knows(schemaResources) }
