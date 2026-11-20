@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="1169846f-4357-49b6-9fca-538667b1a55f" name="@8daf88bc2358 2026-11-20 00:49:52" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-11-20T00:49:52.9036915+00:00" queuing="2026-11-20T00:49:52.9036916+00:00" start="2026-11-20T00:49:52.4221703+00:00" finish="2026-11-20T00:49:52.9199997+00:00" />
+  <TestSettings name="default" id="9a09978d-cf69-4111-be05-3f3426e3e375">
+    <Deployment runDeploymentRoot="_8daf88bc2358_2026-11-20_00_49_52" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="cfc106d3-acbd-461a-bbc2-ee05d2542dfa" testId="5c5a6c38-5683-f808-0334-842156e32984" testName="FlakyPassesOnRetry" computerName="8daf88bc2358" duration="00:00:00.0180580" startTime="2026-11-20T00:49:52.7700081+00:00" endTime="2026-11-20T00:49:52.7880662+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cfc106d3-acbd-461a-bbc2-ee05d2542dfa" />
+    <UnitTestResult executionId="f36ad309-c546-4344-ad22-1a7ce2cc7fcc" testId="5104f0c6-0b9e-2b72-dab8-62a57ecd2236" testName="Inconclusive" computerName="8daf88bc2358" duration="00:00:00.0003280" startTime="2026-11-20T00:49:52.7919482+00:00" endTime="2026-11-20T00:49:52.7922758+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="NotExecuted" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f36ad309-c546-4344-ad22-1a7ce2cc7fcc">
+      <Output>
+        <StdOut>environment not ready</StdOut>
+        <ErrorInfo>
+          <Message>environment not ready</Message>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="3e2f8cca-e7a2-4a7e-8292-d8f3cb8009d2" testId="2579a44a-f873-ec20-ae53-678429e1d017" testName="TenDiscountIsWrong" computerName="8daf88bc2358" duration="00:00:00.0006380" startTime="2026-11-20T00:49:52.7922885+00:00" endTime="2026-11-20T00:49:52.7929264+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3e2f8cca-e7a2-4a7e-8292-d8f3cb8009d2">
+      <Output>
+        <ErrorInfo>
+          <Message>  TEN discount
+Assert.That(30 - 10, Is.EqualTo(25))
+  Expected: 25
+  But was:  20
+</Message>
+          <StackTrace>   at CartNunit.CartTests.TenDiscountIsWrong() in /work/nu/NunitTests.cs:line 25
+
+1)    at CartNunit.CartTests.TenDiscountIsWrong() in /work/nu/NunitTests.cs:line 25
+
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="775ff966-c750-45e4-8925-7316572d41a9" testId="7e82212f-490d-933f-c9f6-641abdbb289f" testName="TotalSums" computerName="8daf88bc2358" duration="00:00:00.0001360" startTime="2026-11-20T00:49:52.7941261+00:00" endTime="2026-11-20T00:49:52.7942622+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="775ff966-c750-45e4-8925-7316572d41a9">
+      <Output>
+        <StdOut>computing total</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="481d44aa-4285-4ec5-bf4f-713b3b3fd180" testId="7879a5bd-dace-e953-8a7b-cc2e8f976455" testName="Currencies" computerName="8daf88bc2358" duration="00:00:00.0011100" startTime="2026-11-20T00:49:52.7682781+00:00" endTime="2026-11-20T00:49:52.7693590+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="NotExecuted" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="481d44aa-4285-4ec5-bf4f-713b3b3fd180">
+      <Output>
+        <StdOut>waiting for currency support</StdOut>
+        <ErrorInfo>
+          <Message>waiting for currency support</Message>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="806d8295-0a4b-4699-9d7c-be05e6626e47" testId="40d7dd13-8f2c-92fb-6427-2bd13f1e553c" testName="HalfDiscount(4,2)" computerName="8daf88bc2358" duration="00:00:00.0001840" startTime="2026-11-20T00:49:52.7910541+00:00" endTime="2026-11-20T00:49:52.7912380+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="806d8295-0a4b-4699-9d7c-be05e6626e47" />
+    <UnitTestResult executionId="05fd0fad-8672-4c6d-87e0-5241ec8ad532" testId="54ad58b7-0912-2016-ed7d-73c5cb03eda8" testName="HalfDiscount(10,5)" computerName="8daf88bc2358" duration="00:00:00.0028990" startTime="2026-11-20T00:49:52.7881239+00:00" endTime="2026-11-20T00:49:52.7910227+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="05fd0fad-8672-4c6d-87e0-5241ec8ad532" />
+    <UnitTestResult executionId="99e3ca56-d0a0-43a4-b516-11f9b4161620" testId="4d6dd619-8bdc-4e12-2f1a-3b8a3190f7b5" testName="ThrowsUnexpected" computerName="8daf88bc2358" duration="00:00:00.0011650" startTime="2026-11-20T00:49:52.7929401+00:00" endTime="2026-11-20T00:49:52.7941052+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="99e3ca56-d0a0-43a4-b516-11f9b4161620">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : cart service unavailable</Message>
+          <StackTrace>   at CartNunit.CartTests.ThrowsUnexpected() in /work/nu/NunitTests.cs:line 56
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="HalfDiscount(4,2)" storage="/work/nu/bin/debug/net9.0/cartnunit.dll" id="40d7dd13-8f2c-92fb-6427-2bd13f1e553c">
+      <Execution id="806d8295-0a4b-4699-9d7c-be05e6626e47" />
+      <TestMethod codeBase="/work/nu/bin/Debug/net9.0/CartNunit.dll" adapterTypeName="executor://nunit3testexecutor/" className="CartNunit.CartTests" name="HalfDiscount(4,2)" />
+    </UnitTest>
+    <UnitTest name="TotalSums" storage="/work/nu/bin/debug/net9.0/cartnunit.dll" id="7e82212f-490d-933f-c9f6-641abdbb289f">
+      <Execution id="775ff966-c750-45e4-8925-7316572d41a9" />
+      <TestMethod codeBase="/work/nu/bin/Debug/net9.0/CartNunit.dll" adapterTypeName="executor://nunit3testexecutor/" className="CartNunit.CartTests" name="TotalSums" />
+    </UnitTest>
+    <UnitTest name="TenDiscountIsWrong" storage="/work/nu/bin/debug/net9.0/cartnunit.dll" id="2579a44a-f873-ec20-ae53-678429e1d017">
+      <Owners>
+        <Owner name="cart-team" />
+      </Owners>
+      <Execution id="3e2f8cca-e7a2-4a7e-8292-d8f3cb8009d2" />
+      <TestMethod codeBase="/work/nu/bin/Debug/net9.0/CartNunit.dll" adapterTypeName="executor://nunit3testexecutor/" className="CartNunit.CartTests" name="TenDiscountIsWrong" />
+    </UnitTest>
+    <UnitTest name="Currencies" storage="/work/nu/bin/debug/net9.0/cartnunit.dll" id="7879a5bd-dace-e953-8a7b-cc2e8f976455">
+      <Execution id="481d44aa-4285-4ec5-bf4f-713b3b3fd180" />
+      <TestMethod codeBase="/work/nu/bin/Debug/net9.0/CartNunit.dll" adapterTypeName="executor://nunit3testexecutor/" className="CartNunit.CartTests" name="Currencies" />
+    </UnitTest>
+    <UnitTest name="ThrowsUnexpected" storage="/work/nu/bin/debug/net9.0/cartnunit.dll" id="4d6dd619-8bdc-4e12-2f1a-3b8a3190f7b5">
+      <Execution id="99e3ca56-d0a0-43a4-b516-11f9b4161620" />
+      <TestMethod codeBase="/work/nu/bin/Debug/net9.0/CartNunit.dll" adapterTypeName="executor://nunit3testexecutor/" className="CartNunit.CartTests" name="ThrowsUnexpected" />
+    </UnitTest>
+    <UnitTest name="Inconclusive" storage="/work/nu/bin/debug/net9.0/cartnunit.dll" id="5104f0c6-0b9e-2b72-dab8-62a57ecd2236">
+      <Execution id="f36ad309-c546-4344-ad22-1a7ce2cc7fcc" />
+      <TestMethod codeBase="/work/nu/bin/Debug/net9.0/CartNunit.dll" adapterTypeName="executor://nunit3testexecutor/" className="CartNunit.CartTests" name="Inconclusive" />
+    </UnitTest>
+    <UnitTest name="HalfDiscount(10,5)" storage="/work/nu/bin/debug/net9.0/cartnunit.dll" id="54ad58b7-0912-2016-ed7d-73c5cb03eda8">
+      <Execution id="05fd0fad-8672-4c6d-87e0-5241ec8ad532" />
+      <TestMethod codeBase="/work/nu/bin/Debug/net9.0/CartNunit.dll" adapterTypeName="executor://nunit3testexecutor/" className="CartNunit.CartTests" name="HalfDiscount(10,5)" />
+    </UnitTest>
+    <UnitTest name="FlakyPassesOnRetry" storage="/work/nu/bin/debug/net9.0/cartnunit.dll" id="5c5a6c38-5683-f808-0334-842156e32984">
+      <Execution id="cfc106d3-acbd-461a-bbc2-ee05d2542dfa" />
+      <TestMethod codeBase="/work/nu/bin/Debug/net9.0/CartNunit.dll" adapterTypeName="executor://nunit3testexecutor/" className="CartNunit.CartTests" name="FlakyPassesOnRetry" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="5c5a6c38-5683-f808-0334-842156e32984" executionId="cfc106d3-acbd-461a-bbc2-ee05d2542dfa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5104f0c6-0b9e-2b72-dab8-62a57ecd2236" executionId="f36ad309-c546-4344-ad22-1a7ce2cc7fcc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="2579a44a-f873-ec20-ae53-678429e1d017" executionId="3e2f8cca-e7a2-4a7e-8292-d8f3cb8009d2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7e82212f-490d-933f-c9f6-641abdbb289f" executionId="775ff966-c750-45e4-8925-7316572d41a9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7879a5bd-dace-e953-8a7b-cc2e8f976455" executionId="481d44aa-4285-4ec5-bf4f-713b3b3fd180" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="40d7dd13-8f2c-92fb-6427-2bd13f1e553c" executionId="806d8295-0a4b-4699-9d7c-be05e6626e47" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="54ad58b7-0912-2016-ed7d-73c5cb03eda8" executionId="05fd0fad-8672-4c6d-87e0-5241ec8ad532" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4d6dd619-8bdc-4e12-2f1a-3b8a3190f7b5" executionId="99e3ca56-d0a0-43a4-b516-11f9b4161620" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="8" executed="6" passed="4" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started
+Running all tests in /work/nu/bin/Debug/net9.0/CartNunit.dll
+   NUnit3TestExecutor discovered 8 of 8 NUnit test cases using Current Discovery mode, Non-Explicit run
+Currencies: waiting for currency support
+Inconclusive: environment not ready
+computing total
+
+NUnit Adapter 4.6.0.0: Test execution complete
+Test 'Currencies' was skipped in the test run.
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

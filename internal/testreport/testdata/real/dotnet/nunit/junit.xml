@@ -1,0 +1,46 @@
+<testsuites>
+  <testsuite name="CartNunit.dll" tests="8" skipped="1" failures="2" errors="0" time="0.024517999999999998" timestamp="2026-11-20T00:49:52" hostname="8daf88bc2358" id="0" package="CartNunit.dll">
+    <properties />
+    <testcase classname="CartNunit.CartTests" name="Currencies" time="0.0011100">
+      <skipped />
+      <system-out>waiting for currency support
+</system-out>
+    </testcase>
+    <testcase classname="CartNunit.CartTests" name="FlakyPassesOnRetry" time="0.0180580" />
+    <testcase classname="CartNunit.CartTests" name="HalfDiscount(10,5)" time="0.0028990" />
+    <testcase classname="CartNunit.CartTests" name="HalfDiscount(4,2)" time="0.0001840" />
+    <testcase classname="CartNunit.CartTests" name="Inconclusive" time="0.0003280">
+      <system-out>environment not ready
+</system-out>
+    </testcase>
+    <testcase classname="CartNunit.CartTests" name="TenDiscountIsWrong" time="0.0006380">
+      <failure type="failure" message="  TEN discount&#xA;Assert.That(30 - 10, Is.EqualTo(25))&#xA;  Expected: 25&#xA;  But was:  20&#xA;">at CartNunit.CartTests.TenDiscountIsWrong() in /work/nu/NunitTests.cs:line 25
+
+1)    at CartNunit.CartTests.TenDiscountIsWrong() in /work/nu/NunitTests.cs:line 25</failure>
+      <properties>
+        <property name="Owner" value="cart-team" />
+      </properties>
+    </testcase>
+    <testcase classname="CartNunit.CartTests" name="ThrowsUnexpected" time="0.0011650">
+      <failure type="failure" message="System.InvalidOperationException : cart service unavailable">at CartNunit.CartTests.ThrowsUnexpected() in /work/nu/NunitTests.cs:line 56
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</failure>
+    </testcase>
+    <testcase classname="CartNunit.CartTests" name="TotalSums" time="0.0001360">
+      <system-out>computing total
+
+</system-out>
+    </testcase>
+    <system-out>
+Test Framework Informational Messages:
+NUnit Adapter 4.6.0.0: Test execution started
+Running all tests in /work/nu/bin/Debug/net9.0/CartNunit.dll
+   NUnit3TestExecutor discovered 8 of 8 NUnit test cases using Current Discovery mode, Non-Explicit run
+Currencies: waiting for currency support
+Inconclusive: environment not ready
+computing total
+
+NUnit Adapter 4.6.0.0: Test execution complete
+</system-out>
+  </testsuite>
+</testsuites>

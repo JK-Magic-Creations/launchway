@@ -45,16 +45,16 @@ func TestContentThatIsNotAReport(t *testing.T) {
 	}{
 		{"empty file", "", "not a test report: the file is empty"},
 		{"only white space", " \n\t\n", "not a test report: the file holds only white space"},
-		{"plain text", "hello world, this is a log", `not a test report: neither JUnit XML nor go test -json output (it starts with "hello wor…")`},
-		{"html page", "<!DOCTYPE html>\n<html><head><title>502 Bad Gateway</title></head><body></body></html>", "not a test report: the XML's root element is <html>, not <testsuites> or <testsuite>"},
-		{"random binary", string(random), "not a test report: neither JUnit XML nor go test -json output (it starts with"},
-		{"package.json", `{"name": "shop", "version": "1.0.0", "scripts": {"test": "jest"}}`, "not a test report: the file is JSON, but no go test -json events were found"},
+		{"plain text", "hello world, this is a log", `not a test report: the content is not XML, JSON or TAP (it starts with "hello wor…")`},
+		{"html page", "<!DOCTYPE html>\n<html><head><title>502 Bad Gateway</title></head><body></body></html>", "not a test report: the XML's root element is <html>; known roots are <testsuites>, <testsuite>, <testng-results>, <test-run>, <assemblies>, <TestRun>, <robot>"},
+		{"random binary", string(random), "not a test report: the content is not XML, JSON or TAP (it starts with"},
+		{"package.json", `{"name": "shop", "version": "1.0.0", "scripts": {"test": "jest"}}`, `not a test report: the JSON object has keys "name", "version", "scripts"; known JSON reports are Cucumber`},
 		{"json lines without actions", "{\"level\":\"info\",\"msg\":\"hi\"}\n{\"level\":\"warn\"}\n", "no go test -json events were found"},
 		{"broken xml before the root", "<<<>>>", "not a test report: the XML could not be read (line 1"},
 		{"xml with no root element", "<?xml version=\"1.0\"?>\n<!-- nothing -->\n", "not a test report: the XML has no root element"},
 		{"utf-16 xml", `<?xml version="1.0" encoding="UTF-16"?><testsuite/>`, "not a test report: the XML is in encoding UTF-16, which is not supported; write it as UTF-8"},
-		{"json array", `[{"Action":"pass"}]`, "not a test report: neither JUnit XML"},
-		{"stderr then plain text", "go: downloading x\n{not json}\n", "not a test report: neither JUnit XML"},
+		{"json array", `[{"Action":"pass"}]`, `not a test report: the JSON is an array of objects with keys "Action", not Cucumber features`},
+		{"stderr then plain text", "go: downloading x\n{not json}\n", "not a test report: the content is not XML, JSON or TAP"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := parseString(t, tc.in, Limits{})

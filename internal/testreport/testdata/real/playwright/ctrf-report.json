@@ -1,0 +1,549 @@
+{
+  "reportFormat": "CTRF",
+  "specVersion": "0.2.0",
+  "reportId": "00e925c0-2371-4f05-a9fa-9431550a184d",
+  "timestamp": "2026-11-20T00:50:58.906Z",
+  "generatedBy": "playwright-ctrf-json-reporter",
+  "results": {
+    "tool": {
+      "name": "playwright",
+      "version": "1.65.1"
+    },
+    "summary": {
+      "tests": 12,
+      "passed": 8,
+      "failed": 2,
+      "pending": 0,
+      "skipped": 2,
+      "other": 0,
+      "start": 1795135859048,
+      "stop": 1795135868531,
+      "duration": 9483,
+      "suites": 6
+    },
+    "tests": [
+      {
+        "testId": "a63ca64a6f071281070d-31643ec70b26f660da21",
+        "executionId": "95171eff-c299-4bad-a5b9-5093bff3ebfa",
+        "attemptId": "14043a94-d95a-4f8d-8c4b-b2cb009f202b",
+        "name": "has title",
+        "status": "passed",
+        "duration": 204,
+        "start": 1795135859308,
+        "stop": 1795135859512,
+        "rawStatus": "passed",
+        "tags": [
+          "@smoke"
+        ],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 0,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "chromium",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [],
+        "stderr": []
+      },
+      {
+        "testId": "a63ca64a6f071281070d-4e0031afc91e51e81f6c",
+        "executionId": "610e63ff-39e8-43ef-a493-cc9d6f09d631",
+        "attemptId": "3c728d25-b1ad-4a6f-9fc9-3f35cadaeac8",
+        "name": "adds an item to the cart",
+        "status": "passed",
+        "duration": 151,
+        "start": 1795135859805,
+        "stop": 1795135859956,
+        "rawStatus": "passed",
+        "tags": [
+          "@smoke",
+          "@cart"
+        ],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 0,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "chromium",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [],
+        "stderr": []
+      },
+      {
+        "testId": "a63ca64a6f071281070d-a8393ffc917de78a8aa1",
+        "executionId": "afafc820-c96a-4be5-8e64-4c0dfc72340a",
+        "attemptId": "432f1f07-c0d2-4aad-ad27-f16297b91c88",
+        "name": "shows wrong count (fails)",
+        "status": "failed",
+        "duration": 1223,
+        "start": 1795135861478,
+        "stop": 1795135862701,
+        "message": "Error: expect(locator).toHaveText(expected) failed\n\nLocator:  locator('#count')\nExpected: \"Items: 2\"\nReceived: \"Items: 1\"\nTimeout:  1000ms\n\nCall log:\n  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\n  - waiting for locator('#count')\n    12 × locator resolved to <p id=\"count\">Items: 1</p>\n       - unexpected value \"Items: 1\"\n",
+        "trace": "Error: expect(locator).toHaveText(expected) failed\n\nLocator:  locator('#count')\nExpected: \"Items: 2\"\nReceived: \"Items: 1\"\nTimeout:  1000ms\n\nCall log:\n  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\n  - waiting for locator('#count')\n    12 × locator resolved to <p id=\"count\">Items: 1</p>\n       - unexpected value \"Items: 1\"\n\n    at /work/tests/shop.spec.js:19:42",
+        "snippet": "  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {",
+        "rawStatus": "failed",
+        "tags": [
+          "@cart"
+        ],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 1,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "chromium",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [
+          {
+            "attachmentId": "3ae6623e-21fc-4a9f-85e9-4aba0c86d3f0",
+            "name": "screenshot",
+            "contentType": "image/png",
+            "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/test-failed-1.png"
+          },
+          {
+            "attachmentId": "a593df3a-0e8a-40a0-b4c5-4a60141ea448",
+            "name": "video",
+            "contentType": "video/webm",
+            "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/video.webm"
+          },
+          {
+            "attachmentId": "40833645-f053-4a76-a07b-b381ed7e838e",
+            "name": "error-context",
+            "contentType": "text/markdown",
+            "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/error-context.md"
+          },
+          {
+            "attachmentId": "d927f4aa-5366-4c4f-a1df-42a4419d4ad5",
+            "name": "trace",
+            "contentType": "application/zip",
+            "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/trace.zip"
+          }
+        ],
+        "stdout": [],
+        "stderr": [],
+        "retryAttempts": [
+          {
+            "attempt": 1,
+            "attemptId": "c5235e51-a6df-4f84-b84a-e40fd530b167",
+            "status": "failed",
+            "duration": 1195,
+            "message": "Error: expect(locator).toHaveText(expected) failed\n\nLocator:  locator('#count')\nExpected: \"Items: 2\"\nReceived: \"Items: 1\"\nTimeout:  1000ms\n\nCall log:\n  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\n  - waiting for locator('#count')\n    12 × locator resolved to <p id=\"count\">Items: 1</p>\n       - unexpected value \"Items: 1\"\n",
+            "trace": "Error: expect(locator).toHaveText(expected) failed\n\nLocator:  locator('#count')\nExpected: \"Items: 2\"\nReceived: \"Items: 1\"\nTimeout:  1000ms\n\nCall log:\n  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\n  - waiting for locator('#count')\n    12 × locator resolved to <p id=\"count\">Items: 1</p>\n       - unexpected value \"Items: 1\"\n\n    at /work/tests/shop.spec.js:19:42",
+            "snippet": "  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {",
+            "attachments": [
+              {
+                "attachmentId": "026ee44b-1ccc-4f03-839e-bde8bf6c3c5b",
+                "name": "screenshot",
+                "contentType": "image/png",
+                "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium/test-failed-1.png"
+              },
+              {
+                "attachmentId": "2c4d368c-a202-4f46-a42c-b1b64b30dbd3",
+                "name": "video",
+                "contentType": "video/webm",
+                "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium/video.webm"
+              },
+              {
+                "attachmentId": "8fa314d3-86cd-46d2-8eac-a6eeaeeb35f8",
+                "name": "error-context",
+                "contentType": "text/markdown",
+                "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium/error-context.md"
+              },
+              {
+                "attachmentId": "3d834d9f-da6c-492a-8f67-4883b6441fb0",
+                "name": "trace",
+                "contentType": "application/zip",
+                "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium/trace.zip"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "testId": "a63ca64a6f071281070d-672628b70fd73f919208",
+        "executionId": "5acdbc0e-2aca-4e91-b9c8-cd54319614d1",
+        "attemptId": "08a050dd-48e0-42ff-8c08-7912d030d1f6",
+        "name": "flaky: passes on retry",
+        "status": "passed",
+        "duration": 194,
+        "start": 1795135863570,
+        "stop": 1795135863764,
+        "rawStatus": "passed",
+        "tags": [],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 1,
+        "flaky": true,
+        "steps": [],
+        "suite": [
+          "chromium",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [],
+        "stderr": [],
+        "retryAttempts": [
+          {
+            "attempt": 1,
+            "attemptId": "d0ed9b8e-73b3-4996-866f-f904f3b6be29",
+            "status": "failed",
+            "duration": 157,
+            "message": "Error: first attempt fails\n\nexpect(received).toBeGreaterThan(expected)\n\nExpected: > 0\nReceived:   0",
+            "trace": "Error: first attempt fails\n\nexpect(received).toBeGreaterThan(expected)\n\nExpected: > 0\nReceived:   0\n    at /work/tests/shop.spec.js:25:51",
+            "snippet": "  23 |     await page.goto('/');\n  24 |     test.info().annotations.push({ type: 'issue', description: 'FLAKY-123' });\n> 25 |     expect(testInfo.retry, 'first attempt fails').toBeGreaterThan(0);\n     |                                                   ^\n  26 |   });\n  27 |\n  28 |   test.skip('checkout not built yet', async ({ page }) => {",
+            "attachments": [
+              {
+                "attachmentId": "758ad302-3e71-4702-8844-d46e3a8333bd",
+                "name": "screenshot",
+                "contentType": "image/png",
+                "path": "/work/test-results/shop-shop-flaky-passes-on-retry-chromium/test-failed-1.png"
+              },
+              {
+                "attachmentId": "f9d6dc93-3b01-4506-bec5-ab03d867328d",
+                "name": "video",
+                "contentType": "video/webm",
+                "path": "/work/test-results/shop-shop-flaky-passes-on-retry-chromium/video.webm"
+              },
+              {
+                "attachmentId": "2d1d78ab-8913-45e8-b09c-044b3b2ea919",
+                "name": "error-context",
+                "contentType": "text/markdown",
+                "path": "/work/test-results/shop-shop-flaky-passes-on-retry-chromium/error-context.md"
+              },
+              {
+                "attachmentId": "401c7e3e-0097-4052-9664-bdf040a63208",
+                "name": "trace",
+                "contentType": "application/zip",
+                "path": "/work/test-results/shop-shop-flaky-passes-on-retry-chromium/trace.zip"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "testId": "a63ca64a6f071281070d-9d5ce9f13bb7c11091a8",
+        "executionId": "7c27435a-9b61-4c59-914f-340ede2226f3",
+        "attemptId": "493bac41-7644-4865-9bbf-85c9fb880954",
+        "name": "checkout not built yet",
+        "status": "skipped",
+        "duration": 0,
+        "start": 1795135863822,
+        "stop": 1795135863822,
+        "rawStatus": "skipped",
+        "tags": [],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 0,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "chromium",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [],
+        "stderr": []
+      },
+      {
+        "testId": "a63ca64a6f071281070d-c9f1ff403744da3b0e34",
+        "executionId": "0abea785-58f0-4df7-a382-62ea1c20e019",
+        "attemptId": "5efb42d4-d38e-44b0-9f0f-4ad44cf41158",
+        "name": "attaches a note",
+        "status": "passed",
+        "duration": 138,
+        "start": 1795135863822,
+        "stop": 1795135863960,
+        "rawStatus": "passed",
+        "tags": [],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 0,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "chromium",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [
+          "stdout line from test\n"
+        ],
+        "stderr": []
+      },
+      {
+        "testId": "a63ca64a6f071281070d-3e07f2bd24a95ad2744b",
+        "executionId": "fc62c728-ee50-441a-9f6d-925ac6aea975",
+        "attemptId": "7bb11801-1579-4959-9bcb-7a197c26560d",
+        "name": "has title",
+        "status": "passed",
+        "duration": 761,
+        "start": 1795135859325,
+        "stop": 1795135860086,
+        "rawStatus": "passed",
+        "tags": [
+          "@smoke"
+        ],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 0,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "firefox",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [],
+        "stderr": []
+      },
+      {
+        "testId": "a63ca64a6f071281070d-57c6e4f42420bd7ca87c",
+        "executionId": "c7ce96b8-e792-4ea2-81b6-286d4f0459e0",
+        "attemptId": "5eb0ff72-e124-46de-a892-10a71895485e",
+        "name": "adds an item to the cart",
+        "status": "passed",
+        "duration": 372,
+        "start": 1795135860546,
+        "stop": 1795135860918,
+        "rawStatus": "passed",
+        "tags": [
+          "@smoke",
+          "@cart"
+        ],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 0,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "firefox",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [],
+        "stderr": []
+      },
+      {
+        "testId": "a63ca64a6f071281070d-7a96d8ea792e411a1eb7",
+        "executionId": "1ea471ad-eeb4-4c60-a715-883840f7c317",
+        "attemptId": "32eb6a02-ae99-4bd1-a4d6-f1a8ab7fdddf",
+        "name": "shows wrong count (fails)",
+        "status": "failed",
+        "duration": 1862,
+        "start": 1795135862766,
+        "stop": 1795135864628,
+        "message": "Error: expect(locator).toHaveText(expected) failed\n\nLocator:  locator('#count')\nExpected: \"Items: 2\"\nReceived: \"Items: 1\"\nTimeout:  1000ms\n\nCall log:\n  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\n  - waiting for locator('#count')\n    9 × locator resolved to <p id=\"count\">Items: 1</p>\n      - unexpected value \"Items: 1\"\n",
+        "trace": "Error: expect(locator).toHaveText(expected) failed\n\nLocator:  locator('#count')\nExpected: \"Items: 2\"\nReceived: \"Items: 1\"\nTimeout:  1000ms\n\nCall log:\n  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\n  - waiting for locator('#count')\n    9 × locator resolved to <p id=\"count\">Items: 1</p>\n      - unexpected value \"Items: 1\"\n\n    at /work/tests/shop.spec.js:19:42",
+        "snippet": "  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {",
+        "rawStatus": "failed",
+        "tags": [
+          "@cart"
+        ],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 1,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "firefox",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [
+          {
+            "attachmentId": "12471fe7-757d-47df-83c9-c1a587048cc5",
+            "name": "screenshot",
+            "contentType": "image/png",
+            "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/test-failed-1.png"
+          },
+          {
+            "attachmentId": "9cc992d5-f912-4ec7-8654-4b3977b975e8",
+            "name": "video",
+            "contentType": "video/webm",
+            "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/video.webm"
+          },
+          {
+            "attachmentId": "6e747a24-f58d-4ef4-bd40-c4c14ea30d27",
+            "name": "error-context",
+            "contentType": "text/markdown",
+            "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/error-context.md"
+          },
+          {
+            "attachmentId": "99a4804c-8658-4c0a-a149-a247288e165b",
+            "name": "trace",
+            "contentType": "application/zip",
+            "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/trace.zip"
+          }
+        ],
+        "stdout": [],
+        "stderr": [],
+        "retryAttempts": [
+          {
+            "attempt": 1,
+            "attemptId": "4f0c608a-cd30-4576-b871-36f254b7328e",
+            "status": "failed",
+            "duration": 1327,
+            "message": "Error: expect(locator).toHaveText(expected) failed\n\nLocator:  locator('#count')\nExpected: \"Items: 2\"\nReceived: \"Items: 1\"\nTimeout:  1000ms\n\nCall log:\n  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\n  - waiting for locator('#count')\n    11 × locator resolved to <p id=\"count\">Items: 1</p>\n       - unexpected value \"Items: 1\"\n",
+            "trace": "Error: expect(locator).toHaveText(expected) failed\n\nLocator:  locator('#count')\nExpected: \"Items: 2\"\nReceived: \"Items: 1\"\nTimeout:  1000ms\n\nCall log:\n  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\n  - waiting for locator('#count')\n    11 × locator resolved to <p id=\"count\">Items: 1</p>\n       - unexpected value \"Items: 1\"\n\n    at /work/tests/shop.spec.js:19:42",
+            "snippet": "  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {",
+            "attachments": [
+              {
+                "attachmentId": "a0c39d80-2a7f-4572-986f-f46e6d9ba730",
+                "name": "screenshot",
+                "contentType": "image/png",
+                "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox/test-failed-1.png"
+              },
+              {
+                "attachmentId": "4f33208d-bda3-45ca-a7c8-96a57742f15d",
+                "name": "video",
+                "contentType": "video/webm",
+                "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox/video.webm"
+              },
+              {
+                "attachmentId": "f32ca1a2-9475-4956-9124-5440fbf5695a",
+                "name": "error-context",
+                "contentType": "text/markdown",
+                "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox/error-context.md"
+              },
+              {
+                "attachmentId": "c93066df-d16a-4199-9503-93a746d74c21",
+                "name": "trace",
+                "contentType": "application/zip",
+                "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox/trace.zip"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "testId": "a63ca64a6f071281070d-cf3de7792d4c07bf6822",
+        "executionId": "ce641452-d008-49e3-8f0c-9a7ba6fb5a35",
+        "attemptId": "98ed56a4-0b31-465c-8cfe-d5cd1216cdd5",
+        "name": "flaky: passes on retry",
+        "status": "passed",
+        "duration": 734,
+        "start": 1795135866839,
+        "stop": 1795135867573,
+        "rawStatus": "passed",
+        "tags": [],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 1,
+        "flaky": true,
+        "steps": [],
+        "suite": [
+          "firefox",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [],
+        "stderr": [],
+        "retryAttempts": [
+          {
+            "attempt": 1,
+            "attemptId": "f5de9d26-f389-4480-bdcc-6d43530f9113",
+            "status": "failed",
+            "duration": 721,
+            "message": "Error: first attempt fails\n\nexpect(received).toBeGreaterThan(expected)\n\nExpected: > 0\nReceived:   0",
+            "trace": "Error: first attempt fails\n\nexpect(received).toBeGreaterThan(expected)\n\nExpected: > 0\nReceived:   0\n    at /work/tests/shop.spec.js:25:51",
+            "snippet": "  23 |     await page.goto('/');\n  24 |     test.info().annotations.push({ type: 'issue', description: 'FLAKY-123' });\n> 25 |     expect(testInfo.retry, 'first attempt fails').toBeGreaterThan(0);\n     |                                                   ^\n  26 |   });\n  27 |\n  28 |   test.skip('checkout not built yet', async ({ page }) => {",
+            "attachments": [
+              {
+                "attachmentId": "48ab27c9-a66a-4ae4-b55a-c26a973660b8",
+                "name": "screenshot",
+                "contentType": "image/png",
+                "path": "/work/test-results/shop-shop-flaky-passes-on-retry-firefox/test-failed-1.png"
+              },
+              {
+                "attachmentId": "90e5cd0b-6d74-4b14-9f32-5bf5aadbbd2a",
+                "name": "video",
+                "contentType": "video/webm",
+                "path": "/work/test-results/shop-shop-flaky-passes-on-retry-firefox/video.webm"
+              },
+              {
+                "attachmentId": "ce30576d-3b9a-47bc-bc30-bbb22c795e09",
+                "name": "error-context",
+                "contentType": "text/markdown",
+                "path": "/work/test-results/shop-shop-flaky-passes-on-retry-firefox/error-context.md"
+              },
+              {
+                "attachmentId": "47942c39-858e-4eb6-ae7b-47ce702aaf82",
+                "name": "trace",
+                "contentType": "application/zip",
+                "path": "/work/test-results/shop-shop-flaky-passes-on-retry-firefox/trace.zip"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "testId": "a63ca64a6f071281070d-e23f64d5e65ef3a7600e",
+        "executionId": "d61a9393-427f-49bd-a89b-bff841882bfd",
+        "attemptId": "6699c975-ea0d-4692-8626-7956908d9fa0",
+        "name": "checkout not built yet",
+        "status": "skipped",
+        "duration": 0,
+        "start": 1795135867880,
+        "stop": 1795135867880,
+        "rawStatus": "skipped",
+        "tags": [],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 0,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "firefox",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [],
+        "stderr": []
+      },
+      {
+        "testId": "a63ca64a6f071281070d-eb5945696acf496070c1",
+        "executionId": "453feb32-d018-45b8-88b6-e8c30d4c8ec3",
+        "attemptId": "53919f4d-3d3c-428b-a505-efee44da91dd",
+        "name": "attaches a note",
+        "status": "passed",
+        "duration": 389,
+        "start": 1795135867880,
+        "stop": 1795135868269,
+        "rawStatus": "passed",
+        "tags": [],
+        "type": "e2e",
+        "filePath": "/work/tests/shop.spec.js",
+        "retries": 0,
+        "flaky": false,
+        "steps": [],
+        "suite": [
+          "firefox",
+          "shop.spec.js",
+          "shop"
+        ],
+        "attachments": [],
+        "stdout": [
+          "stdout line from test\n"
+        ],
+        "stderr": []
+      }
+    ]
+  }
+}

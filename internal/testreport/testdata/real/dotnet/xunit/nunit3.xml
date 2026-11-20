@@ -1,0 +1,52 @@
+<test-run id="2" duration="0.0065631" testcasecount="7" total="7" passed="3" failed="3" inconclusive="0" skipped="1" result="Failed" start-time="2026-11-20T00:49:50Z" end-time="2026-11-20T00:49:51Z">
+  <test-suite type="Assembly" name="CartXunit.dll" fullname="/work/xu/bin/Debug/net9.0/CartXunit.dll" total="7" passed="3" failed="3" inconclusive="0" skipped="1" result="Failed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.0065631">
+    <test-suite type="TestSuite" name="CartXunit" fullname="CartXunit" total="7" passed="3" failed="3" inconclusive="0" skipped="1" result="Failed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.0065631">
+      <test-suite type="TestFixture" name="CartTests" fullname="CartXunit.CartTests" classname="CartXunit.CartTests" total="7" passed="3" failed="3" inconclusive="0" skipped="1" result="Failed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.0065631">
+        <test-case name="CartXunit.CartTests.TenDiscountIsWrong" fullname="CartXunit.CartTests.TenDiscountIsWrong" methodname="TenDiscountIsWrong" classname="CartTests" result="Failed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.0041766" asserts="0">
+          <properties>
+            <property name="Category" value="regression" />
+            <property name="Owner" value="cart-team" />
+          </properties>
+          <failure>
+            <message>Assert.Equal() Failure: Values differ
+Expected: 25
+Actual:   20</message>
+            <stack-trace>   at CartXunit.CartTests.TenDiscountIsWrong() in /work/xu/XunitTests.cs:line 26
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</stack-trace>
+          </failure>
+        </test-case>
+        <test-case name="CartXunit.CartTests.HalfDiscount(price: 4, expected: 2)" fullname="CartXunit.CartTests.HalfDiscount(price: 4, expected: 2)" methodname="HalfDiscount(price: 4, expected: 2)" classname="CartTests" result="Passed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.0006564" asserts="0" />
+        <test-case name="CartXunit.CartTests.HalfDiscount(price: 10, expected: 5)" fullname="CartXunit.CartTests.HalfDiscount(price: 10, expected: 5)" methodname="HalfDiscount(price: 10, expected: 5)" classname="CartTests" result="Passed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.0001368" asserts="0" />
+        <test-case name="CartXunit.CartTests.HalfDiscount(price: 3, expected: 2)" fullname="CartXunit.CartTests.HalfDiscount(price: 3, expected: 2)" methodname="HalfDiscount(price: 3, expected: 2)" classname="CartTests" result="Failed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="7.55E-05" asserts="0">
+          <failure>
+            <message>Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   1</message>
+            <stack-trace>   at CartXunit.CartTests.HalfDiscount(Int32 price, Int32 expected) in /work/xu/XunitTests.cs:line 38
+   at InvokeStub_CartTests.HalfDiscount(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</stack-trace>
+          </failure>
+        </test-case>
+        <test-case name="CartXunit.CartTests.TotalSums" fullname="CartXunit.CartTests.TotalSums" methodname="TotalSums" classname="CartTests" result="Passed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.0003944" asserts="0">
+          <properties>
+            <property name="Category" value="smoke" />
+          </properties>
+          <output>computing total
+
+</output>
+        </test-case>
+        <test-case name="CartXunit.CartTests.ThrowsUnexpected" fullname="CartXunit.CartTests.ThrowsUnexpected" methodname="ThrowsUnexpected" classname="CartTests" result="Failed" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.0001234" asserts="0">
+          <failure>
+            <message>System.InvalidOperationException : cart service unavailable</message>
+            <stack-trace>   at CartXunit.CartTests.ThrowsUnexpected() in /work/xu/XunitTests.cs:line 44
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</stack-trace>
+          </failure>
+        </test-case>
+        <test-case name="CartXunit.CartTests.Currencies" fullname="CartXunit.CartTests.Currencies" methodname="Currencies" classname="CartTests" result="Skipped" start-time="2026-11-20T00:49:51Z" end-time="2026-11-20T00:49:51Z" duration="0.001" asserts="0" />
+      </test-suite>
+    </test-suite>
+    <errors />
+  </test-suite>
+</test-run>

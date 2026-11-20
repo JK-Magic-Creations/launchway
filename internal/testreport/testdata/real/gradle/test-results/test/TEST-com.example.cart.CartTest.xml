@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.cart.CartTest" tests="8" skipped="1" failures="3" errors="0" timestamp="2026-11-20T00:48:50.295Z" hostname="4f4c63c671de" time="0.115">
+  <properties/>
+  <testcase name="currencies()" classname="com.example.cart.CartTest" time="0.0">
+    <skipped/>
+  </testcase>
+  <testcase name="[1] &quot;10&quot;, &quot;5&quot;" classname="com.example.cart.CartTest" time="0.028"/>
+  <testcase name="[2] &quot;4&quot;, &quot;2&quot;" classname="com.example.cart.CartTest" time="0.002"/>
+  <testcase name="errorNotAssertion()" classname="com.example.cart.CartTest" time="0.005">
+    <failure message="java.lang.NullPointerException: Cannot invoke &quot;String.length()&quot; because &quot;s&quot; is null" type="java.lang.NullPointerException">java.lang.NullPointerException: Cannot invoke &quot;String.length()&quot; because &quot;s&quot; is null
+	at com.example.cart.CartTest.errorNotAssertion(CartTest.java:61)
+</failure>
+  </testcase>
+  <testcase name="negativePriceThrows()" classname="com.example.cart.CartTest" time="0.001"/>
+  <testcase name="total sums prices" classname="com.example.cart.CartTest" time="0.003"/>
+  <testcase name="tenDiscountIsWrong()" classname="com.example.cart.CartTest" time="0.005">
+    <failure message="org.opentest4j.AssertionFailedError: TEN discount ==&gt; expected: &lt;25&gt; but was: &lt;20&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: TEN discount ==&gt; expected: &lt;25&gt; but was: &lt;20&gt;
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:601)
+	at com.example.cart.CartTest.tenDiscountIsWrong(CartTest.java:32)
+</failure>
+  </testcase>
+  <testcase name="flakyPassesOnRerun()" classname="com.example.cart.CartTest" time="0.001">
+    <failure message="org.opentest4j.AssertionFailedError: fails first time ==&gt; expected: &lt;2&gt; but was: &lt;1&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: fails first time ==&gt; expected: &lt;2&gt; but was: &lt;1&gt;
+	at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:601)
+	at com.example.cart.CartTest.flakyPassesOnRerun(CartTest.java:55)
+</failure>
+  </testcase>
+  <system-out><![CDATA[cart total computed
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<testsuite name="Cucumber" time="0.012" tests="6" skipped="0" failures="3" errors="0" timestamp="2026-11-20T00:45:56.193Z">
+  <testcase classname="Shopping cart" name="Add a single item" time="0.002">
+    <system-out><![CDATA[Given an empty cart.........................................................passed
+When I add 2 "apple" items..................................................passed
+Then the cart has 2 items...................................................passed
+And I take a screenshot.....................................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Shopping cart" name="Wrong total is reported" time="0.002">
+    <failure type="AssertionError" message="Expected values to be strictly equal:&#xA;&#xA;3 !== 4&#xA;"><![CDATA[AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+3 !== 4
+
+    + expected - actual
+
+    -3
+    +4
+
+    at World.<anonymous> (/work/features/steps.js:20:10)]]></failure>
+    <system-out><![CDATA[Given an empty cart.........................................................passed
+When I add 3 "pear" items...................................................passed
+Then the cart has 4 items...................................................failed]]></system-out>
+  </testcase>
+  <testcase classname="Shopping cart" name="Checkout is pending" time="0.001">
+    <failure/>
+    <system-out><![CDATA[Given an empty cart.........................................................passed
+When I add 1 "plum" items...................................................passed
+Then I can check out........................................................pending]]></system-out>
+  </testcase>
+  <testcase classname="Shopping cart" name="Gift wrap is undefined" time="0.001">
+    <failure/>
+    <system-out><![CDATA[Given an empty cart.........................................................passed
+When I ask for gift wrapping................................................undefined]]></system-out>
+  </testcase>
+  <testcase classname="Shopping cart" name="Add several kinds - #1.1" time="0">
+    <system-out><![CDATA[Given an empty cart.........................................................passed
+When I add 1 "kiwi" items...................................................passed
+Then the cart has 1 items...................................................passed]]></system-out>
+  </testcase>
+  <testcase classname="Shopping cart" name="Add several kinds - #1.2" time="0">
+    <system-out><![CDATA[Given an empty cart.........................................................passed
+When I add 5 "mango" items..................................................passed
+Then the cart has 5 items...................................................passed]]></system-out>
+  </testcase>
+</testsuite>

@@ -1,0 +1,58 @@
+<assemblies timestamp="11/20/2026 00:49:50">
+  <assembly name="/work/xu/bin/Debug/net9.0/CartXunit.dll" run-date="2026-11-20" run-time="00:49:50" total="7" passed="3" failed="3" skipped="1" time="0.426" errors="0">
+    <errors />
+    <collection total="7" passed="3" failed="3" skipped="1" name="Test collection for CartXunit.CartTests" time="0.007">
+      <test name="CartXunit.CartTests.TenDiscountIsWrong" type="CartXunit.CartTests" method="TenDiscountIsWrong" time="0.0041766" result="Fail">
+        <failure>
+          <message>Assert.Equal() Failure: Values differ
+Expected: 25
+Actual:   20</message>
+          <stack-trace>   at CartXunit.CartTests.TenDiscountIsWrong() in /work/xu/XunitTests.cs:line 26
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</stack-trace>
+        </failure>
+        <traits>
+          <trait name="Category" value="regression" />
+          <trait name="Owner" value="cart-team" />
+        </traits>
+      </test>
+      <test name="CartXunit.CartTests.HalfDiscount(price: 4, expected: 2)" type="CartXunit.CartTests" method="HalfDiscount(price: 4, expected: 2)" time="0.0006564" result="Pass">
+        <traits />
+      </test>
+      <test name="CartXunit.CartTests.HalfDiscount(price: 10, expected: 5)" type="CartXunit.CartTests" method="HalfDiscount(price: 10, expected: 5)" time="0.0001368" result="Pass">
+        <traits />
+      </test>
+      <test name="CartXunit.CartTests.HalfDiscount(price: 3, expected: 2)" type="CartXunit.CartTests" method="HalfDiscount(price: 3, expected: 2)" time="0.0000755" result="Fail">
+        <failure>
+          <message>Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   1</message>
+          <stack-trace>   at CartXunit.CartTests.HalfDiscount(Int32 price, Int32 expected) in /work/xu/XunitTests.cs:line 38
+   at InvokeStub_CartTests.HalfDiscount(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</stack-trace>
+        </failure>
+        <traits />
+      </test>
+      <test name="CartXunit.CartTests.TotalSums" type="CartXunit.CartTests" method="TotalSums" time="0.0003944" result="Pass">
+        <output>computing total
+
+</output>
+        <traits>
+          <trait name="Category" value="smoke" />
+        </traits>
+      </test>
+      <test name="CartXunit.CartTests.ThrowsUnexpected" type="CartXunit.CartTests" method="ThrowsUnexpected" time="0.0001234" result="Fail">
+        <failure>
+          <message>System.InvalidOperationException : cart service unavailable</message>
+          <stack-trace>   at CartXunit.CartTests.ThrowsUnexpected() in /work/xu/XunitTests.cs:line 44
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</stack-trace>
+        </failure>
+        <traits />
+      </test>
+      <test name="CartXunit.CartTests.Currencies" type="CartXunit.CartTests" method="Currencies" time="0.0010000" result="Skip">
+        <traits />
+      </test>
+    </collection>
+  </assembly>
+</assemblies>

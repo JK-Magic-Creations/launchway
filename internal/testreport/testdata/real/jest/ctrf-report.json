@@ -1,0 +1,167 @@
+{
+  "reportFormat": "CTRF",
+  "specVersion": "0.2.0",
+  "reportId": "22d500f5-bc99-4e13-9ed6-07538f01c309",
+  "timestamp": "2026-11-20T00:46:34.130Z",
+  "generatedBy": "jest-ctrf-json-reporter",
+  "results": {
+    "tool": {
+      "name": "jest"
+    },
+    "summary": {
+      "tests": 7,
+      "passed": 4,
+      "failed": 1,
+      "pending": 1,
+      "skipped": 0,
+      "other": 1,
+      "start": 1795135594141,
+      "stop": 1795135594485
+    },
+    "tests": [
+      {
+        "testId": "ctrf:jest:v1:7cee68062ebce4f684c09513026bbce5e31f55ae1e1bb0e584f44d37d484e76c",
+        "executionId": "1a104954-e9d1-4bc5-9205-d892aba3a5cc",
+        "attemptId": "5ecb5c75-ad7b-41ed-961c-a1d559a580ba",
+        "name": "cart totals items",
+        "duration": 2,
+        "status": "passed",
+        "rawStatus": "passed",
+        "type": "unit",
+        "filePath": "/work/src/cart.test.js",
+        "retries": 0,
+        "flaky": false,
+        "suite": [
+          "cart.test.js",
+          "cart"
+        ]
+      },
+      {
+        "testId": "ctrf:jest:v1:f8c27b07ac52ca295851b7dfed11b10db5f12cc1d94d02ecce6b8497d835f886",
+        "executionId": "c76e33fa-df5a-49c2-860a-dd2b3e792a10",
+        "attemptId": "2156dccd-7a08-4132-8b1b-69d3f54b9543",
+        "name": "cart applies HALF discount",
+        "duration": 0,
+        "status": "passed",
+        "rawStatus": "passed",
+        "type": "unit",
+        "filePath": "/work/src/cart.test.js",
+        "retries": 0,
+        "flaky": false,
+        "suite": [
+          "cart.test.js",
+          "cart"
+        ]
+      },
+      {
+        "testId": "ctrf:jest:v1:47a3811b994a869a737aa20f61bafe74171d7a08ae38ee950a9bf32457b7993e",
+        "executionId": "b6cd7cc7-5269-428f-bf10-d870a64e3260",
+        "attemptId": "37d37aa9-7bb4-4ff7-8f02-0aa166b1ae73",
+        "name": "cart applies TEN discount (wrong expectation)",
+        "duration": 0,
+        "status": "failed",
+        "message": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 25\nReceived: 20\n",
+        "trace": "at Object.toBe (/work/src/cart.test.js:13:33)\nat Promise.finally.completed (/work/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\nat new Promise (<anonymous>)\nat callAsyncCircusFn (/work/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\nat _callCircusTest (/work/node_modules/jest-circus/build/jestAdapterInit.js:1167:40)\nat processTicksAndRejections (node:internal/process/task_queues:104:5)\nat _runTestInContext (/work/node_modules/jest-circus/build/jestAdapterInit.js:1103:3)\nat rerunTest (/work/node_modules/jest-circus/build/jestAdapterInit.js:977:7)\nat _runTestsForDescribeBlockOnce (/work/node_modules/jest-circus/build/jestAdapterInit.js:1033:5)\nat _runTestsForDescribeBlock (/work/node_modules/jest-circus/build/jestAdapterInit.js:824:5)\nat _runTestsForDescribeBlockOnce (/work/node_modules/jest-circus/build/jestAdapterInit.js:1003:11)\nat _runTestsForDescribeBlock (/work/node_modules/jest-circus/build/jestAdapterInit.js:824:5)\nat run (/work/node_modules/jest-circus/build/jestAdapterInit.js:789:3)\nat runAndTransformResultsToJestFormat (/work/node_modules/jest-circus/build/jestAdapterInit.js:2300:21)\nat jestAdapter (/work/node_modules/jest-circus/build/runner.js:111:19)\nat runTestInternal (/work/node_modules/jest-runner/build/index.js:247:16)\nat runTest (/work/node_modules/jest-runner/build/index.js:315:7)",
+        "rawStatus": "failed",
+        "type": "unit",
+        "filePath": "/work/src/cart.test.js",
+        "retries": 2,
+        "retryAttempts": [
+          {
+            "attempt": 1,
+            "attemptId": "dacfda5c-7c82-4b74-af61-8c045cf2b14c",
+            "status": "failed",
+            "message": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 25\nReceived: 20\n    at Object.toBe (/work/src/cart.test.js:13:33)\n    at Promise.finally.completed (/work/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (/work/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\n    at _callCircusTest (/work/node_modules/jest-circus/build/jestAdapterInit.js:1167:40)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at _runTestInContext (/work/node_modules/jest-circus/build/jestAdapterInit.js:1103:3)\n    at runTestWithContext (/work/node_modules/jest-circus/build/jestAdapterInit.js:996:5)\n    at _runTestsForDescribeBlockOnce (/work/node_modules/jest-circus/build/jestAdapterInit.js:1008:11)\n    at _runTestsForDescribeBlock (/work/node_modules/jest-circus/build/jestAdapterInit.js:824:5)\n    at _runTestsForDescribeBlockOnce (/work/node_modules/jest-circus/build/jestAdapterInit.js:1003:11)\n    at _runTestsForDescribeBlock (/work/node_modules/jest-circus/build/jestAdapterInit.js:824:5)\n    at run (/work/node_modules/jest-circus/build/jestAdapterInit.js:789:3)\n    at runAndTransformResultsToJestFormat (/work/node_modules/jest-circus/build/jestAdapterInit.js:2300:21)\n    at jestAdapter (/work/node_modules/jest-circus/build/runner.js:111:19)\n    at runTestInternal (/work/node_modules/jest-runner/build/index.js:247:16)\n    at runTest (/work/node_modules/jest-runner/build/index.js:315:7)"
+          },
+          {
+            "attempt": 2,
+            "attemptId": "44dcc925-cffc-44f3-9371-dd57548812f6",
+            "status": "failed",
+            "message": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 25\nReceived: 20\n    at Object.toBe (/work/src/cart.test.js:13:33)\n    at Promise.finally.completed (/work/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (/work/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\n    at _callCircusTest (/work/node_modules/jest-circus/build/jestAdapterInit.js:1167:40)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at _runTestInContext (/work/node_modules/jest-circus/build/jestAdapterInit.js:1103:3)\n    at rerunTest (/work/node_modules/jest-circus/build/jestAdapterInit.js:977:7)\n    at _runTestsForDescribeBlockOnce (/work/node_modules/jest-circus/build/jestAdapterInit.js:1033:5)\n    at _runTestsForDescribeBlock (/work/node_modules/jest-circus/build/jestAdapterInit.js:824:5)\n    at _runTestsForDescribeBlockOnce (/work/node_modules/jest-circus/build/jestAdapterInit.js:1003:11)\n    at _runTestsForDescribeBlock (/work/node_modules/jest-circus/build/jestAdapterInit.js:824:5)\n    at run (/work/node_modules/jest-circus/build/jestAdapterInit.js:789:3)\n    at runAndTransformResultsToJestFormat (/work/node_modules/jest-circus/build/jestAdapterInit.js:2300:21)\n    at jestAdapter (/work/node_modules/jest-circus/build/runner.js:111:19)\n    at runTestInternal (/work/node_modules/jest-runner/build/index.js:247:16)\n    at runTest (/work/node_modules/jest-runner/build/index.js:315:7)"
+          }
+        ],
+        "flaky": false,
+        "suite": [
+          "cart.test.js",
+          "cart"
+        ]
+      },
+      {
+        "testId": "ctrf:jest:v1:0770f25f4a92849df1759842508609a27df1353e1ef7087f365156a49c53a9bc",
+        "executionId": "a36a85f5-517f-483b-a48e-18b749538f5a",
+        "attemptId": "0dd14573-e125-4551-a450-977f41a7bead",
+        "name": "cart free shipping over 50",
+        "duration": 0,
+        "status": "pending",
+        "rawStatus": "pending",
+        "type": "unit",
+        "filePath": "/work/src/cart.test.js",
+        "retries": 0,
+        "flaky": false,
+        "suite": [
+          "cart.test.js",
+          "cart"
+        ]
+      },
+      {
+        "testId": "ctrf:jest:v1:b0b56a493eeb4946da445b44cc9bc0476b4e1c8a4f9925df64a9209659315db9",
+        "executionId": "d0bb451f-7664-4689-9408-58fbbec4f1a3",
+        "attemptId": "a07ff1e6-72d9-4d68-9d49-398616c06d1f",
+        "name": "cart supports currencies",
+        "duration": 0,
+        "status": "other",
+        "rawStatus": "todo",
+        "type": "unit",
+        "filePath": "/work/src/cart.test.js",
+        "retries": 0,
+        "flaky": false,
+        "suite": [
+          "cart.test.js",
+          "cart"
+        ]
+      },
+      {
+        "testId": "ctrf:jest:v1:1b4153eee043de07b168952a7e00ee33f2557c5a151f3212d7cece1803481485",
+        "executionId": "2b78b278-6873-420c-a8bb-affd6855d93a",
+        "attemptId": "fb96bebc-ecc5-43c4-b03e-659476f1ee3a",
+        "name": "cart nested group no code keeps amount",
+        "duration": 8,
+        "status": "passed",
+        "rawStatus": "passed",
+        "type": "unit",
+        "filePath": "/work/src/cart.test.js",
+        "retries": 0,
+        "flaky": false,
+        "suite": [
+          "cart.test.js",
+          "cart",
+          "nested group"
+        ]
+      },
+      {
+        "testId": "ctrf:jest:v1:554d17ef151a3e0dbeba56e1c8c41e226eca021e23e1abb8cb7af7a802b51b64",
+        "executionId": "3b5fa4a3-bcb3-4c6f-8081-432e767d2975",
+        "attemptId": "3b220e83-a742-416f-89f3-7d8c33d53192",
+        "name": "flaky: passes on retry",
+        "duration": 1,
+        "status": "passed",
+        "rawStatus": "passed",
+        "type": "unit",
+        "filePath": "/work/src/cart.test.js",
+        "retries": 1,
+        "retryAttempts": [
+          {
+            "attempt": 1,
+            "attemptId": "75ee975f-8cd0-4ecd-81b6-40969c146ffa",
+            "status": "failed",
+            "message": "Error: expect(received).toBeGreaterThan(expected)\n\nExpected: > 1\nReceived:   1\n    at Object.toBeGreaterThan (/work/src/cart.test.js:33:19)\n    at Promise.finally.completed (/work/node_modules/jest-circus/build/jestAdapterInit.js:1834:28)\n    at new Promise (<anonymous>)\n    at callAsyncCircusFn (/work/node_modules/jest-circus/build/jestAdapterInit.js:1774:10)\n    at _callCircusTest (/work/node_modules/jest-circus/build/jestAdapterInit.js:1167:40)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at _runTestInContext (/work/node_modules/jest-circus/build/jestAdapterInit.js:1103:3)\n    at runTestWithContext (/work/node_modules/jest-circus/build/jestAdapterInit.js:996:5)\n    at _runTestsForDescribeBlockOnce (/work/node_modules/jest-circus/build/jestAdapterInit.js:1008:11)\n    at _runTestsForDescribeBlock (/work/node_modules/jest-circus/build/jestAdapterInit.js:824:5)\n    at run (/work/node_modules/jest-circus/build/jestAdapterInit.js:789:3)\n    at runAndTransformResultsToJestFormat (/work/node_modules/jest-circus/build/jestAdapterInit.js:2300:21)\n    at jestAdapter (/work/node_modules/jest-circus/build/runner.js:111:19)\n    at runTestInternal (/work/node_modules/jest-runner/build/index.js:247:16)\n    at runTest (/work/node_modules/jest-runner/build/index.js:315:7)"
+          }
+        ],
+        "flaky": true,
+        "suite": [
+          "cart.test.js"
+        ]
+      }
+    ]
+  }
+}

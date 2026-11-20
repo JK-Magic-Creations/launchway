@@ -1,0 +1,59 @@
+<assemblies timestamp="11/20/2026 00:49:52">
+  <assembly name="/work/nu/bin/Debug/net9.0/CartNunit.dll" run-date="2026-11-20" run-time="00:49:52" total="8" passed="4" failed="2" skipped="1" time="0.506" errors="0">
+    <errors />
+    <collection total="8" passed="4" failed="2" skipped="1" name="Test collection for CartNunit.CartTests" time="0.025">
+      <test name="Currencies" type="CartNunit.CartTests" method="Currencies" time="0.0011100" result="Skip">
+        <output>waiting for currency support
+</output>
+        <traits />
+      </test>
+      <test name="FlakyPassesOnRetry" type="CartNunit.CartTests" method="FlakyPassesOnRetry" time="0.0180580" result="Pass">
+        <traits />
+      </test>
+      <test name="HalfDiscount(10,5)" type="CartNunit.CartTests" method="HalfDiscount(10,5)" time="0.0028990" result="Pass">
+        <traits />
+      </test>
+      <test name="HalfDiscount(4,2)" type="CartNunit.CartTests" method="HalfDiscount(4,2)" time="0.0001840" result="Pass">
+        <traits />
+      </test>
+      <test name="Inconclusive" type="CartNunit.CartTests" method="Inconclusive" time="0.0003280" result="Unknown">
+        <output>environment not ready
+</output>
+        <traits />
+      </test>
+      <test name="TenDiscountIsWrong" type="CartNunit.CartTests" method="TenDiscountIsWrong" time="0.0006380" result="Fail">
+        <failure>
+          <message>  TEN discount
+Assert.That(30 - 10, Is.EqualTo(25))
+  Expected: 25
+  But was:  20
+</message>
+          <stack-trace>   at CartNunit.CartTests.TenDiscountIsWrong() in /work/nu/NunitTests.cs:line 25
+
+1)    at CartNunit.CartTests.TenDiscountIsWrong() in /work/nu/NunitTests.cs:line 25
+
+</stack-trace>
+        </failure>
+        <traits>
+          <trait name="Owner" value="cart-team" />
+        </traits>
+      </test>
+      <test name="ThrowsUnexpected" type="CartNunit.CartTests" method="ThrowsUnexpected" time="0.0011650" result="Fail">
+        <failure>
+          <message>System.InvalidOperationException : cart service unavailable</message>
+          <stack-trace>   at CartNunit.CartTests.ThrowsUnexpected() in /work/nu/NunitTests.cs:line 56
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+</stack-trace>
+        </failure>
+        <traits />
+      </test>
+      <test name="TotalSums" type="CartNunit.CartTests" method="TotalSums" time="0.0001360" result="Pass">
+        <output>computing total
+
+</output>
+        <traits />
+      </test>
+    </collection>
+  </assembly>
+</assemblies>
