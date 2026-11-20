@@ -256,6 +256,10 @@ type Job struct {
 	// what it puts in the workspace before (schema 12).
 	Artifacts *JobArtifacts `json:"artifacts,omitempty"`
 	Fetch     []JobFetch    `json:"fetch,omitempty"`
+	// Cache says which caches the runner restores before the step and
+	// saves after it (schema 25). Only runners with FeatureCache are given
+	// steps that have any.
+	Cache *JobCache `json:"cache,omitempty"`
 	// Deploy, for a deploy or rollback step, is the action a deploy runner
 	// does. Only deploy runners lease such steps.
 	Deploy *DeployJob `json:"deploy,omitempty"`
@@ -316,6 +320,9 @@ type Result struct {
 	// (schema 19); AI, for an ai step, what the call used.
 	Verify *VerifyResult `json:"verify,omitempty"`
 	AI     *AIRecord     `json:"ai,omitempty"`
+	// Caches is what each of a step's caches did (schema 25): restored,
+	// missed, saved or not saved, and why. It never changes the outcome.
+	Caches []CacheResult `json:"caches,omitempty"`
 }
 
 // CollectedReports are the report files a runner found after a step, and
@@ -716,6 +723,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		if !e.knows(schemaResources) {
 			return nil, fmt.Errorf("%w: this server does not know step resources (resources:, schema %d)", ErrConflict, schemaResources)
 		}
+	}
+	if nr.Pipeline.UsesSchemaCache() && !e.knows(schemaCache) {
+		return nil, fmt.Errorf("%w: this server does not know build caches (cache:, schema %d)", ErrConflict, schemaCache)
 	}
 	// Step resources above the installation's limits could never be given;
 	// say so now, naming the limit, instead of failing the step later.
@@ -1335,6 +1345,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		if err := c.finish12(l, res, &p, prep12); err != nil {
 			return err
 		}
+		p.Caches = c.keepCacheResults(c.st.Pipeline.Step(l.stepID), res.Caches)
 		coverageFail, err := c.finish18(l, res, &p, prep18)
 		if err != nil {
 			return err

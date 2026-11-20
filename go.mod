@@ -9,6 +9,7 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.5
 	github.com/google/go-containerregistry v0.22.1
 	github.com/jackc/pgx/v5 v5.13.0
+	github.com/klauspost/compress v1.20.2
 	github.com/moby/buildkit v0.35.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/sigstore/sigstore v1.10.8
@@ -75,7 +76,6 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.3 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect

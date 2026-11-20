@@ -104,36 +104,42 @@ func (p *Pipeline) UsesSchemaCache() bool {
 	return false
 }
 
-// CheckCache returns why a cache, as it will run, is not valid, or "". The
-// parser calls it for values written in place; for a step a loop repeats it
-// is called again once the loop's values are in (see expandLoops), when the
-// name may have become something else.
-func CheckCache(c *Cache) string {
+// CacheProblems returns everything wrong with a cache as it will run, in
+// words, or nothing. The parser calls it for values written in place; for a
+// step a loop repeats it is called again once the loop's values are in (see
+// the expansion of loops), when the name may have become something else.
+func CacheProblems(c *Cache) []string {
+	var out []string
 	switch {
 	case c.Name == "":
-		return "a cache needs a name, such as name: pip"
+		out = append(out, "a cache needs a name, such as name: pip")
 	case !ValidArtifactName(c.Name):
-		return quoteText(c.Name) + " is not a valid cache name: use lower-case letters, digits, '.', '-' and '_', starting with a letter or digit, at most 64"
+		out = append(out, quoteText(c.Name)+" is not a valid cache name: use lower-case letters, digits, '.', '-' and '_', starting with a letter or digit, at most 64")
+	}
+	switch {
 	case len(c.Paths) == 0:
-		return "say which directories or files to keep, such as paths: [.cache/pip]"
+		out = append(out, "say which directories or files to keep, such as paths: [.cache/pip]")
 	case len(c.Paths) > MaxCachePaths:
-		return "at most " + strconv.Itoa(MaxCachePaths) + " paths per cache"
-	case len(c.Key.Files) == 0 && c.Key.Text == "":
-		return "a key needs files, text or both, such as key: { files: [requirements.txt] }; with neither, the entry would never change"
-	case len(c.Key.Files) > MaxCacheKeyFiles:
-		return "key.files has at most " + strconv.Itoa(MaxCacheKeyFiles) + " globs"
-	case utf8.RuneCountInString(c.Key.Text) > MaxCacheKeyText || !utf8.ValidString(c.Key.Text) || strings.ContainsFunc(c.Key.Text, unicode.IsControl):
-		return "key.text is at most " + strconv.Itoa(MaxCacheKeyText) + " characters of plain text"
+		out = append(out, "at most "+strconv.Itoa(MaxCachePaths)+" paths per cache")
 	}
 	for _, g := range c.Paths {
 		if _, msg := checkGlob(g, "cached paths"); msg != "" {
-			return msg
+			out = append(out, msg)
 		}
+	}
+	switch {
+	case len(c.Key.Files) == 0 && c.Key.Text == "":
+		out = append(out, "a key needs files, text or both, such as key: { files: [requirements.txt] }; with neither, the entry would never change")
+	case len(c.Key.Files) > MaxCacheKeyFiles:
+		out = append(out, "key.files has at most "+strconv.Itoa(MaxCacheKeyFiles)+" globs")
 	}
 	for _, g := range c.Key.Files {
 		if _, msg := checkGlob(g, "key files"); msg != "" {
-			return msg
+			out = append(out, msg)
 		}
 	}
-	return ""
+	if utf8.RuneCountInString(c.Key.Text) > MaxCacheKeyText || !utf8.ValidString(c.Key.Text) || strings.ContainsFunc(c.Key.Text, unicode.IsControl) {
+		out = append(out, "key.text is at most "+strconv.Itoa(MaxCacheKeyText)+" characters of plain text")
+	}
+	return out
 }

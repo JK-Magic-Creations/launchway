@@ -1,0 +1,17 @@
+# Keeps npm's download cache between runs. The key is the lock file, so the
+# cache changes exactly when the dependencies do. save: always keeps what a
+# failed install managed to download.
+pipeline: node-with-cache
+steps:
+  test:
+    image: docker.io/library/node:24-slim
+    cache:
+      - name: npm
+        paths: [.npm]
+        key: { files: [package-lock.json] }
+        fallback: latest
+        save: always
+    env: { npm_config_cache: .npm }
+    run: |
+      npm ci --prefer-offline
+      npm test

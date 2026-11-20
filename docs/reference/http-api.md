@@ -398,7 +398,7 @@ needs an administrator, and every change is audited with the values before and a
 
 ## Build caches
 
-A step's `cache:` key (see the pipeline reference) keeps directories between runs.
+A step's `cache:` key (see [the pipeline reference](pipeline.md#cache)) keeps directories between runs.
 Runners look entries up, send them in chunks and restore them under a lease, with the routes in the
 runner API below. The request never says which scope an entry is in: the server works the scope out
 from the run the lease belongs to (`default` for the default branch, `ref:<ref>` for another branch or
@@ -564,6 +564,7 @@ In outline, a runner long-polls for work (`lease`), says the step started (`star
 | `PUT /api/runner/v1/caches/chunk` | `runner` | — | Uploads one chunk of an entry. It is its own route, not the artifacts', because an entry is one archive with rows and limits of its own. |
 | `POST /api/runner/v1/caches/commit` | `runner` | — | Keeps an entry whose bytes have all arrived, evicting the project's least recently used entries if the quota needs room. |
 | `POST /api/runner/v1/caches/download` | `runner` | — | Restores an entry the step's lookup may return, from an offset. |
+| `POST /api/runner/v1/caches/discard` | `runner` | — | Ends an entry the runner proved damaged (its bytes are not what they were saved as, or not an archive Launchway made), so that the next run saves a good one. Entries are never changed, so without it a damaged one would fail every restore until it fell idle. Only an entry the step's own lookup may return. |
 | `POST /api/runner/v1/deploy/lease` | `runner` | — | A deploy runner waits for deploy or rollback work for its targets. |
 | `POST /api/runner/v1/deploy/watch` | `runner` | — | A deploy runner learns which deployments to watch. |
 | `POST /api/runner/v1/deploy/observe` | `runner` | — | A deploy runner reports what it observes of them. |

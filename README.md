@@ -43,6 +43,9 @@ Recently added, each described in the [user guide](docs/guide/index.md):
 
 - artifacts, test attachments and hosted reports kept in the database, so several servers share
   them with nothing else to run ([where artifacts are kept](docs/artifacts.md));
+- build caches that keep dependencies between runs, with nothing but the database to run, and
+  entries a pull request can write but the default branch never reads
+  ([build caches](docs/guide/build-caches.md));
 - test reports in 13 formats, with coverage thresholds and the tools' own HTML reports
   ([test reports](docs/guide/test-reports.md));
 - an MCP endpoint for AI agents, with the rights of the token they hold ([agents](docs/guide/agents.md));

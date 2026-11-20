@@ -388,6 +388,14 @@ type runView struct {
 		Attempt  int    `json:"attempt"`
 		Error    string `json:"error"`
 		ExitCode *int   `json:"exit_code"`
+		Caches   []struct {
+			Name     string `json:"name"`
+			Result   string `json:"result"`
+			Restored string `json:"restored"`
+			Bytes    int64  `json:"bytes"`
+			Scope    string `json:"scope"`
+			Reason   string `json:"reason"`
+		} `json:"caches"`
 	} `json:"step_list"`
 	TriggerDetail *struct {
 		Inputs   map[string]string `json:"inputs"`
@@ -597,6 +605,22 @@ func (cl *client) show(args []string) error {
 			line += ": " + s.Error
 		}
 		fmt.Fprintln(cl.out, line)
+		for _, c := range s.Caches {
+			what := strings.ReplaceAll(c.Result, "_", " ")
+			if c.Result == "saved" && c.Restored != "" {
+				what = "saved (restored: " + c.Restored + ")"
+			}
+			if c.Bytes > 0 {
+				what += ", " + byteText(c.Bytes)
+			}
+			if c.Scope != "" {
+				what += ", scope " + c.Scope
+			}
+			if c.Reason != "" {
+				what += ": " + c.Reason
+			}
+			fmt.Fprintf(cl.out, "             cache %s: %s\n", c.Name, what)
+		}
 	}
 	return nil
 }

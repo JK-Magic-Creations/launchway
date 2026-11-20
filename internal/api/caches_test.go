@@ -188,3 +188,21 @@ func TestCacheRoutes(t *testing.T) {
 		t.Fatalf("%d %s", st, body)
 	}
 }
+
+// get_run says what each step's caches did, in text an agent may read.
+func TestMCPRunBriefHasTheCaches(t *testing.T) {
+	d := &engine.RunDetail{StepList: []engine.StepView{{ID: "test", Status: engine.StepSucceeded, Attempt: 1, Caches: []engine.CacheResult{
+		{Name: "pip", Result: engine.CacheSaved, Restored: engine.CacheFallback, Bytes: 5, Scope: "default"},
+		{Name: "models", Result: engine.CacheNotSaved, Reason: "a draft run\nsaves no cache"}}}}}
+	out := (&mcpCall{}).describeRun(d)
+	if len(out.Steps) != 1 || len(out.Steps[0].Caches) != 2 {
+		t.Fatalf("%+v", out.Steps)
+	}
+	c := out.Steps[0].Caches
+	if c[0].Name != "pip" || c[0].Result != "saved" || c[0].Restored != "fallback" || c[0].Bytes != 5 || c[0].Scope != "default" {
+		t.Errorf("%+v", c[0])
+	}
+	if c[1].Result != "not_saved" || !strings.Contains(c[1].Reason, "saves no cache") {
+		t.Errorf("%+v", c[1])
+	}
+}

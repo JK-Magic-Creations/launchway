@@ -144,6 +144,7 @@ var permissionTable = map[string]matrixRow{
 	"PUT /api/runner/v1/caches/chunk":     {"PUT", "/api/runner/v1/caches/chunk", "x", [6]int{401, 401, 401, 401, 401, 401}},
 	"POST /api/runner/v1/caches/commit":   {"POST", "/api/runner/v1/caches/commit", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"POST /api/runner/v1/caches/download": {"POST", "/api/runner/v1/caches/download", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/discard":  {"POST", "/api/runner/v1/caches/discard", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"GET /api/v1/projects/{name}/caches":  {"GET", "/api/v1/projects/pay-api/caches", "", [6]int{401, 404, 200, 200, 404, 200}},
 	// Nothing is cached, so deleting is a 404 after the permission check.
 	"DELETE /api/v1/projects/{name}/caches/{id}":  {"DELETE", "/api/v1/projects/pay-api/caches/cch_nope", "", [6]int{401, 404, 403, 404, 404, 404}},

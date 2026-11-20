@@ -55,6 +55,10 @@ type Runner struct {
 	// (launchway runner): it never uses a directory of its own host as a
 	// run's source, whatever the server says.
 	Remote bool
+	// CachePlatform is the platform build caches are kept for: the runner's
+	// operating system and architecture (linux/amd64) unless a test says
+	// otherwise.
+	CachePlatform string
 
 	wsMu    sync.Mutex
 	wsLocks map[string]*sync.Mutex
@@ -87,6 +91,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	}
 	if !r.Info.Has(engine.FeatureCoverage) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCoverage)
+	}
+	if !r.Info.Has(engine.FeatureCache) {
+		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCache)
 	}
 	if r.Images != nil && len(r.Images.Builders) > 0 && !r.Info.Has(engine.FeatureImages) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureImages)
@@ -310,7 +317,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	// runner is shutting down (the step will run again elsewhere).
 	if collect != nil && !wasLost && parent.Err() == nil {
 		got := collect(outcomeOf(res, wasRequested))
-		res.Tests, res.Findings, res.Coverage = got.tests, got.findings, got.coverage
+		res.Tests, res.Findings, res.Coverage, res.Caches = got.tests, got.findings, got.coverage, got.caches
 	}
 	close(bgStop)
 	<-bgDone
@@ -321,7 +328,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	case wasLost:
 		res = engine.Result{} // the server already moved on; nothing to report
 	case wasRequested:
-		res = engine.Result{Outcome: "canceled", Error: "canceled", Tests: res.Tests, Findings: res.Findings, Coverage: res.Coverage}
+		res = engine.Result{Outcome: "canceled", Error: "canceled", Tests: res.Tests, Findings: res.Findings, Coverage: res.Coverage, Caches: res.Caches}
 	case parent.Err() != nil:
 		res = engine.Result{Outcome: "canceled", Error: "the runner is shutting down"}
 		sys("The runner is shutting down; the step will be run again.")
@@ -366,11 +373,11 @@ const collectTimeout = 2 * time.Minute
 
 // collector returns what collects a step's report files once it has run,
 // or nil if the step declares none.
-func (r *Runner) collector(job *engine.Job, spec executor.Spec, sys func(string, ...any)) func(outcome string) collected {
+func (r *Runner) collector(job *engine.Job, spec executor.Spec, sys func(string, ...any), caches *cacheRun) func(outcome string) collected {
 	tests := r.testCollector(job, spec, sys)
 	findings := r.findingCollector(job, spec, sys)
 	cover := r.coverageCollector(job, spec, sys)
-	if tests == nil && findings == nil && cover == nil && job.Artifacts == nil {
+	if tests == nil && findings == nil && cover == nil && job.Artifacts == nil && caches == nil {
 		return nil
 	}
 	return func(outcome string) collected {
@@ -385,6 +392,10 @@ func (r *Runner) collector(job *engine.Job, spec executor.Spec, sys func(string,
 			c.coverage = cover()
 		}
 		r.keepArtifacts(job, spec, outcome, sys)
+		if caches != nil {
+			caches.save(outcome)
+			c.caches = caches.results()
+		}
 		return c
 	}
 }
@@ -497,9 +508,13 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: env,
 		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask, AsksResources: job.ResourcesAsked,
 	}
-	collect := r.collector(job, spec, sys)
+	caches := r.newCacheRun(job, spec, sys)
+	collect := r.collector(job, spec, sys, caches)
 	if failed := r.fetch(ctx, job, spec, sys, out); failed != nil {
 		return *failed, nil
+	}
+	if caches != nil {
+		caches.restore(ctx, out)
 	}
 	code, err := r.Exec.Run(tctx, spec, func(stream, text string) {
 		if stream == "system" {

@@ -102,7 +102,7 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 	outDir := filepath.Join(work, "build", imagebuild.OutDir)
 	collectSpec := spec
 	collectSpec.Workspace = outDir
-	inner := r.collector(job, collectSpec, sys)
+	inner := r.collector(job, collectSpec, sys, nil)
 	collect := func(outcome string) collected {
 		defer os.RemoveAll(work)
 		if inner == nil {

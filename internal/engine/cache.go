@@ -545,6 +545,31 @@ func (e *Engine) OpenCache(ctx context.Context, leaseID, id string, offset int64
 	return r, row.Bytes, row.SHA256, err
 }
 
+// DiscardCache ends an entry that a runner could not restore because its
+// bytes are not what they were saved as: damaged on the way, or in the
+// store, or not an archive Launchway made. Entries are never changed, so
+// without this a damaged one would be found, fail and be found again until
+// it fell idle. Only an entry the lease's step could restore may be
+// discarded, and only the run's own project's.
+func (e *Engine) DiscardCache(leaseID, id, why string) error {
+	row, err := cacheRow(e.db, id)
+	if err != nil {
+		return err
+	}
+	cc, err := e.cacheFor(leaseID, row.Name)
+	if err != nil {
+		if errors.Is(err, ErrInvalid) {
+			err = fmt.Errorf("%w: cache entry %s", ErrNotFound, id)
+		}
+		return err
+	}
+	if row.Project != cc.st.Project || !cc.scopes.canRead(row.Scope) || row.Status != cacheKept {
+		return fmt.Errorf("%w: cache entry %s", ErrNotFound, id)
+	}
+	e.log.Warn("a runner could not restore a cache entry and it is ended", "project", row.Project, "entry", id, "why", why)
+	return e.endCacheByID(id, "runner", "could not be restored: "+cleanText(why, 150))
+}
+
 // ---- saving ----
 
 // BeginCache declares an entry to save.

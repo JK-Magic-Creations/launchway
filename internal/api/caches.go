@@ -141,6 +141,26 @@ func (s *Server) cacheDownload(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.Copy(w, body)
 }
 
+// cacheDiscard ends an entry the runner proved damaged.
+func (s *Server) cacheDiscard(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		LeaseID string `json:"lease_id"`
+		CacheID string `json:"cache_id"`
+		Reason  string `json:"reason"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	if !s.leaseAllowed(w, r, in.LeaseID) {
+		return
+	}
+	if err := s.Engine.DiscardCache(in.LeaseID, in.CacheID, in.Reason); err != nil {
+		s.failArtifact(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ended": true})
+}
+
 // ---- entries ----
 
 func (s *Server) listCaches(w http.ResponseWriter, r *http.Request) {

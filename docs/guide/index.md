@@ -13,6 +13,7 @@ key and setting see the [reference](../reference/index.md).
 | [Approvals and re-runs](approvals-and-reruns.md) | Approval steps, re-running from a step, what each step was given |
 | [Test reports](test-reports.md) | 13 formats, attachments, coverage, hosted HTML reports, flaky tests, history |
 | [Artifacts](artifacts.md) | Files steps keep and fetch, storage, limits |
+| [Build caches](build-caches.md) | Keeping dependencies between runs, keys, who can read and write what, limits |
 | [Where artifacts are kept](../artifacts.md) | The database, filesystem and S3 stores, measurements, moving between them |
 | [Security findings and SBOMs](security-findings.md) | SARIF findings, new and fixed, SBOMs, component search |
 | [Container images](images.md) | BuildKit builds, scans, push rules, signing, provenance |

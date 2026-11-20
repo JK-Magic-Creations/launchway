@@ -802,6 +802,9 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	if out.UsesSchemaResources() {
 		out.Requires = max(out.Requires, SchemaResources)
 	}
+	if out.UsesSchemaCache() {
+		out.Requires = max(out.Requires, SchemaCache)
+	}
 	return out, nil
 }
 

@@ -65,7 +65,7 @@ func create(t *testing.T, e *Engine, src string, trig Trigger) string {
 	return r.ID
 }
 
-var runner = RunnerInfo{ID: "runner-1", Name: "test", Features: FeatureArtifacts + " " + FeatureCoverage}
+var runner = RunnerInfo{ID: "runner-1", Name: "test", Features: FeatureArtifacts + " " + FeatureCoverage + " " + FeatureCache}
 
 // take leases one step (without waiting) and fails the test if there is none.
 func take(t *testing.T, e *Engine) *Job {

@@ -75,6 +75,8 @@ func (p *Pipeline) UsesSchemaResources() bool {
 // notHere are keys that are known but that a mapping does not take, with
 // why. They are reported instead of the list of keys expected.
 var notHere = map[string]string{
+	"cache": "cache keeps a directory between runs for steps that run a script. An image step has a cache key of its own, a different shape, " +
+		"for the registry that keeps its build layers; deploy, rollout, rollback, verify and ai steps run in the runner and an approval runs nothing",
 	"resources": "resources are for steps that run a script. An image step is built by the builder, whose memory is set where the builder is " +
 		"deployed; deploy, rollout, rollback, verify and ai steps run in the runner and an approval runs nothing. A container under containers " +
 		"takes cpu and memory",

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
@@ -109,6 +110,28 @@ func TestCLICaches(t *testing.T) {
 		}
 		if err != nil || !found {
 			t.Fatalf("audit %s: %v %+v", action, err, entries)
+		}
+	}
+}
+
+// runs show says what each step's caches did.
+func TestRunsShowListsCaches(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"id":"run_1","project":"shop","number":7,"status":"succeeded","event":"push","branch":"main","sha":"0123456789abcdef","actor":"ann","created_at":1,
+			"step_list":[{"id":"test","status":"succeeded","attempt":1,"caches":[
+				{"name":"pip","result":"hit","bytes":125829120,"scope":"default"},
+				{"name":"npm","result":"saved","restored":"fallback","bytes":2097152,"scope":"pull:3"},
+				{"name":"models","result":"not_saved","reason":"a draft run saves no cache"}]}]}`)
+	}))
+	defer srv.Close()
+	var out bytes.Buffer
+	cl := newClient(credentials{Server: srv.URL, Token: "t"}, &out)
+	if err := cl.show([]string{"run_1"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"cache pip: hit, 120.0 MiB, scope default", "cache npm: saved (restored: fallback), 2.0 MiB, scope pull:3", "cache models: not saved: a draft run saves no cache"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("missing %q in:\n%s", want, out.String())
 		}
 	}
 }

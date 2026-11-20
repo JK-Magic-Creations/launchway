@@ -148,6 +148,8 @@ type StepState struct {
 	// its test totals, findings, SBOM and image, as in the event that
 	// ended it.
 	Evidence *StepEvidence
+	// Caches is what the latest attempt's caches did (schema 25).
+	Caches []CacheResult
 	// Ver, for a verify step, is its verification once started (schema
 	// 19); AI, for an ai step, what its last call used.
 	Ver *VerifyState
@@ -495,6 +497,7 @@ func (st *RunState) apply(ev Event) {
 		s.Outputs = nil
 		s.Excerpt = ""
 		s.Evidence = nil
+		s.Caches = nil
 
 	case StepSkipped:
 		s.Status = StepSkippedS
@@ -545,6 +548,7 @@ func (st *RunState) apply(ev Event) {
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
 		s.Evidence = evidenceOf(p)
+		s.Caches = p.Caches
 		if p.AI != nil {
 			s.AI = p.AI
 		}
@@ -563,6 +567,7 @@ func (st *RunState) apply(ev Event) {
 		if e := evidenceOf(p); e != nil {
 			s.Evidence = e
 		}
+		s.Caches = p.Caches
 
 	case StepReset:
 		s.Status = StepPending
@@ -572,7 +577,7 @@ func (st *RunState) apply(ev Event) {
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.clearDecision()
 		s.WaitKind, s.Dep = "", nil
-		s.Gate, s.Evidence = nil, nil
+		s.Gate, s.Evidence, s.Caches = nil, nil, nil
 		s.Ver, s.AI = nil, nil
 
 	case StepWaiting:

@@ -91,6 +91,14 @@ func (k *Kubernetes) StageFiles(ctx context.Context, s Spec, globs []string, lim
 		return &Staged{Notes: p.notes}, err
 	}
 	out := &Staged{Notes: p.notes}
+	if len(names) > 1 {
+		// One tar stream for all of them: a file at a time is an exec
+		// each, which is far too slow for the thousands of files a cache
+		// holds.
+		files, err := k.copyOutMany(ctx, pod, names, dir, lim)
+		out.Files = files
+		return out, err
+	}
 	var total int64
 	for i, name := range names {
 		local := filepath.Join(dir, strconv.Itoa(i))
@@ -239,4 +247,112 @@ func writePlacedTar(w io.Writer, files []PlacedFile) error {
 		}
 	}
 	return tw.Close()
+}
+
+// WorkspaceInPod implements WorkspaceStager: the workspace is in the pod
+// once the runner has set it up for the run's workspace.
+func (k *Kubernetes) WorkspaceInPod(s Spec) bool {
+	k.mu.Lock()
+	rp := k.pods[s.RunID]
+	k.mu.Unlock()
+	if rp == nil {
+		return false
+	}
+	rp.mu.Lock()
+	defer rp.mu.Unlock()
+	return rp.ready && rp.workspace == s.WorkspaceID
+}
+
+// copyOutMany copies regular files out of the pod with one tar stream. The
+// names are those the listing found, which does not follow symbolic links;
+// what comes back is accepted only if it is a regular file with a name that
+// was asked for (a link put in its place meanwhile arrives as a link, and
+// is refused).
+func (k *Kubernetes) copyOutMany(ctx context.Context, pod string, names []string, dir string, lim StageLimits) ([]StagedFile, error) {
+	want := make(map[string]int, len(names))
+	for i, n := range names {
+		want[n] = i
+	}
+	pr, pw := io.Pipe()
+	var stderr bytes.Buffer
+	done := make(chan error, 1)
+	go func() {
+		err := k.exec(ctx, pod, helperName, []string{"sh", "-c", `cd /workspace && exec tar -c -f - -T -`},
+			strings.NewReader(strings.Join(names, "\n")+"\n"), pw, &stderr)
+		pw.CloseWithError(err)
+		done <- err
+	}()
+	files := make([]StagedFile, len(names))
+	got := make([]bool, len(names))
+	var total int64
+	rerr := func() error {
+		tr := tar.NewReader(pr)
+		for {
+			h, err := tr.Next()
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			name := path.Clean(strings.TrimPrefix(h.Name, "./"))
+			i, ok := want[name]
+			switch {
+			case h.Typeflag == tar.TypeDir:
+				continue
+			case !ok:
+				return notKept("%s was not asked for", name)
+			case h.Typeflag != tar.TypeReg:
+				return notKept("%s is not a regular file", name)
+			case got[i]:
+				return notKept("%s arrived twice", name)
+			}
+			f, err := copyHashed(tr, name, filepath.Join(dir, strconv.Itoa(i)), lim.MaxFileBytes)
+			if err != nil {
+				return err
+			}
+			f.Mode = 0o644
+			if h.FileInfo().Mode()&0o111 != 0 {
+				f.Mode = 0o755
+			}
+			if total += f.Size; total > lim.MaxBytes {
+				return notKept("its files come to more than %s", bytesText(lim.MaxBytes))
+			}
+			files[i], got[i] = f, true
+		}
+	}()
+	pr.CloseWithError(errors.New("stopped reading"))
+	err := <-done
+	if rerr != nil {
+		if errors.Is(rerr, ErrNotKept) {
+			return nil, rerr
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if err != nil {
+			msg := strings.TrimSpace(stderr.String())
+			if msg == "" {
+				msg = err.Error()
+			}
+			return nil, notKept("the files could not be read: %s", oneLine(msg))
+		}
+		return nil, rerr
+	}
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			msg = err.Error()
+		}
+		return nil, notKept("the files could not be read: %s", oneLine(msg))
+	}
+	for i, ok := range got {
+		if !ok {
+			return nil, notKept("%s could not be read", names[i])
+		}
+	}
+	return files, nil
 }

@@ -280,6 +280,7 @@ func (s *Server) routes() []route {
 		{"PUT /api/runner/v1/caches/chunk", runnerOnly, "", s.cacheChunk},
 		{"POST /api/runner/v1/caches/commit", runnerOnly, "", s.cacheCommit},
 		{"POST /api/runner/v1/caches/download", runnerOnly, "", s.cacheDownload},
+		{"POST /api/runner/v1/caches/discard", runnerOnly, "", s.cacheDiscard},
 		{"GET /api/v1/projects/{name}/caches", projectRead, "", s.listCaches},
 		{"DELETE /api/v1/projects/{name}/caches/{id}", projectOperate, "cache.delete", s.deleteCache},
 		{"DELETE /api/v1/projects/{name}/caches", projectOperate, "cache.delete", s.deleteCachesNamed},
