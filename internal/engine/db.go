@@ -969,7 +969,100 @@ CREATE INDEX image_refs_run ON image_refs(run_id, step_id, attempt);
 
 ALTER TABLE runners ADD COLUMN features TEXT NOT NULL DEFAULT '';
 `},
+	// 16 to 19 are taken by work on other branches (policy gates, a
+	// database blob store, test report history, an MCP server). On this
+	// branch they are empty placeholders, so that verification can be
+	// schema 20; when those branches are merged their real migrations take
+	// these places. A database migrated by a build of this branch alone
+	// would record 16 to 19 as applied and never run the real ones: do not
+	// deploy this branch on its own.
+	{additive, ``},
+	{additive, ``},
+	{additive, ``},
+	{additive, ``},
+	// 20: verify steps (kind verify) and ai steps (kind ai); see verify.go
+	//    and aistep.go. A verification's events (verify.started with the
+	//    baseline and the resolved parameters, verify.interval with what a
+	//    deploy runner read, verify.verdict, verify.override) are the
+	//    truth; verifications is their projection for lists, and
+	//    verify_baselines keeps what each passed verification saw, by
+	//    environment, project and service, for later ones to compare with.
+	//    ai_usage counts each project's calls and tokens per model and day
+	//    (UTC) against the registry's budgets; ai_explanations keeps what a
+	//    model said when someone asked it to explain a failed step.
+	//    Compatibility: additive: new tables only. A run whose pipeline has
+	//    a verify or ai step has min_schema 20 from creation (the pipeline
+	//    carries "requires": 20), so older servers leave it alone; the
+	//    four event types are of schema 20. Older servers ignore the tables.
+	{additive, `
+CREATE TABLE verifications (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  environment TEXT    NOT NULL,
+  service     TEXT    NOT NULL,
+  deployment  TEXT    NOT NULL DEFAULT '',
+  target      TEXT    NOT NULL DEFAULT '',
+  version     TEXT    NOT NULL DEFAULT '',
+  outcome     TEXT    NOT NULL DEFAULT 'running',
+  summary     TEXT    NOT NULL DEFAULT '',
+  intervals   INTEGER NOT NULL DEFAULT 0,
+  total       INTEGER NOT NULL DEFAULT 0,
+  overridden_by TEXT  NOT NULL DEFAULT '',
+  started_at  {{BIG}} NOT NULL,
+  decided_at  {{BIG}} NOT NULL DEFAULT 0,
+  PRIMARY KEY (run_id, step_id)
+);
+CREATE INDEX verifications_env ON verifications(environment, project, service, started_at);
+
+CREATE TABLE verify_baselines (
+  run_id      TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL,
+  environment TEXT    NOT NULL,
+  project     TEXT    NOT NULL,
+  service     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  version     TEXT    NOT NULL DEFAULT '',
+  data        TEXT    NOT NULL,
+  created_at  {{BIG}} NOT NULL,
+  PRIMARY KEY (run_id, step_id)
+);
+CREATE INDEX verify_baselines_unit ON verify_baselines(environment, project, service, created_at);
+
+CREATE TABLE ai_usage (
+  project       TEXT    NOT NULL,
+  model         TEXT    NOT NULL,
+  day           TEXT    NOT NULL,
+  calls         INTEGER NOT NULL DEFAULT 0,
+  input_tokens  {{BIG}} NOT NULL DEFAULT 0,
+  output_tokens {{BIG}} NOT NULL DEFAULT 0,
+  cost_micros   {{BIG}} NOT NULL DEFAULT 0,
+  PRIMARY KEY (project, model, day)
+);
+
+CREATE TABLE ai_explanations (
+  id            TEXT    PRIMARY KEY,
+  run_id        TEXT    NOT NULL,
+  step_id       TEXT    NOT NULL,
+  attempt       INTEGER NOT NULL,
+  project       TEXT    NOT NULL,
+  model         TEXT    NOT NULL,
+  actor         TEXT    NOT NULL,
+  text          TEXT    NOT NULL,
+  input_tokens  {{BIG}} NOT NULL DEFAULT 0,
+  output_tokens {{BIG}} NOT NULL DEFAULT 0,
+  cost_micros   {{BIG}} NOT NULL DEFAULT 0,
+  created_at    {{BIG}} NOT NULL
+);
+CREATE INDEX ai_explanations_step ON ai_explanations(run_id, step_id, created_at);
+
+ALTER TABLE steps ADD COLUMN kind TEXT NOT NULL DEFAULT '';
+`},
 }
+
+// schemaVerify is the schema that brought verify and ai steps.
+const schemaVerify = 20
 
 // schemaImages is the schema that brought image steps.
 const schemaImages = 15

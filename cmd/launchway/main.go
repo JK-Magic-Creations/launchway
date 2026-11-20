@@ -29,6 +29,7 @@ import (
 	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
@@ -41,6 +42,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
+	hsource "github.com/jk-magic-creations/launchway/internal/verify/source"
 	"github.com/jk-magic-creations/launchway/web"
 )
 
@@ -163,8 +165,13 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
+	models, err := cfg.Models()
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
 	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
-		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits})
+		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits,
+		HealthSources: cfg.EngineHealthSources(), Models: models})
 	if err != nil {
 		return err
 	}
@@ -196,6 +203,16 @@ func cmdServer(args []string) error {
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
 	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
+	if models != nil {
+		// The server calls models only to explain a failed step, with keys
+		// from its own stores (ai.secrets), if it has any.
+		srv.AI = &ai.Client{}
+		if len(cfg.AI.Secrets) > 0 {
+			if srv.AISecrets, err = secrets.Open(cfg.AI.Secrets); err != nil {
+				return fmt.Errorf("%s: ai.secrets: %w", *cfgPath, err)
+			}
+		}
+	}
 	for _, p := range pools {
 		srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets})
 	}
@@ -245,6 +262,9 @@ func cmdServer(args []string) error {
 			Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
 			DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
 			Secrets: secretStores, Reports: reportLimits, Images: cfg.Runner.Images,
+		}
+		if cfg.Runner.AIEnabled() {
+			r.AI = &ai.Client{}
 		}
 		go func() { defer close(runnerDone); r.Run(runnerCtx) }()
 	} else {
@@ -836,9 +856,23 @@ func runDeployRunner(o *runnerOptions, id string, secretStores *secrets.Resolver
 	}
 	sort.Strings(targets)
 	d := &runner.DeployRunner{
-		Client: runner.NewClient(o.Server, o.Token),
-		Agent:  &argocd.Agent{Config: *o.Deploy, DataDir: o.Data, Secrets: secretStores},
-		Info:   engine.RunnerInfo{ID: id, Name: o.Name, Executor: "deploy", Version: version, Targets: targets},
+		Client:  runner.NewClient(o.Server, o.Token),
+		Agent:   &argocd.Agent{Config: *o.Deploy, DataDir: o.Data, Secrets: secretStores},
+		Info:    engine.RunnerInfo{ID: id, Name: o.Name, Executor: "deploy", Version: version, Targets: targets},
+		Secrets: secretStores,
+	}
+	if len(o.HealthSources) > 0 {
+		lookup := func(ctx context.Context, project string, ref pipeline.SecretRef) (string, error) {
+			return secretStores.Lookup(ctx, project, ref)
+		}
+		srcs, err := hsource.Open(o.HealthSources, lookup)
+		if err != nil {
+			return fmt.Errorf("health_sources: %w", err)
+		}
+		d.Sources = srcs
+	}
+	if o.AIEnabled() {
+		d.AI = &ai.Client{}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

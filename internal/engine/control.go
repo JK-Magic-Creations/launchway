@@ -1048,6 +1048,13 @@ func (e *Engine) EnvironmentOf(runID, stepID, depID string) (string, error) {
 				env = d.Environment
 			}
 		}
+		if def.IsVerify() {
+			if s := c.st.Steps[stepID]; s != nil && s.Ver != nil {
+				env = s.Ver.Environment
+			} else {
+				env, _ = c.st.Pipeline.VerifyEnvironment(def)
+			}
+		}
 		return nil
 	})
 	return env, err

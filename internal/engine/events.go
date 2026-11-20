@@ -49,6 +49,13 @@ const (
 	DeployCommandWithdrawn EventType = "deploy.command_withdrawn" // withdrawn before a deploy runner took it
 	DeployCommandTaken     EventType = "deploy.command_taken"     // a deploy runner took it, until a time
 	DeployCommandDone      EventType = "deploy.command_done"      // applied, already applied, not applied, or failed
+
+	// Verifications (schema 20; see verify.go). Step events of the verify
+	// step.
+	VerifyStarted  EventType = "verify.started"  // the window, the resolved parameters and the baseline it is judged against
+	VerifyInterval EventType = "verify.interval" // what a deploy runner read in one interval
+	VerifyVerdict  EventType = "verify.verdict"  // the decision, with a model's explanation if one was asked
+	VerifyOverride EventType = "verify.override" // a person marked it passed or failed
 )
 
 // eventSince is the schema version that brought each event type. A server
@@ -63,6 +70,7 @@ var eventSince = map[EventType]int{
 	StepReused:        8,
 	DeployWaitingLock: 11, DeployOpened: 11, DeployActionDone: 11, DeployObserving: 11, DeployPhase: 11, DeployClosed: 11,
 	DeployCommand: 14, DeployCommandWithdrawn: 14, DeployCommandTaken: 14, DeployCommandDone: 14,
+	VerifyStarted: 20, VerifyInterval: 20, VerifyVerdict: 20, VerifyOverride: 20,
 }
 
 // Event is one entry in the log.
@@ -153,6 +161,13 @@ type Payload struct {
 	// deploy.* events, and step.queued of a deploy or rollback step (schema
 	// 11): the deployment and what happened to it. Never a credential.
 	Deploy *DeployEvent `json:"deploy,omitempty"`
+	// verify.* events (schema 20): the verification and what happened to
+	// it.
+	Verify *VerifyEvent `json:"verify,omitempty"`
+	// step.finished and step.canceled of an ai step (schema 20): which model
+	// answered and what it cost. Older servers never read it: runs with ai
+	// steps have min_schema 20.
+	AI *AIRecord `json:"ai,omitempty"`
 }
 
 // DeployEvent carries the details of the deploy.* events. Each type uses a

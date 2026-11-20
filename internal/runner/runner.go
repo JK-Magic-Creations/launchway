@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
@@ -43,6 +44,9 @@ type Runner struct {
 	Reports executor.CollectLimits
 	// Images, if it names builders, lets the runner take image steps.
 	Images *imagebuild.Config
+	// AI, if set, lets the runner take ai steps: it calls the models the
+	// server's registry names, with keys from its own secret stores.
+	AI *ai.Client
 
 	wsMu    sync.Mutex
 	wsLocks map[string]*sync.Mutex
@@ -72,6 +76,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	}
 	if r.Images != nil && len(r.Images.Builders) > 0 && !r.Info.Has(engine.FeatureImages) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureImages)
+	}
+	if r.AI != nil && !r.Info.Has(engine.FeatureAI) {
+		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureAI)
 	}
 	abs, err := filepath.Abs(r.DataDir)
 	if err != nil {
@@ -408,6 +415,9 @@ func sizeText(n int64) string {
 // runStep runs one attempt. Once the step has been handed to the executor,
 // it also returns what collects its report files, if it declares any.
 func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, ...any), out executor.Sink) (engine.Result, func(string) collected) {
+	if job.AI != nil {
+		return r.runAI(ctx, job, sys, out)
+	}
 	if job.ImageBuild != nil {
 		return r.runImage(ctx, job, sys, out)
 	}

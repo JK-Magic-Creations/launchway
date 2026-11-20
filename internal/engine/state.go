@@ -134,6 +134,10 @@ type StepState struct {
 	// step's deployment, once it waits for the lock or has one.
 	WaitKind string
 	Dep      *DeployState
+	// Ver, for a verify step, is its verification once started (schema
+	// 20); AI, for an ai step, what its last call used.
+	Ver *VerifyState
+	AI  *AIRecord
 }
 
 // What a waiting deploy or rollback step waits for.
@@ -231,7 +235,7 @@ func fold(events []Event, vocab int) *RunState {
 // Values a server of this version understands, inside events.
 var (
 	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval, pipeline.KindDeploy, pipeline.KindRollback, pipeline.KindRolloutStep,
-		pipeline.KindImage}
+		pipeline.KindImage, pipeline.KindVerify, pipeline.KindAI}
 	knownOutcomes  = []string{string(StepSucceeded), string(StepFailed)}
 	knownRunEnds   = []string{string(RunSucceeded), string(RunFailed), string(RunCanceled)}
 	knownSkipKinds = []string{"condition", "upstream", SkipNotNeeded, SkipSuperseded}
@@ -326,6 +330,13 @@ func (st *RunState) check(ev Event) bool {
 			st.Schema = max(st.Schema, schemaImages)
 			if !st.understands(schemaImages) {
 				st.notUnderstood("image steps or deploy changes that pin a digest (schema %d)", schemaImages)
+			}
+		}
+		// Verify and ai steps.
+		if p.Pipeline.UsesSchemaVerify() {
+			st.Schema = max(st.Schema, schemaVerify)
+			if !st.understands(schemaVerify) {
+				st.notUnderstood("verify or ai steps (schema %d)", schemaVerify)
 			}
 		}
 		// Rollout steps, and the keys that control a rollout.
@@ -461,8 +472,14 @@ func (st *RunState) apply(ev Event) {
 		s.LeaseID = p.Lease
 		s.Runner = p.Runner
 		// A deploy runner's actions need no workspace: they do not move the
-		// run to that runner.
+		// run to that runner. Nor do verify and ai steps.
 		if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
+			break
+		}
+		if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI()) {
+			if st.Status == RunQueued {
+				st.Status, st.StartedAt = RunRunning, ev.At
+			}
 			break
 		}
 		if p.Runner != st.Runner {
@@ -491,6 +508,9 @@ func (st *RunState) apply(ev Event) {
 		s.Outputs = p.Outputs
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
+		if p.AI != nil {
+			s.AI = p.AI
+		}
 
 	case StepLost:
 		s.Lost++
@@ -512,6 +532,7 @@ func (st *RunState) apply(ev Event) {
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.clearDecision()
 		s.WaitKind, s.Dep = "", nil
+		s.Ver, s.AI = nil, nil
 
 	case StepWaiting:
 		s.Status = StepWaitingS
@@ -549,6 +570,9 @@ func (st *RunState) apply(ev Event) {
 		s.FinishedAt = ev.At
 		s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt = p.Reused.Run, p.Reused.Number, p.Reused.Attempt
 		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, p.Reused.DecidedAt, p.Comment
+
+	case VerifyStarted, VerifyInterval, VerifyVerdict, VerifyOverride:
+		st.applyVerify(ev, s)
 
 	default:
 		st.applyDeploy(ev, s)
