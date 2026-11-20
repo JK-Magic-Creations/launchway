@@ -129,6 +129,12 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/tokens":                         {"POST", "/api/v1/tokens", `{"name":"matrix"}`, [6]int{401, 201, 201, 201, 201, 201}},
 	"DELETE /api/v1/tokens/{id}":                  {"DELETE", "/api/v1/tokens/tok_nope", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/audit":                           {"GET", "/api/v1/audit", "", [6]int{401, 403, 403, 403, 403, 200}},
+	// Step resources: anyone signed in reads, an admin changes.
+	"GET /api/v1/step-resources":                 {"GET", "/api/v1/step-resources", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/step-resources/limits":          {"GET", "/api/v1/step-resources/limits", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"PUT /api/v1/step-resources/limits":          {"PUT", "/api/v1/step-resources/limits", `{"memory_per_thread":"1Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/step-resources/defaults/{kind}": {"GET", "/api/v1/step-resources/defaults/step", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"PUT /api/v1/step-resources/defaults/{kind}": {"PUT", "/api/v1/step-resources/defaults/step", `{"cpu":"1","memory":"2Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
 
 	// Artifacts, findings and SBOMs. {pay} keeps no artifact: 404 after the
 	// permission check (see TestArtifactAccess).

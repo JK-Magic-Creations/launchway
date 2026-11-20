@@ -221,9 +221,15 @@ type Job struct {
 	SHA     string                        `json:"sha,omitempty"`
 	// Event is what started the run (push, pull_request, draft, ...), so
 	// that a runner's accept: section can refuse some.
-	Event      string               `json:"event,omitempty"`
-	Container  string               `json:"container"`  // which of Containers the step runs in
-	Containers []pipeline.Container `json:"containers"` // every container the run needs, services included
+	Event     string `json:"event,omitempty"`
+	Container string `json:"container"` // which of Containers the step runs in
+	// ResourcesAsked says that this step wrote resources of its own, as
+	// opposed to getting defaults (or its container's cpu and memory). An
+	// executor that cannot limit anything, the host executor, refuses only
+	// a step that asks. Containers are shared by steps, so this is the
+	// step's own.
+	ResourcesAsked bool                 `json:"resources_asked,omitempty"`
+	Containers     []pipeline.Container `json:"containers"` // every container the run needs, services included
 	// Workspace names the run's workspace on this runner: the same for every
 	// step the runner takes while it holds the run, and new when it takes
 	// the run over from another runner (see Lease).
@@ -461,6 +467,10 @@ func Open(o Options) (*Engine, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := e.seedStepResources(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancelBg = cancel
 	if db.pg {
@@ -695,6 +705,16 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	}
 	if nr.Pipeline.UsesSchemaPools() && !e.knows(schemaPools) {
 		return nil, fmt.Errorf("%w: this server does not know runner pools (runner:, schema %d)", ErrConflict, schemaPools)
+	}
+	if nr.Pipeline.UsesSchemaResources() {
+		if !e.knows(schemaResources) {
+			return nil, fmt.Errorf("%w: this server does not know step resources (resources:, schema %d)", ErrConflict, schemaResources)
+		}
+	}
+	// Step resources above the installation's limits could never be given;
+	// say so now, naming the limit, instead of failing the step later.
+	if ps := e.CheckResources(nr.Pipeline); len(ps) > 0 {
+		return nil, ps
 	}
 	// While build pools decide where runs go, older servers, which would
 	// hand any run's steps to any runner, must leave new runs alone.
@@ -2112,6 +2132,11 @@ func (c *cmd) advance() {
 					return
 				}
 				changed = true
+			case c.resourcesRefused(id, def):
+				if c.err != nil {
+					return
+				}
+				changed = true
 			case !st.secretsAllowed() && len(def.Secrets) > 0:
 				// Never handed to a runner, so no runner looks a secret up
 				// for text that nobody reviewed.
@@ -2176,7 +2201,7 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		env[v.Name] = v.Value
 	}
 	return &Job{
-		Container: st.Pipeline.ContainerFor(def), Containers: st.Pipeline.RunContainers(),
+		Container: st.Pipeline.ContainerFor(def), Containers: c.runContainers(), ResourcesAsked: def.Resources != nil,
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		// advance fails a draft's step that asks for secrets it may not

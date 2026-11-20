@@ -797,6 +797,11 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 		}
 	}
 	out.Libraries = kept
+	// A template's step may ask for resources, which the pipeline file itself
+	// did not show.
+	if out.UsesSchemaResources() {
+		out.Requires = max(out.Requires, SchemaResources)
+	}
 	return out, nil
 }
 

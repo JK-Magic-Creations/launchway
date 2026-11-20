@@ -758,14 +758,18 @@ func (e *Engine) RunInfosFor(r RunnerInfo, list []string) ([]RunInfo, error) {
 	return out, nil
 }
 
-// IsEnrolled reports whether a runner ID belongs to an enrolled runner.
-func (e *Engine) IsEnrolled(runnerID string) bool {
+// IsEnrolled reports whether a runner ID belongs to an enrolled runner. A
+// database error is returned, not read as "not enrolled": callers use this to
+// refuse impersonation and must fail closed.
+func (e *Engine) IsEnrolled(runnerID string) (bool, error) {
 	if !e.knows(schemaIdentity) {
-		return false
+		return false, nil
 	}
 	var n int
-	err := e.db.QueryRow(`SELECT COUNT(*) FROM runner_identities WHERE id = ?`, runnerID).Scan(&n)
-	return err == nil && n > 0
+	if err := e.db.QueryRow(`SELECT COUNT(*) FROM runner_identities WHERE id = ?`, runnerID).Scan(&n); err != nil {
+		return false, err
+	}
+	return n > 0, nil
 }
 
 // KnowsIdentities reports whether this build enrols runners.

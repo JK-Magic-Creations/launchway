@@ -34,6 +34,13 @@ type Spec struct {
 	// Mask, if set, hides secret values in stdout and stderr. It is applied
 	// to whole lines, before long lines are split.
 	Mask func(string) string
+	// AsksResources says that this step wrote resources of its own. An
+	// executor that cannot limit anything refuses such a step rather than
+	// ignore it; for a step that asks for nothing it only says that the
+	// defaults are not enforced. It is about the step, not the container:
+	// another step that runs in the same container may ask while this one
+	// does not.
+	AsksResources bool
 }
 
 // Sink receives output lines as they are produced.
@@ -57,10 +64,24 @@ type ContainerSpec struct {
 	Name    string
 	Image   string
 	Env     map[string]string // services only; a step's environment already includes its container's
-	CPU     string
-	Memory  string
+	CPU     string            // promised, such as 500m or 2
+	Memory  string            // promised, such as 2Gi
 	Service bool
 	Command []string
+
+	// What the server worked out from the steps' resources and the
+	// installation's defaults (see pipeline.Container); zero for a service.
+	CPULimit    string // the most CPU it may use; empty: no limit
+	MemoryLimit string // the most memory it may use; empty: Memory
+	// Threads is how many parallel jobs the tools in it should start so that
+	// they fit its limits; 0 leaves the tools to decide.
+	Threads int
+	// ExplicitCPU and ExplicitMemory say that the container's CPU, or
+	// memory, was asked for by a step or by the container itself, and is
+	// not a default the server chose. An executor whose operator or
+	// namespace allows less fails a step for what it asked for, and lowers
+	// a default (see Kubernetes.limitDefaults).
+	ExplicitCPU, ExplicitMemory bool
 }
 
 // services returns the service containers.

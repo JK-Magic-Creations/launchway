@@ -23,6 +23,7 @@ launchway mcp      [--server URL]             the server's MCP tools for agents,
 launchway verifications list|show|mark        verifications on a server
 launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
+launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway version
 ```
 
@@ -40,7 +41,7 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 | `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
-| `4` | `login`, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
+| `4` | `login`, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
 | `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
@@ -594,6 +595,24 @@ launchway runners rotate RUNNER
 | `revoke-token` | Stops a join token from enrolling runners |
 | `revoke` | Revokes an enrolled runner at once on every server; the steps it held are queued again. `--reason` is for the audit trail |
 | `rotate` | Asks an enrolled runner to move to a new key the next time it gets an access token |
+
+## launchway step-resources
+
+Shows and changes the installation's [step resources](pipeline.md#resources): the default CPU and memory a step gets when it writes none, for each kind of step, and the most any step may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the audit trail (`step_resources.set_limits`, `step_resources.set_default`). The values live in the database, so a change applies to every server at once, to the next pod a run starts.
+
+```text
+launchway step-resources get [--json]
+launchway step-resources set-limits [--max-cpu Q] [--max-memory Q] [--memory-per-thread Q] [--json]
+launchway step-resources set-default KIND [--cpu Q] [--cpu-limit Q] [--memory Q] [--memory-limit Q] [--json]
+```
+
+| Command | What it does |
+|---|---|
+| `get` | Prints each kind's default (`step` is the only kind) and the limits. A value that is not set is shown as `not set` |
+| `set-limits` | Changes `max_cpu` and `max_memory` (the most a step may ask for) and `memory_per_thread` (default `1Gi`, at least `64Mi`). A flag you give sets that value, and `--max-memory ""` clears it; flags you leave out keep their value. Refused if a default is above the new maximum |
+| `set-default` | Changes the default of a kind in the same way. Refused for a quantity that does not read, a limit below what is promised, or a value above the limits |
+
+Quantities are written as in a pipeline: `500m` or `2` for CPU, `512Mi` or `6Gi` for memory. The same operations are `GET /api/v1/step-resources` and the routes under it in the [HTTP API](http-api.md#step-resources), and the MCP tools `get_step_resources`, `set_step_resource_limits` and `set_step_resource_default`.
 
 ## launchway version
 

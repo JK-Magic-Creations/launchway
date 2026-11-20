@@ -237,6 +237,15 @@ function IdentityCell({ r, now }: { r: Runner; now: number }) {
       </div>
     );
   }
+  if (r.auth === "identity") {
+    // The server leaves the identity's details to those who manage runners.
+    return (
+      <div>
+        <span className="pill pill-ok">enrolled</span>
+        <div className="faint small">its key and enrolment are shown to those who manage runners</div>
+      </div>
+    );
+  }
   return (
     <div>
       <span className="pill pill-warn">{r.auth === "pool" ? "pool token" : "shared token"}</span>

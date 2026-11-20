@@ -10,62 +10,31 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
-// What each of the schemas 17 to 21 brought, which no other schema may
-// have: the feature branches that wrote them each carried empty stand-ins
-// for the numbers of the others, and a merge that left a stand-in where a
-// real migration belongs (or the other way round) would show here. Tables
-// are listed by name; columns as table.column.
-var schemaMarkers = []struct {
-	schema  int
-	feature string
-	tables  []string
-	columns []string
-}{
-	{schemaBlobs, "the built-in blob store", []string{"blob_uploads", "blob_parts", "blob_chunks", "blob_objects"}, []string{"artifact_blobs.store"}},
-	{schemaReports, "richer test reports and coverage", []string{"coverage_reports", "coverage_files"}, []string{"test_cases.tags", "test_cases.variant", "test_cases.extra"}},
-	{schemaVerify, "verify and ai steps", []string{"verifications", "verify_baselines", "ai_usage", "ai_explanations"}, []string{"steps.kind"}},
-	{schemaIdentity, "runner identities", []string{"runner_join_tokens", "runner_identities", "runner_access_tokens", "runner_assertions"},
-		[]string{"runners.kind", "runners.auth", "runners.labels", "runners.accept", "runners.os", "runners.arch"}},
-	{schemaPools, "build runner pools", nil, []string{"runs.runner_pool", "runs.runner_labels"}},
-}
-
 // hasColumn reports whether the database has the table's column.
 func hasColumn(t *testing.T, e *Engine, table, column string) bool {
 	t.Helper()
-	var q string
-	if e.db.pg {
-		q = `SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?`
-	} else {
-		q = `SELECT count(*) FROM pragma_table_info(?) WHERE name = ?`
-	}
-	var n int
-	if err := e.db.QueryRow(q, table, column).Scan(&n); err != nil {
+	ok, err := schemaColumnExists(e.db, table, column)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return n > 0
+	return ok
 }
 
 // hasTable reports whether the database has the table.
 func hasTable(t *testing.T, e *Engine, table string) bool {
 	t.Helper()
-	var q string
-	if e.db.pg {
-		q = `SELECT count(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = ?`
-	} else {
-		q = `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?`
-	}
-	var n int
-	if err := e.db.QueryRow(q, table).Scan(&n); err != nil {
+	ok, err := schemaTableExists(e.db, table)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return n > 0
+	return ok
 }
 
 // checkMarkers fails unless exactly what schemas up to n brought is there.
 func checkMarkers(t *testing.T, e *Engine, n int) {
 	t.Helper()
 	for _, m := range schemaMarkers {
-		should := m.schema <= n
+		should := m.dueAt(n)
 		for _, tb := range m.tables {
 			if got := hasTable(t, e, tb); got != should {
 				t.Errorf("at schema %d table %s (%s, schema %d): present %v, want %v", n, tb, m.feature, m.schema, got, should)
@@ -80,17 +49,17 @@ func checkMarkers(t *testing.T, e *Engine, n int) {
 	}
 }
 
-// Every number from 17 to 21 holds its real migration, once: none is empty,
+// Every number from 17 to 22 holds its real migration, once: none is empty,
 // each is additive, and what each brings is written by that migration and
 // no other (a placeholder where a real migration belongs, a real migration
 // repeated, or two numbers swapped, fails here). Applied one at a time to a
 // database of the schema before, each brings exactly its own tables and
 // columns, on SQLite and (with LAUNCHWAY_TEST_POSTGRES) PostgreSQL.
 func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
-	if len(migrations) != schemaPools || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
+	if len(migrations) != schemaResources || schemaResources != schemaPools+1 || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
 		schemaVerify != schemaReports+1 || schemaReports != schemaBlobs+1 || schemaBlobs != schemaPolicy+1 {
-		t.Fatalf("schemas are not 16, 17, 18, 19, 20, 21 in a row: policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, migrations %d",
-			schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, len(migrations))
+		t.Fatalf("schemas are not 16, 17, 18, 19, 20, 21, 22 in a row: policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, resources %d, migrations %d",
+			schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, len(migrations))
 	}
 	create := regexp.MustCompile(`(?i)CREATE TABLE (?:IF NOT EXISTS )?(\w+)`)
 	alter := regexp.MustCompile(`(?i)ALTER TABLE (\w+) ADD COLUMN (\w+)`)
@@ -147,7 +116,7 @@ func TestFreshDatabaseReachesTheNewestSchema(t *testing.T) {
 	var buf syncBuffer
 	e := mustOpenAs(t, addr, clk, 0, &buf)
 	info, err := e.Schema(context.Background())
-	if err != nil || info.Database != len(migrations) || info.Code != len(migrations) || info.Database != schemaPools || !info.Compatible() {
+	if err != nil || info.Database != len(migrations) || info.Code != len(migrations) || info.Database != schemaResources || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	if info.Minimum != 7 {
@@ -211,10 +180,10 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 			}
 			t.Cleanup(func() { cur.Close() })
 			info, err := cur.Schema(context.Background())
-			if err != nil || info.Database != schemaPools || info.Code != schemaPools || !info.Compatible() || info.Minimum != 7 {
+			if err != nil || info.Database != schemaResources || info.Code != schemaResources || !info.Compatible() || info.Minimum != 7 {
 				t.Fatalf("after the upgrade: %+v %v", info, err)
 			}
-			for v := from + 1; v <= schemaPools; v++ {
+			for v := from + 1; v <= schemaResources; v++ {
 				if !strings.Contains(logCur.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 					t.Errorf("migration %d was not applied:\n%s", v, logCur.String())
 				}
@@ -222,7 +191,7 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 			if strings.Contains(logCur.String(), fmt.Sprintf(`applied a database migration" schema=%d `, from)) {
 				t.Errorf("migration %d, already applied, was applied again", from)
 			}
-			checkMarkers(t, cur, schemaPools)
+			checkMarkers(t, cur, schemaResources)
 			var after int
 			if err := cur.db.QueryRow(`SELECT count(*) FROM events`).Scan(&after); err != nil || after < events {
 				t.Fatalf("events after the upgrade: %d, before %d: %v", after, events, err)
@@ -259,7 +228,7 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 
 				var log syncBuffer
 				older := mustOpenAs(t, addr, clk, back, &log)
-				if info, err := older.Schema(context.Background()); err != nil || info.Code != back || info.Database != schemaPools || !info.Compatible() {
+				if info, err := older.Schema(context.Background()); err != nil || info.Code != back || info.Database != schemaResources || !info.Compatible() {
 					t.Fatalf("the schema-%d build's view: %+v %v", back, info, err)
 				}
 				if c := strings.Count(log.String(), "running against a database written by a newer version"); c != 1 {

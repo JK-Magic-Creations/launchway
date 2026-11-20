@@ -203,6 +203,10 @@ take it out again before rolling back. The settings and keys this applies to so 
 | 19 | `verification:`, `ai:`, the runners' `ai:` and `health_sources:` (`delivery.verification`, `ai.*`, `runner.ai`) | `kind: verify`, `kind: ai` |
 | 20 | `runner_admin:`, `require_identity`, the runners' `labels:`, `accept:`, `proxy:`, `no_proxy:`, `ca_file:` (`config.runnerAdmin`, `runner.join`, `runner.labels`, `runner.accept`) | |
 | 21 | `runner_pools:` with `kind: build` (`config.runnerPools`) | `runner:` |
+| 22 | | `resources` on a step (the defaults and limits are kept in the database: `launchway step-resources`) |
+
+Upgrading to schema 22 does not change how existing pipelines run: an installation that already has
+runs starts with no step sized, and an administrator opts in (see [Resources](../reference/pipeline.md#resources)).
 
 The Helm chart writes these settings only when you set them, so its default configuration can be
 read by the release before.

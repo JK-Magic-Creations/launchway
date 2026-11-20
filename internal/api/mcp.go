@@ -194,7 +194,11 @@ type mcpCall struct {
 	// mayOperate says whether the caller may change anything anywhere; if
 	// not, the tools that change things are not listed.
 	mayOperate bool
-	baseURL    string // this server as the caller reaches it, for links
+	// mayAdminister says whether the caller is an administrator of every
+	// project; if not, the tools that change the installation's settings
+	// are not listed.
+	mayAdminister bool
+	baseURL       string // this server as the caller reaches it, for links
 }
 
 // mcpCaller works out who is calling /mcp and answers 401 or 429 if
@@ -205,7 +209,7 @@ func (s *Server) mcpCaller(w http.ResponseWriter, r *http.Request) (*mcpCall, bo
 	c := &mcpCall{s: s, outer: r, baseURL: s.baseURL(r)}
 	if s.Auth == nil {
 		c.id = &identity{User: s.Actor, Via: viaNone}
-		c.limitKey, c.mayOperate = "addr:"+s.clientAddr(r), true
+		c.limitKey, c.mayOperate, c.mayAdminister = "addr:"+s.clientAddr(r), true, true
 		return c, true
 	}
 	h := r.Header.Get("Authorization")
@@ -237,6 +241,7 @@ func (s *Server) mcpCaller(w http.ResponseWriter, r *http.Request) (*mcpCall, bo
 		c.limitKey = "token:" + id.tokenID
 	}
 	c.mayOperate = s.mayOperateSomewhere(id)
+	c.mayAdminister = s.authorize(id, auth.Administer, "")
 	return c, true
 }
 
