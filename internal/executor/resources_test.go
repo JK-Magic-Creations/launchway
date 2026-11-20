@@ -313,7 +313,7 @@ func TestPodAskingForMoreThanTheQuotaHoldsFails(t *testing.T) {
 	if _, err := k.checkResources(context.Background(), build("6Gi"), noSys); err != nil {
 		t.Fatalf("%v", err)
 	}
-	// Six containers of 6 GiB cannot be in a 32 GiB namespace at all.
+	// Six containers of 6 GiB (and the helper, which counts by its request) cannot be in a 32 GiB namespace at all.
 	var six []ContainerSpec
 	for _, n := range []string{"a", "b", "c", "d", "e", "f"} {
 		six = append(six, ContainerSpec{Name: n, Image: n, Memory: "6Gi", ExplicitMemory: true})
@@ -322,7 +322,7 @@ func TestPodAskingForMoreThanTheQuotaHoldsFails(t *testing.T) {
 	if err == nil || errors.Is(err, ErrInfrastructure) {
 		t.Fatalf("%v", err)
 	}
-	for _, want := range []string{"limits.memory", "36Gi", "32Gi", `ResourceQuota "compute"`, "namespace launchway-steps", "no pod of this size can run there"} {
+	for _, want := range []string{"limits.memory", "36928Mi", "32Gi", `ResourceQuota "compute"`, "namespace launchway-steps", "no pod of this size can run there"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the message does not say %q: %v", want, err)
 		}
@@ -461,5 +461,40 @@ func TestOperatorsMemoryLimitStillAppliesWhenTheServerSendsNoMemory(t *testing.T
 	// passes the pod check as it did before.
 	if _, err := k.checkResources(context.Background(), []ContainerSpec{{Name: "a", Image: "x"}}, noSys); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A container with no limit still counts toward a pod's limit and quota, by
+// its request, so that the diagnosis is not too lenient.
+func TestSumOfAsksCountsContainersWithoutALimit(t *testing.T) {
+	asks := []podAsk{
+		{name: "helper", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("64Mi")}}},
+		{name: "a", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("1Gi")}, Limits: corev1.ResourceList{resMemory: q("2Gi")}}},
+		{name: "b", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("3Gi")}}},
+		{name: "c", res: corev1.ResourceRequirements{Limits: corev1.ResourceList{resMemory: q("1Gi")}}},
+	}
+	total, n := sumAsks(asks, "limit", resMemory)
+	want := q("64Mi")
+	want.Add(q("2Gi"))
+	want.Add(q("3Gi"))
+	want.Add(q("1Gi"))
+	if n != 4 || total.Cmp(want) != 0 {
+		t.Errorf("limits: %s over %d containers, want %s over 4", total.String(), n, want.String())
+	}
+	total, n = sumAsks(asks, "request", resMemory)
+	want = q("64Mi")
+	want.Add(q("1Gi"))
+	want.Add(q("3Gi"))
+	want.Add(q("1Gi")) // c has a limit only: Kubernetes requests that much
+	if n != 4 || total.Cmp(want) != 0 {
+		t.Errorf("requests: %s over %d containers, want %s over 4", total.String(), n, want.String())
+	}
+	// A pod whose containers have requests only is still held to a limits quota.
+	hard := corev1.ResourceList{corev1.ResourceLimitsMemory: q("4Gi")}
+	noLimit := []podAsk{{name: "a", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("3Gi")}}},
+		{name: "b", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("3Gi")}}}}
+	if err := checkQuotas("launchway-steps", []corev1.ResourceQuota{*quota("compute", hard, corev1.ResourceList{})}, noLimit); err == nil ||
+		!strings.Contains(err.Error(), "limits.memory") {
+		t.Fatalf("containers without limits slipped past a limits quota: %v", err)
 	}
 }

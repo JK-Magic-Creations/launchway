@@ -279,16 +279,25 @@ func checkRange(a podAsk, r corev1.ResourceName, item corev1.LimitRangeItem, nam
 }
 
 // sumAsks adds up what the containers ask for of a resource, as requests or
-// limits, and says how many containers ask.
+// limits, and says how many containers ask. A container with no limit still
+// counts, by its request: its limit is at least that (the namespace gives it
+// the LimitRange's default, or the quota refuses it), so leaving it out
+// would make the total too small and the diagnosis too lenient. A container
+// with a limit and no request is requesting that much, as Kubernetes
+// defaults the request to the limit.
 func sumAsks(asks []podAsk, kind string, r corev1.ResourceName) (resource.Quantity, int) {
 	var total resource.Quantity
 	n := 0
 	for _, a := range asks {
-		list := a.res.Requests
+		list, other := a.res.Requests, a.res.Limits
 		if kind == "limit" {
-			list = a.res.Limits
+			list, other = a.res.Limits, a.res.Requests
 		}
-		if q, ok := list[r]; ok {
+		q, ok := list[r]
+		if !ok {
+			q, ok = other[r]
+		}
+		if ok {
 			total.Add(q)
 			n++
 		}
