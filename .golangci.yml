@@ -69,6 +69,8 @@ linters:
         - name: redefines-builtin-id
   exclusions:
     generated: lax
+    paths:
+      - node_modules
     presets:
       - comments
       - std-error-handling
