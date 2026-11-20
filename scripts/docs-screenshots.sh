@@ -94,6 +94,7 @@ echo "==> Seeding runs"
 "$root/scripts/docs/seed-demo.sh" runs "$url" "$work/demo"
 
 echo "==> Installing Playwright"
+# shellcheck disable=SC2012  # sorted by version below, which find cannot do
 chrome=${LAUNCHWAY_DOCS_CHROME:-$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -n 1)}
 npm install --prefix "$work/pw" --no-audit --no-fund --prefer-offline --loglevel=error playwright@1.65.1 >/dev/null
 

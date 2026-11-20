@@ -1,3 +1,5 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2034  # the variables here are read by the scripts that source this file
 # Shared by the scripts in deploy/test/argo. Source it; do not run it.
 #
 # The cluster context comes from KUBE_CONTEXT (default kind-launchway-test) or
@@ -92,8 +94,8 @@ start_git_port_forward() {
 	# it would leave the port-forward running.
 	kubectl --context "$CTX" -n "$GIT_NAMESPACE" port-forward --address 127.0.0.1 "svc/$GIT_SERVICE" ":$GIT_PORT" >"$out" 2>&1 &
 	GIT_PF_PID=$!
-	local port="" i
-	for i in $(seq 1 50); do
+	local port=""
+	for _ in $(seq 1 50); do
 		port=$(sed -n 's/^Forwarding from 127\.0\.0\.1:\([0-9]*\) .*/\1/p' "$out")
 		[ -n "$port" ] && break
 		if ! kill -0 "$GIT_PF_PID" 2>/dev/null; then break; fi

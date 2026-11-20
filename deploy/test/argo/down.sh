@@ -3,6 +3,7 @@
 # cluster-scoped objects listed in README.md. kind contexts only.
 #
 #   deploy/test/argo/down.sh [--context kind-NAME]
+# shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 parse_context "$@"
 require_kind_context
