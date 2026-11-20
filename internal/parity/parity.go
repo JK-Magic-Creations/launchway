@@ -51,7 +51,9 @@ type Row struct {
 // Rows returns the table, sorted by route.
 func Rows() []Row {
 	out := append([]Row(nil), rows...)
-	sort.Slice(out, func(i, j int) bool { return pathOf(out[i].Route) < pathOf(out[j].Route) || pathOf(out[i].Route) == pathOf(out[j].Route) && out[i].Route < out[j].Route })
+	sort.Slice(out, func(i, j int) bool {
+		return pathOf(out[i].Route) < pathOf(out[j].Route) || pathOf(out[i].Route) == pathOf(out[j].Route) && out[i].Route < out[j].Route
+	})
 	return out
 }
 
