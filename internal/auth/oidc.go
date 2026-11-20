@@ -229,7 +229,7 @@ func (c *OIDC) VerifyAccessToken(ctx context.Context, raw, audience string, scop
 	if err != nil {
 		return nil, "", err
 	}
-	if _, ok := claims[c.o.GroupsClaim]; !ok {
+	if g, ok := claims[c.o.GroupsClaim]; !ok || g == nil {
 		out.Groups = nil // not said, as opposed to none
 	}
 	return out, client, nil

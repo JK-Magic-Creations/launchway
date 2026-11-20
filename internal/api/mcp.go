@@ -152,8 +152,8 @@ func (s *Server) mcpOriginRefusal(r *http.Request) string {
 			return ""
 		}
 	}
-	if isLoopbackHost(u.Hostname()) && isLoopbackHost(hostOnly(r.Host)) {
-		return ""
+	if isLoopbackHost(u.Hostname()) && isLoopbackHost(hostOnly(r.Host)) && u.Port() == portOf(r.Host) {
+		return "" // this server's own pages, on this machine
 	}
 	return "requests from the web page at " + origin + " may not use this server's MCP endpoint (mcp.allowed_origins lists the pages that may)"
 }
@@ -163,6 +163,13 @@ func hostOnly(hostport string) string {
 		return h
 	}
 	return strings.Trim(hostport, "[]")
+}
+
+func portOf(hostport string) string {
+	if _, p, err := net.SplitHostPort(hostport); err == nil {
+		return p
+	}
+	return ""
 }
 
 func isLoopbackHost(h string) bool {

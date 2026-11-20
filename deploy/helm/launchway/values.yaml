@@ -142,6 +142,28 @@ config:
     # -- The longest an API token may last, in days. Written as auth.tokens.max_days.
     # Unset: the built-in default, 365 (at most 3650).
     maxDays:
+  # -- The MCP endpoint (/mcp), through which agents use Launchway with API tokens. It is on by
+  # default, in every server: it gives a token no right it does not already have over the API.
+  # Every setting is unset by default, and only written to the configuration when set (a server
+  # of the version before does not know mcp:; see docs/development/migrations.md).
+  mcp:
+    # -- false turns the endpoint off on every server. Unset: on.
+    enabled:
+    # -- Origins of web pages, besides the servers' own, that may call /mcp from a browser, such
+    # as https://tools.example.com. Requests without an Origin header are not affected.
+    allowedOrigins: []
+    # -- Requests one token may make to /mcp per minute, on each server. Unset: 120.
+    requestsPerMinute:
+    # -- Requests one token may have in progress at once, on each server. Unset: 4.
+    concurrent:
+    # -- MCP requests in progress at once on each server, all tokens together. Unset: 32.
+    total:
+    # -- Also accept the sign-in provider's OAuth access tokens issued for /mcp (needs
+    # auth.mode: oidc in extraConfig). resource is this endpoint's address as clients reach it,
+    # such as https://launchway.example.com/mcp; scopes, if any, must all be granted.
+    oauth:
+      resource:
+      scopes: []
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -150,8 +172,8 @@ config:
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
   # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts,
-  # findings, loops and schedules are set by the chart and may not appear here; runner.enabled may
-  # not be true.
+  # findings, loops, schedules and mcp are set by the chart and may not appear here; runner.enabled
+  # may not be true.
   extraConfig: {}
 
 # ---------------------------------------------------------------------------------------------

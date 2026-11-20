@@ -715,14 +715,14 @@ func waitForRun(ctx context.Context, c *mcpCall, req *mcp.CallToolRequest, in wa
 	token := req.Params.GetProgressToken()
 	last, progress := "", 0.0
 	for {
-		if done(d) {
-			return c.describeRun(d), nil
-		}
 		if token != nil {
 			if p := progressLine(d); p != last {
 				last, progress = p, progress+1
 				_ = req.Session.NotifyProgress(ctx, &mcp.ProgressNotificationParams{ProgressToken: token, Progress: progress, Message: p})
 			}
+		}
+		if done(d) {
+			return c.describeRun(d), nil
 		}
 		select {
 		case <-ctx.Done():
