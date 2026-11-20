@@ -62,6 +62,12 @@ var mcpPermissionTable = map[string]mcpRow{
 	"mark_verification": {map[string]any{"run_id": "{pay}", "step": "gate", "outcome": "passed", "reason": "checked by hand"}, true,
 		[5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
 	"control_rollout": {map[string]any{"run_id": "{pay}", "deployment": "dep_x", "action": "promote"}, true, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	// Step resources: anyone reads; only an administrator is offered the
+	// tools that change them, as the API refuses everyone else.
+	"get_step_resources":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"set_step_resource_limits": {map[string]any{"memory_per_thread": "1Gi"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"set_step_resource_default": {map[string]any{"kind": "step", "cpu": "1", "memory": "2Gi"}, false,
+		[5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 }
 
 func outcome(errText string) string {

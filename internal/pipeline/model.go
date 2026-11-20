@@ -76,6 +76,23 @@ type Container struct {
 	Memory  string            `json:"memory,omitempty"`  // e.g. 512Mi or 2Gi
 	Service bool              `json:"service,omitempty"` // runs its own command for the whole run
 	Command []string          `json:"command,omitempty"` // services only; default: the image's own
+
+	// What the server works out for a run's container from its steps'
+	// resources and the installation's defaults, and hands the runner with
+	// the step (never written in a pipeline file; see engine.runContainers).
+	// CPU and Memory above then hold what the container is promised.
+	CPULimit    string `json:"cpu_limit,omitempty"`    // the most CPU it may use; empty: no limit
+	MemoryLimit string `json:"memory_limit,omitempty"` // the most memory it may use; empty: the same as Memory
+	// Threads is how many parallel jobs the tools in it should start, so
+	// that they fit the limits (0: no opinion); see resources.Threads.
+	Threads int `json:"threads,omitempty"`
+	// ExplicitCPU and ExplicitMemory say that something the container's
+	// CPU, or memory, came from what a step (or the container's own cpu or
+	// memory) asked for, and not from the installation's defaults. A runner
+	// whose operator or namespace allows less holds the container to what
+	// was asked for, and lowers what the server chose on its own.
+	ExplicitCPU    bool `json:"explicit_cpu,omitempty"`
+	ExplicitMemory bool `json:"explicit_memory,omitempty"`
 }
 
 // Triggers says which events start a run. A run can always be started by hand.
@@ -130,6 +147,10 @@ type Step struct {
 	// Reports are files the step writes that Launchway reads once it ends,
 	// whether it passed or failed: test results, for now.
 	Reports *Reports `json:"reports,omitempty"`
+	// Resources are the CPU and memory the step asks for (schema 22); nil
+	// when it asks for none, and the installation's default for its kind
+	// applies. See resources.go.
+	Resources *Resources `json:"resources,omitempty"`
 
 	// ImageBuild, for an image step (kind image), is what it builds; see
 	// image.go.
@@ -159,7 +180,7 @@ type Step struct {
 	AbortFirst bool   `json:"abort_first,omitempty"` // rollback: abort the rollout before reverting
 	ctl        controlLines
 
-	environmentLine, deploymentLine, versionLine int
+	environmentLine, deploymentLine, versionLine, resourcesLine int
 	// environmentInput is the run input a deploy step's environment comes
 	// from (environment: { input: name }); Bind puts its value in place.
 	environmentInput string

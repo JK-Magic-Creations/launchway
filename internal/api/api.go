@@ -270,6 +270,14 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/ai/models", signedIn, "", s.listModels},
 		{"GET /api/v1/runs/{id}/steps/{step}/explanations", runRead, "", s.stepExplanations},
 		{"POST /api/v1/runs/{id}/steps/{step}/explain", runOperate, "step.explain", s.explainStep},
+
+		// Step resources (schema 22): anyone signed in reads the defaults
+		// and limits; an administrator changes them.
+		{"GET /api/v1/step-resources", signedIn, "", s.getStepResources},
+		{"GET /api/v1/step-resources/limits", signedIn, "", s.getStepResourceLimits},
+		{"PUT /api/v1/step-resources/limits", administer, "step_resources.set_limits", s.setStepResourceLimits},
+		{"GET /api/v1/step-resources/defaults/{kind}", signedIn, "", s.getStepResourceDefault},
+		{"PUT /api/v1/step-resources/defaults/{kind}", administer, "step_resources.set_default", s.setStepResourceDefault},
 	}
 }
 

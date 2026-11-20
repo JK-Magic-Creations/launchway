@@ -175,6 +175,9 @@ func Parse(data []byte) (*Pipeline, error) {
 	if p.UsesSchemaPools() {
 		p.Requires = SchemaPools
 	}
+	if p.UsesSchemaResources() {
+		p.Requires = SchemaResources
+	}
 	return p, nil
 }
 
@@ -212,6 +215,8 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 		if !contains(known, k.Value) {
 			if hint, ok := notYet[k.Value]; ok {
 				ps.add(k, where, "%q is not supported yet (%s)", k.Value, hint)
+			} else if hint, ok := notHere[k.Value]; ok {
+				ps.add(k, where, "%q is not allowed here: %s", k.Value, hint)
 			} else {
 				ps.add(k, where, "unknown key %q; expected one of: %s", k.Value, strings.Join(known, ", "))
 			}
@@ -283,14 +288,14 @@ func (ps *parser) parsePullRequest(v *yaml.Node) {
 
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
-		"for_each", "exclude", "max_parallel", "fail_fast", "artifacts", "fetch", "deployment"}
+		"for_each", "exclude", "max_parallel", "fail_fast", "artifacts", "fetch", "deployment", "resources"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
 	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
-	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch"}
+	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources"}
 	// Kinds from the design that are recognised but not implemented yet.
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
@@ -451,6 +456,9 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				}
 			case "reports":
 				s.Reports = ps.parseReports(v2, where)
+			case "resources":
+				s.Resources = ps.parseResources(v2, where)
+				s.resourcesLine = v2.Line
 			case "artifacts":
 				s.Artifacts = ps.parseArtifacts(v2, where)
 			case "fetch":
