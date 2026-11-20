@@ -12,12 +12,20 @@ service:
   that pod. Runners only make outbound connections: to the servers and to the Kubernetes API.
 - **PostgreSQL**: yours. The chart can deploy a single development database for trying it out.
 
+The chart in [`helm/launchway-runner`](helm/launchway-runner) installs **runners only**, for a
+server elsewhere: see [Runners in another cluster](#runners-in-another-cluster).
+
 Kubernetes 1.30 or later and Helm 3.8 or later are needed.
 
 ## Install
 
-The image is built from the [`Dockerfile`](../Dockerfile) at the top of the repository
-(`make image`). Push it to your registry and set `image.repository` and `image.tag`.
+Released images are `ghcr.io/jk-magic-creations/launchway` (the chart's default; the tag defaults
+to the chart's version) and `ghcr.io/jk-magic-creations/launchway-runner`, for linux/amd64 and
+linux/arm64, signed, with an SBOM and provenance attached ([Verifying downloads](../docs/security/verify-downloads.md) shows how
+to verify them). Pin `image.digest` in production. To build your own from source, use the
+[`Dockerfile`](../Dockerfile) (`make image`), or `make release-local release-images` for the
+release images; push to your registry and set `image.repository` and `image.tag`. Without
+internet access, use the air-gapped bundle (`make bundle`, `OFFLINE-INSTALL.md` inside).
 
 To try it, with the development database:
 
@@ -183,6 +191,40 @@ expose it. The UI keeps a long-lived request open for live updates (`/api/v1/str
 your proxy's read timeout and turn off response buffering for it (the HA example shows the
 annotations for ingress-nginx).
 
+## Runners in another cluster
+
+The `launchway-runner` chart runs only runners, connecting out to a Launchway server installed
+elsewhere: another namespace, another cluster, a VM. It renders the runners exactly as the main
+chart does: the runner file, the step namespace, the ServiceAccount, the Kubernetes executor's
+Role and RoleBinding (pods, `pods/exec`, `pods/log`, in the step namespace only), the Deployment
+and its PodDisruptionBudget, and optionally a deploy runner with its Argo CD RBAC and admission
+policies. Both charts copy these templates from [`helm/shared`](helm/shared)
+(`make charts-sync`), and a test fails if they differ or grant different rights.
+
+```sh
+kubectl create namespace launchway-runners
+kubectl -n launchway-runners create secret generic launchway-runner-token --from-literal=token="$(cat runner-token)"
+helm install runners deploy/helm/launchway-runner -n launchway-runners \
+  -f deploy/helm/launchway-runner/examples/remote.yaml        # server.url, the Secret, a step namespace
+```
+
+| Value | |
+|---|---|
+| `server.url` (required) | the server's URL as the runners reach it |
+| `token.existingSecret` | a Secret holding the runner token or a runner pool's token; required for build runners unless they enrol with `runner.join.existingSecret`; the chart never creates it |
+| `runner.*` | the same as the main chart's `runner.*` (replicas, concurrency, join tokens, labels and `accept`, `kubernetes.namespace` and `createNamespace`, which labels the namespace Pod Security "restricted", resources, PDB, secret stores, image steps) |
+| `deployRunner.*` | the same as the main chart's `delivery.deployRunner.*`, with the pool token in `deployRunner.token.existingSecret`; `runner.enabled: false` for a cluster that only receives deployments ([example](helm/launchway-runner/examples/deploy-runner.yaml)) |
+| `verification.sources` | the same health-source connection entries as the main chart's `delivery.verification.sources`, given only to the deploy runner; register their names, types and projects on the servers too |
+| `proxy.httpsProxy`, `httpProxy`, `noProxy` | a proxy for the runners' connections; its idle timeout must exceed 30 seconds (long polls last 25) |
+| `caBundle.configMap`, `key` | a CA bundle replacing the image's (it must include the public CAs you need) |
+| `networkPolicy.*` | NetworkPolicies, off by default: the runner pods may receive nothing and reach only DNS, the server, the Kubernetes API and `extraEgress`; `steps.enabled` adds one for the step namespace (DNS and `steps.egress` only). See [examples/networkpolicy.yaml](helm/launchway-runner/examples/networkpolicy.yaml) |
+| `join.existingSecret` | the original join-token setting, kept as an alias of `runner.join.existingSecret`; setting both is refused |
+
+`values.schema.json` rejects unknown and mistyped values. Runners are ready once the server has
+answered (`/readyz`), so `helm install --wait` fails if they cannot reach it. `make
+test-runner-chart` installs the main chart as the server in one namespace and this chart in
+another on a kind cluster, and runs a pipeline through the remote runner.
+
 ## Network policies and sign-in behind a gateway
 
 Learned from a real deployment with default-deny Cilium policies and the sign-in provider published
@@ -327,4 +369,7 @@ Nothing else is persisted. Secrets values never reach the servers or the databas
 ## Testing the chart
 
 [`test/README.md`](test/README.md) installs the chart on a kind cluster and checks a real
-pipeline, failover of servers and runners, and a rolling upgrade.
+pipeline, failover of servers and runners, and a rolling upgrade. `make chart-lint` lints both
+charts; `go test ./internal/config/` renders them and checks that they agree; `make
+test-runner-chart` and `make test-bundle` install them on kind (see
+[packaging/README.md](../packaging/README.md)).

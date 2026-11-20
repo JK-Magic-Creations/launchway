@@ -261,6 +261,8 @@ Kubernetes API.
 | `runner.kubernetes.cpu` | string or number | `""` (`50m`) | CPU request of each step container, unless the pipeline asks |
 | `runner.kubernetes.memory` | string or number | `""` (`64Mi`) | Memory request of each step container, unless the pipeline asks |
 | `runner.kubernetes.memoryLimit` | string or number | `""` (none) | Memory limit of each step container that does not ask for memory |
+| `runner.kubernetes.maxCpu` | string or number | `""` (no cap) | The most CPU one step container may ask for, as a request or a limit; server defaults are lowered to it, an explicit ask above it fails the step. See [`kubernetes.max_cpu`](runner-config.md#kubernetes) |
+| `runner.kubernetes.maxMemory` | string or number | `""` (no cap) | The most memory one step container may ask for; same behaviour as `maxCpu` |
 | `runner.kubernetes.imagePullSecrets` | list | `[]` | Secrets in the step namespace for pulling step images |
 | `runner.kubernetes.keepFailed` | string | `""` (`2h`) | How long a failed or cancelled run's pod is kept for a resume |
 | `runner.kubernetes.startTimeout` | string | `""` (`10m`) | How long to wait for a step pod's images and containers |
@@ -353,6 +355,7 @@ runs a release that knows them, and take them out before rolling back to one tha
 | `delivery.deployRunner.secretStores` | map | `{}` | Secret stores the deploy runner may read |
 | `delivery.deployRunner.ai` | boolean or null | unset (`false`) | Let the deploy runner call the models in `ai.models` to explain its verdicts, with keys read from `secretStores`. Needs `ai.models` |
 | `delivery.deployRunner.refresh` | boolean or null | `null` (`true`) | Ask Argo CD to look at the repository at once after a commit |
+| `delivery.deployRunner.accept` | map or null | unset | The deploy runner's own limits on the work it takes, as [`accept`](runner-config.md#what-the-runner-accepts) (`projects`, `environments`, `executors`), checked on the runner before anything runs. Written only when set |
 | `delivery.deployRunner.rbac.create` | boolean | `true` | Create the Roles below and bind them to the deploy runner |
 | `delivery.deployRunner.rbac.patchApplications` | boolean | `true` | Patch on the named Applications, to request syncs and refreshes. Without it, deploy steps need `sync.request: auto` or `never` |
 | `delivery.deployRunner.rbac.readDeployments` | boolean | `false` | Get on Deployments in the rollout namespaces, for rollouts that take their pod template from a Deployment (`workloadRef`) |

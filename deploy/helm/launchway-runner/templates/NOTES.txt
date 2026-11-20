@@ -1,0 +1,17 @@
+Launchway runners {{ include "launchway.imageTag" . }} are installed as release {{ .Release.Name }} in namespace {{ .Release.Namespace }},
+connecting to {{ .Values.server.url }}:
+{{- if .Values.runner.enabled }}
+  {{ .Values.runner.replicas }} build runner(s), running steps in pods in namespace {{ include "launchway.stepNamespace" . }}
+{{- end }}
+{{- if .Values.deployRunner.enabled }}
+  a deploy runner for target {{ .Values.deployRunner.target }} (Argo CD in {{ .Values.deployRunner.argocdNamespace }})
+{{- end }}
+
+Check that they reached the server (a runner is ready once the server has answered):
+  kubectl --namespace {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+  kubectl --namespace {{ .Release.Namespace }} logs -l app.kubernetes.io/instance={{ .Release.Name }} --tail=20
+They also appear on the server's Runners list (/api/v1/runners).
+{{- if not .Values.networkPolicy.enabled }}
+
+No NetworkPolicy is installed: the runners may connect anywhere. See examples/networkpolicy.yaml.
+{{- end }}

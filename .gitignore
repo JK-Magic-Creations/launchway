@@ -9,6 +9,9 @@
 *.db-shm
 *.db-wal
 /.claude/
+/dist/
+/.release-key/
 /docs/node_modules/
 /docs/.vitepress/dist/
 /docs/.vitepress/cache/
+/.tools/

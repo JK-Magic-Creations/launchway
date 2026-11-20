@@ -1,0 +1,8 @@
+{{- $r := .Values.deployRunner -}}
+{{- if $r.enabled }}
+{{- $name := include "launchway.deployRunnerName" . -}}
+{{- $conn := include "launchway.connectionVolumes" . | fromYaml -}}
+{{- $ctx := dict "root" . "r" $r "name" $name "sa" $name "component" "deploy-runner" "server" .Values.server.url "verification" .Values.verification "tokenSecret" $r.token.existingSecret "tokenKey" $r.token.existingSecretKey "env" (include "launchway.connectionEnv" . | fromYaml).env "volumes" $conn.volumes "mounts" $conn.mounts -}}
+{{- /* Shared with the launchway chart (deploy/helm/shared). */ -}}
+{{- include "launchway.shared.deployRunner" $ctx }}
+{{- end }}

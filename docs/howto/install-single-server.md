@@ -28,6 +28,27 @@ servers on Kubernetes, see [Install on Kubernetes](install-kubernetes.md).
 
 ## Get the binary
 
+### From a release
+
+Releases publish static binaries for Linux and macOS (amd64 and arm64), signed, with an SBOM each.
+Download the binary with `SHA256SUMS` and its signature, and check both before installing:
+
+```sh
+v=1.4.0
+base=https://github.com/JK-Magic-Creations/launchway/releases/download/v$v
+curl -fsSLO "$base/launchway-$v-linux-amd64" -O "$base/SHA256SUMS" -O "$base/SHA256SUMS.sigstore.json"
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity-regexp '^https://github\.com/(?i:jk-magic-creations/launchway)/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum --ignore-missing -c SHA256SUMS
+mv "launchway-$v-linux-amd64" launchway && chmod +x launchway
+```
+
+[Verifying downloads](../security/verify-downloads.md) explains the checks. No release has been
+published yet: until the first one is, build from source.
+
+### From source
+
 Clone the repository and build the web UI and the binary:
 
 ```sh
@@ -49,14 +70,18 @@ command line.
 Install it, and create a system user and the configuration directory:
 
 ```sh
-sudo install -m 0755 bin/launchway /usr/local/bin/launchway
+sudo install -m 0755 bin/launchway /usr/local/bin/launchway   # or ./launchway from a release
 sudo useradd --system --home-dir /var/lib/launchway --shell /usr/sbin/nologin launchway
 sudo install -d -m 0750 -o root -g launchway /etc/launchway
 ```
 
 The systemd unit below creates `/var/lib/launchway` itself.
 
-## Or build the container image
+## Or use the container image
+
+Releases publish `ghcr.io/jk-magic-creations/launchway` for linux/amd64 and linux/arm64, signed,
+with SBOM and provenance attestations (see [Verifying downloads](../security/verify-downloads.md#check-an-image)).
+To build it yourself instead:
 
 ```sh
 make image
@@ -68,7 +93,9 @@ and another name with `make image IMAGE=registry.example.com/launchway:1.0.0`.
 
 The image holds the binary, Git, OpenSSH's client and CA certificates, and nothing else: no shell
 and no package manager. It runs as user and group `65532`, works in `/var/lib/launchway`, exposes
-port `8080`, and starts `launchway server --config /etc/launchway/launchway.yaml`.
+port `8080`, and starts `launchway server --config /etc/launchway/launchway.yaml`. Its OCI labels
+name the version, the full commit it was built from and the commit's time; `make image` refuses to
+build outside a Git clone unless `REVISION` and `CREATED` are given.
 
 ## Write the configuration
 

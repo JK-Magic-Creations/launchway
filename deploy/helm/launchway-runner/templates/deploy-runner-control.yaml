@@ -1,0 +1,5 @@
+{{- $r := .Values.deployRunner -}}
+{{- if $r.enabled }}
+{{- $name := include "launchway.deployRunnerName" . -}}
+{{- include "launchway.shared.deployRolloutControl" (dict "root" . "r" $r "name" $name "sa" $name "component" "deploy-runner") }}
+{{- end }}

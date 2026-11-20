@@ -1,7 +1,12 @@
 # The Launchway image: one static binary (server and runner), Git, and CA
 # certificates. Build it with `make image`, or:
 #
-#   podman build --build-arg VERSION=1.2.3 --build-arg REVISION=$(git rev-parse HEAD) -t launchway:1.2.3 .
+#   podman build --build-arg VERSION=1.2.3 --build-arg REVISION=$(git rev-parse HEAD) \
+#     --build-arg CREATED=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ) \
+#     -t launchway:1.2.3 .
+#
+# REVISION (the full commit) is required: the build stops without it, so no image is labelled
+# with an unknown revision.
 #
 # The final image holds the binary, Git (with its HTTPS and SSH transports)
 # and CA certificates, and nothing else: no package manager and no shell.
@@ -31,6 +36,12 @@ COPY internal/ internal/
 COPY web/embed.go web/
 COPY --from=web /src/web/dist/ web/dist/
 ARG VERSION=dev
+ARG REVISION=
+ARG CREATED=
+RUN echo "$REVISION" | grep -Eq '^[0-9a-f]{40}([0-9a-f]{24})?$' \
+    || { echo "REVISION must be the full commit (make image sets it): got '$REVISION'" >&2; exit 1; } \
+    && echo "$CREATED" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' \
+    || { echo "CREATED must be the commit's time in UTC, such as 2026-11-20T06:12:56Z: got '$CREATED'" >&2; exit 1; }
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/launchway ./cmd/launchway
 
 # ---- the runtime file system ----
@@ -53,9 +64,9 @@ RUN apk add --root /rootfs --initdb --no-cache --no-scripts \
 
 FROM scratch
 ARG VERSION=dev
-ARG REVISION=unknown
-ARG CREATED=
-ARG SOURCE=https://github.com/jk-magic-creations/launchway
+ARG REVISION
+ARG CREATED
+ARG SOURCE=https://github.com/JK-Magic-Creations/launchway
 LABEL org.opencontainers.image.title="Launchway" \
       org.opencontainers.image.description="A build and delivery platform: server, web UI and runner in one binary" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \

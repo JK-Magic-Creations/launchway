@@ -435,6 +435,14 @@ runner:
     # -- Memory limit of each container in a step pod that does not ask for memory. Default:
     # none.
     memoryLimit: ""
+    # -- The most CPU one container of a step pod may ask for, as a request or a limit. The
+    # server's step resource defaults are lowered to it; a step that asks for more fails before
+    # its pod is made. Default: no cap.
+    maxCpu: ""
+    # -- The most memory one container of a step pod may ask for, as a request or a limit. The
+    # server's step resource defaults are lowered to it; a step that asks for more fails before
+    # its pod is made. Default: no cap.
+    maxMemory: ""
     # -- Secrets in the step namespace for pulling step images, by name.
     imagePullSecrets: []
     # -- How long a failed or canceled run's pod is kept, so that a resume can reuse its
@@ -705,6 +713,11 @@ delivery:
     # read from deployRunner.secretStores. Written to its file only when true; needs ai.models.
     # Unset: the built-in default, false.
     ai: null
+    # -- The deploy runner's own limits on the work it takes (accept: in its runner.yaml), checked
+    # on the runner before anything runs: which projects it serves and which environments it
+    # deploys to. Written only when set. For example:
+    #   accept: { projects: [launchway], environments: [launchway-dev, launchway-sandbox], executors: [deploy] }
+    accept: null
     rbac:
       # -- Create the Roles below and bind them to the deploy runner.
       create: true

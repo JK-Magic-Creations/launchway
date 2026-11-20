@@ -1,0 +1,7 @@
+# The server side of make test-runner-chart (with --set for the image and the database).
+config:
+  projects:
+    - { name: demo, repo: "git://lw-rc-git.lw-rc-server.svc/demo.git", branch: main, poll: 1h }
+  extraConfig:
+    # A test cluster: no sign-in.
+    auth: { allow_anonymous: true }

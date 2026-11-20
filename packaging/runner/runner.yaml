@@ -1,0 +1,14 @@
+# Settings of the launchway-runner service: the same as runner: in a server's configuration, plus
+# where the server is (see https://jk-magic-creations.github.io/launchway/reference/runner-config).
+# Unknown settings are refused. Credentials are never in this file: they are LAUNCHWAY_JOIN or
+# LAUNCHWAY_RUNNER_TOKEN in /etc/launchway/runner.env.
+#
+# Set server, put a join token (or the runner token) in runner.env, then:
+#   systemctl enable --now launchway-runner
+#
+# server: https://launchway.example.com
+data: /var/lib/launchway-runner
+# name: build-2            # default: the host name
+# concurrency: 2
+# executor: host           # host (the default here), podman, docker or kubernetes
+executor: host

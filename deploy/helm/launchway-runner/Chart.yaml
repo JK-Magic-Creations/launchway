@@ -1,0 +1,18 @@
+apiVersion: v2
+name: launchway-runner
+description: >-
+  Launchway runners only: build runners that run steps in pods of a step namespace, and
+  optionally a deploy runner, connecting out to a Launchway server installed elsewhere.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.30.0-0"
+home: https://github.com/jk-magic-creations/launchway
+sources:
+  - https://github.com/jk-magic-creations/launchway
+keywords:
+  - ci
+  - cd
+  - runner
+annotations:
+  licenses: AGPL-3.0-only

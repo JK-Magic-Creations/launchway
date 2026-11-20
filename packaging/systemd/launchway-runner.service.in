@@ -1,0 +1,72 @@
+# The Launchway runner as a systemd service. Installed by the deb and rpm packages (in
+# /usr/lib/systemd/system) and by install.sh (in /etc/systemd/system); @BIN@ is the binary's path.
+#
+# Settings live in /etc/launchway/runner.yaml (see the runner configuration reference); the credentials and
+# any proxy settings in /etc/launchway/runner.env, readable by root only. The runner makes only
+# outbound connections. Its workspaces and Git mirrors are in /var/lib/launchway-runner, the
+# runner user's home and the only place it may write.
+#
+# The sandbox below suits the host executor (steps run as the runner user, inside this sandbox)
+# and the Kubernetes executor. The container executor needs some of it relaxed; see
+# /usr/share/launchway/systemd/container-executor.conf and SUPPORT.md.
+[Unit]
+Description=Launchway runner
+Documentation=https://github.com/jk-magic-creations/launchway#connect-a-runner-on-another-machine-or-cluster
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=20
+
+[Service]
+Type=exec
+User=launchway-runner
+Group=launchway-runner
+EnvironmentFile=/etc/launchway/runner.env
+Environment=HOME=/var/lib/launchway-runner
+ExecStart=@BIN@ runner --config /etc/launchway/runner.yaml --health-listen 127.0.0.1:8081
+WorkingDirectory=/var/lib/launchway-runner
+StateDirectory=launchway-runner
+StateDirectoryMode=0750
+UMask=0027
+
+# On SIGTERM the runner stops its steps (10 seconds' grace each) and hands them back to the
+# server to run again elsewhere. Exit code 75 asks for a restart (reserved for self-update).
+KillMode=mixed
+TimeoutStopSec=90
+Restart=always
+RestartSec=5s
+
+# Resources. Steps of the host executor run inside this service's cgroup, so these limits cover
+# them too; raise them with a drop-in (systemctl edit launchway-runner) for heavy builds.
+LimitNOFILE=65536
+TasksMax=8192
+MemoryHigh=90%
+OOMPolicy=continue
+
+# Sandbox.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+LockPersonality=yes
+SystemCallArchitectures=native
+RemoveIPC=yes
+# Not set, on purpose: MemoryDenyWriteExecute (breaks the JIT compilers of Node.js, Java and
+# others that steps run) and a SystemCallFilter (steps run arbitrary build tools).
+
+[Install]
+WantedBy=multi-user.target

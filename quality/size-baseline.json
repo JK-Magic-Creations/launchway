@@ -1,0 +1,41 @@
+{
+  "comment": "Files over max_file_lines and functions over max_func_lines that predate the size ratchet. They may not grow and nothing may join them. Lower with `make ratchet-update`.",
+  "max_file_lines": 1000,
+  "max_func_lines": 150,
+  "files": {
+    "cmd/launchway/main.go": 1057,
+    "internal/api/api.go": 1317,
+    "internal/api/mcp_tools.go": 1567,
+    "internal/config/config.go": 1104,
+    "internal/engine/artifacts.go": 1220,
+    "internal/engine/control.go": 1068,
+    "internal/engine/db.go": 1593,
+    "internal/engine/deployments.go": 1006,
+    "internal/engine/engine.go": 2425,
+    "internal/engine/policy.go": 1124,
+    "internal/engine/testqueries.go": 1226,
+    "internal/engine/verify.go": 1443,
+    "internal/pipeline/template.go": 1249,
+    "web/src/api.ts": 1570,
+    "web/src/pages/Run.tsx": 1026
+  },
+  "functions": {
+    "cmd/launchway/main.go:cmdServer": 212,
+    "internal/ai/schema.go:compileSchema": 151,
+    "internal/api/api.go:Server.routes": 158,
+    "internal/config/config.go:Load": 168,
+    "internal/engine/artifacts.go:Engine.BeginArtifact": 199,
+    "internal/engine/state.go:RunState.apply": 216,
+    "internal/engine/testqueries.go:Engine.RunTestCases": 194,
+    "internal/engine/testqueries.go:Engine.TestOverview": 165,
+    "internal/imagebuild/build.go:Build": 431,
+    "internal/pipeline/ai.go:parser.parseAIStep": 154,
+    "internal/pipeline/image.go:parser.parseImageStep": 161,
+    "internal/pipeline/parse.go:parser.parseSteps": 155,
+    "internal/pipeline/verify.go:parser.parseVerifyStep": 216,
+    "internal/policy/evaluate.go:judge": 227,
+    "internal/policy/parse.go:parser.rule": 192,
+    "internal/runner/runner.go:Runner.execute": 152,
+    "internal/verify/source/source.go:openOne": 207
+  }
+}

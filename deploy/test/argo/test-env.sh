@@ -3,6 +3,7 @@
 # the test environment. Used by "make test-argo" before up.sh.
 #
 #   deploy/test/argo/test-env.sh [--context kind-NAME]
+# shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 parse_context "$@"
 require_kind_context

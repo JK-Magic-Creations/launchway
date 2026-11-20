@@ -1,11 +1,21 @@
-# Launchway's own pipeline.
+# Launchway's own pipeline: test, build the image, and deploy it to itself (sandbox first, then dev).
+# Runbook: docs/howto/self-deploy.md. Design: the self-hosting design notes (build, gates, gitops commit,
+# watch, roll back). Everything below uses features that exist; docs/howto/self-deploy.md lists what does not.
+#
+# What an operator must have configured first (none of it is in this file, on purpose):
+#   - runner: images.builders (project launchway), images.registries.harbor with a push rule for
+#     launchway/launchway only, images.signing (the runner's own key), a secret store `ci`.
+#   - server: environments launchway-sandbox and launchway-dev (dev protected), a deploy runner pool,
+#     verification sources `prometheus` and `loki`.
+#   - deploy runner: repos.gitops (homelab-gitops, paths limited to the two launchway files per
+#     environment), applications limited to launchway-sandbox and launchway-dev, accept: limited to the same.
 pipeline: launchway
 on:
   push: { branches: [main] }
   pull_request: {}
 
-# A newer push to the same branch, or a new commit on the same pull request,
-# cancels the older run still going.
+# A newer push to the same branch, or a new commit on the same pull request, cancels the older run
+# still going. A run holding an open deployment is never cancelled this way: it finishes first.
 supersede: true
 
 steps:
@@ -13,6 +23,7 @@ steps:
     description: Look for common mistakes with go vet
     image: docker.io/library/golang:1.27
     run: go vet ./...
+    resources: { cpu: 1, memory: 2Gi }
 
   test:
     description: Run every Go test
@@ -29,6 +40,8 @@ steps:
       exit $status
     reports:
       tests: reports/go-test.json
+    # An earlier run of this step on the shared runners was killed for memory: ask for it.
+    resources: { cpu: 2, cpu_limit: 4, memory: 4Gi, memory_limit: 6Gi }
     timeout: 20m
 
   build-ui:
@@ -39,6 +52,7 @@ steps:
       cd web
       npm ci --no-audit --no-fund
       npm run build
+    resources: { cpu: 1, memory: 2Gi }
 
   build-binary:
     description: Build the launchway binary, with the UI inside it
@@ -49,3 +63,175 @@ steps:
       CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$version" -o bin/launchway ./cmd/launchway
       ls -lh bin/launchway
       echo "size=$(du -h bin/launchway | cut -f1)" >> "$LAUNCHWAY_OUTPUTS"
+    resources: { cpu: 2, memory: 3Gi }
+
+  # The new binary checks the pipeline files that ship with it. (The design also asks the RUNNING
+  # server to validate them and the previous binary to read the new configuration; neither check
+  # exists yet, see the gaps in docs/howto/self-deploy.md.)
+  gate-pipeline:
+    description: The built binary reads this repository's own pipeline
+    image: docker.io/library/golang:1.27
+    needs: build-binary
+    run: bin/launchway validate .launchway/pipeline.yaml
+    resources: { cpu: 500m, memory: 512Mi }
+
+  # ---- the image ---------------------------------------------------------------------------
+  image:
+    description: Build, scan, sign and push the Launchway image by digest
+    kind: image
+    needs: [test, gate-pipeline]
+    context: .
+    file: Dockerfile            # builds the UI and the binary itself
+    build_args:
+      VERSION:  { run: short_sha }
+      REVISION: { run: sha }    # org.opencontainers.image.revision = the commit, never "unknown"
+      # CREATED is left empty: there is no commit-time value yet, and a wall-clock time would make
+      # a rebuild a different image.
+    tags:
+      # Immutable by registry rule; never latest. The tag is for people, the digest is what deploys.
+      - { registry: harbor, repository: launchway/launchway, tag: { run: short_sha } }
+    cache: { registry: harbor, repository: launchway/buildkit-cache }
+    sbom: true
+    provenance: true
+    sign: true                  # the runner's own key; step pods never see it
+    scan: { fail_on: high, mode: enforce }   # nothing is pushed if this fails
+    when: { branch: main }      # pull requests build and scan in their own run, never push
+    retry: 2                    # a first connection to a registry is sometimes refused while the
+                                # cluster's DNS-based egress rules catch up; a scan finding is not retried away
+    timeout: 45m
+
+  # ---- sandbox first -----------------------------------------------------------------------
+  approve-sandbox:
+    kind: approval
+    needs: image
+    when: { branch: main }
+    message: >-
+      Deploy this commit to the Launchway SANDBOX? The image step shows the digest, signature, SBOM and
+      scan counts. This changes helm-values/launchway-sandbox.yaml and the chart pin of the sandbox
+      Application in the GitOps repository, and nothing else. The database is dumped first (Argo CD
+      PreSync job). Roll back is a git revert; the database is never restored for a rollback.
+    timeout: 24h
+
+  deploy-sandbox:
+    kind: deploy
+    needs: [image, approve-sandbox]
+    when: { branch: main }
+    environment: launchway-sandbox
+    service: launchway
+    version: { run: short_sha }
+    timeout: 45m
+    argocd:
+      application: launchway-sandbox
+      write_back:
+        repo: gitops
+        branch: main
+        changes:
+          - { file: helm-values/launchway-sandbox.yaml, set: image.tag,    value: { run: short_sha } }
+          - { file: helm-values/launchway-sandbox.yaml, set: image.digest, value: { output: image.digest } }
+          # The chart is pinned to a commit: it travels with the image, in the same GitOps commit.
+          - { file: argocd-apps/launchway-sandbox.yaml, set: "spec.sources[0].targetRevision", value: { run: sha } }
+      # Argo CD syncs this Application by itself: ask it for nothing.
+      sync: { request: never, windows: wait }
+      health: application
+    rollout: { name: launchway-sandbox-server, namespace: launchway-sandbox }
+
+  verify-sandbox:
+    kind: verify
+    needs: deploy-sandbox
+    when: { branch: main }
+    deployment: deploy-sandbox
+    delay: 1m
+    duration: 10m
+    interval: 1m
+    on_fail: rollback
+    on_inconclusive: fail
+    params:
+      ns: { deployment: namespace }
+    metrics:
+      - name: ready-servers
+        source: prometheus
+        query: 'sum(kube_pod_status_ready{namespace="{{ns}}",condition="true",pod=~".*-server-.*"})'
+        direction: lower-is-worse
+        min: 2
+      - name: restarts
+        source: prometheus
+        query: 'sum(increase(kube_pod_container_status_restarts_total{namespace="{{ns}}"}[5m]))'
+        max: 0
+    logs:
+      - name: server
+        source: loki
+        query: '{namespace="{{ns}}", container="server"}'
+
+  rollback-sandbox:
+    kind: rollback
+    needs: verify-sandbox
+    deployment: deploy-sandbox
+    timeout: 20m
+
+  # ---- the same digest to dev --------------------------------------------------------------
+  approve-dev:
+    kind: approval
+    needs: verify-sandbox
+    when: { branch: main }
+    message: >-
+      The sandbox ran this digest and the verification passed. Deploy THE SAME DIGEST to launchway-dev, the
+      instance that runs this pipeline? A person other than the one who pushed must approve. The commit
+      changes helm-values/launchway-dev.yaml and the chart pin of the launchway-dev Application and
+      nothing else; a database dump is taken first. Not for a release that raises the database
+      schema minimum (those are deployed by hand, with the owner).
+    timeout: 24h
+
+  deploy-dev:
+    kind: deploy
+    needs: [image, approve-dev]
+    when: { branch: main }
+    environment: launchway-dev
+    service: launchway
+    version: { run: short_sha }
+    timeout: 45m
+    argocd:
+      application: launchway-dev
+      write_back:
+        repo: gitops
+        branch: main
+        changes:
+          - { file: helm-values/launchway-dev.yaml, set: image.tag,    value: { run: short_sha } }
+          - { file: helm-values/launchway-dev.yaml, set: image.digest, value: { output: image.digest } }
+          - { file: argocd-apps/launchway-dev.yaml, set: "spec.sources[0].targetRevision", value: { run: sha } }
+      sync: { request: never, windows: wait }
+      health: application
+    # The Argo Rollout's canary gates (analysis) are the verdict; Launchway watches and records.
+    rollout: { name: launchway-dev-server, namespace: launchway-dev }
+
+  verify-dev:
+    kind: verify
+    needs: deploy-dev
+    when: { branch: main }
+    deployment: deploy-dev
+    delay: 1m
+    duration: 15m
+    interval: 1m
+    on_fail: rollback
+    on_inconclusive: fail
+    params:
+      ns: { deployment: namespace }
+    metrics:
+      - name: ready-servers
+        source: prometheus
+        query: 'sum(kube_pod_status_ready{namespace="{{ns}}",condition="true",pod=~".*-server-.*"})'
+        direction: lower-is-worse
+        min: 2
+      - name: restarts
+        source: prometheus
+        query: 'sum(increase(kube_pod_container_status_restarts_total{namespace="{{ns}}"}[5m]))'
+        max: 0
+    logs:
+      - name: server
+        source: loki
+        query: '{namespace="{{ns}}", container="server"}'
+
+  rollback-dev:
+    kind: rollback
+    needs: verify-dev
+    deployment: deploy-dev
+    timeout: 20m

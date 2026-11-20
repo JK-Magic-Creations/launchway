@@ -31,6 +31,7 @@ flowchart LR
 | Push rules | Nothing is pushed without a rule naming the project and the repository. Pull requests and drafts never push. | [Container images](../guide/images.md) |
 | Digest pinning | Deploy steps can write `repository@sha256:...`, which nobody can move. | [Deployments](../guide/deployments.md) |
 | Policy gates | Require tests, findings below a severity, an SBOM, images built, signed and scanned by the run, approvals, pinned libraries, images by digest from named registries. | [Policies](../guide/policies.md) |
+| Launchway releases | Reproducible binaries, packages and charts with CycloneDX SBOMs, signed checksums and SLSA provenance; signed server and runner images with SBOM and provenance attestations. | [Verifying downloads](verify-downloads.md) |
 
 Verify a signature and provenance made by an image step:
 
@@ -44,10 +45,12 @@ cosign verify-attestation --key cosign.pub --insecure-ignore-tlog --type slsapro
 - Builds are not hermetic: a Dockerfile can download anything, and earlier steps can change the
   workspace. The provenance says so.
 - Signatures are recorded, not verified again at deploy time.
-- Keyless signing (short-lived certificates and a transparency log) is designed but not built.
+- Image steps sign with the runner's own key, not a keyless identity. The release workflow uses
+  keyless Sigstore signing for Launchway's own releases; local and air-gapped release builds use a
+  key file, as image steps do.
 
 ## In progress and planned
 
-Signed Launchway releases with installers, and more, are on the [roadmap](../roadmap-list.md),
-each with its status. Verification checks after a deployment are available: see
+More supply-chain controls are on the [roadmap](../roadmap-list.md), each with its status.
+Verification checks after a deployment are available: see
 [Verifying a deployment](../guide/verification.md).

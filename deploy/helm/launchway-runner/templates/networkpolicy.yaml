@@ -1,0 +1,102 @@
+{{- $np := .Values.networkPolicy -}}
+{{- if $np.enabled }}
+{{- $u := urlParse .Values.server.url -}}
+{{- $serverPort := $np.server.port | default (ternary 443 80 (eq $u.scheme "https")) -}}
+{{- $hostPort := regexFind ":[0-9]+$" $u.host -}}
+{{- if $hostPort }}{{ $serverPort = trimPrefix ":" $hostPort | int }}{{ end -}}
+# The runners' traffic: nothing comes in; out, only DNS, the Launchway server, the Kubernetes API
+# (build runners) and what networkPolicy.extraEgress adds (Git hosts, secret stores, Argo CD's
+# repositories). Kubelet probes are not affected by most network plugins.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "launchway.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "launchway.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    {{- if $np.dns.enabled }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $np.dns.namespace }}
+          podSelector:
+            matchLabels:
+              {{- toYaml $np.dns.podLabels | nindent 14 }}
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    {{- end }}
+    # The Launchway server ({{ .Values.server.url }}).
+    - ports:
+        - { protocol: TCP, port: {{ $serverPort }} }
+      {{- if or $np.server.cidrs $np.server.namespaceSelector }}
+      to:
+        {{- range $np.server.cidrs }}
+        - ipBlock: { cidr: {{ . }} }
+        {{- end }}
+        {{- with $np.server.namespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- with $np.server.podSelector }}
+          podSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- if .Values.runner.enabled }}
+    # The Kubernetes API, which the build runners use to start and exec into step pods.
+    - ports:
+        {{- range $np.kubernetesAPI.ports }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+      {{- with $np.kubernetesAPI.cidrs }}
+      to:
+        {{- range . }}
+        - ipBlock: { cidr: {{ . }} }
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- with $np.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- if and .Values.runner.enabled $np.steps.enabled }}
+---
+# Step pods: nothing comes in (runners reach them through the Kubernetes API, not the pod
+# network); out, DNS and what networkPolicy.steps.egress allows (package registries and the
+# like). It selects every pod in the step namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "launchway.fullname" . }}-steps
+  namespace: {{ include "launchway.stepNamespace" . }}
+  labels:
+    {{- include "launchway.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    {{- if $np.dns.enabled }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $np.dns.namespace }}
+          podSelector:
+            matchLabels:
+              {{- toYaml $np.dns.podLabels | nindent 14 }}
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    {{- end }}
+    {{- with $np.steps.egress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}
