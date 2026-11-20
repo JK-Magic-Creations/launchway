@@ -115,3 +115,35 @@ func TestOnlyTokensActAsTerraformAndOwnershipIsKept(t *testing.T) {
 		t.Error("taking ownership is not in the audit trail")
 	}
 }
+
+// Agents change configuration against the version they read: put_config on
+// an object that exists without a version is refused, and replaces it only
+// when the caller says overwrite.
+func TestMCPPutConfigIsVersionCheckedByDefault(t *testing.T) {
+	e := mcpEnv(t, envOpts{mcp: &MCPOptions{RequestsPerMinute: 2000}})
+	cs := mcpSession(t, e.mcpURL(), e.tokenFor(t, "ada", "cfg"), nil, nil)
+	put := func(args map[string]any) string {
+		args["kind"], args["name"] = "libraries", "shared"
+		_, errText := call(t, cs, "put_config", args)
+		return errText
+	}
+	if err := put(map[string]any{"spec": map[string]any{"repo": "https://git.example.com/a.git"}}); err != "" {
+		t.Fatalf("a new object: %s", err)
+	}
+	err := put(map[string]any{"spec": map[string]any{"repo": "https://git.example.com/b.git"}})
+	if !strings.Contains(err, "exists, at version 1") || !strings.Contains(err, "overwrite") {
+		t.Fatalf("an existing object without a version: %q", err)
+	}
+	if err := put(map[string]any{"version": 1, "spec": map[string]any{"repo": "https://git.example.com/b.git"}}); err != "" {
+		t.Errorf("with the version read: %s", err)
+	}
+	if err := put(map[string]any{"version": 1, "spec": map[string]any{"repo": "https://git.example.com/c.git"}}); err == "" {
+		t.Error("a stale version was accepted")
+	}
+	if err := put(map[string]any{"overwrite": true, "spec": map[string]any{"repo": "https://git.example.com/c.git"}}); err != "" {
+		t.Errorf("overwrite: %s", err)
+	}
+	if _, errText := call(t, cs, "delete_config", map[string]any{"kind": "libraries", "name": "shared"}); !strings.Contains(errText, "pass version") {
+		t.Errorf("a delete without a version: %q", errText)
+	}
+}

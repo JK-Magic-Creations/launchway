@@ -29,7 +29,7 @@ const configUsage = `Usage:
                                                       installation, organisation
   launchway config get KIND NAME [--json]             one object, as YAML (or JSON)
   launchway config set KIND NAME -f SPEC.yaml         create or replace an object; - reads standard input
-                     [--unit U] [--version N] [--comment TEXT] [--manager terraform] [--take-ownership]
+                     [--unit U] [--version N | --force] [--comment TEXT] [--manager terraform] [--take-ownership]
   launchway config create KIND NAME -f SPEC.yaml      create an object; fails if it exists
   launchway config delete KIND NAME [--version N] [--comment TEXT]   delete (it can be restored)
   launchway config restore KIND NAME                  bring a deleted object back
@@ -379,6 +379,7 @@ func (cl *client) configSet(args []string, create bool) error {
 	comment := fs.String("comment", "", "why, for the history")
 	mgr := fs.String("manager", "", "who manages it: api (the default), terraform or git; needs an API token")
 	take := fs.Bool("take-ownership", false, "change an object that Terraform or Git manages, and become its owner (recorded)")
+	force := fs.Bool("force", false, "replace the object whatever version it is at (the last writer wins); without it, changing an existing object needs --version")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -401,6 +402,20 @@ func (cl *client) configSet(args []string, create bool) error {
 		spec = json.RawMessage("{}")
 	}
 	body := map[string]any{"unit": *unit, "spec": spec, "comment": *comment}
+	if !create && *ver == 0 && !*force {
+		// Changing an object nobody has looked at overwrites what somebody
+		// else may have changed: ask for the version that was read.
+		var cur cfgObject
+		err := cl.call("GET", "/api/v1/config/"+url.PathEscape(pos[0])+"/"+url.PathEscape(pos[1]), nil, &cur)
+		switch {
+		case err == nil && cur.Version > 0:
+			return usageErr("%s %s exists, at version %d. Look at it (launchway config get %s %s), then change it with --version %d; or replace it whatever it is with --force",
+				pos[0], pos[1], cur.Version, pos[0], pos[1], cur.Version)
+		case err != nil && !isNotFound(err):
+			return err
+		}
+		create = true // it does not exist yet
+	}
 	if *take {
 		body["take_ownership"] = true
 	}
@@ -911,6 +926,10 @@ func (cl *client) configCheckSignIn(args []string) error {
 		fmt.Fprintln(cl.out)
 		fmt.Fprint(cl.out, v.Snippet)
 	})
+}
+
+func isNotFound(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "not found")
 }
 
 func hasFlag(args []string, name string) bool {

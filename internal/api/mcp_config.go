@@ -12,9 +12,11 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -62,11 +64,11 @@ func addConfigTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_config_imports", Annotations: readOnly("List configuration imports"),
 		Description: "The imports of configuration so far, the first start's import of the configuration file among them, with what each changed."},
 		mcpCallTimeout, listConfigImports)
-	addTool(srv, c, &mcp.Tool{Name: "check_repository", Annotations: readOnly("Check a Git repository"),
-		Description: "Read a repository as the server would, keeping nothing: whether it can be reached, its branches and default branch, and whether a branch has a pipeline file. Use it before creating a project."},
+	addTool(srv, c, &mcp.Tool{Name: "check_repository", Annotations: changes("Check a Git repository", false, true),
+		Description: "Read a repository as the server would, keeping nothing: whether it can be reached, its branches and default branch, and whether a branch has a pipeline file. Use it before creating a project. The server contacts the address (an internal address or a path on the server is refused unless allowed), so this is audited and limited, and is not a read-only call."},
 		mcpCallTimeout, checkRepository)
-	addTool(srv, c, &mcp.Tool{Name: "check_signin", Annotations: readOnly("Check sign-in settings"),
-		Description: "Check sign-in answers (issuer, client_id, redirect_url, client_secret_env, groups, first administrators) against the identity provider and return the auth: block for the server's configuration file. Sign-in stays in the file because the server needs it before it can read the database."},
+	addTool(srv, c, &mcp.Tool{Name: "check_signin", Annotations: changes("Check sign-in settings", false, true),
+		Description: "Check sign-in answers (issuer, client_id, redirect_url, client_secret_env, groups, first administrators) against the identity provider and list every problem. The server contacts the address, so an address inside its own network is refused unless an administrator allowed the host; the call is audited and limited."},
 		mcpCallTimeout, checkSignIn)
 }
 
@@ -129,6 +131,7 @@ type putIn struct {
 	Unit          string `json:"unit,omitempty" jsonschema:"the unit the object belongs to or is defined at; empty is the organisation"`
 	Spec          any    `json:"spec" jsonschema:"the object's settings, with the keys the configuration file uses (get_config shows an example)"`
 	Version       int64  `json:"version,omitempty" jsonschema:"the version you read; the change is refused if the object has moved on; -1 means it must not exist yet"`
+	Overwrite     bool   `json:"overwrite,omitempty" jsonschema:"replace the object whatever version it is at (the last writer wins); only when you mean to discard what somebody else may have changed. Without it, changing an object that exists needs version"`
 	Comment       string `json:"comment,omitempty" jsonschema:"why, for the history"`
 	TakeOwnership bool   `json:"take_ownership,omitempty" jsonschema:"change an object that Terraform or Git manages, and become its owner; recorded"`
 }
@@ -145,6 +148,22 @@ func putConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in putIn
 		return out, errors.New("give the object's settings: spec")
 	}
 	body := obj{"unit": in.Unit, "spec": in.Spec, "comment": in.Comment}
+	if in.Version == 0 && !in.Overwrite {
+		// Changing what nobody has read overwrites what somebody else may
+		// have changed: a new object is created, an existing one needs the
+		// version that was read.
+		var cur struct {
+			Version int64 `json:"version"`
+		}
+		err := c.apiJSON(ctx, "put_config", http.MethodGet, apiPath("/api/v1/config/%s/%s", in.Kind, in.Name), nil, &cur)
+		switch {
+		case err == nil && cur.Version > 0:
+			return out, fmt.Errorf("%s %s exists, at version %d: read it with get_config and pass version %d, or pass overwrite true to replace it whatever it is", in.Kind, in.Name, cur.Version, cur.Version)
+		case err != nil && !strings.Contains(err.Error(), "not found"):
+			return out, err
+		}
+		in.Version = -1
+	}
 	if in.TakeOwnership {
 		body["take_ownership"] = true
 	}
@@ -164,7 +183,8 @@ func putConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in putIn
 type lifecycleIn struct {
 	Kind          string `json:"kind" jsonschema:"the kind, as for list_config"`
 	Name          string `json:"name" jsonschema:"the object's name"`
-	Version       int64  `json:"version,omitempty" jsonschema:"the version you read; refused if the object has moved on"`
+	Version       int64  `json:"version,omitempty" jsonschema:"the version you read with get_config; refused if the object has moved on. Required unless overwrite is true"`
+	Overwrite     bool   `json:"overwrite,omitempty" jsonschema:"act whatever version the object is at (the last writer wins)"`
 	Comment       string `json:"comment,omitempty" jsonschema:"why, for the history"`
 	ForceInUse    bool   `json:"force_in_use,omitempty" jsonschema:"delete even though active runs depend on it (project, environment, runner pool); recorded in the history and the audit trail"`
 	TakeOwnership bool   `json:"take_ownership,omitempty" jsonschema:"change an object that Terraform or Git manages, and become its owner; recorded"`
@@ -185,6 +205,9 @@ func lifecycle(ctx context.Context, c *mcpCall, tool, method, suffix string, in 
 	}
 	if in.Name == "" {
 		return out, errors.New("say which object: name")
+	}
+	if in.Version == 0 && !in.Overwrite {
+		return out, errors.New("pass version (from get_config), so that the change is refused if somebody changed the object since you read it; or overwrite true to act whatever version it is at")
 	}
 	body := obj{"comment": in.Comment}
 	if in.Version != 0 {
