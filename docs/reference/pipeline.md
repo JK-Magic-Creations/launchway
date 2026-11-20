@@ -151,8 +151,9 @@ cannot turn pull-request runs on for itself. A pull request has no branch or tag
 The server sees only each pull request's head, so it learns the target from the project's **forge
 connection**, and does so when it first sees each head, reading the pipeline on the default branch
 (the reviewed one) to know whether to filter. If the project has no forge connection, a pipeline
-with `into` runs no pull requests, and the project's recent pushes say so: *pull request #12 not
-run: the pipeline filters by target branch and the project has no forge connection*. If the forge
+with `into` runs no pull requests, and the project's recent pushes say so, once: *waiting: pull request
+#12 not run: the pipeline filters by target branch and the project has no forge connection*. The head
+is not marked as seen, so every poll looks at it again, and it runs once the project has a forge. If the forge
 cannot be reached, the pull request is not run either (the server never runs unfiltered): the
 decision says *waiting: forge unreachable*, and the next poll tries again for as long as the head
 is the newest. The target is read once for each head; when a pull request is retargeted and its

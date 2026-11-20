@@ -91,14 +91,18 @@ type intoResult struct {
 // pullRequestInto applies the default branch's on.pull_request.into to one
 // pull-request head. It fails closed: without a forge, or when the forge
 // cannot say, the pull request does not run, whatever the filter would have
-// said.
+// said, and the head is not marked seen, so that it runs once there is a
+// forge that answers.
 func (m *Manager) pullRequestInto(ctx context.Context, p *project, n int, sha string, filter *pipeline.PullRequestTrigger) intoResult {
 	if filter == nil || len(filter.Into) == 0 {
 		return intoResult{}
 	}
 	f := m.forge(p.Name)
 	if f == nil {
-		return intoResult{Reject: fmt.Sprintf("pull request #%d not run: the pipeline filters by target branch and the project has no forge connection", n)}
+		// Not a verdict on this head: adding a forge later must run it, so it
+		// is not claimed, and the decision is recorded once.
+		return intoResult{Wait: fmt.Sprintf("waiting: pull request #%d not run: the pipeline filters by target branch and the project has no forge connection; "+
+			"it is looked at again at every poll, and runs once the project has one", n)}
 	}
 	key := targetKey{p.Name, n, sha}
 	m.forgeMu.Lock()

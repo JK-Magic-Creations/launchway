@@ -119,23 +119,41 @@ func TestPullRequestsIntoRunOnlyForTheirTargets(t *testing.T) {
 	}
 }
 
-// Without a forge connection, nothing runs and the decision says so.
+// Without a forge connection, nothing runs and the decision says so, once.
+// The head is not marked seen, so connecting a forge later runs it.
 func TestPullRequestsIntoWithoutAForgeRunNothing(t *testing.T) {
 	dir, repo := prRepo(t, intoPipeline)
 	m, eng := prManager(t, testdb.New(t), dir, Project{Name: "app", URL: repo})
 	seedPR(t, repo, m)
 	openPR(t, repo, "12", "", "a change")
 	pollOnce(t, m)
+	pollOnce(t, m)
 	if runs := runsOf(t, eng); len(runs) != 0 {
 		t.Fatalf("%d runs", len(runs))
 	}
 	ds := decisions(t, eng)
-	if len(ds) != 1 || ds[0].Outcome != "ignored" ||
-		ds[0].Detail != "pull request #12 not run: the pipeline filters by target branch and the project has no forge connection" {
+	if len(ds) != 1 || ds[0].Outcome != "waiting" ||
+		!strings.HasPrefix(ds[0].Detail, "waiting: pull request #12 not run: the pipeline filters by target branch and the project has no forge connection") {
 		t.Fatalf("%+v", ds)
 	}
 	if m.HasForge("app") {
 		t.Fatal("HasForge")
+	}
+	seen, err := eng.SeenRefs("app")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, marked := seen["refs/pull/12/head"]; marked {
+		t.Fatalf("the head was marked seen: %v", seen)
+	}
+	ff := newFakeForge()
+	ff.set(func(f *fakeForge) { f.base[12] = "main" })
+	if err := m.SetForge("app", ff); err != nil {
+		t.Fatal(err)
+	}
+	pollOnce(t, m)
+	if runs := runsOf(t, eng); len(runs) != 1 {
+		t.Fatalf("%d runs after the forge was added", len(runs))
 	}
 }
 
