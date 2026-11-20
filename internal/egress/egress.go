@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -416,7 +417,7 @@ func appendGitConfig(env []string, key, value string) []string {
 	out := env[:0:0]
 	for _, e := range env {
 		if v, ok := strings.CutPrefix(e, "GIT_CONFIG_COUNT="); ok {
-			fmt.Sscanf(v, "%d", &n)
+			n, _ = strconv.Atoi(v)
 			continue
 		}
 		out = append(out, e)

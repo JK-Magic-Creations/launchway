@@ -73,7 +73,7 @@ func (s *Service) stepResourcesFromTables() (*StepResources, error) {
 	}
 	d := map[string]resources.Request{}
 	for _, x := range cfg.Defaults {
-		if !x.Request.IsZero() {
+		if !x.IsZero() {
 			d[x.Kind] = x.Request
 		}
 	}

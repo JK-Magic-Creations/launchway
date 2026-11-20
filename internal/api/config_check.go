@@ -24,10 +24,9 @@ const (
 
 // checkLimiter limits the check routes.
 type checkLimiter struct {
-	mu   sync.Mutex
-	per  map[string]*rate.Limiter
-	all  *rate.Limiter
-	conf bool
+	mu  sync.Mutex
+	per map[string]*rate.Limiter
+	all *rate.Limiter
 }
 
 func (c *checkLimiter) allow(who string) bool {

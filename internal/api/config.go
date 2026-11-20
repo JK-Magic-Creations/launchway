@@ -181,8 +181,7 @@ type configBody struct {
 // a change expects; -1 for any.
 func ifVersion(r *http.Request, body int64) (int64, error) {
 	h := strings.TrimSpace(r.Header.Get("If-Match"))
-	switch {
-	case h == "" || h == "*":
+	if h == "" || h == "*" {
 		if body > 0 {
 			return body, nil
 		}

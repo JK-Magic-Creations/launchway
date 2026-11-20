@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
-	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -331,104 +329,6 @@ func (s *Service) Current() (*config.Config, *Layout, int64) {
 	return s.cur, s.lay, s.rev
 }
 
-// ServerState is what one server last said about the configuration.
-type ServerState struct {
-	Server string `json:"server"`
-	// Revision is the revision it applied last, or tried and could not.
-	Revision int64  `json:"revision"`
-	State    string `json:"state"` // applied or failed
-	Problem  string `json:"problem,omitempty"`
-	At       int64  `json:"at"`
-}
-
-// Status says what this server runs with, and what the others do.
-type Status struct {
-	// Server is this server's name.
-	Server string `json:"server"`
-	// Revision is the revision this server applied; Stored is the revision
-	// in the database. They differ while a change is on its way, or cannot
-	// be applied (Problem says why; it is tried again every few seconds).
-	Revision int64  `json:"revision"`
-	Stored   int64  `json:"stored_revision"`
-	Problem  string `json:"problem,omitempty"`
-	// Safe: the stored configuration could not be loaded at start-up, and
-	// this server runs with something safer until it can.
-	Safe *Safe `json:"safe_mode,omitempty"`
-	// Servers is each server's last report (from the audit trail), this one
-	// included: which have applied the stored revision and which have not.
-	Servers []ServerState `json:"servers,omitempty"`
-}
-
-// Status returns the revision in effect and why a newer one is not, if not.
-// It reads the database for the stored revision and the servers' reports.
-func (s *Service) Status() Status {
-	s.mu.Lock()
-	st := Status{Server: s.server, Revision: s.rev, Problem: s.lastErr, Safe: s.safe}
-	s.mu.Unlock()
-	if s.Available() {
-		st.Stored, _ = s.eng.ConfigRevision()
-		st.Servers = s.serverStates()
-	}
-	return st
-}
-
-// ConfigServerAction is the audit action each server records when it applies
-// a revision, or cannot.
-const ConfigServerAction = "config.server_state"
-
-// recordState writes this server's state to the audit trail when it changes,
-// so every server can see which have applied which revision.
-func (s *Service) recordState(rev int64, err error) {
-	state, detail, outcome := "applied", "", "ok"
-	if err != nil {
-		state, detail, outcome = "failed", clipText(redactText(err.Error()), 400), "failed"
-	}
-	key := fmt.Sprintf("%d/%s/%s", rev, state, detail)
-	if key == s.recorded {
-		return
-	}
-	s.recorded = key
-	e := engine.AuditEntry{At: time.Now().UnixMilli(), User: s.server, Source: "server", Action: ConfigServerAction,
-		Target: fmt.Sprintf("revision %d", rev), Outcome: outcome, Detail: detail}
-	if err := s.eng.Audit(e); err != nil {
-		s.log.Warn("could not record the configuration state of this server", "err", err)
-	}
-}
-
-func clipText(s string, n int) string {
-	if len(s) > n {
-		return s[:n] + "..."
-	}
-	return s
-}
-
-func redactText(s string) string { return redact.URLs(s) }
-
-// serverStates reads each server's newest report.
-func (s *Service) serverStates() []ServerState {
-	list, err := s.eng.AuditLog(engine.AuditFilter{Action: ConfigServerAction, Limit: 200})
-	if err != nil {
-		return nil
-	}
-	seen := map[string]bool{}
-	var out []ServerState
-	for _, a := range list { // newest first
-		if seen[a.User] {
-			continue
-		}
-		seen[a.User] = true
-		var rev int64
-		fmt.Sscanf(a.Target, "revision %d", &rev)
-		st := ServerState{Server: a.User, Revision: rev, State: "applied", At: a.At}
-		if a.Outcome != "ok" {
-			st.State, st.Problem = "failed", a.Detail
-		}
-		out = append(out, st)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Server < out[j].Server })
-	return out
-}
-
 // Refresh applies the stored configuration if it changed, or if the last
 // try failed. It returns why it could not.
 func (s *Service) Refresh() error {
@@ -510,84 +410,7 @@ func (s *Service) Watch(ctx context.Context) {
 	}
 }
 
-// pruneHistory removes the changes older than history.retain, at most once
-// an hour. Every server may do it; the removal is the same.
-func (s *Service) pruneHistory() {
-	s.mu.Lock()
-	cur, last := s.cur, s.lastPrune
-	s.mu.Unlock()
-	if cur == nil || cur.History.Retain == "" || time.Since(last) < time.Hour {
-		return
-	}
-	d, ok := pipeline.ParseRetain(cur.History.Retain)
-	if !ok {
-		return
-	}
-	s.mu.Lock()
-	s.lastPrune = time.Now()
-	s.mu.Unlock()
-	if n, err := s.eng.PruneConfigHistory(time.Now().Add(-d).UnixMilli()); err != nil {
-		s.log.Warn("could not remove old configuration history", "err", err)
-	} else if n > 0 {
-		s.log.Info("removed configuration history older than the retention setting", "changes", n, "retain", cur.History.Retain)
-	}
-}
-
 // ---- reading ----
-
-// List returns the objects of a kind (every kind if k is nil), deleted
-// ones only if asked.
-func (s *Service) List(k *Kind, deleted bool) ([]engine.ConfigObject, error) {
-	if err := s.check(); err != nil {
-		return nil, err
-	}
-	_, objs, err := s.eng.ConfigSnapshot()
-	if err != nil {
-		return nil, err
-	}
-	out := []engine.ConfigObject{}
-	have := false
-	for _, o := range objs {
-		if (k == nil || o.Kind == k.Name) && (deleted || !o.Deleted()) {
-			out = append(out, o)
-		}
-		have = have || o.Kind == "step-resources"
-	}
-	if !have && (k == nil || k.Name == "step-resources") && s.eng.StepResourcesKnown() {
-		// Never changed through the object: what the tables hold, so an
-		// export has it too.
-		if o, err := s.stepResourcesObject(); err == nil {
-			out = append(out, *o)
-		}
-	}
-	sortObjects(out)
-	return out, nil
-}
-
-// Get returns one object, deleted or not.
-func (s *Service) Get(k *Kind, name string) (*engine.ConfigObject, error) {
-	if err := s.check(); err != nil {
-		return nil, err
-	}
-	_, objs, err := s.eng.ConfigSnapshot()
-	if err != nil {
-		return nil, err
-	}
-	for _, o := range objs {
-		if o.Kind == k.Name && o.Name == name {
-			return &o, nil
-		}
-	}
-	if k.Name == "step-resources" && name == k.Singleton {
-		// Never changed through the object: what the tables hold.
-		return s.stepResourcesObject()
-	}
-	if k.Singleton != "" && name == k.Singleton {
-		// Never written: its defaults.
-		return &engine.ConfigObject{Kind: k.Name, Name: name, Spec: json.RawMessage("{}")}, nil
-	}
-	return nil, fmt.Errorf("%w: %s %s", engine.ErrNotFound, strings.ToLower(k.Title), name)
-}
 
 // ---- changing ----
 
@@ -779,32 +602,9 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 	if err := s.check(); err != nil {
 		return nil, err
 	}
-	writes := make([]engine.ConfigWrite, 0, len(changes))
-	puts := []engine.ConfigObject{}
-	forced := map[string][]string{}
-	for _, c := range changes {
-		w, obj, err := s.prepare(c)
-		if err != nil {
-			return nil, err
-		}
-		if c.Action == engine.ConfigDelete {
-			use, err := s.eng.ConfigInUse(c.Kind.Name, c.Name)
-			if err != nil {
-				return nil, err
-			}
-			switch {
-			case len(use) > 0 && !c.Force:
-				return nil, invalid(fmt.Errorf("%s %s is in use: %s. Wait for these to finish, or delete it anyway with force (the runs in flight then lose what it gave them, and the forced delete is recorded)",
-					c.Kind.Name, c.Name, strings.Join(use, "; ")))
-			case len(use) > 0:
-				forced[c.Kind.Name+"\x00"+c.Name] = use
-				w.Comment = clipText(strings.TrimSpace(w.Comment+" [forced while in use: "+strings.Join(use, "; ")+"]"), 500)
-			}
-		}
-		writes = append(writes, w)
-		if obj != nil {
-			puts = append(puts, *obj)
-		}
+	writes, puts, forced, err := s.prepareAll(changes)
+	if err != nil {
+		return nil, err
 	}
 	if !dry {
 		s.writeMu.Lock()
@@ -815,28 +615,9 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if err != nil {
 			return nil, err
 		}
-		took, err := checkOwnership(objs, changes, writes)
-		if err != nil {
-			return nil, invalid(err)
-		}
-		after, err := applyLocally(objs, writes)
+		took, err := s.checkWhole(objs, changes, writes, puts, imp)
 		if err != nil {
 			return nil, err
-		}
-		if imp == nil || imp.Origin != OriginBootstrap {
-			if err := checkServerPaths(objs, putObjects(after, puts)); err != nil {
-				return nil, invalid(err)
-			}
-		}
-		cp, err := s.composeChecked(after)
-		if err != nil {
-			return nil, invalid(err)
-		}
-		if err := checkEgress(cp.cfg, putObjects(after, puts)); err != nil {
-			return nil, invalid(err)
-		}
-		if err := checkAdministrable(cp.cfg); err != nil {
-			return nil, invalid(err)
 		}
 		if dry {
 			return nil, nil
@@ -858,31 +639,100 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if err := s.projectStepResources(now); err != nil {
 			return nil, err
 		}
-		results := make([]Result, 0, len(writes))
-		for _, w := range writes {
-			r := Result{}
-			for i := range now {
-				if now[i].Kind == w.Kind && now[i].Name == w.Name {
-					o := now[i]
-					r.Object = &o
-				}
-			}
-			for i := range recorded {
-				if recorded[i].Kind == w.Kind && recorded[i].Name == w.Name {
-					c := recorded[i]
-					r.Change, r.Changed = &c, true
-				}
-			}
-			r.Forced = forced[w.Kind+"\x00"+w.Name]
-			r.TookOwnership = took[w.Kind+"\x00"+w.Name]
-			results = append(results, r)
-		}
+		results := resultsOf(writes, now, recorded, forced, took)
 		if applyErr != nil {
 			return results, &NotAppliedError{Revision: stored, Server: s.server, Cause: applyErr}
 		}
 		return results, nil
 	}
 	return nil, fmt.Errorf("%w: other changes kept coming first; try again", engine.ErrConflict)
+}
+
+// prepareAll checks each change on its own, and refuses deleting what active
+// runs use unless forced.
+func (s *Service) prepareAll(changes []Change) (writes []engine.ConfigWrite, puts []engine.ConfigObject, forced map[string][]string, err error) {
+	writes = make([]engine.ConfigWrite, 0, len(changes))
+	forced = map[string][]string{}
+	for _, c := range changes {
+		w, obj, err := s.prepare(c)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if c.Action == engine.ConfigDelete {
+			use, err := s.eng.ConfigInUse(c.Kind.Name, c.Name)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			switch {
+			case len(use) > 0 && !c.Force:
+				return nil, nil, nil, invalid(fmt.Errorf("%s %s is in use: %s. Wait for these to finish, or delete it anyway with force (the runs in flight then lose what it gave them, and the forced delete is recorded)",
+					c.Kind.Name, c.Name, strings.Join(use, "; ")))
+			case len(use) > 0:
+				forced[c.Kind.Name+"\x00"+c.Name] = use
+				w.Comment = clipText(strings.TrimSpace(w.Comment+" [forced while in use: "+strings.Join(use, "; ")+"]"), 500)
+			}
+		}
+		writes = append(writes, w)
+		if obj != nil {
+			puts = append(puts, *obj)
+		}
+	}
+	return writes, puts, forced, nil
+}
+
+// checkWhole holds the configuration the changes would make to every rule:
+// who owns what, files on the server, the whole configuration's checks,
+// addresses, and that somebody can still administer. It returns whose
+// objects were taken over.
+func (s *Service) checkWhole(objs []engine.ConfigObject, changes []Change, writes []engine.ConfigWrite, puts []engine.ConfigObject, imp *engine.ConfigImport) (map[string]string, error) {
+	took, err := checkOwnership(objs, changes, writes)
+	if err != nil {
+		return nil, invalid(err)
+	}
+	after, err := applyLocally(objs, writes)
+	if err != nil {
+		return nil, err
+	}
+	changed := putObjects(after, puts)
+	if imp == nil || imp.Origin != OriginBootstrap {
+		if err := checkServerPaths(objs, changed); err != nil {
+			return nil, invalid(err)
+		}
+	}
+	cp, err := s.composeChecked(after)
+	if err != nil {
+		return nil, invalid(err)
+	}
+	if err := checkEgress(cp.cfg, changed); err != nil {
+		return nil, invalid(err)
+	}
+	if err := checkAdministrable(cp.cfg); err != nil {
+		return nil, invalid(err)
+	}
+	return took, nil
+}
+
+// resultsOf pairs each write with the object as it is now and the change
+// recorded for it.
+func resultsOf(writes []engine.ConfigWrite, now []engine.ConfigObject, recorded []engine.ConfigChange, forced map[string][]string, took map[string]string) []Result {
+	results := make([]Result, 0, len(writes))
+	for _, w := range writes {
+		r := Result{Forced: forced[w.Kind+"\x00"+w.Name], TookOwnership: took[w.Kind+"\x00"+w.Name]}
+		for i := range now {
+			if now[i].Kind == w.Kind && now[i].Name == w.Name {
+				o := now[i]
+				r.Object = &o
+			}
+		}
+		for i := range recorded {
+			if recorded[i].Kind == w.Kind && recorded[i].Name == w.Name {
+				c := recorded[i]
+				r.Change, r.Changed = &c, true
+			}
+		}
+		results = append(results, r)
+	}
+	return results
 }
 
 // protectedOwner: a manager whose objects another writer must not change
@@ -993,211 +843,4 @@ func applyLocally(objs []engine.ConfigObject, writes []engine.ConfigWrite) ([]en
 
 // ---- history ----
 
-// HistoryEntry is a change with what it changed.
-type HistoryEntry struct {
-	engine.ConfigChange
-	Diff []FieldChange `json:"diff"`
-}
-
-// History returns changes, newest first, with their differences.
-func (s *Service) History(f engine.ConfigHistoryFilter) ([]HistoryEntry, error) {
-	if err := s.check(); err != nil {
-		return nil, err
-	}
-	cs, err := s.eng.ConfigHistory(f)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]HistoryEntry, 0, len(cs))
-	for _, c := range cs {
-		d := Diff(c.Before, c.After)
-		if c.UnitBefore != c.UnitAfter {
-			d = append([]FieldChange{{Path: "(unit)", Before: c.UnitBefore, After: c.UnitAfter}}, d...)
-		}
-		out = append(out, HistoryEntry{ConfigChange: c, Diff: d})
-	}
-	return out, nil
-}
-
-// Imports lists the imports.
-func (s *Service) Imports() ([]engine.ConfigImport, error) {
-	if err := s.check(); err != nil {
-		return nil, err
-	}
-	return s.eng.ConfigImports()
-}
-
 // ---- levels ----
-
-// Levels returns the layout in effect.
-func (s *Service) Levels() (*Layout, error) {
-	if err := s.check(); err != nil {
-		return nil, err
-	}
-	_, lay, _ := s.Current()
-	if lay == nil {
-		_, objs, err := s.eng.ConfigSnapshot()
-		if err != nil {
-			return nil, err
-		}
-		_, lay, err = Compose(s.boot, objs)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return lay, nil
-}
-
-// Effective is what applies to one project, and where each part comes from.
-type Effective struct {
-	Project string           `json:"project"`
-	Unit    string           `json:"unit,omitempty"`
-	Objects []EffectiveEntry `json:"objects"`
-	// Settings are the project's settings that an installation default can
-	// give, with where the value comes from.
-	Settings []EffectiveSetting `json:"settings"`
-}
-
-// EffectiveEntry is an object that applies to the project.
-type EffectiveEntry struct {
-	Kind string `json:"kind"`
-	Name string `json:"name"`
-	// From is the level it is defined at: organisation, unit or project.
-	From string `json:"from"`
-	Unit string `json:"unit,omitempty"`
-}
-
-// EffectiveSetting is one setting and its source.
-type EffectiveSetting struct {
-	Key   string `json:"key"`
-	Value any    `json:"value"`
-	From  string `json:"from"` // project, installation or default
-}
-
-// EffectiveFor works out what applies to a project.
-func (s *Service) EffectiveFor(project string) (*Effective, error) {
-	if err := s.check(); err != nil {
-		return nil, err
-	}
-	_, objs, err := s.eng.ConfigSnapshot()
-	if err != nil {
-		return nil, err
-	}
-	c, lay, err := Compose(s.boot, objs)
-	if err != nil {
-		return nil, err
-	}
-	unit, ok := lay.ProjectUnit[project]
-	if !ok {
-		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, project)
-	}
-	ef := &Effective{Project: project, Unit: unit, Objects: []EffectiveEntry{}, Settings: []EffectiveSetting{}}
-	var pc config.ProjectConfig
-	for _, p := range c.Projects {
-		if p.Name == project {
-			pc = p
-		}
-	}
-	live := []engine.ConfigObject{}
-	for _, o := range objs {
-		if !o.Deleted() {
-			live = append(live, o)
-		}
-	}
-	sortObjects(live)
-	for _, o := range live {
-		k := kindByName(o.Kind)
-		if k == nil || !k.Levels || o.Kind == "project" {
-			continue
-		}
-		if o.Unit != "" && o.Unit != unit {
-			continue
-		}
-		v, _, err := decodeSpec(k, o.Name, o.Spec)
-		if err != nil {
-			continue
-		}
-		pats, all := projectsOf(v)
-		if !all && !matchAny(pats, project) {
-			continue
-		}
-		from := "organisation"
-		if o.Unit != "" {
-			from = "unit"
-		}
-		if len(pats) == 1 && pats[0] == project {
-			from = "project"
-		}
-		ef.Objects = append(ef.Objects, EffectiveEntry{Kind: o.Kind, Name: o.Name, From: from, Unit: o.Unit})
-	}
-	setting := func(key string, projectVal, instVal any, projectSet, instSet bool, def any) {
-		e := EffectiveSetting{Key: key, Value: def, From: "default"}
-		switch {
-		case projectSet:
-			e.Value, e.From = projectVal, "project"
-		case instSet:
-			e.Value, e.From = instVal, "installation"
-		}
-		ef.Settings = append(ef.Settings, e)
-	}
-	b := func(p *bool) any {
-		if p == nil {
-			return nil
-		}
-		return *p
-	}
-	setting("pull_requests.secrets", b(prSecrets(pc)), b(c.PullRequests.Secrets), prSecrets(pc) != nil, c.PullRequests.Secrets != nil, false)
-	var pDraftAllow, pDraftSecrets any
-	var pAllowSet, pSecretsSet bool
-	if pc.Drafts != nil {
-		pDraftAllow, pAllowSet = pc.Drafts.Allow, pc.Drafts.Allow != ""
-		pDraftSecrets, pSecretsSet = b(pc.Drafts.Secrets), pc.Drafts.Secrets != nil
-	}
-	setting("drafts.allow", pDraftAllow, c.Drafts.Allow, pAllowSet, c.Drafts.Allow != "", "operator")
-	setting("drafts.secrets", pDraftSecrets, b(c.Drafts.Secrets), pSecretsSet, c.Drafts.Secrets != nil, false)
-	var pSched any
-	pSchedSet := pc.Schedules != nil && pc.Schedules.Enabled != nil
-	if pSchedSet {
-		pSched = *pc.Schedules.Enabled
-	}
-	setting("schedules.enabled", pSched, b(c.Schedules.Enabled), pSchedSet, c.Schedules.Enabled != nil, true)
-	setting("poll", pc.Poll, nil, pc.Poll != "", false, "30s")
-	setting("branch", pc.Branch, nil, pc.Branch != "", false, "main")
-	sort.SliceStable(ef.Objects, func(i, j int) bool { return kindOrder(ef.Objects[i].Kind) < kindOrder(ef.Objects[j].Kind) })
-	return ef, nil
-}
-
-func prSecrets(p config.ProjectConfig) *bool {
-	if p.PullRequests == nil {
-		return nil
-	}
-	return p.PullRequests.Secrets
-}
-
-// projectsOf returns the project patterns an object applies to, and whether
-// it applies to every project (no patterns).
-func projectsOf(v any) ([]string, bool) {
-	switch t := v.(type) {
-	case *config.LibraryConfig:
-		return nil, true
-	case *config.EnvironmentConfig:
-		return t.Projects, false
-	case *config.RunnerPoolConfig:
-		if t.Kind == engine.PoolBuild {
-			return t.Projects, len(t.Projects) == 0
-		}
-		return nil, false
-	case *config.AccessBinding:
-		return t.Projects, len(t.Projects) == 0
-	case *config.PolicySourceConfig:
-		return t.Projects, len(t.Projects) == 0
-	case *config.HealthSourceConfig:
-		return t.Projects, false
-	case *SecretStore:
-		return t.Projects, len(t.Projects) == 0
-	}
-	if m, ok := v.(interface{ ProjectPatterns() []string }); ok {
-		return m.ProjectPatterns(), false
-	}
-	return policyProjects(v)
-}

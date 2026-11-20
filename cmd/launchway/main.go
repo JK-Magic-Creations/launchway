@@ -154,82 +154,12 @@ func (e exitErr) Error() string { return fmt.Sprintf("exit %d", int(e)) }
 // ---- server ----
 
 func cmdServer(args []string) error {
-	fs := flag.NewFlagSet("server", flag.ExitOnError)
-	cfgPath := fs.String("config", "launchway.yaml", "configuration file")
-	listen := fs.String("listen", "", "address to listen on (overrides the config)")
-	data := fs.String("data", "", "data directory (overrides the config)")
-	ignoreDB := fs.Bool("ignore-database-config", os.Getenv("LAUNCHWAY_IGNORE_DATABASE_CONFIG") != "",
-		"start with the bootstrap file only and ignore the configuration stored in the database (recovery: see the runbook)")
-	fs.Parse(args)
-
-	cfg, err := config.LoadBootstrap(*cfgPath)
+	su, err := readServerSetup(args)
 	if err != nil {
 		return err
 	}
-	secretStores, err := secrets.Open(cfg.Runner.Secrets)
-	if err != nil {
-		return fmt.Errorf("%s: runner.secrets: %w", *cfgPath, err)
-	}
-	if *listen != "" {
-		cfg.Listen = *listen
-	}
-	if *data != "" {
-		cfg.Data = *data
-	}
-	if err := cfg.CheckExposure(cfg.Listen); err != nil {
-		return err
-	}
-	dbWait, drain, err := cfg.Timings()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	authOpts, err := serverAuth(cfg)
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	if err := os.MkdirAll(cfg.Data, 0o755); err != nil {
-		return err
-	}
-	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	slog.SetDefault(log)
-
-	dbAddr := cfg.DatabaseAddr()
-	reportLimits, err := cfg.Runner.Reports.Limits()
-	if err != nil {
-		return fmt.Errorf("%s: runner.%w", *cfgPath, err)
-	}
-	artifactOpts, findingLimits, err := artifactSettings(cfg, log)
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	reportsOrigin, err := cfg.ReportsOrigin()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	// The engine opens with the file's settings; those kept in the
-	// database replace them below, before anything is served.
-	live, err := cfg.EngineLive()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	live.Artifacts = artifactOpts // the limits, and where artifacts are kept
-	live.Findings = findingLimits
-	// Once the database holds the installation's settings, it, not the file,
-	// says where artifacts are kept.
-	fromDatabase := func(spec []byte) (engine.ArtifactOptions, error) {
-		c, err := settings.ArtifactsFromInstallation(cfg, spec)
-		if err != nil {
-			return engine.ArtifactOptions{}, err
-		}
-		o, _, err := artifactSettings(c, log)
-		return o, err
-	}
-	if *ignoreDB {
-		fromDatabase = nil
-	}
-	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: live.AllowSelfApproval, ConnectWait: dbWait, ArtifactsFromDatabase: fromDatabase,
-		Tests: live.Tests, Environments: live.Environments, Artifacts: live.Artifacts, Findings: live.Findings, Policy: live.Policy,
-		Reports: live.Reports, HealthSources: live.HealthSources, Models: live.Models, RunnerPools: live.RunnerPools})
+	cfg, cfgPath, log, live, authOpts := su.cfg, su.cfgPath, su.log, su.live, su.authOpts
+	eng, err := su.openEngine()
 	if err != nil {
 		return err
 	}
@@ -239,28 +169,12 @@ func cmdServer(args []string) error {
 	// Everything but the bootstrap settings is kept in the database
 	// (schema 23): the file's copies are imported once, then ignored.
 	store := settings.New(eng, cfg, log)
-	eff := cfg
-	if *ignoreDB {
-		log.Warn("RECOVERY: --ignore-database-config: the configuration stored in the database is ignored and not changed; this server runs with the bootstrap file only, and the configuration API is off. Restart without the flag when the configuration is repaired")
-		store = nil
-		cfg.Auth.SetAccessInDatabase(false)
-		if err := cfg.Validate(*cfgPath); err != nil {
-			return err
-		}
-	} else if store.Available() {
-		if eff, err = startSettings(store, log); err != nil {
-			return err
-		}
-	} else {
-		// A build limited to an older schema: the file is the whole
-		// configuration, checked in full.
-		cfg.Auth.SetAccessInDatabase(false)
-		if err := cfg.Validate(*cfgPath); err != nil {
-			return err
-		}
+	eff, store, err := chooseConfig(store, cfg, cfgPath, su.ignoreDB, log)
+	if err != nil {
+		return err
 	}
 	if err := egress.Default.Set(settings.EgressPolicy(eff)); err != nil {
-		return fmt.Errorf("%s: egress: %w", *cfgPath, err)
+		return fmt.Errorf("%s: egress: %w", cfgPath, err)
 	}
 	if eff != cfg {
 		l, err := eff.EngineLive()
@@ -288,7 +202,7 @@ func cmdServer(args []string) error {
 		return err
 	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts,
-		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: reportsOrigin}
+		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin}
 	if store.Available() {
 		srv.Settings = store
 	}
@@ -301,34 +215,18 @@ func cmdServer(args []string) error {
 		return nil
 	}
 	if err := applyLive(eff); err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
+		return fmt.Errorf("%s: %w", cfgPath, err)
 	}
 	models := live.Models
 	if eff != cfg {
 		models, _ = eff.Models()
 	}
 	if models != nil || store.Available() {
-		// The server calls models only to explain a failed step, with keys
-		// from its own stores (ai.secrets), if it has any. With models in
-		// the database, any may be added while the server runs.
-		// Its address is an administrator's, but still never an internal one
-		// unless the allowed hosts say so (internal/egress).
-		srv.AI = &ai.Client{HTTP: egress.Default.HTTPClient(16 * time.Minute)}
-		if len(cfg.AI.Secrets) > 0 {
-			if srv.AISecrets, err = secrets.Open(cfg.AI.Secrets); err != nil {
-				return fmt.Errorf("%s: ai.secrets: %w", *cfgPath, err)
-			}
+		if err := setupAI(srv, cfg, cfgPath); err != nil {
+			return err
 		}
 	}
-	if authOpts != nil {
-		// Find the provider now, so a mistake shows at once; sign-in tries
-		// again later if it is unreachable.
-		dctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		if _, err := authOpts.OIDC.Discover(dctx); err != nil {
-			log.Warn("the sign-in provider cannot be reached yet; sign-in will keep trying", "err", err)
-		}
-		cancel()
-	}
+	warmUpSignIn(authOpts, log)
 
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -351,31 +249,7 @@ func cmdServer(args []string) error {
 		// first, then each part is replaced as a whole, so a try that stops
 		// half way is finished by the next one (the service tries again at
 		// every poll until it succeeds).
-		if err := store.Load(func(c *config.Config, _ *settings.Layout) error {
-			l, err := c.EngineLive()
-			if err != nil {
-				return err
-			}
-			sl, err := serverLive(c, token, authOpts)
-			if err != nil {
-				return err
-			}
-			ps, err := c.SourceProjects()
-			if err != nil {
-				return err
-			}
-			libs := c.SourceLibraries()
-			n, _ := c.LoopLimit()
-			if err := eng.Reconfigure(l); err != nil {
-				return err
-			}
-			if err := mgr.Reconfigure(ps, libs); err != nil {
-				return err
-			}
-			mgr.SetLoopLimit(n)
-			srv.Reconfigure(sl)
-			return nil
-		}); err != nil {
+		if err := store.Load(storeApplier(eng, mgr, srv, token, authOpts)); err != nil {
 			return err
 		}
 		go store.Watch(ctx)
@@ -384,31 +258,9 @@ func cmdServer(args []string) error {
 	url := "http://" + loopback(ln.Addr().String())
 	runnerCtx, stopRunner := context.WithCancel(context.Background())
 	defer stopRunner()
-	runnerDone := make(chan struct{})
-	if cfg.RunnerEnabled() {
-		host, _ := os.Hostname()
-		// Unique per server: two servers on one machine must not share an identity.
-		_, port, _ := net.SplitHostPort(ln.Addr().String())
-		runnerID := "builtin-" + host + "-" + port
-		ex, err := executor.ByName(cfg.Runner.Executor, executor.Options{Kubernetes: cfg.Runner.Kubernetes, RunnerID: runnerID})
-		if err != nil {
-			return err
-		}
-		if err := checkExecutor(ctx, ex); err != nil {
-			return err
-		}
-		r := &runner.Runner{
-			Client: runner.NewClient(url, token), Exec: ex,
-			Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
-			DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
-			Secrets: secretStores, Reports: reportLimits, Images: cfg.Runner.Images,
-		}
-		if cfg.Runner.AIEnabled() {
-			r.AI = &ai.Client{}
-		}
-		go func() { defer close(runnerDone); r.Run(runnerCtx) }()
-	} else {
-		close(runnerDone)
+	runnerDone, err := startBuiltinRunner(runnerCtx, ctx, cfg, ln, url, token, log, su.secretStores, su.reportLimits)
+	if err != nil {
+		return err
 	}
 
 	tokenAt := config.TokenFile(cfg.Data)
@@ -420,11 +272,11 @@ func cmdServer(args []string) error {
 		signIn = "no sign-in: anyone who can reach it has full access"
 	}
 	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
-		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(dbAddr), tokenAt)
+		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(cfg.DatabaseAddr()), tokenAt)
 
 	<-ctx.Done()
 	fmt.Fprintln(os.Stderr, "\nStopping. Steps in progress will run again when Launchway starts.")
-	return shutdown(httpSrv, srv, drain, func() {
+	return shutdown(httpSrv, srv, su.drain, func() {
 		stopRunner()
 		select {
 		case <-runnerDone:
@@ -456,33 +308,6 @@ func shutdown(hs *http.Server, srv *api.Server, drain time.Duration, stopRunner 
 		return fmt.Errorf("requests still in flight after %s were cut off: %w", shutdownTimeout, err)
 	}
 	return nil
-}
-
-// startSettings imports the file's settings into the database the first time
-// a server of schema 23 starts, says which of the file's settings are
-// ignored since, and returns the configuration in force: the file's
-// bootstrap settings and the database's.
-func startSettings(store *settings.Service, log *slog.Logger) (*config.Config, error) {
-	res, err := store.ImportBootstrap()
-	if err != nil {
-		return nil, err
-	}
-	when := time.UnixMilli(res.Import.At).UTC().Format(time.RFC3339)
-	switch {
-	case res.Done && len(res.Ignored) > 0:
-		log.Info("imported the configuration file's settings into the database; from now on they are changed in the web UI, the API, the MCP server or with launchway config, and the file's copies are ignored",
-			"import", res.Import.ID, "keys", strings.Join(res.Ignored, ", "))
-	case res.Done:
-		log.Info("the configuration is kept in the database; the file holds only how to start", "import", res.Import.ID)
-	case len(res.Ignored) > 0:
-		for _, k := range res.Ignored {
-			log.Warn("the configuration file sets a key that is kept in the database since it was imported; the file's value is ignored. Change it in the web UI, the API or with launchway config, or import the file again with launchway config import",
-				"key", k, "import", res.Import.ID, "imported_at", when)
-		}
-	}
-	// A stored configuration that cannot be used starts safe mode (the last
-	// one that worked, or the file alone), not an exit with no way back.
-	return store.StartConfig()
 }
 
 // serverLive makes the API server's live settings from a configuration.

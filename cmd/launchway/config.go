@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -164,7 +165,7 @@ func (t headerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // raw fetches a path's body as it is.
 func (cl *client) raw(path string) ([]byte, error) {
-	req, err := http.NewRequest("GET", cl.c.Server+path, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", cl.c.Server+path, nil)
 	if err != nil {
 		return nil, usageErr("%v", err)
 	}

@@ -131,14 +131,15 @@ func same(t *testing.T, what string, a, b any) {
 // liveShape is what can be compared of engine settings (the model registry
 // is a pointer).
 func liveShape(o engine.LiveOptions) any {
-	o2 := o
-	o2.Models = nil
-	o2.Environments, o2.RunnerPools, o2.HealthSources = nil, nil, nil
 	var models any
 	if o.Models != nil {
 		models = o.Models.List()
 	}
-	b, _ := json.Marshal(o2)
+	// Only the artifact limits are live (where they are kept is not, and
+	// holds a function that cannot be marshaled).
+	a := o.Artifacts
+	b, _ := json.Marshal([]any{o.AllowSelfApproval, o.Tests, o.Findings, o.Reports,
+		[]any{a.MaxFileBytes, a.MaxRunBytes, a.MaxProjectBytes, a.DefaultRetain, a.MaxRetain}, o.Policy})
 	// Where a policy was written (its line) differs; nothing else may.
 	return []any{lineRe.ReplaceAllString(string(b), ""), models, byName(o.Environments), byName(o.RunnerPools), byName(o.HealthSources)}
 }

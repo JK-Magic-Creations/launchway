@@ -396,95 +396,114 @@ func toGeneric(v reflect.Value) (out any, omit bool, err error) {
 		return g, false, err
 	case reflect.Struct:
 		if v.Type() == nodeType {
-			n := v.Interface().(yaml.Node)
-			if n.Kind == 0 {
-				return nil, true, nil
-			}
-			y, err := yaml.Marshal(&n)
-			if err != nil {
-				return nil, false, err
-			}
-			var g any
-			if err := yaml.Unmarshal(y, &g); err != nil {
-				return nil, false, err
-			}
-			if g == nil && n.Kind == yaml.ScalarNode && n.Tag == "!!null" {
-				// pull_request: (no value) means the same as {}.
-				return map[string]any{}, false, nil
-			}
-			return g, false, nil
+			return nodeToGeneric(v.Interface().(yaml.Node))
 		}
-		m := map[string]any{}
-		t := v.Type()
-		for i := 0; i < t.NumField(); i++ {
-			f := t.Field(i)
-			if !f.IsExported() {
-				continue
-			}
-			name, opts, _ := strings.Cut(f.Tag.Get("yaml"), ",")
-			if name == "-" {
-				continue
-			}
-			fv := v.Field(i)
-			if strings.Contains(opts, "inline") {
-				g, _, err := toGeneric(fv)
-				if err != nil {
-					return nil, false, err
-				}
-				if gm, ok := g.(map[string]any); ok {
-					for k, x := range gm {
-						m[k] = x
-					}
-				}
-				continue
-			}
-			if name == "" {
-				name = strings.ToLower(f.Name)
-			}
-			if fv.Kind() != reflect.Pointer && fv.Kind() != reflect.Interface && fv.Type() != nodeType && fv.IsZero() {
-				continue
-			}
-			g, omit, err := toGeneric(fv)
-			if err != nil {
-				return nil, false, err
-			}
-			if !omit {
-				m[name] = g
-			}
-		}
-		return m, false, nil
+		m, err := structToGeneric(v)
+		return m, false, err
 	case reflect.Map:
-		if v.Len() == 0 {
-			return nil, true, nil
-		}
-		m := map[string]any{}
-		iter := v.MapRange()
-		for iter.Next() {
-			g, _, err := toGeneric(iter.Value())
-			if err != nil {
-				return nil, false, err
-			}
-			if g == nil {
-				g = map[string]any{}
-			}
-			m[fmt.Sprint(iter.Key().Interface())] = g
-		}
-		return m, false, nil
+		return mapToGeneric(v)
 	case reflect.Slice, reflect.Array:
-		if v.Len() == 0 {
-			return nil, true, nil
-		}
-		out := make([]any, 0, v.Len())
-		for i := 0; i < v.Len(); i++ {
-			g, _, err := toGeneric(v.Index(i))
-			if err != nil {
-				return nil, false, err
-			}
-			out = append(out, g)
-		}
-		return out, false, nil
+		return sliceToGeneric(v)
 	}
 	return v.Interface(), v.IsZero(), nil
+}
+
+// nodeToGeneric turns a YAML node (a policy) into maps, lists and scalars.
+func nodeToGeneric(n yaml.Node) (any, bool, error) {
+	if n.Kind == 0 {
+		return nil, true, nil
+	}
+	y, err := yaml.Marshal(&n)
+	if err != nil {
+		return nil, false, err
+	}
+	var g any
+	if err := yaml.Unmarshal(y, &g); err != nil {
+		return nil, false, err
+	}
+	if g == nil && n.Kind == yaml.ScalarNode && n.Tag == "!!null" {
+		// pull_request: (no value) means the same as {}.
+		return map[string]any{}, false, nil
+	}
+	return g, false, nil
+}
+
+// structToGeneric turns a struct into a map by its yaml tags, leaving out
+// settings at their zero value.
+func structToGeneric(v reflect.Value) (map[string]any, error) {
+	m := map[string]any{}
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if !f.IsExported() {
+			continue
+		}
+		name, opts, _ := strings.Cut(f.Tag.Get("yaml"), ",")
+		if name == "-" {
+			continue
+		}
+		fv := v.Field(i)
+		if strings.Contains(opts, "inline") {
+			g, _, err := toGeneric(fv)
+			if err != nil {
+				return nil, err
+			}
+			if gm, ok := g.(map[string]any); ok {
+				for k, x := range gm {
+					m[k] = x
+				}
+			}
+			continue
+		}
+		if name == "" {
+			name = strings.ToLower(f.Name)
+		}
+		if fv.Kind() != reflect.Pointer && fv.Kind() != reflect.Interface && fv.Type() != nodeType && fv.IsZero() {
+			continue
+		}
+		g, omit, err := toGeneric(fv)
+		if err != nil {
+			return nil, err
+		}
+		if !omit {
+			m[name] = g
+		}
+	}
+	return m, nil
+}
+
+func mapToGeneric(v reflect.Value) (any, bool, error) {
+	if v.Len() == 0 {
+		return nil, true, nil
+	}
+	m := map[string]any{}
+	iter := v.MapRange()
+	for iter.Next() {
+		g, _, err := toGeneric(iter.Value())
+		if err != nil {
+			return nil, false, err
+		}
+		if g == nil {
+			g = map[string]any{}
+		}
+		m[fmt.Sprint(iter.Key().Interface())] = g
+	}
+	return m, false, nil
+}
+
+func sliceToGeneric(v reflect.Value) (any, bool, error) {
+	if v.Len() == 0 {
+		return nil, true, nil
+	}
+	out := make([]any, 0, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		g, _, err := toGeneric(v.Index(i))
+		if err != nil {
+			return nil, false, err
+		}
+		out = append(out, g)
+	}
+	return out, false, nil
 }
 
 // numbersForYAML turns json.Numbers into ints or floats, which YAML writes

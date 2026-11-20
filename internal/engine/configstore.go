@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/ids"
@@ -161,7 +162,7 @@ func (e *Engine) ConfigSnapshot() (int64, []ConfigObject, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var rev int64
 	if err := tx.QueryRow(`SELECT revision FROM config_revisions WHERE org = ?`, "").Scan(&rev); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return 0, nil, err
@@ -196,7 +197,7 @@ func (e *Engine) WriteConfig(base int64, actor string, writes []ConfigWrite, imp
 	if err != nil {
 		return 0, nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	now := e.now().UnixMilli()
 	var rev int64
 	err = tx.QueryRow(`SELECT revision FROM config_revisions WHERE org = ?`, "").Scan(&rev)
@@ -554,8 +555,7 @@ func (e *Engine) ConfigAtRevision(rev int64) ([]ConfigObject, error) {
 	}
 	var pruned string
 	if err := e.db.QueryRow(`SELECT value FROM meta WHERE key = ?`, metaPruned).Scan(&pruned); err == nil {
-		var p int64
-		fmt.Sscan(pruned, &p)
+		p, _ := strconv.ParseInt(pruned, 10, 64)
 		if rev < p {
 			return nil, fmt.Errorf("%w: revision %d: the history up to revision %d was removed by the history retention setting; the oldest revision that can be put back is %d", ErrNotFound, rev, p, p)
 		}
@@ -649,7 +649,7 @@ func (e *Engine) PruneConfigHistory(cutoff int64) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	const old = `FROM config_changes WHERE org = ? AND at < ? AND id NOT IN (SELECT MAX(id) FROM config_changes WHERE org = ? GROUP BY kind, name)`
 	var top sql.NullInt64
 	if err := tx.QueryRow(`SELECT MAX(revision) `+old, "", cutoff, "").Scan(&top); err != nil {

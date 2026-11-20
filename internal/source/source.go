@@ -267,7 +267,7 @@ func (m *Manager) Reconfigure(projects []Project, libraries []Library) error {
 	}
 	for _, name := range cat.order {
 		if m.watching[name] == nil {
-			m.startWatch(cat.projects[name])
+			m.startWatch(m.watchCtx, cat.projects[name])
 		}
 	}
 	return nil
@@ -279,15 +279,15 @@ func (m *Manager) Start(ctx context.Context) {
 	m.watchCtx = ctx
 	cat := m.c()
 	for _, name := range cat.order {
-		m.startWatch(cat.projects[name])
+		m.startWatch(ctx, cat.projects[name])
 	}
 	m.watchMu.Unlock()
 	go m.runSchedules(ctx)
 }
 
 // startWatch starts polling one project; the caller holds watchMu.
-func (m *Manager) startWatch(p *project) {
-	ctx, cancel := context.WithCancel(m.watchCtx)
+func (m *Manager) startWatch(parent context.Context, p *project) {
+	ctx, cancel := context.WithCancel(parent)
 	m.watching[p.Name] = cancel
 	go m.watch(ctx, p)
 }

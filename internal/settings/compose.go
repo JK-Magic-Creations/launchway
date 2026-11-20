@@ -60,103 +60,21 @@ func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *
 		}
 	}
 	sortObjects(live)
-	units := map[string]*UnitView{}
-	var errs []error
-	typed := make([]any, len(live))
-	for i, o := range live {
-		k := kindByName(o.Kind)
-		if k == nil {
-			errs = append(errs, fmt.Errorf("%s %s: this server does not know the kind %q", o.Kind, o.Name, o.Kind))
-			continue
-		}
-		v, _, err := decodeSpec(k, o.Name, o.Spec)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s %s: %w", k.Name, o.Name, err))
-			continue
-		}
-		typed[i] = v
-		if o.Kind == "unit" {
-			u := v.(*Unit)
-			units[o.Name] = &UnitView{Name: o.Name, DisplayName: cmpOr(u.DisplayName, o.Name), Description: u.Description, Projects: []string{}}
-		}
-		if o.Kind == "project" {
-			lay.ProjectUnit[o.Name] = o.Unit
-		}
-	}
-	if err := errors.Join(errs...); err != nil {
+	typed, units, err := decodeAll(live, lay)
+	if err != nil {
 		return nil, nil, err
 	}
 	for name, unit := range lay.ProjectUnit {
-		if unit != "" {
-			if u := units[unit]; u != nil {
-				u.Projects = append(u.Projects, name)
-			}
+		if u := units[unit]; unit != "" && u != nil {
+			u.Projects = append(u.Projects, name)
 		}
-	}
-	for _, u := range units {
-		sort.Strings(u.Projects)
 	}
 	var policies yaml.Node
 	policies.Kind = yaml.SequenceNode
+	var errs []error
 	for i, o := range live {
-		v := typed[i]
-		k := kindByName(o.Kind)
-		if o.Unit != "" {
-			if !k.Levels {
-				errs = append(errs, fmt.Errorf("%s %s: a %s cannot be defined at a unit", k.Name, o.Name, strings.ToLower(k.Title)))
-				continue
-			}
-			if units[o.Unit] == nil {
-				errs = append(errs, fmt.Errorf("%s %s: unit %q does not exist", k.Name, o.Name, o.Unit))
-				continue
-			}
-		}
-		var unitProjects []string
-		if o.Unit != "" && o.Kind != "project" {
-			unitProjects = units[o.Unit].Projects
-		}
-		narrow := func(ps []string) []string { return narrowTo(ps, unitProjects, o.Unit != "" && o.Kind != "project") }
-		switch t := v.(type) {
-		case *Installation:
-			applyInstallation(c, t)
-			lay.Levels = t.Levels.withDefaults()
-		case *Organisation:
-			lay.Organisation = *t
-		case *Unit:
-		case *config.LibraryConfig:
-			c.Libraries = append(c.Libraries, *t)
-		case *config.ProjectConfig:
-			c.Projects = append(c.Projects, *t)
-		case *config.EnvironmentConfig:
-			t.Projects = narrow(t.Projects)
-			c.Environments = append(c.Environments, *t)
-		case *config.RunnerPoolConfig:
-			if t.Kind == engine.PoolBuild {
-				t.Projects = narrow(t.Projects)
-			}
-			c.RunnerPools = append(c.RunnerPools, *t)
-		case *config.AccessBinding:
-			t.Projects = narrow(t.Projects)
-			c.Auth.Access = append(c.Auth.Access, *t)
-		case *yaml.Node:
-			if o.Unit != "" {
-				narrowPolicy(t, unitProjects)
-			}
-			policies.Content = append(policies.Content, t)
-		case *config.PolicySourceConfig:
-			t.Projects = narrow(t.Projects)
-			ensurePolicy(c).Sources = append(ensurePolicy(c).Sources, *t)
-		case *config.HealthSourceConfig:
-			t.Projects = narrow(t.Projects)
-			c.Verification.Sources = append(c.Verification.Sources, *t)
-		case *ai.Model:
-			t.Projects = narrow(t.Projects)
-			c.AI.Models = append(c.AI.Models, *t)
-		case *SignIn:
-			// Saved and checked; not live (see SignIn).
-		case *SecretStore:
-			// Definitions only: what pipelines may name. Nothing in the
-			// running server reads them yet beyond showing them.
+		if err := composeObject(c, lay, &policies, units, o, typed[i]); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	if len(policies.Content) > 0 {
@@ -177,6 +95,90 @@ func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *
 	}
 	lay.UnitsInUse = len(lay.Units) > 0
 	return c, lay, nil
+}
+
+// decodeAll reads every object's spec, and notes the units and which unit
+// each project is in.
+func decodeAll(live []engine.ConfigObject, lay *Layout) ([]any, map[string]*UnitView, error) {
+	units := map[string]*UnitView{}
+	var errs []error
+	typed := make([]any, len(live))
+	for i, o := range live {
+		k := kindByName(o.Kind)
+		v, _, err := decodeSpec(k, o.Name, o.Spec)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s %s: %w", k.Name, o.Name, err))
+			continue
+		}
+		typed[i] = v
+		switch o.Kind {
+		case "unit":
+			u := v.(*Unit)
+			units[o.Name] = &UnitView{Name: o.Name, DisplayName: cmpOr(u.DisplayName, o.Name), Description: u.Description, Projects: []string{}}
+		case "project":
+			lay.ProjectUnit[o.Name] = o.Unit
+		}
+	}
+	return typed, units, errors.Join(errs...)
+}
+
+// composeObject puts one object into the configuration, narrowed to its
+// unit's projects if it is defined at a unit.
+func composeObject(c *config.Config, lay *Layout, policies *yaml.Node, units map[string]*UnitView, o engine.ConfigObject, v any) error {
+	k := kindByName(o.Kind)
+	if o.Unit != "" {
+		if !k.Levels {
+			return fmt.Errorf("%s %s: a %s cannot be defined at a unit", k.Name, o.Name, strings.ToLower(k.Title))
+		}
+		if units[o.Unit] == nil {
+			return fmt.Errorf("%s %s: unit %q does not exist", k.Name, o.Name, o.Unit)
+		}
+	}
+	scoped := o.Unit != "" && o.Kind != "project"
+	var unitProjects []string
+	if scoped {
+		unitProjects = units[o.Unit].Projects
+	}
+	narrow := func(ps []string) []string { return narrowTo(ps, unitProjects, scoped) }
+	switch t := v.(type) {
+	case *Installation:
+		applyInstallation(c, t)
+		lay.Levels = t.Levels.withDefaults()
+	case *Organisation:
+		lay.Organisation = *t
+	case *config.LibraryConfig:
+		c.Libraries = append(c.Libraries, *t)
+	case *config.ProjectConfig:
+		c.Projects = append(c.Projects, *t)
+	case *config.EnvironmentConfig:
+		t.Projects = narrow(t.Projects)
+		c.Environments = append(c.Environments, *t)
+	case *config.RunnerPoolConfig:
+		if t.Kind == engine.PoolBuild {
+			t.Projects = narrow(t.Projects)
+		}
+		c.RunnerPools = append(c.RunnerPools, *t)
+	case *config.AccessBinding:
+		t.Projects = narrow(t.Projects)
+		c.Auth.Access = append(c.Auth.Access, *t)
+	case *yaml.Node:
+		if o.Unit != "" {
+			narrowPolicy(t, unitProjects)
+		}
+		policies.Content = append(policies.Content, t)
+	case *config.PolicySourceConfig:
+		t.Projects = narrow(t.Projects)
+		ensurePolicy(c).Sources = append(ensurePolicy(c).Sources, *t)
+	case *config.HealthSourceConfig:
+		t.Projects = narrow(t.Projects)
+		c.Verification.Sources = append(c.Verification.Sources, *t)
+	case *ai.Model:
+		t.Projects = narrow(t.Projects)
+		c.AI.Models = append(c.AI.Models, *t)
+	}
+	// Units, secret-store definitions and the sign-in settings are saved and
+	// shown; nothing in the running server reads them (see SignIn).
+	return nil
 }
 
 func cmpOr(a, b string) string {
@@ -547,7 +549,7 @@ func Export(objs []engine.ConfigObject) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if o.Kind == "role-binding" || (k.Levels && o.Unit != "") || o.Kind == "unit" || o.Kind == "organisation" || o.Kind == "secret-store" || o.Kind == "step-resources" || o.Kind == "sign-in" {
+		if keptUnderObjects(k, o) {
 			// Kept with its name and level, under objects.
 			entry := map[string]any{"kind": o.Kind, "name": o.Name}
 			if o.Unit != "" {
@@ -564,8 +566,7 @@ func Export(objs []engine.ConfigObject) ([]byte, error) {
 			}
 			continue
 		}
-		switch o.Kind {
-		case "installation":
+		if o.Kind == "installation" {
 			var inst Installation
 			if v, _, err := decodeSpec(k, o.Name, o.Spec); err == nil {
 				inst = *v.(*Installation)
@@ -573,22 +574,8 @@ func Export(objs []engine.ConfigObject) ([]byte, error) {
 			if err := exportInstallation(put, &inst); err != nil {
 				return nil, err
 			}
-		case "library":
-			seq("libraries").Content = append(seq("libraries").Content, n)
-		case "project":
-			seq("projects").Content = append(seq("projects").Content, n)
-		case "environment":
-			seq("environments").Content = append(seq("environments").Content, n)
-		case "runner-pool":
-			seq("runner_pools").Content = append(seq("runner_pools").Content, n)
-		case "policy":
-			seq("policy.policies").Content = append(seq("policy.policies").Content, n)
-		case "policy-source":
-			seq("policy.sources").Content = append(seq("policy.sources").Content, n)
-		case "health-source":
-			seq("verification.sources").Content = append(seq("verification.sources").Content, n)
-		case "model":
-			seq("ai.models").Content = append(seq("ai.models").Content, n)
+		} else if key := exportSection[o.Kind]; key != "" {
+			seq(key).Content = append(seq(key).Content, n)
 		}
 	}
 	for _, key := range []string{"libraries", "projects", "environments", "runner_pools"} {
@@ -627,6 +614,23 @@ func Export(objs []engine.ConfigObject) ([]byte, error) {
 		return nil, err
 	}
 	return []byte(b.String()), nil
+}
+
+// exportSection is where each kind of object is written in the file's
+// sections (a list under that key).
+var exportSection = map[string]string{
+	"library": "libraries", "project": "projects", "environment": "environments", "runner-pool": "runner_pools",
+	"policy": "policy.policies", "policy-source": "policy.sources", "health-source": "verification.sources", "model": "ai.models",
+}
+
+// keptUnderObjects: the file has no place for the object, or not for its
+// name or level, so the export keeps it under objects.
+func keptUnderObjects(k *Kind, o engine.ConfigObject) bool {
+	switch o.Kind {
+	case "role-binding", "unit", "organisation", "secret-store", "step-resources", "sign-in":
+		return true
+	}
+	return k.Levels && o.Unit != ""
 }
 
 // mergeInto puts m under key in doc, merging with a mapping already there.

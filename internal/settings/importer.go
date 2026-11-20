@@ -72,11 +72,11 @@ func ParseFile(data []byte) ([]engine.ConfigObject, error) {
 		if err != nil {
 			return nil, fmt.Errorf("objects[%d]: %w", i, err)
 		}
-		if _, stored, err := decodeSpec(k, e.Name, spec); err != nil {
+		_, stored, err := decodeSpec(k, e.Name, spec)
+		if err != nil {
 			return nil, fmt.Errorf("objects[%d] (%s %s): %w", i, e.Kind, e.Name, err)
-		} else {
-			spec = stored
 		}
+		spec = stored
 		if e.Kind == "installation" {
 			merged := false
 			for j := range objs {

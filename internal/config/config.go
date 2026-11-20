@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -811,85 +810,12 @@ func readConfig(path string, bootstrap bool) (*Config, error) {
 				return nil, fmt.Errorf("%s: %w", path, err)
 			}
 			c.file = path
-			// Relative paths are relative to the config file.
-			base := filepath.Dir(path)
-			if c.Data != "" && !filepath.IsAbs(c.Data) {
-				c.Data = filepath.Join(base, c.Data)
-			}
-			if c.Database != "" && !isURL(c.Database) && !filepath.IsAbs(c.Database) {
-				c.Database = filepath.Join(base, c.Database)
-			}
-			for i, p := range c.Projects {
-				if pp := p.Pipeline; pp != nil && pp.OnAsTrue != nil {
-					if pp.On.Push != nil || pp.On.PullRequest.Kind != 0 {
-						return nil, fmt.Errorf("%s: project %s: pipeline has both `on` and `true` (an unquoted on); keep one", path, p.Name)
-					}
-					pp.On, pp.OnAsTrue = *pp.OnAsTrue, nil
-				}
-				if isLocalPath(p.Repo) && !filepath.IsAbs(p.Repo) {
-					c.Projects[i].Repo = filepath.Join(base, p.Repo)
-				}
-			}
-			for i, l := range c.Libraries {
-				if isLocalPath(l.Repo) && !filepath.IsAbs(l.Repo) {
-					c.Libraries[i].Repo = filepath.Join(base, l.Repo)
-				}
-			}
-			c.Runner.Secrets.RelativeTo(base)
-			c.AI.Secrets.RelativeTo(base)
-			c.Runner.Images.RelativeTo(base)
-			c.relativeTriggerFiles(base)
-			if f := c.Auth.OIDC.ClientSecretFile; f != "" && !filepath.IsAbs(f) {
-				c.Auth.OIDC.ClientSecretFile = filepath.Join(base, f)
-			}
-			for i, p := range c.RunnerPools {
-				if p.TokenFile != "" && !filepath.IsAbs(p.TokenFile) {
-					c.RunnerPools[i].TokenFile = filepath.Join(base, p.TokenFile)
-				}
+			if err := c.relativeToFile(path); err != nil {
+				return nil, err
 			}
 		}
 	}
-	if c.Listen == "" {
-		c.Listen = "127.0.0.1:8080"
-	}
-	if c.Data == "" {
-		c.Data = "launchway-data"
-	}
-	// Runners and container runtimes may work from another directory, so
-	// every local path is made absolute.
-	if abs, err := filepath.Abs(c.Data); err == nil {
-		c.Data = abs
-	}
-	for i, p := range c.Projects {
-		if isLocalPath(p.Repo) {
-			if abs, err := filepath.Abs(p.Repo); err == nil {
-				c.Projects[i].Repo = abs
-			}
-		}
-	}
-	for i, l := range c.Libraries {
-		if isLocalPath(l.Repo) {
-			if abs, err := filepath.Abs(l.Repo); err == nil {
-				c.Libraries[i].Repo = abs
-			}
-		}
-	}
-	if c.User == "" {
-		if u, err := user.Current(); err == nil {
-			c.User = u.Username
-		} else {
-			c.User = "local"
-		}
-	}
-	if c.Runner.Concurrency <= 0 {
-		c.Runner.Concurrency = 2
-	}
-	if c.Auth.Mode == "" {
-		c.Auth.Mode = AuthNone
-	}
-	if c.Artifacts.Dir != "" && !filepath.IsAbs(c.Artifacts.Dir) && path != "" {
-		c.Artifacts.Dir = filepath.Join(filepath.Dir(path), c.Artifacts.Dir)
-	}
+	c.applyDefaults()
 	if err := c.Validate(path); err != nil {
 		return nil, err
 	}
@@ -1151,28 +1077,4 @@ func RunnerToken(dataDir string, store SharedStore) (string, error) {
 		}
 	}
 	return tok, nil
-}
-
-// EgressConfig is what the server may reach when a person gives it an
-// address: a repository to read, an identity provider, a model.
-type EgressConfig struct {
-	// AllowLocal lets repository addresses be paths on this server or file:
-	// addresses. Off by default: through the API such an address reads any
-	// repository the server's account can read. Local development
-	// (make run) turns it on. Bootstrap file only.
-	AllowLocal bool `yaml:"allow_local"`
-	// Allow lists internal hosts (names, *.suffix), addresses and ranges
-	// that may be reached although the server refuses internal addresses by
-	// default: loopback, link-local and cloud metadata, private and shared
-	// ranges. A self-hosted Git server on the private network goes here.
-	// Kept in the database, set by an administrator.
-	Allow []string `yaml:"allow"`
-}
-
-// HistoryConfig is the retention of the configuration's change history.
-type HistoryConfig struct {
-	// Retain is how long changes are kept (90d, 52w; at least 7d); empty
-	// keeps all of them. The newest change of every object is always kept.
-	// Revisions older than what is kept can no longer be put back.
-	Retain string `yaml:"retain"`
 }
