@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/policy"
@@ -518,11 +519,18 @@ func (st *RunState) apply(ev Event) {
 			d.Secrets = *p.DraftSecrets
 			st.Draft = &d
 		}
+		timedOut := strings.HasPrefix(st.CancelReason, runTimeoutReasonPrefix)
 		st.CancelRequested = false
 		st.CancelReason, st.SupersededBy = "", nil
 		st.RunGate = nil // a resume is judged again
 		st.Status = RunRunning
-		if st.FinishedAt > 0 && ev.At > st.FinishedAt {
+		switch {
+		case timedOut && st.Pipeline != nil && ev.At > st.CreatedAt:
+			// A run its own timeout canceled has used its whole budget, so a
+			// resume starts the clock again from now (the ceiling the
+			// installation sets still applies: see checkRunTimeout).
+			st.Excluded = ev.At - st.CreatedAt
+		case st.FinishedAt > 0 && ev.At > st.FinishedAt:
 			st.Excluded += ev.At - st.FinishedAt // the run's timeout does not run while it is over
 		}
 		st.FinishedAt = 0

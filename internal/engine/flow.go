@@ -187,9 +187,11 @@ func (e *Engine) expireRunTimeouts() {
 	}
 }
 
+const runTimeoutReasonPrefix = "run timeout of "
+
 // RunTimeoutReason is the cancel_reason of a run that reached its timeout.
 func RunTimeoutReason(d pipeline.Duration) string {
-	return "run timeout of " + d.Short() + " reached"
+	return runTimeoutReasonPrefix + d.Short() + " reached"
 }
 
 // ---- installation limits ----

@@ -531,6 +531,40 @@ func TestRunTimeoutIgnoresTimeBetweenEndAndResume(t *testing.T) {
 	}
 }
 
+// A run its own timeout canceled gets a fresh budget when it is resumed:
+// the clock restarts from the resume, so the next sweep does not cancel it
+// again.
+func TestResumeAfterRunTimeoutGetsAFreshBudget(t *testing.T) {
+	e, clk := newEngine(t)
+	id := create(t, e, timed, Trigger{Event: "manual"})
+	j := take(t, e)
+	clk.Add(2 * time.Hour)
+	e.expireRunTimeouts()
+	if err := e.Finish(j.LeaseID, Result{Outcome: "canceled"}); err != nil {
+		t.Fatal(err)
+	}
+	if d, _ := e.GetRun(id); d.Status != RunCanceled {
+		t.Fatalf("status %s", d.Status)
+	}
+	clk.Add(3 * time.Hour)
+	if err := e.Resume(id, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	sum, _ := e.Summary(id)
+	if want := clk.Now().Add(time.Hour).UnixMilli(); sum.DeadlineAt != want {
+		t.Fatalf("deadline %d, want %d (a whole new hour)", sum.DeadlineAt, want)
+	}
+	e.expireRunTimeouts()
+	if d, _ := e.GetRun(id); d.CancelRequested {
+		t.Fatal("the resumed run was canceled again straight away")
+	}
+	clk.Add(61 * time.Minute)
+	e.expireRunTimeouts()
+	if d, _ := e.GetRun(id); !d.CancelRequested {
+		t.Fatal("the fresh budget should run out too")
+	}
+}
+
 // The installation can cap run timeouts; a pipeline that asks for more is
 // refused, naming the limit.
 func TestMaxRunTimeoutRefusesALongerTimeout(t *testing.T) {
