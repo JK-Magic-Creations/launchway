@@ -110,18 +110,19 @@ func (r *Runner) runAI(ctx context.Context, job *engine.Job, sys func(string, ..
 		sys("The model used %d input and %d output tokens in %s%s", record.Usage.InputTokens, record.Usage.OutputTokens, took, costText(res.CostUSD))
 	}
 	if err != nil {
-		msg := mask(err.Error())
+		msg, cause := mask(err.Error()), ""
 		sys("%s", msg)
 		switch {
 		case ctx.Err() != nil:
 			return engine.Result{Outcome: "canceled", AI: record}, collect
 		case errors.Is(tctx.Err(), context.DeadlineExceeded):
 			msg = fmt.Sprintf("timed out after %s: %s", job.Timeout.D(), msg)
+			cause = pipeline.CauseTimeout
 		}
 		if res.Text != "" {
 			_ = os.WriteFile(filepath.Join(outDir, "response.txt"), []byte(mask(res.Text)), 0o600)
 		}
-		return engine.Result{Outcome: "failed", Error: msg, AI: record}, collect
+		return engine.Result{Outcome: "failed", Cause: cause, Error: msg, AI: record}, collect
 	}
 	text := mask(res.Text)
 	if err := os.WriteFile(filepath.Join(outDir, "response.txt"), []byte(text), 0o600); err != nil {

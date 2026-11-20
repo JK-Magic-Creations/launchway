@@ -672,3 +672,89 @@ func TestPullRequestIntoOnTheRun(t *testing.T) {
 		t.Fatalf("%+v %v", d, err)
 	}
 }
+
+// A cause the runner sends is believed over what its error text looks like;
+// a runner that sends none is judged by the text, as before.
+func TestRunnerSentCauseWins(t *testing.T) {
+	one := 1
+	for _, tc := range []struct {
+		res  Result
+		want string
+	}{
+		{Result{Outcome: "failed", Cause: "infrastructure", Error: "cannot start a container for x: no space"}, "infrastructure"},
+		{Result{Outcome: "failed", Cause: "infrastructure", Error: "the pod stopped: evicted"}, "infrastructure"},
+		{Result{Outcome: "failed", Cause: "timeout", Error: "the step took too long"}, "timeout"},
+		{Result{Outcome: "failed", Cause: "exit", ExitCode: &one, Error: "preparing the workspace: it printed this itself"}, "exit"},
+		{Result{Outcome: "failed", Cause: "made-up", Error: "preparing the workspace: x"}, "infrastructure"}, // unknown: fall back to the text
+		{Result{Outcome: "failed", Error: "the pod stopped: evicted"}, "exit"},                               // older runner, nothing to go by
+	} {
+		if got := failureCause(tc.res); got != tc.want {
+			t.Errorf("%+v: %s, want %s", tc.res, got, tc.want)
+		}
+	}
+}
+
+// A retry.on list that names infrastructure retries a typed failure the
+// text alone would never have shown to be one.
+func TestRetryOnUsesTheTypedCause(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, "pipeline: demo\nsteps:\n  s: {image: x, run: f, retry: {times: 2, on: [infrastructure]}}\n", Trigger{Event: "manual"})
+	finishWith(t, e, Result{Outcome: "failed", Cause: "infrastructure", Error: "the pod stopped: evicted"})
+	if s := stepOf(t, e, id, "s"); s.Status != StepQueuedS {
+		t.Fatalf("%+v", s)
+	}
+	finishWith(t, e, Result{Outcome: "failed", Cause: "exit", Error: "exit code 1"})
+	if s := stepOf(t, e, id, "s"); s.Status != StepFailed || s.FailureCause != "exit" {
+		t.Fatalf("%+v", s)
+	}
+}
+
+// A lost attempt is an infrastructure failure: retry.wait and retry.backoff
+// space the attempts, and retry.on without infrastructure ends it.
+func TestLostAttemptFollowsTheRetryPolicy(t *testing.T) {
+	lost := Result{Outcome: "lost", Cause: "infrastructure", Error: "pod disappeared"}
+	t.Run("wait and backoff", func(t *testing.T) {
+		e, clk := newEngine(t)
+		id := create(t, e, "pipeline: demo\nsteps:\n  s: {image: x, run: f, retry: {times: 1, wait: 10s, backoff: 2}}\n", Trigger{Event: "manual"})
+		for i, wait := range []time.Duration{10 * time.Second, 20 * time.Second, 40 * time.Second} {
+			finishWith(t, e, lost)
+			s := stepOf(t, e, id, "s")
+			if s.Status != StepQueuedS || time.UnixMilli(s.NotBefore).Sub(clk.Now()) != wait {
+				t.Fatalf("loss %d: %+v, want a wait of %v", i+1, s, wait)
+			}
+			none(t, e)
+			clk.Add(wait)
+		}
+		// maxLost is 3: the next loss is the last.
+		finishWith(t, e, lost)
+		s := stepOf(t, e, id, "s")
+		if s.Status != StepFailed || s.FailureCause != "infrastructure" || !strings.Contains(s.Error, "gave up after 4 tries") {
+			t.Fatalf("%+v", s)
+		}
+	})
+	t.Run("no wait is as before", func(t *testing.T) {
+		e, _ := newEngine(t)
+		id := create(t, e, "pipeline: demo\nsteps:\n  s: {image: x, run: f}\n", Trigger{Event: "manual"})
+		finishWith(t, e, lost)
+		if s := stepOf(t, e, id, "s"); s.Status != StepQueuedS || s.NotBefore != 0 || s.Attempt != 2 {
+			t.Fatalf("%+v", s)
+		}
+	})
+	t.Run("on without infrastructure", func(t *testing.T) {
+		e, _ := newEngine(t)
+		id := create(t, e, "pipeline: demo\nsteps:\n  s: {image: x, run: f, retry: {times: 3, on: [exit]}}\n", Trigger{Event: "manual"})
+		finishWith(t, e, lost)
+		s := stepOf(t, e, id, "s")
+		if s.Status != StepFailed || !strings.Contains(s.Error, "retry.on does not include infrastructure") {
+			t.Fatalf("%+v", s)
+		}
+	})
+	t.Run("on with infrastructure", func(t *testing.T) {
+		e, _ := newEngine(t)
+		id := create(t, e, "pipeline: demo\nsteps:\n  s: {image: x, run: f, retry: {times: 3, on: [infrastructure]}}\n", Trigger{Event: "manual"})
+		finishWith(t, e, lost)
+		if s := stepOf(t, e, id, "s"); s.Status != StepQueuedS {
+			t.Fatalf("%+v", s)
+		}
+	})
+}

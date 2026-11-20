@@ -68,7 +68,7 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 		sys("Attempt %d", job.Attempt)
 	}
 	if r.Images == nil || len(r.Images.Builders) == 0 {
-		return engine.Result{Outcome: "failed", Error: "this runner has no image builders configured (images.builders)"}, nil
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "this runner has no image builders configured (images.builders)"}, nil
 	}
 	values, failed := r.resolveSecrets(ctx, job, sys)
 	if failed != nil {
@@ -86,12 +86,12 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 	ws, err := r.workspace(ctx, job, sys)
 	if err != nil {
 		sys("Could not prepare the workspace: %v", err)
-		return engine.Result{Outcome: "failed", Error: "preparing the workspace: " + err.Error()}, nil
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "preparing the workspace: " + err.Error()}, nil
 	}
 	work := filepath.Join(r.DataDir, "workspaces", "image-"+job.LeaseID)
 	_ = os.RemoveAll(work)
 	if err := os.MkdirAll(work, 0o700); err != nil {
-		return engine.Result{Outcome: "failed", Error: err.Error()}, nil
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: err.Error()}, nil
 	}
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
 	defer os.RemoveAll(meta)
@@ -122,7 +122,7 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 		msg := mask.Mask(err.Error())
 		sys("%s", msg)
 		if errors.Is(err, executor.ErrInfrastructure) {
-			return engine.Result{Outcome: "lost", Error: msg}, nil
+			return engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: msg}, nil
 		}
 		return engine.Result{Outcome: "failed", Error: msg}, collect
 	}
@@ -174,7 +174,7 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 	switch {
 	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
 		sys("Timed out after %s", job.Timeout.D())
-		return engine.Result{Outcome: "failed", Error: fmt.Sprintf("timed out after %s", job.Timeout.D()), Image: record}, collect
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseTimeout, Error: fmt.Sprintf("timed out after %s", job.Timeout.D()), Image: record}, collect
 	case err != nil && ctx.Err() != nil:
 		return engine.Result{Outcome: "canceled", Image: record}, collect
 	case err != nil:

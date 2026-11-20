@@ -20,6 +20,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 // Artifacts on the runner: after a step, each artifact it keeps is copied
@@ -362,7 +363,7 @@ func (r *Runner) fetch(ctx context.Context, job *engine.Job, spec executor.Spec,
 			n++
 			local := filepath.Join(dir, strconv.Itoa(n))
 			if err := os.MkdirAll(dir, 0o700); err != nil {
-				return &engine.Result{Outcome: "lost", Error: "preparing to fetch artifacts: " + err.Error()}
+				return &engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: "preparing to fetch artifacts: " + err.Error()}
 			}
 			if err := r.downloadFile(ctx, job, f.ArtifactID, fl, local); err != nil {
 				msg := fmt.Sprintf("fetching %s of artifact %s of %s: %v", fl.Path, f.Name, f.From, err)
@@ -373,7 +374,7 @@ func (r *Runner) fetch(ctx context.Context, job *engine.Job, spec executor.Spec,
 				if permanent(err) {
 					return &engine.Result{Outcome: "failed", Error: msg}
 				}
-				return &engine.Result{Outcome: "lost", Error: msg}
+				return &engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: msg}
 			}
 			target := fl.Path
 			if f.Into != "" {
@@ -392,9 +393,9 @@ func (r *Runner) fetch(ctx context.Context, job *engine.Job, spec executor.Spec,
 		msg := "putting fetched artifacts in the workspace: " + spec.Mask(err.Error())
 		sys("%s", msg)
 		if errors.Is(err, executor.ErrInfrastructure) {
-			return &engine.Result{Outcome: "lost", Error: msg}
+			return &engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: msg}
 		}
-		return &engine.Result{Outcome: "failed", Error: msg}
+		return &engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: msg}
 	}
 	return nil
 }

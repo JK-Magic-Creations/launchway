@@ -71,13 +71,18 @@ func (c *cmd) persistFlow(changed []string) error {
 	return nil
 }
 
-// failureCause says why an attempt failed, from what its runner reported:
+// failureCause says why an attempt failed. A runner that sends a cause is
+// believed; for an older one, it is worked out from what it reported:
 // refused (the runner's accept: section), a timeout, a failure of the
 // machinery around the script (the workspace, the artifacts to fetch, an
 // image that cannot be pulled, a secret store that does not answer), or
 // else an exit. Anything not known counts as exit: that is the cause of a
 // script that failed, and the one a retry without causes retries anyway.
 func failureCause(res Result) string {
+	switch res.Cause {
+	case pipeline.CauseInfrastructure, pipeline.CauseTimeout, pipeline.CauseExit:
+		return res.Cause // the runner said so
+	}
 	switch {
 	case res.Outcome == OutcomeRefused:
 		return pipeline.CauseInfrastructure

@@ -120,6 +120,22 @@ const (
 // such as a pod disappearing. The step should be run again, not failed.
 var ErrInfrastructure = errors.New("infrastructure problem")
 
+// ErrCannotStart marks a failure to bring a step's containers up: an image
+// that cannot be pulled, a pod that stopped or never started, a pod that
+// could not be created. It is not the step's own failure, but trying again
+// at once would not help, so the step is failed (as infrastructure) rather
+// than lost.
+var ErrCannotStart = errors.New("the step's containers could not be started")
+
+type startError struct{ msg string }
+
+func (e startError) Error() string        { return e.msg }
+func (e startError) Is(target error) bool { return target == ErrCannotStart }
+
+func cannotStart(format string, args ...any) error {
+	return startError{fmt.Sprintf(format, args...)}
+}
+
 func infra(format string, args ...any) error {
 	return fmt.Errorf("%w: %s", ErrInfrastructure, fmt.Sprintf(format, args...))
 }
@@ -413,7 +429,7 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 			"(kubernetes.restricted)", *k.o.RunAsUser, *k.o.RunAsGroup, stepHome)
 	}
 	if _, err := pods.Create(ctx, pod, metav1.CreateOptions{}); err != nil {
-		return nil, fmt.Errorf("creating pod %s: %w", rp.name, err)
+		return nil, cannotStart("creating pod %s: %v", rp.name, err)
 	}
 	if err := k.waitRunning(ctx, rp.name, s.Containers, sys); err != nil {
 		_ = pods.Delete(context.Background(), rp.name, metav1.DeleteOptions{GracePeriodSeconds: ptr(int64(0))})
@@ -583,20 +599,20 @@ func (k *Kubernetes) waitRunning(ctx context.Context, name string, specs []Conta
 			return nil
 		}
 		if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
-			return fmt.Errorf("the pod stopped: %s", podProblem(pod))
+			return cannotStart("the pod stopped: %s", podProblem(pod))
 		}
 		for _, st := range pod.Status.ContainerStatuses {
 			if w := st.State.Waiting; w != nil {
 				switch w.Reason {
 				case "ErrImagePull", "ImagePullBackOff", "InvalidImageName", "ErrImageNeverPull":
-					return fmt.Errorf("cannot pull %s: %s", st.Image, oneLine(w.Message))
+					return cannotStart("cannot pull %s: %s", st.Image, oneLine(w.Message))
 				case "CreateContainerConfigError", "CreateContainerError":
-					return fmt.Errorf("cannot start a container for %s: %s", st.Image, oneLine(w.Message))
+					return cannotStart("cannot start a container for %s: %s", st.Image, oneLine(w.Message))
 				}
 			}
 			if t := st.State.Terminated; t != nil {
 				if service[st.Name] {
-					return fmt.Errorf("the service %s stopped (exit %d): %s", st.Name, t.ExitCode, k.tail(ctx, name, st.Name))
+					return cannotStart("the service %s stopped (exit %d): %s", st.Name, t.ExitCode, k.tail(ctx, name, st.Name))
 				}
 				return fmt.Errorf("the container %s (%s) stopped at once (exit %d). Its image needs /bin/sh", st.Name, st.Image, t.ExitCode)
 			}
@@ -606,7 +622,7 @@ func (k *Kubernetes) waitRunning(ctx context.Context, name string, specs []Conta
 			lastNote = note
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("the pod did not start within %s: %s", k.startWait, podProblem(pod))
+			return cannotStart("the pod did not start within %s: %s", k.startWait, podProblem(pod))
 		}
 		select {
 		case <-ctx.Done():
