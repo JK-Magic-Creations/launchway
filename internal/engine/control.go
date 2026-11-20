@@ -654,6 +654,13 @@ func (c *cmd) startRolloutStep(id string, def *pipeline.Step) {
 		c.failStep(id, "its deployment is already over")
 		return
 	}
+	// Promoting or retrying moves the new version further in: the policies
+	// judge it first. An abort is never judged.
+	if def.Action != pipeline.ActionAbort {
+		if !c.gateDeploy(id, def, c.st.Pipeline.Step(def.Deployment), d.Dep.Environment, def.Action) {
+			return
+		}
+	}
 	commit := d.Dep.Commit
 	if commit == "" && d.Dep.Facts != nil {
 		commit = d.Dep.Facts.Commit

@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/policy"
 )
 
 // RunStatus is the state of a whole run.
@@ -86,6 +87,12 @@ type RunState struct {
 	// Commands are the commands given to the run's deployments' rollouts,
 	// in the order given (schema 14; see control.go).
 	Commands []*CommandState
+	// RunGate is the latest policy decision on the run as a whole, made
+	// when it was created, re-run or last resumed; nil if none (schema 16).
+	// A blocked one fails each step as it would start.
+	RunGate *policy.Evaluation
+	// Policy lists every policy decision on the run, in order.
+	Policy []*policy.Evaluation
 
 	// Schema is the oldest schema whose servers understand every event of
 	// the run (runs.min_schema).
@@ -134,6 +141,22 @@ type StepState struct {
 	// step's deployment, once it waits for the lock or has one.
 	WaitKind string
 	Dep      *DeployState
+	// Gate is the latest policy decision on this step (schema 16): before
+	// a deploy or rollout step acted, or an image step was queued.
+	Gate *policy.Evaluation
+	// Evidence is what the step's latest attempt reported, for policies:
+	// its test totals, findings, SBOM and image, as in the event that
+	// ended it.
+	Evidence *StepEvidence
+}
+
+// StepEvidence is what a step attempt reported, from the event that ended
+// it.
+type StepEvidence struct {
+	Tests    *TestSummary
+	Findings *FindingsSummary
+	SBOM     *SBOMSummary
+	Image    *ImageRecord
 }
 
 // What a waiting deploy or rollback step waits for.
@@ -345,7 +368,7 @@ func (st *RunState) check(ev Event) bool {
 		st.notUnderstood("step %s, which is not in the pipeline", p.Step)
 		return false
 	}
-	if p.Step == "" && ev.Type != RunCancelRequested && ev.Type != RunResumed && ev.Type != RunFinished {
+	if p.Step == "" && ev.Type != RunCancelRequested && ev.Type != RunResumed && ev.Type != RunFinished && ev.Type != PolicyEvaluated {
 		st.notUnderstood("a %s event without a step", ev.Type)
 		return false
 	}
@@ -426,6 +449,7 @@ func (st *RunState) apply(ev Event) {
 		}
 		st.CancelRequested = false
 		st.CancelReason, st.SupersededBy = "", nil
+		st.RunGate = nil // a resume is judged again
 		st.Status = RunRunning
 		st.FinishedAt = 0
 
@@ -448,6 +472,7 @@ func (st *RunState) apply(ev Event) {
 		s.ExitCode, s.Error, s.Runner, s.LeaseID = nil, "", "", ""
 		s.Outputs = nil
 		s.Excerpt = ""
+		s.Evidence = nil
 
 	case StepSkipped:
 		s.Status = StepSkippedS
@@ -491,6 +516,7 @@ func (st *RunState) apply(ev Event) {
 		s.Outputs = p.Outputs
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
+		s.Evidence = evidenceOf(p)
 
 	case StepLost:
 		s.Lost++
@@ -503,6 +529,9 @@ func (st *RunState) apply(ev Event) {
 		s.Error = p.Reason
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
+		if e := evidenceOf(p); e != nil {
+			s.Evidence = e
+		}
 
 	case StepReset:
 		s.Status = StepPending
@@ -512,6 +541,7 @@ func (st *RunState) apply(ev Event) {
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.clearDecision()
 		s.WaitKind, s.Dep = "", nil
+		s.Gate, s.Evidence = nil, nil
 
 	case StepWaiting:
 		s.Status = StepWaitingS
@@ -550,7 +580,27 @@ func (st *RunState) apply(ev Event) {
 		s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt = p.Reused.Run, p.Reused.Number, p.Reused.Attempt
 		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, p.Reused.DecidedAt, p.Comment
 
+	case PolicyEvaluated:
+		if p.Policy == nil {
+			break
+		}
+		st.Policy = append(st.Policy, p.Policy)
+		if s == nil {
+			st.RunGate = p.Policy
+		} else {
+			s.Gate = p.Policy
+		}
+
 	default:
 		st.applyDeploy(ev, s)
 	}
+}
+
+// evidenceOf is what an event that ends a step attempt says it reported,
+// or nil.
+func evidenceOf(p Payload) *StepEvidence {
+	if p.Tests == nil && p.Findings == nil && p.SBOM == nil && p.Image == nil {
+		return nil
+	}
+	return &StepEvidence{Tests: p.Tests, Findings: p.Findings, SBOM: p.SBOM, Image: p.Image}
 }

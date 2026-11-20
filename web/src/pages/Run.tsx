@@ -18,6 +18,7 @@ import { ArtifactsTab } from "./RunArtifacts";
 import { SecurityTab } from "./RunSecurity";
 import { CopyValue, serious, seriousLabel } from "../components/Security";
 import { ImagesTab, imageSteps } from "./RunImages";
+import { PolicyTab } from "./RunPolicy";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
 
 // stepFromURL is the step named by ?step= in the address, if any.
@@ -25,12 +26,12 @@ function stepFromURL(): string | null {
   return new URLSearchParams(location.search).get("step");
 }
 
-type Tab = "graph" | "tests" | "images" | "artifacts" | "security" | "events" | "definition";
+type Tab = "graph" | "tests" | "images" | "artifacts" | "security" | "policy" | "events" | "definition";
 
 // tabFromURL is the tab named by ?tab= in the address.
 function tabFromURL(): Tab {
   const t = new URLSearchParams(location.search).get("tab");
-  return t === "tests" || t === "images" || t === "artifacts" || t === "security" || t === "events" || t === "definition" ? t : "graph";
+  return t === "tests" || t === "images" || t === "artifacts" || t === "security" || t === "policy" || t === "events" || t === "definition" ? t : "graph";
 }
 
 // setQuery changes the address's query without a new history entry.
@@ -165,7 +166,8 @@ export function RunPage({ id }: { id: string }) {
   const images = imageSteps(run);
   const builtImages = images.filter((s) => s.outputs?.digest).length;
   const tabs: [Tab, string][] = [["graph", "Steps and logs"], ["tests", "Tests"], ...(images.length ? [["images", "Images"] as [Tab, string]] : []),
-    ["security", "Security"], ["artifacts", "Artifacts"], ["events", "Event log"], ["definition", "Pipeline"]];
+    ["security", "Security"], ["artifacts", "Artifacts"], ...(run.policy ? [["policy", "Policy"] as [Tab, string]] : []),
+    ["events", "Event log"], ["definition", "Pipeline"]];
   const shownTab: Tab = tab === "images" && !images.length ? "graph" : tab;
 
   return (
@@ -294,6 +296,7 @@ export function RunPage({ id }: { id: string }) {
         <div className="callout callout-bad">
           <strong>{failedCount === 1 ? `${firstFailed.id} failed` : `${failedCount} steps failed`}.</strong>{" "}
           {firstFailed.error}. Steps that succeeded are kept: resuming runs only what did not finish, using the same commit.
+          {firstFailed.policy_blocked && <> <button type="button" className="linkbtn" onClick={() => setTab("policy")}>See the policy decision</button>.</>}
           {firstFailed.excerpt && <Excerpt step={firstFailed} />}
         </div>
       )}
@@ -309,6 +312,10 @@ export function RunPage({ id }: { id: string }) {
               : <span className="tab-n">{run.tests.total}</span>)}
             {k === "images" && builtImages > 0 && <span className="tab-n">{builtImages}</span>}
             {k === "artifacts" && !!run.artifacts && <span className="tab-n">{run.artifacts}</span>}
+            {k === "policy" && run.policy && (run.policy.verdict === "block"
+              ? <span className="tab-n tab-n-bad">blocked</span>
+              : run.policy.verdict === "warn" ? <span className="tab-n tab-n-warn">warning</span>
+              : <span className="tab-n">{run.policy.waived ? `${run.policy.waived} waived` : "passed"}</span>)}
             {k === "security" && run.findings && (serious(run.findings) > 0
               ? <span className="tab-n tab-n-bad">{seriousLabel(run.findings)}</span>
               : <span className="tab-n">{run.findings.total}</span>)}
@@ -325,7 +332,7 @@ export function RunPage({ id }: { id: string }) {
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
             : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun}
-              showTests={(s) => { setTestStep(s); setTab("tests"); }} showImages={() => setTab("images")} />)}
+              showTests={(s) => { setTestStep(s); setTab("tests"); }} showImages={() => setTab("images")} showPolicy={() => setTab("policy")} />)}
         </>
       )}
       {tab === "tests" && <TestsTab run={run} step={testStep} onStep={setTestStep}
@@ -334,18 +341,20 @@ export function RunPage({ id }: { id: string }) {
         onStep={(s) => { select(s); setTab("graph"); }} onShow={setTab} />}
       {tab === "artifacts" && <ArtifactsTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "security" && <SecurityTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
+      {tab === "policy" && <PolicyTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "events" && <EventsTab id={run.id} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "definition" && <DefinitionTab run={run} />}
     </div>
   );
 }
 
-function StepPanel({ run, step, now, sink, rerun, showTests, showImages }: {
+function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPolicy }: {
   run: RunDetail; step: StepView; now: number;
   sink: React.MutableRefObject<((step: string, attempt: number, lines: LogLine[]) => void) | null>;
   rerun: boolean;
   showTests: (step: string) => void;
   showImages: () => void;
+  showPolicy: () => void;
 }) {
   const [attempt, setAttempt] = useState(step.attempt);
   const [lines, setLines] = useState<LogLine[]>([]);
@@ -447,6 +456,12 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages }: {
           <button type="button" className="btn btn-sm" onClick={() => showTests(step.id)}>
             {failing(step.tests) > 0 ? "See the failed tests" : "See the tests"}
           </button>
+        </div>
+      )}
+      {step.policy_blocked && (
+        <div className="callout callout-bad pol-step-callout">
+          <span><strong>Blocked by policy.</strong> Nothing of this step reached a runner or the environment.</span>
+          <button type="button" className="btn btn-sm" onClick={showPolicy}>See the decision</button>
         </div>
       )}
       {step.status === "failed" && following && (step.excerpt || (step.error && !/^exit code \d+$/.test(step.error))) && (

@@ -122,6 +122,9 @@ type StepView struct {
 	Inputs []AttemptInputs `json:"inputs"`
 	// Reports are the test result files the step declares, as globs.
 	Reports []string `json:"reports,omitempty"`
+	// PolicyBlocked says the step failed because a policy in enforce mode
+	// refused it (schema 16); Error says which policy and rule, and why.
+	PolicyBlocked bool `json:"policy_blocked,omitempty"`
 	// Tests are the step's test results, from the attempt that counts (see
 	// RunTests); nil when it has none.
 	Tests *TestTotals `json:"tests,omitempty"`
@@ -147,6 +150,18 @@ type RunDetail struct {
 	// RunnerHint says why a run that is waiting for a runner may wait a long
 	// time: it builds images, and no runner that can has been seen lately.
 	RunnerHint string `json:"runner_hint,omitempty"`
+	// Policy sums up the run's policy decisions (schema 16); nil if no
+	// policy judged it.
+	Policy *RunPolicySummary `json:"policy,omitempty"`
+}
+
+// RunPolicySummary sums up a run's policy decisions.
+type RunPolicySummary struct {
+	Decisions int `json:"decisions"`
+	// Verdict is the worst verdict of the latest decision at each point
+	// (block, warn or pass); Waived counts rules passed by waivers there.
+	Verdict string `json:"verdict"`
+	Waived  int    `json:"waived"`
 }
 
 // RerunBrief is a re-run as listed with the run it re-runs.
@@ -413,6 +428,7 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 	}
 	v.Outputs = map[string]string{}
 	_ = json.Unmarshal([]byte(outputs), &v.Outputs)
+	v.PolicyBlocked = v.Status == StepFailed && (strings.HasPrefix(v.Error, policyBlockedPrefix) || strings.HasPrefix(v.Error, runRefusedPrefix))
 	return v, nil
 }
 
@@ -511,6 +527,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	if d.RunnerHint, err = e.imageRunnerHint(st, d.StepList); err != nil {
 		return nil, err
 	}
+	d.Policy = policySummary(st)
 	return d, nil
 }
 

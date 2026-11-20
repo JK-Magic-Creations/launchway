@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/policy"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
@@ -74,6 +76,112 @@ type Config struct {
 	// the targets its runners may serve. Only a pool's token can take deploy
 	// work.
 	RunnerPools []RunnerPoolConfig `yaml:"runner_pools"`
+	// Policy holds delivery policies: rules pipelines cannot opt out of,
+	// in this file or loaded from Git sources (schema 16). Every server
+	// sharing a database must have the same ones. Unset: no policies.
+	Policy *PolicyConfig `yaml:"policy"`
+
+	// file is the path the configuration was read from, for messages.
+	file string
+}
+
+// PolicyConfig is the policy section.
+type PolicyConfig struct {
+	// Waivers says who may waive a policy's rule, and for how long.
+	Waivers PolicyWaiversConfig `yaml:"waivers"`
+	// Sources are Git repositories (from libraries) of policy files.
+	Sources []PolicySourceConfig `yaml:"sources"`
+	// Policies are policies written here (see internal/policy); kept as a
+	// node so mistakes are reported with this file's lines.
+	Policies yaml.Node `yaml:"policies"`
+}
+
+// PolicyWaiversConfig: Allow is admin (the default), operator or none: the
+// role needed on a project to waive one of its policies' rules (on the
+// environment too, for a deploy rule). MaxDays is the longest a waiver may
+// last; default 30, at most 365.
+type PolicyWaiversConfig struct {
+	Allow   string `yaml:"allow"`
+	MaxDays int    `yaml:"max_days"`
+}
+
+// PolicySourceConfig is one Git source of policies.
+type PolicySourceConfig struct {
+	Name       string   `yaml:"name"`
+	Library    string   `yaml:"library"`     // one of libraries:
+	Version    string   `yaml:"version"`     // a tag or a full commit id
+	Path       string   `yaml:"path"`        // default policies
+	Projects   []string `yaml:"projects"`    // the projects it may govern; default all
+	Refresh    string   `yaml:"refresh"`     // default 1m
+	StaleAfter string   `yaml:"stale_after"` // default 1h
+}
+
+// PolicyOptions reads the policy section for the engine. Problems in the
+// policies carry the file's lines.
+func (c *Config) PolicyOptions() (engine.PolicyOptions, error) {
+	var o engine.PolicyOptions
+	pc := c.Policy
+	if pc == nil {
+		return o, nil
+	}
+	if pc.Policies.Kind != 0 {
+		ps, err := policy.ParseList(&pc.Policies, c.file, "policy.policies", "config")
+		if err != nil {
+			return o, err
+		}
+		o.Inline = ps
+	}
+	libs := map[string]bool{}
+	for _, l := range c.Libraries {
+		libs[l.Name] = true
+	}
+	for _, s := range pc.Sources {
+		where := "policy.sources: " + s.Name
+		if !libs[s.Library] {
+			return o, fmt.Errorf("%s: library %q is not one of libraries:", where, s.Library)
+		}
+		if !pipeline.ValidVersion(s.Version) {
+			return o, fmt.Errorf("%s: version %q is not a tag or a full commit id", where, s.Version)
+		}
+		for _, p := range s.Projects {
+			if _, err := path.Match(p, ""); err != nil || p == "" {
+				return o, fmt.Errorf("%s: %q is not a valid project pattern", where, p)
+			}
+		}
+		sc := engine.PolicySourceConfig{Name: s.Name, Library: s.Library, Version: s.Version, Path: s.Path, Projects: s.Projects}
+		for _, d := range []struct {
+			text string
+			dst  *time.Duration
+			key  string
+		}{{s.Refresh, &sc.Refresh, "refresh"}, {s.StaleAfter, &sc.StaleAfter, "stale_after"}} {
+			if d.text == "" {
+				continue
+			}
+			v, err := time.ParseDuration(d.text)
+			if err != nil || v < 10*time.Second || v > 7*24*time.Hour {
+				return o, fmt.Errorf("%s: %s %q: write a duration between 10s and 168h", where, d.key, d.text)
+			}
+			*d.dst = v
+		}
+		if strings.Contains(s.Path, "..") {
+			return o, fmt.Errorf("%s: path %q may not contain ..", where, s.Path)
+		}
+		o.Sources = append(o.Sources, sc)
+	}
+	o.MaxWaiverDays = pc.Waivers.MaxDays
+	return o, nil
+}
+
+// WaiverRole is the role needed to waive a policy's rule: admin by default.
+func (c *Config) WaiverRole() (auth.Role, error) {
+	if c.Policy == nil || c.Policy.Waivers.Allow == "" {
+		return auth.Admin, nil
+	}
+	r, err := auth.ParseDraftAllow(c.Policy.Waivers.Allow)
+	if err != nil {
+		return auth.NoRole, fmt.Errorf("policy.waivers.%w", err)
+	}
+	return r, nil
 }
 
 // EnvironmentConfig is one environment.
@@ -490,6 +598,7 @@ func Load(path string) (*Config, error) {
 			if err := dec.Decode(c); err != nil && !errors.Is(err, io.EOF) {
 				return nil, fmt.Errorf("%s: %w", path, err)
 			}
+			c.file = path
 			// Relative paths are relative to the config file.
 			base := filepath.Dir(path)
 			if c.Data != "" && !filepath.IsAbs(c.Data) {
@@ -609,6 +718,18 @@ func Load(path string) (*Config, error) {
 			}
 			return nil, fmt.Errorf("project %s: %w", p.Name, err)
 		}
+	}
+	// Policies are refused here, with their lines, so a mistake stops the
+	// server before it starts.
+	if _, err := c.PolicyOptions(); err != nil {
+		var pp policy.Problems
+		if !errors.As(err, &pp) && path != "" {
+			err = fmt.Errorf("%s: %w", path, err)
+		}
+		return nil, err
+	}
+	if _, err := c.WaiverRole(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return c, nil
 }

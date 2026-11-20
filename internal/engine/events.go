@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/policy"
 )
 
 // EventType names something that happened to a run. Events are never changed
@@ -49,6 +50,12 @@ const (
 	DeployCommandWithdrawn EventType = "deploy.command_withdrawn" // withdrawn before a deploy runner took it
 	DeployCommandTaken     EventType = "deploy.command_taken"     // a deploy runner took it, until a time
 	DeployCommandDone      EventType = "deploy.command_done"      // applied, already applied, not applied, or failed
+
+	// PolicyEvaluated records a policy decision (schema 16; see policy.go):
+	// at the run's start (no step), before a deploy or rollout step acts,
+	// or before an image step that pushes is handed to a runner. It holds
+	// the policies, the facts and the waivers it was judged from.
+	PolicyEvaluated EventType = "policy.evaluated"
 )
 
 // eventSince is the schema version that brought each event type. A server
@@ -63,6 +70,7 @@ var eventSince = map[EventType]int{
 	StepReused:        8,
 	DeployWaitingLock: 11, DeployOpened: 11, DeployActionDone: 11, DeployObserving: 11, DeployPhase: 11, DeployClosed: 11,
 	DeployCommand: 14, DeployCommandWithdrawn: 14, DeployCommandTaken: 14, DeployCommandDone: 14,
+	PolicyEvaluated: 16,
 }
 
 // Event is one entry in the log.
@@ -153,6 +161,9 @@ type Payload struct {
 	// deploy.* events, and step.queued of a deploy or rollback step (schema
 	// 11): the deployment and what happened to it. Never a credential.
 	Deploy *DeployEvent `json:"deploy,omitempty"`
+	// policy.evaluated (schema 16): the decision and what it was judged
+	// from.
+	Policy *policy.Evaluation `json:"policy,omitempty"`
 }
 
 // DeployEvent carries the details of the deploy.* events. Each type uses a

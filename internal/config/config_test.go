@@ -428,3 +428,24 @@ deploy:
 		t.Fatalf("got %v", err)
 	}
 }
+
+// Policies in the server's configuration are checked when it is read, and
+// a mistake is refused with the file and the line.
+func TestPolicyConfiguration(t *testing.T) {
+	cases := []struct{ body, want string }{
+		{"policy:\n  policies:\n    - name: a\n      mode: enforce\n      rules:\n        tests: { min: 0 }\n", "c.yaml:6: policy.policies[0].rules.tests.min: must be between 1"},
+		{"policy:\n  policies:\n    - name: a\n      mode: enforce\n      rules:\n        friday: {}\n", `c.yaml:6: policy.policies[0].rules.friday: unknown rule "friday"`},
+		{"policy:\n  sources: [ { name: org, library: nope, version: v1 } ]\n", `policy.sources: org: library "nope" is not one of libraries:`},
+		{"policy:\n  waivers: { allow: everyone }\n", "policy.waivers.allow"},
+		{"policy:\n  colour: red\n", "field colour not found"},
+	}
+	for _, c := range cases {
+		err := loadFile(t, c.body, false)
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%q: %v", c.body, err)
+		}
+	}
+	if err := loadFile(t, "policy:\n  policies:\n    - { name: a, mode: report, rules: { max_timeout: 2h } }\n", false); err != nil {
+		t.Fatal(err)
+	}
+}

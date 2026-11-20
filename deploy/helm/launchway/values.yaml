@@ -142,6 +142,20 @@ config:
     # -- The longest an API token may last, in days. Written as auth.tokens.max_days.
     # Unset: the built-in default, 365 (at most 3650).
     maxDays:
+  # -- Delivery policies (schema 16): rules pipelines cannot opt out of. Written to the
+  # configuration only when set, as policy: (see the README's Policies section). Set it only
+  # once every server runs a release that knows policies, and take it out before rolling back.
+  # Unset: no policies. For example:
+  #   policy:
+  #     waivers: { allow: admin, maxDays: 30 }      # the built-in defaults
+  #     sources:                                     # Git sources, from config.extraConfig.libraries
+  #       - { name: org, library: org-policies, version: v3, path: policies, refresh: 1m, staleAfter: 1h }
+  #     policies:
+  #       - name: prod-evidence
+  #         mode: enforce
+  #         scope: { environments: [prod] }
+  #         rules: { tests: { min: 1 }, approvals: { min: 1 } }
+  policy:
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -150,7 +164,7 @@ config:
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
   # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts,
-  # findings, loops and schedules are set by the chart and may not appear here; runner.enabled may
+  # findings, loops, schedules and policy are set by the chart and may not appear here; runner.enabled may
   # not be true.
   extraConfig: {}
 

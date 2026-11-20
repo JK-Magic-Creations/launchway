@@ -349,6 +349,8 @@ export interface StepView {
   reused_attempt?: number;
   /** What each attempt was given, oldest first. */
   inputs: AttemptInputs[];
+  /** The step failed because a policy in enforce mode refused it; error says which and why. */
+  policy_blocked?: boolean;
   /** The test result files the step declares, as globs. */
   reports?: string[];
   /** The step's test results, from the attempt that counts. */
@@ -473,6 +475,68 @@ export interface RunDetail extends RunSummary {
   deployments?: DeploymentView[];
   /** Why a run with image steps may wait long: no runner that builds images has been seen. */
   runner_hint?: string;
+  /** The run's policy decisions summed up; absent if no policy judged it. */
+  policy?: { decisions: number; verdict: PolicyVerdict; waived: number };
+}
+
+// ---- policies (schema 16) ----
+
+export type PolicyVerdict = "pass" | "warn" | "block";
+export type RuleVerdict = "pass" | "fail" | "waived";
+export type PolicyPoint = "run" | "deploy" | "image";
+
+export interface PolicyScope { projects?: string[]; environments?: string[]; branches?: string[]; events?: string[] }
+
+export interface PolicyDef {
+  name: string; description?: string; mode: "report" | "enforce"; scope: PolicyScope;
+  rules: Record<string, unknown>; source: string; version?: string; file?: string; line?: number;
+}
+
+export interface EvidenceRef { kind: string; step?: string; run?: string; run_number?: number; text: string }
+
+export interface RuleResult {
+  rule: string; verdict: RuleVerdict; found: string; want: string;
+  evidence?: EvidenceRef[]; waiver?: Waiver; waivers?: string[]; notes?: string[];
+}
+
+export interface PolicyResult { policy: PolicyDef; verdict: "pass" | "fail" | "waived"; rules: RuleResult[] }
+
+export interface PolicyDecision {
+  seq: number; point: PolicyPoint; step?: string; action?: string; environment?: string; at: number;
+  verdict: PolicyVerdict; policies: PolicyResult[] | null;
+  input: { project: string; run: string; starter?: string; protected?: boolean; evidence?: { findings?: FindingFact[] } };
+}
+
+export interface FindingFact { fingerprint: string; tool: string; rule: string; severity: string; file?: string; line?: number; step: string }
+
+export interface Waiver {
+  id: string; project: string; policy: string; rule: string; run?: string; run_number?: number; environment?: string;
+  finding?: string; reason: string; granted_by: string; granted_at: number; expires_at: number;
+  revoked_by?: string; revoked_at?: number; revoke_reason?: string; state?: "active" | "expired" | "revoked";
+}
+
+export interface RuleInfo { name: string; point: PolicyPoint; summary: string }
+
+export interface RunPolicy {
+  decisions: PolicyDecision[]; waivers: Waiver[]; can_waive: boolean; waive_refusal: string;
+  rules: Record<string, string[]>; catalogue: RuleInfo[]; max_waiver_days: number;
+}
+
+export interface PolicySourceView {
+  name: string; kind: "config" | "git"; library?: string; ref?: string; path?: string; projects: string[];
+  version: string; loaded_at?: number; checked_at?: number; fetch_error?: string; fetch_error_at?: number;
+  error?: string; policies: PolicyDef[];
+}
+
+export interface PolicyVerdictRow {
+  policy: string; run_id: string; project: string; run_number: number; point: PolicyPoint; step?: string;
+  environment?: string; version: string; mode: string; verdict: "pass" | "fail" | "waived"; at: number;
+}
+
+export interface PolicyOverview { catalogue: RuleInfo[]; sources: PolicySourceView[]; recent: PolicyVerdictRow[]; max_waiver_days: number }
+
+export interface WaiverRequest {
+  policy: string; rule: string; reason: string; expires_in_hours: number; run?: string; environment?: string; finding?: string;
 }
 
 export interface LogLine { seq: number; at: number; stream: "stdout" | "stderr" | "system"; text: string }
@@ -765,6 +829,17 @@ export const api = {
     if (runs) p.set("runs", String(runs));
     return call<ProjectSecurity>("GET", `/api/v1/projects/${encodeURIComponent(name)}/security?` + p.toString());
   },
+  policies: (background = false) => call<PolicyOverview>("GET", "/api/v1/policies?recent=10", undefined, { background }),
+  runPolicy: (id: string, background = false) => call<RunPolicy>("GET", `/api/v1/runs/${id}/policy`, undefined, { background }),
+  waivers: (q: { project?: string; active?: boolean } = {}, background = false) => {
+    const p = new URLSearchParams();
+    if (q.project) p.set("project", q.project);
+    if (q.active) p.set("active", "1");
+    return call<{ waivers: Waiver[]; waive_projects: string[]; rules: Record<string, string[]> }>("GET", `/api/v1/waivers?${p}`, undefined, { background });
+  },
+  grantWaiver: (project: string, w: WaiverRequest) => call<Waiver>("POST", `/api/v1/projects/${encodeURIComponent(project)}/waivers`, w),
+  revokeWaiver: (project: string, id: string, reason: string) =>
+    call<Waiver>("POST", `/api/v1/projects/${encodeURIComponent(project)}/waivers/${encodeURIComponent(id)}/revoke`, { reason }),
   runImages: (id: string, background = false) => call<{ images: ImageView[] }>("GET", `/api/v1/runs/${id}/images`, undefined, { background }),
   images: (q: ImageQuery) => {
     const p = new URLSearchParams();

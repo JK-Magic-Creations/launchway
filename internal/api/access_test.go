@@ -122,6 +122,18 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/runs/{id}/images": {"GET", "/api/v1/runs/{pay}/images", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/images": {"GET", "/api/v1/images?repository=harbor.example.com/team/shop", "",
 		[6]int{401, 200, 200, 200, 200, 200}},
+
+	// Policies: anyone who sees a project; a run's decisions follow the
+	// run. Waiving needs the admin role on the project by default (the
+	// matrix has no policy, so an admin's waiver is refused as invalid,
+	// and a waiver that does not exist is not found).
+	"GET /api/v1/policies":         {"GET", "/api/v1/policies", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/runs/{id}/policy": {"GET", "/api/v1/runs/{pay}/policy", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/waivers":          {"GET", "/api/v1/waivers", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"POST /api/v1/projects/{name}/waivers": {"POST", "/api/v1/projects/pay-api/waivers",
+		`{"policy":"gate","rule":"tests","reason":"hotfix","expires_in_hours":1}`, [6]int{401, 404, 403, 403, 404, 400}},
+	"POST /api/v1/projects/{name}/waivers/{waiver}/revoke": {"POST", "/api/v1/projects/pay-api/waivers/wvr_x/revoke", "",
+		[6]int{401, 404, 403, 403, 404, 404}},
 }
 
 // draftBody starts a draft run that waits for an approval, so it needs no

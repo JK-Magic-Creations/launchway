@@ -217,3 +217,47 @@ runner:
 		t.Fatalf("a TCP builder without TLS: %v %s", err, out)
 	}
 }
+
+// Policies in the chart: the default render writes no new key (so the
+// version before can read it), and set values render to a file that loads,
+// with the policies checked.
+func TestChartPolicySettings(t *testing.T) {
+	def := renderChart(t, "postgresql: { enabled: true }\n")
+	for name, f := range def {
+		var doc map[string]any
+		if err := yaml.Unmarshal([]byte(f), &doc); err != nil {
+			t.Fatal(err)
+		}
+		for _, key := range []string{"policy", "policies"} {
+			if _, ok := doc[key]; ok {
+				t.Errorf("the default %s configuration has %s:\n%s", name, key, f)
+			}
+		}
+	}
+	files := renderChart(t, `postgresql: { enabled: true }
+config:
+  extraConfig:
+    libraries: [ { name: org-policies, repo: "https://git.example.com/org/policies.git" } ]
+  policy:
+    waivers: { allow: operator, maxDays: 14 }
+    sources:
+      - { name: org, library: org-policies, version: v3, staleAfter: 2h }
+    policies:
+      - name: prod-evidence
+        mode: enforce
+        scope: { environments: [prod] }
+        rules: { tests: { min: 1 } }
+`)
+	p := writeTemp(t, files["server"])
+	c, err := Load(p)
+	if err != nil {
+		t.Fatalf("%v\n%s", err, files["server"])
+	}
+	o, err := c.PolicyOptions()
+	if err != nil || len(o.Inline) != 1 || len(o.Sources) != 1 || o.Sources[0].StaleAfter.String() != "2h0m0s" || o.MaxWaiverDays != 14 {
+		t.Fatalf("%+v %v", o, err)
+	}
+	if r, _ := c.WaiverRole(); r.String() != "operator" {
+		t.Fatal(r)
+	}
+}

@@ -116,6 +116,9 @@ type envOpts struct {
 	policy       *auth.Policy
 	// artifacts, if set, is where artifacts are kept and how.
 	artifacts *engine.ArtifactOptions
+	// policies are delivery policies; waiveRole who may waive them.
+	policies  engine.PolicyOptions
+	waiveRole *auth.Role
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -136,7 +139,8 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	if o.artifacts != nil {
 		arts = *o.artifacts
 	}
-	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no, Artifacts: arts, Environments: o.environments})
+	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no, Artifacts: arts, Environments: o.environments,
+		Policy: o.policies})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +155,7 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, Projects: mgr, RunnerToken: "runner-secret", Log: quiet(), Now: o.clk.Now,
-		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts}
+		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts, WaiveRole: o.waiveRole}
 	srv := httptest.NewUnstartedServer(nil)
 	redirect := o.redirectURL
 	if redirect == "" {

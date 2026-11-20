@@ -361,6 +361,10 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 		c.waitForLock(id, def, env, u, holder)
 		return
 	}
+	// Before anything reaches the environment, the policies judge the run.
+	if !c.gateDeploy(id, def, def, env.Name, "deploy") {
+		return
+	}
 	// The lock is free: take it. Another server taking it at the same moment
 	// makes one of the two inserts fail, and that command is tried again.
 	depID := ids.New("dep")
