@@ -25,8 +25,8 @@ for chart in deploy/helm/launchway deploy/helm/launchway-runner; do
 	(
 		cd "$work/x"
 		find "$name" -print0 | LC_ALL=C sort -z |
-			tar --null -T - --no-recursion --mtime="@$epoch" --owner=0 --group=0 --numeric-owner \
-				--format=ustar -cf - | gzip -9n
+			tar --no-recursion --mtime="@$epoch" --owner=0 --group=0 --numeric-owner \
+				--format=ustar --null -T - -cf - | gzip -9n
 	) >"$out/$name-$ver.tgz"
 	rm -rf "$work/x" "$work/$name-$ver.tgz"
 	echo "packaged $out/$name-$ver.tgz"

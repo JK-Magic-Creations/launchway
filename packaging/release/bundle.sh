@@ -86,6 +86,6 @@ chmod -R a+rX "$out"
 
 epoch=${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}
 (cd "$root/dist" && find "$name" -print0 | LC_ALL=C sort -z |
-	tar --null -T - --no-recursion --mtime="@$epoch" --owner=0 --group=0 --numeric-owner -cf "$name.tar")
+	tar --no-recursion --mtime="@$epoch" --owner=0 --group=0 --numeric-owner --null -T - -cf "$name.tar")
 rm -rf "$out"
 ls -l "$root/dist/$name.tar"
