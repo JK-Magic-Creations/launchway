@@ -4,7 +4,7 @@
 #
 # What an operator must have configured first (none of it is in this file, on purpose):
 #   - runner: images.builders (project launchway), images.registries.harbor with a push rule for
-#     homelab/launchway only, images.signing (the runner's own key), a secret store `ci`.
+#     launchway/launchway only, images.signing (the runner's own key), a secret store `ci`.
 #   - server: environments launchway-sandbox and launchway-dev (dev protected), a deploy runner pool,
 #     verification sources `prometheus` and `loki`.
 #   - deploy runner: repos.gitops (homelab-gitops, paths limited to the two launchway files per
@@ -89,8 +89,8 @@ steps:
       # a rebuild a different image.
     tags:
       # Immutable by registry rule; never latest. The tag is for people, the digest is what deploys.
-      - { registry: harbor, repository: homelab/launchway, tag: { run: short_sha } }
-    cache: { registry: harbor, repository: homelab/buildkit-cache/launchway }
+      - { registry: harbor, repository: launchway/launchway, tag: { run: short_sha } }
+    cache: { registry: harbor, repository: launchway/buildkit-cache }
     sbom: true
     provenance: true
     sign: true                  # the runner's own key; step pods never see it

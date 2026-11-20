@@ -55,8 +55,8 @@ the database's minimum schema (the `schema_min` value). Do the first one, and th
 
    ```sh
    podman build --build-arg VERSION=$(git rev-parse --short=8 HEAD) \
-     --build-arg REVISION=$(git rev-parse HEAD) -t registry.example.com/homelab/launchway:$(git rev-parse --short=8 HEAD) .
-   podman push --digestfile digest.txt registry.example.com/homelab/launchway:$(git rev-parse --short=8 HEAD)
+     --build-arg REVISION=$(git rev-parse HEAD) -t registry.example.com/launchway/launchway:$(git rev-parse --short=8 HEAD) .
+   podman push --digestfile digest.txt registry.example.com/launchway/launchway:$(git rev-parse --short=8 HEAD)
    ```
 
    Check `org.opencontainers.image.revision` with `skopeo inspect`; it must be the commit, not `unknown`.
