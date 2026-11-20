@@ -139,11 +139,21 @@ spec:
             {{- end }}
           # The runner's name (and its identity on the server) defaults to the pod name.
           env:
+            {{- if and .Values.runner.join .Values.runner.join.existingSecret }}
+            # Each pod enrols with the join token at start (schema 21) and gets an identity of
+            # its own, kept in its data volume.
+            - name: LAUNCHWAY_JOIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.runner.join.existingSecret }}
+                  key: {{ .Values.runner.join.existingSecretKey | default "token" }}
+            {{- else }}
             - name: LAUNCHWAY_RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ include "launchway.runnerTokenSecretName" . }}
                   key: {{ include "launchway.runnerTokenSecretKey" . }}
+            {{- end }}
             {{- with .Values.runner.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

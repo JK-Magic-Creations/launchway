@@ -226,6 +226,11 @@ owns may not appear in it.
 {{- with .Values.config.tokens }}{{ if .maxDays }}{{ $_ := set $config "auth" (dict "tokens" (dict "max_days" (int64 .maxDays))) }}{{ end }}{{ end -}}
 {{- with include "launchway.policyConfig" . | fromYaml }}{{ if . }}{{ $_ := set $config "policy" . }}{{ end }}{{ end -}}
 {{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
+{{- /* Runner pools and who manages runners (schemas 21 and 22): only when set. */ -}}
+{{- if .Values.config.runnerPools -}}
+{{- $_ := set $config "runner_pools" (concat (get $config "runner_pools" | default list) .Values.config.runnerPools) -}}
+{{- end -}}
+{{- if .Values.config.runnerAdmin }}{{ $_ := set $config "runner_admin" (toString .Values.config.runnerAdmin) }}{{ end -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
 
@@ -257,6 +262,9 @@ in the server configuration, plus the server URL and the data directory.
 {{- /* Only when set: a runner of the version before does not know the setting (see the note on defaults in values.yaml). */ -}}
 {{- if $reports }}{{ $_ := set $runner "reports" $reports }}{{ end -}}
 {{- with include "launchway.runnerImages" . | fromYaml }}{{ if . }}{{ $_ := set $runner "images" . }}{{ end }}{{ end -}}
+{{- /* Labels and the runner's own limits (schemas 21 and 22): only when set. */ -}}
+{{- with .Values.runner.labels }}{{ $_ := set $runner "labels" . }}{{ end -}}
+{{- with .Values.runner.accept }}{{ $_ := set $runner "accept" . }}{{ end -}}
 {{- toYaml $runner -}}
 {{- end -}}
 
