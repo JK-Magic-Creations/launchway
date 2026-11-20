@@ -57,9 +57,13 @@ type Server struct {
 	// WaiveRole is the role needed to waive a policy's rule
 	// (policy.waivers.allow); nil means admin, NoRole nobody.
 	WaiveRole *auth.Role
+	// ReportsOrigin, when set (https://reports.example.com), is a separate
+	// origin that alone serves hosted HTML reports (see reports.go).
+	ReportsOrigin string
 
-	sealerMu sync.Mutex
-	sealer   *auth.Sealer // seals the state of sign-ins in progress
+	sealerMu  sync.Mutex
+	sealer    *auth.Sealer // seals the state of sign-ins in progress
+	reportKey []byte       // signs links to HTML reports
 
 	draining atomic.Bool // see Drain
 	stopMu   sync.Mutex
@@ -205,6 +209,17 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/waivers", signedIn, "", s.listWaivers},
 		{"POST /api/v1/projects/{name}/waivers", projectRead, "policy.waive", s.grantWaiver},
 		{"POST /api/v1/projects/{name}/waivers/{waiver}/revoke", projectRead, "policy.revoke_waiver", s.revokeWaiver},
+
+		// Richer test results, coverage and HTML reports (schema 18).
+		{"GET /api/v1/runs/{id}/tests/compare", runRead, "", s.runTestCompare},
+		{"GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}", runRead, "", s.testAttachment},
+		{"GET /api/v1/runs/{id}/coverage", runRead, "", s.runCoverage},
+		{"GET /api/v1/runs/{id}/coverage/files", runRead, "", s.runCoverageFiles},
+		{"GET /api/v1/projects/{name}/coverage", projectRead, "", s.projectCoverage},
+		{"GET /api/v1/runs/{id}/reports", runRead, "", s.runReports},
+		// A hosted report takes no session: its signed link is the
+		// permission (see reports.go).
+		{"GET /hosted/{link}/{path...}", public, "", s.hosted},
 	}
 }
 
@@ -227,7 +242,7 @@ func (s *Server) Handler() http.Handler {
 		writeErr(w, http.StatusNotFound, "no such API endpoint")
 	})
 	mux.Handle("/", s.ui())
-	return s.recoverer(securityHeaders(mux))
+	return s.recoverer(securityHeaders(s.splitOrigin(mux)))
 }
 
 // ---- shutting down ----

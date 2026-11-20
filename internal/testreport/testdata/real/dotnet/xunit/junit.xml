@@ -1,0 +1,70 @@
+<testsuites>
+  <testsuite name="CartXunit.dll" tests="7" skipped="1" failures="3" errors="0" time="0.0065631" timestamp="2026-11-20T00:49:50" hostname="8daf88bc2358" id="0" package="CartXunit.dll">
+    <properties />
+    <testcase classname="CartXunit.CartTests" name="TenDiscountIsWrong" time="0.0041766">
+      <failure type="failure" message="Assert.Equal() Failure: Values differ&#xA;Expected: 25&#xA;Actual:   20">at CartXunit.CartTests.TenDiscountIsWrong() in /work/xu/XunitTests.cs:line 26
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</failure>
+      <properties>
+        <property name="Category" value="regression" />
+        <property name="Owner" value="cart-team" />
+      </properties>
+    </testcase>
+    <testcase classname="CartXunit.CartTests" name="HalfDiscount(price: 4, expected: 2)" time="0.0006564" />
+    <testcase classname="CartXunit.CartTests" name="HalfDiscount(price: 10, expected: 5)" time="0.0001368" />
+    <testcase classname="CartXunit.CartTests" name="HalfDiscount(price: 3, expected: 2)" time="0.0000755">
+      <failure type="failure" message="Assert.Equal() Failure: Values differ&#xA;Expected: 2&#xA;Actual:   1">at CartXunit.CartTests.HalfDiscount(Int32 price, Int32 expected) in /work/xu/XunitTests.cs:line 38
+   at InvokeStub_CartTests.HalfDiscount(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</failure>
+    </testcase>
+    <testcase classname="CartXunit.CartTests" name="TotalSums" time="0.0003944">
+      <system-out>computing total
+
+</system-out>
+      <properties>
+        <property name="Category" value="smoke" />
+      </properties>
+    </testcase>
+    <testcase classname="CartXunit.CartTests" name="ThrowsUnexpected" time="0.0001234">
+      <failure type="failure" message="System.InvalidOperationException : cart service unavailable">at CartXunit.CartTests.ThrowsUnexpected() in /work/xu/XunitTests.cs:line 44
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</failure>
+    </testcase>
+    <testcase classname="CartXunit.CartTests" name="Currencies" time="0.0010000">
+      <skipped />
+    </testcase>
+    <system-out>
+Test Framework Informational Messages:
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 9.0.23)
+[xUnit.net 00:00:00.03]   Discovering: CartXunit
+[xUnit.net 00:00:00.07]   Discovered:  CartXunit
+[xUnit.net 00:00:00.07]   Starting:    CartXunit
+[xUnit.net 00:00:00.11]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:00.11]       Expected: 25
+[xUnit.net 00:00:00.11]       Actual:   20
+[xUnit.net 00:00:00.11]       Stack Trace:
+[xUnit.net 00:00:00.11]         /work/xu/XunitTests.cs(26,0): at CartXunit.CartTests.TenDiscountIsWrong()
+[xUnit.net 00:00:00.11]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+[xUnit.net 00:00:00.11]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.11]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:00.11]       Expected: 2
+[xUnit.net 00:00:00.11]       Actual:   1
+[xUnit.net 00:00:00.11]       Stack Trace:
+[xUnit.net 00:00:00.11]         /work/xu/XunitTests.cs(38,0): at CartXunit.CartTests.HalfDiscount(Int32 price, Int32 expected)
+[xUnit.net 00:00:00.11]            at InvokeStub_CartTests.HalfDiscount(Object, Span`1)
+[xUnit.net 00:00:00.11]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.11]       System.InvalidOperationException : cart service unavailable
+[xUnit.net 00:00:00.11]       Stack Trace:
+[xUnit.net 00:00:00.11]         /work/xu/XunitTests.cs(44,0): at CartXunit.CartTests.ThrowsUnexpected()
+[xUnit.net 00:00:00.11]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+[xUnit.net 00:00:00.11]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.11]       waiting for currency support
+[xUnit.net 00:00:00.11]   Finished:    CartXunit
+</system-out>
+    <system-err>Error - [xUnit.net 00:00:00.11]     CartXunit.CartTests.TenDiscountIsWrong [FAIL]
+Error - [xUnit.net 00:00:00.11]     CartXunit.CartTests.HalfDiscount(price: 3, expected: 2) [FAIL]
+Error - [xUnit.net 00:00:00.11]     CartXunit.CartTests.ThrowsUnexpected [FAIL]
+Warning - [xUnit.net 00:00:00.11]     CartXunit.CartTests.Currencies [SKIP]
+</system-err>
+  </testsuite>
+</testsuites>

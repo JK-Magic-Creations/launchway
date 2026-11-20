@@ -351,6 +351,13 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("image steps or deploy changes that pin a digest (schema %d)", schemaImages)
 			}
 		}
+		// Test attachments, coverage and HTML reports.
+		if p.Pipeline.UsesSchema18() {
+			st.Schema = max(st.Schema, schemaReports)
+			if !st.understands(schemaReports) {
+				st.notUnderstood("test attachments, coverage or HTML reports (schema %d)", schemaReports)
+			}
+		}
 		// Rollout steps, and the keys that control a rollout.
 		if p.Pipeline.UsesSchemaControl() || p.Pipeline.Requires > 0 {
 			st.Schema = max(st.Schema, schemaControl, p.Pipeline.Requires)

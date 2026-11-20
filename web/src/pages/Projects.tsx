@@ -57,7 +57,7 @@ export function ProjectsPage() {
                 <div className="faint mono small">{p.url}</div>
               </div>
               <div className="project-actions">
-                <Link href={`/projects/${encodeURIComponent(p.name)}/tests`} className="btn">Tests</Link>
+                <Link href={`/projects/${encodeURIComponent(p.name)}/tests`} className="btn">Tests and coverage</Link>
                 <Link href={`/projects/${encodeURIComponent(p.name)}/security`} className="btn">Security</Link>
                 <Link href={`/projects/${encodeURIComponent(p.name)}/pipeline?ref=${encodeURIComponent(p.default_branch)}`} className="btn">Edit pipeline</Link>
                 {canOperate(me, p.name) && <button type="button" className="btn btn-primary" onClick={() => setStarting(p)}>Start a run</button>}

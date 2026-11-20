@@ -212,6 +212,40 @@ type Reports struct {
 	// SBOM are globs of software bills of materials in CycloneDX JSON. They
 	// are kept as the step's artifact "sbom" and summarised.
 	SBOM []string `json:"sbom,omitempty"`
+
+	// What schema 18 brought. A server older than that does not know these
+	// fields, so it reads a pipeline that uses them as not understood.
+
+	// TestAttachments is a directory, relative to the workspace, whose
+	// files the test reports may attach to their results (screenshots,
+	// videos, traces). It is kept as the artifact test-attachments, and
+	// only files inside it are ever shown as attachments.
+	TestAttachments string `json:"test_attachments,omitempty"`
+	// Coverage are globs of coverage reports: Cobertura, JaCoCo or Clover
+	// XML, LCOV, Go coverprofiles or Istanbul json-summary.
+	Coverage []string `json:"coverage,omitempty"`
+	// CoverageFailUnder fails the step when its coverage is below it.
+	CoverageFailUnder *CoverageThreshold `json:"coverage_fail_under,omitempty"`
+	// HTML are directories of HTML that a tool generated (Playwright's or
+	// Karate's report, an Allure site, coverage HTML), published with the
+	// run and shown sandboxed.
+	HTML []HTMLReport `json:"html,omitempty"`
+}
+
+// CoverageThreshold is the least coverage a step must have, in percent; a
+// zero field is not checked.
+type CoverageThreshold struct {
+	Lines     float64 `json:"lines,omitempty"`
+	Branches  float64 `json:"branches,omitempty"`
+	Functions float64 `json:"functions,omitempty"`
+}
+
+// HTMLReport is a directory of HTML a step publishes.
+type HTMLReport struct {
+	Name  string `json:"name"`  // its name in the run, and of its artifact report-<name>
+	Path  string `json:"path"`  // the directory, relative to the workspace
+	Index string `json:"index"` // the page it opens on, relative to the directory
+	Line  int    `json:"-"`
 }
 
 // IsUse reports whether the step is replaced by a template.

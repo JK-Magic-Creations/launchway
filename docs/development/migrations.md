@@ -168,6 +168,36 @@ database` and `artifacts.database` are settings older servers refuse: the Helm c
 only when set. Rolling back, and copying artifacts into a store an older release knows first, is
 described in [docs/artifacts.md](../artifacts.md#upgrading-to-schema-17-and-rolling-back).
 
+Schema 18 brings richer test results, test attachments, coverage and HTML reports. It is additive:
+three columns with defaults on `test_cases` (`tags`, `variant`, `extra`), two new tables
+(`coverage_reports`, derived from the coverage summary in the event that ends an attempt, and
+`coverage_files`, kept beside the events like `test_cases`), and no new event type. Attachments
+and HTML reports are artifacts of kinds `test-attachments`, `test-embedded` and `html-report`
+(schema 12's tables). Older servers write `test_cases` without the new columns (they take their
+defaults), ignore the new tables, and ignore the new summary fields (`tests.attachments`,
+`coverage`), which only record. A pipeline that uses `reports.tests.attachments`,
+`reports.coverage` or `reports.html` has `runs.min_schema` 18 from creation, and older servers
+cannot read it anyway: their strict reading of the pipeline fails on the new keys, so they leave
+the run alone (`TestOlderBuildLeavesReportRunsAlone`). Runners are part of this: a step that
+declares coverage is given only to a runner that reports the feature `coverage`; attachments and
+HTML reports are kept by any runner that knows artifacts (the server adds them to the step's
+artifacts, with their limits, and enforces the limits itself). A test's key now includes its
+variant (browser or project) when a report gives one; results without one keep the keys they had,
+so histories carry on.
+
+Rolling back from schema 18 to 17:
+
+1. Take `reports.tests.attachments`, `reports.coverage` and `reports.html` out of pipeline files
+   first; runs already started with them stay with schema-18 servers, and an older server leaves
+   them alone (they show as needing a newer server).
+2. Take the `reports:` section out of the server configuration (with the Helm chart, unset every
+   `config.reports.*` value): older servers refuse a setting they do not know.
+3. Roll the servers back. Nothing in the database needs undoing: older servers ignore the new
+   columns and tables. Attachments and HTML reports already kept stay listed as artifacts and
+   expire as usual; the older UI shows them on the Artifacts tab only.
+4. Runners may be rolled back in any order; an older runner simply never says `coverage`, so a
+   step that declares coverage waits for a newer one.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

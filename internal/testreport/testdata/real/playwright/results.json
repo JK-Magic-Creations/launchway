@@ -1,0 +1,969 @@
+{
+  "config": {
+    "argv": [
+      "/usr/bin/node",
+      "/work/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/work/playwright.config.js",
+    "rootDir": "/work/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/work/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/work/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/work/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/work/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/work/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "name": "chromium",
+        "testDir": "/work/tests",
+        "snapshotDir": "/work/tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://127.0.0.1:4173",
+          "screenshot": "only-on-failure",
+          "trace": "retain-on-failure",
+          "video": "retain-on-failure",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.8154.6 Safari/537.36",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "chromium"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/work/test-results",
+        "repeatEach": 1,
+        "retries": 1,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "name": "firefox",
+        "testDir": "/work/tests",
+        "snapshotDir": "/work/tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 30000,
+        "use": {
+          "baseURL": "http://127.0.0.1:4173",
+          "screenshot": "only-on-failure",
+          "trace": "retain-on-failure",
+          "video": "retain-on-failure",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:159.0) Gecko/20100101 Firefox/159.0",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "firefox"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "firefox"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "results.json"
+        }
+      ],
+      [
+        "junit",
+        {
+          "outputFile": "junit.xml"
+        }
+      ],
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report",
+          "open": "never"
+        }
+      ],
+      [
+        "/work/node_modules/playwright-ctrf-json-reporter/dist/index.cjs",
+        {
+          "outputDir": ".",
+          "outputFile": "ctrf-report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.65.1",
+    "workers": 2,
+    "webServer": {
+      "command": "node serve.js",
+      "url": "http://127.0.0.1:4173",
+      "reuseExistingServer": false
+    }
+  },
+  "suites": [
+    {
+      "title": "shop.spec.js",
+      "file": "shop.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "shop",
+          "file": "shop.spec.js",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "has title",
+              "ok": true,
+              "tags": [
+                "smoke"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 204,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:50:59.308Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                },
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 761,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:50:59.325Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a63ca64a6f071281070d-31643ec70b26f660da21",
+              "file": "shop.spec.js",
+              "line": 5,
+              "column": 3
+            },
+            {
+              "title": "adds an item to the cart",
+              "ok": true,
+              "tags": [
+                "smoke",
+                "cart"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 151,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:50:59.805Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                },
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "passed",
+                      "duration": 372,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:51:00.546Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a63ca64a6f071281070d-4e0031afc91e51e81f6c",
+              "file": "shop.spec.js",
+              "line": 10,
+              "column": 3
+            },
+            {
+              "title": "shows wrong count (fails)",
+              "ok": false,
+              "tags": [
+                "cart"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1195,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    12 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    12 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n\n    at /work/tests/shop.spec.js:19:42",
+                        "location": {
+                          "file": "/work/tests/shop.spec.js",
+                          "column": 42,
+                          "line": 19
+                        },
+                        "snippet": "  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/work/tests/shop.spec.js",
+                            "column": 42,
+                            "line": 19
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    12 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n\n\n  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {\n    at /work/tests/shop.spec.js:19:42"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:50:59.964Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/work/tests/shop.spec.js",
+                        "column": 42,
+                        "line": 19
+                      }
+                    },
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1223,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    12 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    12 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n\n    at /work/tests/shop.spec.js:19:42",
+                        "location": {
+                          "file": "/work/tests/shop.spec.js",
+                          "column": 42,
+                          "line": 19
+                        },
+                        "snippet": "  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/work/tests/shop.spec.js",
+                            "column": 42,
+                            "line": 19
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    12 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n\n\n  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {\n    at /work/tests/shop.spec.js:19:42"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-11-20T00:51:01.478Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/work/tests/shop.spec.js",
+                        "column": 42,
+                        "line": 19
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                },
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 1327,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    11 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    11 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n\n    at /work/tests/shop.spec.js:19:42",
+                        "location": {
+                          "file": "/work/tests/shop.spec.js",
+                          "column": 42,
+                          "line": 19
+                        },
+                        "snippet": "  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/work/tests/shop.spec.js",
+                            "column": 42,
+                            "line": 19
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    11 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m       - unexpected value \"Items: 1\"\u001b[22m\n\n\n  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {\n    at /work/tests/shop.spec.js:19:42"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:51:00.926Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/work/tests/shop.spec.js",
+                        "column": 42,
+                        "line": 19
+                      }
+                    },
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 1862,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    9 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m      - unexpected value \"Items: 1\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    9 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m      - unexpected value \"Items: 1\"\u001b[22m\n\n    at /work/tests/shop.spec.js:19:42",
+                        "location": {
+                          "file": "/work/tests/shop.spec.js",
+                          "column": 42,
+                          "line": 19
+                        },
+                        "snippet": "  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/work/tests/shop.spec.js",
+                            "column": 42,
+                            "line": 19
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoHaveText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator:  locator('#count')\nExpected: \u001b[32m\"Items: \u001b[7m2\u001b[27m\"\u001b[39m\nReceived: \u001b[31m\"Items: \u001b[7m1\u001b[27m\"\u001b[39m\nTimeout:  1000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveText\" locator('#count') with timeout 1000ms\u001b[22m\n\u001b[2m  - waiting for locator('#count')\u001b[22m\n\u001b[2m    9 × locator resolved to <p id=\"count\">Items: 1</p>\u001b[22m\n\u001b[2m      - unexpected value \"Items: 1\"\u001b[22m\n\n\n  17 |     await page.goto('/');\n  18 |     await page.getByRole('button', { name: 'Add to cart' }).click();\n> 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });\n     |                                          ^\n  20 |   });\n  21 |\n  22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {\n    at /work/tests/shop.spec.js:19:42"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-11-20T00:51:02.766Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/work/test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/work/tests/shop.spec.js",
+                        "column": 42,
+                        "line": 19
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "a63ca64a6f071281070d-a8393ffc917de78a8aa1",
+              "file": "shop.spec.js",
+              "line": 16,
+              "column": 3
+            },
+            {
+              "title": "flaky: passes on retry",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "issue",
+                      "description": "FLAKY-123"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 157,
+                      "error": {
+                        "message": "Error: first attempt fails\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
+                        "stack": "Error: first attempt fails\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at /work/tests/shop.spec.js:25:51",
+                        "location": {
+                          "file": "/work/tests/shop.spec.js",
+                          "column": 51,
+                          "line": 25
+                        },
+                        "snippet": "  23 |     await page.goto('/');\n  24 |     test.info().annotations.push({ type: 'issue', description: 'FLAKY-123' });\n> 25 |     expect(testInfo.retry, 'first attempt fails').toBeGreaterThan(0);\n     |                                                   ^\n  26 |   });\n  27 |\n  28 |   test.skip('checkout not built yet', async ({ page }) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/work/tests/shop.spec.js",
+                            "column": 51,
+                            "line": 25
+                          },
+                          "message": "Error: first attempt fails\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n\n  23 |     await page.goto('/');\n  24 |     test.info().annotations.push({ type: 'issue', description: 'FLAKY-123' });\n> 25 |     expect(testInfo.retry, 'first attempt fails').toBeGreaterThan(0);\n     |                                                   ^\n  26 |   });\n  27 |\n  28 |   test.skip('checkout not built yet', async ({ page }) => {\n    at /work/tests/shop.spec.js:25:51"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:51:03.036Z",
+                      "annotations": [
+                        {
+                          "type": "issue",
+                          "description": "FLAKY-123"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/work/test-results/shop-shop-flaky-passes-on-retry-chromium/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/work/test-results/shop-shop-flaky-passes-on-retry-chromium/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/work/test-results/shop-shop-flaky-passes-on-retry-chromium/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/work/test-results/shop-shop-flaky-passes-on-retry-chromium/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/work/tests/shop.spec.js",
+                        "column": 51,
+                        "line": 25
+                      }
+                    },
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 194,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-11-20T00:51:03.570Z",
+                      "annotations": [
+                        {
+                          "type": "issue",
+                          "description": "FLAKY-123"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "flaky"
+                },
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "issue",
+                      "description": "FLAKY-123"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 721,
+                      "error": {
+                        "message": "Error: first attempt fails\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m",
+                        "stack": "Error: first attempt fails\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n    at /work/tests/shop.spec.js:25:51",
+                        "location": {
+                          "file": "/work/tests/shop.spec.js",
+                          "column": 51,
+                          "line": 25
+                        },
+                        "snippet": "  23 |     await page.goto('/');\n  24 |     test.info().annotations.push({ type: 'issue', description: 'FLAKY-123' });\n> 25 |     expect(testInfo.retry, 'first attempt fails').toBeGreaterThan(0);\n     |                                                   ^\n  26 |   });\n  27 |\n  28 |   test.skip('checkout not built yet', async ({ page }) => {"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/work/tests/shop.spec.js",
+                            "column": 51,
+                            "line": 25
+                          },
+                          "message": "Error: first attempt fails\n\n\u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m0\u001b[39m\nReceived:   \u001b[31m0\u001b[39m\n\n  23 |     await page.goto('/');\n  24 |     test.info().annotations.push({ type: 'issue', description: 'FLAKY-123' });\n> 25 |     expect(testInfo.retry, 'first attempt fails').toBeGreaterThan(0);\n     |                                                   ^\n  26 |   });\n  27 |\n  28 |   test.skip('checkout not built yet', async ({ page }) => {\n    at /work/tests/shop.spec.js:25:51"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:51:05.417Z",
+                      "annotations": [
+                        {
+                          "type": "issue",
+                          "description": "FLAKY-123"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "/work/test-results/shop-shop-flaky-passes-on-retry-firefox/test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "/work/test-results/shop-shop-flaky-passes-on-retry-firefox/video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/work/test-results/shop-shop-flaky-passes-on-retry-firefox/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/work/test-results/shop-shop-flaky-passes-on-retry-firefox/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/work/tests/shop.spec.js",
+                        "column": 51,
+                        "line": 25
+                      }
+                    },
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 734,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-11-20T00:51:06.839Z",
+                      "annotations": [
+                        {
+                          "type": "issue",
+                          "description": "FLAKY-123"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "flaky"
+                }
+              ],
+              "id": "a63ca64a6f071281070d-672628b70fd73f919208",
+              "file": "shop.spec.js",
+              "line": 22,
+              "column": 3
+            },
+            {
+              "title": "checkout not built yet",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/work/tests/shop.spec.js",
+                        "line": 28,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:51:03.822Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/work/tests/shop.spec.js",
+                            "line": 28,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                },
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/work/tests/shop.spec.js",
+                        "line": 28,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:51:07.880Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/work/tests/shop.spec.js",
+                            "line": 28,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "a63ca64a6f071281070d-9d5ce9f13bb7c11091a8",
+              "file": "shop.spec.js",
+              "line": 28,
+              "column": 8
+            },
+            {
+              "title": "attaches a note",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 138,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "stdout line from test\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:51:03.822Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "note.txt",
+                          "contentType": "text/plain",
+                          "body": "aGVsbG8gZnJvbSB0aGUgdGVzdA=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                },
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 389,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "stdout line from test\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-20T00:51:07.880Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "note.txt",
+                          "contentType": "text/plain",
+                          "body": "aGVsbG8gZnJvbSB0aGUgdGVzdA=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a63ca64a6f071281070d-c9f1ff403744da3b0e34",
+              "file": "shop.spec.js",
+              "line": 32,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-20T00:50:58.906Z",
+    "duration": 9607.549,
+    "expected": 6,
+    "skipped": 2,
+    "unexpected": 2,
+    "flaky": 2
+  }
+}

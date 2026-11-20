@@ -192,12 +192,22 @@ func (r *Runner) keepArtifacts(job *engine.Job, spec executor.Spec, outcome stri
 		if a.Name == "sbom" {
 			label = "SBOM"
 		}
+		if a.Label != "" {
+			label = a.Label
+		}
 		if ja.Problem != "" {
 			sys("%s: not kept: %s", label, ja.Problem)
 			continue
 		}
 		dir := filepath.Join(r.DataDir, "artifacts", job.LeaseID, a.Name)
 		lim := executor.StageLimits{MaxFiles: engine.MaxArtifactFiles, MaxFileBytes: ja.MaxFileBytes, MaxBytes: max(ja.MaxBytes-used, 1)}
+		if a.MaxFiles > 0 {
+			lim.MaxFiles = min(lim.MaxFiles, a.MaxFiles)
+		}
+		if a.MaxBytes > 0 {
+			lim.MaxBytes = min(lim.MaxBytes, a.MaxBytes)
+			lim.MaxFileBytes = min(lim.MaxFileBytes, a.MaxBytes)
+		}
 		staged, err := executor.Stage(ctx, r.execFor(job), spec, a.Paths, lim, dir)
 		if staged != nil {
 			for _, n := range staged.Notes {
@@ -449,7 +459,53 @@ func fileSHA256(name string) (string, error) {
 // collected is what a runner collects after a step: report files to send
 // with its result. Artifacts are uploaded on their own.
 type collected struct {
-	tests, findings *engine.CollectedReports
+	tests, findings, coverage *engine.CollectedReports
+}
+
+// coverageCollector returns what collects a step's coverage reports, or
+// nil (schema 18).
+func (r *Runner) coverageCollector(job *engine.Job, spec executor.Spec, sys func(string, ...any)) func() *engine.CollectedReports {
+	if job.Reports == nil || len(job.Reports.Coverage) == 0 {
+		return nil
+	}
+	return func() *engine.CollectedReports {
+		lim := r.Reports.WithDefaults()
+		if job.Reports.CoverageMaxBytes > 0 {
+			lim.MaxBytes = min(lim.MaxBytes, job.Reports.CoverageMaxBytes)
+			lim.MaxFileBytes = min(lim.MaxFileBytes, lim.MaxBytes)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), collectTimeout)
+		defer cancel()
+		got, err := executor.Collect(ctx, r.execFor(job), spec, job.Reports.Coverage, lim)
+		out := &engine.CollectedReports{Files: []engine.ReportFile{}}
+		if got != nil {
+			for _, f := range got.Files {
+				out.Files = append(out.Files, engine.ReportFile{Path: f.Path, Data: f.Data, Size: f.Size, Cut: f.Cut})
+			}
+			out.Notes = got.Notes
+		}
+		if err != nil {
+			msg := "Could not collect the coverage reports: " + spec.Mask(err.Error())
+			if errors.Is(err, context.DeadlineExceeded) {
+				msg = fmt.Sprintf("Collecting the coverage reports took longer than %s; stopped", collectTimeout)
+			}
+			out.Notes = append(out.Notes, msg)
+		}
+		var size int64
+		for _, f := range out.Files {
+			size += int64(len(f.Data))
+		}
+		switch n := len(out.Files); {
+		case n == 1:
+			sys("Coverage: collected %s (%s)", out.Files[0].Path, sizeText(size))
+		case n > 1:
+			sys("Coverage: collected %d files (%s)", n, sizeText(size))
+		}
+		for _, note := range out.Notes {
+			sys("Coverage: %s", note)
+		}
+		return out
+	}
 }
 
 // outcomeOf is how an attempt ended, for the artifacts kept after it:

@@ -1068,6 +1068,70 @@ CREATE INDEX policy_waivers_project ON policy_waivers(project, expires_at);
 	{additive, blobstore.DatabaseSchema + `
 ALTER TABLE artifact_blobs ADD COLUMN store TEXT NOT NULL DEFAULT '';
 `},
+
+	// 18: richer test reports, coverage and HTML reports (see
+	//    reports18.go). test_cases gets the tags and the variant of a
+	//    result (a Playwright project, a browser), for filtering, and extra:
+	//    its steps, attachments, retries and properties as bounded JSON.
+	//    Like test_cases, these are kept beside the events, written in the
+	//    transaction that records the attempt's end. coverage_reports is
+	//    derived from the coverage summary in the event that ends an attempt
+	//    (Payload.Coverage), one row per attempt, and coverage_files holds
+	//    each file's counts beside it, pruned with the run's test results.
+	//    Test attachments and HTML reports are artifacts (schema 12) of
+	//    kinds test-attachments and html-report.
+	//    Compatibility: additive: new columns with defaults and new tables,
+	//    no new event type. Older servers write test_cases without the new
+	//    columns (they take their defaults) and ignore the new tables and
+	//    the new summary fields. A run whose pipeline uses test attachments,
+	//    coverage or HTML reports has min_schema 18 from creation, and older
+	//    servers cannot read such a pipeline anyway (their strict reading
+	//    fails on the new keys), so they leave the run alone.
+	{additive, `
+ALTER TABLE test_cases ADD COLUMN tags TEXT NOT NULL DEFAULT '';
+ALTER TABLE test_cases ADD COLUMN variant TEXT NOT NULL DEFAULT '';
+ALTER TABLE test_cases ADD COLUMN extra TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE coverage_reports (
+  run_id            TEXT    NOT NULL,
+  step_id           TEXT    NOT NULL,
+  attempt           INTEGER NOT NULL,
+  project           TEXT    NOT NULL,
+  run_number        INTEGER NOT NULL,
+  at                {{BIG}} NOT NULL,
+  lines_covered     {{BIG}} NOT NULL DEFAULT 0,
+  lines_total       {{BIG}} NOT NULL DEFAULT 0,
+  branches_covered  {{BIG}} NOT NULL DEFAULT 0,
+  branches_total    {{BIG}} NOT NULL DEFAULT 0,
+  functions_covered {{BIG}} NOT NULL DEFAULT 0,
+  functions_total   {{BIG}} NOT NULL DEFAULT 0,
+  files             INTEGER NOT NULL DEFAULT 0,
+  stored            INTEGER NOT NULL DEFAULT 0,
+  pruned            INTEGER NOT NULL DEFAULT 0,
+  detail            TEXT    NOT NULL DEFAULT '{}',
+  PRIMARY KEY (run_id, step_id, attempt)
+);
+CREATE INDEX coverage_reports_project ON coverage_reports(project, run_number);
+
+CREATE TABLE coverage_files (
+  id                {{ID}},
+  run_id            TEXT    NOT NULL,
+  step_id           TEXT    NOT NULL,
+  attempt           INTEGER NOT NULL,
+  project           TEXT    NOT NULL,
+  run_number        INTEGER NOT NULL,
+  path              TEXT    NOT NULL,
+  package           TEXT    NOT NULL DEFAULT '',
+  lines_covered     {{BIG}} NOT NULL DEFAULT 0,
+  lines_total       {{BIG}} NOT NULL DEFAULT 0,
+  branches_covered  {{BIG}} NOT NULL DEFAULT 0,
+  branches_total    {{BIG}} NOT NULL DEFAULT 0,
+  functions_covered {{BIG}} NOT NULL DEFAULT 0,
+  functions_total   {{BIG}} NOT NULL DEFAULT 0
+);
+CREATE INDEX coverage_files_run ON coverage_files(run_id, step_id, attempt);
+CREATE INDEX coverage_files_prune ON coverage_files(project, run_number);
+`},
 }
 
 // schemaPolicy is the schema that brought delivery policies.
@@ -1076,6 +1140,10 @@ const schemaPolicy = 16
 // schemaBlobs is the schema that brought the built-in blob store and
 // artifact_blobs.store.
 const schemaBlobs = 17
+
+// schemaReports is the schema that brought richer test results, test
+// attachments, coverage and HTML reports.
+const schemaReports = 18
 
 // schemaImages is the schema that brought image steps.
 const schemaImages = 15

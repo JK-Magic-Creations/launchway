@@ -64,6 +64,131 @@ func checkReport(t testing.TB, r *Report, lim Limits) {
 		if c.DurationMs < 0 || c.DurationMs > 1e10 {
 			t.Errorf("case %d duration %d", i, c.DurationMs)
 		}
+		checkRichCase(t, i, c, lim)
+	}
+	var inline int64
+	for _, c := range r.Cases {
+		for _, a := range c.Attachments {
+			inline += int64(len(a.Data))
+		}
+	}
+	if inline > lim.MaxInlineTotal {
+		t.Errorf("inline attachments hold %d bytes, over %d", inline, lim.MaxInlineTotal)
+	}
+}
+
+// checkRichCase checks the bounds of the richer model on one case.
+func checkRichCase(t testing.TB, i int, c Case, lim Limits) {
+	t.Helper()
+	if len(c.Tags) > MaxTags {
+		t.Errorf("case %d has %d tags", i, len(c.Tags))
+	}
+	for _, tag := range c.Tags {
+		checkString(t, "Tag", tag, MaxTagBytes)
+		if tag == "" || strings.HasPrefix(tag, "@") || strings.ContainsAny(tag, "\n\t") {
+			t.Errorf("case %d tag %q", i, tag)
+		}
+	}
+	checkString(t, "Variant", c.Variant, MaxVariantBytes)
+	if c.Retries < 0 || c.Retries > maxRetries {
+		t.Errorf("case %d retries %d", i, c.Retries)
+	}
+	if len(c.Attempts) > MaxAttempts {
+		t.Errorf("case %d has %d attempts", i, len(c.Attempts))
+	}
+	for _, a := range c.Attempts {
+		checkStatus(t, a.Status)
+		checkString(t, "Attempt.Message", a.Message, lim.MaxMessageBytes)
+		if a.DurationMs < 0 || a.DurationMs > 1e10 {
+			t.Errorf("case %d attempt duration %d", i, a.DurationMs)
+		}
+	}
+	if len(c.Properties) > MaxProperties {
+		t.Errorf("case %d has %d properties", i, len(c.Properties))
+	}
+	for _, p := range c.Properties {
+		checkString(t, "Property.Name", p.Name, MaxPropertyName)
+		checkString(t, "Property.Value", p.Value, MaxPropertyText)
+		if p.Name == "" {
+			t.Errorf("case %d has a property with no name", i)
+		}
+	}
+	if len(c.Attachments) > lim.MaxAttachments {
+		t.Errorf("case %d has %d attachments", i, len(c.Attachments))
+	}
+	for _, a := range c.Attachments {
+		checkString(t, "Attachment.Name", a.Name, MaxAttachName)
+		checkString(t, "Attachment.ContentType", a.ContentType, maxContentTypeBytes)
+		checkString(t, "Attachment.Path", a.Path, MaxPathBytes)
+		switch {
+		case a.Path != "":
+			if a.Data != nil || a.Problem != "" {
+				t.Errorf("case %d attachment %q has a path and data or a problem", i, a.Name)
+			}
+		case a.Data != nil:
+			if int64(len(a.Data)) > lim.MaxInlineBytes || a.Size != int64(len(a.Data)) || a.Problem != "" {
+				t.Errorf("case %d attachment %q: %d bytes, size %d, problem %q", i, a.Name, len(a.Data), a.Size, a.Problem)
+			}
+		default:
+			if a.Problem == "" {
+				t.Errorf("case %d attachment %q has neither path, data nor problem", i, a.Name)
+			}
+		}
+		checkString(t, "Attachment.Problem", a.Problem, 300)
+	}
+	if len(c.Steps) > lim.MaxSteps {
+		t.Errorf("case %d has %d steps", i, len(c.Steps))
+	}
+	for _, s := range c.Steps {
+		if s.Depth < 0 || s.Depth > MaxStepDepth {
+			t.Errorf("case %d step depth %d", i, s.Depth)
+		}
+		checkStatus(t, s.Status)
+		checkString(t, "Step.Keyword", s.Keyword, maxKeywordBytes)
+		checkString(t, "Step.Name", s.Name, lim.MaxNameBytes)
+		checkString(t, "Step.Error", s.Error, lim.MaxMessageBytes)
+		checkString(t, "Step.Text", s.Text, lim.MaxStepTextBytes)
+		if s.DurationMs < 0 || s.DurationMs > 1e10 {
+			t.Errorf("case %d step duration %d", i, s.DurationMs)
+		}
+		for _, ai := range s.Attachments {
+			if ai < 0 || ai >= len(c.Attachments) {
+				t.Errorf("case %d step refers to attachment %d of %d", i, ai, len(c.Attachments))
+			}
+		}
+		if h := s.HTTP; h != nil {
+			checkString(t, "HTTP.Method", h.Method, maxMethodBytes)
+			checkString(t, "HTTP.URL", h.URL, MaxURLBytes)
+			checkString(t, "HTTP.RequestBody", h.RequestBody, MaxHTTPBody)
+			checkString(t, "HTTP.ResponseBody", h.ResponseBody, MaxHTTPBody)
+			if h.DurationMs < 0 || h.DurationMs > 1e10 {
+				t.Errorf("case %d HTTP duration %d", i, h.DurationMs)
+			}
+			for _, hs := range [][]Header{h.RequestHeaders, h.ResponseHeaders} {
+				if len(hs) > MaxHeaders {
+					t.Errorf("case %d has %d headers", i, len(hs))
+				}
+				for _, hd := range hs {
+					if len(hd.Name)+len(hd.Value) > MaxHeaderBytes {
+						t.Errorf("header %q is %d bytes", hd.Name, len(hd.Name)+len(hd.Value))
+					}
+					checkString(t, "Header.Name", hd.Name, MaxHeaderBytes)
+					checkString(t, "Header.Value", hd.Value, MaxHeaderBytes)
+					if sensitiveHeader(hd.Name) && hd.Value != "" && hd.Value != hidden {
+						t.Errorf("header %s keeps its value %q", hd.Name, hd.Value)
+					}
+				}
+			}
+		}
+	}
+}
+
+func checkStatus(t testing.TB, s Status) {
+	t.Helper()
+	switch s {
+	case Passed, Failed, Errored, Skipped:
+	default:
+		t.Errorf("status %q", s)
 	}
 }
 

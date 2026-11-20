@@ -1,0 +1,294 @@
+<testsuites id="" name="" tests="12" failures="2" skipped="2" errors="0" time="9.607549">
+<testsuite name="shop.spec.js" timestamp="2026-11-20T00:50:59.048Z" hostname="chromium" tests="6" failures="1" skipped="1" time="3.262" errors="0">
+<testcase name="shop › has title" classname="shop.spec.js" time="0.204">
+</testcase>
+<testcase name="shop › adds an item to the cart" classname="shop.spec.js" time="0.151">
+</testcase>
+<testcase name="shop › shows wrong count (fails)" classname="shop.spec.js" time="2.418">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--chromium/test-failed-1.png]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--chromium/video.webm]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--chromium/error-context.md]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--chromium/trace.zip]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/test-failed-1.png]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/video.webm]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/error-context.md]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/trace.zip]]
+]]>
+</system-out>
+<failure message="expect(locator).toHaveText(expected) failed" type="expect.toHaveText">
+<![CDATA[  [chromium] › shop.spec.js:16:3 › shop › shows wrong count (fails) @cart ──────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('#count')
+    Expected: "Items: 2"
+    Received: "Items: 1"
+    Timeout:  1000ms
+
+    Call log:
+      - Expect "toHaveText" locator('#count') with timeout 1000ms
+      - waiting for locator('#count')
+        12 × locator resolved to <p id="count">Items: 1</p>
+           - unexpected value "Items: 1"
+
+
+      17 |     await page.goto('/');
+      18 |     await page.getByRole('button', { name: 'Add to cart' }).click();
+    > 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });
+         |                                          ^
+      20 |   });
+      21 |
+      22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {
+        at /work/tests/shop.spec.js:19:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/shop-shop-shows-wrong-count-fails--chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../test-results/shop-shop-shows-wrong-count-fails--chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('#count')
+    Expected: "Items: 2"
+    Received: "Items: 1"
+    Timeout:  1000ms
+
+    Call log:
+      - Expect "toHaveText" locator('#count') with timeout 1000ms
+      - waiting for locator('#count')
+        12 × locator resolved to <p id="count">Items: 1</p>
+           - unexpected value "Items: 1"
+
+
+      17 |     await page.goto('/');
+      18 |     await page.getByRole('button', { name: 'Add to cart' }).click();
+    > 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });
+         |                                          ^
+      20 |   });
+      21 |
+      22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {
+        at /work/tests/shop.spec.js:19:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace ../test-results/shop-shop-shows-wrong-count-fails--chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+</testcase>
+<testcase name="shop › flaky: passes on retry" classname="shop.spec.js" time="0.351">
+<properties>
+<property name="issue" value="FLAKY-123">
+</property>
+</properties>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-results/shop-shop-flaky-passes-on-retry-chromium/test-failed-1.png]]
+
+[[ATTACHMENT|test-results/shop-shop-flaky-passes-on-retry-chromium/video.webm]]
+
+[[ATTACHMENT|test-results/shop-shop-flaky-passes-on-retry-chromium/error-context.md]]
+
+[[ATTACHMENT|test-results/shop-shop-flaky-passes-on-retry-chromium/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="shop › checkout not built yet" classname="shop.spec.js">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="shop › attaches a note" classname="shop.spec.js" time="0.138">
+<system-out>
+<![CDATA[stdout line from test
+]]>
+</system-out>
+</testcase>
+</testsuite>
+<testsuite name="shop.spec.js" timestamp="2026-11-20T00:50:59.048Z" hostname="firefox" tests="6" failures="1" skipped="1" time="6.166" errors="0">
+<testcase name="shop › has title" classname="shop.spec.js" time="0.761">
+</testcase>
+<testcase name="shop › adds an item to the cart" classname="shop.spec.js" time="0.372">
+</testcase>
+<testcase name="shop › shows wrong count (fails)" classname="shop.spec.js" time="3.189">
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--firefox/test-failed-1.png]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--firefox/video.webm]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--firefox/error-context.md]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--firefox/trace.zip]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/test-failed-1.png]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/video.webm]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/error-context.md]]
+
+[[ATTACHMENT|test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/trace.zip]]
+]]>
+</system-out>
+<failure message="expect(locator).toHaveText(expected) failed" type="expect.toHaveText">
+<![CDATA[  [firefox] › shop.spec.js:16:3 › shop › shows wrong count (fails) @cart ───────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('#count')
+    Expected: "Items: 2"
+    Received: "Items: 1"
+    Timeout:  1000ms
+
+    Call log:
+      - Expect "toHaveText" locator('#count') with timeout 1000ms
+      - waiting for locator('#count')
+        11 × locator resolved to <p id="count">Items: 1</p>
+           - unexpected value "Items: 1"
+
+
+      17 |     await page.goto('/');
+      18 |     await page.getByRole('button', { name: 'Add to cart' }).click();
+    > 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });
+         |                                          ^
+      20 |   });
+      21 |
+      22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {
+        at /work/tests/shop.spec.js:19:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--firefox/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--firefox/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/shop-shop-shows-wrong-count-fails--firefox/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--firefox/trace.zip
+    Usage:
+
+        npx playwright show-trace ../test-results/shop-shop-shows-wrong-count-fails--firefox/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('#count')
+    Expected: "Items: 2"
+    Received: "Items: 1"
+    Timeout:  1000ms
+
+    Call log:
+      - Expect "toHaveText" locator('#count') with timeout 1000ms
+      - waiting for locator('#count')
+        9 × locator resolved to <p id="count">Items: 1</p>
+          - unexpected value "Items: 1"
+
+
+      17 |     await page.goto('/');
+      18 |     await page.getByRole('button', { name: 'Add to cart' }).click();
+    > 19 |     await expect(page.locator('#count')).toHaveText('Items: 2', { timeout: 1000 });
+         |                                          ^
+      20 |   });
+      21 |
+      22 |   test('flaky: passes on retry', async ({ page }, testInfo) => {
+        at /work/tests/shop.spec.js:19:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace ../test-results/shop-shop-shows-wrong-count-fails--firefox-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+</testcase>
+<testcase name="shop › flaky: passes on retry" classname="shop.spec.js" time="1.455">
+<properties>
+<property name="issue" value="FLAKY-123">
+</property>
+</properties>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-results/shop-shop-flaky-passes-on-retry-firefox/test-failed-1.png]]
+
+[[ATTACHMENT|test-results/shop-shop-flaky-passes-on-retry-firefox/video.webm]]
+
+[[ATTACHMENT|test-results/shop-shop-flaky-passes-on-retry-firefox/error-context.md]]
+
+[[ATTACHMENT|test-results/shop-shop-flaky-passes-on-retry-firefox/trace.zip]]
+]]>
+</system-out>
+</testcase>
+<testcase name="shop › checkout not built yet" classname="shop.spec.js">
+<properties>
+<property name="skip" value="">
+</property>
+</properties>
+<skipped>
+</skipped>
+</testcase>
+<testcase name="shop › attaches a note" classname="shop.spec.js" time="0.389">
+<system-out>
+<![CDATA[stdout line from test
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

@@ -168,7 +168,7 @@ owns may not appear in it.
 */}}
 {{- define "launchway.serverConfig" -}}
 {{- $extra := deepCopy (.Values.config.extraConfig | default dict) -}}
-{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "loops" "schedules" "policy" -}}
+{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "reports" "loops" "schedules" "policy" -}}
 {{- if hasKey $extra $key -}}
 {{- if eq $key "database" -}}
 {{- fail "config.extraConfig.database is not allowed: the database URL must not be in the ConfigMap. Use database.existingSecret or database.url." -}}
@@ -231,6 +231,14 @@ owns may not appear in it.
 {{- if $value }}{{ $_ := set $finds $key (int64 $value) }}{{ end -}}
 {{- end -}}
 {{- if $finds }}{{ $_ := set $config "findings" $finds }}{{ end -}}
+{{- /* Test attachments, coverage and HTML reports (schema 18): only what is set. */ -}}
+{{- $r := .Values.config.reports | default dict -}}
+{{- $reps := dict -}}
+{{- range $key, $value := dict "max_attachment_files" $r.maxAttachmentFiles "max_attachment_mib" $r.maxAttachmentMiB "max_html_files" $r.maxHtmlFiles "max_html_mib" $r.maxHtmlMiB "max_coverage_upload_mib" $r.maxCoverageUploadMiB "max_coverage_files_per_run" $r.maxCoverageFilesPerRun "max_coverage_files_per_project" $r.maxCoverageFilesPerProject -}}
+{{- if $value }}{{ $_ := set $reps $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- if $r.origin }}{{ $_ := set $reps "origin" (toString $r.origin) }}{{ end -}}
+{{- if $reps }}{{ $_ := set $config "reports" $reps }}{{ end -}}
 {{- with .Values.config.loops }}{{ if .maxMembers }}{{ $_ := set $config "loops" (dict "max_members" (int64 .maxMembers)) }}{{ end }}{{ end -}}
 {{- with .Values.config.schedules }}{{ if not (kindIs "invalid" .enabled) }}{{ $_ := set $config "schedules" (dict "enabled" .enabled) }}{{ end }}{{ end -}}
 {{- with .Values.config.tokens }}{{ if .maxDays }}{{ $_ := set $config "auth" (dict "tokens" (dict "max_days" (int64 .maxDays))) }}{{ end }}{{ end -}}

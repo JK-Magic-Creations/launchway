@@ -137,6 +137,29 @@ config:
     maxComponentsPerProject:
     # -- MiB of a step's SBOM files read to summarise them (they are kept whole anyway). Unset: 64.
     maxSbomMiB:
+  # -- Test attachments, coverage and HTML reports (reports.tests.attachments, reports.coverage,
+  # reports.html). Unset values take the built-in defaults shown, and are not written to the
+  # configuration, so the release before this one can still read it. Set them only once every
+  # server is upgraded.
+  reports:
+    # -- Files a step's attachments directory may hold; it is kept whole or not at all. Unset: 2000.
+    maxAttachmentFiles:
+    # -- MiB a step's attachments directory may hold. Unset: 512.
+    maxAttachmentMiB:
+    # -- Files one HTML report may hold. Unset: 5000.
+    maxHtmlFiles:
+    # -- MiB one HTML report may hold. Unset: 256.
+    maxHtmlMiB:
+    # -- MiB of coverage reports a server accepts for one step attempt. Unset: 24.
+    maxCoverageUploadMiB:
+    # -- Source files' coverage one run keeps; beyond it only the totals. Unset: 20000.
+    maxCoverageFilesPerRun:
+    # -- Source files' coverage a project keeps; the oldest runs' go first. Unset: 2000000.
+    maxCoverageFilesPerProject:
+    # -- A separate origin that alone serves hosted HTML reports, such as
+    # https://reports.ci.example.com: a host name of its own routed to the same servers (add it to
+    # the ingress). Unset: reports are served from Launchway's own origin, sandboxed.
+    origin:
   # -- Loops in pipelines (for_each).
   loops:
     # -- Combinations one loop may have; a run whose loop has more is refused.
@@ -174,7 +197,7 @@ config:
   #   drafts: { allow: operator, secrets: false }   # the defaults
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
-  # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts,
+  # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts, reports,
   # findings, loops, schedules and policy are set by the chart and may not appear here; runner.enabled may
   # not be true.
   extraConfig: {}

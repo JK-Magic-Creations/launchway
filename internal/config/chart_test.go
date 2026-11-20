@@ -299,3 +299,65 @@ config:
 		t.Fatalf("limits alone: %+v %v", o, err)
 	}
 }
+
+// Test attachments, coverage and HTML reports in the chart: nothing in the
+// server's file by default (so the release before can read it); with the
+// values set, a reports section that loads.
+func TestChartReportSettings(t *testing.T) {
+	def := renderChart(t, "postgresql: { enabled: true }\n")
+	var top map[string]any
+	if err := yaml.Unmarshal([]byte(def["server"]), &top); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := top["reports"]; ok {
+		t.Fatalf("the default server configuration has reports:\n%s", def["server"])
+	}
+	files := renderChart(t, `postgresql: { enabled: true }
+config:
+  reports:
+    maxAttachmentFiles: 500
+    maxHtmlMiB: 64
+    maxCoverageFilesPerRun: 1000
+    origin: https://reports.ci.example.com
+`)
+	c, err := Load(writeTemp(t, files["server"]))
+	if err != nil {
+		t.Fatalf("server: %v\n%s", err, files["server"])
+	}
+	o, err := c.ReportOptions()
+	if err != nil || o.AttachmentFiles != 500 || o.HTMLBytes != 64<<20 || o.CoverageFilesPerRun != 1000 || o.HTMLFiles != 0 {
+		t.Fatalf("options %+v %v", o, err)
+	}
+	if origin, err := c.ReportsOrigin(); err != nil || origin != "https://reports.ci.example.com" {
+		t.Fatalf("origin %q %v", origin, err)
+	}
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f",
+		writeTemp(t, "postgresql: { enabled: true }\nconfig: { extraConfig: { reports: { origin: x } } }\n")).CombinedOutput(); err == nil ||
+		!strings.Contains(string(out), "use config.reports") {
+		t.Fatalf("reports in extraConfig: %v %s", err, out)
+	}
+}
+
+func TestReportsOrigin(t *testing.T) {
+	for in, want := range map[string]string{
+		"":                                "",
+		"https://reports.example.com":     "https://reports.example.com",
+		"https://reports.example.com/":    "https://reports.example.com",
+		"http://reports.example.com:8080": "http://reports.example.com:8080",
+	} {
+		c := &Config{Reports: ServerReportsConfig{Origin: in}}
+		if got, err := c.ReportsOrigin(); err != nil || got != want {
+			t.Errorf("%q: %q %v", in, got, err)
+		}
+	}
+	for _, bad := range []string{"reports.example.com", "ftp://x", "https://x/path", "https://user@x", "https://x?q=1"} {
+		c := &Config{Reports: ServerReportsConfig{Origin: bad}}
+		if _, err := c.ReportsOrigin(); err == nil {
+			t.Errorf("%q was accepted", bad)
+		}
+	}
+	c := &Config{Reports: ServerReportsConfig{MaxAttachmentFiles: -1}}
+	if _, err := c.ReportOptions(); err == nil {
+		t.Error("a negative limit was accepted")
+	}
+}

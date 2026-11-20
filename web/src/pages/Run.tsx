@@ -15,6 +15,9 @@ import { TestCounts, failing } from "../components/Tests";
 import { RerunInputsNote, RunTrigger } from "../components/RunTrigger";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 import { ArtifactsTab } from "./RunArtifacts";
+import { CoverageTab } from "./RunCoverage";
+import { ReportsTab } from "./RunReports";
+import { pct } from "../components/Coverage";
 import { SecurityTab } from "./RunSecurity";
 import { CopyValue, serious, seriousLabel } from "../components/Security";
 import { ImagesTab, imageSteps } from "./RunImages";
@@ -26,12 +29,12 @@ function stepFromURL(): string | null {
   return new URLSearchParams(location.search).get("step");
 }
 
-type Tab = "graph" | "tests" | "images" | "artifacts" | "security" | "policy" | "events" | "definition";
+type Tab = "graph" | "tests" | "coverage" | "reports" | "images" | "artifacts" | "security" | "policy" | "events" | "definition";
 
 // tabFromURL is the tab named by ?tab= in the address.
 function tabFromURL(): Tab {
   const t = new URLSearchParams(location.search).get("tab");
-  return t === "tests" || t === "images" || t === "artifacts" || t === "security" || t === "policy" || t === "events" || t === "definition" ? t : "graph";
+  return t === "tests" || t === "coverage" || t === "reports" || t === "images" || t === "artifacts" || t === "security" || t === "policy" || t === "events" || t === "definition" ? t : "graph";
 }
 
 // setQuery changes the address's query without a new history entry.
@@ -55,6 +58,8 @@ export function RunPage({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [actionErr, setActionErr] = useState<unknown>(null);
   const logSink = useRef<((step: string, attempt: number, lines: LogLine[]) => void) | null>(null);
+  const [covBadge, setCovBadge] = useState<{ run: string; text: string; bad: boolean } | null>(null);
+  const [htmlCount, setHtmlCount] = useState<{ run: string; n: number } | null>(null);
 
   // A fetch answers with the run as it was when the server read it, which
   // may be older than live updates that arrive while it is on its way. So
@@ -134,6 +139,27 @@ export function RunPage({ id }: { id: string }) {
     },
   }, () => load(true));
 
+  // What the Coverage and Reports tabs hold, for their badges: asked for
+  // only when the pipeline declares them, again as steps end.
+  const declaresCoverage = !!run?.graph.steps.some((s) => (s.reports?.coverage?.length ?? 0) > 0);
+  const declaresHTML = !!run?.graph.steps.some((s) => (s.reports?.html?.length ?? 0) > 0);
+  const ended = run ? run.step_list.filter((s) => ["succeeded", "failed", "skipped", "canceled"].includes(s.status)).length : 0;
+  useEffect(() => {
+    if (!run || !declaresCoverage) return;
+    let alive = true;
+    api.runCoverage(run.id, true).then((c) => {
+      if (!alive) return;
+      setCovBadge(c.totals ? { run: run.id, text: pct(c.totals.lines), bad: c.steps.some((s) => s.failed_under) } : null);
+    }).catch(() => { /* the tab says what went wrong */ });
+    return () => { alive = false; };
+  }, [run?.id, declaresCoverage, ended]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!run || !declaresHTML) return;
+    let alive = true;
+    api.runReports(run.id, true).then((r) => { if (alive) setHtmlCount({ run: run.id, n: r.reports.length }); }).catch(() => { /* shown on the tab */ });
+    return () => { alive = false; };
+  }, [run?.id, declaresHTML, ended]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const done = run ? ["succeeded", "failed", "canceled"].includes(run.status) : false;
   const now = useNow(1000, !done);
   const me = useMe();
@@ -165,7 +191,10 @@ export function RunPage({ id }: { id: string }) {
   const overridden = libraries.filter((l) => l.override);
   const images = imageSteps(run);
   const builtImages = images.filter((s) => s.outputs?.digest).length;
-  const tabs: [Tab, string][] = [["graph", "Steps and logs"], ["tests", "Tests"], ...(images.length ? [["images", "Images"] as [Tab, string]] : []),
+  const tabs: [Tab, string][] = [["graph", "Steps and logs"], ["tests", "Tests"],
+    ...(declaresCoverage || tab === "coverage" ? [["coverage", "Coverage"] as [Tab, string]] : []),
+    ...(declaresHTML || tab === "reports" ? [["reports", "Reports"] as [Tab, string]] : []),
+    ...(images.length ? [["images", "Images"] as [Tab, string]] : []),
     ["security", "Security"], ["artifacts", "Artifacts"], ...(run.policy ? [["policy", "Policy"] as [Tab, string]] : []),
     ["events", "Event log"], ["definition", "Pipeline"]];
   const shownTab: Tab = tab === "images" && !images.length ? "graph" : tab;
@@ -310,6 +339,8 @@ export function RunPage({ id }: { id: string }) {
             {k === "tests" && run.tests && (failing(run.tests) > 0
               ? <span className="tab-n tab-n-bad">{failing(run.tests)} failed</span>
               : <span className="tab-n">{run.tests.total}</span>)}
+            {k === "coverage" && covBadge?.run === run.id && <span className={"tab-n" + (covBadge.bad ? " tab-n-bad" : "")} title="Lines covered">{covBadge.text}</span>}
+            {k === "reports" && htmlCount?.run === run.id && htmlCount.n > 0 && <span className="tab-n">{htmlCount.n}</span>}
             {k === "images" && builtImages > 0 && <span className="tab-n">{builtImages}</span>}
             {k === "artifacts" && !!run.artifacts && <span className="tab-n">{run.artifacts}</span>}
             {k === "policy" && run.policy && (run.policy.verdict === "block"
@@ -337,6 +368,8 @@ export function RunPage({ id }: { id: string }) {
       )}
       {tab === "tests" && <TestsTab run={run} step={testStep} onStep={setTestStep}
         version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
+      {tab === "coverage" && <CoverageTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
+      {tab === "reports" && <ReportsTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {shownTab === "images" && <ImagesTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()}
         onStep={(s) => { select(s); setTab("graph"); }} onShow={setTab} />}
       {tab === "artifacts" && <ArtifactsTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}

@@ -1,0 +1,406 @@
+[
+  {
+    "description": "  As a shopper I want a cart so I can buy things.",
+    "elements": [
+      {
+        "description": "",
+        "id": "shopping-cart;add-a-single-item",
+        "keyword": "Scenario",
+        "line": 9,
+        "name": "Add a single item",
+        "steps": [
+          {
+            "result": {
+              "status": "passed",
+              "duration": 278263
+            },
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "an empty cart",
+            "match": {
+              "location": "features/steps.js:10"
+            }
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 251622
+            },
+            "arguments": [],
+            "keyword": "When ",
+            "line": 10,
+            "name": "I add 2 \"apple\" items",
+            "match": {
+              "location": "features/steps.js:14"
+            },
+            "embeddings": [
+              {
+                "data": "Y2FydCBub3c6IGFwcGxlLGFwcGxl",
+                "mime_type": "text/plain"
+              }
+            ]
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 64044
+            },
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 11,
+            "name": "the cart has 2 items",
+            "match": {
+              "location": "features/steps.js:19"
+            }
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 119544
+            },
+            "arguments": [],
+            "keyword": "And ",
+            "line": 12,
+            "name": "I take a screenshot",
+            "match": {
+              "location": "features/steps.js:23"
+            },
+            "embeddings": [
+              {
+                "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==",
+                "mime_type": "image/png"
+              },
+              {
+                "data": "c2NyZWVuc2hvdCBhdHRhY2hlZA==",
+                "mime_type": "text/x.cucumber.log+plain"
+              }
+            ]
+          }
+        ],
+        "tags": [
+          {
+            "name": "@shop",
+            "line": 1
+          },
+          {
+            "name": "@smoke",
+            "line": 8
+          },
+          {
+            "name": "@fast",
+            "line": 8
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "shopping-cart;wrong-total-is-reported",
+        "keyword": "Scenario",
+        "line": 15,
+        "name": "Wrong total is reported",
+        "steps": [
+          {
+            "result": {
+              "status": "passed",
+              "duration": 40694
+            },
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "an empty cart",
+            "match": {
+              "location": "features/steps.js:10"
+            }
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 53839
+            },
+            "arguments": [],
+            "keyword": "When ",
+            "line": 16,
+            "name": "I add 3 \"pear\" items",
+            "match": {
+              "location": "features/steps.js:14"
+            },
+            "embeddings": [
+              {
+                "data": "Y2FydCBub3c6IHBlYXIscGVhcixwZWFy",
+                "mime_type": "text/plain"
+              }
+            ]
+          },
+          {
+            "result": {
+              "status": "failed",
+              "duration": 434076,
+              "error_message": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n3 !== 4\n\n    + expected - actual\n\n    -3\n    +4\n\n    at World.<anonymous> (/work/features/steps.js:20:10)"
+            },
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 17,
+            "name": "the cart has 4 items",
+            "match": {
+              "location": "features/steps.js:19"
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@shop",
+            "line": 1
+          },
+          {
+            "name": "@regression",
+            "line": 14
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "shopping-cart;checkout-is-pending",
+        "keyword": "Scenario",
+        "line": 19,
+        "name": "Checkout is pending",
+        "steps": [
+          {
+            "result": {
+              "status": "passed",
+              "duration": 33714
+            },
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "an empty cart",
+            "match": {
+              "location": "features/steps.js:10"
+            }
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 69792
+            },
+            "arguments": [],
+            "keyword": "When ",
+            "line": 20,
+            "name": "I add 1 \"plum\" items",
+            "match": {
+              "location": "features/steps.js:14"
+            },
+            "embeddings": [
+              {
+                "data": "Y2FydCBub3c6IHBsdW0=",
+                "mime_type": "text/plain"
+              }
+            ]
+          },
+          {
+            "result": {
+              "status": "pending",
+              "duration": 91452
+            },
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 21,
+            "name": "I can check out",
+            "match": {
+              "location": "features/steps.js:28"
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@shop",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "shopping-cart;gift-wrap-is-undefined",
+        "keyword": "Scenario",
+        "line": 23,
+        "name": "Gift wrap is undefined",
+        "steps": [
+          {
+            "result": {
+              "status": "passed",
+              "duration": 20436
+            },
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "an empty cart",
+            "match": {
+              "location": "features/steps.js:10"
+            }
+          },
+          {
+            "result": {
+              "status": "undefined",
+              "duration": 0
+            },
+            "arguments": [],
+            "keyword": "When ",
+            "line": 24,
+            "name": "I ask for gift wrapping"
+          }
+        ],
+        "tags": [
+          {
+            "name": "@shop",
+            "line": 1
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "shopping-cart;add-several-kinds",
+        "keyword": "Scenario Outline",
+        "line": 33,
+        "name": "Add several kinds",
+        "steps": [
+          {
+            "result": {
+              "status": "passed",
+              "duration": 26467
+            },
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "an empty cart",
+            "match": {
+              "location": "features/steps.js:10"
+            }
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 52969
+            },
+            "arguments": [],
+            "keyword": "When ",
+            "line": 28,
+            "name": "I add 1 \"kiwi\" items",
+            "match": {
+              "location": "features/steps.js:14"
+            },
+            "embeddings": [
+              {
+                "data": "Y2FydCBub3c6IGtpd2k=",
+                "mime_type": "text/plain"
+              }
+            ]
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 50073
+            },
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 29,
+            "name": "the cart has 1 items",
+            "match": {
+              "location": "features/steps.js:19"
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@shop",
+            "line": 1
+          },
+          {
+            "name": "@outline",
+            "line": 26
+          }
+        ],
+        "type": "scenario"
+      },
+      {
+        "description": "",
+        "id": "shopping-cart;add-several-kinds",
+        "keyword": "Scenario Outline",
+        "line": 34,
+        "name": "Add several kinds",
+        "steps": [
+          {
+            "result": {
+              "status": "passed",
+              "duration": 21584
+            },
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 6,
+            "name": "an empty cart",
+            "match": {
+              "location": "features/steps.js:10"
+            }
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 45945
+            },
+            "arguments": [],
+            "keyword": "When ",
+            "line": 28,
+            "name": "I add 5 \"mango\" items",
+            "match": {
+              "location": "features/steps.js:14"
+            },
+            "embeddings": [
+              {
+                "data": "Y2FydCBub3c6IG1hbmdvLG1hbmdvLG1hbmdvLG1hbmdvLG1hbmdv",
+                "mime_type": "text/plain"
+              }
+            ]
+          },
+          {
+            "result": {
+              "status": "passed",
+              "duration": 14873
+            },
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 29,
+            "name": "the cart has 5 items",
+            "match": {
+              "location": "features/steps.js:19"
+            }
+          }
+        ],
+        "tags": [
+          {
+            "name": "@shop",
+            "line": 1
+          },
+          {
+            "name": "@outline",
+            "line": 26
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "shopping-cart",
+    "line": 2,
+    "keyword": "Feature",
+    "name": "Shopping cart",
+    "tags": [
+      {
+        "name": "@shop",
+        "line": 1
+      }
+    ],
+    "uri": "features/cart.feature"
+  }
+]

@@ -1,0 +1,149 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="a5ed0d0e-1358-41a3-adba-4c824149278b" name="@8daf88bc2358 2026-11-20 00:49:51" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-11-20T00:49:51.2218895+00:00" queuing="2026-11-20T00:49:51.2218896+00:00" start="2026-11-20T00:49:50.8031281+00:00" finish="2026-11-20T00:49:51.2351434+00:00" />
+  <TestSettings name="default" id="7d36f441-fb7f-46ab-a723-f1e4bf50bf47">
+    <Deployment runDeploymentRoot="_8daf88bc2358_2026-11-20_00_49_51" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="e393fe5f-5ecc-4c13-9839-570fb86ecfa5" testId="d3466197-f16a-c147-2b20-94c378847c43" testName="CartXunit.CartTests.HalfDiscount(price: 4, expected: 2)" computerName="8daf88bc2358" duration="00:00:00.0006564" startTime="2026-11-20T00:49:51.1434646+00:00" endTime="2026-11-20T00:49:51.1434646+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="e393fe5f-5ecc-4c13-9839-570fb86ecfa5" />
+    <UnitTestResult executionId="8cc7a8d5-c406-4b03-a840-68d705bd3532" testId="40cb49f9-5a60-9543-f372-41ded0ae6c46" testName="CartXunit.CartTests.TenDiscountIsWrong" computerName="8daf88bc2358" duration="00:00:00.0041766" startTime="2026-11-20T00:49:51.1413557+00:00" endTime="2026-11-20T00:49:51.1413693+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8cc7a8d5-c406-4b03-a840-68d705bd3532">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ
+Expected: 25
+Actual:   20</Message>
+          <StackTrace>   at CartXunit.CartTests.TenDiscountIsWrong() in /work/xu/XunitTests.cs:line 26
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="6ef8ffce-50da-4c22-b54f-a9c69d5ca25d" testId="bb12201e-c1fd-2f88-437f-c89d5001b94d" testName="CartXunit.CartTests.Currencies" computerName="8daf88bc2358" duration="00:00:00.0010000" startTime="2026-11-20T00:49:51.1449531+00:00" endTime="2026-11-20T00:49:51.1449532+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="NotExecuted" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6ef8ffce-50da-4c22-b54f-a9c69d5ca25d">
+      <Output>
+        <ErrorInfo>
+          <Message>waiting for currency support</Message>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="c616363f-1a04-4c84-b183-73dedad48563" testId="636a2698-bb42-39fc-fe62-95c67161a496" testName="CartXunit.CartTests.ThrowsUnexpected" computerName="8daf88bc2358" duration="00:00:00.0001234" startTime="2026-11-20T00:49:51.1444948+00:00" endTime="2026-11-20T00:49:51.1444949+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c616363f-1a04-4c84-b183-73dedad48563">
+      <Output>
+        <ErrorInfo>
+          <Message>System.InvalidOperationException : cart service unavailable</Message>
+          <StackTrace>   at CartXunit.CartTests.ThrowsUnexpected() in /work/xu/XunitTests.cs:line 44
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="53b202f2-3a58-4664-a0e7-dab23767185e" testId="abf8d870-cf2f-92a6-28ef-ce1e2420d446" testName="CartXunit.CartTests.TotalSums" computerName="8daf88bc2358" duration="00:00:00.0003944" startTime="2026-11-20T00:49:51.1442358+00:00" endTime="2026-11-20T00:49:51.1442358+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="53b202f2-3a58-4664-a0e7-dab23767185e">
+      <Output>
+        <StdOut>computing total</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="93f13c42-f03d-4a36-a9f2-cb3b28a4aff0" testId="eb2a9c93-c565-070f-6a24-92ccf3766d0e" testName="CartXunit.CartTests.HalfDiscount(price: 3, expected: 2)" computerName="8daf88bc2358" duration="00:00:00.0000755" startTime="2026-11-20T00:49:51.1438927+00:00" endTime="2026-11-20T00:49:51.1438927+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="93f13c42-f03d-4a36-a9f2-cb3b28a4aff0">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   1</Message>
+          <StackTrace>   at CartXunit.CartTests.HalfDiscount(Int32 price, Int32 expected) in /work/xu/XunitTests.cs:line 38
+   at InvokeStub_CartTests.HalfDiscount(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="0205e774-1d7d-4a18-a21c-151699cae365" testId="94e8b4cd-097c-3e75-7bcf-04af3b9925a1" testName="CartXunit.CartTests.HalfDiscount(price: 10, expected: 5)" computerName="8daf88bc2358" duration="00:00:00.0001368" startTime="2026-11-20T00:49:51.1435448+00:00" endTime="2026-11-20T00:49:51.1435448+00:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0205e774-1d7d-4a18-a21c-151699cae365" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CartXunit.CartTests.Currencies" storage="/work/xu/bin/debug/net9.0/cartxunit.dll" id="bb12201e-c1fd-2f88-437f-c89d5001b94d">
+      <Execution id="6ef8ffce-50da-4c22-b54f-a9c69d5ca25d" />
+      <TestMethod codeBase="/work/xu/bin/Debug/net9.0/CartXunit.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CartXunit.CartTests" name="Currencies" />
+    </UnitTest>
+    <UnitTest name="CartXunit.CartTests.TenDiscountIsWrong" storage="/work/xu/bin/debug/net9.0/cartxunit.dll" id="40cb49f9-5a60-9543-f372-41ded0ae6c46">
+      <Owners>
+        <Owner name="cart-team" />
+      </Owners>
+      <Execution id="8cc7a8d5-c406-4b03-a840-68d705bd3532" />
+      <TestMethod codeBase="/work/xu/bin/Debug/net9.0/CartXunit.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CartXunit.CartTests" name="TenDiscountIsWrong" />
+    </UnitTest>
+    <UnitTest name="CartXunit.CartTests.TotalSums" storage="/work/xu/bin/debug/net9.0/cartxunit.dll" id="abf8d870-cf2f-92a6-28ef-ce1e2420d446">
+      <Execution id="53b202f2-3a58-4664-a0e7-dab23767185e" />
+      <TestMethod codeBase="/work/xu/bin/Debug/net9.0/CartXunit.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CartXunit.CartTests" name="TotalSums" />
+    </UnitTest>
+    <UnitTest name="CartXunit.CartTests.HalfDiscount(price: 10, expected: 5)" storage="/work/xu/bin/debug/net9.0/cartxunit.dll" id="94e8b4cd-097c-3e75-7bcf-04af3b9925a1">
+      <Execution id="0205e774-1d7d-4a18-a21c-151699cae365" />
+      <TestMethod codeBase="/work/xu/bin/Debug/net9.0/CartXunit.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CartXunit.CartTests" name="HalfDiscount" />
+    </UnitTest>
+    <UnitTest name="CartXunit.CartTests.HalfDiscount(price: 3, expected: 2)" storage="/work/xu/bin/debug/net9.0/cartxunit.dll" id="eb2a9c93-c565-070f-6a24-92ccf3766d0e">
+      <Execution id="93f13c42-f03d-4a36-a9f2-cb3b28a4aff0" />
+      <TestMethod codeBase="/work/xu/bin/Debug/net9.0/CartXunit.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CartXunit.CartTests" name="HalfDiscount" />
+    </UnitTest>
+    <UnitTest name="CartXunit.CartTests.HalfDiscount(price: 4, expected: 2)" storage="/work/xu/bin/debug/net9.0/cartxunit.dll" id="d3466197-f16a-c147-2b20-94c378847c43">
+      <Execution id="e393fe5f-5ecc-4c13-9839-570fb86ecfa5" />
+      <TestMethod codeBase="/work/xu/bin/Debug/net9.0/CartXunit.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CartXunit.CartTests" name="HalfDiscount" />
+    </UnitTest>
+    <UnitTest name="CartXunit.CartTests.ThrowsUnexpected" storage="/work/xu/bin/debug/net9.0/cartxunit.dll" id="636a2698-bb42-39fc-fe62-95c67161a496">
+      <Execution id="c616363f-1a04-4c84-b183-73dedad48563" />
+      <TestMethod codeBase="/work/xu/bin/Debug/net9.0/CartXunit.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="CartXunit.CartTests" name="ThrowsUnexpected" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="d3466197-f16a-c147-2b20-94c378847c43" executionId="e393fe5f-5ecc-4c13-9839-570fb86ecfa5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="40cb49f9-5a60-9543-f372-41ded0ae6c46" executionId="8cc7a8d5-c406-4b03-a840-68d705bd3532" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bb12201e-c1fd-2f88-437f-c89d5001b94d" executionId="6ef8ffce-50da-4c22-b54f-a9c69d5ca25d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="636a2698-bb42-39fc-fe62-95c67161a496" executionId="c616363f-1a04-4c84-b183-73dedad48563" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="abf8d870-cf2f-92a6-28ef-ce1e2420d446" executionId="53b202f2-3a58-4664-a0e7-dab23767185e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="eb2a9c93-c565-070f-6a24-92ccf3766d0e" executionId="93f13c42-f03d-4a36-a9f2-cb3b28a4aff0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="94e8b4cd-097c-3e75-7bcf-04af3b9925a1" executionId="0205e774-1d7d-4a18-a21c-151699cae365" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="7" executed="6" passed="3" failed="3" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 9.0.23)
+[xUnit.net 00:00:00.03]   Discovering: CartXunit
+[xUnit.net 00:00:00.07]   Discovered:  CartXunit
+[xUnit.net 00:00:00.07]   Starting:    CartXunit
+[xUnit.net 00:00:00.11]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:00.11]       Expected: 25
+[xUnit.net 00:00:00.11]       Actual:   20
+[xUnit.net 00:00:00.11]       Stack Trace:
+[xUnit.net 00:00:00.11]         /work/xu/XunitTests.cs(26,0): at CartXunit.CartTests.TenDiscountIsWrong()
+[xUnit.net 00:00:00.11]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+[xUnit.net 00:00:00.11]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.11]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:00.11]       Expected: 2
+[xUnit.net 00:00:00.11]       Actual:   1
+[xUnit.net 00:00:00.11]       Stack Trace:
+[xUnit.net 00:00:00.11]         /work/xu/XunitTests.cs(38,0): at CartXunit.CartTests.HalfDiscount(Int32 price, Int32 expected)
+[xUnit.net 00:00:00.11]            at InvokeStub_CartTests.HalfDiscount(Object, Span`1)
+[xUnit.net 00:00:00.11]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.11]       System.InvalidOperationException : cart service unavailable
+[xUnit.net 00:00:00.11]       Stack Trace:
+[xUnit.net 00:00:00.11]         /work/xu/XunitTests.cs(44,0): at CartXunit.CartTests.ThrowsUnexpected()
+[xUnit.net 00:00:00.11]            at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)
+[xUnit.net 00:00:00.11]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.11]       waiting for currency support
+[xUnit.net 00:00:00.11]   Finished:    CartXunit
+Test 'CartXunit.CartTests.Currencies' was skipped in the test run.
+</StdOut>
+    </Output>
+    <RunInfos>
+      <RunInfo computerName="8daf88bc2358" outcome="Error" timestamp="2026-11-20T00:49:51.1400509+00:00">
+        <Text>[xUnit.net 00:00:00.11]     CartXunit.CartTests.TenDiscountIsWrong [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="8daf88bc2358" outcome="Error" timestamp="2026-11-20T00:49:51.1438391+00:00">
+        <Text>[xUnit.net 00:00:00.11]     CartXunit.CartTests.HalfDiscount(price: 3, expected: 2) [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="8daf88bc2358" outcome="Error" timestamp="2026-11-20T00:49:51.1444817+00:00">
+        <Text>[xUnit.net 00:00:00.11]     CartXunit.CartTests.ThrowsUnexpected [FAIL]</Text>
+      </RunInfo>
+      <RunInfo computerName="8daf88bc2358" outcome="Warning" timestamp="2026-11-20T00:49:51.1447936+00:00">
+        <Text>[xUnit.net 00:00:00.11]     CartXunit.CartTests.Currencies [SKIP]</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+</TestRun>
