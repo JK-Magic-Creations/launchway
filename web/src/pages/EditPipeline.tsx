@@ -173,9 +173,6 @@ export function EditPipelinePage({ name }: { name: string }) {
 
   return (
     <div className="page page-wide">
-      <nav className="crumbs" aria-label="Breadcrumb">
-        <Link href="/projects">Projects</Link><span>/</span><span>{name}</span><span>/</span><span>Pipeline</span>
-      </nav>
       <header className="page-head">
         <div className="run-head-main">
           <h1>Pipeline of {name}</h1>

@@ -76,7 +76,7 @@ export function TokensPage() {
       <header className="page-head">
         <div>
           <h1>API tokens</h1>
-          <p className="sub">For scripts, the <Mono>launchway</Mono> command line and AI agents (see <Link href="/agents">Connect an agent</Link>).
+          <p className="sub">For scripts, the <Mono>launchway</Mono> command line and AI agents (see <Link href="/settings/access/agents">Connect an agent</Link>).
             A token acts as you, with the rights you have when it is used, never more than the role and projects it is limited to, until it
             expires or is revoked.</p>
         </div>

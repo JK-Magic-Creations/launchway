@@ -41,9 +41,6 @@ export function ProjectSecurityPage({ name }: { name: string }) {
 
   return (
     <div className="page page-wide">
-      <nav className="crumbs" aria-label="Breadcrumb">
-        <Link href="/projects">Projects</Link><span>/</span><span>{name}</span><span>/</span><span>Security</span>
-      </nav>
       <header className="page-head">
         <div>
           <h1>Security of {name}</h1>

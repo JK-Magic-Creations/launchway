@@ -1,0 +1,51 @@
+/* ---- projects ---- */
+.projects { display: flex; flex-direction: column; gap: 16px; }
+.project { display: flex; flex-direction: column; gap: 12px; }
+.project-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.project-facts { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; }
+.lastrun { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); color: var(--text); }
+.lastrun:hover { text-decoration: none; background: var(--accent-soft); }
+.decisions summary { cursor: pointer; font-weight: 600; color: var(--text-2); }
+.decisions ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.decision { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border); align-items: baseline; font-size: 13px; }
+.d-outcome { flex: 0 0 64px; font-weight: 700; }
+.d-started .d-outcome { color: var(--ok-ink); }
+.d-ignored .d-outcome { color: var(--text-3); }
+.d-error .d-outcome { color: var(--bad-ink); }
+.d-detail { flex: 1 1 260px; min-width: 0; }
+
+.dialog { border: 1px solid var(--border); border-radius: 14px; padding: 0; width: min(680px, calc(100vw - 32px)); background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .3); }
+.dialog::backdrop { background: rgba(15, 23, 42, .45); }
+.dialog form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.field textarea { min-height: 72px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 400; resize: vertical; }
+.field input { min-height: 42px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 400; }
+.reflist { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow: auto; }
+.refrow { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; padding: 9px 12px; border-radius: 8px; border: 1.5px solid transparent; background: var(--surface-2); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.refrow:hover { border-color: var(--border-strong); }
+.refrow-on { border-color: var(--accent); background: var(--accent-soft); }
+.refkind { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--text-3); flex: 0 0 48px; }
+.refkind-tag { color: var(--warn-ink); }
+.refname { font-weight: 600; }
+.refsubj { flex: 1 1 200px; min-width: 0; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.refpick { padding: 10px 12px; border-radius: 8px; background: var(--surface-2); }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ---- approvals ---- */
+.approval { display: flex; flex-direction: column; gap: 14px; }
+.approval-q { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.approval-ctx { flex: none; }
+.approval-form { display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
+.approval-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.approval-comment { margin: 6px 0 0; padding-left: 12px; border-left: 3px solid currentColor; white-space: pre-wrap; overflow-wrap: anywhere; }
+.approvalrow .runrow-msg { font-weight: 600; white-space: normal; }
+
+/* ---- runners ---- */
+.table { width: 100%; border-collapse: collapse; }
+.table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); background: var(--surface-2); padding: 10px 16px; }
+.table td { padding: 12px 16px; border-top: 1px solid var(--border); vertical-align: top; }
+.online { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--idle); margin-right: 8px; }
+.online-on { background: var(--ok); }
+
+/* ---- playground ---- */
+.split-play > .card:first-child { flex: 1 1 460px; }

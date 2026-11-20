@@ -1,54 +1,16 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { api, ApiError, SIGNED_OUT, type Me } from "./api";
 import { MeContext } from "./auth";
-import { useApprovals } from "./live";
-import { match, navigate, onLink, usePath } from "./router";
-import { RunsPage } from "./pages/Runs";
+import { useApprovals, type Approvals } from "./live";
+import { navigate, onLink, replace, usePath } from "./router";
 import { nextFromHere, SignInPage } from "./pages/SignIn";
-import { Empty, ErrorBox, Link } from "./components/ui";
+import { ErrorBox } from "./components/ui";
+import { InstallationProvider, useInstallation } from "./guided/facts";
+import { Breadcrumbs, SectionLinks, SectionTabs } from "./nav/Navigation";
+import { CrumbLabelContext } from "./nav/crumbs";
+import { pageTitle, redirectFor } from "./nav/model";
+import { PageFor } from "./nav/pages";
 
-// Pages other than the runs list load when first opened, so the first
-// page needs less script (the run page with its charts is the largest).
-const RunPage = lazy(() => import("./pages/Run").then((m) => ({ default: m.RunPage })));
-const ProjectsPage = lazy(() => import("./pages/Projects").then((m) => ({ default: m.ProjectsPage })));
-const RunnersPage = lazy(() => import("./pages/Runners").then((m) => ({ default: m.RunnersPage })));
-const PlaygroundPage = lazy(() => import("./pages/Playground").then((m) => ({ default: m.PlaygroundPage })));
-const ApprovalsPage = lazy(() => import("./pages/Approvals").then((m) => ({ default: m.ApprovalsPage })));
-const EnvironmentsPage = lazy(() => import("./pages/Environments").then((m) => ({ default: m.EnvironmentsPage })));
-const TokensPage = lazy(() => import("./pages/Tokens").then((m) => ({ default: m.TokensPage })));
-const AuditPage = lazy(() => import("./pages/Audit").then((m) => ({ default: m.AuditPage })));
-const EditPipelinePage = lazy(() => import("./pages/EditPipeline").then((m) => ({ default: m.EditPipelinePage })));
-const ProjectTestsPage = lazy(() => import("./pages/ProjectTests").then((m) => ({ default: m.ProjectTestsPage })));
-const ProjectSecurityPage = lazy(() => import("./pages/ProjectSecurity").then((m) => ({ default: m.ProjectSecurityPage })));
-const ComponentsPage = lazy(() => import("./pages/Components").then((m) => ({ default: m.ComponentsPage })));
-const ImagesPage = lazy(() => import("./pages/Images").then((m) => ({ default: m.ImagesPage })));
-const PolicyPage = lazy(() => import("./pages/Policy").then((m) => ({ default: m.PolicyPage })));
-const AgentsPage = lazy(() => import("./pages/Agents").then((m) => ({ default: m.AgentsPage })));
-const ConfigHomePage = lazy(() => import("./pages/ConfigHome").then((m) => ({ default: m.ConfigHomePage })));
-const ConfigListPage = lazy(() => import("./pages/ConfigList").then((m) => ({ default: m.ConfigListPage })));
-const ConfigObjectPage = lazy(() => import("./pages/ConfigObject").then((m) => ({ default: m.ConfigObjectPage })));
-const WizardPage = lazy(() => import("./pages/wizards/Wizards").then((m) => ({ default: m.WizardPage })));
-
-interface NavItem { href: string; label: string; active: (p: string) => boolean; show?: (me: Me) => boolean }
-
-const NAV: NavItem[] = [
-  { href: "/", label: "Runs", active: (p) => p === "/" || p.startsWith("/runs") },
-  { href: "/approvals", label: "Approvals", active: (p) => p.startsWith("/approvals") },
-  { href: "/environments", label: "Environments", active: (p) => p.startsWith("/environments") },
-  { href: "/projects", label: "Projects", active: (p) => p.startsWith("/projects") },
-  { href: "/runners", label: "Runners", active: (p) => p.startsWith("/runners"), show: (me) => me.runners },
-  { href: "/playground", label: "Playground", active: (p) => p.startsWith("/playground"), show: (me) => me.runners },
-  { href: "/tokens", label: "API tokens", active: (p) => p.startsWith("/tokens"), show: (me) => me.auth_mode === "oidc" },
-  { href: "/agents", label: "Connect an agent", active: (p) => p.startsWith("/agents"), show: (me) => me.mcp?.enabled !== false },
-  { href: "/audit", label: "Audit trail", active: (p) => p.startsWith("/audit"), show: (me) => me.admin },
-  { href: "/components", label: "Components", active: (p) => p.startsWith("/components") },
-  { href: "/images", label: "Images", active: (p) => p.startsWith("/images") },
-  { href: "/policy", label: "Policy", active: (p) => p.startsWith("/policy"), show: (me) => me.runners },
-  { href: "/config", label: "Configuration", active: (p) => p === "/config" || p.startsWith("/config/"), show: (me) => me.admin },
-];
-
-// Shown so people can see where this is going; none of these work yet.
-const NEXT = ["Releases", "Infrastructure"];
 
 type Who = { state: "loading" } | { state: "out"; next: string } | { state: "in"; me: Me } | { state: "error"; error: unknown };
 
@@ -81,79 +43,64 @@ export function App() {
 }
 
 function Shell({ me }: { me: Me }) {
-  const path = usePath();
-  const [version, setVersion] = useState("");
   const approvals = useApprovals();
-  const waiting = approvals.list?.length ?? 0;
+  return (
+    <InstallationProvider me={me} approvals={approvals.list ?? []}>
+      <Frame me={me} approvals={approvals} />
+    </InstallationProvider>
+  );
+}
+
+function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
+  const path = usePath();
+  const inst = useInstallation();
+  const [version, setVersion] = useState("");
+  const [open, setOpen] = useState(false);
+  const [crumb, setCrumb] = useState<string | undefined>();
   useEffect(() => { api.info().then((i) => setVersion(i.version)).catch(() => {}); }, []);
   // Signed in already: the sign-in page has nothing to offer.
   useEffect(() => { if (path === "/signin") navigate("/"); }, [path]);
-
-  const nav = NAV.filter((n) => !n.show || n.show(me));
-  let page;
-  let m;
-  if (path === "/") page = <RunsPage />;
-  else if ((m = match("/runs/:id", path))) page = <RunPage id={m.id} />;
-  else if (path === "/approvals") page = <ApprovalsPage approvals={approvals} />;
-  else if (path === "/environments") page = <EnvironmentsPage />;
-  else if (path === "/projects") page = <ProjectsPage />;
-  else if ((m = match("/projects/:name/pipeline", path))) page = <EditPipelinePage key={m.name} name={m.name} />;
-  else if ((m = match("/projects/:name/tests", path))) page = <ProjectTestsPage key={m.name} name={m.name} />;
-  else if (path === "/runners") page = <RunnersPage />;
-  else if (path === "/playground") page = <PlaygroundPage />;
-  else if (path === "/tokens") page = <TokensPage />;
-  else if (path === "/agents") page = <AgentsPage />;
-  else if (path === "/audit") page = <AuditPage />;
-  else if ((m = match("/projects/:name/security", path))) page = <ProjectSecurityPage key={m.name} name={m.name} />;
-  else if (path === "/components") page = <ComponentsPage />;
-  else if (path === "/images") page = <ImagesPage />;
-  else if (path === "/policy") page = <PolicyPage />;
-  else if (path === "/config") page = <ConfigHomePage />;
-  else if ((m = match("/config/wizard/:id", path))) page = <WizardPage key={m.id} id={m.id} />;
-  else if ((m = match("/config/:kind/new", path))) page = <ConfigObjectPage key={m.kind + "/new"} kind={m.kind} name="" />;
-  else if ((m = match("/config/:kind/:name", path))) page = <ConfigObjectPage key={m.kind + "/" + m.name} kind={m.kind} name={m.name} />;
-  else if ((m = match("/config/:kind", path))) page = <ConfigListPage key={m.kind} kind={m.kind} />;
-  else page = <div className="page"><Empty title="Nothing here">This page does not exist. <Link href="/">Go to runs</Link>.</Empty></div>;
-
+  // An address from the old flat menu goes to where the page lives now.
   useEffect(() => {
-    const title = NAV.find((n) => n.active(path))?.label;
-    document.title = title ? `${title} · Launchway` : "Launchway";
+    const to = redirectFor(path, location.search);
+    if (to) replace(to);
   }, [path]);
+  useEffect(() => { document.title = pageTitle(path); setOpen(false); }, [path]);
 
+  const ctx = { me, facts: inst.facts };
   return (
     <div className="shell">
-      <nav className="nav" aria-label="Main">
+      <a href="#main" className="skip">Skip to the page</a>
+      <header className="topbar">
+        <button type="button" className="btn btn-sm" aria-expanded={open} aria-controls="menu" onClick={() => setOpen((o) => !o)}>Menu</button>
+        <strong>Launchway</strong>
+      </header>
+      <nav className={"nav" + (open ? " nav-open" : "")} id="menu" aria-label="Main">
         <a href="/" onClick={onLink} className="brand">
           <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2563eb" /><path d="M8 22l8-12 8 12" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <span>Launchway</span>
         </a>
-        <div className="nav-links">
-          {nav.map((n) => (
-            <a key={n.href} href={n.href} onClick={onLink} className={"nav-link" + (n.active(path) ? " nav-on" : "")}
-              aria-current={n.active(path) ? "page" : undefined}>
-              {n.label}
-              {n.href === "/approvals" && waiting > 0 && (
-                <span className="nav-badge" aria-label={`${waiting} waiting`}>{waiting}</span>
-              )}
-            </a>
-          ))}
-        </div>
-        <div className="nav-next">
-          <div className="nav-next-title">Coming next</div>
-          {NEXT.map((n) => <div key={n} className="nav-soon" title="Designed, not built yet">{n}</div>)}
-        </div>
+        <SectionLinks ctx={ctx} path={path} onNavigate={() => setOpen(false)} />
         <div className="nav-foot">
           <UserMenu me={me} />
           {version && <span>Launchway {version}</span>}
         </div>
       </nav>
-      <main className="main">
+      <main className="main" id="main" tabIndex={-1}>
         {me.auth_mode === "none" && (
           <div className="notice" role="note">
             <strong>No sign-in:</strong> anyone who can reach this server has full access.
           </div>
         )}
-        <Suspense fallback={<div className="page"><p className="sub">Loading…</p></div>}>{page}</Suspense>
+        <div className="frame-head">
+          <Breadcrumbs path={path} label={crumb} />
+          <SectionTabs ctx={ctx} path={path} />
+        </div>
+        <CrumbLabelContext.Provider value={setCrumb}>
+          <Suspense fallback={<div className="page"><p className="sub">Loading…</p></div>}>
+            <PageFor path={path} approvals={approvals} />
+          </Suspense>
+        </CrumbLabelContext.Provider>
       </main>
     </div>
   );
