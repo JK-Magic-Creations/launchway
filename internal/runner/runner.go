@@ -495,7 +495,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	spec := executor.Spec{
 		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
 		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: env,
-		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask,
+		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask, AsksResources: job.ResourcesAsked,
 	}
 	collect := r.collector(job, spec, sys)
 	if failed := r.fetch(ctx, job, spec, sys, out); failed != nil {
@@ -757,7 +757,8 @@ func containerSpecs(job *engine.Job) []executor.ContainerSpec {
 	for i, c := range job.Containers {
 		out[i] = executor.ContainerSpec{Name: c.Name, Image: c.Image, Env: c.Env, CPU: c.CPU, Memory: c.Memory,
 			Service: c.Service, Command: c.Command,
-			CPULimit: c.CPULimit, MemoryLimit: c.MemoryLimit, Threads: c.Threads, Explicit: c.Explicit}
+			CPULimit: c.CPULimit, MemoryLimit: c.MemoryLimit, Threads: c.Threads,
+			ExplicitCPU: c.ExplicitCPU, ExplicitMemory: c.ExplicitMemory}
 	}
 	return out
 }

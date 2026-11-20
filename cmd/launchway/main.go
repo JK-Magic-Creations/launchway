@@ -73,6 +73,7 @@ Usage:
                                                 (launchway verifications, for more)
   launchway health-sources | models             what verify and ai steps may name
   launchway runners  list|join-token|revoke|rotate  runners, and join tokens to enrol them
+  launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -117,6 +118,8 @@ func main() {
 		err = cmdModels(args)
 	case "runners":
 		err = cmdRunners(args)
+	case "step-resources":
+		err = cmdStepResources(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":

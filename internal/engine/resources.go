@@ -17,8 +17,9 @@ import (
 // database (step_resource_defaults, step_resource_limits), where every server
 // of an installation reads the same values and an administrator changes them
 // through the API, the CLI or the MCP server. The values compiled into the
-// program (pipeline.SeedStepResources) only seed the tables, once, when a
-// server first finds them empty.
+// program (pipeline.SeedStepResources) seed the tables, once, when a server
+// first finds them empty, and only on a fresh installation (see
+// seedStepResources).
 //
 // A run's containers are sized when its pod is made, from the run's
 // pipeline and the configuration at that moment (runContainers); nothing is
@@ -152,26 +153,57 @@ func (e *Engine) loadPolicy(q rowQuerier) (resourcePolicy, error) {
 	return e.policy(cfg), nil
 }
 
-// seedStepResources fills empty configuration tables from the values
-// compiled into the program. It never changes a row that exists, so what an
-// administrator set stays, even if it is empty. Servers starting together
-// do not collide: each insert does nothing if the row exists.
+// seedStepResources fills empty configuration tables. A fresh installation,
+// one that has never had a run, gets the values compiled into the program
+// (pipeline.SeedStepResources). An installation that is upgraded to schema 22
+// already has runs, and its pipelines must run as they did, so every kind is
+// seeded with empty values: nothing is sized, and the namespace decides, as
+// before. An administrator opts in with the recommended values (set-default
+// --recommended) or with values of their own.
+//
+// It never changes a row that exists, so what an administrator set stays,
+// even if it is empty. Servers starting together do not collide: each insert
+// does nothing if the row exists.
 func (e *Engine) seedStepResources() error {
 	if !e.knows(schemaResources) {
 		return nil
 	}
+	var anyRun int
+	if err := e.db.QueryRow(`SELECT COUNT(*) FROM (SELECT 1 FROM runs LIMIT 1) r`).Scan(&anyRun); err != nil {
+		return err
+	}
+	fresh := anyRun == 0
+	by := "seed"
+	if !fresh {
+		by = "upgrade"
+	}
+	unlock := e.writeLock()
+	defer unlock()
 	now := e.now().UnixMilli()
 	for _, kind := range pipeline.ResourceKinds {
-		seed := pipeline.SeedStepResources[kind]
+		var seed resources.Request
+		if fresh {
+			seed = pipeline.SeedStepResources[kind]
+		}
 		if _, err := e.db.Exec(`INSERT INTO step_resource_defaults(kind, cpu, cpu_limit, memory, memory_limit, updated_at, updated_by)
 			VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(kind) DO NOTHING`,
-			kind, seed.CPU, seed.CPULimit, seed.Memory, seed.MemoryLimit, now, "seed"); err != nil {
+			kind, seed.CPU, seed.CPULimit, seed.Memory, seed.MemoryLimit, now, by); err != nil {
 			return err
 		}
 	}
 	_, err := e.db.Exec(`INSERT INTO step_resource_limits(name, max_cpu, max_memory, memory_per_thread, updated_at, updated_by)
-		VALUES(?, '', '', ?, ?, ?) ON CONFLICT(name) DO NOTHING`, limitsRow, seedMemoryPerThread, now, "seed")
+		VALUES(?, '', '', ?, ?, ?) ON CONFLICT(name) DO NOTHING`, limitsRow, seedMemoryPerThread, now, by)
 	return err
+}
+
+// RecommendedStepResource is the default Launchway recommends for a step
+// kind: what a fresh installation starts with. An administrator of an
+// upgraded installation, which starts with nothing sized, sets it to opt in.
+func (e *Engine) RecommendedStepResource(kind string) (resources.Request, error) {
+	if !slices.Contains(pipeline.ResourceKinds, kind) {
+		return resources.Request{}, fmt.Errorf("%w: %q has no default resources; the kinds that have are %s", ErrInvalid, kind, strings.Join(pipeline.ResourceKinds, ", "))
+	}
+	return pipeline.SeedStepResources[kind], nil
 }
 
 // StepResources returns the installation's configuration of step resources.
@@ -388,7 +420,11 @@ func checkResources(p *pipeline.Pipeline, l resources.Limits) pipeline.Problems 
 
 // resourcesRefused fails a step, before any runner sees it, whose resources
 // are above the installation's limits as they are now: they may have been
-// lowered since the run was created. It reports whether it did.
+// lowered since the run was created. It holds the step to what it asked for
+// (resources) and to what its container under containers asks for (cpu and
+// memory, which existed before step resources), as the run's creation did,
+// and never to a default, which is the installation's own and is not the
+// step's fault. It reports whether it failed the step.
 func (c *cmd) resourcesRefused(id string, def *pipeline.Step) bool {
 	if !c.e.knows(schemaResources) || def.ResourceKind() == "" {
 		return false
@@ -402,14 +438,26 @@ func (c *cmd) resourcesRefused(id string, def *pipeline.Step) bool {
 	if err != nil {
 		return false
 	}
-	eff := resources.Merge(declared, pol.defaults[def.ResourceKind()])
-	vs := pol.limits.Check(eff)
+	who := "step " + id
+	vs := pol.limits.Check(declared)
+	if len(vs) == 0 {
+		ct := c.st.Pipeline.Container(c.st.Pipeline.ContainerFor(def))
+		if ct == nil || ct.Service {
+			return false
+		}
+		legacy, err := resources.Request{CPU: ct.CPU, Memory: ct.Memory}.Parse()
+		if err != nil {
+			return false
+		}
+		who = "container " + ct.Name
+		vs = pol.limits.Check(legacy)
+	}
 	if len(vs) == 0 {
 		return false
 	}
 	v := vs[0]
 	c.emit(StepFinished, Payload{Step: id, Outcome: string(StepFailed), Reason: fmt.Sprintf(
-		"step %s asks for %s %s, which is above %s %s, the most a step may ask for: %s", id, v.Field, v.Asked, v.Name, v.Limit, limitSource)})
+		"%s asks for %s %s, which is above %s %s, the most a step may ask for: %s", who, v.Field, v.Asked, v.Name, v.Limit, limitSource)})
 	return true
 }
 
@@ -450,7 +498,10 @@ func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourceP
 			legacy.MemoryLimit = legacy.Memory // as it was: what is asked for is also the cap
 		}
 		var folded resources.Amount
-		explicit, declaredAny, any := false, false, false
+		declaredAny, any := false, false
+		// What the container's CPU and memory come from: asked for by a
+		// step or by the container's own cpu and memory, or the defaults.
+		askedCPU, askedMemory := legacy.CPU > 0, legacy.Memory > 0
 		for _, s := range p.Steps {
 			kind := s.ResourceKind()
 			if kind == "" || p.ContainerFor(s) != ct.Name {
@@ -466,7 +517,9 @@ func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourceP
 				base = legacy
 			}
 			if s.Resources != nil {
-				explicit, declaredAny = true, true // a step asked: the host executor must refuse
+				declaredAny = true
+				askedCPU = askedCPU || declared.CPU > 0 || declared.CPULimit > 0
+				askedMemory = askedMemory || declared.Memory > 0 || declared.MemoryLimit > 0
 			}
 			folded = resources.Max(folded, resources.Merge(declared, base))
 		}
@@ -479,7 +532,7 @@ func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourceP
 		r := folded.Request()
 		ct.CPU, ct.CPULimit, ct.Memory, ct.MemoryLimit = r.CPU, r.CPULimit, r.Memory, r.MemoryLimit
 		ct.Threads = resources.Threads(folded.CPULimit, folded.MemoryLimit, pol.limits.MemoryPerThread)
-		ct.Explicit = explicit
+		ct.ExplicitCPU, ct.ExplicitMemory = askedCPU, askedMemory
 	}
 	return cs
 }

@@ -925,9 +925,19 @@ steps:
 **Defaults.** A new installation starts with these for kind `step`, and an administrator changes
 them without a restart; a change applies to the next pod a run starts (a run's pod is made once, for
 its first step, and kept for its other steps). The values live in the database, so every server of
-an installation agrees:
+an installation agrees.
 
-| Setting | Starts at | Meaning |
+**Upgrading does not change your pipelines.** An installation that is upgraded from a release before
+step resources starts with nothing sized: every kind's default is empty, so a step that writes no
+`resources` gets what the namespace gives, as it did before (a step that does write `resources` is
+sized as written). To adopt the recommended values below, an administrator runs
+`launchway step-resources set-default step --recommended` (or `PUT /api/v1/step-resources/defaults/step`
+with `{"recommended": true}`, or the MCP tool `set_step_resource_default`), or sets values of their
+own with `--cpu`, `--cpu-limit`, `--memory` and `--memory-limit`. `launchway step-resources get`
+shows what an installation has; `updated_by` says `seed` for a new installation and `upgrade` for an
+upgraded one until someone changes it. The recommended values are:
+
+| Setting | Recommended | Meaning |
 |---|---|---|
 | `cpu`, `cpu_limit` | `1`, `4` | A step is promised one CPU and may use four |
 | `memory`, `memory_limit` | `2Gi`, `6Gi` | A step is promised 2 GiB and may use six |
@@ -951,15 +961,22 @@ starting defaults that is 4 jobs; `memory: 6Gi` with no CPU written is 4 as well
 
 **Where it is applied.** Kubernetes sets the pod's requests and limits. Podman and Docker run each
 step with `--memory`, `--memory-reservation` and `--cpus`. The host executor cannot limit anything:
-a step that asks for resources there is refused with a message saying so, and the defaults are not
-applied. The runner log says what each container was given.
+a step that writes `resources` there is refused with a message saying so. A step that does not
+(another step that uses the same image may) runs, the defaults are not applied, and its log has one
+line, "resources not enforced on the host executor", saying what it would have been given. The runner log says what each container was given.
 
 **Checks.** `launchway validate` checks the quantities. A run is refused when it is created if a
 step asks for more than the installation's `max_cpu` or `max_memory`, the message naming the step,
 the value and the limit. On Kubernetes the executor checks again before it creates the pod, against
 the namespace's LimitRange (the container's and the pod's maximum) and ResourceQuota, and against
 the runner's own `kubernetes.max_cpu` and `kubernetes.max_memory`; the step then fails at once with
-a message naming which of them it exceeds.
+a message naming which of them it exceeds. That applies to what the step, or the container under
+`containers`, asked for. A default that the installation chose never fails a step: if it is above
+what the runner or the namespace allows one container, the runner lowers it to the most allowed
+(the runner's `kubernetes.max_cpu` and `kubernetes.max_memory`, and each LimitRange's container
+maximum) and writes one line to the step's log saying what it lowered and why. A step that asks for
+memory only is held to its memory, and its CPU default is lowered if need be, and the other way
+round.
 
 ## When
 

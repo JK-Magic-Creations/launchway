@@ -522,4 +522,3 @@ func (s *Server) effectiveConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, ef)
 }
-

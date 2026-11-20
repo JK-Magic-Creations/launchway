@@ -129,6 +129,13 @@ func (d *DeployRunner) verify(parent context.Context, job *engine.Job) {
 			}
 		}
 	}
+	if why := verifyRefusal(d.Accept, job); why != "" {
+		log.Warn("refusing a verification", "project", job.Project, "why", why)
+		if err := refuse(report, d.Client, job, why); err != nil {
+			log.Warn("could not report the refusal", "err", err)
+		}
+		return
+	}
 	cancelNow, err := d.Client.Start(report, job.LeaseID)
 	if err != nil {
 		log.Warn("could not start the verification", "err", err)

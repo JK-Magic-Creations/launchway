@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -149,7 +150,7 @@ func TestContainerExecutorAppliesTheLimitsAndParallelism(t *testing.T) {
 	var out capture
 	s := spec(t, "true")
 	s.Container = "go"
-	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "1", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", Threads: 4, Explicit: true}}
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "1", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", Threads: 4}}
 	if code, err := c.Run(context.Background(), s, out.sink); err != nil || code != 0 {
 		t.Fatalf("code %d err %v\n%s", code, err, out.text())
 	}
@@ -202,7 +203,7 @@ func TestContainerExecutorLimitsAreReal(t *testing.T) {
 	var out capture
 	s := spec(t, "echo gomaxprocs=$GOMAXPROCS\ncat /sys/fs/cgroup/memory.max 2>/dev/null || cat /sys/fs/cgroup/memory/memory.limit_in_bytes")
 	s.Container = "go"
-	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, Memory: "256Mi", MemoryLimit: "256Mi", Threads: 2, Explicit: true}}
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, Memory: "256Mi", MemoryLimit: "256Mi", Threads: 2}}
 	if code, err := c.Run(context.Background(), s, out.sink); err != nil || code != 0 {
 		t.Fatalf("code %d err %v\n%s", code, err, out.text())
 	}
@@ -217,7 +218,8 @@ func TestHostRefusesAStepThatAsksForResources(t *testing.T) {
 	var out capture
 	s := spec(t, "echo ran")
 	s.Container = "go"
-	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "4", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", Threads: 4, Explicit: true}}
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "4", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", Threads: 4}}
+	s.AsksResources = true
 	code, err := (&Host{}).Run(context.Background(), s, out.sink)
 	if err == nil || code != -1 || errors.Is(err, ErrInfrastructure) {
 		t.Fatalf("code %d err %v: a refusal is a failure of the step, not of the machinery", code, err)
@@ -232,13 +234,47 @@ func TestHostRefusesAStepThatAsksForResources(t *testing.T) {
 	}
 
 	// Defaults are not a request, and the host applies none of them.
-	s.Containers[0].Explicit = false
+	s.AsksResources = false
 	s.Script = "echo \"ran gomaxprocs=${GOMAXPROCS:-unset}\""
 	if code, err := (&Host{}).Run(context.Background(), s, out.sink); err != nil || code != 0 {
 		t.Fatalf("code %d err %v", code, err)
 	}
 	if !strings.Contains(out.text(), "ran gomaxprocs=unset") {
 		t.Fatalf("the host must not apply limits it cannot enforce:\n%s", out.text())
+	}
+	// ...and it says so, once, in the step's log, so nobody believes the
+	// step is limited.
+	if n := strings.Count(out.text(), "resources not enforced on the host executor: cpu 4, memory 6Gi"); n != 1 {
+		t.Fatalf("the step's log says it %d times:\n%s", n, out.text())
+	}
+}
+
+// Containers are shared by the steps that use an image. The host refuses a
+// step for what that step asked, not for another step's resources in the
+// same container.
+func TestHostRefusesOnlyTheStepThatAsked(t *testing.T) {
+	var out capture
+	s := spec(t, "echo ran")
+	s.Container = "go"
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "4", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", ExplicitCPU: true, ExplicitMemory: true}}
+	// A step of the same container that asked for nothing runs, with the line.
+	if code, err := (&Host{}).Run(context.Background(), s, out.sink); err != nil || code != 0 {
+		t.Fatalf("code %d err %v", code, err)
+	}
+	if !strings.Contains(out.text(), "resources not enforced on the host executor") || !strings.Contains(out.text(), "ran") {
+		t.Fatalf("%s", out.text())
+	}
+	// The step that asked is refused.
+	s.AsksResources = true
+	if code, err := (&Host{}).Run(context.Background(), s, out.sink); err == nil || code != -1 {
+		t.Fatalf("code %d err %v", code, err)
+	}
+	// A container with no sizing at all says nothing.
+	var quiet capture
+	s.AsksResources = false
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image}}
+	if code, err := (&Host{}).Run(context.Background(), s, quiet.sink); err != nil || code != 0 || strings.Contains(quiet.text(), "not enforced") {
+		t.Fatalf("code %d err %v\n%s", code, err, quiet.text())
 	}
 }
 
@@ -268,7 +304,7 @@ func quota(name string, hard, used corev1.ResourceList) *corev1.ResourceQuota {
 }
 
 var build = func(mem string) []ContainerSpec {
-	return []ContainerSpec{{Name: "image-1", Image: "golang:1.27", CPU: "1", CPULimit: "4", Memory: mem, MemoryLimit: mem}}
+	return []ContainerSpec{{Name: "image-1", Image: "golang:1.27", CPU: "1", CPULimit: "4", Memory: mem, MemoryLimit: mem, ExplicitCPU: true, ExplicitMemory: true}}
 }
 
 func noSys(string, ...any) {}
@@ -279,10 +315,10 @@ func TestStepAskingForMoreThanTheNamespaceAllowsFailsNamingTheLimit(t *testing.T
 	lr := limitRange("container-limits", corev1.LimitRangeItem{Type: corev1.LimitTypeContainer,
 		Max: corev1.ResourceList{corev1.ResourceMemory: q("8Gi")}, Min: corev1.ResourceList{corev1.ResourceMemory: q("16Mi")}})
 	k := kubeWith(KubernetesOptions{}, lr)
-	if err := k.checkResources(context.Background(), build("8Gi"), noSys); err != nil {
+	if _, err := k.checkResources(context.Background(), build("8Gi"), noSys); err != nil {
 		t.Fatalf("at the limit is allowed: %v", err)
 	}
-	err := k.checkResources(context.Background(), build("12Gi"), noSys)
+	_, err := k.checkResources(context.Background(), build("12Gi"), noSys)
 	if err == nil || errors.Is(err, ErrInfrastructure) {
 		t.Fatalf("want a failure of the step, got %v", err)
 	}
@@ -294,14 +330,14 @@ func TestStepAskingForMoreThanTheNamespaceAllowsFailsNamingTheLimit(t *testing.T
 	// A pod of containers that are each allowed may still be too much for a pod limit.
 	pod := limitRange("pod-limits", corev1.LimitRangeItem{Type: corev1.LimitTypePod, Max: corev1.ResourceList{corev1.ResourceMemory: q("10Gi")}})
 	k = kubeWith(KubernetesOptions{}, pod)
-	two := []ContainerSpec{{Name: "a", Image: "x", Memory: "6Gi"}, {Name: "b", Image: "y", Memory: "6Gi"}}
-	if err := k.checkResources(context.Background(), two, noSys); err == nil || !strings.Contains(err.Error(), `LimitRange "pod-limits"`) || !strings.Contains(err.Error(), "per pod") {
+	two := []ContainerSpec{{Name: "a", Image: "x", Memory: "6Gi", ExplicitMemory: true}, {Name: "b", Image: "y", Memory: "6Gi", ExplicitMemory: true}}
+	if _, err := k.checkResources(context.Background(), two, noSys); err == nil || !strings.Contains(err.Error(), `LimitRange "pod-limits"`) || !strings.Contains(err.Error(), "per pod") {
 		t.Fatalf("%v", err)
 	}
 	// Below a minimum.
 	lr = limitRange("floor", corev1.LimitRangeItem{Type: corev1.LimitTypeContainer, Min: corev1.ResourceList{corev1.ResourceMemory: q("1Gi")}})
 	k = kubeWith(KubernetesOptions{}, lr)
-	if err := k.checkResources(context.Background(), []ContainerSpec{{Name: "a", Image: "x", Memory: "512Mi"}}, noSys); err == nil || !strings.Contains(err.Error(), "below the 1Gi") {
+	if _, err := k.checkResources(context.Background(), []ContainerSpec{{Name: "a", Image: "x", Memory: "512Mi", ExplicitMemory: true}}, noSys); err == nil || !strings.Contains(err.Error(), "below the 1Gi") {
 		t.Fatalf("%v", err)
 	}
 }
@@ -309,26 +345,26 @@ func TestStepAskingForMoreThanTheNamespaceAllowsFailsNamingTheLimit(t *testing.T
 func TestPodAskingForMoreThanTheQuotaHoldsFails(t *testing.T) {
 	hard := corev1.ResourceList{corev1.ResourceLimitsMemory: q("32Gi"), corev1.ResourceRequestsMemory: q("64Gi")}
 	k := kubeWith(KubernetesOptions{}, quota("compute", hard, corev1.ResourceList{corev1.ResourceLimitsMemory: q("0"), corev1.ResourceRequestsMemory: q("0")}))
-	if err := k.checkResources(context.Background(), build("6Gi"), noSys); err != nil {
+	if _, err := k.checkResources(context.Background(), build("6Gi"), noSys); err != nil {
 		t.Fatalf("%v", err)
 	}
-	// Six containers of 6 GiB cannot be in a 32 GiB namespace at all.
+	// Six containers of 6 GiB (and the helper, which counts by its request) cannot be in a 32 GiB namespace at all.
 	var six []ContainerSpec
 	for _, n := range []string{"a", "b", "c", "d", "e", "f"} {
-		six = append(six, ContainerSpec{Name: n, Image: n, Memory: "6Gi"})
+		six = append(six, ContainerSpec{Name: n, Image: n, Memory: "6Gi", ExplicitMemory: true})
 	}
-	err := k.checkResources(context.Background(), six, noSys)
+	_, err := k.checkResources(context.Background(), six, noSys)
 	if err == nil || errors.Is(err, ErrInfrastructure) {
 		t.Fatalf("%v", err)
 	}
-	for _, want := range []string{"limits.memory", "36Gi", "32Gi", `ResourceQuota "compute"`, "namespace launchway-steps", "no pod of this size can run there"} {
+	for _, want := range []string{"limits.memory", "36928Mi", "32Gi", `ResourceQuota "compute"`, "namespace launchway-steps", "no pod of this size can run there"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the message does not say %q: %v", want, err)
 		}
 	}
 	// When it fits but other pods are using the quota, it is tried again later.
 	k = kubeWith(KubernetesOptions{}, quota("compute", hard, corev1.ResourceList{corev1.ResourceLimitsMemory: q("30Gi"), corev1.ResourceRequestsMemory: q("1Gi")}))
-	err = k.checkResources(context.Background(), build("6Gi"), noSys)
+	_, err = k.checkResources(context.Background(), build("6Gi"), noSys)
 	if !errors.Is(err, ErrInfrastructure) || !strings.Contains(err.Error(), "30Gi is in use by other pods") {
 		t.Fatalf("%v", err)
 	}
@@ -336,15 +372,15 @@ func TestPodAskingForMoreThanTheQuotaHoldsFails(t *testing.T) {
 
 func TestRunnersOwnMaximumsAreCheckedAndNamed(t *testing.T) {
 	k := kubeWith(KubernetesOptions{MaxMemory: "8Gi", MaxCPU: "4"})
-	if err := k.checkResources(context.Background(), build("8Gi"), noSys); err != nil {
+	if _, err := k.checkResources(context.Background(), build("8Gi"), noSys); err != nil {
 		t.Fatal(err)
 	}
-	err := k.checkResources(context.Background(), build("12Gi"), noSys)
+	_, err := k.checkResources(context.Background(), build("12Gi"), noSys)
 	if err == nil || !strings.Contains(err.Error(), "kubernetes.max_memory 8Gi in this runner's configuration") || !strings.Contains(err.Error(), "12Gi") {
 		t.Fatalf("%v", err)
 	}
-	big := []ContainerSpec{{Name: "a", Image: "x", CPU: "8", CPULimit: "8", Memory: "1Gi"}}
-	if err := k.checkResources(context.Background(), big, noSys); err == nil || !strings.Contains(err.Error(), "kubernetes.max_cpu 4") {
+	big := []ContainerSpec{{Name: "a", Image: "x", CPU: "8", CPULimit: "8", Memory: "1Gi", ExplicitCPU: true, ExplicitMemory: true}}
+	if _, err := k.checkResources(context.Background(), big, noSys); err == nil || !strings.Contains(err.Error(), "kubernetes.max_cpu 4") {
 		t.Fatalf("%v", err)
 	}
 }
@@ -364,7 +400,7 @@ func TestUnreadableNamespaceLimitsAreSaidOnceNotFatal(t *testing.T) {
 	var said []string
 	sys := func(f string, a ...any) { said = append(said, f) }
 	for i := 0; i < 3; i++ {
-		if err := k.checkResources(context.Background(), build("6Gi"), sys); err != nil {
+		if _, err := k.checkResources(context.Background(), build("6Gi"), sys); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -376,7 +412,7 @@ func TestUnreadableNamespaceLimitsAreSaidOnceNotFatal(t *testing.T) {
 	k.client.(*fake.Clientset).PrependReactor("list", "limitranges", func(clienttesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("connection refused")
 	})
-	if err := k.checkResources(context.Background(), build("6Gi"), noSys); !errors.Is(err, ErrInfrastructure) {
+	if _, err := k.checkResources(context.Background(), build("6Gi"), noSys); !errors.Is(err, ErrInfrastructure) {
 		t.Fatalf("%v", err)
 	}
 }
@@ -396,5 +432,104 @@ func TestEnsurePodRefusesBeforeCreatingAnything(t *testing.T) {
 	pods, _ := k.client.CoreV1().Pods("launchway-steps").List(context.Background(), metav1.ListOptions{})
 	if len(pods.Items) != 0 {
 		t.Fatalf("a pod was created: %d", len(pods.Items))
+	}
+}
+
+// What the server chose on its own, the installation's defaults, never
+// fails a step: it is lowered to the runner's maximum and the namespace's
+// LimitRange, with one line saying so. What the step asked for still fails.
+func TestServerDefaultsAreLoweredToWhatTheRunnerAndNamespaceAllow(t *testing.T) {
+	lr := limitRange("container-limits", corev1.LimitRangeItem{Type: corev1.LimitTypeContainer,
+		Max: corev1.ResourceList{corev1.ResourceMemory: q("4Gi")}})
+	k := kubeWith(KubernetesOptions{MaxCPU: "2", MaxMemory: "8Gi"}, lr)
+	// The recommended default: 1 CPU and 2Gi promised, 4 CPUs and 6Gi at most.
+	def := []ContainerSpec{{Name: "image-1", Image: "golang:1.27", CPU: "1", CPULimit: "4", Memory: "2Gi", MemoryLimit: "6Gi"}}
+	var said []string
+	sys := func(f string, a ...any) { said = append(said, fmt.Sprintf(f, a...)) }
+	got, err := k.checkResources(context.Background(), def, sys)
+	if err != nil {
+		t.Fatalf("a default failed the step: %v", err)
+	}
+	if got[0].CPULimit != "2" || got[0].MemoryLimit != "4Gi" || got[0].CPU != "1" || got[0].Memory != "2Gi" {
+		t.Fatalf("not lowered: %+v", got[0])
+	}
+	if def[0].CPULimit != "4" || def[0].MemoryLimit != "6Gi" {
+		t.Fatalf("the caller's spec was changed: %+v", def[0])
+	}
+	if len(said) != 1 || !strings.Contains(said[0], "lowered") || !strings.Contains(said[0], "cpu_limit 4 to 2, kubernetes.max_cpu") ||
+		!strings.Contains(said[0], `memory_limit 6Gi to 4Gi, LimitRange "container-limits"`) {
+		t.Fatalf("said %q", said)
+	}
+	// What a step asked for is held to the same limits and fails.
+	asked := []ContainerSpec{{Name: "image-1", Image: "golang:1.27", CPU: "1", CPULimit: "4", Memory: "2Gi", MemoryLimit: "6Gi",
+		ExplicitCPU: true, ExplicitMemory: true}}
+	if _, err := k.checkResources(context.Background(), asked, noSys); err == nil || !strings.Contains(err.Error(), "container image-1") {
+		t.Fatalf("an explicit ask above the limits must fail: %v", err)
+	}
+	// A step that asked for memory only: its memory is held, its CPU default is lowered.
+	mixed := []ContainerSpec{{Name: "image-1", Image: "golang:1.27", CPU: "1", CPULimit: "4", Memory: "2Gi", MemoryLimit: "2Gi", ExplicitMemory: true}}
+	got, err = k.checkResources(context.Background(), mixed, noSys)
+	if err != nil || got[0].CPULimit != "2" || got[0].MemoryLimit != "2Gi" {
+		t.Fatalf("%+v %v", got, err)
+	}
+}
+
+// With nothing sized by the server, the runner's own memory and memory_limit
+// settings apply as they did before step resources.
+func TestOperatorsMemoryLimitStillAppliesWhenTheServerSendsNoMemory(t *testing.T) {
+	k := kubeWith(KubernetesOptions{Memory: "256Mi", MemoryLimit: "1Gi"})
+	for _, sp := range []ContainerSpec{{Name: "a", Image: "x"}, {Name: "a", Image: "x", CPU: "2", CPULimit: "4"}} {
+		res := k.resources(sp)
+		if m := res.Requests[resMemory]; m.String() != "256Mi" {
+			t.Errorf("%+v: memory request %s", sp, m.String())
+		}
+		if m, ok := res.Limits[resMemory]; !ok || m.String() != "1Gi" {
+			t.Errorf("%+v: the runner's memory_limit was not applied: %v", sp, res.Limits)
+		}
+	}
+	// The server's memory, if it sends any, is what the container gets.
+	res := k.resources(ContainerSpec{Name: "a", Image: "x", Memory: "2Gi", MemoryLimit: "6Gi"})
+	if m := res.Limits[resMemory]; m.String() != "6Gi" {
+		t.Errorf("memory limit %s", m.String())
+	}
+	// A server that cleared its defaults and left a step to the namespace
+	// passes the pod check as it did before.
+	if _, err := k.checkResources(context.Background(), []ContainerSpec{{Name: "a", Image: "x"}}, noSys); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A container with no limit still counts toward a pod's limit and quota, by
+// its request, so that the diagnosis is not too lenient.
+func TestSumOfAsksCountsContainersWithoutALimit(t *testing.T) {
+	asks := []podAsk{
+		{name: "helper", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("64Mi")}}},
+		{name: "a", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("1Gi")}, Limits: corev1.ResourceList{resMemory: q("2Gi")}}},
+		{name: "b", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("3Gi")}}},
+		{name: "c", res: corev1.ResourceRequirements{Limits: corev1.ResourceList{resMemory: q("1Gi")}}},
+	}
+	total, n := sumAsks(asks, "limit", resMemory)
+	want := q("64Mi")
+	want.Add(q("2Gi"))
+	want.Add(q("3Gi"))
+	want.Add(q("1Gi"))
+	if n != 4 || total.Cmp(want) != 0 {
+		t.Errorf("limits: %s over %d containers, want %s over 4", total.String(), n, want.String())
+	}
+	total, n = sumAsks(asks, "request", resMemory)
+	want = q("64Mi")
+	want.Add(q("1Gi"))
+	want.Add(q("3Gi"))
+	want.Add(q("1Gi")) // c has a limit only: Kubernetes requests that much
+	if n != 4 || total.Cmp(want) != 0 {
+		t.Errorf("requests: %s over %d containers, want %s over 4", total.String(), n, want.String())
+	}
+	// A pod whose containers have requests only is still held to a limits quota.
+	hard := corev1.ResourceList{corev1.ResourceLimitsMemory: q("4Gi")}
+	noLimit := []podAsk{{name: "a", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("3Gi")}}},
+		{name: "b", res: corev1.ResourceRequirements{Requests: corev1.ResourceList{resMemory: q("3Gi")}}}}
+	if err := checkQuotas("launchway-steps", []corev1.ResourceQuota{*quota("compute", hard, corev1.ResourceList{})}, noLimit); err == nil ||
+		!strings.Contains(err.Error(), "limits.memory") {
+		t.Fatalf("containers without limits slipped past a limits quota: %v", err)
 	}
 }

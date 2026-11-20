@@ -27,7 +27,7 @@ func configs(t *testing.T) map[string]string {
 		"examples/local.yaml":                               "../../examples/local.yaml",
 		"examples/tutorials/deploy/launchway.yaml":          "../../examples/tutorials/deploy/launchway.yaml",
 		"examples/tutorials/build-and-sign-image/launchway": "../../examples/tutorials/build-and-sign-image/launchway.yaml",
-		"owner-shape":                                       "testdata/owner-shape.yaml",
+		"owner-shape": "testdata/owner-shape.yaml",
 	}
 }
 

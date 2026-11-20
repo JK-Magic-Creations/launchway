@@ -49,7 +49,7 @@ func TestDefaultsAreSeededIntoTheDatabaseAndApplyToAStepThatAsksForNothing(t *te
 	// What a step gets when it asks for nothing: promised 1 CPU and 2 GiB,
 	// and may use 4 CPUs and 6 GiB, the memory of a build, not the
 	// namespace's 2 GiB. Four parallel jobs fit in it.
-	if c.CPU != "1" || c.CPULimit != "4" || c.Memory != "2Gi" || c.MemoryLimit != "6Gi" || c.Threads != 4 || c.Explicit {
+	if c.CPU != "1" || c.CPULimit != "4" || c.Memory != "2Gi" || c.MemoryLimit != "6Gi" || c.Threads != 4 || c.ExplicitCPU || c.ExplicitMemory {
 		t.Fatalf("a step that asks for nothing got %+v", c)
 	}
 }
@@ -114,7 +114,7 @@ func TestAStepThatDeclaresResourcesGetsThem(t *testing.T) {
 	e, _ := newEngine(t)
 	create(t, e, "pipeline: p\nsteps:\n  build:\n    image: golang:1.27\n    run: go build ./...\n    resources: { cpu: 16, memory: 6Gi }\n", Trigger{Event: "manual"})
 	c := firstContainer(t, take(t, e))
-	if c.Memory != "6Gi" || c.MemoryLimit != "6Gi" || c.CPU != "16" || c.CPULimit != "16" || !c.Explicit {
+	if c.Memory != "6Gi" || c.MemoryLimit != "6Gi" || c.CPU != "16" || c.CPULimit != "16" || !c.ExplicitCPU || !c.ExplicitMemory {
 		t.Fatalf("%+v", c)
 	}
 	// 16 CPUs would be 16 compilations; 6 GiB feeds six.
@@ -169,13 +169,13 @@ func TestAContainersOwnSizeStandsInForTheDefault(t *testing.T) {
 	e, _ := newEngine(t)
 	create(t, e, "pipeline: p\ncontainers:\n  go: { image: golang:1.27, cpu: 500m, memory: 1Gi }\nsteps:\n  a: { container: go, run: a }\n", Trigger{Event: "manual"})
 	c := firstContainer(t, take(t, e))
-	if c.CPU != "500m" || c.CPULimit != "" || c.Memory != "1Gi" || c.MemoryLimit != "1Gi" || c.Explicit || c.Threads != 1 {
+	if c.CPU != "500m" || c.CPULimit != "" || c.Memory != "1Gi" || c.MemoryLimit != "1Gi" || !c.ExplicitCPU || !c.ExplicitMemory || c.Threads != 1 {
 		t.Fatalf("as written: %+v", c)
 	}
 	e2, _ := newEngine(t)
 	create(t, e2, "pipeline: p\ncontainers:\n  go: { image: golang:1.27, cpu: 500m, memory: 1Gi }\nsteps:\n  a: { container: go, run: a, resources: { memory: 4Gi } }\n", Trigger{Event: "manual"})
 	c = firstContainer(t, take(t, e2))
-	if c.Memory != "4Gi" || c.MemoryLimit != "4Gi" || c.CPU != "500m" || !c.Explicit {
+	if c.Memory != "4Gi" || c.MemoryLimit != "4Gi" || c.CPU != "500m" || !c.ExplicitMemory {
 		t.Fatalf("the step's memory, the container's cpu: %+v", c)
 	}
 }
@@ -184,7 +184,7 @@ func TestServicesAreLeftAsWritten(t *testing.T) {
 	e, _ := newEngine(t)
 	create(t, e, "pipeline: p\ncontainers:\n  db: { image: postgres:17, service: true, memory: 512Mi }\nsteps:\n  a: { image: x, run: a }\n", Trigger{Event: "manual"})
 	j := take(t, e)
-	if c := containerOf(t, j, "db"); c.Memory != "512Mi" || c.MemoryLimit != "" || c.Threads != 0 || c.Explicit {
+	if c := containerOf(t, j, "db"); c.Memory != "512Mi" || c.MemoryLimit != "" || c.Threads != 0 || c.ExplicitCPU || c.ExplicitMemory {
 		t.Fatalf("%+v", c)
 	}
 }
@@ -299,5 +299,129 @@ func TestABuildWithoutStepResourcesSizesNothing(t *testing.T) {
 	if _, err := e.CreateRun(NewRun{Project: "demo", Pipeline: parse(t, "pipeline: p\nsteps:\n  a: { image: x, run: a, resources: { memory: 1Gi } }\n"),
 		Trigger: Trigger{Event: "manual"}, Source: Source{Kind: "dir", Path: "/tmp"}}); err == nil || !strings.Contains(err.Error(), "does not know step resources") {
 		t.Fatalf("%v", err)
+	}
+}
+
+// An upgrade must not change existing pipelines: an installation that
+// already has runs when it first finds the tables empty gets every kind
+// seeded with nothing, so no step is sized; the administrator opts in with
+// the recommended values.
+func TestUpgradedInstallationIsSeededWithNothingSized(t *testing.T) {
+	clk, addr := newClock(), testdb.New(t)
+	e := mustOpenAs(t, addr, clk, 0, &syncBuffer{})
+	create(t, e, linear, Trigger{Event: "manual"}) // a run from before the upgrade
+	// The state an upgrade finds: schema 22's tables, empty.
+	for _, q := range []string{`DELETE FROM step_resource_defaults`, `DELETE FROM step_resource_limits`} {
+		if _, err := e.db.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.Close()
+
+	e2 := mustOpenAs(t, addr, clk, 0, &syncBuffer{})
+	defer e2.Close()
+	cfg, err := e2.StepResources()
+	if err != nil || len(cfg.Defaults) != 1 {
+		t.Fatalf("%+v %v", cfg, err)
+	}
+	if d := cfg.Defaults[0]; d.Kind != pipeline.KindStep || !d.Request.IsZero() || d.UpdatedBy != "upgrade" {
+		t.Fatalf("an upgraded installation must start with nothing sized: %+v", d)
+	}
+	take(t, e2) // the old run's step, before a new one
+	create(t, e2, linear, Trigger{Event: "manual"})
+	j, err := e2.Lease(context.Background(), runner, 0)
+	if err != nil || j == nil {
+		t.Fatalf("%v %v", j, err)
+	}
+	if c := firstContainer(t, j); c.CPU != "" || c.CPULimit != "" || c.Memory != "" || c.MemoryLimit != "" || c.Threads != 0 || c.ExplicitCPU || c.ExplicitMemory {
+		t.Fatalf("a step of an upgraded installation was sized: %+v", c)
+	}
+
+	// Opting in: the recommended values are what a fresh installation has.
+	rec, err := e2.RecommendedStepResource(pipeline.KindStep)
+	if err != nil || rec != pipeline.SeedStepResources[pipeline.KindStep] {
+		t.Fatalf("%+v %v", rec, err)
+	}
+	if _, after, err := e2.SetStepResourceDefault(pipeline.KindStep, rec, "ann"); err != nil || after.Memory != "2Gi" || after.MemoryLimit != "6Gi" {
+		t.Fatalf("%+v %v", after, err)
+	}
+	if _, err := e2.RecommendedStepResource("deploy"); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("a kind with no default: %v", err)
+	}
+}
+
+// The runner is told which of a container's CPU and memory a step asked for,
+// so that it fails the step for those and only lowers the defaults.
+func TestContainersSayWhichOfCPUAndMemoryWereAskedFor(t *testing.T) {
+	for _, c := range []struct {
+		name, src   string
+		cpu, memory bool
+	}{
+		{"nothing", "pipeline: p\nsteps:\n  a: { image: x, run: a }\n", false, false},
+		{"memory", "pipeline: p\nsteps:\n  a: { image: x, run: a, resources: { memory: 3Gi } }\n", false, true},
+		{"cpu", "pipeline: p\nsteps:\n  a: { image: x, run: a, resources: { cpu_limit: 2 } }\n", true, false},
+		{"both", "pipeline: p\nsteps:\n  a: { image: x, run: a, resources: { cpu: 1, memory_limit: 3Gi } }\n", true, true},
+		{"the container's own", "pipeline: p\ncontainers:\n  c: { image: x, memory: 1Gi }\nsteps:\n  a: { container: c, run: a }\n", false, true},
+	} {
+		e, _ := newEngine(t)
+		create(t, e, c.src, Trigger{Event: "manual"})
+		ct := firstContainer(t, take(t, e))
+		if ct.ExplicitCPU != c.cpu || ct.ExplicitMemory != c.memory {
+			t.Errorf("%s: explicit cpu %v memory %v, want %v %v", c.name, ct.ExplicitCPU, ct.ExplicitMemory, c.cpu, c.memory)
+		}
+	}
+}
+
+// A container is shared by the steps that use its image; whether a step
+// asked for resources is the step's own, so that the host executor refuses
+// only a step that asked.
+func TestJobSaysWhetherThisStepAskedForResources(t *testing.T) {
+	e, _ := newEngine(t)
+	create(t, e, "pipeline: p\nsteps:\n  a: { image: x, run: a }\n  b: { image: x, run: b, needs: a, resources: { memory: 3Gi } }\n", Trigger{Event: "manual"})
+	j := take(t, e)
+	if j.StepID != "a" || j.ResourcesAsked {
+		t.Fatalf("%s asked: %v", j.StepID, j.ResourcesAsked)
+	}
+	// Both run in the one container, which holds b's 3Gi.
+	if c := firstContainer(t, j); c.Memory != "3Gi" || !c.ExplicitMemory {
+		t.Fatalf("%+v", c)
+	}
+	ok(t, e, j, nil)
+	if j = take(t, e); j.StepID != "b" || !j.ResourcesAsked {
+		t.Fatalf("%s asked: %v", j.StepID, j.ResourcesAsked)
+	}
+}
+
+// A container's own cpu and memory (written under containers, which existed
+// before step resources) are held to limits lowered after the run was
+// created, as a step's resources are, and a default never fails a step.
+func TestLimitsLoweredAfterTheRunWasCreatedHoldAContainersOwnSizeToo(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, "pipeline: p\ncontainers:\n  big: { image: x, memory: 6Gi }\nsteps:\n  a: { image: y, run: a }\n  b: { container: big, run: b, needs: a }\n", Trigger{Event: "manual"})
+	j := take(t, e)
+	// The recommended defaults are 6Gi at most; a limit below them cannot be set, so lower the default first.
+	if _, _, err := e.SetStepResourceDefault(pipeline.KindStep, resources.Request{Memory: "1Gi"}, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := e.SetStepResourceLimits(ResourceLimits{MaxMemory: "4Gi"}, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	ok(t, e, j, nil)
+	want(t, statuses(t, e, id), "run", "failed", "a", "succeeded", "b", "failed")
+	d, err := e.GetRun(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range d.StepList {
+		switch s.ID {
+		case "b":
+			if !strings.Contains(s.Error, "container big asks for memory 6Gi") || !strings.Contains(s.Error, "max_memory 4Gi") {
+				t.Errorf("b: %s", s.Error)
+			}
+		case "a":
+			if s.Error != "" {
+				t.Errorf("a step that asked for nothing failed on a default: %s", s.Error)
+			}
+		}
 	}
 }

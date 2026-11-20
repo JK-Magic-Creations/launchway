@@ -65,8 +65,9 @@ func isPostgres(addr string) bool {
 }
 
 // openDB opens SQLite at a file path, or PostgreSQL at a postgres:// URL,
-// and brings the schema up to the one this build knows (see migrate). A
-// database that does not answer is tried again for up to wait.
+// brings the schema up to the one this build knows (see migrate), and checks
+// that the recorded schema's tables and columns exist. A database that does
+// not answer is tried again for up to wait.
 func openDB(addr string, wait time.Duration, known int, log *slog.Logger) (*dbx, SchemaInfo, error) {
 	var d *dbx
 	if isPostgres(addr) {
@@ -101,6 +102,10 @@ func openDB(addr string, wait time.Duration, known int, log *slog.Logger) (*dbx,
 	}
 	info, err := migrate(d, known, log)
 	if err != nil {
+		d.Close()
+		return nil, info, err
+	}
+	if err := checkSchemaMarkers(d, info.Database, log); err != nil {
 		d.Close()
 		return nil, info, err
 	}

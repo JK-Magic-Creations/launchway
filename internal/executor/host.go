@@ -24,8 +24,19 @@ func (*Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	if len(s.services()) > 0 {
 		return -1, errors.New("services need the container or kubernetes executor")
 	}
-	if c, ok := s.stepContainer(); ok && c.Explicit {
-		return -1, errHostCannotLimit(c)
+	if c, ok := s.stepContainer(); ok {
+		// The host can limit nothing. A step that asked for resources is
+		// refused; resources it only has by default (the installation's, or
+		// its container's own cpu and memory) are not applied, and the log
+		// says so once, so that nobody believes the step is limited.
+		if s.AsksResources {
+			return -1, errHostCannotLimit(c)
+		}
+		if a := c.amount(); !a.IsZero() && !c.Service {
+			out("system", "resources not enforced on the host executor: "+a.Describe()+
+				" (the installation's default or the container's own) is not applied; this step runs without limits. "+
+				"The podman, docker and kubernetes executors enforce it")
+		}
 	}
 	script, err := writeScript(s)
 	if err != nil {

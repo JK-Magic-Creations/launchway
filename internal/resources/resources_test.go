@@ -166,3 +166,21 @@ func TestDescribe(t *testing.T) {
 		t.Error(got)
 	}
 }
+
+// A quantity too big for any host is reported as too big, whatever the
+// suffix, and not as a value that wrapped around to something small.
+func TestQuantitiesThatAreTooBigSaySo(t *testing.T) {
+	for _, s := range []string{"9000000Ti", "100000000000000000000", "9999999999999999999999Gi", "1" + strings.Repeat("0", 400) + "Ti"} {
+		if n, err := ParseMemory(s); err == nil || !strings.Contains(err.Error(), "too big") {
+			t.Errorf("ParseMemory(%q) = %d, %v", s, n, err)
+		}
+	}
+	for _, s := range []string{"99999999999999999999999", "9999999999999999999999m", "1" + strings.Repeat("0", 400)} {
+		if n, err := ParseCPU(s); err == nil || !strings.Contains(err.Error(), "too big") {
+			t.Errorf("ParseCPU(%q) = %d, %v", s, n, err)
+		}
+	}
+	if n, err := ParseMemory("1Ti"); err != nil || n != 1<<40 {
+		t.Errorf("1Ti = %d, %v", n, err)
+	}
+}

@@ -8,6 +8,7 @@
 package resources
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -55,18 +56,21 @@ func ParseCPU(s string) (int64, error) {
 		return 0, fmt.Errorf("%q is not a CPU amount; write for example 500m, 2 or 0.5", s)
 	}
 	f, err := strconv.ParseFloat(m[1], 64)
+	if errors.Is(err, strconv.ErrRange) {
+		return 0, fmt.Errorf("%q is too big: more than can be asked for", s)
+	}
 	if err != nil {
 		return 0, fmt.Errorf("%q is not a CPU amount", s)
 	}
 	if m[2] == "" {
 		f *= 1000
 	}
+	if f > float64(maxQuantity) {
+		return 0, fmt.Errorf("%q is too big: more than can be asked for", s)
+	}
 	n := int64(math.Round(f))
 	if n < 1 {
 		return 0, fmt.Errorf("%q is less than one millicore (1m)", s)
-	}
-	if n > maxQuantity {
-		return 0, fmt.Errorf("%q is more than can be asked for", s)
 	}
 	return n, nil
 }
@@ -80,17 +84,22 @@ func ParseMemory(s string) (int64, error) {
 		return 0, fmt.Errorf("%q is not a memory amount; write for example 512Mi or 6Gi", s)
 	}
 	f, err := strconv.ParseFloat(m[1], 64)
+	if errors.Is(err, strconv.ErrRange) {
+		return 0, fmt.Errorf("%q is too big: more than can be asked for", s)
+	}
 	if err != nil {
 		return 0, fmt.Errorf("%q is not a memory amount", s)
 	}
 	mult := map[string]float64{"": 1, "k": 1e3, "M": 1e6, "G": 1e9, "T": 1e12,
 		"Ki": 1 << 10, "Mi": 1 << 20, "Gi": 1 << 30, "Ti": 1 << 40}[m[2]]
+	// Check before converting: a float past int64's range converts to an
+	// unspecified value, which could pass for a small amount.
+	if v := f * mult; v > float64(maxQuantity) {
+		return 0, fmt.Errorf("%q is too big: more than can be asked for", s)
+	}
 	n := int64(math.Round(f * mult))
 	if n < 1 {
 		return 0, fmt.Errorf("%q is less than one byte", s)
-	}
-	if n > maxQuantity {
-		return 0, fmt.Errorf("%q is more than can be asked for", s)
 	}
 	return n, nil
 }

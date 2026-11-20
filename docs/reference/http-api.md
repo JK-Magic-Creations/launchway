@@ -382,6 +382,20 @@ Granting and revoking also need the role `policy.waivers.allow` names (admin by 
 
 `reason` and an expiry are required; instead of `expires_in_hours` you may send `expires_at` (Unix milliseconds). `run`, `environment` and `finding` narrow the waiver. The revoke body is optional: `{"reason": "..."}`. See [Policy rules](policy-rules.md).
 
+## Step resources
+
+The installation's [default CPU and memory](pipeline.md#resources) for each kind of step, and the most
+any step may ask for. They are kept in the database. Anyone signed in may read them; changing them
+needs an administrator, and every change is audited with the values before and after.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/step-resources` | `signed-in` | — | Everything: `defaults` (each with `kind`, `cpu`, `cpu_limit`, `memory`, `memory_limit`, `updated_at`, `updated_by`), `limits` (`max_cpu`, `max_memory`, `memory_per_thread`) and `kinds`, the step kinds that have defaults. A value that is empty is not set. |
+| `GET /api/v1/step-resources/limits` | `signed-in` | — | The limits alone. |
+| `PUT /api/v1/step-resources/limits` | `admin` | `step_resources.set_limits` | Replaces the limits: `{"max_cpu", "max_memory", "memory_per_thread"}`. A value left out is not set. `400` for a quantity that does not read, a `memory_per_thread` under 64Mi, or a maximum below a default (lower the default first). |
+| `GET /api/v1/step-resources/defaults/{kind}` | `signed-in` | — | One kind's default. `404` for a kind that has none. |
+| `PUT /api/v1/step-resources/defaults/{kind}` | `admin` | `step_resources.set_default` | Replaces a kind's default: `{"cpu", "cpu_limit", "memory", "memory_limit"}`. A value left out is not set. `400` for a quantity that does not read, a limit below what is promised, or a value above the installation's limits. |
+
 ## API tokens
 
 These routes need sign-in on: with sign-in off they answer `404` with `API tokens need sign-in, which is off on this server (auth.mode: none)`.
