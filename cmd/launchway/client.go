@@ -186,6 +186,10 @@ func (cl *client) call(method, path string, body, v any) error {
 	}
 	req.Header.Set("Authorization", "Bearer "+cl.c.Token)
 	req.Header.Set("User-Agent", "launchway-cli/"+version)
+	// Not a browser: a server without sign-in (auth.mode: none) treats
+	// every caller as its user and asks every change for this header,
+	// which a page of another site cannot send.
+	req.Header.Set("X-Launchway-CSRF", "1")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

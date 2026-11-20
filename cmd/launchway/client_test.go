@@ -343,3 +343,21 @@ func TestCLIReports(t *testing.T) {
 		t.Errorf("tests of a run that does not exist: %v", err)
 	}
 }
+
+// Against a server without sign-in (auth.mode: none) the CLI's changes are
+// accepted: it says it is not a browser, as Launchway's own pages do.
+func TestCLIWithoutSignIn(t *testing.T) {
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	eng, err := engine.Open(engine.Options{Database: testdb.New(t), Logger: quiet})
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewServer((&api.Server{Engine: eng, Log: quiet, RunnerToken: "r", Actor: "ada"}).Handler())
+	t.Cleanup(func() { srv.Close(); eng.Close() })
+	var out bytes.Buffer
+	cl := newClient(credentials{Server: srv.URL}, &out)
+	err = cl.call("POST", "/api/v1/runs/run_nope/cancel", map[string]string{}, nil)
+	if err == nil || strings.Contains(err.Error(), "header is missing") || !strings.Contains(strings.ToLower(err.Error()), "not found") && !strings.Contains(err.Error(), "no run") {
+		t.Fatalf("a change without sign-in: %v", err)
+	}
+}
