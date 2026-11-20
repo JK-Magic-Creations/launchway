@@ -57,10 +57,21 @@ type ContainerSpec struct {
 	Name    string
 	Image   string
 	Env     map[string]string // services only; a step's environment already includes its container's
-	CPU     string
-	Memory  string
+	CPU     string            // promised, such as 500m or 2
+	Memory  string            // promised, such as 2Gi
 	Service bool
 	Command []string
+
+	// What the server worked out from the steps' resources and the
+	// installation's defaults (see pipeline.Container); zero for a service.
+	CPULimit    string // the most CPU it may use; empty: no limit
+	MemoryLimit string // the most memory it may use; empty: Memory
+	// Threads is how many parallel jobs the tools in it should start so that
+	// they fit its limits; 0 leaves the tools to decide.
+	Threads int
+	// Explicit says that a step asked for resources. An executor that
+	// cannot limit anything refuses such a step rather than ignore it.
+	Explicit bool
 }
 
 // services returns the service containers.

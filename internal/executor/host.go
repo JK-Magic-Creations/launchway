@@ -24,6 +24,9 @@ func (*Host) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	if len(s.services()) > 0 {
 		return -1, errors.New("services need the container or kubernetes executor")
 	}
+	if c, ok := s.stepContainer(); ok && c.Explicit {
+		return -1, errHostCannotLimit(c)
+	}
 	script, err := writeScript(s)
 	if err != nil {
 		return -1, err

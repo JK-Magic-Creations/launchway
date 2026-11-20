@@ -80,17 +80,17 @@ func checkMarkers(t *testing.T, e *Engine, n int) {
 	}
 }
 
-// Every number from 17 to 21 holds its real migration, once: none is empty,
+// Every number from 17 to 22 holds its real migration, once: none is empty,
 // each is additive, and what each brings is written by that migration and
 // no other (a placeholder where a real migration belongs, a real migration
 // repeated, or two numbers swapped, fails here). Applied one at a time to a
 // database of the schema before, each brings exactly its own tables and
 // columns, on SQLite and (with LAUNCHWAY_TEST_POSTGRES) PostgreSQL.
 func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
-	if len(migrations) != schemaPools || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
+	if len(migrations) != schemaResources || schemaResources != schemaPools+1 || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
 		schemaVerify != schemaReports+1 || schemaReports != schemaBlobs+1 || schemaBlobs != schemaPolicy+1 {
-		t.Fatalf("schemas are not 16, 17, 18, 19, 20, 21 in a row: policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, migrations %d",
-			schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, len(migrations))
+		t.Fatalf("schemas are not 16, 17, 18, 19, 20, 21, 22 in a row: policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, resources %d, migrations %d",
+			schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, len(migrations))
 	}
 	create := regexp.MustCompile(`(?i)CREATE TABLE (?:IF NOT EXISTS )?(\w+)`)
 	alter := regexp.MustCompile(`(?i)ALTER TABLE (\w+) ADD COLUMN (\w+)`)
@@ -147,7 +147,7 @@ func TestFreshDatabaseReachesTheNewestSchema(t *testing.T) {
 	var buf syncBuffer
 	e := mustOpenAs(t, addr, clk, 0, &buf)
 	info, err := e.Schema(context.Background())
-	if err != nil || info.Database != len(migrations) || info.Code != len(migrations) || info.Database != schemaPools || !info.Compatible() {
+	if err != nil || info.Database != len(migrations) || info.Code != len(migrations) || info.Database != schemaResources || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	if info.Minimum != 7 {
@@ -211,10 +211,10 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 			}
 			t.Cleanup(func() { cur.Close() })
 			info, err := cur.Schema(context.Background())
-			if err != nil || info.Database != schemaPools || info.Code != schemaPools || !info.Compatible() || info.Minimum != 7 {
+			if err != nil || info.Database != schemaResources || info.Code != schemaResources || !info.Compatible() || info.Minimum != 7 {
 				t.Fatalf("after the upgrade: %+v %v", info, err)
 			}
-			for v := from + 1; v <= schemaPools; v++ {
+			for v := from + 1; v <= schemaResources; v++ {
 				if !strings.Contains(logCur.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 					t.Errorf("migration %d was not applied:\n%s", v, logCur.String())
 				}
@@ -222,7 +222,7 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 			if strings.Contains(logCur.String(), fmt.Sprintf(`applied a database migration" schema=%d `, from)) {
 				t.Errorf("migration %d, already applied, was applied again", from)
 			}
-			checkMarkers(t, cur, schemaPools)
+			checkMarkers(t, cur, schemaResources)
 			var after int
 			if err := cur.db.QueryRow(`SELECT count(*) FROM events`).Scan(&after); err != nil || after < events {
 				t.Fatalf("events after the upgrade: %d, before %d: %v", after, events, err)
@@ -259,7 +259,7 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 
 				var log syncBuffer
 				older := mustOpenAs(t, addr, clk, back, &log)
-				if info, err := older.Schema(context.Background()); err != nil || info.Code != back || info.Database != schemaPools || !info.Compatible() {
+				if info, err := older.Schema(context.Background()); err != nil || info.Code != back || info.Database != schemaResources || !info.Compatible() {
 					t.Fatalf("the schema-%d build's view: %+v %v", back, info, err)
 				}
 				if c := strings.Count(log.String(), "running against a database written by a newer version"); c != 1 {

@@ -324,6 +324,7 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `env` | mapping | none | Environment variables, name to value. Names match `^[A-Za-z_][A-Za-z0-9_]*$`; `LAUNCHWAY_*` is reserved. In a looped step a value may be [`{ each: key }`](#value-forms) |
 | `secrets` | mapping | none | Environment variables whose values a runner looks up: variable name to a [secret reference](#secret-references). A name may not also be under `env` |
 | `reports` | mapping | none | Files the step writes that Launchway reads once it ends, passed or failed; see [Reports](#reports) |
+| `resources` | mapping | the installation's default for the kind | The CPU and memory the step asks for; see [Resources](#resources) |
 | `artifacts` | list | none | Files the step keeps once it has run; see [Artifacts](#artifacts) |
 | `fetch` | list | none | Artifacts of earlier steps to put in the workspace first; see [Fetch](#fetch) |
 | `for_each` | mapping | none | Repeat the step once for each combination of values; see [For each](#for-each) |
@@ -880,6 +881,86 @@ steps:
     run: python train.py
 ```
 
+## Resources
+
+`resources` says how much CPU and memory a step needs. Without it a step gets the installation's
+default for its kind, which an administrator keeps in the database (see
+[`launchway step-resources`](cli.md#step-resources) and `GET /api/v1/step-resources` in the
+[HTTP API](http-api.md)); the defaults that a new installation starts from are in the table below.
+Only a step that runs a script (kind `step`) takes it: an image step is built by the builder, whose
+memory is set where the builder is deployed, deploy, rollout, rollback, verify and ai steps run in
+the runner itself, and an approval runs nothing. A step that uses a template says nothing of its
+own; the template's steps may.
+
+Each of CPU and memory has an amount the step is **promised** (`cpu`, `memory`: the scheduler keeps
+that much free for it) and a **limit** (`cpu_limit`, `memory_limit`: the most it may use). A limit
+left out is the same as the amount promised, so `memory: 6Gi` is a step that is given 6 GiB and is
+stopped, not slowed down, if it uses more. Where a step writes anything about CPU (or memory), the
+default's CPU (or memory) is not used at all; what it leaves out of its own is filled in as the table
+says.
+
+<!-- keys: step-resources -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `cpu` | quantity | the default's | CPU promised, such as `500m`, `2` or `0.5`; at least `1m` |
+| `cpu_limit` | quantity | `cpu` | The most CPU the step may use. Not below `cpu` |
+| `memory` | quantity | the default's | Memory promised, such as `512Mi`, `6Gi` or `2G` (`Ki` `Mi` `Gi` `Ti` are powers of 1024, `k` `M` `G` `T` of 1000) |
+| `memory_limit` | quantity | `memory` | The most memory the step may use; above it the step is killed. Not below `memory` |
+
+<!-- validate -->
+```yaml
+pipeline: compile
+steps:
+  build:
+    image: golang:1.27
+    run: go build ./...
+    resources: { cpu: 4, memory: 6Gi }
+  test:
+    image: golang:1.27
+    needs: build
+    run: go test ./...
+    resources: { cpu: 1, cpu_limit: 8, memory: 2Gi, memory_limit: 6Gi }
+```
+
+**Defaults.** A new installation starts with these for kind `step`, and an administrator changes
+them without a restart; a change applies to the next pod a run starts (a run's pod is made once, for
+its first step, and kept for its other steps). The values live in the database, so every server of
+an installation agrees:
+
+| Setting | Starts at | Meaning |
+|---|---|---|
+| `cpu`, `cpu_limit` | `1`, `4` | A step is promised one CPU and may use four |
+| `memory`, `memory_limit` | `2Gi`, `6Gi` | A step is promised 2 GiB and may use six |
+| `max_cpu`, `max_memory` | not set | The most any step may ask for, on the installation |
+| `memory_per_thread` | `1Gi` | The memory one parallel job is assumed to need (see below) |
+
+**Steps that share an image share a container.** A run's steps that use the same image run in one
+container, so on Kubernetes the container gets the largest of what its steps ask for, and every
+step in it may use that much. A container written under `containers` with its own `cpu` or `memory`
+counts as asking for them.
+
+**Parallelism follows the memory.** A container that may use 2 GiB but sees 32 CPUs makes `go build`
+start about 32 compilations and run out of memory. So alongside the limits, Launchway tells the
+tools how many jobs to start: the smaller of the CPUs it may use (rounded up) and its memory limit
+divided by `memory_per_thread`, never fewer than one. It sets `GOMAXPROCS` (which `go build` also
+uses for how many packages it compiles at once), `MAKEFLAGS=-jN`, `CARGO_BUILD_JOBS`,
+`CMAKE_BUILD_PARALLEL_LEVEL`, `UV_THREADPOOL_SIZE` and, for your own scripts,
+`LAUNCHWAY_PARALLELISM`. A variable the step sets under `env` is left as it wrote it. With the
+starting defaults that is 4 jobs; `memory: 6Gi` with no CPU written is 4 as well, and
+`cpu: 16, memory: 6Gi` is 6.
+
+**Where it is applied.** Kubernetes sets the pod's requests and limits. Podman and Docker run each
+step with `--memory`, `--memory-reservation` and `--cpus`. The host executor cannot limit anything:
+a step that asks for resources there is refused with a message saying so, and the defaults are not
+applied. The runner log says what each container was given.
+
+**Checks.** `launchway validate` checks the quantities. A run is refused when it is created if a
+step asks for more than the installation's `max_cpu` or `max_memory`, the message naming the step,
+the value and the limit. On Kubernetes the executor checks again before it creates the pod, against
+the namespace's LimitRange (the container's and the pod's maximum) and ResourceQuota, and against
+the runner's own `kubernetes.max_cpu` and `kubernetes.max_memory`; the step then fails at once with
+a message naming which of them it exceeds.
+
 ## When
 
 `when` holds conditions; every condition written must hold for the step to run, and within one,
@@ -1310,6 +1391,7 @@ older server. Use them only once every server and runner is upgraded; see
 | 13 | `inputs`, `when.input`, `when.upstream`, `for_each`, `on.schedule`, `on.webhook` |
 | 14 | rollout steps, `rollout.until: paused`, `rollout.pauses`, an approval's `deployment`, `abort_first`, `on_cancel: abort` |
 | 15 | image steps, a change's `digest` |
+| 22 | a step's `resources` |
 
 ## What next
 

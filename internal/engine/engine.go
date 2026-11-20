@@ -461,6 +461,10 @@ func Open(o Options) (*Engine, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := e.seedStepResources(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancelBg = cancel
 	if db.pg {
@@ -695,6 +699,16 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	}
 	if nr.Pipeline.UsesSchemaPools() && !e.knows(schemaPools) {
 		return nil, fmt.Errorf("%w: this server does not know runner pools (runner:, schema %d)", ErrConflict, schemaPools)
+	}
+	if nr.Pipeline.UsesSchemaResources() {
+		if !e.knows(schemaResources) {
+			return nil, fmt.Errorf("%w: this server does not know step resources (resources:, schema %d)", ErrConflict, schemaResources)
+		}
+	}
+	// Step resources above the installation's limits could never be given;
+	// say so now, naming the limit, instead of failing the step later.
+	if ps := e.CheckResources(nr.Pipeline); len(ps) > 0 {
+		return nil, ps
 	}
 	// While build pools decide where runs go, older servers, which would
 	// hand any run's steps to any runner, must leave new runs alone.
@@ -2112,6 +2126,11 @@ func (c *cmd) advance() {
 					return
 				}
 				changed = true
+			case c.resourcesRefused(id, def):
+				if c.err != nil {
+					return
+				}
+				changed = true
 			case !st.secretsAllowed() && len(def.Secrets) > 0:
 				// Never handed to a runner, so no runner looks a secret up
 				// for text that nobody reviewed.
@@ -2176,7 +2195,7 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		env[v.Name] = v.Value
 	}
 	return &Job{
-		Container: st.Pipeline.ContainerFor(def), Containers: st.Pipeline.RunContainers(),
+		Container: st.Pipeline.ContainerFor(def), Containers: c.runContainers(),
 		LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl),
 		RunID: st.ID, Project: st.Project, RunNumber: st.Number, Pipeline: st.Pipeline.Name,
 		// advance fails a draft's step that asks for secrets it may not
