@@ -18,11 +18,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
+	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -60,6 +62,11 @@ type Server struct {
 	// ReportsOrigin, when set (https://reports.example.com), is a separate
 	// origin that alone serves hosted HTML reports (see reports.go).
 	ReportsOrigin string
+	// AI, when models are configured, lets people ask one to explain a
+	// failed step; the server reads model keys from AISecrets (ai.secrets),
+	// its own stores. Nil: the explain button says it is off.
+	AI        *ai.Client
+	AISecrets *secrets.Resolver
 
 	sealerMu  sync.Mutex
 	sealer    *auth.Sealer // seals the state of sign-ins in progress
@@ -234,6 +241,18 @@ func (s *Server) routes() []route {
 		{"GET /mcp", public, "", s.mcpEndpoint},
 		{"DELETE /mcp", public, "", s.mcpEndpoint},
 		{"GET /.well-known/oauth-protected-resource/mcp", public, "", s.protectedResourceMetadata},
+
+		// Verifications and AI models (schema 19).
+		{"POST /api/runner/v1/deploy/verify/lease", runnerOnly, "", s.verifyLease},
+		{"POST /api/runner/v1/deploy/verify/interval", runnerOnly, "", s.verifyInterval},
+		{"GET /api/v1/runs/{id}/verifications", runRead, "", s.runVerifications},
+		{"GET /api/v1/verifications", signedIn, "", s.listVerifications},
+		{"GET /api/v1/runs/{id}/steps/{step}/verify/controls", runRead, "", s.verifyControls},
+		{"POST /api/v1/runs/{id}/steps/{step}/verify/override", runOperate, "verification.override", s.overrideVerify},
+		{"GET /api/v1/health-sources", signedIn, "", s.listHealthSources},
+		{"GET /api/v1/ai/models", signedIn, "", s.listModels},
+		{"GET /api/v1/runs/{id}/steps/{step}/explanations", runRead, "", s.stepExplanations},
+		{"POST /api/v1/runs/{id}/steps/{step}/explain", runOperate, "step.explain", s.explainStep},
 	}
 }
 

@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/coverage"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/ids"
@@ -83,6 +84,12 @@ type Options struct {
 	// Policy configures delivery policies (schema 16). Every server
 	// sharing a database must be given the same ones.
 	Policy PolicyOptions
+	// HealthSources are the health sources verify steps may name (schema
+	// 19), and Models the AI models steps may ask; nil means none, and then
+	// nothing is ever sent to a model. Every server sharing a database must
+	// have the same ones.
+	HealthSources []HealthSource
+	Models        *ai.Registry
 
 	// schema, for tests, makes the engine behave as a build that knows only
 	// the first schema migrations and their events; 0 means every one (or
@@ -112,6 +119,8 @@ type Engine struct {
 	envs          map[string]Environment
 	pol           PolicyOptions
 	polHash       string // names the configuration's own policies
+	sources       map[string]HealthSource
+	models        *ai.Registry
 
 	// deployKick wakes the reaper to hand free locks to waiting deploy steps
 	// at once (see kickDeploys).
@@ -201,6 +210,11 @@ type Job struct {
 	// ImageBuild, for an image step, is what to build (schema 15). Only
 	// runners with FeatureImages lease such steps.
 	ImageBuild *ImageJob `json:"image_build,omitempty"`
+	// Verify, for a verify step, is the verification a deploy runner reads
+	// (schema 19); AI, for an ai step, the question a runner with FeatureAI
+	// asks.
+	Verify *VerifyJob `json:"verify,omitempty"`
+	AI     *AIJob     `json:"ai,omitempty"`
 }
 
 // JobReports is what a runner collects after a step.
@@ -246,6 +260,10 @@ type Result struct {
 	// Image, for an image step, is what it made (schema 15): also when it
 	// failed after building (a scan that failed it, a push that failed).
 	Image *ImageRecord `json:"image,omitempty"`
+	// Verify, for a verify step, is what the runner adds to the verdict
+	// (schema 19); AI, for an ai step, what the call used.
+	Verify *VerifyResult `json:"verify,omitempty"`
+	AI     *AIRecord     `json:"ai,omitempty"`
 }
 
 // CollectedReports are the report files a runner found after a step, and
@@ -329,6 +347,13 @@ func Open(o Options) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+	sources, err := checkHealthSources(o.HealthSources)
+	if err != nil {
+		return nil, err
+	}
+	if (len(sources) > 0 || (o.Models != nil && len(o.Models.List()) > 0)) && known < schemaVerify {
+		return nil, fmt.Errorf("health sources and AI models need schema %d; this build knows %d", schemaVerify, known)
+	}
 	if len(envs) > 0 && known < schemaDeploy {
 		return nil, fmt.Errorf("environments need schema %d; this build knows %d", schemaDeploy, known)
 	}
@@ -353,6 +378,8 @@ func Open(o Options) (*Engine, error) {
 		envs:       envs,
 		pol:        pol,
 		polHash:    policy.Hash(pol.Inline),
+		sources:    sources,
+		models:     o.Models,
 		deployKick: make(chan struct{}, 1),
 		published:  map[string]int64{},
 		selfOK:     o.AllowSelfApproval == nil || *o.AllowSelfApproval,
@@ -607,6 +634,14 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	}
 	if nr.Pipeline.UsesSchema18() && !e.knows(schemaReports) {
 		return nil, fmt.Errorf("%w: this server does not know test attachments, coverage or HTML reports (schema %d)", ErrConflict, schemaReports)
+	}
+	if nr.Pipeline.UsesSchemaVerify() {
+		if !e.knows(schemaVerify) {
+			return nil, fmt.Errorf("%w: this server does not know verify or ai steps (schema %d)", ErrConflict, schemaVerify)
+		}
+		if ps := e.CheckVerify(nr.Project, nr.Pipeline); len(ps) > 0 {
+			return nil, ps
+		}
 	}
 	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
 		return nil, err
@@ -913,6 +948,11 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 		where = `(runs.runner = ? OR runs.runner = '' OR o.last_seen IS NULL OR o.last_seen < ?)`
 		args = append(args, now.Add(-e.runnerTimeout).UnixMilli())
 	}
+	if e.knows(schemaVerify) && r.Has(FeatureAI) {
+		// An ai step needs no workspace: any runner that calls models may
+		// take it, whoever holds the run.
+		where = `(` + where + ` OR s.kind = 'ai')`
+	}
 	if e.knows(schemaReruns) {
 		// Runs that need a newer server are left to one.
 		where += ` AND runs.min_schema <= ?`
@@ -961,6 +1001,28 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			prev := c.st.Runner
 			if !c.runnerCan(r, cd.step) {
 				return nil // it needs a runner that knows artifacts
+			}
+			if def := c.st.Pipeline.Step(cd.step); def.IsAI() && c.e.knows(schemaVerify) {
+				// An ai step needs no workspace: any runner that can call
+				// models takes it, and the run stays where it is.
+				aj, why := c.aiJob(def)
+				if why != "" {
+					if c.err != nil {
+						return c.err
+					}
+					c.failStep(cd.step, why)
+					c.advance()
+					return nil
+				}
+				leaseID := ids.New("lease")
+				if _, err := c.tx.Exec(`INSERT INTO leases(id, run_id, step_id, attempt, runner, expires_at) VALUES(?,?,?,?,?,?)`,
+					leaseID, cd.run, cd.step, s.Attempt, r.ID, c.leaseUntil()); err != nil {
+					return err
+				}
+				c.emit(StepLeased, Payload{Step: cd.step, Attempt: s.Attempt, Lease: leaseID, Runner: r.ID, Inputs: c.inputs(cd.step)})
+				job = c.job(cd.step, leaseID)
+				job.AI = aj
+				return c.addArtifactsToJob(job)
 			}
 			if prev != r.ID {
 				if ownOnly {
@@ -1134,6 +1196,11 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			c.advance()
 			return nil
 		}
+		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.IsVerify() && c.e.knows(schemaVerify) {
+			c.finishVerify(l.stepID, s, def, leaseID, res)
+			c.advance()
+			return nil
+		}
 		p := Payload{Step: l.stepID, Attempt: l.attempt, Lease: leaseID, ExitCode: res.ExitCode, Outputs: res.Outputs}
 		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.IsImage() && c.e.knows(schemaImages) {
 			// An image step's outputs are what it made, never what anything
@@ -1145,6 +1212,12 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 					p.Outputs = imageOutputs(res.Image)
 				}
 			}
+		}
+		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.IsAI() && c.e.knows(schemaVerify) {
+			// An ai step's outputs are the answer's, as the step declares
+			// them, and what the call used is counted.
+			p.Outputs = aiOutputs(def, res.Outputs)
+			p.AI = cleanAIRecord(def, res.AI)
 		}
 		if def := c.st.Pipeline.Step(l.stepID); tests != nil && def != nil && def.Reports != nil {
 			var err error
@@ -1766,6 +1839,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaVerify) {
+		if err := c.persistVerify(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
 }
 
@@ -1918,6 +1996,20 @@ func (c *cmd) advance() {
 			case def.IsRolloutStep():
 				c.startRolloutStep(id, def)
 				changed = true
+			case def.IsVerify():
+				before := len(c.events)
+				c.startVerify(id, def)
+				if c.err != nil {
+					return
+				}
+				changed = len(c.events) > before
+			case def.IsAI():
+				before := len(c.events)
+				c.startAI(id, def)
+				if c.err != nil {
+					return
+				}
+				changed = len(c.events) > before
 			case def.IsApproval():
 				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
 				changed = true

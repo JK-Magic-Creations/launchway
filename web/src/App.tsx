@@ -1,26 +1,29 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { api, ApiError, SIGNED_OUT, type Me } from "./api";
 import { MeContext } from "./auth";
 import { useApprovals } from "./live";
 import { match, navigate, onLink, usePath } from "./router";
 import { RunsPage } from "./pages/Runs";
-import { RunPage } from "./pages/Run";
-import { ProjectsPage } from "./pages/Projects";
-import { RunnersPage } from "./pages/Runners";
-import { PlaygroundPage } from "./pages/Playground";
-import { ApprovalsPage } from "./pages/Approvals";
-import { EnvironmentsPage } from "./pages/Environments";
-import { TokensPage } from "./pages/Tokens";
-import { AgentsPage } from "./pages/Agents";
-import { AuditPage } from "./pages/Audit";
-import { EditPipelinePage } from "./pages/EditPipeline";
-import { ProjectTestsPage } from "./pages/ProjectTests";
 import { nextFromHere, SignInPage } from "./pages/SignIn";
-import { ProjectSecurityPage } from "./pages/ProjectSecurity";
-import { ComponentsPage } from "./pages/Components";
-import { ImagesPage } from "./pages/Images";
-import { PolicyPage } from "./pages/Policy";
 import { Empty, ErrorBox, Link } from "./components/ui";
+
+// Pages other than the runs list load when first opened, so the first
+// page needs less script (the run page with its charts is the largest).
+const RunPage = lazy(() => import("./pages/Run").then((m) => ({ default: m.RunPage })));
+const ProjectsPage = lazy(() => import("./pages/Projects").then((m) => ({ default: m.ProjectsPage })));
+const RunnersPage = lazy(() => import("./pages/Runners").then((m) => ({ default: m.RunnersPage })));
+const PlaygroundPage = lazy(() => import("./pages/Playground").then((m) => ({ default: m.PlaygroundPage })));
+const ApprovalsPage = lazy(() => import("./pages/Approvals").then((m) => ({ default: m.ApprovalsPage })));
+const EnvironmentsPage = lazy(() => import("./pages/Environments").then((m) => ({ default: m.EnvironmentsPage })));
+const TokensPage = lazy(() => import("./pages/Tokens").then((m) => ({ default: m.TokensPage })));
+const AuditPage = lazy(() => import("./pages/Audit").then((m) => ({ default: m.AuditPage })));
+const EditPipelinePage = lazy(() => import("./pages/EditPipeline").then((m) => ({ default: m.EditPipelinePage })));
+const ProjectTestsPage = lazy(() => import("./pages/ProjectTests").then((m) => ({ default: m.ProjectTestsPage })));
+const ProjectSecurityPage = lazy(() => import("./pages/ProjectSecurity").then((m) => ({ default: m.ProjectSecurityPage })));
+const ComponentsPage = lazy(() => import("./pages/Components").then((m) => ({ default: m.ComponentsPage })));
+const ImagesPage = lazy(() => import("./pages/Images").then((m) => ({ default: m.ImagesPage })));
+const PolicyPage = lazy(() => import("./pages/Policy").then((m) => ({ default: m.PolicyPage })));
+const AgentsPage = lazy(() => import("./pages/Agents").then((m) => ({ default: m.AgentsPage })));
 
 interface NavItem { href: string; label: string; active: (p: string) => boolean; show?: (me: Me) => boolean }
 
@@ -140,7 +143,7 @@ function Shell({ me }: { me: Me }) {
             <strong>No sign-in:</strong> anyone who can reach this server has full access.
           </div>
         )}
-        {page}
+        <Suspense fallback={<div className="page"><p className="sub">Loading…</p></div>}>{page}</Suspense>
       </main>
     </div>
   );

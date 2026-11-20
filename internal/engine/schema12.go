@@ -45,6 +45,11 @@ func needsArtifacts(def *pipeline.Step) bool {
 // artifacts, when the step needs them.
 func (c *cmd) runnerCan(r RunnerInfo, stepID string) bool {
 	def := c.st.Pipeline.Step(stepID)
+	if def != nil && def.IsAI() && c.e.knows(schemaVerify) {
+		// It needs no workspace, only a runner that can call models (and
+		// fetch the artifacts it reads, which runners that call models can).
+		return r.Has(FeatureAI) && r.Has(FeatureArtifacts)
+	}
 	if c.st.Pipeline.HasImageSteps() && !r.Has(FeatureImages) {
 		// A run's steps share one runner's workspace, and an image step
 		// builds from it: a run with image steps runs, from its first step,

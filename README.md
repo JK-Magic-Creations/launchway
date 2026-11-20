@@ -1874,6 +1874,343 @@ With the Helm chart, policies are `config.policy` in the values (unset by defaul
 schema 16: configure them only once every server runs a release that knows them, and take them out
 before rolling back (see [docs/development/migrations.md](docs/development/migrations.md)).
 
+## Verifying a deployment
+
+A `kind: verify` step watches a deployment (or an environment) for a window of time, reads its
+metrics and logs, and decides **passed**, **failed** or **inconclusive**. The judging is built into
+Launchway: plain statistics and log clustering, no AI service and nothing to install. A model can
+explain the verdict (see [AI models](#ai-models)), but the statistics decide.
+
+### A canary verified with Prometheus and Loki, then promoted or aborted
+
+```yaml
+steps:
+  deploy-prod:
+    kind: deploy
+    needs: build
+    environment: prod
+    version: { output: build.tag }
+    argocd:
+      application: shop
+      write_back:
+        repo: gitops
+        branch: main
+        changes:
+          - { file: apps/shop.yaml, image: team/shop, tag: { output: build.tag } }
+    rollout: { name: shop, namespace: shop, until: paused }   # stop at the canary's pause
+
+  verify-canary:
+    kind: verify
+    needs: deploy-prod
+    deployment: deploy-prod          # watch this deployment (its environment, service, pods)
+    delay: 1m                        # let the canary warm up first
+    duration: 10m
+    interval: 1m
+    sensitivity: medium              # low | medium | high
+    baseline: 3                      # also compare with the last 3 passed verifications here
+    on_fail: abort                   # fail | abort (abort the rollout now) | rollback
+    on_inconclusive: pause           # fail | pass | pause (wait for a person, like an approval)
+    params:                          # typed values, never pasted into a query as text
+      ns:     { deployment: namespace }
+      canary: { deployment: canary_hash }
+      stable: { deployment: stable_hash }
+    metrics:
+      - name: error-rate
+        source: prometheus
+        query: 'sum(rate(http_requests_total{namespace="{{ns}}",pod_template_hash="{{canary}}",code=~"5.."}[1m]))
+                / sum(rate(http_requests_total{namespace="{{ns}}",pod_template_hash="{{canary}}"}[1m]))'
+        stable_query: 'sum(rate(http_requests_total{namespace="{{ns}}",pod_template_hash="{{stable}}",code=~"5.."}[1m]))
+                / sum(rate(http_requests_total{namespace="{{ns}}",pod_template_hash="{{stable}}"}[1m]))'
+        max: 0.01                    # a fixed bound
+        fail_fast: { max: 0.2 }      # fail the whole verification at once
+      - name: p99-latency
+        source: prometheus
+        query: 'histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{pod_template_hash="{{canary}}"}[1m])))'
+        stable_query: 'histogram_quantile(0.99, sum by (le) (rate(http_request_duration_seconds_bucket{pod_template_hash="{{stable}}"}[1m])))'
+        direction: higher-is-worse   # or lower-is-worse (throughput) or either
+        failures: 2                  # failing intervals in a row that fail the metric (default 2)
+    logs:
+      - name: app
+        source: loki
+        query: '{namespace="{{ns}}", pod_template_hash="{{canary}}"}'
+        stable_query: '{namespace="{{ns}}", pod_template_hash="{{stable}}"}'
+
+  promote:
+    kind: rollout
+    needs: verify-canary             # runs only when the verification passed
+    deployment: deploy-prod
+    action: promote-full
+
+  rollback-prod:
+    kind: rollback
+    deployment: deploy-prod
+    needs: [promote]                 # runs when the verification (and so promote) failed
+    abort_first: true
+```
+
+A healthy canary passes and the rollout step promotes it. A canary whose error rate climbs fails
+the verification: `on_fail: abort` aborts the rollout through the same command a person's Abort
+button gives (recorded, audited, applied by the deploy runner), and the rollback step reverts the
+Git change. Placeholders `{{name}}` take the step's `params`: `{ run: sha }`, `{ input: name }`,
+`{ output: step.key }`, or a fact of the deployment (`namespace`, `rollout`, `application`,
+`version`, `previous_version`, `environment`, `service`, `canary_hash`, `stable_hash`). Each value
+is checked and escaped for the query language it goes into (PromQL and LogQL string literals,
+Elasticsearch JSON string values) or sent as a typed parameter (SQL); a placeholder outside a quoted
+string is refused when the pipeline is checked.
+
+A verify step can also stand alone: `environment: prod` and `service: shop` instead of
+`deployment:`, to watch what runs now (after a deploy done elsewhere, or on a schedule).
+
+### Log verification with ClickHouse
+
+SQL and HTTP sources run only statements their operator wrote, by name; a pipeline passes typed
+parameters and never writes SQL. On the deploy runner:
+
+```yaml
+health_sources:
+  clickhouse:
+    type: clickhouse
+    url: http://clickhouse.logging.svc:8123
+    projects: [shop]
+    auth: { user: launchway_ro, secret: { store: vault, key: ci/clickhouse, field: password } }
+    statements:
+      service_errors:
+        kind: logs
+        params: { service: String, version: String }
+        sql: >
+          SELECT ts AS t, message FROM logs
+          WHERE service = {service:String} AND version = {version:String} AND level = 'error'
+            AND ts >= {start:DateTime64(3)} AND ts < {end:DateTime64(3)}
+          ORDER BY ts
+```
+
+and in the pipeline:
+
+```yaml
+  verify-logs:
+    kind: verify
+    needs: deploy-prod
+    deployment: deploy-prod
+    duration: 15m
+    interval: 1m
+    params:
+      service: { deployment: service }
+      version: { deployment: version }
+    logs:
+      - name: errors
+        source: clickhouse
+        statement: service_errors
+        errors: all                  # every line this statement returns is an error
+```
+
+The lines are clustered into templates and compared with what the last passed verifications of
+`shop` in `prod` saw: a new error template fails the verification (at medium sensitivity, once it
+has at least 3 lines), as does a known one appearing unusually often.
+
+### Health sources
+
+Operators configure where the data is; pipelines only name it. The servers list the names, types
+and projects (`verification.sources`; every server lists the same ones), and the deploy runners
+that serve the environment's target hold the rest (`health_sources`), because they are the ones next
+to the monitoring systems and they never run anyone's script:
+
+```yaml
+# server: launchway.yaml
+verification:
+  sources:
+    - { name: prometheus, type: prometheus, projects: ["*"] }
+    - { name: loki,       type: loki,       projects: [shop, "mcp-*"] }
+    - { name: clickhouse, type: clickhouse, projects: [shop] }
+
+# deploy runner: runner.yaml
+health_sources:
+  prometheus:
+    type: prometheus                  # also Thanos, Mimir, VictoriaMetrics
+    url: http://prometheus-operated.monitoring.svc:9090
+    projects: ["*"]
+  loki:
+    type: loki
+    url: http://loki-gateway.monitoring.svc
+    headers: { X-Scope-OrgID: platform }
+    auth: { type: bearer, secret: { store: vault, key: ci/loki, field: token } }
+    projects: [shop, "mcp-*"]
+    timeout: 15s
+    limits: { max_points: 500, max_lines: 5000, max_bytes: 8388608 }
+```
+
+Types: `prometheus`, `loki`, `clickhouse`, `elasticsearch` / `opensearch` (with `indices`, the
+only indices pipelines may search), `postgres` (named statements in a read-only transaction) and
+`http` (named requests to any JSON API, with a path into the answer). With the Helm chart,
+`delivery.verification.sources` fills both sides. Credentials are only secret references, read from
+the deploy runner's own stores for each query.
+
+**What a pipeline cannot do with a health source.** Use one its project is not listed for (checked
+when the pipeline is validated, and again on the deploy runner); run SQL of its own; search an
+index not allowed; change anything (PromQL and LogQL are read APIs; ClickHouse statements run with
+`readonly=1`; PostgreSQL ones in a `READ ONLY` transaction; HTTP requests go to the configured
+host only, without following redirects); or read without bounds (each query has a timeout, at most
+one series per metric query, and limits on points, lines and bytes; log lines are redacted before
+they are clustered, stored or shown).
+
+### How it decides
+
+Each interval, a metric's value is the mean of its readings, checked against `fail_fast` bounds,
+`max`/`min`, the stable version in the same interval, and the baseline learned from earlier passed
+verifications of the same environment and service, in standard deviations:
+
+| sensitivity | fails beyond | and at least | log clusters match at | unusual frequency |
+|---|---|---|---|---|
+| high   | 2 sd   | 5% of the reference   | 90% of tokens | 2 times |
+| medium | 3 sd   | 10% of the reference  | 75% | 3 times |
+| low    | 4.5 sd | 25% of the reference  | 60% | 5 times |
+
+A metric fails after `failures` failing intervals in a row. Too little data is **inconclusive**,
+never a silent pass: an interval needs `min_points` readings, a metric needs `min_intervals`
+intervals with data (default half), and a verification with no check that could run (no bound, no
+stable query, no baseline yet) is inconclusive. Logs are clustered with the Drain algorithm and
+classed as known, unknown (new) or unexpected frequency; only error clusters fail. Every interval's
+data and the verdict are events, so any server re-derives the same verdict. The limits of these
+statistics (when they pass a bad version or fail a good one: short windows, low traffic, a
+regressed baseline, seasonality, warm-up) are written down in
+[internal/verify/doc.go](internal/verify/doc.go).
+
+**Marking a verification passed or failed.** An operator of the project may mark a running or
+paused verification passed or failed, with a reason (`verification.override` in the audit trail);
+on a protected environment the person who started the run may not mark it passed. A pass marked by
+a person does not become part of the baseline.
+
+**The run page** has a Verification tab and panel: the intervals as a timeline, a chart per metric
+with the canary, the stable version's band and the baseline's band and the points that failed, the
+log clusters with counts and sample lines (new ones first), the verdict in words ("error-rate:
+0.042 against the stable version's 0.003, 6.1 standard deviations above"), and the buttons the
+viewer may use. **The Environments page** lists each service's recent verifications. API:
+`GET /api/v1/runs/{run}/verifications`, `GET /api/v1/verifications?environment=&project=&service=`,
+`POST /api/v1/runs/{run}/steps/{step}/verify/override`, `GET /api/v1/health-sources` (names only).
+CLI: `launchway verifications list|show|mark`, `launchway health-sources`.
+
+Verify steps need schema 19: use them once every server and deploy runner is upgraded, and take
+them out before rolling back (see [docs/development/migrations.md](docs/development/migrations.md)).
+
+## AI models
+
+Nothing is sent to any model unless an operator configured one. With none, every AI feature says so
+and everything else works. Models are named in the server's configuration (Helm: `ai.models`):
+
+```yaml
+ai:
+  models:
+    - name: local                     # what pipelines call it
+      provider: openai                # OpenAI-compatible chat completions: Ollama, vLLM, LM Studio...
+      endpoint: http://ollama.ai.svc:11434/v1
+      model: qwen3:8b
+      projects: ["*"]
+      max_tokens: 2048                # per call
+      calls_per_run: 10
+      tokens_per_day: 2000000         # per project, input and output
+    - name: claude
+      provider: anthropic             # the Messages API
+      model: claude-sonnet-5-5
+      key: { store: vault, key: ci/anthropic, field: api_key }   # a reference, never a value
+      projects: [shop]
+      tokens_per_day: 500000
+runner:
+  ai: true                            # this runner may make the calls (default false)
+```
+
+The call is made by a runner (`ai: true` in its configuration) with the key from its own secret
+stores; the key never enters a step's container. The servers themselves call a model only for
+**Explain** (below), with keys from `ai.secrets`, stores of their own (Helm:
+`ai.serverSecretStores`); without them they explain only with models that need no key. Adding another provider
+is one small file in `internal/ai`. `GET /api/v1/ai/models` and `launchway models` list the names,
+limits and today's use, never endpoints or keys.
+
+### An ai step that writes release notes
+
+```yaml
+steps:
+  changes:
+    image: alpine/git:2.47.2
+    run: |
+      mkdir -p out
+      prev=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)
+      git log --format='%h %s' "$prev"..HEAD > out/commits.txt
+    artifacts:
+      - { name: log, paths: [out/commits.txt] }
+
+  notes:
+    kind: ai
+    needs: changes
+    model: local
+    instructions: You write short release notes for operators. Plain words, no marketing.
+    prompt: Write the release notes for these commits, and say how risky the release looks.
+    inputs:
+      - { artifact: changes/log, file: out/commits.txt, label: commits, max_bytes: 32768 }
+    schema:                           # optional: the answer must be this JSON
+      type: object
+      properties:
+        notes: { type: string }
+        risk:  { type: string, enum: [low, medium, high] }
+      required: [notes, risk]
+    max_tokens: 800
+
+  publish:
+    needs: notes
+    image: alpine:3.22
+    run: |
+      echo "risk: $LAUNCHWAY_NEEDS_NOTES_RISK"
+      printf '%s\n' "$LAUNCHWAY_NEEDS_NOTES_NOTES" > RELEASE_NOTES.md
+```
+
+Each scalar property of the schema becomes an output (`notes`, `risk`), next to `text`, `model`,
+`input_tokens` and `output_tokens`; later steps use them like any output (`{ output: notes.risk }`).
+An answer that does not follow the schema fails the step. The whole answer is kept as the artifact
+`response`, and the step shows the tokens used and the estimated cost. The model's answer is
+untrusted text: it can set outputs and an artifact, never run anything. A pull-request run gets no
+model unless the project allows secrets on pull requests.
+
+### Models on verifications and failed steps
+
+A verify step with `model: local` sends the model what the statistics computed and the top log
+clusters, and shows its explanation and suggested cause next to the verdict. The decision stays
+with the statistics. With `decide: model-assisted` the model may turn a pass into inconclusive or
+a fail, never a fail into a pass, and its reasoning is recorded with the verdict. On the run page,
+**Explain** on a failed step asks a configured model to summarise the step's log tail, failed tests
+and findings (`POST /api/v1/runs/{run}/steps/{step}/explain`); the button is not there when no
+model is configured.
+
+**What is sent.** For an ai step: its instructions, its prompt and its inputs, each cut to its
+`max_bytes` and the model's `max_input_bytes`, with every secret the runner knows masked first. For
+a verification: the service, the environment, each metric's means and standard deviations and the
+reason it passed or failed, and up to 20 log templates per log query with one redacted sample line
+each; never the queries, the sources' addresses or credentials. For Explain: the failing step's
+last log lines, failed test names and messages and findings, redacted.
+
+**Prompt injection.** Log lines and commit messages are written by applications and people, and
+can contain text that reads like instructions to a model. The instructions say to treat them as
+data, but that is not a guarantee. What limits the harm is what a model's answer can do: in a
+verification it can only make the verdict stricter (`model-assisted` turns a pass into
+inconclusive or a fail; nothing a log line says can make a failing release pass), and in an ai step
+it can only set outputs and an artifact, which later steps should treat as untrusted input.
+
+**Where the data go.** A hosted model receives the data above in the provider's region, under the
+provider's terms; check that this is allowed for your logs and code before you configure one. A
+local model keeps everything on your own machines.
+
+### A local model, step by step
+
+1. Run a model server next to the runners, for example Ollama:
+   `podman run -d --name ollama -p 11434:11434 -v ollama:/root/.ollama docker.io/ollama/ollama`
+   and pull a model: `podman exec ollama ollama pull qwen3:8b` (a smaller one, such as
+   `qwen2.5:0.5b`, is enough to try it out).
+2. Add it to the servers' configuration as `provider: openai`, `endpoint:
+   http://<host>:11434/v1`, `model: qwen3:8b`, with no `key`, and list the projects that may use it.
+3. Set `ai: true` on the runners that should make the calls (with Helm: `runner.ai: true`, and
+   `delivery.deployRunner.ai: true` for verification explanations).
+4. Use `model: local` in an ai step or a verify step. `make test-local-model` runs the same thing
+   against a real small model in a container.
+
+AI steps need schema 19, like verify steps.
+
 ## Secrets
 
 A step names the secrets it needs. Each one becomes an environment variable:
@@ -2361,6 +2698,10 @@ Built so far:
   policy, provenance, cosign-compatible signatures, several platforms on several builders;
 - delivery policies: typed rules at run start, before deployments and before image pushes, from the
   configuration or a Git repository pinned by tag, enforced or reported, with waivers;
+- an MCP endpoint for AI agents, with `launchway mcp` for agents that start commands.
+- deployment verification: metrics and logs from Prometheus, Loki, ClickHouse, Elasticsearch and
+  OpenSearch, PostgreSQL and JSON APIs, judged by built-in statistics and log clustering, which
+  can abort, roll back or promote; optional AI models (local or hosted) in steps and to explain;
 - the web UI;
 - an MCP endpoint for AI agents, with `launchway mcp` for agents that start commands.
 

@@ -151,6 +151,8 @@ func Parse(data []byte) (*Pipeline, error) {
 	if ps.check(p) {
 		ps.checkDeploys(p)
 		ps.checkImages(p)
+		ps.checkVerify(p)
+		ps.checkAI(p)
 	}
 	ps.checkUses(p)
 	ps.checkInputs(p)
@@ -164,6 +166,9 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	if p.UsesSchema15() {
 		p.Requires = SchemaImages
+	}
+	if p.UsesSchemaVerify() {
+		p.Requires = SchemaVerify
 	}
 	return p, nil
 }
@@ -282,7 +287,7 @@ var (
 	approvalOnly = []string{"message"}
 	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch"}
 	// Kinds from the design that are recognised but not implemented yet.
-	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true, "analysis": true}
+	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
 	storeNameRe   = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,62}$`)
 	containerKeys = []string{"image", "env", "cpu", "memory", "service", "command"}
@@ -379,6 +384,14 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			p.Steps = append(p.Steps, ps.parseImageStep(k, v, at))
 			continue
 		}
+		if mappingValue(v, "kind") == KindVerify {
+			p.Steps = append(p.Steps, ps.parseVerifyStep(k, v, at))
+			continue
+		}
+		if mappingValue(v, "kind") == KindAI {
+			p.Steps = append(p.Steps, ps.parseAIStep(k, v, at))
+			continue
+		}
 		s := &Step{ID: k.Value, Line: k.Line}
 		var secretsNode, kindNode, timeoutNode *yaml.Node
 		var timeout time.Duration
@@ -472,10 +485,12 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			ps.parseRunStep(k, at, s, p, keys, secretsNode)
 		case s.Kind == KindApproval:
 			ps.parseApproval(k, at, s, keys)
+		case s.Kind == "analysis":
+			ps.add(kindNode, at+".kind", "write kind: verify: Launchway judges the metrics and logs itself (see verify steps)")
 		case kindsNotYet[s.Kind]:
 			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote, analysis and input steps arrive in a later milestone)", s.Kind)
 		default:
-			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, image, deploy, rollout or rollback", s.Kind)
+			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, image, deploy, rollout, rollback, verify or ai", s.Kind)
 		}
 		def, most := DefaultTimeout, MaxTimeout
 		if s.IsApproval() {

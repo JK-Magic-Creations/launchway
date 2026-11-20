@@ -17,6 +17,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -26,6 +27,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/policy"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/source"
+	hsource "github.com/jk-magic-creations/launchway/internal/verify/source"
 )
 
 // Config is the whole server configuration. One file describes an
@@ -86,6 +88,15 @@ type Config struct {
 
 	// MCP controls the endpoint agents use, /mcp; see mcp.go.
 	MCP MCPConfig `yaml:"mcp"`
+
+	// Verification names the health sources verify steps may read (schema
+	// 19). Where they are and their credentials are in the deploy runners'
+	// configuration (health_sources); every server must list the same ones.
+	// Unset: verify steps are refused.
+	Verification VerificationConfig `yaml:"verification"`
+	// AI lists the models steps may ask (schema 19). Unset: no model, and
+	// nothing is ever sent to one; every other feature works.
+	AI AIConfig `yaml:"ai"`
 
 	// file is the path the configuration was read from, for messages.
 	file string
@@ -186,6 +197,48 @@ func (c *Config) WaiverRole() (auth.Role, error) {
 	r, err := auth.ParseDraftAllow(c.Policy.Waivers.Allow)
 	if err != nil {
 		return auth.NoRole, fmt.Errorf("policy.waivers.%w", err)
+	}
+	return r, nil
+}
+
+// VerificationConfig is the server's side of health sources.
+type VerificationConfig struct {
+	Sources []HealthSourceConfig `yaml:"sources"`
+}
+
+// HealthSourceConfig names one health source.
+type HealthSourceConfig struct {
+	Name     string   `yaml:"name"`
+	Type     string   `yaml:"type"` // prometheus, loki, clickhouse, elasticsearch, opensearch, postgres or http
+	Projects []string `yaml:"projects"`
+}
+
+// AIConfig is the model registry.
+type AIConfig struct {
+	Models []ai.Model `yaml:"models"`
+	// Secrets are the server's own secret stores, for the keys of models it
+	// calls itself (to explain a failed step); runners read keys from their
+	// own. Unset: the server explains only with models that need no key.
+	Secrets secrets.Config `yaml:"secrets"`
+}
+
+// EngineHealthSources converts the health sources for the engine.
+func (c *Config) EngineHealthSources() []engine.HealthSource {
+	out := make([]engine.HealthSource, 0, len(c.Verification.Sources))
+	for _, h := range c.Verification.Sources {
+		out = append(out, engine.HealthSource{Name: h.Name, Type: h.Type, Projects: h.Projects})
+	}
+	return out
+}
+
+// Models checks the model registry; nil when none is configured.
+func (c *Config) Models() (*ai.Registry, error) {
+	if len(c.AI.Models) == 0 {
+		return nil, nil
+	}
+	r, err := ai.NewRegistry(c.AI.Models)
+	if err != nil {
+		return nil, fmt.Errorf("ai.models: %w", err)
 	}
 	return r, nil
 }
@@ -527,7 +580,15 @@ type RunnerSettings struct {
 	// to, and the registries it pushes to (see internal/imagebuild). Unset,
 	// the runner takes no image steps.
 	Images *imagebuild.Config `yaml:"images"`
+	// AI lets the runner call models: for ai steps on a runner, and to
+	// explain verdicts on a deploy runner (schema 19). The models are the
+	// server's registry; their keys come from this runner's secret stores.
+	// Unset or false: it calls none.
+	AI *bool `yaml:"ai"`
 }
+
+// AIEnabled reports whether the runner calls models.
+func (s RunnerSettings) AIEnabled() bool { return s.AI != nil && *s.AI }
 
 // RunnerFile is the file given to `launchway runner --config`: the same
 // settings as the server's runner section, and where to find the server.
@@ -541,6 +602,10 @@ type RunnerFile struct {
 	// rollback steps for the targets listed, and runs no other steps. Its
 	// token must be a runner pool's.
 	Deploy *argocd.Config `yaml:"deploy"`
+	// HealthSources, on a deploy runner, are the health sources it reads
+	// for verify steps of its targets, by the names the servers'
+	// verification.sources give them (schema 19).
+	HealthSources map[string]hsource.Config `yaml:"health_sources"`
 }
 
 // LoadRunner reads a runner configuration file. Unknown settings are
@@ -584,6 +649,15 @@ func LoadRunner(path string) (*RunnerFile, error) {
 		}
 		if err := c.Deploy.Check(); err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
+		}
+	}
+	if len(c.HealthSources) > 0 && c.Deploy == nil {
+		return nil, fmt.Errorf("%s: health_sources are read by deploy runners for verify steps; add a deploy: section, or take them out", path)
+	}
+	for name, h := range c.HealthSources {
+		if h.CAFile != "" && !filepath.IsAbs(h.CAFile) {
+			h.CAFile = filepath.Join(base, h.CAFile)
+			c.HealthSources[name] = h
 		}
 	}
 	return c, nil
@@ -630,6 +704,7 @@ func Load(path string) (*Config, error) {
 				}
 			}
 			c.Runner.Secrets.RelativeTo(base)
+			c.AI.Secrets.RelativeTo(base)
 			c.Runner.Images.RelativeTo(base)
 			c.relativeTriggerFiles(base)
 			if f := c.Auth.OIDC.ClientSecretFile; f != "" && !filepath.IsAbs(f) {
@@ -719,6 +794,9 @@ func Load(path string) (*Config, error) {
 	}
 	if c.MCP.OAuth != nil && c.Auth.Mode != AuthOIDC {
 		return nil, fmt.Errorf("%s: mcp.oauth needs sign-in with OpenID Connect (auth.mode: oidc)", path)
+	}
+	if _, err := c.Models(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.DraftRules(); err != nil {
 		if path != "" {

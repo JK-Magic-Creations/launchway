@@ -268,9 +268,9 @@ export interface TestOverview {
 }
 
 /** What kind of step it is: a step that runs a script has none. */
-export type StepKind = "approval" | "deploy" | "rollback" | "rollout" | "image";
-/** What a waiting deploy step waits for: its environment's lock, or what deploy runners observe. */
-export type WaitKind = "lock" | "observe";
+export type StepKind = "approval" | "deploy" | "rollback" | "rollout" | "image" | "verify" | "ai";
+/** What a waiting deploy step waits for: its environment's lock, or what deploy runners observe; a verify step: a person (verify). */
+export type WaitKind = "lock" | "observe" | "verify";
 /** Why a step was skipped: condition, upstream, not_needed (a rollback with nothing to roll back) or superseded. */
 export type SkipKind = "" | "condition" | "upstream" | "not_needed" | "superseded";
 
@@ -573,6 +573,13 @@ export interface GraphStep {
   action?: RolloutAction;
   /** An image step: the container image it builds. */
   image_build?: ImageBuild;
+  /** A verify step: what it watches and how it decides. */
+  verify?: GraphVerify;
+  /** An ai step: the model it asks and what. */
+  ai?: GraphAI;
+  /** A verify step watching an environment, not a deployment. */
+  environment?: string;
+  service?: string;
 }
 
 /** What a step reports, as its pipeline declares it. */
@@ -1301,3 +1308,212 @@ export interface ImageQuery { digest?: string; repository?: string; tag?: string
 export function attachmentURL(run: string, caseId: number, n: number, download = false): string {
   return `/api/v1/runs/${run}/tests/cases/${caseId}/attachments/${n}${download ? "?download=1" : ""}`;
 }
+
+// ---- Verifications ----
+
+/** How a verification, or one of its checks, stands. */
+export type VerifyOutcome = "running" | "passed" | "failed" | "inconclusive";
+
+export interface VerifyPoint { t: number; v: number }
+
+export interface VerifyCluster { template: string; count: number; samples?: string[] }
+
+/** What a deploy runner read in one interval. */
+export interface VerifyInterval {
+  index: number;
+  start: number;
+  end: number;
+  metrics?: { name: string; canary?: VerifyPoint[]; stable?: VerifyPoint[]; error?: string }[];
+  logs?: {
+    name: string; lines: number; truncated?: boolean; clusters?: VerifyCluster[];
+    stable?: VerifyCluster[]; stable_lines?: number; error?: string;
+  }[];
+}
+
+/** A set of readings summed up; n is 0 when there were none. */
+export interface VerifyStats { n: number; mean: number; sd: number; min: number; max: number }
+
+/** One metric in one interval. */
+export interface IntervalCheck {
+  index: number;
+  outcome: "passed" | "failed" | "no_data";
+  /** The new version's mean in the interval. */
+  value: number;
+  stable_z?: number;
+  baseline_z?: number;
+  reason?: string;
+}
+
+export interface MetricVerdict {
+  name: string;
+  outcome: VerifyOutcome;
+  reason: string;
+  intervals?: IntervalCheck[];
+  canary: VerifyStats;
+  stable: VerifyStats;
+  baseline: VerifyStats;
+}
+
+export type ClusterClass = "known" | "unknown" | "unexpected_frequency" | "no_reference";
+
+export interface ClusterVerdict {
+  template: string;
+  count: number;
+  class: ClusterClass;
+  /** Counts as an error. */
+  error: boolean;
+  reference?: number;
+  rate_ratio?: number;
+  samples?: string[];
+  /** This cluster is why the log query failed. */
+  failing?: boolean;
+}
+
+export interface LogVerdict {
+  name: string; outcome: VerifyOutcome; reason: string; lines: number; clusters?: ClusterVerdict[];
+  /** Each interval's read: value is the lines read in it. */
+  intervals?: IntervalCheck[];
+}
+
+export interface VerifyVerdict {
+  outcome: VerifyOutcome;
+  /** No more intervals are needed. */
+  final: boolean;
+  summary: string;
+  metrics?: MetricVerdict[];
+  logs?: LogVerdict[];
+  /** How many intervals were judged. */
+  intervals: number;
+}
+
+export interface AIUsage { calls: number; input_tokens: number; output_tokens: number; cost_usd?: number; duration_ms?: number }
+
+/** What a model said about a verdict: untrusted text. */
+export interface VerifyExplanation {
+  model: string;
+  summary?: string;
+  cause?: string;
+  suggestion?: string;
+  outcome?: string;
+  /** The model turned the statistics' pass into something else (decide: model-assisted). */
+  changed?: boolean;
+  error?: string;
+  usage?: AIUsage;
+}
+
+export interface BaselineRun { run: string; number: number; step: string; version?: string; at: number }
+
+export interface VerifyQuery { name: string; source: string; query?: string; stable_query?: string; statement?: string; index?: string }
+
+export interface VerificationView {
+  run_id: string;
+  run_number: number;
+  project: string;
+  step: string;
+  /** The step's status. */
+  status: StepStatus;
+  environment: string;
+  service: string;
+  target: string;
+  deployment?: string;
+  version?: string;
+  /** When the first interval starts (Unix ms). */
+  start: number;
+  interval_ms: number;
+  total: number;
+  deadline?: number;
+  sensitivity: "low" | "medium" | "high" | string;
+  on_fail: string;
+  on_inconclusive: string;
+  decide?: string;
+  model?: string;
+  params?: Record<string, string>;
+  /** The earlier passed verifications it is compared with, newest first. */
+  baseline?: BaselineRun[];
+  baseline_metrics?: Record<string, VerifyStats>;
+  intervals: VerifyInterval[];
+  /** The recorded verdict, or what the intervals so far say. */
+  verdict: VerifyVerdict;
+  decided: boolean;
+  explanation?: VerifyExplanation;
+  override?: "passed" | "failed" | "";
+  override_by?: string;
+  override_comment?: string;
+  queries: VerifyQuery[];
+  started_at: number;
+}
+
+export interface VerificationSummary {
+  run_id: string; run_number: number; project: string; step: string; environment: string; service: string;
+  deployment?: string; version?: string; outcome: VerifyOutcome; summary: string; intervals: number; total: number;
+  overridden_by?: string; started_at: number; decided_at?: number;
+  /** The verify step's status ("waiting" while it waits for a person). */
+  status?: StepStatus;
+}
+
+export type VerifyAction = "mark-passed" | "mark-failed";
+
+export interface VerifyControls {
+  environment: string;
+  controls: { action: VerifyAction; available: boolean; reason?: string; forbidden?: boolean }[];
+}
+
+/** The pipeline's definition of a verify step, as the run's graph has it. */
+export interface GraphVerify {
+  delay?: string; duration: string; interval: string; sensitivity: string; baseline: number;
+  on_fail: string; on_inconclusive: string; model?: string; decide?: string;
+  metrics?: { name: string; source: string; direction?: string; max?: number; min?: number; fail_fast_max?: number; fail_fast_min?: number }[];
+  logs?: { name: string; source: string }[];
+}
+
+/** The pipeline's definition of an ai step. */
+export interface GraphAI { model: string; prompt: string; instructions?: string; schema?: string; max_tokens: number }
+
+// ---- AI models ----
+
+export interface ModelUsage { project: string; day: string; calls: number; input_tokens: number; output_tokens: number; cost_usd: number }
+
+export interface ModelView {
+  name: string;
+  provider: string;
+  model: string;
+  /** No key: a model server of the operator's own. */
+  local: boolean;
+  projects: string[];
+  max_tokens: number;
+  max_input_bytes: number;
+  calls_per_run: number;
+  tokens_per_day?: number;
+  temperature: boolean;
+  used_today?: ModelUsage[];
+}
+
+export interface Models { models: ModelView[]; server_can_explain: boolean }
+
+/** A model's explanation of a failed step: untrusted text. */
+export interface ExplanationView {
+  id: string; run_id: string; step: string; attempt: number; model: string; actor: string; text: string;
+  usage: AIUsage; created_at: number;
+}
+
+export interface HealthSourceView { name: string; type: string; projects: string[] }
+
+export const verifyApi = {
+  runVerifications: (id: string, background = true) =>
+    call<VerificationView[]>("GET", `/api/v1/runs/${id}/verifications`, undefined, { background }),
+  verifications: (q: { environment?: string; project?: string; service?: string; limit?: number }, background = false) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<VerificationSummary[]>("GET", "/api/v1/verifications?" + p.toString(), undefined, { background });
+  },
+  controls: (run: string, step: string, background = true) =>
+    call<VerifyControls>("GET", `/api/v1/runs/${run}/steps/${encodeURIComponent(step)}/verify/controls`, undefined, { background }),
+  override: (run: string, step: string, outcome: "passed" | "failed", reason: string) =>
+    call<{ ok: boolean }>("POST", `/api/v1/runs/${run}/steps/${encodeURIComponent(step)}/verify/override`, { outcome, reason }),
+  models: (background = true) => call<Models>("GET", "/api/v1/ai/models", undefined, { background }),
+  explain: (run: string, step: string, model: string) =>
+    call<ExplanationView>("POST", `/api/v1/runs/${run}/steps/${encodeURIComponent(step)}/explain`, { model }),
+  explanations: (run: string, step: string, background = true) =>
+    call<ExplanationView[]>("GET", `/api/v1/runs/${run}/steps/${encodeURIComponent(step)}/explanations`, undefined, { background }),
+  healthSources: (background = true) => call<HealthSourceView[]>("GET", "/api/v1/health-sources", undefined, { background }),
+};

@@ -390,7 +390,7 @@ func (r *Runner) fetch(ctx context.Context, job *engine.Job, spec executor.Spec,
 		}
 		sys("%s: fetched %s (%s) into %s", label, filesText(len(f.Files)), sizeText(size), into)
 	}
-	if err := executor.Place(ctx, r.Exec, spec, placed, out); err != nil {
+	if err := executor.Place(ctx, r.execFor(job), spec, placed, out); err != nil {
 		msg := "putting fetched artifacts in the workspace: " + spec.Mask(err.Error())
 		sys("%s", msg)
 		if errors.Is(err, executor.ErrInfrastructure) {

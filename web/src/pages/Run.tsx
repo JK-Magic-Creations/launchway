@@ -22,19 +22,24 @@ import { SecurityTab } from "./RunSecurity";
 import { CopyValue, serious, seriousLabel } from "../components/Security";
 import { ImagesTab, imageSteps } from "./RunImages";
 import { PolicyTab } from "./RunPolicy";
+import { useRunVerifications, VerificationPanel, VerificationsTab, VerificationSummaryRows } from "../components/Verification";
+import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
+
+// Stands for the run until it is loaded, so hooks run in the same order.
+const EMPTY_RUN = { id: "", step_list: [] } as unknown as RunDetail;
 
 // stepFromURL is the step named by ?step= in the address, if any.
 function stepFromURL(): string | null {
   return new URLSearchParams(location.search).get("step");
 }
 
-type Tab = "graph" | "tests" | "coverage" | "reports" | "images" | "artifacts" | "security" | "policy" | "events" | "definition";
+type Tab = "graph" | "tests" | "coverage" | "reports" | "images" | "verification" | "artifacts" | "security" | "policy" | "events" | "definition";
 
 // tabFromURL is the tab named by ?tab= in the address.
 function tabFromURL(): Tab {
   const t = new URLSearchParams(location.search).get("tab");
-  return t === "tests" || t === "coverage" || t === "reports" || t === "images" || t === "artifacts" || t === "security" || t === "policy" || t === "events" || t === "definition" ? t : "graph";
+  return t === "tests" || t === "coverage" || t === "reports" || t === "images" || t === "verification" || t === "artifacts" || t === "security" || t === "policy" || t === "events" || t === "definition" ? t : "graph";
 }
 
 // setQuery changes the address's query without a new history entry.
@@ -163,6 +168,7 @@ export function RunPage({ id }: { id: string }) {
   const done = run ? ["succeeded", "failed", "canceled"].includes(run.status) : false;
   const now = useNow(1000, !done);
   const me = useMe();
+  const verifications = useRunVerifications(run ?? EMPTY_RUN);
 
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true); setActionErr(null);
@@ -191,13 +197,17 @@ export function RunPage({ id }: { id: string }) {
   const overridden = libraries.filter((l) => l.override);
   const images = imageSteps(run);
   const builtImages = images.filter((s) => s.outputs?.digest).length;
+  const verifySteps = run.step_list.filter((s) => s.kind === "verify");
+  const verifyFailed = verifySteps.filter((s) => s.status === "failed").length;
+  const verifyWaiting = done ? undefined : verifySteps.find((s) => s.status === "waiting" && s.wait_kind === "verify");
   const tabs: [Tab, string][] = [["graph", "Steps and logs"], ["tests", "Tests"],
     ...(declaresCoverage || tab === "coverage" ? [["coverage", "Coverage"] as [Tab, string]] : []),
     ...(declaresHTML || tab === "reports" ? [["reports", "Reports"] as [Tab, string]] : []),
     ...(images.length ? [["images", "Images"] as [Tab, string]] : []),
+    ...(verifySteps.length ? [["verification", "Verification"] as [Tab, string]] : []),
     ["security", "Security"], ["artifacts", "Artifacts"], ...(run.policy ? [["policy", "Policy"] as [Tab, string]] : []),
     ["events", "Event log"], ["definition", "Pipeline"]];
-  const shownTab: Tab = tab === "images" && !images.length ? "graph" : tab;
+  const shownTab: Tab = (tab === "images" && !images.length) || (tab === "verification" && !verifySteps.length) ? "graph" : tab;
 
   return (
     <div className="page page-wide">
@@ -210,6 +220,7 @@ export function RunPage({ id }: { id: string }) {
           <div className="run-title-row">
             {run.cancel_requested && !done ? <StatusPill status={run.status} label="Canceling" />
               : waitingStep ? <StatusPill status="waiting" label="Waiting for approval" />
+              : verifyWaiting ? <StatusPill status="waiting" label="Waiting for a person" />
               : deploying ? <StatusPill status={shownStatus(deploying)} label={stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying))} />
               : <StatusPill status={run.status} />}
             {run.draft && <span className="badge-draft" title="Pipeline text from the editor, not from Git">Draft</span>}
@@ -314,6 +325,13 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
+      {verifyWaiting && selected !== verifyWaiting.id && (
+        <div className="callout callout-wait">
+          <span><strong>{verifyWaiting.id}</strong> is waiting for a person: the verification was inconclusive, and someone must mark it passed or failed.</span>
+          <button type="button" className="btn" onClick={() => { select(verifyWaiting.id); setTab("graph"); }}>{mayOperate ? "Decide" : "View"}</button>
+        </div>
+      )}
+
       {deploying && selected !== deploying.id && (
         <div className="callout callout-info callout-row">
           <span><strong>{deploying.id}</strong>: {stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying)).replace(/^./, (c) => c.toLowerCase())}</span>
@@ -324,13 +342,14 @@ export function RunPage({ id }: { id: string }) {
       {run.status === "failed" && firstFailed && (
         <div className="callout callout-bad">
           <strong>{failedCount === 1 ? `${firstFailed.id} failed` : `${failedCount} steps failed`}.</strong>{" "}
-          {firstFailed.error}. Steps that succeeded are kept: resuming runs only what did not finish, using the same commit.
+          {firstFailed.error.replace(/\.$/, "")}. Steps that succeeded are kept: resuming runs only what did not finish, using the same commit.
           {firstFailed.policy_blocked && <> <button type="button" className="linkbtn" onClick={() => setTab("policy")}>See the policy decision</button>.</>}
           {firstFailed.excerpt && <Excerpt step={firstFailed} />}
         </div>
       )}
 
       <DeploymentSummary run={run} onSelect={(s) => { select(s); setTab("graph"); }} />
+      <VerificationSummaryRows list={verifications.list} onSelect={(s) => { select(s); setTab("graph"); }} />
 
       <div className="tabs" role="tablist">
         {tabs.map(([k, label]) => (
@@ -342,6 +361,7 @@ export function RunPage({ id }: { id: string }) {
             {k === "coverage" && covBadge?.run === run.id && <span className={"tab-n" + (covBadge.bad ? " tab-n-bad" : "")} title="Lines covered">{covBadge.text}</span>}
             {k === "reports" && htmlCount?.run === run.id && htmlCount.n > 0 && <span className="tab-n">{htmlCount.n}</span>}
             {k === "images" && builtImages > 0 && <span className="tab-n">{builtImages}</span>}
+            {k === "verification" && (verifyFailed > 0 ? <span className="tab-n tab-n-bad">{verifyFailed} failed</span> : <span className="tab-n">{verifySteps.length}</span>)}
             {k === "artifacts" && !!run.artifacts && <span className="tab-n">{run.artifacts}</span>}
             {k === "policy" && run.policy && (run.policy.verdict === "block"
               ? <span className="tab-n tab-n-bad">blocked</span>
@@ -362,7 +382,7 @@ export function RunPage({ id }: { id: string }) {
           {loop && <LoopPanel run={run} loop={loop} selected={selected} onSelect={select} />}
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
-            : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun}
+            : <StepPanel run={run} step={step} now={now} sink={logSink} rerun={mayRerun} verifications={verifications}
               showTests={(s) => { setTestStep(s); setTab("tests"); }} showImages={() => setTab("images")} showPolicy={() => setTab("policy")} />)}
         </>
       )}
@@ -372,6 +392,8 @@ export function RunPage({ id }: { id: string }) {
       {tab === "reports" && <ReportsTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {shownTab === "images" && <ImagesTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()}
         onStep={(s) => { select(s); setTab("graph"); }} onShow={setTab} />}
+      {shownTab === "verification" && <VerificationsTab run={run} list={verifications.list} error={verifications.error} reload={verifications.reload}
+        onStep={(s) => { select(s); setTab("graph"); }} />}
       {tab === "artifacts" && <ArtifactsTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "security" && <SecurityTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
       {tab === "policy" && <PolicyTab run={run} version={run.status + run.step_list.map((s) => s.status + s.attempt).join()} />}
@@ -381,8 +403,9 @@ export function RunPage({ id }: { id: string }) {
   );
 }
 
-function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPolicy }: {
+function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPolicy, verifications }: {
   run: RunDetail; step: StepView; now: number;
+  verifications: ReturnType<typeof useRunVerifications>;
   sink: React.MutableRefObject<((step: string, attempt: number, lines: LogLine[]) => void) | null>;
   rerun: boolean;
   showTests: (step: string) => void;
@@ -433,6 +456,10 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   const build = step.kind === "image" ? run.graph.steps.find((g) => g.id === step.id)?.image_build : undefined;
   const env = deploys ? environmentOf(run, step) : "";
   const reused = !!step.reused_from;
+  // A verification taken over by another deploy runner keeps its window:
+  // it has lasted since it started, not since the latest attempt.
+  const vstart = step.kind === "verify" ? verifications.list?.find((v) => v.step === step.id)?.started_at ?? 0 : 0;
+  const since = step.attempt > 1 && vstart > 0 && vstart < step.started_at ? vstart : step.started_at;
   const group = step.group ? run.graph.groups?.find((g) => g.id === step.group) : undefined;
   const outputs = Object.entries(step.outputs ?? {});
   const secrets = Object.entries(step.secrets ?? {}).sort(([a], [b]) => a.localeCompare(b));
@@ -443,6 +470,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
     : step.status === "skipped" ? step.error || "Skipped."
     : deploys && step.status === "waiting" && step.wait_kind === "lock" ? `Waiting for ${env}'s lock: nothing is deployed yet.`
     : deploys && step.status === "waiting" ? "The deploy runner's part is done; the step waits for what deploy runners observe (above)."
+    : step.kind === "ai" && step.status === "succeeded" ? "No output: the answer is above."
     : step.status === "canceled" && step.attempt === 0 ? "Canceled before it started."
     : "No output.";
 
@@ -455,9 +483,12 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           <div className="run-meta">
             <StatusPill status={shownStatus(step)} label={stepLabel({ ...step, environment: env || step.environment })} />
             {step.kind === "image" && <span className="meta step-kind"><ImageIcon />builds a container image</span>}
+            {step.kind === "verify" && <span className="meta">verifies {step.environment || environmentOf(run, step) || "an environment"}</span>}
+            {step.kind === "ai" && <span className="meta">asks a model</span>}
             {deploys && <span className="meta">{step.kind === "rollback" ? `rollback of ${step.deployment}` : step.kind === "rollout" ? `acts on the rollout of ${step.deployment}` : `deploy to ${env}`}</span>}
             {reused && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
-            {step.started_at > 0 && <span className="meta">{elapsed(step.started_at, step.finished_at, now)}</span>}
+            {step.started_at > 0 && <span className="meta" title={since < step.started_at ? `since the verification started; this attempt started ${clock(step.started_at)}` : undefined}>
+              {elapsed(since, step.finished_at, now)}</span>}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
             {step.runner && <span className="meta">on {step.runner}</span>}
             {step.container && !step.container.startsWith("image-") && <span className="meta">in <strong>{step.container}</strong></span>}
@@ -478,6 +509,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
       </div>
       {reused && <ReusedNote run={run} step={step} />}
       {deploys && <DeploymentPanel run={run} step={step} />}
+      {step.kind === "verify" && <VerificationPanel run={run} step={step} list={verifications.list} reload={verifications.reload} />}
+      {step.kind === "ai" && <AIStepResult run={run} step={step} />}
       {step.tests && (
         <div className={"callout tstep-callout " + (failing(step.tests) > 0 ? "callout-bad" : "callout-info")}>
           <span>
@@ -497,14 +530,15 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           <button type="button" className="btn btn-sm" onClick={showPolicy}>See the decision</button>
         </div>
       )}
-      {step.status === "failed" && following && (step.excerpt || (step.error && !/^exit code \d+$/.test(step.error))) && (
+      {step.status === "failed" && following && step.kind !== "verify" && (step.excerpt || (step.error && !/^exit code \d+$/.test(step.error))) && (
         <div className="callout callout-bad">
           {step.error && !/^exit code \d+$/.test(step.error) && <div>{step.error}</div>}
           {step.excerpt && <Excerpt step={step} />}
         </div>
       )}
+      {step.status === "failed" && following && !reused && <ExplainFailure run={run} step={step} />}
       {step.kind === "image" && <ImageResult run={run} step={step} showImages={showImages} />}
-      {!(deploys && step.attempt === 0) && <LogView lines={lines} live={isLive} empty={empty} />}
+      {!(deploys && step.attempt === 0) && step.kind !== "verify" && <LogView lines={lines} live={isLive} empty={empty} />}
       <div className="stepinfo">
         {step.run && (
           <details>
@@ -525,10 +559,10 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {secrets.length > 0 && <><dt>Secrets</dt><dd>{secrets.map(([name, r]) => <div key={name}><Mono>{name}</Mono> ← <Mono>{`${r.store}:${r.key}${r.field ? `#${r.field}` : ""}`}</Mono></div>)}</dd></>}
           <dt>Retry</dt><dd>{step.retry ? `up to ${step.retry} more time${step.retry > 1 ? "s" : ""}` : "no"}</dd>
           <dt>Timeout</dt><dd>{step.timeout}</dd>
-          {!deploys && step.queued_at > 0 && step.started_at > 0 && <><dt>Waited</dt><dd>{duration(step.started_at - step.queued_at)} for a runner</dd></>}
+          {!deploys && step.kind !== "verify" && step.queued_at > 0 && step.started_at > 0 && <><dt>Waited</dt><dd>{duration(step.started_at - step.queued_at)} for a runner</dd></>}
           {outputs.length > 0 && <><dt>Outputs</dt><dd>{outputs.map(([k, v]) => <div key={k}><Mono>{k}</Mono> = <Mono>{v}</Mono></div>)}</dd></>}
         </dl>
-        {!deploys && <InputsView inputs={step.inputs?.find((a) => a.attempt === attempt)} step={step} />}
+        {!deploys && step.kind !== "verify" && <InputsView inputs={step.inputs?.find((a) => a.attempt === attempt)} step={step} />}
       </div>
     </section>
   );

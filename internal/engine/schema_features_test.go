@@ -14,8 +14,8 @@ import (
 // attachments, coverage or HTML reports 18; a run using several gets the
 // highest, so a server of any schema between leaves it alone.
 func TestRunMinSchemaAcrossFeatures(t *testing.T) {
-	if schemaPolicy != 16 || schemaBlobs != 17 || schemaReports != 18 || len(migrations) != 18 {
-		t.Fatalf("schemas: policy %d, blobs %d, reports %d, migrations %d", schemaPolicy, schemaBlobs, schemaReports, len(migrations))
+	if schemaPolicy != 16 || schemaBlobs != 17 || schemaReports != 18 || schemaVerify != 19 || len(migrations) != 19 {
+		t.Fatalf("schemas: policy %d, blobs %d, reports %d, verify %d, migrations %d", schemaPolicy, schemaBlobs, schemaReports, schemaVerify, len(migrations))
 	}
 	report := PolicyOptions{Inline: mustPolicies(t, strings.Replace(shapePolicy, "enforce", "report", 1))}
 	open := func(t *testing.T, addr, store string, po PolicyOptions) *Engine {
@@ -151,5 +151,37 @@ func TestUpgradeFromSchema16AndBack(t *testing.T) {
 	}
 	if d, err := old.GetRun(half); err != nil || d.NeedsNewerServer || d.Status != RunSucceeded {
 		t.Fatalf("its own run: %+v %v", d, err)
+	}
+}
+
+// A run with a verify step (19) that also keeps artifacts in the database
+// store (17), declares coverage (18) and is governed by a policy (16)
+// records 19, and a build of 18 leaves it alone.
+func TestVerifyRunTakesTheHighestSchema(t *testing.T) {
+	clk := newClock()
+	addr := testdb.New(t)
+	ps := mustPolicies(t, "policies:\n  - name: shape\n    mode: report\n    scope: { projects: [shop] }\n    rules:\n      step_images: { digest: true }\n")
+	e, err := Open(Options{Database: addr, LeaseTTL: ttl, Now: clk.Now, Environments: prodEnv, HealthSources: prom,
+		Artifacts: ArtifactOptions{Choice: StoreDatabase}, Policy: PolicyOptions{Inline: ps}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { e.Close() })
+	src := envVerify + `  build:
+    image: x
+    run: make
+    artifacts: [ {name: bin, paths: [bin/app]} ]
+    reports: { coverage: cover.out }
+`
+	r, err := e.CreateRun(NewRun{Project: "shop", Pipeline: parse(t, src), Trigger: Trigger{Event: "manual"}, Source: gitSource})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum, err := e.Summary(r.ID); err != nil || sum.MinSchema != schemaVerify {
+		t.Fatalf("min_schema %d %v", sum.MinSchema, err)
+	}
+	old := mustOpenAs(t, addr, clk, schemaVerify-1, &syncBuffer{})
+	if d, err := old.GetRun(r.ID); err != nil || !d.NeedsNewerServer {
+		t.Fatalf("the schema-18 build's view: %v %v", d.NotUnderstood, err)
 	}
 }

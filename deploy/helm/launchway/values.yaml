@@ -220,8 +220,8 @@ config:
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
   # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts, reports,
-  # findings, loops, schedules, policy and mcp are set by the chart and may not appear here;
-  # runner.enabled may not be true.
+  # findings, loops, schedules, policy, mcp, verification (delivery.verification) and ai (ai.*) are
+  # set by the chart and may not appear here; runner.enabled may not be true.
   extraConfig: {}
 
 # ---------------------------------------------------------------------------------------------
@@ -489,6 +489,10 @@ runner:
     maxContextMiB:
     # -- MiB of image the runner accepts back from a builder. Unset: the built-in default, 20480.
     maxImageMiB:
+  # -- Let runners take ai steps, calling the models in ai.models. A model's key is read from
+  # runner.secretStores. Written to the runners' file only when true; needs ai.models.
+  # Unset: the built-in default, false (runners call no model).
+  ai:
   resources:
     requests:
       cpu: 100m
@@ -585,6 +589,57 @@ delivery:
   #     queue: newest            # or all; default newest
   #     protected: true          # the person who started a run may not promote it here; default false
   environments: null
+  # -- Health sources: where verify steps read metrics and logs to judge a deployment. Each entry
+  # is split: name, type and projects go to the servers' verification.sources, and the whole
+  # entry to the deploy runner's health_sources, by name. Needs deployRunner.enabled: the deploy
+  # runner does the queries. Credentials are only secret references, read from
+  # deployRunner.secretStores. Default (unset): none, and verify steps are refused.
+  #
+  # Each source: { name, type, url, projects, and optionally auth, headers, caFile, timeout,
+  # limits, statements, indices, timeField, messageField }.
+  #   type: prometheus (also Thanos, Mimir, VictoriaMetrics), loki, clickhouse, elasticsearch,
+  #     opensearch, postgres or http.
+  #   projects: patterns of the projects that may use it; at least one.
+  #   auth: { type: bearer|basic|header, user, header, secret: { store, key, field } }; for
+  #     clickhouse and postgres type may be left out (user and secret are the database login).
+  #   headers: fixed headers that are not secret, such as X-Scope-OrgID.
+  #   caFile: a PEM file of extra CAs, mounted with deployRunner.extraVolumes.
+  #   timeout: per query; default 10s, at most 60s.
+  #   limits: { maxSeries, maxPoints, maxLines, maxBytes }; defaults 1, 500, 5000, 8 MiB.
+  #   statements: (clickhouse, postgres, http) the only queries pipelines may run there, by name:
+  #     { kind: metric|logs, sql, path, method, body, value, params, projects }.
+  #   indices, timeField, messageField: (elasticsearch) the indices pipelines may search, and the
+  #     documents' time and message fields (default @timestamp and message).
+  # Sources in the cluster need no RBAC. The chart renders no NetworkPolicy; if the deploy
+  # runner's namespace denies egress by default, allow it to reach each source's host and port.
+  # Example:
+  #   sources:
+  #     - name: prometheus
+  #       type: prometheus
+  #       url: http://prometheus-operated.monitoring.svc:9090
+  #       projects: ["*"]
+  #     - name: loki
+  #       type: loki
+  #       url: http://loki-gateway.monitoring.svc
+  #       projects: [shop, "mcp-*"]
+  #       headers: { X-Scope-OrgID: homelab }
+  #       limits: { maxLines: 2000 }
+  #     - name: clickhouse
+  #       type: clickhouse
+  #       url: http://clickhouse.analytics.svc:8123
+  #       projects: [shop]
+  #       auth: { user: launchway, secret: { store: vault, key: ci/clickhouse, field: password } }
+  #       timeout: 20s
+  #       statements:
+  #         checkout_errors:
+  #           kind: metric
+  #           sql: >-
+  #             SELECT toStartOfMinute(ts) AS t, countIf(status >= 500) / count() AS value
+  #             FROM requests WHERE service = {service:String}
+  #             AND ts BETWEEN {start:DateTime64(3)} AND {end:DateTime64(3)} GROUP BY t ORDER BY t
+  #           params: { service: String }
+  verification:
+    sources: null
   deployRunner:
     # -- Run a deploy runner in this cluster, with a runner pool token of its own. It serves
     # deployRunner.target, which must be this cluster.
@@ -609,6 +664,10 @@ delivery:
     # -- Ask Argo CD to look at the repository at once after a commit (the refresh
     # annotation). Default (unset): true.
     refresh: null
+    # -- Let the deploy runner call the models in ai.models to explain its verdicts, with keys
+    # read from deployRunner.secretStores. Written to its file only when true; needs ai.models.
+    # Unset: the built-in default, false.
+    ai: null
     rbac:
       # -- Create the Roles below and bind them to the deploy runner.
       create: true
@@ -650,3 +709,39 @@ delivery:
     extraEnv: []
     extraVolumes: []
     extraVolumeMounts: []
+
+# ---------------------------------------------------------------------------------------------
+# AI: the models steps may ask (ai steps, and explanations of failed steps and verdicts). Off
+# unless set: with no model, nothing is ever sent to one and every other feature works. Set these
+# only once every server and runner runs a release that knows them, and take them out again
+# before rolling back to one that does not. Runners and the deploy runner call models only with
+# runner.ai or delivery.deployRunner.ai.
+# ---------------------------------------------------------------------------------------------
+ai:
+  # -- The model registry, written into the servers' configuration as ai.models exactly as given,
+  # so its keys are the configuration's own (snake_case): name, provider (anthropic, or openai for
+  # any OpenAI-compatible server), endpoint, model, key: { store, key, field }, projects,
+  # max_tokens, max_input_bytes, calls_per_run, tokens_per_day, price: { input_per_mtok,
+  # output_per_mtok, ... }, timeout, effort, stream, headers, max_tokens_field, schema_mode.
+  # A model's projects list is who may use it; empty: no project. The key is a secret reference,
+  # looked up in the secret stores of whoever calls the model (runner.secretStores,
+  # delivery.deployRunner.secretStores, or serverSecretStores below). Default (unset): none.
+  # Example:
+  #   - name: local
+  #     provider: openai
+  #     endpoint: http://ollama.ai.svc:11434/v1
+  #     model: "qwen3:8b"
+  #     projects: ["*"]
+  #     schema_mode: json_object
+  #   - name: claude
+  #     provider: anthropic
+  #     model: claude-sonnet-5-5
+  #     key: { store: vault, key: ai/anthropic, field: key }
+  #     projects: [shop]
+  #     tokens_per_day: 2000000
+  models: null
+  # -- Secret stores the servers read model keys from, to explain failed steps themselves (the
+  # same map as runner.secretStores); written as ai.secrets. Mount any token or certificate files
+  # they refer to with server.extraVolumes/extraVolumeMounts. Default (unset): the servers explain
+  # only with models that need no key.
+  serverSecretStores: null

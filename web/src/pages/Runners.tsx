@@ -4,6 +4,7 @@ import { ago } from "../format";
 import { useNow } from "../live";
 import { Empty, ErrorBox, Mono } from "../components/ui";
 import { bytes } from "../components/Security";
+import { HealthSourcesSection, ModelsSection } from "../components/Explain";
 
 export function RunnersPage() {
   const [runners, setRunners] = useState<Runner[] | null>(null);
@@ -60,6 +61,8 @@ export function RunnersPage() {
         <pre className="code">{`launchway runner --server ${location.origin} --token <token> --name build-2`}</pre>
       </section>
       <StoreCard />
+      <ModelsSection />
+      <HealthSourcesSection />
     </div>
   );
 }

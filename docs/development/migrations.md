@@ -213,6 +213,37 @@ kept in the database store 17, attachments, coverage or HTML reports 18
 build of 16 started against it again runs, says once that the database is newer, and leaves the
 runs of 17 and 18 alone (`TestUpgradeFromSchema16AndBack`).
 
+Schema 19 brings verify steps (`kind: verify`) and ai steps (`kind: ai`). It is additive: four new
+tables (`verifications` and `verify_baselines`, projections of the verification events;
+`ai_usage`, each project's model use per day; `ai_explanations`), a `kind` column on `steps` with a
+default, and four event types of schema 19 (`verify.started`, `verify.interval`, `verify.verdict`,
+`verify.override`). A pipeline with a verify or ai step has `runs.min_schema` 19 from creation and
+carries `"requires": 19`, so older servers leave such runs alone, refuse to start one, and do not
+expire, cancel or re-run them (`TestOlderBuildLeavesVerifyRunsAlone`). A paused verification
+(`on_inconclusive: pause`) waits with `wait_kind = 'verify'`, which older servers do not list among
+their approvals. Runners must say they can do the work: a deploy runner reports the feature `verify`
+only when it has health sources, and a runner reports `ai` only when its operator turned `ai: true`
+on; an older runner reports neither, so it is never given these steps. (Verification was built as
+schema 20 on a branch where 16 to 19 were empty stand-ins; it was renumbered 19 when the branches
+were merged, before any release, so no database ever recorded those stand-ins.)
+
+To roll back from schema 19:
+
+1. Take `kind: verify` and `kind: ai` steps out of the pipeline files, and let the runs that have
+   them finish (or cancel them on a schema-19 server). Runs still open are left alone by older
+   servers and resume when a schema-19 server runs again: a deploy runner takes a verification up
+   where it stopped, reading the intervals not reported yet, and one that waited (queued or paused)
+   past its step's timeout fails, saying why. Intervals that ended meanwhile are read afterwards
+   from the health sources (which keep the data); one whose data are gone has no data, which can
+   make the verdict inconclusive, never a pass.
+2. Remove the settings older releases refuse: the servers' `verification:` and `ai:` sections, the
+   deploy runners' `health_sources:`, and the runners' `ai:`; with the Helm chart,
+   `delivery.verification`, `ai.models`, `ai.serverSecretStores`, `runner.ai` and
+   `delivery.deployRunner.ai`. The default render writes none of them.
+3. Roll the servers and runners back. The new tables stay and are ignored; recorded baselines are
+   used again after a later upgrade. Model use counted on the day of the rollback is not counted by
+   older servers (they call no models).
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

@@ -251,6 +251,8 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
                 <span className="node-name">{label}</span>
                 {s.kind === "image" && <span className="node-kind" title="Builds a container image"><ImageIcon size={11} />image</span>}
                 {s.policy_blocked && <span className="node-policy" title="Blocked by policy">policy</span>}
+                {s.kind === "verify" && <span className="node-kind" title="Watches an environment's metrics and logs">verify</span>}
+                {s.kind === "ai" && <span className="node-kind" title="Asks a model">ai</span>}
                 {s.attempt > 1 && <span className="node-attempt" title={`Attempt ${s.attempt}`}>#{s.attempt}</span>}
               </span>
               <span className="node-sub">
