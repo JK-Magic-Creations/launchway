@@ -41,9 +41,13 @@ Or straight into a node's container runtime, one architecture at a time:
 
 ```sh
 podman load -i images/launchway-linux-amd64.oci.tar
-ctr -n k8s.io images import --base-name docker.io/library/launchway images/launchway-linux-amd64.oci.tar
+ctr -n k8s.io images import images/launchway-linux-amd64.oci.tar
 kind load image-archive images/launchway-linux-amd64.oci.tar
 ```
+
+The archives name the images `localhost/launchway:@VER@` and `localhost/launchway-runner:@VER@`.
+With the charts, use `--set image.repository=localhost/launchway --set image.pullPolicy=Never`
+(and `localhost/launchway-runner` for the runner chart).
 
 ## 3. Servers and runners on Kubernetes
 

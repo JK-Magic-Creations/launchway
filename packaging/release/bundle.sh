@@ -14,7 +14,8 @@
 #   images/<name>/              each image as an OCI layout with its signatures and attestations
 #                               (cosign save): load into a registry with `cosign load`
 #   images/<name>-linux-<arch>.oci.tar   each image for one platform as an OCI archive, named
-#                               <name>:<version>: for `podman load`, `ctr images import`,
+#                               localhost/<name>:<version> (a name with a registry, which the
+#                               kubelet needs to find the image): for `podman load`, `ctr images import`,
 #                               `kind load image-archive`
 #   BUNDLE-SHA256SUMS           the SHA-256 of every file in the bundle, and its signature
 #                               BUNDLE-SHA256SUMS.sigstore.json (SIGN as in finish.sh)
@@ -56,7 +57,7 @@ while read -r line; do
 	for arch in amd64 arm64; do
 		# shellcheck disable=SC2086
 		skopeo copy -q $tls --override-os linux --override-arch "$arch" \
-			"docker://$repo@$digest" "oci-archive:$out/images/$img-linux-$arch.oci.tar:$img:$ver"
+			"docker://$repo@$digest" "oci-archive:$out/images/$img-linux-$arch.oci.tar:localhost/$img:$ver"
 	done
 done <"$rel/images.txt"
 cp "$rel/images.txt" "$out/images/images.txt"
