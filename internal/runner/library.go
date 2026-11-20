@@ -9,7 +9,6 @@ package runner
 
 import (
 	"archive/tar"
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -17,12 +16,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 )
@@ -142,22 +141,22 @@ func (r *Runner) libraryRepo(ctx context.Context, l engine.LibrarySource) (strin
 // export writes the files of a commit into dest, keeping which are
 // executable, as Git records them.
 func export(ctx context.Context, repo, commit, dest string) error {
-	cmd := exec.CommandContext(ctx, "git", "archive", "--format=tar", commit)
-	cmd.Dir = repo
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	out, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	xerr := untar(out, dest)
-	_, _ = io.Copy(io.Discard, out)
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("git archive: %s", redact.URLs(strings.TrimSpace(stderr.String())))
+	pr, pw := io.Pipe()
+	done := make(chan error, 1)
+	go func() {
+		_, err := gitexec.Run(ctx, gitexec.Spec{Dir: repo, Args: []string{"archive", "--format=tar", commit}, Stdout: pw, Untrusted: true})
+		pw.CloseWithError(err)
+		done <- err
+	}()
+	xerr := untar(pr, dest)
+	_, _ = io.Copy(io.Discard, pr)
+	if err := <-done; err != nil {
+		var ee *gitexec.ExitError
+		msg := err.Error()
+		if errors.As(err, &ee) {
+			msg = ee.Stderr
+		}
+		return fmt.Errorf("git archive: %s", redact.URLs(strings.TrimSpace(msg)))
 	}
 	return xerr
 }

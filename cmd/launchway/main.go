@@ -16,7 +16,6 @@ import (
 	"net/http"
 	neturl "net/url"
 	"os"
-	"os/exec"
 	"os/signal"
 	"os/user"
 	"path/filepath"
@@ -38,6 +37,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
@@ -80,6 +80,7 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 `
 
 func main() {
+	gitexec.Reexec()
 	if len(os.Args) < 2 {
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
@@ -720,15 +721,14 @@ func cmdRun(args []string) error {
 	httpSrv := &http.Server{Handler: srv.Handler()}
 	go httpSrv.Serve(ln)
 	defer httpSrv.Close()
-
 	trig := engine.Trigger{Event: "manual", Actor: currentUser(), Inputs: inputs}
-	if out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err == nil {
-		if b := strings.TrimSpace(string(out)); b != "HEAD" {
+	if out, err := gitexec.Output(context.Background(), gitexec.Spec{Args: []string{"rev-parse", "--abbrev-ref", "HEAD"}}); err == nil {
+		if b := strings.TrimSpace(out); b != "HEAD" {
 			trig.Branch, trig.Ref = b, "refs/heads/"+b
 		}
 	}
-	if out, err := exec.Command("git", "rev-parse", "HEAD").Output(); err == nil {
-		trig.SHA = strings.TrimSpace(string(out))
+	if out, err := gitexec.Output(context.Background(), gitexec.Spec{Args: []string{"rev-parse", "HEAD"}}); err == nil {
+		trig.SHA = strings.TrimSpace(out)
 	}
 	run, err := eng.CreateRun(engine.NewRun{Project: "local", Pipeline: p, Trigger: trig, Source: engine.Source{Kind: "dir", Path: dir}})
 	if err != nil {

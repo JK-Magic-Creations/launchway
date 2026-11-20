@@ -1,18 +1,12 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 507,
+  "total": 499,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
       "linter": "errcheck",
       "text": "Error return value of `fs.Parse` is not checked",
       "count": 2
-    },
-    {
-      "file": "cmd/launchway/client.go",
-      "linter": "gosec",
-      "text": "G704: SSRF via taint analysis",
-      "count": 1
     },
     {
       "file": "cmd/launchway/client.go",
@@ -79,12 +73,6 @@
       "linter": "noctx",
       "text": "net.Listen must not be called. use (*net.ListenConfig).Listen",
       "count": 4
-    },
-    {
-      "file": "cmd/launchway/main.go",
-      "linter": "noctx",
-      "text": "os/exec.Command must not be called. use os/exec.CommandContext",
-      "count": 2
     },
     {
       "file": "cmd/launchway/mcp.go",
@@ -486,12 +474,6 @@
       "file": "internal/deploy/gitops/gitops.go",
       "linter": "errcheck",
       "text": "Error return value of `r.resetTo` is not checked",
-      "count": 1
-    },
-    {
-      "file": "internal/deploy/gitops/gitops.go",
-      "linter": "gosec",
-      "text": "G204: Subprocess launched with variable",
       "count": 1
     },
     {
@@ -1619,12 +1601,6 @@
     {
       "file": "internal/runner/library.go",
       "linter": "gosec",
-      "text": "G204: Subprocess launched with variable",
-      "count": 1
-    },
-    {
-      "file": "internal/runner/library.go",
-      "linter": "gosec",
       "text": "G301: Expect directory permissions to be 0750 or less",
       "count": 6
     },
@@ -1656,12 +1632,6 @@
       "file": "internal/runner/runner.go",
       "linter": "gocyclo",
       "text": "cyclomatic complexity 36 of func `(*Runner).execute` is high (\u003e 30)",
-      "count": 1
-    },
-    {
-      "file": "internal/runner/runner.go",
-      "linter": "gosec",
-      "text": "G204: Subprocess launched with variable",
       "count": 1
     },
     {
@@ -1711,12 +1681,6 @@
       "linter": "revive",
       "text": "receiver-naming: receiver name lib should be consistent with previous receiver name p for project",
       "count": 2
-    },
-    {
-      "file": "internal/source/source.go",
-      "linter": "gosec",
-      "text": "G204: Subprocess launched with variable",
-      "count": 1
     },
     {
       "file": "internal/source/source.go",
@@ -1992,12 +1956,6 @@
       "file": "internal/verify/source/sql.go",
       "linter": "gocyclo",
       "text": "cyclomatic complexity 33 of func `lexSQL` is high (\u003e 30)",
-      "count": 1
-    },
-    {
-      "file": "web/node_modules/flatted/golang/pkg/flatted/flatted.go",
-      "linter": "gocyclo",
-      "text": "cyclomatic complexity 32 of func `Stringify` is high (\u003e 30)",
       "count": 1
     }
   ]

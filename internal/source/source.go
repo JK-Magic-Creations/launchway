@@ -9,13 +9,11 @@
 package source
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -25,6 +23,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 )
@@ -186,6 +185,7 @@ func NewManagerWithLibraries(eng *engine.Engine, dataDir string, projects []Proj
 
 // Start polls every project until ctx ends.
 func (m *Manager) Start(ctx context.Context) {
+	m.logGitVersion(ctx)
 	for _, name := range m.order {
 		go m.watch(ctx, m.projects[name])
 	}
@@ -657,30 +657,27 @@ func gitOut(ctx context.Context, dir string, args ...string) (string, error) {
 	return out, nil
 }
 
-// gitRun runs git in dir with extra environment and stdin. It returns what
-// git wrote to stdout, even when it fails; the error is what it wrote to
-// stderr.
+// gitRun runs git in dir with extra environment and stdin through the one
+// hardened runner (internal/gitexec). It returns what git wrote to stdout,
+// even when it fails; the error is what it wrote to stderr.
 func gitRun(ctx context.Context, dir string, env []string, stdin string, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", args...)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-	cmd.Env = append(append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "LC_ALL=C"), env...)
+	spec := gitexec.Spec{Dir: dir, Args: args, Env: env, Inherit: gitexec.Remote, Timeout: 2 * time.Minute}
 	if stdin != "" {
-		cmd.Stdin = strings.NewReader(stdin)
+		spec.Stdin = strings.NewReader(stdin)
 	}
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = err.Error()
+	res, err := gitexec.Run(ctx, spec)
+	if err != nil {
+		var ee *gitexec.ExitError
+		if errors.As(err, &ee) {
+			msg := strings.TrimSpace(ee.Stderr)
+			if msg == "" {
+				msg = "exit status " + strconv.Itoa(ee.Code)
+			}
+			return res.Stdout, errors.New(msg)
 		}
-		return stdout.String(), errors.New(msg)
+		return res.Stdout, err
 	}
-	return stdout.String(), nil
+	return res.Stdout, nil
 }
 
 func short(sha string) string {
@@ -688,4 +685,17 @@ func short(sha string) string {
 		return sha[:10]
 	}
 	return sha
+}
+
+// logGitVersion names the installed git once and says what it is too old for.
+func (m *Manager) logGitVersion(ctx context.Context) {
+	v, err := gitexec.Installed(ctx)
+	if err != nil {
+		m.log.Error("git is not usable; repositories cannot be watched", "error", err)
+		return
+	}
+	m.log.Info("git found", "version", v.String())
+	for _, missing := range v.Missing() {
+		m.log.Warn("git is older than later features need", "version", v.String(), "detail", missing)
+	}
 }
