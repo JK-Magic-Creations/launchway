@@ -365,6 +365,8 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `exclude` | list | none | With `for_each`: combinations to leave out |
 | `max_parallel` | whole number | no bound | With `for_each`: how many members may be queued or running at once, 1 to 500 |
 | `fail_fast` | boolean | `true` | With `for_each`: once a member fails for good, cancel the others not started and stop those running |
+| `add` | list | none | With `for_each`: whole combinations to add outside the lists, one value for every key; see [For each](#for-each) |
+| `continue_for` | list | none | With `for_each`: members, matched like `exclude` entries, that may fail without failing the run (as `on_failure: continue`) |
 
 A step that fails keeps its last few lines of output with the step, so the reason shows where the
 run says it failed. Secret values are masked in logs and outputs; values shorter than 4 characters
@@ -417,6 +419,8 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 | `exclude` | list | none | With `for_each`: combinations to leave out |
 | `max_parallel` | whole number | no bound | With `for_each`: members queued or running at once, 1 to 500 |
 | `fail_fast` | boolean | `true` | With `for_each`: stop the other members once one fails |
+| `add` | list | none | With `for_each`: whole combinations to add outside the lists |
+| `continue_for` | list | none | With `for_each`: members that may fail without failing the run; the template's steps that run a script or build an image then behave as `on_failure: continue` |
 
 `launchway validate` checks such a step without reading the template; the server's editor and
 `POST /api/v1/validate?project=NAME` expand it.
@@ -1180,6 +1184,18 @@ step that needs the loop needs every member.
   digit. Put other text around a value with `format`.
 - `exclude` is a list of mappings from keys to values; a combination matching every key of an
   entry is left out. With every list written in place, an entry that matches nothing is an error.
+- `add` is a list of whole combinations (every key of the loop, values from the same alphabet,
+  allowed to lie outside the lists). They are appended after the cross product in the order
+  written, take part in `max_parallel` and `fail_fast` like any member, and count toward the
+  limit below. Members keep ids made of the loop keys only, so adding an entry never changes the
+  id of a member the lists make. An entry that is already a combination of the lists, is left out
+  by `exclude`, or is written twice is an error.
+- `continue_for` is a list of entries matched like `exclude` entries (one or more keys). A matching
+  member behaves as `on_failure: continue`: if it fails for good it ends as failed (allowed), the
+  steps that need the loop treat it as succeeded and it does not trigger `fail_fast`. An entry
+  that matches no member is an error. In a loop over a template, the template's steps that run a
+  script or build an image are tolerated; other kinds of step cannot tolerate a failure. Members
+  that `continue_for` does not select still stop the others.
 - A loop has at most 64 combinations unless the server allows more
   ([`loops.max_members`](server-config.md#loops), at most 500), and a run at most 500 steps.
   An expanded step name may be at most 200 bytes.
@@ -1213,6 +1229,8 @@ steps:
       python: ["3.11", "3.12", "3.13"]
       os: { input: systems }
     exclude: [ { python: "3.11", os: alpine } ]
+    add: [ { python: "3.14", os: debian } ]
+    continue_for: [ { python: "3.14" } ]
     max_parallel: 3
     fail_fast: false
     image: { each: python, format: "python:%s" }

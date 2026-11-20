@@ -316,10 +316,10 @@ func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
 
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
-		"for_each", "exclude", "max_parallel", "fail_fast", "artifacts", "fetch", "deployment", "resources", "on_failure"}
+		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "artifacts", "fetch", "deployment", "resources", "on_failure"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
-	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast"}
+	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}

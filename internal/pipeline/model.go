@@ -206,6 +206,10 @@ type Step struct {
 	AbortFirst bool   `json:"abort_first,omitempty"` // rollback: abort the rollout before reverting
 	ctl        controlLines
 
+	// continueFail says a loop's continue_for selected this member, or the
+	// loop member it is part of (template steps): see tolerate.
+	continueFail bool
+
 	environmentLine, deploymentLine, versionLine, resourcesLine int
 	// environmentInput is the run input a deploy step's environment comes
 	// from (environment: { input: name }); Bind puts its value in place.

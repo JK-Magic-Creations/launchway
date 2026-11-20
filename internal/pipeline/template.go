@@ -836,6 +836,7 @@ type scope struct {
 	retry         *retryPolicy
 	timeout       *Duration
 	each          map[string]string // the loop values of the uses step, and of those around it
+	continueFail  bool              // continue_for selected the loop member of the uses step
 }
 
 func (x *expander) problem(sc *scope, line, col int, path, format string, args ...any) {
@@ -1045,6 +1046,7 @@ func (x *expander) emit(sc *scope) {
 			child.inherit, child.inheritGroups = needs, groups
 			child.when, child.retry, child.timeout = sc.when, sc.retry, sc.timeout
 			child.each = mergeEach(sc.each, s.Each)
+			child.continueFail = sc.continueFail || s.continueFail
 			if s.When != nil {
 				child.when = whenIn(s.When, sc.prefix)
 			}
@@ -1080,6 +1082,9 @@ func (x *expander) emit(sc *scope) {
 			c.Container = sc.containers[s.Container]
 		}
 		c.When = sc.whenFor(c.When)
+		if sc.continueFail {
+			c.tolerate()
+		}
 		if !s.retrySet && sc.retry != nil && !s.IsApproval() {
 			c.setRetryPolicy(*sc.retry)
 		}

@@ -86,7 +86,7 @@ steps:
 | `message` | For an approval: the question to decide, one line |
 | `uses` | `library/template`: the step becomes that template's steps |
 | `with` | Values for the template's parameters |
-| `for_each` | Repeat the step over lists; with `exclude`, `max_parallel` and `fail_fast` |
+| `for_each` | Repeat the step over lists; with `exclude`, `add` (extra whole combinations), `continue_for` (members that may fail without failing the run), `max_parallel` and `fail_fast` |
 | `on_failure` | `stop` (default) or `continue` (steps that run a script, and image steps): a final failure is shown as failed (allowed), the run's outcome ignores it and steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }` |
 | `deployment` | For a `rollback` or `rollout` step: the deploy step it acts on |
 
@@ -190,6 +190,8 @@ and in deploy values.
       python: ["3.12", "3.13"]
       os: { input: systems }                   # a list input
     exclude: [ { python: "3.12", os: alpine } ]
+    add: [ { python: "3.14", os: debian } ]   # a combination outside the lists
+    continue_for: [ { python: "3.14" } ]       # may fail without failing the run
     max_parallel: 2
     fail_fast: false                           # default true
     image: { each: python, format: "docker.io/library/python:%s-slim" }

@@ -145,6 +145,7 @@ func Bind(p *Pipeline, values map[string]string, o BindOptions) (*Pipeline, erro
 	if len(out.Steps) > MaxExpandedSteps {
 		return nil, Problems{{Message: fmt.Sprintf("with its loops repeated, the pipeline has %d steps; at most %d are allowed", len(out.Steps), MaxExpandedSteps)}}
 	}
+	out.requireFlow() // a loop's continue_for makes members with on_failure
 	return &out, nil
 }
 
