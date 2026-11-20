@@ -1014,7 +1014,9 @@ func TestTwoServersCommitAndEvictAtOnce(t *testing.T) {
 			defer wg.Done()
 			d := big(mib, byte(10+i))
 			_, c, err := r.save(e, jobs[i], "pip", cacheKey("many"+string(rune('a'+i))), d)
-			if err != nil && !errors.Is(err, ErrConflict) {
+			// Uploads in progress take room too, so a declaration made while
+			// others hold the quota is refused (ErrQuota), as it should be.
+			if err != nil && !errors.Is(err, ErrConflict) && !errors.Is(err, ErrQuota) {
 				t.Errorf("entry %d: %v", i, err)
 			}
 			_ = c
