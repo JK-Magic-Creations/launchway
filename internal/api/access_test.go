@@ -118,6 +118,11 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/projects/{name}/security": {"GET", "/api/v1/projects/pay-api/security", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/components":               {"GET", "/api/v1/components?name=left-pad", "", [6]int{401, 200, 200, 200, 200, 200}},
 
+	// Shared libraries and their templates: anyone who may see a project.
+	// The test server has no library called nope.
+	"GET /api/v1/libraries":                     {"GET", "/api/v1/libraries", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/libraries/{library}/templates": {"GET", "/api/v1/libraries/nope/templates", "", [6]int{401, 403, 404, 404, 404, 404}},
+
 	// Images: what a run built; a search over the projects the caller may see.
 	"GET /api/v1/runs/{id}/images": {"GET", "/api/v1/runs/{pay}/images", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/images": {"GET", "/api/v1/images?repository=harbor.example.com/team/shop", "",
@@ -189,7 +194,7 @@ func (b *browser) statusOf(method, url, body string, header ...string) int {
 }
 
 func TestPermissionMatrix(t *testing.T) {
-	e := setupAuth(t, envOpts{})
+	e := setupAuth(t, envOpts{mcp: &MCPOptions{}})
 	pay := e.startRun(t, "pay-api")
 	e.startRun(t, "web")
 	patterns := make([]string, 0, len(permissionTable))

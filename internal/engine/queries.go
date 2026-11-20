@@ -272,6 +272,15 @@ type RunFilter struct {
 	// OnlyProjects, if not nil, limits the list to runs of these projects;
 	// an empty, non-nil list matches nothing.
 	OnlyProjects []string
+	// Before, if set, lists only runs after this one in the list's order
+	// (older, or as old with a smaller ID): the next page after it.
+	Before *RunCursor
+}
+
+// RunCursor is a place in the list of runs: a run's creation time and ID.
+type RunCursor struct {
+	CreatedAt int64
+	ID        string
 }
 
 // ListRuns returns the newest runs first.
@@ -299,6 +308,10 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 			args = append(args, p)
 		}
 		where = append(where, "project IN ("+strings.Join(marks, ",")+")")
+	}
+	if b := f.Before; b != nil {
+		where = append(where, "(created_at < ? OR (created_at = ? AND id < ?))")
+		args = append(args, b.CreatedAt, b.CreatedAt, b.ID)
 	}
 	q := `SELECT ` + e.runCols() + ` FROM runs`
 	if len(where) > 0 {
@@ -536,6 +549,25 @@ func (e *Engine) reruns(runID string) ([]RerunBrief, error) {
 // Logs returns log lines for one step attempt after the given sequence number.
 // Attempt 0 means the latest attempt.
 func (e *Engine) Logs(runID, stepID string, attempt, after, limit int) ([]LogLine, int, error) {
+	return e.QueryLogs(runID, stepID, LogQuery{Attempt: attempt, After: after, Limit: limit})
+}
+
+// LogQuery says which of a step attempt's log lines to read.
+type LogQuery struct {
+	Attempt int // 0: the latest attempt
+	After   int // only lines after this sequence number
+	Limit   int // at most this many lines: default 5000, at most 10000
+	// Tail, if set, reads the last Tail lines (after After) instead of the
+	// first ones; the lines are still returned in order.
+	Tail bool
+	// Search, if set, reads only lines that contain it, ignoring case.
+	Search string
+}
+
+// QueryLogs returns log lines for one step attempt, and the attempt they
+// are of.
+func (e *Engine) QueryLogs(runID, stepID string, q LogQuery) ([]LogLine, int, error) {
+	attempt, after, limit := q.Attempt, q.After, q.Limit
 	if limit <= 0 || limit > 10000 {
 		limit = 5000
 	}
@@ -547,8 +579,17 @@ func (e *Engine) Logs(runID, stepID string, attempt, after, limit int) ([]LogLin
 			return nil, 0, err
 		}
 	}
-	rows, err := e.db.Query(`SELECT seq, at, stream, text FROM logs WHERE run_id = ? AND step_id = ? AND attempt = ? AND seq > ?
-		ORDER BY seq LIMIT ?`, runID, stepID, attempt, after, limit)
+	where := `run_id = ? AND step_id = ? AND attempt = ? AND seq > ?`
+	args := []any{runID, stepID, attempt, after}
+	if s := q.Search; s != "" {
+		where += ` AND LOWER(text) LIKE ? ESCAPE '\'`
+		args = append(args, "%"+strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(strings.ToLower(s))+"%")
+	}
+	order := "seq"
+	if q.Tail {
+		order = "seq DESC"
+	}
+	rows, err := e.db.Query(`SELECT seq, at, stream, text FROM logs WHERE `+where+` ORDER BY `+order+` LIMIT ?`, append(args, limit)...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -560,6 +601,9 @@ func (e *Engine) Logs(runID, stepID string, attempt, after, limit int) ([]LogLin
 			return nil, 0, err
 		}
 		out = append(out, l)
+	}
+	if q.Tail {
+		slices.Reverse(out)
 	}
 	return out, attempt, rows.Err()
 }

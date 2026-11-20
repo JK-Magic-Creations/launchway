@@ -161,6 +161,80 @@ func (c *OIDC) Exchange(ctx context.Context, code, verifier, nonce string) (*Cla
 	return c.claims(idt.Subject, claims)
 }
 
+// RedirectURL is this server's sign-in callback, as browsers reach it.
+func (c *OIDC) RedirectURL() string { return c.o.RedirectURL }
+
+// Issuer is the provider's issuer.
+func (c *OIDC) Issuer() string { return c.o.Issuer }
+
+// ClientID is the client ID Launchway signs in with.
+func (c *OIDC) ClientID() string { return c.o.ClientID }
+
+// VerifyAccessToken checks an access token the provider issued as a JWT
+// (RFC 9068) for a resource: its signature with the provider's keys, its
+// issuer, that audience is among its audiences, that it has not expired,
+// and that it carries every scope in scopes. It returns who it is for, from
+// the same claims sign-in uses, and the client it was issued to.
+func (c *OIDC) VerifyAccessToken(ctx context.Context, raw, audience string, scopes []string) (*Claims, string, error) {
+	p, err := c.Discover(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	if audience == "" || audience == c.o.ClientID {
+		// An ID token for Launchway's own sign-in has that audience: it must
+		// never pass for an access token.
+		return nil, "", errors.New("no audience to check access tokens against")
+	}
+	tok, err := p.Verifier(&oidc.Config{ClientID: audience, Now: c.o.Now}).Verify(c.ctx(ctx), raw)
+	if err != nil {
+		return nil, "", err
+	}
+	claims := map[string]any{}
+	if err := tok.Claims(&claims); err != nil {
+		return nil, "", err
+	}
+	if _, isID := claims["nonce"]; isID {
+		return nil, "", errors.New("an ID token is not an access token")
+	}
+	granted := map[string]bool{}
+	switch sc := claims["scope"].(type) {
+	case string:
+		for _, s := range strings.Fields(sc) {
+			granted[s] = true
+		}
+	case []any: // some providers send scp as a list
+		for _, v := range sc {
+			if s, ok := v.(string); ok {
+				granted[s] = true
+			}
+		}
+	}
+	if scp, ok := claims["scp"].([]any); ok {
+		for _, v := range scp {
+			if s, ok := v.(string); ok {
+				granted[s] = true
+			}
+		}
+	}
+	for _, want := range scopes {
+		if !granted[want] {
+			return nil, "", fmt.Errorf("the access token lacks the scope %q", want)
+		}
+	}
+	client, _ := claims["client_id"].(string)
+	if client == "" {
+		client, _ = claims["azp"].(string)
+	}
+	out, err := c.claims(tok.Subject, claims)
+	if err != nil {
+		return nil, "", err
+	}
+	if _, ok := claims[c.o.GroupsClaim]; !ok {
+		out.Groups = nil // not said, as opposed to none
+	}
+	return out, client, nil
+}
+
 // claims picks out the username and groups.
 func (c *OIDC) claims(subject string, m map[string]any) (*Claims, error) {
 	out := &Claims{Subject: subject}

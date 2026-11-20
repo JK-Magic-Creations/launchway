@@ -116,6 +116,8 @@ type envOpts struct {
 	policy       *auth.Policy
 	// artifacts, if set, is where artifacts are kept and how.
 	artifacts *engine.ArtifactOptions
+	// mcp, if set, turns the MCP endpoint on.
+	mcp *MCPOptions
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -151,7 +153,7 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, Projects: mgr, RunnerToken: "runner-secret", Log: quiet(), Now: o.clk.Now,
-		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts}
+		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts, MCP: o.mcp}
 	srv := httptest.NewUnstartedServer(nil)
 	redirect := o.redirectURL
 	if redirect == "" {

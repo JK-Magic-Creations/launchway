@@ -160,6 +160,20 @@ func (e *Engine) TokenByHash(hash string) (*APIToken, []string, error) {
 	return t, decodeGroups(groups), nil
 }
 
+// LastSignIn returns a person's groups and profile as of their latest
+// sign-in; ErrNotFound if they never signed in.
+func (e *Engine) LastSignIn(user string) ([]string, Profile, error) {
+	var groups, name, email sql.NullString
+	err := e.db.QueryRow(`SELECT group_list, display_name, email FROM users WHERE username = ?`, user).Scan(&groups, &name, &email)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, Profile{}, fmt.Errorf("%w: user %s", ErrNotFound, user)
+	}
+	if err != nil {
+		return nil, Profile{}, err
+	}
+	return decodeGroups(groups), Profile{Name: name.String, Email: email.String}, nil
+}
+
 // TouchToken records that a token was used at now, unless that was already
 // recorded since notBefore.
 func (e *Engine) TouchToken(id string, now, notBefore int64) error {

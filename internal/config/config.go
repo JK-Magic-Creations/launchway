@@ -74,6 +74,8 @@ type Config struct {
 	// the targets its runners may serve. Only a pool's token can take deploy
 	// work.
 	RunnerPools []RunnerPoolConfig `yaml:"runner_pools"`
+	// MCP controls the endpoint agents use, /mcp; see mcp.go.
+	MCP MCPConfig `yaml:"mcp"`
 }
 
 // EnvironmentConfig is one environment.
@@ -592,6 +594,12 @@ func Load(path string) (*Config, error) {
 	}
 	if err := c.checkTriggers(); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := c.MCP.Check(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if c.MCP.OAuth != nil && c.Auth.Mode != AuthOIDC {
+		return nil, fmt.Errorf("%s: mcp.oauth needs sign-in with OpenID Connect (auth.mode: oidc)", path)
 	}
 	if _, err := c.DraftRules(); err != nil {
 		if path != "" {

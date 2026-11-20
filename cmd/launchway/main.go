@@ -59,6 +59,7 @@ Usage:
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel  start and follow runs on a server
                                                 (launchway runs, for more)
+  launchway mcp      [--server URL]             the server's MCP tools for agents, on stdin and stdout
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -87,6 +88,8 @@ func main() {
 		err = cmdLogin(args)
 	case "runs":
 		err = cmdRuns(args)
+	case "mcp":
+		err = cmdMCP(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -196,6 +199,15 @@ func cmdServer(args []string) error {
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
 	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
+	if m := cfg.MCP; m.On() {
+		srv.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
+		if o := m.OAuth; o != nil {
+			srv.MCP.OAuth = &api.MCPOAuth{Resource: o.Resource, Scopes: o.Scopes}
+			if err := api.CheckMCPOAuth(srv.MCP.OAuth, authOpts); err != nil {
+				return fmt.Errorf("%s: %w", *cfgPath, err)
+			}
+		}
+	}
 	for _, p := range pools {
 		srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets})
 	}
