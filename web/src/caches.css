@@ -1,0 +1,27 @@
+/* Build caches: a project's entries against its quota, and what a step's caches did. */
+.cc-meter { margin: 12px 0 6px; }
+.cc-use { display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; font-size: 14px; }
+.cc-use strong { font-variant-numeric: tabular-nums; }
+.cc-table td { vertical-align: top; }
+.cc-key { font-family: var(--mono); font-size: 12.5px; }
+.cc-scope { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+.cc-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cc-sort { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; font-weight: 700; display: inline-flex; gap: 4px; align-items: center; }
+.cc-sort:hover { color: var(--accent-ink); }
+.cc-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.cc-arrow { font-size: 11px; color: var(--text-3); }
+.cc-names { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; }
+.cc-names li { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); }
+.cc-names li:first-child { border-top: 0; }
+.cc-name { font-weight: 600; }
+.cc-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.cc-h { margin: 22px 0 8px; }
+/* A step's caches on the run page. */
+.cc-step { display: flex; flex-direction: column; gap: 8px; }
+.cc-step ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cc-step li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.cc-result { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); }
+.cc-hit, .cc-fallback, .cc-saved { background: var(--ok-soft); color: var(--ok-ink); border-color: transparent; }
+.cc-miss { background: var(--idle-soft); color: var(--idle-ink); border-color: transparent; }
+.cc-not_saved { background: var(--warn-soft); color: var(--warn-ink); border-color: transparent; }
+.cc-reason { color: var(--text-2); font-size: 13.5px; overflow-wrap: anywhere; }

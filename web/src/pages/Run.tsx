@@ -25,6 +25,7 @@ import { PolicyTab } from "./RunPolicy";
 import { useRunVerifications, VerificationPanel, VerificationsTab, VerificationSummaryRows } from "../components/Verification";
 import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
+import { CacheResults } from "../components/CacheResults";
 
 // Stands for the run until it is loaded, so hooks run in the same order.
 const EMPTY_RUN = { id: "", step_list: [] } as unknown as RunDetail;
@@ -530,6 +531,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           </button>
         </div>
       )}
+      {step.caches && step.caches.length > 0 && <CacheResults project={run.project} caches={step.caches} />}
       {step.policy_blocked && (
         <div className="callout callout-bad pol-step-callout">
           <span><strong>Blocked by policy.</strong> Nothing of this step reached a runner or the environment.</span>

@@ -504,6 +504,58 @@ export interface StepView {
   reports?: string[];
   /** The step's test results, from the attempt that counts. */
   tests?: TestTotals;
+  /** What each of the step's build caches did in its latest attempt. */
+  caches?: CacheResult[];
+}
+
+/** What one cache of a step did: restored (hit, fallback), missed, saved or not saved. */
+export interface CacheResult {
+  name: string;
+  /** The key worked out for the step (64 hex digits). */
+  key?: string;
+  result: "hit" | "fallback" | "miss" | "saved" | "not_saved";
+  /** When saved or not saved: what the restore found. */
+  restored?: "hit" | "fallback" | "miss";
+  bytes?: number;
+  scope?: string;
+  /** Why there was no entry, or why nothing was saved. */
+  reason?: string;
+  seconds?: number;
+}
+
+/** A project's cache policy as it applies to it. */
+export interface CachePolicy {
+  enabled: boolean;
+  max_project_gib: number;
+  max_entry_gib: number;
+  idle_days: number;
+  /** Whose policy it is: the project's own, the installation's, or what is built in. */
+  source: "project" | "installation" | "default";
+}
+
+export interface CacheEntry {
+  id: string;
+  name: string;
+  key: string;
+  /** default, ref:<ref> or pull:<n>. */
+  scope: string;
+  platform: string;
+  bytes: number;
+  files: number;
+  status: "kept" | "uploading";
+  created_at: number;
+  last_used_at: number;
+  hits: number;
+  /** The run that wrote it. */
+  run_id: string;
+  run_number: number;
+}
+
+export interface CacheList {
+  project: string;
+  entries: CacheEntry[];
+  totals: { entries: number; bytes: number; quota_bytes: number; max_entry_bytes: number; idle_days: number };
+  policy: CachePolicy;
 }
 
 /** Where a variable came from. */
@@ -980,6 +1032,12 @@ export const api = {
   startRun: (name: string, ref: string, libraries?: LibraryOverrides) =>
     call<RunSummary>("POST", `/api/v1/projects/${encodeURIComponent(name)}/runs`, { ref, libraries }),
   runners: (background = false) => call<Runner[]>("GET", "/api/v1/runners", undefined, { background }),
+  caches: (project: string, background = false) =>
+    call<CacheList>("GET", `/api/v1/projects/${encodeURIComponent(project)}/caches`, undefined, { background }),
+  deleteCache: (project: string, id: string) =>
+    call<{ ended: number; bytes: number }>("DELETE", `/api/v1/projects/${encodeURIComponent(project)}/caches/${encodeURIComponent(id)}`),
+  deleteCachesNamed: (project: string, name: string) =>
+    call<{ ended: number; bytes: number }>("DELETE", `/api/v1/projects/${encodeURIComponent(project)}/caches?name=${encodeURIComponent(name)}`),
   runnerPools: (background = false) => call<RunnerPools>("GET", "/api/v1/runner-pools", undefined, { background }),
   joinTokens: (background = false) => call<JoinToken[]>("GET", "/api/v1/runner-join-tokens", undefined, { background }),
   createJoinToken: (req: JoinTokenRequest) => call<{ token: string; join_token: JoinToken }>("POST", "/api/v1/runner-join-tokens", req),
