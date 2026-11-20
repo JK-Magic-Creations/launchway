@@ -1,0 +1,141 @@
+# Builds, signs and publishes a release when a version tag (v1.2.3, v1.2.3-rc.1) is pushed.
+#
+# Every step calls the same scripts and make targets a developer runs locally (make release-local,
+# make release-images, packaging/release/*.sh), so what is tested locally is what runs here; only
+# the signing identity differs: keyless Sigstore signatures for this workflow's identity instead
+# of a key file. The GitHub release is created as a draft for a person to check and publish.
+#
+# Repository settings this needs: Actions may create releases and write packages (the
+# GITHUB_TOKEN permissions below), and, for the apt and yum repositories, the secret
+# REPO_GPG_PRIVATE_KEY (an armored OpenPGP key without a passphrase). See packaging/README.md.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Tools
+        run: make tools
+      - name: Vulnerabilities (govulncheck)
+        run: make vulncheck
+      - name: Licenses of dependencies
+        run: make license-check
+      - name: Scripts and workflows
+        run: make lint-scripts lint-workflows
+      - name: Charts
+        run: make chart-lint
+      - name: Vet and test
+        run: |
+          go vet ./...
+          go test -race -count=1 ./...
+
+  release:
+    needs: checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # the draft release
+      packages: write # the images on ghcr.io
+      id-token: write # keyless signing and attestations
+      attestations: write
+    env:
+      VERSION: ${{ github.ref_name }}
+      SOURCE_REPOSITORY: https://github.com/${{ github.repository }}
+      BUILDER_ID: https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}
+      SIGN: keyless
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Tools
+        run: make tools
+
+      - name: Binaries, packages, charts, SBOMs, SHA256SUMS (signed)
+        run: PATH="$PWD/bin/tools:$PATH" packaging/release/release.sh "$VERSION" "dist/$VERSION"
+
+      - name: Images (built, pushed, signed, SBOM and provenance attached)
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          printf '%s' "$REGISTRY_TOKEN" | podman login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          # cosign reads podman's credentials from the Docker configuration.
+          mkdir -p ~/.docker && cp "${XDG_RUNTIME_DIR}/containers/auth.json" ~/.docker/config.json
+          IMAGE_REPO="ghcr.io/$owner" PATH="$PWD/bin/tools:$PATH" packaging/release/images.sh "$VERSION" "dist/$VERSION"
+
+      - name: Apt and yum repositories
+        env:
+          REPO_GPG_PRIVATE_KEY: ${{ secrets.REPO_GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$REPO_GPG_PRIVATE_KEY" ]; then
+            echo "::warning::REPO_GPG_PRIVATE_KEY is not set: no apt or yum repository in this release"
+            exit 0
+          fi
+          key=$(mktemp)
+          printf '%s\n' "$REPO_GPG_PRIVATE_KEY" >"$key"
+          REPO_GPG_KEY=$key BASE_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$VERSION" \
+            packaging/release/repo.sh "dist/$VERSION"
+          rm -f "$key"
+          tar -C "dist/$VERSION" -czf "dist/$VERSION/launchway-repositories-$VERSION.tar.gz" repo
+
+      - name: Image digests
+        id: images
+        run: |
+          while read -r line; do
+            ref=${line%@*}; digest=${line#*@}; name=${ref%:*}
+            case $name in
+              */launchway-runner) echo "runner_name=$name" >>"$GITHUB_OUTPUT"; echo "runner_digest=$digest" >>"$GITHUB_OUTPUT" ;;
+              */launchway) echo "server_name=$name" >>"$GITHUB_OUTPUT"; echo "server_digest=$digest" >>"$GITHUB_OUTPUT" ;;
+            esac
+          done <"dist/$VERSION/images.txt"
+
+      # GitHub's own SLSA build provenance, verifiable with `gh attestation verify`.
+      - name: Provenance of the release files
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: dist/${{ github.ref_name }}/SHA256SUMS
+      - name: Provenance of the server image
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.images.outputs.server_name }}
+          subject-digest: ${{ steps.images.outputs.server_digest }}
+          push-to-registry: true
+      - name: Provenance of the runner image
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.images.outputs.runner_name }}
+          subject-digest: ${{ steps.images.outputs.runner_digest }}
+          push-to-registry: true
+
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd "dist/$VERSION"
+          prerelease=
+          case $VERSION in *-*) prerelease=--prerelease ;; esac
+          find . -maxdepth 1 -type f -print0 | xargs -0 \
+            gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --draft --verify-tag $prerelease \
+              --title "Launchway $VERSION" --notes "See SUPPORT.md for verifying these files and the images."

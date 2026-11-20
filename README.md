@@ -26,46 +26,11 @@ It is early. What is described below works and is tested, including with several
 real Kubernetes, PostgreSQL and OpenBao. Much of the rest is designed but not built yet (see
 [Status](#status)). Turn on [sign-in](#sign-in-and-access) before anyone else can reach it.
 
-## Running several servers
+## Install
 
-Point every server at the same PostgreSQL database and put them behind a load balancer:
+### Try it in one minute
 
-```yaml
-# launchway.yaml
-listen: 0.0.0.0:8080
-database: postgres://launchway:...@db.internal:5432/launchway
-auth:
-  mode: oidc   # see Sign-in and access
-  # ...
-```
-
-`LAUNCHWAY_DATABASE` overrides the file. Each server exposes `/healthz` (the process is up) and
-`/readyz` (the database answers, and the server is not shutting down). A starting server waits up
-to `database_wait` (default `60s`) for the database. On SIGTERM a server reports not ready at
-once, keeps serving for `server.drain_delay` (default `0s`) so that load balancers checking
-`/readyz` move away, and then gives requests in flight up to 15 seconds. Runners may connect to
-any server. With no `database` setting a
-single server keeps its data in an embedded SQLite file, which suits development and small
-installs. Sessions, API tokens and sign-ins in progress are kept in the database too, so a browser
-or script may be sent to any server.
-
-## Run it on Kubernetes
-
-`make image` builds a container image, and the Helm chart in `deploy/helm/launchway` runs
-several servers against your PostgreSQL database, with runners that execute steps in pods in a
-namespace of your choice:
-
-```sh
-helm install launchway deploy/helm/launchway -n launchway --create-namespace \
-  --set database.existingSecret=launchway-database
-```
-
-See [deploy/README.md](deploy/README.md) for the required values, a high-availability example,
-upgrades, and security notes.
-
-## Try it on one machine
-
-You need Go 1.27+, Node 24+, Git, and Podman or Docker.
+From a source checkout (you need Go 1.27+, Node 24+, Git, and Podman or Docker):
 
 ```sh
 make run
@@ -105,6 +70,103 @@ Things to try:
   *demo-plain* has no pipeline file at all; the server runs the library's `check` template for it.
 - **Run locally.** In any repository with a `.launchway/pipeline.yaml`, run `bin/launchway run`. It
   uses the same engine, on your machine, against your working copy.
+
+Or with a release binary for Linux or macOS (amd64 or arm64), from
+[the releases](https://github.com/jk-magic-creations/launchway/releases): download
+`launchway-VERSION-OS-ARCH`, [verify it](#verify-what-you-downloaded), and run
+`./launchway server`; it serves http://127.0.0.1:8080 with its data in an SQLite file.
+
+### A single server
+
+One server with its embedded SQLite database suits small teams and development. Write a
+`launchway.yaml` (the projects to watch, sign-in, runners; see the sections below) and run
+`launchway server --config launchway.yaml`, from the binary or from the image
+`ghcr.io/jk-magic-creations/launchway`. The server runs a built-in runner unless
+`runner.enabled: false`; [connect more runners](#connect-a-runner-on-another-machine-or-cluster)
+for real work. Turn on [sign-in](#sign-in-and-access) before anyone else can reach it.
+
+### High availability
+
+Point every server at the same PostgreSQL database and put them behind a load balancer:
+
+```yaml
+# launchway.yaml
+listen: 0.0.0.0:8080
+database: postgres://launchway:...@db.internal:5432/launchway
+auth:
+  mode: oidc   # see Sign-in and access
+  # ...
+```
+
+`LAUNCHWAY_DATABASE` overrides the file. Each server exposes `/healthz` (the process is up) and
+`/readyz` (the database answers, and the server is not shutting down). A starting server waits up
+to `database_wait` (default `60s`) for the database. On SIGTERM a server reports not ready at
+once, keeps serving for `server.drain_delay` (default `0s`) so that load balancers checking
+`/readyz` move away, and then gives requests in flight up to 15 seconds. Runners may connect to
+any server. With no `database` setting a
+single server keeps its data in an embedded SQLite file, which suits development and small
+installs. Sessions, API tokens and sign-ins in progress are kept in the database too, so a browser
+or script may be sent to any server.
+
+On Kubernetes, the Helm chart in `deploy/helm/launchway` runs several servers against your
+PostgreSQL database, with runners that execute steps in pods in a namespace of your choice:
+
+```sh
+helm install launchway deploy/helm/launchway -n launchway --create-namespace \
+  --set database.existingSecret=launchway-database
+```
+
+See [deploy/README.md](deploy/README.md) for the required values, a high-availability example,
+upgrades, and security notes. [SUPPORT.md](SUPPORT.md) says which versions may run side by side.
+
+### Connect a runner on another machine or cluster
+
+Runners only connect outbound, to the server's URL, with the runner token: `LAUNCHWAY_RUNNER_TOKEN`
+if the servers are given one, otherwise the token the first server generated (stored in the
+database and written to the server's data directory); with the Helm chart, the Secret it
+generates.
+
+- **A Linux machine with systemd** (Debian, Ubuntu, RHEL and its relatives): the install script
+  downloads the release, verifies its signature and checksum, creates the unprivileged
+  `launchway-runner` user, writes `/etc/launchway/runner.yaml` and a root-only `runner.env`, and
+  starts a hardened systemd service:
+
+  ```sh
+  curl -fsSLO https://github.com/jk-magic-creations/launchway/releases/download/VERSION/install.sh
+  sudo sh install.sh --server https://launchway.example.com --token-file /root/runner-token
+  ```
+
+  `sh install.sh --help` lists the options: `--executor podman`, `--proxy`, `--ca-file`,
+  `upgrade`, `uninstall`. Or install the `launchway-runner` deb or rpm from the release (or its
+  apt and yum repositories), set `server:` and the token, and `systemctl enable --now
+  launchway-runner`. See [packaging/README.md](packaging/README.md) for the service's sandbox and
+  what each executor needs.
+- **Another Kubernetes cluster**: the runner-only chart `deploy/helm/launchway-runner` takes the
+  server URL and a Secret holding the token, creates the step namespace with Pod Security
+  "restricted" and the same least-privilege RBAC as the main chart, and can add NetworkPolicies
+  for the runners and their step pods (see [deploy/README.md](deploy/README.md#runners-in-another-cluster)).
+- **Anywhere else**: `launchway runner --server URL --config runner.yaml` with the token in
+  `LAUNCHWAY_RUNNER_TOKEN` (see [Commands](#commands)), or the image
+  `ghcr.io/jk-magic-creations/launchway-runner`.
+
+One-time join tokens, so that each runner gets an identity of its own, are being built; the
+install script and the runner chart keep the option `--join` (and `join.existingSecret`) for them.
+
+### Verify what you downloaded
+
+Every release lists the SHA-256 of each file in `SHA256SUMS`, signed by the release workflow with
+Sigstore; images are signed too and carry an SBOM and build provenance. With cosign:
+
+```sh
+cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
+  --certificate-identity-regexp '^https://github\.com/jk-magic-creations/launchway/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+sha256sum --ignore-missing -c SHA256SUMS
+```
+
+[SUPPORT.md](SUPPORT.md#verifying-what-you-downloaded) shows how to verify an image, its SBOM and
+provenance, and a release rebuilt from source. An air-gapped bundle (`make bundle`) holds the
+binaries, packages, charts and images for installations without internet access.
 
 ## A pipeline
 
