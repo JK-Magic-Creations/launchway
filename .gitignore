@@ -9,3 +9,5 @@
 *.db-shm
 *.db-wal
 /.claude/
+/dist/
+/.release-key/

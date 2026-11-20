@@ -1,0 +1,13 @@
+# Settings of the launchway-runner service: the same as runner: in a server's configuration, plus
+# where the server is (see the README's Commands section). Unknown settings are refused. The token
+# is never in this file: it is LAUNCHWAY_RUNNER_TOKEN in /etc/launchway/runner.env.
+#
+# Set server, put the token in runner.env, then:
+#   systemctl enable --now launchway-runner
+#
+# server: https://launchway.example.com
+data: /var/lib/launchway-runner
+# name: build-2            # default: the host name
+# concurrency: 2
+# executor: host           # host (the default here), podman, docker or kubernetes
+executor: host

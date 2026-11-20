@@ -1,0 +1,59 @@
+# The release images, built by packaging/release/images.sh from the release binaries (not from
+# source: the binaries are the reproducible, checksummed ones in SHA256SUMS). Two targets:
+#   server  launchway server (ENTRYPOINT launchway, CMD server ...)
+#   runner  launchway runner (the same file system, CMD runner ...)
+# Both are the same one static binary, with Git, its SSH transport and CA certificates; no shell,
+# no package manager, user 65532. The build context is the release directory.
+#
+# The file system is assembled on the build machine's own architecture for each target
+# architecture (apk --arch), so no emulation is needed. The base is pinned by digest; Alpine's
+# packages come from its 3.23 repository at build time (their versions are in the image's SBOM).
+ARG ALPINE_IMAGE=docker.io/library/alpine:3.23.8@sha256:469c9ea410b9215eaee7976ba6c0639039b444be8e5d638f7abbada189971eb2
+
+FROM --platform=$BUILDPLATFORM ${ALPINE_IMAGE} AS rootfs
+ARG TARGETARCH
+RUN case "$TARGETARCH" in amd64) a=x86_64 ;; arm64) a=aarch64 ;; *) echo "unsupported $TARGETARCH" >&2; exit 1 ;; esac \
+    && keys=/usr/share/apk/keys/$a && [ -d "$keys" ] || keys=/etc/apk/keys \
+    && apk add --root /rootfs --arch "$a" --initdb --no-cache --no-scripts \
+        --keys-dir "$keys" --repositories-file /etc/apk/repositories \
+        ca-certificates-bundle git openssh-client-default \
+    && rm -f /rootfs/usr/bin/scp /rootfs/usr/bin/sftp /rootfs/usr/bin/ssh-add /rootfs/usr/bin/ssh-agent \
+        /rootfs/usr/bin/ssh-copy-id /rootfs/usr/bin/ssh-keyscan /rootfs/usr/bin/ssh-pkcs11-helper \
+        /rootfs/usr/bin/findssl.sh /rootfs/usr/bin/git-shell \
+    && rm -rf /rootfs/etc/apk/keys /rootfs/var/cache/apk \
+    && mkdir -p /rootfs/tmp /rootfs/home/launchway /rootfs/var/lib/launchway /rootfs/var/lib/launchway-runner /rootfs/etc/launchway \
+    && chmod 1777 /rootfs/tmp \
+    && printf 'root:x:0:0:root:/root:/sbin/nologin\nlaunchway:x:65532:65532:launchway:/home/launchway:/sbin/nologin\n' > /rootfs/etc/passwd \
+    && printf 'root:x:0:\nlaunchway:x:65532:\n' > /rootfs/etc/group \
+    && chown 65532:65532 /rootfs/home/launchway /rootfs/var/lib/launchway /rootfs/var/lib/launchway-runner
+
+FROM scratch AS server
+ARG TARGETARCH
+ARG VERSION
+ARG REVISION=unknown
+ARG CREATED=
+ARG SOURCE=https://github.com/jk-magic-creations/launchway
+LABEL org.opencontainers.image.title="Launchway" \
+      org.opencontainers.image.description="A build and delivery platform: server, web UI and runner in one binary" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.source="${SOURCE}" \
+      org.opencontainers.image.url="${SOURCE}" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}" \
+      org.opencontainers.image.created="${CREATED}"
+COPY --from=rootfs /rootfs/ /
+COPY --chmod=0755 launchway-${VERSION}-linux-${TARGETARCH} /usr/local/bin/launchway
+ENV HOME=/home/launchway \
+    PATH=/usr/local/bin:/usr/bin:/bin
+USER 65532:65532
+WORKDIR /var/lib/launchway
+EXPOSE 8080
+ENTRYPOINT ["launchway"]
+CMD ["server", "--config", "/etc/launchway/launchway.yaml"]
+
+FROM server AS runner
+LABEL org.opencontainers.image.title="Launchway runner" \
+      org.opencontainers.image.description="The Launchway runner: takes steps from a Launchway server and runs them"
+WORKDIR /var/lib/launchway-runner
+EXPOSE 8081
+CMD ["runner", "--config", "/etc/launchway/runner.yaml", "--health-listen", ":8081"]
