@@ -286,6 +286,7 @@ func TestProjectPipelineFromALibrary(t *testing.T) {
 // A library that needs credentials is read with the server's Git settings,
 // as projects are, and the credentials never appear in what is shown.
 func TestPrivateLibraryWithGitEnvCredentials(t *testing.T) {
+	allowLoopbackHosts(t)
 	dir := t.TempDir()
 	lib := testlib.NewLibrary(t, filepath.Join(dir, "lib"))
 	testlib.Git(t, lib.Bare, "update-server-info")

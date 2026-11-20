@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -406,14 +407,16 @@ func gitEnv(allowLocal bool) []string {
 	if allowLocal {
 		protos = "file:" + protos
 	}
-	env := []string{"GIT_ALLOW_PROTOCOL=" + protos, "GIT_CONFIG_COUNT=0"}
+	env := []string{"GIT_ALLOW_PROTOCOL=" + protos}
 	env = appendGitConfig(env, "http.followRedirects", "false")
 	return env
 }
 
-// appendGitConfig adds a setting through GIT_CONFIG_COUNT/KEY_n/VALUE_n.
+// appendGitConfig adds a setting through GIT_CONFIG_COUNT/KEY_n/VALUE_n,
+// after any the server's own environment already has (an operator's
+// credentials may be given that way).
 func appendGitConfig(env []string, key, value string) []string {
-	n := 0
+	n, _ := strconv.Atoi(os.Getenv("GIT_CONFIG_COUNT"))
 	out := env[:0:0]
 	for _, e := range env {
 		if v, ok := strings.CutPrefix(e, "GIT_CONFIG_COUNT="); ok {

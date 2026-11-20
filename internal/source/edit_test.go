@@ -311,6 +311,7 @@ func TestStaleAndInvalidSavesPushNothing(t *testing.T) {
 // A repository that may be read but not written: the push fails with Git's
 // own explanation, credentials removed, and nothing is left behind.
 func TestPushFailureIsExplained(t *testing.T) {
+	allowLoopbackHosts(t)
 	dir := t.TempDir()
 	origin := remote(t, dir, pl)
 	gitIn(t, origin, "update-server-info")

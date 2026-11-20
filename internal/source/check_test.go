@@ -77,6 +77,15 @@ func allowLocalPaths(t *testing.T) {
 	t.Cleanup(func() { _ = egress.Default.Set(old) })
 }
 
+// allowLoopbackHosts lets a test fetch from a server on this machine, as an
+// administrator's allowed hosts would.
+func allowLoopbackHosts(t *testing.T) {
+	t.Helper()
+	old := egress.Default.Policy()
+	_ = egress.Default.Set(egress.Policy{AllowLocal: old.AllowLocal, Allow: []string{"127.0.0.0/8"}})
+	t.Cleanup(func() { _ = egress.Default.Set(old) })
+}
+
 func TestCheckRepository(t *testing.T) {
 	allowLocalPaths(t)
 	dir := t.TempDir()

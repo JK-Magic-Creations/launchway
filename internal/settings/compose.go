@@ -69,6 +69,9 @@ func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *
 			u.Projects = append(u.Projects, name)
 		}
 	}
+	for _, u := range units {
+		sort.Strings(u.Projects) // objects narrowed to a unit read them in this order
+	}
 	var policies yaml.Node
 	policies.Kind = yaml.SequenceNode
 	var errs []error

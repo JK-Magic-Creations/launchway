@@ -154,3 +154,26 @@ func TestRepositoryAddresses(t *testing.T) {
 		t.Errorf("file not allowed with allow_local: %v", env)
 	}
 }
+
+// An operator may give Git credentials through the server's environment
+// (GIT_CONFIG_COUNT and its keys): the guard adds its settings after them and
+// never replaces them.
+func TestGitSettingsFollowTheOperatorsOwn(t *testing.T) {
+	t.Setenv("GIT_CONFIG_COUNT", "1")
+	t.Setenv("GIT_CONFIG_KEY_0", "http.extraHeader")
+	g := New(Policy{})
+	g.Resolve = fake(map[string][]string{"github.com": {"140.82.112.3"}})
+	env, err := g.CheckRepo(context.Background(), "https://github.com/a/b.git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(env, "\n")
+	for _, want := range []string{"GIT_CONFIG_KEY_1=http.followRedirects", "GIT_CONFIG_KEY_2=http.curloptResolve", "GIT_CONFIG_COUNT=3"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("missing %q in\n%s", want, joined)
+		}
+	}
+	if strings.Contains(joined, "GIT_CONFIG_KEY_0") {
+		t.Errorf("the operator's first setting is overwritten:\n%s", joined)
+	}
+}
