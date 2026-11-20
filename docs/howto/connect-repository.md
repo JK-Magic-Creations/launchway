@@ -32,5 +32,12 @@ a pipeline.
 A summary lists the project exactly as it will be created. After you confirm it is created, and the
 wizard offers to start a first run and shows it.
 
+If the repository is on your own network (a Git server at a private address) the server refuses to
+contact it by default, so that nobody who can reach the server can use it to probe that network; the
+wizard says so and offers an administrator to add the host to the allowed hosts. A path on the server
+needs `egress.allow_local` in the bootstrap file (`make run` sets it). Do not put a user name or token
+in the address: the server refuses it, because the configuration's history cannot be scrubbed; the server
+uses its own Git credentials (an SSH key or a credential helper).
+
 From the command line: `launchway config check-repository URL`, then `launchway projects set NAME -f
 project.yaml`.

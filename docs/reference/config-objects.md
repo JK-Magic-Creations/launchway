@@ -45,6 +45,7 @@ command line, the MCP server and the planned Terraform provider name them. For t
 | Policy source | `policy-sources` | A library whose files hold policies, at a pinned version | `launchway_policy_source` |
 | Health source | `health-sources` | A metrics or logs system verify steps may read by name: `type`, `projects`. Its address and credentials stay with the deploy runners | `launchway_health_source` |
 | AI model | `models` | A model steps may ask: provider, endpoint, model, `key` (a reference to a secret store, never a value), `projects`, limits | `launchway_model` |
+| Sign-in | `sign-in` | How people sign in: `issuer`, `client_id`, `redirect_url`, `client_secret_env` (the name of the variable that holds the secret, never the secret), claims and the first administrators. Saved and checked here; `enabled` must stay `false`: switching sign-in on needs a successful test sign-in, which this version cannot do yet, so the bootstrap file stays the live sign-in and the way back in | none |
 | Secret store | `secret-stores` | The definition of a secret store pipelines may name: `type`, `projects`. Its address and credentials stay with the runners | `launchway_secret_store` |
 | Step resources | `step-resources` | The default CPU and memory by kind of step (`defaults`) and the most any step may ask for (`limits`). One object, named `step-resources` | `launchway_step_resources` |
 | Unit | `units` | A group of projects: `display_name`, `description` | `launchway_unit` |

@@ -17,9 +17,13 @@ none`, anyone).
    - *My company's identity provider* (OpenID Connect): the wizard asks where the provider is, the
      client ID you registered, which environment variable will hold the client secret, and which group
      are the first administrators. It tests the answers against the provider (it reads its discovery
-     document and checks the redirect address) and writes the few lines for the server's configuration
-     file. Sign-in stays in the file because the server needs it before it can read the database. The
-     wizard never asks for the secret itself.
+     document and checks the redirect address) and saves the answers as the sign-in settings. The wizard
+     never asks for the secret itself, only the name of the variable that holds it. Saving does not
+     switch sign-in on: that needs a successful test sign-in by you, so that nobody is locked out, and
+     this version cannot do the test yet. Until it can, the servers keep the sign-in they started with
+     (the bootstrap file's, which is also the way back in if sign-in breaks), and the wizard says so.
+     If your provider is on your own network, the server refuses to contact it until an administrator
+     allows its host; the wizard offers to add it to the allowed hosts.
 3. **Your first project.** The same steps as [Connect a repository](connect-repository.md).
 
 ## What it creates
@@ -28,8 +32,6 @@ A summary lists exactly what will be created: the level names in the installatio
 project. Nothing is created until you confirm, and the wizard creates it all in one step or not at all;
 cancelling at any step leaves nothing behind.
 
-Changing the sign-in settings means editing the file and restarting the server; the wizard shows the
-snippet with a copy button and says where it goes.
-
-The same thing from the command line: `launchway config check-signin ...` prints the snippet;
+The same thing from the command line: `launchway config check-signin ...` checks the answers and
+`launchway config set sign-in sign-in -f signin.yaml` saves them;
 `launchway config set installation installation -f levels.yaml` names the levels.
