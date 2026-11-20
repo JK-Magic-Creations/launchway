@@ -24,6 +24,9 @@ const ComponentsPage = lazy(() => import("./pages/Components").then((m) => ({ de
 const ImagesPage = lazy(() => import("./pages/Images").then((m) => ({ default: m.ImagesPage })));
 const PolicyPage = lazy(() => import("./pages/Policy").then((m) => ({ default: m.PolicyPage })));
 const AgentsPage = lazy(() => import("./pages/Agents").then((m) => ({ default: m.AgentsPage })));
+const ConfigHomePage = lazy(() => import("./pages/ConfigHome").then((m) => ({ default: m.ConfigHomePage })));
+const ConfigListPage = lazy(() => import("./pages/ConfigList").then((m) => ({ default: m.ConfigListPage })));
+const ConfigObjectPage = lazy(() => import("./pages/ConfigObject").then((m) => ({ default: m.ConfigObjectPage })));
 
 interface NavItem { href: string; label: string; active: (p: string) => boolean; show?: (me: Me) => boolean }
 
@@ -40,6 +43,7 @@ const NAV: NavItem[] = [
   { href: "/components", label: "Components", active: (p) => p.startsWith("/components") },
   { href: "/images", label: "Images", active: (p) => p.startsWith("/images") },
   { href: "/policy", label: "Policy", active: (p) => p.startsWith("/policy"), show: (me) => me.runners },
+  { href: "/config", label: "Configuration", active: (p) => p === "/config" || p.startsWith("/config/"), show: (me) => me.admin },
 ];
 
 // Shown so people can see where this is going; none of these work yet.
@@ -103,6 +107,10 @@ function Shell({ me }: { me: Me }) {
   else if (path === "/components") page = <ComponentsPage />;
   else if (path === "/images") page = <ImagesPage />;
   else if (path === "/policy") page = <PolicyPage />;
+  else if (path === "/config") page = <ConfigHomePage />;
+  else if ((m = match("/config/:kind/new", path))) page = <ConfigObjectPage key={m.kind + "/new"} kind={m.kind} name="" />;
+  else if ((m = match("/config/:kind/:name", path))) page = <ConfigObjectPage key={m.kind + "/" + m.name} kind={m.kind} name={m.name} />;
+  else if ((m = match("/config/:kind", path))) page = <ConfigListPage key={m.kind} kind={m.kind} />;
   else page = <div className="page"><Empty title="Nothing here">This page does not exist. <Link href="/">Go to runs</Link>.</Empty></div>;
 
   useEffect(() => {

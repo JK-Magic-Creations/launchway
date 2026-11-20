@@ -76,6 +76,8 @@ export interface FieldDef {
   showIf?: (spec: Spec) => boolean;
   /** tri: what unset means. */
   unsetMeans?: string;
+  /** Takes the whole row (long values such as addresses). */
+  wide?: boolean;
 }
 
 /** Puts each of the server's messages next to the field it is about; the
@@ -122,14 +124,14 @@ export function Field({ label, help, problems, children, wide, required }: {
   );
 }
 
-export function TextInput({ label, help, value, onChange, problems, placeholder, required, mono, type = "text", autoFocus, wide }: {
+export function TextInput({ label, help, value, onChange, problems, placeholder, required, mono, type = "text", autoFocus, wide, list }: {
   label: string; help?: ReactNode; value: string; onChange: (v: string) => void; problems?: string[];
-  placeholder?: string; required?: boolean; mono?: boolean; type?: string; autoFocus?: boolean; wide?: boolean;
+  placeholder?: string; required?: boolean; mono?: boolean; type?: string; autoFocus?: boolean; wide?: boolean; list?: string;
 }) {
   return (
     <Field label={label} help={help} problems={problems} required={required} wide={wide}>
       {({ id, describedBy, invalid }) => (
-        <input id={id} type={type} value={value} placeholder={placeholder} autoFocus={autoFocus} className={"cf-input" + (mono ? " mono" : "")}
+        <input id={id} type={type} value={value} placeholder={placeholder} autoFocus={autoFocus} list={list} className={"cf-input" + (mono ? " mono" : "")}
           aria-describedby={describedBy || undefined} aria-invalid={invalid || undefined} aria-required={required || undefined}
           spellCheck={false} autoComplete="off" onChange={(e) => onChange(e.target.value)} />
       )}
@@ -256,7 +258,7 @@ export function SpecField({ f, spec, onChange, problems }: { f: FieldDef; spec: 
         </Field>
       );
     default:
-      return <TextInput label={f.label} help={f.help} problems={problems} placeholder={f.placeholder} mono={f.type === "duration"}
+      return <TextInput label={f.label} help={f.help} problems={problems} placeholder={f.placeholder} mono={f.type === "duration" || f.wide} wide={f.wide}
         value={typeof v === "string" ? v : v == null ? "" : String(v)} onChange={(x) => set(x)} />;
   }
 }
@@ -271,16 +273,29 @@ export function SpecForm({ fields, spec, onChange, problems }: { fields: FieldDe
     if (!s) sections.push((s = { title: t, fields: [] }));
     s.fields.push(f);
   }
+  // Many sections (the installation's settings): each folds, the first and any with a problem open.
+  const fold = sections.filter((x) => x.title).length > 3;
   return (
     <div className="cf-form">
-      {sections.map((s) => s.title ? (
-        <fieldset key={s.title} className="cf-section">
-          <legend className="cf-section-title">{s.title}</legend>
-          <div className="cf-grid">{s.fields.map((f) => <SpecField key={f.path} f={f} spec={spec} onChange={onChange} problems={problems[f.path]} />)}</div>
-        </fieldset>
-      ) : (
-        <div key="_" className="cf-grid">{s.fields.map((f) => <SpecField key={f.path} f={f} spec={spec} onChange={onChange} problems={problems[f.path]} />)}</div>
-      ))}
+      {sections.map((s, i) => {
+        const grid = <div className="cf-grid">{s.fields.map((f) => <SpecField key={f.path} f={f} spec={spec} onChange={onChange} problems={problems[f.path]} />)}</div>;
+        if (!s.title) return <div key="_">{grid}</div>;
+        if (fold) {
+          const bad = s.fields.some((f) => problems[f.path]?.length);
+          return (
+            <details key={s.title} className="cf-section cf-fold" open={i === 0 || bad || undefined}>
+              <summary className="cf-section-title">{s.title}</summary>
+              <fieldset className="cf-plain"><legend className="visually-hidden">{s.title}</legend>{grid}</fieldset>
+            </details>
+          );
+        }
+        return (
+          <fieldset key={s.title} className="cf-section">
+            <legend className="cf-section-title">{s.title}</legend>
+            {grid}
+          </fieldset>
+        );
+      })}
     </div>
   );
 }

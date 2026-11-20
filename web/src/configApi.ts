@@ -61,6 +61,9 @@ export interface Effective { project: string; unit?: string; objects: EffectiveE
 
 export interface RepoCheck {
   ok: boolean; problem?: string; default_branch?: string; branches: string[]; has_pipeline_file: boolean;
+  /** The pipeline file found, the commit it was read at, and whether it is valid there. */
+  pipeline_file?: string; commit?: string; valid?: boolean;
+  problems?: { file: string; line?: number; column?: number; commit: string; message: string }[];
 }
 
 export interface SignInRequest {

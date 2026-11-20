@@ -203,3 +203,8 @@ select.cf-input { padding: 0 10px; }
   .cf-rule-opts { padding-left: 0; }
   .cf-help-indent { padding-left: 0; }
 }
+.cf-fold { padding: 0; gap: 0; }
+.cf-fold > summary { cursor: pointer; padding: 12px 16px; list-style-position: inside; }
+.cf-fold[open] > summary { border-bottom: 1px solid var(--border); }
+.cf-fold > .cf-plain { padding: 14px 16px 16px; }
+.cf-fileprobs { margin: 4px 0 0; padding-left: 18px; font-weight: 400; }

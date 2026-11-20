@@ -101,11 +101,11 @@ export const FIELDS: Record<string, FieldDef[]> = {
     { path: "description", label: "Description", type: "textarea", help: "Who it is and what its projects are." },
   ],
   library: [
-    { path: "repo", label: "Repository", type: "text", placeholder: "https://git.example.com/platform/ci-templates.git",
+    { path: "repo", label: "Repository", type: "text", wide: true, placeholder: "https://git.example.com/platform/ci-templates.git",
       help: "The Git repository of templates and scripts. It is fetched with the same credentials as projects: the server's own Git settings, never a password typed here." },
   ],
   project: [
-    { path: "repo", label: "Repository", type: "text", placeholder: "https://git.example.com/team/shop.git", section: "Repository",
+    { path: "repo", label: "Repository", type: "text", wide: true, placeholder: "https://git.example.com/team/shop.git", section: "Repository",
       help: "The Git URL (https:// or SSH) Launchway reads. It uses the server's own Git credentials." },
     { path: "branch", label: "Default branch", type: "text", placeholder: "main", section: "Repository",
       help: "The branch manual runs start from when nobody picks another." },
@@ -214,7 +214,7 @@ export const FIELDS: Record<string, FieldDef[]> = {
     { path: "provider", label: "Provider", type: "select", options: [{ value: "", label: "Choose" }, { value: "anthropic", label: "anthropic" }, { value: "openai", label: "openai (any OpenAI-compatible chat API)" }],
       help: "How to talk to the model: the Anthropic Messages API, or OpenAI-compatible chat completions (local model servers among them)." },
     { path: "model", label: "Model id", type: "text", placeholder: "claude-sonnet-5-5", help: "The provider's id of the model, such as claude-sonnet-5-5 or qwen3:8b." },
-    { path: "endpoint", label: "Endpoint", type: "text", placeholder: "https://api.anthropic.com",
+    { path: "endpoint", label: "Endpoint", type: "text", wide: true, placeholder: "https://api.anthropic.com",
       help: "The base URL. Default https://api.anthropic.com for anthropic; required for openai." },
     { path: "key", label: "API key (a reference)", type: "secretref", match: ["key"],
       help: "Where the key is kept, in a secret store the runners (and the server, to explain failures) have: never the key itself. A local server may need none." },
