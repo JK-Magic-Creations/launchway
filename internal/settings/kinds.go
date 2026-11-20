@@ -186,16 +186,16 @@ type ArtifactLimits struct {
 
 // Levels are the display names of the levels, singular and plural.
 type Levels struct {
-	Installation LevelName `yaml:"installation"`
-	Organisation LevelName `yaml:"organisation"`
-	Unit         LevelName `yaml:"unit"`
-	Project      LevelName `yaml:"project"`
+	Installation LevelName `yaml:"installation" json:"installation"`
+	Organisation LevelName `yaml:"organisation" json:"organisation"`
+	Unit         LevelName `yaml:"unit" json:"unit"`
+	Project      LevelName `yaml:"project" json:"project"`
 }
 
 // LevelName is how a level is called.
 type LevelName struct {
-	Singular string `yaml:"singular"`
-	Plural   string `yaml:"plural"`
+	Singular string `yaml:"singular" json:"singular"`
+	Plural   string `yaml:"plural" json:"plural"`
 }
 
 // DefaultLevels are the built-in names.
@@ -239,14 +239,14 @@ func (l Levels) check() error {
 
 // Organisation is the organisation's settings (kind organisation).
 type Organisation struct {
-	DisplayName string `yaml:"display_name"`
-	Description string `yaml:"description"`
+	DisplayName string `yaml:"display_name" json:"display_name"`
+	Description string `yaml:"description" json:"description"`
 }
 
 // Unit is a unit (kind unit).
 type Unit struct {
-	DisplayName string `yaml:"display_name"`
-	Description string `yaml:"description"`
+	DisplayName string `yaml:"display_name" json:"display_name"`
+	Description string `yaml:"description" json:"description"`
 }
 
 // SecretStore is a secret-store definition (kind secret-store): what
