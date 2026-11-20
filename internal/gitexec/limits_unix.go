@@ -55,6 +55,7 @@ func setGroup(cmd *exec.Cmd) {
 // the runner to apply limits and run git, it never returns; otherwise it
 // returns at once.
 func Reexec() {
+	runEntries()
 	if len(os.Args) < 2 || os.Args[1] != reexecArg || os.Getenv(reexecEnv) != "1" {
 		return
 	}
@@ -137,4 +138,10 @@ func checkSelf() error {
 		return ErrLimitsUnavailable
 	}
 	return nil
+}
+
+// ownedByMe reports whether the file belongs to the user running this process.
+func ownedByMe(fi os.FileInfo) bool {
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	return ok && int(st.Uid) == os.Getuid()
 }

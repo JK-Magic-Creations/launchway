@@ -506,3 +506,15 @@ func TestMissingGitIsAnError(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestRegisteredEntriesRunFirst(t *testing.T) {
+	ran := 0
+	RegisterEntry(func() { ran++ })
+	runEntries()
+	if ran != 1 {
+		t.Fatalf("ran %d times", ran)
+	}
+	entryMu.Lock()
+	entries = nil
+	entryMu.Unlock()
+}

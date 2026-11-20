@@ -17,12 +17,20 @@ var (
 
 func emptyHome() string {
 	homeOnce.Do(func() {
+		// One fixed directory per user, shared by every process, so that
+		// short-lived processes (git hooks, the command line) leave nothing
+		// behind. It is used only if it is ours and nobody else can write to it.
+		fixed := filepath.Join(os.TempDir(), fmt.Sprintf("launchway-git-home-%d", os.Getuid()))
+		_ = os.Mkdir(fixed, 0o500)
+		if st, err := os.Lstat(fixed); err == nil && st.IsDir() && st.Mode().Perm()&0o022 == 0 && ownedByMe(st) {
+			homePath = fixed
+			return
+		}
 		d, err := os.MkdirTemp("", "launchway-git-home-")
 		if err != nil {
 			homePath = "/nonexistent"
 			return
 		}
-		// Read-only: git cannot write anything into it.
 		_ = os.Chmod(d, 0o500) //nolint:gosec // read-only on purpose: git can write nothing into the stand-in HOME
 		homePath = d
 	})
