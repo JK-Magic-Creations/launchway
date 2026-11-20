@@ -32,6 +32,9 @@ func (a *AuthConfig) check() error {
 		if len(a.Access) > 0 {
 			errs = append(errs, errors.New(`access is set, but mode is "none", where everyone has full access; set mode: oidc`))
 		}
+		if !a.Admins.Empty() {
+			errs = append(errs, errors.New(`admins is set, but mode is "none", where everyone has full access; set mode: oidc`))
+		}
 	case AuthOIDC:
 		o := a.OIDC
 		if o.Issuer == "" || o.ClientID == "" || o.RedirectURL == "" {
@@ -51,8 +54,8 @@ func (a *AuthConfig) check() error {
 		if (o.ClientSecretEnv == "") == (o.ClientSecretFile == "") {
 			errs = append(errs, errors.New("oidc: give exactly one of client_secret_env or client_secret_file"))
 		}
-		if len(a.Access) == 0 {
-			errs = append(errs, errors.New("access is empty, so nobody could do anything; add at least one binding"))
+		if len(a.Access) == 0 && a.Admins.Empty() && !a.accessInDatabase {
+			errs = append(errs, errors.New("access is empty, so nobody could do anything; add at least one binding, or name the first administrators in admins"))
 		}
 	default:
 		errs = append(errs, fmt.Errorf("mode %q is not one of none, oidc", a.Mode))
@@ -99,6 +102,20 @@ func (a *AuthConfig) Policy() (*auth.Policy, error) {
 			continue
 		}
 		bs = append(bs, auth.Binding{Group: b.Group, User: b.User, Role: role, Projects: b.Projects, Environments: b.Environments})
+	}
+	for _, u := range a.Admins.Users {
+		if strings.TrimSpace(u) == "" {
+			errs = append(errs, errors.New("admins.users: a user name is empty"))
+			continue
+		}
+		bs = append(bs, auth.Binding{User: u, Role: auth.Admin})
+	}
+	for _, g := range a.Admins.Groups {
+		if strings.TrimSpace(g) == "" {
+			errs = append(errs, errors.New("admins.groups: a group name is empty"))
+			continue
+		}
+		bs = append(bs, auth.Binding{Group: g, Role: auth.Admin})
 	}
 	p, err := auth.NewPolicy(bs)
 	return p, errors.Join(append(errs, err)...)

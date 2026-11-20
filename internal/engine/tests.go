@@ -76,7 +76,7 @@ func (l TestLimits) withDefaults() (TestLimits, error) {
 }
 
 // TestLimits returns the limits the engine keeps test reports within.
-func (e *Engine) TestLimits() TestLimits { return e.tests }
+func (e *Engine) TestLimits() TestLimits { return e.live().tests }
 
 // Limits on what is kept from one attempt's files, apart from the cases.
 const (
@@ -184,8 +184,8 @@ func (e *Engine) parseTests(in *CollectedReports) *parsedTests {
 	for _, n := range in.Notes {
 		s.note(n)
 	}
-	budget := e.tests.MaxUploadBytes
-	room := e.tests.MaxCasesPerRun
+	budget := e.live().tests.MaxUploadBytes
+	room := e.live().tests.MaxCasesPerRun
 	for i, f := range in.Files {
 		if i >= maxReportFiles {
 			s.note(fmt.Sprintf("%d more files were sent; only the first %d were read", len(in.Files)-i, maxReportFiles))
@@ -197,7 +197,7 @@ func (e *Engine) parseTests(in *CollectedReports) *parsedTests {
 			tf.Path = "(no name)"
 		}
 		if int64(len(f.Data)) > budget {
-			tf.Error = fmt.Sprintf("not read: the step's report files came to more than the %s the server accepts", sizeText(e.tests.MaxUploadBytes))
+			tf.Error = fmt.Sprintf("not read: the step's report files came to more than the %s the server accepts", sizeText(e.live().tests.MaxUploadBytes))
 			s.Truncated = true
 			s.Files = append(s.Files, tf)
 			budget = 0
@@ -273,7 +273,7 @@ func (c *cmd) keepTests(step string, attempt int, t *parsedTests) (*TestSummary,
 	if err := c.tx.QueryRow(`SELECT COALESCE(SUM(stored), 0) FROM test_reports WHERE run_id = ?`, c.runID).Scan(&kept); err != nil {
 		return nil, err
 	}
-	room := max(c.e.tests.MaxCasesPerRun-kept, 0)
+	room := max(c.e.live().tests.MaxCasesPerRun-kept, 0)
 	cases := t.cases
 	if len(cases) > room {
 		cases = cases[:room]
@@ -282,7 +282,7 @@ func (c *cmd) keepTests(step string, attempt int, t *parsedTests) (*TestSummary,
 	sum.Stored = len(cases)
 	if sum.Stored < sum.Total {
 		sum.note(fmt.Sprintf("%d of the %d results were kept with the run, which keeps at most %d; the totals count them all",
-			sum.Stored, sum.Total, c.e.tests.MaxCasesPerRun))
+			sum.Stored, sum.Total, c.e.live().tests.MaxCasesPerRun))
 	}
 	if c.tests == nil {
 		c.tests = map[stepAttempt][]storedCase{}
@@ -303,12 +303,12 @@ func (c *cmd) jobReports(def *pipeline.Step) *JobReports {
 	if !c.e.knows(schemaTests) || def.Reports == nil {
 		return nil
 	}
-	jr := &JobReports{Tests: append([]string(nil), def.Reports.Tests...), MaxBytes: c.e.tests.MaxUploadBytes}
+	jr := &JobReports{Tests: append([]string(nil), def.Reports.Tests...), MaxBytes: c.e.live().tests.MaxUploadBytes}
 	if c.e.knows(schemaArtifacts) && len(def.Reports.Findings) > 0 {
-		jr.Findings, jr.FindingsMaxBytes = append([]string(nil), def.Reports.Findings...), c.e.finds.MaxUploadBytes
+		jr.Findings, jr.FindingsMaxBytes = append([]string(nil), def.Reports.Findings...), c.e.live().finds.MaxUploadBytes
 	}
 	if c.e.knows(schemaReports) && len(def.Reports.Coverage) > 0 {
-		jr.Coverage, jr.CoverageMaxBytes = append([]string(nil), def.Reports.Coverage...), c.e.reps.CoverageUploadBytes
+		jr.Coverage, jr.CoverageMaxBytes = append([]string(nil), def.Reports.Coverage...), c.e.live().reps.CoverageUploadBytes
 	}
 	if len(jr.Tests) == 0 && len(jr.Findings) == 0 && len(jr.Coverage) == 0 {
 		return nil
@@ -427,7 +427,7 @@ func (e *Engine) pruneTests() {
 	if !e.knows(schemaTests) {
 		return
 	}
-	limit := e.tests.MaxCasesPerProject
+	limit := e.live().tests.MaxCasesPerProject
 	rows, err := e.db.Query(`SELECT project FROM test_reports GROUP BY project HAVING SUM(stored) > ?`, limit)
 	if err != nil {
 		e.log.Error("looking for projects with too many test results", "err", err)

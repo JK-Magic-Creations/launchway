@@ -110,7 +110,7 @@ func (e *Engine) CreateJoinToken(spec JoinTokenSpec, actor string) (string, *Joi
 	if err := e.identityError(); err != nil {
 		return "", nil, err
 	}
-	pool, ok := e.pools[nonEmpty(spec.Pool, DefaultPool)]
+	pool, ok := e.live().pools[nonEmpty(spec.Pool, DefaultPool)]
 	if !ok {
 		return "", nil, fmt.Errorf("%w: there is no runner pool %q (runner_pools in the server's configuration)", ErrInvalid, spec.Pool)
 	}
@@ -264,7 +264,7 @@ func (e *Engine) Join(req JoinRequest) (*RunnerIdentity, error) {
 	if err != nil {
 		return nil, err
 	}
-	p, ok := e.pools[pool]
+	p, ok := e.live().pools[pool]
 	if !ok {
 		return nil, fmt.Errorf("%w: the join token is for pool %s, which this server's configuration no longer has", ErrForbidden, pool)
 	}
@@ -485,7 +485,7 @@ func (e *Engine) scanIdentity(sc interface{ Scan(...any) error }) (*RunnerIdenti
 	id.Labels, id.Ephemeral = splitLabels(labels), eph != 0
 	id.KeyFingerprint = runnerauth.Fingerprint(id.publicKey)
 	id.Kind = PoolBuild
-	if p, ok := e.pools[id.Pool]; ok {
+	if p, ok := e.live().pools[id.Pool]; ok {
 		id.Kind = p.Kind
 	}
 	return &id, nil
@@ -741,7 +741,7 @@ func (e *Engine) RunInfosFor(r RunnerInfo, list []string) ([]RunInfo, error) {
 	if err != nil || len(all) == 0 {
 		return all, err
 	}
-	pool, ok := e.pools[runnerPoolName(r)]
+	pool, ok := e.live().pools[runnerPoolName(r)]
 	if !ok {
 		return []RunInfo{}, nil
 	}

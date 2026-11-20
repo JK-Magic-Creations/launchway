@@ -80,7 +80,7 @@ var mcpSchemas = mcp.NewSchemaCache()
 // limits, and then hands the request to the SDK's stateless Streamable
 // HTTP handler with a server made for this caller.
 func (s *Server) mcpEndpoint(w http.ResponseWriter, r *http.Request) {
-	if s.MCP == nil {
+	if s.mcpOpts() == nil {
 		writeErr(w, http.StatusNotFound, "the MCP endpoint is turned off on this server (mcp.enabled: false)")
 		return
 	}
@@ -99,7 +99,7 @@ func (s *Server) mcpEndpoint(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	release, ok := s.mcpLimits().admit(w, caller.limitKey, s.MCP)
+	release, ok := s.mcpLimits().admit(w, caller.limitKey, s.mcpNow())
 	if !ok {
 		return
 	}
@@ -142,7 +142,7 @@ func (s *Server) mcpOriginRefusal(r *http.Request) string {
 		return "the Origin header is not an origin"
 	}
 	origin := strings.ToLower(u.Scheme + "://" + u.Host)
-	for _, a := range s.MCP.AllowedOrigins {
+	for _, a := range s.mcpNow().AllowedOrigins {
 		if strings.EqualFold(strings.TrimRight(a, "/"), origin) {
 			return ""
 		}
@@ -222,7 +222,7 @@ func (s *Server) mcpCaller(w http.ResponseWriter, r *http.Request) (*mcpCall, bo
 	}
 	var id *identity
 	var err error
-	if tok, _ := strings.CutPrefix(h, "Bearer "); s.MCP.OAuth != nil && !strings.HasPrefix(tok, tokenPrefix) {
+	if tok, _ := strings.CutPrefix(h, "Bearer "); s.mcpNow().OAuth != nil && !strings.HasPrefix(tok, tokenPrefix) {
 		id, err = s.oauthIdentity(r, tok)
 	} else {
 		id, err = s.identify(r, true)
@@ -250,9 +250,9 @@ func (s *Server) mcpCaller(w http.ResponseWriter, r *http.Request) (*mcpCall, bo
 // is, when this server accepts the sign-in provider's tokens.
 func (s *Server) mcpChallenge(w http.ResponseWriter, code, msg string) {
 	parts := []string{`Bearer realm="launchway"`}
-	if s.MCP.OAuth != nil {
-		parts = append(parts, `resource_metadata="`+s.MCP.OAuth.metadataURL()+`"`)
-		if sc := s.MCP.OAuth.Scopes; len(sc) > 0 {
+	if o := s.mcpNow().OAuth; o != nil {
+		parts = append(parts, `resource_metadata="`+o.metadataURL()+`"`)
+		if sc := o.Scopes; len(sc) > 0 {
 			parts = append(parts, `scope="`+strings.Join(sc, " ")+`"`)
 		}
 	}
@@ -298,6 +298,9 @@ func (s *Server) baseURL(r *http.Request) string {
 // mcpLimiter bounds MCP requests per caller and per server. Each server
 // counts on its own.
 type mcpLimiter struct {
+	// limits are the settings the buckets were made with: a change to
+	// them (they are kept in the database) starts a new limiter.
+	limits  [3]int
 	mu      sync.Mutex
 	callers map[string]*mcpBucket
 	total   int
@@ -314,11 +317,17 @@ const mcpMaxCallers = 10000
 var mcpLimiters sync.Map // *Server → *mcpLimiter
 
 func (s *Server) mcpLimits() *mcpLimiter {
-	if l, ok := mcpLimiters.Load(s); ok {
+	m := s.mcpNow()
+	now := [3]int{m.RequestsPerMinute, m.Concurrent, m.Total}
+	if l, ok := mcpLimiters.Load(s); ok && l.(*mcpLimiter).limits == now {
 		return l.(*mcpLimiter)
 	}
-	l, _ := mcpLimiters.LoadOrStore(s, &mcpLimiter{callers: map[string]*mcpBucket{}})
-	return l.(*mcpLimiter)
+	fresh := &mcpLimiter{limits: now, callers: map[string]*mcpBucket{}}
+	if old, loaded := mcpLimiters.Swap(s, fresh); loaded && old.(*mcpLimiter).limits == now {
+		mcpLimiters.Store(s, old) // another request already made it
+		return old.(*mcpLimiter)
+	}
+	return fresh
 }
 
 // admit lets a request in, or answers 429 and says no. The caller must call

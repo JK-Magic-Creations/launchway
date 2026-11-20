@@ -16,3 +16,12 @@ func TestURLs(t *testing.T) {
 		}
 	}
 }
+
+func TestURLsHideTokenQueryParameters(t *testing.T) {
+	if got := URLs("GET https://h/r.git?token=abc&x=1 failed"); got != "GET https://h/r.git?token=***&x=1 failed" {
+		t.Errorf("%q", got)
+	}
+	if !SecretQueryName("Access_Token") || SecretQueryName("ref") {
+		t.Error("SecretQueryName")
+	}
+}

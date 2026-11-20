@@ -112,11 +112,11 @@ func checkPolicyOptions(o PolicyOptions) (PolicyOptions, error) {
 
 // policiesOn reports whether any policy or policy source is configured.
 func (e *Engine) policiesOn() bool {
-	return e.knows(schemaPolicy) && (len(e.pol.Inline) > 0 || len(e.pol.Sources) > 0)
+	return e.knows(schemaPolicy) && (len(e.live().pol.Inline) > 0 || len(e.live().pol.Sources) > 0)
 }
 
 // PolicySources returns the configured Git sources of policies.
-func (e *Engine) PolicySources() []PolicySourceConfig { return slices.Clone(e.pol.Sources) }
+func (e *Engine) PolicySources() []PolicySourceConfig { return slices.Clone(e.live().pol.Sources) }
 
 // recordConfigPolicies notes this server's own policies in policy_sources,
 // and warns if another server started recently with different ones.
@@ -133,14 +133,14 @@ func (e *Engine) recordConfigPolicies() error {
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
-	if err == nil && version != e.polHash && now-at < (10*time.Minute).Milliseconds() {
+	if err == nil && server != e.instance && version != e.live().polHash && now-at < (10*time.Minute).Milliseconds() {
 		e.log.Warn("another server started recently with different policies in its configuration; every server must have the same ones",
-			"this_server", e.polHash, "other_server", version)
+			"this_server", e.live().polHash, "other_server", version)
 	}
-	b, _ := json.Marshal(e.pol.Inline)
+	b, _ := json.Marshal(e.live().pol.Inline)
 	_, err = e.db.Exec(`INSERT INTO policy_sources(name, version, policies, loaded_at, checked_at, server) VALUES(?,?,?,?,?,?)
 		ON CONFLICT(name) DO UPDATE SET version = excluded.version, policies = excluded.policies, loaded_at = excluded.loaded_at,
-			checked_at = excluded.checked_at, server = excluded.server`, configSource, e.polHash, string(b), now, now, e.instance)
+			checked_at = excluded.checked_at, server = excluded.server`, configSource, e.live().polHash, string(b), now, now, e.instance)
 	return err
 }
 
@@ -166,10 +166,10 @@ func (e *Engine) policySet(q interface {
 	QueryRow(string, ...any) *sql.Row
 }, now int64) policy.Set {
 	var set policy.Set
-	if len(e.pol.Inline) > 0 {
-		set.Sources = append(set.Sources, policy.Source{Name: configSource, Version: e.polHash, Policies: e.pol.Inline})
+	if len(e.live().pol.Inline) > 0 {
+		set.Sources = append(set.Sources, policy.Source{Name: configSource, Version: e.live().polHash, Policies: e.live().pol.Inline})
 	}
-	for _, sc := range e.pol.Sources {
+	for _, sc := range e.live().pol.Sources {
 		src := policy.Source{Name: sc.Name, Ref: sc.Version, Projects: sc.Projects}
 		row, err := readSourceRow(q, sc.Name)
 		switch {
@@ -235,7 +235,7 @@ func (c *cmd) policyInput(point string) policy.Input {
 	st := c.st
 	t := st.Trigger
 	return policy.Input{Point: point, Project: st.Project, Run: st.ID, RunNumber: st.Number, Event: t.Event, Branch: t.Branch, Tag: t.Tag,
-		Starter: t.Actor, SelfApproval: c.e.selfOK}
+		Starter: t.Actor, SelfApproval: c.st.selfApproval(c.e)}
 }
 
 // pipelineFacts are what the run-point rules judge.
@@ -520,13 +520,13 @@ const (
 // gateDeploy judges a deploy step (or a rollout step that promotes or
 // retries) before it acts. It reports false, having failed the step, if
 // the decision blocks it.
-func (c *cmd) gateDeploy(id string, def, deployDef *pipeline.Step, envName, action string) bool {
+func (c *cmd) gateDeploy(id string, def, deployDef *pipeline.Step, envName, action string, protected bool) bool {
 	if !c.e.policiesOn() {
 		return true
 	}
 	in := c.policyInput(policy.PointDeploy)
 	in.Step, in.Action, in.Environment = id, action, envName
-	in.Protected = c.e.envs[envName].Protected
+	in.Protected = protected
 	ev := c.judge(&in, func(set policy.Set) error {
 		var applicable []policy.Policy
 		for _, p := range set.Policies() {
@@ -727,8 +727,8 @@ func (e *Engine) GrantWaiver(rq WaiverRequest) (*WaiverView, error) {
 		return nil, fmt.Errorf("%w: the reason is longer than %d characters", ErrInvalid, policy.MaxReason)
 	case rq.ExpiresAt <= now:
 		return nil, fmt.Errorf("%w: a waiver must expire in the future (expires_at, Unix milliseconds)", ErrInvalid)
-	case rq.ExpiresAt > now+int64(e.pol.MaxWaiverDays)*24*time.Hour.Milliseconds():
-		return nil, fmt.Errorf("%w: a waiver may last at most %d days (policy.waivers.max_days)", ErrInvalid, e.pol.MaxWaiverDays)
+	case rq.ExpiresAt > now+int64(e.live().pol.MaxWaiverDays)*24*time.Hour.Milliseconds():
+		return nil, fmt.Errorf("%w: a waiver may last at most %d days (policy.waivers.max_days)", ErrInvalid, e.live().pol.MaxWaiverDays)
 	case rq.Rule == policy.RuleSource:
 		return nil, fmt.Errorf("%w: a policy source that cannot be loaded cannot be waived; fix the source or take it out of the configuration", ErrInvalid)
 	case rq.Finding != "" && rq.Rule != policy.RuleFindings:
@@ -752,7 +752,7 @@ func (e *Engine) GrantWaiver(rq WaiverRequest) (*WaiverView, error) {
 		return nil, fmt.Errorf("%w: policy %s does not apply to project %s", ErrInvalid, p.Name, rq.Project)
 	}
 	if rq.Environment != "" {
-		if _, ok := e.envs[rq.Environment]; !ok {
+		if _, ok := e.live().envs[rq.Environment]; !ok {
 			return nil, fmt.Errorf("%w: environment %q is not configured on this server", ErrInvalid, rq.Environment)
 		}
 		if policy.PointOf(rq.Rule) != policy.PointDeploy {
@@ -771,7 +771,7 @@ func (e *Engine) GrantWaiver(rq WaiverRequest) (*WaiverView, error) {
 		runNumber = st.Number
 		// The person who started a run may not waive a deploy gate of it on
 		// a protected environment, unless people may approve their own runs.
-		if policy.PointOf(rq.Rule) == policy.PointDeploy && !e.selfOK && rq.Actor != "" && rq.Actor == st.Trigger.Actor {
+		if policy.PointOf(rq.Rule) == policy.PointDeploy && !st.selfApproval(e) && rq.Actor != "" && rq.Actor == st.Trigger.Actor {
 			for _, env := range e.Environments() {
 				if !env.Protected || (rq.Environment != "" && env.Name != rq.Environment) {
 					continue
@@ -1007,13 +1007,13 @@ type PolicyOverview struct {
 // PolicyOverview lists the policies in force, their sources, and recent
 // verdicts of runs of onlyProjects (nil: every project).
 func (e *Engine) PolicyOverview(onlyProjects []string, recentPerPolicy int) (*PolicyOverview, error) {
-	o := &PolicyOverview{Catalogue: policy.Catalogue, Sources: []PolicySourceView{}, Recent: []PolicyVerdict{}, MaxWaiverDays: e.pol.MaxWaiverDays}
+	o := &PolicyOverview{Catalogue: policy.Catalogue, Sources: []PolicySourceView{}, Recent: []PolicyVerdict{}, MaxWaiverDays: e.live().pol.MaxWaiverDays}
 	if !e.knows(schemaPolicy) {
 		return o, nil
 	}
 	set := e.policySet(e.db, e.now().UnixMilli())
 	cfg := map[string]PolicySourceConfig{}
-	for _, sc := range e.pol.Sources {
+	for _, sc := range e.live().pol.Sources {
 		cfg[sc.Name] = sc
 	}
 	var names []string
@@ -1121,4 +1121,4 @@ func policySummary(st *RunState) *RunPolicySummary {
 }
 
 // MaxWaiverDays is the longest a waiver may last.
-func (e *Engine) MaxWaiverDays() int { return e.pol.MaxWaiverDays }
+func (e *Engine) MaxWaiverDays() int { return e.live().pol.MaxWaiverDays }

@@ -1,0 +1,231 @@
+/* ---- configuration pages and wizards ---- */
+.cf-page { gap: 20px; }
+.cf-h { font-size: 16px; font-weight: 650; margin: 0 0 10px; }
+.cf-h1-mono { font-family: var(--mono); font-size: 22px; overflow-wrap: anywhere; }
+.cf-help { color: var(--text-2); font-size: 13px; font-weight: 400; line-height: 1.5; }
+.cf-help-indent { padding-left: 26px; }
+.cf-ok { color: var(--ok-ink); font-weight: 600; }
+.cf-problem { color: var(--bad-ink); font-weight: 600; font-size: 13px; }
+.cf-problem:empty { display: none; }
+.cf-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.cf-row > span { flex: 1 1 260px; }
+.cf-spacer { flex: 1 1 auto; }
+.cf-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 18px; align-items: start; }
+.cf-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.cf-head-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* sub-navigation */
+.cf-subnav { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.cf-subnav-link { padding: 6px 12px; border-radius: 999px; color: var(--text-2); font-weight: 600; font-size: 13px; border: 1px solid transparent; }
+.cf-subnav-link:hover { background: var(--surface-2); text-decoration: none; color: var(--text); }
+.cf-subnav-on { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent); }
+
+/* home */
+.cf-firstrun { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border-left: 4px solid var(--accent); }
+.cf-firstrun > div { flex: 1 1 360px; }
+.cf-firstrun h2 { margin-bottom: 6px; }
+.cf-firstrun p { margin: 0; color: var(--text-2); }
+.cf-wizgrid { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
+.cf-wizcard { display: flex; flex-direction: column; gap: 6px; height: 100%; padding: 16px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.cf-wizcard:hover { border-color: var(--accent); text-decoration: none; }
+.cf-wizcard-title { font-weight: 650; color: var(--accent-ink); }
+.cf-wizcard-text { color: var(--text-2); font-size: 13px; }
+.cf-wizcard-quiet { background: var(--surface-2); box-shadow: none; }
+.cf-kindlist { list-style: none; margin: 0; padding: 0; }
+.cf-kindlist li + li { border-top: 1px solid var(--border); }
+.cf-kindrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 4px; color: var(--text); }
+.cf-kindrow:hover { background: var(--surface-2); text-decoration: none; }
+.cf-kindrow-name { font-weight: 600; color: var(--accent-ink); }
+.cf-kindrow-doc { grid-column: 1 / -1; color: var(--text-2); font-size: 13px; }
+.cf-count { min-width: 28px; text-align: center; padding: 1px 8px; border-radius: 999px; background: var(--idle-soft); color: var(--idle-ink); font-weight: 700; font-size: 12px; align-self: center; }
+.cf-levels { grid-template-columns: minmax(0, max-content) 1fr; }
+.cf-recent { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.cf-recent li { padding: 6px 0; overflow-wrap: anywhere; }
+.cf-recent li + li { border-top: 1px solid var(--border); }
+.cf-action { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; background: var(--idle-soft); color: var(--idle-ink); }
+.cf-action-create { background: var(--ok-soft); color: var(--ok-ink); }
+.cf-action-update { background: var(--run-soft); color: var(--run-ink); }
+.cf-action-delete { background: var(--bad-soft); color: var(--bad-ink); }
+.cf-action-restore { background: var(--warn-soft); color: var(--warn-ink); }
+
+/* lists of objects */
+.cf-objlist { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.cf-obj { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 18px; padding: 14px 18px; }
+.cf-obj + .cf-obj { border-top: 1px solid var(--border); }
+.cf-obj-main { flex: 1 1 320px; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.cf-obj-name { font-weight: 650; font-size: 15px; overflow-wrap: anywhere; }
+.cf-obj-sum { flex-basis: 100%; color: var(--text-2); font-size: 13px; overflow-wrap: anywhere; }
+.cf-obj-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; color: var(--text-3); font-size: 13px; }
+.cf-obj-deleted .cf-obj-name { text-decoration: line-through; color: var(--text-3); }
+.cf-pill { display: inline-flex; padding: 1px 8px; border-radius: 999px; background: var(--idle-soft); color: var(--idle-ink); font-size: 12px; font-weight: 600; }
+.cf-pill-bad { background: var(--bad-soft); color: var(--bad-ink); }
+.cf-pill-warn { background: var(--warn-soft); color: var(--warn-ink); }
+
+/* object page */
+.cf-meta { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; font-size: 13px; }
+.cf-meta dt { color: var(--text-3); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
+.cf-meta dd { margin: 0; font-weight: 600; }
+.cf-editor { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; }
+.cf-editor > .tabs { padding: 0 12px; }
+.cf-panel { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+.cf-plain { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.cf-savebar { border-top: 1px solid var(--border); background: var(--surface-2); padding: 14px 20px; display: flex; flex-direction: column; gap: 10px; }
+.cf-savebar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.cf-checkstate { font-size: 13px; }
+.cf-raw { min-height: 320px; font-size: 12.5px; line-height: 1.55; }
+.cf-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cf-table th { text-align: left; color: var(--text-3); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.cf-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+.cf-from { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--idle-soft); color: var(--idle-ink); white-space: nowrap; }
+.cf-from-project { background: var(--accent-soft); color: var(--accent-ink); }
+.cf-from-unit, .cf-from-organisation { background: var(--ok-soft); color: var(--ok-ink); }
+.cf-from-installation { background: var(--warn-soft); color: var(--warn-ink); }
+.cf-history { list-style: none; margin: 0; padding: 0; }
+.cf-hist { padding: 12px 0; display: flex; flex-direction: column; gap: 6px; }
+.cf-hist + .cf-hist { border-top: 1px solid var(--border); }
+.cf-hist-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 13px; }
+.cf-hist-comment { font-style: italic; color: var(--text-2); }
+.cf-diff { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.cf-diff li { display: flex; flex-wrap: wrap; gap: 2px 12px; padding: 4px 8px; border-radius: 6px; background: var(--surface-2); }
+.cf-diff-key { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.cf-diff-vals { min-width: 0; overflow-wrap: anywhere; }
+.cf-del { background: var(--bad-soft); color: var(--bad-ink); text-decoration: line-through; padding: 0 4px; border-radius: 4px; }
+.cf-ins { background: var(--ok-soft); color: var(--ok-ink); text-decoration: none; padding: 0 4px; border-radius: 4px; }
+
+/* fields */
+.cf-form { display: flex; flex-direction: column; gap: 18px; }
+.cf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px 20px; align-items: start; }
+.cf-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.cf-wide { grid-column: 1 / -1; }
+.cf-label { font-weight: 600; }
+.cf-req { color: var(--bad-ink); }
+.cf-input { width: 100%; min-height: 42px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 400; }
+select.cf-input { padding: 0 10px; }
+.cf-input::placeholder { color: var(--text-3); opacity: .85; }
+.cf-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.cf-textarea { min-height: 84px; padding: 10px 12px; resize: vertical; line-height: 1.5; }
+.cf-invalid .cf-input, .cf-input[aria-invalid="true"] { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad); }
+.cf-problems { display: flex; flex-direction: column; gap: 2px; }
+.cf-section { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px 16px; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.cf-section-title { padding: 0 6px; font-weight: 650; color: var(--text); }
+.cf-check { gap: 2px; }
+.cf-checkline { display: inline-flex; align-items: flex-start; gap: 10px; cursor: pointer; font-weight: 600; }
+.cf-checkline input { width: 16px; height: 16px; margin: 3px 0 0; flex: none; accent-color: var(--accent); }
+.cf-subset { border: 0; padding: 0; margin: 0; }
+.cf-ref { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 10px; }
+.cf-mini { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+.cf-mini-check { font-size: 13px; flex-wrap: wrap; }
+.cf-mini-check .cf-help { flex-basis: 100%; padding-left: 26px; }
+
+/* choice cards */
+.cf-choices { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.cf-legend { padding: 0; font-weight: 650; font-size: 15px; margin-bottom: 4px; }
+.cf-cards { display: flex; flex-direction: column; gap: 8px; }
+.cf-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border-strong); background: var(--surface); cursor: pointer; }
+.cf-card:hover { border-color: var(--accent); }
+.cf-card input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
+.cf-card-on { border-color: var(--accent); background: var(--accent-soft); }
+.cf-card-off { cursor: default; opacity: .75; }
+.cf-card-off:hover { border-color: var(--border-strong); }
+.cf-card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cf-card-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cf-card-title { font-weight: 650; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; overflow-wrap: anywhere; }
+.cf-card-help { color: var(--text-2); font-size: 13px; line-height: 1.5; }
+.cf-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--idle-soft); color: var(--idle-ink); font-size: 11.5px; font-weight: 700; }
+.cf-card-on .cf-badge { background: var(--surface); }
+.cf-ticks { display: flex; flex-wrap: wrap; gap: 8px; }
+.cf-tick { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 999px; cursor: pointer; background: var(--surface); }
+.cf-tick:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.cf-tick input { accent-color: var(--accent); margin: 0; }
+
+/* policy rules */
+.cf-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cf-rule { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.cf-rule-on { border-color: var(--accent); background: var(--accent-soft); }
+.cf-rule-name { font-weight: 700; }
+.cf-rule-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 10px 14px; padding: 8px 0 2px 26px; }
+.cf-rule-opts .cf-problems { grid-column: 1 / -1; }
+
+/* wizards */
+.cf-wizard { max-width: 920px; }
+.cf-steps-nav { display: flex; flex-direction: column; gap: 6px; }
+.cf-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 4px; }
+.cf-stepdot { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; color: var(--text-3); font-size: 13px; font-weight: 600; }
+.cf-stepnum { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid var(--border-strong); font-size: 12px; background: var(--surface); }
+.cf-done .cf-stepnum { background: var(--ok); border-color: var(--ok); color: #fff; }
+.cf-done { color: var(--text-2); }
+.cf-now { background: var(--accent-soft); color: var(--accent-ink); }
+.cf-now .cf-stepnum { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cf-stepcount { display: none; color: var(--text-3); font-size: 13px; }
+.cf-stepcard { padding: 22px 24px; }
+.cf-step-h { font-size: 19px; margin: 0 0 14px; }
+.cf-step-h:focus { outline: none; }
+.cf-step-h:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.cf-stepbody, .cf-stepinner { display: flex; flex-direction: column; gap: 16px; }
+.cf-stepbody p { margin: 0; }
+.cf-sub { display: flex; flex-direction: column; gap: 14px; padding: 14px 0 0 16px; border-left: 3px solid var(--accent-soft); }
+.cf-wiz-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+.cf-explain { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; background: var(--surface-2); }
+.cf-explain summary { cursor: pointer; font-weight: 600; color: var(--accent-ink); }
+.cf-explain p { margin: 8px 0 0; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.cf-checkresult { font-size: 13px; }
+.cf-summary p { margin: 0 0 10px; }
+.cf-willlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cf-will { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.cf-will-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; overflow-wrap: anywhere; }
+.cf-kindtag { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 700; }
+.cf-code { max-height: 360px; white-space: pre; overflow: auto; max-width: 100%; }
+.cf-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cf-copy-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cf-copy-title { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.cf-problemlist ul { margin: 6px 0 0; padding-left: 20px; }
+.cf-donepanel { display: flex; flex-direction: column; gap: 16px; }
+.cf-created { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cf-next { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.cf-howto { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--text-2); }
+.cf-instructions { display: flex; flex-direction: column; gap: 10px; }
+.cf-joinwait { display: flex; flex-direction: column; gap: 14px; }
+.cf-waiting { display: flex; align-items: flex-start; gap: 6px; padding: 12px 14px; border-radius: 8px; border: 1px dashed var(--border-strong); color: var(--text-2); }
+.cf-waiting-ok { border-style: solid; border-color: var(--ok); background: var(--ok-soft); color: var(--ok-ink); }
+.cf-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-strong); border-top-color: var(--accent); animation: spin 1s linear infinite; margin-right: 4px; }
+@media (prefers-reduced-motion: reduce) { .cf-spinner { animation: none; } }
+
+@media (max-width: 640px) {
+  .cf-steptitle { display: none; }
+  .cf-now .cf-steptitle { display: inline; }
+  .cf-stepcount { display: block; }
+  .cf-stepcard { padding: 16px; }
+  .cf-panel { padding: 14px; }
+  .cf-savebar { padding: 12px 14px; }
+  .cf-wiz-actions .btn { flex: 1 1 auto; }
+  .cf-wiz-actions .cf-spacer { display: none; }
+  .cf-sub { padding-left: 10px; }
+  .cf-rule-opts { padding-left: 0; }
+  .cf-help-indent { padding-left: 0; }
+}
+.cf-fold { padding: 0; gap: 0; }
+.cf-fold > summary { cursor: pointer; padding: 12px 16px; list-style-position: inside; }
+.cf-fold[open] > summary { border-bottom: 1px solid var(--border); }
+.cf-fold > .cf-plain { padding: 14px 16px 16px; }
+.cf-fileprobs { margin: 4px 0 0; padding-left: 18px; font-weight: 400; }
+.cf-subset > legend.cf-label { padding: 0; }
+.cf-waiting .online, .cf-waiting .cf-spinner { flex: none; margin-top: 4px; }
+@media (max-width: 640px) {
+  .cf-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cf-table tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .cf-table td { border: 0; padding: 0; }
+  .cf-table td:first-child { flex-basis: 100%; font-weight: 600; }
+}
+.cf-wizard .callout, .cf-page .callout, .cf-wizard .errorbox, .cf-page .errorbox { overflow-wrap: anywhere; min-width: 0; }
+.cf-stepinner .btn, .cf-savebar .btn { white-space: normal; text-align: center; }
+.cf-copy, .cf-will, .cf-stepinner, .cf-stepbody, .cf-stepcard, .cf-stepcard form { min-width: 0; }
+.cf-checklist { border-left: 4px solid var(--accent); }
+.cf-checklist-done { border-left-color: var(--ok); }
+.cf-checklist summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; }
+.cf-checklist summary .cf-h { margin: 0; }
+.cf-checkitems { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.cf-checkitems li { display: flex; gap: 12px; align-items: flex-start; }
+.cf-checkmark { flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--border-strong); font-size: 12px; font-weight: 700; color: var(--text-2); }
+.cf-check-on .cf-checkmark { background: var(--ok); border-color: var(--ok); color: #fff; }
+.cf-checktext { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-weight: 600; }
+.cf-check-on .cf-checktext > a { color: var(--text-2); }

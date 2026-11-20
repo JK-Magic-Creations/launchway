@@ -3,6 +3,7 @@ import { api, verifyApi, type DeploymentView, type EnvironmentView, type LiveVie
 import { ago, clock } from "../format";
 import { useNow } from "../live";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
+import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { AppChips, DeployStatePill, FreshnessLine, freshness } from "../components/Deployment";
 import { VerifyPill } from "../components/Verification";
 
@@ -37,6 +38,7 @@ export function EnvironmentsPage() {
           <h1>Environments</h1>
           <p className="sub">What each environment runs, by service, and what is being deployed there now. Checked every 5 seconds.</p>
         </div>
+        {envs && envs.length > 0 && <WizardButton wizard="add-environment" label="Add an environment" />}
       </header>
       <ErrorBox error={error} />
       {envs === null && !error && <div className="loading">Loading…</div>}
@@ -293,28 +295,22 @@ function Verifications({ list, now }: { list: VerificationSummary[]; now: number
 
 function NoEnvironments() {
   return (
-    <Empty title="No environments yet">
-      An environment is a place a run deploys to, such as <strong>staging</strong> or <strong>prod</strong>. They are set in the server's configuration,
-      each with its target (the cluster deploy runners serve) and the projects that may deploy there.
-      A run deploys when it reaches a step with <Mono>kind: deploy</Mono>: the step commits the new version to your GitOps repository,
-      asks Argo CD to sync, and waits until the application is healthy.
-      <Example config />
-    </Empty>
+    <>
+      <WizardEmpty title="No environments yet" wizard="add-environment" label="Add an environment"
+        text="An environment is a place runs deploy to, such as staging or prod: add one to see what runs where and to deploy with a protected, queued, recorded step." />
+      <details className="card">
+        <summary className="h-sm">How a pipeline deploys to an environment</summary>
+        <p className="sub">A run deploys when it reaches a step with <Mono>kind: deploy</Mono>: the step commits the new version to your GitOps repository,
+          asks Argo CD to sync, and waits until the application is healthy.</p>
+        <Example />
+      </details>
+    </>
   );
 }
 
-function Example({ config }: { config?: boolean }) {
+function Example() {
   return (
     <div className="howto">
-      {config && (
-        <>
-          <p className="sub">In the server's configuration:</p>
-          <pre className="code">{`environments:
-  - name: prod
-    target: homelab
-    projects: [shop]`}</pre>
-        </>
-      )}
       <p className="sub">In a project's <Mono>.launchway/pipeline.yaml</Mono>:</p>
       <pre className="code">{`  deploy-prod:
     kind: deploy

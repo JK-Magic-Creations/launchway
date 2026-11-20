@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/fakeidp"
 	"github.com/jk-magic-creations/launchway/internal/source"
@@ -138,6 +139,10 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 		t.Cleanup(o.idp.Close)
 	}
 	o.idp.Now = o.clk.Now
+	// The test repositories are paths on this machine.
+	oldEgress := egress.Default.Policy()
+	_ = egress.Default.Set(egress.Policy{AllowLocal: true})
+	t.Cleanup(func() { _ = egress.Default.Set(oldEgress) })
 	no := false
 	var arts engine.ArtifactOptions
 	if o.artifacts != nil {
@@ -160,6 +165,7 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	}
 	s := &Server{Engine: eng, Projects: mgr, RunnerToken: "runner-secret", Log: quiet(), Now: o.clk.Now,
 		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts, WaiveRole: o.waiveRole, MCP: o.mcp}
+	s.Settings = testSettings(t, eng)
 	srv := httptest.NewUnstartedServer(nil)
 	redirect := o.redirectURL
 	if redirect == "" {

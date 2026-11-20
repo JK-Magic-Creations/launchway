@@ -36,12 +36,14 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
+	"github.com/jk-magic-creations/launchway/internal/settings"
 	"github.com/jk-magic-creations/launchway/internal/source"
 	hsource "github.com/jk-magic-creations/launchway/internal/verify/source"
 	"github.com/jk-magic-creations/launchway/web"
@@ -73,6 +75,10 @@ Usage:
   launchway health-sources | models             what verify and ai steps may name
   launchway runners  list|join-token|revoke|rotate  runners, and join tokens to enrol them
   launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
+  launchway config   list|get|set|create|delete|restore|history|export|import|apply ...
+                                                configuration kept in the database (launchway config, for more)
+  launchway projects|libraries|environments|policies|runner-pools|role-bindings|policy-sources|units|secret-stores ...
+                                                the same commands for one kind of object
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -119,6 +125,10 @@ func main() {
 		err = cmdRunners(args)
 	case "step-resources":
 		err = cmdStepResources(args)
+	case "config":
+		err = cmdConfig(args)
+	case "projects", "libraries", "environments", "policies", "runner-pools", "role-bindings", "policy-sources", "units", "secret-stores":
+		err = cmdKindAlias(os.Args[1])(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -144,96 +154,44 @@ func (e exitErr) Error() string { return fmt.Sprintf("exit %d", int(e)) }
 // ---- server ----
 
 func cmdServer(args []string) error {
-	fs := flag.NewFlagSet("server", flag.ExitOnError)
-	cfgPath := fs.String("config", "launchway.yaml", "configuration file")
-	listen := fs.String("listen", "", "address to listen on (overrides the config)")
-	data := fs.String("data", "", "data directory (overrides the config)")
-	fs.Parse(args)
-
-	cfg, err := config.Load(*cfgPath)
+	su, err := readServerSetup(args)
 	if err != nil {
 		return err
 	}
-	secretStores, err := secrets.Open(cfg.Runner.Secrets)
-	if err != nil {
-		return fmt.Errorf("%s: runner.secrets: %w", *cfgPath, err)
-	}
-	if *listen != "" {
-		cfg.Listen = *listen
-	}
-	if *data != "" {
-		cfg.Data = *data
-	}
-	if err := cfg.CheckExposure(cfg.Listen); err != nil {
-		return err
-	}
-	dbWait, drain, err := cfg.Timings()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	authOpts, err := serverAuth(cfg)
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	if err := os.MkdirAll(cfg.Data, 0o755); err != nil {
-		return err
-	}
-	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	slog.SetDefault(log)
-
-	dbAddr := cfg.DatabaseAddr()
-	allowSelf := cfg.AllowSelfApproval()
-	testLimits, err := cfg.TestLimits()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	reportLimits, err := cfg.Runner.Reports.Limits()
-	if err != nil {
-		return fmt.Errorf("%s: runner.%w", *cfgPath, err)
-	}
-	artifactOpts, findingLimits, err := artifactSettings(cfg, log)
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	policyOpts, err := cfg.PolicyOptions() // checked when the file was read
-	if err != nil {
-		return err
-	}
-	waiveRole, _ := cfg.WaiverRole()
-	reportOpts, err := cfg.ReportOptions()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	reportsOrigin, err := cfg.ReportsOrigin()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	models, err := cfg.Models()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	runnersRole, _ := cfg.RunnerAdminRole() // checked when the file was read
-	// The pools' tokens are read and checked against the shared token
-	// below; here only what the engine needs.
-	poolShapes, err := cfg.Pools("")
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
-		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits, Policy: policyOpts,
-		Reports: reportOpts, HealthSources: cfg.EngineHealthSources(), Models: models, RunnerPools: config.EnginePools(poolShapes)})
+	cfg, cfgPath, log, live, authOpts := su.cfg, su.cfgPath, su.log, su.live, su.authOpts
+	eng, err := su.openEngine()
 	if err != nil {
 		return err
 	}
 	defer eng.Close()
 	logStore(eng, log)
-	projects, err := cfg.SourceProjects()
+
+	// Everything but the bootstrap settings is kept in the database
+	// (schema 23): the file's copies are imported once, then ignored.
+	store := settings.New(eng, cfg, log)
+	eff, store, err := chooseConfig(store, cfg, cfgPath, su.ignoreDB, log)
 	if err != nil {
 		return err
 	}
-	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, cfg.SourceLibraries(), log)
+	if err := egress.Default.Set(settings.EgressPolicy(eff)); err != nil {
+		return fmt.Errorf("%s: egress: %w", cfgPath, err)
+	}
+	if eff != cfg {
+		l, err := eff.EngineLive()
+		if err != nil {
+			return err
+		}
+		if err := eng.Reconfigure(l); err != nil {
+			return err
+		}
+	}
+	projects, err := eff.SourceProjects()
+	if err != nil {
+		return err
+	}
+	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, eff.SourceLibraries(), log)
 	if err == nil {
-		loopLimit, _ := cfg.LoopLimit() // checked when the file was read
+		loopLimit, _ := eff.LoopLimit() // checked when the configuration was read
 		mgr.SetLoopLimit(loopLimit)
 	}
 	if err != nil {
@@ -243,50 +201,32 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	drafts, err := cfg.DraftRules()
-	if err != nil {
-		return err
+	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts,
+		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin}
+	if store.Available() {
+		srv.Settings = store
 	}
-	pools, err := cfg.Pools(token)
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
+	applyLive := func(c *config.Config) error {
+		l, err := serverLive(c, token, authOpts)
+		if err != nil {
+			return err
+		}
+		srv.Reconfigure(l)
+		return nil
 	}
-	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
-		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, WaiveRole: &waiveRole, ReportsOrigin: reportsOrigin, RunnersRole: &runnersRole}
-	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
-	if m := cfg.MCP; m.On() {
-		srv.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
-		if o := m.OAuth; o != nil {
-			srv.MCP.OAuth = &api.MCPOAuth{Resource: o.Resource, Scopes: o.Scopes}
-			if err := api.CheckMCPOAuth(srv.MCP.OAuth, authOpts); err != nil {
-				return fmt.Errorf("%s: %w", *cfgPath, err)
-			}
+	if err := applyLive(eff); err != nil {
+		return fmt.Errorf("%s: %w", cfgPath, err)
+	}
+	models := live.Models
+	if eff != cfg {
+		models, _ = eff.Models()
+	}
+	if models != nil || store.Available() {
+		if err := setupAI(srv, cfg, cfgPath); err != nil {
+			return err
 		}
 	}
-	if models != nil {
-		// The server calls models only to explain a failed step, with keys
-		// from its own stores (ai.secrets), if it has any.
-		srv.AI = &ai.Client{}
-		if len(cfg.AI.Secrets) > 0 {
-			if srv.AISecrets, err = secrets.Open(cfg.AI.Secrets); err != nil {
-				return fmt.Errorf("%s: ai.secrets: %w", *cfgPath, err)
-			}
-		}
-	}
-	for _, p := range pools {
-		if p.Kind == engine.PoolDeploy {
-			srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets, RequireIdentity: p.RequireIdentity})
-		}
-	}
-	if authOpts != nil {
-		// Find the provider now, so a mistake shows at once; sign-in tries
-		// again later if it is unreachable.
-		dctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		if _, err := authOpts.OIDC.Discover(dctx); err != nil {
-			log.Warn("the sign-in provider cannot be reached yet; sign-in will keep trying", "err", err)
-		}
-		cancel()
-	}
+	warmUpSignIn(authOpts, log)
 
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -303,35 +243,24 @@ func cmdServer(args []string) error {
 	}()
 	mgr.Start(ctx)
 	mgr.WatchPolicySources(ctx)
+	if store.Available() {
+		// Changes made through any server take effect here within seconds.
+		// Applying is safe to repeat: everything that can fail is worked out
+		// first, then each part is replaced as a whole, so a try that stops
+		// half way is finished by the next one (the service tries again at
+		// every poll until it succeeds).
+		if err := store.Load(storeApplier(eng, mgr, srv, token, authOpts)); err != nil {
+			return err
+		}
+		go store.Watch(ctx)
+	}
 
 	url := "http://" + loopback(ln.Addr().String())
 	runnerCtx, stopRunner := context.WithCancel(context.Background())
 	defer stopRunner()
-	runnerDone := make(chan struct{})
-	if cfg.RunnerEnabled() {
-		host, _ := os.Hostname()
-		// Unique per server: two servers on one machine must not share an identity.
-		_, port, _ := net.SplitHostPort(ln.Addr().String())
-		runnerID := "builtin-" + host + "-" + port
-		ex, err := executor.ByName(cfg.Runner.Executor, executor.Options{Kubernetes: cfg.Runner.Kubernetes, RunnerID: runnerID})
-		if err != nil {
-			return err
-		}
-		if err := checkExecutor(ctx, ex); err != nil {
-			return err
-		}
-		r := &runner.Runner{
-			Client: runner.NewClient(url, token), Exec: ex,
-			Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
-			DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
-			Secrets: secretStores, Reports: reportLimits, Images: cfg.Runner.Images,
-		}
-		if cfg.Runner.AIEnabled() {
-			r.AI = &ai.Client{}
-		}
-		go func() { defer close(runnerDone); r.Run(runnerCtx) }()
-	} else {
-		close(runnerDone)
+	runnerDone, err := startBuiltinRunner(runnerCtx, ctx, cfg, ln, url, token, log, su.secretStores, su.reportLimits)
+	if err != nil {
+		return err
 	}
 
 	tokenAt := config.TokenFile(cfg.Data)
@@ -343,11 +272,11 @@ func cmdServer(args []string) error {
 		signIn = "no sign-in: anyone who can reach it has full access"
 	}
 	fmt.Fprintf(os.Stderr, "\n  Launchway %s is listening on %s (%s)\n  %d project(s), data in %s, %s\n  Runner token for other machines: %s\n\n",
-		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(dbAddr), tokenAt)
+		version, listening(ln.Addr()), signIn, len(projects), cfg.Data, describeDatabase(cfg.DatabaseAddr()), tokenAt)
 
 	<-ctx.Done()
 	fmt.Fprintln(os.Stderr, "\nStopping. Steps in progress will run again when Launchway starts.")
-	return shutdown(httpSrv, srv, drain, func() {
+	return shutdown(httpSrv, srv, su.drain, func() {
 		stopRunner()
 		select {
 		case <-runnerDone:
@@ -379,6 +308,52 @@ func shutdown(hs *http.Server, srv *api.Server, drain time.Duration, stopRunner 
 		return fmt.Errorf("requests still in flight after %s were cut off: %w", shutdownTimeout, err)
 	}
 	return nil
+}
+
+// serverLive makes the API server's live settings from a configuration.
+func serverLive(c *config.Config, runnerToken string, auth *api.Auth) (api.Live, error) {
+	var l api.Live
+	var err error
+	signIn := auth != nil
+	if m := c.MCP; m.On() {
+		l.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
+		if o := m.OAuth; o != nil {
+			l.MCP.OAuth = &api.MCPOAuth{Resource: o.Resource, Scopes: o.Scopes}
+			if err := api.CheckMCPOAuth(l.MCP.OAuth, auth); err != nil {
+				return l, err
+			}
+		}
+	}
+	if signIn {
+		if l.Policy, err = c.Auth.Policy(); err != nil {
+			return l, err
+		}
+	}
+	if l.Drafts, err = c.DraftRules(); err != nil {
+		return l, err
+	}
+	waive, err := c.WaiverRole()
+	if err != nil {
+		return l, err
+	}
+	runners, err := c.RunnerAdminRole()
+	if err != nil {
+		return l, err
+	}
+	l.WaiveRole, l.RunnersRole = &waive, &runners
+	if l.TokenMaxDays, err = c.TokenMaxDays(); err != nil {
+		return l, err
+	}
+	pools, err := c.Pools(runnerToken)
+	if err != nil {
+		return l, err
+	}
+	for _, p := range pools {
+		if p.Kind == engine.PoolDeploy {
+			l.RunnerPools = append(l.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets, RequireIdentity: p.RequireIdentity})
+		}
+	}
+	return l, nil
 }
 
 // serverAuth builds the sign-in settings, or returns nil if sign-in is off.

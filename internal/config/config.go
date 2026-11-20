@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -93,6 +92,15 @@ type Config struct {
 
 	// MCP controls the endpoint agents use, /mcp; see mcp.go.
 	MCP MCPConfig `yaml:"mcp"`
+
+	// History is how long the change history of the configuration kept in
+	// the database is kept. Moved to the database with the rest.
+	History HistoryConfig `yaml:"history"`
+
+	// Egress says which addresses the server may fetch from on a user's
+	// behalf (see internal/egress). AllowLocal stays in this file; the
+	// allowed hosts are an administrator's setting in the database.
+	Egress EgressConfig `yaml:"egress"`
 
 	// Verification names the health sources verify steps may read (schema
 	// 19). Where they are and their credentials are in the deploy runners'
@@ -524,8 +532,17 @@ type AuthConfig struct {
 	// SessionLifetime ends every session this long after sign-in; default 24h.
 	SessionLifetime string          `yaml:"session_lifetime"`
 	Access          []AccessBinding `yaml:"access"`
+	// Admins are users and groups who are admins of every project whatever
+	// the role bindings (in the database since schema 23) say: the first
+	// administrator of a new installation, and the way back in if the
+	// bindings lock everyone out. Bootstrap: it stays in this file.
+	Admins AdminsConfig `yaml:"admins"`
 	// Tokens limits API tokens.
 	Tokens TokensConfig `yaml:"tokens"`
+
+	// accessInDatabase: the role bindings are in the database, so an empty
+	// access here is not a mistake (see LoadBootstrap).
+	accessInDatabase bool
 }
 
 // OIDCConfig is the OpenID Connect provider to sign in with.
@@ -554,6 +571,15 @@ type AccessBinding struct {
 	// to these environments.
 	Environments []string `yaml:"environments"`
 }
+
+// AdminsConfig names the bootstrap administrators.
+type AdminsConfig struct {
+	Users  []string `yaml:"users"`
+	Groups []string `yaml:"groups"`
+}
+
+// Empty reports whether nobody is named.
+func (a AdminsConfig) Empty() bool { return len(a.Users) == 0 && len(a.Groups) == 0 }
 
 // ApprovalsConfig controls approval steps.
 type ApprovalsConfig struct {
@@ -760,8 +786,17 @@ func LoadRunner(path string) (*RunnerFile, error) {
 }
 
 // Load reads path. A missing file gives the defaults.
-func Load(path string) (*Config, error) {
+func Load(path string) (*Config, error) { return readConfig(path, false) }
+
+// LoadBootstrap reads the file a server starts with. It is checked as Load
+// checks it, except that it need not grant anyone a role: since schema 23
+// the role bindings are in the database, which is checked with them when
+// the server reads it.
+func LoadBootstrap(path string) (*Config, error) { return readConfig(path, true) }
+
+func readConfig(path string, bootstrap bool) (*Config, error) {
 	c := &Config{}
+	c.Auth.accessInDatabase = bootstrap
 	if path != "" {
 		data, err := os.ReadFile(path)
 		switch {
@@ -775,130 +810,71 @@ func Load(path string) (*Config, error) {
 				return nil, fmt.Errorf("%s: %w", path, err)
 			}
 			c.file = path
-			// Relative paths are relative to the config file.
-			base := filepath.Dir(path)
-			if c.Data != "" && !filepath.IsAbs(c.Data) {
-				c.Data = filepath.Join(base, c.Data)
-			}
-			if c.Database != "" && !isURL(c.Database) && !filepath.IsAbs(c.Database) {
-				c.Database = filepath.Join(base, c.Database)
-			}
-			for i, p := range c.Projects {
-				if pp := p.Pipeline; pp != nil && pp.OnAsTrue != nil {
-					if pp.On.Push != nil || pp.On.PullRequest.Kind != 0 {
-						return nil, fmt.Errorf("%s: project %s: pipeline has both `on` and `true` (an unquoted on); keep one", path, p.Name)
-					}
-					pp.On, pp.OnAsTrue = *pp.OnAsTrue, nil
-				}
-				if isLocalPath(p.Repo) && !filepath.IsAbs(p.Repo) {
-					c.Projects[i].Repo = filepath.Join(base, p.Repo)
-				}
-			}
-			for i, l := range c.Libraries {
-				if isLocalPath(l.Repo) && !filepath.IsAbs(l.Repo) {
-					c.Libraries[i].Repo = filepath.Join(base, l.Repo)
-				}
-			}
-			c.Runner.Secrets.RelativeTo(base)
-			c.AI.Secrets.RelativeTo(base)
-			c.Runner.Images.RelativeTo(base)
-			c.relativeTriggerFiles(base)
-			if f := c.Auth.OIDC.ClientSecretFile; f != "" && !filepath.IsAbs(f) {
-				c.Auth.OIDC.ClientSecretFile = filepath.Join(base, f)
-			}
-			for i, p := range c.RunnerPools {
-				if p.TokenFile != "" && !filepath.IsAbs(p.TokenFile) {
-					c.RunnerPools[i].TokenFile = filepath.Join(base, p.TokenFile)
-				}
+			if err := c.relativeToFile(path); err != nil {
+				return nil, err
 			}
 		}
 	}
-	if c.Listen == "" {
-		c.Listen = "127.0.0.1:8080"
+	c.applyDefaults()
+	if err := c.Validate(path); err != nil {
+		return nil, err
 	}
-	if c.Data == "" {
-		c.Data = "launchway-data"
-	}
-	// Runners and container runtimes may work from another directory, so
-	// every local path is made absolute.
-	if abs, err := filepath.Abs(c.Data); err == nil {
-		c.Data = abs
-	}
-	for i, p := range c.Projects {
-		if isLocalPath(p.Repo) {
-			if abs, err := filepath.Abs(p.Repo); err == nil {
-				c.Projects[i].Repo = abs
-			}
-		}
-	}
-	for i, l := range c.Libraries {
-		if isLocalPath(l.Repo) {
-			if abs, err := filepath.Abs(l.Repo); err == nil {
-				c.Libraries[i].Repo = abs
-			}
-		}
-	}
-	if c.User == "" {
-		if u, err := user.Current(); err == nil {
-			c.User = u.Username
-		} else {
-			c.User = "local"
-		}
-	}
-	if c.Runner.Concurrency <= 0 {
-		c.Runner.Concurrency = 2
-	}
-	if c.Auth.Mode == "" {
-		c.Auth.Mode = AuthNone
-	}
+	return c, nil
+}
+
+// Validate checks the whole configuration: the file's when the server
+// starts, and the database's (with the file's bootstrap settings) before
+// any change to it is stored, so both are held to exactly the same rules.
+// path names where it came from in messages.
+func (c *Config) Validate(path string) error {
 	if err := c.Auth.check(); err != nil {
 		where := "auth"
 		if path != "" {
 			where = path + ": auth"
 		}
-		return nil, fmt.Errorf("%s: %w", where, err)
+		return fmt.Errorf("%s: %w", where, err)
 	}
 	if _, err := c.TestLimits(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.Runner.Reports.Limits(); err != nil {
-		return nil, fmt.Errorf("%s: runner.%w", path, err)
+		return fmt.Errorf("%s: runner.%w", path, err)
 	}
 	if err := c.Runner.Images.Check(); err != nil {
-		return nil, fmt.Errorf("%s: runner.%w", path, err)
-	}
-	if c.Artifacts.Dir != "" && !filepath.IsAbs(c.Artifacts.Dir) && path != "" {
-		c.Artifacts.Dir = filepath.Join(filepath.Dir(path), c.Artifacts.Dir)
+		return fmt.Errorf("%s: runner.%w", path, err)
 	}
 	if _, err := c.ArtifactLimits(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.FindingLimits(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.ReportOptions(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.ReportsOrigin(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.checkTriggers(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.MCP.Check(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if c.MCP.OAuth != nil && c.Auth.Mode != AuthOIDC {
-		return nil, fmt.Errorf("%s: mcp.oauth needs sign-in with OpenID Connect (auth.mode: oidc)", path)
+		return fmt.Errorf("%s: mcp.oauth needs sign-in with OpenID Connect (auth.mode: oidc)", path)
+	}
+	if o := c.MCP.OAuth; o != nil && o.Resource == c.Auth.OIDC.ClientID {
+		return fmt.Errorf("%s: mcp.oauth.resource must not be the sign-in client ID: ID tokens carry that audience", path)
 	}
 	if _, err := c.Models(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.DraftRules(); err != nil {
 		if path != "" {
 			err = fmt.Errorf("%s: %w", path, err)
 		}
-		return nil, err
+		return err
 	}
 	for _, p := range c.Projects {
 		if p.Pipeline == nil {
@@ -906,9 +882,9 @@ func Load(path string) (*Config, error) {
 		}
 		if _, err := p.Pipeline.On.pullRequests(); err != nil {
 			if path != "" {
-				return nil, fmt.Errorf("%s: project %s: %w", path, p.Name, err)
+				return fmt.Errorf("%s: project %s: %w", path, p.Name, err)
 			}
-			return nil, fmt.Errorf("project %s: %w", p.Name, err)
+			return fmt.Errorf("project %s: %w", p.Name, err)
 		}
 	}
 	// Policies are refused here, with their lines, so a mistake stops the
@@ -918,15 +894,15 @@ func Load(path string) (*Config, error) {
 		if !errors.As(err, &pp) && path != "" {
 			err = fmt.Errorf("%s: %w", path, err)
 		}
-		return nil, err
+		return err
 	}
 	if _, err := c.WaiverRole(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.RunnerAdminRole(); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return fmt.Errorf("%s: %w", path, err)
 	}
-	return c, nil
+	return nil
 }
 
 // DraftRules works out who may start draft runs on each project.

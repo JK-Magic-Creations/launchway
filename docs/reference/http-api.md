@@ -382,6 +382,39 @@ Granting and revoking also need the role `policy.waivers.allow` names (admin by 
 
 `reason` and an expiry are required; instead of `expires_in_hours` you may send `expires_at` (Unix milliseconds). `run`, `environment` and `finding` narrow the waiver. The revoke body is optional: `{"reason": "..."}`. See [Policy rules](policy-rules.md).
 
+## Configuration
+
+Everything an administrator manages is a configuration object kept in the database, with a version
+and a history: see [Configuration objects](config-objects.md) for the kinds, their settings, how
+changes are checked and how a Terraform provider uses them. Reading and changing configuration
+needs the admin role on every project, except the overview, which any signed-in person with a role
+may read (the web UI names the levels from it). A change names the version it expects (`If-Match`
+or `version` in the body); `412` says someone changed the object meanwhile. `X-Launchway-Manager:
+terraform` (or `git`), sent with an API token, says a tool manages the object; only that
+manager may change it afterwards, unless the caller sends `take_ownership: true`, which is audited. `{kind}` is one of `projects`, `libraries`,
+`environments`, `runner-pools`, `role-bindings`, `policies`, `policy-sources`, `health-sources`,
+`models`, `secret-stores`, `step-resources`, `units`, `installation` and `organisation`.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/config` | `any-viewer` | — | The kinds, the names of the levels, the units, the revision this server runs with, and whether the caller is an administrator. `available` is false on a server limited to a schema before 23, which uses its file |
+| `GET /api/v1/config/history` | `admin` | — | The changes of every object, newest first: who, when, the action, what changed. `kind`, `name`, `import`, `before` and `limit` narrow and page it |
+| `GET /api/v1/config/export` | `admin` | — | Every object as configuration text (YAML), for backup, review or Git |
+| `POST /api/v1/config/import` | `admin` | `config.import` | `{"text", "prune", "apply", "digest"}`. Without `apply`, plans the import: what would be created, changed or (with `prune`) deleted. With `apply` and the plan's `digest`, makes exactly those changes, recorded as one import |
+| `GET /api/v1/config/imports` | `admin` | — | The imports so far, the first start's import of the configuration file among them |
+| `POST /api/v1/config/validate` | `admin` | — | `{"changes": [...]}`: checks changes as `apply` would make them and stores nothing. The answer is `{"valid", "problems"}` and lists every problem. The wizards call it as people answer |
+| `POST /api/v1/config/check/repository` | `admin` | `config.check_repository` | `{"repo", "branch"}`: reads a repository with the server's own Git credentials and keeps nothing. Internal addresses and local paths are refused (`blocked`, `blocked_host`; see Egress in the server settings). Audited and limited to a few a minute per caller. Answers `ok`, a plain `problem`, the `default_branch`, the `branches` and whether the branch has a pipeline file |
+| `POST /api/v1/config/check/signin` | `admin` | `config.check_signin` | `{"issuer", "client_id", "redirect_url", "client_secret_env", "groups_claim", "admin_groups", "admin_users"}`: checks the answers against the identity provider and returns the `auth:` block for the configuration file (`snippet`). Sign-in stays in the file |
+| `POST /api/v1/config/apply` | `admin` | `config.apply` | `{"changes": [{"kind", "name", "action", "unit", "spec", "version", "comment"}]}`, at most 200: all or none. `action` is `put` (the default), `delete` or `restore`; `version` -1 means the object must not exist yet |
+| `GET /api/v1/config/effective/{project}` | `admin` | — | What applies to a project and where each part comes from: the installation, the organisation, a unit or the project |
+| `GET /api/v1/config/{kind}` | `admin` | — | The objects of a kind; `?deleted=1` lists the deleted ones |
+| `POST /api/v1/config/{kind}` | `admin` | `config.create` | `{"name", "unit", "spec", "comment"}`: creates an object; `409` if it exists |
+| `GET /api/v1/config/{kind}/{obj}` | `admin` | — | One object: `spec`, `version` (also the `ETag`), `managed_by`, who created and last changed it, and `deleted` |
+| `PUT /api/v1/config/{kind}/{obj}` | `admin` | `config.put` | Creates or replaces the object, declaratively: sending the same body twice changes nothing the second time (`changed` says so). `400` lists every problem the same checks as the configuration file find |
+| `DELETE /api/v1/config/{kind}/{obj}` | `admin` | `config.delete` | Deletes the object; it is kept and can be restored. Refused if something still depends on it, if active runs use it (a project, an environment or a runner pool: the answer lists them; `{"force_in_use": true}` deletes it anyway, recorded in the object's history and the audit trail) or if it would leave the configuration invalid |
+| `POST /api/v1/config/{kind}/{obj}/restore` | `admin` | `config.restore` | Brings a deleted object back as it was |
+| `GET /api/v1/config/{kind}/{obj}/history` | `admin` | — | The object's changes, newest first, each with the fields that changed |
+
 ## Step resources
 
 The installation's [default CPU and memory](pipeline.md#resources) for each kind of step, and the most

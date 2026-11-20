@@ -12,6 +12,8 @@ behind it.
 | [Helm values](helm-values.md) | every value of the Helm chart |
 | [Command line](cli.md) | every command and flag of `launchway` |
 | [HTTP API](http-api.md) | every route, who may call it, and what it returns |
+| [Configuration objects](config-objects.md) | the kinds of configuration kept in the database, their settings, and how the API, CLI, MCP and Terraform name them |
+| [Interface parity](interface-parity.md) | every API operation against its MCP tool, CLI command and Terraform resource |
 | [Events and audit actions](events.md) | the run event log, the live stream and the audit trail |
 | [Roles and permissions](roles.md) | what viewers, operators and admins may do |
 | [Policy rules](policy-rules.md) | the policy rule catalogue |

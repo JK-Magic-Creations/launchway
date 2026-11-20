@@ -72,7 +72,7 @@ func (s *PushSettings) directAllowed(branch string) bool {
 
 // Push returns a project's push settings, or nil if it cannot be saved to.
 func (m *Manager) Push(name string) *PushSettings {
-	if p := m.projects[name]; p != nil && p.Push != nil {
+	if p := m.c().projects[name]; p != nil && p.Push != nil {
 		s := *p.Push
 		return &s
 	}
@@ -103,7 +103,7 @@ type PipelineFile struct {
 // empty ref means the default branch. A commit without a pipeline file gives
 // a starter pipeline with Exists false.
 func (m *Manager) ReadPipelineFile(ctx context.Context, name, ref string) (*PipelineFile, error) {
-	p := m.projects[name]
+	p := m.c().projects[name]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}
@@ -196,7 +196,7 @@ type DraftRequest struct {
 // the commit, and starts a draft run. Problems in the text are returned as
 // pipeline.Problems, before anything is fetched.
 func (m *Manager) StartDraft(ctx context.Context, d DraftRequest) (*engine.RunSummary, error) {
-	p := m.projects[d.Project]
+	p := m.c().projects[d.Project]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, d.Project)
 	}
@@ -294,7 +294,7 @@ var ErrNotSavable = fmt.Errorf("%w: saving is not set up for this project (its c
 // saving at once cannot overwrite each other: the second either gets a
 // branch of its own or a conflict. Nothing is kept in memory.
 func (m *Manager) Save(ctx context.Context, req SaveRequest) (*SaveResult, error) {
-	p := m.projects[req.Project]
+	p := m.c().projects[req.Project]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, req.Project)
 	}
@@ -554,7 +554,11 @@ var errStale = errors.New("the branch is not where it was expected")
 // receiving repository, so two pushes cannot both win.
 func push(ctx context.Context, repo, remote, commit, branch, expect string) error {
 	ref := "refs/heads/" + branch
-	out, err := gitRun(ctx, repo, nil, "", "push", "--porcelain", "--no-verify",
+	env, err := remoteEnv(ctx, remote)
+	if err != nil {
+		return &PushError{Message: redact.URLs(err.Error())}
+	}
+	out, err := gitRun(ctx, repo, env, "", "push", "--porcelain", "--no-verify",
 		"--force-with-lease="+ref+":"+expect, remote, commit+":"+ref)
 	if err == nil {
 		return nil

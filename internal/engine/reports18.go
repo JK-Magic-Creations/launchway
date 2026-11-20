@@ -123,7 +123,7 @@ func (o ReportOptions) withDefaults() (ReportOptions, error) {
 func CheckReportOptions(o ReportOptions) (ReportOptions, error) { return o.withDefaults() }
 
 // ReportOptions returns the options schema 18 keeps reports within.
-func (e *Engine) ReportOptions() ReportOptions { return e.reps }
+func (e *Engine) ReportOptions() ReportOptions { return e.live().reps }
 
 // needsCoverage reports whether a step needs a runner that collects
 // coverage reports.
@@ -138,7 +138,7 @@ func (c *cmd) reportArtifacts(def *pipeline.Step) []JobArtifact {
 		return nil
 	}
 	var out []JobArtifact
-	o := c.e.reps
+	o := c.e.live().reps
 	if d := def.Reports.TestAttachments; d != "" {
 		out = append(out, JobArtifact{Name: pipeline.TestAttachmentsArtifact, Paths: []string{d}, When: pipeline.ArtifactAlways,
 			MaxFiles: o.AttachmentFiles, MaxBytes: o.AttachmentBytes, Label: "Test attachments"})
@@ -159,13 +159,13 @@ func (e *Engine) reportArtifactKind(def *pipeline.Step, name string) (kind strin
 	r := def.Reports
 	switch {
 	case name == pipeline.TestAttachmentsArtifact && r.TestAttachments != "":
-		return KindTestAttachments, e.reps.AttachmentFiles, e.reps.AttachmentBytes
+		return KindTestAttachments, e.live().reps.AttachmentFiles, e.live().reps.AttachmentBytes
 	case name == pipeline.TestEmbeddedArtifact && len(r.Tests) > 0:
 		return KindTestEmbedded, maxEmbeddedFiles, maxEmbeddedBytes
 	case strings.HasPrefix(name, pipeline.HTMLReportPrefix):
 		for _, h := range r.HTML {
 			if pipeline.HTMLReportPrefix+h.Name == name {
-				return KindHTMLReport, e.reps.HTMLFiles, e.reps.HTMLBytes
+				return KindHTMLReport, e.live().reps.HTMLFiles, e.live().reps.HTMLBytes
 			}
 		}
 	}

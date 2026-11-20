@@ -145,9 +145,6 @@ func (o ArtifactOptions) withDefaults() (ArtifactOptions, error) {
 	return o, nil
 }
 
-// ArtifactOptions returns the options artifacts are kept with.
-func (e *Engine) ArtifactOptions() ArtifactOptions { return e.arts }
-
 // Artifact statuses, in artifacts.status.
 const (
 	artUploading = "uploading"
@@ -280,7 +277,7 @@ func (c *cmd) jobArtifacts(def *pipeline.Step) *JobArtifacts {
 	if len(keep) == 0 {
 		return nil
 	}
-	o := c.e.arts
+	o := c.e.ArtifactOptions()
 	ja := &JobArtifacts{Keep: keep, MaxFileBytes: o.MaxFileBytes, MaxBytes: o.MaxRunBytes, ChunkBytes: ArtifactChunkBytes}
 	if o.Store == nil {
 		ja.Problem = "this server keeps no artifacts: " + o.StoreProblem
@@ -562,12 +559,12 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 		return nil, ErrLeaseLost
 	}
 	kind, retain := "", time.Duration(0)
-	maxFiles, maxBytes := MaxArtifactFiles, e.arts.MaxRunBytes
+	maxFiles, maxBytes := MaxArtifactFiles, e.live().arts.MaxRunBytes
 	switch rk, rf, rb := e.reportArtifactKind(def, in.Name); {
 	case in.Name == pipeline.SBOMArtifact && def.Reports != nil && len(def.Reports.SBOM) > 0:
 		kind, retain = "sbom", 0
 	case rk != "":
-		kind, maxFiles, maxBytes = rk, rf, min(rb, e.arts.MaxRunBytes)
+		kind, maxFiles, maxBytes = rk, rf, min(rb, e.live().arts.MaxRunBytes)
 	default:
 		found := false
 		for _, a := range def.Artifacts {
@@ -580,9 +577,9 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 		}
 	}
 	if retain == 0 {
-		retain = e.arts.DefaultRetain
+		retain = e.live().arts.DefaultRetain
 	}
-	retain = min(retain, e.arts.MaxRetain)
+	retain = min(retain, e.live().arts.MaxRetain)
 	switch n := len(in.Files); {
 	case n == 0:
 		return nil, fmt.Errorf("%w: an artifact needs at least one file", ErrInvalid)
@@ -602,8 +599,8 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 		switch {
 		case f.Size < 0:
 			return nil, fmt.Errorf("%w: %s has a negative size", ErrInvalid, f.Path)
-		case f.Size > e.arts.MaxFileBytes:
-			return nil, fmt.Errorf("%w: %s is %s; the server keeps files of at most %s", ErrQuota, f.Path, sizeText(f.Size), sizeText(e.arts.MaxFileBytes))
+		case f.Size > e.maxFileBytes():
+			return nil, fmt.Errorf("%w: %s is %s; the server keeps files of at most %s", ErrQuota, f.Path, sizeText(f.Size), sizeText(e.maxFileBytes()))
 		case !validSHA256(f.SHA256):
 			return nil, fmt.Errorf("%w: %s: the SHA-256 must be 64 lower-case hex digits", ErrInvalid, f.Path)
 		}
@@ -617,7 +614,7 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 		if kind != "" && kind != "sbom" {
 			return nil, fmt.Errorf("%w: %s is %s; at most %s is kept", ErrQuota, artifactWhat(kind), sizeText(total), sizeText(maxBytes))
 		}
-		return nil, fmt.Errorf("%w: the artifact is %s; a run keeps at most %s", ErrQuota, sizeText(total), sizeText(e.arts.MaxRunBytes))
+		return nil, fmt.Errorf("%w: the artifact is %s; a run keeps at most %s", ErrQuota, sizeText(total), sizeText(e.live().arts.MaxRunBytes))
 	}
 	if u, ok := e.arts.Store.(blobstore.UsageReporter); ok {
 		// Say so before anything is sent, not half-way through.
@@ -667,7 +664,7 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 			return err
 		}
 		res, err := tx.Exec(`UPDATE artifact_usage SET bytes = bytes + ? WHERE project = ? AND bytes + ? <= ?`,
-			total, st.Project, total, e.arts.MaxProjectBytes)
+			total, st.Project, total, e.live().arts.MaxProjectBytes)
 		if err != nil {
 			return err
 		}
@@ -675,7 +672,7 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 			var used int64
 			_ = tx.QueryRow(`SELECT bytes FROM artifact_usage WHERE project = ?`, st.Project).Scan(&used)
 			return fmt.Errorf("%w: project %s keeps %s of artifacts; with this one's %s it would be over its quota of %s",
-				ErrQuota, st.Project, sizeText(used), sizeText(total), sizeText(e.arts.MaxProjectBytes))
+				ErrQuota, st.Project, sizeText(used), sizeText(total), sizeText(e.live().arts.MaxProjectBytes))
 		}
 		// The project's row is now locked until the end of this
 		// transaction, so the run's total below cannot change underneath.
@@ -684,9 +681,9 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 			l.runID, artUploading, artKept).Scan(&runBytes); err != nil {
 			return err
 		}
-		if runBytes+total > e.arts.MaxRunBytes {
+		if runBytes+total > e.live().arts.MaxRunBytes {
 			return fmt.Errorf("%w: the run keeps %s of artifacts; with this one's %s it would be over its limit of %s",
-				ErrQuota, sizeText(runBytes), sizeText(total), sizeText(e.arts.MaxRunBytes))
+				ErrQuota, sizeText(runBytes), sizeText(total), sizeText(e.live().arts.MaxRunBytes))
 		}
 		id := ids.New("art")
 		if _, err := tx.Exec(`INSERT INTO artifacts(id, run_id, step_id, attempt, project, run_number, name, kind, status, files, bytes,

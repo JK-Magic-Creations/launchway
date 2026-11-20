@@ -59,6 +59,10 @@ func (m MCPConfig) Check() error {
 		if strings.TrimSpace(o.Resource) == "" {
 			return errors.New("mcp.oauth.resource: say this server's MCP address, such as https://launchway.example.com/mcp")
 		}
+		u, err := url.Parse(o.Resource)
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.Fragment != "" || u.RawQuery != "" || !strings.HasSuffix(u.Path, "/mcp") {
+			return errors.New("mcp.oauth.resource must be this server's MCP address, ending in /mcp, such as https://launchway.example.com/mcp")
+		}
 		for _, s := range o.Scopes {
 			if s == "" || strings.ContainsAny(s, " \"\\") {
 				return fmt.Errorf("mcp.oauth.scopes: %q is not a scope", s)

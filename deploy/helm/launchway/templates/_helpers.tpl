@@ -223,7 +223,11 @@ owns may not appear in it.
 {{- end -}}
 {{- $_ := set $runner "enabled" false -}}
 {{- $_ := set $extra "runner" $runner -}}
-{{- $config := dict "listen" .Values.config.listen "data" "/var/lib/launchway" "projects" (.Values.config.projects | default list) -}}
+{{- $config := dict "listen" .Values.config.listen "data" "/var/lib/launchway" -}}
+{{- /* Since schema 23 the file is bootstrap only: projects (and every other setting an
+       administrator manages) are imported into the database once, by the first server that
+       starts, and the file's copies are ignored after that. The chart writes them only when set. */ -}}
+{{- with .Values.config.projects }}{{ $_ := set $config "projects" . }}{{ end -}}
 {{- $t := .Values.config.tests | default dict -}}
 {{- $tests := dict -}}
 {{- range $key, $value := dict "max_upload_mib" $t.maxUploadMiB "max_cases_per_run" $t.maxCasesPerRun "max_cases_per_project" $t.maxCasesPerProject -}}

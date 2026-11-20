@@ -3,6 +3,7 @@ import { api, verifyApi, type AIUsage, type ExplanationView, type ModelView, typ
 import { ago, clock } from "../format";
 import { canOperate, useMe } from "../auth";
 import { ErrorBox, Mono } from "./ui";
+import { WizardButton } from "./WizardButton";
 import { costText, usageText } from "./Verification";
 
 // Models: asking one to explain a failed step, what an ai step's model
@@ -192,11 +193,12 @@ export function ModelsSection() {
     <section className="card">
       <h2 className="h-sm">AI models</h2>
       <p className="sub">
-        Models that ai steps and verify steps may ask, and that people may ask to explain a failed step. They are set in the server's configuration (<Mono>ai.models</Mono>);
-        with none, nothing is ever sent to a model and everything else works.
+        Models that ai steps and verify steps may ask, and that people may ask to explain a failed step.
+        With none, nothing is ever sent to a model and everything else works.
       </p>
       <ErrorBox error={error} />
-      {models && models.models.length === 0 && <p className="sub"><strong>No AI model is configured.</strong></p>}
+      {models && models.models.length === 0 && <p className="sub"><strong>No AI model is set up.</strong></p>}
+      <div><WizardButton wizard="add-model" label="Add an AI model" primary={!models?.models.length} small /></div>
       {models && models.models.length > 0 && (
         <div className="table-scroll models-wrap">
           <table className="inputs-table models-table">
@@ -254,14 +256,15 @@ export function HealthSourcesSection() {
   return (
     <section className="card">
       <h2 className="h-sm">Health sources</h2>
-      <p className="sub">What verify steps may read, by name (<Mono>verification.sources</Mono>). Where each is and its credentials are in the deploy runners' configuration only.</p>
-      {list.length === 0 ? <p className="sub"><strong>None configured</strong>: verify steps are refused.</p> : (
+      <p className="sub">Monitoring that verify steps may read, by name, to judge a deployment. Where each is and its credentials stay with the deploy runners.</p>
+      {list.length === 0 ? <p className="sub"><strong>None yet</strong>: verify steps are refused.</p> : (
         <ul className="hsources">
           {list.map((h) => (
             <li key={h.name}><strong className="mono">{h.name}</strong> <span className="faint">{h.type}</span> <span className="small">for {h.projects.map((p, i) => <span key={p}>{i > 0 && ", "}<Mono>{p}</Mono></span>)}</span></li>
           ))}
         </ul>
       )}
+      <div><WizardButton wizard="add-health-source" label="Add a health source" primary={list.length === 0} small /></div>
     </section>
   );
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
+	"github.com/jk-magic-creations/launchway/internal/settings"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -71,6 +72,9 @@ type Server struct {
 	// make join tokens, revoke and rotate runners (runner_admin); nil means
 	// admin, NoRole nobody.
 	RunnersRole *auth.Role
+	// Settings is the configuration kept in the database (schema 23),
+	// served under /api/v1/config; nil on a server that keeps none.
+	Settings *settings.Service
 
 	sealerMu  sync.Mutex
 	sealer    *auth.Sealer // seals the state of sign-ins in progress
@@ -80,7 +84,9 @@ type Server struct {
 	MCP *MCPOptions
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
-	draining atomic.Bool    // see Drain
+	checks   checkLimiter
+	live     atomic.Pointer[Live] // see Reconfigure
+	draining atomic.Bool          // see Drain
 	stopMu   sync.Mutex
 	stopped  chan struct{} // closed by Stop; see longLived
 }
@@ -123,6 +129,10 @@ type route struct {
 }
 
 func (s *Server) routes() []route {
+	return append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...)
+}
+
+func (s *Server) mainRoutes() []route {
 	return []route{
 		// Health checks for load balancers and orchestrators.
 		{"GET /healthz", public, "", s.healthz},
@@ -227,57 +237,6 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/runs/{id}/findings", runRead, "", s.runFindings},
 		{"GET /api/v1/projects/{name}/security", projectRead, "", s.projectSecurity},
 		{"GET /api/v1/components", signedIn, "", s.searchComponents},
-
-		// Images (schema 15).
-		{"GET /api/v1/runs/{id}/images", runRead, "", s.runImages},
-		{"GET /api/v1/images", signedIn, "", s.searchImages},
-
-		// Policies and waivers (schema 16). Waiving needs the role
-		// policy.waivers.allow names, which the handlers check.
-		{"GET /api/v1/policies", readAny, "", s.listPolicies},
-		{"GET /api/v1/runs/{id}/policy", runRead, "", s.runPolicy},
-		{"GET /api/v1/waivers", signedIn, "", s.listWaivers},
-		{"POST /api/v1/projects/{name}/waivers", projectRead, "policy.waive", s.grantWaiver},
-		{"POST /api/v1/projects/{name}/waivers/{waiver}/revoke", projectRead, "policy.revoke_waiver", s.revokeWaiver},
-
-		// Richer test results, coverage and HTML reports (schema 18).
-		{"GET /api/v1/runs/{id}/tests/compare", runRead, "", s.runTestCompare},
-		{"GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}", runRead, "", s.testAttachment},
-		{"GET /api/v1/runs/{id}/coverage", runRead, "", s.runCoverage},
-		{"GET /api/v1/runs/{id}/coverage/files", runRead, "", s.runCoverageFiles},
-		{"GET /api/v1/projects/{name}/coverage", projectRead, "", s.projectCoverage},
-		{"GET /api/v1/runs/{id}/reports", runRead, "", s.runReports},
-		// A hosted report takes no session: its signed link is the
-		// permission (see reports.go).
-		{"GET /hosted/{link}/{path...}", public, "", s.hosted},
-
-		// The MCP endpoint for agents. It checks callers itself (only bearer
-		// tokens, with limits of their own; see mcp.go), and its tools call
-		// the routes above in process, through guard.
-		{"POST /mcp", public, "", s.mcpEndpoint},
-		{"GET /mcp", public, "", s.mcpEndpoint},
-		{"DELETE /mcp", public, "", s.mcpEndpoint},
-		{"GET /.well-known/oauth-protected-resource/mcp", public, "", s.protectedResourceMetadata},
-
-		// Verifications and AI models (schema 19).
-		{"POST /api/runner/v1/deploy/verify/lease", runnerOnly, "", s.verifyLease},
-		{"POST /api/runner/v1/deploy/verify/interval", runnerOnly, "", s.verifyInterval},
-		{"GET /api/v1/runs/{id}/verifications", runRead, "", s.runVerifications},
-		{"GET /api/v1/verifications", signedIn, "", s.listVerifications},
-		{"GET /api/v1/runs/{id}/steps/{step}/verify/controls", runRead, "", s.verifyControls},
-		{"POST /api/v1/runs/{id}/steps/{step}/verify/override", runOperate, "verification.override", s.overrideVerify},
-		{"GET /api/v1/health-sources", signedIn, "", s.listHealthSources},
-		{"GET /api/v1/ai/models", signedIn, "", s.listModels},
-		{"GET /api/v1/runs/{id}/steps/{step}/explanations", runRead, "", s.stepExplanations},
-		{"POST /api/v1/runs/{id}/steps/{step}/explain", runOperate, "step.explain", s.explainStep},
-
-		// Step resources (schema 22): anyone signed in reads the defaults
-		// and limits; an administrator changes them.
-		{"GET /api/v1/step-resources", signedIn, "", s.getStepResources},
-		{"GET /api/v1/step-resources/limits", signedIn, "", s.getStepResourceLimits},
-		{"PUT /api/v1/step-resources/limits", administer, "step_resources.set_limits", s.setStepResourceLimits},
-		{"GET /api/v1/step-resources/defaults/{kind}", signedIn, "", s.getStepResourceDefault},
-		{"PUT /api/v1/step-resources/defaults/{kind}", administer, "step_resources.set_default", s.setStepResourceDefault},
 	}
 }
 
@@ -696,7 +655,7 @@ func (s *Server) view(id *identity, p source.ProjectStatus) projectView {
 	if runs, err := s.Engine.ListRuns(engine.RunFilter{Project: p.Name, Limit: 1}); err == nil && len(runs) > 0 {
 		v.LastRun = runs[0]
 	}
-	rule := s.Drafts.For(p.Name)
+	rule := s.cur().Drafts.For(p.Name)
 	v.Editor = editorRights{DraftsAllow: "none", MayDraft: s.authorize(id, auth.RunDraft, p.Name), DraftSecrets: rule.Secrets,
 		MaySave: p.Push != nil && s.authorize(id, auth.Operate, p.Name), MayForce: s.authorize(id, auth.AdministerProject, p.Name)}
 	if rule.Allow != auth.NoRole {
@@ -984,7 +943,7 @@ func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		setAudit(r, "", "draft run, pipeline "+sum.PipelineHash)
-		err = s.Engine.ResumeDraft(sum.ID, id.User, s.Drafts.For(sum.Project).Secrets)
+		err = s.Engine.ResumeDraft(sum.ID, id.User, s.cur().Drafts.For(sum.Project).Secrets)
 	} else {
 		err = s.Engine.Resume(sum.ID, id.User)
 	}
@@ -1039,7 +998,7 @@ func (s *Server) rerunRun(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, s.draftRefusal(sum.Project))
 			return
 		}
-		secrets := s.Drafts.For(sum.Project).Secrets
+		secrets := s.cur().Drafts.For(sum.Project).Secrets
 		rq.DraftSecrets = &secrets
 	}
 	run, err := s.Engine.Rerun(rq)

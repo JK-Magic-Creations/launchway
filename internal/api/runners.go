@@ -75,8 +75,9 @@ func (s *Server) runnerAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		shared := s.RunnerToken != "" && subtle.ConstantTimeCompare([]byte(got), []byte(s.RunnerToken)) == 1
 		var pool *RunnerPool
-		for i := range s.RunnerPools {
-			p := &s.RunnerPools[i]
+		pools := s.cur().RunnerPools
+		for i := range pools {
+			p := &pools[i]
 			if p.Token != "" && subtle.ConstantTimeCompare([]byte(got), []byte(p.Token)) == 1 {
 				pool = p
 			}
@@ -96,9 +97,10 @@ func (s *Server) runnerAuth(next http.HandlerFunc) http.HandlerFunc {
 
 // deployPool finds a configured deploy pool by name.
 func (s *Server) deployPool(name string) *RunnerPool {
-	for i := range s.RunnerPools {
-		if s.RunnerPools[i].Name == name {
-			return &s.RunnerPools[i]
+	pools := s.cur().RunnerPools
+	for i := range pools {
+		if pools[i].Name == name {
+			return &pools[i]
 		}
 	}
 	return nil
@@ -367,10 +369,10 @@ func (s *Server) assertionFailed(w http.ResponseWriter, r *http.Request, asserti
 // runnersRole is the role needed on every project to manage runners:
 // make join tokens, revoke and rotate runners.
 func (s *Server) runnersRole() auth.Role {
-	if s.RunnersRole == nil {
+	if s.cur().RunnersRole == nil {
 		return auth.Admin
 	}
-	return *s.RunnersRole
+	return *s.cur().RunnersRole
 }
 
 // mayManageRunners reports whether someone may manage runners.
@@ -388,7 +390,7 @@ func (s *Server) mayManageRunners(id *identity) bool {
 	if id.limited() && (len(id.scope) > 0 || (id.capRole != auth.NoRole && id.capRole < need)) {
 		return false
 	}
-	return s.Auth.Policy.RoleEverywhere(id.User, id.Groups) >= need
+	return s.cur().Policy.RoleEverywhere(id.User, id.Groups) >= need
 }
 
 func (s *Server) manageRefusal() string {

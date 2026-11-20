@@ -251,3 +251,69 @@ needs the database restored from a backup taken before it.
 - [Install on Kubernetes](install-kubernetes.md#upgrades) for how the chart replaces servers.
 - [Monitoring](monitoring.md), to watch `/readyz` and the schema numbers.
 - [Troubleshooting](troubleshooting.md).
+
+## Configuration in the database
+
+Since schema 23 the settings an administrator manages are in the database, so **a database backup is
+a configuration backup**, with every object's history. For a copy you can read, review and keep in Git:
+
+```sh
+launchway config export -o launchway-config.yaml
+```
+
+### Upgrading from a release that kept configuration in the file
+
+1. Upgrade as usual. The first server of schema 23 to start imports the settings in its file into the
+   database, once, and records the import (`launchway config imports` shows it and what it brought).
+2. Every server logs each key of its file that it now ignores. Change those settings in the web UI,
+   with `launchway config`, the API or Terraform from now on. With the Helm chart, the values still
+   in `config.*` were imported the first time and are ignored after; take them out when convenient.
+3. During a rolling upgrade, servers of the release before keep using their own file. Make no
+   configuration change through the API until every server is replaced: an older server does not see
+   it. **This matters most for access:** an older server keeps the role bindings of its file, so a
+   revocation made in the database (taking an administrator out, narrowing a role) does **not** apply
+   to it, and the person keeps their old access there until that server is upgraded. Upgrade all
+   servers first, then change who may do what.
+
+### Rolling back
+
+Export, take the `objects:` list out of the text, merge the rest into each server's configuration
+file, and roll the servers back; they use the file again, **with the file's role bindings**: a
+revocation made in the database since the upgrade applies to the rolled-back servers only once the
+exported `auth.access` is merged into their files, so check it before you roll back. The exact steps, and why they work, are in
+[Migrations](../development/migrations.md) under schema 23. Settings changed in the
+file after a rollback are not seen by the database; export the file's sections again and `launchway
+config import --apply` before rolling forward.
+
+### Locked out, or a stored configuration that will not load
+
+Two protections keep a wrong configuration from locking everyone out:
+
+- A change that would leave nobody able to administer everything is refused: with sign-in on, at
+  least one role binding must give the `admin` role on every project (or the bootstrap file's
+  `auth.admins` must name someone, which cannot be changed through the API).
+- A server that cannot load the stored configuration at start-up does **not** exit. It starts in
+  **safe mode**, logs `SAFE MODE` with the reason, runs with the last configuration that worked (kept in
+  its data directory as `config-last-good.json`) or, if there is none, with the bootstrap file alone,
+  and tries the stored configuration again every few seconds. `GET /api/v1/config` shows `safe_mode`
+  in its status. The people named in the bootstrap file's `auth.admins` can still sign in and repair it.
+  Objects of a kind a newer version wrote are ignored with a warning, never fatal.
+
+If the API cannot be used at all, on the server host:
+
+```sh
+launchway config history --limit 20                     # if a server still answers
+launchway config restore --offline --revision 41        # put revision 41 back, as a new revision
+launchway server --ignore-database-config               # start with the bootstrap file only
+```
+
+`restore --offline` needs only the bootstrap file's database address, not a running server or a
+sign-in; the history keeps everything, so the restore itself can be undone. `--ignore-database-config`
+leaves the database untouched; restart without it after the repair.
+
+### Restoring one object
+
+Every change is in the object's history, and a deleted object is kept: `launchway config history
+projects shop` shows who changed it, and `launchway config restore projects shop` brings a deleted
+project back. To go back to an earlier version of the settings, take the spec from the history and
+`launchway config set` it.

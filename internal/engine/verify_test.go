@@ -249,7 +249,11 @@ func TestInconclusivePausesForAPerson(t *testing.T) {
 		t.Fatalf("step environment %q", s.Environment)
 	}
 	// Not by the person who started it, on a protected environment.
-	e.selfOK = false
+	{
+		l := *e.live()
+		l.selfOK = false
+		e.cur.Store(&l)
+	}
 	starter := ""
 	if d, err := e.GetRun(id); err == nil {
 		starter = d.Actor

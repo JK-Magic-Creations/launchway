@@ -79,6 +79,9 @@ type RunState struct {
 	// PullRequestSecrets says whether the steps of a pull-request run may
 	// read secrets. It means nothing for other runs.
 	PullRequestSecrets bool
+	// SelfApproval is whether the starter could approve their own run when
+	// it was created; nil for a run created before it was recorded.
+	SelfApproval *bool
 	// CancelReason is why the run was asked to cancel, when it was not by
 	// hand, and SupersededBy the newer run that superseded it, if that is
 	// why. Both are cleared by a resume.
@@ -193,6 +196,9 @@ type DeployState struct {
 	Phases     int // deploy.phase events in this attempt
 	Closed     bool
 	Verdict    string
+	// Protected is whether the environment was protected when the
+	// deployment opened; nil for one that predates the record.
+	Protected *bool
 	// Command, for a rollout step, is the command it gave in this attempt
 	// (schema 14).
 	Command string
@@ -200,6 +206,16 @@ type DeployState struct {
 
 // Opened reports whether the deployment was opened (it took the lock).
 func (d *DeployState) Opened() bool { return d != nil && d.ID != "" }
+
+// selfApproval says whether the person who started the run may approve it:
+// what was in force when it was created, or, for a run that predates the
+// record, the server's setting now.
+func (st *RunState) selfApproval(e *Engine) bool {
+	if st.SelfApproval != nil {
+		return *st.SelfApproval
+	}
+	return e.live().selfOK
+}
 
 // secretsAllowed reports whether the run's steps may read secrets: not in a
 // draft run or a pull-request run unless the project allowed it when the run
@@ -412,6 +428,40 @@ func (st *RunState) check(ev Event) bool {
 	return true
 }
 
+// applyCreated folds run.created: what the run is, and what was in force when
+// it was created.
+func (st *RunState) applyCreated(ev Event) {
+	p := ev.Data
+	st.ID = ev.RunID
+	st.Project = p.Project
+	st.Number = p.Number
+	st.Pipeline = p.Pipeline
+	if p.Trigger != nil {
+		st.Trigger = *p.Trigger
+	}
+	if p.Source != nil {
+		st.Source = *p.Source
+	}
+	if p.Draft != nil {
+		d := *p.Draft
+		st.Draft = &d
+	}
+	if p.Rerun != nil {
+		r := *p.Rerun
+		st.Rerun = &r
+	}
+	st.PullRequestSecrets = p.PullRequestSecrets != nil && *p.PullRequestSecrets
+	st.SelfApproval = p.SelfApproval
+	st.Status = RunQueued
+	st.CreatedAt = ev.At
+	st.Steps = map[string]*StepState{}
+	st.Order = nil
+	for i, step := range p.Pipeline.Steps {
+		st.Steps[step.ID] = &StepState{ID: step.ID, Position: i, Status: StepPending}
+		st.Order = append(st.Order, step.ID)
+	}
+}
+
 // apply moves the state forward by one event. It must stay deterministic:
 // the same events always produce the same state.
 func (st *RunState) apply(ev Event) {
@@ -426,33 +476,7 @@ func (st *RunState) apply(ev Event) {
 	}
 	switch ev.Type {
 	case RunCreated:
-		st.ID = ev.RunID
-		st.Project = p.Project
-		st.Number = p.Number
-		st.Pipeline = p.Pipeline
-		if p.Trigger != nil {
-			st.Trigger = *p.Trigger
-		}
-		if p.Source != nil {
-			st.Source = *p.Source
-		}
-		if p.Draft != nil {
-			d := *p.Draft
-			st.Draft = &d
-		}
-		if p.Rerun != nil {
-			r := *p.Rerun
-			st.Rerun = &r
-		}
-		st.PullRequestSecrets = p.PullRequestSecrets != nil && *p.PullRequestSecrets
-		st.Status = RunQueued
-		st.CreatedAt = ev.At
-		st.Steps = map[string]*StepState{}
-		st.Order = nil
-		for i, step := range p.Pipeline.Steps {
-			st.Steps[step.ID] = &StepState{ID: step.ID, Position: i, Status: StepPending}
-			st.Order = append(st.Order, step.ID)
-		}
+		st.applyCreated(ev)
 
 	case RunCancelRequested:
 		st.CancelRequested = true
@@ -480,21 +504,7 @@ func (st *RunState) apply(ev Event) {
 		st.FinishedAt = ev.At
 
 	case StepQueued:
-		if p.Attempt != s.Attempt && s.Dep != nil {
-			s.Dep.Phases = 0
-		}
-		s.Status = StepQueuedS
-		s.WaitKind = ""
-		if d := p.Deploy; d != nil {
-			st.queueAction(s, d)
-		}
-		s.Attempt = p.Attempt
-		s.QueuedAt = ev.At
-		s.StartedAt, s.FinishedAt = 0, 0
-		s.ExitCode, s.Error, s.Runner, s.LeaseID = nil, "", "", ""
-		s.Outputs = nil
-		s.Excerpt = ""
-		s.Evidence = nil
+		st.applyQueued(ev, s)
 
 	case StepSkipped:
 		s.Status = StepSkippedS
@@ -504,50 +514,14 @@ func (st *RunState) apply(ev Event) {
 		s.FinishedAt = ev.At
 
 	case StepLeased:
-		s.Status = StepLeasedS
-		s.LeaseID = p.Lease
-		s.Runner = p.Runner
-		// A deploy runner's actions need no workspace: they do not move the
-		// run to that runner. Nor do verify and ai steps.
-		if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
-			break
-		}
-		if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI()) {
-			if st.Status == RunQueued {
-				st.Status, st.StartedAt = RunRunning, ev.At
-			}
-			break
-		}
-		if p.Runner != st.Runner {
-			st.Runner, st.Workspace = p.Runner, p.Lease
-		}
-		if st.Status == RunQueued {
-			st.Status = RunRunning
-			st.StartedAt = ev.At
-		}
+		st.applyLeased(ev, s)
 
 	case StepStarted:
 		s.Status = StepRunning
 		s.StartedAt = ev.At
 
 	case StepFinished:
-		s.WaitKind = ""
-		if p.Outcome == string(StepSucceeded) {
-			s.Status = StepSucceeded
-		} else {
-			s.Status = StepFailed
-			s.Failures++
-		}
-		s.ExitCode = p.ExitCode
-		s.Error = p.Reason
-		s.Excerpt = p.Excerpt
-		s.Outputs = p.Outputs
-		s.FinishedAt = ev.At
-		s.LeaseID = ""
-		s.Evidence = evidenceOf(p)
-		if p.AI != nil {
-			s.AI = p.AI
-		}
+		st.applyFinished(ev, s)
 
 	case StepLost:
 		s.Lost++
@@ -565,52 +539,16 @@ func (st *RunState) apply(ev Event) {
 		}
 
 	case StepReset:
-		s.Status = StepPending
-		s.Failures, s.Lost = 0, 0
-		s.Error, s.SkipKind, s.Excerpt = "", "", ""
-		s.ExitCode = nil
-		s.StartedAt, s.FinishedAt = 0, 0
-		s.clearDecision()
-		s.WaitKind, s.Dep = "", nil
-		s.Gate, s.Evidence = nil, nil
-		s.Ver, s.AI = nil, nil
+		st.applyReset(ev, s)
 
 	case StepWaiting:
-		s.Status = StepWaitingS
-		s.Attempt = p.Attempt
-		// It starts waiting now; how long it waited is shown like a step's run time.
-		s.QueuedAt, s.StartedAt, s.FinishedAt = ev.At, ev.At, 0
-		s.Error = ""
-		s.clearDecision()
-		s.Deadline = p.Deadline
-		if st.Status == RunQueued {
-			st.Status = RunRunning
-			st.StartedAt = ev.At
-		}
+		st.applyWaiting(ev, s)
 
 	case StepApproved, StepRejected:
-		if ev.Type == StepApproved {
-			s.Status = StepSucceeded
-			s.Error = ""
-		} else {
-			s.Status = StepFailed
-			s.Failures++
-			s.Error = p.Reason
-		}
-		s.FinishedAt = ev.At
-		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, ev.At, p.Comment
+		st.applyDecided(ev, s)
 
 	case StepReused:
-		if p.Outcome == string(StepSucceeded) {
-			s.Status = StepSucceeded
-		} else {
-			s.Status = StepSkippedS
-			s.SkipKind, s.Error = p.SkipKind, p.Reason
-		}
-		s.Outputs = p.Outputs
-		s.FinishedAt = ev.At
-		s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt = p.Reused.Run, p.Reused.Number, p.Reused.Attempt
-		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, p.Reused.DecidedAt, p.Comment
+		st.applyReused(ev, s)
 
 	case PolicyEvaluated:
 		if p.Policy == nil {
@@ -629,6 +567,133 @@ func (st *RunState) apply(ev Event) {
 	default:
 		st.applyDeploy(ev, s)
 	}
+}
+
+// applyQueued folds StepQueued.
+func (st *RunState) applyQueued(ev Event, s *StepState) {
+	p := ev.Data
+	if p.Attempt != s.Attempt && s.Dep != nil {
+		s.Dep.Phases = 0
+	}
+	s.Status = StepQueuedS
+	s.WaitKind = ""
+	if d := p.Deploy; d != nil {
+		st.queueAction(s, d)
+	}
+	s.Attempt = p.Attempt
+	s.QueuedAt = ev.At
+	s.StartedAt, s.FinishedAt = 0, 0
+	s.ExitCode, s.Error, s.Runner, s.LeaseID = nil, "", "", ""
+	s.Outputs = nil
+	s.Excerpt = ""
+	s.Evidence = nil
+}
+
+// applyLeased folds StepLeased.
+func (st *RunState) applyLeased(ev Event, s *StepState) {
+	p := ev.Data
+	s.Status = StepLeasedS
+	s.LeaseID = p.Lease
+	s.Runner = p.Runner
+	// A deploy runner's actions need no workspace: they do not move the
+	// run to that runner. Nor do verify and ai steps.
+	if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
+		return
+	}
+	if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI()) {
+		if st.Status == RunQueued {
+			st.Status, st.StartedAt = RunRunning, ev.At
+		}
+		return
+	}
+	if p.Runner != st.Runner {
+		st.Runner, st.Workspace = p.Runner, p.Lease
+	}
+	if st.Status == RunQueued {
+		st.Status = RunRunning
+		st.StartedAt = ev.At
+	}
+}
+
+// applyFinished folds StepFinished.
+func (st *RunState) applyFinished(ev Event, s *StepState) {
+	p := ev.Data
+	s.WaitKind = ""
+	if p.Outcome == string(StepSucceeded) {
+		s.Status = StepSucceeded
+	} else {
+		s.Status = StepFailed
+		s.Failures++
+	}
+	s.ExitCode = p.ExitCode
+	s.Error = p.Reason
+	s.Excerpt = p.Excerpt
+	s.Outputs = p.Outputs
+	s.FinishedAt = ev.At
+	s.LeaseID = ""
+	s.Evidence = evidenceOf(p)
+	if p.AI != nil {
+		s.AI = p.AI
+	}
+}
+
+// applyReset folds StepReset.
+func (st *RunState) applyReset(ev Event, s *StepState) {
+	s.Status = StepPending
+	s.Failures, s.Lost = 0, 0
+	s.Error, s.SkipKind, s.Excerpt = "", "", ""
+	s.ExitCode = nil
+	s.StartedAt, s.FinishedAt = 0, 0
+	s.clearDecision()
+	s.WaitKind, s.Dep = "", nil
+	s.Gate, s.Evidence = nil, nil
+	s.Ver, s.AI = nil, nil
+}
+
+// applyWaiting folds StepWaiting.
+func (st *RunState) applyWaiting(ev Event, s *StepState) {
+	p := ev.Data
+	s.Status = StepWaitingS
+	s.Attempt = p.Attempt
+	// It starts waiting now; how long it waited is shown like a step's run time.
+	s.QueuedAt, s.StartedAt, s.FinishedAt = ev.At, ev.At, 0
+	s.Error = ""
+	s.clearDecision()
+	s.Deadline = p.Deadline
+	if st.Status == RunQueued {
+		st.Status = RunRunning
+		st.StartedAt = ev.At
+	}
+}
+
+// applyDecided folds StepApproved and StepRejected.
+func (st *RunState) applyDecided(ev Event, s *StepState) {
+	p := ev.Data
+	if ev.Type == StepApproved {
+		s.Status = StepSucceeded
+		s.Error = ""
+	} else {
+		s.Status = StepFailed
+		s.Failures++
+		s.Error = p.Reason
+	}
+	s.FinishedAt = ev.At
+	s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, ev.At, p.Comment
+}
+
+// applyReused folds StepReused.
+func (st *RunState) applyReused(ev Event, s *StepState) {
+	p := ev.Data
+	if p.Outcome == string(StepSucceeded) {
+		s.Status = StepSucceeded
+	} else {
+		s.Status = StepSkippedS
+		s.SkipKind, s.Error = p.SkipKind, p.Reason
+	}
+	s.Outputs = p.Outputs
+	s.FinishedAt = ev.At
+	s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt = p.Reused.Run, p.Reused.Number, p.Reused.Attempt
+	s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, p.Reused.DecidedAt, p.Comment
 }
 
 // evidenceOf is what an event that ends a step attempt says it reported,

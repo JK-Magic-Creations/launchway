@@ -272,3 +272,18 @@ func ParseDraftAllow(s string) (Role, error) {
 	}
 	return NoRole, fmt.Errorf("allow %q is not one of admin, operator, none", s)
 }
+
+// HasEverywhereAdmin reports whether some binding gives the admin role on
+// every project: somebody who can administer everything. A configuration
+// without one cannot be changed by anyone through the API.
+func (p *Policy) HasEverywhereAdmin() bool {
+	if p == nil {
+		return false
+	}
+	for i := range p.bindings {
+		if b := &p.bindings[i]; b.Role == Admin && len(b.Projects) == 0 {
+			return true
+		}
+	}
+	return false
+}

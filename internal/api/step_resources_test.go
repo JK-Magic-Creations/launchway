@@ -144,3 +144,45 @@ func TestStepResourcesRecommendedValues(t *testing.T) {
 		t.Fatalf("recommended for a kind with no default: %d %s", r.status, r.body)
 	}
 }
+
+// Step resources are also a kind of configuration object: the same values,
+// with a version and a history, changed from either side.
+func TestStepResourcesAreAConfigurationObjectWithHistory(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	ada := e.signIn(t, "ada")
+	cfg := e.srv.URL + "/api/v1/config/step-resources/step-resources"
+
+	// Before any change it reads as what the tables hold, version 0.
+	r := ada.get(cfg)
+	if r.status != 200 || !strings.Contains(string(r.body), `"version":0`) || !strings.Contains(string(r.body), `"memory":"2Gi"`) {
+		t.Fatalf("get: %d %s", r.status, r.body)
+	}
+	// Change through the object.
+	body := `{"spec":{"limits":{"max_memory":"8Gi","memory_per_thread":"1Gi"},"defaults":{"step":{"cpu":"1","memory":"2Gi","memory_limit":"4Gi"}}},"comment":"size for the small cluster"}`
+	if r := ada.do(http.MethodPut, cfg, body); r.status != 201 && r.status != 200 {
+		t.Fatalf("put: %d %s", r.status, r.body)
+	}
+	if r := ada.get(e.srv.URL + "/api/v1/step-resources"); !strings.Contains(string(r.body), `"max_memory":"8Gi"`) || !strings.Contains(string(r.body), `"memory_limit":"4Gi"`) {
+		t.Errorf("the engine's tables did not follow: %s", r.body)
+	}
+	// A refused change: a default above the limits, in one object.
+	bad := `{"spec":{"limits":{"max_memory":"1Gi"},"defaults":{"step":{"memory":"2Gi"}}}}`
+	if r := ada.do(http.MethodPut, cfg, bad); r.status != 400 {
+		t.Errorf("a default above the limit: %d %s", r.status, r.body)
+	}
+	// Change through the older route: it lands in the object's history.
+	if r := ada.do(http.MethodPut, e.srv.URL+"/api/v1/step-resources/limits", `{"max_memory":"12Gi","memory_per_thread":"1Gi"}`); r.status != 200 {
+		t.Fatalf("old route: %d %s", r.status, r.body)
+	}
+	h := ada.get(cfg + "/history")
+	if h.status != 200 || strings.Count(string(h.body), `"version"`) < 2 || !strings.Contains(string(h.body), "size for the small cluster") {
+		t.Errorf("history: %d %s", h.status, h.body)
+	}
+	if r := ada.get(e.srv.URL + "/api/v1/config/export"); !strings.Contains(string(r.body), "step-resources") || !strings.Contains(string(r.body), "12Gi") {
+		t.Errorf("export lacks the step resources: %s", r.body)
+	}
+	// Stale version.
+	if r := ada.do(http.MethodPut, cfg, `{"version":1,"spec":{"limits":{"max_memory":"9Gi"}}}`); r.status != 412 {
+		t.Errorf("a stale version: %d %s", r.status, r.body)
+	}
+}

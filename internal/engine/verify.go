@@ -106,8 +106,8 @@ func checkHealthSources(list []HealthSource) (map[string]HealthSource, error) {
 
 // HealthSources returns the configured health sources, by name.
 func (e *Engine) HealthSources() []HealthSource {
-	out := make([]HealthSource, 0, len(e.sources))
-	for _, h := range e.sources {
+	out := make([]HealthSource, 0, len(e.live().sources))
+	for _, h := range e.live().sources {
 		out = append(out, h)
 	}
 	slices.SortFunc(out, func(a, b HealthSource) int { return strings.Compare(a.Name, b.Name) })
@@ -262,10 +262,10 @@ func (e *Engine) CheckVerify(project string, p *pipeline.Pipeline) pipeline.Prob
 		switch {
 		case s.IsVerify() && s.Verify != nil:
 			if s.Deployment == "" {
-				env, ok := e.envs[s.Environment]
+				env, ok := e.live().envs[s.Environment]
 				switch {
 				case !ok:
-					add(s, ".environment", "environment %q is not configured on this server%s", s.Environment, knownList(envNames(e.envs)))
+					add(s, ".environment", "environment %q is not configured on this server%s", s.Environment, knownList(envNames(e.live().envs)))
 				case project != "" && !env.Allows(project):
 					add(s, ".environment", "project %s may not use environment %s (see the environment's projects in the server's configuration)", project, s.Environment)
 				}
@@ -283,15 +283,15 @@ func (e *Engine) CheckVerify(project string, p *pipeline.Pipeline) pipeline.Prob
 			}
 			declared := append(slices.Sorted(mapKeys(s.Verify.Params)), pipeline.ReservedParams...)
 			for _, x := range qs {
-				h, ok := e.sources[x.source]
+				h, ok := e.live().sources[x.source]
 				where := func(format string, a ...any) {
 					out = append(out, pipeline.Problem{Line: x.line, Path: "steps." + s.ID, Message: s.ID + ": " + x.name + ": " + fmt.Sprintf(format, a...)})
 				}
 				switch {
-				case !ok && len(e.sources) == 0:
+				case !ok && len(e.live().sources) == 0:
 					where("this server has no health sources configured (verification.sources), so it cannot read %s", x.source)
 				case !ok:
-					where("health source %q is not configured on this server%s", x.source, knownList(sourceNames(e.sources)))
+					where("health source %q is not configured on this server%s", x.source, knownList(sourceNames(e.live().sources)))
 				case project != "" && !h.Allows(project):
 					where("project %s may not use health source %s (see its projects in the server's configuration)", project, x.source)
 				case queryLanguage(h.Type) && x.query == "":
@@ -381,7 +381,7 @@ func (c *cmd) startVerify(id string, def *pipeline.Step) {
 			ve.Service = st.Project
 		}
 	}
-	env, ok := c.e.envs[ve.Environment]
+	env, ok := c.e.live().envs[ve.Environment]
 	switch {
 	case !ok:
 		c.failStep(id, fmt.Sprintf("environment %s is not configured on this server", ve.Environment))
@@ -1153,10 +1153,9 @@ func (c *cmd) overrideRefusal(def *pipeline.Step, actor, outcome string) error {
 	if s.Ver == nil {
 		return fmt.Errorf("%w: %s has not started", ErrConflict, def.ID)
 	}
-	env := c.e.envs[s.Ver.Environment]
-	if env.Protected && !c.e.selfOK && outcome == verify.Passed && actor == c.st.Trigger.Actor {
+	if c.verifyProtected(s.Ver) && !c.st.selfApproval(c.e) && outcome == verify.Passed && actor == c.st.Trigger.Actor {
 		return fmt.Errorf("%w: %s started this run, and %s is a protected environment, so someone else must mark the verification passed (you may still mark it failed)",
-			ErrForbidden, actor, env.Name)
+			ErrForbidden, actor, s.Ver.Environment)
 	}
 	return nil
 }

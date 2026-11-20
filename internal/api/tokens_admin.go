@@ -18,10 +18,10 @@ const (
 )
 
 func (s *Server) tokenMaxDays() int {
-	if s.TokenMaxDays <= 0 {
+	if s.cur().TokenMaxDays <= 0 {
 		return maxTokenDays
 	}
-	return min(s.TokenMaxDays, MaxTokenDaysLimit)
+	return min(s.cur().TokenMaxDays, MaxTokenDaysLimit)
 }
 
 // checkTokenLimits checks the role and projects a new token is limited to:
@@ -32,7 +32,7 @@ func (s *Server) checkTokenLimits(id *identity, role string, projects []string) 
 		if err != nil || r == auth.NoRole {
 			return "the role is viewer, operator or admin, or leave it out for your own"
 		}
-		if have := s.Auth.Policy.RoleAnywhere(id.User, id.Groups); r > have {
+		if have := s.cur().Policy.RoleAnywhere(id.User, id.Groups); r > have {
 			if have == auth.NoRole {
 				return "you have no role on any project, so a token of yours can have none"
 			}
@@ -69,7 +69,7 @@ func (s *Server) tokenLimits(w http.ResponseWriter, r *http.Request) {
 	}
 	id := identityFrom(r)
 	role := ""
-	if have := s.Auth.Policy.RoleAnywhere(id.User, id.Groups); have > auth.NoRole {
+	if have := s.cur().Policy.RoleAnywhere(id.User, id.Groups); have > auth.NoRole {
 		role = have.String()
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"max_days": s.tokenMaxDays(), "default_days": min(defaultTokenDays, s.tokenMaxDays()), "your_role": role})

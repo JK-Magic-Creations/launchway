@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type PolicyDef, type PolicyOverview, type PolicyVerdictRow, type Waiver } from "../api";
 import { ago, clock } from "../format";
 import { useNow } from "../live";
-import { Empty, ErrorBox, Link, Mono } from "../components/ui";
+import { ErrorBox, Link, Mono } from "../components/ui";
+import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { ModeBadge, ResultBadge, ScopeText, ShieldIcon, WaiverForm, WaiverList, type WaiverDraft } from "../components/Policy";
 
 const POINT_WORDS: Record<string, string> = { run: "run start", deploy: "before deploying", image: "before an image push" };
@@ -41,6 +42,7 @@ export function PolicyPage() {
           <p className="sub">Rules every pipeline is held to, set on the server or in a reviewed Git repository. Each decision is recorded in the run
             it judged, with the evidence; <strong>enforce</strong> stops a run or a step, <strong>report</strong> only records.</p>
         </div>
+        {o.sources.length > 0 && <WizardButton wizard="add-policy" label="Add a policy" />}
       </header>
       <ErrorBox error={error} />
 
@@ -51,15 +53,15 @@ export function PolicyPage() {
       ))}
 
       {!o.sources.length && (
-        <Empty title="No policies">This server has no policies. An administrator adds them under <Mono>policy:</Mono> in the server's configuration
-          (or <Mono>config.policy</Mono> with the Helm chart), or names a Git source of them.</Empty>
+        <WizardEmpty title="No policies" wizard="add-policy" label="Add a policy"
+          text="A policy is a set of rules every run must meet before it deploys or finishes, such as tests passing or a second person's approval; pipelines cannot switch it off." />
       )}
 
       {o.sources.map((s) => (
         <section key={s.name} className="card pol-source" aria-label={`Source ${s.name}`}>
           <div className="pol-source-head">
             <div>
-              <h2 className="h-sm"><ShieldIcon size={15} /> {s.kind === "config" ? "The server's configuration" : <>Source <Mono>{s.name}</Mono></>}</h2>
+              <h2 className="h-sm"><ShieldIcon size={15} /> {s.kind === "config" ? "Policies set in Launchway" : <>Source <Mono>{s.name}</Mono></>}</h2>
               <div className="faint small pol-source-meta">
                 {s.kind === "git" ? <>library <Mono>{s.library}</Mono> at <Mono>{s.ref}</Mono>, <Mono>{s.path}/</Mono> · </> : null}
                 version <Mono>{s.version ? s.version.slice(0, 19) : "none"}</Mono>

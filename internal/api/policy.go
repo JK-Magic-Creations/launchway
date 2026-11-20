@@ -19,10 +19,10 @@ import (
 
 // waiveRole is the role needed to waive a policy's rule.
 func (s *Server) waiveRole() auth.Role {
-	if s.WaiveRole == nil {
+	if s.cur().WaiveRole == nil {
 		return auth.Admin
 	}
-	return *s.WaiveRole
+	return *s.cur().WaiveRole
 }
 
 // waiveRefusal says why someone may not waive rules of a project (and, for
@@ -45,7 +45,7 @@ func (s *Server) waiveRefusal(id *identity, project, env string, deployRule bool
 	if deployRule {
 		// RoleOnEnvironment with no environment counts only the bindings
 		// that are not limited to environments.
-		if id.limit(s.Auth.Policy.RoleOnEnvironment(id.User, id.Groups, project, env), project) < need {
+		if id.limit(s.cur().Policy.RoleOnEnvironment(id.User, id.Groups, project, env), project) < need {
 			if env == "" {
 				return fmt.Sprintf("a deploy rule waived for every environment needs the %s role on %s from a binding not limited to environments; name the environment", need, project)
 			}

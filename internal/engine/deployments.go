@@ -136,8 +136,8 @@ func validName(s string) bool {
 
 // Environments returns the configured environments, by name.
 func (e *Engine) Environments() []Environment {
-	out := make([]Environment, 0, len(e.envs))
-	for _, env := range e.envs {
+	out := make([]Environment, 0, len(e.live().envs))
+	for _, env := range e.live().envs {
 		out = append(out, env)
 	}
 	sortEnvs(out)
@@ -155,14 +155,14 @@ func (e *Engine) CheckDeploys(project string, p *pipeline.Pipeline) pipeline.Pro
 			continue
 		}
 		line := s.EnvironmentLine()
-		env, ok := e.envs[s.Environment]
+		env, ok := e.live().envs[s.Environment]
 		switch {
-		case !ok && len(e.envs) == 0:
+		case !ok && len(e.live().envs) == 0:
 			out = append(out, pipeline.Problem{Line: line, Path: "steps." + s.ID + ".environment",
 				Message: fmt.Sprintf("%s: this server has no environments configured, so it cannot deploy to %s", s.ID, s.Environment)})
 		case !ok:
 			out = append(out, pipeline.Problem{Line: line, Path: "steps." + s.ID + ".environment",
-				Message: fmt.Sprintf("%s: environment %q is not configured on this server; it knows %s", s.ID, s.Environment, envNames(e.envs))})
+				Message: fmt.Sprintf("%s: environment %q is not configured on this server; it knows %s", s.ID, s.Environment, envNames(e.live().envs))})
 		case project != "" && !env.Allows(project):
 			out = append(out, pipeline.Problem{Line: line, Path: "steps." + s.ID + ".environment",
 				Message: fmt.Sprintf("%s: project %s may not deploy to %s (see the environment's projects in the server's configuration)", s.ID, project, s.Environment)})
@@ -258,7 +258,7 @@ func (st *RunState) applyDeploy(ev Event, s *StepState) {
 		}
 	case DeployOpened:
 		s.Dep = &DeployState{ID: d.ID, Environment: d.Environment, Service: d.Service, Target: d.Target,
-			Application: d.Application, Mode: d.Mode, Version: d.Version, Previous: d.Previous, OpenedAt: ev.At}
+			Application: d.Application, Mode: d.Mode, Version: d.Version, Previous: d.Previous, OpenedAt: ev.At, Protected: d.Protected}
 		s.Deadline = d.Deadline
 		s.WaitKind = ""
 		if st.Status == RunQueued {
@@ -334,7 +334,7 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 		c.failStep(id, why)
 		return
 	}
-	env, ok := c.e.envs[def.Environment]
+	env, ok := c.e.live().envs[def.Environment]
 	if !ok {
 		c.failStep(id, fmt.Sprintf("environment %s is not configured on this server", def.Environment))
 		return
@@ -362,7 +362,7 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 		return
 	}
 	// Before anything reaches the environment, the policies judge the run.
-	if !c.gateDeploy(id, def, def, env.Name, "deploy") {
+	if !c.gateDeploy(id, def, def, env.Name, "deploy", env.Protected) {
 		return
 	}
 	// The lock is free: take it. Another server taking it at the same moment
@@ -380,7 +380,7 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 	}
 	deadline := c.now + def.Timeout.D().Milliseconds()
 	c.emit(DeployOpened, Payload{Step: id, Deploy: &DeployEvent{ID: depID, Environment: u.env, Service: u.service, Target: env.Target,
-		Application: def.ArgoCD.Application, Mode: "write_back", Version: version, Previous: prev, Deadline: deadline}})
+		Application: def.ArgoCD.Application, Mode: "write_back", Version: version, Previous: prev, Deadline: deadline, Protected: &env.Protected}})
 	c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1, Deploy: &DeployEvent{ID: depID, Action: ActionApply}})
 	c.after(c.e.kickDeploys)
 }

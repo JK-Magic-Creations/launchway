@@ -80,7 +80,7 @@ func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
 			}
 			role = s.roleOn(id, project)
 		}
-		return s.Drafts.For(project).AllowsDraft(role)
+		return s.cur().Drafts.For(project).AllowsDraft(role)
 	}
 	if s.Auth == nil {
 		return true // sign-in is off: everyone has every right
@@ -91,12 +91,12 @@ func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
 	if id.limited() {
 		return s.limitedAllows(id, a, project)
 	}
-	return s.Auth.Policy.Allows(id.User, id.Groups, a, project)
+	return s.cur().Policy.Allows(id.User, id.Groups, a, project)
 }
 
 // draftRefusal explains why someone may not start a draft run of a project.
 func (s *Server) draftRefusal(project string) string {
-	switch rule := s.Drafts.For(project); rule.Allow {
+	switch rule := s.cur().Drafts.For(project); rule.Allow {
 	case auth.NoRole:
 		return fmt.Sprintf("draft runs are turned off for %s (drafts.allow: none); save the pipeline to a branch and run that", project)
 	default:
@@ -410,7 +410,7 @@ func securityHeaders(next http.Handler) http.Handler {
 // visibleProjects returns the projects whose runs the caller may see, or
 // nil if they may see every project's.
 func (s *Server) visibleProjects(id *identity) ([]string, error) {
-	if s.Auth == nil || (!id.limited() && s.Auth.Policy.RoleEverywhere(id.User, id.Groups) >= auth.Viewer) {
+	if s.Auth == nil || (!id.limited() && s.cur().Policy.RoleEverywhere(id.User, id.Groups) >= auth.Viewer) {
 		return nil, nil
 	}
 	known, err := s.knownProjects()
@@ -468,9 +468,9 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		groups = []string{}
 	}
 	// Whether agents can connect, so the UI can show how.
-	agents := map[string]any{"enabled": s.MCP != nil, "path": mcpPath}
-	if s.MCP != nil && s.MCP.OAuth != nil {
-		agents["oauth_resource"] = s.MCP.OAuth.Resource
+	agents := map[string]any{"enabled": s.mcpOpts() != nil, "path": mcpPath}
+	if m := s.mcpOpts(); m != nil && m.OAuth != nil {
+		agents["oauth_resource"] = m.OAuth.Resource
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user": id.User, "groups": groups, "auth_mode": mode, "via": id.Via,

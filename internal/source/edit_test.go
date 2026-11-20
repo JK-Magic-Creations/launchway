@@ -311,6 +311,7 @@ func TestStaleAndInvalidSavesPushNothing(t *testing.T) {
 // A repository that may be read but not written: the push fails with Git's
 // own explanation, credentials removed, and nothing is left behind.
 func TestPushFailureIsExplained(t *testing.T) {
+	allowLoopbackHosts(t)
 	dir := t.TempDir()
 	origin := remote(t, dir, pl)
 	gitIn(t, origin, "update-server-info")
@@ -508,5 +509,30 @@ func TestPullRequestURL(t *testing.T) {
 		if got := PullRequestURL(c.remote, "main", "launchway/dana/1"); got != c.want {
 			t.Errorf("%s:\n got %s\nwant %s", c.remote, got, c.want)
 		}
+	}
+}
+
+// A project that comes from the database (added while the server runs, as
+// configuration in the database does) is saved from the editor the same
+// way: as a commit on a new branch of its Git repository. The configuration
+// holds only the repository; the pipeline text is in Git and nowhere else.
+func TestSaveFromTheEditorIsAGitCommitForAProjectAddedLive(t *testing.T) {
+	dir := t.TempDir()
+	origin := remote(t, dir, pl)
+	m := manager(t, newTestEngine(t, testdb.New(t)), filepath.Join(dir, "data"), origin, nil)
+	if err := m.Reconfigure([]Project{{Name: "app", URL: origin, Push: &PushSettings{}}}, nil); err != nil {
+		t.Fatal(err)
+	}
+	base := gitIn(t, origin, "rev-parse", "main")
+	res, err := m.Save(context.Background(), SaveRequest{Project: "app", BaseRef: "main", BaseSHA: base, Text: edited, Now: saveTime,
+		Author: Author{User: "dana"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Direct || gitIn(t, origin, "rev-parse", "main") != base {
+		t.Fatalf("the save went to main, not a new branch: %+v", res)
+	}
+	if got := gitIn(t, origin, "show", res.Branch+":.launchway/pipeline.yaml"); got != strings.TrimSpace(edited) {
+		t.Fatalf("the pipeline in Git: %q", got)
 	}
 }

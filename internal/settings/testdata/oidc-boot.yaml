@@ -1,0 +1,12 @@
+# A bootstrap-only file: sign-in, and the first administrators. Everything
+# else is in the database.
+listen: 127.0.0.1:8080
+auth:
+  mode: oidc
+  oidc:
+    issuer: https://sso.example.test/
+    client_id: launchway
+    client_secret_env: TEST_OIDC_SECRET
+    redirect_url: https://launchway.example.test/auth/callback
+  admins:
+    groups: [platform-admins]

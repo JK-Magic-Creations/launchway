@@ -92,7 +92,7 @@ func checkPools(list []RunnerPool) (map[string]RunnerPool, error) {
 // buildPoolsConfigured reports whether any build pool other than an
 // unconfigured default exists: then pools decide where runs go.
 func (e *Engine) buildPoolsConfigured() bool {
-	for _, p := range e.pools {
+	for _, p := range e.live().pools {
 		if p.Kind == PoolBuild && (p.Name != DefaultPool || len(p.Projects) > 0 || len(p.Events) > 0) {
 			return true
 		}
@@ -103,14 +103,14 @@ func (e *Engine) buildPoolsConfigured() bool {
 // Pool returns a configured pool, or the default one; false if there is no
 // such pool.
 func (e *Engine) Pool(name string) (RunnerPool, bool) {
-	p, ok := e.pools[name]
+	p, ok := e.live().pools[name]
 	return p, ok
 }
 
 // Pools lists the pools, by name.
 func (e *Engine) Pools() []RunnerPool {
-	out := make([]RunnerPool, 0, len(e.pools))
-	for _, p := range e.pools {
+	out := make([]RunnerPool, 0, len(e.live().pools))
+	for _, p := range e.live().pools {
 		out = append(out, p)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
@@ -136,7 +136,7 @@ func (e *Engine) poolServes(p RunnerPool, project, event string) string {
 	}
 	// The default pool without projects: every run no other build pool
 	// serves (a pool limited to some events leaves the others to it).
-	for _, o := range e.pools {
+	for _, o := range e.live().pools {
 		if o.Kind != PoolBuild || o.Name == p.Name || len(o.Projects) == 0 {
 			continue
 		}
@@ -158,7 +158,7 @@ func runnerPoolName(r RunnerInfo) string { return nonEmpty(r.Pool, DefaultPool) 
 // project and event. (The runner checks the rest of accept: itself, and
 // refuses what it does not allow.)
 func (e *Engine) refusesRun(r RunnerInfo, project, event string, sel *pipeline.RunnerSelector) string {
-	pool, ok := e.pools[runnerPoolName(r)]
+	pool, ok := e.live().pools[runnerPoolName(r)]
 	if !ok {
 		return fmt.Sprintf("the runner's pool %s is not configured on this server", runnerPoolName(r))
 	}
@@ -263,7 +263,7 @@ func (e *Engine) poolHint(st *RunState, steps []StepView) (string, error) {
 	sel := st.Pipeline.Runner
 	// What the configuration allows, whichever runners are connected.
 	if sel != nil && sel.Pool != "" {
-		p, ok := e.pools[sel.Pool]
+		p, ok := e.live().pools[sel.Pool]
 		switch {
 		case !ok:
 			return fmt.Sprintf("The pipeline asks for runner pool %s (runner.pool), which this server does not have.", sel.Pool), nil

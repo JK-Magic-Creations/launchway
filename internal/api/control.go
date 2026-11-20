@@ -21,7 +21,7 @@ func (s *Server) envRefusal(id *identity, project, env string) string {
 		return ""
 	}
 	// What the person has there, never more than a limited token allows.
-	if id.limit(s.Auth.Policy.RoleOnEnvironment(id.User, id.Groups, project, env), project) >= auth.Operator {
+	if id.limit(s.cur().Policy.RoleOnEnvironment(id.User, id.Groups, project, env), project) >= auth.Operator {
 		return ""
 	}
 	return fmt.Sprintf("you need the operator role on %s in environment %s to do this", project, env)

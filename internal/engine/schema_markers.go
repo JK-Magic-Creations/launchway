@@ -12,7 +12,7 @@ import (
 // does not bypass errors encountered while reading the database's metadata.
 const schemaCheckSkipEnv = "LAUNCHWAY_SKIP_SCHEMA_CHECK"
 
-// What each of the schemas 17 to 22 brought, which no other schema may
+// What each of the schemas 17 to 23 brought, which no other schema may
 // have: the feature branches that wrote them each carried empty stand-ins
 // for the numbers of the others, and a merge that left a stand-in where a
 // real migration belongs (or the other way round) would show here. Tables
@@ -30,6 +30,7 @@ var schemaMarkers = []schemaMarker{
 		columns: []string{"runners.kind", "runners.auth", "runners.labels", "runners.accept", "runners.os", "runners.arch"}},
 	{schema: schemaPools, feature: "build runner pools", columns: []string{"runs.runner_pool", "runs.runner_labels"}},
 	schemaMarkersStepResources,
+	{schema: schemaConfig, feature: "configuration in the database", tables: []string{"config_objects", "config_changes", "config_imports", "config_revisions"}},
 }
 
 type schemaMarker struct {

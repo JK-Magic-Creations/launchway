@@ -1348,7 +1348,7 @@ CREATE TABLE step_resource_limits (
   updated_at        {{BIG}} NOT NULL DEFAULT 0,
   updated_by        TEXT    NOT NULL DEFAULT ''
 );
-`},
+`}, {additive, schema23SQL}, // 23: configuration in the database (db_config.go)
 }
 
 // schemaIdentity is the schema that brought runner identities.

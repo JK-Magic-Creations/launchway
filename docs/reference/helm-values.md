@@ -24,7 +24,15 @@ The chart runs several servers against one PostgreSQL database, and runners that
 [server configuration](server-config.md) into a ConfigMap from `config.*`, and the runners'
 [configuration file](runner-config.md) from `runner.*`. The database URL and the runner token
 reach the pods as environment variables from Secrets, never through a ConfigMap. Changing a
-ConfigMap restarts the pods. `values.schema.json` checks the types and ranges below when you install
+ConfigMap restarts the pods.
+
+**The file the chart renders is bootstrap only** (see [what stays in the file](server-config.md#what-stays-in-the-file-and-what-moved)).
+With the default values it holds `listen`, `data` and the runner switch. A value that sets something
+that now lives in the database (projects, libraries, environments, runner pools, policy, health
+sources, models, limits, the MCP endpoint, where artifacts are kept) is **imported once**, by the first
+server of a new installation to start, and ignored afterwards: each server logs the keys it ignores.
+After that, change those settings in the web UI, with `launchway config`, the API or Terraform.
+`values.schema.json` checks the types and ranges below when you install
 or upgrade.
 
 ## Required values

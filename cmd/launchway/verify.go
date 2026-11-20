@@ -175,6 +175,9 @@ func (cl *client) markVerification(args []string) error {
 }
 
 func (cl *client) healthSources(args []string) error {
+	if len(args) > 0 && configVerb(args[0]) {
+		return cl.config(args, "health-sources")
+	}
 	fs := flag.NewFlagSet("health-sources", flag.ContinueOnError)
 	asJSON := fs.Bool("json", false, "print JSON")
 	if _, err := parseArgs(fs, args); err != nil {
@@ -199,6 +202,9 @@ func (cl *client) healthSources(args []string) error {
 }
 
 func (cl *client) models(args []string) error {
+	if len(args) > 0 && configVerb(args[0]) {
+		return cl.config(args, "models")
+	}
 	fs := flag.NewFlagSet("models", flag.ContinueOnError)
 	asJSON := fs.Bool("json", false, "print JSON")
 	if _, err := parseArgs(fs, args); err != nil {

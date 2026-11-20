@@ -692,3 +692,28 @@ runner:
 		t.Fatalf("join: %v", err)
 	}
 }
+
+// Since schema 23 the file is bootstrap only: the chart's default render
+// holds nothing an administrator manages (those settings are imported into
+// the database once and ignored after), only what a server needs before it
+// can read the database.
+func TestChartDefaultWritesBootstrapKeysOnly(t *testing.T) {
+	bootstrap := map[string]bool{"listen": true, "data": true, "database": true, "database_wait": true, "user": true, "server": true, "auth": true, "runner": true}
+	for _, values := range []string{"postgresql: { enabled: true }\n", "database: { url: \"postgres://u@db/launchway\" }\n"} {
+		f := renderChart(t, values)["server"]
+		var doc map[string]any
+		if err := yaml.Unmarshal([]byte(f), &doc); err != nil {
+			t.Fatal(err)
+		}
+		for key := range doc {
+			if !bootstrap[key] {
+				t.Errorf("the default server configuration (%s) has %s, which is kept in the database since schema 23:\n%s", strings.TrimSpace(values), key, f)
+			}
+		}
+	}
+	// What the values do set is still written, to be imported once.
+	f := renderChart(t, "postgresql: { enabled: true }\nconfig:\n  projects:\n    - { name: shop, repo: https://git.example.test/shop.git }\n")["server"]
+	if !strings.Contains(f, "name: shop") {
+		t.Errorf("a project in the values is not in the file the first server imports:\n%s", f)
+	}
+}

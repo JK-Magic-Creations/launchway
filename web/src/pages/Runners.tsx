@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { api, type ArtifactStore, type JoinToken, type Runner, type RunnerAccept, type RunnerPool, type RunnerPools } from "../api";
 import { ago, clock } from "../format";
 import { useNow } from "../live";
-import { Empty, ErrorBox, Link, Mono } from "../components/ui";
+import { ErrorBox, Link, Mono } from "../components/ui";
+import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { bytes } from "../components/Security";
 import { HealthSourcesSection, ModelsSection } from "../components/Explain";
 import "../runners.css";
@@ -80,6 +81,7 @@ export function RunnersPage() {
           <p className="sub">Machines that run steps. A runner only ever connects out to the server, so it can sit in any network.
             Each belongs to a pool, which decides which projects' work it may take.</p>
         </div>
+        <WizardButton wizard="add-runner" label="Add a runner" />
       </header>
       <ErrorBox error={error} />
 
@@ -94,7 +96,8 @@ export function RunnersPage() {
       {pools && <PoolsCard pools={pools.pools} runners={runners ?? []} />}
 
       <h2 className="h-sm rn-h">Runners</h2>
-      {runners && runners.length === 0 && <Empty title="No runners have connected yet" />}
+      {runners && runners.length === 0 && <WizardEmpty title="No runners have connected yet" wizard="add-runner" label="Add a runner"
+        text="A runner is a machine, container or Kubernetes pod that does the steps of runs: without one, runs wait." />}
       {runners && runners.length > 0 && (
         <div className="card card-flush table-scroll rn-scroll">
           <table className="table rn-table">

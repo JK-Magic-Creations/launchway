@@ -74,7 +74,7 @@ func (e *Engine) RunArtifacts(runID string) (*RunArtifacts, error) {
 		return nil, err
 	}
 	out := &RunArtifacts{Artifacts: []*ArtifactView{}, Declared: []string{}, Available: e.arts.Store != nil,
-		Problem: e.arts.StoreProblem, MaxRetainMs: e.arts.MaxRetain.Milliseconds()}
+		Problem: e.arts.StoreProblem, MaxRetainMs: e.live().arts.MaxRetain.Milliseconds()}
 	if out.Available {
 		out.Problem = ""
 	}

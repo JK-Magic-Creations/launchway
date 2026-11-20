@@ -24,7 +24,20 @@ image:
 imagePullSecrets: []
 
 # ---------------------------------------------------------------------------------------------
-# The server configuration file. The chart renders it into a ConfigMap mounted at
+# The server configuration file.
+#
+# SINCE SCHEMA 23 THE FILE IS BOOTSTRAP ONLY. Everything an administrator manages (projects,
+# libraries, environments, runner pools, role bindings, policies, health sources, models, secret
+# stores, limits, the MCP endpoint, where artifacts are kept) lives in the database, with history
+# and an API, the web UI, the CLI and the MCP server. What the values below set for those is
+# IMPORTED ONCE, by the first server of a new installation to start, and ignored afterwards: each
+# server logs which keys it ignores and names the import. After that, change them in the UI,
+# `launchway config`, the API or Terraform, not here; `launchway config export` writes them as
+# text for backup or Git. The chart writes these keys only when you set them, so with the
+# default values the file holds only listen, data and the runner switch. docs/reference/server-config.md
+# lists what stays in the file (docs/concepts: configuration).
+#
+# The chart renders the file into a ConfigMap mounted at
 # /etc/launchway/launchway.yaml; changing it restarts the servers. The database URL and the
 # runner token are never written here: they reach the servers as environment variables from
 # Secrets. Servers always run with their built-in runner disabled; steps run on the runners

@@ -24,11 +24,11 @@ const modulePath = "github.com/jk-magic-creations/launchway/"
 // (TestTableHasNoStaleEdges makes the table shrink as the code is cleaned up).
 // Edges the audit calls harmful may not be added at all: see forbidden below.
 var allowedImports = map[string][]string{
-	"cmd/launchway":                     {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/config", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/imagebuild", "internal/pipeline", "internal/runner", "internal/secrets", "internal/source", "internal/verify/source"},
+	"cmd/launchway":                     {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/imagebuild", "internal/pipeline", "internal/runner", "internal/secrets", "internal/settings", "internal/source", "internal/verify/source"},
 	"internal/accept":                   {},
 	"internal/ai":                       {"internal/pipeline"},
 	"internal/ai/aitest":                {},
-	"internal/api":                      {"internal/ai", "internal/auth", "internal/engine", "internal/hub", "internal/ids", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/secrets", "internal/source", "internal/verify"},
+	"internal/api":                      {"internal/ai", "internal/auth", "internal/engine", "internal/hub", "internal/ids", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/secrets", "internal/settings", "internal/source", "internal/verify"},
 	"internal/auth":                     {},
 	"internal/blobstore":                {},
 	"internal/config":                   {"internal/accept", "internal/ai", "internal/auth", "internal/blobstore", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/imagebuild", "internal/pipeline", "internal/policy", "internal/secrets", "internal/source", "internal/verify/source"},
@@ -37,6 +37,7 @@ var allowedImports = map[string][]string{
 	"internal/deploy/argocd":            {"internal/deploy", "internal/deploy/edit", "internal/deploy/gitops", "internal/engine", "internal/pipeline", "internal/secrets"},
 	"internal/deploy/edit":              {},
 	"internal/deploy/gitops":            {"internal/redact"},
+	"internal/egress":                   {},
 	"internal/engine":                   {"internal/accept", "internal/ai", "internal/blobstore", "internal/coverage", "internal/deploy", "internal/deploy/edit", "internal/findings", "internal/hub", "internal/ids", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/sbom", "internal/testreport", "internal/verify", "internal/verify/source"},
 	"internal/executor":                 {"internal/resources"},
 	"internal/fakeidp":                  {},
@@ -46,6 +47,7 @@ var allowedImports = map[string][]string{
 	"internal/ids":                      {},
 	"internal/imagebuild":               {"internal/findings", "internal/pipeline"},
 	"internal/imagebuild/imagetest":     {},
+	"internal/parity":                   {},
 	"internal/pipeline":                 {"internal/deploy/edit", "internal/resources"},
 	"internal/policy":                   {},
 	"internal/redact":                   {},
@@ -54,7 +56,8 @@ var allowedImports = map[string][]string{
 	"internal/runnerauth":               {},
 	"internal/sbom":                     {"internal/findings/jsonscan"},
 	"internal/secrets":                  {"internal/pipeline"},
-	"internal/source":                   {"internal/engine", "internal/pipeline", "internal/policy", "internal/redact"},
+	"internal/settings":                 {"internal/ai", "internal/blobstore", "internal/config", "internal/egress", "internal/engine", "internal/pipeline", "internal/redact", "internal/resources", "internal/source"},
+	"internal/source":                   {"internal/egress", "internal/engine", "internal/pipeline", "internal/policy", "internal/redact"},
 	"internal/testdb":                   {},
 	"internal/testlib":                  {},
 	"internal/testreport":               {},
@@ -138,9 +141,10 @@ var forbidden = []rule{
 	},
 	{
 		label: "nothing but cmd imports config",
-		why:   "config is a composition root; only the binary may depend on it",
+		why: "config is a composition root; only the binary may depend on it, and internal/settings, " +
+			"which keeps the same settings in the database and must compose and check them with the same code as the file",
 		from: func(p string) bool {
-			return p != "cmd/launchway" && p != "internal/config"
+			return p != "cmd/launchway" && p != "internal/config" && p != "internal/settings"
 		},
 		to: in("internal/config"),
 	},

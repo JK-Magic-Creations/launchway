@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/accept"
@@ -33,7 +34,6 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/ids"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
-	"github.com/jk-magic-creations/launchway/internal/policy"
 )
 
 var (
@@ -54,9 +54,16 @@ var (
 
 // Options configure an Engine.
 type Options struct {
-	Database string        // a SQLite file, or a postgres:// URL that several servers share
-	LeaseTTL time.Duration // how long a runner may go silent; default 30s
-	MaxLost  int           // times a step is requeued after losing its runner; default 3
+	Database string // a SQLite file, or a postgres:// URL that several servers share
+	// ArtifactsFromDatabase, if set, is called as the engine opens with the
+	// spec of the stored installation object (schema 23), if there is one;
+	// it returns the artifact options that spec says (where artifacts are
+	// kept and their limits), which replace Artifacts. The database, not
+	// the file, decides where artifacts are kept once it has an
+	// installation object.
+	ArtifactsFromDatabase func(installation []byte) (ArtifactOptions, error)
+	LeaseTTL              time.Duration // how long a runner may go silent; default 30s
+	MaxLost               int           // times a step is requeued after losing its runner; default 3
 	// RunnerTimeout is how long a runner may go unseen before another runner
 	// may take over its runs (see Lease); default 3 × LeaseTTL.
 	RunnerTimeout time.Duration
@@ -112,22 +119,28 @@ type Engine struct {
 	runnerTimeout time.Duration
 	maxLost       int
 	now           func() time.Time
-	selfOK        bool   // AllowSelfApproval
 	schema        int    // the newest schema this build knows: its tables, columns and events
 	instance      string // tags this process's notifications, so it can ignore its own
 	channel       string // the PostgreSQL notification channel
-	tests         TestLimits
-	reps          ReportOptions
-	arts          ArtifactOptions
-	storeWhy      string // why arts.Store was chosen, when nothing was configured
-	strayAfter    string // where removeStrays carries on
-	finds         FindingLimits
-	envs          map[string]Environment
-	pol           PolicyOptions
-	polHash       string // names the configuration's own policies
-	sources       map[string]HealthSource
-	models        *ai.Registry
-	pools         map[string]RunnerPool
+	// arts is where artifacts are kept (Store and its settings, which
+	// the server's bootstrap file gives); their limits and retention are
+	// in the live configuration.
+	arts       ArtifactOptions
+	storeWhy   string // why arts.Store was chosen, when nothing was configured
+	strayAfter string // where removeStrays carries on
+	// objectCap is the largest object the store keeps (0: no limit); no
+	// artifact file may be larger, whatever the limit says.
+	objectCap int64
+
+	// cur is the configuration an administrator manages (environments,
+	// pools, policies, limits...): read with live(), replaced whole by
+	// Reconfigure, so a change made on any server takes effect here
+	// without a restart.
+	cur atomic.Pointer[liveConfig]
+	// cfgWatchers are called when the stored configuration may have
+	// changed (see OnConfigChange).
+	cfgMu       sync.Mutex
+	cfgWatchers []func()
 
 	// deployKick wakes the reaper to hand free locks to waiting deploy steps
 	// at once (see kickDeploys).
@@ -370,54 +383,16 @@ func Open(o Options) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	tests, err := o.Tests.withDefaults()
-	if err != nil {
-		return nil, err
-	}
 	arts, err := o.Artifacts.withDefaults()
-	if err != nil {
-		return nil, err
-	}
-	finds, err := o.Findings.withDefaults()
-	if err != nil {
-		return nil, err
-	}
-	reps, err := o.Reports.withDefaults()
 	if err != nil {
 		return nil, err
 	}
 	if o.schema > 0 {
 		known = min(o.schema, len(migrations))
 	}
-	envs, err := checkEnvironments(o.Environments)
+	live, err := buildLive(o.Live(), known)
 	if err != nil {
 		return nil, err
-	}
-	sources, err := checkHealthSources(o.HealthSources)
-	if err != nil {
-		return nil, err
-	}
-	if (len(sources) > 0 || (o.Models != nil && len(o.Models.List()) > 0)) && known < schemaVerify {
-		return nil, fmt.Errorf("health sources and AI models need schema %d; this build knows %d", schemaVerify, known)
-	}
-	if len(envs) > 0 && known < schemaDeploy {
-		return nil, fmt.Errorf("environments need schema %d; this build knows %d", schemaDeploy, known)
-	}
-	pol, err := checkPolicyOptions(o.Policy)
-	if err != nil {
-		return nil, err
-	}
-	if (len(pol.Inline) > 0 || len(pol.Sources) > 0) && known < schemaPolicy {
-		return nil, fmt.Errorf("policies need schema %d; this build knows %d", schemaPolicy, known)
-	}
-	pools, err := checkPools(o.RunnerPools)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range o.RunnerPools {
-		if p.Kind == PoolBuild && known < schemaPools {
-			return nil, fmt.Errorf("build runner pools need schema %d; this build knows %d", schemaPools, known)
-		}
 	}
 	db, _, err := openDB(o.Database, o.ConnectWait, known, o.Logger)
 	if err != nil {
@@ -426,23 +401,14 @@ func Open(o Options) (*Engine, error) {
 	e := &Engine{
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
 		schema:     known,
-		tests:      tests,
 		arts:       arts,
-		finds:      finds,
-		reps:       reps,
-		envs:       envs,
-		pol:        pol,
-		polHash:    policy.Hash(pol.Inline),
-		sources:    sources,
-		models:     o.Models,
-		pools:      pools,
 		deployKick: make(chan struct{}, 1),
 		published:  map[string]int64{},
-		selfOK:     o.AllowSelfApproval == nil || *o.AllowSelfApproval,
 		instance:   ids.New("srv"),
 		wake:       make(chan struct{}),
 		stop:       make(chan struct{}),
 	}
+	e.cur.Store(live)
 	if db.pg {
 		var schema string
 		if err := db.QueryRow(`SELECT current_schema()`).Scan(&schema); err != nil {
@@ -452,6 +418,10 @@ func Open(o Options) (*Engine, error) {
 		e.channel = channelFor(schema)
 	}
 	if err := e.recoverLeases(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := e.artifactsFromDatabase(o.ArtifactsFromDatabase); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -780,7 +750,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			return err
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: c.e.withStoreRequires(nr.Pipeline), Trigger: &trig, Source: &src, Draft: draft,
-			PullRequestSecrets: prSecrets, Requires: poolRequires})
+			PullRequestSecrets: prSecrets, SelfApproval: c.e.selfApprovalNow(), Requires: poolRequires})
 		c.advance()
 		var superseded []int
 		if supersede {

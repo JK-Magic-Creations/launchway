@@ -48,7 +48,7 @@ func newLibSetup(t *testing.T, appPipeline string, pp *ProjectPipeline) *libSetu
 // changed makes the next StartRun fetch the application's repository,
 // which it otherwise skips if it fetched in the last few seconds.
 func (s *libSetup) changed() {
-	p := s.m.projects["app"]
+	p := s.m.c().projects["app"]
 	p.stateMu.Lock()
 	p.lastFetch = time.Time{}
 	p.stateMu.Unlock()
@@ -216,7 +216,7 @@ func TestProjectPipelineFromALibrary(t *testing.T) {
 		On: pipeline.Triggers{Push: &pipeline.PushTrigger{Branches: []string{"main"}}}}
 	s := newLibSetup(t, "", pp)
 	ctx := context.Background()
-	p := s.m.projects["app"]
+	p := s.m.c().projects["app"]
 	if err := s.m.poll(ctx, p); err != nil { // first sight
 		t.Fatal(err)
 	}
@@ -286,6 +286,7 @@ func TestProjectPipelineFromALibrary(t *testing.T) {
 // A library that needs credentials is read with the server's Git settings,
 // as projects are, and the credentials never appear in what is shown.
 func TestPrivateLibraryWithGitEnvCredentials(t *testing.T) {
+	allowLoopbackHosts(t)
 	dir := t.TempDir()
 	lib := testlib.NewLibrary(t, filepath.Join(dir, "lib"))
 	testlib.Git(t, lib.Bare, "update-server-info")
