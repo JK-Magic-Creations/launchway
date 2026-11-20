@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { api } from "../api";
+import { useMe } from "../auth";
 import { configApi, kindLabel, kindShown, useOverview, type ConfigChange, type ConfigOverview } from "../configApi";
 import { ago } from "../format";
 import { usePath } from "../router";
 import { ConfigNav, WIZARDS } from "../components/ConfigNav";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
+import { levelWords } from "../configKinds";
 import "../config.css";
 
 // ConfigHomePage is where an administrator starts: what is configured, the
@@ -40,7 +43,6 @@ export function ConfigHomePage() {
     return <div className="page"><h1>Configuration</h1><Empty title="Only administrators change the configuration">Ask someone with the admin role.</Empty></div>;
   }
   const lv = overview.levels;
-  const noProjects = counts.project === 0;
   return (
     <div className="page cf-page">
       <ConfigNav overview={overview} path={path} />
@@ -58,16 +60,7 @@ export function ConfigHomePage() {
         </div>
       )}
 
-      {noProjects && (
-        <section className="card cf-firstrun" aria-labelledby="cf-firstrun-h">
-          <div>
-            <h2 id="cf-firstrun-h">Set up {overview.organisation?.display_name || "Launchway"}</h2>
-            <p>There are no {lv.project.plural.toLowerCase()} yet. A few questions name things the way your organisation does, choose how people sign in,
-              and connect your first repository. Nothing is created until you confirm at the end.</p>
-          </div>
-          <Link href="/config/wizard/first-run" className="btn btn-primary">Start the first-run setup</Link>
-        </section>
-      )}
+      <Checklist overview={overview} counts={counts} />
 
       <section aria-labelledby="cf-wiz-h">
         <h2 id="cf-wiz-h" className="cf-h">Guided set-ups</h2>
@@ -81,7 +74,7 @@ export function ConfigHomePage() {
               </Link>
             </li>
           ))}
-          {!noProjects && (
+          {(
             <li><Link href="/config/wizard/first-run" className="cf-wizcard cf-wizcard-quiet">
               <span className="cf-wizcard-title">First-run setup</span>
               <span className="cf-wizcard-text">Name the levels, choose sign-in, connect a repository: the questions a new installation starts with.</span>
@@ -99,7 +92,7 @@ export function ConfigHomePage() {
                 <Link href={`/config/${k.path}`} className="cf-kindrow">
                   <span className="cf-kindrow-name">{kindLabel(overview, k)}</span>
                   {!k.singleton && <span className="cf-count" aria-label={`${counts[k.name] ?? "unknown"} configured`}>{counts[k.name] ?? "…"}</span>}
-                  <span className="cf-kindrow-doc">{k.doc}</span>
+                  <span className="cf-kindrow-doc">{levelWords(k.doc, overview.levels)}</span>
                 </Link>
               </li>
             ))}
@@ -127,6 +120,48 @@ export function ConfigHomePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Checklist is the first-run setup as five things to do, each ticked off
+ * when it is done, each opening the wizard that does it. */
+function Checklist({ overview, counts }: { overview: ConfigOverview; counts: Record<string, number> }) {
+  const me = useMe();
+  const [named, setNamed] = useState<boolean | null>(null);
+  const [runner, setRunner] = useState<boolean | null>(null);
+  useEffect(() => {
+    configApi.get("installation", "installation").then((o) => setNamed(!!(o.spec as { levels?: unknown }).levels || !!overview.organisation?.display_name))
+      .catch(() => setNamed(!!overview.organisation?.display_name));
+    api.runners(true).then((rs) => setRunner(rs.some((r) => !/\(built in\)/.test(r.name)))).catch(() => setRunner(false));
+  }, [overview]);
+  const lv = overview.levels;
+  const items = [
+    { done: named, title: "Name things", text: `What your organisation, its groups and its ${lv.project.plural.toLowerCase()} are called, so the screens use your words.`, href: "/config/wizard/first-run?step=names" },
+    { done: me?.auth_mode === "oidc", title: "Choose how people sign in", text: "Your company's identity provider, so people use the accounts they have and groups decide what they may do.", href: "/config/wizard/first-run?step=signin" },
+    { done: counts.project === undefined ? null : counts.project > 0, title: "Connect a repository", text: `Your first ${lv.project.singular.toLowerCase()}: its pushes start runs of its pipeline.`, href: "/config/wizard/connect-repository" },
+    { done: runner, title: "Add a runner", text: "A machine, container or Kubernetes pod of your own that does the steps of runs (the server's built-in runner is for trying things out).", href: "/config/wizard/add-runner" },
+    { done: counts.environment === undefined ? null : counts.environment > 0, title: "Add an environment", text: "A place runs deploy to, such as staging or prod.", href: "/config/wizard/add-environment" },
+  ];
+  const left = items.filter((i) => i.done === false).length;
+  const all = items.every((i) => i.done);
+  return (
+    <section className={"card cf-checklist" + (all ? " cf-checklist-done" : "")} aria-labelledby="cf-check-h">
+      <details open={!all}>
+        <summary><h2 id="cf-check-h" className="cf-h">Set up {overview.organisation?.display_name || "Launchway"}</h2>
+          <span className="faint">{all ? "All done." : left ? `${left} of ${items.length} to do` : "Checking…"}</span></summary>
+        <ol className="cf-checkitems">
+          {items.map((i, n) => (
+            <li key={i.title} className={i.done ? "cf-check-on" : ""}>
+              <span className="cf-checkmark" aria-hidden="true">{i.done ? "✓" : n + 1}</span>
+              <span className="cf-checktext">
+                <Link href={i.href}>{i.title}</Link><span className="visually-hidden">{i.done ? " (done)" : i.done === false ? " (to do)" : ""}</span>
+                <span className="cf-help">{i.text}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </section>
   );
 }
 

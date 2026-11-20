@@ -277,8 +277,9 @@ function SaveNotice({ project, me }: { project: Project; me: string }) {
   if (!project.push) {
     return (
       <div className="callout callout-info">
-        <strong>Saving is not set up for {project.name}.</strong> An administrator can allow it by adding a <Mono>push:</Mono> section
-        to the project in the server's configuration. Until then, use <em>Copy</em> or <em>Download</em> and commit the file yourself.
+        <strong>Saving is not set up for {project.name}.</strong> An administrator can allow it in the project's settings
+        (<a href={`/config/projects/${encodeURIComponent(project.name)}`}>Saving from the editor</a>); each save is then a commit on a new branch.
+        Until then, use <em>Copy</em> or <em>Download</em> and commit the file yourself.
       </div>
     );
   }

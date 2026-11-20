@@ -1349,3 +1349,5 @@ button.hitem:hover { background: var(--surface-2); }
   .models-table td:nth-child(4), .models-table td:nth-child(5) { white-space: normal; }
   .models-table td[data-label]::before { content: attr(data-label); display: block; color: var(--text-3); font-size: 12px; font-weight: 600; }
 }
+.wiz-empty-text { margin: 0 auto 14px; max-width: 560px; }
+.page-head-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

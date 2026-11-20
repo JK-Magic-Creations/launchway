@@ -4,7 +4,8 @@ import { ago, shortSha } from "../format";
 import { navigate } from "../router";
 import { useNow } from "../live";
 import { canOperate, useMe } from "../auth";
-import { BranchIcon, Empty, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
+import { BranchIcon, ErrorBox, Link, Mono, StatusPill } from "../components/ui";
+import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { RefPicker } from "../components/RefPicker";
 import { OverridesEditor } from "../components/Libraries";
 import { TestCounts } from "../components/Tests";
@@ -35,18 +36,16 @@ export function ProjectsPage() {
           <h1>Projects</h1>
           <p className="sub">Repositories Launchway watches. A push that matches a pipeline's trigger starts a run; every push is explained below.</p>
         </div>
+        {projects && projects.length > 0 && <WizardButton wizard="connect-repository" label="Add a project" />}
       </header>
       <ErrorBox error={error} />
       {projects === null && !error && <div className="loading">Loading…</div>}
       {projects && projects.length === 0 && (
-        <Empty title="No projects yet">
-          Add repositories to <Mono>launchway.yaml</Mono> and restart the server:
-          <pre className="code">{`projects:
-  - name: my-service
-    repo: https://git.example.com/me/my-service.git
-    branch: main`}</pre>
-          Any Git host works, or a local path.
-        </Empty>
+        <>
+          <WizardEmpty title="No projects yet" wizard="connect-repository" label="Add a project"
+            text="A project is a Git repository Launchway watches: connect one and its pushes start runs of its pipeline." />
+          {me?.admin && <p className="sub">New here? The <Link href="/config">setup checklist</Link> walks through naming things, sign-in, a repository, a runner and an environment.</p>}
+        </>
       )}
       <div className="projects">
         {projects?.map((p) => (
