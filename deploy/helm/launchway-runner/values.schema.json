@@ -326,6 +326,26 @@
                 }
               ]
             },
+            "maxCpu": {
+              "anyOf": [
+                {
+                  "const": ""
+                },
+                {
+                  "$ref": "#/definitions/quantity"
+                }
+              ]
+            },
+            "maxMemory": {
+              "anyOf": [
+                {
+                  "const": ""
+                },
+                {
+                  "$ref": "#/definitions/quantity"
+                }
+              ]
+            },
             "imagePullSecrets": {
               "type": "array",
               "items": {

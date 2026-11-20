@@ -389,6 +389,8 @@
             "cpu": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
             "memory": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
             "memoryLimit": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
+            "maxCpu": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
+            "maxMemory": { "anyOf": [{ "const": "" }, { "$ref": "#/definitions/quantity" }] },
             "imagePullSecrets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
             "keepFailed": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$" },
             "startTimeout": { "type": "string", "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))*$" },
