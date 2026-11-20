@@ -53,6 +53,13 @@ Recently added, each described in the [user guide](docs/guide/index.md):
 
 Launchway is early software. Turn on sign-in before anyone else can reach a server.
 
+## Releases and verification
+
+Releases are signed, with SBOMs and provenance, and rebuild byte for byte from their commit; see
+[verifying downloads](docs/security/verify-downloads.md) and [versions and support](SUPPORT.md).
+Runners install on Linux with `install.sh`, deb or rpm packages, or the runner-only Helm chart:
+see [connect a runner](docs/howto/connect-runner.md).
+
 ## Contributing and security
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Report security problems privately as described in

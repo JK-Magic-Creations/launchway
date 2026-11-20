@@ -11,6 +11,7 @@
 # Recreating the repository resets history: every Application goes back to the
 # first good version (busybox 1.36.1, MODE serve, verdict pass). Sync windows
 # on the AppProject are removed.
+# shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 parse_context "$@"
 set -- "${REST_ARGS[@]}"

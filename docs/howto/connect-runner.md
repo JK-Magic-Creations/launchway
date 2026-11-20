@@ -81,7 +81,91 @@ kubectl -n launchway get secret launchway-runner-token -o jsonpath='{.data.token
 Treat the token as a password. Anyone who has it can take steps, with their checkouts, from the
 server.
 
-## Run a runner on another machine
+## Install the runner service on Linux
+
+On Debian, Ubuntu, RHEL and compatible systems with systemd, a release's `install.sh` installs the
+runner as a service. It downloads the binary and `SHA256SUMS`, checks the binary's checksum and,
+when [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) is installed, the
+signature on `SHA256SUMS`, and stops before installing anything if either does not match. Then it
+creates the unprivileged system user `launchway-runner`, writes `/etc/launchway/runner.yaml`
+(readable by root and that user) and `/etc/launchway/runner.env` (the credentials, root only), and
+installs and starts a hardened systemd unit.
+
+Make a join token on the Runners page (**Add a runner**, which also shows these commands with the
+server's own version), then on the machine:
+
+```sh
+curl -fsSLO https://github.com/JK-Magic-Creations/launchway/releases/download/v1.4.0/install.sh
+sudo sh install.sh --version v1.4.0 --server https://launchway.example.com --join lwj_…
+```
+
+The runner enrols on its first start: `install.sh` hands the join token to `launchway runner
+--join` through `LAUNCHWAY_JOIN` in `runner.env`, and the runner keeps its identity in
+`/var/lib/launchway-runner`. A release whose runner cannot enrol is refused. Use the same version as
+the server (see [versions and support](https://github.com/JK-Magic-Creations/launchway/blob/main/SUPPORT.md)).
+
+To check `install.sh` itself before running it, download it with `SHA256SUMS` and
+`SHA256SUMS.sigstore.json` and check it as [Verifying downloads](../security/verify-downloads.md)
+describes.
+
+Other options (`sh install.sh --help` lists them all):
+
+| Option | What it does |
+|---|---|
+| `--token-file FILE` | use the shared runner token or a runner pool's token from a file instead of `--join` |
+| `--name NAME`, `--concurrency N` | the runner's name (default: the host name) and how many steps it runs at once |
+| `--executor podman` or `docker` | run steps in containers; see the sandbox below |
+| `--proxy URL`, `--no-proxy LIST` | an HTTP proxy for the server, Git and secret stores |
+| `--ca-file FILE` | trust a private CA (or a proxy that inspects TLS) as well as the system's |
+| `--require-signature` | refuse to install unless the signature was checked |
+| `--public-key FILE` | check a release your organisation signed with a key (cosign or openssl) |
+| `--from-dir DIR` | install from a directory, such as an [air-gapped bundle](../security/verify-downloads.md#air-gapped-bundles), with no download |
+
+Running it again with the same options changes nothing; with other options it updates the settings
+and restarts the service. Upgrade and remove with:
+
+```sh
+sudo sh install.sh upgrade --version v1.5.0     # keeps the settings and the identity
+sudo sh install.sh uninstall                    # add --purge to delete settings, workspaces and the user
+```
+
+### Packages
+
+Every release also has `launchway-runner` deb and rpm packages for amd64 and arm64, with the same
+unit and user. They install the service without enabling it, since it needs a server and a
+credential first:
+
+```sh
+sudo apt install ./launchway-runner_1.4.0-1_amd64.deb      # or: sudo dnf install ./launchway-runner-1.4.0-1.x86_64.rpm
+sudoedit /etc/launchway/runner.yaml                         # server: https://launchway.example.com
+echo 'LAUNCHWAY_JOIN=lwj_…' | sudo tee -a /etc/launchway/runner.env >/dev/null
+sudo systemctl enable --now launchway-runner
+```
+
+Settings files are kept on upgrade. Signed apt and yum repositories are generated with each
+release; where they are served is announced with the release.
+
+### The service's sandbox
+
+The unit runs the runner as `launchway-runner` with no capabilities, `NoNewPrivileges`,
+`ProtectSystem=strict` (it can write only `/var/lib/launchway-runner`), `ProtectHome`, `PrivateTmp`,
+`PrivateDevices` and the kernel and control-group protections. With the default host executor,
+steps run inside that sandbox: they cannot use `sudo` or write outside the runner's state
+directory. `--executor podman` adds a drop-in that relaxes what rootless Podman needs (its setuid
+helpers, user namespaces, `/dev/fuse`, a delegated cgroup); `--executor docker` adds the user to the
+`docker` group, which is as good as root on that machine. The full list is in
+[the packaging guide](https://github.com/JK-Magic-Creations/launchway/blob/main/packaging/README.md#the-runners-systemd-unit).
+
+Alpine and other OpenRC systems are not supported by the installer or the packages; run the runner
+image there. There is no Windows build.
+
+> **Verified** with `make test-install`: `install.sh` (with a shared token and with a join token),
+> the deb and rpm packages from the generated repositories, on Debian 12, Ubuntu 24.04 and Rocky
+> Linux 9 in systemd containers: install, connect to a real server, run a pipeline, upgrade,
+> uninstall. Releases are not published yet, so the download from GitHub was not; the test serves
+> a locally built, key-signed release instead.
+
+## Run a runner by hand
 
 Write a `runner.yaml`. It takes the same settings as `runner:` in the server's configuration, plus
 where the server is. Unknown settings are refused. The token is never in the file.
@@ -148,140 +232,46 @@ off with `kubernetes.restricted: false` or `--k8s-unrestricted`. The other setti
 
 ## Run a runner in another cluster
 
-The Helm chart always deploys servers and needs a database, so it cannot install runners alone. A
-runner-only install with the chart is not available yet; see the [roadmap](../roadmap-list.md). Until
-then, apply plain manifests. These run two runners in namespace `launchway-runner`, with step pods
-in `launchway-steps`, connecting out to `https://launchway.example.com`:
+The `launchway-runner` chart installs only runners, connecting out to a server in another namespace,
+cluster or machine. It shares its runner configuration, least-privilege RBAC and Pod Security
+settings with the main chart, and can also install a deploy runner, proxy/CA settings and
+NetworkPolicies.
 
 ```sh
 kubectl create namespace launchway-runner
-kubectl create namespace launchway-steps
-kubectl label namespace launchway-steps pod-security.kubernetes.io/enforce=restricted
 kubectl -n launchway-runner create secret generic launchway-runner-token \
   --from-literal=token="$(cat runner-token)"
-kubectl apply -f launchway-runner.yaml
+helm install runners deploy/helm/launchway-runner -n launchway-runner \
+  --set server.url=https://launchway.example.com \
+  --set token.existingSecret=launchway-runner-token \
+  --set runner.kubernetes.namespace=launchway-steps \
+  --set runner.kubernetes.createNamespace=true
 ```
 
-```yaml
-# launchway-runner.yaml
-# A Launchway runner in this cluster, connecting out to a server elsewhere.
-# Step pods run in launchway-steps; the runner itself in launchway-runner.
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: launchway-runner
-  namespace: launchway-runner
-automountServiceAccountToken: false
----
-# Exactly what the Kubernetes executor uses, in the step namespace only.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: launchway-runner
-  namespace: launchway-steps
-rules:
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["create", "get", "list", "delete", "patch"]
-  - apiGroups: [""]
-    resources: ["pods/exec"]
-    verbs: ["create", "get"]
-  - apiGroups: [""]
-    resources: ["pods/log"]
-    verbs: ["get"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: launchway-runner
-  namespace: launchway-steps
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: launchway-runner
-subjects:
-  - kind: ServiceAccount
-    name: launchway-runner
-    namespace: launchway-runner
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: launchway-runner
-  namespace: launchway-runner
-data:
-  runner.yaml: |
-    server: https://launchway.example.com
-    data: /var/lib/launchway-runner
-    concurrency: 2
-    executor: kubernetes
-    kubernetes:
-      namespace: launchway-steps
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: launchway-runner
-  namespace: launchway-runner
-spec:
-  replicas: 2
-  selector:
-    matchLabels: { app.kubernetes.io/name: launchway-runner }
-  template:
-    metadata:
-      labels: { app.kubernetes.io/name: launchway-runner }
-    spec:
-      serviceAccountName: launchway-runner
-      automountServiceAccountToken: true     # the executor uses it to reach the Kubernetes API
-      enableServiceLinks: false
-      terminationGracePeriodSeconds: 60      # time to hand steps back on shutdown
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 65532
-        runAsGroup: 65532
-        fsGroup: 65532
-        seccompProfile: { type: RuntimeDefault }
-      containers:
-        - name: runner
-          image: registry.example.com/launchway:0.1.0
-          args: ["runner", "--config=/etc/launchway-runner/runner.yaml", "--health-listen=:8081"]
-          env:
-            - name: LAUNCHWAY_RUNNER_TOKEN
-              valueFrom:
-                secretKeyRef: { name: launchway-runner-token, key: token }
-          ports:
-            - { name: health, containerPort: 8081 }
-          livenessProbe:
-            httpGet: { path: /healthz, port: health }
-          readinessProbe:
-            httpGet: { path: /readyz, port: health }
-          resources:
-            requests: { cpu: 100m, memory: 128Mi }
-            limits: { memory: 1Gi }
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities: { drop: [ALL] }
-          volumeMounts:
-            - { name: config, mountPath: /etc/launchway-runner, readOnly: true }
-            - { name: data, mountPath: /var/lib/launchway-runner }
-            - { name: tmp, mountPath: /tmp }
-      volumes:
-        - name: config
-          configMap: { name: launchway-runner }
-        - name: data
-          emptyDir: { sizeLimit: 10Gi }
-        - name: tmp
-          emptyDir: { sizeLimit: 256Mi }
-```
-
-Change `server:` and the image to yours. The Role gives the runners exactly what the Kubernetes
-executor uses, in the step namespace only, as the chart does. Check that they connected:
+To enrol each runner with its own identity instead, create a Secret holding a join token and set
+`runner.join.existingSecret` (and optionally `runner.join.existingSecretKey`, default `token`)
+instead of `token.existingSecret`:
 
 ```sh
-kubectl -n launchway-runner rollout status deploy/launchway-runner
-kubectl -n launchway-runner logs deploy/launchway-runner
+kubectl -n launchway-runner create secret generic launchway-runner-join \
+  --from-literal=token='lwj_…'
+helm install runners deploy/helm/launchway-runner -n launchway-runner \
+  --set server.url=https://launchway.example.com \
+  --set runner.join.existingSecret=launchway-runner-join \
+  --set runner.kubernetes.namespace=launchway-steps \
+  --set runner.kubernetes.createNamespace=true
 ```
+
+From a release, install the chart archive instead of the directory:
+`helm install runners https://github.com/JK-Magic-Creations/launchway/releases/download/v1.4.0/launchway-runner-1.4.0.tgz ...`
+(checked as [Verifying downloads](../security/verify-downloads.md) describes). Its image is
+`ghcr.io/jk-magic-creations/launchway-runner`, with the chart's version as the tag.
+
+The chart creates the step namespace with Pod Security `restricted` and gives the runners exactly
+the Kubernetes executor's permissions there. `runner.labels` and `runner.accept` set identity labels
+and runner-side work limits. See [the chart and deployment guide](https://github.com/JK-Magic-Creations/launchway/blob/main/deploy/README.md#runners-in-another-cluster)
+for deploy runners, image builders and signing, verification health sources, proxies, CA bundles,
+and NetworkPolicy examples. Its values are checked by `values.schema.json`.
 
 > [!WARNING]
 > Create the token Secret with `--from-literal=token="$(cat runner-token)"`, as above, not with

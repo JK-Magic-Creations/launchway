@@ -22,11 +22,13 @@ else
     commit "Templates for checks and releases"
     git tag v1
     # Release 2: the build says which release of the library made it.
+    # shellcheck disable=SC2016  # the $ in the sed pattern is literal
     sed -i.bak 's/^echo "Built sha256:\$digest"$/echo "Built sha256:$digest (release script v2)"/' scripts/build.sh && rm -f scripts/build.sh.bak
     git add -A
     commit "build.sh: say which release built the image"
     git tag v2
     # Work in progress on main, not released: try it with a library override.
+    # shellcheck disable=SC2016  # the $ in the sed pattern is literal
     sed -i.bak 's/^echo "\$count note(s) left in the code"$/echo "$count note(s) left in the code (unreleased count-notes.sh)"/' scripts/count-notes.sh && rm -f scripts/count-notes.sh.bak
     git add -A
     commit "count-notes.sh: work in progress"

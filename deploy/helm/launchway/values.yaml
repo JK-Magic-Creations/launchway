@@ -422,6 +422,14 @@ runner:
     # -- Memory limit of each container in a step pod that does not ask for memory. Default:
     # none.
     memoryLimit: ""
+    # -- The most CPU one container of a step pod may ask for, as a request or a limit. The
+    # server's step resource defaults are lowered to it; a step that asks for more fails before
+    # its pod is made. Default: no cap.
+    maxCpu: ""
+    # -- The most memory one container of a step pod may ask for, as a request or a limit. The
+    # server's step resource defaults are lowered to it; a step that asks for more fails before
+    # its pod is made. Default: no cap.
+    maxMemory: ""
     # -- Secrets in the step namespace for pulling step images, by name.
     imagePullSecrets: []
     # -- How long a failed or canceled run's pod is kept, so that a resume can reuse its

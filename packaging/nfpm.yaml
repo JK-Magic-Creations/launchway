@@ -1,0 +1,68 @@
+# The launchway-runner deb and rpm packages, built with nfpm by packaging/release/packages.sh.
+# packages.sh replaces the variables PKG_VERSION, PKG_ARCH (amd64, arm64), PKG_BINARY (the
+# release binary) and PKG_UNIT (the systemd unit rendered for /usr/bin/launchway). File times come
+# from SOURCE_DATE_EPOCH (the commit's time), so that rebuilding gives the same files.
+name: launchway-runner
+arch: ${PKG_ARCH}
+platform: linux
+version: ${PKG_VERSION}
+version_schema: semver
+release: "1"
+section: devel
+priority: optional
+maintainer: Launchway maintainers <security@launchway.invalid>
+vendor: Launchway
+homepage: https://github.com/jk-magic-creations/launchway
+license: AGPL-3.0-only
+description: |-
+  Launchway runner as a systemd service.
+  The runner takes steps from a Launchway server and runs them on this machine, on the host
+  or in containers, making only outbound connections. The package installs the launchway
+  binary, the launchway-runner service (not enabled) and its user.
+umask: 0o022
+depends:
+  - git
+  - ca-certificates
+contents:
+  - src: ${PKG_BINARY}
+    dst: /usr/bin/launchway
+    file_info: { mode: 0o755 }
+  - src: ${PKG_UNIT}
+    dst: /usr/lib/systemd/system/launchway-runner.service
+    file_info: { mode: 0o644 }
+  - src: packaging/systemd/container-executor.conf
+    dst: /usr/share/launchway/systemd/container-executor.conf
+    file_info: { mode: 0o644 }
+  - dst: /etc/launchway
+    type: dir
+    file_info: { mode: 0o750 }
+  - src: packaging/runner/runner.yaml
+    dst: /etc/launchway/runner.yaml
+    type: config|noreplace
+    file_info: { mode: 0o640 }
+  - src: packaging/runner/runner.env
+    dst: /etc/launchway/runner.env
+    type: config|noreplace
+    file_info: { mode: 0o600 }
+  - src: LICENSE
+    dst: /usr/share/doc/launchway-runner/LICENSE
+    type: license
+    file_info: { mode: 0o644 }
+scripts:
+  preinstall: packaging/scripts/preinstall.sh
+  postinstall: packaging/scripts/postinstall.sh
+  preremove: packaging/scripts/preremove.sh
+  postremove: packaging/scripts/postremove.sh
+overrides:
+  rpm:
+    depends:
+      - git-core
+      - ca-certificates
+      - shadow-utils
+rpm:
+  group: Development/Tools
+  summary: Launchway runner as a systemd service
+  buildhost: launchway-release
+  compression: zstd
+deb:
+  compression: gzip

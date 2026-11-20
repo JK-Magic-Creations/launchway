@@ -1,0 +1,24 @@
+# The runner side of make test-runner-chart: build runners in lw-rc-runners for the server in
+# lw-rc-server, steps in lw-rc-steps, with the NetworkPolicies on.
+server:
+  url: http://lw-rc-launchway.lw-rc-server.svc:8080
+token:
+  existingSecret: launchway-runner-token
+runner:
+  replicas: 1
+  kubernetes:
+    namespace: lw-rc-steps
+    createNamespace: true
+networkPolicy:
+  enabled: true
+  server:
+    namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: lw-rc-server } }
+    podSelector: { matchLabels: { app.kubernetes.io/component: server } }
+  extraEgress:
+    # The Git server the runner clones from.
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: lw-rc-server } }
+          podSelector: { matchLabels: { app: lw-rc-git } }
+      ports: [ { protocol: TCP, port: 9418 } ]
+  steps:
+    enabled: true

@@ -7,6 +7,7 @@
 #   kill "$LAUNCHWAY_TEST_ARGO_GIT_PF_PID"     # when done
 #
 # Options: [--context kind-NAME]  (or KUBE_CONTEXT)
+# shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 parse_context "$@"
 require_kind_context

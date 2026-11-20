@@ -7,6 +7,7 @@
 # Environment:
 #   KUBE_CONTEXT                    context (default kind-launchway-test; must start with kind-)
 #   LAUNCHWAY_TEST_ARGO_RESEED=1    recreate the test repository even if it exists
+# shellcheck source=lib.sh
 source "$(dirname "$0")/lib.sh"
 parse_context "$@"
 require_kind_context

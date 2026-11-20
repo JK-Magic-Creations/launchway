@@ -1,0 +1,17 @@
+# Build runners in this cluster for a Launchway server elsewhere. Before installing:
+#   kubectl create namespace launchway-runners
+#   kubectl -n launchway-runners create secret generic launchway-runner-token \
+#     --from-file=token=./runner-token
+# then:
+#   helm install runners deploy/helm/launchway-runner -n launchway-runners -f examples/remote.yaml
+server:
+  url: https://launchway.example.com
+token:
+  existingSecret: launchway-runner-token
+runner:
+  replicas: 2
+  concurrency: 2
+  kubernetes:
+    # A namespace of their own for step pods, created with Pod Security "restricted".
+    namespace: launchway-steps
+    createNamespace: true

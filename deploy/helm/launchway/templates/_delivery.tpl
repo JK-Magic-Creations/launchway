@@ -39,49 +39,6 @@ the configuration stays readable by releases that do not know these settings.
 {{- toYaml $out -}}
 {{- end -}}
 
-{{/* The deploy runner's file, for `launchway runner --config`. */}}
-{{- define "launchway.deployRunnerConfig" -}}
-{{- $r := .Values.delivery.deployRunner -}}
-{{- $target := dict "kubernetes" (dict "in_cluster" true) "argocd_namespace" $r.argocdNamespace "applications" $r.applications "rollout_namespaces" ($r.rolloutNamespaces | default list) -}}
-{{- if not (kindIs "invalid" $r.refresh) }}{{ $_ := set $target "refresh" $r.refresh }}{{ end -}}
-{{- $server := .Values.runner.serverURL | default (printf "http://%s.%s.svc:%v" (include "launchway.fullname" .) .Release.Namespace .Values.service.port) -}}
-{{- $file := dict "server" $server "data" "/var/lib/launchway-runner" "secrets" ($r.secretStores | default dict) "deploy" (dict "targets" (dict $r.target $target) "repos" $r.repos) -}}
-{{- /* Only when set: a deploy runner of the version before does not know these settings. */ -}}
-{{- with include "launchway.healthSources" . | fromYaml }}{{ if . }}{{ $_ := set $file "health_sources" . }}{{ end }}{{ end -}}
-{{- if eq (toString $r.ai) "true" }}{{ $_ := set $file "ai" true }}{{ end -}}
-{{- /* Only when set: the runner's own limits (accept:), checked on the runner before anything is done. */ -}}
-{{- with $r.accept }}{{ $_ := set $file "accept" . }}{{ end -}}
-{{- toYaml $file -}}
-{{- end -}}
-
-{{/* The deploy runner's health_sources: each of delivery.verification.sources by name, with
-where it is and how to log in (credentials are secret references only). Empty when none is set. */}}
-{{- define "launchway.healthSources" -}}
-{{- $out := dict -}}
-{{- range (.Values.delivery.verification | default dict).sources | default list -}}
-{{- $s := dict "type" .type "url" .url "projects" (.projects | default list) -}}
-{{- with .auth -}}
-{{- $a := dict "secret" .secret -}}
-{{- range $key, $value := dict "type" .type "user" .user "header" .header -}}
-{{- if $value }}{{ $_ := set $a $key $value }}{{ end -}}
-{{- end -}}
-{{- $_ := set $s "auth" $a -}}
-{{- end -}}
-{{- range $key, $value := dict "headers" .headers "ca_file" .caFile "timeout" .timeout "statements" .statements "indices" .indices "time_field" .timeField "message_field" .messageField -}}
-{{- if $value }}{{ $_ := set $s $key $value }}{{ end -}}
-{{- end -}}
-{{- with .limits -}}
-{{- $l := dict -}}
-{{- range $key, $value := dict "max_series" .maxSeries "max_points" .maxPoints "max_lines" .maxLines "max_bytes" .maxBytes -}}
-{{- if $value }}{{ $_ := set $l $key (int64 $value) }}{{ end -}}
-{{- end -}}
-{{- if $l }}{{ $_ := set $s "limits" $l }}{{ end -}}
-{{- end -}}
-{{- $_ := set $out .name $s -}}
-{{- end -}}
-{{- if $out }}{{ toYaml $out }}{{ end -}}
-{{- end -}}
-
 {{/* Checks of the delivery values. */}}
 {{- define "launchway.validateDelivery" -}}
 {{- $r := .Values.delivery.deployRunner -}}
@@ -134,10 +91,4 @@ where it is and how to log in (credentials are secret references only). Empty wh
 {{- end -}}
 {{- end -}}
 {{- end -}}
-{{- end -}}
-
-{{/* The fields of a rollout's status the deploy runner may not change (Argo Rollouts v1.8
-CRD): everything but pauseConditions (promote), promoteFull and abort (abort, retry). */}}
-{{- define "launchway.rolloutStatusFixed" -}}
-HPAReplicas abortedAt alb albs availableReplicas blueGreen canary collisionCount conditions controllerPause currentPodHash currentStepHash currentStepIndex message observedGeneration phase readyReplicas replicas restartedAt selector stableRS updatedReplicas workloadObservedGeneration
 {{- end -}}

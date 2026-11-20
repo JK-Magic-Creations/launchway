@@ -21,11 +21,13 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U launchway" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
@@ -46,3 +48,30 @@ jobs:
         run: go test -count=1 ./internal/executor/
       - name: Build the binary
         run: CGO_ENABLED=0 go build -trimpath -o bin/launchway ./cmd/launchway
+
+  # Supply chain: known vulnerabilities in the code's dependencies (govulncheck), their licenses,
+  # the packaging scripts (shellcheck), the workflows (actionlint), both Helm charts, and a
+  # reproducible release build (built twice, compared byte for byte; nothing is signed or
+  # published).
+  supply-chain:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - name: Tools
+        run: make tools
+      - name: Vulnerabilities (govulncheck)
+        run: make vulncheck
+      - name: Licenses of dependencies
+        run: make license-check
+      - name: Scripts and workflows
+        run: make lint-scripts lint-workflows
+      - name: Charts
+        run: make chart-lint
+      - name: Reproducible release build
+        run: make release-reproduce

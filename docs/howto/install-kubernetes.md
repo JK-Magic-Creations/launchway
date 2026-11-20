@@ -67,7 +67,13 @@ that run's pod. If that runner goes away, another runner takes the run over in a
 
 ## Build the image
 
-From a clone of the repository:
+Releases publish the image as `ghcr.io/jk-magic-creations/launchway` (the chart's default, with
+the chart's version as the tag) and the chart itself as `launchway-VERSION.tgz`, both signed (see
+[Verifying downloads](../security/verify-downloads.md)). With a release, skip this section and
+install the chart archive, `helm install launchway
+https://github.com/JK-Magic-Creations/launchway/releases/download/v1.4.0/launchway-1.4.0.tgz ...`,
+in place of `deploy/helm/launchway` below. No release has been published yet, so this guide builds
+the image from a clone of the repository:
 
 ```sh
 git clone https://github.com/jk-magic-creations/launchway.git
@@ -441,7 +447,9 @@ be tainted.
 
 Image steps (`kind: image`) need BuildKit daemons deployed apart from the step pods; see
 `deploy/buildkit/README.md` and `runner.images` in the values. Runners elsewhere (another cluster or
-a machine) connect with the runner token; see [Connect a runner](connect-runner.md).
+a machine) connect with a join token or the runner token; in another cluster, install only runners
+with the runner-only chart `deploy/helm/launchway-runner` (released as
+`launchway-runner-VERSION.tgz`). See [Connect a runner](connect-runner.md).
 
 ## Deploy runner
 
