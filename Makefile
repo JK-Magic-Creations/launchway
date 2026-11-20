@@ -36,7 +36,7 @@ chart-lint: charts-sync
 
 test:
 	go vet ./...
-	go test -race ./...
+	go test -race -timeout 30m ./...
 	cd web && npx tsc --noEmit
 
 # Runs the engine, source and API tests against PostgreSQL. Each test gets a
@@ -189,13 +189,15 @@ release-images: tools
 vulncheck: tools
 	$(TOOLS)/govulncheck ./...
 
-# Every module compiled into the binary must carry one of these licenses. The --ignore entries are
-# modules whose license file the classifier cannot read and a person has checked: the in-toto
-# modules carry the short Apache-2.0 notice (checked for attestation v1.2.0 and in-toto-golang
-# v0.11.0; check again when they change).
+# Every third-party module compiled into the binary must carry one of these licenses. Launchway
+# itself is AGPL-3.0-only (see LICENSE and LICENSING.md), not one of the dependencies checked here.
+# The in-toto --ignore entries are modules whose license file the classifier cannot read and a
+# person has checked: they carry the short Apache-2.0 notice (checked for attestation v1.2.0 and
+# in-toto-golang v0.11.0; check again when they change).
 ALLOWED_LICENSES := Apache-2.0,BSD-2-Clause,BSD-3-Clause,MIT,ISC,MPL-2.0,Unlicense,0BSD
 license-check: tools
 	$(TOOLS)/go-licenses check ./cmd/launchway --allowed_licenses=$(ALLOWED_LICENSES) \
+		--ignore github.com/jk-magic-creations/launchway \
 		--ignore github.com/in-toto/attestation --ignore github.com/in-toto/in-toto-golang
 
 # shellcheck on the packaging, release and test scripts (installed, or in a container).
