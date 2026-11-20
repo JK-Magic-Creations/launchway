@@ -280,6 +280,32 @@ file, and roll the servers back; they use the file again. The exact steps, and w
 file after a rollback are not seen by the database; export the file's sections again and `launchway
 config import --apply` before rolling forward.
 
+### Locked out, or a stored configuration that will not load
+
+Two protections keep a wrong configuration from locking everyone out:
+
+- A change that would leave nobody able to administer everything is refused: with sign-in on, at
+  least one role binding must give the `admin` role on every project (or the bootstrap file's
+  `auth.admins` must name someone, which cannot be changed through the API).
+- A server that cannot load the stored configuration at start-up does **not** exit. It starts in
+  **safe mode**, logs `SAFE MODE` with the reason, runs with the last configuration that worked (kept in
+  its data directory as `config-last-good.json`) or, if there is none, with the bootstrap file alone,
+  and tries the stored configuration again every few seconds. `GET /api/v1/config` shows `safe_mode`
+  in its status. The people named in the bootstrap file's `auth.admins` can still sign in and repair it.
+  Objects of a kind a newer version wrote are ignored with a warning, never fatal.
+
+If the API cannot be used at all, on the server host:
+
+```sh
+launchway config history --limit 20                     # if a server still answers
+launchway config restore --offline --revision 41        # put revision 41 back, as a new revision
+launchway server --ignore-database-config               # start with the bootstrap file only
+```
+
+`restore --offline` needs only the bootstrap file's database address, not a running server or a
+sign-in; the history keeps everything, so the restore itself can be undone. `--ignore-database-config`
+leaves the database untouched; restart without it after the repair.
+
 ### Restoring one object
 
 Every change is in the object's history, and a deleted object is kept: `launchway config history

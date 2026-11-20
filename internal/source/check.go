@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/redact"
+	"log/slog"
 	"os"
 	"regexp"
 	"sort"
@@ -16,7 +19,12 @@ import (
 type RepositoryCheck struct {
 	OK bool `json:"ok"`
 	// Problem says in plain words why the repository could not be read.
-	Problem       string   `json:"problem,omitempty"`
+	Problem string `json:"problem,omitempty"`
+	// Blocked: the address is one this server refuses to fetch from
+	// (internal, or local without the server's say-so); BlockedHost is the
+	// host an administrator may add to the allowed hosts.
+	Blocked       bool     `json:"blocked,omitempty"`
+	BlockedHost   string   `json:"blocked_host,omitempty"`
 	DefaultBranch string   `json:"default_branch,omitempty"`
 	Branches      []string `json:"branches"`
 	// HasPipelineFile: the branch (the default branch if none was asked
@@ -52,14 +60,26 @@ func CheckRepository(ctx context.Context, repo, branch string) RepositoryCheck {
 		out.Problem = "give the repository's address"
 		return out
 	case strings.HasPrefix(repo, "-") || transportRE.MatchString(repo):
-		out.Problem = "that is not a Git address; use an https:// or ssh address, or a path on this server"
+		out.Problem = "that is not a Git address; use an https:// or ssh address"
 		return out
 	}
 	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
-	env := []string{"GIT_ALLOW_PROTOCOL=file:git:http:https:ssh"}
+	env, err := egress.Default.CheckRepo(ctx, repo)
+	if err != nil {
+		out.Problem = explainBlocked(err)
+		if errors.Is(err, egress.ErrBlocked) {
+			out.Blocked = true
+			if t, perr := egress.ParseRepo(repo); perr == nil {
+				out.BlockedHost = t.Host
+			}
+		}
+		slog.Warn("repository check refused", "reason", redact.URLs(err.Error()))
+		return out
+	}
 	text, err := gitRun(ctx, "", env, "", "ls-remote", "--symref", "--heads", "--", repo)
 	if err != nil {
+		slog.Warn("repository check failed", "git", clipMsg(err.Error()))
 		out.Problem = explainGit(err)
 		return out
 	}
@@ -160,25 +180,33 @@ func pipelineFileOn(ctx context.Context, repo, branch string, env []string) (pat
 	return "", "", sha
 }
 
-// explainGit turns what Git said into something a person can act on.
+// explainBlocked says, without detail, that an address is refused.
+func explainBlocked(err error) string {
+	if errors.Is(err, egress.ErrBlocked) {
+		return "this server does not fetch from that address: it is internal to the server's network, or a path on the server. If it is your own Git host, an administrator can add it to the allowed hosts"
+	}
+	return "that is not an address this server can read; use an https:// or ssh address"
+}
+
+// explainGit turns what Git said into a short answer a person can act on.
+// What Git said can name hosts, ports and paths of the server's network and
+// is not returned; the caller logs it (redacted).
 func explainGit(err error) string {
-	msg := err.Error()
-	low := strings.ToLower(msg)
+	low := strings.ToLower(err.Error())
 	switch {
+	case errors.Is(err, context.DeadlineExceeded), strings.Contains(low, "timed out"):
+		return "reading the repository took too long"
 	case strings.Contains(low, "authentication failed"), strings.Contains(low, "could not read username"),
 		strings.Contains(low, "permission denied"), strings.Contains(low, "terminal prompts disabled"):
-		return "the server could not sign in to that repository; it uses the Git credentials of the account the server runs as (an SSH key or a credential helper), and they do not give access. Git said: " + clipMsg(msg)
+		return "the server could not sign in to that repository; it uses the Git credentials of the account the server runs as (an SSH key or a credential helper), and they do not give access"
 	case strings.Contains(low, "not found"), strings.Contains(low, "does not appear to be a git repository"):
-		return "no repository is there; check the address. Git said: " + clipMsg(msg)
-	case strings.Contains(low, "could not resolve host"), strings.Contains(low, "connection refused"), strings.Contains(low, "timed out"):
-		return "the server could not reach that host. Git said: " + clipMsg(msg)
-	case errors.Is(err, context.DeadlineExceeded):
-		return "reading the repository took too long"
+		return "no repository is there; check the address"
 	}
-	return clipMsg(msg)
+	return "the server could not read that repository; check the address and that the server can reach it"
 }
 
 func clipMsg(s string) string {
+	s = redact.URLs(s)
 	s = strings.TrimSpace(s)
 	if len(s) > 300 {
 		s = s[:300] + "..."

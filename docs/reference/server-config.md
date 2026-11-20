@@ -506,6 +506,21 @@ not already have over the API. See [Agents (MCP)](../guide/agents.md).
 
 The limits are whole numbers from 0 to 100000, where `0` means the default.
 
+## Egress
+
+What the server may reach when a person gives it an address: a repository to read (the check in the
+wizards, and the mirrors it polls), an identity provider, an AI model. The server refuses addresses that lead
+into its own network, loopback, link-local and cloud metadata (`169.254.169.254`), private ranges and the
+shared `100.64.0.0/10` range, after looking the name up and again when it connects, so a name that changes its
+answer does not get through. It does not follow redirects. Paths on the server and `file:` addresses are
+refused too, because through the API they would read any repository the server's account can read.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `egress.allow_local` | boolean | `false` | Allows repository addresses that are paths on this server or `file:` addresses. Bootstrap file only, never through the API. `examples/local.yaml` (`make run`) sets it |
+| `egress.allow` | list | none | Internal hosts (`git.internal`, `*.corp.internal`), addresses and ranges (`10.0.0.0/8`) the server may reach, such as a self-hosted Git server. Kept in the database: an administrator sets it in the installation settings, and the wizards offer to add the host that was refused |
+
 ## Policy
 
 Delivery policies: rules pipelines cannot opt out of. The rules themselves are listed in the

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +15,10 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/jk-magic-creations/launchway/internal/config"
+	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/settings"
 )
 
 const configUsage = `Usage:
@@ -28,6 +33,10 @@ const configUsage = `Usage:
   launchway config create KIND NAME -f SPEC.yaml      create an object; fails if it exists
   launchway config delete KIND NAME [--version N] [--comment TEXT]   delete (it can be restored)
   launchway config restore KIND NAME                  bring a deleted object back
+  launchway config restore --offline --revision N [--config launchway.yaml]
+                                                      on the server host, without a running server or a sign-in:
+                                                      put the whole configuration back as it was at revision N,
+                                                      as a new revision (see the runbook, "Locked out")
   launchway config history [KIND [NAME]] [--import ID] [--limit N] [--json]
   launchway config validate -f CHANGES.yaml           check changes without making them
   launchway config apply -f CHANGES.yaml              make several changes, all or none
@@ -49,6 +58,9 @@ Changing configuration needs the admin role on every project.
 `
 
 func cmdConfig(args []string) error {
+	if len(args) > 0 && args[0] == "restore" && hasFlag(args[1:], "--offline") {
+		return configRestoreOffline(args[1:])
+	}
 	return runClient(func() error {
 		if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
 			fmt.Fprint(os.Stderr, configUsage)
@@ -887,4 +899,57 @@ func (cl *client) configCheckSignIn(args []string) error {
 		fmt.Fprintln(cl.out)
 		fmt.Fprint(cl.out, v.Snippet)
 	})
+}
+
+func hasFlag(args []string, name string) bool {
+	for _, a := range args {
+		if a == name || strings.HasPrefix(a, name+"=") {
+			return true
+		}
+	}
+	return false
+}
+
+// configRestoreOffline puts the configuration back as it was at a revision,
+// by writing to the database directly. It is for the operator on the server
+// host when nobody can sign in or the stored configuration cannot be loaded;
+// it needs only the bootstrap file's database address.
+func configRestoreOffline(args []string) error {
+	fs := flag.NewFlagSet("config restore --offline", flag.ContinueOnError)
+	fs.Bool("offline", false, "")
+	cfgPath := fs.String("config", "launchway.yaml", "the server's bootstrap file")
+	rev := fs.Int64("revision", -1, "the revision to put back (launchway config history shows them)")
+	if err := fs.Parse(args); err != nil {
+		return usageErr("%v", err)
+	}
+	if *rev < 0 {
+		return usageErr("give the revision to put back: launchway config restore --offline --revision N")
+	}
+	cfg, err := config.LoadBootstrap(*cfgPath)
+	if err != nil {
+		return err
+	}
+	wait, _, err := cfg.Timings()
+	if err != nil {
+		return err
+	}
+	eng, err := engine.Open(engine.Options{Database: cfg.DatabaseAddr(), ConnectWait: wait, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	if err != nil {
+		return err
+	}
+	defer eng.Close()
+	who := "offline restore on the server host"
+	if u := os.Getenv("USER"); u != "" {
+		who += " by " + u
+	}
+	next, n, err := settings.RestoreRevision(eng, *rev, who)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		fmt.Printf("The configuration already is as it was at revision %d.\n", *rev)
+		return nil
+	}
+	fmt.Printf("Put the configuration back as it was at revision %d: %d objects changed, now revision %d. Running servers pick it up within seconds; a server started with --ignore-database-config needs a restart.\n", *rev, n, next)
+	return nil
 }

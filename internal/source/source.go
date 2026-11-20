@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
@@ -628,11 +629,15 @@ func (p *project) fetch(ctx context.Context, fresh time.Duration) error {
 	if recent {
 		return nil
 	}
-	var err error
+	env, err := remoteEnv(ctx, p.URL)
+	if err != nil {
+		p.setErr(err)
+		return err
+	}
 	if _, statErr := os.Stat(filepath.Join(p.dir, "HEAD")); statErr != nil {
 		_ = os.RemoveAll(p.dir)
 		if err = os.MkdirAll(filepath.Dir(p.dir), 0o755); err == nil {
-			_, err = gitOut(ctx, "", "clone", "--mirror", "--quiet", p.URL, p.dir)
+			_, err = gitRun(ctx, "", env, "", "clone", "--mirror", "--quiet", p.URL, p.dir)
 		}
 	} else {
 		// The configured address may have changed since the mirror was made.
@@ -640,7 +645,7 @@ func (p *project) fetch(ctx context.Context, fresh time.Duration) error {
 			_, err = gitOut(ctx, p.dir, "remote", "set-url", "origin", p.URL)
 		}
 		if err == nil {
-			_, err = gitOut(ctx, p.dir, "remote", "update", "--prune")
+			_, err = gitRun(ctx, p.dir, env, "", "remote", "update", "--prune")
 		}
 	}
 	if err != nil {
@@ -749,6 +754,26 @@ func (m *Manager) ReadPipeline(ctx context.Context, name, sha string) (string, e
 	return "", ErrNoPipeline
 }
 
+// remoteEnv is the Git environment for talking to a remote: for a network
+// address, only the protocols the egress policy allows, no redirects, and
+// the checked address pinned (see internal/egress). A path on the server was
+// allowed when it was configured (it can only come from the bootstrap file
+// or from a server that allowed local paths), so it is not refused here.
+func remoteEnv(ctx context.Context, addr string) ([]string, error) {
+	t, err := egress.ParseRepo(addr)
+	if err != nil {
+		return nil, err
+	}
+	if t.Local {
+		return nil, nil
+	}
+	env, err := egress.Default.CheckRepo(ctx, addr)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", "not fetched", err)
+	}
+	return env, nil
+}
+
 func gitOut(ctx context.Context, dir string, args ...string) (string, error) {
 	out, err := gitRun(ctx, dir, nil, "", args...)
 	if err != nil {
@@ -778,7 +803,7 @@ func gitRun(ctx context.Context, dir string, env []string, stdin string, args ..
 		if msg == "" {
 			msg = err.Error()
 		}
-		return stdout.String(), errors.New(msg)
+		return stdout.String(), errors.New(redact.URLs(msg))
 	}
 	return stdout.String(), nil
 }

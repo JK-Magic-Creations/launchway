@@ -161,10 +161,19 @@ type Installation struct {
 	Artifacts ArtifactLimits `yaml:"artifacts"`
 	// MCP is the endpoint agents use: on or off, the origins and limits,
 	// and OAuth.
-	MCP           config.MCPConfig           `yaml:"mcp"`
+	MCP config.MCPConfig `yaml:"mcp"`
+	// Egress lists the internal hosts and ranges the server may fetch from
+	// for people (a Git server on the private network); everything
+	// internal is refused otherwise.
+	Egress        EgressAllow                `yaml:"egress"`
 	RunnerAdmin   string                     `yaml:"runner_admin"`
 	PolicyWaivers config.PolicyWaiversConfig `yaml:"policy_waivers"`
 	Tokens        config.TokensConfig        `yaml:"tokens"`
+}
+
+// EgressAllow is the allowed hosts of the installation.
+type EgressAllow struct {
+	Allow []string `yaml:"allow"`
 }
 
 // ArtifactLimits are the artifacts settings that moved to the database.

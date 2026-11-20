@@ -94,6 +94,11 @@ type Config struct {
 	// MCP controls the endpoint agents use, /mcp; see mcp.go.
 	MCP MCPConfig `yaml:"mcp"`
 
+	// Egress says which addresses the server may fetch from on a user's
+	// behalf (see internal/egress). AllowLocal stays in this file; the
+	// allowed hosts are an administrator's setting in the database.
+	Egress EgressConfig `yaml:"egress"`
+
 	// Verification names the health sources verify steps may read (schema
 	// 19). Where they are and their credentials are in the deploy runners'
 	// configuration (health_sources); every server must list the same ones.
@@ -1142,4 +1147,20 @@ func RunnerToken(dataDir string, store SharedStore) (string, error) {
 		}
 	}
 	return tok, nil
+}
+
+// EgressConfig is what the server may reach when a person gives it an
+// address: a repository to read, an identity provider, a model.
+type EgressConfig struct {
+	// AllowLocal lets repository addresses be paths on this server or file:
+	// addresses. Off by default: through the API such an address reads any
+	// repository the server's account can read. Local development
+	// (make run) turns it on. Bootstrap file only.
+	AllowLocal bool `yaml:"allow_local"`
+	// Allow lists internal hosts (names, *.suffix), addresses and ranges
+	// that may be reached although the server refuses internal addresses by
+	// default: loopback, link-local and cloud metadata, private and shared
+	// ranges. A self-hosted Git server on the private network goes here.
+	// Kept in the database, set by an administrator.
+	Allow []string `yaml:"allow"`
 }

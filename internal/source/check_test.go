@@ -5,8 +5,58 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/jk-magic-creations/launchway/internal/egress"
 )
+
+// By default the check reads no path on the server and no internal
+// address, and says so in a few generic words, never with what Git or the
+// network answered.
+func TestCheckRepositoryRefusesLocalAndInternalAddresses(t *testing.T) {
+	dir := t.TempDir()
+	checkGit(t, dir, "init", "-q", "-b", "main")
+	for _, addr := range []string{dir, "file://" + dir, "http://127.0.0.1:9/x.git", "http://localhost/x.git",
+		"https://169.254.169.254/latest", "git://10.1.2.3/x.git", "ssh://git@192.168.1.5/x.git", "git@[::1]:x.git"} {
+		got := CheckRepository(context.Background(), addr, "")
+		if got.OK || !got.Blocked || got.Problem == "" || len(got.Problem) > 300 {
+			t.Errorf("%s: %+v", addr, got)
+		}
+		if strings.Contains(got.Problem, dir) || strings.Contains(got.Problem, "fatal") {
+			t.Errorf("%s: the answer repeats detail: %s", addr, got.Problem)
+		}
+	}
+	if got := CheckRepository(context.Background(), "http://127.0.0.1:9/x.git", ""); got.BlockedHost != "127.0.0.1" {
+		t.Errorf("the host to allow is not named: %+v", got)
+	}
+	// Once an administrator lists the host, it is read (here, refused by
+	// the closed port, which is not the guard).
+	old := egress.Default.Policy()
+	_ = egress.Default.Set(egress.Policy{Allow: []string{"127.0.0.0/8"}})
+	defer egress.Default.Set(old)
+	if got := CheckRepository(context.Background(), "http://127.0.0.1:9/x.git", ""); got.Blocked {
+		t.Errorf("an allowed host is still refused: %+v", got)
+	}
+}
+
+// The mirrors the server polls are guarded as the check is: a network
+// address that is internal is never fetched, and Git is told not to follow
+// redirects or use any protocol the policy does not allow.
+func TestMirrorsAreGuarded(t *testing.T) {
+	ctx := context.Background()
+	if _, err := remoteEnv(ctx, "http://10.0.0.7/x.git"); err == nil {
+		t.Error("an internal address would be fetched")
+	}
+	env, err := remoteEnv(ctx, "/srv/git/x") // allowed when configured
+	if err != nil || env != nil {
+		t.Errorf("a path: %v %v", env, err)
+	}
+	p := &project{Project: Project{Name: "x", URL: "http://169.254.169.254/x.git"}, dir: filepath.Join(t.TempDir(), "m"), mirror: &mirror{}}
+	if err := p.fetch(ctx, 0); err == nil || !strings.Contains(err.Error(), "not allowed") {
+		t.Errorf("fetch: %v", err)
+	}
+}
 
 func checkGit(t *testing.T, dir string, args ...string) {
 	t.Helper()
@@ -18,7 +68,17 @@ func checkGit(t *testing.T, dir string, args ...string) {
 	}
 }
 
+// allowLocalPaths lets a test use repositories on this machine, as a server
+// started with egress.allow_local does.
+func allowLocalPaths(t *testing.T) {
+	t.Helper()
+	old := egress.Default.Policy()
+	_ = egress.Default.Set(egress.Policy{AllowLocal: true})
+	t.Cleanup(func() { _ = egress.Default.Set(old) })
+}
+
 func TestCheckRepository(t *testing.T) {
+	allowLocalPaths(t)
 	dir := t.TempDir()
 	checkGit(t, dir, "init", "-q", "-b", "main")
 	if err := os.MkdirAll(filepath.Join(dir, ".launchway"), 0o755); err != nil {

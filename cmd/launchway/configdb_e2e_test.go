@@ -66,6 +66,7 @@ data: %s
 database: %q
 runner: { enabled: false }
 approvals: { allow_self: true }
+egress: { allow_local: true }
 projects:
   - { name: demo, repo: %s, branch: main, poll: 1h }
 environments:

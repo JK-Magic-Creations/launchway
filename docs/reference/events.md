@@ -249,6 +249,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `config.put` | `PUT /api/v1/config/{kind}/{obj}`: an object was created or replaced; `unchanged` when the same settings were sent again |
 | `config.delete` | `DELETE /api/v1/config/{kind}/{obj}`: an object was deleted (it can be restored) |
 | `config.restore` | `POST /api/v1/config/{kind}/{obj}/restore` |
+| `config.check_repository` | `POST /api/v1/config/check/repository`: the server contacted (or refused to contact) an address a caller gave; the target is the address without credentials, the detail says whether it was readable or refused |
+| `config.check_signin` | `POST /api/v1/config/check/signin`: the same for an identity provider's address |
 | `config.apply` | `POST /api/v1/config/apply`: several changes made together; the detail says how many changed |
 | `config.import` | `POST /api/v1/config/import` with `apply` (also `launchway config import --apply`); the detail holds the import's ID and the number of changes. The first start's import of the configuration file is recorded as an import, not in the audit trail |
 | `step_resources.set_limits` | `PUT /api/v1/step-resources/limits` (also `launchway step-resources set-limits`); the detail holds the limits before and after |
@@ -318,3 +320,7 @@ curl -s 'http://127.0.0.1:8080/api/v1/audit?limit=2'
 
 The trail is kept until you remove old rows from the `audit` table yourself. See the
 [HTTP API](http-api.md) for the other endpoints and [roles](roles.md) for who may call them.
+
+## Servers' configuration state
+
+Besides the actions above, each server writes an audit entry, action `config.server_state`, when it applies a stored configuration revision or cannot: the user is the server's name, the target is `revision N`, the outcome is `ok` or `failed`, and the detail is the reason. `GET /api/v1/config` shows each server's newest one, so an administrator sees which servers have applied the stored revision and which have not.

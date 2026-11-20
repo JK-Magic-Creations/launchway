@@ -11,6 +11,8 @@ import (
 // bootForTests is the bootstrap file of the test servers: sign-in, and the
 // admins group as the first administrators.
 const bootForTests = `
+egress:
+  allow_local: true
 auth:
   mode: oidc
   oidc:

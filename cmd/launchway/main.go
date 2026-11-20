@@ -36,6 +36,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
@@ -157,6 +158,8 @@ func cmdServer(args []string) error {
 	cfgPath := fs.String("config", "launchway.yaml", "configuration file")
 	listen := fs.String("listen", "", "address to listen on (overrides the config)")
 	data := fs.String("data", "", "data directory (overrides the config)")
+	ignoreDB := fs.Bool("ignore-database-config", os.Getenv("LAUNCHWAY_IGNORE_DATABASE_CONFIG") != "",
+		"start with the bootstrap file only and ignore the configuration stored in the database (recovery: see the runbook)")
 	fs.Parse(args)
 
 	cfg, err := config.LoadBootstrap(*cfgPath)
@@ -221,6 +224,9 @@ func cmdServer(args []string) error {
 		o, _, err := artifactSettings(c, log)
 		return o, err
 	}
+	if *ignoreDB {
+		fromDatabase = nil
+	}
 	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: live.AllowSelfApproval, ConnectWait: dbWait, ArtifactsFromDatabase: fromDatabase,
 		Tests: live.Tests, Environments: live.Environments, Artifacts: live.Artifacts, Findings: live.Findings, Policy: live.Policy,
 		Reports: live.Reports, HealthSources: live.HealthSources, Models: live.Models, RunnerPools: live.RunnerPools})
@@ -234,7 +240,14 @@ func cmdServer(args []string) error {
 	// (schema 23): the file's copies are imported once, then ignored.
 	store := settings.New(eng, cfg, log)
 	eff := cfg
-	if store.Available() {
+	if *ignoreDB {
+		log.Warn("RECOVERY: --ignore-database-config: the configuration stored in the database is ignored and not changed; this server runs with the bootstrap file only, and the configuration API is off. Restart without the flag when the configuration is repaired")
+		store = nil
+		cfg.Auth.SetAccessInDatabase(false)
+		if err := cfg.Validate(*cfgPath); err != nil {
+			return err
+		}
+	} else if store.Available() {
 		if eff, err = startSettings(store, log); err != nil {
 			return err
 		}
@@ -245,6 +258,9 @@ func cmdServer(args []string) error {
 		if err := cfg.Validate(*cfgPath); err != nil {
 			return err
 		}
+	}
+	if err := egress.Default.Set(settings.EgressPolicy(eff)); err != nil {
+		return fmt.Errorf("%s: egress: %w", *cfgPath, err)
 	}
 	if eff != cfg {
 		l, err := eff.EngineLive()
@@ -295,7 +311,9 @@ func cmdServer(args []string) error {
 		// The server calls models only to explain a failed step, with keys
 		// from its own stores (ai.secrets), if it has any. With models in
 		// the database, any may be added while the server runs.
-		srv.AI = &ai.Client{}
+		// Its address is an administrator's, but still never an internal one
+		// unless the allowed hosts say so (internal/egress).
+		srv.AI = &ai.Client{HTTP: egress.Default.HTTPClient(16 * time.Minute)}
 		if len(cfg.AI.Secrets) > 0 {
 			if srv.AISecrets, err = secrets.Open(cfg.AI.Secrets); err != nil {
 				return fmt.Errorf("%s: ai.secrets: %w", *cfgPath, err)
@@ -329,6 +347,10 @@ func cmdServer(args []string) error {
 	mgr.WatchPolicySources(ctx)
 	if store.Available() {
 		// Changes made through any server take effect here within seconds.
+		// Applying is safe to repeat: everything that can fail is worked out
+		// first, then each part is replaced as a whole, so a try that stops
+		// half way is finished by the next one (the service tries again at
+		// every poll until it succeeds).
 		if err := store.Load(func(c *config.Config, _ *settings.Layout) error {
 			l, err := c.EngineLive()
 			if err != nil {
@@ -342,13 +364,14 @@ func cmdServer(args []string) error {
 			if err != nil {
 				return err
 			}
+			libs := c.SourceLibraries()
+			n, _ := c.LoopLimit()
 			if err := eng.Reconfigure(l); err != nil {
 				return err
 			}
-			if err := mgr.Reconfigure(ps, c.SourceLibraries()); err != nil {
+			if err := mgr.Reconfigure(ps, libs); err != nil {
 				return err
 			}
-			n, _ := c.LoopLimit()
 			mgr.SetLoopLimit(n)
 			srv.Reconfigure(sl)
 			return nil
@@ -457,18 +480,9 @@ func startSettings(store *settings.Service, log *slog.Logger) (*config.Config, e
 				"key", k, "import", res.Import.ID, "imported_at", when)
 		}
 	}
-	rev, objs, err := store.Engine().ConfigSnapshot()
-	if err != nil {
-		return nil, err
-	}
-	c, _, err := settings.Compose(store.Boot(), objs)
-	if err == nil {
-		err = settings.Check(c, store.Engine())
-	}
-	if err != nil {
-		return nil, fmt.Errorf("the configuration in the database (revision %d) cannot be used: %w", rev, err)
-	}
-	return c, nil
+	// A stored configuration that cannot be used starts safe mode (the last
+	// one that worked, or the file alone), not an exit with no way back.
+	return store.StartConfig()
 }
 
 // serverLive makes the API server's live settings from a configuration.

@@ -554,7 +554,11 @@ var errStale = errors.New("the branch is not where it was expected")
 // receiving repository, so two pushes cannot both win.
 func push(ctx context.Context, repo, remote, commit, branch, expect string) error {
 	ref := "refs/heads/" + branch
-	out, err := gitRun(ctx, repo, nil, "", "push", "--porcelain", "--no-verify",
+	env, err := remoteEnv(ctx, remote)
+	if err != nil {
+		return &PushError{Message: redact.URLs(err.Error())}
+	}
+	out, err := gitRun(ctx, repo, env, "", "push", "--porcelain", "--no-verify",
 		"--force-with-lease="+ref+":"+expect, remote, commit+":"+ref)
 	if err == nil {
 		return nil

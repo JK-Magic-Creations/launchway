@@ -3,8 +3,10 @@ package settings
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,6 +15,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/jk-magic-creations/launchway/internal/config"
+	"github.com/jk-magic-creations/launchway/internal/egress"
+	"github.com/jk-magic-creations/launchway/internal/redact"
 )
 
 // SignInRequest is what the sign-in helper is told: the answers a person
@@ -47,6 +51,10 @@ type SignInCheck struct {
 	OK        bool            `json:"ok"`
 	Problems  []string        `json:"problems"`
 	Endpoints SignInEndpoints `json:"endpoints"`
+	// Blocked: the server refuses to contact that address (it is internal);
+	// BlockedHost is the host an administrator may add to the allowed hosts.
+	Blocked     bool   `json:"blocked,omitempty"`
+	BlockedHost string `json:"blocked_host,omitempty"`
 	// Snippet is the auth: block to put in the server's configuration file.
 	Snippet string `json:"snippet"`
 }
@@ -76,8 +84,14 @@ func CheckSignIn(ctx context.Context, in SignInRequest, client *http.Client) Sig
 		}
 	}
 	if in.Issuer != "" {
-		ep, problem := discoverOIDC(ctx, in.Issuer, client)
+		ep, problem, blocked := discoverOIDC(ctx, in.Issuer, client)
 		out.Endpoints = ep
+		if blocked {
+			out.Blocked = true
+			if u, err := url.Parse(in.Issuer); err == nil {
+				out.BlockedHost = u.Hostname()
+			}
+		}
 		if problem != "" {
 			out.Problems = append(out.Problems, problem)
 		}
@@ -128,28 +142,37 @@ func signInSnippet(a config.AuthConfig) string {
 	return string(text)
 }
 
-func discoverOIDC(ctx context.Context, issuer string, client *http.Client) (SignInEndpoints, string) {
+func discoverOIDC(ctx context.Context, issuer string, client *http.Client) (SignInEndpoints, string, bool) {
 	var ep SignInEndpoints
 	u, err := url.Parse(issuer)
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
-		return ep, ""
+		return ep, "", false
 	}
 	if client == nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		// Never follows a redirect and never connects to an internal address
+		// unless an administrator allowed the host.
+		client = egress.Default.HTTPClient(10 * time.Second)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, issuer+"/.well-known/openid-configuration", nil)
 	if err != nil {
-		return ep, ""
+		return ep, "", false
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return ep, fmt.Sprintf("the server could not reach the identity provider at %s (%v); check the address and that this server can connect to it", issuer, err)
+		slog.Warn("sign-in check could not reach the identity provider", "issuer", redact.URLs(issuer), "err", redact.URLs(err.Error()))
+		if errors.Is(err, egress.ErrBlocked) {
+			return ep, "this server does not contact that address: it is internal to the server's network. If it is your own identity provider, an administrator can add its host to the allowed hosts", true
+		}
+		return ep, fmt.Sprintf("the server could not reach the identity provider at %s; check the address and that this server can connect to it", redact.URLs(issuer)), false
 	}
 	defer resp.Body.Close()
+	if egress.Redirected(resp) {
+		return ep, "the identity provider's address redirects somewhere else; use the address it redirects to (the issuer is the provider's address up to the application)", false
+	}
 	if resp.StatusCode != http.StatusOK {
-		return ep, fmt.Sprintf("%s/.well-known/openid-configuration answered %d; the issuer address is usually the provider's address up to the application, with no trailing path to the login page", issuer, resp.StatusCode)
+		return ep, fmt.Sprintf("the identity provider's discovery document answered %d; the issuer address is usually the provider's address up to the application, with no trailing path to the login page", resp.StatusCode), false
 	}
 	var doc struct {
 		Issuer        string   `json:"issuer"`
@@ -159,7 +182,7 @@ func discoverOIDC(ctx context.Context, issuer string, client *http.Client) (Sign
 		Claims        []string `json:"claims_supported"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&doc); err != nil {
-		return ep, "the identity provider's discovery document is not valid JSON; is this the issuer address?"
+		return ep, "the identity provider's discovery document is not valid JSON; is this the issuer address?", false
 	}
 	ep = SignInEndpoints{Authorization: doc.Authorization, Token: doc.Token, JWKS: doc.JWKS, ClaimsOffered: doc.Claims}
 	for _, c := range doc.Claims {
@@ -168,7 +191,7 @@ func discoverOIDC(ctx context.Context, issuer string, client *http.Client) (Sign
 		}
 	}
 	if doc.Issuer != "" && strings.TrimRight(doc.Issuer, "/") != issuer {
-		return ep, fmt.Sprintf("the provider says its issuer is %q, not %q; use exactly the address it gives, or sign-in will be refused", doc.Issuer, issuer)
+		return ep, fmt.Sprintf("the provider says its issuer is %q, not %q; use exactly the address it gives, or sign-in will be refused", redact.URLs(doc.Issuer), issuer), false
 	}
-	return ep, ""
+	return ep, "", false
 }

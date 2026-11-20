@@ -68,7 +68,7 @@ API tokens are made in the web UI, on the **API tokens** page, and start with `l
 Runs the server, its web UI and, unless the configuration turns it off, a built-in runner.
 
 ```text
-launchway server [--config FILE] [--listen ADDR] [--data DIR]
+launchway server [--config FILE] [--listen ADDR] [--data DIR] [--ignore-database-config]
 ```
 
 | Flag | Default | Meaning |
@@ -76,6 +76,7 @@ launchway server [--config FILE] [--listen ADDR] [--data DIR]
 | `--config` | `launchway.yaml` | The configuration file. A file that does not exist is not an error: the server starts with the defaults. |
 | `--listen` | the configuration's `listen`, else `127.0.0.1:8080` | The address to listen on. |
 | `--data` | the configuration's `data`, else `launchway-data` in the current directory | The data directory. |
+| `--ignore-database-config` | off (or `LAUNCHWAY_IGNORE_DATABASE_CONFIG=1`) | Recovery. Starts with the bootstrap file only and neither reads nor changes the configuration stored in the database; the configuration API is off. See [Locked out](../howto/backup-restore-upgrade.md#locked-out-or-a-stored-configuration-that-will-not-load). |
 
 | Variable | Meaning |
 |---|---|
@@ -608,6 +609,7 @@ launchway config set KIND NAME -f SPEC.yaml [--unit U] [--version N] [--comment 
 launchway config create KIND NAME -f SPEC.yaml
 launchway config delete KIND NAME [--version N] [--comment TEXT]
 launchway config restore KIND NAME
+launchway config restore --offline --revision N [--config FILE]
 launchway config history [KIND [NAME]] [--import ID] [--limit N] [--json]
 launchway config validate -f CHANGES.yaml
 launchway config apply -f CHANGES.yaml

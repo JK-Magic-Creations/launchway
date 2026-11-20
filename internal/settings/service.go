@@ -8,14 +8,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/config"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -26,6 +30,49 @@ const OriginBootstrap = "bootstrap-file"
 // ErrUnavailable: this server or its database does not keep configuration
 // in the database (a build limited to an older schema).
 var ErrUnavailable = errors.New("configuration in the database needs schema 23")
+
+// EgressPolicy is what a configuration allows the server to reach.
+func EgressPolicy(c *config.Config) egress.Policy {
+	return egress.Policy{AllowLocal: c.Egress.AllowLocal, Allow: c.Egress.Allow}
+}
+
+// checkEgress refuses addresses in changed objects that the server would
+// not be allowed to fetch from: a path on the server unless the server was
+// started allowing them, and an internal address unless an administrator
+// allowed it. Names are not resolved here (a lookup does not belong in a
+// validation that runs on every keystroke of a wizard); the fetch does it.
+func checkEgress(c *config.Config, objs []engine.ConfigObject) error {
+	g := egress.New(EgressPolicy(c))
+	if err := g.Set(EgressPolicy(c)); err != nil {
+		return err
+	}
+	var errs []error
+	for _, o := range objs {
+		k := kindByName(o.Kind)
+		if k == nil || o.Deleted() {
+			continue
+		}
+		v, _, err := decodeSpec(k, o.Name, o.Spec)
+		if err != nil {
+			continue
+		}
+		var e error
+		switch t := v.(type) {
+		case *config.ProjectConfig:
+			e = g.CheckRepoSyntax(t.Repo)
+		case *config.LibraryConfig:
+			e = g.CheckRepoSyntax(t.Repo)
+		case *ai.Model:
+			if u, err := url.Parse(t.Endpoint); err == nil {
+				e = g.CheckHostSyntax(u.Hostname())
+			}
+		}
+		if e != nil {
+			errs = append(errs, fmt.Errorf("%s %s: %w; an administrator can add an internal host to the allowed hosts in the installation settings (egress)", o.Kind, o.Name, e))
+		}
+	}
+	return errors.Join(errs...)
+}
 
 // Applier puts a checked configuration into effect on this server: the
 // engine's, the projects' and the API's live settings.
@@ -45,6 +92,12 @@ type Service struct {
 	lay   *Layout
 	rev   int64
 	apply Applier
+	// safe is set when this server started in safe mode.
+	safe *Safe
+	// server names this server in the audit trail's record of which
+	// revision each server applied; recorded is the last state written.
+	server   string
+	recorded string
 	// lastErr is why the newest configuration was not applied, if it was
 	// not.
 	lastErr string
@@ -58,11 +111,15 @@ func New(eng *engine.Engine, boot *config.Config, log *slog.Logger) *Service {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Service{eng: eng, boot: boot, log: log, Poll: 2 * time.Second}
+	host, _ := os.Hostname()
+	if host == "" {
+		host = "server"
+	}
+	return &Service{eng: eng, boot: boot, log: log, Poll: 2 * time.Second, server: host}
 }
 
 // Available reports whether configuration is kept in the database.
-func (s *Service) Available() bool { return s != nil && s.eng.ConfigKnown() }
+func (s *Service) Available() bool { return s != nil && s.eng != nil && s.eng.ConfigKnown() }
 
 // Boot is the file the server started with.
 func (s *Service) Boot() *config.Config { return s.boot }
@@ -121,9 +178,23 @@ func (s *Service) ImportBootstrap() (*ImportResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("importing the configuration file: %w", err)
 		}
+		for _, o := range file {
+			k := kindByName(o.Kind)
+			v, _, err := decodeSpec(k, o.Name, o.Spec)
+			if err == nil {
+				err = checkOwn(k, v)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("importing the configuration file: %s %s: %w", o.Kind, o.Name, err)
+			}
+		}
 		writes := make([]engine.ConfigWrite, 0, len(file))
 		after := mergeObjects(objs, file)
-		if _, err := s.composeChecked(after); err != nil {
+		cp, err := s.composeChecked(after)
+		if err != nil {
+			return nil, fmt.Errorf("importing the configuration file: %w", err)
+		}
+		if err := checkEgress(cp.cfg, file); err != nil {
 			return nil, fmt.Errorf("importing the configuration file: %w", err)
 		}
 		counts := map[string]int{}
@@ -202,6 +273,9 @@ func Check(c *config.Config, eng *engine.Engine) error {
 	if err := c.Validate("configuration"); err != nil {
 		return err
 	}
+	if err := egress.CheckAllowList(c.Egress.Allow); err != nil {
+		return fmt.Errorf("egress.allow: %w", err)
+	}
 	projects, err := c.SourceProjects()
 	if err != nil {
 		return err
@@ -229,7 +303,23 @@ func (s *Service) Load(apply Applier) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.apply = apply
-	return s.reloadLocked(true)
+	err := s.reloadLocked(true)
+	if err == nil {
+		return nil
+	}
+	// A stored configuration that cannot be used must not stop every server
+	// with no way back: run with the last one that worked (or the file
+	// alone), say so, and keep trying (Watch).
+	fb, using := s.fallback()
+	if aerr := apply(fb.cfg, fb.lay); aerr != nil {
+		return fmt.Errorf("the stored configuration cannot be used (%v) and neither can %s: %w", err, using, aerr)
+	}
+	s.cur, s.lay = fb.cfg, fb.lay
+	if s.safe == nil {
+		s.safe = &Safe{Reason: s.lastErr, Using: using}
+		s.log.Error("SAFE MODE: the stored configuration cannot be used, so this server runs with "+using, "err", err)
+	}
+	return nil
 }
 
 // Current returns the configuration in effect, its layout and revision.
@@ -239,29 +329,113 @@ func (s *Service) Current() (*config.Config, *Layout, int64) {
 	return s.cur, s.lay, s.rev
 }
 
-// Status says what this server runs with.
-type Status struct {
+// ServerState is what one server last said about the configuration.
+type ServerState struct {
+	Server string `json:"server"`
+	// Revision is the revision it applied last, or tried and could not.
 	Revision int64  `json:"revision"`
+	State    string `json:"state"` // applied or failed
 	Problem  string `json:"problem,omitempty"`
+	At       int64  `json:"at"`
+}
+
+// Status says what this server runs with, and what the others do.
+type Status struct {
+	// Server is this server's name.
+	Server string `json:"server"`
+	// Revision is the revision this server applied; Stored is the revision
+	// in the database. They differ while a change is on its way, or cannot
+	// be applied (Problem says why; it is tried again every few seconds).
+	Revision int64  `json:"revision"`
+	Stored   int64  `json:"stored_revision"`
+	Problem  string `json:"problem,omitempty"`
+	// Safe: the stored configuration could not be loaded at start-up, and
+	// this server runs with something safer until it can.
+	Safe *Safe `json:"safe_mode,omitempty"`
+	// Servers is each server's last report (from the audit trail), this one
+	// included: which have applied the stored revision and which have not.
+	Servers []ServerState `json:"servers,omitempty"`
 }
 
 // Status returns the revision in effect and why a newer one is not, if not.
+// It reads the database for the stored revision and the servers' reports.
 func (s *Service) Status() Status {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return Status{Revision: s.rev, Problem: s.lastErr}
+	st := Status{Server: s.server, Revision: s.rev, Problem: s.lastErr, Safe: s.safe}
+	s.mu.Unlock()
+	if s.Available() {
+		st.Stored, _ = s.eng.ConfigRevision()
+		st.Servers = s.serverStates()
+	}
+	return st
 }
 
-// Refresh applies the stored configuration if it changed.
-func (s *Service) Refresh() {
+// ConfigServerAction is the audit action each server records when it applies
+// a revision, or cannot.
+const ConfigServerAction = "config.server_state"
+
+// recordState writes this server's state to the audit trail when it changes,
+// so every server can see which have applied which revision.
+func (s *Service) recordState(rev int64, err error) {
+	state, detail, outcome := "applied", "", "ok"
+	if err != nil {
+		state, detail, outcome = "failed", clipText(redactText(err.Error()), 400), "failed"
+	}
+	key := fmt.Sprintf("%d/%s/%s", rev, state, detail)
+	if key == s.recorded {
+		return
+	}
+	s.recorded = key
+	e := engine.AuditEntry{At: time.Now().UnixMilli(), User: s.server, Source: "server", Action: ConfigServerAction,
+		Target: fmt.Sprintf("revision %d", rev), Outcome: outcome, Detail: detail}
+	if err := s.eng.Audit(e); err != nil {
+		s.log.Warn("could not record the configuration state of this server", "err", err)
+	}
+}
+
+func clipText(s string, n int) string {
+	if len(s) > n {
+		return s[:n] + "..."
+	}
+	return s
+}
+
+func redactText(s string) string { return redact.URLs(s) }
+
+// serverStates reads each server's newest report.
+func (s *Service) serverStates() []ServerState {
+	list, err := s.eng.AuditLog(engine.AuditFilter{Action: ConfigServerAction, Limit: 200})
+	if err != nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []ServerState
+	for _, a := range list { // newest first
+		if seen[a.User] {
+			continue
+		}
+		seen[a.User] = true
+		var rev int64
+		fmt.Sscanf(a.Target, "revision %d", &rev)
+		st := ServerState{Server: a.User, Revision: rev, State: "applied", At: a.At}
+		if a.Outcome != "ok" {
+			st.State, st.Problem = "failed", a.Detail
+		}
+		out = append(out, st)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Server < out[j].Server })
+	return out
+}
+
+// Refresh applies the stored configuration if it changed, or if the last
+// try failed. It returns why it could not.
+func (s *Service) Refresh() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.apply == nil {
-		return
+		return nil
 	}
-	if err := s.reloadLocked(false); err != nil {
-		s.log.Error("the configuration in the database changed but cannot be used here; keeping the configuration in effect", "err", err)
-	}
+	return s.reloadLocked(false)
 }
 
 func (s *Service) reloadLocked(first bool) error {
@@ -269,7 +443,7 @@ func (s *Service) reloadLocked(first bool) error {
 	if err != nil {
 		return err
 	}
-	if !first && rev == s.rev {
+	if !first && rev == s.rev && s.lastErr == "" {
 		return nil
 	}
 	rev, objs, err := s.eng.ConfigSnapshot()
@@ -278,22 +452,35 @@ func (s *Service) reloadLocked(first bool) error {
 	}
 	cp, err := s.composeChecked(objs)
 	if err == nil {
+		err = checkAdministrable(cp.cfg)
+	}
+	if err == nil {
 		err = s.projectStepResources(objs)
 	}
 	if err == nil {
 		err = s.apply(cp.cfg, cp.lay)
 	}
 	if err != nil {
-		s.lastErr = fmt.Sprintf("revision %d: %v", rev, err)
-		if !first {
-			s.rev = rev // do not try again until it changes
+		s.recordState(rev, err)
+		msg := fmt.Sprintf("revision %d: %v", rev, err)
+		if msg != s.lastErr {
+			s.log.Error("the stored configuration cannot be used here; keeping the configuration in effect", "revision", rev, "err", err)
 		}
+		s.lastErr = msg // tried again at the next poll, and when the revision changes
 		return err
 	}
 	if !first && s.rev != rev {
 		s.log.Info("applied a change to the configuration", "revision", rev)
 	}
 	s.cur, s.lay, s.rev, s.lastErr = cp.cfg, cp.lay, rev, ""
+	s.recordState(rev, nil)
+	if s.safe != nil {
+		s.log.Warn("leaving safe mode: the stored configuration is in effect", "revision", rev)
+		s.safe = nil
+	}
+	warnUnknown(s.log, objs)
+	s.saveLastGood(rev, objs)
+	_ = egress.Default.Set(EgressPolicy(cp.cfg))
 	return nil
 }
 
@@ -473,7 +660,17 @@ func checkOwn(k *Kind, v any) error {
 		}
 		return t.Levels.check()
 	case *config.ProjectConfig:
+		if err := checkAddress("repo", t.Repo); err != nil {
+			return err
+		}
 		return t.Normalize()
+	case *config.LibraryConfig:
+		return checkAddress("repo", t.Repo)
+	case *ai.Model:
+		if err := checkAddress("endpoint", t.Endpoint); err != nil {
+			return err
+		}
+		return checkHeaders("headers", t.Headers)
 	case *StepResources:
 		return checkStepResources(t)
 	case *SecretStore:
@@ -554,20 +751,27 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if err != nil {
 			return nil, err
 		}
-		if _, err := s.composeChecked(after); err != nil {
+		cp, err := s.composeChecked(after)
+		if err != nil {
+			return nil, invalid(err)
+		}
+		if err := checkEgress(cp.cfg, putObjects(after, puts)); err != nil {
+			return nil, invalid(err)
+		}
+		if err := checkAdministrable(cp.cfg); err != nil {
 			return nil, invalid(err)
 		}
 		if dry {
 			return nil, nil
 		}
-		_, recorded, err := s.eng.WriteConfig(rev, actor, writes, imp)
+		stored, recorded, err := s.eng.WriteConfig(rev, actor, writes, imp)
 		if errors.Is(err, engine.ErrConfigMoved) {
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		s.Refresh()
+		applyErr := s.Refresh()
 		_, now, err := s.eng.ConfigSnapshot()
 		if err != nil {
 			return nil, err
@@ -594,10 +798,42 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 			}
 			results = append(results, r)
 		}
+		if applyErr != nil {
+			return results, &NotAppliedError{Revision: stored, Server: s.server, Cause: applyErr}
+		}
 		return results, nil
 	}
 	return nil, fmt.Errorf("%w: other changes kept coming first; try again", engine.ErrConflict)
 }
+
+// putObjects returns the objects of after that puts describe.
+func putObjects(after, puts []engine.ConfigObject) []engine.ConfigObject {
+	var out []engine.ConfigObject
+	for _, p := range puts {
+		for _, o := range after {
+			if o.Kind == p.Kind && o.Name == p.Name {
+				out = append(out, o)
+			}
+		}
+	}
+	return out
+}
+
+// NotAppliedError: the change is stored, but this server could not put it
+// into effect. It is applied by every server as soon as it can: this one is
+// tried again at every poll. The results of the change are still returned.
+type NotAppliedError struct {
+	Revision int64
+	Server   string
+	Cause    error
+}
+
+func (e *NotAppliedError) Error() string {
+	return fmt.Sprintf("the change is stored (revision %d) but server %s could not apply it: %v. It is tried again every few seconds; the servers' state is in the status of GET /api/v1/config",
+		e.Revision, e.Server, redactText(e.Cause.Error()))
+}
+
+func (e *NotAppliedError) Unwrap() error { return e.Cause }
 
 // applyLocally works out the objects after writes, checking versions as
 // the store will (so a dry run says the same).
