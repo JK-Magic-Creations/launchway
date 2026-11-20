@@ -354,8 +354,12 @@ func (st *RunState) check(ev Event) bool {
 		// Rollout steps, and the keys that control a rollout.
 		if p.Pipeline.UsesSchemaControl() || p.Pipeline.Requires > 0 {
 			st.Schema = max(st.Schema, schemaControl, p.Pipeline.Requires)
-			if !st.understands(max(schemaControl, p.Pipeline.Requires)) {
-				st.notUnderstood("rollout steps or keys that control a rollout (schema %d)", schemaControl)
+			if need := max(schemaControl, p.Pipeline.Requires); !st.understands(need) {
+				what := "rollout steps or keys that control a rollout"
+				if p.Pipeline.Requires >= schemaPools {
+					what = "a pipeline key of a newer schema, such as runner:"
+				}
+				st.notUnderstood("%s (schema %d)", what, need)
 			}
 		}
 		return true
