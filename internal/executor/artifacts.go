@@ -35,6 +35,9 @@ type StageLimits struct {
 	MaxFiles     int   // default 10000
 	MaxFileBytes int64 // default 1 GiB
 	MaxBytes     int64 // all files together; default 4 GiB
+	// NoGit leaves out whatever is in a .git directory, however the globs
+	// came to match it (build caches keep nothing of the repository).
+	NoGit bool
 }
 
 func (l StageLimits) withDefaults() StageLimits {
@@ -114,6 +117,8 @@ type artifactPicker struct {
 	hits  map[string]int
 	names map[string]bool
 	notes []string
+	// sawGit is whether the note about .git files was given.
+	sawGit bool
 }
 
 func newPicker(globs []string) *artifactPicker {
@@ -144,6 +149,13 @@ func (p *artifactPicker) chosen(lim StageLimits) ([]string, error) {
 	}
 	names := make([]string, 0, len(p.names))
 	for n := range p.names {
+		if lim.NoGit && inGitDir(n) {
+			if !p.sawGit {
+				p.sawGit = true
+				p.notes = append(p.notes, "files in a .git directory are never kept: they hold the repository's history and often credentials")
+			}
+			continue
+		}
 		names = append(names, n)
 	}
 	slices.Sort(names)

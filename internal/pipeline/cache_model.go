@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"path"
 	"strconv"
 	"strings"
 	"unicode"
@@ -123,7 +124,11 @@ func CacheProblems(c *Cache) []string {
 		out = append(out, "at most "+strconv.Itoa(MaxCachePaths)+" paths per cache")
 	}
 	for _, g := range c.Paths {
-		if _, msg := checkGlob(g, "cached paths"); msg != "" {
+		clean, msg := checkGlob(g, "cached paths")
+		if msg == "" && namesGitDir(clean) {
+			msg = quoteText(clipText(g, 60)) + " would keep a .git directory: it holds the repository's history and often credentials, and every run that may restore the cache would read them; cache the directories the build makes instead"
+		}
+		if msg != "" {
 			out = append(out, msg)
 		}
 	}
@@ -142,4 +147,21 @@ func CacheProblems(c *Cache) []string {
 		out = append(out, "key.text is at most "+strconv.Itoa(MaxCacheKeyText)+" characters of plain text")
 	}
 	return out
+}
+
+// namesGitDir reports whether a cached path's glob names the .git
+// directory: a part that is .git, or a pattern that starts with a dot and
+// matches it (.g*, .*).
+func namesGitDir(glob string) bool {
+	for _, part := range strings.Split(glob, "/") {
+		if part == ".git" {
+			return true
+		}
+		if strings.HasPrefix(part, ".") && !strings.Contains(part, "**") {
+			if ok, _ := path.Match(part, ".git"); ok {
+				return true
+			}
+		}
+	}
+	return false
 }

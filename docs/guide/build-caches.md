@@ -71,6 +71,11 @@ step saves a good one.
 ## What is kept, and for how long
 
 Only regular files and directories are kept: symbolic links are left out, and the log says which.
+A path that names the repository's `.git` directory (`.git`, `.g*`, `.*`) is refused when the pipeline is
+checked, and files inside a `.git` directory are never kept, whatever the paths match: they hold
+the history and often credentials, and every run that may restore the entry would read them. Files
+named like credentials (`.env`, `*.pem`, `*.key`, `id_rsa`, `.npmrc`, `*.tfvars` and the like) are kept,
+but the step's log warns, naming them: keep secrets out of cached paths.
 Entries are tar archives compressed with zstd. By default a project keeps 10 GiB of caches, one entry
 may hold 2 GiB, and an entry nobody restored for 7 days is ended. An entry counts against the quota from the moment its
 save begins, so uploads in progress take room too. When a save would pass the quota, the project's

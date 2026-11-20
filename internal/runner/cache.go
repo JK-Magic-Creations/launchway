@@ -470,7 +470,7 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	dir := filepath.Join(cr.dir, "save-"+name)
 	defer os.RemoveAll(dir)
 	max := cr.job.Cache.MaxEntryBytes
-	lim := executor.StageLimits{MaxFiles: engine.MaxCacheFiles, MaxFileBytes: 8 << 30, MaxBytes: 32 << 30}
+	lim := executor.StageLimits{MaxFiles: engine.MaxCacheFiles, MaxFileBytes: 8 << 30, MaxBytes: 32 << 30, NoGit: true}
 	if max > 0 {
 		lim.MaxBytes = maxInt64(max*16, 64<<20)
 	}
@@ -488,6 +488,7 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 		cr.notSaved(t, strings.TrimPrefix(err.Error(), executor.ErrNotKept.Error()+": "))
 		return
 	}
+	cr.warnSecretLike(name, staged.Files)
 	archive, err := executor.PackCache(staged.Files, filepath.Join(dir, "archive"))
 	if err != nil {
 		cr.notSaved(t, "packing the files failed: "+err.Error())
@@ -538,6 +539,25 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	t.res.Bytes, t.res.Scope, t.res.Seconds = archive.Bytes, begun.Scope, seconds(time.Since(start))
 	t.res.Key = t.key
 	cr.sys("Cache %s: saved %s as key %s", name, cacheSize(archive.Bytes), shortKey(t.key))
+}
+
+// warnSecretLike says in the step's log that a cache is about to keep files
+// named like credentials: every run that may restore the entry gets them.
+func (cr *cacheRun) warnSecretLike(name string, files []executor.StagedFile) {
+	names := executor.SecretLikeFiles(files)
+	if len(names) == 0 {
+		return
+	}
+	shown := names
+	if len(shown) > 5 {
+		shown = shown[:5]
+	}
+	more := ""
+	if len(names) > len(shown) {
+		more = fmt.Sprintf(" and %d more", len(names)-len(shown))
+	}
+	cr.sys("Cache %s: warning: %d file(s) named like credentials are saved in this cache (%s%s); every run that may restore it can read them. Keep secrets out of cached paths.",
+		name, len(names), cr.mask(strings.Join(shown, ", ")), more)
 }
 
 func maxInt64(a, b int64) int64 {

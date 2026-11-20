@@ -435,3 +435,58 @@ func TestKubernetesCache(t *testing.T) {
 	s2.WorkspaceID = "ws2"
 	cacheAcrossSteps(t, k, s1, s2)
 }
+
+// Whatever the globs match, the files of a .git directory are not kept in a
+// cache: a broad glob must not take the repository's history and credentials
+// into an entry every run may restore.
+func TestStagingForACacheLeavesOutGitDirectories(t *testing.T) {
+	ws := t.TempDir()
+	for name, data := range map[string]string{
+		".cache/deps/a.txt":         "a",
+		".cache/deps/.git/config":   "[remote] url = https://token@example.com/x.git",
+		".cache/deps/sub/.git/HEAD": "ref",
+		"top.txt":                   "t",
+		".git/config":               "secret",
+	} {
+		p := filepath.Join(ws, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Directories named .git are left out of a walk unless a glob names them;
+	// for a cache, naming them is not enough.
+	for _, globs := range [][]string{{".cache/deps", ".cache/deps/.git", ".cache/deps/sub/.git/HEAD"}, {"**/*", ".git/config", ".git"}} {
+		staged, err := stageLocal(context.Background(), ws, globs, StageLimits{NoGit: true}.withDefaults(), t.TempDir())
+		if err != nil {
+			t.Fatalf("%v: %v", globs, err)
+		}
+		for _, f := range staged.Files {
+			if inGitDir(f.Path) {
+				t.Errorf("%v: %s is kept", globs, f.Path)
+			}
+		}
+		if len(staged.Files) == 0 || !strings.Contains(strings.Join(staged.Notes, "\n"), "never kept") {
+			t.Errorf("%v: %d files, notes %v", globs, len(staged.Files), staged.Notes)
+		}
+	}
+	// Artifacts are not caches: they keep what their paths say.
+	staged, err := stageLocal(context.Background(), ws, []string{".cache/deps", ".cache/deps/.git", ".cache/deps/sub/.git/HEAD"}, StageLimits{}.withDefaults(), t.TempDir())
+	if err != nil || len(staged.Files) != 3 {
+		t.Fatalf("%v %v", staged, err)
+	}
+}
+
+func TestSecretLikeFiles(t *testing.T) {
+	var files []StagedFile
+	for _, p := range []string{".cache/a.txt", "x/.env", ".env.production", "keys/server.pem", "id_ed25519", "id_ed25519.pub", ".npmrc", "node_modules/y/index.js", "deploy/prod.tfvars", "cert.key"} {
+		files = append(files, StagedFile{Path: p})
+	}
+	got := strings.Join(SecretLikeFiles(files), " ")
+	want := "x/.env .env.production keys/server.pem id_ed25519 .npmrc deploy/prod.tfvars cert.key"
+	if got != want {
+		t.Errorf("got  %s\nwant %s", got, want)
+	}
+}

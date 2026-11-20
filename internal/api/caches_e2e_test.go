@@ -513,3 +513,26 @@ func TestCacheEndToEndOnKubernetes(t *testing.T) {
 	}
 	_ = ex.Cleanup(context.Background(), func(context.Context, []string) (map[string]executor.RunInfo, error) { return nil, nil })
 }
+
+// A cache that is about to keep files named like credentials says so in the
+// step's log; the entry is still saved, and the .git directory of the
+// repository is never part of one.
+func TestCacheWarnsAboutFilesNamedLikeSecrets(t *testing.T) {
+	ce := newCacheEnv(t)
+	text := cachePipelineText("deps", "none", "success", "      echo token > .cache/deps/.env\n      echo key > .cache/deps/server.pem\n      mkdir -p .cache/deps/.git && echo history > .cache/deps/.git/config\n")
+	d, log := ce.runWith(t, "demo", text, pushMain(ce.head(t)))
+	if d.Status != "succeeded" || !strings.Contains(log, "Cache deps: saved ") {
+		t.Fatalf("%s\n%s", d.Status, log)
+	}
+	if !strings.Contains(log, "Cache deps: warning: 2 file(s) named like credentials are saved in this cache (.cache/deps/.env, .cache/deps/server.pem)") {
+		t.Fatalf("no warning about the secret-like files:\n%s", log)
+	}
+	if strings.Contains(log, ".cache/deps/.git") {
+		t.Errorf("the log speaks of the .git directory's files:\n%s", log)
+	}
+	// And a restore has no .git directory in it.
+	d, log = ce.runWith(t, "demo", cachePipelineText("deps", "none", "success", "      ls -A .cache/deps | tr '\\n' ' '; echo\n"), pushMain(ce.head(t)))
+	if d.Status != "succeeded" || !strings.Contains(log, ".env") || strings.Contains(log, ".git") {
+		t.Fatalf("%s\n%s", d.Status, log)
+	}
+}

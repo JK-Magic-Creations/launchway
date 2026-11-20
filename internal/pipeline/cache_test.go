@@ -267,3 +267,21 @@ func TestCacheAndResourcesTakeTheNewerSchema(t *testing.T) {
 		t.Errorf("%v %d", err, p.Requires)
 	}
 }
+
+// A cache is restored by every run that may read it. The repository's .git
+// directory holds its history and, often, credentials; caching it is never
+// what anyone means, and the pipeline is refused instead of silently
+// sharing it.
+func TestCacheRefusesTheGitDirectory(t *testing.T) {
+	for _, paths := range []string{".git", ".git/hooks", "sub/.git/config", ".*", ".g*", ".gi?", "**/.git/*"} {
+		_, err := Parse([]byte(cacheHead + "  test:\n    image: x\n    run: y\n    cache:\n      - name: c\n        paths: [\"" + paths + "\"]\n        key: { text: v1 }\n"))
+		if err == nil || !strings.Contains(err.Error(), ".git directory") {
+			t.Errorf("paths %q: %v", paths, err)
+		}
+	}
+	for _, paths := range []string{".cache/pip", ".github/cache", ".gitignore-cache/x", "gitlab/*", "**/*.bin"} {
+		if _, err := Parse([]byte(cacheHead + "  test:\n    image: x\n    run: y\n    cache:\n      - name: c\n        paths: [\"" + paths + "\"]\n        key: { text: v1 }\n")); err != nil {
+			t.Errorf("paths %q are fine: %v", paths, err)
+		}
+	}
+}
