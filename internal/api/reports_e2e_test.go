@@ -192,7 +192,7 @@ func TestReportAccess(t *testing.T) {
 	link := list.Reports[0].URL
 	anon := newBrowser(t)
 	r := anon.get(e.srv.URL + link)
-	if r.status != http.StatusOK || string(r.body) != hostileReport {
+	if r.status != http.StatusOK || string(r.body) != string(withStorageShim([]byte(hostileReport))) || !strings.HasPrefix(string(r.body), "<!doctype html><html><script>") {
 		t.Fatalf("hosted page: %d %s", r.status, r.body)
 	}
 	csp := r.header.Get("Content-Security-Policy")

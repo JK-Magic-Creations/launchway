@@ -1017,8 +1017,15 @@ runs, start runs, approve deployments, create tokens. So:
   script in the viewer's browser, or open pop-ups (sandboxed too). Treat a report from a pull
   request as you would the pull request.
 
-`internal/api/reports_e2e_test.go` checks the headers, the links and the refusals, and a page that
-tries all of the above was opened in a real browser (see the project's development notes).
+Because a sandboxed page may not use the browser's storage, and many report generators stop
+working without it (Playwright's and Karate's among them), every page of a report is served with a
+few lines first that stand in for `localStorage` and `sessionStorage` in memory, for that page
+only: nothing is kept between visits or shared with any other page.
+
+`internal/api/reports_e2e_test.go` checks the headers, the links and the refusals. A report whose
+script tries all of the above (read the cookies and Launchway's storage, reach the page around it,
+read `/api/v1/runs` and `/api/v1/me`, create an API token) was opened in headless Chromium through
+the Reports tab: every attempt was blocked.
 
 ### API and command line
 

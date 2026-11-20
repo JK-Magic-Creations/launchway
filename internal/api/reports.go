@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -286,7 +287,9 @@ func (s *Server) hosted(w http.ResponseWriter, r *http.Request) {
 	h.Set("Referrer-Policy", "no-referrer")
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Cache-Control", "private, max-age=600")
-	h.Set("Cross-Origin-Resource-Policy", "same-site")
+	// The report runs in an opaque origin (sandboxed), so the browser counts
+	// its loads of its own files as cross-site; the link alone guards them.
+	h.Set("Cross-Origin-Resource-Policy", "cross-origin")
 	if s.ReportsOrigin != "" && !sameHost(s.ReportsOrigin, r.Host) {
 		// Reports run script; with a separate origin configured, they
 		// never run on Launchway's own.
@@ -318,7 +321,11 @@ func (s *Server) hosted(w http.ResponseWriter, r *http.Request) {
 	if s.isHTTPS(r) {
 		scheme = "https"
 	}
-	base := scheme + "://" + r.Host + "/hosted/" + link + "/"
+	host := r.Host
+	if fh := lastListItem(r.Header.Values("X-Forwarded-Host")); s.TrustProxy && fh != "" {
+		host = fh // the host the browser used, behind a proxy that rewrites Host
+	}
+	base := scheme + "://" + host + "/hosted/" + link + "/"
 	ancestors := "'self'"
 	if s.ReportsOrigin != "" {
 		ancestors = "*" // framed by Launchway's own origin, which is another one
@@ -335,6 +342,24 @@ func (s *Server) hosted(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	h.Set("Content-Type", ct)
+	if strings.HasPrefix(ct, "text/html") && f.Size <= maxShimmedPage {
+		// Pages get a few lines first that stand in for the browser storage
+		// a sandboxed page may not use (see storageShim).
+		g, err := s.Engine.OpenHostedFile(r.Context(), artifactID, page, 0)
+		if err != nil {
+			hostedError(w, http.StatusNotFound, "Not found in this report.")
+			return
+		}
+		body, err := io.ReadAll(io.LimitReader(g.Body, maxShimmedPage+1))
+		g.Body.Close()
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		h.Set("ETag", `"sha256-`+f.SHA256+`-s1"`)
+		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(withStorageShim(body)))
+		return
+	}
 	h.Set("ETag", `"sha256-`+f.SHA256+`"`)
 	rs := &artifactSeeker{ctx: r.Context(), size: f.Size, open: func(ctx context.Context, off int64) (io.ReadCloser, error) {
 		g, err := s.Engine.OpenHostedFile(ctx, artifactID, page, off)
@@ -345,6 +370,40 @@ func (s *Server) hosted(w http.ResponseWriter, r *http.Request) {
 	}}
 	defer rs.Close()
 	http.ServeContent(w, r, "", time.Time{}, rs)
+}
+
+// maxShimmedPage is the largest page that gets the storage shim; larger
+// pages are served as they are.
+const maxShimmedPage = 32 << 20
+
+// storageShim stands in for localStorage and sessionStorage, which a page
+// in an opaque origin may not touch: reading them throws, and many report
+// generators (Playwright's, Karate's) then fail to show anything. It keeps
+// values in memory for the page's lifetime only, so a report cannot keep
+// anything between visits or share it with any other page.
+const storageShim = `<script>(function(){function m(){var d=Object.create(null);return{getItem:function(k){k=String(k);return k in d?d[k]:null},` +
+	`setItem:function(k,v){d[String(k)]=String(v)},removeItem:function(k){delete d[String(k)]},clear:function(){d=Object.create(null)},` +
+	`key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}` +
+	`["localStorage","sessionStorage"].forEach(function(n){try{window[n].length}catch(e){try{Object.defineProperty(window,n,{value:m(),configurable:true})}catch(_){}}})})();</script>`
+
+// withStorageShim puts storageShim at the start of a page: just after
+// <head>, or <html>, or the doctype, so that it runs before the page's own
+// scripts and leaves the page in standards mode.
+func withStorageShim(page []byte) []byte {
+	lower := bytes.ToLower(page[:min(len(page), 64<<10)])
+	at := 0
+	for _, tag := range []string{"<head", "<html", "<!doctype"} {
+		if i := bytes.Index(lower, []byte(tag)); i >= 0 {
+			if j := bytes.IndexByte(lower[i:], '>'); j >= 0 {
+				at = i + j + 1
+				break
+			}
+		}
+	}
+	out := make([]byte, 0, len(page)+len(storageShim))
+	out = append(out, page[:at]...)
+	out = append(out, storageShim...)
+	return append(out, page[at:]...)
 }
 
 // hostedCSP is the policy every file of an HTML report is served with: a

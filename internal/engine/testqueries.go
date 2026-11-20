@@ -978,10 +978,11 @@ type OverviewRun struct {
 
 // TestStat is one test and what makes it stand out.
 type TestStat struct {
-	Key   string `json:"key"`
-	Suite string `json:"suite"`
-	Name  string `json:"name"`
-	File  string `json:"file,omitempty"`
+	Key     string `json:"key"`
+	Suite   string `json:"suite"`
+	Name    string `json:"name"`
+	File    string `json:"file,omitempty"`
+	Variant string `json:"variant,omitempty"` // the browser or project it ran as (schema 18)
 	// Runs counts the runs it ran in, of those looked at.
 	Runs int `json:"runs"`
 	// Slowest: the average and longest duration.
@@ -1162,7 +1163,48 @@ func (e *Engine) TestOverview(project, ref string, window int) (*TestOverview, e
 	if len(out.Flaky) > overviewTop {
 		out.Flaky = out.Flaky[:overviewTop]
 	}
+	if err := e.statVariants(project, out.Slowest, out.Failing, out.Flaky); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// statVariants says which browser or project each test ran as (schema 18),
+// so that the same test in two browsers can be told apart.
+func (e *Engine) statVariants(project string, lists ...[]TestStat) error {
+	if !e.knows(schemaReports) {
+		return nil
+	}
+	var keys []string
+	for _, l := range lists {
+		for _, s := range l {
+			keys = append(keys, s.Key)
+		}
+	}
+	keys = slices.Compact(slices.Sorted(slices.Values(keys)))
+	variant := map[string]string{}
+	err := inChunks(keys, func(marks string, args []any) error {
+		rows, err := e.db.Query(`SELECT test_key, MAX(variant) FROM test_cases WHERE project = ? AND test_key IN (`+marks+`) GROUP BY test_key`,
+			append([]any{project}, args...)...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var k, v string
+			if err := rows.Scan(&k, &v); err != nil {
+				return err
+			}
+			variant[k] = v
+		}
+		return rows.Err()
+	})
+	for _, l := range lists {
+		for i := range l {
+			l[i].Variant = variant[l[i].Key]
+		}
+	}
+	return err
 }
 
 // stepTests adds each step's totals to a run's steps.
