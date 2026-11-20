@@ -646,6 +646,7 @@
             "repos": { "type": "object" },
             "secretStores": { "type": "object" },
             "refresh": { "type": ["boolean", "null"] },
+            "accept": { "type": ["object", "null"] },
             "ai": { "type": ["boolean", "null"] },
             "rbac": {
               "type": "object",

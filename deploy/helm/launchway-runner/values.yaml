@@ -339,6 +339,11 @@ deployRunner:
   # -- Let the deploy runner call models configured on the servers to explain verification
   # verdicts, with keys read from deployRunner.secretStores. Written only when true. Unset: false.
   ai: null
+  # -- The deploy runner's own limits on the work it takes (accept: in its runner.yaml), checked
+  # on the runner before anything runs: which projects it serves and which environments it
+  # deploys to. Written only when set. For example:
+  #   accept: { projects: [launchway], environments: [launchway-dev, launchway-sandbox], executors: [deploy] }
+  accept: null
   rbac:
     # -- Create the Roles below and bind them to the deploy runner.
     create: true

@@ -281,3 +281,79 @@ docs-roadmap:
 docs-roadmap-sync:
 	@test -n '$(ROADMAP_JSON)' || { echo 'docs-roadmap-sync: set ROADMAP_JSON=path/to/roadmap.json' >&2; exit 2; }
 	node scripts/docs/build-roadmap.mjs --sync='$(ROADMAP_JSON)' .
+
+# ---------------------------------------------------------------------------
+# Quality gates (docs/development/quality-gates.md). Each fails the build.
+# Tools are pinned by version and installed into the repository's own .tools
+# directory (gitignored), never into the user's GOPATH.
+# ---------------------------------------------------------------------------
+TOOLS ?= $(CURDIR)/.tools
+GOLANGCI_LINT_VERSION := v2.15.0
+GOLANGCI_LINT := $(TOOLS)/bin/golangci-lint
+QUALITY_DIR := $(CURDIR)/quality
+
+.PHONY: tools lint lint-baseline-update arch ratchet ratchet-update fmt-check vet \
+	web-lint web-test web-size coverage coverage-check coverage-update check check-all
+
+tools: $(GOLANGCI_LINT)
+
+$(GOLANGCI_LINT):
+	GOBIN=$(TOOLS)/bin go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
+# golangci-lint exits non-zero when it finds anything; the baseline tool decides.
+# Findings beyond quality/lint-baseline.json fail; the baseline may only shrink.
+lint: $(GOLANGCI_LINT)
+	@mkdir -p bin
+	@$(GOLANGCI_LINT) run --output.json.path=bin/lint-report.json --output.text.path=stderr ./... >/dev/null 2>&1; rc=$$?; [ $$rc -le 1 ]
+	go run ./scripts/quality/lintbaseline check bin/lint-report.json $(QUALITY_DIR)/lint-baseline.json
+
+lint-baseline-update: $(GOLANGCI_LINT)
+	@mkdir -p bin
+	@$(GOLANGCI_LINT) run --output.json.path=bin/lint-report.json --output.text.path=stderr ./... >/dev/null 2>&1; rc=$$?; [ $$rc -le 1 ]
+	go run ./scripts/quality/lintbaseline update bin/lint-report.json $(QUALITY_DIR)/lint-baseline.json
+
+# Allowed imports between internal packages, and the size ratchet.
+arch:
+	go test -count=1 -run 'TestImportsAreInTheTable|TestTableHasNoStaleEdges|TestForbiddenEdges|TestKnownExceptionsAreStillNeeded' ./internal/archtest/
+
+ratchet:
+	go test -count=1 -run TestSizeRatchet ./internal/archtest/
+
+# Lowers quality/size-baseline.json after a file or function shrank; refuses growth.
+ratchet-update:
+	UPDATE_RATCHET=1 go test -count=1 -run TestSizeRatchet -v ./internal/archtest/
+
+fmt-check:
+	@out=$$(gofmt -l cmd internal scripts web/*.go); if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
+
+vet:
+	go vet ./...
+
+web-lint:
+	cd web && npm ci --no-audit --no-fund --prefer-offline >/dev/null && npm run lint && npx tsc --noEmit
+
+web-test:
+	cd web && npm ci --no-audit --no-fund --prefer-offline >/dev/null && npm test
+
+web-size:
+	cd web && npm ci --no-audit --no-fund --prefer-offline >/dev/null && npm run size
+
+# Writes per-package coverage (no race detector) to bin/coverage.txt.
+coverage:
+	@mkdir -p bin
+	go test -count=1 -cover ./... 2>&1 | grep -E '^(ok|FAIL|\?)[[:space:]]' | tee bin/coverage.txt
+
+# Fails when a package is below quality/coverage-floor.json. Runs all tests.
+coverage-check: coverage
+	go run ./scripts/quality/covercheck check bin/coverage.txt $(QUALITY_DIR)/coverage-floor.json
+
+# Raises the floors to today's values; never lowers one.
+coverage-update: coverage
+	go run ./scripts/quality/covercheck update bin/coverage.txt $(QUALITY_DIR)/coverage-floor.json
+
+# The fast gates: a few minutes, no test suite of the server.
+check: fmt-check vet lint arch ratchet web-lint web-test
+	@echo "make check: all fast gates passed"
+
+# Everything, including the Go tests with the coverage floors and the bundle budget.
+check-all: check web-size coverage-check

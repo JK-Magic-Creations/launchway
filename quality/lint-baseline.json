@@ -1,0 +1,2004 @@
+{
+  "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
+  "total": 507,
+  "entries": [
+    {
+      "file": "cmd/launchway/blobs.go",
+      "linter": "errcheck",
+      "text": "Error return value of `fs.Parse` is not checked",
+      "count": 2
+    },
+    {
+      "file": "cmd/launchway/client.go",
+      "linter": "gosec",
+      "text": "G704: SSRF via taint analysis",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/client.go",
+      "linter": "noctx",
+      "text": "net/http.NewRequest must not be called. use net/http.NewRequestWithContext",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "errcheck",
+      "text": "Error return value of `fs.Parse` is not checked",
+      "count": 2
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "errcheck",
+      "text": "Error return value of `hs.Serve` is not checked",
+      "count": 2
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "errcheck",
+      "text": "Error return value of `httpSrv.Serve` is not checked",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "errcheck",
+      "text": "Error return value of `r.Run` is not checked",
+      "count": 2
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "funlen",
+      "text": "Function 'cmdServer' has too many statements (140 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 45 of func `cmdServer` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "gosec",
+      "text": "G112: Potential Slowloris Attack because ReadHeaderTimeout is not configured in the http.Server",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "gosec",
+      "text": "G301: Expect directory permissions to be 0750 or less",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "gosec",
+      "text": "G703: Path traversal via taint analysis",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "noctx",
+      "text": "net.Listen must not be called. use (*net.ListenConfig).Listen",
+      "count": 4
+    },
+    {
+      "file": "cmd/launchway/main.go",
+      "linter": "noctx",
+      "text": "os/exec.Command must not be called. use os/exec.CommandContext",
+      "count": 2
+    },
+    {
+      "file": "cmd/launchway/mcp.go",
+      "linter": "errcheck",
+      "text": "Error return value of `p.out.Write` is not checked",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/mcp.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "cmd/launchway/step_resources.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 2
+    },
+    {
+      "file": "internal/accept/accept.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/ai/aitest/aitest.go",
+      "linter": "errcheck",
+      "text": "Error return value of `(*encoding/json.Encoder).Encode` is not checked",
+      "count": 3
+    },
+    {
+      "file": "internal/ai/aitest/aitest.go",
+      "linter": "errcheck",
+      "text": "Error return value of `io.WriteString` is not checked",
+      "count": 4
+    },
+    {
+      "file": "internal/ai/model.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 48 of func `(*Model).normalize` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/ai/model.go",
+      "linter": "revive",
+      "text": "error-strings: error strings should not be capitalized or end with punctuation or a newline",
+      "count": 1
+    },
+    {
+      "file": "internal/ai/model.go",
+      "linter": "staticcheck",
+      "text": "ST1005: error strings should not end with punctuation or newlines",
+      "count": 1
+    },
+    {
+      "file": "internal/ai/schema.go",
+      "linter": "funlen",
+      "text": "Function 'compileSchema' has too many statements (101 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/ai/schema.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 33 of func `(*schema).validate` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/ai/schema.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 63 of func `compileSchema` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/ai/schema.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 2
+    },
+    {
+      "file": "internal/api/access.go",
+      "linter": "gosec",
+      "text": "G124: http.Cookie missing or has insecure Secure, HttpOnly, or SameSite attribute",
+      "count": 1
+    },
+    {
+      "file": "internal/api/api.go",
+      "linter": "contextcheck",
+      "text": "Function `Finish-\u003eparseTests` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/api/api.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` or `r.Context` instead",
+      "count": 1
+    },
+    {
+      "file": "internal/api/artifacts.go",
+      "linter": "contextcheck",
+      "text": "Function `BeginArtifact` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/api/artifacts_e2e_test.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 1
+    },
+    {
+      "file": "internal/api/artifacts_e2e_test.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 1
+    },
+    {
+      "file": "internal/api/control.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` or `r.Context` instead",
+      "count": 1
+    },
+    {
+      "file": "internal/api/deploy.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` or `r.Context` instead",
+      "count": 2
+    },
+    {
+      "file": "internal/api/deploy.go",
+      "linter": "dupl",
+      "text": "50-85 lines are duplicate of `internal/api/verify.go:20-55`",
+      "count": 1
+    },
+    {
+      "file": "internal/api/mcp.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 3
+    },
+    {
+      "file": "internal/api/mcp.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/api/mcp_tools.go",
+      "linter": "funlen",
+      "text": "Function 'describeRun' has too many statements (113 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/api/mcp_tools.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 48 of func `(*mcpCall).describeRun` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/api/mcp_tools.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/api/secrets_e2e_test.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 2
+    },
+    {
+      "file": "internal/api/secrets_e2e_test.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 2
+    },
+    {
+      "file": "internal/api/verify.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` or `r.Context` instead",
+      "count": 1
+    },
+    {
+      "file": "internal/api/verify.go",
+      "linter": "dupl",
+      "text": "20-55 lines are duplicate of `internal/api/deploy.go:50-85`",
+      "count": 1
+    },
+    {
+      "file": "internal/blobstore/blobstore.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/blobstore/database.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/blobstore/database.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 3
+    },
+    {
+      "file": "internal/blobstore/filesystem.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/blobstore/s3.go",
+      "linter": "bodyclose",
+      "text": "response body must be closed",
+      "count": 7
+    },
+    {
+      "file": "internal/blobstore/s3.go",
+      "linter": "gosec",
+      "text": "G401: Use of weak cryptographic primitive",
+      "count": 1
+    },
+    {
+      "file": "internal/blobstore/s3.go",
+      "linter": "gosec",
+      "text": "G404: Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+      "count": 1
+    },
+    {
+      "file": "internal/blobstore/s3.go",
+      "linter": "gosec",
+      "text": "G501: Blocklisted import crypto/md5: weak cryptographic primitive",
+      "count": 1
+    },
+    {
+      "file": "internal/blobstore/s3.go",
+      "linter": "gosec",
+      "text": "G703: Path traversal via taint analysis",
+      "count": 1
+    },
+    {
+      "file": "internal/blobstore/s3.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/config/artifacts.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 35 of func `(*Config).ArtifactLimits` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/config/config.go",
+      "linter": "funlen",
+      "text": "Function 'Load' has too many statements (108 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/config/config.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 38 of func `(*Config).Pools` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/config/config.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 67 of func `Load` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/config/config.go",
+      "linter": "gosec",
+      "text": "G703: Path traversal via taint analysis",
+      "count": 1
+    },
+    {
+      "file": "internal/config/config.go",
+      "linter": "revive",
+      "text": "error-strings: error strings should not be capitalized or end with punctuation or a newline",
+      "count": 2
+    },
+    {
+      "file": "internal/config/config.go",
+      "linter": "staticcheck",
+      "text": "ST1005: error strings should not end with punctuation or newlines",
+      "count": 2
+    },
+    {
+      "file": "internal/config/config_test.go",
+      "linter": "misspell",
+      "text": "`adress` is a misspelling of `address`",
+      "count": 2
+    },
+    {
+      "file": "internal/config/config_test.go",
+      "linter": "misspell",
+      "text": "`versoin` is a misspelling of `version`",
+      "count": 2
+    },
+    {
+      "file": "internal/coverage/clean.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 2
+    },
+    {
+      "file": "internal/coverage/coverage.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 1
+    },
+    {
+      "file": "internal/coverage/text.go",
+      "linter": "funlen",
+      "text": "Function 'parseLCOV' has too many statements (104 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/coverage/text.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 38 of func `parseLCOV` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/argocd/agent.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 47 of func `(*Agent).requestSync` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/argocd/agent.go",
+      "linter": "staticcheck",
+      "text": "ST1005: error strings should not be capitalized",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/argocd/agent_test.go",
+      "linter": "ineffassign",
+      "text": "ineffectual assignment to dyn",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/argocd/agent_test.go",
+      "linter": "staticcheck",
+      "text": "SA4006: this value of dyn is never used",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/argocd/config.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 32 of func `(*Config).Check` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/argocd/windows.go",
+      "linter": "staticcheck",
+      "text": "QF1002: could use tagged switch on part",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/edit/edit.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 36 of func `imageRef` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/edit/edit.go",
+      "linter": "revive",
+      "text": "error-strings: error strings should not be capitalized or end with punctuation or a newline",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/edit/edit.go",
+      "linter": "staticcheck",
+      "text": "ST1005: error strings should not end with punctuation or newlines",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/evaluate.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 49 of func `Evaluate` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/evaluate.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/gitops/gitops.go",
+      "linter": "errcheck",
+      "text": "Error return value of `r.git` is not checked",
+      "count": 2
+    },
+    {
+      "file": "internal/deploy/gitops/gitops.go",
+      "linter": "errcheck",
+      "text": "Error return value of `r.resetTo` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/gitops/gitops.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with variable",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/gitops/gitops.go",
+      "linter": "gosec",
+      "text": "G301: Expect directory permissions to be 0750 or less",
+      "count": 2
+    },
+    {
+      "file": "internal/deploy/gitops/gitops.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/integration/argo_test.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/integration/argo_test.go",
+      "linter": "staticcheck",
+      "text": "QF1008: could remove embedded field \"TLSClientConfig\" from selector",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/integration/argo_test.go",
+      "linter": "unused",
+      "text": "field runnerWG is unused",
+      "count": 1
+    },
+    {
+      "file": "internal/deploy/integration/control_test.go",
+      "linter": "staticcheck",
+      "text": "QF1008: could remove embedded field \"TLSClientConfig\" from selector",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/aistep.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/aistep.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 3
+    },
+    {
+      "file": "internal/engine/aistep.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 3
+    },
+    {
+      "file": "internal/engine/approvals.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/approvals.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/artifactlife.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/artifacts.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/artifacts.go",
+      "linter": "funlen",
+      "text": "Function 'BeginArtifact' is too long (184 \u003e 150)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/artifacts.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 33 of func `(*Engine).CommitArtifact` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/artifacts.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 38 of func `(*Engine).PutArtifactChunk` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/artifacts.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 54 of func `(*Engine).BeginArtifact` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/artifacts.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/control.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/control.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/control.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/control.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/coverage.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 38 of func `(*Engine).RunCoverageFiles` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/coverage.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/coverage.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 6
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "errcheck",
+      "text": "Error return value of `conn.ExecContext` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "noctx",
+      "text": "(*database/sql.DB).Begin must not be called. use (*database/sql.DB).BeginTx",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "noctx",
+      "text": "(*database/sql.DB).Exec must not be called. use (*database/sql.DB).ExecContext",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "noctx",
+      "text": "(*database/sql.DB).Query must not be called. use (*database/sql.DB).QueryContext",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "noctx",
+      "text": "(*database/sql.DB).QueryRow must not be called. use (*database/sql.DB).QueryRowContext",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "noctx",
+      "text": "(*database/sql.Tx).Exec must not be called. use (*database/sql.Tx).ExecContext",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "noctx",
+      "text": "(*database/sql.Tx).Query must not be called. use (*database/sql.Tx).QueryContext",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/db.go",
+      "linter": "noctx",
+      "text": "(*database/sql.Tx).QueryRow must not be called. use (*database/sql.Tx).QueryRowContext",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/deployments.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/deployments.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/deployments.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/deployments_test.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "contextcheck",
+      "text": "Function `pruneArtifacts` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 4
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "funlen",
+      "text": "Function 'advance' has too many statements (110 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 31 of func `(*cmd).persist` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 40 of func `Open` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 41 of func `(*Engine).Finish` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 44 of func `(*Engine).tryLease` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 50 of func `(*cmd).advance` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 52 of func `(*Engine).CreateRun` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "gosec",
+      "text": "G404: Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/engine.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 3
+    },
+    {
+      "file": "internal/engine/engine_test.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/findingqueries.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 33 of func `(*Engine).ProjectSecurity` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/findingqueries.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 37 of func `(*Engine).RunFindings` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/findingqueries.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/findings.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/findings.go",
+      "linter": "unused",
+      "text": "func (*FindingCounts).count is unused",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/ha_test.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/hosted.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/identity.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/notify.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/observe.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/observe.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 35 of func `(*Engine).EnvironmentStates` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/observe.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 41 of func `(*Engine).observe` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/observe.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 7
+    },
+    {
+      "file": "internal/engine/observe.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 10
+    },
+    {
+      "file": "internal/engine/observe_control.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/policy.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/policy.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 37 of func `(*Engine).GrantWaiver` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/policy.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 43 of func `(*cmd).stepEvidence` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/policy.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/policy_test.go",
+      "linter": "staticcheck",
+      "text": "QF1008: could remove embedded field \"Evaluation\" from selector",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/pools.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 34 of func `(*Engine).poolHint` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/queries.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/queries.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 3
+    },
+    {
+      "file": "internal/engine/refs.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 3
+    },
+    {
+      "file": "internal/engine/reports18.go",
+      "linter": "contextcheck",
+      "text": "Function `BeginArtifact` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/resources.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in type any",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/resources.go",
+      "linter": "staticcheck",
+      "text": "QF1008: could remove embedded field \"Request\" from selector",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/resources_test.go",
+      "linter": "staticcheck",
+      "text": "QF1008: could remove embedded field \"Request\" from selector",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/runnerids.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 4
+    },
+    {
+      "file": "internal/engine/runnerids.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/runnerids.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/state.go",
+      "linter": "funlen",
+      "text": "Function 'apply' has too many statements (157 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/state.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 48 of func `(*RunState).apply` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/state.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 51 of func `(*RunState).check` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/state.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/testqueries.go",
+      "linter": "funlen",
+      "text": "Function 'RunTestCases' has too many statements (137 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/testqueries.go",
+      "linter": "funlen",
+      "text": "Function 'TestOverview' is too long (159 \u003e 150)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/testqueries.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 33 of func `(*Engine).TestOverview` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/testqueries.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 54 of func `(*Engine).RunTestCases` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/testqueries.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/testqueries.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 5
+    },
+    {
+      "file": "internal/engine/tests.go",
+      "linter": "rowserrcheck",
+      "text": "rows.Err must be checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/tests.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 2
+    },
+    {
+      "file": "internal/engine/tokens.go",
+      "linter": "gosec",
+      "text": "G101: Potential hardcoded credentials",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/triggers.go",
+      "linter": "errcheck",
+      "text": "Error return value of `tx.Rollback` is not checked",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/verify.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 31 of func `(*Engine).CheckVerify` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/verify.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 31 of func `(*cmd).verifyParams` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/verify.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 36 of func `(*cmd).persistVerify` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/verify.go",
+      "linter": "sqlclosecheck",
+      "text": "Close should use defer",
+      "count": 1
+    },
+    {
+      "file": "internal/engine/verify.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/artifacts.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/container.go",
+      "linter": "errcheck",
+      "text": "Error return value is not checked",
+      "count": 2
+    },
+    {
+      "file": "internal/executor/container.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with a potential tainted input or cmd arguments",
+      "count": 11
+    },
+    {
+      "file": "internal/executor/container.go",
+      "linter": "noctx",
+      "text": "os/exec.Command must not be called. use os/exec.CommandContext",
+      "count": 3
+    },
+    {
+      "file": "internal/executor/executor.go",
+      "linter": "gosec",
+      "text": "G301: Expect directory permissions to be 0750 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/executor.go",
+      "linter": "gosec",
+      "text": "G302: Expect file permissions to be 0600 or less",
+      "count": 2
+    },
+    {
+      "file": "internal/executor/executor.go",
+      "linter": "gosec",
+      "text": "G306: Expect WriteFile permissions to be 0600 or less",
+      "count": 2
+    },
+    {
+      "file": "internal/executor/host.go",
+      "linter": "errcheck",
+      "text": "Error return value is not checked",
+      "count": 2
+    },
+    {
+      "file": "internal/executor/host.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with variable",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/host.go",
+      "linter": "noctx",
+      "text": "os/exec.Command must not be called. use os/exec.CommandContext",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/kubernetes.go",
+      "linter": "contextcheck",
+      "text": "Function `signal` should pass the context parameter",
+      "count": 2
+    },
+    {
+      "file": "internal/executor/kubernetes.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 3
+    },
+    {
+      "file": "internal/executor/kubernetes.go",
+      "linter": "errcheck",
+      "text": "Error return value is not checked",
+      "count": 2
+    },
+    {
+      "file": "internal/executor/kubernetes.go",
+      "linter": "gosec",
+      "text": "G122: Filesystem operation in filepath.Walk/WalkDir callback uses race-prone path; consider root-scoped APIs (e.g. os.Root) to prevent symlink TOCTOU traversal",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/kubernetes.go",
+      "linter": "gosec",
+      "text": "G301: Expect directory permissions to be 0750 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/kubernetes.go",
+      "linter": "gosec",
+      "text": "G306: Expect WriteFile permissions to be 0600 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/kubernetes.go",
+      "linter": "staticcheck",
+      "text": "SA1019: k8s.io/apimachinery/pkg/util/httpstream is deprecated: use k8s.io/streaming/pkg/httpstream directly. ",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/kubernetes_artifacts.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/executor/kubernetes_export.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 2
+    },
+    {
+      "file": "internal/executor/kubernetes_limits.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 5
+    },
+    {
+      "file": "internal/executor/kubernetes_limits.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function min",
+      "count": 1
+    },
+    {
+      "file": "internal/fakeidp/fakeidp.go",
+      "linter": "errcheck",
+      "text": "Error return value of `(*encoding/json.Encoder).Encode` is not checked",
+      "count": 5
+    },
+    {
+      "file": "internal/fakeidp/fakeidp.go",
+      "linter": "gosec",
+      "text": "G101: Potential hardcoded credentials",
+      "count": 1
+    },
+    {
+      "file": "internal/fakeidp/fakeidp.go",
+      "linter": "gosec",
+      "text": "G710: Open redirect via taint analysis",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/findings.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/jsonscan/deadline.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/jsonscan/scan.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 34 of func `(*Scanner).Value` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/jsonscan/scan_test.go",
+      "linter": "staticcheck",
+      "text": "ST1018: string literal contains Unicode format characters, consider using escape sequences instead",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/jsonscan/text.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 2
+    },
+    {
+      "file": "internal/findings/paths.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/paths.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/samples_test.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/sarif.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 34 of func `(*parser).resolve` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/findings/secrets.go",
+      "linter": "gosec",
+      "text": "G101: Potential hardcoded credentials",
+      "count": 1
+    },
+    {
+      "file": "internal/ids/ids.go",
+      "linter": "gosec",
+      "text": "G115: integer overflow conversion uint64 -\u003e byte",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/build.go",
+      "linter": "funlen",
+      "text": "Function 'Build' has too many statements (279 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/build.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 117 of func `Build` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/buildkit.go",
+      "linter": "contextcheck",
+      "text": "Function `solve$4` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/config.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 39 of func `(*Config).Check` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/imagetest/imagetest.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with a potential tainted input or cmd arguments",
+      "count": 5
+    },
+    {
+      "file": "internal/imagebuild/imagetest/imagetest.go",
+      "linter": "gosec",
+      "text": "G302: Expect file permissions to be 0600 or less",
+      "count": 3
+    },
+    {
+      "file": "internal/imagebuild/imagetest/imagetest.go",
+      "linter": "gosec",
+      "text": "G306: Expect WriteFile permissions to be 0600 or less",
+      "count": 7
+    },
+    {
+      "file": "internal/imagebuild/imagetest/imagetest.go",
+      "linter": "gosec",
+      "text": "G703: Path traversal via taint analysis",
+      "count": 2
+    },
+    {
+      "file": "internal/imagebuild/imagetest/imagetest.go",
+      "linter": "noctx",
+      "text": "net.DialTimeout must not be called. use (*net.Dialer).DialContext with (*net.Dialer).Timeout",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/imagetest/imagetest.go",
+      "linter": "noctx",
+      "text": "net.Listen must not be called. use (*net.ListenConfig).Listen",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/imagetest/imagetest.go",
+      "linter": "noctx",
+      "text": "os/exec.Command must not be called. use os/exec.CommandContext",
+      "count": 5
+    },
+    {
+      "file": "internal/imagebuild/imagetest/imagetest.go",
+      "linter": "unused",
+      "text": "var seccompOnce is unused",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/oci.go",
+      "linter": "gosec",
+      "text": "G110: Potential DoS vulnerability via decompression bomb",
+      "count": 1
+    },
+    {
+      "file": "internal/imagebuild/registry.go",
+      "linter": "staticcheck",
+      "text": "QF1011: could omit type authn.Authenticator from declaration; it will be inferred from the right-hand side",
+      "count": 2
+    },
+    {
+      "file": "internal/imagebuild/registry.go",
+      "linter": "staticcheck",
+      "text": "ST1023: should omit type authn.Authenticator from declaration; it will be inferred from the right-hand side",
+      "count": 2
+    },
+    {
+      "file": "internal/pipeline/ai.go",
+      "linter": "funlen",
+      "text": "Function 'parseAIStep' is too long (151 \u003e 150)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/ai.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 59 of func `(*parser).parseAIStep` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/control.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 35 of func `(*parser).checkControl` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/deploy.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 34 of func `(*parser).checkDeploys` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/deploy.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 35 of func `(*parser).parseChange` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/image.go",
+      "linter": "funlen",
+      "text": "Function 'parseImageStep' is too long (157 \u003e 150)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/image.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 69 of func `(*parser).parseImageStep` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/model.go",
+      "linter": "gosec",
+      "text": "G115: integer overflow conversion int -\u003e rune",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/model.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 2
+    },
+    {
+      "file": "internal/pipeline/parse.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 51 of func `(*parser).parseSteps` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/template.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 33 of func `readTemplate` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/template.go",
+      "linter": "staticcheck",
+      "text": "QF1002: could use tagged switch on n.Kind",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/triggers_test.go",
+      "linter": "staticcheck",
+      "text": "SA4000: identical expressions on the left and right side of the '!=' operator",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/verify.go",
+      "linter": "funlen",
+      "text": "Function 'parseVerifyStep' is too long (211 \u003e 150)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/verify.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 33 of func `(*parser).parseVerifyMetric` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/verify.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 40 of func `(*parser).checkVerify` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/pipeline/verify.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 80 of func `(*parser).parseVerifyStep` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/policy/evaluate.go",
+      "linter": "funlen",
+      "text": "Function 'judge' has too many statements (164 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/policy/evaluate.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 31 of func `judgeDeployed` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/policy/evaluate.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 37 of func `judgeFindings` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/policy/evaluate.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 75 of func `judge` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/policy/evaluate.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/policy/evaluate_test.go",
+      "linter": "staticcheck",
+      "text": "QF1008: could remove embedded field \"Counts\" from selector",
+      "count": 2
+    },
+    {
+      "file": "internal/policy/parse.go",
+      "linter": "funlen",
+      "text": "Function 'rule' is too long (190 \u003e 150)",
+      "count": 1
+    },
+    {
+      "file": "internal/policy/parse.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 74 of func `(*parser).rule` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/policy/parse.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 2
+    },
+    {
+      "file": "internal/policy/parse.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function min",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/accept.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/aistep.go",
+      "linter": "contextcheck",
+      "text": "Function `collector-\u003etestCollector-\u003etestCollector$1` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/artifacts.go",
+      "linter": "dupl",
+      "text": "465-507 lines are duplicate of `internal/runner/artifacts.go:519-561`",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/artifacts.go",
+      "linter": "dupl",
+      "text": "519-561 lines are duplicate of `internal/runner/artifacts.go:465-507`",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/artifacts.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/deploy.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 9
+    },
+    {
+      "file": "internal/runner/deploy.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 34 of func `(*DeployRunner).act` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/image.go",
+      "linter": "contextcheck",
+      "text": "Function `collector-\u003etestCollector-\u003etestCollector$1` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/library.go",
+      "linter": "gosec",
+      "text": "G110: Potential DoS vulnerability via decompression bomb",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/library.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with variable",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/library.go",
+      "linter": "gosec",
+      "text": "G301: Expect directory permissions to be 0750 or less",
+      "count": 6
+    },
+    {
+      "file": "internal/runner/library.go",
+      "linter": "gosec",
+      "text": "G302: Expect file permissions to be 0600 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "contextcheck",
+      "text": "Function `collector-\u003etestCollector-\u003etestCollector$1` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "contextcheck",
+      "text": "Function `leave` should pass the context parameter",
+      "count": 2
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 4
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 36 of func `(*Runner).execute` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with variable",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "gosec",
+      "text": "G301: Expect directory permissions to be 0750 or less",
+      "count": 2
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "gosec",
+      "text": "G302: Expect file permissions to be 0600 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "gosec",
+      "text": "G306: Expect WriteFile permissions to be 0600 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/runner.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/runner/verify.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 4
+    },
+    {
+      "file": "internal/runnerauth/runnerauth.go",
+      "linter": "gosec",
+      "text": "G101: Potential hardcoded credentials",
+      "count": 1
+    },
+    {
+      "file": "internal/sbom/sbom.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 1
+    },
+    {
+      "file": "internal/source/library.go",
+      "linter": "revive",
+      "text": "receiver-naming: receiver name lib should be consistent with previous receiver name p for project",
+      "count": 2
+    },
+    {
+      "file": "internal/source/source.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with variable",
+      "count": 1
+    },
+    {
+      "file": "internal/source/source.go",
+      "linter": "gosec",
+      "text": "G301: Expect directory permissions to be 0750 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/testdb/testdb.go",
+      "linter": "noctx",
+      "text": "(*database/sql.DB).Exec must not be called. use (*database/sql.DB).ExecContext",
+      "count": 2
+    },
+    {
+      "file": "internal/testdb/testdb.go",
+      "linter": "revive",
+      "text": "blank-imports: a blank import should be only in a main or test package, or have a comment justifying it",
+      "count": 1
+    },
+    {
+      "file": "internal/testlib/testlib.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with variable",
+      "count": 1
+    },
+    {
+      "file": "internal/testlib/testlib.go",
+      "linter": "gosec",
+      "text": "G301: Expect directory permissions to be 0750 or less",
+      "count": 2
+    },
+    {
+      "file": "internal/testlib/testlib.go",
+      "linter": "noctx",
+      "text": "os/exec.Command must not be called. use os/exec.CommandContext",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/clean.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 6
+    },
+    {
+      "file": "internal/testreport/detect.go",
+      "linter": "contextcheck",
+      "text": "Non-inherited new context, use function like `context.WithXXX` instead",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/detect.go",
+      "linter": "staticcheck",
+      "text": "QF1002: could use tagged switch on firstHow",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/gotest.go",
+      "linter": "unused",
+      "text": "field finishedBad is unused",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/junitcase.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 43 of func `(*junitParser).finishCase` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/model.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/playwright.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 40 of func `(*playwrightParser).test` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/robot.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 35 of func `(*robotParser).body` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/robot.go",
+      "linter": "unused",
+      "text": "field depth is unused",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/tap.go",
+      "linter": "staticcheck",
+      "text": "QF1003: could use tagged switch on c",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/testng.go",
+      "linter": "gosec",
+      "text": "G115: integer overflow conversion int -\u003e rune",
+      "count": 1
+    },
+    {
+      "file": "internal/testreport/xmltree.go",
+      "linter": "unused",
+      "text": "func (*xnode).has is unused",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/drain.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/drain.go",
+      "linter": "staticcheck",
+      "text": "QF1002: could use tagged switch on t",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/containers_test.go",
+      "linter": "ineffassign",
+      "text": "ineffectual assignment to end",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/containers_test.go",
+      "linter": "ineffassign",
+      "text": "ineffectual assignment to start",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/containers_test.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/containers_test.go",
+      "linter": "staticcheck",
+      "text": "SA4006: this value of end is never used",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/containers_test.go",
+      "linter": "staticcheck",
+      "text": "SA4006: this value of start is never used",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/httpclient.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/loki.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/placeholder.go",
+      "linter": "funlen",
+      "text": "Function 'rewriteQL' has too many statements (104 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/placeholder.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 54 of func `rewriteQL` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/postgres.go",
+      "linter": "contextcheck",
+      "text": "Function `query$2` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/postgres.go",
+      "linter": "contextcheck",
+      "text": "Function `query$3` should pass the context parameter",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/source.go",
+      "linter": "funlen",
+      "text": "Function 'openOne' has too many statements (137 \u003e 100)",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/source.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 35 of func `(*Sources).Query` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/source.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 92 of func `openOne` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/source.go",
+      "linter": "revive",
+      "text": "redefines-builtin-id: redefinition of the built-in function max",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/source.go",
+      "linter": "staticcheck",
+      "text": "QF1001: could apply De Morgan's law",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/source_test.go",
+      "linter": "staticcheck",
+      "text": "SA4006: this value of b is never used",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/sourcetest/sourcetest.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with a potential tainted input or cmd arguments",
+      "count": 2
+    },
+    {
+      "file": "internal/verify/source/sourcetest/sourcetest.go",
+      "linter": "gosec",
+      "text": "G204: Subprocess launched with variable",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/sourcetest/sourcetest.go",
+      "linter": "gosec",
+      "text": "G302: Expect file permissions to be 0600 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/sourcetest/sourcetest.go",
+      "linter": "gosec",
+      "text": "G306: Expect WriteFile permissions to be 0600 or less",
+      "count": 1
+    },
+    {
+      "file": "internal/verify/source/sourcetest/sourcetest.go",
+      "linter": "noctx",
+      "text": "net.Listen must not be called. use (*net.ListenConfig).Listen",
+      "count": 2
+    },
+    {
+      "file": "internal/verify/source/sourcetest/sourcetest.go",
+      "linter": "noctx",
+      "text": "net/http.NewRequest must not be called. use net/http.NewRequestWithContext",
+      "count": 2
+    },
+    {
+      "file": "internal/verify/source/sourcetest/sourcetest.go",
+      "linter": "noctx",
+      "text": "net/http.Post must not be called. use net/http.NewRequestWithContext and (*net/http.Client).Do(*http.Request)",
+      "count": 2
+    },
+    {
+      "file": "internal/verify/source/sourcetest/sourcetest.go",
+      "linter": "noctx",
+      "text": "os/exec.Command must not be called. use os/exec.CommandContext",
+      "count": 3
+    },
+    {
+      "file": "internal/verify/source/sql.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 33 of func `lexSQL` is high (\u003e 30)",
+      "count": 1
+    },
+    {
+      "file": "web/node_modules/flatted/golang/pkg/flatted/flatted.go",
+      "linter": "gocyclo",
+      "text": "cyclomatic complexity 32 of func `Stringify` is high (\u003e 30)",
+      "count": 1
+    }
+  ]
+}

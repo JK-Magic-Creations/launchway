@@ -913,6 +913,12 @@
             }
           }
         },
+        "accept": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
         "ai": {
           "type": [
             "boolean",

@@ -28,8 +28,28 @@ make test-s3            # a real S3-compatible server, for the artifact store
 - Changing the database schema, or adding an event type? Read
   [Writing a migration](docs/development/migrations.md) first: servers of two versions share one
   database during every upgrade, and a rollback must keep working.
-- Run `make test` before pushing.
+- Run `make check` and `make test` before pushing.
 - Write messages and UI text in plain words.
+
+## Engineering standard and quality gates
+
+A change is done when its behaviour is tested (a test that fails without it, and for the engine,
+what happens on failure, restart and retry), the gates pass, packages keep their boundaries, files
+stay under 1,000 lines and functions under 150, I/O takes a `context.Context`, errors are returned
+with context, input is validated at the edge, public behaviour is documented, migrations are
+additive, nothing is duplicated that an existing package provides, and someone other than the author
+has read the diff.
+
+The gates fail the build; they are not advice. `make check` runs the fast ones in a few minutes:
+`gofmt`, `go vet`, `golangci-lint`, the architecture test (allowed imports between packages), the
+size ratchet, and the web's `eslint`, type check and tests. `make check-all` adds the bundle
+budget and the per-package coverage floors.
+
+Gates use baselines: what was wrong before they existed is recorded, and only something new fails.
+Baselines only shrink. When you fix something, run the matching update command and commit the file
+with your change; never add a new finding to a baseline to get a build through. Each gate, each
+baseline and how to update it are in [Quality gates](docs/development/quality-gates.md), which
+also holds the full engineering standard.
 
 ## Licence and contributor licence agreement
 
