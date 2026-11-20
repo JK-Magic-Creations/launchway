@@ -513,6 +513,9 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 		cr.notSaved(t, begun.Reason)
 		return
 	}
+	if begun.Evicted > 0 {
+		cr.sys("Cache %s: %d older entries of this project were ended to make room (cache policy max_project_gib)", name, begun.Evicted)
+	}
 	if err := cr.send(ctx, begun, archive); err != nil {
 		cr.notSaved(t, refusalText(err))
 		return
@@ -535,9 +538,6 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	t.res.Bytes, t.res.Scope, t.res.Seconds = archive.Bytes, begun.Scope, seconds(time.Since(start))
 	t.res.Key = t.key
 	cr.sys("Cache %s: saved %s as key %s", name, cacheSize(archive.Bytes), shortKey(t.key))
-	if done.Evicted > 0 {
-		cr.sys("Cache %s: %d older entries of this project were ended to make room (cache policy max_project_gib)", name, done.Evicted)
-	}
 }
 
 func maxInt64(a, b int64) int64 {

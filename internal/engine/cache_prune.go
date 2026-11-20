@@ -144,8 +144,7 @@ func (e *Engine) trimCaches() error {
 			}
 			for used > lim.maxProject {
 				var victim string
-				err := tx.QueryRow(`SELECT id FROM caches WHERE project = ? AND status = ? ORDER BY last_used_at, created_at, id LIMIT 1`,
-					u.project, cacheKept).Scan(&victim)
+				err := tx.QueryRow(cacheVictimSQL, u.project, cacheKept).Scan(&victim)
 				if errors.Is(err, sql.ErrNoRows) {
 					return nil
 				}

@@ -53,7 +53,57 @@ func (e *Engine) endCacheByID(id, by, note string) error {
 	})
 }
 
-// endCacheTx ends an entry in whichever of uploading or kept it is.
+// errCacheFull says a reservation of bytes did not fit in the project's
+// quota even after every kept entry was ended. A transaction that gets it
+// returns it, so that the entries it ended are not lost for nothing.
+var errCacheFull = errors.New("the project's caches are full")
+
+// cacheVictimSQL picks the entry to end first when a project is over its
+// quota: the least recently used one of the scopes that are not the default
+// branch's, and the default branch's only when nothing else is left. Many
+// pull requests and branches, each writing its own scope, then cannot push
+// the default branch's cache out, which every other run restores.
+const cacheVictimSQL = `SELECT id FROM caches WHERE project = ? AND status = ?
+	ORDER BY CASE WHEN scope = '` + cacheScopeDefault + `' THEN 1 ELSE 0 END, last_used_at, created_at, id LIMIT 1`
+
+// reserveCacheBytes charges bytes to a project's usage, which counts the
+// entries kept and the uploads in progress, ending entries (see
+// cacheVictimSQL) until they fit within max. It says how many it ended and
+// how many bytes they held, and whether the bytes now fit.
+func reserveCacheBytes(tx *txx, project string, bytes, max, now int64) (evicted int, freed int64, fits bool, err error) {
+	// Every transaction that changes a project's usage and an entry
+	// takes the usage row first, so that servers doing both at once
+	// cannot wait for each other.
+	if _, err := tx.Exec(`INSERT INTO cache_usage(project, bytes) VALUES(?, 0) ON CONFLICT(project) DO NOTHING`, project); err != nil {
+		return 0, 0, false, err
+	}
+	for {
+		res, err := tx.Exec(`UPDATE cache_usage SET bytes = bytes + ? WHERE project = ? AND bytes + ? <= ?`, bytes, project, bytes, max)
+		if err != nil {
+			return evicted, freed, false, err
+		}
+		if n, _ := res.RowsAffected(); n == 1 {
+			return evicted, freed, true, nil
+		}
+		var victim string
+		err = tx.QueryRow(cacheVictimSQL, project, cacheKept).Scan(&victim)
+		if errors.Is(err, sql.ErrNoRows) {
+			return evicted, freed, false, nil
+		}
+		if err != nil {
+			return evicted, freed, false, err
+		}
+		n, size, err := endKeptCache(tx, victim, "", "evicted: the project's caches were over their quota", now)
+		if err != nil {
+			return evicted, freed, false, err
+		}
+		evicted += n
+		freed += size
+	}
+}
+
+// endCacheTx ends an entry in whichever of uploading or kept it is, and
+// gives its bytes back to the project's usage either way.
 func endCacheTx(tx *txx, r *cacheRowT, by, note string, now int64) (bool, error) {
 	if _, err := tx.Exec(`INSERT INTO cache_usage(project, bytes) VALUES(?, 0) ON CONFLICT(project) DO NOTHING`, r.Project); err != nil {
 		return false, err
@@ -62,13 +112,18 @@ func endCacheTx(tx *txx, r *cacheRowT, by, note string, now int64) (bool, error)
 	if err != nil || n == 1 {
 		return n == 1, err
 	}
-	res, err := tx.Exec(`UPDATE caches SET status = ?, ended_at = ?, ended_by = ? WHERE id = ? AND status = ?`,
-		cacheEnded, now, clipNote(by, note), r.ID, cacheUploading)
+	var bytes int64
+	err = tx.QueryRow(`UPDATE caches SET status = ?, ended_at = ?, ended_by = ? WHERE id = ? AND status = ? RETURNING bytes`,
+		cacheEnded, now, clipNote(by, note), r.ID, cacheUploading).Scan(&bytes)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	k, _ := res.RowsAffected()
-	return k == 1, nil
+	// An upload was charged when it began (see BeginCache).
+	_, err = tx.Exec(`UPDATE cache_usage SET bytes = CASE WHEN bytes > ? THEN bytes - ? ELSE 0 END WHERE project = ?`, bytes, bytes, r.Project)
+	return true, err
 }
 
 // ---- listing and deleting ----
@@ -136,9 +191,11 @@ func (e *Engine) Caches(project string) (*CacheList, error) {
 			return nil, err
 		}
 		out.Entries = append(out.Entries, v)
+		// What counts against the quota is what is kept and what is being
+		// uploaded.
+		out.Totals.Bytes += v.Bytes
 		if v.Status == cacheKept {
 			out.Totals.Entries++
-			out.Totals.Bytes += v.Bytes
 		}
 	}
 	if err := rows.Err(); err != nil {

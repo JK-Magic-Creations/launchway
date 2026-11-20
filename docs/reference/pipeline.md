@@ -1312,7 +1312,7 @@ branch built but can never put anything where the default branch will read it. N
 between projects. How much a project keeps (10 GiB), how large one entry may be (2 GiB) and how long
 an entry nobody restored is kept (7 days) are the [cache policy](http-api.md#build-caches), set by an
 administrator in the database; when a save would pass the quota the project's least recently used
-entries are evicted, and with caching switched off for a project every lookup misses and nothing is
+entries are evicted (those of pull requests and branches before the default branch's), and with caching switched off for a project every lookup misses and nothing is
 saved, while the pipeline still validates. The step's log says what happened to each cache
 (`Cache pip: restored key 3f9c… (exact, 118 MB, 4 s)`, `Cache pip: no entry; the step runs without
 it`, `Cache pip: saved 120 MB as key 3f9c…`, `Cache pip: not saved: …`), and the same is in the run

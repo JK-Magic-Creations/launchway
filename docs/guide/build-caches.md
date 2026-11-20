@@ -70,9 +70,10 @@ step saves a good one.
 
 Only regular files and directories are kept: symbolic links are left out, and the log says which.
 Entries are tar archives compressed with zstd. By default a project keeps 10 GiB of caches, one entry
-may hold 2 GiB, and an entry nobody restored for 7 days is ended. When a save would pass the quota,
-the project's least recently used entries are ended to make room, or the save is refused if it cannot
-fit. An administrator changes these in the database, for the installation or for one project: the
+may hold 2 GiB, and an entry nobody restored for 7 days is ended. An entry counts against the quota from the moment its
+save begins, so uploads in progress take room too. When a save would pass the quota, the project's
+least recently used entries are ended to make room, those of pull requests and branches before the
+default branch's, or the save is refused if it cannot fit. An administrator changes these in the database, for the installation or for one project: the
 **Caches** page of the project, `launchway caches policy`, `PUT /api/v1/cache-policy` and the MCP tool
 `set_cache_policy` do the same thing, and every change is audited. With caching off for a project,
 lookups miss and nothing is saved, and the pipeline still passes validation.

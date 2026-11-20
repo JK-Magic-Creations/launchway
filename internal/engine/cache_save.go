@@ -32,12 +32,15 @@ type BeginCache struct {
 // BegunCache says what to send. Exists says the entry is already kept (or
 // being saved by another run): nothing is sent, and that is not an error.
 type BegunCache struct {
-	ID         string `json:"id,omitempty"`
-	Exists     bool   `json:"exists,omitempty"`
-	Reason     string `json:"reason,omitempty"`
-	Scope      string `json:"scope,omitempty"`
-	Received   int64  `json:"received"`
-	ChunkBytes int64  `json:"chunk_bytes"`
+	ID     string `json:"id,omitempty"`
+	Exists bool   `json:"exists,omitempty"`
+	Reason string `json:"reason,omitempty"`
+	Scope  string `json:"scope,omitempty"`
+	// Evicted is how many of the project's other entries were ended to make
+	// room for the bytes this entry reserves.
+	Evicted    int   `json:"evicted,omitempty"`
+	Received   int64 `json:"received"`
+	ChunkBytes int64 `json:"chunk_bytes"`
 }
 
 func cacheBytesText(n int64) string {
@@ -130,6 +133,17 @@ func (e *Engine) BeginCache(leaseID string, in BeginCache) (*BegunCache, error) 
 			out = existsAnswer(r, scope)
 			return nil
 		}
+		// The bytes are charged to the project's quota from here, until the
+		// entry ends: what is being uploaded takes room as much as what is
+		// kept, so that a loop of declarations cannot park more than the
+		// quota allows.
+		evicted, _, fits, err := reserveCacheBytes(tx, project, in.Bytes, cc.limits.maxProject, now)
+		if err != nil {
+			return err
+		}
+		if !fits {
+			return errCacheFull
+		}
 		if _, err := tx.Exec(`INSERT INTO caches(id, project, scope, name, key, platform, blob_key, store, sha256, bytes, files, created_run, created_step,
 			created_attempt, created_at, last_used_at, status, upload_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 			id, project, scope, in.Name, in.Key, in.Platform, blobKey, store.Name(), in.SHA256, in.Bytes, in.Files, cc.l.runID, cc.l.stepID,
@@ -137,11 +151,15 @@ func (e *Engine) BeginCache(leaseID string, in BeginCache) (*BegunCache, error) 
 			return err
 		}
 		won = true
-		out = &BegunCache{ID: id, Scope: scope, ChunkBytes: ArtifactChunkBytes}
+		out = &BegunCache{ID: id, Scope: scope, Evicted: evicted, ChunkBytes: ArtifactChunkBytes}
 		return nil
 	})
 	if err != nil || !won {
 		_ = store.AbortUpload(context.Background(), blobKey, uploadID)
+	}
+	if errors.Is(err, errCacheFull) {
+		return nil, fmt.Errorf("%w: this cache is %s, which does not fit in the project's %s of caches, with the entries kept and the uploads in progress (cache policy max_project_gib)",
+			ErrQuota, cacheBytesText(in.Bytes), cacheBytesText(cc.limits.maxProject))
 	}
 	return out, err
 }
@@ -293,19 +311,14 @@ var errCacheMoved = errors.New("the cache entry changed under the commit")
 type CommittedCache struct {
 	ID    string `json:"id"`
 	Bytes int64  `json:"bytes"`
-	// Evicted is how many of the project's other entries were ended to make
-	// room, and EvictedBytes their size.
-	Evicted      int   `json:"evicted,omitempty"`
-	EvictedBytes int64 `json:"evicted_bytes,omitempty"`
 	// Exists says the entry was already committed: nothing changed.
 	Exists bool `json:"exists,omitempty"`
 }
 
-// CommitCache makes an entry whose bytes have all arrived a kept one. If
-// that would take the project past its quota, the project's least recently
-// used entries are ended in the same transaction until it fits; if it
-// cannot fit, the entry is refused (ErrQuota) and ended. Two servers
-// committing one entry at once: one wins, the other is told it exists.
+// CommitCache makes an entry whose bytes have all arrived a kept one. Its
+// bytes have counted against the project's quota since BeginCache reserved
+// them, so committing cannot go over it. Two servers committing one entry
+// at once: one wins, the other is told it exists.
 func (e *Engine) CommitCache(ctx context.Context, leaseID, id string) (*CommittedCache, error) {
 	store, err := e.storeOrErr()
 	if err != nil {
@@ -340,58 +353,23 @@ func (e *Engine) CommitCache(ctx context.Context, leaseID, id string) (*Committe
 		return nil, err
 	}
 	var out *CommittedCache
-	var refused error
 	err = e.artifactTx(func(tx *txx, now int64) error {
-		out, refused = nil, nil
+		out = nil
 		if err := leaseHeld(tx, leaseID); err != nil {
 			return err
 		}
-		// Every transaction that changes a project's usage and an entry
-		// takes the usage row first, so that servers doing both at once
-		// cannot wait for each other.
-		if _, err := tx.Exec(`INSERT INTO cache_usage(project, bytes) VALUES(?, 0) ON CONFLICT(project) DO NOTHING`, r.Project); err != nil {
-			return err
-		}
-		evicted, freed := 0, int64(0)
-		for {
-			res, err := tx.Exec(`UPDATE cache_usage SET bytes = bytes + ? WHERE project = ? AND bytes + ? <= ?`,
-				r.Bytes, r.Project, r.Bytes, cc.limits.maxProject)
-			if err != nil {
-				return err
-			}
-			if n, _ := res.RowsAffected(); n == 1 {
-				break
-			}
-			var victim string
-			err = tx.QueryRow(`SELECT id FROM caches WHERE project = ? AND status = ? ORDER BY last_used_at, created_at, id LIMIT 1`,
-				r.Project, cacheKept).Scan(&victim)
-			if errors.Is(err, sql.ErrNoRows) {
-				refused = fmt.Errorf("%w: this cache is %s, which does not fit in the project's %s of caches (cache policy max_project_gib)",
-					ErrQuota, cacheBytesText(r.Bytes), cacheBytesText(cc.limits.maxProject))
-				return nil // the transaction ends without evicting anything it cannot use
-			}
-			if err != nil {
-				return err
-			}
-			n, size, err := endKeptCache(tx, victim, "", "evicted: the project's caches were over their quota", now)
-			if err != nil {
-				return err
-			}
-			evicted += n
-			freed += size
-		}
+		// The entry's bytes were charged to the project when it began (see
+		// BeginCache), so committing only makes it kept.
 		res, err := tx.Exec(`UPDATE caches SET status = ?, last_used_at = ?, hash_state = '', parts = '[]' WHERE id = ? AND status = ?`,
 			cacheKept, now, r.ID, cacheUploading)
 		if err != nil {
 			return err
 		}
 		if n, _ := res.RowsAffected(); n == 0 {
-			// Another server committed it first (or it ended): this
-			// transaction's changes, the usage it added and the entries it
-			// evicted among them, are rolled back.
+			// Another server committed it first (or it ended).
 			return errCacheMoved
 		}
-		out = &CommittedCache{ID: r.ID, Bytes: r.Bytes, Evicted: evicted, EvictedBytes: freed}
+		out = &CommittedCache{ID: r.ID, Bytes: r.Bytes}
 		return nil
 	})
 	if err != nil {
@@ -404,10 +382,6 @@ func (e *Engine) CommitCache(ctx context.Context, leaseID, id string) (*Committe
 			}
 		}
 		return nil, err
-	}
-	if refused != nil {
-		_ = e.endCacheByID(r.ID, "", "did not fit in the project's quota")
-		return nil, refused
 	}
 	return out, nil
 }

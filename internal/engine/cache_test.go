@@ -713,9 +713,9 @@ func TestCacheQuotaEvictsLeastRecentlyUsed(t *testing.T) {
 		t.Fatal("a is gone")
 	}
 	r.advance(time.Minute)
-	c := r.mustSave(j, "pip", cacheKey("d"), mk("d"))
-	if c.Evicted != 1 || c.EvictedBytes != mib {
-		t.Fatalf("%+v", c)
+	b, _, err := r.save(r.e, j, "pip", cacheKey("d"), mk("d"))
+	if err != nil || b.Evicted != 1 {
+		t.Fatalf("%+v %v", b, err)
 	}
 	have := map[string]bool{}
 	for _, v := range r.entries("demo") {
