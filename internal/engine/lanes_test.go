@@ -551,3 +551,41 @@ func TestLaneCancelSparesOpenDeployments(t *testing.T) {
 		t.Fatalf("%+v", l)
 	}
 }
+
+// A run that ends and holds a lane takes the project's run_counters row
+// before it writes its own row: creating a run takes them in that order, and
+// the other order could deadlock the two on PostgreSQL.
+func TestLaneHolderTakesTheCounterBeforeItsRow(t *testing.T) {
+	e, _ := newEngine(t)
+	if !e.db.pg {
+		t.Skip("lock order matters on PostgreSQL only")
+	}
+	id := create(t, e, "pipeline: demo\nlane: {when_busy: wait}\nsteps:\n  a: {image: x, run: a}\n", mainPush("s1"))
+	j := take(t, e)
+	hold, err := e.db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hold.Rollback()
+	if _, err := hold.Exec(`INSERT INTO run_counters(project, last) VALUES(?, 0) ON CONFLICT(project) DO UPDATE SET last = run_counters.last`, "demo"); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		zero := 0
+		done <- e.Finish(j.LeaseID, Result{Outcome: "succeeded", ExitCode: &zero})
+	}()
+	time.Sleep(500 * time.Millisecond) // the finish is now waiting for the counter
+	var got string
+	err = hold.QueryRow(`SELECT id FROM runs WHERE id = ? FOR UPDATE NOWAIT`, id).Scan(&got)
+	if err != nil {
+		t.Fatalf("the finishing run wrote its row before it took the project's counter: %v", err)
+	}
+	if err := hold.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	want(t, statuses(t, e, id), "run", "succeeded")
+}

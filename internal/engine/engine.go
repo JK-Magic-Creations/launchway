@@ -1902,6 +1902,9 @@ func decodePayload(t EventType, data []byte) (p Payload, problem string, err err
 // The events go first: if another transaction has stored the same run_seq,
 // this fails with a conflict before anything else is touched.
 func (c *cmd) persist() error {
+	if err := c.lockLaneBeforeRows(); err != nil {
+		return err
+	}
 	for i := range c.events {
 		ev := &c.events[i]
 		data, err := json.Marshal(ev.Data)

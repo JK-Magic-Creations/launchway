@@ -1033,6 +1033,12 @@ another run holds it, and takes the lane otherwise. A lane is released whenever 
 it ends: a run that fails, is canceled or is lost to a server that died frees the lane, and a server that
 finds a lane with runs waiting and no live holder starts the first of them.
 
+A run that waits for an approval still holds its lane, until the approval is decided or expires (its
+`timeout`, 72 hours by default), so runs behind it wait that long too. The run's own `timeout` does
+not count that wait (see `timeout` in [top-level keys](#top-level-keys)), so only the approval's `timeout` ends it. If that is too long
+for the lane, give the approval a shorter `timeout`, or put the approval in a pipeline of its own.
+There is no key that lets a run give its lane up while it waits; that is on the backlog.
+
 <!-- validate -->
 ```yaml
 pipeline: release

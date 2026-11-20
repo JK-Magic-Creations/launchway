@@ -569,3 +569,21 @@ func (e *Engine) attachLanePositions(runs []*RunSummary) error {
 	}
 	return nil
 }
+
+// lockLaneBeforeRows takes the project's run_counters row before anything of
+// the run is written, when the command ends a run that holds a lane. Creating
+// a run takes that row first and then writes the rows of the runs it
+// supersedes; a holder that ended wrote its own row first and asked for the
+// counter second, so the two could wait for each other on PostgreSQL. Every
+// path now takes run_counters first, then run rows.
+func (c *cmd) lockLaneBeforeRows() error {
+	if c.st.Lane == nil || !c.e.knows(schemaFlow) {
+		return nil
+	}
+	for _, ev := range c.events {
+		if ev.Type == RunFinished {
+			return c.lockLanes(c.st.Project)
+		}
+	}
+	return nil
+}

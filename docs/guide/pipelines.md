@@ -144,7 +144,7 @@ records *skipped* or *waiting*), webhooks and runs started by hand. Draft runs a
 one. A lane is released when its holder ends, however it ends, and the next run starts in the same
 database transaction, so it is exact however many servers there are; a server that finds a lane
 with runs waiting and no live holder starts the first of them. Resuming a finished run is
-refused while another run holds its lane. See the runs a project has in line with `launchway runs
+refused while another run holds its lane. A run that waits for an approval keeps its lane until the approval is decided or expires, so give approvals in a laned pipeline a short `timeout`. See the runs a project has in line with `launchway runs
 lanes PROJECT`, on the run page, or with the MCP tool `list_lanes`. `lane` and `supersede` cannot be written together:
 `supersede: true` is the short form of `lane: { per: [ref], when_busy: cancel }` for pushes and
 pull requests.
