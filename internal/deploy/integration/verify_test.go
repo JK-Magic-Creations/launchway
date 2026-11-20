@@ -3,7 +3,6 @@ package integration
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/deploy"
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -111,5 +110,4 @@ func TestArgoVerify(t *testing.T) {
 		})
 		t.Logf("rolled back to %s", s.image)
 	})
-	_ = time.Second
 }
