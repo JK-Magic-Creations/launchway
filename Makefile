@@ -173,7 +173,7 @@ SHELL_SCRIPTS = $(shell git ls-files -co --exclude-standard 'packaging/*.sh' 'de
 	'deploy/test/runner-chart/*.sh' 'deploy/test/bundle/*.sh' 'scripts/charts-sync.sh')
 lint-scripts:
 	if command -v shellcheck >/dev/null 2>&1; then shellcheck $(SHELL_SCRIPTS); \
-	else $(CONTAINER) run --rm -v "$(CURDIR):/mnt:Z,ro" -w /mnt $(SHELLCHECK_IMAGE) $(SHELL_SCRIPTS); fi
+	else $(CONTAINER) run --rm --security-opt label=disable -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) $(SHELL_SCRIPTS); fi
 
 lint-workflows: tools
 	$(TOOLS)/actionlint

@@ -24,6 +24,7 @@ out=$(cd "$out" && pwd)
 platforms=${RELEASE_PLATFORMS:-linux/amd64 linux/arm64 darwin/amd64 darwin/arm64}
 # shellcheck disable=SC2086 # a list of platforms
 packaging/release/build.sh "$version" "$out" $platforms
+# shellcheck disable=SC2086 # a list of platforms
 arches=$(printf '%s\n' $platforms | sed -n 's#^linux/##p' | tr '\n' ' ')
 # shellcheck disable=SC2086
 [ -z "$arches" ] || packaging/release/packages.sh "$version" "$out" $arches
