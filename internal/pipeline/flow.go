@@ -105,6 +105,49 @@ func (ps *parser) checkOutputTests(p *Pipeline) {
 	}
 }
 
+// OutputWarnings are the warnings about output tests that no step the
+// pipeline can see appears to satisfy: a typo in the key skips the step
+// forever, and nothing else notices. Until steps declare their outputs, a
+// script step is taken to write a key when its script mentions the key; a
+// step of a kind with fixed outputs (image, verify, ai) writes those. A step
+// whose script calls other files may write a key the pipeline text never
+// shows, so these are warnings, never problems.
+func OutputWarnings(p *Pipeline) Problems {
+	var out Problems
+	for _, s := range p.Steps {
+		step, key, ok := s.When.OutputRef()
+		if !ok || key == "" {
+			continue
+		}
+		t := p.Step(step)
+		if t == nil || t.IsUse() || t.ForEach != nil {
+			continue // a problem already, or not knowable
+		}
+		line := s.When.inputLine
+		if line == 0 {
+			line = s.Line
+		}
+		var seen string
+		switch fixed := fixedOutputs(t); {
+		case fixed != nil:
+			if slices.Contains(fixed, key) {
+				continue
+			}
+			seen = "a " + string(t.Kind) + " step's outputs are " + strings.Join(fixed, ", ")
+		case t.Run == "":
+			continue // nothing to look at
+		case strings.Contains(t.Run, key):
+			continue
+		default:
+			seen = "its script never mentions " + strconv.Quote(key)
+		}
+		out = append(out, Problem{Line: line, Path: "steps." + s.ID + ".when.output", Message: fmt.Sprintf(
+			"no step this pipeline shows writes the output %q of step %s (%s), so %s will be skipped every time: check the key for a typo, or ignore this if the script writes it by another means",
+			key, step, seen, s.ID)})
+	}
+	return out
+}
+
 // The causes a failed attempt can have, as retry's on lists them.
 const (
 	CauseExit           = "exit"           // the script ended non-zero

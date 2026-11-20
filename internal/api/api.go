@@ -1250,6 +1250,10 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 		out["warnings"] = []string{"the pipeline filters pull requests by the branch they target (on.pull_request.into), and project " + project +
 			" has no forge connection: no pull request will run until it has one"}
 	}
+	if ws := outputWarnings(p); len(ws) > 0 {
+		warnings, _ := out["warnings"].([]string)
+		out["warnings"] = append(warnings, ws...)
+	}
 	writeJSON(w, http.StatusOK, out)
 }
 

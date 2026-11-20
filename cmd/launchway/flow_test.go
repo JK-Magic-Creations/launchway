@@ -98,3 +98,25 @@ func TestCLIShowsThePullRequestTarget(t *testing.T) {
 		t.Fatalf("%s", out.String())
 	}
 }
+
+// validate warns, at the line of the test, about an output nothing writes.
+func TestCLIValidateWarnsAboutAnOutputNothingWrites(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "pipeline.yaml")
+	text := "pipeline: demo\nsteps:\n  scan: {image: x, run: 'echo changed=1 >> $LAUNCHWAY_OUTPUTS'}\n  fix: {image: x, run: f, needs: scan, when: {output: scan.chnaged, equals: '1'}}\n"
+	if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	old := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+	err := cmdValidate([]string{file})
+	w.Close()
+	os.Stderr = old
+	got, _ := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := file + ":4: warning: steps.fix.when.output: "; !strings.Contains(string(got), want) || !strings.Contains(string(got), `"chnaged" of step scan`) {
+		t.Fatalf("%q", got)
+	}
+}

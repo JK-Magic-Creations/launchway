@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -37,6 +39,12 @@ func (c *cmd) condContext(ctx pipeline.Context) pipeline.Context {
 		}
 		v, ok := s.Outputs[key]
 		return v, ok
+	}
+	ctx.OutputKeys = func(step string) []string {
+		if s := c.st.Steps[step]; s != nil {
+			return slices.Sorted(maps.Keys(s.Outputs))
+		}
+		return nil
 	}
 	return ctx
 }

@@ -43,7 +43,7 @@ func TestOutputConditionMatch(t *testing.T) {
 		t.Fatal(c.OutputWhy(ctx))
 	}
 	delete(outs, "scan.changed")
-	if c.Match(ctx) || c.OutputWhy(ctx) != "scan.changed was not set" {
+	if c.Match(ctx) || c.OutputWhy(ctx) != `the output "changed" of step scan was not set: scan did not write it` {
 		t.Fatal(c.OutputWhy(ctx))
 	}
 	if c.Match(Context{Event: EventManual}) {
@@ -386,5 +386,35 @@ func TestPullRequestIntoProblems(t *testing.T) {
 				t.Fatalf("%+v, want path %s with a line", p, tc.path)
 			}
 		})
+	}
+}
+
+// A when: { output } test of a key nothing writes is a warning at the line
+// of the test; a key the script mentions, or a fixed output, is not.
+func TestOutputWarnings(t *testing.T) {
+	const head = "pipeline: demo\nsteps:\n  scan: {image: x, run: 'echo changed=true >> $LAUNCHWAY_OUTPUTS'}\n"
+	warn := func(rest string) Problems {
+		t.Helper()
+		p, err := Parse([]byte(head + rest))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return OutputWarnings(p)
+	}
+	if ws := warn("  fix: {image: x, run: f, needs: scan, when: {output: scan.changed, equals: true}}\n"); len(ws) != 0 {
+		t.Fatalf("the key is written: %+v", ws)
+	}
+	ws := warn("  fix: {image: x, run: f, needs: scan, when: {output: scan.chnaged, equals: true}}\n")
+	if len(ws) != 1 || ws[0].Line != 4 || ws[0].Path != "steps.fix.when.output" ||
+		!strings.Contains(ws[0].Message, `"chnaged" of step scan`) || !strings.Contains(ws[0].Message, "will be skipped every time") {
+		t.Fatalf("%+v", ws)
+	}
+	// A step of a kind with fixed outputs is checked against them.
+	ai := "  ask: {kind: ai, model: m, prompt: hi, needs: scan}\n"
+	if ws := warn(ai + "  fix: {image: x, run: f, needs: ask, when: {output: ask.text, equals: x}}\n"); len(ws) != 0 {
+		t.Fatalf("ai steps write text: %+v", ws)
+	}
+	if ws := warn(ai + "  fix: {image: x, run: f, needs: ask, when: {output: ask.nope, equals: x}}\n"); len(ws) != 1 {
+		t.Fatalf("%+v", ws)
 	}
 }

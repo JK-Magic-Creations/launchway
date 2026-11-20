@@ -467,6 +467,9 @@ type Context struct {
 	// Output looks up an output a step wrote (schema 24); nil, or ok false,
 	// means it was never written.
 	Output func(step, key string) (value string, ok bool)
+	// OutputKeys lists the outputs a step did write, so that a missing one
+	// can say what was there instead; nil if not known.
+	OutputKeys func(step string) []string
 }
 
 // OutputRef splits the step and key of an output test, which are written
@@ -502,7 +505,22 @@ func (c *Condition) OutputWhy(ctx Context) string {
 			return c.Output + " was " + strconv.Quote(v) + ", not one of " + strings.Join(want, ", ")
 		}
 	}
-	return c.Output + " was not set"
+	return c.missingOutput(ctx, step, key)
+}
+
+// missingOutput says which output was not written, and by which step, and
+// what the step wrote instead: a mistyped key is the usual cause.
+func (c *Condition) missingOutput(ctx Context, step, key string) string {
+	msg := "the output " + strconv.Quote(key) + " of step " + step + " was not set: " + step + " did not write it"
+	if ctx.OutputKeys == nil {
+		return msg
+	}
+	keys := ctx.OutputKeys(step)
+	if len(keys) == 0 {
+		return msg + " (it wrote no outputs)"
+	}
+	slices.Sort(keys)
+	return msg + " (it wrote: " + strings.Join(keys, ", ") + ")"
 }
 
 // Match reports whether the condition holds. A nil condition always holds.

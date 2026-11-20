@@ -311,7 +311,7 @@ inside the template.
 `when: { output: step.key, equals: value }` skips a step because of what an earlier step found.
 The step must be one this step needs, directly or through others. Outputs compare as text (a
 boolean is `true` or `false`), a list of values matches any of them, and an output that was never
-written never matches: the skip says `scan.changed was not set`. The step shows as skipped, not
+written never matches: the skip says which output was missing and what the step wrote instead: `the output "changed" of step scan was not set: scan did not write it (it wrote: other)`. The step shows as skipped, not
 as passed, and a re-run reuses the skip.
 
 ```yaml

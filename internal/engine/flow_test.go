@@ -31,8 +31,8 @@ func TestOutputConditionRunsAndSkips(t *testing.T) {
 	}{
 		{"matches", map[string]string{"changed": "true"}, true, ""},
 		{"differs", map[string]string{"changed": "false"}, false, `scan.changed was "false", not "true"`},
-		{"never written", nil, false, "scan.changed was not set"},
-		{"another key written", map[string]string{"other": "true"}, false, "scan.changed was not set"},
+		{"never written", nil, false, `the output "changed" of step scan was not set: scan did not write it (it wrote no outputs)`},
+		{"another key written", map[string]string{"other": "true"}, false, `the output "changed" of step scan was not set: scan did not write it (it wrote: other)`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, _ := newEngine(t)

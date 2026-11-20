@@ -633,6 +633,9 @@ func cmdValidate(args []string) error {
 		return err
 	}
 	fmt.Printf("%s: pipeline %q is valid, %d step(s) in %d level(s)\n", path, p.Name, len(p.Steps), len(p.Levels()))
+	for _, w := range pipeline.OutputWarnings(p) {
+		fmt.Fprintf(os.Stderr, "%s:%d: warning: %s: %s\n", path, w.Line, w.Path, w.Message)
+	}
 	if *project != "" {
 		return validateOnServer(path, *project)
 	}
