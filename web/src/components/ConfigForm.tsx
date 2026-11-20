@@ -85,10 +85,16 @@ export interface FieldDef {
 export function assignProblems(problems: string[], fields: FieldDef[]): { by: Record<string, string[]>; rest: string[] } {
   const by: Record<string, string[]> = {};
   const rest: string[] = [];
-  const ordered = [...fields].sort((a, b) => b.path.length - a.path.length);
+  // The field whose word in the message is the longest (the most specific) gets it.
   for (const p of problems) {
-    const f = ordered.find((f) => (f.match ?? [f.path, f.path.split(".").pop()!]).some((t) => wordIn(p, t)));
-    if (f) (by[f.path] ??= []).push(p);
+    let best: FieldDef | null = null;
+    let bestLen = 0;
+    for (const f of fields) {
+      for (const t of f.match ?? [f.path, f.path.split(".").pop()!]) {
+        if (t.length > bestLen && wordIn(p, t)) { best = f; bestLen = t.length; }
+      }
+    }
+    if (best) (by[best.path] ??= []).push(p);
     else rest.push(p);
   }
   return { by, rest };

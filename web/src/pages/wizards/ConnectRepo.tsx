@@ -374,7 +374,7 @@ export function RunItNow({ name, branch }: { name: string; branch: string }) {
       {state.run ? (
         <span className="cf-ok" role="status">Run #{state.run.number} started. <Link href={`/runs/${state.run.id}`}>Watch it</Link>.</span>
       ) : (
-        <button type="button" className="btn btn-primary" disabled={state.busy} onClick={start}>{state.busy ? "Starting…" : `Run it now (${branch})`}</button>
+        <button type="button" className="btn btn-primary" disabled={state.busy} onClick={start}>{state.busy ? "Starting…" : `Start its first run (${branch})`}</button>
       )}
       {state.error && <span className="cf-problem" role="alert">The run did not start: {state.error}</span>}
     </div>

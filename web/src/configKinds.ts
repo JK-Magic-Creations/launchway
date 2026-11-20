@@ -228,6 +228,16 @@ export const FIELDS: Record<string, FieldDef[]> = {
       options: [{ value: "", label: "the model's default" }, ...["low", "medium", "high", "xhigh", "max"].map((v) => ({ value: v, label: v }))], help: "anthropic only." },
     { path: "headers", label: "Extra headers", type: "map", section: "Limits", help: "Headers that are not secret, name=value per line." },
   ],
+  "step-resources": [
+    { path: "limits.max_cpu", label: "Most CPU a step may ask for", type: "text", section: "Limits", placeholder: "8", help: "In cores, such as 8 or 500m. Empty: no limit." },
+    { path: "limits.max_memory", label: "Most memory a step may ask for", type: "text", section: "Limits", placeholder: "16Gi", help: "Such as 16Gi. Empty: no limit." },
+    { path: "limits.memory_per_thread", label: "Memory per thread", type: "text", section: "Limits", placeholder: "1Gi", help: "Default 1Gi, at least 64Mi." },
+    { path: "defaults.step.cpu", label: "CPU a step gets", type: "text", section: "Defaults for steps that ask for nothing", placeholder: "1", match: ["defaults.step", "cpu"], help: "What it is guaranteed." },
+    { path: "defaults.step.cpu_limit", label: "CPU it may use at most", type: "text", section: "Defaults for steps that ask for nothing", placeholder: "4", help: "Above it the step is slowed, not stopped." },
+    { path: "defaults.step.memory", label: "Memory a step gets", type: "text", section: "Defaults for steps that ask for nothing", placeholder: "2Gi", match: ["defaults.step", "memory"], help: "What it is guaranteed." },
+    { path: "defaults.step.memory_limit", label: "Memory it may use at most", type: "text", section: "Defaults for steps that ask for nothing", placeholder: "6Gi",
+      help: "Other kinds of step (image builds and the like) have defaults of their own: set them on the Raw tab under defaults." },
+  ],
   "secret-store": [
     { path: "type", label: "Type", type: "select", options: [{ value: "", label: "Choose a type" }, ...SECRET_STORE_TYPES],
       help: "What kind of store pipelines may name. Its address and credentials stay with the runners." },
@@ -277,3 +287,24 @@ export const RULES: Record<string, { scalar?: "duration"; templates?: true; fiel
 
 /** When a rule is judged, in words. */
 export const POINT: Record<string, string> = { run: "at run start", deploy: "before deploying", image: "before an image push" };
+
+/** withLevelNames rewrites "project(s)" in the fields' words with what the
+ * installation calls a project. */
+export function withLevelNames(fields: FieldDef[], lv?: Levels): FieldDef[] {
+  if (!lv || (lv.project.singular === "Project" && lv.project.plural === "Projects")) return fields;
+  const sub = (t: string) => t
+    .replace(/\bProjects\b/g, lv.project.plural).replace(/\bprojects\b/g, lv.project.plural.toLowerCase())
+    .replace(/\bProject\b/g, lv.project.singular).replace(/\bproject\b/g, lv.project.singular.toLowerCase());
+  return fields.map((f) => ({ ...f, label: sub(f.label), help: typeof f.help === "string" ? sub(f.help) : f.help, section: f.section && sub(f.section) }));
+}
+
+/** levelWords rewrites "project(s)" and "unit(s)" in a sentence with what
+ * the installation calls them. */
+export function levelWords(t: string, lv?: Levels): string {
+  if (!lv) return t;
+  return t
+    .replace(/\bProjects\b/g, lv.project.plural).replace(/\bprojects\b/g, lv.project.plural.toLowerCase())
+    .replace(/\bProject\b/g, lv.project.singular).replace(/\bproject\b/g, lv.project.singular.toLowerCase())
+    .replace(/\bUnits\b/g, lv.unit.plural).replace(/\bunits\b/g, lv.unit.plural.toLowerCase())
+    .replace(/\bUnit\b/g, lv.unit.singular).replace(/\bunit\b/g, lv.unit.singular.toLowerCase());
+}

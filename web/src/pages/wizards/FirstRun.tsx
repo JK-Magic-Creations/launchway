@@ -64,7 +64,7 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   const changes: ChangeRequest[] = [];
   if (inst) {
     const levels = naming === "own" || useUnits === "yes" ? {
-      organisation: { singular: names.orgS.trim(), plural: "" },
+      organisation: { singular: names.orgS.trim() },
       unit: { singular: names.unitS.trim(), plural: names.unitP.trim() },
       project: { singular: names.projectS.trim(), plural: names.projectP.trim() },
     } : null;
@@ -97,7 +97,7 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
         <Choices legend="What should the things Launchway manages be called?" value={naming} onChange={(v) => setNaming(v as "usual" | "own")}
           help="Launchway has levels: the installation, an organisation that owns everything, optional groups, and the projects (one per repository). Their names are only words on the screen; you can change them later."
           options={[
-            { value: "usual", label: `The usual names: ${lv.organisation.singular}, ${lv.unit.plural}, ${lv.project.plural}`, help: "Nothing to decide now." },
+            { value: "usual", label: `Keep these names: ${lv.organisation.singular}, ${lv.unit.plural}, ${lv.project.plural}`, help: "Nothing to decide now." },
             { value: "own", label: "Our own words", help: "For example Company, Teams and Services, so the screens use your organisation's language." },
           ]} />
         {naming === "own" && (

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, api, type RuleInfo } from "../api";
 import { configApi, kindLabel, kindOf, levelOf, loadOverview, useOverview, type ChangeRequest, type ConfigChange, type ConfigKind,
   type ConfigObject, type ConfigOverview, type Effective, type Spec } from "../configApi";
-import { FIELDS, nameHelp } from "../configKinds";
+import { FIELDS, levelWords, nameHelp, withLevelNames } from "../configKinds";
 import { ago, clock } from "../format";
 import { navigate, usePath } from "../router";
 import { CheckLine, DefinedAt, DiffTable, ProblemList, SpecForm, TextInput, assignProblems, specDiff, useServerCheck } from "../components/ConfigForm";
@@ -62,13 +62,17 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
   const change: ChangeRequest[] | null = dirty && objName
     ? [{ kind: k.name, name: objName, unit: unit || undefined, spec, version: isNew ? -1 : obj?.version }] : null;
   const check = useServerCheck(change);
-  const fields = FIELDS[k.name] ?? [];
+  const fields = useMemo(() => withLevelNames(FIELDS[k.name] ?? [], overview.levels), [k.name, overview.levels]);
   const nameField = { path: "__name", label: "Name", help: "", type: "text" as const, match: ["name", "names", "exists", "already"] };
   const { by, rest } = useMemo(() => {
     const ruleFields = k.name === "policy" ? catalogue.map((r) => ({ path: r.name, label: r.name, help: "", type: "text" as const })) : [];
     return assignProblems(check.problems, [...fields, ...ruleFields, ...(isNew ? [nameField] : [])]);
   }, [check.problems, fields, catalogue, isNew]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Someone else saved since this page loaded: the server's check says so before Save.
+  const moved = check.problems.some((p) => /is at version \d+, not \d+/.test(p));
+  const restShown = rest.filter((p) => !/is at version \d+, not \d+/.test(p));
+  useEffect(() => { if (dirty) setSaved(""); }, [spec, unit]); // eslint-disable-line react-hooks/exhaustive-deps
   const one = kindLabel(overview, k, false);
   const title = k.singleton ? kindLabel(overview, k) : isNew ? `New ${one.toLowerCase()}` : name;
 
@@ -128,7 +132,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
           <div className="crumbs"><Link href="/config">Configuration</Link><span aria-hidden="true">/</span>
             {!k.singleton && <><Link href={`/config/${k.path}`}>{kindLabel(overview, k)}</Link><span aria-hidden="true">/</span></>}</div>
           <h1 className={isNew || k.singleton ? "" : "mono cf-h1-mono"}>{title}</h1>
-          <p className="sub">{k.doc}</p>
+          <p className="sub">{levelWords(k.doc, overview.levels)}</p>
         </div>
         {obj && (
           <dl className="cf-meta">
@@ -153,7 +157,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
           <button type="button" className="btn" disabled={busy} onClick={restore}>Restore</button>
         </div>
       )}
-      {conflict && (
+      {(conflict || moved) && (
         <div className="callout callout-bad cf-row" role="alert">
           <span><strong>Someone else changed this since you opened it.</strong> Your change was not saved, so theirs is not lost. Reload to see their version, then make your change again (copy it from the Raw tab first if it is long).</span>
           <button type="button" className="btn" onClick={() => { setLoaded({ state: "loading" }); load(); }}>Reload</button>
@@ -162,9 +166,14 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
       <ErrorBox error={error} />
 
       <section className="card cf-editor" aria-label="Settings">
-        <div className="tabs" role="tablist" aria-label="How to edit">
-          <button type="button" role="tab" id="cf-tab-form" aria-selected={tab === "form"} aria-controls="cf-panel" className={"tab" + (tab === "form" ? " tab-on" : "")} onClick={() => setTab("form")}>Settings</button>
-          <button type="button" role="tab" id="cf-tab-raw" aria-selected={tab === "raw"} aria-controls="cf-panel" className={"tab" + (tab === "raw" ? " tab-on" : "")} onClick={() => setTab("raw")}>Raw (JSON)</button>
+        <div className="tabs" role="tablist" aria-label="How to edit" onKeyDown={(e) => {
+          if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+          const t = tab === "form" ? "raw" : "form";
+          setTab(t);
+          document.getElementById(t === "form" ? "cf-tab-form" : "cf-tab-raw")?.focus();
+        }}>
+          <button type="button" role="tab" id="cf-tab-form" aria-selected={tab === "form"} tabIndex={tab === "form" ? 0 : -1} aria-controls="cf-panel" className={"tab" + (tab === "form" ? " tab-on" : "")} onClick={() => setTab("form")}>Settings</button>
+          <button type="button" role="tab" id="cf-tab-raw" aria-selected={tab === "raw"} tabIndex={tab === "raw" ? 0 : -1} aria-controls="cf-panel" className={"tab" + (tab === "raw" ? " tab-on" : "")} onClick={() => setTab("raw")}>Raw (JSON)</button>
         </div>
         <div id="cf-panel" role="tabpanel" aria-labelledby={tab === "form" ? "cf-tab-form" : "cf-tab-raw"} className="cf-panel">
           <fieldset disabled={deleted} className="cf-plain">
@@ -190,7 +199,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
               </>
             ) : <RawEditor spec={spec} onChange={setSpec} />}
           </fieldset>
-          <ProblemList problems={rest} title="The server says:" />
+          <ProblemList problems={restShown} title="The server says:" />
         </div>
         {!deleted && (
           <div className="cf-savebar">
@@ -209,7 +218,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
         )}
       </section>
 
-      {k.name === "project" && obj && !deleted && <EffectiveCard project={name} overview={overview} />}
+      {k.name === "project" && obj && !deleted && <EffectiveCard key={obj.version} project={name} overview={overview} />}
       {!isNew && <History changes={history} overview={overview} />}
     </div>
   );
@@ -290,7 +299,7 @@ function EffectiveCard({ project, overview }: { project: string; overview: Confi
                     <tr key={o.kind + "/" + o.name}>
                       <td>{kk ? kindLabel(overview, kk, false) : o.kind}</td>
                       <td>{kk ? <Link href={`/config/${kk.path}/${encodeURIComponent(o.name)}`}><Mono>{o.name}</Mono></Link> : <Mono>{o.name}</Mono>}</td>
-                      <td><span className={`cf-from cf-from-${o.from}`}>{from(o.from, o.unit)}</span></td>
+                      <td><span className={`cf-from cf-from-${o.from}`}>{o.from === "project" ? "names this project" : from(o.from, o.unit)}</span></td>
                     </tr>
                   );
                 })}</tbody>

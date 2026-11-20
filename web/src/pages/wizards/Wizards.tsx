@@ -61,7 +61,11 @@ export function WizardRunner({ title, intro, steps, changes, overview, done, sum
   title: string; intro?: ReactNode; steps: StepDef[]; changes: ChangeRequest[]; overview: ConfigOverview;
   done: (created: ConfigObject[]) => ReactNode; summaryExtra?: ReactNode; createLabel?: string;
 }) {
-  const [at, setAt] = useState(0);
+  // ?step= opens a wizard at one of its steps (the setup checklist links to them).
+  const [at, setAt] = useState(() => {
+    const i = steps.findIndex((x) => x.id === new URLSearchParams(location.search).get("step"));
+    return i > 0 ? i : 0;
+  });
   const [tried, setTried] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [localErr, setLocalErr] = useState("");
@@ -119,8 +123,8 @@ export function WizardRunner({ title, intro, steps, changes, overview, done, sum
   if (created) {
     return (
       <WizardFrame title={title} steps={all.concat([{ id: "done", title: "Done", render: () => null }])} at={all.length} hideNav>
-        <div className="cf-done" role="status">
-          {created.length > 0 && <div className="callout callout-ok"><strong>Created.</strong> Every server uses it within seconds; nothing needs a restart.</div>}
+        <div className="cf-donepanel">
+          {created.length > 0 && <div className="callout callout-ok" role="status"><strong>Created.</strong> Every server uses it within seconds; nothing needs a restart.</div>}
           {done(created)}
         </div>
       </WizardFrame>

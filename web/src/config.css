@@ -174,18 +174,18 @@ select.cf-input { padding: 0 10px; }
 .cf-will { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
 .cf-will-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; overflow-wrap: anywhere; }
 .cf-kindtag { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; font-weight: 700; }
-.cf-code { max-height: 360px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cf-code { max-height: 360px; white-space: pre; overflow: auto; max-width: 100%; }
 .cf-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .cf-copy-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .cf-copy-title { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .cf-problemlist ul { margin: 6px 0 0; padding-left: 20px; }
-.cf-done { display: flex; flex-direction: column; gap: 16px; }
+.cf-donepanel { display: flex; flex-direction: column; gap: 16px; }
 .cf-created { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .cf-next { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 .cf-howto { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--text-2); }
 .cf-instructions { display: flex; flex-direction: column; gap: 10px; }
 .cf-joinwait { display: flex; flex-direction: column; gap: 14px; }
-.cf-waiting { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 12px 14px; border-radius: 8px; border: 1px dashed var(--border-strong); color: var(--text-2); }
+.cf-waiting { display: flex; align-items: flex-start; gap: 6px; padding: 12px 14px; border-radius: 8px; border: 1px dashed var(--border-strong); color: var(--text-2); }
 .cf-waiting-ok { border-style: solid; border-color: var(--ok); background: var(--ok-soft); color: var(--ok-ink); }
 .cf-spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--border-strong); border-top-color: var(--accent); animation: spin 1s linear infinite; margin-right: 4px; }
 @media (prefers-reduced-motion: reduce) { .cf-spinner { animation: none; } }
@@ -208,3 +208,24 @@ select.cf-input { padding: 0 10px; }
 .cf-fold[open] > summary { border-bottom: 1px solid var(--border); }
 .cf-fold > .cf-plain { padding: 14px 16px 16px; }
 .cf-fileprobs { margin: 4px 0 0; padding-left: 18px; font-weight: 400; }
+.cf-subset > legend.cf-label { padding: 0; }
+.cf-waiting .online, .cf-waiting .cf-spinner { flex: none; margin-top: 4px; }
+@media (max-width: 640px) {
+  .cf-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cf-table tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .cf-table td { border: 0; padding: 0; }
+  .cf-table td:first-child { flex-basis: 100%; font-weight: 600; }
+}
+.cf-wizard .callout, .cf-page .callout, .cf-wizard .errorbox, .cf-page .errorbox { overflow-wrap: anywhere; min-width: 0; }
+.cf-stepinner .btn, .cf-savebar .btn { white-space: normal; text-align: center; }
+.cf-copy, .cf-will, .cf-stepinner, .cf-stepbody, .cf-stepcard, .cf-stepcard form { min-width: 0; }
+.cf-checklist { border-left: 4px solid var(--accent); }
+.cf-checklist-done { border-left-color: var(--ok); }
+.cf-checklist summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; }
+.cf-checklist summary .cf-h { margin: 0; }
+.cf-checkitems { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.cf-checkitems li { display: flex; gap: 12px; align-items: flex-start; }
+.cf-checkmark { flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--border-strong); font-size: 12px; font-weight: 700; color: var(--text-2); }
+.cf-check-on .cf-checkmark { background: var(--ok); border-color: var(--ok); color: #fff; }
+.cf-checktext { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-weight: 600; }
+.cf-check-on .cf-checktext > a { color: var(--text-2); }

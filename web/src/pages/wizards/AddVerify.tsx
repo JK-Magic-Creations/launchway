@@ -99,7 +99,7 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
   const [name, setName] = useState("");
   const [model, setModel] = useState("");
   const [endpoint, setEndpoint] = useState("");
-  const [key, setKey] = useState<SecretRef | null>({ store: "vault", key: "ci/models", field: "api_key" });
+  const [key, setKey] = useState<SecretRef | null>(null);
   const [projects, setProjects] = useState<string[]>([]);
   const [maxTokens, setMaxTokens] = useState("");
   const [callsPerRun, setCallsPerRun] = useState("");
@@ -124,7 +124,7 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
       render: (by) => (
         <>
           <p>AI steps ask a model a question (summarise a failure, review a change); Launchway also uses one to explain failed steps. A model here is a name pipelines use, where it is, and who may use it.</p>
-          <Choices legend="Where is the model?" value={provider} onChange={(v) => { setProvider(v as typeof provider); setKey(v === "openai-local" ? null : { store: "vault", key: "ci/models", field: "api_key" }); }} problems={by.provider}
+          <Choices legend="Where is the model?" value={provider} onChange={(v) => { setProvider(v as typeof provider); setKey(null); }} problems={by.provider}
             options={[
               { value: "anthropic", label: "Claude, through the Anthropic API", help: "Hosted models. Needs an API key, kept in a secret store. Prices are known, so each call shows its cost." },
               { value: "openai-hosted", label: "A hosted service with an OpenAI-compatible API", help: "Any service that speaks chat completions. Needs its address and usually a key." },
@@ -135,7 +135,7 @@ export function AddModelWizard({ overview }: { overview: ConfigOverview }) {
     },
     {
       id: "model", title: "The model and its key",
-      fields: [{ path: "name", match: ["name", "names", "exists", "already"], value: name }, { path: "model", value: model }, { path: "endpoint", value: endpoint }, { path: "key", value: key }],
+      fields: [{ path: "name", match: ["name", "names", "exists", "already"], value: name }, { path: "model", value: model }, { path: "endpoint", value: endpoint }, { path: "key", match: ["key is required", "key"], value: key }],
       local: () => !name.trim() ? "Give the model a name for pipelines." : !model.trim() ? "Give the provider's model id." : prov === "openai" && !endpoint.trim() ? "Give the address of the model's API." : null,
       render: (by) => (
         <>

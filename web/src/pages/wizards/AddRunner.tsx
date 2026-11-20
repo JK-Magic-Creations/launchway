@@ -173,9 +173,9 @@ function JoinAndWait({ pool, kind, uses, ttl, labels, place, ephemeral, isNew }:
       {cmds.map((c) => <CopyBlock key={c.title} title={c.title} text={c.text} note={c.note} />)}
       <div className={"cf-waiting" + (runner ? " cf-waiting-ok" : "")} role="status" aria-live="polite">
         {runner ? (
-          <><span className="online online-on" aria-hidden="true" /><strong>Runner connected:</strong> <span className="mono">{runner.name}</span> joined pool {pool}{runner.executor ? `, running steps with ${runner.executor}` : ""}. <Link href="/runners">See it on the Runners page</Link>.</>
+          <><span className="online online-on" aria-hidden="true" /><span><strong>Runner connected:</strong> <span className="mono">{runner.name}</span> joined pool {pool}{runner.executor ? `, running steps with ${runner.executor}` : ""}. <Link href="/runners">See it on the Runners page</Link>.</span></>
         ) : (
-          <><span className="cf-spinner" aria-hidden="true" />Waiting for the runner to connect… This page notices it by itself; it can take a minute after the command starts.</>
+          <><span className="cf-spinner" aria-hidden="true" /><span>Waiting for the runner to connect… This page notices it by itself; it can take a minute after the command starts.</span></>
         )}
       </div>
     </div>

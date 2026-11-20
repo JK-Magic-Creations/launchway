@@ -4,6 +4,7 @@ import { ago } from "../format";
 import { navigate, usePath } from "../router";
 import { ConfigNav, wizardFor } from "../components/ConfigNav";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
+import { levelWords } from "../configKinds";
 import "../config.css";
 
 // ConfigListPage lists the objects of one kind, with where each is defined,
@@ -44,7 +45,7 @@ export function ConfigListPage({ kind }: { kind: string }) {
       <header className="page-head">
         <div>
           <h1>{label}</h1>
-          <p className="sub">{k.doc}</p>
+          <p className="sub">{levelWords(k.doc, overview.levels)}</p>
         </div>
         <div className="cf-head-actions">
           {wiz && <Link href={`/config/wizard/${wiz.id}`} className="btn btn-primary">{wiz.title}</Link>}

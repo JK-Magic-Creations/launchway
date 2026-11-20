@@ -16,6 +16,9 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
   const [unit, setUnit] = useState("");
   const [projects, setProjects] = useState<string[]>([]);
   const [prot, setProt] = useState<"no" | "yes">("no");
+  const [protTouched, setProtTouched] = useState(false);
+  // Production is usually protected: the default follows the name until someone chooses.
+  useEffect(() => { if (!protTouched) setProt(/prod|live/i.test(name) ? "yes" : "no"); }, [name, protTouched]);
   const [queue, setQueue] = useState<"newest" | "all">("newest");
   const [poolChoice, setPoolChoice] = useState<"existing" | "new" | "later">("later");
   const [poolName, setPoolName] = useState("");
@@ -73,9 +76,9 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
       fields: [{ path: "protected" }, { path: "queue" }],
       render: (by) => (
         <>
-          <Choices legend="Is it protected?" value={prot} onChange={(v) => setProt(v as "no" | "yes")} problems={by.protected}
+          <Choices legend="Is it protected?" value={prot} onChange={(v) => { setProt(v as "no" | "yes"); setProtTouched(true); }} problems={by.protected}
             options={[
-              { value: "no", label: "No", help: "Whoever may operate the project may promote or retry its deployments here, including the person who started the run. Usual for test and staging environments." },
+              { value: "no", label: "No", help: `Whoever may operate the ${proj.singular.toLowerCase()} may promote or retry its deployments here, including the person who started the run. Usual for test and staging environments.` },
               { value: "yes", label: "Yes, protected", help: "The person who started a run may not promote or retry its deployment here: someone else with the operator role must. Anyone with the operator role may still abort. The usual choice for production." },
             ]} />
           <Choices legend="When several runs wait to deploy the same service here" value={queue} onChange={(v) => setQueue(v as "newest" | "all")} problems={by.queue}
