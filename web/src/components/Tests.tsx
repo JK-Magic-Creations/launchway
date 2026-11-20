@@ -133,7 +133,108 @@ export function ReportsHowTo({ compact }: { compact?: boolean }) {
     run: pytest --junitxml=reports/unit.xml
     reports:
       tests: reports/*.xml`}</pre>
-      <p className="sub">JUnit XML (pytest, Maven, Gradle, Jest, Vitest, gotestsum and most others) and the output of <span className="mono">go test -json</span> are read; the format is worked out from each file.</p>
+      <p className="sub">The format is worked out from each file. Launchway reads {READ_FORMATS}.</p>
+      {!compact && (
+        <>
+          <p className="sub">Screenshots, videos and traces the tests attach are shown with each result when the step names the directory they are written to:</p>
+          <pre className="code">{`    reports:
+      tests:
+        paths: test-results/results.json
+        attachments: test-results`}</pre>
+        </>
+      )}
     </div>
+  );
+}
+
+const READ_FORMATS = "JUnit XML (pytest, Maven Surefire and Failsafe, Gradle, Jest, Vitest, PHPUnit, RSpec, Mocha, Playwright, Cypress), " +
+  "go test -json, Cucumber JSON (Karate, cucumber-js, Cucumber-JVM), Karate JSON, Playwright JSON, mochawesome (Cypress), CTRF, " +
+  "TestNG, NUnit 3, xUnit.net v2, .NET TRX, TAP and Robot Framework output.xml";
+
+const FORMAT_LABEL: Record<string, string> = {
+  "junit": "JUnit XML", "go-test-json": "go test -json", "cucumber-json": "Cucumber JSON", "karate-json": "Karate JSON",
+  "playwright-json": "Playwright JSON", "mochawesome": "mochawesome", "ctrf": "CTRF", "testng": "TestNG XML",
+  "nunit3": "NUnit 3 XML", "xunit2": "xUnit.net v2 XML", "trx": ".NET TRX", "tap": "TAP", "robot": "Robot Framework XML",
+};
+
+/** The name of a test report format, as people know it. */
+export function formatLabel(f?: string): string {
+  if (!f) return "JUnit XML";
+  return FORMAT_LABEL[f] ?? f;
+}
+
+/** Tags of a test, as small pills. */
+export function TagPills({ tags, max = 4 }: { tags?: string[]; max?: number }) {
+  if (!tags?.length) return null;
+  const shown = tags.slice(0, max);
+  return (
+    <span className="ttags">
+      <span className="visually-hidden">Tags: </span>
+      {shown.map((t) => <span key={t} className="ttag">{t.replace(/^@/, "")}</span>)}
+      {tags.length > max && <span className="ttag ttag-more" title={tags.slice(max).join(", ")}>+{tags.length - max}</span>}
+    </span>
+  );
+}
+
+const BROWSERS = ["chromium", "chrome", "firefox", "webkit", "safari", "edge", "msedge", "mobile", "android", "ios"];
+
+/** Whether a variant names a browser or device. */
+export function isBrowser(v: string): boolean {
+  const l = v.toLowerCase();
+  return BROWSERS.some((b) => l.includes(b));
+}
+
+/** What a test ran against: a browser gets a window icon, anything else a layers icon. */
+export function VariantPill({ variant }: { variant?: string }) {
+  if (!variant) return null;
+  return (
+    <span className="tvariant" title={isBrowser(variant) ? `Browser: ${variant}` : `Variant: ${variant}`}>
+      {isBrowser(variant) ? <BrowserIcon /> : <LayersIcon />}
+      <span className="visually-hidden">{isBrowser(variant) ? "Browser " : "Variant "}</span>
+      {variant}
+    </span>
+  );
+}
+
+export function BrowserIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className="ic-line">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="2" /><path d="M1.5 5.5h13" /><circle cx="3.6" cy="4" r=".4" /><circle cx="5.2" cy="4" r=".4" />
+    </svg>
+  );
+}
+
+export function LayersIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true" className="ic-line">
+      <path d="M8 2l6 3-6 3-6-3z" strokeLinejoin="round" /><path d="M2 8.2l6 3 6-3M2 11.2l6 3 6-3" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** A line of values as a small chart, oldest on the left; the last point is marked. */
+export function Sparkline({ values, width = 160, height = 36, label, format }: {
+  values: number[]; width?: number; height?: number; label: string; format: (v: number) => string;
+}) {
+  if (values.length < 2) return null;
+  const max = Math.max(...values, 1);
+  const min = 0;
+  const pad = 3;
+  const x = (i: number) => pad + (i * (width - pad * 2)) / (values.length - 1);
+  const y = (v: number) => height - pad - ((v - min) / (max - min || 1)) * (height - pad * 2);
+  const d = values.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const area = `${d}L${x(values.length - 1).toFixed(1)},${height - pad}L${x(0).toFixed(1)},${height - pad}Z`;
+  const last = values[values.length - 1];
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  return (
+    <span className="spark">
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img"
+        aria-label={`${label}: the last ${values.length}, oldest first, from ${format(values[0])} to ${format(last)}; at most ${format(max)}, ${format(avg)} on average`}>
+        <path d={area} className="spark-area" />
+        <path d={d} className="spark-line" />
+        <circle cx={x(values.length - 1)} cy={y(last)} r="3" className="spark-dot" />
+      </svg>
+      <span className="spark-text"><strong>{format(last)}</strong> <span className="faint">last · {format(max)} max</span></span>
+    </span>
   );
 }

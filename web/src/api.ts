@@ -57,8 +57,13 @@ export interface TestTotals {
   truncated?: boolean;
 }
 
+/** The format a test report file was read as. A newer server may name others. */
+export type TestFormat =
+  | "junit" | "go-test-json" | "cucumber-json" | "karate-json" | "playwright-json" | "mochawesome" | "ctrf"
+  | "testng" | "nunit3" | "xunit2" | "trx" | "tap" | "robot";
+
 export interface TestFile {
-  path: string; format?: "junit" | "go-test-json"; bytes: number; cases: number; error?: string; warning?: string;
+  path: string; format?: TestFormat | string; bytes: number; cases: number; error?: string; warning?: string;
 }
 
 export interface StepTests extends TestTotals {
@@ -91,13 +96,157 @@ export interface TestCase {
   message?: string; has_details: boolean; report_file?: string;
   flaky?: boolean; new_failure?: boolean;
   details?: string; output?: string;
+  /** Tags or labels the report gives the test (@smoke, a JUnit property, a Playwright tag). */
+  tags?: string[];
+  /** What the test ran against: a Playwright project or browser, a matrix entry. */
+  variant?: string;
+  /** In a list: the result has steps or other structure to show when opened. */
+  has_steps?: boolean;
+  // Only in one result fetched on its own:
+  /** How many times the test tool ran the test again. */
+  retries?: number;
+  /** Earlier tries inside the test tool, oldest first; the result is the last. */
+  attempts?: TestAttempt[];
+  steps?: TestStep[];
+  /** Not every step was kept. */
+  steps_cut?: boolean;
+  attachments?: TestAttachment[];
+  properties?: { name: string; value: string }[];
 }
+
+export interface TestAttempt { status: TestStatus; duration_ms: number; message?: string }
+
+export interface TestHeader { name: string; value: string }
+
+/** An HTTP request a step made and its answer (Karate and other API test tools). */
+export interface HTTPExchange {
+  method: string; url: string; status?: number; duration_ms?: number;
+  request_headers?: TestHeader[]; request_body?: string;
+  response_headers?: TestHeader[]; response_body?: string;
+}
+
+/** One step of a test: a Gherkin step, a Playwright step, a Robot keyword. */
+export interface TestStep {
+  /** 0 for a top-level step. */
+  depth?: number;
+  /** Given, When, Then, And, *; a Robot keyword's library. */
+  keyword?: string;
+  name: string; status: TestStatus; duration_ms?: number;
+  error?: string;
+  /** A doc string, data table or log the step wrote. */
+  text?: string;
+  http?: HTTPExchange;
+  /** Indexes into the result's attachments. */
+  attachments?: number[];
+}
+
+export type AttachmentKind = "image" | "video" | "trace" | "text" | "html" | "file";
+
+export interface TestAttachment {
+  name: string; kind: AttachmentKind | string; content_type?: string; size?: number;
+  artifact?: string; path?: string;
+  /** Why it cannot be shown or fetched. */
+  problem?: string;
+}
+
+export interface Facet { value: string; count: number }
 
 export interface CasePage {
   cases: TestCase[]; matching: number; counts: Record<string, number>; offset: number; limit: number;
+  tags?: Facet[]; variants?: Facet[]; suites?: Facet[];
 }
 
-export interface CaseQuery { status?: string; q?: string; step?: string; attempt?: number; limit?: number; offset?: number }
+export type CaseSort = "" | "failures" | "slowest" | "name";
+
+export interface CaseQuery {
+  status?: string; q?: string; step?: string; attempt?: number; limit?: number; offset?: number;
+  tag?: string; suite?: string; variant?: string; sort?: CaseSort;
+}
+
+/** A test whose result differs from, or matches a failure of, the previous run. */
+export interface CompareCase {
+  key: string; id: number; suite: string; name: string; variant?: string;
+  status: TestStatus; before: TestStatus | ""; message?: string; duration_ms: number;
+}
+
+export interface TestCompare {
+  previous?: { id: string; number: number };
+  new_failures: CompareCase[]; fixed: CompareCase[]; still_failing: CompareCase[];
+  counts: { new_failures: number; fixed: number; still_failing: number };
+}
+
+// ---- coverage ----
+
+/** Covered items of one kind; a total of 0 means it was not measured. */
+export interface CoverageCounter { covered: number; total: number }
+
+export interface CoverageTotals {
+  lines: CoverageCounter; branches: CoverageCounter; functions: CoverageCounter;
+  /** What lines counts: "lines", or "statements" (Go). */
+  unit?: string;
+}
+
+export interface CoverageReportFile { path: string; format?: string; bytes: number; files: number; error?: string; warning?: string }
+
+export interface CoverageThreshold { lines?: number; branches?: number; functions?: number }
+
+export interface CoverageStep extends CoverageTotals {
+  step: string; attempt: number; reused_from?: string; reused_from_number?: number;
+  source_files: number; stored: number; pruned?: boolean;
+  reports: CoverageReportFile[]; notes?: string[];
+  /** Why the step failed its fail_under. */
+  failed_under?: string;
+  threshold?: CoverageThreshold;
+}
+
+export interface CoverageCompare { run: { id: string; number: number }; ref: string; totals: CoverageTotals }
+
+export interface RunCoverage {
+  totals: CoverageTotals | null;
+  steps: CoverageStep[];
+  declared: string[];
+  previous?: CoverageCompare;
+  base?: CoverageCompare;
+}
+
+export interface CoverageFileRow {
+  step: string; path: string; package?: string;
+  lines: CoverageCounter; branches: CoverageCounter; functions: CoverageCounter;
+  /** Points of line coverage against the previous run; absent when not known. */
+  change?: number | null;
+}
+
+export interface CoveragePackage {
+  package: string; files: number; lines: CoverageCounter; branches: CoverageCounter; functions: CoverageCounter;
+}
+
+export interface CoverageFiles {
+  files: CoverageFileRow[]; packages: CoveragePackage[]; matching: number; offset: number; limit: number;
+}
+
+export type CoverageSort = "path" | "lines" | "missed";
+
+export interface CoverageTrend {
+  ref: string;
+  runs: { id: string; number: number; sha: string; created_at: number; totals: CoverageTotals }[];
+}
+
+// ---- hosted HTML reports ----
+
+export interface HostedReport {
+  step: string; attempt: number; name: string; artifact: string; index: string;
+  files: number; bytes: number; has_index: boolean; expires_at?: number;
+  /** Opens the report: a signed link that works for a few hours. */
+  url?: string;
+  base: string;
+}
+
+export interface RunReports {
+  reports: HostedReport[];
+  /** Reports the pipeline declares, as step/name. */
+  declared: string[];
+  origin: "sandboxed" | "separate";
+}
 
 export interface HistoryResult {
   run_id: string; number: number; sha: string; ref: string; created_at: number; step: string; attempt: number;
@@ -107,7 +256,7 @@ export interface HistoryResult {
 export interface TestHistory { key: string; suite: string; name: string; file?: string; ref: string; results: HistoryResult[] }
 
 export interface TestStat {
-  key: string; suite: string; name: string; file?: string; runs: number;
+  key: string; suite: string; name: string; file?: string; variant?: string; runs: number;
   avg_ms?: number; max_ms?: number; failures?: number; last_failed?: number;
   commits?: number; tool_retry?: boolean; last_seen?: number;
 }
@@ -415,13 +564,22 @@ export interface GraphStep {
   group?: string;
   library?: string;
   needs_groups?: string[];
-  reports?: { tests: string[] };
+  reports?: GraphReports;
   /** A rollout, rollback or linked approval step: the deploy step it is about. */
   deployment?: string;
   /** A rollout step: what it does to the rollout. */
   action?: RolloutAction;
   /** An image step: the container image it builds. */
   image_build?: ImageBuild;
+}
+
+/** What a step reports, as its pipeline declares it. */
+export interface GraphReports {
+  tests?: string[] | null;
+  test_attachments?: string;
+  coverage?: string[] | null;
+  coverage_fail_under?: CoverageThreshold;
+  html?: { name: string; path: string; index?: string }[] | null;
 }
 
 /** A library a pipeline uses, and the commit its version resolved to when the run was created. */
@@ -723,6 +881,20 @@ export const api = {
     return call<CasePage>("GET", `/api/v1/runs/${id}/tests/cases?` + p.toString(), undefined, { background });
   },
   testCase: (id: string, caseId: number) => call<TestCase>("GET", `/api/v1/runs/${id}/tests/cases/${caseId}`),
+  testCompare: (id: string, background = false) => call<TestCompare>("GET", `/api/v1/runs/${id}/tests/compare`, undefined, { background }),
+  runCoverage: (id: string, background = false) => call<RunCoverage>("GET", `/api/v1/runs/${id}/coverage`, undefined, { background }),
+  coverageFiles: (id: string, q: { step?: string; q?: string; sort?: CoverageSort; limit?: number; offset?: number }, background = false) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<CoverageFiles>("GET", `/api/v1/runs/${id}/coverage/files?` + p.toString(), undefined, { background });
+  },
+  projectCoverage: (name: string, ref?: string, runs?: number) => {
+    const p = new URLSearchParams();
+    if (ref) p.set("ref", ref);
+    if (runs) p.set("runs", String(runs));
+    return call<CoverageTrend>("GET", `/api/v1/projects/${encodeURIComponent(name)}/coverage?` + p.toString());
+  },
+  runReports: (id: string, background = false) => call<RunReports>("GET", `/api/v1/runs/${id}/reports`, undefined, { background }),
   projectTests: (name: string, ref?: string, runs?: number) => {
     const p = new URLSearchParams();
     if (ref) p.set("ref", ref);
@@ -1028,3 +1200,8 @@ export interface ImageHit {
 }
 
 export interface ImageQuery { digest?: string; repository?: string; tag?: string; project?: string; limit?: number }
+
+/** Where one attachment of a test result is served; download asks for a file. */
+export function attachmentURL(run: string, caseId: number, n: number, download = false): string {
+  return `/api/v1/runs/${run}/tests/cases/${caseId}/attachments/${n}${download ? "?download=1" : ""}`;
+}
