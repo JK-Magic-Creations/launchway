@@ -54,6 +54,9 @@ type Server struct {
 	StreamPing time.Duration
 	// TokenMaxDays is the longest an API token may last; 0 is 365 days.
 	TokenMaxDays int
+	// WaiveRole is the role needed to waive a policy's rule
+	// (policy.waivers.allow); nil means admin, NoRole nobody.
+	WaiveRole *auth.Role
 
 	sealerMu sync.Mutex
 	sealer   *auth.Sealer // seals the state of sign-ins in progress
@@ -193,6 +196,14 @@ func (s *Server) routes() []route {
 		// Images (schema 15).
 		{"GET /api/v1/runs/{id}/images", runRead, "", s.runImages},
 		{"GET /api/v1/images", signedIn, "", s.searchImages},
+
+		// Policies and waivers (schema 16). Waiving needs the role
+		// policy.waivers.allow names, which the handlers check.
+		{"GET /api/v1/policies", readAny, "", s.listPolicies},
+		{"GET /api/v1/runs/{id}/policy", runRead, "", s.runPolicy},
+		{"GET /api/v1/waivers", signedIn, "", s.listWaivers},
+		{"POST /api/v1/projects/{name}/waivers", projectRead, "policy.waive", s.grantWaiver},
+		{"POST /api/v1/projects/{name}/waivers/{waiver}/revoke", projectRead, "policy.revoke_waiver", s.revokeWaiver},
 	}
 }
 

@@ -168,7 +168,7 @@ owns may not appear in it.
 */}}
 {{- define "launchway.serverConfig" -}}
 {{- $extra := deepCopy (.Values.config.extraConfig | default dict) -}}
-{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "loops" "schedules" -}}
+{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "loops" "schedules" "policy" -}}
 {{- if hasKey $extra $key -}}
 {{- if eq $key "database" -}}
 {{- fail "config.extraConfig.database is not allowed: the database URL must not be in the ConfigMap. Use database.existingSecret or database.url." -}}
@@ -224,6 +224,7 @@ owns may not appear in it.
 {{- with .Values.config.loops }}{{ if .maxMembers }}{{ $_ := set $config "loops" (dict "max_members" (int64 .maxMembers)) }}{{ end }}{{ end -}}
 {{- with .Values.config.schedules }}{{ if not (kindIs "invalid" .enabled) }}{{ $_ := set $config "schedules" (dict "enabled" .enabled) }}{{ end }}{{ end -}}
 {{- with .Values.config.tokens }}{{ if .maxDays }}{{ $_ := set $config "auth" (dict "tokens" (dict "max_days" (int64 .maxDays))) }}{{ end }}{{ end -}}
+{{- with include "launchway.policyConfig" . | fromYaml }}{{ if . }}{{ $_ := set $config "policy" . }}{{ end }}{{ end -}}
 {{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
@@ -347,4 +348,31 @@ affinity:
             matchLabels:
               {{- include "launchway.componentSelectorLabels" (list $ $component) | nindent 14 }}
 {{- end }}
+{{- end -}}
+
+{{/* Delivery policies (schema 16), or nothing when none is set: a server of the version before
+does not know the setting. */}}
+{{- define "launchway.policyConfig" -}}
+{{- $p := .Values.config.policy | default dict -}}
+{{- $out := dict -}}
+{{- with $p.waivers -}}
+{{- $w := dict -}}
+{{- if .allow }}{{ $_ := set $w "allow" (toString .allow) }}{{ end -}}
+{{- if .maxDays }}{{ $_ := set $w "max_days" (int64 .maxDays) }}{{ end -}}
+{{- if $w }}{{ $_ := set $out "waivers" $w }}{{ end -}}
+{{- end -}}
+{{- if $p.sources -}}
+{{- $sources := list -}}
+{{- range $p.sources -}}
+{{- $s := dict "name" .name "library" .library "version" (toString .version) -}}
+{{- if .path }}{{ $_ := set $s "path" .path }}{{ end -}}
+{{- if .projects }}{{ $_ := set $s "projects" .projects }}{{ end -}}
+{{- if .refresh }}{{ $_ := set $s "refresh" (toString .refresh) }}{{ end -}}
+{{- if .staleAfter }}{{ $_ := set $s "stale_after" (toString .staleAfter) }}{{ end -}}
+{{- $sources = append $sources $s -}}
+{{- end -}}
+{{- $_ := set $out "sources" $sources -}}
+{{- end -}}
+{{- if $p.policies }}{{ $_ := set $out "policies" $p.policies }}{{ end -}}
+{{- if $out }}{{ toYaml $out }}{{ end -}}
 {{- end -}}

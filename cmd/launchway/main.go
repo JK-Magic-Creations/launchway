@@ -163,8 +163,13 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
+	policyOpts, err := cfg.PolicyOptions() // checked when the file was read
+	if err != nil {
+		return err
+	}
+	waiveRole, _ := cfg.WaiverRole()
 	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
-		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits})
+		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits, Policy: policyOpts})
 	if err != nil {
 		return err
 	}
@@ -194,7 +199,7 @@ func cmdServer(args []string) error {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
-		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log}
+		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, WaiveRole: &waiveRole}
 	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
 	for _, p := range pools {
 		srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets})
@@ -223,6 +228,7 @@ func cmdServer(args []string) error {
 		}
 	}()
 	mgr.Start(ctx)
+	mgr.WatchPolicySources(ctx)
 
 	url := "http://" + loopback(ln.Addr().String())
 	runnerCtx, stopRunner := context.WithCancel(context.Background())

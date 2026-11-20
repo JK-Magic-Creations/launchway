@@ -685,7 +685,10 @@ type WaiverRequest struct {
 	Finding     string `json:"finding,omitempty"`
 	Reason      string `json:"reason"`
 	ExpiresAt   int64  `json:"expires_at"` // Unix ms
-	Actor       string `json:"-"`
+	// ExpiresIn, if set, is used instead of ExpiresAt: from now, as this
+	// server's clock says.
+	ExpiresIn time.Duration `json:"-"`
+	Actor     string        `json:"-"`
 }
 
 // WaiverView is a waiver as the API shows it.
@@ -711,6 +714,9 @@ func (e *Engine) GrantWaiver(rq WaiverRequest) (*WaiverView, error) {
 		return nil, fmt.Errorf("%w: this server does not know policies (schema %d)", ErrConflict, schemaPolicy)
 	}
 	now := e.now().UnixMilli()
+	if rq.ExpiresIn > 0 {
+		rq.ExpiresAt = now + rq.ExpiresIn.Milliseconds()
+	}
 	rq.Reason = strings.TrimSpace(rq.Reason)
 	switch {
 	case rq.Project == "":
