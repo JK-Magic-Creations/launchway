@@ -101,6 +101,28 @@ func refusal(c *accept.Config, job *engine.Job, executorName string, remote bool
 	return ""
 }
 
+// verifyRefusal says why a deploy runner will not read a verification, or
+// "" if it will: the server's IDs are its own, and the project, event and
+// environment are ones its accept: section allows. It is checked before
+// the runner asks any health source anything.
+func verifyRefusal(c *accept.Config, job *engine.Job) string {
+	for _, id := range []string{job.RunID, job.LeaseID} {
+		if !serverID.MatchString(id) {
+			return fmt.Sprintf("the server sent an ID that is not one of its own (%q); it is not used as a path", clipID(id))
+		}
+	}
+	if job.Verify == nil {
+		return "the server sent a verification without saying what to verify"
+	}
+	if why := c.Project(job.Project); why != "" {
+		return why
+	}
+	if why := c.Event(job.Event); why != "" {
+		return why
+	}
+	return c.Environment(job.Verify.Environment)
+}
+
 func clipID(s string) string {
 	if len(s) > 40 {
 		return s[:40] + "…"

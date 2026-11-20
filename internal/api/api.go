@@ -449,7 +449,7 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 		Runner      engine.RunnerInfo `json:"runner"`
 		WaitSeconds int               `json:"wait_seconds"`
 	}
-	if !decode(w, r, &in) || s.refusePools(w, r) {
+	if !decode(w, r, &in) || s.refusePools(w, r) || s.claimsEnrolled(w, r, in.Runner) {
 		return
 	}
 	info := s.callerInfo(r, in.Runner)
@@ -598,7 +598,10 @@ func (s *Server) leave(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		in.RunnerID = id.ID
-	} else if s.Engine.IsEnrolled(in.RunnerID) {
+	} else if enrolled, err := s.Engine.IsEnrolled(in.RunnerID); err != nil {
+		s.fail(w, err)
+		return
+	} else if enrolled {
 		writeErr(w, http.StatusForbidden, "runner "+in.RunnerID+" is enrolled; only it may say it leaves")
 		return
 	}
@@ -1096,6 +1099,24 @@ func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.fail(w, err)
 		return
+	}
+	// Anyone who can read one project may list the runners, but what a
+	// runner holds names other projects' runs and steps, and who enrolled
+	// it and with which join token, and which projects it accepts, is for those
+	// who manage runners.
+	id := identityFrom(r)
+	if !s.mayManageRunners(id) {
+		for i := range rs {
+			rs[i].Identity = nil
+			rs[i].Accept = nil
+			work := []engine.RunnerWork{}
+			for _, wk := range rs[i].Work {
+				if s.authorize(id, auth.Read, wk.Project) {
+					work = append(work, wk)
+				}
+			}
+			rs[i].Work = work
+		}
 	}
 	writeJSON(w, http.StatusOK, rs)
 }

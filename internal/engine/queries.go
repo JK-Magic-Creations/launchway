@@ -575,6 +575,11 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	if d.PoolHint, err = e.poolHint(st, d.StepList); err != nil {
 		return nil, err
 	}
+	if d.PoolHint == "" {
+		if d.PoolHint, err = e.verifyHint(st); err != nil {
+			return nil, err
+		}
+	}
 	d.Policy = policySummary(st)
 	return d, nil
 }

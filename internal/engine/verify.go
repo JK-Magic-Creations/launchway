@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -692,6 +693,9 @@ func (e *Engine) tryLeaseVerify(r RunnerInfo, targets []string) (*Job, error) {
 				c.st.CancelRequested || s.Ver == nil || !slices.Contains(targets, s.Ver.Target) {
 				return nil
 			}
+			if r.refusesVerify(c.st.Project, s.Ver.Environment, c.st.Trigger.Event) != "" {
+				return nil // its accept: section does not allow it; another runner may take it
+			}
 			leaseID := ids.New("lease")
 			if _, err := c.tx.Exec(`INSERT INTO leases(id, run_id, step_id, attempt, runner, expires_at) VALUES(?,?,?,?,?,?)`,
 				leaseID, cd.run, cd.step, s.Attempt, r.ID, c.leaseUntil()); err != nil {
@@ -712,6 +716,81 @@ func (e *Engine) tryLeaseVerify(r RunnerInfo, targets []string) (*Job, error) {
 		}
 	}
 	return nil, nil
+}
+
+// verifyHint says why a run's queued verifications may wait for a long time:
+// every deploy runner seen lately limits what it takes (its accept: section)
+// and none allows them. "" if some runner may take one, no deploy runner
+// has been seen (nothing to say about accept: then), or nothing waits.
+func (e *Engine) verifyHint(st *RunState) (string, error) {
+	if !e.knows(schemaPools) || st.Status.Terminal() || st.Pipeline == nil {
+		return "", nil
+	}
+	type want struct{ step, env string }
+	var waiting []want
+	for id, s := range st.Steps {
+		if s != nil && s.Status == StepQueuedS && s.Ver != nil {
+			if def := st.Pipeline.Step(id); def != nil && def.IsVerify() {
+				waiting = append(waiting, want{id, s.Ver.Environment})
+			}
+		}
+	}
+	if len(waiting) == 0 {
+		return "", nil
+	}
+	sort.Slice(waiting, func(i, j int) bool { return waiting[i].step < waiting[j].step })
+	rows, err := e.db.Query(`SELECT id, pool, kind, accept FROM runners WHERE last_seen >= ?`, e.now().Add(-RunnerOffline).UnixMilli())
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	reasons := map[string]int{}
+	seen := 0
+	for rows.Next() {
+		var id, pool, kind, acc string
+		if err := rows.Scan(&id, &pool, &kind, &acc); err != nil {
+			return "", err
+		}
+		if !(kind == PoolDeploy || (kind == "" && pool != "")) {
+			continue // a build runner
+		}
+		seen++
+		r := RunnerInfo{ID: id, Accept: decodeAccept(acc)}
+		for _, w := range waiting {
+			why := r.refusesVerify(st.Project, w.env, st.Trigger.Event)
+			if why == "" {
+				return "", nil
+			}
+			reasons[why]++
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if seen == 0 {
+		return "", nil
+	}
+	why := make([]string, 0, len(reasons))
+	for k := range reasons {
+		why = append(why, k)
+	}
+	sort.Strings(why)
+	return fmt.Sprintf("Its verification waits for a deploy runner, and none of the %d seen in the last %d minutes accepts it: %s.",
+		seen, int(RunnerOffline.Minutes()), strings.Join(why, "; ")), nil
+}
+
+// refusesVerify says why runner r, by what its accept: section says it
+// allows, may not read a verification of project in environment of a run
+// started by event, or "" if it may. (The runner checks it too, and
+// refuses what it does not allow.)
+func (r RunnerInfo) refusesVerify(project, environment, event string) string {
+	if why := r.Accept.Project(project); why != "" {
+		return why
+	}
+	if why := r.Accept.Event(event); why != "" {
+		return why
+	}
+	return r.Accept.Environment(environment)
 }
 
 // verifyJob builds a deploy runner's job for a leased verify step.
@@ -740,7 +819,7 @@ func (c *cmd) verifyJob(stepID, leaseID string) *Job {
 	}
 	trig := st.Trigger
 	return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
-		Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Timeout: def.Timeout, Source: st.Source, Verify: vj}
+		Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Event: trig.Event, Timeout: def.Timeout, Source: st.Source, Verify: vj}
 }
 
 // VerifyInterval records what a deploy runner read in one interval of the
@@ -875,6 +954,11 @@ func (c *cmd) finishVerify(stepID string, s *StepState, def *pipeline.Step, leas
 		return
 	case s.Ver == nil:
 		c.failStep(stepID, "the verification was never started")
+		return
+	case res.Outcome == OutcomeRefused:
+		// The runner's accept: section does not allow it. It read nothing;
+		// another try would be refused the same way.
+		c.failStep(stepID, "the runner refused the step: "+nonEmpty(res.Error, "its accept: section does not allow it"))
 		return
 	}
 	v := s.Ver.verdict()

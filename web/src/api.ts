@@ -827,8 +827,9 @@ export interface Runner {
   os?: string; arch?: string;
   /** What its accept: section allows, as the runner reported it. */
   accept?: RunnerAccept;
+  /** The enrolled runner's details; only for those who manage runners. */
   identity?: RunnerIdentity;
-  /** The steps it holds now. */
+  /** The steps it holds now, of the projects the viewer may read. */
   work?: { run: string; project: string; number: number; step: string }[];
 }
 
