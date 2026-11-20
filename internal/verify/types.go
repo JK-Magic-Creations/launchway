@@ -35,10 +35,10 @@ const (
 
 // Log cluster classes.
 const (
-	Known                = "known"                // seen in the reference (baseline or stable) at a similar rate
-	Unknown              = "unknown"              // not seen in the reference: new
-	UnexpectedFrequency  = "unexpected_frequency" // seen in the reference, but much more often now
-	NoReference          = "no_reference"         // there is no reference to compare with
+	Known               = "known"                // seen in the reference (baseline or stable) at a similar rate
+	Unknown             = "unknown"              // not seen in the reference: new
+	UnexpectedFrequency = "unexpected_frequency" // seen in the reference, but much more often now
+	NoReference         = "no_reference"         // there is no reference to compare with
 )
 
 // Spec is what a verification judges: the resolved form of a verify step,
@@ -141,10 +141,10 @@ type MetricData struct {
 // LogData is one log query's clusters in one interval.
 type LogData struct {
 	Name      string    `json:"name"`
-	Lines     int       `json:"lines"`                // lines read
-	Truncated bool      `json:"truncated,omitempty"`  // the source had more than the limit
-	Clusters  []Cluster `json:"clusters,omitempty"`   // the new version's
-	Stable    []Cluster `json:"stable,omitempty"`     // the stable version's, with a stable query
+	Lines     int       `json:"lines"`               // lines read
+	Truncated bool      `json:"truncated,omitempty"` // the source had more than the limit
+	Clusters  []Cluster `json:"clusters,omitempty"`  // the new version's
+	Stable    []Cluster `json:"stable,omitempty"`    // the stable version's, with a stable query
 	StableN   int       `json:"stable_lines,omitempty"`
 	Error     string    `json:"error,omitempty"`
 }
