@@ -28,6 +28,9 @@ func (b Base) Maturity() Maturity {
 	return b.Mat
 }
 
+// ProposalRefs returns the zero layout: no proposal refs.
+func (b Base) ProposalRefs() RefLayout { return RefLayout{} }
+
 func (b Base) Identity() Identity         { return unIdentity{b.Caps} }
 func (b Base) Repositories() Repositories { return unRepositories{b.Caps} }
 func (b Base) Content() Content           { return unContent{b.Caps} }

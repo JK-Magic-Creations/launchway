@@ -42,6 +42,9 @@ type Provider interface {
 	// Maturity is the label the provider carries until it has passed the
 	// conformance suite against a live service.
 	Maturity() Maturity
+	// ProposalRefs says where proposal heads are published as refs; the zero
+	// layout means the forge publishes none.
+	ProposalRefs() RefLayout
 
 	Identity() Identity
 	Repositories() Repositories

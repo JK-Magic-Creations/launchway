@@ -20,7 +20,7 @@ var modelTypes = []any{
 	Connection{}, SecretRef{}, Repository{}, CloneAddresses{}, Ref{}, Result{}, Details{}, TestCounts{},
 	Principal{}, Mergeability{}, Proposal{}, Revision{}, Review{}, Thread{}, Message{}, Commit{}, TreeEntry{},
 	Comparison{}, RefRule{}, Event{}, Whoami{}, NewRepository{}, NewProposal{}, ProposalPatch{}, Credential{},
-	Declaration{}, ErrUnsupported{}, Page[Repository]{},
+	Declaration{}, ErrUnsupported{}, Page[Repository]{}, RefLayout{},
 }
 
 // properties lists every JSON property name and Go field name reachable from
@@ -409,5 +409,34 @@ func TestCredentialSecretIsNeverSerialised(t *testing.T) {
 	data, _ := json.Marshal(Credential{Username: "u", Secret: "do-not-print"})
 	if strings.Contains(string(data), "do-not-print") {
 		t.Fatal("a credential secret was serialised")
+	}
+}
+
+func TestRefLayout(t *testing.T) {
+	l := PullRefLayout
+	if l.Ref(12) != "refs/pull/12/head" {
+		t.Error(l.Ref(12))
+	}
+	if n, ok := l.Parse("refs/pull/12/head"); !ok || n != 12 {
+		t.Error("parse")
+	}
+	for _, bad := range []string{"refs/pull/12/merge", "refs/pull/0/head", "refs/pull/012/head", "refs/pull/x/head", "refs/pull//head", "refs/heads/main", "refs/pull/-1/head", "refs/pull/12/head/x"} {
+		if _, ok := l.Parse(bad); ok {
+			t.Errorf("%q parsed", bad)
+		}
+	}
+	gl := RefLayout{Prefix: "refs/merge-requests", Suffix: "/head"}
+	if n, ok := gl.Parse(gl.Ref(7)); !ok || n != 7 {
+		t.Error("other layout")
+	}
+	if _, ok := gl.Parse("refs/pull/7/head"); ok {
+		t.Error("layouts must not cross")
+	}
+	var none RefLayout
+	if !none.IsZero() || (NewFake(KindPlain, NoCapabilities("r", "w")).ProposalRefs() != none) {
+		t.Error("zero layout")
+	}
+	if _, ok := none.Parse("refs/pull/1/head"); ok {
+		t.Error("the zero layout parsed a ref")
 	}
 }
