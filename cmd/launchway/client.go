@@ -46,6 +46,9 @@ const clientUsage = `Usage:
   launchway runs show <run-id> [--json]
   launchway runs logs <run-id> [--step S] [--follow]
   launchway runs cancel <run-id>
+  launchway runs tests <run-id> [--all | --status S] [--tag T] [--json]   failures first, with messages
+  launchway runs coverage <run-id> [--files] [--json]
+  launchway runs reports <run-id> [--json]                links to its HTML reports
 
 LAUNCHWAY_SERVER and LAUNCHWAY_TOKEN, if set, are used instead of what login
 stored. Exit codes: 0 success; 1 the run failed; 2 usage; 3 the run was
@@ -327,6 +330,12 @@ func cmdRuns(args []string) error {
 			return cl.show(args[1:])
 		case "logs":
 			return cl.logs(args[1:])
+		case "tests":
+			return cl.tests(args[1:])
+		case "coverage":
+			return cl.coverage(args[1:])
+		case "reports":
+			return cl.reports(args[1:])
 		case "cancel":
 			return cl.cancel(args[1:])
 		}

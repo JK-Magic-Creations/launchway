@@ -150,6 +150,11 @@ type Payload struct {
 	// built, pushed and signed. Older servers never read it: runs with image
 	// steps have min_schema 15.
 	Image *ImageRecord `json:"image,omitempty"`
+	// step.finished and step.canceled (schema 18): what the attempt's
+	// coverage reports said, in brief; each file's counts are in
+	// coverage_files. Older servers never read it: runs whose pipeline
+	// declares coverage have min_schema 18.
+	Coverage *CoverageSummary `json:"coverage,omitempty"`
 	// deploy.* events, and step.queued of a deploy or rollback step (schema
 	// 11): the deployment and what happened to it. Never a credential.
 	Deploy *DeployEvent `json:"deploy,omitempty"`

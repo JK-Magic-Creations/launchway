@@ -37,7 +37,8 @@ func (c *cmd) s12() *schema12Data {
 // artifacts.
 func needsArtifacts(def *pipeline.Step) bool {
 	return def != nil && (len(def.Artifacts) > 0 || len(def.Fetch) > 0 ||
-		(def.Reports != nil && (len(def.Reports.Findings) > 0 || len(def.Reports.SBOM) > 0)))
+		(def.Reports != nil && (len(def.Reports.Findings) > 0 || len(def.Reports.SBOM) > 0 ||
+			def.Reports.TestAttachments != "" || len(def.Reports.HTML) > 0)))
 }
 
 // runnerCan reports whether a runner can run a step: whether it knows
@@ -48,6 +49,9 @@ func (c *cmd) runnerCan(r RunnerInfo, stepID string) bool {
 		// A run's steps share one runner's workspace, and an image step
 		// builds from it: a run with image steps runs, from its first step,
 		// on a runner that can build them.
+		return false
+	}
+	if c.e.knows(schemaReports) && needsCoverage(def) && !r.Has(FeatureCoverage) {
 		return false
 	}
 	if !c.e.knows(schemaArtifacts) || !needsArtifacts(def) {
@@ -113,7 +117,7 @@ func (c *cmd) finish12(l leaseRef, res Result, p *Payload, prep *prepared12) err
 			return err
 		}
 	}
-	if len(def.Artifacts) > 0 || (def.Reports != nil && len(def.Reports.SBOM) > 0) {
+	if c.keepsArtifacts(def) {
 		list, err := attemptArtifacts(c.tx, l.runID, l.stepID, l.attempt)
 		if err != nil {
 			return err
@@ -152,7 +156,7 @@ func (c *cmd) persistSchema12() error {
 				}
 			}
 			def := st.Pipeline.Step(p.Step)
-			if !needsArtifacts(def) || p.Attempt == 0 {
+			if !c.keepsArtifacts(def) || p.Attempt == 0 {
 				continue
 			}
 			k := stepAttempt{p.Step, p.Attempt}
@@ -166,7 +170,7 @@ func (c *cmd) persistSchema12() error {
 				return err
 			}
 		case StepLost:
-			if !needsArtifacts(st.Pipeline.Step(p.Step)) {
+			if !c.keepsArtifacts(st.Pipeline.Step(p.Step)) {
 				continue
 			}
 			if err := endAttemptArtifacts(c.tx, st.ID, p.Step, p.Attempt, []string{artUploading, artKept}, artFailed,

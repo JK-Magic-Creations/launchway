@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/coverage"
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/ids"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -73,6 +74,8 @@ type Options struct {
 	// Findings limits what is kept of security findings and SBOMs.
 	Artifacts ArtifactOptions
 	Findings  FindingLimits
+	// Reports bounds test attachments, coverage and HTML reports.
+	Reports ReportOptions
 	// Environments are where deploy steps may deploy (schema 11). Every
 	// server sharing a database must be given the same ones.
 	Environments []Environment
@@ -97,6 +100,7 @@ type Engine struct {
 	instance      string // tags this process's notifications, so it can ignore its own
 	channel       string // the PostgreSQL notification channel
 	tests         TestLimits
+	reps          ReportOptions
 	arts          ArtifactOptions
 	finds         FindingLimits
 	envs          map[string]Environment
@@ -201,6 +205,11 @@ type JobReports struct {
 	// bytes of them the server accepts (schema 12).
 	Findings         []string `json:"findings,omitempty"`
 	FindingsMaxBytes int64    `json:"findings_max_bytes,omitempty"`
+	// Coverage are globs of coverage reports, and CoverageMaxBytes how many
+	// bytes of them the server accepts (schema 18). Only runners with
+	// FeatureCoverage are given steps that declare them.
+	Coverage         []string `json:"coverage,omitempty"`
+	CoverageMaxBytes int64    `json:"coverage_max_bytes,omitempty"`
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -221,6 +230,9 @@ type Result struct {
 	// Findings, for a step that declares reports.findings, are the SARIF
 	// files the runner collected, like Tests (schema 12).
 	Findings *CollectedReports `json:"findings,omitempty"`
+	// Coverage, for a step that declares reports.coverage, are the coverage
+	// reports the runner collected, like Tests (schema 18).
+	Coverage *CollectedReports `json:"coverage,omitempty"`
 	// Deploy, for a deploy runner's action, is what it did.
 	Deploy *DeployFacts `json:"deploy,omitempty"`
 	// Image, for an image step, is what it made (schema 15): also when it
@@ -236,6 +248,10 @@ type CollectedReports struct {
 	// file, files cut short, limits reached. The runner also writes them in
 	// the step's log.
 	Notes []string `json:"notes,omitempty"`
+	// Workspace is where the step saw its workspace (/workspace in a
+	// container), so that absolute paths in reports can be read as paths
+	// in it (schema 18).
+	Workspace string `json:"workspace,omitempty"`
 }
 
 // ReportFile is one report file, as the runner read it.
@@ -294,6 +310,10 @@ func Open(o Options) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+	reps, err := o.Reports.withDefaults()
+	if err != nil {
+		return nil, err
+	}
 	if o.schema > 0 {
 		known = min(o.schema, len(migrations))
 	}
@@ -314,6 +334,7 @@ func Open(o Options) (*Engine, error) {
 		tests:      tests,
 		arts:       arts,
 		finds:      finds,
+		reps:       reps,
 		envs:       envs,
 		deployKick: make(chan struct{}, 1),
 		published:  map[string]int64{},
@@ -558,6 +579,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	}
 	if nr.Pipeline.UsesSchema15() && !e.knows(schemaImages) {
 		return nil, fmt.Errorf("%w: this server does not know image steps or deploy changes that pin a digest (schema %d)", ErrConflict, schemaImages)
+	}
+	if nr.Pipeline.UsesSchema18() && !e.knows(schemaReports) {
+		return nil, fmt.Errorf("%w: this server does not know test attachments, coverage or HTML reports (schema %d)", ErrConflict, schemaReports)
 	}
 	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
 		return nil, err
@@ -1071,6 +1095,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		tests = e.parseTests(res.Tests)
 	}
 	prep12 := e.prepare12(l, res)
+	prep18 := e.prepare18(leaseID, l, res, tests)
 	return e.withRun(l.runID, func(c *cmd) error {
 		s := c.st.Steps[l.stepID]
 		if s == nil || s.LeaseID != leaseID || !s.Status.Active() {
@@ -1105,6 +1130,20 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		if err := c.finish12(l, res, &p, prep12); err != nil {
 			return err
 		}
+		coverageFail, err := c.finish18(l, res, &p, prep18)
+		if err != nil {
+			return err
+		}
+		if coverageFail != "" && res.Outcome == "succeeded" {
+			// The step did its work, but its coverage is under what its
+			// pipeline requires. Running it again would not change that,
+			// so it is not retried.
+			p.Outcome = string(StepFailed)
+			p.Reason = coverageFail
+			c.emit(StepFinished, p)
+			c.advance()
+			return nil
+		}
 		switch res.Outcome {
 		case "succeeded":
 			p.Outcome = string(StepSucceeded)
@@ -1113,7 +1152,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
 				p.Tests = nil // the machinery failed; nothing it collected is kept
-				p.Findings, p.SBOM, p.Artifacts, p.Image = nil, nil, nil, nil
+				p.Findings, p.SBOM, p.Artifacts, p.Image, p.Coverage = nil, nil, nil, nil, nil
 				c.dropTests(l.stepID, l.attempt)
 				c.emit(StepCanceled, p)
 			} else {
@@ -1274,6 +1313,7 @@ func (e *Engine) reaper(ctx context.Context) {
 				pruned = now
 				e.forgetRunners()
 				e.pruneTests()
+				e.pruneCoverage()
 				e.pruneFindings()
 				e.pruneArtifacts()
 				e.PruneTriggers(now.Add(-7 * 24 * time.Hour).UnixMilli())
@@ -1370,6 +1410,9 @@ type cmd struct {
 	// tests are the test results to store with this command's events, by
 	// step attempt (see keepTests).
 	tests map[stepAttempt][]storedCase
+	// cover are the coverage files to store with this command's events, by
+	// step attempt (see keepCoverage).
+	cover map[stepAttempt][]coverage.File
 	// schema12 is what schema 12 stores with the command's events.
 	schema12 *schema12Data
 	// schemaBefore is the run's Schema before this command, so that
@@ -1681,6 +1724,11 @@ func (c *cmd) persist() error {
 	}
 	if c.e.knows(schemaImages) {
 		if err := c.persistImages(); err != nil {
+			return err
+		}
+	}
+	if c.e.knows(schemaReports) {
+		if err := c.persistSchema18(); err != nil {
 			return err
 		}
 	}

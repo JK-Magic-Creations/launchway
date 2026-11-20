@@ -202,7 +202,7 @@ func TestLibraryEndToEndOnKubernetes(t *testing.T) {
 	if ctxName == "" {
 		t.Skip("set LAUNCHWAY_TEST_KUBE_CONTEXT to run Kubernetes tests")
 	}
-	ex, err := executor.NewKubernetes(executor.KubernetesOptions{Context: ctxName, Namespace: "launchway-test", StartTimeout: "5m"},
+	ex, err := executor.NewKubernetes(executor.KubernetesOptions{Context: ctxName, Namespace: testKubeNamespace(), StartTimeout: "5m"},
 		fmt.Sprintf("test-libraries-%d", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatal(err)

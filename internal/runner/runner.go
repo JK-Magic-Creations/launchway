@@ -70,6 +70,9 @@ func (r *Runner) Run(ctx context.Context) error {
 	if !r.Info.Has(engine.FeatureArtifacts) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureArtifacts)
 	}
+	if !r.Info.Has(engine.FeatureCoverage) {
+		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureCoverage)
+	}
 	if r.Images != nil && len(r.Images.Builders) > 0 && !r.Info.Has(engine.FeatureImages) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureImages)
 	}
@@ -278,7 +281,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	// runner is shutting down (the step will run again elsewhere).
 	if collect != nil && !wasLost && parent.Err() == nil {
 		got := collect(outcomeOf(res, wasRequested))
-		res.Tests, res.Findings = got.tests, got.findings
+		res.Tests, res.Findings, res.Coverage = got.tests, got.findings, got.coverage
 	}
 	close(bgStop)
 	<-bgDone
@@ -289,7 +292,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	case wasLost:
 		res = engine.Result{} // the server already moved on; nothing to report
 	case wasRequested:
-		res = engine.Result{Outcome: "canceled", Error: "canceled", Tests: res.Tests, Findings: res.Findings}
+		res = engine.Result{Outcome: "canceled", Error: "canceled", Tests: res.Tests, Findings: res.Findings, Coverage: res.Coverage}
 	case parent.Err() != nil:
 		res = engine.Result{Outcome: "canceled", Error: "the runner is shutting down"}
 		sys("The runner is shutting down; the step will be run again.")
@@ -304,6 +307,12 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 			log.Warn("the server refused the step's SARIF files as too large; reporting the result without them", "err", err)
 			res.Findings = &engine.CollectedReports{Files: []engine.ReportFile{},
 				Notes: append(res.Findings.Notes, "the server refused the SARIF files as too large, so none were kept")}
+			continue
+		}
+		if errors.Is(err, ErrTooLarge) && res.Coverage != nil && len(res.Coverage.Files) > 0 {
+			log.Warn("the server refused the step's coverage reports as too large; reporting the result without them", "err", err)
+			res.Coverage = &engine.CollectedReports{Files: []engine.ReportFile{},
+				Notes: append(res.Coverage.Notes, "the server refused the coverage reports as too large, so none were kept")}
 			continue
 		}
 		if errors.Is(err, ErrTooLarge) && res.Tests != nil {
@@ -331,7 +340,8 @@ const collectTimeout = 2 * time.Minute
 func (r *Runner) collector(job *engine.Job, spec executor.Spec, sys func(string, ...any)) func(outcome string) collected {
 	tests := r.testCollector(job, spec, sys)
 	findings := r.findingCollector(job, spec, sys)
-	if tests == nil && findings == nil && job.Artifacts == nil {
+	cover := r.coverageCollector(job, spec, sys)
+	if tests == nil && findings == nil && cover == nil && job.Artifacts == nil {
 		return nil
 	}
 	return func(outcome string) collected {
@@ -341,6 +351,9 @@ func (r *Runner) collector(job *engine.Job, spec executor.Spec, sys func(string,
 		}
 		if findings != nil {
 			c.findings = findings()
+		}
+		if cover != nil {
+			c.coverage = cover()
 		}
 		r.keepArtifacts(job, spec, outcome, sys)
 		return c
@@ -363,7 +376,7 @@ func (r *Runner) testCollector(job *engine.Job, spec executor.Spec, sys func(str
 		ctx, cancel := context.WithTimeout(context.Background(), collectTimeout)
 		defer cancel()
 		got, err := executor.Collect(ctx, r.execFor(job), spec, job.Reports.Tests, lim)
-		out := &engine.CollectedReports{Files: []engine.ReportFile{}}
+		out := &engine.CollectedReports{Files: []engine.ReportFile{}, Workspace: r.execFor(job).WorkspacePath(spec.Workspace)}
 		if got != nil {
 			for _, f := range got.Files {
 				out.Files = append(out.Files, engine.ReportFile{Path: f.Path, Data: f.Data, Size: f.Size, Cut: f.Cut})

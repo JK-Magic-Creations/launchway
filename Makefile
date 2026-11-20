@@ -65,11 +65,14 @@ test-containers:
 # profile it needs onto the kind node; it refuses any context not kind-*.
 # Some tests pull python:3.12-slim and node:24-alpine and
 # install a package from PyPI and from npm.
+# KUBE_NAMESPACE picks another step namespace than launchway-test (it must exist).
 test-kubernetes:
-	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace launchway-test \
+	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace $${KUBE_NAMESPACE:-launchway-test} \
 		pod-security.kubernetes.io/enforce=restricted
-	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -run Kubernetes ./internal/executor/
-	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -timeout 40m -run Kubernetes ./internal/api/
+	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} LAUNCHWAY_TEST_KUBE_NAMESPACE=$${KUBE_NAMESPACE:-launchway-test} \
+		go test -count=1 -run Kubernetes ./internal/executor/
+	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} LAUNCHWAY_TEST_KUBE_NAMESPACE=$${KUBE_NAMESPACE:-launchway-test} \
+		go test -count=1 -timeout 40m -run Kubernetes ./internal/api/
 
 # Runs the deploy integration tests against Argo CD and Argo Rollouts in a kind
 # cluster (see deploy/test/argo/README.md). Refuses any context not starting

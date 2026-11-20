@@ -901,7 +901,7 @@ func (k *Kubernetes) CollectFiles(ctx context.Context, s Spec, globs []string, l
 		lw := &limitedWriter{w: &data, n: n + 1}
 		// Only a regular file, never what a symbolic link points at.
 		err := k.exec(ctx, pod, helperName, []string{"sh", "-c",
-			`cd /workspace && [ -f "$1" ] && [ ! -L "$1" ] || { echo "not a regular file" >&2; exit 3; }; exec head -c "$2" -- "$1"`,
+			`cd /workspace && [ -f "$1" ] && [ ! -L "$1" ] && [ "$(readlink -f "./$1")" = "/workspace/$1" ] || { echo "not a regular file inside the workspace" >&2; exit 3; }; exec head -c "$2" -- "$1"`,
 			"sh", name, fmt.Sprint(n + 1)}, nil, lw, &stderr)
 		if err != nil && !lw.full {
 			if ctx.Err() != nil {

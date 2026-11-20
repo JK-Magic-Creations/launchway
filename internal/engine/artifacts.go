@@ -217,6 +217,13 @@ type JobArtifact struct {
 	Paths []string `json:"paths"`
 	// When is success, failure or always (see pipeline.Artifact.KeepAfter).
 	When string `json:"when"`
+	// MaxFiles and MaxBytes, when set, are tighter limits for this one
+	// artifact (test attachments and HTML reports, schema 18), and Label
+	// what the step's log calls it. Older runners ignore them; the server
+	// enforces the limits anyway.
+	MaxFiles int    `json:"max_files,omitempty"`
+	MaxBytes int64  `json:"max_bytes,omitempty"`
+	Label    string `json:"label,omitempty"`
 }
 
 // KeepAfter reports whether the artifact is kept after an attempt that
@@ -261,6 +268,7 @@ func (c *cmd) jobArtifacts(def *pipeline.Step) *JobArtifacts {
 	if def.Reports != nil && len(def.Reports.SBOM) > 0 {
 		keep = append(keep, JobArtifact{Name: pipeline.SBOMArtifact, Paths: append([]string(nil), def.Reports.SBOM...), When: pipeline.ArtifactAlways})
 	}
+	keep = append(keep, c.reportArtifacts(def)...)
 	if len(keep) == 0 {
 		return nil
 	}
@@ -546,9 +554,12 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 		return nil, ErrLeaseLost
 	}
 	kind, retain := "", time.Duration(0)
-	switch {
+	maxFiles, maxBytes := MaxArtifactFiles, e.arts.MaxRunBytes
+	switch rk, rf, rb := e.reportArtifactKind(def, in.Name); {
 	case in.Name == pipeline.SBOMArtifact && def.Reports != nil && len(def.Reports.SBOM) > 0:
 		kind, retain = "sbom", 0
+	case rk != "":
+		kind, maxFiles, maxBytes = rk, rf, min(rb, e.arts.MaxRunBytes)
 	default:
 		found := false
 		for _, a := range def.Artifacts {
@@ -567,8 +578,8 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 	switch n := len(in.Files); {
 	case n == 0:
 		return nil, fmt.Errorf("%w: an artifact needs at least one file", ErrInvalid)
-	case n > MaxArtifactFiles:
-		return nil, fmt.Errorf("%w: an artifact holds at most %d files; this one has %d", ErrQuota, MaxArtifactFiles, n)
+	case n > maxFiles:
+		return nil, fmt.Errorf("%w: %s holds at most %d files; this one has %d", ErrQuota, artifactWhat(kind), maxFiles, n)
 	}
 	files := slices.Clone(in.Files)
 	slices.SortFunc(files, func(a, b ArtifactFileInfo) int { return strings.Compare(a.Path, b.Path) })
@@ -594,7 +605,10 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 		}
 		total += f.Size
 	}
-	if total > e.arts.MaxRunBytes {
+	if total > maxBytes {
+		if kind != "" && kind != "sbom" {
+			return nil, fmt.Errorf("%w: %s is %s; at most %s is kept", ErrQuota, artifactWhat(kind), sizeText(total), sizeText(maxBytes))
+		}
 		return nil, fmt.Errorf("%w: the artifact is %s; a run keeps at most %s", ErrQuota, sizeText(total), sizeText(e.arts.MaxRunBytes))
 	}
 

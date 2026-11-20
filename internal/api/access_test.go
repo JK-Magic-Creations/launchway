@@ -122,6 +122,18 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/runs/{id}/images": {"GET", "/api/v1/runs/{pay}/images", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/images": {"GET", "/api/v1/images?repository=harbor.example.com/team/shop", "",
 		[6]int{401, 200, 200, 200, 200, 200}},
+
+	// Schema 18: like the run's and project's tests (see TestReportAccess).
+	"GET /api/v1/runs/{id}/tests/compare": {"GET", "/api/v1/runs/{pay}/tests/compare", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// {pay} has no test results: 404 after the permission check too.
+	"GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}": {"GET", "/api/v1/runs/{pay}/tests/cases/1/attachments/0", "",
+		[6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/runs/{id}/coverage":       {"GET", "/api/v1/runs/{pay}/coverage", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/coverage/files": {"GET", "/api/v1/runs/{pay}/coverage/files", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/coverage": {"GET", "/api/v1/projects/pay-api/coverage", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/reports":        {"GET", "/api/v1/runs/{pay}/reports", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// A hosted report needs its signed link, whoever asks (see TestHostedReports).
+	"GET /hosted/{link}/{path...}": {"GET", "/hosted/art_x.zz.bad/index.html", "", [6]int{404, 404, 404, 404, 404, 404}},
 }
 
 // draftBody starts a draft run that waits for an approval, so it needs no
@@ -130,7 +142,8 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).
-var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info"}
+var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info",
+	"GET /hosted/{link}/{path...}"}
 
 // Every registered route must be in the permission table, and the table
 // must not list routes that no longer exist.

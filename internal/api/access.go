@@ -207,6 +207,12 @@ func (s *Server) guard(rt route) http.Handler {
 					Project: r.PathValue("name"), Target: id.tokenTag, Outcome: "denied", Detail: r.Method + " " + r.URL.Path + ": " + msg})
 			}
 		}
+		if id.Via != viaToken && fromSandboxOrOtherSite(r) {
+			// A page of another site, or a sandboxed HTML report, must
+			// not act as whoever is viewing it (see reports.go).
+			deny(http.StatusForbidden, "requests from other sites or from sandboxed reports cannot use a Launchway session")
+			return
+		}
 		if !isSafeMethod(r.Method) && id.Via != viaToken {
 			if msg := checkCSRF(r); msg != "" {
 				deny(http.StatusForbidden, msg)

@@ -249,3 +249,41 @@ func TestCLILogin(t *testing.T) {
 		t.Fatalf("plain http: %v", err)
 	}
 }
+
+// The reports commands read a run's tests, coverage and HTML reports.
+func TestCLIReports(t *testing.T) {
+	c, eng := cliServer(t)
+	pollEvery = 20 * time.Millisecond
+	var out bytes.Buffer
+	cl := newClient(c, &out)
+	if err := cl.start([]string{"app", "--wait", "-i", "version=v7"}); exitCode(err) != 0 {
+		t.Fatalf("a run: %v", err)
+	}
+	runs, _ := eng.ListRuns(engine.RunFilter{})
+	id := runs[0].ID
+	for cmd, want := range map[string]string{"tests": "No test results.", "coverage": "No coverage.", "reports": "No HTML reports."} {
+		out.Reset()
+		var err error
+		switch cmd {
+		case "tests":
+			err = cl.tests([]string{id})
+		case "coverage":
+			err = cl.coverage([]string{id, "--files"})
+		case "reports":
+			err = cl.reports([]string{id})
+		}
+		if err != nil || strings.TrimSpace(out.String()) != want {
+			t.Errorf("%s: %v %q", cmd, err, out.String())
+		}
+	}
+	out.Reset()
+	if err := cl.coverage([]string{id, "--json"}); err != nil || !strings.Contains(out.String(), `"coverage"`) {
+		t.Errorf("coverage --json: %v %s", err, out.String())
+	}
+	if err := cl.tests(nil); exitCode(err) != exitUsage {
+		t.Errorf("tests without a run: %v", err)
+	}
+	if err := cl.tests([]string{"run_nope"}); exitCode(err) != exitAPI {
+		t.Errorf("tests of a run that does not exist: %v", err)
+	}
+}

@@ -366,6 +366,8 @@ func (ps *parser) checkArtifacts(p *Pipeline) {
 			case a.Name == SBOMArtifact && s.Reports != nil && len(s.Reports.SBOM) > 0:
 				ps.problems = append(ps.problems, Problem{Line: a.Line, Path: at,
 					Message: "the artifact name sbom is taken by reports.sbom in this step; choose another"})
+			case reservedArtifact(s, a.Name) != "":
+				ps.problems = append(ps.problems, Problem{Line: a.Line, Path: at, Message: reservedArtifact(s, a.Name)})
 			case names[a.Name]:
 				ps.problems = append(ps.problems, Problem{Line: a.Line, Path: at, Message: "artifact " + a.Name + " is listed twice"})
 			}

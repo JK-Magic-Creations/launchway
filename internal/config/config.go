@@ -62,6 +62,9 @@ type Config struct {
 	// them; Findings limits what is kept of security findings and SBOMs.
 	Artifacts ArtifactsConfig `yaml:"artifacts"`
 	Findings  FindingsConfig  `yaml:"findings"`
+	// Reports bounds test attachments, coverage and HTML reports, and says
+	// where hosted HTML reports are served from.
+	Reports ServerReportsConfig `yaml:"reports"`
 	// Loops limits loops (for_each) in pipelines.
 	Loops LoopsConfig `yaml:"loops"`
 	// Schedules turns pipelines' schedules off for every project; a
@@ -588,6 +591,12 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if _, err := c.FindingLimits(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if _, err := c.ReportOptions(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if _, err := c.ReportsOrigin(); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.checkTriggers(); err != nil {
