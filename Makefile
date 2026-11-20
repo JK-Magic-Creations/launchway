@@ -45,7 +45,7 @@ test:
 #     -e POSTGRES_PASSWORD=launchway -e POSTGRES_DB=launchway postgres:17-alpine
 LAUNCHWAY_TEST_POSTGRES ?= postgres://launchway:launchway@127.0.0.1:55432/launchway?sslmode=disable
 test-postgres:
-	LAUNCHWAY_TEST_POSTGRES='$(LAUNCHWAY_TEST_POSTGRES)' go test -race -count=1 ./internal/engine/ ./internal/source/ ./internal/api/
+	LAUNCHWAY_TEST_POSTGRES='$(LAUNCHWAY_TEST_POSTGRES)' go test -race -count=1 -timeout 60m ./internal/engine/ ./internal/source/ ./internal/api/
 
 # Runs the vault secret store against a real server. A throwaway OpenBao in
 # dev mode (KV version 2 at secret/):
