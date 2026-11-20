@@ -118,6 +118,32 @@ func (s *Server) callerInfo(r *http.Request, said engine.RunnerInfo) engine.Runn
 	return said
 }
 
+// claimsEnrolled refuses a runner that has no identity of its own but says
+// it is an enrolled runner, whose ID anyone who can read a project can see:
+// it would write that runner's row and bind leases to an ID it cannot use.
+// It audits and writes the refusal, and reports true. If the database cannot
+// say whether the runner is enrolled it fails closed: it writes a 500 and
+// reports true.
+func (s *Server) claimsEnrolled(w http.ResponseWriter, r *http.Request, said engine.RunnerInfo) bool {
+	if callerIdentity(r) != nil {
+		return false
+	}
+	enrolled, err := s.Engine.IsEnrolled(said.ID)
+	if err != nil {
+		s.fail(w, err)
+		return true
+	}
+	if !enrolled {
+		return false
+	}
+	msg := "runner " + said.ID + " is enrolled; only it may say it is that runner"
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r),
+		Action: "runner.identity_refused", Target: said.ID, Outcome: "denied",
+		Detail: "a runner with a shared or pool token said it is the enrolled runner " + said.ID + " (" + r.URL.Path + ")"})
+	writeErr(w, http.StatusForbidden, msg)
+	return true
+}
+
 // sharedRefused says why the shared runner token may not take build work:
 // the default pool takes only enrolled runners. "" if it may.
 func (s *Server) sharedRefused() string {
@@ -198,6 +224,9 @@ func (s *Server) deployRunner(w http.ResponseWriter, r *http.Request, info *engi
 	pool := callerPool(r)
 	if pool == nil {
 		writeErr(w, http.StatusForbidden, "deploy work needs a runner of a deploy pool (runner_pools in the server's configuration): its token or a runner enrolled in it; the shared runner token cannot take it")
+		return nil, false
+	}
+	if s.claimsEnrolled(w, r, *info) {
 		return nil, false
 	}
 	*info = s.callerInfo(r, *info)

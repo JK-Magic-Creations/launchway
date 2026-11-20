@@ -65,8 +65,9 @@ func isPostgres(addr string) bool {
 }
 
 // openDB opens SQLite at a file path, or PostgreSQL at a postgres:// URL,
-// and brings the schema up to the one this build knows (see migrate). A
-// database that does not answer is tried again for up to wait.
+// brings the schema up to the one this build knows (see migrate), and checks
+// that the recorded schema's tables and columns exist. A database that does
+// not answer is tried again for up to wait.
 func openDB(addr string, wait time.Duration, known int, log *slog.Logger) (*dbx, SchemaInfo, error) {
 	var d *dbx
 	if isPostgres(addr) {
@@ -101,6 +102,10 @@ func openDB(addr string, wait time.Duration, known int, log *slog.Logger) (*dbx,
 	}
 	info, err := migrate(d, known, log)
 	if err != nil {
+		d.Close()
+		return nil, info, err
+	}
+	if err := checkSchemaMarkers(d, info.Database, log); err != nil {
 		d.Close()
 		return nil, info, err
 	}
@@ -1308,6 +1313,41 @@ ALTER TABLE runners ADD COLUMN arch TEXT NOT NULL DEFAULT '';
 	{additive, `
 ALTER TABLE runs ADD COLUMN runner_pool TEXT NOT NULL DEFAULT '';
 ALTER TABLE runs ADD COLUMN runner_labels TEXT NOT NULL DEFAULT '';
+`},
+
+	// 22: step resources (see resources.go). A step may ask for CPU and
+	//     memory (the pipeline key resources); what it leaves out comes from
+	//     the installation's default for its kind, and what it may ask for
+	//     is bounded by the installation's limits. Both are configuration,
+	//     so both are tables: step_resource_defaults, one row per step kind,
+	//     and step_resource_limits, one row for the installation. Quantities
+	//     are kept as the text a pipeline writes (2Gi, 500m). A server seeds
+	//     both tables with the values compiled into it when it finds them
+	//     empty; after that the rows are the configuration.
+	//     Compatibility: additive: two new tables and nothing else, no new
+	//     event type and nothing older code reads. Older servers do not
+	//     size containers, so runs get the namespace's defaults there, as
+	//     before; the pipeline key resources is one they refuse (a pipeline
+	//     that uses it carries "requires": 22, so they leave such runs alone).
+	{additive, `
+CREATE TABLE step_resource_defaults (
+  kind         TEXT PRIMARY KEY,
+  cpu          TEXT    NOT NULL DEFAULT '',
+  cpu_limit    TEXT    NOT NULL DEFAULT '',
+  memory       TEXT    NOT NULL DEFAULT '',
+  memory_limit TEXT    NOT NULL DEFAULT '',
+  updated_at   {{BIG}} NOT NULL DEFAULT 0,
+  updated_by   TEXT    NOT NULL DEFAULT ''
+);
+
+CREATE TABLE step_resource_limits (
+  name              TEXT PRIMARY KEY,
+  max_cpu           TEXT    NOT NULL DEFAULT '',
+  max_memory        TEXT    NOT NULL DEFAULT '',
+  memory_per_thread TEXT    NOT NULL DEFAULT '',
+  updated_at        {{BIG}} NOT NULL DEFAULT 0,
+  updated_by        TEXT    NOT NULL DEFAULT ''
+);
 `},
 }
 

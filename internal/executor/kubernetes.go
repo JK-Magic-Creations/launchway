@@ -44,6 +44,8 @@ type KubernetesOptions struct {
 	CPU              string            `yaml:"cpu"`          // request per container
 	Memory           string            `yaml:"memory"`       // request per container
 	MemoryLimit      string            `yaml:"memory_limit"` // optional limit per container
+	MaxCPU           string            `yaml:"max_cpu"`      // the most a container may ask for, checked before its pod is made
+	MaxMemory        string            `yaml:"max_memory"`   // likewise; see checkResources
 	ImagePullSecrets []string          `yaml:"image_pull_secrets"`
 	KeepFailed       string            `yaml:"keep_failed"`   // how long to keep a failed run's pod for a resume; default 2h
 	StartTimeout     string            `yaml:"start_timeout"` // how long to wait for images to pull; default 10m
@@ -92,8 +94,9 @@ type Kubernetes struct {
 	keepFailed time.Duration
 	startWait  time.Duration
 
-	mu   sync.Mutex
-	pods map[string]*runPod
+	mu    sync.Mutex
+	pods  map[string]*runPod
+	noted map[string]bool // what has been said once (see noteOnce)
 }
 
 type runPod struct {
@@ -156,7 +159,7 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 			*v.d = d
 		}
 	}
-	for _, q := range []string{o.CPU, o.Memory, o.MemoryLimit} {
+	for _, q := range []string{o.CPU, o.Memory, o.MemoryLimit, o.MaxCPU, o.MaxMemory} {
 		if q != "" {
 			if _, err := resource.ParseQuantity(q); err != nil {
 				return nil, fmt.Errorf("kubernetes: %q is not a valid quantity", q)
@@ -224,7 +227,7 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	if s.RunID == "" {
 		return -1, errors.New("kubernetes: the step has no run")
 	}
-	s = withDefaultContainer(s)
+	s = withDefaultContainer(s).withParallelism()
 	rp, err := k.ensurePod(ctx, s, out)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -384,6 +387,11 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 		return nil, infra("looking up pod %s: %v", rp.name, err)
 	}
 
+	specs, err := k.checkResources(ctx, s.Containers, sys)
+	if err != nil {
+		return nil, err
+	}
+	s.Containers = specs
 	pod, containers := k.podSpec(rp.name, s.RunID, s.Containers)
 	var names []string
 	for _, c := range s.Containers {
@@ -394,6 +402,11 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 		names = append(names, c.Name+kind)
 	}
 	sys("Starting pod %s/%s: %s", k.o.Namespace, rp.name, strings.Join(names, ", "))
+	for _, c := range s.Containers {
+		if !c.Service && (c.CPU != "" || c.Memory != "" || c.CPULimit != "" || c.MemoryLimit != "") {
+			sys("Container %s resources: %s", c.Name, c.describeResources())
+		}
+	}
 	if k.o.restricted() {
 		sys("Containers run as user %d (group %d), not as root, with HOME=%s: commands that need root, "+
 			"such as installing packages with apt-get or apk, fail. The runner's operator can change this "+
@@ -418,16 +431,36 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 	return rp, nil
 }
 
-func (k *Kubernetes) resources(cpu, memory string) corev1.ResourceRequirements {
+// resources is what a container asks of the cluster. Memory asked for is
+// guaranteed and capped at it (the limit is the same, unless the container
+// has a limit of its own); a CPU limit is set only if the container has one.
+// What a container leaves out is the runner's own setting.
+func (k *Kubernetes) resources(sp ContainerSpec) corev1.ResourceRequirements {
 	res := corev1.ResourceRequirements{Requests: corev1.ResourceList{}, Limits: corev1.ResourceList{}}
+	cpu := sp.CPU
 	if cpu == "" {
 		cpu = k.o.CPU
 	}
-	res.Requests[corev1.ResourceCPU] = resource.MustParse(cpu)
+	cpuReq := resource.MustParse(cpu)
+	if sp.CPULimit != "" {
+		lim := resource.MustParse(sp.CPULimit)
+		res.Limits[corev1.ResourceCPU] = lim
+		if cpuReq.Cmp(lim) > 0 {
+			cpuReq = lim.DeepCopy()
+		}
+	}
+	res.Requests[corev1.ResourceCPU] = cpuReq
 	switch {
-	case memory != "": // asked for explicitly: guarantee it, and cap at it
-		res.Requests[corev1.ResourceMemory] = resource.MustParse(memory)
-		res.Limits[corev1.ResourceMemory] = resource.MustParse(memory)
+	case sp.Memory != "" || sp.MemoryLimit != "": // asked for explicitly: guarantee it, and cap it
+		req, lim := sp.Memory, sp.MemoryLimit
+		if lim == "" {
+			lim = req
+		}
+		if req == "" {
+			req = lim
+		}
+		res.Requests[corev1.ResourceMemory] = resource.MustParse(req)
+		res.Limits[corev1.ResourceMemory] = resource.MustParse(lim)
 	default:
 		res.Requests[corev1.ResourceMemory] = resource.MustParse(k.o.Memory)
 		if k.o.MemoryLimit != "" {
@@ -454,11 +487,11 @@ func (k *Kubernetes) podSpec(name, runID string, specs []ContainerSpec) (*corev1
 	containers := map[string]string{}
 	images := map[string]string{}
 	cs := []corev1.Container{{Name: helperName, Image: k.o.HelperImage, Command: keepAlive, WorkingDir: "/workspace",
-		VolumeMounts: mounts, Resources: k.resources("", "")}}
+		VolumeMounts: mounts, Resources: k.resources(ContainerSpec{})}}
 	for _, sp := range specs {
 		images[sp.Name] = sp.Image
 		c := corev1.Container{Name: sp.Name, Image: sp.Image, WorkingDir: "/workspace", VolumeMounts: mounts,
-			Resources: k.resources(sp.CPU, sp.Memory), ImagePullPolicy: corev1.PullIfNotPresent}
+			Resources: k.resources(sp), ImagePullPolicy: corev1.PullIfNotPresent}
 		if sp.Service {
 			c.Command = sp.Command // nil: the image's own entrypoint
 			c.WorkingDir = ""

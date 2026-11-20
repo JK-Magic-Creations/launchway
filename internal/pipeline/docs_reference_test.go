@@ -210,6 +210,7 @@ steps:
     image: alpine:3.22
     run: "true"
     when: { branch: main }
+    resources: { cpu: 2, memory: 4Gi }
     secrets:
       TOKEN: { store: vault, key: ci/token, field: token }
     reports:
@@ -359,6 +360,7 @@ var probes = []probe{
 	{table: "reports-fail-under", path: []any{"steps", "build", "reports", "coverage", "fail_under"}},
 	{table: "reports-html", path: []any{"steps", "build", "reports", "html", 0}},
 	{table: "runner", path: []any{"runner"}},
+	{table: "step-resources", path: []any{"steps", "build", "resources"}},
 	{table: "ai-input", path: []any{"steps", "notes", "inputs", 0}},
 	{table: "verify-metric", path: []any{"steps", "verify", "metrics", 0}},
 	{table: "verify-log", path: []any{"steps", "verify", "logs", 0}},

@@ -15,9 +15,9 @@ import (
 // using several gets the highest, so a server of any schema between leaves
 // it alone.
 func TestRunMinSchemaAcrossFeatures(t *testing.T) {
-	if schemaPolicy != 16 || schemaBlobs != 17 || schemaReports != 18 || schemaVerify != 19 || schemaIdentity != 20 || schemaPools != 21 || len(migrations) != 21 {
-		t.Fatalf("schemas: policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, migrations %d",
-			schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, len(migrations))
+	if schemaPolicy != 16 || schemaBlobs != 17 || schemaReports != 18 || schemaVerify != 19 || schemaIdentity != 20 || schemaPools != 21 || schemaResources != 22 || len(migrations) != 22 {
+		t.Fatalf("schemas: policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, resources %d, migrations %d",
+			schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, len(migrations))
 	}
 	report := PolicyOptions{Inline: mustPolicies(t, strings.Replace(shapePolicy, "enforce", "report", 1))}
 	open := func(t *testing.T, addr, store string, po PolicyOptions) *Engine {

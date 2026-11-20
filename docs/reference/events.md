@@ -245,6 +245,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `token.create` | `POST /api/v1/tokens` |
 | `token.revoke` | `DELETE /api/v1/tokens/{id}`, and an admin's `DELETE /api/v1/admin/tokens/{id}` |
 | `token.use` | a request with an API token that is refused: malformed, unknown, revoked or expired, or not allowed by its limits or its owner's role on a call that has no action of its own |
+| `step_resources.set_limits` | `PUT /api/v1/step-resources/limits` (also `launchway step-resources set-limits`); the detail holds the limits before and after |
+| `step_resources.set_default` | `PUT /api/v1/step-resources/defaults/{kind}` (also `launchway step-resources set-default`); the detail holds the default before and after |
 | `policy.waive` | `POST /api/v1/projects/{name}/waivers`: granting a waiver (also `launchway waivers grant`) |
 | `policy.revoke_waiver` | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` |
 | `webhook.git` | `POST /api/v1/projects/{name}/git-hook`: a Git host's call that made the project poll (`ok`) or could not prove itself (`denied`); ignored events and repeated deliveries are not recorded |
@@ -259,6 +261,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `runner.refused` | a runner refused a step before running it, because its own `accept:` section does not allow it; the detail says why |
 | `runner.lease_refused` | a runner asked for a lease it does not hold: the logs, results, artifacts or heartbeat of a step taken by another runner |
 | `runner.auth` | a runner's request refused: an unknown, revoked or expired token or identity; the target and detail say which and why |
+| `runner.identity_refused` | a runner with the shared or a pool token said it is an enrolled runner; only that runner, with its own identity, may say so. The request is refused with 403 and the detail names the claimed runner and the path |
 | `auth.sign_in` | `GET /auth/callback`: a sign-in that succeeded (with the groups the provider gave) or failed (with why) |
 | `auth.sign_out` | `POST /auth/logout`, for a session that existed |
 

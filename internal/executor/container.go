@@ -48,6 +48,7 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		return -1, err
 	}
 	s.Name = containerName(s.Name)
+	s = s.withParallelism()
 	var podArgs []string
 	if len(s.services()) > 0 {
 		pod, err := c.ensurePod(ctx, s, out)
@@ -69,6 +70,12 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		"--entrypoint", "/bin/sh",
 	}
 	args = append(args, podArgs...)
+	if sc, ok := s.stepContainer(); ok && !sc.Service {
+		if flags := containerFlags(sc); len(flags) > 0 {
+			args = append(args, flags...)
+			out("system", "Container resources: "+sc.describeResources())
+		}
+	}
 	// Pass values through the environment of the podman process rather than
 	// the command line, so they never appear in a process list.
 	env := os.Environ()
