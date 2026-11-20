@@ -3,6 +3,7 @@ import { api, type Runner } from "../api";
 import { ago } from "../format";
 import { useNow } from "../live";
 import { Empty, ErrorBox, Mono } from "../components/ui";
+import { HealthSourcesSection, ModelsSection } from "../components/Explain";
 
 export function RunnersPage() {
   const [runners, setRunners] = useState<Runner[] | null>(null);
@@ -58,6 +59,8 @@ export function RunnersPage() {
         <p className="sub">Copy the <Mono>launchway</Mono> binary to the machine, then run it with this server's address and the token in <Mono>launchway-data/runner-token</Mono>:</p>
         <pre className="code">{`launchway runner --server ${location.origin} --token <token> --name build-2`}</pre>
       </section>
+      <ModelsSection />
+      <HealthSourcesSection />
     </div>
   );
 }

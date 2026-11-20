@@ -65,6 +65,8 @@ export function stepLabel(s: {
   status: StepStatus; kind?: string; wait_kind?: string; environment?: string; skip_kind?: string;
 }, phase?: string): string {
   if (s.status === "waiting") {
+    // A verification that was inconclusive waits for someone to mark it.
+    if (s.kind === "verify" || s.wait_kind === "verify") return "Waiting for a person";
     if (s.kind === "approval" || (!s.kind && !s.wait_kind)) return "Waiting for approval";
     const env = s.environment;
     if (s.wait_kind === "lock") return env ? `Waiting for ${env}'s lock` : "Waiting for the environment's lock";

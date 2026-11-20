@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, type DeploymentView, type EnvironmentView, type LiveView, type UnitView } from "../api";
+import { api, verifyApi, type DeploymentView, type EnvironmentView, type LiveView, type UnitView, type VerificationSummary } from "../api";
 import { ago, clock } from "../format";
 import { useNow } from "../live";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { AppChips, DeployStatePill, FreshnessLine, freshness } from "../components/Deployment";
+import { VerifyPill } from "../components/Verification";
 
 // EnvironmentsPage shows, for every service of every project, what each
 // environment runs, what is being deployed there now, and who holds or waits
@@ -11,11 +12,14 @@ import { AppChips, DeployStatePill, FreshnessLine, freshness } from "../componen
 export function EnvironmentsPage() {
   const [envs, setEnvs] = useState<EnvironmentView[] | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [verifs, setVerifs] = useState<VerificationSummary[]>([]);
   const [tick, setTick] = useState(0);
   const now = useNow(1000);
 
   const load = useCallback((background: boolean) => {
     api.environments(background).then((e) => { setEnvs(e); setError(null); }).catch(setError);
+    // A server that does not know verifications answers with none.
+    verifyApi.verifications({ limit: 200 }, background).then(setVerifs).catch(() => setVerifs([]));
   }, []);
   useEffect(() => {
     load(false);
@@ -23,7 +27,7 @@ export function EnvironmentsPage() {
     return () => window.clearInterval(t);
   }, [load]);
 
-  const rows = envs ? unitRows(envs) : [];
+  const rows = envs ? unitRows(envs, verifs) : [];
   const unobserved = (envs ?? []).filter((e) => !observing(e, now));
 
   return (
@@ -76,12 +80,14 @@ export function EnvironmentsPage() {
                       </th>
                       {envs.map((e) => {
                         const u = e.services.find((x) => x.project === r.project && x.service === r.service);
+                        const vs = verifs.filter((v) => v.environment === e.name && v.project === r.project && v.service === r.service);
                         return (
                           <td key={e.name} data-env={e.name}>
                             <span className="envgrid-cell-env">{e.name}{e.protected && <> <ProtectedPill env={e.name} /></>} <span className="faint">· {e.target}</span></span>
                             {u ? <UnitCell env={e} unit={u} now={now} tick={tick} />
                               : allows(e, r.project) ? <span className="faint">Nothing deployed here yet.</span>
-                              : <span className="faint">{r.project} may not deploy here.</span>}
+                              : vs.length === 0 ? <span className="faint">{r.project} may not deploy here.</span> : null}
+                            {vs.length > 0 && <Verifications list={vs} now={now} />}
                           </td>
                         );
                       })}
@@ -148,9 +154,11 @@ function allows(e: EnvironmentView, project: string): boolean {
   return e.projects.some((p) => new RegExp("^" + p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*").replace(/\?/g, "[^/]") + "$").test(project));
 }
 
-function unitRows(envs: EnvironmentView[]): { project: string; service: string }[] {
+function unitRows(envs: EnvironmentView[], verifs: VerificationSummary[]): { project: string; service: string }[] {
   const seen = new Map<string, { project: string; service: string }>();
   for (const e of envs) for (const u of e.services) seen.set(u.project + "/" + u.service, { project: u.project, service: u.service });
+  // A service only verified, never deployed by Launchway, has a row too.
+  for (const v of verifs) if (envs.some((e) => e.name === v.environment)) seen.set(v.project + "/" + v.service, { project: v.project, service: v.service });
   return [...seen.values()].sort((a, b) => a.project.localeCompare(b.project) || a.service.localeCompare(b.service));
 }
 
@@ -243,6 +251,43 @@ function History({ env, project, service, tick, now }: { env: string; project: s
         </ol>
       )}
     </details>
+  );
+}
+
+// Verifications lists the newest verifications of one service in one
+// environment: the latest in a line, the others when opened.
+function Verifications({ list, now }: { list: VerificationSummary[]; now: number }) {
+  const [latest, ...rest] = list;
+  const row = (v: VerificationSummary) => (
+    <>
+      <Link href={`/runs/${v.run_id}?step=${encodeURIComponent(v.step)}`}>#{v.run_number}</Link>
+      <VerifyPill v={{ outcome: v.outcome, override: v.overridden_by ? v.outcome : undefined, status: v.status || (v.outcome === "running" ? "running" : undefined) }} now={now} />
+      {v.version && <Mono>{v.version}</Mono>}
+      <span className="faint" title={clock(v.started_at)}>{ago(v.decided_at || v.started_at, now)}</span>
+    </>
+  );
+  return (
+    <div className="unit-verif" aria-label="Verifications">
+      <div className="h-xs unit-verif-title">Verifications</div>
+      <div className="unit-line">{row(latest)}</div>
+      <div className="unit-verif-summary">
+        {latest.outcome === "running" && !latest.summary ? `interval ${Math.min(latest.intervals + 1, latest.total)} of ${latest.total}` : latest.summary}
+        {latest.overridden_by && <span className="faint"> (marked by {latest.overridden_by})</span>}
+      </div>
+      {rest.length > 0 && (
+        <details className="unit-history">
+          <summary>{rest.length} earlier</summary>
+          <ol className="unit-history-list">
+            {rest.slice(0, 10).map((v) => (
+              <li key={v.run_id + v.step}>
+                {row(v)}
+                {v.summary && <span className="unit-verif-summary">{v.summary}</span>}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </div>
   );
 }
 
