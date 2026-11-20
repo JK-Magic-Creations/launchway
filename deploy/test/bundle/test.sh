@@ -84,7 +84,8 @@ h uninstall lw -n $SRV --wait >/dev/null 2>&1 || :
 k delete namespace $RUN $SRV --ignore-not-found --wait >/dev/null
 h install lw "release/launchway-$ver.tgz" -n $SRV --create-namespace --wait --timeout 5m \
 	--set postgresql.enabled=true --set runner.enabled=false --set server.replicas=1 \
-	--set image.repository="${server_ref%:*}" --set image.pullPolicy=Never >/dev/null || fail "helm install launchway"
+	--set image.repository="${server_ref%:*}" --set image.pullPolicy=Never \
+	--set-json config.extraConfig='{"auth":{"allow_anonymous":true}}' >/dev/null || fail "helm install launchway"
 pass "launchway chart from the bundle: server ready"
 k create namespace $RUN >/dev/null
 k -n $RUN create secret generic launchway-runner-token \
