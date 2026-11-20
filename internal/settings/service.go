@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/config"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
@@ -27,6 +29,49 @@ const OriginBootstrap = "bootstrap-file"
 // ErrUnavailable: this server or its database does not keep configuration
 // in the database (a build limited to an older schema).
 var ErrUnavailable = errors.New("configuration in the database needs schema 23")
+
+// EgressPolicy is what a configuration allows the server to reach.
+func EgressPolicy(c *config.Config) egress.Policy {
+	return egress.Policy{AllowLocal: c.Egress.AllowLocal, Allow: c.Egress.Allow}
+}
+
+// checkEgress refuses addresses in changed objects that the server would
+// not be allowed to fetch from: a path on the server unless the server was
+// started allowing them, and an internal address unless an administrator
+// allowed it. Names are not resolved here (a lookup does not belong in a
+// validation that runs on every keystroke of a wizard); the fetch does it.
+func checkEgress(c *config.Config, objs []engine.ConfigObject) error {
+	g := egress.New(EgressPolicy(c))
+	if err := g.Set(EgressPolicy(c)); err != nil {
+		return err
+	}
+	var errs []error
+	for _, o := range objs {
+		k := kindByName(o.Kind)
+		if k == nil || o.Deleted() {
+			continue
+		}
+		v, _, err := decodeSpec(k, o.Name, o.Spec)
+		if err != nil {
+			continue
+		}
+		var e error
+		switch t := v.(type) {
+		case *config.ProjectConfig:
+			e = g.CheckRepoSyntax(t.Repo)
+		case *config.LibraryConfig:
+			e = g.CheckRepoSyntax(t.Repo)
+		case *ai.Model:
+			if u, err := url.Parse(t.Endpoint); err == nil {
+				e = g.CheckHostSyntax(u.Hostname())
+			}
+		}
+		if e != nil {
+			errs = append(errs, fmt.Errorf("%s %s: %w; an administrator can add an internal host to the allowed hosts in the installation settings (egress)", o.Kind, o.Name, e))
+		}
+	}
+	return errors.Join(errs...)
+}
 
 // Applier puts a checked configuration into effect on this server: the
 // engine's, the projects' and the API's live settings.
@@ -134,7 +179,11 @@ func (s *Service) ImportBootstrap() (*ImportResult, error) {
 		}
 		writes := make([]engine.ConfigWrite, 0, len(file))
 		after := mergeObjects(objs, file)
-		if _, err := s.composeChecked(after); err != nil {
+		cp, err := s.composeChecked(after)
+		if err != nil {
+			return nil, fmt.Errorf("importing the configuration file: %w", err)
+		}
+		if err := checkEgress(cp.cfg, file); err != nil {
 			return nil, fmt.Errorf("importing the configuration file: %w", err)
 		}
 		counts := map[string]int{}
@@ -212,6 +261,9 @@ type composed struct {
 func Check(c *config.Config, eng *engine.Engine) error {
 	if err := c.Validate("configuration"); err != nil {
 		return err
+	}
+	if err := egress.CheckAllowList(c.Egress.Allow); err != nil {
+		return fmt.Errorf("egress.allow: %w", err)
 	}
 	projects, err := c.SourceProjects()
 	if err != nil {
@@ -305,6 +357,7 @@ func (s *Service) reloadLocked(first bool) error {
 		s.log.Info("applied a change to the configuration", "revision", rev)
 	}
 	s.cur, s.lay, s.rev, s.lastErr = cp.cfg, cp.lay, rev, ""
+	_ = egress.Default.Set(EgressPolicy(cp.cfg))
 	return nil
 }
 
@@ -575,7 +628,11 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if err != nil {
 			return nil, err
 		}
-		if _, err := s.composeChecked(after); err != nil {
+		cp, err := s.composeChecked(after)
+		if err != nil {
+			return nil, invalid(err)
+		}
+		if err := checkEgress(cp.cfg, putObjects(after, puts)); err != nil {
 			return nil, invalid(err)
 		}
 		if dry {
@@ -618,6 +675,19 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		return results, nil
 	}
 	return nil, fmt.Errorf("%w: other changes kept coming first; try again", engine.ErrConflict)
+}
+
+// putObjects returns the objects of after that puts describe.
+func putObjects(after, puts []engine.ConfigObject) []engine.ConfigObject {
+	var out []engine.ConfigObject
+	for _, p := range puts {
+		for _, o := range after {
+			if o.Kind == p.Kind && o.Name == p.Name {
+				out = append(out, o)
+			}
+		}
+	}
+	return out
 }
 
 // applyLocally works out the objects after writes, checking versions as

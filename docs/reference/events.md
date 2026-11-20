@@ -249,6 +249,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `config.put` | `PUT /api/v1/config/{kind}/{obj}`: an object was created or replaced; `unchanged` when the same settings were sent again |
 | `config.delete` | `DELETE /api/v1/config/{kind}/{obj}`: an object was deleted (it can be restored) |
 | `config.restore` | `POST /api/v1/config/{kind}/{obj}/restore` |
+| `config.check_repository` | `POST /api/v1/config/check/repository`: the server contacted (or refused to contact) an address a caller gave; the target is the address without credentials, the detail says whether it was readable or refused |
+| `config.check_signin` | `POST /api/v1/config/check/signin`: the same for an identity provider's address |
 | `config.apply` | `POST /api/v1/config/apply`: several changes made together; the detail says how many changed |
 | `config.import` | `POST /api/v1/config/import` with `apply` (also `launchway config import --apply`); the detail holds the import's ID and the number of changes. The first start's import of the configuration file is recorded as an import, not in the audit trail |
 | `step_resources.set_limits` | `PUT /api/v1/step-resources/limits` (also `launchway step-resources set-limits`); the detail holds the limits before and after |

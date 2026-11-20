@@ -3,6 +3,12 @@
 listen: 127.0.0.1:8080
 data: ../launchway-data
 
+# Local development: the demo repositories below are paths on this machine.
+# A server refuses paths and file: addresses by default (through the API they
+# would read any repository the server can); this file allows them.
+egress:
+  allow_local: true
+
 projects:
   # A small repository made by `make demo`, to play with freely.
   - name: demo-app

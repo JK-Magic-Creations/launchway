@@ -36,6 +36,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
@@ -246,6 +247,9 @@ func cmdServer(args []string) error {
 			return err
 		}
 	}
+	if err := egress.Default.Set(settings.EgressPolicy(eff)); err != nil {
+		return fmt.Errorf("%s: egress: %w", *cfgPath, err)
+	}
 	if eff != cfg {
 		l, err := eff.EngineLive()
 		if err != nil {
@@ -295,7 +299,9 @@ func cmdServer(args []string) error {
 		// The server calls models only to explain a failed step, with keys
 		// from its own stores (ai.secrets), if it has any. With models in
 		// the database, any may be added while the server runs.
-		srv.AI = &ai.Client{}
+		// Its address is an administrator's, but still never an internal one
+		// unless the allowed hosts say so (internal/egress).
+		srv.AI = &ai.Client{HTTP: egress.Default.HTTPClient(16 * time.Minute)}
 		if len(cfg.AI.Secrets) > 0 {
 			if srv.AISecrets, err = secrets.Open(cfg.AI.Secrets); err != nil {
 				return fmt.Errorf("%s: ai.secrets: %w", *cfgPath, err)
