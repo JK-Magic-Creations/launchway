@@ -27,6 +27,7 @@ const AgentsPage = lazy(() => import("./pages/Agents").then((m) => ({ default: m
 const ConfigHomePage = lazy(() => import("./pages/ConfigHome").then((m) => ({ default: m.ConfigHomePage })));
 const ConfigListPage = lazy(() => import("./pages/ConfigList").then((m) => ({ default: m.ConfigListPage })));
 const ConfigObjectPage = lazy(() => import("./pages/ConfigObject").then((m) => ({ default: m.ConfigObjectPage })));
+const WizardPage = lazy(() => import("./pages/wizards/Wizards").then((m) => ({ default: m.WizardPage })));
 
 interface NavItem { href: string; label: string; active: (p: string) => boolean; show?: (me: Me) => boolean }
 
@@ -108,6 +109,7 @@ function Shell({ me }: { me: Me }) {
   else if (path === "/images") page = <ImagesPage />;
   else if (path === "/policy") page = <PolicyPage />;
   else if (path === "/config") page = <ConfigHomePage />;
+  else if ((m = match("/config/wizard/:id", path))) page = <WizardPage key={m.id} id={m.id} />;
   else if ((m = match("/config/:kind/new", path))) page = <ConfigObjectPage key={m.kind + "/new"} kind={m.kind} name="" />;
   else if ((m = match("/config/:kind/:name", path))) page = <ConfigObjectPage key={m.kind + "/" + m.name} kind={m.kind} name={m.name} />;
   else if ((m = match("/config/:kind", path))) page = <ConfigListPage key={m.kind} kind={m.kind} />;
