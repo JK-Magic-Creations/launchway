@@ -1,0 +1,24 @@
+/* Runners: pools, identities, join tokens and install commands. */
+.rn-h { margin: 22px 0 8px; }
+.rn-table td { vertical-align: top; }
+.rn-revoked td { opacity: .7; }
+.rn-labels { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.rn-label { font-size: 11.5px; font-weight: 600; padding: 0 7px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); }
+.rn-accept { font-size: 12.5px; color: var(--text-2); max-width: 260px; }
+.rn-accept-list { margin: 0; padding-left: 16px; }
+.rn-accept-list li { overflow-wrap: anywhere; }
+.rn-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.rn-add { margin-top: 22px; display: flex; flex-direction: column; gap: 12px; }
+.rn-form { display: flex; flex-wrap: wrap; gap: 12px; }
+.rn-form .field { flex: 1 1 160px; min-width: 0; }
+.rn-check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+.rn-check input { margin-top: 3px; }
+.rn-made { display: flex; flex-direction: column; gap: 12px; white-space: normal; }
+.rn-made .tabs { border-bottom-color: color-mix(in srgb, var(--ok-ink) 25%, transparent); }
+.rn-cmd { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rn-cmd-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; }
+.rn-cmd pre.code { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Keeps the visually hidden headers inside the scrolling box, so a wide
+   table never widens the page on a phone. */
+.rn-scroll { position: relative; }
+.rn-table .rn-accept { min-width: 180px; }
