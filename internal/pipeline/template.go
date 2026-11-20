@@ -804,6 +804,9 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 		out.Requires = max(out.Requires, SchemaResources)
 	}
 	out.requireFlow() // likewise for the flow control keys a template's step uses
+	if ps := checkFetchLoops(out, true); len(ps) > 0 {
+		return nil, ps
+	}
 	return out, nil
 }
 

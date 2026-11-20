@@ -39,7 +39,7 @@ have advanced the number with an empty placeholder for another branch's migratio
 any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
 the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
 including the recorded database version. The markers currently cover the tables and columns of
-schemas 17 to 22 and 24 (23 is reserved; see below). The migration-order tests use the same marker list and the same SQLite and
+schemas 17 to 22, 24 and 27 (23, 25 and 26 are reserved; see below). The migration-order tests use the same marker list and the same SQLite and
 PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
 
 These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
@@ -460,3 +460,11 @@ simply has no `/mcp`.
 
 This was learned the hard way: a chart that wrote `tests:` by default left the previous version
 unable to start when a rollout was aborted.
+
+Schema 27 brings the second set of pipeline parity features. It is additive: `steps` gains
+`own_workspace`, `runner_pool` and `runner_labels` (a step that chooses its own runner). A
+pipeline that fetches from a loop (`fetch: [{ from: <loop>, ... }]`, with or without `member`), or
+uses any other key of schema 27, carries `"requires": 27` and `runs.min_schema` 27, so a server of
+schema 26 or older leaves the run alone (`TestOlderServerLeavesFetchFromLoopRunsAlone`): it would
+look for a step named after the loop. Schemas 25 and 26 belong to other branches; until they merge
+they are empty stand-ins in `migrations_parity2.go`, which the migration tests accept.

@@ -227,7 +227,7 @@ func TestArtifactsWithOtherFeatures(t *testing.T) {
 		{"fetch from a loop",
 			"  test:\n    for_each: { py: [\"3.12\", \"3.13\"] }\n    image: x\n    run: y\n    artifacts: [{name: cov, paths: [c.xml]}]\n" +
 				"  after:\n    image: x\n    run: y\n    needs: test\n    fetch: [{from: test, name: cov}]\n",
-			"test is a loop: each of its members keeps its own artifacts", 14},
+			"say where the members' files go with into", 14},
 		{"a loop value in a name",
 			"  test:\n    for_each: { py: [\"3.12\"] }\n    image: x\n    run: y\n    artifacts: [{name: {each: py}, paths: [c.xml]}]\n",
 			"artifact names and paths are written as text", 9},

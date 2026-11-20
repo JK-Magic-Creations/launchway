@@ -31,6 +31,7 @@ var schemaMarkers = []schemaMarker{
 	{schema: schemaPools, feature: "build runner pools", columns: []string{"runs.runner_pool", "runs.runner_labels"}},
 	schemaMarkersStepResources,
 	schemaMarkersFlow,
+	schemaMarkersParity2,
 }
 
 type schemaMarker struct {

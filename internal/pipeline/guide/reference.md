@@ -82,7 +82,7 @@ steps:
 | `reports` | Files read when the step ends, pass or fail: `tests` (JUnit XML or `go test -json`), `findings` (SARIF 2.1.0), `sbom` (CycloneDX JSON). Each is a glob or a list of globs relative to the workspace |
 | `resources` | CPU and memory for a step that runs a script: `{ cpu: 2, memory: 6Gi }`, with `cpu_limit` and `memory_limit` to let it use more than it is promised. A limit left out is the amount promised. Without it the step gets the installation's default for its kind (up to 4 CPUs and 6 GiB to start with). Tools are told to start only as many parallel jobs as fit (`GOMAXPROCS`, `MAKEFLAGS`, `CARGO_BUILD_JOBS`, `LAUNCHWAY_PARALLELISM`). A run is refused if a step asks for more than the installation or the cluster allows. Not for image, deploy, rollout, rollback, verify, ai or approval steps |
 | `artifacts` | Files kept after the step: a list of `{ name, paths, retain, when }`; `when` is `success` (the default), `failure` or `always` |
-| `fetch` | Artifacts of steps this step needs, put in the workspace first: a list of `{ from: step, name: artifact, into: dir }` |
+| `fetch` | Artifacts of steps this step needs, put in the workspace first: a list of `{ from: step-or-loop, name: artifact, into: dir }`; from a loop, `into` is required and each member's files go in `<into>/<member>` (values joined by `_`), or add `member: { key: value, ... }` for one member |
 | `message` | For an approval: the question to decide, one line |
 | `uses` | `library/template`: the step becomes that template's steps |
 | `with` | Values for the template's parameters |

@@ -135,6 +135,7 @@ func Bind(p *Pipeline, values map[string]string, o BindOptions) (*Pipeline, erro
 	steps, loops, ps := expandLoops(out.Steps, "", out.maxLoop, lookup, o.Preview)
 	problems = append(problems, ps...)
 	out.Steps, out.Loops = steps, loops
+	problems = append(problems, checkFetchLoops(&out, false)...)
 	if len(problems) > 0 {
 		sort.SliceStable(problems, func(i, j int) bool { return problems[i].Line < problems[j].Line })
 		return nil, problems

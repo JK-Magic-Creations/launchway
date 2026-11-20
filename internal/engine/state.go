@@ -409,14 +409,8 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("verify or ai steps (schema %d)", schemaVerify)
 			}
 		}
-		// Flow control: conditions on outputs, tolerated failures, retry
-		// waits and causes, run timeouts, lanes.
-		if p.Pipeline.UsesSchemaFlow() {
-			st.Schema = max(st.Schema, schemaFlow)
-			if !st.understands(schemaFlow) {
-				st.notUnderstood("a pipeline key of schema %d (flow control: when.output, on_failure, retry waits, timeout, lane or into)", schemaFlow)
-			}
-		}
+		// Flow control and the keys of schema 27.
+		st.checkNewerSchemas(p.Pipeline)
 		// Rollout steps, and the keys that control a rollout.
 		if p.Pipeline.UsesSchemaControl() || p.Pipeline.Requires > 0 {
 			st.Schema = max(st.Schema, schemaControl, p.Pipeline.Requires)

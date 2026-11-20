@@ -220,3 +220,97 @@ steps:
 		t.Fatalf("requires %d", x.Requires)
 	}
 }
+
+const fetchLoopSrc = `
+pipeline: fetch
+steps:
+  build:
+    for_each: { os: [linux, mac], arch: [amd64, arm64] }
+    exclude: [ { os: mac, arch: arm64 } ]
+    image: x
+    run: make
+    artifacts: [{name: binary, paths: [bin/app]}]
+  package:
+    needs: build
+    image: x
+    run: tar
+    fetch:
+      - { from: build, name: binary, into: dist }
+      - { from: build, name: binary, member: { os: mac, arch: amd64 }, into: one }
+`
+
+func TestFetchFromALoop(t *testing.T) {
+	p, err := Parse([]byte(fetchLoopSrc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Requires != SchemaParity2 {
+		t.Fatalf("requires %d", p.Requires)
+	}
+	b := bindLoop(t, fetchLoopSrc)
+	if b.Requires != SchemaParity2 || len(b.Step("package").Fetch) != 2 {
+		t.Fatalf("bound: %d %+v", b.Requires, b.Step("package").Fetch)
+	}
+	if l := b.Loops[0]; l.MemberDir(l.Members[1]) != "linux_arm64" {
+		t.Fatalf("member dir %s", l.MemberDir(l.Members[1]))
+	}
+	if !reflect.DeepEqual(b.Step("package").Needs, []string{"build[os=linux,arch=amd64]", "build[os=linux,arch=arm64]", "build[os=mac,arch=amd64]"}) {
+		t.Fatalf("needs %v", b.Step("package").Needs)
+	}
+}
+
+func TestFetchFromALoopMistakes(t *testing.T) {
+	cases := []struct{ name, fetch, want string }{
+		{"no into", "{ from: build, name: binary }", "say where the members' files go with into"},
+		{"missing key", "{ from: build, name: binary, member: { os: linux }, into: o }", "lacks arch"},
+		{"unknown key", "{ from: build, name: binary, member: { os: linux, arch: amd64, x: y }, into: o }", "x, which build does not have"},
+		{"unknown value", "{ from: build, name: binary, member: { os: linux, arch: s390x }, into: o }", "has no member os=linux,arch=s390x"},
+		{"excluded member", "{ from: build, name: binary, member: { os: mac, arch: arm64 }, into: o }", "has no member"},
+		{"member on a plain step", "{ from: lint, name: binary, member: { os: linux }, into: o }", "member goes with a loop"},
+		{"not a path", "{ from: build, name: binary, into: /abs }", "not relative"},
+		{"twice", "{ from: build, name: binary, into: o }, { from: build, name: binary, into: p }", "fetched twice"},
+	}
+	for _, c := range cases {
+		src := strings.Replace(fetchLoopSrc, "    fetch:\n      - { from: build, name: binary, into: dist }\n      - { from: build, name: binary, member: { os: mac, arch: amd64 }, into: one }\n",
+			"    fetch: [ "+c.fetch+" ]\n", 1)
+		src = strings.Replace(src, "steps:\n", "steps:\n  lint: {image: x, run: l, artifacts: [{name: binary, paths: [x]}]}\n", 1)
+		src = strings.Replace(src, "    needs: build\n", "    needs: [build, lint]\n", 1)
+		_, err := Parse([]byte(src))
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: want %q, got %v", c.name, c.want, err)
+		}
+	}
+	// A loop the step does not need.
+	_, err := Parse([]byte(strings.Replace(fetchLoopSrc, "    needs: build\n", "", 1)))
+	if err == nil || !strings.Contains(err.Error(), "does not need") {
+		t.Errorf("not needed: %v", err)
+	}
+}
+
+// With an input list the member's value is checked when the run is made.
+func TestFetchFromALoopMemberChecksTheExpansion(t *testing.T) {
+	src := `
+pipeline: fetch
+inputs:
+  systems: { type: list, default: [linux, mac] }
+steps:
+  build:
+    for_each: { os: { input: systems } }
+    image: x
+    run: make
+    artifacts: [{name: binary, paths: [bin/app]}]
+  package:
+    needs: build
+    image: x
+    run: tar
+    fetch: [ { from: build, name: binary, member: { os: beos }, into: one } ]
+`
+	p, err := Parse([]byte(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	vals, _ := ResolveInputs(p, nil)
+	if _, err := Bind(p, vals, BindOptions{}); err == nil || !strings.Contains(err.Error(), "has no member os=beos") {
+		t.Fatalf("%v", err)
+	}
+}

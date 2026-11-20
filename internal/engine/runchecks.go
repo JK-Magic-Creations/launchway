@@ -49,6 +49,9 @@ func (e *Engine) checkSchemas(nr *NewRun) error {
 	if nr.Pipeline.UsesSchemaFlow() && !e.knows(schemaFlow) {
 		return fmt.Errorf("%w: this server does not know flow control keys (when.output, on_failure, retry waits, timeout, lane or into, schema %d)", ErrConflict, schemaFlow)
 	}
+	if nr.Pipeline.UsesSchemaParity2() && !e.knows(schemaParity2) {
+		return fmt.Errorf("%w: this server does not know what schema %d brought (fetch from a loop, a step's own runner, approvers, service readiness, secret references in templates)", ErrConflict, schemaParity2)
+	}
 	// Step resources above the installation's limits could never be given;
 	// say so now, naming the limit, instead of failing the step later.
 	if ps := e.CheckResources(nr.Pipeline); len(ps) > 0 {

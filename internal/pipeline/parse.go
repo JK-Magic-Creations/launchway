@@ -190,6 +190,7 @@ func Parse(data []byte) (*Pipeline, error) {
 	if p.UsesSchemaFlow() {
 		p.Requires = SchemaFlow
 	}
+	p.requireParity2()
 	return p, nil
 }
 

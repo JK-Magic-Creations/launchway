@@ -1391,12 +1391,23 @@ most 20 per step.
 <!-- keys: fetch -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `from` | step name | required | The step that keeps the artifact. The fetching step must need it, directly or not. Not a step that uses a template, nor a loop |
+| `from` | step or loop name | required | The step that keeps the artifact, or a `for_each` loop whose members each keep it (in a pipeline, a loop inside a template is written `use/loop`). The fetching step must need it, directly or not. Not a step that uses a template |
 | `name` | text | required | The artifact's name |
-| `into` | directory | the workspace | A directory relative to the workspace to put the files in, keeping their paths below it |
+| `into` | directory | the workspace | A directory relative to the workspace to put the files in, keeping their paths below it. Required when `from` is a loop and there is no `member` |
+| `member` | mapping | all members | With a loop: one member, named by a value for every key of the loop, such as `{ os: linux, arch: amd64 }`. Its files go directly in `into` |
 
 A step that runs only after a failure (`when.upstream: failed`) cannot fetch an artifact kept only
 on success.
+
+Fetching from a loop: `{ from: build, name: binary, into: dist }` puts every member's files in
+`dist/<member>/…`, `<member>` being the member's values joined by `_` in key order
+(`dist/linux_amd64/…`), so two members never share a path. `{ from: build, name: binary, member:
+{ os: linux, arch: amd64 }, into: out }` fetches one member directly into `out`. A member that was
+skipped, or that failed, was allowed to (`continue_for`) and kept nothing, is left out of the
+all-members form; a member that succeeded without keeping the artifact fails the step, as a
+missing artifact does for any step. The limit of 20 counts the entries written, not the members.
+`launchway validate` refuses a `member` with a missing or unknown key or a value the loop does not
+have, and the all-members form without `into`.
 
 <!-- validate -->
 ```yaml
