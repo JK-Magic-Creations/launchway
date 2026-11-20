@@ -623,7 +623,9 @@ a.btn:hover { text-decoration: none; }
 .hcell:hover .hcell-tip, .hcell:focus-visible .hcell-tip { display: block; }
 .pstat-more { margin-top: 8px; font-weight: 600; font-size: 13px; }
 .tab { white-space: nowrap; flex: none; }
-@media (max-width: 640px) { .tabs { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; } }
+/* A run can have eleven tabs: they scroll rather than widen the page. */
+.tabs { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+@media (max-width: 640px) { .tabs { scrollbar-width: none; } }
 .hcell-flaky { border-style: dashed; border-color: var(--warn); }
 .hcell-flaky::after { content: ""; position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); border: 1.5px solid var(--surface); }
 
