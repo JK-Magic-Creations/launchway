@@ -11,6 +11,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/policy"
 )
 
 // The pool token and OIDC secret the owner-shaped configuration reads.
@@ -65,6 +66,11 @@ func TestImportedConfigurationIsTheFilesConfiguration(t *testing.T) {
 				t.Fatal(err1, err2)
 			}
 			same(t, "engine settings", liveShape(fl), liveShape(gl))
+			// Servers sharing a database compare policies by hash; the file's
+			// have line numbers and the database's have none.
+			if a, b := policy.Hash(fl.Policy.Inline), policy.Hash(gl.Policy.Inline); a != b {
+				t.Errorf("the policies hash differently from the file (%s) and from the database (%s)", a, b)
+			}
 			fp := byName(file.Auth.Access)
 			gp := byName(got.Auth.Access)
 			same(t, "role bindings", fp, gp)

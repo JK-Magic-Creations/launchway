@@ -414,8 +414,18 @@ func (s Set) Governed(project, branch, event string) bool {
 
 // Hash names a list of policies by their content: sha256: and 12 hex
 // digits of the SHA-256 of their JSON. Inline policies are versioned by it.
+//
+// Where a policy was written (its file and line) is not part of what it
+// says, so it is left out: the same policies hash the same whether they were
+// read from the configuration file or from the database, where they have no
+// line, and servers sharing a database do not take each other for different.
 func Hash(ps []Policy) string {
-	b, _ := json.Marshal(ps)
+	plain := make([]Policy, len(ps))
+	for i, p := range ps {
+		p.File, p.Line = "", 0
+		plain[i] = p
+	}
+	b, _ := json.Marshal(plain)
 	sum := sha256.Sum256(b)
 	return "sha256:" + hex.EncodeToString(sum[:])[:12]
 }
