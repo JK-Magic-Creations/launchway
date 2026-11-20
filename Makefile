@@ -162,10 +162,14 @@ release-images: tools
 vulncheck: tools
 	$(TOOLS)/govulncheck ./...
 
-# Every module compiled into the binary must carry one of these licenses.
+# Every module compiled into the binary must carry one of these licenses. The --ignore entries are
+# modules whose license file the classifier cannot read and a person has checked: the in-toto
+# modules carry the short Apache-2.0 notice (checked for attestation v1.2.0 and in-toto-golang
+# v0.11.0; check again when they change).
 ALLOWED_LICENSES := Apache-2.0,BSD-2-Clause,BSD-3-Clause,MIT,ISC,MPL-2.0,Unlicense,0BSD
 license-check: tools
-	$(TOOLS)/go-licenses check ./cmd/launchway --allowed_licenses=$(ALLOWED_LICENSES)
+	$(TOOLS)/go-licenses check ./cmd/launchway --allowed_licenses=$(ALLOWED_LICENSES) \
+		--ignore github.com/in-toto/attestation --ignore github.com/in-toto/in-toto-golang
 
 # shellcheck on the packaging, release and test scripts (installed, or in a container).
 SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
