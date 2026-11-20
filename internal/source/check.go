@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/redact"
 	"os"
 	"regexp"
 	"sort"
@@ -179,6 +180,7 @@ func explainGit(err error) string {
 }
 
 func clipMsg(s string) string {
+	s = redact.URLs(s)
 	s = strings.TrimSpace(s)
 	if len(s) > 300 {
 		s = s[:300] + "..."

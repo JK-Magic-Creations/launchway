@@ -778,7 +778,7 @@ func gitRun(ctx context.Context, dir string, env []string, stdin string, args ..
 		if msg == "" {
 			msg = err.Error()
 		}
-		return stdout.String(), errors.New(msg)
+		return stdout.String(), errors.New(redact.URLs(msg))
 	}
 	return stdout.String(), nil
 }

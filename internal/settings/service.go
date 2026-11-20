@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/source"
@@ -120,6 +121,16 @@ func (s *Service) ImportBootstrap() (*ImportResult, error) {
 		file, err := FromConfig(s.boot)
 		if err != nil {
 			return nil, fmt.Errorf("importing the configuration file: %w", err)
+		}
+		for _, o := range file {
+			k := kindByName(o.Kind)
+			v, _, err := decodeSpec(k, o.Name, o.Spec)
+			if err == nil {
+				err = checkOwn(k, v)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("importing the configuration file: %s %s: %w", o.Kind, o.Name, err)
+			}
 		}
 		writes := make([]engine.ConfigWrite, 0, len(file))
 		after := mergeObjects(objs, file)
@@ -473,7 +484,17 @@ func checkOwn(k *Kind, v any) error {
 		}
 		return t.Levels.check()
 	case *config.ProjectConfig:
+		if err := checkAddress("repo", t.Repo); err != nil {
+			return err
+		}
 		return t.Normalize()
+	case *config.LibraryConfig:
+		return checkAddress("repo", t.Repo)
+	case *ai.Model:
+		if err := checkAddress("endpoint", t.Endpoint); err != nil {
+			return err
+		}
+		return checkHeaders("headers", t.Headers)
 	case *StepResources:
 		return checkStepResources(t)
 	case *SecretStore:
