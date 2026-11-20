@@ -1,0 +1,228 @@
+# Quality gates
+
+Launchway's engineering standard says that code follows best practice, is well tested, and is
+easy to add to, change and modify. These gates make that a rule the build enforces. Each one
+fails the build; none of them is advice.
+
+Most gates use a **baseline**: what was already wrong when the gate was introduced is recorded and
+tolerated, so the gate can be strict from day one. Only something *new* fails. A baseline may only
+shrink. It never grows to make a change pass.
+
+Run all the fast gates with one command:
+
+```sh
+make check        # formatting, vet, lint, architecture, size ratchet, web lint, type check, web tests
+make check-all    # the above, plus the bundle budget and the Go tests with the coverage floors
+```
+
+## The gates
+
+| Gate | Command | Fails when | Baseline file |
+|---|---|---|---|
+| Format | `make fmt-check` | `gofmt` would change a file | none |
+| Vet | `make vet` | `go vet` reports anything | none |
+| Go lint | `make lint` | a finding appears that is not in the baseline | `quality/lint-baseline.json` |
+| Architecture | `make arch` | a package imports one it may not | table in `internal/archtest/arch_test.go` |
+| Size | `make ratchet` | a file over 1,000 lines or a function over 150 lines is new or grew | `quality/size-baseline.json` |
+| Coverage | `make coverage-check` | a package's coverage is below its floor | `quality/coverage-floor.json` |
+| Web lint | `make web-lint` | `eslint` or `tsc` reports something new | `web/eslint-suppressions.json` |
+| Web tests | `make web-test` | a `vitest` test fails | none |
+| Bundle size | `make web-size` | the built JavaScript or CSS is larger than the budget | `web/bundle-budget.json` |
+
+### Go lint
+
+`.golangci.yml` turns on `errcheck`, `govet`, `staticcheck`, `ineffassign`, `unused`, `gosec`,
+`bodyclose`, `contextcheck`, `noctx`, `sqlclosecheck`, `rowserrcheck`, `revive`, `gocyclo`
+(over 30), `funlen` (over 150 lines or 100 statements), `dupl` and `misspell`. Tests have a relaxed
+set: length, duplication and cleanup errors are allowed there.
+
+`golangci-lint` is pinned (see `GOLANGCI_LINT_VERSION` in the Makefile) and installed into the
+repository's own `.tools/bin` directory by `make tools`, never into your `GOPATH`.
+
+The baseline holds 507 findings today, counted by file, linter and message, not by line number, so
+editing a file does not disturb it. When you fix findings, run `make lint-baseline-update`: it
+rewrites the file and refuses if anything would be added. The findings the baseline allows are the
+work list for the refactoring steps: `contextcheck` and `noctx` (database calls without a context),
+`sqlclosecheck` and `rowserrcheck`, and `gocyclo` and `funlen` (long functions).
+
+Never silence a finding with `//nolint` unless the reason is written after it, for example
+`//nolint:gosec // the path comes from the server's own configuration`.
+
+### Architecture test
+
+`internal/archtest` reads the imports of every non-test file under `internal/` and `cmd/` and
+compares them with a table of allowed imports. Today's graph is the table. It fails when:
+
+- a package or an import edge is not in the table (a new dependency has to be a visible, reviewed
+  change to the table, with the reason in the pull request);
+- an edge in the table no longer exists (so the table only shrinks);
+- an edge breaks one of the rules below, even if it is in the table, unless it is a known exception.
+
+The rules are the ones the code health audit calls harmful:
+
+- leaf packages (`redact`, `ids`, `resources`, `hub`, `policy`, `auth`, `verify`, `testreport`,
+  `blobstore`, `coverage`, `runnerauth`, `accept`) import nothing internal;
+- runner-side packages (`runner`, `executor`, `imagebuild`, `verify`, `deploy`, `secrets`,
+  `redact`, `resources`) must not import `internal/engine`;
+- `engine` must not import `api`, `runner`, `source`, `config` or `cmd`;
+- `api` must not import `config`, `runner` or `cmd`;
+- only `cmd` imports `config`, and nothing imports `cmd`;
+- production code must not import the test support packages.
+
+Known exceptions, each with a TODO, are `runner` to `engine` and `deploy/argocd` to `engine`. Both
+go away when the wire types move to a new `internal/wire` package. When the edge is gone, the test
+fails until the exception is deleted, so it cannot come back unnoticed.
+
+To add an edge on purpose, add it to `allowedImports` in the same pull request and explain why. A
+pull request that adds an edge a rule forbids needs a design decision first.
+
+### Size ratchet
+
+Files over 1,000 lines and functions over 150 lines make code hard to review and to test. The
+test (`TestSizeRatchet`) lists today's offenders in `quality/size-baseline.json`: 15 files (13 Go,
+2 in the web UI) and 17 functions. It fails when a listed item grows, or a new one appears. It
+looks at Go outside tests, and at `.ts` and `.tsx` files in `web/src`.
+
+When you split or shorten one, run `make ratchet-update`. It lowers the baseline and refuses to
+record growth. Prefer a new file or package to growing a large one.
+
+### Coverage floors
+
+`make coverage` runs every Go test (without the race detector) and writes the per-package result to
+`bin/coverage.txt`. `quality/coverage-floor.json` holds each package's coverage rounded down to
+0.1. `make coverage-check` fails when a package is below its floor, or when a new package, which
+has no floor yet, starts below 70%.
+
+Floors only move up. After adding tests, run `make coverage-update`: it raises floors, adds new
+packages, and never lowers one. Commit the file with your change. The security-relevant packages
+`auth`, `runner`, `executor` and `imagebuild` have low floors today; raising them is planned work.
+
+### Web gates
+
+In `web/`:
+
+- `npm run lint` runs `eslint` with `typescript-eslint`, `react-hooks` and `jsx-a11y`. Findings
+  that existed are recorded by ESLint's own bulk suppressions in `eslint-suppressions.json`. After
+  fixing some, run `npm run lint:prune` to drop them from the file. Do not run `npm run
+  lint:baseline` to make a new finding pass.
+- `npm test` runs `vitest` with Testing Library in `jsdom`. `src/format.test.ts`,
+  `src/router.test.tsx` and `src/components/ui.test.tsx` are the pattern: test what a person sees
+  and does (roles, names, text), not how the component is built. A test file sits next to its
+  source file and is called `<name>.test.ts` or `<name>.test.tsx`.
+- `npm run size` builds the UI and fails when the JavaScript or CSS is larger than
+  `bundle-budget.json`. Shrink with `React.lazy` per route; when the bundle gets smaller, run
+  `npm run size:update` (it never raises the budget).
+
+## Updating a baseline legitimately
+
+A baseline moves in one direction.
+
+- **Down**: you fixed something. Run the update command for that gate (`make lint-baseline-update`,
+  `make ratchet-update`, `make coverage-update`, `npm run lint:prune`, `npm run size:update`) and
+  commit the changed file with the fix. A reviewer sees the number fall.
+- **Up**: not allowed for lint and size. If a finding or a long function is truly necessary,
+  restructure it, or explain it in the pull request and ask for a decision. For coverage, a floor
+  may be lowered by hand only when code is deleted, and the pull request says so.
+- **New package**: add it to the architecture table, and give it at least 70% coverage.
+
+## The engineering standard
+
+A change is done when all of the following are true.
+
+**Behaviour is tested.** Every new behaviour has a test that would fail without it: a unit test for
+logic, an integration test where it crosses a boundary (database, runner, HTTP, container). A bug
+fix starts with a test that reproduces the bug. Tests assert what a user or caller can observe, not
+how the code is built. Anything that touches the engine also shows what happens on failure,
+restart and retry.
+
+**Gates pass.** `make check` passes locally, and the pipeline runs the same gates and the full
+tests; nobody merges a red build.
+
+**Boundaries hold.** Packages depend downward only (the table is in `internal/archtest`). Wire
+types will live in `internal/wire`. Do not import `engine` from `runner`, nor `api` from `engine`.
+If you need a new edge, change the table in the same pull request and say why.
+
+**Small units.** Files stay under 1,000 lines and functions under 150; the baseline only shrinks.
+
+**Context everywhere.** Every function that does input or output takes a `context.Context` first
+and passes it on. No `context.Background()` below `main` except in documented background loops.
+
+**Errors.** Return errors with context (`fmt.Errorf("...: %w", err)`). Do not discard errors except
+`Close` on read paths and `Rollback` after commit. No `panic` in request or run paths.
+
+**Input is validated at the edge.** Bodies are size-limited, JSON is decoded strictly, IDs and
+names are validated before use, SQL uses placeholders only. Parsers that take outside input get a
+fuzz target.
+
+**Authorisation is in the table.** A new route is added to the route table with a permission class
+and a row in the permission test; hidden resources answer like missing ones.
+
+**Parity.** A new capability is in the HTTP API, the MCP server, the CLI, Terraform and the web UI,
+or has a recorded exemption with a reason.
+
+**Docs.** Public behaviour is documented and the docs tests pass, in plain words.
+
+**Migrations are additive.** Follow [Writing a migration](./migrations.md); servers of two
+versions share a database.
+
+**No duplication.** Search for an existing package or helper before writing one; reuse `testdb`,
+`testlib`, `redact` and `secrets`.
+
+**Dependencies.** A new module needs an approved licence, a reason in the pull request, and passes
+`govulncheck`.
+
+**Web.** Components use the shared tokens in `styles.css`, call the API only through the typed
+client, are keyboard-operable, have labels, and have a test for any logic.
+
+**Review.** Someone other than the author reads the diff. The reviewer checks tests first, then
+boundaries, then names.
+
+**Speed.** Tests that take over 20 seconds go in the slow tier. Do not add `time.Sleep` to wait for
+a result: use the fake clock or a polling helper with a deadline.
+
+## Running the gates in the pipeline
+
+`.launchway/pipeline.yaml` should run the same gates as `make check`. Add these steps (the Go step
+needs network access once to install the pinned linter; the web step needs Node):
+
+```yaml
+  quality-go:
+    description: Format, vet, lint, architecture test and size ratchet
+    image: docker.io/library/golang:1.27
+    run: make fmt-check vet lint arch ratchet
+    timeout: 15m
+
+  quality-web:
+    description: Web lint, type check, tests and bundle budget
+    image: docker.io/library/node:24-alpine
+    run: |
+      cd web
+      npm ci --no-audit --no-fund
+      npm run lint
+      npx tsc --noEmit
+      npm test
+      npm run size
+    timeout: 10m
+
+  coverage:
+    description: Per-package coverage must not fall below its floor
+    image: docker.io/library/golang:1.27
+    needs: quality-go
+    run: make coverage-check
+    timeout: 30m
+```
+
+Make `build-ui` and `build-binary` depend on these (`needs:`), so a failed gate stops the build.
+The `coverage` step runs the whole Go suite once more, so when the `test` step produces a
+coverage report, point the floor check at that output instead.
+
+## Tooling summary
+
+| What | Where |
+|---|---|
+| Linter configuration | `.golangci.yml` |
+| Pinned tools | `Makefile` (`GOLANGCI_LINT_VERSION`), installed in `.tools/bin` |
+| Baselines and floors | `quality/` and `web/` (listed above) |
+| Architecture and size tests | `internal/archtest/` |
+| Lint and coverage comparers | `scripts/quality/` |
+| Web gates | `web/eslint.config.js`, `web/vitest.config.ts`, `web/scripts/check-bundle.mjs` |
