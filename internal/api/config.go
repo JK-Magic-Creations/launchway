@@ -89,13 +89,36 @@ func (s *Server) configOverview(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, err)
 			return
 		}
+		id := identityFrom(r)
+		admin := s.authorize(id, auth.Administer, "")
 		out["available"] = true
 		out["levels"] = lay.Levels
 		out["organisation"] = lay.Organisation
-		out["units_in_use"] = lay.UnitsInUse
-		out["units"] = lay.Units
-		out["status"] = s.Settings.Status()
-		out["admin"] = s.authorize(identityFrom(r), auth.Administer, "")
+		out["admin"] = admin
+		if admin {
+			out["units_in_use"] = lay.UnitsInUse
+			out["units"] = lay.Units
+			out["status"] = s.Settings.Status()
+		} else {
+			// Any role holder reads the names of the levels; only the
+			// projects they may see are named, and what is wrong with the
+			// configuration (it can name hosts and repositories) is for
+			// administrators.
+			units := make([]settings.UnitView, 0, len(lay.Units))
+			for _, u := range lay.Units {
+				v := u
+				v.Projects = []string{}
+				for _, p := range u.Projects {
+					if s.authorize(id, auth.Read, p) {
+						v.Projects = append(v.Projects, p)
+					}
+				}
+				units = append(units, v)
+			}
+			out["units_in_use"] = lay.UnitsInUse
+			out["units"] = units
+			out["status"] = settings.Status{Revision: s.Settings.Status().Revision}
+		}
 	}
 	writeJSON(w, http.StatusOK, out)
 }
