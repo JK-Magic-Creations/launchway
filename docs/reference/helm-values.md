@@ -345,6 +345,7 @@ runs a release that knows them, and take them out before rolling back to one tha
 | `delivery.deployRunner.secretStores` | map | `{}` | Secret stores the deploy runner may read |
 | `delivery.deployRunner.ai` | boolean or null | unset (`false`) | Let the deploy runner call the models in `ai.models` to explain its verdicts, with keys read from `secretStores`. Needs `ai.models` |
 | `delivery.deployRunner.refresh` | boolean or null | `null` (`true`) | Ask Argo CD to look at the repository at once after a commit |
+| `delivery.deployRunner.accept` | map or null | unset | The deploy runner's own limits on the work it takes, as [`accept`](runner-config.md#what-the-runner-accepts) (`projects`, `environments`, `executors`), checked on the runner before anything runs. Written only when set |
 | `delivery.deployRunner.rbac.create` | boolean | `true` | Create the Roles below and bind them to the deploy runner |
 | `delivery.deployRunner.rbac.patchApplications` | boolean | `true` | Patch on the named Applications, to request syncs and refreshes. Without it, deploy steps need `sync.request: auto` or `never` |
 | `delivery.deployRunner.rbac.readDeployments` | boolean | `false` | Get on Deployments in the rollout namespaces, for rollouts that take their pod template from a Deployment (`workloadRef`) |
