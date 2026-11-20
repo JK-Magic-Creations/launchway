@@ -39,7 +39,7 @@ have advanced the number with an empty placeholder for another branch's migratio
 any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
 the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
 including the recorded database version. The markers currently cover the tables and columns of
-schemas 17 to 22. The migration-order tests use the same marker list and the same SQLite and
+schemas 17 to 23. The migration-order tests use the same marker list and the same SQLite and
 PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
 
 These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
@@ -337,6 +337,52 @@ the MCP tool `set_step_resource_default`, or with values of their own. A server 
 that exists. A run's own record holds no sizes, so an older server reads the runs of a newer one as
 before and rolling back needs nothing but rolling the servers back.
 
+Schema 23 brings configuration in the database (see `internal/engine/configstore.go` and
+`internal/settings`): four tables, `config_objects` (the current state of each object: kind, name,
+unit, spec, version, who manages it, soft-delete marks), `config_changes` (the history, appended in
+the transaction of every change and never rewritten, with the object before and after), `config_imports`
+(one row per import, the first start's among them) and `config_revisions` (one counter that every change
+raises, which is what servers watch). Every table has an `org` column, `''` for the one organisation
+there is, and `org` is the first column of the keys and indexes: adding organisations later is a new
+value in that column, with no table rewritten. It is additive: nothing older code reads is added, no
+event type is added, and no run carries `requires: 23`.
+
+What a server of schema 22 does with a schema-23 database: it starts, logs that the database is newer,
+and keeps using its own configuration file until it is replaced. It never reads the new tables, so the
+import changes nothing it does, and the runs it picks up behave as before. The rule for a rollout is
+therefore: make configuration changes through the API only after every server is replaced, because a
+server that is not replaced does not see them (an environment added in the database is unknown to it,
+and a deploy to it is refused, not guessed). Servers of schema 23 notice a change within seconds
+(PostgreSQL `NOTIFY`, and a poll every two seconds), apply it without a restart and, if a change cannot be
+used on one server, keep what they had and log why.
+
+The recorded hash of a server's own policies no longer includes where each policy was written (file
+and line), so the same policies hash the same from the file and from the database. A server of schema
+22 beside a server of schema 23 may log once that the other has different policies, because the older
+server's hash still includes line numbers; the policies are the same.
+
+The artifact store is the one setting chosen before the database can be asked: the engine reads the
+stored installation settings as it opens, and uses the store they name instead of the file's. A change
+to it applies when each server next restarts.
+
+Rolling back from schema 23 to 22:
+
+1. Export: `launchway config export -o config.yaml` (or `GET /api/v1/config/export`). Take the
+   `objects:` list out of the text: it holds what the file has no place for (units, secret-store
+   definitions, step resources, names of role bindings, objects defined at a unit), which the release
+   before cannot read; the release before does not have those.
+2. Merge the rest into each server's configuration file (with the Helm chart, into `config.*`;
+   `config.projects`, `config.extraConfig` and the other values hold the same sections), together with
+   the bootstrap settings the file already has.
+3. Roll the servers back. They start with the file, as before. The new tables stay and are ignored;
+   when you roll forward again, the database still holds the configuration as it was at the last
+   change, and the file's copies are ignored again, so roll forward only after exporting anything
+   changed in the file meanwhile and importing it (`launchway config import --apply`).
+
+`TestConfigurationInTheDatabaseTwoServersAndRollback` runs this on PostgreSQL with real processes:
+the first start's import, a change through one server seen by the other, a restart that keeps the
+database's settings over the file's, and the release before running with an exported file.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what
@@ -402,6 +448,10 @@ server or runner refuses a setting it does not know. So:
 The MCP endpoint (`mcp:`) follows this rule: it adds no table, column or event, and the chart
 writes `config.mcp.*` only when set, so a release before it reads the default configuration and
 simply has no `/mcp`.
+
+From schema 23 the rule is stricter: the chart writes only the bootstrap keys by default (`listen`,
+`data` and the runner switch; `TestChartDefaultWritesBootstrapKeysOnly`), and what the values set for
+settings that live in the database is imported once and then ignored.
 
 This was learned the hard way: a chart that wrote `tests:` by default left the previous version
 unable to start when a rollout was aborted.

@@ -22,6 +22,29 @@ override it. It is for operators who install and run Launchway. For a walk-throu
 [Install on a single server](../howto/install-single-server.md); for the Helm chart, which writes
 this file for you, see [Helm values](helm-values.md).
 
+## What stays in the file, and what moved
+
+Since schema 23 this file is **bootstrap only**: it holds what a server needs before it can read
+the database, and nothing an administrator manages day to day.
+
+| Stays in the file | Why |
+|---|---|
+| `listen`, `data`, `database`, `database_wait`, `user` | Where the server runs and how it reaches the database |
+| `server.trust_proxy`, `server.drain_delay` | How it sits behind a proxy or load balancer |
+| `auth.mode`, `auth.oidc`, `auth.idle_timeout`, `auth.session_lifetime`, `auth.allow_anonymous` | Sign-in must work before anyone can change anything |
+| `auth.admins` | The first administrators, and the way back in if the role bindings lock everyone out |
+| `runner` (the built-in runner and its secret stores, the AI secret stores) | Process settings of the machine the server runs on |
+| `reports.origin` | The address the server is reached at |
+
+Everything else lives in the database: `projects`, `libraries`, `environments`, `runner_pools`,
+`runner_admin`, `auth.access` (role bindings), `auth.tokens`, `policy`, `verification`, `ai.models`,
+`approvals`, `drafts`, `pull_requests`, `schedules`, `loops`, `tests`, `findings`, `reports` (except
+`origin`), `artifacts` (limits, retention and where artifacts are kept) and `mcp`. The sections below
+that describe them document the **keys of the import format**: the keys a first start imports, that
+`launchway config export` writes and `launchway config import` reads. A server that starts with a
+database that already holds configuration ignores them, says so for each key, and names the import.
+See [Configuration and levels](../guide/configuration.md) and [Configuration objects](config-objects.md).
+
 ## How the file is read
 
 - **Unknown settings are refused.** A misspelt key stops the server from starting, naming the line.
@@ -158,7 +181,21 @@ Required with `mode: oidc`: `issuer`, `client_id`, `redirect_url` and one of
 | `auth.oidc.username_claim` | text | `preferred_username`, then `email`, then `sub` | The claim that names a person. Choose one people cannot change themselves |
 | `auth.oidc.groups_claim` | text | `groups` | The claim, in the ID token or the userinfo response, that lists a person's groups |
 
+`auth.admins` names the first administrators: people or groups who are administrators of every project
+whatever the role bindings in the database say. It stays in the file so that a new installation has
+someone who can sign in and set the rest up, and so that bindings that lock everyone out can be
+repaired by editing a file.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `auth.admins.users` | list of text | | Users, as `username_claim` gives them, who are administrators of every project |
+| `auth.admins.groups` | list of text | | Groups, as `groups_claim` gives them, whose members are administrators of every project |
+
 ### Access bindings
+
+Role bindings are kept in the database since schema 23; `auth.access` is the format the first start
+imports.
 
 `auth.access` is a list of bindings. Each grants a role to one group or one user. With
 `mode: oidc` at least one is required; with `mode: none` it must be empty. Where several match,

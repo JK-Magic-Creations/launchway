@@ -251,3 +251,38 @@ needs the database restored from a backup taken before it.
 - [Install on Kubernetes](install-kubernetes.md#upgrades) for how the chart replaces servers.
 - [Monitoring](monitoring.md), to watch `/readyz` and the schema numbers.
 - [Troubleshooting](troubleshooting.md).
+
+## Configuration in the database
+
+Since schema 23 the settings an administrator manages are in the database, so **a database backup is
+a configuration backup**, with every object's history. For a copy you can read, review and keep in Git:
+
+```sh
+launchway config export -o launchway-config.yaml
+```
+
+### Upgrading from a release that kept configuration in the file
+
+1. Upgrade as usual. The first server of schema 23 to start imports the settings in its file into the
+   database, once, and records the import (`launchway config imports` shows it and what it brought).
+2. Every server logs each key of its file that it now ignores. Change those settings in the web UI,
+   with `launchway config`, the API or Terraform from now on. With the Helm chart, the values still
+   in `config.*` were imported the first time and are ignored after; take them out when convenient.
+3. During a rolling upgrade, servers of the release before keep using their own file. Make no
+   configuration change through the API until every server is replaced: an older server does not see
+   it.
+
+### Rolling back
+
+Export, take the `objects:` list out of the text, merge the rest into each server's configuration
+file, and roll the servers back; they use the file again. The exact steps, and why they work, are in
+[Migrations](../development/migrations.md) under schema 23. Settings changed in the
+file after a rollback are not seen by the database; export the file's sections again and `launchway
+config import --apply` before rolling forward.
+
+### Restoring one object
+
+Every change is in the object's history, and a deleted object is kept: `launchway config history
+projects shop` shows who changed it, and `launchway config restore projects shop` brings a deleted
+project back. To go back to an earlier version of the settings, take the spec from the history and
+`launchway config set` it.

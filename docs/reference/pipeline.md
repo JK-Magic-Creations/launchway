@@ -885,7 +885,7 @@ steps:
 
 `resources` says how much CPU and memory a step needs. Without it a step gets the installation's
 default for its kind, which an administrator keeps in the database (see
-[`launchway step-resources`](cli.md#step-resources) and `GET /api/v1/step-resources` in the
+[`launchway step-resources`](cli.md#launchway-step-resources) and `GET /api/v1/step-resources` in the
 [HTTP API](http-api.md)); the defaults that a new installation starts from are in the table below.
 Only a step that runs a script (kind `step`) takes it: an image step is built by the builder, whose
 memory is set where the builder is deployed, deploy, rollout, rollback, verify and ai steps run in
