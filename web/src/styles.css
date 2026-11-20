@@ -418,6 +418,8 @@ a.btn:hover { text-decoration: none; }
 .linkbtn { border: 0; padding: 0; background: none; color: var(--accent-ink); font: inherit; cursor: pointer; }
 .linkbtn:hover { text-decoration: underline; }
 .callout-info { background: var(--accent-soft); color: var(--text); }
+.callout-allowed { background: var(--warn-soft); color: var(--warn-ink); }
+.badge-allowed { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .callout-draft { background: var(--warn-soft); color: var(--warn-ink); }
 .callout-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .callout-row > span { flex: 1 1 320px; }

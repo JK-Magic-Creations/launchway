@@ -183,8 +183,9 @@ export function RunPage({ id }: { id: string }) {
   const step = run.step_list.find((s) => s.id === selected) ?? null;
   const loopView = collapseLoops(run);
   const loop = loopFor(run, selected);
-  const failedCount = run.step_list.filter((s) => s.status === "failed").length;
-  const firstFailed = run.step_list.find((s) => s.status === "failed");
+  const failedCount = run.step_list.filter((s) => s.status === "failed" && !s.allowed_failure).length;
+  const firstFailed = run.step_list.find((s) => s.status === "failed" && !s.allowed_failure);
+  const allowedFailed = run.step_list.filter((s) => s.status === "failed" && s.allowed_failure);
   // Only approvals wait for someone to decide; deploy steps wait for their
   // environment's lock or for the deployment to finish.
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting" && s.kind === "approval");
@@ -345,6 +346,16 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
+      {allowedFailed.length > 0 && (
+        <div className="callout callout-allowed">
+          <strong>{allowedFailed.length === 1 ? `${allowedFailed[0].id} failed, and the pipeline allows that` : `${allowedFailed.length} steps failed, and the pipeline allows that`}.</strong>{" "}
+          Their steps have <code>on_failure: continue</code>, so the run goes on as if they had succeeded:{" "}
+          {allowedFailed.map((s, i) => (
+            <span key={s.id}>{i > 0 && ", "}<button type="button" className="linkbtn" onClick={() => select(s.id)}>{s.id}</button></span>
+          ))}.
+        </div>
+      )}
+
       {run.status === "failed" && firstFailed && (
         <div className="callout callout-bad">
           <strong>{failedCount === 1 ? `${firstFailed.id} failed` : `${failedCount} steps failed`}.</strong>{" "}
@@ -488,6 +499,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={shownStatus(step)} label={stepLabel({ ...step, environment: env || step.environment })} />
+            {step.allowed_failure && <span className="badge-allowed" title="The step has on_failure: continue, so its failure does not fail the run and the steps that need it run as if it had succeeded">Allowed to fail</span>}
             {step.kind === "image" && <span className="meta step-kind"><ImageIcon />builds a container image</span>}
             {step.kind === "verify" && <span className="meta">verifies {step.environment || environmentOf(run, step) || "an environment"}</span>}
             {step.kind === "ai" && <span className="meta">asks a model</span>}
@@ -562,6 +574,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {group && <TemplateFacts group={group} libraries={run.graph.libraries} />}
           {step.needs && step.needs.length > 0 && <><dt>Needs</dt><dd>{step.needs.join(", ")}</dd></>}
           {step.when && <><dt>When</dt><dd className="mono">{JSON.stringify(step.when)}</dd></>}
+          {step.on_failure === "continue" && <><dt>On failure</dt><dd className="mono">continue</dd></>}
           {secrets.length > 0 && <><dt>Secrets</dt><dd>{secrets.map(([name, r]) => <div key={name}><Mono>{name}</Mono> ← <Mono>{`${r.store}:${r.key}${r.field ? `#${r.field}` : ""}`}</Mono></div>)}</dd></>}
           <dt>Retry</dt><dd>{step.retry ? `up to ${step.retry} more time${step.retry > 1 ? "s" : ""}` : "no"}</dd>
           <dt>Timeout</dt><dd>{step.timeout}</dd>

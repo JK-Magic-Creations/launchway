@@ -1349,7 +1349,34 @@ CREATE TABLE step_resource_limits (
   updated_by        TEXT    NOT NULL DEFAULT ''
 );
 `},
+
+	// 23: reserved for the configuration kept in the database (built on
+	//     another branch). It is an empty stand-in here so that the numbers
+	//     after it are the ones their branches were given; the migration
+	//     tests accept it, and only it, being empty.
+	//     Compatibility: additive: nothing.
+	{additive, ``},
+
+	// 24: flow control (see flow.go in the pipeline package): conditions on
+	//     step outputs, tolerated failures, retry waits and causes, a run
+	//     timeout, lanes, the target branch of a pull request, and
+	//     re-running from several steps. A step that failed and was allowed
+	//     to (on_failure: continue) is marked in steps.allowed so that every
+	//     view of the run, including live updates, can say so.
+	//     Compatibility: additive: new columns with defaults and, in the
+	//     lanes' case, new tables. Pipelines that use the new keys carry
+	//     "requires": 24 and the events that use new fields carry
+	//     Requires, so older servers leave such runs alone.
+	{additive, `
+ALTER TABLE steps ADD COLUMN allowed INTEGER NOT NULL DEFAULT 0;
+`},
 }
+
+// schemaFlow is the schema that brought flow control: conditions on step
+// outputs, tolerated failures, retry waits and causes, run timeouts, lanes,
+// the target branch of pull requests and re-running from several steps.
+// Schema 23 is the configuration kept in the database, built elsewhere.
+const schemaFlow = 24
 
 // schemaIdentity is the schema that brought runner identities.
 const schemaIdentity = 20

@@ -566,6 +566,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 		ps.parseSteps(v, p)
 	}
 	if ps.check(p) {
+		ps.checkOutputTests(p)
 		ps.checkImages(p)
 	}
 	ps.checkArtifacts(p)
@@ -802,6 +803,11 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	if out.UsesSchemaResources() {
 		out.Requires = max(out.Requires, SchemaResources)
 	}
+	// Likewise for flow control keys a template's step uses (on_failure, a
+	// condition on an output).
+	if out.UsesSchemaFlow() {
+		out.Requires = max(out.Requires, SchemaFlow)
+	}
 	return out, nil
 }
 
@@ -929,6 +935,19 @@ func short(sha string) string {
 	return sha
 }
 
+// whenIn is a condition written in the scope that has the given prefix, as
+// the run sees it: an output test names a step of the run by its full ID.
+// The condition is copied, because a template's steps are shared by every
+// use of the template.
+func whenIn(c *Condition, prefix string) *Condition {
+	if c == nil || c.Output == "" || prefix == "" {
+		return c
+	}
+	cc := *c
+	cc.Output = prefix + c.Output
+	return &cc
+}
+
 // dropped reports whether a template step's if left it out.
 func dropped(s *Step) bool { return s.ifTest != nil && !s.ifTest.keep }
 
@@ -1044,7 +1063,7 @@ func (x *expander) emit(sc *scope) {
 			child.when, child.retry, child.timeout = sc.when, sc.retry, sc.timeout
 			child.each = mergeEach(sc.each, s.Each)
 			if s.When != nil {
-				child.when = s.When
+				child.when = whenIn(s.When, sc.prefix)
 			}
 			if s.retrySet {
 				r := s.Retry
@@ -1079,6 +1098,8 @@ func (x *expander) emit(sc *scope) {
 		}
 		if c.When == nil {
 			c.When = sc.when
+		} else {
+			c.When = whenIn(c.When, sc.prefix)
 		}
 		if !s.retrySet && sc.retry != nil && !s.IsApproval() {
 			c.Retry = *sc.retry

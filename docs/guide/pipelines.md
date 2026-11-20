@@ -36,11 +36,12 @@ steps:
 | `image` | Container image the step runs in |
 | `run` | Shell script, run with `sh -e` in the repository checkout |
 | `needs` | Steps that must succeed first; steps with no unmet needs run in parallel |
-| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook`) patterns, and `input` with `equals` (see [Run inputs](#run-inputs)); the step is skipped if they do not match. `upstream` says how the steps it needs must have ended; see [Cleanup and notification steps](#cleanup-and-notification-steps). In a [draft run](editor.md), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](triggers.md#pull-requests) has no branch, so `when: { branch: main }` never matches it |
+| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook`) patterns, and `input` or `output` with `equals` (see [Run inputs](#run-inputs) and [Tolerating a failure](#tolerating-a-failure-and-testing-an-output)); the step is skipped if they do not match. `upstream` says how the steps it needs must have ended; see [Cleanup and notification steps](#cleanup-and-notification-steps). In a [draft run](editor.md), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](triggers.md#pull-requests) has no branch, so `when: { branch: main }` never matches it |
 | `env` | Extra environment variables |
 | `secrets` | Environment variables whose values a runner looks up; see [Secrets](secrets.md) |
 | `container` | A named container from the `containers` section, instead of `image` |
 | `retry` | Extra attempts after a failure |
+| `on_failure` | `stop` (the default) or `continue`: with `continue` a step that fails for good is shown as failed (allowed) and the run goes on; see [Tolerating a failure](#tolerating-a-failure-and-testing-an-output) |
 | `timeout` | Per attempt; default 1h, at most 24h. For an approval, how long to wait for a decision; default 24h, at most 30 days |
 | `reports` | `tests:` one glob or a list, relative to the workspace: test result files read once the step ends; see [Test reports](test-reports.md) |
 | `kind` | `step` (the default), `approval` (see [Approvals](approvals-and-reruns.md#approvals)), `image` (see [Container images](images.md)), or `deploy`, `rollback` and `rollout` (see [Deployments](deployments.md)) |
@@ -216,6 +217,54 @@ would fit the engine this way: the producing step's outputs are recorded in its 
 event, so a new event (a loop's members, recorded when that step finishes) would add the member
 steps to the run, and every server would rebuild them from the log as it does now; servers that
 do not know the event would leave such runs alone, as they do any run they do not fully understand.
+
+## Tolerating a failure and testing an output
+
+A step that fails fails the run, and a step that needs it is not run. Two keys change that for
+the steps where it makes sense.
+
+`on_failure: continue` lets a step fail without failing the run, for a check that informs but does
+not gate (a linter, an optional scan):
+
+```yaml
+  lint:
+    image: alpine:3.22
+    on_failure: continue
+    run: ./lint.sh
+  build:
+    needs: lint            # runs after lint, whether lint passed or failed for good
+    run: make
+```
+
+A step that fails for good (after its `retry` attempts) ends **failed (allowed)** in the run page,
+the API, the MCP tools and `launchway runs show`. The run's outcome ignores it, `fail_fast` of a
+loop ignores it, and the steps that need it **run as if it had succeeded**, unless they say
+`when: { upstream: failed }`, which runs them after any failure. Take care with steps that need
+files the failed step should have written: they run anyway. A step that fails for a reason that
+is not tolerated still fails the run, and a step that needs it is skipped. A
+[resume](approvals-and-reruns.md) does not run an allowed failure again, and a re-run reuses it.
+`on_failure` is for steps that run a script and image steps; deploy, rollback, rollout, verify, ai
+and approval steps have their own failure handling, and a step that uses a template takes it from
+inside the template.
+
+`when: { output: step.key, equals: value }` skips a step because of what an earlier step found.
+The step must be one this step needs, directly or through others. Outputs compare as text (a
+boolean is `true` or `false`), a list of values matches any of them, and an output that was never
+written never matches: the skip says `scan.changed was not set`. The step shows as skipped, not
+as passed, and a re-run reuses the skip.
+
+```yaml
+  scan:
+    run: ./scan.sh          # writes changed=true to "$LAUNCHWAY_OUTPUTS" when it finds something
+  fix:
+    needs: scan
+    when: { output: scan.changed, equals: true }
+    run: ./fix.sh
+```
+
+A step that repeats (`for_each`) cannot be named, because which member is not known when the
+pipeline is written; add a step that needs it and writes the output to test. Both keys need
+schema 24: older servers leave runs that use them alone.
 
 ## Cleanup and notification steps
 

@@ -39,7 +39,7 @@ have advanced the number with an empty placeholder for another branch's migratio
 any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
 the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
 including the recorded database version. The markers currently cover the tables and columns of
-schemas 17 to 22. The migration-order tests use the same marker list and the same SQLite and
+schemas 17 to 22 and 24 (23 is reserved; see below). The migration-order tests use the same marker list and the same SQLite and
 PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
 
 These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
@@ -336,6 +336,23 @@ operation on the API (`PUT /api/v1/step-resources/defaults/step` with `{"recomme
 the MCP tool `set_step_resource_default`, or with values of their own. A server never changes a row
 that exists. A run's own record holds no sizes, so an older server reads the runs of a newer one as
 before and rolling back needs nothing but rolling the servers back.
+
+Schema 23 is reserved for the configuration kept in the database, which another branch builds; in
+this tree it is an empty stand-in, and the migration tests allow that one number, and no other, to be
+empty. When that branch merges, its migration replaces the stand-in.
+
+Schema 24 brings flow control, built one key at a time. It is additive. `steps` gains `allowed`
+(default 0), which says that a failed step was allowed to fail. Pipeline keys: `when.output` and
+`on_failure` (a step that fails for good with `on_failure: continue` records `allowed` on its
+`step.finished` event, and a re-run's `step.reused` of such a step has outcome `failed` and
+`allowed`). A pipeline that uses any key of schema 24, including one that arrives through a template,
+carries `"requires": 24` and has `runs.min_schema` 24, so older servers leave its runs alone
+(`TestOlderServerLeavesFlowControlRunsAlone`). Servers of schema 22 read the new `Step` fields as keys
+they do not know, which makes the run not understood, so the rule holds even for a run created by a
+build that forgot `requires`. A run that finished with an allowed failure reads as succeeded to an
+older server, which is why the pipeline, not the event, carries the guard. Nothing needs undoing to
+roll back: the column is ignored, and runs of pipelines that use the keys wait for a server of schema
+24.
 
 ## Writing a migration
 

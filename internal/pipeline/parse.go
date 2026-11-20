@@ -151,6 +151,7 @@ func Parse(data []byte) (*Pipeline, error) {
 		ps.parseSteps(stepsNode, p)
 	}
 	if ps.check(p) {
+		ps.checkOutputTests(p)
 		ps.checkDeploys(p)
 		ps.checkImages(p)
 		ps.checkVerify(p)
@@ -177,6 +178,9 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	if p.UsesSchemaResources() {
 		p.Requires = SchemaResources
+	}
+	if p.UsesSchemaFlow() {
+		p.Requires = SchemaFlow
 	}
 	return p, nil
 }
@@ -288,14 +292,14 @@ func (ps *parser) parsePullRequest(v *yaml.Node) {
 
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
-		"for_each", "exclude", "max_parallel", "fail_fast", "artifacts", "fetch", "deployment", "resources"}
+		"for_each", "exclude", "max_parallel", "fail_fast", "artifacts", "fetch", "deployment", "resources", "on_failure"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
 	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
-	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources"}
+	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources", "on_failure"}
 	// Kinds from the design that are recognised but not implemented yet.
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
@@ -454,6 +458,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 					timeoutNode, timeout = v2, d
 					s.timeoutSet = true
 				}
+			case "on_failure":
+				ps.parseOnFailure(s, v2, where)
 			case "reports":
 				s.Reports = ps.parseReports(v2, where)
 			case "resources":
@@ -581,7 +587,7 @@ func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[strin
 
 func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 	c := &Condition{}
-	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "equals", "upstream"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "output", "equals", "upstream"}, func(k, v *yaml.Node) {
 		if k.Value == "upstream" {
 			c.Upstream = ps.str(v, at+".upstream")
 			if !slices.Contains(Upstreams, c.Upstream) {
@@ -589,7 +595,7 @@ func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 			}
 			return
 		}
-		if k.Value == "input" || k.Value == "equals" {
+		if k.Value == "input" || k.Value == "output" || k.Value == "equals" {
 			ps.parseInputTest(c, k, v, at)
 			return
 		}

@@ -711,6 +711,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			return nil, fmt.Errorf("%w: this server does not know step resources (resources:, schema %d)", ErrConflict, schemaResources)
 		}
 	}
+	if nr.Pipeline.UsesSchemaFlow() && !e.knows(schemaFlow) {
+		return nil, fmt.Errorf("%w: this server does not know flow control keys (when.output, on_failure, retry waits, timeout, lane or into, schema %d)", ErrConflict, schemaFlow)
+	}
 	// Step resources above the installation's limits could never be given;
 	// say so now, naming the limit, instead of failing the step later.
 	if ps := e.CheckResources(nr.Pipeline); len(ps) > 0 {
@@ -948,7 +951,7 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 		c.emit(RunResumed, Payload{Actor: actor, DraftSecrets: draftSecrets})
 		for _, id := range c.st.Order {
 			s := c.st.Steps[id]
-			if s.Status == StepFailed || s.Status == StepCanceledS || (s.Status == StepSkippedS && s.SkipKind == "upstream") {
+			if (s.Status == StepFailed && !s.Allowed) || s.Status == StepCanceledS || (s.Status == StepSkippedS && s.SkipKind == "upstream") {
 				c.emit(StepReset, Payload{Step: id})
 			}
 		}
@@ -1379,9 +1382,11 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Reason = nonEmpty(res.Error, "the step failed")
 			p.Excerpt = CleanExcerpt(res.Excerpt)
-			c.emit(StepFinished, p)
 			def := c.st.Pipeline.Step(l.stepID)
-			if def != nil && s.Failures <= def.Retry && !c.st.CancelRequested {
+			retry := def != nil && s.Failures+1 <= def.Retry && !c.st.CancelRequested
+			p.retrying = retry
+			c.emit(StepFinished, p)
+			if retry {
 				c.emit(StepQueued, Payload{Step: l.stepID, Attempt: s.Attempt + 1, Reason: "retry"})
 			}
 		}
@@ -1637,6 +1642,9 @@ type cmd struct {
 func (c *cmd) emit(t EventType, p Payload) {
 	if c.st == nil {
 		c.st = &RunState{vocab: c.e.schema}
+	}
+	if t == StepFinished && c.tolerates(&p) {
+		p.Allowed = true
 	}
 	ev := Event{RunID: c.runID, Type: t, At: c.now, Data: p}
 	c.st.apply(ev)
@@ -1908,6 +1916,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaFlow) {
+		if err := c.persistFlow(changed); err != nil {
+			return err
+		}
+	}
 	if c.e.knows(schemaPullRequests) {
 		if err := c.persistSchema9(); err != nil {
 			return err
@@ -2071,7 +2084,12 @@ func (c *cmd) advance() {
 			for _, n := range def.Needs {
 				switch dep := st.Steps[n]; dep.Status {
 				case StepSucceeded:
-				case StepFailed, StepSkippedS, StepCanceledS:
+				case StepFailed:
+					// A failure its step tolerates counts as success.
+					if !dep.Allowed && blocked == "" {
+						blocked = fmt.Sprintf("%s %s", n, dep.Status)
+					}
+				case StepSkippedS, StepCanceledS:
 					if blocked == "" {
 						blocked = fmt.Sprintf("%s %s", n, dep.Status)
 					}
@@ -2091,7 +2109,10 @@ func (c *cmd) advance() {
 			case condSkip != "":
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: condSkip})
 				changed = true
-			case !def.When.Match(ctx):
+			case def.When.OutputWhy(c.condContext(ctx)) != "":
+				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: def.When.OutputWhy(c.condContext(ctx))})
+				changed = true
+			case !def.When.Match(c.condContext(ctx)):
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: "its when condition did not match"})
 				changed = true
 			case c.loopHolds(id):
@@ -2158,7 +2179,8 @@ func (c *cmd) advance() {
 		switch st.Steps[id].Status {
 		case StepSucceeded, StepSkippedS:
 		case StepFailed:
-			failed = true
+			// A failure its step tolerates does not fail the run.
+			failed = failed || !st.Steps[id].Allowed
 		case StepCanceledS:
 			canceled = true
 		default:

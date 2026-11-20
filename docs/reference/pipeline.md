@@ -307,6 +307,7 @@ The second column says which kinds take the key. `uses` stands for a step that u
 | `when` | `step` `approval` `uses` `image` `deploy` `verify` `ai` | mapping | none | Conditions for the step to run; see [When](#when). Otherwise the step is skipped |
 | `timeout` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | duration | depends on the kind | How long the step may take. Defaults and bounds per kind are in the kind's section |
 | `retry` | `step` `uses` `image` `ai` | whole number | `0` | Extra attempts after a failure, 0 to 10 |
+| `on_failure` | `step` `image` | `stop` or `continue` | `stop` | What a failure that is final (after its retries) does to the run. With `continue` the step ends `failed (allowed)`: the run's outcome ignores it, `fail_fast` ignores it, and the steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }`. Not for deploy, rollback, rollout, verify, ai or approval steps (each has its own failure handling), and not on a step that uses a template: set it inside the template. Needs schema 24 |
 
 For a step that uses a template, `when`, `retry` and `timeout` apply to every step of the
 template that does not set its own.
@@ -990,13 +991,41 @@ any listed value may match. It is a closed set of tests, not an expression langu
 | `tag` | pattern, one value or a list | none | The run's tag matches one |
 | `event` | one value or a list | none | The run's event is one of `push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook` |
 | `input` | input name | none | The step runs only if this [input](#inputs)'s value is one of `equals`. A `boolean` input alone means `equals: true`. A `list` input cannot be tested. Not in a template |
-| `equals` | one value or a list | `true` for a boolean | The values `input` is compared with, in canonical form |
+| `output` | `step.key` | none | The step runs only if this output of a step it needs (directly or through others) is one of `equals`. The step must be in `needs`, may not repeat (`for_each`) and may not be a step that uses a template. An output that was never written never matches, and the skip says `scan.changed was not set`. Needs schema 24 |
+| `equals` | one value or a list | `true` for a boolean `input` | The values `input` or `output` is compared with, as text: a boolean is written `true` or `false`. A condition tests an input or an output, not both |
 | `upstream` | text | `succeeded` | How the steps it needs must have ended: `succeeded` (all of them), `failed` (at least one failed, was cancelled, or was not run because of a failure) or `always` (whatever happened). The step then waits until every step it needs has ended |
 
 In a [draft run](../glossary.md#draft-run) a step with a `when` runs only if its `event` names
 `draft`, so `when: { branch: main }` alone does not run in a draft of `main`. A `when` that only says
 `upstream` does not keep a step out of drafts. A deploy step, and an approval that names a
 deployment, take no `upstream`. In a template, the lists may be `{ param: name }`.
+
+A condition on an output reads what a step it needs wrote to `$LAUNCHWAY_OUTPUTS`; the step is
+skipped (a skip by condition, which a re-run reuses) when the output differs, and the skip says what
+the value was:
+
+<!-- validate -->
+```yaml
+pipeline: output-example
+steps:
+  scan:
+    image: alpine:3.22
+    run: ./scan.sh   # writes changed=true or changed=false to "$LAUNCHWAY_OUTPUTS"
+  fix:
+    image: alpine:3.22
+    needs: scan
+    when: { output: scan.changed, equals: true }
+    run: ./fix.sh
+  lint:
+    image: alpine:3.22
+    on_failure: continue   # a failing lint is reported but does not fail the run
+    run: ./lint.sh
+  build:
+    image: alpine:3.22
+    needs: [fix, lint]
+    when: { upstream: always }
+    run: make
+```
 
 <!-- validate -->
 ```yaml
@@ -1409,6 +1438,7 @@ older server. Use them only once every server and runner is upgraded; see
 | 14 | rollout steps, `rollout.until: paused`, `rollout.pauses`, an approval's `deployment`, `abort_first`, `on_cancel: abort` |
 | 15 | image steps, a change's `digest` |
 | 22 | a step's `resources` |
+| 24 | `when.output`, `on_failure` |
 
 ## What next
 

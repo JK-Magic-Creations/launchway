@@ -191,7 +191,7 @@ func (c *cmd) failFast() bool {
 		failed := ""
 		for _, m := range l.Members {
 			for _, id := range st.Order {
-				if m.Has(id) && st.Steps[id].Status == StepFailed {
+				if m.Has(id) && st.Steps[id].Status == StepFailed && !st.Steps[id].Allowed {
 					failed = id
 					break
 				}

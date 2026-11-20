@@ -388,6 +388,8 @@ type runView struct {
 		Attempt  int    `json:"attempt"`
 		Error    string `json:"error"`
 		ExitCode *int   `json:"exit_code"`
+		// AllowedFailure: failed, and its pipeline allows that.
+		AllowedFailure bool `json:"allowed_failure"`
 	} `json:"step_list"`
 	TriggerDetail *struct {
 		Inputs   map[string]string `json:"inputs"`
@@ -592,7 +594,11 @@ func (cl *client) show(args []string) error {
 	}
 	fmt.Fprintf(cl.out, "  %s/runs/%s\n\nSteps:\n", cl.c.Server, r.ID)
 	for _, s := range r.StepList {
-		line := fmt.Sprintf("  %-10s %s", s.Status, s.ID)
+		status := s.Status
+		if s.AllowedFailure {
+			status = "failed (allowed)"
+		}
+		line := fmt.Sprintf("  %-10s %s", status, s.ID)
 		if s.Error != "" {
 			line += ": " + s.Error
 		}

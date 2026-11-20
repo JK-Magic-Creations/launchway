@@ -70,6 +70,9 @@ type RunSummary struct {
 type StepBrief struct {
 	ID     string     `json:"id"`
 	Status StepStatus `json:"status"`
+	// Allowed says a failed step was allowed to fail (on_failure:
+	// continue): the run does not count it as a failure.
+	Allowed bool `json:"allowed,omitempty"`
 }
 
 // StepView is a step with its definition and current state.
@@ -124,6 +127,13 @@ type StepView struct {
 	Inputs []AttemptInputs `json:"inputs"`
 	// Reports are the test result files the step declares, as globs.
 	Reports []string `json:"reports,omitempty"`
+	// AllowedFailure says the step failed for good and its pipeline
+	// tolerates that (on_failure: continue): shown as failed (allowed). The
+	// run does not fail because of it (schema 24).
+	AllowedFailure bool `json:"allowed_failure,omitempty"`
+	// OnFailure is the step's on_failure, from its definition: continue or
+	// empty (stop).
+	OnFailure string `json:"on_failure,omitempty"`
 	// PolicyBlocked says the step failed because a policy in enforce mode
 	// refused it (schema 16); Error says which policy and rule, and why.
 	PolicyBlocked bool `json:"policy_blocked,omitempty"`
@@ -404,7 +414,11 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 	if e.knows(schemaDeploy) {
 		waitKind = `wait_kind`
 	}
-	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+` FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
+	allowed := `0`
+	if e.knows(schemaFlow) {
+		allowed = `allowed`
+	}
+	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+`, `+allowed+` FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
 		ORDER BY run_id, position`, args...)
 	if err != nil {
 		return err
@@ -413,9 +427,11 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 	for rows.Next() {
 		var runID, kind string
 		var b StepBrief
-		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind); err != nil {
+		var allowed int
+		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind, &allowed); err != nil {
 			return err
 		}
+		b.Allowed = b.Status == StepFailed && allowed != 0
 		r := byID[runID]
 		r.Steps = append(r.Steps, b)
 		if b.Status == StepWaitingS && kind == "" {
@@ -440,13 +456,17 @@ const stepCols8 = `, reused_from, reused_from_number, reused_attempt`
 
 // stepCols is the columns scanStep reads.
 func (e *Engine) stepCols() string {
-	switch {
-	case e.knows(schemaDeploy):
-		return stepCols + stepCols8 + `, wait_kind`
-	case e.knows(schemaReruns):
-		return stepCols + stepCols8
+	cols := stepCols
+	if e.knows(schemaReruns) {
+		cols += stepCols8
 	}
-	return stepCols
+	if e.knows(schemaDeploy) {
+		cols += `, wait_kind`
+	}
+	if e.knows(schemaFlow) {
+		cols += `, allowed`
+	}
+	return cols
 }
 
 func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error) {
@@ -461,6 +481,10 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 	if e.knows(schemaDeploy) {
 		dst = append(dst, &v.WaitKind)
 	}
+	var allowed int
+	if e.knows(schemaFlow) {
+		dst = append(dst, &allowed)
+	}
 	if err := sc.Scan(dst...); err != nil {
 		return nil, err
 	}
@@ -470,6 +494,7 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 	}
 	v.Outputs = map[string]string{}
 	_ = json.Unmarshal([]byte(outputs), &v.Outputs)
+	v.AllowedFailure = v.Status == StepFailed && allowed != 0
 	v.PolicyBlocked = v.Status == StepFailed && (strings.HasPrefix(v.Error, policyBlockedPrefix) || strings.HasPrefix(v.Error, runRefusedPrefix))
 	return v, nil
 }
@@ -535,6 +560,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		}
 		if def := st.Pipeline.Step(v.ID); def != nil {
 			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout.Short()
+			v.OnFailure = def.OnFailure
 			v.Secrets = def.Secrets
 			v.Container = st.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description

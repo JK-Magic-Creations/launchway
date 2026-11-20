@@ -442,7 +442,15 @@ export interface EnvironmentView {
   protected?: boolean;
 }
 
-export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
+export interface Condition {
+  branch?: string[]; tag?: string[]; event?: string[];
+  /** A run input and the values that run the step (see equals). */
+  input?: string;
+  /** step.key: an output of a step this one needs; the step runs only when it is one of equals. */
+  output?: string;
+  equals?: string[];
+  upstream?: string;
+}
 
 /** Where a secret is kept. The value itself never leaves the runner. */
 export interface SecretRef { store: string; key: string; field?: string }
@@ -496,6 +504,10 @@ export interface StepView {
   reused_from?: string;
   reused_from_number?: number;
   reused_attempt?: number;
+  /** The step failed for good and its pipeline allows that (on_failure: continue): shown as failed (allowed). */
+  allowed_failure?: boolean;
+  /** From the definition: continue, or empty for stop. */
+  on_failure?: string;
   /** What each attempt was given, oldest first. */
   inputs: AttemptInputs[];
   /** The step failed because a policy in enforce mode refused it; error says which and why. */

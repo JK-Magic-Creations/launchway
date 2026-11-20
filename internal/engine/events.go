@@ -116,6 +116,11 @@ type Payload struct {
 	Deadline int64             `json:"deadline,omitempty"`  // step.waiting: when nobody deciding rejects it (Unix ms)
 	Comment  string            `json:"comment,omitempty"`   // step.approved and step.rejected
 	Excerpt  string            `json:"excerpt,omitempty"`   // step.finished, failed: the last lines of output, masked
+	// Allowed, on a step.finished that failed for good, or a step.reused of
+	// one, says that the step has on_failure: continue: the failure does not
+	// fail the run and the steps that need it run as if it had succeeded
+	// (schema 24).
+	Allowed bool `json:"allowed,omitempty"`
 
 	// shared
 	Reason string `json:"reason,omitempty"`
@@ -125,6 +130,10 @@ type Payload struct {
 	// run.resumed of a draft run: whether its steps may read secrets from
 	// now on, as the configuration says at the time of the resume.
 	DraftSecrets *bool `json:"draft_secrets,omitempty"`
+
+	// retrying, set by the code that emits a step.finished it will follow
+	// with a retry, says the failure is not final, so it is not allowed.
+	retrying bool
 
 	// Requires, on any event, is the oldest schema whose servers understand
 	// it. Servers ignore fields they do not know, so a newer server that adds

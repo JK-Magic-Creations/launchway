@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -143,7 +144,10 @@ type Step struct {
 	Env         map[string]string    `json:"env,omitempty"`
 	Secrets     map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
 	Retry       int                  `json:"retry"`             // extra attempts after a failure
-	Timeout     Duration             `json:"timeout"`           // per attempt; for an approval, how long to wait for a decision
+	// OnFailure is continue when a step that fails for good (after its
+	// retries) must not fail the run (schema 24); empty means stop.
+	OnFailure string   `json:"on_failure,omitempty"`
+	Timeout   Duration `json:"timeout"` // per attempt; for an approval, how long to wait for a decision
 	// Reports are files the step writes that Launchway reads once it ends,
 	// whether it passed or failed: test results, for now.
 	Reports *Reports `json:"reports,omitempty"`
@@ -394,13 +398,18 @@ type Condition struct {
 	// (see Input.Canon), so they compare as text.
 	Input  string   `json:"input,omitempty"`
 	Equals []string `json:"equals,omitempty"`
+	// Output tests an output of a step this one needs (schema 24), written
+	// step.key: the step runs only if the output's value is one of Equals
+	// (the same list Input uses; a condition has one or the other). An
+	// output that was never written never matches.
+	Output string `json:"output,omitempty"`
 	// Upstream says how the steps this one needs must have ended for it
 	// to run (schema 13): succeeded (the default), failed (at least one
 	// failed, was cancelled or was not run because of a failure) or
 	// always (whatever happened). See UpstreamAllows.
 	Upstream string `json:"upstream,omitempty"`
 
-	inputLine int // where input was written, for messages
+	inputLine int // where input or output was written, for messages
 }
 
 // The events a run can be started by.
@@ -433,6 +442,45 @@ type Context struct {
 	Tag    string
 	// Inputs are the run's input values, canonical, by name.
 	Inputs map[string]string
+	// Output looks up an output a step wrote (schema 24); nil, or ok false,
+	// means it was never written.
+	Output func(step, key string) (value string, ok bool)
+}
+
+// OutputRef splits the step and key of an output test, which are written
+// step.key; ok is false if c tests none.
+func (c *Condition) OutputRef() (step, key string, ok bool) {
+	if c == nil || c.Output == "" {
+		return "", "", false
+	}
+	step, key, ok = strings.Cut(c.Output, ".")
+	return step, key, ok
+}
+
+// OutputWhy explains why the condition's output test fails, or returns ""
+// if it holds or the condition has none. An output that was never written
+// is reported as such, not as a mismatch.
+func (c *Condition) OutputWhy(ctx Context) string {
+	step, key, ok := c.OutputRef()
+	if !ok {
+		return ""
+	}
+	if ctx.Output != nil {
+		if v, set := ctx.Output(step, key); set {
+			if slices.Contains(c.Equals, v) {
+				return ""
+			}
+			want := make([]string, len(c.Equals))
+			for i, e := range c.Equals {
+				want[i] = strconv.Quote(e)
+			}
+			if len(want) == 1 {
+				return c.Output + " was " + strconv.Quote(v) + ", not " + want[0]
+			}
+			return c.Output + " was " + strconv.Quote(v) + ", not one of " + strings.Join(want, ", ")
+		}
+	}
+	return c.Output + " was not set"
 }
 
 // Match reports whether the condition holds. A nil condition always holds.
@@ -455,10 +503,13 @@ func (c *Condition) Match(ctx Context) bool {
 			return false
 		}
 	}
+	if c.OutputWhy(ctx) != "" {
+		return false
+	}
 	if len(c.Event) > 0 {
 		return matchAny(c.Event, ctx.Event)
 	}
-	if c.Upstream != "" && len(c.Branch) == 0 && len(c.Tag) == 0 && c.Input == "" {
+	if c.Upstream != "" && len(c.Branch) == 0 && len(c.Tag) == 0 && c.Input == "" && c.Output == "" {
 		return true // only about upstream: not a guard that keeps steps out of drafts
 	}
 	return ctx.Event != EventDraft

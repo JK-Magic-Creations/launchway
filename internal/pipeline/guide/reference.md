@@ -83,6 +83,7 @@ steps:
 | `uses` | `library/template`: the step becomes that template's steps |
 | `with` | Values for the template's parameters |
 | `for_each` | Repeat the step over lists; with `exclude`, `max_parallel` and `fail_fast` |
+| `on_failure` | `stop` (default) or `continue` (steps that run a script, and image steps): a final failure is shown as failed (allowed), the run's outcome ignores it and steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }` |
 | `deployment` | For a `rollback` or `rollout` step: the deploy step it acts on |
 
 ### Environment every step gets
@@ -102,6 +103,7 @@ when: { branch: [main, "release/*"] }          # only on these branches
 when: { tag: "v*" }
 when: { event: [push, manual] }                # push, manual, draft, pull_request, schedule, webhook
 when: { input: dry_run, equals: false }        # a run input; a boolean input alone means equals: true
+when: { output: scan.changed, equals: true }   # an output of a step this one needs; never written: skipped
 when: { upstream: failed }                     # run if a needed step failed (notifications)
 when: { upstream: always }                     # run whatever happened (cleanup)
 ```

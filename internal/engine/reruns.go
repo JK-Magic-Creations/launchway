@@ -96,8 +96,8 @@ func planRerun(orig *RunState, from string) (RerunPlan, error) {
 		}
 		plan.Reuse = append(plan.Reuse, id)
 		s := orig.Steps[id]
-		if s.Status == StepSucceeded || (s.Status == StepSkippedS && s.SkipKind == "condition") {
-			continue
+		if s.Status == StepSucceeded || (s.Status == StepSkippedS && s.SkipKind == "condition") || (s.Status == StepFailed && s.Allowed) {
+			continue // an allowed failure is reused too: it blocked nothing
 		}
 		desc := fmt.Sprintf("%s (%s)", id, s.Status)
 		if needed[id] {
@@ -223,8 +223,11 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 				from.Run, from.Number, from.Attempt = s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt
 			}
 			p := Payload{Step: id, Outcome: string(s.Status), Outputs: s.Outputs, Reused: from, Actor: s.DecidedBy, Comment: s.Comment}
-			if s.Status == StepSkippedS {
+			switch {
+			case s.Status == StepSkippedS:
 				p.SkipKind, p.Reason = s.SkipKind, s.Error
+			case s.Status == StepFailed:
+				p.Allowed, p.Reason = true, s.Error
 			}
 			c.emit(StepReused, p)
 		}

@@ -126,6 +126,9 @@ type StepState struct {
 	LeaseID    string
 	Outputs    map[string]string
 	Excerpt    string // a failed attempt: the last lines of its output, masked by the runner
+	// Allowed says a failed step has on_failure: continue (schema 24): it
+	// failed for good, and the run goes on as if it had succeeded.
+	Allowed bool
 	// Approvals only.
 	Deadline  int64  // when a waiting approval is rejected because nobody decided
 	DecidedBy string // who approved or rejected it; empty if it expired
@@ -369,6 +372,14 @@ func (st *RunState) check(ev Event) bool {
 				st.notUnderstood("verify or ai steps (schema %d)", schemaVerify)
 			}
 		}
+		// Flow control: conditions on outputs, tolerated failures, retry
+		// waits and causes, run timeouts, lanes.
+		if p.Pipeline.UsesSchemaFlow() {
+			st.Schema = max(st.Schema, schemaFlow)
+			if !st.understands(schemaFlow) {
+				st.notUnderstood("a pipeline key of schema %d (flow control: when.output, on_failure, retry waits, timeout, lane or into)", schemaFlow)
+			}
+		}
 		// Rollout steps, and the keys that control a rollout.
 		if p.Pipeline.UsesSchemaControl() || p.Pipeline.Requires > 0 {
 			st.Schema = max(st.Schema, schemaControl, p.Pipeline.Requires)
@@ -405,6 +416,7 @@ func (st *RunState) check(ev Event) bool {
 		st.notUnderstood("skip kind %q", p.SkipKind)
 		return false
 	case ev.Type == StepReused && (p.Reused == nil || !(p.Outcome == string(StepSucceeded) ||
+		(p.Outcome == string(StepFailed) && p.Allowed) ||
 		(p.Outcome == string(StepSkippedS) && slices.Contains(knownSkipKinds, p.SkipKind)))):
 		st.notUnderstood("a reused step with outcome %q", p.Outcome)
 		return false
@@ -495,6 +507,7 @@ func (st *RunState) apply(ev Event) {
 		s.Outputs = nil
 		s.Excerpt = ""
 		s.Evidence = nil
+		s.Allowed = false
 
 	case StepSkipped:
 		s.Status = StepSkippedS
@@ -544,6 +557,7 @@ func (st *RunState) apply(ev Event) {
 		s.Outputs = p.Outputs
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
+		s.Allowed = s.Status == StepFailed && p.Allowed
 		s.Evidence = evidenceOf(p)
 		if p.AI != nil {
 			s.AI = p.AI
@@ -568,6 +582,7 @@ func (st *RunState) apply(ev Event) {
 		s.Status = StepPending
 		s.Failures, s.Lost = 0, 0
 		s.Error, s.SkipKind, s.Excerpt = "", "", ""
+		s.Allowed = false
 		s.ExitCode = nil
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.clearDecision()
@@ -601,9 +616,13 @@ func (st *RunState) apply(ev Event) {
 		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, ev.At, p.Comment
 
 	case StepReused:
-		if p.Outcome == string(StepSucceeded) {
+		switch p.Outcome {
+		case string(StepSucceeded):
 			s.Status = StepSucceeded
-		} else {
+		case string(StepFailed):
+			s.Status, s.Allowed = StepFailed, true
+			s.Error = p.Reason
+		default:
 			s.Status = StepSkippedS
 			s.SkipKind, s.Error = p.SkipKind, p.Reason
 		}
