@@ -7,7 +7,8 @@
 #
 # Checks: the runner reaches the server through the chart's NetworkPolicy; a run's step runs in
 # a pod of the step namespace (Pod Security "restricted"); the step pod's NetworkPolicy blocks
-# its egress; the runner's ServiceAccount may manage pods in the step namespace and nothing else.
+# its egress; the runner's ServiceAccount may manage pods in the step namespace and nothing else;
+# then the runners switch to a join token (runner.join.existingSecret), enrol, and run again.
 #
 # Images: built from a linux/amd64 release binary with packaging/release/Containerfile and
 # loaded into the cluster (no registry). RELEASE_DIR names a release directory to take the
@@ -147,6 +148,20 @@ enforces_policies() {
 	[ "$result" = blocked ]
 }
 
+# run_pipeline: starts a run of demo, waits for it; sets $id, $status and $logs.
+run_pipeline() {
+	id=$(api -X POST -d '{}' "http://127.0.0.1:$port/api/v1/projects/demo/runs" | jq -r .id)
+	i=0
+	while :; do
+		status=$(api "http://127.0.0.1:$port/api/v1/runs/$id" | jq -r .status)
+		case $status in succeeded | failed | canceled) break ;; esac
+		i=$((i + 1))
+		[ $i -lt 300 ] || fail "run $id still $status after 5 minutes"
+		sleep 1
+	done
+	logs=$(api "http://127.0.0.1:$port/api/v1/runs/$id/steps/hello/logs" | jq -r '.lines[].text')
+}
+
 # ---- a run ----
 log "running a pipeline through the remote runner"
 port=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1])' 2>/dev/null || echo 18573)
@@ -159,16 +174,7 @@ until api "http://127.0.0.1:$port/readyz" >/dev/null 2>&1; do
 	[ $i -lt 30 ] || fail "port-forward"
 	sleep 1
 done
-id=$(api -X POST -d '{}' "http://127.0.0.1:$port/api/v1/projects/demo/runs" | jq -r .id)
-i=0
-while :; do
-	status=$(api "http://127.0.0.1:$port/api/v1/runs/$id" | jq -r .status)
-	case $status in succeeded | failed | canceled) break ;; esac
-	i=$((i + 1))
-	[ $i -lt 300 ] || fail "run $id still $status after 5 minutes"
-	sleep 1
-done
-logs=$(api "http://127.0.0.1:$port/api/v1/runs/$id/steps/hello/logs" | jq -r '.lines[].text')
+run_pipeline
 printf '%s\n' "$logs" | sed 's/^/    | /'
 [ "$status" = succeeded ] || fail "run $id $status"
 printf '%s\n' "$logs" | grep -q '^Runner lw-rc-runners-launchway-runner-.*, executor kubernetes' || fail "not run by the chart's runner"
@@ -184,5 +190,37 @@ fi
 runners=$(api "http://127.0.0.1:$port/api/v1/runners" | jq -r '.[] | select(.online) | "\(.name) \(.executor) \(.version)"')
 printf '%s\n' "$runners" | grep -q "^lw-rc-runners-launchway-runner-.* kubernetes.* v$ver$" || fail "the server lists: $runners"
 pass "the server lists the runner: $runners"
+
+# ---- join tokens ----
+log "switching the runners to a join token (runner.join.existingSecret)"
+jt=$(api -X POST -d '{"pool":"default","ttl":"1h","max_uses":5,"ephemeral":true}' \
+	"http://127.0.0.1:$port/api/v1/runner-join-tokens" | jq -r .token)
+case $jt in lwj_*) ;; *) fail "no join token from the server ($jt)" ;; esac
+k -n $RUN_NS create secret generic launchway-runner-join --from-literal=token="$jt" >/dev/null
+h upgrade lw-rc-runners deploy/helm/launchway-runner -n $RUN_NS --wait --timeout 3m \
+	--set image.repository=localhost/launchway-runner --set image.tag=$tag --set image.pullPolicy=Never \
+	-f $here/runner-values.yaml --set token.existingSecret= --set runner.join.existingSecret=launchway-runner-join >/dev/null || {
+	k -n $RUN_NS get pods
+	k -n $RUN_NS logs -l app.kubernetes.io/instance=lw-rc-runners --tail=20 || :
+	fail "helm upgrade with runner.join.existingSecret"
+}
+k -n $RUN_NS rollout status deployment -l app.kubernetes.io/instance=lw-rc-runners --timeout=180s >/dev/null 2>&1 || :
+i=0
+until api "http://127.0.0.1:$port/api/v1/runners" | jq -e '[.[] | select(.online and .auth == "identity")] | length > 0' >/dev/null; do
+	i=$((i + 1))
+	[ $i -lt 90 ] || fail "no enrolled runner: $(api "http://127.0.0.1:$port/api/v1/runners" | jq -c '[.[] | {name, online, auth}]')"
+	sleep 2
+done
+pass "the runner pod enrolled with the join token"
+# Only the enrolled runner may take the next run: wait for the shared-token one to leave.
+i=0
+until [ "$(api "http://127.0.0.1:$port/api/v1/runners" | jq '[.[] | select(.online and .auth != "identity")] | length')" = 0 ]; do
+	i=$((i + 1))
+	[ $i -lt 90 ] || fail "the shared-token runner is still online"
+	sleep 2
+done
+run_pipeline
+[ "$status" = succeeded ] || { printf '%s\n' "$logs"; fail "run $id $status with the enrolled runner"; }
+pass "run $id succeeded on the enrolled runner"
 
 log "test-runner-chart passed"
