@@ -324,7 +324,7 @@ func judge(p Policy, rule string, in Input, waivers []Waiver, at int64) RuleResu
 
 	case RuleMaxTimeout:
 		limit, _ := time.ParseDuration(rs.MaxTimeout)
-		want := "no step (or approval wait) longer than " + rs.MaxTimeout
+		want := "no step longer than " + rs.MaxTimeout + " (approvals' waits are not counted)"
 		var bad []string
 		for _, t := range in.Pipeline.Timeouts {
 			if time.Duration(t.Timeout)*time.Millisecond > limit {

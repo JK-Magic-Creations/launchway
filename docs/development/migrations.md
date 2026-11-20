@@ -127,6 +127,31 @@ rollback, image runs still open are left to a schema-15 server; the runners' `im
 the Helm chart's `runner.images` must be taken out first, as older runners refuse a setting they do
 not know.
 
+Schema 16 brings delivery policies. It is additive: four new tables (`policy_sources`, what servers
+loaded from Git sources of policies; `policy_evaluations`, derived from events; `policy_waiver_events`,
+the log of waivers, and `policy_waivers`, derived from it) and one event type, `policy.evaluated`.
+A run a policy governs gets a `policy.evaluated` event in the transaction that creates it (or, if it
+was created before a policy governed it, at the first gate it meets), which gives it
+`runs.min_schema` 16, so a schema-15 server leaves it alone rather than run its steps past gates it
+does not know (`TestOlderBuildLeavesPolicyRunsAlone`). Runs no policy governs are unchanged and stay
+readable by schema 15. Findings summaries gain `by_tool`, which older servers ignore, as it only
+records. A build limited to schema 15 refuses to start with policies configured. The `policy:`
+setting is one older servers refuse, so the Helm chart writes it only when `config.policy` is set.
+
+Rolling back from schema 16 to 15:
+
+1. Take `policy:` out of every server's configuration (`config.policy` with the chart), and let the
+   servers of schema 16 restart without it: new runs are then not governed, and older servers can
+   handle them. Runs that already have decisions stay at `min_schema` 16.
+2. Roll the servers back. Runs at `min_schema` 16 still open are left alone by the older servers
+   (shown as needing a newer server); cancel them before rolling back, or let a schema-16 server
+   finish them after a roll forward. Their decisions and the waivers stay in the database, unused.
+3. Nothing needs restoring: the new tables are ignored by schema 15, and a roll forward picks up
+   where it stopped (waivers that expired meanwhile are expired).
+
+During a rolling upgrade, configure policies only once every server runs schema 16: until then an
+older server could start a deploy that a newer one would have judged.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

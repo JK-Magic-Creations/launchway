@@ -90,7 +90,7 @@ var Catalogue = []RuleInfo{
 	{RuleLibraryVersions, PointRun, "every shared library the run uses is pinned by a tag (or a commit), never a branch"},
 	{RuleRequiredTemplates, PointRun, "the pipeline uses the named templates of the named libraries, at allowed versions"},
 	{RuleStepImages, PointRun, "the images steps and containers run in are pinned by digest and/or come from allowed registries"},
-	{RuleMaxTimeout, PointRun, "no step may run (or wait) longer than this"},
+	{RuleMaxTimeout, PointRun, "no step may run longer than this (approvals' waits are not counted)"},
 	{RuleForbidSecrets, PointRun, "runs of the listed events (pull_request, draft) may not read secrets"},
 	{RuleTests, PointDeploy, "the steps before the deployment reported test results: at least min, none failed"},
 	{RuleFindings, PointDeploy, "the steps before the deployment ran scanners, and nothing they found is worse than allowed"},

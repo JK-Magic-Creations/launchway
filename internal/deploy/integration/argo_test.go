@@ -64,6 +64,7 @@ type harness struct {
 	stopSrv  func()
 	log      *slog.Logger
 	runnerWG sync.WaitGroup
+	policy   engine.PolicyOptions // delivery policies the server judges runs by
 }
 
 func (h *harness) kubectl(args ...string) string {
@@ -180,7 +181,7 @@ func (p *apiProxy) setOff(off bool) {
 	}
 }
 
-func setup(t *testing.T) *harness {
+func setup(t *testing.T, policies ...engine.PolicyOptions) *harness {
 	kctx := os.Getenv("LAUNCHWAY_TEST_ARGO_CONTEXT")
 	if kctx == "" {
 		t.Skip("set LAUNCHWAY_TEST_ARGO_CONTEXT to a kind context with deploy/test/argo installed (make test-argo)")
@@ -256,6 +257,9 @@ func setup(t *testing.T) *harness {
 		t.Fatal(err)
 	}
 	h.addr = ln.Addr().String()
+	if len(policies) > 0 {
+		h.policy = policies[0]
+	}
 	h.startServer(ln)
 	t.Cleanup(h.stopServer)
 	h.startBuildRunner()
@@ -277,7 +281,7 @@ func (h *harness) startServer(ln net.Listener) {
 		}
 	}
 	eng, err := engine.Open(engine.Options{Database: h.db, LeaseTTL: 6 * time.Second, Logger: h.log,
-		Environments: []engine.Environment{{Name: "kind", Target: "kind", Projects: []string{"shop"}}}})
+		Environments: []engine.Environment{{Name: "kind", Target: "kind", Projects: []string{"shop"}}}, Policy: h.policy})
 	if err != nil {
 		h.t.Fatal(err)
 	}
