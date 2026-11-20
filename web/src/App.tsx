@@ -11,6 +11,7 @@ import { PlaygroundPage } from "./pages/Playground";
 import { ApprovalsPage } from "./pages/Approvals";
 import { EnvironmentsPage } from "./pages/Environments";
 import { TokensPage } from "./pages/Tokens";
+import { AgentsPage } from "./pages/Agents";
 import { AuditPage } from "./pages/Audit";
 import { EditPipelinePage } from "./pages/EditPipeline";
 import { ProjectTestsPage } from "./pages/ProjectTests";
@@ -30,6 +31,7 @@ const NAV: NavItem[] = [
   { href: "/runners", label: "Runners", active: (p) => p.startsWith("/runners"), show: (me) => me.runners },
   { href: "/playground", label: "Playground", active: (p) => p.startsWith("/playground"), show: (me) => me.runners },
   { href: "/tokens", label: "API tokens", active: (p) => p.startsWith("/tokens"), show: (me) => me.auth_mode === "oidc" },
+  { href: "/agents", label: "Connect an agent", active: (p) => p.startsWith("/agents"), show: (me) => me.mcp?.enabled !== false },
   { href: "/audit", label: "Audit trail", active: (p) => p.startsWith("/audit"), show: (me) => me.admin },
   { href: "/components", label: "Components", active: (p) => p.startsWith("/components") },
   { href: "/images", label: "Images", active: (p) => p.startsWith("/images") },
@@ -90,6 +92,7 @@ function Shell({ me }: { me: Me }) {
   else if (path === "/runners") page = <RunnersPage />;
   else if (path === "/playground") page = <PlaygroundPage />;
   else if (path === "/tokens") page = <TokensPage />;
+  else if (path === "/agents") page = <AgentsPage />;
   else if (path === "/audit") page = <AuditPage />;
   else if ((m = match("/projects/:name/security", path))) page = <ProjectSecurityPage key={m.name} name={m.name} />;
   else if (path === "/components") page = <ComponentsPage />;

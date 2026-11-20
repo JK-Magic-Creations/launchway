@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Role } from "../api";
 import { ago, clock } from "../format";
 import { useMe } from "../auth";
-import { Empty, ErrorBox, Mono } from "../components/ui";
+import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { triggersApi, type Token, type TokenLimits } from "../triggers";
 import "../triggers.css";
 
@@ -76,8 +76,9 @@ export function TokensPage() {
       <header className="page-head">
         <div>
           <h1>API tokens</h1>
-          <p className="sub">For scripts and the <Mono>launchway</Mono> command line. A token acts as you, with the rights you have when it is used,
-            never more than the role and projects it is limited to, until it expires or is revoked.</p>
+          <p className="sub">For scripts, the <Mono>launchway</Mono> command line and AI agents (see <Link href="/agents">Connect an agent</Link>).
+            A token acts as you, with the rights you have when it is used, never more than the role and projects it is limited to, until it
+            expires or is revoked.</p>
         </div>
       </header>
 

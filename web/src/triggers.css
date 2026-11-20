@@ -56,3 +56,20 @@
 }
 .hooks { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; overflow-wrap: anywhere; }
 .loop-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+/* Connect an agent. */
+.agents { display: flex; flex-direction: column; gap: 16px; }
+.agents-step { display: flex; flex-direction: column; gap: 12px; }
+.agents-step .h-sm { display: flex; align-items: center; gap: 10px; font-size: 15px; margin: 0; }
+.agents-num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; flex: none; }
+.agents-step .sub { margin: 0; }
+.agents-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+.agents-facts dt { color: var(--text-3); }
+.agents-facts dd { margin: 0; overflow-wrap: anywhere; }
+.agents-configs { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.agents-tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.agents-h3 { font-size: 13px; font-weight: 600; color: var(--text-2); margin: 0 0 8px; }
+.agents-tools .list-items { list-style: none; margin: 0; padding: 0; }
+@media (max-width: 640px) {
+  .agents-facts { grid-template-columns: 1fr; }
+  .agents-configs { grid-template-columns: 1fr; }
+}
