@@ -420,7 +420,11 @@ func checkResources(p *pipeline.Pipeline, l resources.Limits) pipeline.Problems 
 
 // resourcesRefused fails a step, before any runner sees it, whose resources
 // are above the installation's limits as they are now: they may have been
-// lowered since the run was created. It reports whether it did.
+// lowered since the run was created. It holds the step to what it asked for
+// (resources) and to what its container under containers asks for (cpu and
+// memory, which existed before step resources), as the run's creation did,
+// and never to a default, which is the installation's own and is not the
+// step's fault. It reports whether it failed the step.
 func (c *cmd) resourcesRefused(id string, def *pipeline.Step) bool {
 	if !c.e.knows(schemaResources) || def.ResourceKind() == "" {
 		return false
@@ -434,14 +438,26 @@ func (c *cmd) resourcesRefused(id string, def *pipeline.Step) bool {
 	if err != nil {
 		return false
 	}
-	eff := resources.Merge(declared, pol.defaults[def.ResourceKind()])
-	vs := pol.limits.Check(eff)
+	who := "step " + id
+	vs := pol.limits.Check(declared)
+	if len(vs) == 0 {
+		ct := c.st.Pipeline.Container(c.st.Pipeline.ContainerFor(def))
+		if ct == nil || ct.Service {
+			return false
+		}
+		legacy, err := resources.Request{CPU: ct.CPU, Memory: ct.Memory}.Parse()
+		if err != nil {
+			return false
+		}
+		who = "container " + ct.Name
+		vs = pol.limits.Check(legacy)
+	}
 	if len(vs) == 0 {
 		return false
 	}
 	v := vs[0]
 	c.emit(StepFinished, Payload{Step: id, Outcome: string(StepFailed), Reason: fmt.Sprintf(
-		"step %s asks for %s %s, which is above %s %s, the most a step may ask for: %s", id, v.Field, v.Asked, v.Name, v.Limit, limitSource)})
+		"%s asks for %s %s, which is above %s %s, the most a step may ask for: %s", who, v.Field, v.Asked, v.Name, v.Limit, limitSource)})
 	return true
 }
 

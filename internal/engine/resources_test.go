@@ -391,3 +391,37 @@ func TestJobSaysWhetherThisStepAskedForResources(t *testing.T) {
 		t.Fatalf("%s asked: %v", j.StepID, j.ResourcesAsked)
 	}
 }
+
+// A container's own cpu and memory (written under containers, which existed
+// before step resources) are held to limits lowered after the run was
+// created, as a step's resources are, and a default never fails a step.
+func TestLimitsLoweredAfterTheRunWasCreatedHoldAContainersOwnSizeToo(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, "pipeline: p\ncontainers:\n  big: { image: x, memory: 6Gi }\nsteps:\n  a: { image: y, run: a }\n  b: { container: big, run: b, needs: a }\n", Trigger{Event: "manual"})
+	j := take(t, e)
+	// The recommended defaults are 6Gi at most; a limit below them cannot be set, so lower the default first.
+	if _, _, err := e.SetStepResourceDefault(pipeline.KindStep, resources.Request{Memory: "1Gi"}, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := e.SetStepResourceLimits(ResourceLimits{MaxMemory: "4Gi"}, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	ok(t, e, j, nil)
+	want(t, statuses(t, e, id), "run", "failed", "a", "succeeded", "b", "failed")
+	d, err := e.GetRun(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range d.StepList {
+		switch s.ID {
+		case "b":
+			if !strings.Contains(s.Error, "container big asks for memory 6Gi") || !strings.Contains(s.Error, "max_memory 4Gi") {
+				t.Errorf("b: %s", s.Error)
+			}
+		case "a":
+			if s.Error != "" {
+				t.Errorf("a step that asked for nothing failed on a default: %s", s.Error)
+			}
+		}
+	}
+}
