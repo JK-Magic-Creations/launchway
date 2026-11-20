@@ -120,3 +120,31 @@ func TestCLIValidateWarnsAboutAnOutputNothingWrites(t *testing.T) {
 		t.Fatalf("%q", got)
 	}
 }
+
+// A run that went on past tolerated failures says so in runs list and runs
+// show, naming the steps.
+func TestCLIShowsAllowedFailureCounts(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		one := `{"id":"run_1","project":"app","number":4,"status":"succeeded","event":"manual","branch":"main","sha":"0123456789abcdef","actor":"ann","created_at":1,
+			"allowed_failures":2,"allowed_failure_steps":["lint","scan"],"step_list":[]}`
+		if r.URL.Path == "/api/v1/runs" {
+			fmt.Fprint(w, "["+one+`,{"id":"run_2","project":"app","number":5,"status":"succeeded","event":"manual","branch":"main","created_at":1,"allowed_failures":0}]`)
+			return
+		}
+		fmt.Fprint(w, one)
+	}))
+	defer srv.Close()
+	var out bytes.Buffer
+	cl := newClient(credentials{Server: srv.URL, Token: "lw_x"}, &out)
+	if err := cl.show([]string{"run_1"}); err != nil || !strings.Contains(out.String(), "  2 allowed failures: lint, scan\n") {
+		t.Fatalf("%v %s", err, out.String())
+	}
+	out.Reset()
+	if err := cl.list(nil); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], "(2 allowed failures: lint, scan)") || strings.Contains(lines[1], "allowed") {
+		t.Fatalf("%q", lines)
+	}
+}

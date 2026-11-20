@@ -65,6 +65,12 @@ type RunSummary struct {
 	// PullRequestInto is the branch the pull request targets (schema 24),
 	// for a pull-request run of a pipeline that filters by it.
 	PullRequestInto string `json:"pull_request_into,omitempty"`
+	// AllowedFailures counts the steps that failed for good and were allowed
+	// to (on_failure: continue), and AllowedFailureSteps names them: a run
+	// that succeeded with some is not quite as clean as one without
+	// (schema 24).
+	AllowedFailures     int      `json:"allowed_failures"`
+	AllowedFailureSteps []string `json:"allowed_failure_steps,omitempty"`
 	// Lane is the run's place in its lane (schema 24); nil when its pipeline
 	// has no lane.
 	Lane *LaneInfo `json:"lane,omitempty"`
@@ -481,6 +487,10 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		b.Allowed = b.Status == StepFailed && allowed != 0
 		r := byID[runID]
 		r.Steps = append(r.Steps, b)
+		if b.Allowed {
+			r.AllowedFailures++
+			r.AllowedFailureSteps = append(r.AllowedFailureSteps, b.ID)
+		}
 		if b.Status == StepWaitingS && kind == "" {
 			r.Waiting = append(r.Waiting, b.ID)
 		}

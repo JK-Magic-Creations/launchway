@@ -163,6 +163,9 @@ func TestDeployRules(t *testing.T) {
 		{"self approved", Rules{Approvals: &Approvals{Min: 1}}, Evidence{Steps: []StepFact{approval("dana")}}, ResultFail, "an approval by the person who started the run does not count"},
 		{"two needed", Rules{Approvals: &Approvals{Min: 2}}, Evidence{Steps: []StepFact{approval("sam"), approval("sam")}}, ResultFail, "approved by sam only"},
 		{"no approval", Rules{Approvals: &Approvals{Min: 1}}, Evidence{}, ResultFail, "no approval before deploy"},
+		{"no allowed failures", Rules{AllowedFailures: &AllowedFailures{}}, Evidence{Steps: []StepFact{tests(1, 0)}, AllowedFailures: []string{}}, ResultPass, "0 allowed failure(s)"},
+		{"an allowed failure", Rules{AllowedFailures: &AllowedFailures{}}, Evidence{Steps: []StepFact{{Step: "lint", Status: "failed", Allowed: true}}, AllowedFailures: []string{"lint"}}, ResultFail, "1 allowed failure(s): lint"},
+		{"one allowed failure is within max", Rules{AllowedFailures: &AllowedFailures{Max: 1}}, Evidence{AllowedFailures: []string{"lint"}}, ResultPass, "1 allowed failure(s)"},
 		{"branch ok", Rules{Refs: &Refs{Branches: []string{"main"}}}, Evidence{}, ResultPass, "branch main"},
 		{"branch wrong", Rules{Refs: &Refs{Branches: []string{"release/*"}}}, Evidence{}, ResultFail, "a run of branch main"},
 	}

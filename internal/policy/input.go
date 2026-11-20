@@ -96,22 +96,28 @@ type Evidence struct {
 	// from its changes; Changes how many changes it has.
 	Deployed []DeployedRef `json:"deployed"`
 	Changes  int           `json:"changes"`
+	// AllowedFailures names the steps before the deployment that failed and
+	// were allowed to: a policy can ask that there be none.
+	AllowedFailures []string `json:"allowed_failures"`
 }
 
 // StepFact is one step before the deployment and what it reported. Run is
 // where it ran: this run, or for a step a re-run reused, the earlier run.
 type StepFact struct {
-	Step      string        `json:"step"`
-	Kind      string        `json:"kind,omitempty"`
-	Status    string        `json:"status"`
-	Run       string        `json:"run"`
-	RunNumber int           `json:"run_number"`
-	Attempt   int           `json:"attempt,omitempty"`
-	Tests     *TestFact     `json:"tests,omitempty"`
-	Findings  *FindingsFact `json:"findings,omitempty"`
-	SBOM      *SBOMFact     `json:"sbom,omitempty"`
-	Image     *BuiltImage   `json:"image,omitempty"`
-	Approval  *ApprovalFact `json:"approval,omitempty"`
+	Step      string `json:"step"`
+	Kind      string `json:"kind,omitempty"`
+	Status    string `json:"status"`
+	Run       string `json:"run"`
+	RunNumber int    `json:"run_number"`
+	Attempt   int    `json:"attempt,omitempty"`
+	// Allowed says the step failed and its pipeline tolerates that
+	// (on_failure: continue): its status is failed, but the run went on.
+	Allowed  bool          `json:"allowed,omitempty"`
+	Tests    *TestFact     `json:"tests,omitempty"`
+	Findings *FindingsFact `json:"findings,omitempty"`
+	SBOM     *SBOMFact     `json:"sbom,omitempty"`
+	Image    *BuiltImage   `json:"image,omitempty"`
+	Approval *ApprovalFact `json:"approval,omitempty"`
 	// Declared says which reports the step declares (tests, findings,
 	// sbom), so that a step that declared them and reported nothing is told
 	// apart from one that never would.

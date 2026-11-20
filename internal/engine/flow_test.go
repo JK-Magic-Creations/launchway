@@ -758,3 +758,26 @@ func TestLostAttemptFollowsTheRetryPolicy(t *testing.T) {
 		}
 	})
 }
+
+// A run that succeeded with a tolerated failure says so in its summary and
+// in the run list, naming the steps.
+func TestRunSummaryCountsAllowedFailures(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, tolerant, Trigger{Event: "manual"})
+	fail(t, e, take(t, e))
+	ok(t, e, take(t, e), nil)
+	ok(t, e, take(t, e), nil)
+	sum, err := e.Summary(id)
+	if err != nil || sum.Status != RunSucceeded || sum.AllowedFailures != 1 || len(sum.AllowedFailureSteps) != 1 || sum.AllowedFailureSteps[0] != "lint" {
+		t.Fatalf("%+v %v", sum, err)
+	}
+	list, err := e.ListRuns(RunFilter{Project: "demo"})
+	if err != nil || len(list) != 1 || list[0].AllowedFailures != 1 || list[0].AllowedFailureSteps[0] != "lint" {
+		t.Fatalf("%+v %v", list, err)
+	}
+	clean := create(t, e, "pipeline: demo\nsteps:\n  a: {image: x, run: a}\n", Trigger{Event: "manual"})
+	ok(t, e, take(t, e), nil)
+	if s, _ := e.Summary(clean); s.AllowedFailures != 0 || s.AllowedFailureSteps != nil {
+		t.Fatalf("%+v", s)
+	}
+}

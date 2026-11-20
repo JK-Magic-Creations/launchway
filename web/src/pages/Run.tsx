@@ -1,3 +1,4 @@
+import { AllowedFailureBadge } from "../components/AllowedFailures";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RerunFrom, type RerunPlan, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from "../format";
@@ -225,6 +226,7 @@ export function RunPage({ id }: { id: string }) {
               : verifyWaiting ? <StatusPill status="waiting" label="Waiting for a person" />
               : deploying ? <StatusPill status={shownStatus(deploying)} label={stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying))} />
               : <StatusPill status={run.status} />}
+            <AllowedFailureBadge run={run} onSelect={select} />
             {run.draft && <span className="badge-draft" title="Pipeline text from the editor, not from Git">Draft</span>}
             {overridden.length > 0 && <span className="badge-override" title="Started with another version of a library than the pipeline names">Library override</span>}
             <h1>{run.message || run.pipeline}</h1>

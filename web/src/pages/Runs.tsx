@@ -1,3 +1,4 @@
+import { AllowedFailureBadge } from "../components/AllowedFailures";
 import { useCallback, useEffect, useState } from "react";
 import { api, type LaneInfo, type Project, type RunStatus, type RunSummary } from "../api";
 import { ago, elapsed, refLabel, shortSha, starterLabel } from "../format";
@@ -129,6 +130,7 @@ function RunRow({ r, now }: { r: RunSummary; now: number }) {
           <span className="runrow-title">
             <span className="runrow-project">{r.project}</span>
             <span className="runrow-num">#{r.number}</span>
+            <AllowedFailureBadge run={r} />
             {r.draft && <span className="badge-draft" title="A draft run: pipeline text from the editor, not from Git">Draft</span>}
             <span className="runrow-msg">{title}</span>
           </span>

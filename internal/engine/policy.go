@@ -301,7 +301,8 @@ func (c *cmd) reusedState(runID string) (*RunState, error) {
 func (c *cmd) stepEvidence(stepID string, deployDef *pipeline.Step, floor string) (*policy.Evidence, error) {
 	st := c.st
 	up := st.Pipeline.Upstream(stepID)
-	ev := &policy.Evidence{Steps: []policy.StepFact{}, Deployed: []policy.DeployedRef{}, FindingsListed: true}
+	ev := &policy.Evidence{Steps: []policy.StepFact{}, Deployed: []policy.DeployedRef{}, FindingsListed: true,
+		AllowedFailures: []string{}}
 	type att struct {
 		run, step string
 		attempt   int
@@ -313,7 +314,11 @@ func (c *cmd) stepEvidence(stepID string, deployDef *pipeline.Step, floor string
 		}
 		def := st.Pipeline.Step(id)
 		s := st.Steps[id]
-		fact := policy.StepFact{Step: id, Kind: def.Kind, Status: string(s.Status), Run: st.ID, RunNumber: st.Number, Attempt: s.Attempt}
+		fact := policy.StepFact{Step: id, Kind: def.Kind, Status: string(s.Status), Run: st.ID, RunNumber: st.Number, Attempt: s.Attempt,
+			Allowed: s.Status == StepFailed && s.Allowed}
+		if fact.Allowed {
+			ev.AllowedFailures = append(ev.AllowedFailures, id)
+		}
 		if r := def.Reports; r != nil {
 			if len(r.Tests) > 0 {
 				fact.Declared = append(fact.Declared, "tests")

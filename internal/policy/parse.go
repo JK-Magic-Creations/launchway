@@ -538,6 +538,12 @@ func (ps *parser) rule(r *Rules, key string, v *yaml.Node, where string) {
 			a.Min = ps.integer(x, where+".min", 1, 20)
 		})
 		r.Approvals = a
+	case RuleAllowedFailures:
+		af := &AllowedFailures{}
+		ps.mapping(v, where, []string{"max"}, func(_ string, _, x *yaml.Node) {
+			af.Max = ps.integer(x, where+".max", 0, 100)
+		})
+		r.AllowedFailures = af
 	case RuleRefs:
 		rf := &Refs{}
 		ps.mapping(v, where, []string{"branches", "tags"}, func(key string, _, x *yaml.Node) {

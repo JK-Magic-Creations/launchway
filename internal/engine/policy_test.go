@@ -626,3 +626,40 @@ func TestPolicyOverview(t *testing.T) {
 		t.Fatalf("%+v", o.Recent)
 	}
 }
+
+// A deploy can refuse to go on after a step that failed and was allowed to:
+// the facts name the step, and the allowed_failures rule judges them.
+func TestAllowedFailuresRuleBlocksADeploy(t *testing.T) {
+	policyText := strings.Replace(gatePolicy, "      tests: { min: 2 }\n", "      allowed_failures: { max: 0 }\n", 1)
+	pipe := strings.Replace(gatePipeline, "steps:\n", "steps:\n  lint: {image: x, run: lint, on_failure: continue}\n", 1)
+	pipe = strings.Replace(pipe, "needs: [build, approve]", "needs: [build, approve, lint]", 1)
+	e, _, _ := newPolicyEngine(t, prodEnv, policyText)
+	r, err := e.CreateRun(NewRun{Project: "shop", Pipeline: parse(t, pipe), Source: gitSource,
+		Trigger: Trigger{Event: "manual", Ref: "refs/heads/main", Branch: "main", SHA: strings.Repeat("a", 40), Actor: "dana"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		j := take(t, e)
+		if j.StepID == "lint" {
+			fail(t, e, j)
+		} else {
+			ok(t, e, j, map[string]string{"tag": "1.0"})
+		}
+	}
+	if err := e.Decide(r.ID, "approve", true, "sam", ""); err != nil {
+		t.Fatal(err)
+	}
+	s := stepViewOf(t, e, r.ID, "deploy-prod")
+	if s.Status != StepFailed || !strings.Contains(s.Error, "rule allowed_failures: 1 allowed failure(s): lint") {
+		t.Fatalf("%s %q", s.Status, s.Error)
+	}
+	ds := decisions(t, e, r.ID)
+	if got := ds[len(ds)-1].Input.Evidence.AllowedFailures; !reflect.DeepEqual(got, []string{"lint"}) {
+		t.Fatalf("%v", got)
+	}
+	sum, _ := e.Summary(r.ID)
+	if sum.AllowedFailures != 1 || !reflect.DeepEqual(sum.AllowedFailureSteps, []string{"lint"}) {
+		t.Fatalf("%+v", sum)
+	}
+}

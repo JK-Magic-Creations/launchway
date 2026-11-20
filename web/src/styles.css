@@ -420,6 +420,8 @@ a.btn:hover { text-decoration: none; }
 .linkbtn:hover { text-decoration: underline; }
 .callout-info { background: var(--accent-soft); color: var(--text); }
 .callout-allowed { background: var(--warn-soft); color: var(--warn-ink); }
+.badge-button { border: 0; cursor: pointer; font-family: inherit; }
+.badge-button:hover { filter: brightness(0.95); }
 .badge-allowed { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .callout-draft { background: var(--warn-soft); color: var(--warn-ink); }
 .callout-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

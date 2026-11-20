@@ -139,6 +139,9 @@ func (pr *printer) summary(d *engine.RunDetail) {
 		engine.RunCanceled: pr.c("33;1", "Canceled"),
 	}[d.Status]
 	fmt.Printf("\n%s in %s\n", label, total.Round(100*time.Millisecond))
+	if note := allowedNote(d.AllowedFailures, d.AllowedFailureSteps); note != "" {
+		fmt.Println(pr.c("33", note))
+	}
 }
 
 func took(s *engine.StepView) string {

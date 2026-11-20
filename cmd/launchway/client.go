@@ -403,6 +403,9 @@ type runView struct {
 	// "run timeout of 2h reached"; DeadlineAt is when its timeout cancels it.
 	CancelReason string `json:"cancel_reason"`
 	DeadlineAt   int64  `json:"deadline_at"`
+	// AllowedFailures counts the steps that failed and were allowed to.
+	AllowedFailures     int      `json:"allowed_failures"`
+	AllowedFailureSteps []string `json:"allowed_failure_steps"`
 	// PullRequest and PullRequestInto: a pull-request run, and the branch
 	// it targets.
 	PullRequest     int    `json:"pull_request"`
@@ -597,8 +600,12 @@ func (cl *client) list(args []string) error {
 	return cl.print(runs, *asJSON, func() {
 		for _, r := range runs {
 			ref := runRef(r)
-			fmt.Fprintf(cl.out, "%-24s %-16s #%-5d %-10s %-12s %-14s %s\n", r.ID, r.Project, r.Number, r.Status, r.Event, ref,
+			line := fmt.Sprintf("%-24s %-16s #%-5d %-10s %-12s %-14s %s", r.ID, r.Project, r.Number, r.Status, r.Event, ref,
 				time.UnixMilli(r.CreatedAt).Format(time.DateTime))
+			if note := allowedNote(r.AllowedFailures, r.AllowedFailureSteps); note != "" {
+				line += "  (" + note + ")"
+			}
+			fmt.Fprintln(cl.out, line)
 		}
 	})
 }
@@ -629,6 +636,9 @@ func (cl *client) show(args []string) error {
 	}
 	ref := runRef(r)
 	fmt.Fprintf(cl.out, "Run #%d of %s: %s\n", r.Number, r.Project, r.Status)
+	if note := allowedNote(r.AllowedFailures, r.AllowedFailureSteps); note != "" {
+		fmt.Fprintf(cl.out, "  %s\n", note)
+	}
 	fmt.Fprintf(cl.out, "  %s at %.10s, %s by %s, %s\n", ref, r.SHA, r.Event, r.Actor, time.UnixMilli(r.CreatedAt).Format(time.DateTime))
 	if d := r.TriggerDetail; d != nil {
 		if d.Schedule != "" {
