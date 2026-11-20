@@ -245,7 +245,7 @@ export default defineConfig({
     editLink: { pattern: `${repo}/edit/main/docs/:path`, text: 'Edit this page' },
     outline: { level: [2, 3] },
     footer: {
-      message: 'Apache 2.0 licence. Features marked planned or in progress are not available yet.',
+      message: 'AGPL-3.0 licence. Features marked planned or in progress are not available yet.',
       copyright: 'Launchway contributors',
     },
   },

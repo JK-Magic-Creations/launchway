@@ -63,7 +63,7 @@ called a [pipeline](../glossary.md#pipeline).
 
 ## How far along it is
 
-Launchway is early software, released under the Apache 2.0 licence. What these documents describe
+Launchway is early software, released under the AGPL-3.0 licence. What these documents describe
 as available works and is tested, including with several servers and with real Kubernetes,
 PostgreSQL, OpenBao, BuildKit and Argo CD. Much more is designed but not built yet. The
 [roadmap](../roadmap-list.md) shows each item as **available**, **in progress** or **planned**;

@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/JK-Magic-Creations/launchway/actions/workflows/ci.yml/badge.svg)](https://github.com/JK-Magic-Creations/launchway/actions/workflows/ci.yml)
 [![Docs](https://github.com/JK-Magic-Creations/launchway/actions/workflows/docs-pages.yml/badge.svg)](https://jk-magic-creations.github.io/launchway/)
-[![Licence: Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue.svg)](LICENSE)
+[![Licence: AGPL-3.0](https://img.shields.io/badge/licence-AGPL--3.0-blue.svg)](LICENSE)
 
 Launchway is a build and delivery platform for teams: it builds each change, tests it, scans it,
 and takes it to production through approvals, policy checks and GitOps deployments. It runs on
@@ -48,4 +48,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Report security problems privately as de
 
 ## Licence
 
-Apache 2.0. See [LICENSE](LICENSE).
+Launchway is free software under the [GNU Affero General Public License, version 3](LICENSE)
+(AGPL-3.0). [LICENSING.md](LICENSING.md) explains in plain language what that means for you and
+how to get a commercial licence if you cannot use the AGPL. The copyright notice is in
+[COPYRIGHT](COPYRIGHT).

@@ -53,7 +53,7 @@ const shots = [
   <div class="lw-landing">
     <section class="lw-hero" aria-labelledby="lw-hero-title">
       <div class="lw-hero-text">
-        <p class="lw-eyebrow">Open source · Apache 2.0 · early software</p>
+        <p class="lw-eyebrow">Open source · AGPL-3.0 · early software</p>
         <h1 id="lw-hero-title">Build, test and deliver software on infrastructure you control.</h1>
         <p class="lw-lead">
           Launchway is a build and delivery platform for teams. It runs your pipelines on your own

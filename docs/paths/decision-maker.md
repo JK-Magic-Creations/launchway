@@ -21,7 +21,7 @@ See [What Launchway is](../start/overview.md).
 
 ## How mature it is
 
-Launchway is early, open-source software (Apache 2.0). The features these documents describe as
+Launchway is early, open-source software (AGPL-3.0). The features these documents describe as
 available work and are tested. Others are in progress or planned; the
 [roadmap](../roadmap-list.md) shows each one's status. There is no hosted service and no paid
 support offering today.

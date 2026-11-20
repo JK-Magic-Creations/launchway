@@ -31,18 +31,30 @@ make test-s3            # a real S3-compatible server, for the artifact store
 - Run `make test` before pushing.
 - Write messages and UI text in plain words.
 
-## Sign your work
+## Licence and contributor licence agreement
 
-Launchway uses the [Developer Certificate of Origin](https://developercertificate.org/) instead
-of a contributor licence agreement. You keep the copyright to what you write, and no single party
-can relicense the project. Sign each commit with:
+Launchway is free software under the [GNU Affero General Public License, version 3](LICENSE)
+(AGPL-3.0). [LICENSING.md](LICENSING.md) explains what that means in plain words. JK Magic
+Creations, which owns Launchway, also offers a commercial licence to organisations that cannot
+accept the AGPL's terms.
 
-```sh
-git commit -s
-```
+To make that possible, every contributor agrees to the [contributor licence agreement](CLA.md)
+(CLA):
 
-This adds a `Signed-off-by:` line certifying that you wrote the change or otherwise have the right
-to contribute it under the Apache 2.0 licence.
+- **You keep the copyright** to what you write.
+- **You grant JK Magic Creations a licence** to your contribution, including a patent licence and
+  the right to sublicense it. This lets JK Magic Creations relicense Launchway, including under
+  commercial terms, and distribute your contribution under those terms as well as under the AGPL.
+  Read [CLA.md](CLA.md) for the exact terms; it, not this summary, is the agreement.
+- **A pull request cannot be merged until its author has agreed to the CLA.**
+
+To agree, comment on your pull request with the statement given in
+[How to agree](CLA.md#how-to-agree), including your name and e-mail address. The maintainer
+records your agreement. You only need to do this once. Until an automated CLA bot is set up, this
+is done by hand.
+
+The CLA text is awaiting review by a lawyer. Until that is done, no agreement is accepted, so
+pull requests from anyone but the owner cannot be merged yet.
 
 ## Where things are
 
