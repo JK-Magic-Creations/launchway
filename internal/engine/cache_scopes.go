@@ -14,18 +14,21 @@ import (
 // SetDefaultBranch tells the engine how to find a project's default branch,
 // which decides whose cache entries are the default scope. The engine knows
 // projects only by name; the server that knows their repositories sets this
-// once, before it takes runs. Without it, every project's is main.
+// once, before it takes runs. Without it, or for a project it cannot say the
+// default branch of, no run writes the default scope: guessing main would let
+// a run of a branch that is not the default plant what every other run
+// restores.
 func (e *Engine) SetDefaultBranch(fn func(project string) string) {
 	e.caches.defaultBranch.Store(&fn)
 }
 
+// projectDefaultBranch is the project's default branch, or empty when it is
+// not known.
 func (e *Engine) projectDefaultBranch(project string) string {
 	if fn := e.caches.defaultBranch.Load(); fn != nil {
-		if b := (*fn)(project); b != "" {
-			return b
-		}
+		return (*fn)(project)
 	}
-	return "main"
+	return ""
 }
 
 // cacheScopes says which scopes a run reads, in the order it reads them, and
@@ -44,7 +47,7 @@ func (s cacheScopes) canRead(scope string) bool { return slices.Contains(s.read,
 // how it started. Nothing a runner says takes part.
 func (e *Engine) scopesOf(st *RunState) cacheScopes {
 	t := st.Trigger
-	def := e.projectDefaultBranch(st.Project)
+	def := e.projectDefaultBranch(st.Project) // empty if unknown: nothing then matches it
 	var s cacheScopes
 	switch {
 	case st.Draft != nil || t.Event == pipeline.EventDraft:

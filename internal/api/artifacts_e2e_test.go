@@ -39,6 +39,7 @@ func setupStore(t *testing.T) *env {
 	if err != nil {
 		t.Fatal(err)
 	}
+	eng.SetDefaultBranch(func(string) string { return "main" }) // build caches write the default scope only for a known default branch
 	s := &Server{Engine: eng, RunnerToken: "secret", Actor: "tester", Log: quiet()}
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })

@@ -49,7 +49,9 @@ be restored by a run that is trusted with secrets or deploys.
 
 So a pull request starts from what the default branch built, and saves only where the default
 branch never looks. Nothing is shared between projects. An entry is never changed once saved: a key
-that has an entry is not saved again.
+that has an entry is not saved again. Launchway takes the default branch from the project's
+repository; if it cannot tell which it is, no run writes `default` (a run of any branch then saves
+to its own branch scope) rather than guess.
 
 ## What the step's log says
 

@@ -55,6 +55,7 @@ func newCacheRig(t *testing.T) *cacheRig {
 	t.Helper()
 	clk := newClock()
 	e := openStore(t, testdb.New(t), clk, t.TempDir(), ArtifactOptions{})
+	e.SetDefaultBranch(func(string) string { return "main" })
 	return &cacheRig{t: t, e: e, clk: clk}
 }
 
@@ -449,7 +450,7 @@ func TestOnlyTheDefaultBranchWritesTheDefaultScope(t *testing.T) {
 		if p == "demo" {
 			return "trunk"
 		}
-		return ""
+		return "main"
 	})
 	for name, tc := range map[string]struct {
 		project string
@@ -957,6 +958,8 @@ func TestTwoServersCommitAndEvictAtOnce(t *testing.T) {
 	dir := t.TempDir()
 	e1 := openStore(t, addr, clk, dir, ArtifactOptions{})
 	e2 := openStore(t, addr, clk, dir, ArtifactOptions{})
+	e1.SetDefaultBranch(func(string) string { return "main" })
+	e2.SetDefaultBranch(func(string) string { return "main" })
 	r := &cacheRig{t: t, e: e1, clk: clk}
 	setPolicy(t, e1, "", CachePolicy{Enabled: true, MaxProjectGiB: 3.5 / 1024, MaxEntryGiB: 2.0 / 1024, IdleDays: 7})
 
