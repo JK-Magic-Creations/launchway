@@ -121,8 +121,15 @@ type Triggers struct {
 	Webhook []*WebhookTrigger `json:"webhook,omitempty"`
 }
 
-// PullRequestTrigger starts a run for pull requests. It is empty for now.
-type PullRequestTrigger struct{}
+// PullRequestTrigger starts a run for pull requests. Without settings it is
+// every pull request. The server sees each pull request's head
+// (refs/pull/<n>/head) and learns the branch it targets from the project's
+// forge connection, so it can filter by that (schema 24).
+type PullRequestTrigger struct {
+	// Into are patterns of the branches a pull request may target, as the
+	// branches of on.push; empty means any.
+	Into []string `json:"into,omitempty"`
+}
 
 // PushTrigger starts a run when matching branches or tags are pushed.
 type PushTrigger struct {
@@ -543,6 +550,22 @@ func (t Triggers) MatchPush(branch, tag string) bool {
 
 // MatchPullRequest reports whether pull requests start a run.
 func (t Triggers) MatchPullRequest() bool { return t.PullRequest != nil }
+
+// FiltersPullRequests reports whether the pipeline runs only for pull
+// requests that target some branches (on.pull_request.into), which the
+// server can only learn from the project's forge connection.
+func (t Triggers) FiltersPullRequests() bool {
+	return t.PullRequest != nil && len(t.PullRequest.Into) > 0
+}
+
+// MatchPullRequestInto reports whether a pull request that targets the
+// branch starts a run: any does unless the trigger says into.
+func (t Triggers) MatchPullRequestInto(branch string) bool {
+	if t.PullRequest == nil {
+		return false
+	}
+	return len(t.PullRequest.Into) == 0 || matchAny(t.PullRequest.Into, branch)
+}
 
 // UsesSchema9 reports whether the pipeline uses keys that servers older
 // than schema 9 do not know: on.pull_request and supersede.

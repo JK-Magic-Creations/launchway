@@ -304,6 +304,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
 .d-started .d-outcome { color: var(--ok-ink); }
 .d-ignored .d-outcome { color: var(--text-3); }
 .d-error .d-outcome { color: var(--bad-ink); }
+.d-waiting .d-outcome { color: var(--warn-ink); }
 .d-detail { flex: 1 1 260px; min-width: 0; }
 
 .dialog { border: 1px solid var(--border); border-radius: 14px; padding: 0; width: min(680px, calc(100vw - 32px)); background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .3); }

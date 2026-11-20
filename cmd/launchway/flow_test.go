@@ -3,8 +3,11 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -44,5 +47,54 @@ func TestCLIShowsRetryWaitsAndCancelReasons(t *testing.T) {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("missing %q in\n%s", want, out.String())
 		}
+	}
+}
+
+// validate --project has the server check the file for that project too,
+// and prints its warnings and problems.
+func TestCLIValidateAgainstAProject(t *testing.T) {
+	var gotPath, gotBody string
+	reply := `{"ok":true,"warnings":["the pipeline filters pull requests by the branch they target (on.pull_request.into), and project app has no forge connection"]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		gotPath, gotBody = r.URL.String(), string(b)
+		fmt.Fprint(w, reply)
+	}))
+	defer srv.Close()
+	t.Setenv("LAUNCHWAY_SERVER", srv.URL)
+	t.Setenv("LAUNCHWAY_TOKEN", "lw_x")
+	file := filepath.Join(t.TempDir(), "pipeline.yaml")
+	text := "pipeline: demo\non: { pull_request: { into: [main] } }\nsteps:\n  a: {image: x, run: a}\n"
+	if err := os.WriteFile(file, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmdValidate([]string{file, "--project", "app"}); err != nil {
+		t.Fatalf("%v", err)
+	}
+	if gotPath != "/api/v1/validate?project=app" || gotBody != text {
+		t.Fatalf("%s %q", gotPath, gotBody)
+	}
+	// into is accepted by the local check alone, with no server involved.
+	gotPath = ""
+	if err := cmdValidate([]string{file}); err != nil || gotPath != "" {
+		t.Fatalf("%v %q", err, gotPath)
+	}
+	reply = `{"ok":false,"problems":[{"line":2,"path":"timeout","message":"too long"}]}`
+	if err := cmdValidate([]string{file, "--project", "app"}); err != exitErr(1) {
+		t.Fatalf("%v", err)
+	}
+}
+
+func TestCLIShowsThePullRequestTarget(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"id":"run_1","project":"app","number":4,"status":"succeeded","event":"pull_request","pull_request":12,"pull_request_into":"main","sha":"0123456789abcdef","actor":"ann","created_at":1,"step_list":[]}`)
+	}))
+	defer srv.Close()
+	var out bytes.Buffer
+	if err := newClient(credentials{Server: srv.URL, Token: "lw_x"}, &out).show([]string{"run_1"}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "pull request #12 into main") {
+		t.Fatalf("%s", out.String())
 	}
 }

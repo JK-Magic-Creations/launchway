@@ -93,7 +93,7 @@ export function ProjectsPage() {
               <ul>
                 {p.decisions.map((d, i) => (
                   <li key={i} className={"decision d-" + d.outcome}>
-                    <span className="d-outcome">{d.outcome === "started" ? "Started" : d.outcome === "ignored" ? "Ignored" : "Problem"}</span>
+                    <span className="d-outcome">{d.outcome === "started" ? "Started" : d.outcome === "ignored" ? "Ignored" : d.outcome === "waiting" ? "Waiting" : "Problem"}</span>
                     <span className="mono">{d.ref.replace(/^refs\/(heads|tags)\//, "")}</span>
                     <span className="mono faint">{shortSha(d.sha)}</span>
                     <span className="d-detail">

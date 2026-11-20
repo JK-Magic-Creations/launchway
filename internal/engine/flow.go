@@ -51,8 +51,17 @@ func (c *cmd) persistFlow(changed []string) error {
 			return err
 		}
 	}
-	_, err := c.tx.Exec(`UPDATE runs SET deadline_at = ? WHERE id = ?`, c.st.deadline(), c.st.ID)
-	return err
+	if _, err := c.tx.Exec(`UPDATE runs SET deadline_at = ? WHERE id = ?`, c.st.deadline(), c.st.ID); err != nil {
+		return err
+	}
+	for _, ev := range c.events {
+		if ev.Type == RunCreated && c.st.Trigger.PullRequestInto != "" {
+			if _, err := c.tx.Exec(`UPDATE runs SET pull_request_into = ? WHERE id = ?`, c.st.Trigger.PullRequestInto, c.st.ID); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // failureCause says why an attempt failed, from what its runner reported:

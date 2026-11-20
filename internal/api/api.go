@@ -1218,7 +1218,15 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "graph": p, "levels": p.Levels(), "expanded": expand})
+	out := map[string]any{"ok": true, "graph": p, "levels": p.Levels(), "expanded": expand}
+	// What is valid but will not work as written for this project: a
+	// pipeline that filters pull requests by the branch they target needs
+	// the project's forge to say which that is.
+	if project != "" && s.Projects != nil && p.On.FiltersPullRequests() && !s.Projects.HasForge(project) {
+		out["warnings"] = []string{"the pipeline filters pull requests by the branch they target (on.pull_request.into), and project " + project +
+			" has no forge connection: no pull request will run until it has one"}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 // stream sends live changes as server-sent events. With ?run=ID it sends only

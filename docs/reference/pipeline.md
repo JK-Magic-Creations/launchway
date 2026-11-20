@@ -117,7 +117,7 @@ Keys that the design has but are not built yet are refused with a hint: `outputs
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `push` | mapping | none | Start a run when a matching branch or tag is pushed |
-| `pull_request` | empty mapping | none | Start a run when a pull request is opened or its head moves. Write `pull_request: {}` (or the key with no value). It takes no settings |
+| `pull_request` | mapping | none | Start a run when a pull request is opened or its head moves. Write `pull_request: {}` (or the key with no value) for every pull request, or filter by the branch they target with `into` (see [Pull request](#pull-request)) |
 | `schedule` | list | none | Start runs at times written as cron expressions. At most 20 |
 | `webhook` | mapping, or a list of mappings | none | Let other systems start runs by calling a URL. At most 20 |
 
@@ -139,11 +139,41 @@ At least one of `branches` or `tags` is required.
 
 Pull-request runs run the pipeline at the pull request's head commit (`refs/pull/<n>/head`). They
 run only if the pipeline on the project's default branch also has `pull_request`, so a pull request
-cannot turn pull-request runs on for itself. The server sees only each pull request's head, not the
-branch it targets, so `pull_request` takes no `branches` filter and `when: { branch: ... }` never
-matches a pull-request run. Steps of pull-request runs may not read secrets unless the server's
-configuration allows it ([`pull_requests.secrets`](server-config.md#drafts-and-pull-requests)).
-See [Pull requests](../tutorials/pull-requests.md).
+cannot turn pull-request runs on for itself. A pull request has no branch or tag of its own:
+`when: { branch: ... }` never matches a pull-request run, and `branches` and `tags` are not keys of
+`pull_request`. What it has is the branch it would land on, and `into` filters by that:
+
+<!-- keys: on-pull-request -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `into` | pattern, one value or a list | any branch | Run only for pull requests that target a branch matching one of the patterns, written as the `branches` of [`push`](#push). The step environment gets `LAUNCHWAY_PULL_REQUEST_INTO`. Needs schema 24 |
+
+The server sees only each pull request's head, so it learns the target from the project's **forge
+connection**, and does so when it first sees each head, reading the pipeline on the default branch
+(the reviewed one) to know whether to filter. If the project has no forge connection, a pipeline
+with `into` runs no pull requests, and the project's recent pushes say so: *pull request #12 not
+run: the pipeline filters by target branch and the project has no forge connection*. If the forge
+cannot be reached, the pull request is not run either (the server never runs unfiltered): the
+decision says *waiting: forge unreachable*, and the next poll tries again for as long as the head
+is the newest. The target is read once for each head; when a pull request is retargeted and its
+head moves, it is read again and the decision says that the target changed. The target is kept on
+the run (`pull_request_into` in the run JSON) and shown with the pull request. `pull_request: {}`
+needs no forge and no newer server.
+
+<!-- validate -->
+```yaml
+pipeline: checks
+on:
+  pull_request: { into: [main, "release/*"] }
+steps:
+  test:
+    image: alpine:3.22
+    run: echo "testing a change into $LAUNCHWAY_PULL_REQUEST_INTO"
+```
+
+Steps of pull-request runs may not read secrets unless the server's configuration allows it
+([`pull_requests.secrets`](server-config.md#drafts-and-pull-requests)). See
+[Pull requests](../tutorials/pull-requests.md).
 
 ### Schedule
 
@@ -1510,7 +1540,7 @@ older server. Use them only once every server and runner is upgraded; see
 | 14 | rollout steps, `rollout.until: paused`, `rollout.pauses`, an approval's `deployment`, `abort_first`, `on_cancel: abort` |
 | 15 | image steps, a change's `digest` |
 | 22 | a step's `resources` |
-| 24 | `when.output`, `on_failure`, `retry` with `wait`, `backoff` or `on`, the pipeline's `timeout`, `lane` |
+| 24 | `when.output`, `on_failure`, `retry` with `wait`, `backoff` or `on`, the pipeline's `timeout`, `lane`, `on.pull_request.into` |
 
 ## What next
 

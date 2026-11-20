@@ -485,8 +485,8 @@ func TestPullRequestsAndSupersede(t *testing.T) {
 		t.Fatal("deploy's when matched a pull request")
 	}
 	for name, c := range map[string]struct{ src, want string }{
-		"branches":      {"pipeline: a\non: { pull_request: { branches: [main] } }\nsteps:\n  a: {image: x, run: y}\n", "cannot be filtered by branch"},
-		"another key":   {"pipeline: a\non: { pull_request: { types: [opened] } }\nsteps:\n  a: {image: x, run: y}\n", "takes no settings"},
+		"branches":      {"pipeline: a\non: { pull_request: { branches: [main] } }\nsteps:\n  a: {image: x, run: y}\n", "write pull_request: { into: ["},
+		"another key":   {"pipeline: a\non: { pull_request: { types: [opened] } }\nsteps:\n  a: {image: x, run: y}\n", `unknown key "types"; expected one of: into`},
 		"a value":       {"pipeline: a\non: { pull_request: yes }\nsteps:\n  a: {image: x, run: y}\n", "write pull_request: {}"},
 		"supersede":     {"pipeline: a\nsupersede: sometimes\nsteps:\n  a: {image: x, run: y}\n", "write true or false"},
 		"unknown event": {"pipeline: a\nsteps:\n  a: {image: x, run: y, when: { event: pull-request }}\n", "pull_request"},

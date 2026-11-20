@@ -40,6 +40,8 @@ export interface RunSummary {
   needs_newer_server: boolean;
   /** A run of a pull request (event "pull_request"): its number. */
   pull_request?: number;
+  /** The branch the pull request targets, for a pull-request run of a pipeline that filters by it. */
+  pull_request_into?: string;
   /** Why the run was asked to cancel, when not by hand, such as "superseded by run #12". */
   cancel_reason?: string;
   /** The newer run that superseded this one, and its number. */
@@ -654,7 +656,7 @@ export interface GraphGroup {
 
 export interface Graph {
   name: string;
-  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: Record<string, never> };
+  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: { into?: string[] } };
   /** A new run of a push or pull request cancels the older ones of the same ref still going. */
   supersede?: boolean;
   libraries?: GraphLibrary[];
@@ -754,7 +756,7 @@ export interface RunEvent {
   data: Record<string, unknown>;
 }
 
-export interface Decision { at: number; ref: string; sha: string; outcome: "started" | "ignored" | "error"; detail: string; run_id?: string }
+export interface Decision { at: number; ref: string; sha: string; outcome: "started" | "ignored" | "waiting" | "error"; detail: string; run_id?: string }
 
 export interface PushSettings { branch_prefix: string; allow_direct: string[] | null }
 
@@ -764,7 +766,7 @@ export interface ProjectPipeline {
   version: string;
   template: string;
   with?: Record<string, string> | null;
-  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: Record<string, never> };
+  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: { into?: string[] } };
   supersede?: boolean;
 }
 
@@ -907,6 +909,8 @@ export interface Problem { file?: string; library?: string; line?: number; colum
 
 export interface ValidateResult {
   ok: boolean; problems?: Problem[]; graph?: Graph; levels?: string[][];
+  /** Valid, but will not work as written for the project (for example, a pull-request filter by target branch where the project has no forge). */
+  warnings?: string[];
   /** Templates were expanded from the libraries' current versions. */
   expanded?: boolean;
 }

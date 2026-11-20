@@ -24,10 +24,14 @@ with everything else, and a run starts when one appears or moves.
   even while the default branch does not ask for pull requests, so turning them on later does
   not run the old ones either. As with pushes, this is kept in the database, and exactly one
   server acts on each change.
-- **No target branch.** The ref says which commit a pull request is at, not which branch it
-  targets, so `pull_request` takes no `branches` filter, and `when: { branch: ... }` never matches
-  a pull-request run. Use `when: { event: pull_request }` for steps only pull requests run, and
-  `when: { event: [push, manual] }` to keep a step out of them.
+- **The target branch comes from the forge.** The ref says which commit a pull request is at, not
+  which branch it targets, so `when: { branch: ... }` never matches a pull-request run. Use
+  `when: { event: pull_request }` for steps only pull requests run, and `when: { event: [push,
+  manual] }` to keep a step out of them. To run only for pull requests into some branches, write
+  `on: { pull_request: { into: [main, "release/*"] } }`: the server then asks the project's forge
+  connection which branch each new head targets (once for each head), and runs nothing for a
+  pull request it cannot ask about. Steps get the answer as `LAUNCHWAY_PULL_REQUEST_INTO`. See
+  [Pull request](../reference/pipeline.md#pull-request) for what the decisions say.
 - **No secrets, by default.** A pull request's code may come from anyone who can open one, so a
   step of a pull-request run that declares `secrets` fails before any runner sees it, unless the
   project allows it. The setting is read when the run is created; resuming the run and re-running

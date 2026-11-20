@@ -204,3 +204,34 @@ func (e *Engine) SharedValue(key, proposed string) (string, error) {
 	err := e.db.QueryRow(`SELECT value FROM meta WHERE key = ?`, "shared:"+key).Scan(&v)
 	return v, err
 }
+
+// RecordDecision records a decision about a ref without claiming the change:
+// the ref is not moved, so the next poll looks at the commit again. A
+// decision identical to the project's newest for the same ref and commit is
+// not recorded again, so a pull request waiting for its forge says so once,
+// not at every poll, whichever servers poll.
+func (e *Engine) RecordDecision(project string, d PushDecision) error {
+	unlock := e.writeLock()
+	tx, err := e.db.Begin()
+	if err != nil {
+		unlock()
+		return err
+	}
+	var n int
+	err = tx.QueryRow(`SELECT COUNT(*) FROM (SELECT outcome, detail FROM push_decisions WHERE project = ? AND ref = ? AND sha = ?
+		ORDER BY at DESC, id DESC LIMIT 1) last WHERE last.outcome = ? AND last.detail = ?`, project, d.Ref, d.SHA, d.Outcome, d.Detail).Scan(&n)
+	if err == nil && n == 0 {
+		d.At = e.now().UnixMilli()
+		err = insertDecision(tx, project, d)
+	}
+	if err == nil {
+		err = tx.Commit()
+	} else {
+		tx.Rollback()
+	}
+	unlock()
+	if err == nil && n == 0 {
+		e.pruneDecisions(project)
+	}
+	return err
+}

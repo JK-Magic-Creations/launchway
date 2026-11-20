@@ -599,3 +599,42 @@ func TestOlderServerLeavesRetryAndTimeoutRunsAlone(t *testing.T) {
 		t.Fatalf("%+v", again)
 	}
 }
+
+const prInto = `
+pipeline: demo
+on: { pull_request: { into: [main] } }
+steps:
+  a: {image: x, run: a}
+`
+
+// A pull-request run of a pipeline that filters by target keeps the target
+// on the run, exports it to its steps, and older servers leave it alone.
+func TestPullRequestIntoOnTheRun(t *testing.T) {
+	clk, addr := newClock(), testdb.New(t)
+	e := mustOpenAs(t, addr, clk, 0, &syncBuffer{})
+	trig := prTrigger(12, "c12")
+	trig.PullRequestInto = "main"
+	id := create(t, e, prInto, trig)
+	sum, _ := e.Summary(id)
+	if sum.PullRequest != 12 || sum.PullRequestInto != "main" || sum.MinSchema != schemaFlow {
+		t.Fatalf("%+v", sum)
+	}
+	d, _ := e.GetRun(id)
+	if d.TriggerDetail == nil || d.TriggerDetail.PullRequestInto != "main" {
+		t.Fatalf("%+v", d.TriggerDetail)
+	}
+	j := take(t, e)
+	if j.Env["LAUNCHWAY_PULL_REQUEST_INTO"] != "main" || j.Env["LAUNCHWAY_PULL_REQUEST"] != "12" {
+		t.Fatalf("%v", j.Env)
+	}
+	// Another pull-request run has no target to export.
+	other := create(t, e, "pipeline: demo\non: { pull_request: {} }\nsteps:\n  a: {image: x, run: a}\n", prTrigger(13, "c13"))
+	if j := take(t, e); j.RunID != other || j.Env["LAUNCHWAY_PULL_REQUEST_INTO"] != "" {
+		t.Fatalf("%v", j.Env)
+	}
+	e.Close()
+	old := mustOpenAs(t, addr, clk, schemaResources, &syncBuffer{})
+	if d, err := old.GetRun(id); err != nil || !d.NeedsNewerServer {
+		t.Fatalf("%+v %v", d, err)
+	}
+}

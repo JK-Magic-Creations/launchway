@@ -127,6 +127,12 @@ type Manager struct {
 	// trig is what schedules and webhooks keep (see triggers.go).
 	trig     *triggerState
 	trigOnce sync.Once
+	// forges are the projects' forge connections, and targets what they
+	// said about pull-request heads (see forge.go).
+	forgeMu    sync.Mutex
+	forges     map[string]Forge
+	targets    map[targetKey]string
+	lastTarget map[targetPR]string
 }
 
 var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
@@ -413,13 +419,14 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 	gateRead := false
 	var gateOn bool
 	var gateWhy string
+	var gateFilter *pipeline.PullRequestTrigger
 	for _, r := range pulls {
 		old, known := seen[r.FullRef()]
 		if known && old == r.SHA {
 			continue
 		}
 		if !gateRead {
-			gateOn, gateWhy = m.pullRequestsOn(ctx, p, refs)
+			gateOn, gateWhy, gateFilter = m.pullRequestsOn(ctx, p, refs)
 			gateRead = true
 		}
 		change := engine.RefChange{Ref: r.FullRef(), Old: old, New: r.SHA, SeenAt: seenAt}
@@ -456,11 +463,33 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				d.Outcome, d.Detail = "ignored", strings.TrimSpace("the pipeline at the pull request's head does not ask for pull requests "+p.note(from))
 			default:
 				n, _ := strconv.Atoi(r.Name)
+				// The default branch's pipeline says whether to filter by the
+				// branch the pull request targets; only the project's forge
+				// can say which that is, and without it nothing runs.
+				into := m.pullRequestInto(ctx, p, n, r.SHA, gateFilter)
+				if into.Wait != "" {
+					// Not claimed: the next poll looks at this head again, for
+					// as long as it is the newest.
+					if err := m.eng.RecordDecision(p.Name, Decision{Ref: r.FullRef(), SHA: r.SHA, Outcome: "waiting", Detail: into.Wait}); err != nil {
+						return err
+					}
+					continue
+				}
+				if into.Reject != "" {
+					d.Outcome, d.Detail = "ignored", into.Reject
+					break
+				}
 				t := trigger(r, pipeline.EventPullRequest, r.Author)
 				t.PullRequest = n
+				t.PullRequestInto = into.Target
 				t.Inputs = vals
+				note := p.note(from)
+				if into.Target != "" {
+					note = strings.TrimSpace("into " + into.Target + "; " + into.Note + " " + note)
+					note = strings.ReplaceAll(note, "; ;", ";")
+				}
 				run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
-					Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: p.note(from),
+					Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: note,
 					PullRequestSecrets: p.PullRequestSecrets})
 				switch {
 				case errors.Is(err, engine.ErrAlreadyClaimed):
@@ -482,7 +511,10 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 
 // pullRequestsOn reports whether the pipeline at the tip of the project's
 // default branch asks for pull requests, and if not, says why in words.
-func (m *Manager) pullRequestsOn(ctx context.Context, p *project, refs []Ref) (bool, string) {
+//
+// It also returns the default branch's on.pull_request, whose into says which
+// target branches the project's pull requests may have.
+func (m *Manager) pullRequestsOn(ctx context.Context, p *project, refs []Ref) (bool, string, *pipeline.PullRequestTrigger) {
 	for _, r := range refs {
 		if r.Kind != "branch" || r.Name != p.DefaultBranch {
 			continue
@@ -490,15 +522,15 @@ func (m *Manager) pullRequestsOn(ctx context.Context, p *project, refs []Ref) (b
 		pl, _, err := p.parsedAt(ctx, r.SHA)
 		switch {
 		case errors.Is(err, ErrNoPipeline):
-			return false, "the default branch, " + p.DefaultBranch + ", has no pipeline"
+			return false, "the default branch, " + p.DefaultBranch + ", has no pipeline", nil
 		case err != nil:
-			return false, "the pipeline on the default branch, " + p.DefaultBranch + ", has problems"
+			return false, "the pipeline on the default branch, " + p.DefaultBranch + ", has problems", nil
 		case !pl.On.MatchPullRequest():
-			return false, "the pipeline on the default branch, " + p.DefaultBranch + ", does not ask for them"
+			return false, "the pipeline on the default branch, " + p.DefaultBranch + ", does not ask for them", nil
 		}
-		return true, ""
+		return true, "", pl.On.PullRequest
 	}
-	return false, "the default branch, " + p.DefaultBranch + ", does not exist"
+	return false, "the default branch, " + p.DefaultBranch + ", does not exist", nil
 }
 
 func trigger(r Ref, event, actor string) engine.Trigger {

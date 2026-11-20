@@ -377,6 +377,15 @@ waiting runs and no live holder: every server's reaper (`recoverLanes`) starts t
 run that arrives meanwhile does not jump the queue. On a rollback, waiting runs stay waiting until a
 server of schema 24 runs again.
 
+`on.pull_request.into` is schema 24's last pipeline key. A pipeline with it carries `"requires": 24`,
+so older servers refuse to read it as a pipeline file (they do not know the key) and leave its runs
+alone. `runs` gains `pull_request_into`, and a run's trigger gains `pull_request_into`: the branch the
+project's forge said the pull request targets when the run was created. Pull requests wait for the
+forge, never run unfiltered: a decision with outcome `waiting` is recorded without claiming the
+head, so the next poll tries again. The forge itself is not database state here: a project's connection
+is given to the server's source manager, and a project without one runs no pull request of a
+pipeline that filters.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

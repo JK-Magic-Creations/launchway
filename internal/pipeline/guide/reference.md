@@ -16,7 +16,7 @@ example `steps.build.needs`), and nothing starts while there are any.
 pipeline: my-service        # required: lower-case letters, digits and hyphens
 on:                         # what starts runs by itself (a run can always be started by hand)
   push: { branches: [main, "release/*"], tags: ["v*"] }
-  pull_request: {}
+  pull_request: {}            # or { into: [main, "release/*"] } to run only for pull requests into those branches
   schedule: [ { cron: "0 3 * * *", timezone: Europe/Berlin, ref: main, inputs: { dry_run: false } } ]
   webhook: { name: deploy-request, ref: main, inputs: { version: body.release.version } }
 supersede: true             # a new push or pull-request run cancels older ones of the same ref
@@ -31,7 +31,7 @@ steps: { … }                # required: the steps, by name
 | Key | Meaning |
 |---|---|
 | `pipeline` | The pipeline's name |
-| `on` | `push` (with `branches` and `tags` patterns), `pull_request: {}`, `schedule` (a list of `cron`, `timezone`, `ref`, `inputs`) and `webhook` (`name`, `ref`, `inputs` mapping fields of the request body). Schedules and webhooks are read from the default branch only |
+| `on` | `push` (with `branches` and `tags` patterns), `pull_request: {}` (or `{ into: [patterns] }`: only for pull requests that target such a branch, as the project's forge says), `schedule` (a list of `cron`, `timezone`, `ref`, `inputs`) and `webhook` (`name`, `ref`, `inputs` mapping fields of the request body). Schedules and webhooks are read from the default branch only |
 | `supersede` | `true`: a run started by a push or pull request cancels the older such runs of the same branch, tag or pull request that are still going |
 | `lane` | `name` (default the pipeline's), `per` (`ref`, `pull_request`, `input:<name>`: what splits it into separate lanes), `when_busy` (`wait`, `cancel` or `skip`: what a run that arrives while the lane is held does) and `queue` (`newest`: a waiting run is replaced by a newer one; or `all`). At most one run of a lane goes at a time. Not with `supersede` |
 | `timeout` | How long a run may stay open, `1m` to `720h` (and no more than the installation's limit): a run past it is canceled with the reason `run timeout of 2h reached`. Time spent waiting for an approval does not count |

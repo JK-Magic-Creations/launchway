@@ -52,7 +52,7 @@ oldest schema whose servers understand it.
 
 | Type | Schema | Written when | Main fields in `data` |
 |---|---|---|---|
-| `run.created` | 1 | a run is created: by a push, a pull request, a schedule, a webhook, a person, a draft or a re-run | `project`, `number`, `pipeline` (the whole expanded pipeline), `trigger` (`event`, `ref`, `branch`, `tag`, `sha`, `actor`, `message`, `author`, `pull_request`, `inputs`, `schedule`, `scheduled_for`, `webhook`), `source` (`kind` git or dir, `url`, `libraries` with their commits), `draft` (`text`, `hash`, `secrets`) for a draft run, `rerun` (`of`, `of_number`, `from`) for a re-run, `pull_request_secrets` for a pull-request run |
+| `run.created` | 1 | a run is created: by a push, a pull request, a schedule, a webhook, a person, a draft or a re-run | `project`, `number`, `pipeline` (the whole expanded pipeline), `trigger` (`event`, `ref`, `branch`, `tag`, `sha`, `actor`, `message`, `author`, `pull_request`, `pull_request_into`, `inputs`, `schedule`, `scheduled_for`, `webhook`), `source` (`kind` git or dir, `url`, `libraries` with their commits), `draft` (`text`, `hash`, `secrets`) for a draft run, `rerun` (`of`, `of_number`, `from`) for a re-run, `pull_request_secrets` for a pull-request run |
 | `run.cancel_requested` | 1 | someone asks to cancel the run, or a newer run supersedes it | `actor`; or `reason` (such as `superseded by run #12`) and `superseded_by` (`run`, `number`) |
 | `run.resumed` | 1 | someone resumes a failed or cancelled run | `actor`; `draft_secrets` for a draft run (whether its steps may read secrets from now on) |
 | `run.finished` | 1 | every step has ended | `status`: `succeeded`, `failed` or `canceled` |

@@ -339,3 +339,52 @@ func TestLaneProblems(t *testing.T) {
 		})
 	}
 }
+
+func TestPullRequestInto(t *testing.T) {
+	p, err := Parse([]byte("pipeline: demo\non: { pull_request: { into: [main, \"release/*\"] } }\nsteps:\n  a: {image: x, run: a}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !p.On.FiltersPullRequests() || p.Requires != SchemaFlow || !p.UsesSchema9() {
+		t.Fatalf("%+v requires %d", p.On.PullRequest, p.Requires)
+	}
+	for branch, want := range map[string]bool{"main": true, "release/1.2": true, "release": false, "staging": false, "": false} {
+		if got := p.On.MatchPullRequestInto(branch); got != want {
+			t.Errorf("into %q: %v, want %v", branch, got, want)
+		}
+	}
+	// A single pattern, as a list of one.
+	one, err := Parse([]byte("pipeline: demo\non: { pull_request: { into: main } }\nsteps:\n  a: {image: x, run: a}\n"))
+	if err != nil || len(one.On.PullRequest.Into) != 1 || one.On.PullRequest.Into[0] != "main" {
+		t.Fatalf("%v %+v", err, one.On.PullRequest)
+	}
+	// pull_request: {} keeps its meaning: every pull request, no forge, nothing newer needed.
+	for _, text := range []string{"on: { pull_request: {} }", "on: { pull_request: }"} {
+		q, err := Parse([]byte("pipeline: demo\n" + text + "\nsteps:\n  a: {image: x, run: a}\n"))
+		if err != nil || q.On.FiltersPullRequests() || !q.On.MatchPullRequestInto("anything") || q.Requires != 0 || q.UsesSchemaFlow() {
+			t.Fatalf("%s: %v %+v", text, err, q)
+		}
+		if j := mustJSON(q); !strings.Contains(j, `"pull_request":{}`) {
+			t.Fatalf("%s", j)
+		}
+	}
+}
+
+func TestPullRequestIntoProblems(t *testing.T) {
+	for name, tc := range map[string]struct{ on, want, path string }{
+		"branches": {"{ pull_request: { branches: [main] } }", "pull_request: { into:", "on.pull_request.branches"},
+		"tags":     {"{ pull_request: { tags: [v1] } }", "pull_request: { into:", "on.pull_request.tags"},
+		"empty":    {"{ pull_request: { into: [] } }", "list the branches pull requests may target", "on.pull_request.into"},
+		"pattern":  {"{ pull_request: { into: [\"[\"] } }", "pattern", "on.pull_request.into"},
+		"unknown":  {"{ pull_request: { labels: [x] } }", `unknown key "labels"`, "on.pull_request.labels"},
+		"scalar":   {"{ pull_request: yes }", "pull_request: { into: [main] }", "on.pull_request"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := Parse([]byte("pipeline: demo\non: " + tc.on + "\nsteps:\n  a: {image: x, run: a}\n"))
+			p := findProblem(t, problemsOf(t, err), tc.want)
+			if p.Line == 0 || p.Path != tc.path {
+				t.Fatalf("%+v, want path %s with a line", p, tc.path)
+			}
+		})
+	}
+}

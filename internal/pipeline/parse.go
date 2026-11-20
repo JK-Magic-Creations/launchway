@@ -256,8 +256,7 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 			return
 		}
 		if k.Value == "pull_request" {
-			ps.parsePullRequest(v)
-			p.On.PullRequest = &PullRequestTrigger{}
+			p.On.PullRequest = ps.parsePullRequest(v)
 			return
 		}
 		t := &PushTrigger{}
@@ -279,23 +278,40 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 	})
 }
 
-// parsePullRequest checks on.pull_request, which takes no settings: written
-// as pull_request: {} or with no value at all.
-func (ps *parser) parsePullRequest(v *yaml.Node) {
+// parsePullRequest reads on.pull_request: written pull_request: {} (or with
+// no value at all) for every pull request, or with into: the branches a pull
+// request must target. A pull request has no branch of its own that could be
+// filtered, only the one it targets.
+func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
+	t := &PullRequestTrigger{}
 	switch {
 	case v.Kind == yaml.ScalarNode && v.Tag == "!!null":
-	case v.Kind == yaml.MappingNode && len(v.Content) == 0:
 	case v.Kind == yaml.MappingNode:
-		k := v.Content[0]
-		if k.Value == "branches" || k.Value == "tags" {
-			ps.add(k, "on.pull_request."+k.Value, "pull requests cannot be filtered by branch: the server sees only each pull request's head "+
-				"(refs/pull/<n>/head), not the branch it targets. Write pull_request: {}")
-		} else {
-			ps.add(k, "on.pull_request."+k.Value, "unknown key %q; pull_request takes no settings: write pull_request: {}", k.Value)
+		// branches and tags are push's keys: say where a pull request's
+		// filter is, instead of listing what is expected.
+		rest := &yaml.Node{Kind: yaml.MappingNode, Line: v.Line, Column: v.Column}
+		for i := 0; i+1 < len(v.Content); i += 2 {
+			k := v.Content[i]
+			if k.Value == "branches" || k.Value == "tags" {
+				ps.add(k, "on.pull_request."+k.Value, "a pull request has no branch or tag of its own to filter: the server sees the branch it "+
+					"targets. To run only for pull requests into some branches, write pull_request: { into: [main, \"release/*\"] }")
+				continue
+			}
+			rest.Content = append(rest.Content, v.Content[i], v.Content[i+1])
 		}
+		ps.eachKey(rest, "on.pull_request", []string{"into"}, func(k, x *yaml.Node) {
+			t.Into = ps.strList(x, "on.pull_request.into")
+			for _, pat := range t.Into {
+				ps.checkPattern(x, "on.pull_request.into", pat)
+			}
+			if len(t.Into) == 0 {
+				ps.add(x, "on.pull_request.into", "list the branches pull requests may target, for example: into: [main]; or write pull_request: {} for any")
+			}
+		})
 	default:
-		ps.add(v, "on.pull_request", "write pull_request: {}")
+		ps.add(v, "on.pull_request", "write pull_request: {}, or pull_request: { into: [main] }")
 	}
+	return t
 }
 
 var (

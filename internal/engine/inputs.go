@@ -132,6 +132,9 @@ func (c *cmd) stepEnv(stepID string) []InputVar {
 	}
 	if t.Event == pipeline.EventPullRequest {
 		vars["LAUNCHWAY_PULL_REQUEST"] = InputVar{Name: "LAUNCHWAY_PULL_REQUEST", Value: strconv.Itoa(t.PullRequest), From: FromLaunchway}
+		if t.PullRequestInto != "" {
+			vars["LAUNCHWAY_PULL_REQUEST_INTO"] = InputVar{Name: "LAUNCHWAY_PULL_REQUEST_INTO", Value: t.PullRequestInto, From: FromLaunchway}
+		}
 	}
 	inputEnv(t, vars)
 	eachEnv(def, vars)

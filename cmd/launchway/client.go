@@ -172,9 +172,14 @@ func newClient(c credentials, out io.Writer) *client {
 // call sends a request and decodes the answer into v. Problems the server
 // reports are returned as they are, including input values that do not
 // fit, by name.
+// rawText is a request body sent as it is, not as JSON: a pipeline file.
+type rawText string
+
 func (cl *client) call(method, path string, body, v any) error {
 	var rd io.Reader
-	if body != nil {
+	if raw, ok := body.(rawText); ok {
+		rd = strings.NewReader(string(raw))
+	} else if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
 			return err
@@ -191,7 +196,9 @@ func (cl *client) call(method, path string, body, v any) error {
 	// every caller as its user and asks every change for this header,
 	// which a page of another site cannot send.
 	req.Header.Set("X-Launchway-CSRF", "1")
-	if body != nil {
+	if _, raw := body.(rawText); raw {
+		req.Header.Set("Content-Type", "text/plain")
+	} else if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	resp, err := cl.http.Do(req)
@@ -389,6 +396,10 @@ type runView struct {
 	// "run timeout of 2h reached"; DeadlineAt is when its timeout cancels it.
 	CancelReason string `json:"cancel_reason"`
 	DeadlineAt   int64  `json:"deadline_at"`
+	// PullRequest and PullRequestInto: a pull-request run, and the branch
+	// it targets.
+	PullRequest     int    `json:"pull_request"`
+	PullRequestInto string `json:"pull_request_into"`
 	// Lane is the run's place in its pipeline's lane, if it has one.
 	Lane *struct {
 		Label    string `json:"label"`
@@ -418,6 +429,22 @@ type runView struct {
 		Schedule string            `json:"schedule"`
 		Webhook  string            `json:"webhook"`
 	} `json:"trigger_detail"`
+}
+
+// runRef says what a run is of: its branch or tag, or its pull request and
+// the branch that targets.
+func runRef(r runView) string {
+	if r.PullRequest > 0 {
+		ref := fmt.Sprintf("pull request #%d", r.PullRequest)
+		if r.PullRequestInto != "" {
+			ref += " into " + r.PullRequestInto
+		}
+		return ref
+	}
+	if r.Branch != "" {
+		return r.Branch
+	}
+	return r.Tag
 }
 
 func terminal(status string) bool {
@@ -562,10 +589,7 @@ func (cl *client) list(args []string) error {
 	}
 	return cl.print(runs, *asJSON, func() {
 		for _, r := range runs {
-			ref := r.Branch
-			if ref == "" {
-				ref = r.Tag
-			}
+			ref := runRef(r)
 			fmt.Fprintf(cl.out, "%-24s %-16s #%-5d %-10s %-12s %-14s %s\n", r.ID, r.Project, r.Number, r.Status, r.Event, ref,
 				time.UnixMilli(r.CreatedAt).Format(time.DateTime))
 		}
@@ -596,10 +620,7 @@ func (cl *client) show(args []string) error {
 	if err := cl.call("GET", "/api/v1/runs/"+url.PathEscape(pos[0]), nil, &r); err != nil {
 		return err
 	}
-	ref := r.Branch
-	if ref == "" {
-		ref = r.Tag
-	}
+	ref := runRef(r)
 	fmt.Fprintf(cl.out, "Run #%d of %s: %s\n", r.Number, r.Project, r.Status)
 	fmt.Fprintf(cl.out, "  %s at %.10s, %s by %s, %s\n", ref, r.SHA, r.Event, r.Actor, time.UnixMilli(r.CreatedAt).Format(time.DateTime))
 	if d := r.TriggerDetail; d != nil {

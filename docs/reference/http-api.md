@@ -283,7 +283,7 @@ The body is optional: `{"comment": "Looks good"}`. Answers `{"ok": true}`. An ap
 | `GET /api/v1/projects/{name}/pipeline` | `project-viewer` | — | The pipeline file at the tip of `?ref=` (default: the default branch). |
 | `POST /api/v1/projects/{name}/pipeline` | `project-operator` | `pipeline.save` | Commits pipeline text to the project's repository, as the caller. |
 | `POST /api/v1/projects/{name}/draft-runs` | `project-draft` | `run.draft` | Runs pipeline text that is not in Git against a branch. |
-| `POST /api/v1/validate` | `any-viewer` | — | Checks pipeline text without running it. |
+| `POST /api/v1/validate` | `any-viewer` | — | Checks pipeline text without running it. With `?project=NAME` it checks it for that project too, and a valid pipeline may come back with `warnings` (for example, a pull-request filter by target branch in a project with no forge connection). |
 
 **Read.** `{"ref", "kind", "sha", "subject", "author", "committed_at", "path", "exists", "configured", "text"}`.
 

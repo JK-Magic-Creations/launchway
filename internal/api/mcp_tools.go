@@ -94,6 +94,9 @@ func (c *mcpCall) brief(r *engine.RunSummary) runBrief {
 	switch {
 	case r.PullRequest > 0:
 		b.Ref = fmt.Sprintf("pull request #%d", r.PullRequest)
+		if r.PullRequestInto != "" {
+			b.Ref += " into " + untrusted(r.PullRequestInto, 100)
+		}
 	case r.Tag != "":
 		b.Ref = "tag " + r.Tag
 	case r.Branch != "":
@@ -1464,6 +1467,7 @@ type validateOut struct {
 	Steps    []validStep  `json:"steps,omitempty"`
 	Order    [][]string   `json:"order,omitempty" jsonschema:"steps in each list run in parallel, after the lists before"`
 	Expanded bool         `json:"templates_expanded" jsonschema:"whether uses steps were expanded from their libraries"`
+	Warnings []string     `json:"warnings,omitempty" jsonschema:"valid, but will not work as written for the project: for example, a pull-request filter by target branch in a project with no forge connection"`
 }
 
 func validatePipeline(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in validateIn) (validateOut, error) {
@@ -1479,6 +1483,7 @@ func validatePipeline(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, i
 		Problems pipeline.Problems `json:"problems"`
 		Expanded bool              `json:"expanded"`
 		Levels   [][]string        `json:"levels"`
+		Warnings []string          `json:"warnings"`
 		Graph    *struct {
 			Name  string `json:"name"`
 			Steps []struct {
@@ -1491,7 +1496,7 @@ func validatePipeline(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, i
 	if err := c.apiJSON(ctx, "validate_pipeline", http.MethodPost, p, []byte(in.Text), &got); err != nil {
 		return validateOut{}, err
 	}
-	out := validateOut{OK: got.OK, Expanded: got.Expanded}
+	out := validateOut{OK: got.OK, Expanded: got.Expanded, Warnings: got.Warnings}
 	if !got.OK {
 		lines := strings.Split(in.Text, "\n")
 		for _, pr := range got.Problems {

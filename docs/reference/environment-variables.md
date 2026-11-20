@@ -72,6 +72,7 @@ You may not set names that start with `LAUNCHWAY_` in `env:` or `secrets:`: the 
 | `LAUNCHWAY_TAG` | the tag name, or empty for a branch |
 | `LAUNCHWAY_COMMIT` | the full commit ID the run checks out |
 | `LAUNCHWAY_PULL_REQUEST` | the pull request's number; only in runs whose event is `pull_request` |
+| `LAUNCHWAY_PULL_REQUEST_INTO` | the branch the pull request targets, as the project's forge said; only in pull-request runs of a pipeline whose `on.pull_request` has `into` |
 | `LAUNCHWAY_OUTPUTS` | the file the step appends `key=value` lines to, to give outputs to the steps that need it (see below) |
 
 `LAUNCHWAY_OUTPUTS` is `/launchway/outputs` in a container step. With the host executor it is a path in the runner's data directory; with the Kubernetes executor it is a path in the pod. Always use the variable, not a fixed path.

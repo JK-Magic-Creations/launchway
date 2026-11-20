@@ -59,6 +59,9 @@ type RunSummary struct {
 	// DeadlineAt is when the run's timeout will cancel it (Unix ms; schema
 	// 24); 0 when it has none, or it is paused (an approval waits) or over.
 	DeadlineAt int64 `json:"deadline_at,omitempty"`
+	// PullRequestInto is the branch the pull request targets (schema 24),
+	// for a pull-request run of a pipeline that filters by it.
+	PullRequestInto string `json:"pull_request_into,omitempty"`
 	// Lane is the run's place in its lane (schema 24); nil when its pipeline
 	// has no lane.
 	Lane *LaneInfo `json:"lane,omitempty"`
@@ -270,7 +273,7 @@ func (e *Engine) runCols() string {
 }
 
 // runCols24 are the columns of runs that schema 24 added.
-const runCols24 = `, deadline_at, lane_name, lane_key, lane_label, lane_state, lane_other, lane_other_number`
+const runCols24 = `, deadline_at, lane_name, lane_key, lane_label, lane_state, lane_other, lane_other_number, pull_request_into`
 
 func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error) {
 	r := &RunSummary{}
@@ -288,7 +291,7 @@ func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error
 		number                         int
 	}
 	if e.knows(schemaFlow) {
-		dst = append(dst, &r.DeadlineAt, &lane.name, &lane.key, &lane.label, &lane.state, &lane.other, &lane.number)
+		dst = append(dst, &r.DeadlineAt, &lane.name, &lane.key, &lane.label, &lane.state, &lane.other, &lane.number, &r.PullRequestInto)
 	}
 	err := sc.Scan(dst...)
 	r.Lane = laneInfo(lane.name, lane.key, lane.label, lane.state, lane.other, lane.number, 0)

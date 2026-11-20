@@ -347,6 +347,7 @@ var probes = []probe{
 	{table: "top"},
 	{table: "on", path: []any{"on"}},
 	{table: "on-push", path: []any{"on", "push"}},
+	{table: "on-pull-request", path: []any{"on", "pull_request"}},
 	{table: "on-schedule", path: []any{"on", "schedule", 0}},
 	{table: "on-webhook", path: []any{"on", "webhook"}},
 	{table: "inputs", path: []any{"inputs", "target"}},

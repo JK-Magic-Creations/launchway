@@ -342,6 +342,10 @@ type Trigger struct {
 	Author  string `json:"author,omitempty"`
 	// PullRequest is the pull request's number, for event pull_request.
 	PullRequest int `json:"pull_request,omitempty"`
+	// PullRequestInto is the branch the pull request targets, as the
+	// project's forge said when the run was created (schema 24); empty when
+	// the pipeline does not filter by target and none was read.
+	PullRequestInto string `json:"pull_request_into,omitempty"`
 	// Inputs are the run's input values, canonical, by name: every input
 	// the pipeline declares (schema 13).
 	Inputs map[string]string `json:"inputs,omitempty"`

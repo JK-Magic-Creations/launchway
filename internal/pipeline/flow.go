@@ -31,7 +31,7 @@ const (
 // UsesSchemaFlow reports whether the pipeline uses a key servers older
 // than schema 24 do not know.
 func (p *Pipeline) UsesSchemaFlow() bool {
-	if p.Timeout > 0 || p.Lane != nil {
+	if p.Timeout > 0 || p.Lane != nil || p.On.FiltersPullRequests() {
 		return true
 	}
 	for _, s := range p.Steps {

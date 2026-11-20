@@ -52,3 +52,14 @@ func TestMCPDescribeRunRetryWaitAndTimeout(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
+
+func TestMCPBriefNamesTheTargetOfAPullRequest(t *testing.T) {
+	c := &mcpCall{s: &Server{}}
+	b := c.brief(&engine.RunSummary{ID: "run_1", Number: 3, Project: "demo", Event: "pull_request", PullRequest: 12, PullRequestInto: "main"})
+	if b.Ref != "pull request #12 into main" {
+		t.Fatalf("%q", b.Ref)
+	}
+	if b := c.brief(&engine.RunSummary{ID: "run_1", Event: "pull_request", PullRequest: 12}); b.Ref != "pull request #12" {
+		t.Fatalf("%q", b.Ref)
+	}
+}

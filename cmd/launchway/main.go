@@ -58,7 +58,7 @@ Usage:
   launchway runner   --server URL --token T     run a runner with the shared token (no identity)
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
                      [-i name=value ...]
-  launchway validate [file]                     check a pipeline file
+  launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that project too)
   launchway graph    [file]                     print a pipeline's graph as JSON
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel  start and follow runs on a server
@@ -621,18 +621,67 @@ func load(path string) (*pipeline.Pipeline, error) {
 }
 
 func cmdValidate(args []string) error {
-	path := pipelineFile(args)
+	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
+	project := fs.String("project", "", "also check the file against this project on the server you are signed in to: its libraries, and whether it has what the pipeline needs, such as a forge")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	path := pipelineFile(pos)
 	p, err := load(path)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("%s: pipeline %q is valid, %d step(s) in %d level(s)\n", path, p.Name, len(p.Steps), len(p.Levels()))
+	if *project != "" {
+		return validateOnServer(path, *project)
+	}
 	if !p.Expanded() {
 		// Templates come from the libraries a server knows; this command
 		// reads only the file.
 		fmt.Printf("Steps that use templates are not expanded here: check the pipeline in a server's editor to see them.\n")
 	}
 	return nil
+}
+
+// validateOnServer has the server check a pipeline file against a project,
+// as the editor does, and prints what it says: problems, and warnings, such
+// as that the pipeline filters pull requests by their target branch and the
+// project has no forge connection.
+func validateOnServer(path, project string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return runClient(func() error {
+		c, err := loadCredentials()
+		if err != nil {
+			return err
+		}
+		var got struct {
+			OK       bool              `json:"ok"`
+			Problems pipeline.Problems `json:"problems"`
+			Warnings []string          `json:"warnings"`
+		}
+		if err := newClient(c, os.Stdout).call("POST", "/api/v1/validate?project="+neturl.QueryEscape(project), rawText(data), &got); err != nil {
+			return err
+		}
+		for _, pr := range got.Problems {
+			where := ""
+			if pr.Path != "" {
+				where = pr.Path + ": "
+			}
+			fmt.Fprintf(os.Stderr, "%s:%d: %s%s\n", path, pr.Line, where, pr.Message)
+		}
+		for _, w := range got.Warnings {
+			fmt.Fprintf(os.Stderr, "%s: warning: %s\n", path, w)
+		}
+		if !got.OK {
+			return exitErr(1)
+		}
+		fmt.Printf("%s: accepted by the server for project %s\n", path, project)
+		return nil
+	})
 }
 
 func cmdGraph(args []string) error {

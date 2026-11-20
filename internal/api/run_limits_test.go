@@ -90,3 +90,22 @@ func TestValidateRefusesATimeoutOverTheInstallationsLimit(t *testing.T) {
 		t.Fatalf("%d %s", r.status, r.body)
 	}
 }
+
+// A pipeline that filters pull requests by target branch is valid, but
+// validate says it will not work in a project with no forge connection.
+func TestValidateWarnsWhenTheProjectHasNoForge(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	ada := e.signIn(t, "ada")
+	text := "pipeline: p\non: { pull_request: { into: [main] } }\nsteps:\n  a: {image: x, run: a}\n"
+	r := ada.do(http.MethodPost, e.srv.URL+"/api/v1/validate?project=pay-api", text)
+	if r.status != 200 || !strings.Contains(string(r.body), `"ok":true`) || !strings.Contains(string(r.body), "has no forge connection") {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	if r := ada.do(http.MethodPost, e.srv.URL+"/api/v1/validate", text); strings.Contains(string(r.body), "warnings") {
+		t.Fatalf("without a project there is nothing to warn about: %s", r.body)
+	}
+	plain := "pipeline: p\non: { pull_request: {} }\nsteps:\n  a: {image: x, run: a}\n"
+	if r := ada.do(http.MethodPost, e.srv.URL+"/api/v1/validate?project=pay-api", plain); strings.Contains(string(r.body), "warnings") {
+		t.Fatalf("pull_request: {} needs no forge: %s", r.body)
+	}
+}

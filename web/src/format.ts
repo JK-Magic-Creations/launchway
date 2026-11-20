@@ -48,8 +48,8 @@ export function shortDuration(d: string): string {
 }
 
 /** Where a run came from, as shown beside it: "pull request #12", a branch or a tag. */
-export function refLabel(r: { branch?: string; tag?: string; pull_request?: number }): string {
-  if (r.pull_request) return `pull request #${r.pull_request}`;
+export function refLabel(r: { branch?: string; tag?: string; pull_request?: number; pull_request_into?: string }): string {
+  if (r.pull_request) return `pull request #${r.pull_request}${r.pull_request_into ? ` into ${r.pull_request_into}` : ""}`;
   return r.branch || r.tag || "";
 }
 

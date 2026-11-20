@@ -150,7 +150,7 @@ func TestPullRequestsStartRuns(t *testing.T) {
 	openPR(t, repo, "5", "pipeline: app\non: { pull_request: { branches: [main] } }\nsteps:\n  t: {image: x, run: y}\n", "filter by branch")
 	pollOnce(t, m)
 	s, _ = m.Get("app")
-	if d := s.Decisions[0]; d.Outcome != "error" || !strings.Contains(d.Detail, "cannot be filtered by branch") {
+	if d := s.Decisions[0]; d.Outcome != "error" || !strings.Contains(d.Detail, "pull_request: { into:") {
 		t.Fatalf("decision %+v", d)
 	}
 	if runs := runsOf(t, eng); len(runs) != 2 {

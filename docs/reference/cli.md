@@ -12,7 +12,7 @@ launchway runner   --server URL --join J      enrol a runner with a join token, 
                    [--config runner.yaml] [--health-listen ADDR] [--labels a,b]
 launchway runner   --server URL --token T     run a runner with the shared token (no identity)
 launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
-launchway validate [file]                     check a pipeline file
+launchway validate [file] [--project P]       check a pipeline file
 launchway graph    [file]                     print a pipeline's graph as JSON
 launchway login    --server URL               store an API token for a server
 launchway runs     start|list|show|logs|cancel  start and follow runs on a server
@@ -192,10 +192,12 @@ It exits with `0` if the run succeeded and `1` otherwise. The first Ctrl-C cance
 Checks a pipeline file and prints a summary.
 
 ```text
-launchway validate [FILE]
+launchway validate [FILE] [--project NAME]
 ```
 
 `FILE` defaults to `.launchway/pipeline.yaml`. Steps that use library templates are not expanded: the command reads only the file. To check them, use the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
+
+With `--project NAME` the server you are signed in to checks the file for that project as well, as its editor does: the libraries templates use, the limits the installation sets (such as `max_run_timeout`), and what the project must have for the pipeline to work. It warns, for example, that a pipeline that filters pull requests by their target branch (`on.pull_request.into`) will run none in a project with no forge connection. Warnings are printed to standard error and do not change the exit code; problems do.
 
 ```sh
 launchway validate
@@ -212,7 +214,7 @@ bad.yaml:3: steps.a: say what to run in, for example: image: alpine:3.22, or con
 bad.yaml:4: steps.b.needs: needs "c", but there is no step with that name
 ```
 
-`validate` takes no flags: `launchway validate -h` looks for a file called `-h`.
+`launchway validate` also accepts a file name after the flags.
 
 ## launchway graph
 
