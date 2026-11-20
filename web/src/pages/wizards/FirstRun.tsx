@@ -102,7 +102,7 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
     render: (by) => (
       <>
         <div className="cf-grid">
-          <TextInput label="Your organisation's name" value={orgName} onChange={setOrgName} placeholder="Acme" autoFocus problems={by.display_name}
+          <TextInput label="Your organisation's name" value={orgName} onChange={setOrgName} placeholder="Acme" focusOnMount problems={by.display_name}
             help="Shown at the top of the configuration and where it helps people know where they are. Optional." />
         </div>
         <Choices legend="What should the things Launchway manages be called?" value={naming} onChange={(v) => setNaming(v as "usual" | "own")}

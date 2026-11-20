@@ -50,16 +50,15 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
   const lv = overview.levels;
   const proj = lv.project.singular.toLowerCase();
   const [repo, setRepo] = useState("");
-  const [name, setName] = useState("");
-  const [nameTouched, setNameTouched] = useState(false);
+  const [nameEdit, setNameEdit] = useState<string | null>(null);
   const [unit, setUnit] = useState("");
   const [check, setCheck] = useState<{ state: "idle" | "checking" | "unavailable" | "error"; result?: RepoCheck; error?: string; repo?: string; branch?: string }>({ state: "idle" });
   const [branch, setBranch] = useState("");
-  const [source, setSource] = useState<Source>("template");
+  const [sourcePick, setSourcePick] = useState<Source>("template");
   const [libs, setLibs] = useState<LibraryInfo[] | null>(null);
   const [library, setLibrary] = useState("");
-  const [tmpls, setTmpls] = useState<{ state: "idle" | "loading" | "error"; data?: LibraryTemplates; error?: string }>({ state: "idle" });
   const [version, setVersion] = useState("");
+  const [tmplsRes, setTmplsRes] = useState<{ key: string; state: "idle" | "error"; data?: LibraryTemplates; error?: string } | null>(null);
   const [template, setTemplate] = useState("");
   const [withVals, setWithVals] = useState<Record<string, string>>({});
   const [onPush, setOnPush] = useState(true);
@@ -72,15 +71,21 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
   const [supersede, setSupersede] = useState(true);
 
   useEffect(() => { configApi.libraries().then(setLibs).catch(() => setLibs([])); }, []);
-  useEffect(() => { if (libs && libs.length === 0 && source === "template") setSource("sample"); }, [libs]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!nameTouched) setName(nameFromRepo(repo)); }, [repo, nameTouched]);
+  // With no library to take a template from, the sample pipeline is the default.
+  const source: Source = libs && libs.length === 0 && sourcePick === "template" ? "sample" : sourcePick;
+  const setSource = setSourcePick;
+  const name = nameEdit ?? nameFromRepo(repo);
+  // What was read belongs to the library and version it was read for; anything else is still loading.
+  const tmplsKey = `${library}\n${version}`;
+  const tmpls: { state: "idle" | "loading" | "error"; data?: LibraryTemplates; error?: string } =
+    !library ? { state: "idle" } : tmplsRes && tmplsRes.key === tmplsKey ? tmplsRes : { state: "loading" };
   useEffect(() => {
-    if (!library) { setTmpls({ state: "idle" }); return; }
-    setTmpls({ state: "loading" });
+    if (!library) return;
+    const key = `${library}\n${version}`;
     configApi.templates(library, version || undefined).then((d) => {
-      setTmpls({ state: "idle", data: d });
+      setTmplsRes({ key, state: "idle", data: d });
       if (!version) setVersion(d.version);
-    }).catch((e) => setTmpls({ state: "error", error: e instanceof Error ? e.message : String(e) }));
+    }).catch((e) => setTmplsRes({ key, state: "error", error: e instanceof Error ? e.message : String(e) }));
   }, [library, version]);
 
   const runCheck = async (b?: string): Promise<RepoCheck | null> => {
@@ -154,7 +159,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
       <>
         <p>Which Git repository should Launchway watch? It reads it to find the pipeline and to know when to start runs.</p>
         <div className="cf-grid">
-          <TextInput label="Repository address" required value={repo} onChange={setRepo} mono wide autoFocus problems={by.repo}
+          <TextInput label="Repository address" required value={repo} onChange={setRepo} mono wide focusOnMount problems={by.repo}
             placeholder="https://git.example.com/team/shop.git or git@git.example.com:team/shop.git"
             help="The address you would clone it with: https:// or SSH." />
         </div>
@@ -178,7 +183,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
           <RepoCheckLine check={check} repo={repo.trim()} />
         </div>
         <div className="cf-grid">
-          <TextInput label={`Name of the ${proj}`} required value={name} onChange={(v) => { setName(v); setNameTouched(true); }} mono problems={by.name}
+          <TextInput label={`Name of the ${proj}`} required value={name} onChange={setNameEdit} mono problems={by.name}
             help={`How the ${proj} is named in URLs, pipelines and the command line: letters, digits, dots, hyphens and underscores. It cannot be changed later.`} />
           <DefinedAt overview={overview} value={unit} onChange={setUnit} project />
         </div>

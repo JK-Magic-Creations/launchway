@@ -15,13 +15,12 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
   const [target, setTarget] = useState("");
   const [unit, setUnit] = useState("");
   const [projects, setProjects] = useState<string[]>([]);
-  const [prot, setProt] = useState<"no" | "yes">("no");
-  const [protTouched, setProtTouched] = useState(false);
+  const [protChoice, setProtChoice] = useState<"no" | "yes" | null>(null);
   // Production is usually protected: the default follows the name until someone chooses.
-  useEffect(() => { if (!protTouched) setProt(/prod|live/i.test(name) ? "yes" : "no"); }, [name, protTouched]);
+  const prot = protChoice ?? (/prod|live/i.test(name) ? "yes" : "no");
   const [queue, setQueue] = useState<"newest" | "all">("newest");
-  const [poolChoice, setPoolChoice] = useState<"existing" | "new" | "later">("later");
-  const [poolName, setPoolName] = useState("");
+  const [poolPick, setPoolPick] = useState<"existing" | "new" | "later" | null>(null);
+  const [poolNameEdit, setPoolNameEdit] = useState<string | null>(null);
   const [pools, setPools] = useState<RunnerPool[]>([]);
   const projectNames = useNames("projects");
   const envs = useObjects("environments");
@@ -29,11 +28,9 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
 
   useEffect(() => { api.runnerPools().then((p) => setPools(p.pools)).catch(() => setPools([])); }, []);
   const serving = pools.filter((p) => p.kind === "deploy" && p.targets.includes(target.trim()));
-  useEffect(() => {
-    if (serving.length) setPoolChoice("existing");
-    else if (poolChoice === "existing") setPoolChoice("later");
-  }, [serving.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!poolName && name) setPoolName(`deploy-${name.trim()}`); }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Until someone chooses, runners already serving the target are the default; "existing" needs some.
+  const poolChoice: "existing" | "new" | "later" = poolPick === null ? (serving.length ? "existing" : "later") : poolPick === "existing" && !serving.length ? "later" : poolPick;
+  const poolName = poolNameEdit ?? (name.trim() ? `deploy-${name.trim()}` : "");
 
   const spec: Spec = { target: target.trim() };
   if (projects.length) spec.projects = projects;
@@ -54,7 +51,7 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
         <>
           <p>An environment is a place deploy steps deploy to, such as staging or production. Pipelines name it in their deploy steps.</p>
           <div className="cf-grid">
-            <TextInput label="Name" value={name} onChange={setName} mono required autoFocus placeholder="staging" problems={by.name}
+            <TextInput label="Name" value={name} onChange={setName} mono required focusOnMount placeholder="staging" problems={by.name}
               help="As pipelines will write it: environment: staging. Letters, digits, dots, hyphens and underscores." />
             <Field2 target={target} setTarget={setTarget} known={knownTargets} problems={by.target} />
             <DefinedAt overview={overview} value={unit} onChange={setUnit} />
@@ -76,7 +73,7 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
       fields: [{ path: "protected" }, { path: "queue" }],
       render: (by) => (
         <>
-          <Choices legend="Is it protected?" value={prot} onChange={(v) => { setProt(v as "no" | "yes"); setProtTouched(true); }} problems={by.protected}
+          <Choices legend="Is it protected?" value={prot} onChange={(v) => setProtChoice(v as "no" | "yes")} problems={by.protected}
             options={[
               { value: "no", label: "No", help: `Whoever may operate the ${proj.singular.toLowerCase()} may promote or retry its deployments here, including the person who started the run. Usual for test and staging environments.` },
               { value: "yes", label: "Yes, protected", help: "The person who started a run may not promote or retry its deployment here: someone else with the operator role must. Anyone with the operator role may still abort. The usual choice for production." },
@@ -99,7 +96,7 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
       render: (by) => (
         <>
           <p>Deployments here are done by deploy runners that serve target <span className="mono">{target || "…"}</span>. Until one does, deploy steps to this environment wait.</p>
-          <Choices legend="Which runners deploy here?" value={poolChoice} onChange={(v) => setPoolChoice(v as "existing" | "new" | "later")}
+          <Choices legend="Which runners deploy here?" value={poolChoice} onChange={(v) => setPoolPick(v as "existing" | "new" | "later")}
             options={[
               ...(serving.length ? [{ value: "existing", label: `The pool that already serves ${target}: ${serving.map((p) => p.name).join(", ")}`, help: "Nothing to add: its runners will take this environment's deployments." }] : []),
               { value: "new", label: "A new deploy pool for this target", help: "Made with the environment. Then add a runner to it: the next wizard gives you the command." },
@@ -107,7 +104,7 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
             ]} />
           {poolChoice === "new" && (
             <div className="cf-grid">
-              <TextInput label="Name of the pool" value={poolName} onChange={setPoolName} mono problems={by.pool}
+              <TextInput label="Name of the pool" value={poolName} onChange={setPoolNameEdit} mono problems={by.pool}
                 help="It takes only runners enrolled with a join token for it, so no shared token can deploy here." />
             </div>
           )}

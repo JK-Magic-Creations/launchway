@@ -43,7 +43,8 @@ function RuleRow({ info, on, value, onToggle, onValue, problems }: {
     <li className={"cf-rule" + (on ? " cf-rule-on" : "")}>
       <label className="cf-checkline">
         <input type="checkbox" checked={on} onChange={(e) => onToggle(e.target.checked)} aria-describedby={id} />
-        <span><span className="mono cf-rule-name">{info.name}</span> <span className="cf-badge">{POINT[info.point] ?? info.point}</span></span>
+        <span className="mono cf-rule-name">{info.name}</span>
+        <span className="cf-badge">{POINT[info.point] ?? info.point}</span>
       </label>
       <div id={id} className="cf-help cf-help-indent">Passes when {info.summary}.</div>
       {on && (

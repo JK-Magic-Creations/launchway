@@ -130,14 +130,17 @@ export function Field({ label, help, problems, children, wide, required }: {
   );
 }
 
-export function TextInput({ label, help, value, onChange, problems, placeholder, required, mono, type = "text", autoFocus, wide, list }: {
+export function TextInput({ label, help, value, onChange, problems, placeholder, required, mono, type = "text", focusOnMount, wide, list }: {
   label: string; help?: ReactNode; value: string; onChange: (v: string) => void; problems?: string[];
-  placeholder?: string; required?: boolean; mono?: boolean; type?: string; autoFocus?: boolean; wide?: boolean; list?: string;
+  placeholder?: string; required?: boolean; mono?: boolean; type?: string; focusOnMount?: boolean; wide?: boolean; list?: string;
 }) {
+  // Focus is moved once, when a wizard step or form opens, so the first question is ready to type into.
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (focusOnMount) ref.current?.focus(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Field label={label} help={help} problems={problems} required={required} wide={wide}>
       {({ id, describedBy, invalid }) => (
-        <input id={id} type={type} value={value} placeholder={placeholder} autoFocus={autoFocus} list={list} className={"cf-input" + (mono ? " mono" : "")}
+        <input ref={ref} id={id} type={type} value={value} placeholder={placeholder} list={list} className={"cf-input" + (mono ? " mono" : "")}
           aria-describedby={describedBy || undefined} aria-invalid={invalid || undefined} aria-required={required || undefined}
           spellCheck={false} autoComplete="off" onChange={(e) => onChange(e.target.value)} />
       )}
@@ -416,12 +419,12 @@ export function useServerCheck(changes: ChangeRequest[] | null, delay = 450): Se
     }
   }, []);
   useEffect(() => {
-    if (!key) { setProblems([]); return; }
+    if (!key) return;
     const t = window.setTimeout(() => { run(key).catch(() => {}); }, delay);
     return () => window.clearTimeout(t);
   }, [key, delay, run]);
   const now = useCallback(() => run(key), [run, key]);
-  return { problems, checking, failure, now };
+  return { problems: key ? problems : [], checking, failure, now };
 }
 
 /** CheckLine says whether the server's check passed, in a live region. */

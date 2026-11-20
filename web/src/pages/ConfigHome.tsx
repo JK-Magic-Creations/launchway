@@ -17,6 +17,7 @@ export function ConfigHomePage() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [recent, setRecent] = useState<ConfigChange[] | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     if (!overview?.available) return;
@@ -132,7 +133,7 @@ export function ConfigHomePage() {
                     <li key={c.id}>
                       <span className={`cf-action cf-action-${c.action}`}>{c.action}</span>{" "}
                       {k ? <Link href={`/config/${k.path}/${encodeURIComponent(c.name)}`}><Mono>{c.name}</Mono></Link> : <Mono>{c.name}</Mono>}
-                      <span className="faint"> {k ? kindLabel(overview, k, false).toLowerCase() : c.kind} · {c.actor || "someone"} · {ago(c.at, Date.now())}</span>
+                      <span className="faint"> {k ? kindLabel(overview, k, false).toLowerCase() : c.kind} · {c.actor || "someone"} · {ago(c.at, now)}</span>
                     </li>
                   );
                 })}

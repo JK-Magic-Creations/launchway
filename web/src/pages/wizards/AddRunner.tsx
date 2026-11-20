@@ -35,7 +35,6 @@ export function AddRunnerWizard({ overview }: { overview: ConfigOverview }) {
     api.runnerPools().then((p) => { setPools(p.pools); if (!choice) setChoice(p.pools.some((x) => x.kind === "build") ? "existing:" + (p.pools.find((x) => x.kind === "build")!.name) : "new-build"); })
       .catch((e) => { setPools([]); setPoolsError(e instanceof Error ? e.message : String(e)); if (!choice) setChoice("new-build"); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (place === "kubernetes" && uses < 5) setUses(5); }, [place]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isNew = choice.startsWith("new-");
   const newKind = choice === "new-deploy" ? "deploy" : "build";
@@ -95,7 +94,7 @@ export function AddRunnerWizard({ overview }: { overview: ConfigOverview }) {
     id: "place", title: "Where it runs",
     render: () => (
       <>
-        <Choices legend="Where will the runner run?" value={place} onChange={(v) => setPlace(v as Place)}
+        <Choices legend="Where will the runner run?" value={place} onChange={(v) => { setPlace(v as Place); if (v === "kubernetes") setUses((n) => Math.max(n, 5)); }}
           help="A runner only makes outbound connections to this server: nothing needs to reach it."
           options={[
             { value: "vm", label: "A machine (a server or a virtual machine)", help: "The launchway program runs as a service. Steps run in containers with Podman or Docker if the machine has them. Good for builds that need the machine's own tools or hardware." },

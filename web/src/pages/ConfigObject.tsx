@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { ApiError, api, type RuleInfo } from "../api";
 import { configApi, kindLabel, kindOf, levelOf, loadOverview, useOverview, type ChangeRequest, type ConfigChange, type ConfigKind,
   type ConfigObject, type ConfigOverview, type Effective, type Spec } from "../configApi";
@@ -72,9 +72,16 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
   // Someone else saved since this page loaded: the server's check says so before Save.
   const moved = check.problems.some((p) => /is at version \d+, not \d+/.test(p));
   const restShown = rest.filter((p) => !/is at version \d+, not \d+/.test(p));
-  useEffect(() => { if (dirty) setSaved(""); }, [spec, unit]); // eslint-disable-line react-hooks/exhaustive-deps
   const one = kindLabel(overview, k, false);
   const title = k.singleton ? kindLabel(overview, k) : isNew ? `New ${one.toLowerCase()}` : name;
+
+  // Arrow keys move between the two tabs, as in the tabs pattern.
+  const tabKeys = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const t = tab === "form" ? "raw" : "form";
+    setTab(t);
+    document.getElementById(t === "form" ? "cf-tab-form" : "cf-tab-raw")?.focus();
+  };
 
   const save = async () => {
     setBusy(true); setError(null); setSaved(""); setConflict(false);
@@ -179,20 +186,15 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
       <ErrorBox error={error} />
 
       <section className="card cf-editor" aria-label="Settings">
-        <div className="tabs" role="tablist" aria-label="How to edit" onKeyDown={(e) => {
-          if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-          const t = tab === "form" ? "raw" : "form";
-          setTab(t);
-          document.getElementById(t === "form" ? "cf-tab-form" : "cf-tab-raw")?.focus();
-        }}>
-          <button type="button" role="tab" id="cf-tab-form" aria-selected={tab === "form"} tabIndex={tab === "form" ? 0 : -1} aria-controls="cf-panel" className={"tab" + (tab === "form" ? " tab-on" : "")} onClick={() => setTab("form")}>Settings</button>
-          <button type="button" role="tab" id="cf-tab-raw" aria-selected={tab === "raw"} tabIndex={tab === "raw" ? 0 : -1} aria-controls="cf-panel" className={"tab" + (tab === "raw" ? " tab-on" : "")} onClick={() => setTab("raw")}>Raw (JSON)</button>
+        <div className="tabs" role="tablist" aria-label="How to edit">
+          <button type="button" role="tab" id="cf-tab-form" aria-selected={tab === "form"} tabIndex={tab === "form" ? 0 : -1} aria-controls="cf-panel" className={"tab" + (tab === "form" ? " tab-on" : "")} onClick={() => setTab("form")} onKeyDown={tabKeys}>Settings</button>
+          <button type="button" role="tab" id="cf-tab-raw" aria-selected={tab === "raw"} tabIndex={tab === "raw" ? 0 : -1} aria-controls="cf-panel" className={"tab" + (tab === "raw" ? " tab-on" : "")} onClick={() => setTab("raw")} onKeyDown={tabKeys}>Raw (JSON)</button>
         </div>
         <div id="cf-panel" role="tabpanel" aria-labelledby={tab === "form" ? "cf-tab-form" : "cf-tab-raw"} className="cf-panel">
           <fieldset disabled={deleted} className="cf-plain">
             {isNew && !k.singleton && (
               <div className="cf-grid">
-                <TextInput label="Name" required value={newName} onChange={setNewName} help={nameHelp(k.name, overview.levels)} mono autoFocus problems={by.__name} />
+                <TextInput label="Name" required value={newName} onChange={setNewName} help={nameHelp(k.name, overview.levels)} mono focusOnMount problems={by.__name} />
               </div>
             )}
             {k.levels && (
@@ -226,7 +228,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
                 {busy ? "Saving…" : isNew ? "Create" : "Save"}
               </button>
             </div>
-            <div aria-live="polite" className="cf-ok">{saved}</div>
+            <div aria-live="polite" className="cf-ok">{dirty ? "" : saved}</div>
           </div>
         )}
       </section>

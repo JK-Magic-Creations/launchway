@@ -68,7 +68,10 @@ export function WizardRunner({ title, intro, steps, changes, overview, done, sum
   });
   const [tried, setTried] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
-  const [localErr, setLocalErr] = useState("");
+  // The message belongs to the step it was raised on: moving to another step hides it.
+  const [localErrAt, setLocalErrAt] = useState({ at: 0, msg: "" });
+  const localErr = localErrAt.at === at ? localErrAt.msg : "";
+  const setLocalErr = (msg: string) => setLocalErrAt({ at, msg });
   const [applyError, setApplyError] = useState<unknown>(null);
   const [created, setCreated] = useState<ConfigObject[] | null>(null);
   const check = useServerCheck(changes.length && !created ? changes : null);
@@ -81,7 +84,6 @@ export function WizardRunner({ title, intro, steps, changes, overview, done, sum
   for (const f of step.fields ?? []) {
     if (by[f.path] && (tried[step.id] || hasValue(f.value))) shown[f.path] = by[f.path];
   }
-  useEffect(() => { setLocalErr(""); }, [at]);
 
   const labels: Record<string, string> = {};
   for (const k of overview.kinds) labels[k.name] = kindLabel(overview, k, false);
