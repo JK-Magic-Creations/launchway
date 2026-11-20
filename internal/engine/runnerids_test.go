@@ -480,6 +480,9 @@ func TestKeyRotationMidStep(t *testing.T) {
 	if _, err := e.AskRotation(r.id.ID); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := e.RunnerByAccessToken(old); err == nil {
+		t.Fatal("asking for a rotation leaves the access token working")
+	}
 	if g, err := e.IssueAccessToken(r.assertion(t, e, runnerauth.AudienceToken)); err != nil || !g.Rotate {
 		t.Fatalf("the grant should ask for a rotation: %+v %v", g, err)
 	}

@@ -541,20 +541,26 @@ func (e *Engine) identityUsable(runnerID string) error {
 	return nil
 }
 
-// AskRotation asks a runner to move to a new key the next time it gets an
-// access token (within runnerauth.AccessTTL).
+// AskRotation asks a runner to move to a new key. Its access tokens end,
+// so it asks for a new one at its next request, and the answer tells it to
+// rotate.
 func (e *Engine) AskRotation(runnerID string) (*RunnerIdentity, error) {
 	if err := e.identityError(); err != nil {
 		return nil, err
 	}
 	unlock := e.writeLock()
 	res, err := e.db.Exec(`UPDATE runner_identities SET rotate_asked = ? WHERE id = ? AND revoked_at = 0`, e.now().UnixMilli(), runnerID)
+	if err == nil {
+		if n, _ := res.RowsAffected(); n == 0 {
+			err = fmt.Errorf("%w: no enrolled runner %s that is not revoked", ErrNotFound, runnerID)
+		}
+	}
+	if err == nil {
+		_, err = e.db.Exec(`DELETE FROM runner_access_tokens WHERE runner = ?`, runnerID)
+	}
 	unlock()
 	if err != nil {
 		return nil, err
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return nil, fmt.Errorf("%w: no enrolled runner %s that is not revoked", ErrNotFound, runnerID)
 	}
 	return e.RunnerIdentity(runnerID)
 }
