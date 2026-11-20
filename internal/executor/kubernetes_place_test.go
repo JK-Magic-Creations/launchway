@@ -72,3 +72,79 @@ func TestPlacedChmodChangesEveryFile(t *testing.T) {
 		}
 	}
 }
+
+// copyOutMany reads many files with one tar stream. A directory on the way
+// that is a link to somewhere outside the workspace must be refused, as it is
+// for a single file, though the file itself is a regular file there.
+func TestCopyOutManyRefusesALinkedDirectory(t *testing.T) {
+	for _, tool := range []string{"tar", "readlink"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skip("no " + tool)
+		}
+	}
+	base, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, outside := filepath.Join(base, "workspace"), filepath.Join(base, "outside")
+	for _, p := range []string{filepath.Join(root, "src", "deep"), outside} {
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write := func(p string) {
+		if err := os.WriteFile(p, []byte("data"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write(filepath.Join(root, "top.txt"))
+	write(filepath.Join(root, "src", "a.txt"))
+	write(filepath.Join(root, "src", "deep", "b.txt"))
+	write(filepath.Join(outside, "secret.txt"))
+	run := func(names ...string) (string, error) {
+		cmd := exec.Command("sh", "-c", copyOutManyScript(root))
+		cmd.Stdin = strings.NewReader(copyOutManyInput(names))
+		var out, stderr strings.Builder
+		cmd.Stdout, cmd.Stderr = &out, &stderr
+		err := cmd.Run()
+		return out.String() + stderr.String(), err
+	}
+
+	good := []string{"top.txt", "src/a.txt", "src/deep/b.txt"}
+	out, err := run(good...)
+	if err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	for _, n := range good {
+		if !strings.Contains(out, n) {
+			t.Errorf("%s is not in the archive", n)
+		}
+	}
+
+	// The step turns a directory into a link to a place outside.
+	if err := os.Symlink(outside, filepath.Join(root, "linked")); err != nil {
+		t.Fatal(err)
+	}
+	out, err = run("top.txt", "linked/secret.txt")
+	if err == nil || strings.Contains(out, "secret.txt") && strings.Contains(out, "data") {
+		t.Fatalf("a file inside a linked directory was read: %v %q", err, out)
+	}
+	if !strings.Contains(out, "not inside the workspace: linked") {
+		t.Errorf("the refusal does not say why: %q", out)
+	}
+	// One level deeper, under a link.
+	if err := os.MkdirAll(filepath.Join(outside, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	write(filepath.Join(outside, "sub", "x.txt"))
+	if _, err := run("linked/sub/x.txt"); err == nil {
+		t.Error("a file two levels under a linked directory was read")
+	}
+}
+
+func TestCopyOutManyInputListsEachDirectoryOnce(t *testing.T) {
+	in := copyOutManyInput([]string{"a.txt", "d/x", "d/y", "d/e/z"})
+	if in != "d\nd/e\n\na.txt\nd/x\nd/y\nd/e/z\n" {
+		t.Errorf("%q", in)
+	}
+}

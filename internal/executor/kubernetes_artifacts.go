@@ -285,8 +285,8 @@ func (k *Kubernetes) copyOutMany(ctx context.Context, pod string, names []string
 	var stderr bytes.Buffer
 	done := make(chan error, 1)
 	go func() {
-		err := k.exec(ctx, pod, helperName, []string{"sh", "-c", `cd /workspace && exec tar -c -f - -T -`},
-			strings.NewReader(strings.Join(names, "\n")+"\n"), pw, &stderr)
+		err := k.exec(ctx, pod, helperName, []string{"sh", "-c", copyOutManyScript("/workspace")},
+			strings.NewReader(copyOutManyInput(names)), pw, &stderr)
 		pw.CloseWithError(err)
 		done <- err
 	}()
@@ -363,4 +363,39 @@ func (k *Kubernetes) copyOutMany(ctx context.Context, pod string, names []string
 		}
 	}
 	return files, nil
+}
+
+// copyOutManyScript is what runs in the pod to read many files with one tar
+// stream. Like copyOut for one file, it refuses a path that leaves the
+// workspace through a symbolic link: tar names only the last component of
+// each file, so a directory on the way that was made a link to somewhere
+// else (the step's own script can do that) would send the files of that
+// other place. The directories come first on standard input, one a line and
+// ended by an empty line; each must be its own resolved path. What follows
+// are the files, for tar.
+func copyOutManyScript(root string) string {
+	q := shellQuote(root)
+	return `cd ` + q + ` || exit 1; ` +
+		`while IFS= read -r d && [ -n "$d" ]; do ` +
+		`[ "$(readlink -f "./$d")" = ` + q + `"/$d" ] || { echo "not inside the workspace: $d" >&2; exit 3; }; done; ` +
+		`exec tar -c -f - -T -`
+}
+
+// copyOutManyInput is the standard input of copyOutManyScript: every
+// directory the names are in (the deepest ones suffice, as resolving one
+// resolves the ones above it, but all are listed so that each is checked
+// by its own name), an empty line, then the names.
+func copyOutManyInput(names []string) string {
+	seen := map[string]bool{}
+	var b strings.Builder
+	for _, n := range names {
+		d := path.Dir(n)
+		if d == "." || seen[d] {
+			continue
+		}
+		seen[d] = true
+		b.WriteString(d + "\n")
+	}
+	b.WriteString("\n" + strings.Join(names, "\n") + "\n")
+	return b.String()
 }
