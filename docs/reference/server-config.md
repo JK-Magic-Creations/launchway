@@ -1,0 +1,396 @@
+<!--
+How this page is checked (read before editing).
+
+Each table marked with the HTML comment "keys: server" (written as a comment on the line
+before the table) lists settings: its rows start with the setting's full path in a code span,
+such as `auth.oidc.issuer`. A list's items are written [] (`projects[].name`) and a map's
+entries <name> (`projects[].webhooks.<name>.token_env`). The Go test
+internal/config/docs_reference_test.go finds every setting launchway.yaml may hold, by
+reflection over the structs the loader decodes into (it refuses unknown keys), and fails if a
+setting has no row here, or a row names a setting that does not exist. Settings under runner.
+other than runner.enabled are documented once, in runner-config.md, without the prefix.
+
+A ```yaml block preceded by a line with the HTML comment "validate-config server" is loaded
+with the server's loader by the same test.
+-->
+
+# Server configuration reference
+
+This page lists every setting of the server's configuration file, `launchway.yaml`, read by
+`launchway server --config FILE`: type, default, allowed values and the environment variables that
+override it. It is for operators who install and run Launchway. For a walk-through, see
+[Install on a single server](../howto/install-single-server.md); for the Helm chart, which writes
+this file for you, see [Helm values](helm-values.md).
+
+## How the file is read
+
+- **Unknown settings are refused.** A misspelt key stops the server from starting, naming the line.
+- **A missing file gives the defaults.** `launchway server` without `--config` reads
+  `launchway.yaml` in the current directory if it exists.
+- **Relative paths are relative to the file's directory**: `data`, a SQLite `database`, local
+  repository paths in `projects` and `libraries`, `artifacts.dir`, every `*_file` setting
+  (`auth.oidc.client_secret_file`, `runner_pools[].token_file`, webhook secret files) and the
+  file paths under [`runner`](runner-config.md).
+- **Secrets are never in the file.** Client secrets, pool tokens and webhook secrets are read
+  from an environment variable or a file the setting names; secret values a step needs stay in
+  the runners' [secret stores](runner-config.md#secrets).
+- **Every server that shares a database** must have the same `environments`, `runner_pools` and
+  `policy`.
+
+Mistakes in the settings below are reported when the file is read, before the server listens,
+unless the table says otherwise.
+
+## Command line and environment
+
+| Flag or variable | Overrides | Description |
+|---|---|---|
+| `--config FILE` | | The file to read. Default `launchway.yaml` |
+| `--listen ADDR` | `listen` | The address to listen on |
+| `--data DIR` | `data` | The data directory |
+| `LAUNCHWAY_DATABASE` | `database` | The database: a SQLite file or a `postgres://` URL. Keeps a password out of the file |
+| `LAUNCHWAY_RUNNER_TOKEN` | the stored runner token | The token runners present. Without it, the first server creates a random token, keeps it in the database so every server shares it, and writes it to `<data>/runner-token` |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | | Credentials of the S3 artifact store. `AWS_ACCESS_KEY_ID_FILE` and `AWS_SECRET_ACCESS_KEY_FILE` name files instead |
+| `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_<n>`, `GIT_CONFIG_VALUE_<n>` | | Git settings for fetching and pushing, such as an `http.<url>.extraHeader` with a token |
+
+A flag wins over the file. The variables named by settings (`auth.oidc.client_secret_env`,
+`runner_pools[].token_env`, webhook `*_env` settings) are read when the server starts.
+
+## A complete example
+
+<!-- validate-config server -->
+```yaml
+listen: 0.0.0.0:8080
+data: /var/lib/launchway
+database: postgres://launchway@db.example.com:5432/launchway   # or LAUNCHWAY_DATABASE
+database_wait: 60s
+server:
+  trust_proxy: true
+  drain_delay: 5s
+auth:
+  mode: oidc
+  oidc:
+    issuer: https://sso.example.com/realms/acme
+    client_id: launchway
+    client_secret_env: LAUNCHWAY_OIDC_SECRET
+    redirect_url: https://launchway.example.com/auth/callback
+  access:
+    - { group: platform-admins, role: admin }
+    - { group: payments, role: operator, projects: ["payments-*"], environments: [staging] }
+    - { group: everyone, role: viewer }
+  tokens: { max_days: 180 }
+projects:
+  - name: payments
+    repo: https://git.example.com/team/payments.git
+    branch: main
+    poll: 30s
+    push: { branch_prefix: launchway/, allow_direct: ["release/*"] }
+    git_webhook: { kind: github, secret_env: PAYMENTS_HOOK_SECRET }
+    webhooks:
+      deploy-request: { hmac_secret_env: PAYMENTS_DEPLOY_HMAC }
+libraries:
+  - { name: ci-templates, repo: https://git.example.com/platform/ci-templates.git }
+runner:
+  enabled: false        # steps run on separate runners
+approvals:
+  allow_self: false
+drafts:
+  allow: operator
+  secrets: false
+pull_requests:
+  secrets: false
+artifacts:
+  store: s3
+  s3: { endpoint: https://s3.eu-west-1.amazonaws.com, region: eu-west-1, bucket: launchway-artifacts }
+  retain: 30d
+environments:
+  - { name: staging, target: main-cluster, projects: ["*"] }
+  - { name: prod, target: main-cluster, projects: [payments], queue: newest, protected: true }
+runner_pools:
+  - { name: deploy-main, token_env: LAUNCHWAY_POOL_DEPLOY_MAIN_TOKEN, targets: [main-cluster] }
+```
+
+## Top-level settings
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `listen` | address | `127.0.0.1:8080` | Where the server listens for the API, the web UI and runners. With `auth.mode: none` it must be a loopback address unless `auth.allow_anonymous` is true |
+| `data` | directory | `launchway-data` | Holds the repository mirrors, the built-in runner's workspaces, the default SQLite database and the default artifact store. Made absolute |
+| `database` | path or URL | `<data>/launchway.db` | A SQLite file for one server, or a `postgres://` URL that several servers share. `LAUNCHWAY_DATABASE` overrides it |
+| `database_wait` | duration | `60s` | How long a starting server keeps trying a database that does not answer. Checked when the server starts |
+| `user` | text | the operating system user, else `local` | Who every action is recorded as when sign-in is off (`auth.mode: none`) |
+
+## Server
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `server.trust_proxy` | boolean | `false` | A reverse proxy in front sets `X-Forwarded-Proto` and `X-Forwarded-For`, and clients cannot reach the server except through it. Set it only then |
+| `server.drain_delay` | duration | `0s` | How long a stopping server keeps serving after `/readyz` reports not ready, so load balancers that check `/readyz` move away first. Checked when the server starts |
+
+## Auth
+
+See [Set up sign-in and roles](../howto/oidc-and-roles.md) and [Roles](roles.md).
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `auth.mode` | text | `none` | `none`: no sign-in, everyone acts as `user` with full rights. `oidc`: sign in with an OpenID Connect provider |
+| `auth.allow_anonymous` | boolean | `false` | Lets a server with `mode: none` listen on an address other than loopback, when something in front already decides who may reach it |
+| `auth.idle_timeout` | duration | `8h` | A session nobody has used this long ends. At least `1m`; at most `session_lifetime` |
+| `auth.session_lifetime` | duration | `24h` | Every session ends this long after sign-in. At least `1m` |
+| `auth.tokens.max_days` | whole number | `365` | The longest an API token may last, in days, 1 to 3650. `0` means the default |
+
+### OpenID Connect
+
+Required with `mode: oidc`: `issuer`, `client_id`, `redirect_url` and one of
+`client_secret_env` or `client_secret_file`.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `auth.oidc.issuer` | URL | | The provider's issuer, exactly as in its discovery document. `http` or `https` |
+| `auth.oidc.client_id` | text | | The client ID registered with the provider |
+| `auth.oidc.client_secret_env` | variable name | | An environment variable holding the client secret |
+| `auth.oidc.client_secret_file` | path | | Or a file holding it |
+| `auth.oidc.redirect_url` | URL | | This server's address followed by `/auth/callback`. Cookies are marked `Secure` when it starts with `https://` |
+| `auth.oidc.scopes` | list | `[openid, profile, email, groups]` | The scopes to ask for |
+| `auth.oidc.username_claim` | text | `preferred_username`, then `email`, then `sub` | The claim that names a person. Choose one people cannot change themselves |
+| `auth.oidc.groups_claim` | text | `groups` | The claim, in the ID token or the userinfo response, that lists a person's groups |
+
+### Access bindings
+
+`auth.access` is a list of bindings. Each grants a role to one group or one user. With
+`mode: oidc` at least one is required; with `mode: none` it must be empty. Where several match,
+the highest role wins.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `auth.access[].group` | text | | A group, as `groups_claim` gives it. One of `group` or `user` |
+| `auth.access[].user` | text | | A user, as `username_claim` gives it |
+| `auth.access[].role` | text | required | `viewer`, `operator` or `admin` |
+| `auth.access[].projects` | list of patterns | every project | The projects it grants the role on |
+| `auth.access[].environments` | list of patterns | every environment | Limits what it grants on deployments (rollout commands, approvals that name a deployment) to these environments |
+
+## Projects
+
+`projects` lists the repositories to watch. Projects can be added only here.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `projects[].name` | name | required | `^[a-z0-9][a-z0-9-]{0,62}$`, unique |
+| `projects[].repo` | URL or path | required | What the servers and runners clone: `https://...`, `ssh://...`, or a local path. Credentials go in the URL or in `GIT_CONFIG_*` variables |
+| `projects[].branch` | branch | `main` | The default branch: manual runs start from it, and schedules, webhooks and the pull-request setting are read from its pipeline |
+| `projects[].poll` | duration | `30s` | How often to look for pushes and pull requests. At least `5s` (shorter is raised to 5s). Checked when the server starts |
+| `projects[].drafts.allow` | text | the server's `drafts.allow` | Overrides [`drafts.allow`](#drafts-and-pull-requests) for this project |
+| `projects[].drafts.secrets` | boolean | the server's `drafts.secrets` | Overrides `drafts.secrets` for this project |
+| `projects[].pull_requests.secrets` | boolean | the server's `pull_requests.secrets` | Overrides `pull_requests.secrets` for this project |
+| `projects[].push.branch_prefix` | text | `launchway/` | Lets the pipeline editor save to the repository. Saves go to a new branch `<prefix><you>/<date-time>`. Letters, digits, `-`, `_`, `.` and `/`, at most 100 |
+| `projects[].push.allow_direct` | list of patterns | none | Branches that may be saved to directly |
+| `projects[].schedules.enabled` | boolean | the server's `schedules.enabled` | Turns this project's [schedules](pipeline.md#schedule) on or off |
+| `projects[].git_webhook.kind` | text | | The Git host's webhook, which makes the server poll at once: `github`, `gitea`, `forgejo` or `gitlab`. The host calls `POST /api/v1/projects/<name>/git-hook` |
+| `projects[].git_webhook.secret_env` | variable name | | The webhook's secret, from an environment variable. Exactly one of `secret_env` or `secret_file` |
+| `projects[].git_webhook.secret_file` | path | | Or from a file |
+| `projects[].webhooks.<name>.token_env` | variable name | | What callers of the pipeline's [webhook trigger](pipeline.md#webhook) `<name>` must prove: a bearer token from this variable. Exactly one of the four settings. A trigger not listed cannot be called |
+| `projects[].webhooks.<name>.token_file` | path | | Or a bearer token from a file |
+| `projects[].webhooks.<name>.hmac_secret_env` | variable name | | Or an HMAC-SHA256 signing secret from a variable (preferred: a signed request cannot be replayed) |
+| `projects[].webhooks.<name>.hmac_secret_file` | path | | Or a signing secret from a file |
+
+### A pipeline from a library
+
+A project may get its pipeline from a library template instead of a file in its repository. At a
+commit that has its own `.launchway/pipeline.yaml`, that file wins.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `projects[].pipeline.library` | name | required | One of [`libraries`](#libraries) |
+| `projects[].pipeline.version` | text | required | A tag, branch or full commit id |
+| `projects[].pipeline.template` | name | required | The template to run |
+| `projects[].pipeline.with` | mapping | none | Values for the template's parameters |
+| `projects[].pipeline.on.push.branches` | list of patterns | none | As a pipeline's [`on.push`](pipeline.md#push) |
+| `projects[].pipeline.on.push.tags` | list of patterns | none | |
+| `projects[].pipeline.on.pull_request` | empty mapping | none | Write `pull_request: {}` to run pull requests. It takes no settings |
+| `projects[].pipeline.supersede` | boolean | `false` | As a pipeline's [`supersede`](pipeline.md#top-level-keys) |
+| `projects[].pipeline.true` | | | Not written by hand: tools that read YAML 1.1 (Helm among them) turn an unquoted `on` into `true`. It is read as `on`; having both is refused |
+
+## Libraries
+
+`libraries` lists the repositories pipelines may use templates from, and policy sources may be
+read from. A pipeline names one of these by name; it can never give an address.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `libraries[].name` | name | required | `^[a-z][a-z0-9-]{0,39}$`, unique |
+| `libraries[].repo` | URL or path | required | Fetched with the same credentials as projects |
+
+## Runner
+
+The built-in runner runs steps inside the server process's machine. Its settings are the same as
+a separate runner's: see the [runner configuration reference](runner-config.md), where
+`concurrency` is written here as `runner.concurrency`, `kubernetes.namespace` as
+`runner.kubernetes.namespace`, and so on.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `runner.enabled` | boolean | `true` | Start the built-in runner. Set `false` when steps run on separate runners |
+| `runner.concurrency` | whole number | `2` | Steps the built-in runner runs at once. See [runner settings](runner-config.md#runner-settings) |
+
+## Approvals
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `approvals.allow_self` | boolean | `true` with `auth.mode: none`, else `false` | Lets the person who started a run approve it, and promote or waive on a protected environment |
+
+## Drafts and pull requests
+
+[Draft runs](../glossary.md#draft-run) run pipeline text from the editor that is in no commit;
+pull-request runs run code anyone who can open a pull request wrote. Each project may override
+these settings.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `drafts.allow` | text | `operator` | The role needed on a project to start a draft run there: `admin`, `operator` or `none` (nobody) |
+| `drafts.secrets` | boolean | `false` | Let steps of draft runs read secrets |
+| `pull_requests.secrets` | boolean | `false` | Let steps of pull-request runs read secrets, and image steps use pull credentials and build secrets |
+
+## Tests
+
+Limits on what the server keeps of the test reports steps declare. `0` means the default.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `tests.max_upload_mib` | whole number | `24` | MiB of report files accepted per step attempt; runners are told and send no more. At most 1024 |
+| `tests.max_cases_per_run` | whole number | `50000` | Individual results one run keeps; beyond it, only the totals |
+| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its runs, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
+
+## Artifacts
+
+Where the files steps keep are stored, and limits on them. Several servers need one store they all
+share: `s3`, or a directory on a shared filesystem.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `artifacts.store` | text | `filesystem` | `filesystem` or `s3` |
+| `artifacts.dir` | directory | `<data>/artifacts` | The filesystem store's directory. Not with `s3` |
+| `artifacts.s3.endpoint` | URL | required with `s3` | Scheme and host, such as `https://s3.eu-west-1.amazonaws.com` or `http://minio.example.com:9000` |
+| `artifacts.s3.region` | text | `us-east-1` | The region |
+| `artifacts.s3.bucket` | text | required with `s3` | The bucket; it must exist |
+| `artifacts.s3.prefix` | text | none | Prepended to every object's name, such as `launchway/` |
+| `artifacts.s3.path_style` | boolean | `true` | Path-style requests, which MinIO, Ceph and AWS accept; `false` for virtual-hosted style |
+| `artifacts.s3.ca_file` | path | none | An extra CA bundle (PEM) for a private endpoint |
+| `artifacts.max_file_mib` | whole number | `1024` | The largest file an artifact may hold, in MiB. At most 80000 |
+| `artifacts.max_run_mib` | whole number | `4096` | How much one run may keep, in MiB. At least `max_file_mib` |
+| `artifacts.max_project_gib` | whole number | `50` | How much a project may keep over all its runs, in GiB. At least `max_run_mib` |
+| `artifacts.retain` | text | `30d` | How long artifacts are kept when the pipeline does not say: `30d`, `2w`, `12h`. From `1h` to `3650d` |
+| `artifacts.max_retain` | text | `90d` | The longest any artifact is kept, whatever the pipeline says. At least `retain` |
+
+S3 credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or the `_FILE` variants),
+never from the file.
+
+## Findings
+
+Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` means the default.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `findings.max_upload_mib` | whole number | `32` | MiB of SARIF files accepted per step attempt. At most 1024 |
+| `findings.max_per_run` | whole number | `20000` | Findings one run keeps; beyond it, only the counts |
+| `findings.max_per_project` | whole number | `500000` | Findings a project keeps, the oldest runs' removed first. At least `max_per_run` |
+| `findings.max_components_per_run` | whole number | `20000` | SBOM components one run keeps for searching |
+| `findings.max_components_per_project` | whole number | `1000000` | SBOM components a project keeps. At least `max_components_per_run` |
+| `findings.max_sbom_mib` | whole number | `64` | MiB of a step's SBOM files read to summarise them. At most 1024 |
+
+## Loops
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `loops.max_members` | whole number | `64` | The most combinations one [`for_each`](pipeline.md#for-each) loop may have, up to 500. `0` means the default |
+
+## Schedules
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `schedules.enabled` | boolean | `true` | `false` turns every project's schedules off (a project's own setting wins). While off, firings are recorded as skipped and are not caught up later |
+
+## Environments
+
+`environments` lists where [deploy steps](pipeline.md#kind-deploy) may deploy. Without any, deploy
+steps are refused. Checked when the server starts.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `environments[].name` | name | required | Lower-case letters, digits and hyphens, at most 63, unique |
+| `environments[].target` | name | required | What deploy runners serve to reach it, in practice its cluster. Same rules as `name` |
+| `environments[].projects` | list of patterns | required | The projects that may deploy here, such as `web-*` |
+| `environments[].queue` | text | `newest` | `newest`: a run waiting for the lock is skipped when a newer run of the same service starts waiting. `all`: they deploy in turn |
+| `environments[].protected` | boolean | `false` | The person who started a run may not promote or retry its deployment here, nor waive its deploy gate, unless `approvals.allow_self` lets them approve their own runs |
+
+## Runner pools
+
+`runner_pools` gives deploy runners tokens of their own. Only a pool's token can take deploy work,
+and only for the pool's targets. Checked when the server starts.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `runner_pools[].name` | text | required | Unique |
+| `runner_pools[].token_env` | variable name | | The pool's token, from an environment variable. Exactly one of `token_env` or `token_file`. At least 32 characters, different from every other pool's and from the shared runner token |
+| `runner_pools[].token_file` | path | | Or from a file |
+| `runner_pools[].targets` | list | required | Targets its runners may serve; each must be some environment's `target` |
+
+## Policy
+
+Delivery policies: rules pipelines cannot opt out of. The rules themselves are listed in the
+[policy rules reference](policy-rules.md); see also [Policy gates](../tutorials/policy-gates.md).
+Unset, there are no policies.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `policy.policies` | list | none | Policies written in this file. Mistakes are reported with this file's line |
+| `policy.waivers.allow` | text | `admin` | The role needed on a project to waive one of its policies' rules (on the environment too, for a deploy rule): `admin`, `operator` or `none` |
+| `policy.waivers.max_days` | whole number | `30` | The longest a waiver may last, in days, 1 to 365. Checked when the server starts |
+| `policy.sources[].name` | name | required | Lower-case letters, digits and hyphens; unique, and not `config` |
+| `policy.sources[].library` | name | required | One of [`libraries`](#libraries) |
+| `policy.sources[].version` | text | required | A tag or a full commit id. A branch is refused (the source then fails closed) |
+| `policy.sources[].path` | path | `policies` | The directory of `*.yaml` policy files in the library. No `..` |
+| `policy.sources[].projects` | list of patterns | every project | The projects it may govern |
+| `policy.sources[].refresh` | duration | `1m` | How often servers look at the version again. From `10s` to `168h` |
+| `policy.sources[].stale_after` | duration | `1h` | How long a version loaded earlier is used while the repository cannot be reached. From `10s` to `168h` |
+
+<!-- validate-config server -->
+```yaml
+libraries:
+  - { name: org-policies, repo: https://git.example.com/platform/policies.git }
+policy:
+  waivers: { allow: admin, max_days: 30 }
+  sources:
+    - { name: org, library: org-policies, version: v3, path: policies, projects: ["*"], refresh: 1m, stale_after: 1h }
+  policies:
+    - name: prod-evidence
+      mode: enforce
+      scope: { environments: [prod] }
+      rules:
+        tests: { min: 1 }
+        approvals: { min: 1 }
+```
+
+## What next
+
+- [Runner configuration](runner-config.md): executors, secret stores, image builders and deploy
+  targets.
+- [Helm values](helm-values.md): the same settings when Launchway runs on Kubernetes.
+- [Back up, restore and upgrade](../howto/backup-restore-upgrade.md).

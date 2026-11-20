@@ -1,0 +1,21 @@
+# The images: section on its own, for `launchway run --images-config`.
+# Paths are relative to this file.
+images:
+  builders:
+    - name: laptop
+      address: tcp://127.0.0.1:1234
+      ca_file: buildkit/ca.crt
+      cert_file: buildkit/client.crt
+      key_file: buildkit/client.key
+  registries:
+    local:
+      host: 127.0.0.1:5000
+      insecure: true
+      credentials:
+        username: tutorial
+        password: { store: files, key: registry-password }
+      push:
+        - { projects: [local], repositories: [tutorial/*] }
+  signing:
+    key_file: cosign/cosign.key
+    password_file: cosign/password

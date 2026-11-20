@@ -1,0 +1,365 @@
+<!--
+How this page is checked (read before editing).
+
+Each table marked with the HTML comment "keys: helm" (written as a comment on the line before
+the table) lists chart values: its rows start with the value's full path in a code span, such
+as `server.replicas`. The Go test internal/config/docs_reference_test.go reads
+deploy/helm/launchway/values.yaml and values.schema.json and fails if a value has no row here,
+or a row names a value the chart does not have. Values the chart hands to Kubernetes as they are
+(resources, probes, namespaceLabels, podSecurityContext, securityContext) are one row each.
+
+A ```yaml block preceded by a line with the HTML comment "validate-helm" is rendered with
+`helm template` by the same test (skipped when helm is not installed), and every configuration
+file the chart renders from it must load.
+-->
+
+# Helm values reference
+
+This page lists every value of the Launchway Helm chart, `deploy/helm/launchway`, in the order
+`values.yaml` writes them: path, type, default and meaning. It is for operators who install
+Launchway on Kubernetes; for a walk-through, see [Install on Kubernetes](../howto/install-kubernetes.md).
+
+The chart runs several servers against one PostgreSQL database, and runners that run each
+[run](../glossary.md#run) in a pod of a step namespace. It renders the
+[server configuration](server-config.md) into a ConfigMap from `config.*`, and the runners'
+[configuration file](runner-config.md) from `runner.*`. The database URL and the runner token
+reach the pods as environment variables from Secrets, never through a ConfigMap. Changing a
+ConfigMap restarts the pods. `values.schema.json` checks the types and ranges below when you install
+or upgrade.
+
+## Required values
+
+One of these is required, or the install fails with a message saying so:
+
+- `database.existingSecret` (with `database.existingSecretKey`): a Secret holding a `postgres://` URL;
+- `database.url`: a `postgres://` URL, stored in a Secret the chart makes;
+- `postgresql.enabled: true`: a development database, for trying the chart only.
+
+Only one of them may be set.
+
+<!-- validate-helm -->
+```yaml
+postgresql:
+  enabled: true
+```
+
+A production-shaped example (see also `deploy/helm/launchway/examples/ha.yaml`):
+
+<!-- validate-helm -->
+```yaml
+database:
+  existingSecret: launchway-database
+image:
+  tag: "1.0.0"
+config:
+  projects:
+    - name: payments
+      repo: https://git.example.com/team/payments.git
+      branch: main
+      poll: 30s
+  artifacts:
+    store: s3
+    s3:
+      endpoint: https://s3.eu-west-1.amazonaws.com
+      region: eu-west-1
+      bucket: launchway-artifacts
+      existingSecret: launchway-s3
+  extraConfig:
+    approvals: { allow_self: false }
+server:
+  replicas: 3
+ingress:
+  enabled: true
+  className: nginx
+  hosts: [launchway.example.com]
+  tls:
+    - secretName: launchway-tls
+      hosts: [launchway.example.com]
+runner:
+  replicas: 3
+  concurrency: 4
+  kubernetes:
+    namespace: launchway-steps
+    createNamespace: true
+  secretStores:
+    vault: { type: vault, address: "https://vault.example.com:8200", role: launchway }
+```
+
+## General
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `nameOverride` | string | `""` | Overrides the chart name in resource names |
+| `fullnameOverride` | string | `""` | Overrides the full resource name prefix; default `<release>-launchway` |
+| `commonLabels` | map | `{}` | Labels added to every resource the chart creates |
+| `image.repository` | string | `ghcr.io/jk-magic-creations/launchway` | The Launchway image; servers and runners use the same one |
+| `image.tag` | string | the chart's `appVersion` | The image tag |
+| `image.digest` | string | `""` | An image digest, `sha256:...`; used instead of the tag when set |
+| `image.pullPolicy` | string | `IfNotPresent` | `Always`, `IfNotPresent` or `Never` |
+| `imagePullSecrets` | list | `[]` | Secrets for pulling the Launchway (and development PostgreSQL) image, by name |
+
+## Server configuration
+
+`config.*` becomes the servers' `launchway.yaml`. Settings that newer versions added are unset by
+default and written to the file only when set, so a server of the version before can read the
+file during an upgrade or after an aborted one. Unset values take the
+[server's built-in defaults](server-config.md). The chart always sets `data` to
+`/var/lib/launchway` and turns the built-in runner off.
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `config.listen` | string | `0.0.0.0:8080` | Where the servers listen inside the pod; its port is also the container port. Written as `listen` |
+| `config.projects` | list | `[]` | The repositories to watch, exactly as [`projects`](server-config.md#projects) in the server configuration (snake_case keys: `name`, `repo`, `branch`, `poll`, `push`, `drafts`, `pull_requests`, `schedules`, `git_webhook`, `webhooks`, `pipeline`). Git credentials go in the URL or in `GIT_CONFIG_*` variables in `server.extraEnv` |
+| `config.tests.maxUploadMiB` | integer or null | unset (24) | Written as `tests.max_upload_mib`. 1 to 1024 |
+| `config.tests.maxCasesPerRun` | integer or null | unset (50000) | Written as `tests.max_cases_per_run` |
+| `config.tests.maxCasesPerProject` | integer or null | unset (1000000) | Written as `tests.max_cases_per_project`. At least `maxCasesPerRun` |
+| `config.artifacts.store` | string or null | unset (`filesystem`) | `filesystem` or `s3`. Unset, artifacts go in the pod's data directory, an `emptyDir`: lost when the pod goes, and with more than one server only the first keeps any. Use `s3` for real use |
+| `config.artifacts.s3.endpoint` | string or null | unset | Scheme and host only, such as `https://s3.eu-west-1.amazonaws.com` or `http://minio.storage:9000` |
+| `config.artifacts.s3.region` | string or null | unset (`us-east-1`) | |
+| `config.artifacts.s3.bucket` | string or null | unset | The bucket; it must exist |
+| `config.artifacts.s3.prefix` | string or null | unset | Prepended to every object's name, such as `launchway/` |
+| `config.artifacts.s3.pathStyle` | boolean or null | unset (`true`) | Path-style requests |
+| `config.artifacts.s3.existingSecret` | string or null | unset | Required with `s3`: a Secret with the keys `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (and optionally `AWS_SESSION_TOKEN`), given to the servers as environment variables |
+| `config.artifacts.maxFileMiB` | integer or null | unset (1024) | The largest file an artifact may hold, in MiB |
+| `config.artifacts.maxRunMiB` | integer or null | unset (4096) | How much one run may keep, in MiB |
+| `config.artifacts.maxProjectGiB` | integer or null | unset (50) | How much a project may keep, in GiB |
+| `config.artifacts.retain` | string or null | unset (`30d`) | How long artifacts are kept when the pipeline does not say |
+| `config.artifacts.maxRetain` | string or null | unset (`90d`) | The longest any artifact is kept |
+| `config.findings.maxUploadMiB` | integer or null | unset (32) | MiB of SARIF files accepted per step attempt |
+| `config.findings.maxPerRun` | integer or null | unset (20000) | Findings one run keeps |
+| `config.findings.maxPerProject` | integer or null | unset (500000) | Findings a project keeps |
+| `config.findings.maxComponentsPerRun` | integer or null | unset (20000) | SBOM components one run keeps |
+| `config.findings.maxComponentsPerProject` | integer or null | unset (1000000) | SBOM components a project keeps |
+| `config.findings.maxSbomMiB` | integer or null | unset (64) | MiB of a step's SBOM files read to summarise them |
+| `config.loops.maxMembers` | integer or null | unset (64) | Combinations one `for_each` loop may have, at most 500. Written as `loops.max_members` |
+| `config.schedules.enabled` | boolean or null | unset (on) | `false` turns every project's schedules off. Written as `schedules.enabled` |
+| `config.tokens.maxDays` | integer or null | unset (365) | The longest an API token may last, in days, at most 3650. Written as `auth.tokens.max_days` |
+| `config.policy` | object or null | unset (no policies) | Delivery policies, written as [`policy`](server-config.md#policy). Set it only once every server runs a release that knows policies, and take it out before rolling back |
+| `config.policy.waivers.allow` | string or null | unset (`admin`) | `admin`, `operator` or `none` |
+| `config.policy.waivers.maxDays` | integer or null | unset (30) | Written as `max_days` |
+| `config.policy.sources` | list or null | unset | Git sources: `{ name, library, version, path, projects, refresh, staleAfter }`; `staleAfter` is written as `stale_after`. The library comes from `config.extraConfig.libraries` |
+| `config.policy.policies` | list or null | unset | Policies, as in the [policy rules reference](policy-rules.md), written as they are |
+| `config.extraConfig` | map | `{}` | Any other top-level settings of the [server configuration](server-config.md), merged into the file as they are, so new settings need no chart change. `listen`, `data`, `database`, `projects`, `tests`, `artifacts`, `findings`, `loops`, `schedules` and `policy` are refused here, and `runner.enabled` may not be true. A typo stops the servers from starting; the pod log names the key |
+
+## Database and runner token
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `database.url` | string | `""` | A `postgres://` or `postgresql://` URL. The chart stores it in a Secret of its own. Prefer `existingSecret`, so the password is not in your values |
+| `database.existingSecret` | string | `""` | An existing Secret in the release namespace holding the URL |
+| `database.existingSecretKey` | string | `url` | The key in that Secret |
+| `runnerToken.existingSecret` | string | `""` | An existing Secret holding the runner token. Empty: the chart creates one with a random token on first install and keeps it on every upgrade |
+| `runnerToken.existingSecretKey` | string | `token` | The key in that Secret |
+
+## Servers
+
+Servers serve the API and web UI and run the engine. They keep nothing that matters on disk; any
+number can run against the same database.
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `server.replicas` | integer | `2` | Number of servers. Two or more for high availability |
+| `server.strategy.rollingUpdate.maxUnavailable` | integer or string | `0` | Keeps every server serving until its replacement is ready |
+| `server.strategy.rollingUpdate.maxSurge` | integer or string | `1` | |
+| `server.preStopSleepSeconds` | integer | `5` | How long a stopping server keeps serving after Kubernetes takes it out of the Service, before it is sent SIGTERM. After SIGTERM it reports not ready, waits `server.drain_delay` (set it in `config.extraConfig.server`), then gives requests in flight up to 15s |
+| `server.terminationGracePeriodSeconds` | integer | `30` | Time allowed to stop, including the above |
+| `server.resources` | object | requests `100m` CPU, `128Mi`; limit `512Mi` memory | Kubernetes resources of the server container |
+| `server.dataVolume.sizeLimit` | quantity | `2Gi` | The data directory (an `emptyDir`) holds mirrors of the projects' repositories, rebuilt when a pod starts. Size it to fit them all |
+| `server.startupProbe` | object | `GET /healthz`, every 2s, 90 failures | Allows time for database migrations, which servers take in turn under a lock |
+| `server.livenessProbe` | object | `GET /healthz`, every 10s | |
+| `server.readinessProbe` | object | `GET /readyz`, every 5s | `/readyz` reports the database answers and the server is not stopping |
+| `server.spreadAcrossNodes` | boolean | `true` | A soft spread of servers across nodes. Ignored when `topologySpreadConstraints` is set |
+| `server.topologySpreadConstraints` | list | `[]` | Replaces the default spread; use it to spread across zones as well |
+| `server.affinity` | map | `{}` | Affinity rules |
+| `server.nodeSelector` | map | `{}` | |
+| `server.tolerations` | list | `[]` | |
+| `server.priorityClassName` | string | `""` | |
+| `server.podAnnotations` | map | `{}` | |
+| `server.podLabels` | map | `{}` | |
+| `server.extraEnv` | list | `[]` | Extra environment variables, such as webhook secrets or `GIT_CONFIG_*` |
+| `server.extraVolumes` | list | `[]` | |
+| `server.extraVolumeMounts` | list | `[]` | |
+| `server.podDisruptionBudget.enabled` | boolean | `true` | |
+| `server.podDisruptionBudget.maxUnavailable` | integer or string | `1` | At most this many servers evicted at once |
+| `server.serviceAccount.create` | boolean | `true` | Create a ServiceAccount for the servers. It has no API permissions and its token is not mounted |
+| `server.serviceAccount.name` | string | `""` | Default `<fullname>-server` |
+| `server.serviceAccount.annotations` | map | `{}` | |
+
+## Service ingress and route
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `service.type` | string | `ClusterIP` | `ClusterIP`, `NodePort` or `LoadBalancer` |
+| `service.port` | integer | `8080` | |
+| `service.annotations` | map | `{}` | |
+| `ingress.enabled` | boolean | `false` | Expose the UI and API through an Ingress. Turn on [sign-in](../howto/oidc-and-roles.md) before exposing Launchway to anyone |
+| `ingress.className` | string | `""` | |
+| `ingress.annotations` | map | `{}` | |
+| `ingress.hosts` | list | `[]` | Host names; each routes every path to the servers |
+| `ingress.tls` | list | `[]` | `[{ secretName, hosts }]` |
+| `httpRoute.enabled` | boolean | `false` | Expose them through a Gateway API HTTPRoute (`gateway.networking.k8s.io/v1`) |
+| `httpRoute.annotations` | map | `{}` | |
+| `httpRoute.parentRefs` | list | `[]` | The Gateways to attach to: `[{ name, namespace, sectionName }]` |
+| `httpRoute.hostnames` | list | `[]` | |
+
+## Runners
+
+Runners are `launchway runner` with the Kubernetes executor. Each run gets one pod in the step
+namespace, held by one runner. Runners only make outbound connections, to the servers and the
+Kubernetes API.
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `runner.enabled` | boolean | `true` | Run runners. Turn off if your runners live elsewhere |
+| `runner.replicas` | integer | `2` | Number of runner pods |
+| `runner.concurrency` | integer | `2` | Steps each runner runs at once |
+| `runner.serverURL` | string | the chart's Service | The URL runners connect to |
+| `runner.kubernetes.namespace` | string | the release namespace | Where step pods run. Runners are granted access to pods there only. It must exist unless `createNamespace` is true |
+| `runner.kubernetes.createNamespace` | boolean | `false` | Create the step namespace with the chart (deleted on uninstall, with any step pods in it) |
+| `runner.kubernetes.namespaceLabels` | map | `pod-security.kubernetes.io/enforce: restricted` | Labels of a namespace the chart creates. Use `baseline` when `restricted` is false |
+| `runner.kubernetes.helperImage` | string | `""` (busybox 1.37) | The step pods' helper image; needs `sh` and `tar` |
+| `runner.kubernetes.serviceAccount` | string | `""` (none, no token mounted) | The ServiceAccount step pods run as |
+| `runner.kubernetes.nodeSelector` | map | `{}` | Node selector for step pods (`runner.nodeSelector` is for the runner pods) |
+| `runner.kubernetes.cpu` | string or number | `""` (`50m`) | CPU request of each step container, unless the pipeline asks |
+| `runner.kubernetes.memory` | string or number | `""` (`64Mi`) | Memory request of each step container, unless the pipeline asks |
+| `runner.kubernetes.memoryLimit` | string or number | `""` (none) | Memory limit of each step container that does not ask for memory |
+| `runner.kubernetes.imagePullSecrets` | list | `[]` | Secrets in the step namespace for pulling step images |
+| `runner.kubernetes.keepFailed` | string | `""` (`2h`) | How long a failed or cancelled run's pod is kept for a resume |
+| `runner.kubernetes.startTimeout` | string | `""` (`10m`) | How long to wait for a step pod's images and containers |
+| `runner.kubernetes.restricted` | boolean | `true` | Step containers run as `runAsUser`, without privileges, meeting Pod Security `restricted`; see [`kubernetes.restricted`](runner-config.md#kubernetes). Pipelines cannot change it |
+| `runner.kubernetes.runAsUser` | integer or null | unset (1000) | Not 0 |
+| `runner.kubernetes.runAsGroup` | integer or null | unset (1000) | Also owns the pod's volumes |
+| `runner.healthPort` | integer | `8081` | The port runners serve `/healthz` and `/readyz` on, for the probes. Not exposed outside the pod |
+| `runner.livenessProbe` | object | `GET /healthz`, every 10s | |
+| `runner.readinessProbe` | object | `GET /readyz`, every 10s | A runner that cannot reach the servers is not ready, which holds back a rollout that would replace working runners |
+| `runner.extraArgs` | list | `[]` | Extra arguments for `launchway runner`. [Flags](runner-config.md#how-settings-are-read) override the rendered file |
+| `runner.reports.maxFiles` | integer or null | unset (100) | Written as `reports.max_files` |
+| `runner.reports.maxFileMiB` | integer or null | unset (10) | Written as `reports.max_file_mib` |
+| `runner.reports.maxTotalMiB` | integer or null | unset (20) | Written as `reports.max_total_mib` |
+| `runner.images.builders` | list | `[]` | BuildKit daemons for image steps: `[{ name, address, serverName, platforms, projects }]`. Unset, runners take no image steps. Set it only once every runner is upgraded |
+| `runner.images.tlsSecret` | string | `""` | A Secret with `ca.crt`, `tls.crt` and `tls.key`, mounted at `/var/run/launchway/buildkit`. Required for `tcp://` builders |
+| `runner.images.registries` | map | `{}` | Registries by the name pipelines use: `{ host, credentials, pullCredentials, pullProjects, caFile, insecure, push }`, as [`images.registries`](runner-config.md#registries). Credentials are secret references read from `runner.secretStores` |
+| `runner.images.signingSecret` | string | `""` | A Secret with `cosign.key` (and `cosign.password`), mounted where step pods never see it. Unset, `sign: true` fails |
+| `runner.images.scanner.image` | string | `""` (the built-in Trivy) | Pinned by digest |
+| `runner.images.scanner.dbRepository` | string | `""` | Where the scanner downloads its database |
+| `runner.images.scanner.javaDBRepository` | string | `""` | Where it downloads its Java database |
+| `runner.images.maxContextMiB` | integer or null | unset (2048) | |
+| `runner.images.maxImageMiB` | integer or null | unset (20480) | |
+| `runner.secretStores` | map | `{}` | Secret stores runners may read, as [`secrets`](runner-config.md#secrets). Mount token or certificate files with `extraVolumes`. There is no `env` store unless you define one |
+| `runner.resources` | object | requests `100m` CPU, `128Mi`; limit `1Gi` memory | |
+| `runner.dataVolume.sizeLimit` | quantity | `10Gi` | Runners clone each run's commit here and copy it into the step pod |
+| `runner.terminationGracePeriodSeconds` | integer | `60` | On SIGTERM a runner stops its steps (10s grace each) and hands them back to run again |
+| `runner.nodeSelector` | map | `{}` | |
+| `runner.tolerations` | list | `[]` | |
+| `runner.affinity` | map | `{}` | |
+| `runner.spreadAcrossNodes` | boolean | `true` | A soft spread across nodes |
+| `runner.topologySpreadConstraints` | list | `[]` | |
+| `runner.priorityClassName` | string | `""` | |
+| `runner.podAnnotations` | map | `{}` | |
+| `runner.podLabels` | map | `{}` | |
+| `runner.extraEnv` | list | `[]` | |
+| `runner.extraVolumes` | list | `[]` | |
+| `runner.extraVolumeMounts` | list | `[]` | |
+| `runner.podDisruptionBudget.enabled` | boolean | `true` | |
+| `runner.podDisruptionBudget.maxUnavailable` | integer or string | `1` | |
+| `runner.serviceAccount.create` | boolean | `true` | It is bound to a Role in the step namespace |
+| `runner.serviceAccount.name` | string | `""` | Default `<fullname>-runner` |
+| `runner.serviceAccount.annotations` | map | `{}` | |
+| `runner.rbac.create` | boolean | `true` | Create the Role and RoleBinding that let runners manage step pods (pods, `pods/exec`, `pods/log`) in the step namespace only |
+
+## Security contexts
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `podSecurityContext` | object | non-root, user and group 65532, `RuntimeDefault` seccomp | The pod security context of servers and runners. The image runs as user 65532 |
+| `securityContext` | object | no privilege escalation, read-only root filesystem, all capabilities dropped | The container security context of servers and runners |
+
+## Development PostgreSQL
+
+One PostgreSQL pod, for trying the chart only: no backups, no high availability. Use a managed or
+operator-run PostgreSQL in production.
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `postgresql.enabled` | boolean | `false` | |
+| `postgresql.image.repository` | string | `docker.io/library/postgres` | |
+| `postgresql.image.tag` | string | `17.12-alpine` | |
+| `postgresql.image.pullPolicy` | string | `IfNotPresent` | |
+| `postgresql.database` | string | `launchway` | |
+| `postgresql.username` | string | `launchway` | |
+| `postgresql.password` | string | `""` | Empty: a random password, generated once and kept |
+| `postgresql.persistence.size` | quantity | `1Gi` | |
+| `postgresql.persistence.storageClass` | string | `""` | Default: the cluster's default StorageClass |
+| `postgresql.resources` | object | requests `50m` CPU, `128Mi`; limit `512Mi` memory | |
+
+## Delivery
+
+Deploy, rollback and rollout steps. Off unless set. Set these only once every server and runner
+runs a release that knows them, and take them out before rolling back to one that does not. See
+[Deploy with an approval](../tutorials/deploy-with-approval.md).
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `delivery.environments` | list or null | `null` | [Environments](server-config.md#environments), written as `environments`: `[{ name, target, projects, queue, protected }]`. Without any, deploy steps are refused |
+| `delivery.deployRunner.enabled` | boolean | `false` | Run a deploy runner in this cluster, with a runner pool token of its own (the chart adds the pool to `runner_pools`) |
+| `delivery.deployRunner.target` | string | `""` | The target this cluster is, as `delivery.environments` names it. Required when enabled |
+| `delivery.deployRunner.replicas` | integer | `1` | One deploy runner observes each target at a time; others take over |
+| `delivery.deployRunner.argocdNamespace` | string | `argocd` | Where the Argo CD Applications are |
+| `delivery.deployRunner.applications` | list | `[]` | `[{ projects, names }]`: which projects may deploy which applications. Names written out, no patterns: the RBAC rules name each application. Required when enabled |
+| `delivery.deployRunner.rolloutNamespaces` | list | `[]` | Namespaces whose rollouts deploy steps may watch |
+| `delivery.deployRunner.repos` | map | `{}` | GitOps repositories, as [`deploy.repos`](runner-config.md#deploy) (`url`, `argocd_url`, `credentials`, `username`, `paths`, `author`). Credentials name a secret in `secretStores`. Required when enabled |
+| `delivery.deployRunner.secretStores` | map | `{}` | Secret stores the deploy runner may read |
+| `delivery.deployRunner.refresh` | boolean or null | `null` (`true`) | Ask Argo CD to look at the repository at once after a commit |
+| `delivery.deployRunner.rbac.create` | boolean | `true` | Create the Roles below and bind them to the deploy runner |
+| `delivery.deployRunner.rbac.patchApplications` | boolean | `true` | Patch on the named Applications, to request syncs and refreshes. Without it, deploy steps need `sync.request: auto` or `never` |
+| `delivery.deployRunner.rbac.readDeployments` | boolean | `false` | Get on Deployments in the rollout namespaces, for rollouts that take their pod template from a Deployment (`workloadRef`) |
+| `delivery.deployRunner.rbac.controlRollouts` | map or null | `null` | Rollouts the deploy runner may promote, abort and retry, by namespace: `{ shop: [shop] }`. Each namespace must be in `rolloutNamespaces`. Unset, commands are not applied |
+| `delivery.deployRunner.admissionPolicy.enabled` | boolean | `true` | A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the deploy runner change only an Application's operation and refresh annotation |
+| `delivery.deployRunner.poolToken.existingSecret` | string | `""` | A Secret holding the pool token. Empty: generated on first install and kept on upgrade |
+| `delivery.deployRunner.poolToken.existingSecretKey` | string | `token` | |
+| `delivery.deployRunner.resources` | object | requests `50m` CPU, `64Mi`; limit `256Mi` memory | |
+| `delivery.deployRunner.healthPort` | integer | `8081` | |
+| `delivery.deployRunner.nodeSelector` | map | `{}` | |
+| `delivery.deployRunner.tolerations` | list | `[]` | |
+| `delivery.deployRunner.podAnnotations` | map | `{}` | |
+| `delivery.deployRunner.extraEnv` | list | `[]` | |
+| `delivery.deployRunner.extraVolumes` | list | `[]` | |
+| `delivery.deployRunner.extraVolumeMounts` | list | `[]` | |
+
+<!-- validate-helm -->
+```yaml
+postgresql:
+  enabled: true
+delivery:
+  environments:
+    - { name: prod, target: main-cluster, projects: [shop], queue: newest, protected: true }
+  deployRunner:
+    enabled: true
+    target: main-cluster
+    applications: [ { projects: [shop], names: [shop] } ]
+    rolloutNamespaces: [shop]
+    repos:
+      gitops:
+        url: https://git.example.com/team/gitops.git
+        credentials: { store: vault, key: ci/gitops, field: token }
+        paths: [ { projects: [shop], files: ["apps/shop/**"] } ]
+    secretStores:
+      vault: { type: vault, address: "https://vault.example.com:8200", role: launchway-deploy }
+    rbac:
+      controlRollouts: { shop: [shop] }
+```
+
+## What next
+
+- [Install on Kubernetes](../howto/install-kubernetes.md) walks through an installation.
+- [Server configuration](server-config.md) and [runner configuration](runner-config.md) explain
+  the settings these values become.

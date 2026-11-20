@@ -110,3 +110,48 @@ test-s3:
 		LAUNCHWAY_TEST_S3_ACCESS_KEY='$(LAUNCHWAY_TEST_S3_ACCESS_KEY)' LAUNCHWAY_TEST_S3_SECRET_KEY='$(LAUNCHWAY_TEST_S3_SECRET_KEY)' \
 		LAUNCHWAY_TEST_S3_CREATE_BUCKET='$(LAUNCHWAY_TEST_S3_CREATE_BUCKET)' \
 		go test -race -count=1 -run S3 -v ./internal/blobstore/
+
+# The documentation site (docs/, built with VitePress; see docs/contributing/docs.md).
+# Needs Node 24+. `make docs` installs the pinned tools once (npm ci), then
+# builds without network access and checks links, anchors, spelling and the
+# roadmap. DOCS_BASE is the path the site is served under.
+DOCS_BASE ?= /launchway/
+docs/node_modules: docs/package-lock.json
+	cd docs && npm ci --no-audit --no-fund
+	touch docs/node_modules
+
+docs: docs/node_modules
+	cd docs && DOCS_BASE='$(DOCS_BASE)' npx vitepress build .
+	node scripts/docs/check-links.mjs docs/.vitepress/dist '$(DOCS_BASE)'
+	node scripts/docs/build-roadmap.mjs --check .
+	cd docs && npx cspell --no-progress --config cspell.json "**/*.md"
+
+# A live preview at http://127.0.0.1:5173/launchway/
+docs-serve: docs/node_modules
+	cd docs && DOCS_BASE='$(DOCS_BASE)' npx vitepress dev . --host 127.0.0.1 --port 5173
+
+.PHONY: docs docs-serve docs-roadmap docs-roadmap-sync docs-diagrams docs-reference
+
+# Renders every Mermaid diagram of the built site in a headless browser, light
+# and dark (run make docs first). Needs a Chromium: `cd docs && npx
+# playwright-core install chromium`, or LAUNCHWAY_DOCS_CHROME=/path/to/chrome.
+docs-diagrams: docs/node_modules
+	node scripts/docs/check-diagrams.mjs docs/.vitepress/dist '$(DOCS_BASE)'
+
+# Checks the reference pages against the code: the keys the parsers accept,
+# routes, events, audit actions, policy rules, and that every pipeline example
+# in docs/reference/pipeline.md is valid.
+docs-reference: build
+	go test -count=1 -run 'Reference|DocsEvents' ./internal/pipeline/ ./internal/config/ ./internal/api/ ./internal/engine/ ./internal/policy/
+	scripts/docs/check-pipeline-examples.sh docs/reference/pipeline.md bin/launchway
+
+# Rebuilds docs/public/roadmap.html and docs/roadmap-list.md from docs/roadmap/.
+docs-roadmap:
+	node scripts/docs/build-roadmap.mjs .
+
+# Writes docs/roadmap/roadmap.json from a maintainer's roadmap file, keeping only the public
+# fields and dropping items that are not about the product (see scripts/docs/build-roadmap.mjs),
+# then rebuilds. Usage: make docs-roadmap-sync ROADMAP_JSON=path/to/roadmap.json
+docs-roadmap-sync:
+	@test -n '$(ROADMAP_JSON)' || { echo 'docs-roadmap-sync: set ROADMAP_JSON=path/to/roadmap.json' >&2; exit 2; }
+	node scripts/docs/build-roadmap.mjs --sync='$(ROADMAP_JSON)' .

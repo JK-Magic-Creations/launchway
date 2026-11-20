@@ -1,0 +1,37 @@
+# Server configuration for the tutorial. Paths are relative to this file.
+listen: 127.0.0.1:8080
+data: data
+
+projects:
+  - name: hello
+    repo: app
+    branch: main
+    poll: 5s
+
+runner:
+  executor: auto
+  secrets:
+    files:                              # a secret store: one file per secret in a directory
+      type: file
+      dir: secrets
+      projects: [hello]
+  images:
+    builders:
+      - name: laptop
+        address: tcp://127.0.0.1:1234
+        ca_file: buildkit/ca.crt        # the CA that signed the daemon's certificate
+        cert_file: buildkit/client.crt  # the runner's client certificate
+        key_file: buildkit/client.key
+        projects: [hello]
+    registries:
+      local:
+        host: 127.0.0.1:5000
+        insecure: true                  # plain HTTP: only for a registry on this machine
+        credentials:
+          username: tutorial
+          password: { store: files, key: registry-password }
+        push:
+          - { projects: [hello], repositories: [tutorial/*] }
+    signing:
+      key_file: cosign/cosign.key
+      password_file: cosign/password

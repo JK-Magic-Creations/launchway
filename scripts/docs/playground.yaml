@@ -1,0 +1,24 @@
+pipeline: checkout-service
+on:
+  push: { branches: [main] }
+
+steps:
+  lint:
+    image: docker.io/library/alpine:3.22
+    run: echo "lint"
+  test:
+    image: docker.io/library/alpine:3.22
+    for_each: { go: ["1.26", "1.27"] }
+    run: echo "go $LAUNCHWAY_EACH_GO"
+  build:
+    image: docker.io/library/alpine:3.22
+    needs: [lint, test]
+    run: echo "build"
+  approve:
+    kind: approval
+    needs: build
+    message: Ship it?
+  deploy:
+    image: docker.io/library/alpine:3.22
+    needs: approve
+    run: echo "deploy"

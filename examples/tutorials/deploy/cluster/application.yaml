@@ -1,0 +1,29 @@
+# Argo CD reads the GitOps repository with these credentials (test-only values
+# of the throwaway Git server) and keeps the shop in sync with it.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-shop-gitops
+  namespace: argocd
+  labels: { argocd.argoproj.io/secret-type: repository }
+type: Opaque
+stringData:
+  type: git
+  url: http://git.lw-git.svc:8080/lwtest/shop-gitops.git
+  username: lwtest
+  password: lwtest-not-a-secret
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: shop
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: http://git.lw-git.svc:8080/lwtest/shop-gitops.git
+    targetRevision: main
+    path: apps/shop
+  destination: { server: https://kubernetes.default.svc, namespace: shop }
+  syncPolicy:
+    automated: { selfHeal: true, prune: false }

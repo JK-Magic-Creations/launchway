@@ -84,7 +84,7 @@ failed run's pod is kept (`keepFailed`) and how long to wait for images (`startT
 `runner.extraArgs` adds flags, which override the file.
 
 `runner.secretStores` configures the secret stores runners read (Vault, OpenBao, mounted files),
-as described in the main [README](../README.md#secrets). Add volumes for token or CA files with
+as described in the [secrets guide](../docs/guide/secrets.md). Add volumes for token or CA files with
 `runner.extraVolumes` and `runner.extraVolumeMounts`. Runners have only the stores defined there.
 
 Runners serve `/healthz` and `/readyz` on `runner.healthPort` (8081, inside the pod only), used by

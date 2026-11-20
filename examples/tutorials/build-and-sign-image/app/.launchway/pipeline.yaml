@@ -1,0 +1,32 @@
+pipeline: hello
+on:
+  push: { branches: [main] }
+
+steps:
+  test:
+    image: docker.io/library/busybox:1.37.0
+    run: |
+      grep -q "Hello from Launchway" greeting.txt
+      echo "version=1.0.$LAUNCHWAY_RUN_NUMBER" >> "$LAUNCHWAY_OUTPUTS"
+
+  image:
+    kind: image
+    needs: test
+    context: .
+    file: Dockerfile
+    build_args: { VERSION: { output: test.version } }
+    tags:
+      - { registry: local, repository: tutorial/hello, tag: { output: test.version } }
+      - { registry: local, repository: tutorial/hello, tag: latest }
+    sbom: true
+    provenance: true
+    sign: true
+    scan: { fail_on: critical, mode: enforce }
+
+  show:
+    image: docker.io/library/busybox:1.37.0
+    needs: image
+    run: |
+      echo "pushed:  $LAUNCHWAY_NEEDS_IMAGE_PUSHED"
+      echo "image:   $LAUNCHWAY_NEEDS_IMAGE_IMAGE"
+      echo "tags:    $LAUNCHWAY_NEEDS_IMAGE_TAGS"

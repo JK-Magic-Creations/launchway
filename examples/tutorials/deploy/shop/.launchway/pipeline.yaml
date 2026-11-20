@@ -1,0 +1,65 @@
+pipeline: shop
+
+inputs:
+  version: { type: string, default: "1.1.0", description: The version to release }
+
+steps:
+  build:
+    image: docker.io/library/busybox:1.37.0
+    run: |
+      # A real pipeline builds and pushes an image here. The tutorial
+      # releases a version number instead.
+      echo "version=$LAUNCHWAY_INPUT_VERSION" >> "$LAUNCHWAY_OUTPUTS"
+
+  deploy:
+    kind: deploy
+    needs: build
+    environment: staging
+    service: shop
+    version: { output: build.version }
+    argocd:
+      application: shop
+      write_back:
+        repo: gitops
+        branch: main
+        changes:
+          - file: apps/shop/rollout.yaml
+            set: spec.template.spec.containers[0].env[0].value
+            value: { output: build.version }
+    rollout: { name: shop, namespace: shop, until: paused }   # stop at the canary's pause
+
+  canary-smoke:
+    needs: [build, deploy]
+    image: docker.io/library/busybox:1.37.0
+    run: |
+      url=http://shop-canary.shop.svc
+      want="shop $LAUNCHWAY_NEEDS_BUILD_VERSION"
+      # The canary Service follows the new pods within a few seconds.
+      for i in $(seq 1 15); do
+        got=$(wget -qO- "$url/" || true)
+        [ "$got" = "$want" ] && break
+        sleep 2
+      done
+      echo "The canary says: $got"
+      [ "$got" = "$want" ]
+      wget -qO- "$url/healthz"
+
+  approve:
+    kind: approval
+    needs: canary-smoke
+    deployment: deploy
+    message: The canary passed its smoke test. Promote the shop to 100%?
+
+  promote:
+    kind: rollout
+    needs: approve
+    deployment: deploy
+    action: promote
+    until: healthy
+    timeout: 10m
+
+  rollback:
+    kind: rollback
+    deployment: deploy
+    needs: [promote]
+    abort_first: true

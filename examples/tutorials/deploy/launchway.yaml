@@ -1,0 +1,26 @@
+# Server configuration for the deployment tutorial. Paths are relative to this file.
+listen: 127.0.0.1:8080
+data: data
+
+projects:
+  - name: shop
+    repo: shop
+    branch: main
+
+environments:
+  - name: staging
+    target: kind                       # a deploy runner serves this target
+    projects: [shop]
+
+runner_pools:
+  - name: deploy-kind
+    token_env: LAUNCHWAY_POOL_DEPLOY_KIND_TOKEN
+    targets: [kind]
+
+# The built-in runner runs the steps as pods in the cluster, so the smoke
+# test can reach the canary's Service.
+runner:
+  executor: kubernetes
+  kubernetes:
+    context: kind-launchway-test
+    namespace: launchway-steps
