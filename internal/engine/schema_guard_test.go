@@ -119,3 +119,39 @@ func TestSchemaGuardSkipsRetiredMarkers(t *testing.T) {
 		t.Errorf("a retired marker hid another marker's missing table: %v", err)
 	}
 }
+
+// Rolling back means rolling back the image, never the database: an older
+// build opens a database recorded at a newer schema, within schema_min, and
+// the guard, which asks for what the recorded schema brought, finds it all
+// and does not refuse.
+func TestSchemaGuardLetsAnOlderBuildStartOnANewerDatabase(t *testing.T) {
+	t.Setenv(schemaCheckSkipEnv, "")
+	clk, addr := newClock(), testdb.New(t)
+	e := mustOpenAs(t, addr, clk, 0, &syncBuffer{})
+	newest := len(migrations)
+	info, err := e.Schema(context.Background())
+	if err != nil || info.Database != newest {
+		t.Fatalf("the database: %+v %v", info, err)
+	}
+	if err := e.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, older := range []int{newest - 1, schemaVerify, schemaBlobs} {
+		if older < info.Minimum {
+			t.Fatalf("schema %d is below the database's minimum %d: the test would not show a supported rollback", older, info.Minimum)
+		}
+		var log syncBuffer
+		old, err := openAs(t, addr, clk, older, &log)
+		if err != nil {
+			t.Fatalf("a build of schema %d on a database of schema %d: %v", older, newest, err)
+		}
+		got, err := old.Schema(context.Background())
+		if err != nil || got.Database != newest || got.Code != older || !got.Compatible() {
+			t.Errorf("a build of schema %d: %+v %v", older, got, err)
+		}
+		if strings.Contains(log.String(), "schema check failed") {
+			t.Errorf("the guard spoke against a rollback:\n%s", log.String())
+		}
+		old.Close()
+	}
+}
