@@ -292,6 +292,12 @@ func (p *Policy) Governs(project, branch, event string) bool {
 		(len(s.Events) == 0 || slices.Contains(s.Events, event))
 }
 
+// CoversProject reports whether the policy's scope names the project (or
+// names no projects).
+func (p *Policy) CoversProject(project string) bool {
+	return matchList(p.Scope.Projects, project, true)
+}
+
 // AppliesTo reports whether the policy is judged at a point for a run: it
 // governs the run, has rules at the point, and, at a deploy point, covers
 // the environment.
@@ -362,7 +368,7 @@ type Set struct {
 }
 
 // Policies lists the policies of every source that loaded.
-func (s *Set) Policies() []Policy {
+func (s Set) Policies() []Policy {
 	var out []Policy
 	for _, src := range s.Sources {
 		if src.Error == "" {
@@ -373,7 +379,7 @@ func (s *Set) Policies() []Policy {
 }
 
 // Policy finds a policy by name among the sources that loaded.
-func (s *Set) Policy(name string) *Policy {
+func (s Set) Policy(name string) *Policy {
 	for _, src := range s.Sources {
 		if src.Error != "" {
 			continue
@@ -389,7 +395,7 @@ func (s *Set) Policy(name string) *Policy {
 
 // Governed reports whether any policy (or a source that could not be
 // loaded) governs runs of a project with this branch and event.
-func (s *Set) Governed(project, branch, event string) bool {
+func (s Set) Governed(project, branch, event string) bool {
 	for _, src := range s.Sources {
 		if !src.Covers(project) {
 			continue

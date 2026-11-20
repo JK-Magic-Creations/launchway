@@ -122,6 +122,9 @@ type StepView struct {
 	Inputs []AttemptInputs `json:"inputs"`
 	// Reports are the test result files the step declares, as globs.
 	Reports []string `json:"reports,omitempty"`
+	// PolicyBlocked says the step failed because a policy in enforce mode
+	// refused it (schema 16); Error says which policy and rule, and why.
+	PolicyBlocked bool `json:"policy_blocked,omitempty"`
 	// Tests are the step's test results, from the attempt that counts (see
 	// RunTests); nil when it has none.
 	Tests *TestTotals `json:"tests,omitempty"`
@@ -413,6 +416,7 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 	}
 	v.Outputs = map[string]string{}
 	_ = json.Unmarshal([]byte(outputs), &v.Outputs)
+	v.PolicyBlocked = v.Status == StepFailed && (strings.HasPrefix(v.Error, policyBlockedPrefix) || strings.HasPrefix(v.Error, runRefusedPrefix))
 	return v, nil
 }
 

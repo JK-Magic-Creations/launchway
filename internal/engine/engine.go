@@ -30,6 +30,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/hub"
 	"github.com/jk-magic-creations/launchway/internal/ids"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/policy"
 )
 
 var (
@@ -76,6 +77,9 @@ type Options struct {
 	// Environments are where deploy steps may deploy (schema 11). Every
 	// server sharing a database must be given the same ones.
 	Environments []Environment
+	// Policy configures delivery policies (schema 16). Every server
+	// sharing a database must be given the same ones.
+	Policy PolicyOptions
 
 	// schema, for tests, makes the engine behave as a build that knows only
 	// the first schema migrations and their events; 0 means every one (or
@@ -100,6 +104,8 @@ type Engine struct {
 	arts          ArtifactOptions
 	finds         FindingLimits
 	envs          map[string]Environment
+	pol           PolicyOptions
+	polHash       string // names the configuration's own policies
 
 	// deployKick wakes the reaper to hand free locks to waiting deploy steps
 	// at once (see kickDeploys).
@@ -304,6 +310,13 @@ func Open(o Options) (*Engine, error) {
 	if len(envs) > 0 && known < schemaDeploy {
 		return nil, fmt.Errorf("environments need schema %d; this build knows %d", schemaDeploy, known)
 	}
+	pol, err := checkPolicyOptions(o.Policy)
+	if err != nil {
+		return nil, err
+	}
+	if (len(pol.Inline) > 0 || len(pol.Sources) > 0) && known < schemaPolicy {
+		return nil, fmt.Errorf("policies need schema %d; this build knows %d", schemaPolicy, known)
+	}
 	db, _, err := openDB(o.Database, o.ConnectWait, known, o.Logger)
 	if err != nil {
 		return nil, err
@@ -315,6 +328,8 @@ func Open(o Options) (*Engine, error) {
 		arts:       arts,
 		finds:      finds,
 		envs:       envs,
+		pol:        pol,
+		polHash:    policy.Hash(pol.Inline),
 		deployKick: make(chan struct{}, 1),
 		published:  map[string]int64{},
 		selfOK:     o.AllowSelfApproval == nil || *o.AllowSelfApproval,
@@ -335,6 +350,10 @@ func Open(o Options) (*Engine, error) {
 		return nil, err
 	}
 	if err := e.checkArtifactStore(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := e.recordConfigPolicies(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -1378,6 +1397,10 @@ type cmd struct {
 	// err is a database error met while moving the run forward (see
 	// dbFail); the command fails with it.
 	err error
+	// policyChecked says the run point was judged in this command;
+	// reused caches the states of runs steps were reused from.
+	policyChecked bool
+	reused        map[string]*RunState
 }
 
 func (c *cmd) emit(t EventType, p Payload) {
@@ -1684,6 +1707,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaPolicy) {
+		if err := c.persistPolicy(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
 }
 
@@ -1764,6 +1792,13 @@ func (c *cmd) advance() {
 	if st.Status.Terminal() {
 		return
 	}
+	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.startedOrResumed() {
+		c.policyChecked = true
+		c.gateRun()
+		if c.err != nil {
+			return
+		}
+	}
 	ctx := st.Trigger.Context()
 	for changed := true; changed; {
 		changed = c.failFast()
@@ -1815,6 +1850,10 @@ func (c *cmd) advance() {
 				changed = true
 			case c.loopHolds(id):
 				// Its loop has max_parallel members going; it waits its turn.
+			case st.runBlocked() != "":
+				// Refused by policy when the run started: it never starts.
+				c.emit(StepFinished, Payload{Step: id, Outcome: string(StepFailed), Reason: st.runBlocked()})
+				changed = true
 			case def.IsDeploy():
 				before := len(c.events)
 				c.startDeploy(id, def)
@@ -1828,7 +1867,10 @@ func (c *cmd) advance() {
 			case def.IsApproval():
 				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
 				changed = true
-			case def.IsImage() && c.imageRefused(id, def):
+			case def.IsImage() && (c.imageRefused(id, def) || c.gateImage(id, def)):
+				if c.err != nil {
+					return
+				}
 				changed = true
 			case !st.secretsAllowed() && len(def.Secrets) > 0:
 				// Never handed to a runner, so no runner looks a secret up
