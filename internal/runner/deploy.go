@@ -75,6 +75,9 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	if d.ActionTimeout <= 0 {
 		d.ActionTimeout = 10 * time.Minute
 	}
+	if d.Info.Accept == nil && !d.Accept.Empty() {
+		d.Info.Accept = d.Accept // the server leaves verifications it would refuse to other runners
+	}
 	if !d.Info.Has(engine.FeatureIdle) {
 		d.Info.Features = strings.TrimSpace(d.Info.Features + " " + engine.FeatureIdle)
 	}

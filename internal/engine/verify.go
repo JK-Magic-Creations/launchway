@@ -692,6 +692,9 @@ func (e *Engine) tryLeaseVerify(r RunnerInfo, targets []string) (*Job, error) {
 				c.st.CancelRequested || s.Ver == nil || !slices.Contains(targets, s.Ver.Target) {
 				return nil
 			}
+			if r.refusesVerify(c.st.Project, s.Ver.Environment, c.st.Trigger.Event) != "" {
+				return nil // its accept: section does not allow it; another runner may take it
+			}
 			leaseID := ids.New("lease")
 			if _, err := c.tx.Exec(`INSERT INTO leases(id, run_id, step_id, attempt, runner, expires_at) VALUES(?,?,?,?,?,?)`,
 				leaseID, cd.run, cd.step, s.Attempt, r.ID, c.leaseUntil()); err != nil {
@@ -712,6 +715,20 @@ func (e *Engine) tryLeaseVerify(r RunnerInfo, targets []string) (*Job, error) {
 		}
 	}
 	return nil, nil
+}
+
+// refusesVerify says why runner r, by what its accept: section says it
+// allows, may not read a verification of project in environment of a run
+// started by event, or "" if it may. (The runner checks it too, and
+// refuses what it does not allow.)
+func (r RunnerInfo) refusesVerify(project, environment, event string) string {
+	if why := r.Accept.Project(project); why != "" {
+		return why
+	}
+	if why := r.Accept.Event(event); why != "" {
+		return why
+	}
+	return r.Accept.Environment(environment)
 }
 
 // verifyJob builds a deploy runner's job for a leased verify step.
@@ -740,7 +757,7 @@ func (c *cmd) verifyJob(stepID, leaseID string) *Job {
 	}
 	trig := st.Trigger
 	return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
-		Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Timeout: def.Timeout, Source: st.Source, Verify: vj}
+		Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Event: trig.Event, Timeout: def.Timeout, Source: st.Source, Verify: vj}
 }
 
 // VerifyInterval records what a deploy runner read in one interval of the
@@ -875,6 +892,11 @@ func (c *cmd) finishVerify(stepID string, s *StepState, def *pipeline.Step, leas
 		return
 	case s.Ver == nil:
 		c.failStep(stepID, "the verification was never started")
+		return
+	case res.Outcome == OutcomeRefused:
+		// The runner's accept: section does not allow it. It read nothing;
+		// another try would be refused the same way.
+		c.failStep(stepID, "the runner refused the step: "+nonEmpty(res.Error, "its accept: section does not allow it"))
 		return
 	}
 	v := s.Ver.verdict()
