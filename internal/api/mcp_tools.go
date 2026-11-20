@@ -706,7 +706,8 @@ func waitForRun(ctx context.Context, c *mcpCall, req *mcp.CallToolRequest, in wa
 	}
 	// Each change to the run on this server wakes the wait; a slow poll
 	// catches changes other servers make.
-	ch, stop := c.s.Engine.Hub().Subscribe(func(m hub.Message) bool { return m.RunID == d.ID })
+	runID := d.ID
+	ch, stop := c.s.Engine.Hub().Subscribe(func(m hub.Message) bool { return m.RunID == runID })
 	defer stop()
 	deadline := time.NewTimer(time.Duration(secs) * time.Second)
 	defer deadline.Stop()
