@@ -65,7 +65,7 @@ func (p *Pipeline) Bound() bool {
 		if s.ForEach != nil || len(s.withInputs) > 0 || len(s.eachRefs) > 0 || s.environmentInput != "" {
 			return false
 		}
-		for _, v := range append(deployValues(s), imageValues(s)...) {
+		for _, v := range append(append(deployValues(s), imageValues(s)...), verifyValues(s)...) {
 			if v.Input != "" {
 				return false
 			}
@@ -97,6 +97,9 @@ func Bind(p *Pipeline, values map[string]string, o BindOptions) (*Pipeline, erro
 		}
 		if s.IsImage() {
 			c = *bindImage(&c, values)
+		}
+		if s.IsVerify() {
+			c = *bindVerify(&c, values)
 		}
 		if s.IsDeployKind() {
 			b, msg := bindDeploy(&c, values)

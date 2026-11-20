@@ -131,6 +131,12 @@ type Step struct {
 	// image.go.
 	ImageBuild *ImageBuild `json:"image_build,omitempty"`
 
+	// Verify, for a verify step (kind verify), is what it watches and how
+	// it decides; AI, for an ai step (kind ai), what it asks. See verify.go
+	// and ai.go (schema 20).
+	Verify *Verify `json:"verify,omitempty"`
+	AI     *AIStep `json:"ai,omitempty"`
+
 	// Deploy steps (kind deploy) only; see deploy.go.
 	Environment string      `json:"environment,omitempty"` // a server's environment, which gives the lock and the record
 	Service     string      `json:"service,omitempty"`     // what is deployed there; empty means the project's name
@@ -459,7 +465,7 @@ func (p *Pipeline) RunContainers() []Container {
 		out = append(out, *c)
 	}
 	for _, s := range p.Steps {
-		if !s.IsApproval() && !s.IsDeployKind() && !s.IsUse() && !s.IsImage() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
+		if !s.IsApproval() && !s.IsDeployKind() && !s.IsUse() && !s.IsImage() && !s.IsVerify() && !s.IsAI() && s.Container == "" && p.containerForImage(out, s.Image) == "" {
 			out = append(out, Container{Name: "image-" + itoa(len(out)-len(p.Containers)+1), Image: s.Image})
 		}
 	}
@@ -470,7 +476,7 @@ func (p *Pipeline) RunContainers() []Container {
 // It is empty for an approval, an image step (the runner builds it, in no
 // container of the run), and a step not yet replaced by a template.
 func (p *Pipeline) ContainerFor(s *Step) string {
-	if s.IsApproval() || s.IsDeployKind() || s.IsUse() || s.IsImage() {
+	if s.IsApproval() || s.IsDeployKind() || s.IsUse() || s.IsImage() || s.IsVerify() || s.IsAI() {
 		return ""
 	}
 	if s.Container != "" {
