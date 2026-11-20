@@ -1142,11 +1142,17 @@ func (c *cmd) persistVerify() error {
 				st.ID, ev.Data.Step, s.Ver.Environment, st.Project, s.Ver.Service, st.Number, s.Ver.Version, string(data), ev.At)
 		case (ev.Type == StepFinished || ev.Type == StepCanceled) && ev.Data.AI != nil:
 			err = c.addUsage(st.Project, ev.Data.AI.Model, ev.At, ev.Data.AI.Usage)
-		case ev.Type == VerifyVerdict && ev.Data.Verify.Explanation != nil && ev.Data.Verify.Explanation.Usage != nil:
-			err = c.addUsage(st.Project, ev.Data.Verify.Explanation.Model, ev.At, *ev.Data.Verify.Explanation.Usage)
 		}
 		if err != nil {
 			return err
+		}
+		// A verdict carries both the decision (above) and, when a model
+		// explained it, the tokens that cost: count them toward the
+		// project's daily budget too.
+		if ev.Type == VerifyVerdict && ev.Data.Verify.Explanation != nil && ev.Data.Verify.Explanation.Usage != nil {
+			if err := c.addUsage(st.Project, ev.Data.Verify.Explanation.Model, ev.At, *ev.Data.Verify.Explanation.Usage); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -1260,6 +1266,9 @@ type VerificationSummary struct {
 	OverriddenBy string `json:"overridden_by,omitempty"`
 	StartedAt    int64  `json:"started_at"`
 	DecidedAt    int64  `json:"decided_at,omitempty"`
+	// Status is the verify step's status: waiting while an inconclusive
+	// verdict waits for a person (on_inconclusive: pause).
+	Status string `json:"status"`
 }
 
 // VerificationFilter narrows a list of verifications.
@@ -1282,15 +1291,17 @@ func (e *Engine) Verifications(f VerificationFilter) ([]VerificationSummary, err
 	where, args := []string{"1 = 1"}, []any{}
 	for col, v := range map[string]string{"environment": f.Environment, "project": f.Project, "service": f.Service} {
 		if v != "" {
-			where = append(where, col+" = ?")
+			where = append(where, "v."+col+" = ?")
 			args = append(args, v)
 		}
 	}
 	slices.Sort(where)
 	args = append(args, f.Limit*4)
-	rows, err := e.db.Query(`SELECT run_id, run_number, project, step_id, environment, service, deployment, version, outcome, summary,
-			intervals, total, overridden_by, started_at, decided_at FROM verifications WHERE `+strings.Join(where, " AND ")+`
-		ORDER BY started_at DESC, run_id DESC LIMIT ?`, args...)
+	rows, err := e.db.Query(`SELECT v.run_id, v.run_number, v.project, v.step_id, v.environment, v.service, v.deployment, v.version, v.outcome,
+			v.summary, v.intervals, v.total, v.overridden_by, v.started_at, v.decided_at, COALESCE(s.status, '')
+		FROM verifications v LEFT JOIN steps s ON s.run_id = v.run_id AND s.step_id = v.step_id
+		WHERE `+strings.Join(where, " AND ")+`
+		ORDER BY v.started_at DESC, v.run_id DESC LIMIT ?`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1298,7 +1309,7 @@ func (e *Engine) Verifications(f VerificationFilter) ([]VerificationSummary, err
 	for rows.Next() {
 		var v VerificationSummary
 		if err := rows.Scan(&v.RunID, &v.RunNumber, &v.Project, &v.Step, &v.Environment, &v.Service, &v.Deployment, &v.Version,
-			&v.Outcome, &v.Summary, &v.Intervals, &v.Total, &v.OverriddenBy, &v.StartedAt, &v.DecidedAt); err != nil {
+			&v.Outcome, &v.Summary, &v.Intervals, &v.Total, &v.OverriddenBy, &v.StartedAt, &v.DecidedAt, &v.Status); err != nil {
 			return nil, err
 		}
 		if f.Visible != nil && !f.Visible(v.Project) {

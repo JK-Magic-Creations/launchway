@@ -242,6 +242,7 @@ func judgeLog(spec Spec, l LogSpec, base Baseline, judged []Interval, allIn bool
 	if len(lv.Clusters) > maxClusterVerdicts {
 		lv.Clusters = lv.Clusters[:maxClusterVerdicts]
 	}
+	lv.Intervals = logIntervals(l, judged, failing)
 
 	switch {
 	case len(failing) > 0:
@@ -262,6 +263,41 @@ func judgeLog(spec Spec, l LogSpec, base Baseline, judged []Interval, allIn bool
 			plural(lines, "line", "lines"), plural(len(canary.list), "cluster", "clusters"), newClusters, ref.name)
 	}
 	return lv
+}
+
+// logIntervals checks each judged interval of a log query: no data when
+// it could not be read, failed when it had lines of a failing cluster.
+func logIntervals(l LogSpec, judged []Interval, failing []ClusterVerdict) []IntervalCheck {
+	bad := map[string]bool{}
+	for _, cv := range failing {
+		bad[cv.Template] = true
+	}
+	var out []IntervalCheck
+	for _, iv := range judged {
+		ic := IntervalCheck{Index: iv.Index, Outcome: Passed}
+		ld := findLog(iv.Logs, l.Name)
+		switch {
+		case ld == nil:
+			ic.Outcome, ic.Reason = noData, "the report has no lines for this log query"
+		case ld.Error != "":
+			ic.Outcome, ic.Reason = noData, clip(ld.Error, MaxErrorBytes)
+		default:
+			n := 0
+			for _, c := range ld.Clusters {
+				n += max(c.Count, 0)
+				if bad[c.Template] {
+					ic.Outcome = Failed
+				}
+			}
+			ic.Value = float64(max(ld.Lines, n))
+			if ic.Outcome == Failed {
+				ic.Reason = "lines of a failing cluster"
+			}
+		}
+		out = append(out, ic)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Index < out[j].Index })
+	return out
 }
 
 func matchIn(ref *reference, template string, threshold float64) (refCluster, bool) {

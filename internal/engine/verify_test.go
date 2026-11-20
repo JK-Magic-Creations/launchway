@@ -239,6 +239,15 @@ func TestInconclusivePausesForAPerson(t *testing.T) {
 	if err != nil || len(appr) != 1 || appr[0].StepID != "verify-canary" {
 		t.Fatalf("approvals: %v %+v", err, appr)
 	}
+	// The list says it waits for a person, not only that it is inconclusive;
+	// the run page has its environment from the deployment.
+	if l, err := e.Verifications(VerificationFilter{Environment: "prod"}); err != nil || len(l) != 1 ||
+		l[0].Status != string(StepWaitingS) || l[0].Outcome != verify.Inconclusive {
+		t.Fatalf("list: %v %+v", err, l)
+	}
+	if s := stepOf(t, e, id, "verify-canary"); s.Environment != "prod" {
+		t.Fatalf("step environment %q", s.Environment)
+	}
 	// Not by the person who started it, on a protected environment.
 	e.selfOK = false
 	starter := ""
@@ -509,4 +518,45 @@ func TestAIStep(t *testing.T) {
 		t.Fatalf("over budget: %+v", s)
 	}
 	_ = id2
+}
+
+// TestVerifyExplanationUsageAndModelAssist: a model's explanation of a
+// verdict counts toward the project's daily budget, and with decide:
+// model-assisted it may turn the statistics' pass into a fail, recorded.
+func TestVerifyExplanationUsageAndModelAssist(t *testing.T) {
+	clk := &clock{t: time.Date(2026, 11, 14, 9, 0, 0, 0, time.UTC)}
+	models, err := ai.NewRegistry([]ai.Model{{Name: "local", Provider: "openai", Endpoint: "http://127.0.0.1:1/v1", Model: "qwen",
+		Projects: []string{"shop"}, TokensPerDay: 100000}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e := openVerify(t, testdb.New(t), clk, prodEnv, models)
+	p := strings.Replace(verifiedCanary, "    on_inconclusive: pause\n", "    on_inconclusive: pause\n    model: local\n    decide: model-assisted\n", 1)
+	id := createShop(t, e, p, 1)
+	toPause(t, e, id)
+	j := leaseVerify(t, e)
+	var ack *VerifyAck
+	for i := 0; i < 4; i++ {
+		ack = report(t, e, clk, j, i, 0.003, 0.003)
+	}
+	if !ack.Final || ack.Verdict.Outcome != verify.Passed {
+		t.Fatalf("verdict: %+v", ack.Verdict)
+	}
+	expl := &Explanation{Model: "local", Summary: "errors look fine", Cause: "but the logs show a new panic", Outcome: verify.Failed,
+		Changed: true, Usage: &AIUsage{Calls: 1, InputTokens: 1200, OutputTokens: 150}}
+	if err := e.Finish(j.LeaseID, Result{Outcome: "succeeded", Verify: &VerifyResult{Explanation: expl}}); err != nil {
+		t.Fatal(err)
+	}
+	if s := stepOf(t, e, id, "verify-canary"); s.Status != StepFailed {
+		t.Fatalf("the model's fail was not applied: %+v", s)
+	}
+	vs, err := e.RunVerifications(id)
+	if err != nil || len(vs) != 1 || vs[0].Explanation == nil || !vs[0].Explanation.Changed || vs[0].Verdict.Outcome != verify.Failed {
+		t.Fatalf("views: %v %+v", err, vs)
+	}
+	views, err := e.ModelViews(nil)
+	if err != nil || len(views) != 1 || len(views[0].UsedToday) != 1 || views[0].UsedToday[0].InputTokens != 1200 ||
+		views[0].UsedToday[0].OutputTokens != 150 || views[0].UsedToday[0].Calls != 1 {
+		t.Fatalf("the explanation's usage was not counted: %v %+v", err, views)
+	}
 }

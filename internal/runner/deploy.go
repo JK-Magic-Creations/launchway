@@ -49,9 +49,9 @@ type DeployRunner struct {
 	VerifyConcurrency int
 	// Settle is how long after an interval ends its data are read; default
 	// 10s.
-	Settle time.Duration
-	AI                *ai.Client
-	Secrets           *secrets.Resolver
+	Settle  time.Duration
+	AI      *ai.Client
+	Secrets *secrets.Resolver
 }
 
 // Run takes actions and observes until ctx ends.

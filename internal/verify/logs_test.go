@@ -317,6 +317,14 @@ func TestLogVerdicts(t *testing.T) {
 					t.Errorf("summary %q", v.Summary)
 				}
 			}
+			if len(l.Intervals) != c.upto {
+				t.Errorf("%d interval checks for %d intervals", len(l.Intervals), c.upto)
+			}
+			for i, ic := range l.Intervals {
+				if ic.Index != i || ic.Value <= 0 || (ic.Outcome == Failed) != (c.failing != "") {
+					t.Errorf("interval check %d: %+v", i, ic)
+				}
+			}
 			for _, cv := range l.Clusters {
 				if cv.Failing && c.outcome != Failed {
 					t.Errorf("failing cluster in a %s verdict: %+v", c.outcome, cv)

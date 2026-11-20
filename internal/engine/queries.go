@@ -108,8 +108,9 @@ type StepView struct {
 	// WaitKind, for a waiting deploy or rollback step, is what it waits
 	// for: lock or observe. Empty for an approval.
 	WaitKind string `json:"wait_kind,omitempty"`
-	// Environment and Deployment come from a deploy or rollback step's
-	// definition.
+	// Environment and Deployment come from a deploy, rollback or verify
+	// step's definition (a verify step watching a deployment has its
+	// environment).
 	Environment string `json:"environment,omitempty"`
 	Deployment  string `json:"deployment,omitempty"`
 	// A step a re-run reused: the run (ID and number) where it ran, and the
@@ -484,6 +485,9 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Environment, v.Deployment = def.Environment, def.Deployment
 			if dd := st.Pipeline.Step(def.Deployment); def.IsRollback() && dd != nil {
 				v.Environment = dd.Environment
+			}
+			if def.IsVerify() {
+				v.Environment, _ = st.Pipeline.VerifyEnvironment(def)
 			}
 			if def.Reports != nil {
 				v.Reports = def.Reports.Tests

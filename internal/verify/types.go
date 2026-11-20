@@ -234,6 +234,11 @@ type LogVerdict struct {
 	Reason   string           `json:"reason"`
 	Lines    int              `json:"lines"`
 	Clusters []ClusterVerdict `json:"clusters,omitempty"` // new and unexpected first, then by count
+	// Intervals says how each interval read went: Value is the lines read
+	// in it; failed when it had lines of a cluster that fails the query,
+	// no_data when it could not be read. The verdict itself is over the
+	// whole window (clusters are compared as a whole, not per interval).
+	Intervals []IntervalCheck `json:"intervals,omitempty"`
 }
 
 // ClusterVerdict is one cluster of the new version's logs, classified.
