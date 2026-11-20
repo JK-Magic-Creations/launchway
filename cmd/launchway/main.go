@@ -61,6 +61,9 @@ Usage:
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel  start and follow runs on a server
                                                 (launchway runs, for more)
+  launchway verifications list|show|mark        verifications on a server
+                                                (launchway verifications, for more)
+  launchway health-sources | models             what verify and ai steps may name
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -89,6 +92,12 @@ func main() {
 		err = cmdLogin(args)
 	case "runs":
 		err = cmdRuns(args)
+	case "verifications":
+		err = cmdVerifications(args)
+	case "health-sources":
+		err = cmdHealthSources(args)
+	case "models":
+		err = cmdModels(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
