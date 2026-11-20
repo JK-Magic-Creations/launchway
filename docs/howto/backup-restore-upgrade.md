@@ -270,12 +270,17 @@ launchway config export -o launchway-config.yaml
    in `config.*` were imported the first time and are ignored after; take them out when convenient.
 3. During a rolling upgrade, servers of the release before keep using their own file. Make no
    configuration change through the API until every server is replaced: an older server does not see
-   it.
+   it. **This matters most for access:** an older server keeps the role bindings of its file, so a
+   revocation made in the database (taking an administrator out, narrowing a role) does **not** apply
+   to it, and the person keeps their old access there until that server is upgraded. Upgrade all
+   servers first, then change who may do what.
 
 ### Rolling back
 
 Export, take the `objects:` list out of the text, merge the rest into each server's configuration
-file, and roll the servers back; they use the file again. The exact steps, and why they work, are in
+file, and roll the servers back; they use the file again, **with the file's role bindings**: a
+revocation made in the database since the upgrade applies to the rolled-back servers only once the
+exported `auth.access` is merged into their files, so check it before you roll back. The exact steps, and why they work, are in
 [Migrations](../development/migrations.md) under schema 23. Settings changed in the
 file after a rollback are not seen by the database; export the file's sections again and `launchway
 config import --apply` before rolling forward.

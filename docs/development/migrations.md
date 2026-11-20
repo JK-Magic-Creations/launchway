@@ -352,7 +352,16 @@ and keeps using its own configuration file until it is replaced. It never reads 
 import changes nothing it does, and the runs it picks up behave as before. The rule for a rollout is
 therefore: make configuration changes through the API only after every server is replaced, because a
 server that is not replaced does not see them (an environment added in the database is unknown to it,
-and a deploy to it is refused, not guessed). Servers of schema 23 notice a change within seconds
+and a deploy to it is refused, not guessed). **Access is the sharpest case.** A server older than schema 23 keeps the role bindings of its own
+file, and never reads the database's. A binding that is removed or narrowed in the database (a
+revoked administrator, a group taken out) therefore **still applies on every server that has not
+been upgraded**, and a binding added in the database does not apply there. Upgrade every server
+before changing who may do what; until then make access changes in each server's file as before.
+The same holds after a rollback: servers rolled back to schema 22 use the file's bindings, so
+revocations made in the database since the upgrade do not apply to them until the exported
+bindings are merged into their files (step 2 below).
+
+Servers of schema 23 notice a change within seconds
 (PostgreSQL `NOTIFY`, and a poll every two seconds), apply it without a restart and, if a change cannot be
 used on one server, keep what they had and log why.
 
