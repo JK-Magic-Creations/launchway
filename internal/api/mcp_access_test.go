@@ -66,6 +66,24 @@ var mcpPermissionTable = map[string]mcpRow{
 	// tools that change them, as the API refuses everyone else.
 	"get_step_resources":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"set_step_resource_limits": {map[string]any{"memory_per_thread": "1Gi"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	// Configuration in the database: anyone reads the overview; the rest is
+	// listed to an administrator only, as the API answers an administrator
+	// only.
+	"get_config_overview":  {nil, false, [5]string{mRefused, mOK, mOK, mOK, mOK}},
+	"list_config":          {map[string]any{"kind": "projects"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"get_config":           {map[string]any{"kind": "libraries", "name": "none"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"put_config":           {map[string]any{"kind": "libraries", "name": "mcp-lib", "spec": map[string]any{"repo": "/nonexistent/lib"}}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"delete_config":        {map[string]any{"kind": "libraries", "name": "none"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"restore_config":       {map[string]any{"kind": "libraries", "name": "none"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"get_config_history":   {nil, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"validate_config":      {map[string]any{"changes": []any{map[string]any{"kind": "libraries", "name": "x", "spec": map[string]any{"repo": "/nonexistent/lib"}}}}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"apply_config":         {map[string]any{"changes": []any{map[string]any{"kind": "libraries", "name": "y", "spec": map[string]any{"repo": "/nonexistent/lib2"}}}}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"get_effective_config": {map[string]any{"project": "pay-api"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"export_config":        {nil, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"import_config":        {map[string]any{"text": "libraries: []\n"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"list_config_imports":  {nil, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"check_repository":     {map[string]any{"repo": "/nonexistent/none"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"check_signin":         {map[string]any{"issuer": "not a url", "client_id": "x", "redirect_url": "y", "client_secret_env": "Z"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"set_step_resource_default": {map[string]any{"kind": "step", "cpu": "1", "memory": "2Gi"}, false,
 		[5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 }
@@ -89,7 +107,7 @@ func outcome(errText string) string {
 // Every tool, called by each person with their own token, does exactly
 // what the API lets that person do: the same answer for the same reason.
 func TestMCPPermissionMatrix(t *testing.T) {
-	e := mcpEnv(t, envOpts{})
+	e := mcpEnv(t, envOpts{mcp: &MCPOptions{RequestsPerMinute: 2000}})
 	pay := e.startRun(t, "pay-api")
 	e.startRun(t, "web")
 	tools := make([]string, 0, len(mcpPermissionTable))

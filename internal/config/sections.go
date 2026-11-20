@@ -83,3 +83,7 @@ func (a *AuthConfig) SetAccessInDatabase(v bool) { a.accessInDatabase = v }
 
 // File is the path the configuration was read from; "" if none.
 func (c *Config) File() string { return c.file }
+
+// Check reports what is wrong with the auth section, all of it, the way
+// the server will when it starts.
+func (a *AuthConfig) Check() error { return a.check() }

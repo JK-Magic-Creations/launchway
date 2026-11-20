@@ -35,6 +35,9 @@ const configUsage = `Usage:
   launchway config import FILE [--prune] [--apply]    show what importing FILE would change; --apply makes it so
   launchway config imports [--json]                   past imports, the first start's among them
   launchway config effective PROJECT [--json]         what applies to a project, and where it comes from
+  launchway config check-repository URL [--branch B]  read a repository as the server would: branches, pipeline file
+  launchway config check-signin --issuer URL --client-id ID --redirect-url URL --secret-env VAR
+                     [--admin-group G] [--admin-user U]   check sign-in answers; prints the auth: block for the file
 
   launchway health-sources|models|policy-sources get|set|create|delete|restore|history ...   likewise
   launchway projects list|get|set|create|delete|restore|history ...   the same for projects
@@ -115,6 +118,10 @@ func (cl *client) config(args []string, kind string) error {
 		return cl.configImports(rest)
 	case "effective":
 		return cl.configEffective(rest)
+	case "check-repository":
+		return cl.configCheckRepository(rest)
+	case "check-signin":
+		return cl.configCheckSignIn(rest)
 	}
 	return usageErr("unknown command config %s\n\n%s", cmd, configUsage)
 }
@@ -792,4 +799,92 @@ func configVerb(word string) bool {
 		return true
 	}
 	return false
+}
+
+// stringList is a flag that may be given more than once.
+type stringList []string
+
+func (s *stringList) String() string     { return strings.Join(*s, ",") }
+func (s *stringList) Set(v string) error { *s = append(*s, v); return nil }
+
+func (cl *client) configCheckRepository(args []string) error {
+	fs := flag.NewFlagSet("config check-repository", flag.ContinueOnError)
+	branch := fs.String("branch", "", "the branch to look at; default the repository's default branch")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("give the repository's address: launchway config check-repository https://git.example.com/team/shop.git")
+	}
+	var v struct {
+		OK              bool     `json:"ok"`
+		Problem         string   `json:"problem"`
+		DefaultBranch   string   `json:"default_branch"`
+		Branches        []string `json:"branches"`
+		HasPipelineFile bool     `json:"has_pipeline_file"`
+	}
+	if err := cl.call("POST", "/api/v1/config/check/repository", map[string]string{"repo": pos[0], "branch": *branch}, &v); err != nil {
+		return err
+	}
+	return cl.print(v, *asJSON, func() {
+		if !v.OK {
+			fmt.Fprintf(cl.out, "Cannot use it: %s\n", v.Problem)
+			return
+		}
+		fmt.Fprintf(cl.out, "Reachable. Default branch %s; branches: %s\n", v.DefaultBranch, strings.Join(v.Branches, ", "))
+		if v.HasPipelineFile {
+			fmt.Fprintln(cl.out, "The branch has .launchway/pipeline.yaml.")
+		} else {
+			fmt.Fprintln(cl.out, "The branch has no .launchway/pipeline.yaml; use a library template or add one.")
+		}
+	})
+}
+
+func (cl *client) configCheckSignIn(args []string) error {
+	fs := flag.NewFlagSet("config check-signin", flag.ContinueOnError)
+	var req struct {
+		Issuer          string   `json:"issuer"`
+		ClientID        string   `json:"client_id"`
+		RedirectURL     string   `json:"redirect_url"`
+		ClientSecretEnv string   `json:"client_secret_env"`
+		GroupsClaim     string   `json:"groups_claim,omitempty"`
+		AdminGroups     []string `json:"admin_groups,omitempty"`
+		AdminUsers      []string `json:"admin_users,omitempty"`
+	}
+	var groups, users stringList
+	fs.StringVar(&req.Issuer, "issuer", "", "the identity provider's issuer address")
+	fs.StringVar(&req.ClientID, "client-id", "", "the application's client ID at the provider")
+	fs.StringVar(&req.RedirectURL, "redirect-url", "", "this server's address followed by /auth/callback")
+	fs.StringVar(&req.ClientSecretEnv, "secret-env", "", "the environment variable that will hold the client secret")
+	fs.StringVar(&req.GroupsClaim, "groups-claim", "", "the claim that lists a person's groups; default groups")
+	fs.Var(&groups, "admin-group", "a group of first administrators (repeatable)")
+	fs.Var(&users, "admin-user", "a first administrator (repeatable)")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	if _, err := parseArgs(fs, args); err != nil {
+		return err
+	}
+	req.AdminGroups, req.AdminUsers = groups, users
+	var v struct {
+		OK       bool     `json:"ok"`
+		Problems []string `json:"problems"`
+		Snippet  string   `json:"snippet"`
+	}
+	if err := cl.call("POST", "/api/v1/config/check/signin", req, &v); err != nil {
+		return err
+	}
+	return cl.print(v, *asJSON, func() {
+		if v.OK {
+			fmt.Fprintln(cl.out, "The identity provider answers and the settings are valid. Put this in the server's configuration file and restart it:")
+		} else {
+			fmt.Fprintln(cl.out, "Problems:")
+			for _, p := range v.Problems {
+				fmt.Fprintln(cl.out, "  -", p)
+			}
+			fmt.Fprintln(cl.out, "\nThe file would read:")
+		}
+		fmt.Fprintln(cl.out)
+		fmt.Fprint(cl.out, v.Snippet)
+	})
 }

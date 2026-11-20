@@ -285,6 +285,8 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/config/import", administer, "config.import", s.importConfig},
 		{"GET /api/v1/config/imports", administer, "", s.configImports},
 		{"POST /api/v1/config/validate", administer, "", s.validateConfig},
+		{"POST /api/v1/config/check/repository", administer, "", s.checkRepository},
+		{"POST /api/v1/config/check/signin", administer, "", s.checkSignIn},
 		{"POST /api/v1/config/apply", administer, "config.apply", s.applyConfig},
 		{"GET /api/v1/config/effective/{project}", administer, "", s.effectiveConfig},
 		{"GET /api/v1/config/{kind}", administer, "", s.listConfig},

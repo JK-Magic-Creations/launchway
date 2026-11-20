@@ -231,6 +231,7 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 	addReadTools(srv, c)
 	addVerifyTools(srv, c)
 	addStepResourceTools(srv, c)
+	addConfigTools(srv, c)
 	if c.mayOperate {
 		addChangeTools(srv, c)
 		addVerifyChangeTools(srv, c)
