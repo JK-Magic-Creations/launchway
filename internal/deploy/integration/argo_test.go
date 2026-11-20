@@ -31,6 +31,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
+	hsource "github.com/jk-magic-creations/launchway/internal/verify/source"
 )
 
 const poolToken = "integration-pool-token-0123456789abcdef0123"
@@ -64,6 +65,10 @@ type harness struct {
 	stopSrv  func()
 	log      *slog.Logger
 	runnerWG sync.WaitGroup
+	// sources and healthSources, when set, are the health sources the
+	// server knows and the deploy runner reads (verify steps).
+	sources       []engine.HealthSource
+	healthSources *hsource.Sources
 }
 
 func (h *harness) kubectl(args ...string) string {
@@ -277,7 +282,7 @@ func (h *harness) startServer(ln net.Listener) {
 		}
 	}
 	eng, err := engine.Open(engine.Options{Database: h.db, LeaseTTL: 6 * time.Second, Logger: h.log,
-		Environments: []engine.Environment{{Name: "kind", Target: "kind", Projects: []string{"shop"}}}})
+		Environments: []engine.Environment{{Name: "kind", Target: "kind", Projects: []string{"shop"}}}, HealthSources: h.sources})
 	if err != nil {
 		h.t.Fatal(err)
 	}
@@ -328,7 +333,7 @@ func (h *harness) startBuildRunner() {
 func (h *harness) startDeployRunner(name string) (stop func()) {
 	d := &runner.DeployRunner{Client: runner.NewClient("http://"+h.addr, poolToken), Agent: h.agent,
 		Info: engine.RunnerInfo{ID: name, Name: name, Targets: []string{"kind"}}, Log: h.log,
-		ObserveEvery: time.Second, ReportEvery: 3 * time.Second}
+		ObserveEvery: time.Second, ReportEvery: 3 * time.Second, Sources: h.healthSources, Settle: 3 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { defer close(done); d.Run(ctx) }()
