@@ -150,6 +150,18 @@ type RunDetail struct {
 	// RunnerHint says why a run that is waiting for a runner may wait a long
 	// time: it builds images, and no runner that can has been seen lately.
 	RunnerHint string `json:"runner_hint,omitempty"`
+	// Policy sums up the run's policy decisions (schema 16); nil if no
+	// policy judged it.
+	Policy *RunPolicySummary `json:"policy,omitempty"`
+}
+
+// RunPolicySummary sums up a run's policy decisions.
+type RunPolicySummary struct {
+	Decisions int `json:"decisions"`
+	// Verdict is the worst verdict of the latest decision at each point
+	// (block, warn or pass); Waived counts rules passed by waivers there.
+	Verdict string `json:"verdict"`
+	Waived  int    `json:"waived"`
 }
 
 // RerunBrief is a re-run as listed with the run it re-runs.
@@ -515,6 +527,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	if d.RunnerHint, err = e.imageRunnerHint(st, d.StepList); err != nil {
 		return nil, err
 	}
+	d.Policy = policySummary(st)
 	return d, nil
 }
 

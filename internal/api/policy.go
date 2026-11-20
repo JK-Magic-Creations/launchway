@@ -97,7 +97,7 @@ func (s *Server) runPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	refusal := s.waiveRefusal(identityFrom(r), project, "", false)
 	writeJSON(w, http.StatusOK, map[string]any{"decisions": ds, "waivers": ws, "can_waive": refusal == "", "waive_refusal": refusal,
-		"rules": s.Engine.PolicyNames(), "catalogue": policy.Catalogue})
+		"rules": s.Engine.PolicyNames(), "catalogue": policy.Catalogue, "max_waiver_days": s.Engine.MaxWaiverDays()})
 }
 
 // listWaivers lists waivers of the projects the caller may see:

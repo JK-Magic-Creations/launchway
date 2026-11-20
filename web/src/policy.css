@@ -1,0 +1,60 @@
+/* Policy: the Policy page, a run's Policy tab, and waivers. */
+.pol-tab { display: flex; flex-direction: column; gap: 14px; }
+.pol-decision { display: flex; flex-direction: column; gap: 12px; }
+.pol-decision-head, .pol-source-head, .pol-section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pol-decision-head .h-sm, .pol-source-head .h-sm { margin: 0 0 2px; display: flex; align-items: center; gap: 6px; }
+.pol-policy { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.pol-policy-head, .pol-item-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pol-rules, .pol-list, .pol-waivers, .pol-evidence { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pol-rule { border: 1px solid var(--border); border-left-width: 3px; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+.pol-rule-pass { border-left-color: var(--ok); }
+.pol-rule-fail { border-left-color: var(--bad); }
+.pol-rule-waived { border-left-color: var(--warn); }
+.pol-rule-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pol-found, .pol-want { overflow-wrap: anywhere; }
+.pol-waive-btn { margin-left: auto; }
+.pol-note { font-size: 12.5px; color: var(--text-2); background: var(--surface-2); border-radius: 6px; padding: 6px 8px; overflow-wrap: anywhere; }
+.pol-waiver-note { font-size: 12.5px; color: var(--warn-ink); background: var(--warn-soft); border-radius: 6px; padding: 6px 8px; overflow-wrap: anywhere; }
+.pol-ev-details summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.pol-evidence { margin-top: 6px; gap: 4px; font-size: 12.5px; }
+.pol-evidence li { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.pol-ev-kind { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); min-width: 64px; }
+.pol-badge { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.pol-ok { background: var(--ok-soft); color: var(--ok-ink); }
+.pol-bad { background: var(--bad-soft); color: var(--bad-ink); }
+.pol-warn { background: var(--warn-soft); color: var(--warn-ink); }
+.pol-idle { background: var(--idle-soft); color: var(--idle-ink); }
+.pol-mode { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--border-strong); color: var(--text-2); }
+.pol-mode-enforce { border-color: var(--bad); color: var(--bad-ink); }
+.pol-scope { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
+.pol-scope-item { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: baseline; }
+.pol-source { display: flex; flex-direction: column; gap: 12px; }
+.pol-source-meta { display: block; overflow-wrap: anywhere; }
+.pol-item { border-top: 1px solid var(--border); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.pol-name { font-size: 15px; }
+.pol-rulelist { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.pol-rulelist .mono { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; font-size: 12px; }
+.pol-recent { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pol-recent-item { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; color: var(--text); }
+.pol-recent-item:hover { border-color: var(--accent); }
+.pol-waiver { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+.pol-waiver-revoked, .pol-waiver-expired { opacity: .75; }
+.pol-waiver-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pol-waiver-reason { overflow-wrap: anywhere; }
+.pol-revoke { margin-left: auto; }
+.pol-waiver-form, .pol-grant { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.pol-grant { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
+.pol-grant .field { flex: 1 1 160px; }
+.pol-waiver-title { font-weight: 600; }
+.pol-waiver-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.pol-waiver-row .field { flex: 1 1 180px; }
+.pol-check { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; font-weight: 600; }
+.pol-waiver-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pol-step-callout { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.pol-catalogue td:first-child { white-space: nowrap; }
+.node-policy { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--bad-ink); background: var(--bad-soft); border-radius: 6px; padding: 1px 6px; }
+.tab-n-warn { background: var(--warn-soft); color: var(--warn-ink); }
+@media (max-width: 640px) {
+  .pol-waive-btn, .pol-revoke { margin-left: 0; }
+  .pol-ev-kind { min-width: 0; }
+}

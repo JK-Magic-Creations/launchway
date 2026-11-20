@@ -18,6 +18,7 @@ import { nextFromHere, SignInPage } from "./pages/SignIn";
 import { ProjectSecurityPage } from "./pages/ProjectSecurity";
 import { ComponentsPage } from "./pages/Components";
 import { ImagesPage } from "./pages/Images";
+import { PolicyPage } from "./pages/Policy";
 import { Empty, ErrorBox, Link } from "./components/ui";
 
 interface NavItem { href: string; label: string; active: (p: string) => boolean; show?: (me: Me) => boolean }
@@ -33,10 +34,11 @@ const NAV: NavItem[] = [
   { href: "/audit", label: "Audit trail", active: (p) => p.startsWith("/audit"), show: (me) => me.admin },
   { href: "/components", label: "Components", active: (p) => p.startsWith("/components") },
   { href: "/images", label: "Images", active: (p) => p.startsWith("/images") },
+  { href: "/policy", label: "Policy", active: (p) => p.startsWith("/policy"), show: (me) => me.runners },
 ];
 
 // Shown so people can see where this is going; none of these work yet.
-const NEXT = ["Releases", "Infrastructure", "Policy"];
+const NEXT = ["Releases", "Infrastructure"];
 
 type Who = { state: "loading" } | { state: "out"; next: string } | { state: "in"; me: Me } | { state: "error"; error: unknown };
 
@@ -94,6 +96,7 @@ function Shell({ me }: { me: Me }) {
   else if ((m = match("/projects/:name/security", path))) page = <ProjectSecurityPage key={m.name} name={m.name} />;
   else if (path === "/components") page = <ComponentsPage />;
   else if (path === "/images") page = <ImagesPage />;
+  else if (path === "/policy") page = <PolicyPage />;
   else page = <div className="page"><Empty title="Nothing here">This page does not exist. <Link href="/">Go to runs</Link>.</Empty></div>;
 
   useEffect(() => {

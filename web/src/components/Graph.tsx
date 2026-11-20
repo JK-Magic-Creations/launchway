@@ -250,11 +250,13 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
                 <StatusIcon status={shownStatus(s)} />
                 <span className="node-name">{label}</span>
                 {s.kind === "image" && <span className="node-kind" title="Builds a container image"><ImageIcon size={11} />image</span>}
+                {s.policy_blocked && <span className="node-policy" title="Blocked by policy">policy</span>}
                 {s.attempt > 1 && <span className="node-attempt" title={`Attempt ${s.attempt}`}>#{s.attempt}</span>}
               </span>
               <span className="node-sub">
                 {describe ? describe(s) : s.reused_from ? `reused from #${s.reused_from_number}`
                   : s.status === "skipped" ? lowerFirst(stepLabel(s))
+                  : s.status === "failed" && s.policy_blocked ? "blocked by policy"
                   : s.status === "pending" ? "waiting"
                   : s.status === "queued" ? "waiting for a runner"
                   : s.status === "waiting" ? phases?.[s.id] ?? lowerFirst(stepLabel(s))

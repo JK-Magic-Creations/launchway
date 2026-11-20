@@ -62,8 +62,9 @@ export function shownStatus(s: { status: StepStatus; wait_kind?: string }): Step
  * for a decision, a deploy step waits for its environment's lock or for the
  * deployment to finish. phase, if given, is where a deployment stands. */
 export function stepLabel(s: {
-  status: StepStatus; kind?: string; wait_kind?: string; environment?: string; skip_kind?: string;
+  status: StepStatus; kind?: string; wait_kind?: string; environment?: string; skip_kind?: string; policy_blocked?: boolean;
 }, phase?: string): string {
+  if (s.status === "failed" && s.policy_blocked) return "Blocked by policy";
   if (s.status === "waiting") {
     if (s.kind === "approval" || (!s.kind && !s.wait_kind)) return "Waiting for approval";
     const env = s.environment;

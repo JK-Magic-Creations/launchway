@@ -1092,3 +1092,33 @@ func (e *Engine) PolicyNames() map[string][]string {
 	}
 	return out
 }
+
+// policySummary sums up a run's policy decisions: the latest at each
+// point (the run, and each step).
+func policySummary(st *RunState) *RunPolicySummary {
+	if len(st.Policy) == 0 {
+		return nil
+	}
+	latest := map[string]*policy.Evaluation{}
+	for _, ev := range st.Policy {
+		latest[ev.Point+"/"+ev.Step] = ev
+	}
+	sum := &RunPolicySummary{Decisions: len(st.Policy), Verdict: policy.VerdictPass}
+	rank := map[string]int{policy.VerdictPass: 0, policy.VerdictWarn: 1, policy.VerdictBlock: 2}
+	for _, ev := range latest {
+		if rank[ev.Verdict] > rank[sum.Verdict] {
+			sum.Verdict = ev.Verdict
+		}
+		for _, p := range ev.Policies {
+			for _, r := range p.Rules {
+				if r.Verdict == policy.ResultWaived {
+					sum.Waived++
+				}
+			}
+		}
+	}
+	return sum
+}
+
+// MaxWaiverDays is the longest a waiver may last.
+func (e *Engine) MaxWaiverDays() int { return e.pol.MaxWaiverDays }
