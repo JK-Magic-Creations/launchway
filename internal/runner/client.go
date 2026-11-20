@@ -31,6 +31,9 @@ type Client struct {
 	Server string // base URL, e.g. http://127.0.0.1:8080
 	Token  string
 	HTTP   *http.Client
+	// Auth, for an enrolled runner, gives each request an access token in
+	// place of Token.
+	Auth *IdentityAuth
 
 	contact atomic.Int64 // Unix milliseconds of the last good answer; see LastContact
 }
@@ -50,18 +53,49 @@ func NewClient(server, token string) *Client {
 	return &Client{Server: strings.TrimRight(server, "/"), Token: token, HTTP: &http.Client{Timeout: 60 * time.Second}}
 }
 
+// bearer is the token for a request: the access token of an enrolled
+// runner, or the shared or pool token.
+func (c *Client) bearer(ctx context.Context) (string, error) {
+	if c.Auth != nil {
+		return c.Auth.Token(ctx)
+	}
+	return c.Token, nil
+}
+
+// do sends a request with the runner's token. An enrolled runner whose
+// access token is refused (it expired, or a rotation replaced it) gets a
+// new one and sends the request once more.
+func (c *Client) do(ctx context.Context, method, url, contentType string, body []byte) (*http.Response, error) {
+	for try := 0; ; try++ {
+		tok, err := c.bearer(ctx)
+		if err != nil {
+			return nil, err
+		}
+		req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Authorization", "Bearer "+tok)
+		resp, err := c.HTTP.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode == http.StatusUnauthorized && c.Auth != nil && try == 0 {
+			resp.Body.Close()
+			c.Auth.Invalidate(tok)
+			continue
+		}
+		return resp, nil
+	}
+}
+
 func (c *Client) call(ctx context.Context, path string, in, out any) (int, error) {
 	body, err := json.Marshal(in)
 	if err != nil {
 		return 0, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.Server+"/api/runner/v1/"+path, bytes.NewReader(body))
-	if err != nil {
-		return 0, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	resp, err := c.HTTP.Do(req)
+	resp, err := c.do(ctx, http.MethodPost, c.Server+"/api/runner/v1/"+path, "application/json", body)
 	if err != nil {
 		return 0, err
 	}

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/accept"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 )
@@ -38,6 +39,9 @@ type DeployRunner struct {
 	// IdleEvery is how often it reads an idle service (one nothing is
 	// deploying), reporting it at least every other time; default 30s.
 	IdleEvery time.Duration
+	// Accept is the runner's own limits (its accept: section): projects,
+	// environments, repositories and whether pull-request runs may deploy.
+	Accept *accept.Config
 }
 
 // Run takes actions and observes until ctx ends.
@@ -131,6 +135,13 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 	log := d.Log.With("run", job.RunID, "step", job.StepID, "action", job.Deploy.Action, "deployment", job.Deploy.Deployment)
 	report, stop := context.WithTimeout(context.Background(), d.ActionTimeout+time.Minute)
 	defer stop()
+	if why := refusal(d.Accept, job, "deploy", true); why != "" {
+		log.Warn("refusing a deploy action", "project", job.Project, "why", why)
+		if err := refuse(report, d.Client, job, why); err != nil {
+			log.Warn("could not report the refusal", "err", err)
+		}
+		return
+	}
 	if _, err := d.Client.Start(report, job.LeaseID); err != nil {
 		log.Warn("could not start the action", "err", err)
 		return

@@ -407,7 +407,7 @@ func (e *Engine) checkAssertion(assertion, audience string) (*RunnerIdentity, ru
 	}
 	c, err := runnerauth.Peek(assertion)
 	if err != nil {
-		return nil, c, fmt.Errorf("%w: %v", ErrForbidden, err)
+		return nil, c, fmt.Errorf("%w: %v", ErrInvalid, err)
 	}
 	id, err := e.RunnerIdentity(c.Issuer)
 	if errors.Is(err, ErrNotFound) {
@@ -727,3 +727,40 @@ func encodeAccept(r RunnerInfo) string {
 	}
 	return string(b)
 }
+
+// RunInfosFor is RunInfos for an enrolled runner: only runs of projects
+// its pool serves, so that a runner learns nothing of other projects' runs.
+func (e *Engine) RunInfosFor(r RunnerInfo, list []string) ([]RunInfo, error) {
+	all, err := e.RunInfos(list)
+	if err != nil || len(all) == 0 {
+		return all, err
+	}
+	pool, ok := e.pools[runnerPoolName(r)]
+	if !ok {
+		return []RunInfo{}, nil
+	}
+	out := all[:0]
+	for _, ri := range all {
+		var project, event string
+		if err := e.db.QueryRow(`SELECT project, event FROM runs WHERE id = ?`, ri.ID).Scan(&project, &event); err != nil {
+			continue
+		}
+		if pool.Kind == PoolDeploy || e.poolServes(pool, project, event) == "" {
+			out = append(out, ri)
+		}
+	}
+	return out, nil
+}
+
+// IsEnrolled reports whether a runner ID belongs to an enrolled runner.
+func (e *Engine) IsEnrolled(runnerID string) bool {
+	if !e.knows(schemaIdentity) {
+		return false
+	}
+	var n int
+	err := e.db.QueryRow(`SELECT COUNT(*) FROM runner_identities WHERE id = ?`, runnerID).Scan(&n)
+	return err == nil && n > 0
+}
+
+// KnowsIdentities reports whether this build enrols runners.
+func (e *Engine) KnowsIdentities() bool { return e.knows(schemaIdentity) }

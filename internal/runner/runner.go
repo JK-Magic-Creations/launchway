@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/jk-magic-creations/launchway/internal/accept"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
@@ -43,6 +44,13 @@ type Runner struct {
 	Reports executor.CollectLimits
 	// Images, if it names builders, lets the runner take image steps.
 	Images *imagebuild.Config
+	// Accept is the runner's own limits on the work it takes (its accept:
+	// section). Every job is checked against it before anything runs.
+	Accept *accept.Config
+	// Remote is set for a runner on another machine than the server
+	// (launchway runner): it never uses a directory of its own host as a
+	// run's source, whatever the server says.
+	Remote bool
 
 	wsMu    sync.Mutex
 	wsLocks map[string]*sync.Mutex
@@ -67,6 +75,9 @@ func (r *Runner) Run(ctx context.Context) error {
 		r.SecretWait = 30 * time.Second
 	}
 	r.wsLocks = map[string]*sync.Mutex{}
+	if r.Info.Accept == nil && !r.Accept.Empty() {
+		r.Info.Accept = r.Accept // the server leaves it out of work it refuses
+	}
 	if !r.Info.Has(engine.FeatureArtifacts) {
 		r.Info.Features = strings.TrimSpace(r.Info.Features + " " + engine.FeatureArtifacts)
 	}
@@ -228,6 +239,17 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		}
 	}
 
+	exName := r.Exec.Name()
+	if job.ImageBuild != nil {
+		exName = "buildkit"
+	}
+	if why := refusal(r.Accept, job, exName, r.Remote); why != "" {
+		log.Warn("refusing a step", "project", job.Project, "why", why)
+		if err := refuse(report, r.Client, job, why); err != nil {
+			log.Warn("could not report the refusal", "err", err)
+		}
+		return
+	}
 	cancelNow, err := r.Client.Start(report, job.LeaseID)
 	if err != nil {
 		log.Warn("could not start the step", "err", err)

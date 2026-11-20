@@ -58,13 +58,7 @@ func (c *Client) PutChunk(ctx context.Context, lease, artifact, filePath string,
 	sum := sha256.Sum256(data)
 	q := url.Values{"lease_id": {lease}, "artifact_id": {artifact}, "path": {filePath}, "offset": {strconv.FormatInt(offset, 10)},
 		"sha256": {hex.EncodeToString(sum[:])}}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.Server+"/api/runner/v1/artifacts/chunk?"+q.Encode(), bytes.NewReader(data))
-	if err != nil {
-		return 0, err
-	}
-	req.Header.Set("Content-Type", "application/octet-stream")
-	req.Header.Set("Authorization", "Bearer "+c.Token)
-	resp, err := c.HTTP.Do(req)
+	resp, err := c.do(ctx, http.MethodPut, c.Server+"/api/runner/v1/artifacts/chunk?"+q.Encode(), "application/octet-stream", data)
 	if err != nil {
 		return 0, err
 	}
@@ -108,7 +102,11 @@ func (c *Client) Download(ctx context.Context, lease, artifact, filePath string,
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.Token)
+	tok, err := c.bearer(ctx)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+tok)
 	// The client's timeout covers the whole body; a large file takes longer.
 	hc := *c.HTTP
 	hc.Timeout = 0

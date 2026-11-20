@@ -57,6 +57,10 @@ type Server struct {
 	// WaiveRole is the role needed to waive a policy's rule
 	// (policy.waivers.allow); nil means admin, NoRole nobody.
 	WaiveRole *auth.Role
+	// RunnersRole is the role needed on every project to manage runners:
+	// make join tokens, revoke and rotate runners (runner_admin); nil means
+	// admin, NoRole nobody.
+	RunnersRole *auth.Role
 
 	sealerMu sync.Mutex
 	sealer   *auth.Sealer // seals the state of sign-ins in progress
@@ -122,6 +126,11 @@ func (s *Server) routes() []route {
 		{"POST /api/runner/v1/deploy/observe", runnerOnly, "", s.deployObserve},
 		{"POST /api/runner/v1/deploy/commands", runnerOnly, "", s.deployCommands},
 		{"POST /api/runner/v1/deploy/command-done", runnerOnly, "", s.deployCommandDone},
+		// Enrolment (schema 21): a join token, or an assertion signed by the
+		// runner's key, in the body; the handlers check and audit them.
+		{"POST /api/runner/v2/join", public, "", s.runnerJoin},
+		{"POST /api/runner/v2/token", public, "", s.runnerToken},
+		{"POST /api/runner/v2/rotate", public, "", s.runnerRotate},
 
 		// Signing in and out.
 		{"GET /auth/login", public, "", s.login},
@@ -156,6 +165,14 @@ func (s *Server) routes() []route {
 		{"POST /api/v1/runs/{id}/steps/{step}/reject", runOperate, "approval.reject", s.decide(false)},
 		{"GET /api/v1/approvals", signedIn, "", s.listApprovals},
 		{"GET /api/v1/runners", readAny, "", s.listRunners},
+		{"GET /api/v1/runner-pools", readAny, "", s.listPools},
+		// Managing runners needs the role runner_admin names on every
+		// project, which the handlers check.
+		{"GET /api/v1/runner-join-tokens", signedIn, "", s.listJoinTokens},
+		{"POST /api/v1/runner-join-tokens", signedIn, "runner.join_token.create", s.createJoinToken},
+		{"POST /api/v1/runner-join-tokens/{id}/revoke", signedIn, "runner.join_token.revoke", s.revokeJoinToken},
+		{"POST /api/v1/runners/{id}/revoke", signedIn, "runner.revoke", s.revokeRunner},
+		{"POST /api/v1/runners/{id}/rotate", signedIn, "runner.rotate", s.rotateRunner},
 		{"GET /api/v1/environments", signedIn, "", s.listEnvironments},
 		{"GET /api/v1/deployments", signedIn, "", s.listDeployments},
 		{"GET /api/v1/runs/{id}/deployments/{dep}/controls", runRead, "", s.controls},
@@ -382,13 +399,14 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 		Runner      engine.RunnerInfo `json:"runner"`
 		WaitSeconds int               `json:"wait_seconds"`
 	}
-	if !decode(w, r, &in) || refusePools(w, r) {
+	if !decode(w, r, &in) || s.refusePools(w, r) {
 		return
 	}
+	info := s.callerInfo(r, in.Runner)
 	wait := time.Duration(min(max(in.WaitSeconds, 0), 50)) * time.Second
 	ctx, cancel := s.longLived(r)
 	defer cancel()
-	job, err := s.Engine.Lease(ctx, in.Runner, wait)
+	job, err := s.Engine.Lease(ctx, info, wait)
 	switch {
 	case err != nil && r.Context().Err() != nil:
 		return // the runner went away; nobody to answer
@@ -487,9 +505,20 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 	if !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
+	var refused *engine.AuditEntry
+	if in.Result.Outcome == engine.OutcomeRefused {
+		// Recorded before the lease ends, while it still says which run.
+		_, _, runID, _, _ := s.Engine.LeaseHolder(in.LeaseID)
+		project, _ := s.Engine.RunProject(runID)
+		refused = &engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r),
+			Action: "runner.refused", Project: project, Target: runID, Outcome: "ok", Detail: in.Result.Error}
+	}
 	if err := s.Engine.Finish(in.LeaseID, in.Result); err != nil {
 		s.fail(w, err)
 		return
+	}
+	if refused != nil {
+		s.record(refused)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -504,6 +533,23 @@ func (s *Server) leave(w http.ResponseWriter, r *http.Request) {
 		RunnerID string `json:"runner_id"`
 	}
 	if !decode(w, r, &in) {
+		return
+	}
+	if id := callerIdentity(r); id != nil {
+		// An enrolled runner leaves as itself, whatever it says.
+		if id.Ephemeral {
+			if _, err := s.Engine.RevokeRunner(id.ID, "runner:"+id.ID, "an ephemeral runner left"); err != nil {
+				s.fail(w, err)
+				return
+			}
+			s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), Action: "runner.revoke",
+				Target: id.ID, Outcome: "ok", Detail: "an ephemeral runner left"})
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		in.RunnerID = id.ID
+	} else if s.Engine.IsEnrolled(in.RunnerID) {
+		writeErr(w, http.StatusForbidden, "runner "+in.RunnerID+" is enrolled; only it may say it leaves")
 		return
 	}
 	if err := s.Engine.RunnerLeft(in.RunnerID); err != nil {
@@ -524,7 +570,13 @@ func (s *Server) runInfos(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "at most 5000 runs per call")
 		return
 	}
-	infos, err := s.Engine.RunInfos(in.IDs)
+	var infos []engine.RunInfo
+	var err error
+	if id := callerIdentity(r); id != nil {
+		infos, err = s.Engine.RunInfosFor(id.Info(engine.RunnerInfo{}), in.IDs)
+	} else {
+		infos, err = s.Engine.RunInfos(in.IDs)
+	}
 	if err != nil {
 		s.fail(w, err)
 		return
