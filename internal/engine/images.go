@@ -565,3 +565,16 @@ func (e *Engine) imageRunnerHint(st *RunState, steps []StepView) (string, error)
 	return "This run builds images, so all its steps wait for a runner that can build them, and none has been seen in the last " +
 		fmt.Sprintf("%d minutes", int(RunnerOffline.Minutes())) + ". A runner builds images when its configuration names image builders (images.builders).", nil
 }
+
+// imageJobFor is an image step's job, or nil for other steps. advance
+// checked that its values can be worked out before queueing it.
+func (c *cmd) imageJobFor(def *pipeline.Step) *ImageJob {
+	if !def.IsImage() || !c.e.knows(schemaImages) {
+		return nil
+	}
+	j, err := c.imageJob(def)
+	if err != nil {
+		return nil
+	}
+	return j
+}

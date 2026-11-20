@@ -50,6 +50,9 @@ func usesSchema13(p Payload) bool {
 // checkNewRun checks what schema 13 adds to a new run.
 func (e *Engine) checkNewRun(nr *NewRun) error {
 	p := nr.Pipeline
+	if p.UsesSchemaCache() && !e.knows(schemaCache) {
+		return fmt.Errorf("%w: this server does not know build caches (cache:, schema %d)", ErrConflict, schemaCache)
+	}
 	if !p.Bound() {
 		return fmt.Errorf("%w: the pipeline has loops that have not been repeated over their lists; bind it first", ErrConflict)
 	}

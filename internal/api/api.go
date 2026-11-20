@@ -123,7 +123,7 @@ type route struct {
 }
 
 func (s *Server) routes() []route {
-	return []route{
+	return append([]route{
 		// Health checks for load balancers and orchestrators.
 		{"GET /healthz", public, "", s.healthz},
 		{"GET /readyz", public, "", s.readyz},
@@ -271,25 +271,6 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/runs/{id}/steps/{step}/explanations", runRead, "", s.stepExplanations},
 		{"POST /api/v1/runs/{id}/steps/{step}/explain", runOperate, "step.explain", s.explainStep},
 
-		// Build caches (schema 25). Runners look up, send and restore
-		// entries under a lease; the server decides the scope. People and
-		// agents list and delete a project's entries; an administrator
-		// changes the policy.
-		{"POST /api/runner/v1/caches/lookup", runnerOnly, "", s.cacheLookup},
-		{"POST /api/runner/v1/caches/begin", runnerOnly, "", s.cacheBegin},
-		{"PUT /api/runner/v1/caches/chunk", runnerOnly, "", s.cacheChunk},
-		{"POST /api/runner/v1/caches/commit", runnerOnly, "", s.cacheCommit},
-		{"POST /api/runner/v1/caches/download", runnerOnly, "", s.cacheDownload},
-		{"POST /api/runner/v1/caches/discard", runnerOnly, "", s.cacheDiscard},
-		{"GET /api/v1/projects/{name}/caches", projectRead, "", s.listCaches},
-		{"DELETE /api/v1/projects/{name}/caches/{id}", projectOperate, "cache.delete", s.deleteCache},
-		{"DELETE /api/v1/projects/{name}/caches", projectOperate, "cache.delete", s.deleteCachesNamed},
-		{"GET /api/v1/cache-policy", signedIn, "", s.getCachePolicy},
-		{"PUT /api/v1/cache-policy", administer, "cache_policy.set", s.setCachePolicy},
-		{"GET /api/v1/projects/{name}/cache-policy", projectRead, "", s.getProjectCachePolicy},
-		{"PUT /api/v1/projects/{name}/cache-policy", administer, "cache_policy.set_project", s.setProjectCachePolicy},
-		{"DELETE /api/v1/projects/{name}/cache-policy", administer, "cache_policy.clear_project", s.clearProjectCachePolicy},
-
 		// Step resources (schema 22): anyone signed in reads the defaults
 		// and limits; an administrator changes them.
 		{"GET /api/v1/step-resources", signedIn, "", s.getStepResources},
@@ -297,7 +278,7 @@ func (s *Server) routes() []route {
 		{"PUT /api/v1/step-resources/limits", administer, "step_resources.set_limits", s.setStepResourceLimits},
 		{"GET /api/v1/step-resources/defaults/{kind}", signedIn, "", s.getStepResourceDefault},
 		{"PUT /api/v1/step-resources/defaults/{kind}", administer, "step_resources.set_default", s.setStepResourceDefault},
-	}
+	}, s.cacheRoutes()...) // build caches (schema 25): caches.go
 }
 
 // Handler returns the full HTTP handler.

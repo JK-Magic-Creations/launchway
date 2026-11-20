@@ -25,7 +25,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/accept"
@@ -122,18 +121,14 @@ type Engine struct {
 	arts          ArtifactOptions
 	storeWhy      string // why arts.Store was chosen, when nothing was configured
 	strayAfter    string // where removeStrays carries on
-	// cacheStrayAfter is where removeCacheStrays carries on, and
-	// defaultBranch how to find a project's default branch (see
-	// SetDefaultBranch).
-	cacheStrayAfter string
-	defaultBranch   atomic.Pointer[func(string) string]
-	finds           FindingLimits
-	envs            map[string]Environment
-	pol             PolicyOptions
-	polHash         string // names the configuration's own policies
-	sources         map[string]HealthSource
-	models          *ai.Registry
-	pools           map[string]RunnerPool
+	finds         FindingLimits
+	envs          map[string]Environment
+	pol           PolicyOptions
+	polHash       string // names the configuration's own policies
+	sources       map[string]HealthSource
+	models        *ai.Registry
+	pools         map[string]RunnerPool
+	caches        cacheState // build caches (schema 25): see cache.go
 
 	// deployKick wakes the reaper to hand free locks to waiting deploy steps
 	// at once (see kickDeploys).
@@ -256,10 +251,7 @@ type Job struct {
 	// what it puts in the workspace before (schema 12).
 	Artifacts *JobArtifacts `json:"artifacts,omitempty"`
 	Fetch     []JobFetch    `json:"fetch,omitempty"`
-	// Cache says which caches the runner restores before the step and
-	// saves after it (schema 25). Only runners with FeatureCache are given
-	// steps that have any.
-	Cache *JobCache `json:"cache,omitempty"`
+	Cache     *JobCache     `json:"cache,omitempty"` // the caches to restore and save (schema 25)
 	// Deploy, for a deploy or rollback step, is the action a deploy runner
 	// does. Only deploy runners lease such steps.
 	Deploy *DeployJob `json:"deploy,omitempty"`
@@ -320,9 +312,7 @@ type Result struct {
 	// (schema 19); AI, for an ai step, what the call used.
 	Verify *VerifyResult `json:"verify,omitempty"`
 	AI     *AIRecord     `json:"ai,omitempty"`
-	// Caches is what each of a step's caches did (schema 25): restored,
-	// missed, saved or not saved, and why. It never changes the outcome.
-	Caches []CacheResult `json:"caches,omitempty"`
+	Caches []CacheResult `json:"caches,omitempty"` // what each cache did (schema 25)
 }
 
 // CollectedReports are the report files a runner found after a step, and
@@ -723,9 +713,6 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		if !e.knows(schemaResources) {
 			return nil, fmt.Errorf("%w: this server does not know step resources (resources:, schema %d)", ErrConflict, schemaResources)
 		}
-	}
-	if nr.Pipeline.UsesSchemaCache() && !e.knows(schemaCache) {
-		return nil, fmt.Errorf("%w: this server does not know build caches (cache:, schema %d)", ErrConflict, schemaCache)
 	}
 	// Step resources above the installation's limits could never be given;
 	// say so now, naming the limit, instead of failing the step later.
@@ -1540,7 +1527,6 @@ func (e *Engine) reaper(ctx context.Context) {
 				e.pruneCoverage()
 				e.pruneFindings()
 				e.pruneArtifacts()
-				e.pruneCaches()
 				e.PruneTriggers(now.Add(-7 * 24 * time.Hour).UnixMilli())
 			}
 		}
@@ -2227,21 +2213,8 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		// a runner is never asked to look a secret up for one.
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: c.stepSecrets(def),
 		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Event: st.Trigger.Event, Workspace: st.Workspace, Library: def.Library,
-		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def),
+		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def), Cache: c.jobCache(def),
 	}
-}
-
-// imageJobFor is an image step's job, or nil for other steps. advance
-// checked that its values can be worked out before queueing it.
-func (c *cmd) imageJobFor(def *pipeline.Step) *ImageJob {
-	if !def.IsImage() || !c.e.knows(schemaImages) {
-		return nil
-	}
-	j, err := c.imageJob(def)
-	if err != nil {
-		return nil
-	}
-	return j
 }
 
 // localID is how a step refers to another: by the ID it has within the

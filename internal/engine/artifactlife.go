@@ -138,6 +138,7 @@ const pruneBatchArtifacts = 200
 //   - A blob marked deleting whose server stopped before finishing is
 //     finished by any server later: deleting an object twice is harmless.
 func (e *Engine) pruneArtifacts() {
+	defer e.pruneCaches() // build caches (schema 25) are pruned at the same time
 	if !e.knows(schemaArtifacts) {
 		return
 	}

@@ -291,9 +291,6 @@ func (c *cmd) jobArtifacts(def *pipeline.Step) *JobArtifacts {
 // addArtifactsToJob fills in what a runner keeps after the step and what
 // it fetches before it. It runs in the transaction that leases the step.
 func (c *cmd) addArtifactsToJob(job *Job) error {
-	if def := c.st.Pipeline.Step(job.StepID); def != nil {
-		job.Cache = c.jobCache(def)
-	}
 	if !c.e.knows(schemaArtifacts) {
 		return nil
 	}

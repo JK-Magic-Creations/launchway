@@ -16,6 +16,7 @@ import (
 )
 
 func addStepResourceTools(srv *mcp.Server, c *mcpCall) {
+	addCacheTools(srv, c) // build caches (schema 25) join the same group
 	addTool(srv, c, &mcp.Tool{Name: "get_step_resources", Annotations: readOnly("Get step resources"),
 		Description: "The installation's default CPU and memory for each kind of step (what a step gets when it writes no resources), and its limits: the most a step may ask for and the memory one parallel job is assumed to need. An empty value is not set."},
 		mcpCallTimeout, getStepResources)

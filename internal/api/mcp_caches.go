@@ -25,6 +25,9 @@ func addCacheTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_cache_policy", Annotations: readOnly("Get the cache policy"),
 		Description: "Whether build caches are kept and how much: max_project_gib, max_entry_gib and idle_days, for one project (its own override, else the installation's) or, without a project, the installation's."},
 		mcpCallTimeout, getCachePolicy)
+	if c.mayOperate {
+		addCacheChangeTools(srv, c)
+	}
 	if !c.mayAdminister {
 		return
 	}
@@ -139,4 +142,26 @@ func setCachePolicy(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 	body := cachePolicyIn{Enabled: in.Enabled, MaxProjectGiB: in.MaxProjectGiB, MaxEntryGiB: in.MaxEntryGiB, IdleDays: in.IdleDays}
 	err := c.apiJSON(ctx, "set_cache_policy", http.MethodPut, path, body, &out)
 	return out, err
+}
+
+// cacheBrief is what one build cache of a step did, as a run's description
+// gives it.
+type cacheBrief struct {
+	Name     string `json:"name"`
+	Result   string `json:"result" jsonschema:"hit, fallback, miss, saved or not_saved"`
+	Restored string `json:"restored,omitempty" jsonschema:"when the cache was saved or not saved: what the restore before the step found"`
+	Bytes    int64  `json:"bytes,omitempty"`
+	Scope    string `json:"scope,omitempty"`
+	Reason   string `json:"reason,omitempty" jsonschema:"why there was no entry, or why nothing was saved"`
+}
+
+// cacheBriefs describes what a step's caches did. The text comes from the
+// runner, so it is data, never instructions.
+func cacheBriefs(in []engine.CacheResult) []cacheBrief {
+	var out []cacheBrief
+	for _, ca := range in {
+		out = append(out, cacheBrief{Name: untrusted(ca.Name, 80), Result: ca.Result, Restored: ca.Restored, Bytes: ca.Bytes,
+			Scope: untrusted(ca.Scope, 200), Reason: untrusted(ca.Reason, 400)})
+	}
+	return out
 }

@@ -16,6 +16,29 @@ import (
 // agents list a project's entries and delete them with the rights the
 // project's other operations need, and administrators change the policy.
 
+// cacheRoutes are the routes of build caches. Runners look up, send and
+// restore entries under a lease; the server decides the scope. People and
+// agents list and delete a project's entries; an administrator changes the
+// policy.
+func (s *Server) cacheRoutes() []route {
+	return []route{
+		{"POST /api/runner/v1/caches/lookup", runnerOnly, "", s.cacheLookup},
+		{"POST /api/runner/v1/caches/begin", runnerOnly, "", s.cacheBegin},
+		{"PUT /api/runner/v1/caches/chunk", runnerOnly, "", s.cacheChunk},
+		{"POST /api/runner/v1/caches/commit", runnerOnly, "", s.cacheCommit},
+		{"POST /api/runner/v1/caches/download", runnerOnly, "", s.cacheDownload},
+		{"POST /api/runner/v1/caches/discard", runnerOnly, "", s.cacheDiscard},
+		{"GET /api/v1/projects/{name}/caches", projectRead, "", s.listCaches},
+		{"DELETE /api/v1/projects/{name}/caches/{id}", projectOperate, "cache.delete", s.deleteCache},
+		{"DELETE /api/v1/projects/{name}/caches", projectOperate, "cache.delete", s.deleteCachesNamed},
+		{"GET /api/v1/cache-policy", signedIn, "", s.getCachePolicy},
+		{"PUT /api/v1/cache-policy", administer, "cache_policy.set", s.setCachePolicy},
+		{"GET /api/v1/projects/{name}/cache-policy", projectRead, "", s.getProjectCachePolicy},
+		{"PUT /api/v1/projects/{name}/cache-policy", administer, "cache_policy.set_project", s.setProjectCachePolicy},
+		{"DELETE /api/v1/projects/{name}/cache-policy", administer, "cache_policy.clear_project", s.clearProjectCachePolicy},
+	}
+}
+
 // ---- runner API ----
 
 func (s *Server) cacheLookup(w http.ResponseWriter, r *http.Request) {
