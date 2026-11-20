@@ -925,9 +925,19 @@ steps:
 **Defaults.** A new installation starts with these for kind `step`, and an administrator changes
 them without a restart; a change applies to the next pod a run starts (a run's pod is made once, for
 its first step, and kept for its other steps). The values live in the database, so every server of
-an installation agrees:
+an installation agrees.
 
-| Setting | Starts at | Meaning |
+**Upgrading does not change your pipelines.** An installation that is upgraded from a release before
+step resources starts with nothing sized: every kind's default is empty, so a step that writes no
+`resources` gets what the namespace gives, as it did before (a step that does write `resources` is
+sized as written). To adopt the recommended values below, an administrator runs
+`launchway step-resources set-default step --recommended` (or `PUT /api/v1/step-resources/defaults/step`
+with `{"recommended": true}`, or the MCP tool `set_step_resource_default`), or sets values of their
+own with `--cpu`, `--cpu-limit`, `--memory` and `--memory-limit`. `launchway step-resources get`
+shows what an installation has; `updated_by` says `seed` for a new installation and `upgrade` for an
+upgraded one until someone changes it. The recommended values are:
+
+| Setting | Recommended | Meaning |
 |---|---|---|
 | `cpu`, `cpu_limit` | `1`, `4` | A step is promised one CPU and may use four |
 | `memory`, `memory_limit` | `2Gi`, `6Gi` | A step is promised 2 GiB and may use six |

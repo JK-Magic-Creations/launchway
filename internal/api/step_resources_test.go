@@ -120,3 +120,27 @@ func TestStepResourcesOverMCP(t *testing.T) {
 		t.Error("no audit entry for the MCP change")
 	}
 }
+
+// An administrator of an upgraded installation (which starts with nothing
+// sized) opts in to the recommended values with {"recommended": true}.
+func TestStepResourcesRecommendedValues(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	ada := e.signIn(t, "ada")
+	url := e.srv.URL + "/api/v1/step-resources/defaults/step"
+	if r := ada.do(http.MethodPut, url, `{}`); r.status != 200 { // nothing sized, as after an upgrade
+		t.Fatalf("clear: %d %s", r.status, r.body)
+	}
+	if r := ada.get(url); strings.Contains(string(r.body), `"memory":"2Gi"`) {
+		t.Fatalf("not cleared: %s", r.body)
+	}
+	if r := ada.do(http.MethodPut, url, `{"recommended":true,"memory":"1Gi"}`); r.status != 400 {
+		t.Fatalf("recommended with values: %d %s", r.status, r.body)
+	}
+	if r := ada.do(http.MethodPut, url, `{"recommended":true}`); r.status != 200 || !strings.Contains(string(r.body), `"memory":"2Gi"`) ||
+		!strings.Contains(string(r.body), `"memory_limit":"6Gi"`) {
+		t.Fatalf("recommended: %d %s", r.status, r.body)
+	}
+	if r := ada.do(http.MethodPut, e.srv.URL+"/api/v1/step-resources/defaults/deploy", `{"recommended":true}`); r.status != 400 {
+		t.Fatalf("recommended for a kind with no default: %d %s", r.status, r.body)
+	}
+}

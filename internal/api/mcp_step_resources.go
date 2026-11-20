@@ -26,7 +26,7 @@ func addStepResourceTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Administrators only. Replace the installation's step resource limits: max_cpu and max_memory (the most a step may ask for) and memory_per_thread. A value left out is not set. Refused if a default is above the new maximum. Audited."},
 		mcpCallTimeout, setStepResourceLimits)
 	addTool(srv, c, &mcp.Tool{Name: "set_step_resource_default", Annotations: changes("Set a step resource default", true, true),
-		Description: "Administrators only. Replace the default resources of one step kind (kind step): cpu, cpu_limit, memory, memory_limit, as 500m, 2, 512Mi or 6Gi; a value left out is not set. Applies to the next pod a run starts. Audited."},
+		Description: "Administrators only. Replace the default resources of one step kind (kind step): cpu, cpu_limit, memory, memory_limit, as 500m, 2, 512Mi or 6Gi; a value left out is not set. With recommended true, set the values Launchway recommends instead (what a fresh installation starts with; an upgraded one starts with nothing sized). Applies to the next pod a run starts. Audited."},
 		mcpCallTimeout, setStepResourceDefault)
 }
 
@@ -56,6 +56,7 @@ type setDefaultIn struct {
 	CPULimit    string `json:"cpu_limit,omitempty" jsonschema:"the most CPU a step may use; not below cpu"`
 	Memory      string `json:"memory,omitempty" jsonschema:"memory promised, such as 2Gi"`
 	MemoryLimit string `json:"memory_limit,omitempty" jsonschema:"the most memory a step may use; not below memory"`
+	Recommended bool   `json:"recommended,omitempty" jsonschema:"set Launchway's recommended values for the kind instead of the ones given"`
 }
 
 func setStepResourceDefault(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in setDefaultIn) (engine.ResourceDefault, error) {
@@ -64,6 +65,9 @@ func setStepResourceDefault(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequ
 		return out, errors.New("say which kind: kind")
 	}
 	body := map[string]any{"cpu": in.CPU, "cpu_limit": in.CPULimit, "memory": in.Memory, "memory_limit": in.MemoryLimit}
+	if in.Recommended {
+		body["recommended"] = true
+	}
 	err := c.apiJSON(ctx, "set_step_resource_default", http.MethodPut, apiPath("/api/v1/step-resources/defaults/%s", in.Kind), body, &out)
 	return out, err
 }

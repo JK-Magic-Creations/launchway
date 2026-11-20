@@ -301,3 +301,51 @@ func TestABuildWithoutStepResourcesSizesNothing(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+// An upgrade must not change existing pipelines: an installation that
+// already has runs when it first finds the tables empty gets every kind
+// seeded with nothing, so no step is sized; the administrator opts in with
+// the recommended values.
+func TestUpgradedInstallationIsSeededWithNothingSized(t *testing.T) {
+	clk, addr := newClock(), testdb.New(t)
+	e := mustOpenAs(t, addr, clk, 0, &syncBuffer{})
+	create(t, e, linear, Trigger{Event: "manual"}) // a run from before the upgrade
+	// The state an upgrade finds: schema 22's tables, empty.
+	for _, q := range []string{`DELETE FROM step_resource_defaults`, `DELETE FROM step_resource_limits`} {
+		if _, err := e.db.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
+	e.Close()
+
+	e2 := mustOpenAs(t, addr, clk, 0, &syncBuffer{})
+	defer e2.Close()
+	cfg, err := e2.StepResources()
+	if err != nil || len(cfg.Defaults) != 1 {
+		t.Fatalf("%+v %v", cfg, err)
+	}
+	if d := cfg.Defaults[0]; d.Kind != pipeline.KindStep || !d.Request.IsZero() || d.UpdatedBy != "upgrade" {
+		t.Fatalf("an upgraded installation must start with nothing sized: %+v", d)
+	}
+	take(t, e2) // the old run's step, before a new one
+	create(t, e2, linear, Trigger{Event: "manual"})
+	j, err := e2.Lease(context.Background(), runner, 0)
+	if err != nil || j == nil {
+		t.Fatalf("%v %v", j, err)
+	}
+	if c := firstContainer(t, j); c.CPU != "" || c.CPULimit != "" || c.Memory != "" || c.MemoryLimit != "" || c.Threads != 0 || c.Explicit {
+		t.Fatalf("a step of an upgraded installation was sized: %+v", c)
+	}
+
+	// Opting in: the recommended values are what a fresh installation has.
+	rec, err := e2.RecommendedStepResource(pipeline.KindStep)
+	if err != nil || rec != pipeline.SeedStepResources[pipeline.KindStep] {
+		t.Fatalf("%+v %v", rec, err)
+	}
+	if _, after, err := e2.SetStepResourceDefault(pipeline.KindStep, rec, "ann"); err != nil || after.Memory != "2Gi" || after.MemoryLimit != "6Gi" {
+		t.Fatalf("%+v %v", after, err)
+	}
+	if _, err := e2.RecommendedStepResource("deploy"); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("a kind with no default: %v", err)
+	}
+}

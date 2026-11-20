@@ -13,6 +13,10 @@ const stepResourcesUsage = `Usage:
                      [--max-cpu Q] [--max-memory Q] [--memory-per-thread Q]
   launchway step-resources set-default KIND           change the default of a step kind (administrators)
                      [--cpu Q] [--cpu-limit Q] [--memory Q] [--memory-limit Q]
+  launchway step-resources set-default KIND --recommended   the values Launchway recommends
+
+An installation upgraded from before step resources starts with nothing sized, so that its
+pipelines run as they did; --recommended opts in to what a new installation starts with.
 
 A flag you give sets that value ("" clears it); the others keep what they are. Quantities are
 written as in a pipeline: 500m or 2 for CPU, 512Mi or 6Gi for memory. Changes need the admin
@@ -144,12 +148,23 @@ func (cl *client) stepResourcesSetDefault(args []string) error {
 	cpuLimit := fs.String("cpu-limit", "", "the most CPU a step may use")
 	mem := fs.String("memory", "", "memory promised")
 	memLimit := fs.String("memory-limit", "", "the most memory a step may use")
+	recommended := fs.Bool("recommended", false, "set the values Launchway recommends")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	given := visited(fs)
+	if *recommended {
+		if len(pos) != 1 || given["cpu"] || given["cpu-limit"] || given["memory"] || given["memory-limit"] {
+			return usageErr("launchway step-resources set-default KIND --recommended (no other flags)")
+		}
+		var out stepResourceDefault
+		if err := cl.call("PUT", "/api/v1/step-resources/defaults/"+url.PathEscape(pos[0]), map[string]any{"recommended": true}, &out); err != nil {
+			return err
+		}
+		return cl.print(out, *asJSON, func() { cl.defaultLine(out) })
+	}
 	if len(pos) != 1 || !(given["cpu"] || given["cpu-limit"] || given["memory"] || given["memory-limit"]) {
 		return usageErr("launchway step-resources set-default KIND [--cpu Q] [--cpu-limit Q] [--memory Q] [--memory-limit Q]")
 	}
@@ -169,8 +184,10 @@ func (cl *client) stepResourcesSetDefault(args []string) error {
 	if err := cl.call("PUT", "/api/v1/step-resources/defaults/"+url.PathEscape(pos[0]), body, &out); err != nil {
 		return err
 	}
-	return cl.print(out, *asJSON, func() {
-		fmt.Fprintf(cl.out, "Default for %s is now: cpu %s (up to %s), memory %s (up to %s).\n", out.Kind,
-			orUnset(out.CPU), orUnset(out.CPULimit), orUnset(out.Memory), orUnset(out.MemoryLimit))
-	})
+	return cl.print(out, *asJSON, func() { cl.defaultLine(out) })
+}
+
+func (cl *client) defaultLine(out stepResourceDefault) {
+	fmt.Fprintf(cl.out, "Default for %s is now: cpu %s (up to %s), memory %s (up to %s).\n", out.Kind,
+		orUnset(out.CPU), orUnset(out.CPULimit), orUnset(out.Memory), orUnset(out.MemoryLimit))
 }

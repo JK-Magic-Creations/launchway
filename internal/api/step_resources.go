@@ -82,15 +82,31 @@ func (s *Server) setStepResourceLimits(w http.ResponseWriter, r *http.Request) {
 
 // setStepResourceDefault replaces the default of one step kind:
 // {"cpu", "cpu_limit", "memory", "memory_limit"}; a value left out is not
-// set.
+// set. {"recommended": true} sets the values Launchway recommends instead.
 func (s *Server) setStepResourceDefault(w http.ResponseWriter, r *http.Request) {
-	var in resources.Request
+	var in struct {
+		resources.Request
+		Recommended bool `json:"recommended"`
+	}
 	if !decode(w, r, &in) {
 		return
 	}
 	kind := r.PathValue("kind")
 	setAudit(r, "default "+kind, "")
-	before, after, err := s.Engine.SetStepResourceDefault(kind, in, identityFrom(r).User)
+	req := in.Request
+	if in.Recommended {
+		if !req.IsZero() {
+			writeErr(w, http.StatusBadRequest, "send either \"recommended\": true or values, not both")
+			return
+		}
+		rec, err := s.Engine.RecommendedStepResource(kind)
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		req = rec
+	}
+	before, after, err := s.Engine.SetStepResourceDefault(kind, req, identityFrom(r).User)
 	if err != nil {
 		s.fail(w, err)
 		return

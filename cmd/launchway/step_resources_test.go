@@ -78,6 +78,13 @@ func TestCLIStepResources(t *testing.T) {
 	if err := ada.stepResourcesSetDefault([]string{"step", "--memory", "64Gi"}); err == nil {
 		t.Fatal("a default above the limit was accepted")
 	}
+	ao.Reset()
+	if err := ada.stepResourcesSetDefault([]string{"step", "--recommended"}); err != nil || !strings.Contains(ao.String(), "memory 2Gi (up to 6Gi)") {
+		t.Fatalf("--recommended: %v %q", err, ao.String())
+	}
+	if err := ada.stepResourcesSetDefault([]string{"step", "--recommended", "--memory", "1Gi"}); err == nil {
+		t.Fatal("--recommended with values was accepted")
+	}
 	if err := ada.stepResourcesSetDefault([]string{"step"}); err == nil {
 		t.Fatal("set-default with nothing to set was accepted")
 	}

@@ -289,6 +289,20 @@ Runner identities and pools were built as schemas 21 and 22 on a branch where 17
 stand-ins; they were renumbered 20 and 21 when the branches were merged, before any release, so no
 database ever recorded those stand-ins.
 
+Schema 22 brings step resources: the pipeline key `resources:` on a step, and two tables,
+`step_resource_defaults` and `step_resource_limits`, that hold the installation's default CPU and
+memory per step kind and its limits. It is additive. A pipeline whose steps write `resources:`
+carries `"requires": 22`, so older servers leave its runs alone. The tables are filled once, when a
+server of schema 22 finds them empty, and the seed depends on the installation: a fresh one (no row
+in `runs`) gets the recommended values compiled into the program (`pipeline.SeedStepResources`, with
+`updated_by` `seed`); an installation that is upgraded, which has runs, gets every kind with empty
+values (`updated_by` `upgrade`), so that no step is sized and its pipelines run as they did. An
+administrator opts in with `launchway step-resources set-default step --recommended`, the same
+operation on the API (`PUT /api/v1/step-resources/defaults/step` with `{"recommended": true}`) or
+the MCP tool `set_step_resource_default`, or with values of their own. A server never changes a row
+that exists. A run's own record holds no sizes, so an older server reads the runs of a newer one as
+before and rolling back needs nothing but rolling the servers back.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

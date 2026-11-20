@@ -17,8 +17,9 @@ import (
 // database (step_resource_defaults, step_resource_limits), where every server
 // of an installation reads the same values and an administrator changes them
 // through the API, the CLI or the MCP server. The values compiled into the
-// program (pipeline.SeedStepResources) only seed the tables, once, when a
-// server first finds them empty.
+// program (pipeline.SeedStepResources) seed the tables, once, when a server
+// first finds them empty, and only on a fresh installation (see
+// seedStepResources).
 //
 // A run's containers are sized when its pod is made, from the run's
 // pipeline and the configuration at that moment (runContainers); nothing is
@@ -152,26 +153,57 @@ func (e *Engine) loadPolicy(q rowQuerier) (resourcePolicy, error) {
 	return e.policy(cfg), nil
 }
 
-// seedStepResources fills empty configuration tables from the values
-// compiled into the program. It never changes a row that exists, so what an
-// administrator set stays, even if it is empty. Servers starting together
-// do not collide: each insert does nothing if the row exists.
+// seedStepResources fills empty configuration tables. A fresh installation,
+// one that has never had a run, gets the values compiled into the program
+// (pipeline.SeedStepResources). An installation that is upgraded to schema 22
+// already has runs, and its pipelines must run as they did, so every kind is
+// seeded with empty values: nothing is sized, and the namespace decides, as
+// before. An administrator opts in with the recommended values (set-default
+// --recommended) or with values of their own.
+//
+// It never changes a row that exists, so what an administrator set stays,
+// even if it is empty. Servers starting together do not collide: each insert
+// does nothing if the row exists.
 func (e *Engine) seedStepResources() error {
 	if !e.knows(schemaResources) {
 		return nil
 	}
+	var anyRun int
+	if err := e.db.QueryRow(`SELECT COUNT(*) FROM (SELECT 1 FROM runs LIMIT 1) r`).Scan(&anyRun); err != nil {
+		return err
+	}
+	fresh := anyRun == 0
+	by := "seed"
+	if !fresh {
+		by = "upgrade"
+	}
+	unlock := e.writeLock()
+	defer unlock()
 	now := e.now().UnixMilli()
 	for _, kind := range pipeline.ResourceKinds {
-		seed := pipeline.SeedStepResources[kind]
+		var seed resources.Request
+		if fresh {
+			seed = pipeline.SeedStepResources[kind]
+		}
 		if _, err := e.db.Exec(`INSERT INTO step_resource_defaults(kind, cpu, cpu_limit, memory, memory_limit, updated_at, updated_by)
 			VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(kind) DO NOTHING`,
-			kind, seed.CPU, seed.CPULimit, seed.Memory, seed.MemoryLimit, now, "seed"); err != nil {
+			kind, seed.CPU, seed.CPULimit, seed.Memory, seed.MemoryLimit, now, by); err != nil {
 			return err
 		}
 	}
 	_, err := e.db.Exec(`INSERT INTO step_resource_limits(name, max_cpu, max_memory, memory_per_thread, updated_at, updated_by)
-		VALUES(?, '', '', ?, ?, ?) ON CONFLICT(name) DO NOTHING`, limitsRow, seedMemoryPerThread, now, "seed")
+		VALUES(?, '', '', ?, ?, ?) ON CONFLICT(name) DO NOTHING`, limitsRow, seedMemoryPerThread, now, by)
 	return err
+}
+
+// RecommendedStepResource is the default Launchway recommends for a step
+// kind: what a fresh installation starts with. An administrator of an
+// upgraded installation, which starts with nothing sized, sets it to opt in.
+func (e *Engine) RecommendedStepResource(kind string) (resources.Request, error) {
+	if !slices.Contains(pipeline.ResourceKinds, kind) {
+		return resources.Request{}, fmt.Errorf("%w: %q has no default resources; the kinds that have are %s", ErrInvalid, kind, strings.Join(pipeline.ResourceKinds, ", "))
+	}
+	return pipeline.SeedStepResources[kind], nil
 }
 
 // StepResources returns the installation's configuration of step resources.
