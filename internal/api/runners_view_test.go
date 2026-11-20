@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jk-magic-creations/launchway/internal/accept"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
@@ -122,6 +123,44 @@ func TestRunnersListShowsOnlyWhatTheViewerMayRead(t *testing.T) {
 	}
 	if i := ada["enrolled"].Identity; i == nil || i.Hostname != "build-host-7" || i.EnrolledBy != "ada" || i.JoinToken == "" {
 		t.Errorf("ada does not see the identity: %+v", i)
+	}
+}
+
+// A runner's accept: section names projects, so only those who manage
+// runners see it, as with the identity.
+func TestRunnersListHidesAcceptFromThoseWhoDoNotManageRunners(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	ctx := context.Background()
+	shared := runner.NewClient(e.srv.URL, "runner-secret")
+	info := engine.RunnerInfo{ID: "shared-1", Name: "shared", Features: engine.FeatureArtifacts,
+		Accept: &accept.Config{Projects: []string{"secret-project"}}}
+	if _, err := shared.Lease(ctx, info, 0); err != nil {
+		t.Fatal(err)
+	}
+	list := func(user string) (engine.RunnerView, string) {
+		t.Helper()
+		resp := e.signIn(t, user).get(e.srv.URL + "/api/v1/runners")
+		if resp.status != 200 {
+			t.Fatalf("%s: %d %s", user, resp.status, resp.body)
+		}
+		var rs []engine.RunnerView
+		resp.json(t, &rs)
+		for _, r := range rs {
+			if r.Name == "shared" {
+				return r, string(resp.body)
+			}
+		}
+		t.Fatalf("%s does not see the runner: %s", user, resp.body)
+		return engine.RunnerView{}, ""
+	}
+	for _, user := range []string{"vic", "dana"} {
+		r, body := list(user)
+		if r.Accept != nil || strings.Contains(body, "secret-project") {
+			t.Errorf("%s sees the runner's accept section: %s", user, body)
+		}
+	}
+	if r, _ := list("ada"); r.Accept == nil || !slices.Equal(r.Accept.Projects, []string{"secret-project"}) {
+		t.Errorf("ada does not see the accept section: %+v", r.Accept)
 	}
 }
 
