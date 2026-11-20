@@ -195,6 +195,8 @@ holding the workspace and a container per image or toolbox.
 | `kubernetes.cpu` | quantity | `50m` | CPU request of each container, unless the pipeline's container asks for its own |
 | `kubernetes.memory` | quantity | `64Mi` | Memory request of each container, unless the pipeline asks |
 | `kubernetes.memory_limit` | quantity | none | Memory limit of each container that does not ask for memory |
+| `kubernetes.max_cpu` | quantity | none (no cap) | The most CPU one container may ask for, as a request or a limit. A default the server chose (the installation's step resource defaults) is lowered to this, and the log says so; a step or container that explicitly asks for more fails before the pod is made, naming this setting |
+| `kubernetes.max_memory` | quantity | none (no cap) | The most memory one container may ask for, as a request or a limit. Server defaults are lowered to it; an explicit ask above it fails the step, naming this setting |
 | `kubernetes.image_pull_secrets` | list | none | Secrets in the namespace for pulling step images |
 | `kubernetes.keep_failed` | duration | `2h` | How long a failed or cancelled run's pod is kept, so a resume can reuse its workspace |
 | `kubernetes.start_timeout` | duration | `10m` | How long to wait for a pod's images to be pulled and its containers to start |
