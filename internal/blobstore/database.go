@@ -152,7 +152,6 @@ CREATE TABLE blob_objects (
   parts      TEXT    NOT NULL,
   created_at {{BIG}} NOT NULL
 );
-CREATE INDEX blob_objects_upload ON blob_objects(upload_id);
 `
 
 // RenderSchema fills in DatabaseSchema's types for PostgreSQL or SQLite.

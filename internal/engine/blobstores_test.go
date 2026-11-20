@@ -55,7 +55,7 @@ func TestBlobSchemaIsFrozen(t *testing.T) {
 }
 
 // frozenBlobSchema is the SHA-256 of blobstore.DatabaseSchema.
-const frozenBlobSchema = "7638861e0649e9dbeb8a476f0a0160111ca3f4718e61a2adbab1b9db39d1611d"
+const frozenBlobSchema = "76a9c901e5c34c9716dbd719e97b9185ab51209be8e9e339c2f86905a9b4235a"
 
 func slogTo(buf *syncBuffer) *slog.Logger { return slog.New(slog.NewTextHandler(buf, nil)) }
 
