@@ -121,6 +121,8 @@ type envOpts struct {
 	waiveRole *auth.Role
 	// mcp, if set, turns the MCP endpoint on.
 	mcp *MCPOptions
+	// healthSources are the health sources verify steps may name.
+	healthSources []engine.HealthSource
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -142,7 +144,7 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 		arts = *o.artifacts
 	}
 	eng, err := engine.Open(engine.Options{Database: o.db, Logger: quiet(), AllowSelfApproval: &no, Artifacts: arts, Environments: o.environments,
-		Policy: o.policies})
+		Policy: o.policies, HealthSources: o.healthSources})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -40,6 +40,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"wait_for_run":           {map[string]any{"run_id": "{pay}", "until": "waiting", "timeout_seconds": 5}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"get_step_log":           {map[string]any{"run_id": "{pay}", "step": "after"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"get_test_results":       {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"get_verification":       {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"get_security_findings":  {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"list_artifacts":         {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"read_artifact_file":     {map[string]any{"run_id": "{pay}", "artifact_id": "art_nope", "path": "a"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
@@ -56,6 +57,10 @@ var mcpPermissionTable = map[string]mcpRow{
 	"decide_approval": {map[string]any{"run_id": "{pay}", "step": "gate", "decision": "reject"}, true, [5]string{mUnlisted, mUnlisted, mOK, mNotFound, mOK}},
 	// {pay} has no deployment dep_x: 404 after the permission check, as
 	// on the API (see permissionTable).
+	// {pay} has no verify step: not found after the permission check, as
+	// on the API.
+	"mark_verification": {map[string]any{"run_id": "{pay}", "step": "gate", "outcome": "passed", "reason": "checked by hand"}, true,
+		[5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
 	"control_rollout": {map[string]any{"run_id": "{pay}", "deployment": "dep_x", "action": "promote"}, true, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 }
 

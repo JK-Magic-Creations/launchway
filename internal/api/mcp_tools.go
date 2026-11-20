@@ -229,8 +229,10 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 			},
 		})
 	addReadTools(srv, c)
+	addVerifyTools(srv, c)
 	if c.mayOperate {
 		addChangeTools(srv, c)
+		addVerifyChangeTools(srv, c)
 	}
 	addDocs(srv, c)
 	return srv

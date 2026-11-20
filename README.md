@@ -2470,11 +2470,13 @@ and there is no `GET` stream. Built with the official Go SDK.
 `wait_for_run` (at most 10 minutes, with progress notifications), `get_step_log` (the last lines,
 the first lines, or lines containing a text: at most 500 lines and 64 KiB), `get_test_results`,
 `get_security_findings`, `list_artifacts`, `read_artifact_file` (at most 64 KiB at a time),
-`list_images`, `get_deployments` (with which rollout commands are possible now), `list_approvals`,
+`list_images`, `get_deployments` (with which rollout commands are possible now), `get_verification`
+(a run's verifications, each check's outcome and why), `list_approvals`,
 `validate_pipeline` (the server's own validator, with line numbers and the text of each line),
 `get_pipeline_reference` and `list_templates`. Changing, listed only to tokens that may change
 something on some project: `start_run` (with inputs, or with `pipeline_text` as a draft run),
-`cancel_run`, `retry_run` (resume, or re-run from a step), `decide_approval` and `control_rollout`.
+`cancel_run`, `retry_run` (resume, or re-run from a step), `decide_approval`, `control_rollout` and
+`mark_verification` (passed or failed, with a reason, as on the run page).
 Tools are marked read-only or destructive with the protocol's annotations. Lists page with a cursor.
 The resources `launchway://docs/pipeline-reference`, `launchway://docs/agent-guide` and
 `launchway://docs/examples/<name>` hold the same documentation.
