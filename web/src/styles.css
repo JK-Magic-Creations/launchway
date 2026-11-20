@@ -1226,6 +1226,7 @@ button.hitem:hover { background: var(--surface-2); }
   .hlist { flex-direction: row; overflow-x: auto; scrollbar-width: thin; }
   .hlist li { flex: 0 0 auto; max-width: 240px; }
   .hframe-frame { height: 72vh; min-height: 480px; }
+}
 
 /* ---- verifications and models ---- */
 .vmark { flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
