@@ -97,7 +97,6 @@ func controlSetup(t *testing.T) (*authEnv, string) {
 	return e, e.srv.URL + "/api/v1/runs/" + run.ID + "/deployments/" + dep + "/"
 }
 
-
 func TestCommandsOverHTTP(t *testing.T) {
 	e, base := controlSetup(t)
 	otto, ada, dana, vic := e.signIn(t, "otto"), e.signIn(t, "ada"), e.signIn(t, "dana"), e.signIn(t, "vic")
