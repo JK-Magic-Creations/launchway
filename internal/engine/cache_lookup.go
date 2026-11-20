@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
@@ -132,9 +134,60 @@ func (e *Engine) LookupCache(leaseID string, in CacheLookup) (*CacheLookupResult
 }
 
 // OpenCache opens an entry's bytes for the step attempt a lease holds, from
-// offset. Only entries that the step's own lookups may return: of the
+// offset, and keeps them until the reader is closed. Only entries that the step's own lookups may return: of the
 // run's project, in a scope the run reads, under a name its step declares.
 func (e *Engine) OpenCache(ctx context.Context, leaseID, id string, offset int64) (io.ReadCloser, int64, string, error) {
+	// The download is counted before anything is checked, so that the
+	// pruner cannot remove the bytes between the checks and the open.
+	e.caches.startReading(id)
+	r, size, sum, err := e.openCache(ctx, leaseID, id, offset)
+	if err != nil {
+		e.caches.stopReading(id)
+		return nil, 0, "", err
+	}
+	return &cacheReader{ReadCloser: r, e: e, id: id, beat: e.now()}, size, sum, nil
+}
+
+// cacheReadBeat is how often a download in progress says so in the
+// database, for the servers whose pruner has no count of it.
+const cacheReadBeat = time.Minute
+
+// cacheReader is a download of an entry's bytes. While it is open the
+// entry's bytes are kept, even if the entry ends meanwhile: this server
+// counts it, and others see its entry used, as removing waits for the
+// entry to be idle for the grace period.
+type cacheReader struct {
+	io.ReadCloser
+	e    *Engine
+	id   string
+	beat time.Time
+	once sync.Once
+}
+
+func (r *cacheReader) Read(p []byte) (int, error) {
+	if now := r.e.now(); now.Sub(r.beat) >= cacheReadBeat {
+		r.beat = now
+		r.e.touchCache(r.id, now.UnixMilli())
+	}
+	return r.ReadCloser.Read(p)
+}
+
+func (r *cacheReader) Close() error {
+	err := r.ReadCloser.Close()
+	r.once.Do(func() { r.e.caches.stopReading(r.id) })
+	return err
+}
+
+// touchCache records that an entry's bytes are in use, for entries that have
+// ended too (last_used_at is not otherwise looked at then). A failure only
+// shortens the protection.
+func (e *Engine) touchCache(id string, now int64) {
+	if _, err := e.db.Exec(`UPDATE caches SET last_used_at = ? WHERE id = ? AND last_used_at < ?`, now, id, now); err != nil {
+		e.log.Warn("recording that a cache download is in progress", "entry", id, "err", err)
+	}
+}
+
+func (e *Engine) openCache(ctx context.Context, leaseID, id string, offset int64) (io.ReadCloser, int64, string, error) {
 	row, err := cacheRow(e.db, id)
 	if err != nil {
 		return nil, 0, "", err
@@ -165,6 +218,9 @@ func (e *Engine) OpenCache(ctx context.Context, leaseID, id string, offset int64
 	r, err := store.Open(ctx, row.BlobKey, offset, -1)
 	if errors.Is(err, blobstore.ErrNotFound) {
 		return nil, 0, "", fmt.Errorf("%w: the bytes of cache entry %s are no longer kept", ErrNotFound, id)
+	}
+	if err == nil {
+		e.touchCache(id, e.now().UnixMilli())
 	}
 	return r, row.Bytes, row.SHA256, err
 }

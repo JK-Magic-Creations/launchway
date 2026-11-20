@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -139,4 +140,34 @@ type cacheState struct {
 	// defaultBranch is how to find a project's default branch (see
 	// SetDefaultBranch).
 	defaultBranch atomic.Pointer[func(string) string]
+	// readers counts the downloads of each entry in progress on this server
+	// (see OpenCache), so that the pruner does not remove the bytes of an
+	// ended entry under one.
+	mu      sync.Mutex
+	readers map[string]int
+}
+
+func (s *cacheState) startReading(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.readers == nil {
+		s.readers = map[string]int{}
+	}
+	s.readers[id]++
+}
+
+func (s *cacheState) stopReading(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.readers[id] <= 1 {
+		delete(s.readers, id)
+		return
+	}
+	s.readers[id]--
+}
+
+func (s *cacheState) reading(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.readers[id] > 0
 }

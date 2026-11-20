@@ -176,8 +176,8 @@ func (e *Engine) removeCacheBytes(ctx context.Context, store blobstore.Store, no
 		endedAt                 int64
 	}
 	rows, err := e.db.Query(`SELECT id, blob_key, upload_id, status, ended_at FROM caches
-		WHERE (status = ? AND ended_at < ?) OR (status = ? AND ended_at < ?) ORDER BY ended_at LIMIT ?`,
-		cacheEnded, now-cacheEndedGrace.Milliseconds(), cacheRemoving, now-cacheOrphanedUpload.Milliseconds(), pruneBatchCaches)
+		WHERE (status = ? AND ended_at < ? AND last_used_at < ?) OR (status = ? AND ended_at < ?) ORDER BY ended_at LIMIT ?`,
+		cacheEnded, now-cacheEndedGrace.Milliseconds(), now-cacheEndedGrace.Milliseconds(), cacheRemoving, now-cacheOrphanedUpload.Milliseconds(), pruneBatchCaches)
 	if err != nil {
 		return err
 	}
@@ -196,6 +196,9 @@ func (e *Engine) removeCacheBytes(ctx context.Context, store blobstore.Store, no
 	}
 	removed := 0
 	for _, c := range cands {
+		if e.caches.reading(c.id) {
+			continue // a download of its bytes is in progress; they go once it is over and the grace has passed
+		}
 		var claimed bool
 		err := e.artifactTx(func(tx *txx, now int64) error {
 			res, err := tx.Exec(`UPDATE caches SET status = ?, ended_at = ? WHERE id = ? AND status = ? AND ended_at = ?`,
