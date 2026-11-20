@@ -49,6 +49,8 @@ the configuration stays readable by releases that do not know these settings.
 {{- /* Only when set: a deploy runner of the version before does not know these settings. */ -}}
 {{- with include "launchway.healthSources" . | fromYaml }}{{ if . }}{{ $_ := set $file "health_sources" . }}{{ end }}{{ end -}}
 {{- if eq (toString $r.ai) "true" }}{{ $_ := set $file "ai" true }}{{ end -}}
+{{- /* Only when set: the runner's own limits (accept:), checked on the runner before anything is done. */ -}}
+{{- with $r.accept }}{{ $_ := set $file "accept" . }}{{ end -}}
 {{- toYaml $file -}}
 {{- end -}}
 
