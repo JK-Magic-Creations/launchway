@@ -115,7 +115,9 @@ file during an upgrade or after an aborted one. Unset values take the
 | `config.tests.maxUploadMiB` | integer or null | unset (24) | Written as `tests.max_upload_mib`. 1 to 1024 |
 | `config.tests.maxCasesPerRun` | integer or null | unset (50000) | Written as `tests.max_cases_per_run` |
 | `config.tests.maxCasesPerProject` | integer or null | unset (1000000) | Written as `tests.max_cases_per_project`. At least `maxCasesPerRun` |
-| `config.artifacts.store` | string or null | unset (`filesystem`) | `filesystem` or `s3`. Unset, artifacts go in the pod's data directory, an `emptyDir`: lost when the pod goes, and with more than one server only the first keeps any. Use `s3` for real use |
+| `config.artifacts.store` | string or null | unset (`database` on PostgreSQL, `filesystem` on SQLite) | `database`, `filesystem` or `s3`. Unset with PostgreSQL, artifacts are kept in the database itself, shared by every server, with nothing else to run. An installation that kept artifacts on the filesystem before the database store existed keeps doing so, and the servers' log says how to copy them (`launchway blobs copy`). With SQLite they go in the pod's data directory, an `emptyDir`: lost when the pod goes. Set `database` only once every server runs a release that knows it. See [Where artifacts are kept](../artifacts.md) |
+| `config.artifacts.database.maxTotalGiB` | integer or null | unset (100) | Written as `artifacts.database.max_total_gib` |
+| `config.artifacts.database.maxBlobMiB` | integer or null | unset (2048) | Written as `artifacts.database.max_blob_mib` |
 | `config.artifacts.s3.endpoint` | string or null | unset | Scheme and host only, such as `https://s3.eu-west-1.amazonaws.com` or `http://minio.storage:9000` |
 | `config.artifacts.s3.region` | string or null | unset (`us-east-1`) | |
 | `config.artifacts.s3.bucket` | string or null | unset | The bucket; it must exist |
@@ -132,6 +134,23 @@ file during an upgrade or after an aborted one. Unset values take the
 | `config.findings.maxPerProject` | integer or null | unset (500000) | Findings a project keeps |
 | `config.findings.maxComponentsPerRun` | integer or null | unset (20000) | SBOM components one run keeps |
 | `config.findings.maxComponentsPerProject` | integer or null | unset (1000000) | SBOM components a project keeps |
+| `config.reports.maxAttachmentFiles` | integer or null | unset (2000) | Written as `reports.max_attachment_files` |
+| `config.reports.maxAttachmentMiB` | integer or null | unset (512) | Written as `reports.max_attachment_mib` |
+| `config.reports.maxHtmlFiles` | integer or null | unset (5000) | Written as `reports.max_html_files` |
+| `config.reports.maxHtmlMiB` | integer or null | unset (256) | Written as `reports.max_html_mib` |
+| `config.reports.maxCoverageUploadMiB` | integer or null | unset (24) | Written as `reports.max_coverage_upload_mib` |
+| `config.reports.maxCoverageFilesPerRun` | integer or null | unset (20000) | Written as `reports.max_coverage_files_per_run` |
+| `config.reports.maxCoverageFilesPerProject` | integer or null | unset (2000000) | Written as `reports.max_coverage_files_per_project` |
+| `config.reports.origin` | string or null | unset | A separate origin that alone serves hosted HTML reports, such as `https://reports.ci.example.com`: a host name of its own routed to the same servers (add it to the ingress). Unset, reports are served from Launchway's own origin, sandboxed. Written as `reports.origin` |
+| `config.mcp.enabled` | boolean or null | unset (on) | `false` turns the MCP endpoint off on every server |
+| `config.mcp.allowedOrigins` | list | `[]` | Origins of web pages, besides the servers' own, that may call `/mcp` from a browser, such as `https://tools.example.com`. Requests without an `Origin` header are not affected |
+| `config.mcp.requestsPerMinute` | integer or null | unset (120) | Requests one token may make to `/mcp` a minute, on each server |
+| `config.mcp.concurrent` | integer or null | unset (4) | Requests one token may have in progress at once, on each server |
+| `config.mcp.total` | integer or null | unset (32) | MCP requests in progress at once on each server, all tokens together |
+| `config.mcp.oauth.resource` | string or null | unset | Also accept the sign-in provider's OAuth access tokens issued for `/mcp` (needs `auth.mode: oidc` in `extraConfig`): this endpoint's address as clients reach it, such as `https://launchway.example.com/mcp` |
+| `config.mcp.oauth.scopes` | list | `[]` | Scopes a token must carry, if any |
+| `config.runnerAdmin` | string or null | unset (`admin`) | The role needed on every project to make join tokens and to revoke or rotate runners: `admin`, `operator` or `none`. Written as `runner_admin` only when set |
+| `config.runnerPools` | list or null | unset | [Runner pools](server-config.md#runner-pools), written as `runner_pools` in the configuration's own keys, after the deploy pool `delivery.*` makes. Unset, every build runner is in the default pool, which serves every project. Set it only once every server and runner runs a release that knows it, and take it out before rolling back. For example `[{ name: web, kind: build, projects: ["web-*"] }]` |
 | `config.findings.maxSbomMiB` | integer or null | unset (64) | MiB of a step's SBOM files read to summarise them |
 | `config.loops.maxMembers` | integer or null | unset (64) | Combinations one `for_each` loop may have, at most 500. Written as `loops.max_members` |
 | `config.schedules.enabled` | boolean or null | unset (on) | `false` turns every project's schedules off. Written as `schedules.enabled` |
@@ -220,6 +239,11 @@ Kubernetes API.
 | `runner.replicas` | integer | `2` | Number of runner pods |
 | `runner.concurrency` | integer | `2` | Steps each runner runs at once |
 | `runner.serverURL` | string | the chart's Service | The URL runners connect to |
+| `runner.join.existingSecret` | string or null | unset | Enrol each runner pod with a join token instead of using the shared runner token: a Secret holding a join token made in the UI (Runners, Add a runner), with enough uses for every pod start, ideally ephemeral. Unset, the shared runner token is used |
+| `runner.join.existingSecretKey` | string | `token` | The key of that Secret |
+| `runner.labels` | list or null | unset | Labels the runners have, for pipelines that ask for them (`runner: { labels }`). Written only when set |
+| `runner.accept` | map or null | unset | The runners' own limits on the work they take, as [`accept`](runner-config.md#what-the-runner-accepts), checked on the runner before anything runs. Written only when set |
+| `runner.ai` | boolean or null | unset (`false`) | Let runners take `ai` steps, calling the models in `ai.models`. A model's key is read from `runner.secretStores`. Needs `ai.models` |
 | `runner.kubernetes.namespace` | string | the release namespace | Where step pods run. Runners are granted access to pods there only. It must exist unless `createNamespace` is true |
 | `runner.kubernetes.createNamespace` | boolean | `false` | Create the step namespace with the chart (deleted on uninstall, with any step pods in it) |
 | `runner.kubernetes.namespaceLabels` | map | `pod-security.kubernetes.io/enforce: restricted` | Labels of a namespace the chart creates. Use `baseline` when `restricted` is false |
@@ -310,6 +334,7 @@ runs a release that knows them, and take them out before rolling back to one tha
 | Value | Type | Default | Description |
 |---|---|---|---|
 | `delivery.environments` | list or null | `null` | [Environments](server-config.md#environments), written as `environments`: `[{ name, target, projects, queue, protected }]`. Without any, deploy steps are refused |
+| `delivery.verification.sources` | list or null | `null` | [Health sources](runner-config.md#health-sources) for verify steps. Each entry is split: `name`, `type` and `projects` go to the servers' `verification.sources`, and the whole entry to the deploy runner's `health_sources`, by name. Each is `{ name, type, url, projects }` and optionally `auth`, `headers`, `caFile`, `timeout`, `limits`, `statements`, `indices`, `timeField` and `messageField`, as in the runner reference (camelCase here). Needs `deployRunner.enabled`; credentials are secret references read from `deployRunner.secretStores`. Unset, verify steps are refused |
 | `delivery.deployRunner.enabled` | boolean | `false` | Run a deploy runner in this cluster, with a runner pool token of its own (the chart adds the pool to `runner_pools`) |
 | `delivery.deployRunner.target` | string | `""` | The target this cluster is, as `delivery.environments` names it. Required when enabled |
 | `delivery.deployRunner.replicas` | integer | `1` | One deploy runner observes each target at a time; others take over |
@@ -318,6 +343,7 @@ runs a release that knows them, and take them out before rolling back to one tha
 | `delivery.deployRunner.rolloutNamespaces` | list | `[]` | Namespaces whose rollouts deploy steps may watch |
 | `delivery.deployRunner.repos` | map | `{}` | GitOps repositories, as [`deploy.repos`](runner-config.md#deploy) (`url`, `argocd_url`, `credentials`, `username`, `paths`, `author`). Credentials name a secret in `secretStores`. Required when enabled |
 | `delivery.deployRunner.secretStores` | map | `{}` | Secret stores the deploy runner may read |
+| `delivery.deployRunner.ai` | boolean or null | unset (`false`) | Let the deploy runner call the models in `ai.models` to explain its verdicts, with keys read from `secretStores`. Needs `ai.models` |
 | `delivery.deployRunner.refresh` | boolean or null | `null` (`true`) | Ask Argo CD to look at the repository at once after a commit |
 | `delivery.deployRunner.rbac.create` | boolean | `true` | Create the Roles below and bind them to the deploy runner |
 | `delivery.deployRunner.rbac.patchApplications` | boolean | `true` | Patch on the named Applications, to request syncs and refreshes. Without it, deploy steps need `sync.request: auto` or `never` |
@@ -357,6 +383,16 @@ delivery:
     rbac:
       controlRollouts: { shop: [shop] }
 ```
+
+## AI models
+
+Nothing is sent to any model unless `ai.models` lists one. See [AI models](../guide/ai.md).
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `ai.models` | list or null | `null` | The model registry, written into the servers' configuration as [`ai.models`](server-config.md#ai-models) exactly as given, so its keys are the configuration's own (snake_case): `name`, `provider`, `endpoint`, `model`, `key: { store, key, field }`, `projects`, `max_tokens`, `price` and the rest. A model's `projects` list says who may use it; empty means no project. The key is a secret reference, looked up in the secret stores of whoever calls the model (`runner.secretStores`, `delivery.deployRunner.secretStores` or `ai.serverSecretStores`). Unset, there are none |
+| `ai.serverSecretStores` | map or null | `null` | Secret stores the servers read model keys from, to explain failed steps themselves (the same map as `runner.secretStores`); written as `ai.secrets`. Mount any token or certificate files they refer to with `server.extraVolumes` and `server.extraVolumeMounts`. Unset, the servers explain only with models that need no key |
 
 ## What next
 

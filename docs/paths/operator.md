@@ -12,7 +12,10 @@ A reading order for people who install Launchway and run it for others.
 6. [Backup, restore, upgrade](../howto/backup-restore-upgrade.md) and
    [Monitor Launchway](../howto/monitoring.md).
 7. For delivery: [Container images](../guide/images.md), [Deployments](../guide/deployments.md),
-   [Policies](../guide/policies.md).
+   [Policies](../guide/policies.md) and [Verifying a deployment](../guide/verification.md).
+8. [Runners on other machines](../guide/runner-identity.md) (pools, join tokens and each runner's own
+   limits), [Where artifacts are kept](../artifacts.md), and optionally [AI models](../guide/ai.md)
+   and [Agents (MCP)](../guide/agents.md).
 
 Keep at hand:
 

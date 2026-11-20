@@ -1,6 +1,17 @@
 // Package testreport reads the test result files that pipeline steps write
-// (JUnit XML and go test -json output) and turns them into a list of test
-// results.
+// and turns them into a list of test results: JUnit XML in its dialects
+// (Maven Surefire and Failsafe, Gradle, pytest, Jest, Vitest, PHPUnit, RSpec
+// and others), go test -json, Cucumber JSON (Karate writes it too) and
+// Karate's own JSON, Playwright's JSON report, mochawesome (Cypress), TestNG,
+// NUnit 3, xUnit.net v2, .NET TRX, TAP, Robot Framework's output.xml and CTRF.
+//
+// Every format is turned into the same model: cases, each with optional
+// steps (Cucumber and Karate steps, Robot keywords, Playwright test steps),
+// tags, a variant (the browser or project a case ran in), retries,
+// properties and attachments (screenshots, videos, traces, text, HTTP
+// exchanges). Attachments are either named by path, which the caller
+// resolves against files it kept, or carried inline in the report, in which
+// case their bytes are returned (bounded) for the caller to store.
 //
 // The files come from whoever can push code, so they are treated as hostile:
 // memory and nesting are bounded, no XML entities are expanded or fetched,
@@ -10,7 +21,6 @@
 package testreport
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -34,8 +44,19 @@ const (
 
 // The formats Parse understands.
 const (
-	FormatJUnit  = "junit"
-	FormatGoTest = "go-test-json"
+	FormatJUnit       = "junit"
+	FormatGoTest      = "go-test-json"
+	FormatCucumber    = "cucumber-json" // Cucumber JSON, as cucumber-js, Cucumber-JVM, Karate and others write it
+	FormatKarate      = "karate-json"   // Karate's own JSON (*.karate-json.txt)
+	FormatPlaywright  = "playwright-json"
+	FormatMochawesome = "mochawesome" // Cypress and Mocha with the mochawesome reporter
+	FormatCTRF        = "ctrf"
+	FormatTestNG      = "testng"
+	FormatNUnit       = "nunit3"
+	FormatXUnit       = "xunit2" // xUnit.net v2 XML
+	FormatTRX         = "trx"    // .NET Visual Studio test results
+	FormatTAP         = "tap"
+	FormatRobot       = "robot" // Robot Framework output.xml
 )
 
 // Case is one test result.
@@ -49,9 +70,124 @@ type Case struct {
 	Details    string `json:"details,omitempty"` // stack trace / failure body
 	Output     string `json:"output,omitempty"`  // captured output; only kept for failed and errored cases
 	Flaky      bool   `json:"flaky,omitempty"`   // passed after reruns inside the test tool
+
+	// The richer model, filled in by the formats that have it. Every slice
+	// is bounded by Limits.
+
+	// Tags are the case's tags or categories, without a leading @, in the
+	// order given, each at most MaxTagBytes; at most MaxTags.
+	Tags []string `json:"tags,omitempty"`
+	// Variant is what the same test ran as, when a report runs it several
+	// ways: a Playwright project (chromium, firefox), a Cypress browser. It
+	// is part of the test's key, so each variant has its own history.
+	Variant string `json:"variant,omitempty"`
+	// Retries is how many times the test tool ran the case again before
+	// its final result (Playwright retries, Surefire reruns, CTRF retries).
+	Retries int `json:"retries,omitempty"`
+	// Attempts are the earlier tries of a case the tool retried, oldest
+	// first, at most MaxAttempts.
+	Attempts []Attempt `json:"attempts,omitempty"`
+	// Steps are the case's steps (Cucumber and Karate steps, Robot
+	// keywords, Playwright test steps), flattened in order with their
+	// depth; at most Limits.MaxSteps.
+	Steps []Step `json:"steps,omitempty"`
+	// Attachments are files the report attaches to the case; steps refer
+	// to them by index. At most Limits.MaxAttachments.
+	Attachments []Attachment `json:"attachments,omitempty"`
+	// Properties are name/value facts about the case (JUnit properties,
+	// TRX and NUnit properties, the browser, the OS, a shard); at most
+	// MaxProperties.
+	Properties []Property `json:"properties,omitempty"`
 }
 
-// Key identifies a test across runs: suite, name and file.
+// Attempt is one earlier try of a retried case.
+type Attempt struct {
+	Status     Status `json:"status"`
+	DurationMs int64  `json:"duration_ms"`
+	Message    string `json:"message,omitempty"`
+}
+
+// Step is one step of a case.
+type Step struct {
+	Depth      int    `json:"depth,omitempty"`   // 0 for a top-level step; at most MaxStepDepth
+	Keyword    string `json:"keyword,omitempty"` // Given, When, Then, And, *; a Robot keyword's library; else empty
+	Name       string `json:"name"`
+	Status     Status `json:"status"`
+	DurationMs int64  `json:"duration_ms,omitempty"`
+	Error      string `json:"error,omitempty"` // at most Limits.MaxMessageBytes
+	// Text is a doc string, data table or log the step carries (Karate's
+	// request and response log), at most Limits.MaxStepTextBytes.
+	Text string `json:"text,omitempty"`
+	// HTTP is the request the step made and the response it got, when the
+	// report says (Karate).
+	HTTP *HTTPExchange `json:"http,omitempty"`
+	// Attachments are indexes into the case's Attachments.
+	Attachments []int `json:"attachments,omitempty"`
+}
+
+// HTTPExchange is one HTTP request and its response, as an API test made it.
+type HTTPExchange struct {
+	Method          string   `json:"method"`
+	URL             string   `json:"url"`
+	Status          int      `json:"status,omitempty"`
+	DurationMs      int64    `json:"duration_ms,omitempty"`
+	RequestHeaders  []Header `json:"request_headers,omitempty"`
+	RequestBody     string   `json:"request_body,omitempty"`
+	ResponseHeaders []Header `json:"response_headers,omitempty"`
+	ResponseBody    string   `json:"response_body,omitempty"`
+}
+
+// Header is one HTTP header. Values of headers that carry credentials
+// (Authorization, Cookie, Set-Cookie, Proxy-Authorization, X-Api-Key and
+// the like) are replaced by "[hidden]" (see HideCredentials).
+type Header struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// Property is a name and a value.
+type Property struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// Attachment is a file a report attaches to a case: named by Path (as the
+// report wrote it: relative to the report file, or absolute), or carried
+// inline in Data. Exactly one of Path and Data is set, except for an inline
+// attachment over the limits, which has neither and says so in Problem.
+type Attachment struct {
+	Name        string `json:"name"`                   // as the report names it, or the file's base name
+	ContentType string `json:"content_type,omitempty"` // as the report declares it; never trusted for serving
+	Path        string `json:"path,omitempty"`
+	Data        []byte `json:"-"`
+	// Size is len(Data) for inline content (or the decoded size of one
+	// left out); 0 for a path (the caller knows the file).
+	Size int64 `json:"size,omitempty"`
+	// Problem says why an inline attachment's bytes were not kept.
+	Problem string `json:"problem,omitempty"`
+}
+
+// Bounds of the richer model that are not configurable.
+const (
+	MaxTags         = 20
+	MaxTagBytes     = 100
+	MaxProperties   = 20
+	MaxPropertyName = 100
+	MaxPropertyText = 500
+	MaxAttempts     = 5
+	MaxStepDepth    = 8
+	MaxHeaders      = 50
+	MaxHeaderBytes  = 1000 // a header's name and value together
+	MaxHTTPBody     = 16 << 10
+	MaxURLBytes     = 2000
+	MaxVariantBytes = 100
+	MaxAttachName   = 200
+	MaxPathBytes    = 1024 // an attachment's path
+)
+
+// Key identifies a test across runs: suite, name and file, and the variant
+// when there is one (so a test that runs in chromium and in firefox has two
+// histories). Results without a variant keep the keys they always had.
 func (c Case) Key() string {
 	h := sha256.New()
 	h.Write([]byte(c.Suite))
@@ -59,6 +195,10 @@ func (c Case) Key() string {
 	h.Write([]byte(c.Name))
 	h.Write([]byte{0})
 	h.Write([]byte(c.File))
+	if c.Variant != "" {
+		h.Write([]byte{0})
+		h.Write([]byte(c.Variant))
+	}
 	sum := h.Sum(nil)
 	return hex.EncodeToString(sum[:16])
 }
@@ -69,7 +209,7 @@ type Counts struct{ Total, Passed, Failed, Errored, Skipped, Flaky int }
 
 // Report is the result of parsing one file.
 type Report struct {
-	Format     string // FormatJUnit or FormatGoTest
+	Format     string // one of the Format constants
 	Cases      []Case // at most Limits.MaxCases, in file order
 	Counts     Counts // every case found, including any beyond MaxCases
 	DurationMs int64
@@ -84,8 +224,14 @@ type Limits struct {
 	MaxDetailsBytes int           // default 8192
 	MaxOutputBytes  int           // default 4096 (the end of the output is kept)
 	MaxNameBytes    int           // default 1000, for Suite and Name; File gets at most 500
-	MaxDepth        int           // default 64: XML element nesting
+	MaxDepth        int           // default 64: XML element nesting, and JSON nesting
 	Timeout         time.Duration // default 10s for the whole parse
+
+	MaxSteps         int   // default 200 steps per case, nested ones included
+	MaxStepTextBytes int   // default 8192: a step's doc string or log
+	MaxAttachments   int   // default 20 per case
+	MaxInlineBytes   int64 // default 5 MiB: one inline attachment, decoded; a larger one is listed without its bytes
+	MaxInlineTotal   int64 // default 20 MiB: all inline attachments of one report, decoded
 }
 
 // maxFileBytes is the most a Case.File may hold.
@@ -102,6 +248,12 @@ func DefaultLimits() Limits {
 		MaxNameBytes:    1000,
 		MaxDepth:        64,
 		Timeout:         10 * time.Second,
+
+		MaxSteps:         200,
+		MaxStepTextBytes: 8192,
+		MaxAttachments:   20,
+		MaxInlineBytes:   5 << 20,
+		MaxInlineTotal:   20 << 20,
 	}
 }
 
@@ -128,6 +280,21 @@ func (l Limits) withDefaults() Limits {
 	if l.Timeout <= 0 {
 		l.Timeout = d.Timeout
 	}
+	if l.MaxSteps <= 0 {
+		l.MaxSteps = d.MaxSteps
+	}
+	if l.MaxStepTextBytes <= 0 {
+		l.MaxStepTextBytes = d.MaxStepTextBytes
+	}
+	if l.MaxAttachments <= 0 {
+		l.MaxAttachments = d.MaxAttachments
+	}
+	if l.MaxInlineBytes <= 0 {
+		l.MaxInlineBytes = d.MaxInlineBytes
+	}
+	if l.MaxInlineTotal <= 0 {
+		l.MaxInlineTotal = d.MaxInlineTotal
+	}
 	return l
 }
 
@@ -135,61 +302,6 @@ func (l Limits) withDefaults() Limits {
 var ErrNotReport = errors.New("not a test report")
 
 var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
-
-// Parse detects the format from the content (never the file name) and
-// parses it.
-func Parse(ctx context.Context, data []byte, lim Limits) (*Report, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	lim = lim.withDefaults()
-	dl := newDeadline(ctx, lim.Timeout)
-
-	if len(data) == 0 {
-		return nil, fmt.Errorf("%w: the file is empty", ErrNotReport)
-	}
-	body := bytes.TrimPrefix(data, utf8BOM)
-	i := 0
-	for i < len(body) && isSpace(body[i]) {
-		i++
-	}
-	if i == len(body) {
-		return nil, fmt.Errorf("%w: the file holds only white space", ErrNotReport)
-	}
-	body = body[i:]
-	switch body[0] {
-	case '<':
-		return parseJUnit(dl, body, lim)
-	case '{':
-		return parseGoTest(dl, body, lim)
-	}
-	// go test -json output often starts with a few lines from standard
-	// error ("go: downloading ..."), so look for an event line near the
-	// start before giving up.
-	if jsonLineNearStart(body) {
-		r, err := parseGoTest(dl, body, lim)
-		if !errors.Is(err, ErrNotReport) {
-			return r, err
-		}
-	}
-	return nil, fmt.Errorf("%w: neither JUnit XML nor go test -json output (it starts with %s)", ErrNotReport, snippet(body))
-}
-
-// jsonLineNearStart says whether a line in the first 64 KiB starts with
-// {" the way every go test -json event does.
-func jsonLineNearStart(b []byte) bool {
-	b = b[:min(len(b), 64<<10)]
-	for {
-		i := bytes.IndexByte(b, '\n')
-		if i < 0 {
-			return false
-		}
-		b = b[i+1:]
-		if bytes.HasPrefix(bytes.TrimLeft(b, " \t\r"), []byte(`{"`)) {
-			return true
-		}
-	}
-}
 
 func isSpace(b byte) bool { return b == ' ' || b == '\t' || b == '\n' || b == '\r' }
 
@@ -243,9 +355,11 @@ func (d *deadline) stopError() error {
 
 // collector gathers cases and counts for one report.
 type collector struct {
-	lim      Limits
-	rep      Report
-	warnings []string
+	lim        Limits
+	rep        Report
+	warnings   []string
+	once       map[string]bool // kinds of cut already noted (see warnOnce)
+	inlineUsed int64           // inline attachment bytes kept so far
 }
 
 func newCollector(format string, lim Limits) *collector {
@@ -280,9 +394,18 @@ func (c *collector) add(st Status, flaky bool, build func() Case) {
 	c.rep.Cases = append(c.rep.Cases, cs)
 }
 
+// full says whether the report has no room for more cases.
+func (c *collector) full() bool { return len(c.rep.Cases) >= c.lim.MaxCases }
+
 func (c *collector) warn(format string, args ...any) {
 	if len(c.warnings) < 5 {
-		c.warnings = append(c.warnings, fmt.Sprintf(format, args...))
+		w := fmt.Sprintf(format, args...)
+		for _, have := range c.warnings {
+			if have == w {
+				return
+			}
+		}
+		c.warnings = append(c.warnings, w)
 	}
 }
 

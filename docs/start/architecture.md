@@ -157,11 +157,13 @@ flowchart LR
 - **The server sends references, not secrets.** A step says `{ store: vault, key: ci/npm, field:
   token }`; the runner reads the value in its own network, gives it to the step, and replaces it
   with `***` in the log.
-- **Build runners share one runner token today.** Any build runner holding it can take any
-  project's step. Deploy work needs a **runner pool** token and is limited to that pool's targets.
-  Per-runner identity with join tokens and runner-side allow-lists is
-  [in progress](../roadmap-list.md); until then, run runners only for servers you run and trust.
-  See [Trust model](../security/trust-model.md).
+- **Runners have identities.** A runner enrolled with a join token holds its own key, its steps'
+  leases are bound to it, and it takes only work of the projects its **pool** serves; its own
+  `accept:` section limits further what it will run. A runner still on the shared runner token has
+  no identity, so enrol runners and require identity on their pools. Deploy work needs a pool
+  token and is limited to that pool's targets. See
+  [Runners on other machines and clusters](../guide/runner-identity.md) and the
+  [trust model](../security/trust-model.md).
 
 ## Delivery with GitOps and rollout control
 

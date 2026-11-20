@@ -48,5 +48,6 @@ cosign verify-attestation --key cosign.pub --insecure-ignore-tlog --type slsapro
 
 ## In progress and planned
 
-Signed Launchway releases with installers, verification checks after deployment, and more are
-on the [roadmap](../roadmap-list.md), each with its status.
+Signed Launchway releases with installers, and more, are on the [roadmap](../roadmap-list.md),
+each with its status. Verification checks after a deployment are available: see
+[Verifying a deployment](../guide/verification.md).

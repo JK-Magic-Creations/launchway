@@ -12,11 +12,12 @@ These are read by the `launchway` binary itself: the server, a runner, or the co
 |---|---|---|
 | `LAUNCHWAY_DATABASE` | `launchway server` | The database to use, instead of `database:` in the configuration. A SQLite file path, or a `postgres://` URL. Surrounding white space is ignored. Without it, and without `database:`, the server uses `launchway.db` in its data directory. |
 | `LAUNCHWAY_RUNNER_TOKEN` | `launchway server` | The token runners must send. When set, it wins over the token kept in the database, and the start-up banner says `Runner token for other machines: LAUNCHWAY_RUNNER_TOKEN` instead of a file path. |
-| `LAUNCHWAY_RUNNER_TOKEN` | `launchway runner` | The runner token, when `--token` is not given. |
+| `LAUNCHWAY_RUNNER_TOKEN` | `launchway runner` | The runner token, when `--token` is not given. Not together with a join token. |
+| `LAUNCHWAY_JOIN` | `launchway runner` | A join token, when `--join` is not given: the runner enrols with it once and gets an identity of its own, then starts without it. In a container, use it instead of `--join`. |
 | `LAUNCHWAY_SERVER` | `launchway runner` | The server URL, when `--server` is not given. It wins over `server:` in the `--config` file. |
-| `LAUNCHWAY_SERVER` | `launchway login`, `runs`, `policy`, `waivers` | The server URL. For `login` it is the default of `--server`; for the other commands it replaces the server stored by `login`. |
+| `LAUNCHWAY_SERVER` | `launchway login`, `runs`, `policy`, `waivers`, `mcp`, `runners`, `verifications`, `health-sources`, `models` | The server URL. For `login` it is the default of `--server`; for the other commands it replaces the server stored by `login`. |
 | `LAUNCHWAY_TOKEN` | `launchway login` | The API token to store. Without it, `login` reads the token from the terminal (hidden) or from standard input. |
-| `LAUNCHWAY_TOKEN` | `launchway runs`, `policy`, `waivers` | The API token, instead of the one stored by `login`. |
+| `LAUNCHWAY_TOKEN` | `launchway runs`, `policy`, `waivers`, `mcp`, `runners`, `verifications`, `health-sources`, `models` | The API token, instead of the one stored by `login`. |
 | `LAUNCHWAY_CONFIG_DIR` | `launchway login`, `runs`, `policy`, `waivers` | The directory that holds `credentials.json`. The default is `launchway` in your user configuration directory (`~/.config/launchway` on Linux). |
 | `NO_COLOR` | `launchway run` | Any value turns off coloured output. Colour is also off when standard output is not a terminal. |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | `launchway server` | Credentials of the S3 artifact store. Each may instead be given as a file named by `AWS_ACCESS_KEY_ID_FILE` or `AWS_SECRET_ACCESS_KEY_FILE`; setting both forms of one is refused. |
@@ -35,6 +36,7 @@ Secrets are never written in the configuration file. Instead, a setting names a 
 |---|---|
 | `auth.oidc.client_secret_env` | the OpenID Connect client secret (or `client_secret_file`) |
 | `runner_pools[].token_env` | a deploy runner pool's token, at least 32 characters (or `token_file`) |
+| `ai.models[].key` and `health_sources.<name>.auth.secret` | not variables: secret references (`store`, `key`, `field`), read from the runner's own secret stores, where an `env` store reads a variable of the runner |
 | `projects[].git_webhook.secret_env` | the secret a Git host signs its webhook calls with (or `secret_file`) |
 | `projects[].webhooks.<name>.token_env` | the bearer token a webhook trigger's caller must send (or `token_file`) |
 | `projects[].webhooks.<name>.hmac_secret_env` | the HMAC secret a webhook trigger's caller signs with (or `hmac_secret_file`) |

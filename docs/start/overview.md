@@ -47,6 +47,14 @@ called a [pipeline](../glossary.md#pipeline).
   or retry, and rollback by reverting the change.
 - **Policies an organisation sets for every pipeline**, such as "nothing reaches production
   without passing tests, a clean scan and a second person's approval", with waivers that expire.
+- **Verification after a deploy.** A step reads metrics and logs from Prometheus, Loki and other
+  sources, judges them with built-in statistics, and can promote, abort or roll back. Optional AI
+  models only explain; the statistics decide.
+- **Runners with identities.** Runners enrol with join tokens and their own keys, serve only the
+  projects of their pool, and set their own limits on what they accept.
+- **Artifacts and test reports that work out of the box.** Artifacts are kept in the database
+  with nothing else to run; test reports come in 13 formats, with coverage and hosted HTML reports.
+- **An endpoint for AI agents** (MCP), with the same rights and audit trail as any token.
 - **Pipelines you can check and run anywhere**, with line-numbered errors before anything starts.
 - **Shared pipelines as Git repositories.** Templates and the scripts they run live in one
   repository, released with Git tags; pipelines pin a tag, branch or commit, and every run records

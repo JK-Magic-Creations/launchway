@@ -52,7 +52,7 @@ flowchart LR
     r2["Runner"] --> svc
   end
   s1 & s2 & s3 --> db[("PostgreSQL")]
-  s1 & s2 & s3 --> obj[("Artifact store (S3)")]
+  s1 & s2 & s3 --> obj[("Optional: S3 artifact store")]
   s1 & s2 & s3 --> git["Git host"]
   r1 & r2 --> git
   r1 & r2 --> api["Kubernetes API"]
@@ -217,7 +217,7 @@ curl -s http://127.0.0.1:8080/api/v1/runners
 ```
 
 ```text
-{"schema":{"code":16,"database":16,"minimum":7},"status":"ok"}
+{"schema":{"code":21,"database":21,"minimum":7},"status":"ok"}
 [{"id":"runner-launchway-runner-68b4f8f7bd-cnkks","name":"launchway-runner-68b4f8f7bd-cnkks","executor":"kubernetes (launchway-steps)",...,"online":true},
  {"id":"runner-launchway-runner-68b4f8f7bd-m25hz",...,"online":true}]
 ```
@@ -315,8 +315,10 @@ they start (see [Back up, restore and upgrade](backup-restore-upgrade.md#upgrade
 `deploy/helm/launchway/examples/ha.yaml` file is a production-shaped starting point: three servers
 across zones, an external database, runners in their own namespace and an Ingress with TLS.
 
-Keep artifacts somewhere all servers share, too. Without `config.artifacts.store: s3`, each server
-keeps artifacts in its own `emptyDir`, which is lost with the pod and not shared:
+Artifacts need nothing more with PostgreSQL: unset, `config.artifacts.store` makes the servers keep
+them in the database, in chunks every server reads, so any number of servers share them (see
+[Where artifacts are kept](../artifacts.md), including when to move to S3). For very large or busy
+installations, keep them in an S3-compatible store instead:
 
 ```yaml
 config:

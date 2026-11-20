@@ -34,7 +34,7 @@ curl -s http://127.0.0.1:8080/readyz
 
 ```text
 {"status":"ok"}
-{"schema":{"code":16,"database":16,"minimum":7},"status":"ok"}
+{"schema":{"code":21,"database":21,"minimum":7},"status":"ok"}
 ```
 
 `schema` says which database schema this build knows (`code`), where the database is
@@ -58,7 +58,7 @@ set that to at least your load balancer's check interval when you run several se
 schema, which helps to spot servers left on an old version:
 
 ```json
-{"auth_mode":"oidc","schema":{"code":16,"database":16,"minimum":7},"version":"f717337"}
+{"auth_mode":"oidc","schema":{"code":21,"database":21,"minimum":7},"version":"f717337"}
 ```
 
 ## Health and readiness of a runner

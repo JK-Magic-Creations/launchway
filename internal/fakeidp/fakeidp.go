@@ -98,6 +98,27 @@ func (p *Provider) Refused() []string {
 // Close stops the provider.
 func (p *Provider) Close() { p.srv.Close() }
 
+// JWTAccessToken issues a JWT access token (RFC 9068) for user, for the
+// given audience and scope, valid for ttl from now (negative: expired). It
+// is what a provider gives an OAuth client that asked for a resource.
+// Claims, if set, are added or replace the usual ones.
+func (p *Provider) JWTAccessToken(user string, groups []string, audience, scope string, ttl time.Duration, extra map[string]any) string {
+	now := p.Now()
+	claims := map[string]any{
+		"iss": p.URL, "sub": "sub-" + user, "aud": audience, "client_id": "some-agent",
+		"iat": now.Unix(), "exp": now.Add(ttl).Unix(), "scope": scope,
+		"preferred_username": user, "groups": groups,
+	}
+	for k, v := range extra {
+		claims[k] = v
+	}
+	tok, err := sign(p.key, "k1", claims)
+	if err != nil {
+		panic(err)
+	}
+	return tok
+}
+
 // SignInAs chooses who the next sign-ins are.
 func (p *Provider) SignInAs(user string, groups ...string) {
 	p.mu.Lock()

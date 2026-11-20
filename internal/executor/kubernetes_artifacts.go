@@ -115,7 +115,7 @@ func (k *Kubernetes) copyOut(ctx context.Context, pod, name, local string, max i
 	done := make(chan error, 1)
 	go func() {
 		err := k.exec(ctx, pod, helperName, []string{"sh", "-c",
-			`cd /workspace && [ -f "$1" ] && [ ! -L "$1" ] || { echo "not a regular file" >&2; exit 3; }; ` +
+			`cd /workspace && [ -f "$1" ] && [ ! -L "$1" ] && [ "$(readlink -f "./$1")" = "/workspace/$1" ] || { echo "not a regular file inside the workspace" >&2; exit 3; }; ` +
 				`if [ -x "$1" ]; then printf x; else printf -; fi; exec head -c "$2" -- "$1"`,
 			"sh", name, strconv.FormatInt(max+1, 10)}, nil, pw, &stderr)
 		pw.CloseWithError(err)

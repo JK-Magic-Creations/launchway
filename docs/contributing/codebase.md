@@ -13,10 +13,15 @@ The packages of the code base and what the tests cover. For contributors.
 | `internal/auth` | Roles and access bindings, OpenID Connect sign-in, and the cryptography sessions and tokens need |
 | `internal/api` | Runner API, UI API, sign-in, API tokens, access checks, the audit trail and the live event stream |
 | `internal/fakeidp` | An OpenID Connect provider for tests, which can be made to misbehave |
-| `internal/blobstore` | Where artifacts are kept: a directory, or S3-compatible object storage |
+| `internal/blobstore` | Where artifacts are kept: the database (in chunks), a directory, or S3-compatible object storage |
 | `internal/findings`, `internal/sbom` | Read SARIF scanner results and CycloneDX SBOMs, treating them as hostile input |
 | `internal/policy` | Delivery policies: the rule catalogue, policy files read with their lines, and the pure function that judges a run |
 | `internal/imagebuild` | Image steps on the runner: BuildKit's client, pushing, scanning, signing and provenance |
+| `internal/testreport`, `internal/coverage` | Read test result files in 13 formats and coverage files (Cobertura, JaCoCo, Clover, LCOV, Istanbul, Go), treating them as hostile input |
+| `internal/verify`, `internal/verify/source` | Judge a deployment with plain statistics and log clustering, and read the metrics and logs from Prometheus, Loki, ClickHouse, Elasticsearch, PostgreSQL and JSON APIs |
+| `internal/ai` | Optional calls to AI models (Anthropic, and OpenAI-compatible servers) for `ai` steps and explanations |
+| `internal/runnerauth`, `internal/accept` | How an enrolled runner proves who it is, and a runner's own limits on the work it takes |
+| `internal/api` (MCP files) | The `/mcp` endpoint for AI agents, built on the official Go SDK, calling the server's own API with the caller's token |
 | `web/` | The React UI, compiled into the binary |
 
 `make test` runs the Go tests with the race detector and type-checks the UI. The tests cover:
@@ -56,5 +61,15 @@ The packages of the code base and what the tests cover. For contributors.
   replayed from what they record, malformed and unknown rules refused with their lines, Git sources broken,
   unreachable and stale, two servers racing on one gate, a restart between a decision and the step, an older
   server leaving governed runs alone, and a deploy gate in front of real Argo CD (`make test-argo`);
+- test reports and coverage: real output of the tools that write them, hostile and fuzzed files,
+  attachments and hosted HTML reports in a sandbox;
+- the built-in blob store: uploads that break off and carry on, damaged chunks refused, two servers
+  on one part, copies between stores (`make test-postgres` runs them on PostgreSQL);
+- verification: every statistic against known series, every kind of health source against a real or
+  faked server, a deploy runner that dies mid-window, and an `ai` step against a fake model and a real
+  small one (`make test-verify`, `make test-local-model`);
+- runner identities and pools: enrolment, leases bound to a runner, pools by project and event,
+  revocation and key rotation in the middle of a step, `accept:`, clock skew and proxies;
+- the MCP endpoint: every tool, rights, limits, origins, OAuth and untrusted text;
 - real containers (`make test-containers`);
 - a real Kubernetes cluster (`make test-kubernetes`).

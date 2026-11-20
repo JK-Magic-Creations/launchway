@@ -51,7 +51,7 @@ func (im *imageMasker) Mask(s string) string {
 // artifacts are collected through: for an image step, the runner's own
 // output directory for it.
 func (r *Runner) execFor(job *engine.Job) executor.Executor {
-	if job.ImageBuild != nil {
+	if job.ImageBuild != nil || job.AI != nil {
 		return &executor.Host{}
 	}
 	return r.Exec

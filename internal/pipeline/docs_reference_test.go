@@ -56,7 +56,7 @@ const pipelineReference = "../../docs/reference/pipeline.md"
 
 // stepKinds are the kinds of step the reference documents; "uses" is a step
 // that uses a template.
-var stepKinds = []string{"step", "approval", "uses", "image", "deploy", "rollback", "rollout"}
+var stepKinds = []string{"step", "approval", "uses", "image", "deploy", "rollback", "rollout", "ai", "verify"}
 
 // docRow is one row of a marked table.
 type docRow struct {
@@ -204,6 +204,7 @@ libraries:
   platform: { repo: ci-templates, version: v3 }
 containers:
   py: { image: python:3.13 }
+runner: { pool: gpu, labels: [cuda] }
 steps:
   build:
     image: alpine:3.22
@@ -211,7 +212,10 @@ steps:
     when: { branch: main }
     secrets:
       TOKEN: { store: vault, key: ci/token, field: token }
-    reports: { tests: reports/*.xml }
+    reports:
+      tests: { paths: reports/*.xml, attachments: test-results }
+      coverage: { paths: coverage/lcov.info, fail_under: { lines: 80 } }
+      html: [{ name: pw, path: playwright-report, index: index.html }]
     artifacts:
       - { name: bin, paths: [bin/app] }
   test:
@@ -276,6 +280,23 @@ steps:
     kind: rollback
     deployment: deploy
     needs: [promote]
+  verify:
+    kind: verify
+    needs: deploy
+    deployment: deploy
+    params:
+      ns: { deployment: namespace }
+    metrics:
+      - { name: error-rate, source: prometheus, query: 'sum(rate(errors{namespace="{{ns}}"}[1m]))', max: 0.01, fail_fast: { max: 0.5 } }
+    logs:
+      - { name: errors, source: loki, query: '{namespace="{{ns}}"}' }
+  notes:
+    kind: ai
+    needs: smoke
+    model: local
+    prompt: Summarise the release.
+    inputs:
+      - { label: version, output: build.version }
 `
 
 // probeTemplate is a valid template, read for a use with no values.
@@ -333,6 +354,14 @@ var probes = []probe{
 	{table: "secret-ref", path: []any{"steps", "image", "sign", "key"}},
 	{table: "when", path: []any{"steps", "build", "when"}},
 	{table: "reports", path: []any{"steps", "build", "reports"}},
+	{table: "reports-tests", path: []any{"steps", "build", "reports", "tests"}},
+	{table: "reports-coverage", path: []any{"steps", "build", "reports", "coverage"}},
+	{table: "reports-fail-under", path: []any{"steps", "build", "reports", "coverage", "fail_under"}},
+	{table: "reports-html", path: []any{"steps", "build", "reports", "html", 0}},
+	{table: "runner", path: []any{"runner"}},
+	{table: "ai-input", path: []any{"steps", "notes", "inputs", 0}},
+	{table: "verify-metric", path: []any{"steps", "verify", "metrics", 0}},
+	{table: "verify-log", path: []any{"steps", "verify", "logs", 0}},
 	{table: "artifacts", path: []any{"steps", "build", "artifacts", 0}},
 	{table: "fetch", path: []any{"steps", "test", "fetch", 0}},
 	{table: "value", path: []any{"steps", "deploy", "version"}},
@@ -441,6 +470,8 @@ func kindKeys() map[string][]string {
 		"deploy":   sortedSet(deployKeys),
 		"rollback": sortedSet(rollbackKeys),
 		"rollout":  sortedSet(rolloutStepKeys),
+		"ai":       sortedSet(aiKeys),
+		"verify":   sortedSet(verifyKeys),
 	}
 }
 
@@ -468,6 +499,10 @@ func TestReferenceStepListsAreTheParsers(t *testing.T) {
 		{[]any{"steps", "deploy"}, deployKeys},
 		{[]any{"steps", "rollback"}, rollbackKeys},
 		{[]any{"steps", "promote"}, rolloutStepKeys},
+		// The parser lists the loop keys among the expected ones and then
+		// refuses them with a reason of their own, so they are not documented.
+		{[]any{"steps", "notes"}, sortedSet(aiKeys, loopKeys)},
+		{[]any{"steps", "verify"}, sortedSet(verifyKeys, loopKeys)},
 	} {
 		got := accepted(t, probe{table: "kind", path: c.path})
 		if !slices.Equal(got, sortedSet(c.want)) {

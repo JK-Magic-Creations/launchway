@@ -97,3 +97,25 @@ config:
 		t.Fatalf("findings: %+v", l)
 	}
 }
+
+func TestDatabaseStoreSettings(t *testing.T) {
+	c, err := loadText(t, "artifacts: {store: database, max_file_mib: 512, database: {max_total_gib: 10, max_blob_mib: 512}}\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s, err := c.ArtifactStore(); s != nil || err != nil {
+		t.Fatalf("the database store is the engine's to make: %v %v", s, err)
+	}
+	for text, want := range map[string]string{
+		"artifacts: {store: s3, s3: {endpoint: x, bucket: b}, database: {max_total_gib: 1}}": "store is not database",
+		"artifacts: {store: database, database: {max_blob_mib: 512}}":                        "max_file_mib (1024) cannot be more than database.max_blob_mib (512)",
+		"artifacts: {store: database, database: {max_total_gib: 1, max_blob_mib: 2048}}":     "cannot be more than database.max_total_gib",
+		"artifacts: {store: database, database: {max_total_gib: -1}}":                        "cannot be negative",
+		"artifacts: {store: database, dir: /x}":                                              "not for the database store",
+		"artifacts: {database: {max_total_gb: 1}}":                                           "field max_total_gb not found",
+	} {
+		if _, err := loadText(t, text); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: %v, want %q", text, err, want)
+		}
+	}
+}

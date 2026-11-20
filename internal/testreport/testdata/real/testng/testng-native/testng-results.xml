@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results ignored="0" total="6" passed="3" failed="1" skipped="2">
+  <reporter-output>
+  </reporter-output>
+  <suite started-at="2026-11-20T00:49:13 UTC" name="Command line suite" finished-at="2026-11-20T00:49:13 UTC" duration-ms="31">
+    <groups>
+      <group name="regression">
+        <method signature="CartNgTest.wrongTotal()[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" name="wrongTotal" class="com.example.cart.CartNgTest"/>
+      </group> <!-- regression -->
+      <group name="smoke">
+        <method signature="CartNgTest.addsNumbers()[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" name="addsNumbers" class="com.example.cart.CartNgTest"/>
+        <method signature="CartNgTest.doubles(int,int)[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" name="doubles" class="com.example.cart.CartNgTest"/>
+      </group> <!-- smoke -->
+    </groups>
+    <test started-at="2026-11-20T00:49:13 UTC" name="Command line test" finished-at="2026-11-20T00:49:13 UTC" duration-ms="31">
+      <class name="com.example.cart.CartNgTest">
+        <test-method is-config="true" signature="setUp()[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" started-at="2026-11-20T00:49:13 UTC" name="setUp" finished-at="2026-11-20T00:49:13 UTC" duration-ms="5" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setUp -->
+        <test-method signature="addsNumbers()[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" started-at="2026-11-20T00:49:13 UTC" name="addsNumbers" description="basic addition" finished-at="2026-11-20T00:49:13 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- addsNumbers -->
+        <test-method signature="skippedAtRuntime()[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" started-at="2026-11-20T00:49:13 UTC" name="skippedAtRuntime" finished-at="2026-11-20T00:49:13 UTC" duration-ms="0" status="SKIP">
+          <exception class="org.testng.SkipException">
+            <message>
+              <![CDATA[feature flag off]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[org.testng.SkipException: feature flag off
+at com.example.cart.CartNgTest.skippedAtRuntime(CartNgTest.java:30)
+at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:697)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:1005)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+at org.testng.TestRunner.privateRun(TestRunner.java:744)
+at org.testng.TestRunner.run(TestRunner.java:616)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)
+at org.testng.SuiteRunner.run(SuiteRunner.java:312)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)
+at org.testng.TestNG.runSuites(TestNG.java:1112)
+at org.testng.TestNG.run(TestNG.java:1079)
+at org.testng.TestNG.privateMain(TestNG.java:1430)
+at org.testng.TestNG.main(TestNG.java:1394)
+]]>
+            </full-stacktrace>
+          </exception> <!-- org.testng.SkipException -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- skippedAtRuntime -->
+        <test-method signature="wrongTotal()[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" started-at="2026-11-20T00:49:13 UTC" name="wrongTotal" finished-at="2026-11-20T00:49:13 UTC" duration-ms="2" status="FAIL">
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[doubled base expected [25] but found [20]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: doubled base expected [25] but found [20]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1590)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1431)
+at org.testng.Assert.assertEquals(Assert.java:1395)
+at com.example.cart.CartNgTest.wrongTotal(CartNgTest.java:25)
+at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:141)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:697)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:230)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:63)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:1005)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:203)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+at org.testng.TestRunner.privateRun(TestRunner.java:744)
+at org.testng.TestRunner.run(TestRunner.java:616)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)
+at org.testng.SuiteRunner.run(SuiteRunner.java:312)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)
+at org.testng.TestNG.runSuites(TestNG.java:1112)
+at org.testng.TestNG.run(TestNG.java:1079)
+at org.testng.TestNG.privateMain(TestNG.java:1430)
+at org.testng.TestNG.main(TestNG.java:1394)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- wrongTotal -->
+        <test-method signature="doubles(int,int)[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" started-at="2026-11-20T00:49:13 UTC" name="doubles" data-provider="prices" finished-at="2026-11-20T00:49:13 UTC" duration-ms="2" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[1]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[2]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- doubles -->
+        <test-method signature="doubles(int,int)[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" started-at="2026-11-20T00:49:13 UTC" name="doubles" data-provider="prices" finished-at="2026-11-20T00:49:13 UTC" duration-ms="0" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[3]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[6]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- doubles -->
+        <test-method signature="dependsOnFailure()[pri:0, instance:com.example.cart.CartNgTest@1f021e6c]" started-at="2026-11-20T00:49:13 UTC" name="dependsOnFailure" finished-at="2026-11-20T00:49:13 UTC" depends-on-methods="com.example.cart.CartNgTest.wrongTotal" duration-ms="0" status="SKIP">
+          <exception class="java.lang.Throwable">
+            <message>
+              <![CDATA[Method com.example.cart.CartNgTest.dependsOnFailure() on instance com.example.cart.CartNgTest@1f021e6c depends on not successfully finished methods 
+[com.example.cart.CartNgTest.wrongTotal() on instance com.example.cart.CartNgTest@1f021e6c]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.Throwable: Method com.example.cart.CartNgTest.dependsOnFailure() on instance com.example.cart.CartNgTest@1f021e6c depends on not successfully finished methods 
+[com.example.cart.CartNgTest.wrongTotal() on instance com.example.cart.CartNgTest@1f021e6c]
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:159)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:154)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:134)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+at org.testng.TestRunner.privateRun(TestRunner.java:744)
+at org.testng.TestRunner.run(TestRunner.java:616)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:421)
+at org.testng.SuiteRunner.runSequentially(SuiteRunner.java:413)
+at org.testng.SuiteRunner.privateRun(SuiteRunner.java:373)
+at org.testng.SuiteRunner.run(SuiteRunner.java:312)
+at org.testng.SuiteRunnerWorker.runSuite(SuiteRunnerWorker.java:52)
+at org.testng.SuiteRunnerWorker.run(SuiteRunnerWorker.java:95)
+at org.testng.TestNG.runSuitesSequentially(TestNG.java:1274)
+at org.testng.TestNG.runSuitesLocally(TestNG.java:1208)
+at org.testng.TestNG.runSuites(TestNG.java:1112)
+at org.testng.TestNG.run(TestNG.java:1079)
+at org.testng.TestNG.privateMain(TestNG.java:1430)
+at org.testng.TestNG.main(TestNG.java:1394)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.Throwable -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- dependsOnFailure -->
+      </class> <!-- com.example.cart.CartNgTest -->
+    </test> <!-- Command line test -->
+  </suite> <!-- Command line suite -->
+</testng-results>

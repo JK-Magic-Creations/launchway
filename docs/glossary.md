@@ -25,6 +25,10 @@ A set of files a step keeps, for people to download and for later steps to fetch
 The append-only record of every change, sign-in and refused call: who, when, from where, what and
 the outcome.
 
+### Blob store
+Where artifacts are kept: the database (the default on PostgreSQL), a directory, or S3-compatible
+object storage. See [Where artifacts are kept](artifacts.md).
+
 ### BuildKit
 The container image builder Launchway's image steps use, run rootless apart from the steps.
 
@@ -60,8 +64,17 @@ One result of a security scanner, read from SARIF, with a severity and a fingerp
 Deploying by committing the desired version to a Git repository that a tool (here Argo CD) applies
 to the cluster.
 
+### Health source
+A monitoring system (Prometheus, Loki, ClickHouse, Elasticsearch, PostgreSQL or a JSON API) that a
+verify step reads metrics and logs from. An operator configures it on a deploy runner; pipelines only
+name it.
+
 ### Input
 A typed value a run is started with, declared under `inputs:` in the pipeline.
+
+### Join token
+A secret, shown once, that a person makes for a runner pool. A runner uses it to enrol: it registers
+its own key and gets an identity. See [Runners on other machines](guide/runner-identity.md).
 
 ### Lease
 A runner's time-limited claim on a step. A runner that stops renewing it loses the step, which is
@@ -70,6 +83,10 @@ run again.
 ### Library
 A Git repository of [templates](#template) and the scripts they run, named in the server's
 configuration.
+
+### MCP
+The Model Context Protocol, which AI agents use to call tools. Every Launchway server serves it at
+`/mcp`, with the rights of the token the agent holds. See [Agents (MCP)](guide/agents.md).
 
 ### Operator
 The [role](#role) that may start, cancel, resume and re-run runs, approve, and save pipelines.
@@ -115,7 +132,9 @@ The program, `launchway runner`, that takes steps from a server and runs them. R
 outbound only.
 
 ### Runner pool
-A named group of deploy runners with its own token, allowed to serve some deploy targets.
+A named group of runners. A deploy pool serves some deploy targets; a build pool serves some
+projects, and optionally only some events. Runners enrol into a pool with a join token (or, for a
+deploy pool, use its token).
 
 ### SARIF
 A standard file format for the results of static analysis and security scanners.
@@ -135,6 +154,10 @@ Cancelling older queued or running runs of the same branch or pull request when 
 
 ### Template
 A reusable fragment of pipeline with typed parameters, kept in a [library](#library).
+
+### Verification
+A step of `kind: verify` that watches a deployment's metrics and logs for a window of time and
+decides passed, failed or inconclusive. See [Verifying a deployment](guide/verification.md).
 
 ### Viewer
 The [role](#role) that may see a project's runs, logs and pipelines, but not change anything.

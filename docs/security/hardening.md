@@ -25,9 +25,16 @@ authors. For operators and platform engineers, and for developers who write pipe
 
 ### Runners
 
-- [ ] **Keep the runner token secret.** It lets a machine take work, and with it pipelines and the
-  secret references they hold. Every build runner shares it today; see the
+- [ ] **Enrol runners with join tokens** instead of the shared runner token, give each pool only the
+  projects it serves, and set `require_identity: true` on pools whose runners are all enrolled. A
+  runner on the shared token has no identity; see the
   [trust model](trust-model.md#current-limits-and-what-is-changing).
+- [ ] **Keep the runner token and join tokens secret.** A token lets a machine take work, and with it
+  pipelines and the secret references they hold. Make join tokens short-lived and ephemeral, and
+  revoke runners you no longer trust.
+- [ ] **Give each runner an `accept:` section** limiting the projects, repositories, images and
+  executors it takes, and refusing pull requests and drafts where they are not needed. The server
+  cannot change it. See [Runners on other machines](../guide/runner-identity.md).
 - [ ] **Connect runners only to servers you run**, over HTTPS.
 - [ ] **Set `executor:` explicitly** on shared runners. `auto` falls back to running steps on the
   host when no container runtime is found.

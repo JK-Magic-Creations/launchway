@@ -39,6 +39,18 @@ make run          # then open http://127.0.0.1:8080
 - [Roadmap](https://jk-magic-creations.github.io/launchway/roadmap.html)
   ([as a list](docs/roadmap-list.md)): what is available, in progress and planned
 
+Recently added, each described in the [user guide](docs/guide/index.md):
+
+- artifacts, test attachments and hosted reports kept in the database, so several servers share
+  them with nothing else to run ([where artifacts are kept](docs/artifacts.md));
+- test reports in 13 formats, with coverage thresholds and the tools' own HTML reports
+  ([test reports](docs/guide/test-reports.md));
+- an MCP endpoint for AI agents, with the rights of the token they hold ([agents](docs/guide/agents.md));
+- verification of deployments from metrics and logs, with optional AI models that explain and never
+  turn a failure into a pass ([verification](docs/guide/verification.md), [AI models](docs/guide/ai.md));
+- runner identities, join tokens and pools, and each runner's own limits
+  ([runners on other machines](docs/guide/runner-identity.md)).
+
 Launchway is early software. Turn on sign-in before anyone else can reach a server.
 
 ## Contributing and security

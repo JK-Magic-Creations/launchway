@@ -369,6 +369,98 @@ type LibraryStatus struct {
 	Error     string `json:"error,omitempty"`
 }
 
+// LibraryTemplates is a library's templates at one version, for someone
+// choosing one to use.
+type LibraryTemplates struct {
+	Library string `json:"library"`
+	// Version is the version read: as asked, else the newest tag, else the
+	// default branch.
+	Version string `json:"version"`
+	Commit  string `json:"commit"`
+	// Versions are the library's tags, newest first, then its branches: at
+	// most maxLibraryVersions.
+	Versions  []string                `json:"versions"`
+	Templates []pipeline.TemplateInfo `json:"templates"`
+	// Truncated says the library has more templates than are listed.
+	Truncated bool `json:"truncated,omitempty"`
+}
+
+const (
+	maxLibraryVersions  = 20
+	maxLibraryTemplates = 100
+)
+
+// LibraryTemplates lists the templates of a library at a version, with
+// their parameters and outputs. An unknown library is ErrNotFound.
+func (m *Manager) LibraryTemplates(ctx context.Context, name, version string) (*LibraryTemplates, error) {
+	lib := m.libraries[name]
+	if lib == nil {
+		return nil, fmt.Errorf("%w: library %q (the libraries are: %s)", engine.ErrNotFound, name, m.libraryNames())
+	}
+	out := &LibraryTemplates{Library: name, Versions: []string{}, Templates: []pipeline.TemplateInfo{}}
+	lib.mu.Lock()
+	err := lib.fetch(ctx, checkFresh)
+	var refs []Ref
+	if err == nil {
+		refs, err = lib.refs(ctx)
+	}
+	lib.mu.Unlock()
+	if err != nil {
+		return nil, errors.New(redact.URLs(err.Error()))
+	}
+	var tags, branches []string
+	for _, r := range refs {
+		if r.Kind == "tag" {
+			tags = append(tags, r.Name)
+		} else {
+			branches = append(branches, r.Name)
+		}
+	}
+	out.Versions = append(out.Versions, tags...)
+	out.Versions = append(out.Versions, branches...)
+	if len(out.Versions) > maxLibraryVersions {
+		out.Versions = out.Versions[:maxLibraryVersions]
+	}
+	if version == "" {
+		switch {
+		case len(tags) > 0:
+			version = tags[0]
+		case len(branches) > 0:
+			version = branches[0]
+		default:
+			return out, nil // an empty repository
+		}
+	}
+	sha, _, err := lib.resolveVersion(ctx, version, checkFresh)
+	if err != nil {
+		return nil, err
+	}
+	out.Version, out.Commit = version, sha
+	lib.mu.Lock()
+	list, err := gitOut(ctx, lib.dir, "ls-tree", "--name-only", sha, strings.TrimSuffix(pipeline.TemplatePath("x"), "x.yaml"))
+	lib.mu.Unlock()
+	if err != nil {
+		return nil, errors.New(redact.URLs(err.Error()))
+	}
+	for _, path := range strings.Split(strings.TrimSpace(list), "\n") {
+		file := filepath.Base(path)
+		tname, ok := strings.CutSuffix(file, ".yaml")
+		if !ok || !pipeline.ValidTemplateName(tname) {
+			continue
+		}
+		if len(out.Templates) == maxLibraryTemplates {
+			out.Truncated = true
+			break
+		}
+		data, err := lib.templateAt(ctx, sha, tname)
+		if err != nil {
+			continue
+		}
+		out.Templates = append(out.Templates, pipeline.DescribeTemplate(data, tname))
+	}
+	return out, nil
+}
+
 // Libraries lists the libraries pipelines may use.
 func (m *Manager) Libraries() []LibraryStatus {
 	out := make([]LibraryStatus, 0, len(m.libOrder))

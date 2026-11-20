@@ -239,6 +239,7 @@ a separate runner's: see the [runner configuration reference](runner-config.md),
 |---|---|---|---|
 | `runner.enabled` | boolean | `true` | Start the built-in runner. Set `false` when steps run on separate runners |
 | `runner.concurrency` | whole number | `2` | Steps the built-in runner runs at once. See [runner settings](runner-config.md#runner-settings) |
+| `runner.ai` | boolean | `false` | Whether the built-in runner may call the AI models listed under [`ai`](#ai-models), for `ai` steps. See [runner settings](runner-config.md#runner-settings) |
 
 ## Approvals
 
@@ -271,15 +272,37 @@ Limits on what the server keeps of the test reports steps declare. `0` means the
 | `tests.max_cases_per_run` | whole number | `50000` | Individual results one run keeps; beyond it, only the totals |
 | `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its runs, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
 
-## Artifacts
+## Reports
 
-Where the files steps keep are stored, and limits on them. Several servers need one store they all
-share: `s3`, or a directory on a shared filesystem.
+Limits on test attachments, coverage and hosted HTML reports, and where hosted reports are served
+from. `0` means the default. See [Test reports](../guide/test-reports.md).
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `artifacts.store` | text | `filesystem` | `filesystem` or `s3` |
+| `reports.max_attachment_files` | whole number | `2000` | Files of a step's attachments directory the server accepts |
+| `reports.max_attachment_mib` | whole number | `512` | MiB of attachments per step attempt |
+| `reports.max_html_files` | whole number | `5000` | Files of one hosted HTML report |
+| `reports.max_html_mib` | whole number | `256` | MiB of one hosted HTML report |
+| `reports.max_coverage_upload_mib` | whole number | `24` | MiB of coverage reports accepted per step attempt. At most 1024 |
+| `reports.max_coverage_files_per_run` | whole number | `20000` | Per-file coverage records one run keeps; beyond it, only the totals |
+| `reports.max_coverage_files_per_project` | whole number | `2000000` | Per-file coverage records a project keeps, the oldest runs' removed first |
+| `reports.origin` | URL | none | A separate origin, such as `https://reports.example.com`, that alone serves hosted HTML reports, on its own host name pointing at the same servers. Without it, reports are served from Launchway's own origin, sandboxed |
+
+The other sizes are at most 1048576. Limits are checked when the server starts.
+
+## Artifacts
+
+Where the files steps keep are stored, and limits on them. Several servers need one store they all
+share: the database (the default on PostgreSQL), `s3`, or a directory on a shared filesystem. See
+[Where artifacts are kept](../artifacts.md).
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `artifacts.store` | text | `database` on PostgreSQL, `filesystem` on SQLite | `database`, `filesystem` or `s3`. An installation that kept artifacts on the filesystem before the database store existed keeps doing so until they are copied with `launchway blobs copy` |
+| `artifacts.database.max_total_gib` | whole number | `100` | How much the database store may hold in all, uploads in progress included, in GiB. Only with the database store |
+| `artifacts.database.max_blob_mib` | whole number | `2048` | The largest single file the database store keeps, in MiB. Only with the database store |
 | `artifacts.dir` | directory | `<data>/artifacts` | The filesystem store's directory. Not with `s3` |
 | `artifacts.s3.endpoint` | URL | required with `s3` | Scheme and host, such as `https://s3.eu-west-1.amazonaws.com` or `http://minio.example.com:9000` |
 | `artifacts.s3.region` | text | `us-east-1` | The region |
@@ -340,16 +363,111 @@ steps are refused. Checked when the server starts.
 
 ## Runner pools
 
-`runner_pools` gives deploy runners tokens of their own. Only a pool's token can take deploy work,
-and only for the pool's targets. Checked when the server starts.
+`runner_pools` gives runners pools. A **deploy** pool has targets, and its runners take deploy work
+for them, with the pool's own token or enrolled with a join token. A **build** pool serves projects
+(and optionally only some events), and its runners enrol with join tokens. The build pool named
+`default` is the pool of the shared runner token: without it listed, it serves every project that no
+other build pool serves; list it to limit what it serves or to require identities. See
+[Runners on other machines and clusters](../guide/runner-identity.md). Checked when the server
+starts.
 
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `runner_pools[].name` | text | required | Unique |
-| `runner_pools[].token_env` | variable name | | The pool's token, from an environment variable. Exactly one of `token_env` or `token_file`. At least 32 characters, different from every other pool's and from the shared runner token |
+| `runner_pools[].kind` | text | `deploy` | `deploy` (serves targets) or `build` (serves projects) |
+| `runner_pools[].token_env` | variable name | | A deploy pool's token, from an environment variable. Exactly one of `token_env` or `token_file`, unless `require_identity` is set (then neither). At least 32 characters, different from every other pool's and from the shared runner token. A build pool has none: its runners enrol with join tokens |
 | `runner_pools[].token_file` | path | | Or from a file |
-| `runner_pools[].targets` | list | required | Targets its runners may serve; each must be some environment's `target` |
+| `runner_pools[].targets` | list | required for a deploy pool | Targets its runners may serve; each must be some environment's `target` |
+| `runner_pools[].projects` | list of patterns | required for a build pool (`["*"]` for all) | Projects a build pool's runners take work for. The pool named `default` may leave it out |
+| `runner_pools[].events` | list | every event | A build pool: only runs started this way, such as `push` or `manual`, and not, say, pull requests |
+| `runner_pools[].require_identity` | boolean | `false` | Refuse shared tokens: only runners enrolled with a join token for the pool serve it. For the pool named `default` (the build pool of the shared runner token), refuse the shared token; turn the built-in runner off first |
+
+## Runner administration
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `runner_admin` | text | `admin` | The role needed on every project to manage runners: make join tokens, and revoke and rotate runners. `admin`, `operator` or `none` (managing runners over the API and the web UI is off) |
+
+## Verification
+
+`verification.sources` names the health sources that [verify steps](../guide/verification.md) may
+read. Every server lists the same ones. Where each is and its credentials are in the deploy runners'
+configuration (`health_sources`, see [runner configuration](runner-config.md#health-sources)).
+Unset, verify steps are refused.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `verification.sources[].name` | name | required | What pipelines call the source |
+| `verification.sources[].type` | text | required | `prometheus`, `loki`, `clickhouse`, `elasticsearch`, `opensearch`, `postgres` or `http` |
+| `verification.sources[].projects` | list of patterns | none | The projects that may use it |
+
+## AI models
+
+`ai` is the registry of models that `ai` steps, verifications and **Explain** may use. Nothing is
+sent to any model unless one is listed here. See [AI models](../guide/ai.md).
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `ai.models[].name` | name | required | What pipelines call the model: a lower-case letter, then letters, digits and hyphens, at most 40 characters; unique |
+| `ai.models[].provider` | text | required | `anthropic` (the Messages API), or `openai` for any OpenAI-compatible chat completions server (Ollama, vLLM, LM Studio) |
+| `ai.models[].model` | text | required | The provider's model id, without spaces, such as `claude-sonnet-5-5` or `qwen3:8b` |
+| `ai.models[].endpoint` | URL | `https://api.anthropic.com` for `anthropic`; required for `openai` | The base URL, `http` or `https`, without a query or a user name |
+| `ai.models[].key.store` | name | | Where the API key is kept: a secret store of the runner that makes the call (and of `ai.secrets` on a server). A reference, never a value. Required for `api.anthropic.com`; a local server may need none |
+| `ai.models[].key.key` | text | | The key in the store |
+| `ai.models[].key.field` | text | | The field of the key |
+| `ai.models[].projects` | list of patterns | none | The projects that may use the model. Empty means none |
+| `ai.models[].max_tokens` | whole number | `4096` | Output cap per call, 1 to 128000 |
+| `ai.models[].max_input_bytes` | whole number | `262144` | Bytes of instructions and prompt per call, at most 8 MiB |
+| `ai.models[].calls_per_run` | whole number | `20` | Calls one run may make, 1 to 1000 |
+| `ai.models[].tokens_per_day` | whole number | `0` | Tokens (input and output) a project may use a day. `0` means no limit |
+| `ai.models[].timeout` | duration | `2m` | One call, retries included, at most `15m` |
+| `ai.models[].effort` | text | the model's own | `anthropic` only: `low`, `medium`, `high`, `xhigh` or `max` |
+| `ai.models[].stream` | boolean | stream when a call may write over 16000 tokens | Whether calls stream their answer |
+| `ai.models[].headers` | mapping | none | Extra headers that are not secret |
+| `ai.models[].max_tokens_field` | text | `max_tokens` | `openai` only: the request field carrying the output cap; `max_completion_tokens` for newer hosted models |
+| `ai.models[].schema_mode` | text | `json_schema` | `openai` only: how JSON is asked for when a step gives a schema: `json_schema`, `json_object` or `prompt`. A rejected mode falls back to the next; the answer is checked against the schema in every mode |
+| `ai.models[].price.input_per_mtok` | number | built in for current Claude models | US dollars per million input tokens, to show an estimated cost |
+| `ai.models[].price.output_per_mtok` | number | built in | Per million output tokens |
+| `ai.models[].price.cache_read_per_mtok` | number | a tenth of the input price | Per million cached tokens read |
+| `ai.models[].price.cache_write_per_mtok` | number | 1.25 times the input price | Per million cached tokens written |
+| `ai.models[].price.long_input_tokens` | whole number | `0` | Above this many input tokens in one call, the long prices apply to the whole call. `0` means no separate prices |
+| `ai.models[].price.long_input_per_mtok` | number | | The long-prompt input price |
+| `ai.models[].price.long_output_per_mtok` | number | | The long-prompt output price |
+| `ai.secrets.<name>.type` | text | required | The server's own secret stores, for the keys of models the server calls itself (only to explain a failed step); runners read keys from their own. Same types and settings as [`secrets`](runner-config.md#secrets): `env`, `file` or `vault`. Without them the server explains only with models that need no key |
+| `ai.secrets.<name>.projects` | list of patterns | every project | As for runner secret stores |
+| `ai.secrets.<name>.keys` | list of patterns | every key | |
+| `ai.secrets.<name>.dir` | directory | required for `file` | |
+| `ai.secrets.<name>.address` | URL | required for `vault` | |
+| `ai.secrets.<name>.mount` | text | `secret` | `vault` |
+| `ai.secrets.<name>.namespace` | text | none | `vault` |
+| `ai.secrets.<name>.ca_file` | path | the system's | `vault` |
+| `ai.secrets.<name>.token_env` | variable name | | `vault`: exactly one of `token_env`, `token_file` or `role` |
+| `ai.secrets.<name>.token_file` | path | | `vault` |
+| `ai.secrets.<name>.role` | text | | `vault`: Kubernetes auth |
+| `ai.secrets.<name>.auth_path` | text | `kubernetes` | `vault` with `role` |
+| `ai.secrets.<name>.jwt_file` | path | the pod's service account token | `vault` with `role` |
+
+## MCP
+
+The endpoint AI agents use, `/mcp`. It is on by default, because it gives no right that a token does
+not already have over the API. See [Agents (MCP)](../guide/agents.md).
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `mcp.enabled` | boolean | `true` | `false` turns `/mcp` off |
+| `mcp.allowed_origins` | list | none | Browser origins (`https://tools.example.com`), besides this server's own, whose pages may call `/mcp`. Anything else with an `Origin` header gets `403` |
+| `mcp.requests_per_minute` | whole number | `120` | Requests a token may make a minute, on each server |
+| `mcp.concurrent` | whole number | `4` | Requests of one token in progress at once, on each server |
+| `mcp.total` | whole number | `32` | MCP requests in progress at once on each server, all tokens together |
+| `mcp.oauth.resource` | URL | none | Makes `/mcp` an OAuth resource server for the sign-in provider (needs `auth.mode: oidc`): the endpoint's address as clients and tokens name it, such as `https://launchway.example.com/mcp` |
+| `mcp.oauth.scopes` | list | none | Scopes an access token must carry |
+
+The limits are whole numbers from 0 to 100000, where `0` means the default.
 
 ## Policy
 

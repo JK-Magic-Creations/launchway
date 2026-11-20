@@ -12,16 +12,15 @@ const page = (path: string) => {
   return withBase(p + '.html' + (hash ? '#' + hash : ''))
 }
 
-// The delivery flow drawn in the hero. "status" is honest: verify with
-// metrics is being built; today a deployment is judged by Argo CD health and
-// the rollout's own analysis.
+// The delivery flow drawn in the hero. "status" is honest: every stage drawn
+// here is available on the main branch.
 const flow = [
   { id: 'commit', label: 'Commit', note: 'Git push, pull request, schedule or webhook', status: 'available' },
   { id: 'build', label: 'Build', note: 'Steps in containers or Kubernetes pods', status: 'available' },
-  { id: 'test', label: 'Test', note: 'JUnit and go test reports, flaky tests', status: 'available' },
+  { id: 'test', label: 'Test', note: 'Thirteen report formats, coverage, flaky tests', status: 'available' },
   { id: 'scan', label: 'Scan', note: 'SARIF findings, SBOMs, image scans', status: 'available' },
   { id: 'deploy', label: 'Deploy', note: 'GitOps with Argo CD, canary with Argo Rollouts', status: 'available' },
-  { id: 'verify', label: 'Verify', note: 'Health and rollout analysis today; metric checks in progress', status: 'partial' },
+  { id: 'verify', label: 'Verify', note: 'Metrics and logs judged after a deploy; abort, roll back or promote', status: 'available' },
 ]
 const active = ref(-1)
 
@@ -31,14 +30,17 @@ const tiles: Tile[] = [
   { title: 'High availability', text: 'Several servers share one PostgreSQL database with no leader. Losing a server loses no work.', link: '/guide/high-availability', status: 'available' },
   { title: 'Outbound-only runners', text: 'Runners connect out to the server. Steps run in Kubernetes pods or containers, with services beside them.', link: '/howto/connect-runner', status: 'available' },
   { title: 'Secrets stay with runners', text: 'Pipelines hold references. Runners read values from Vault, OpenBao, files or the environment and mask them.', link: '/guide/secrets', status: 'available' },
-  { title: 'Test and security reports', text: 'Test results, flaky tests, SARIF findings that are new or fixed, SBOMs and a component search.', link: '/guide/test-reports', status: 'available' },
+  { title: 'Test and security reports', text: 'Test results in 13 formats, coverage, flaky tests, SARIF findings that are new or fixed, SBOMs and a component search.', link: '/guide/test-reports', status: 'available' },
   { title: 'Signed images', text: 'Rootless BuildKit builds, vulnerability scans with a policy, provenance and cosign-compatible signatures.', link: '/guide/images', status: 'available' },
   { title: 'GitOps deployments', text: 'Write-back to Git, Argo CD sync and health, canary promote, abort and retry, rollback by revert.', link: '/guide/deployments', status: 'available' },
   { title: 'Policy gates', text: 'Typed rules at run start, before deploys and before image pushes, enforced or reported, with waivers.', link: '/guide/policies', status: 'available' },
   { title: 'Sign-in and audit', text: 'OpenID Connect, roles per project and environment, expiring API tokens, an append-only audit trail.', link: '/guide/access', status: 'available' },
   { title: 'Shared libraries', text: 'Templates and scripts in a Git repository, pinned by tag, with typed parameters and no expression language.', link: '/guide/libraries', status: 'available' },
-  { title: 'Verification with metrics', text: 'A step that checks metrics and logs after a deploy, with optional AI help to explain results.', link: '/roadmap', status: 'in progress' },
-  { title: 'Hosted control plane', text: 'Organisations, runner enrolment with join tokens, and a management API.', link: '/roadmap', status: 'in progress' },
+  { title: 'Verification with metrics', text: 'A step that checks metrics and logs after a deploy, with optional AI help to explain results.', link: '/guide/verification', status: 'available' },
+  { title: 'Runner identities and pools', text: 'Runners enrol with join tokens and their own keys, serve only the projects of their pool, and limit what they accept.', link: '/guide/runner-identity', status: 'available' },
+  { title: 'Built-in artifact storage', text: 'Artifacts and hosted reports are kept in the database: several servers, nothing else to run.', link: '/artifacts', status: 'available' },
+  { title: 'An endpoint for AI agents', text: 'MCP tools to write and check pipelines, start and watch runs and diagnose failures, with a token\'s rights.', link: '/guide/agents', status: 'available' },
+  { title: 'Hosted control plane', text: 'Organisations and a management API for everything.', link: '/roadmap', status: 'planned' },
 ]
 
 const shots = [
@@ -73,7 +75,7 @@ const shots = [
         <svg viewBox="0 64 640 112" role="img" aria-labelledby="lw-flow-title lw-flow-desc">
           <title id="lw-flow-title">The delivery flow</title>
           <desc id="lw-flow-desc">A change moves from commit to build, test, scan, deploy and verify.
-            The first five are available today; verification with metrics is in progress.</desc>
+            All six are available today.</desc>
           <path class="lw-track" d="M 40 105 H 600" />
           <path class="lw-pulse" d="M 40 105 H 600" />
           <g v-for="(s, i) in flow" :key="s.id"

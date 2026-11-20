@@ -342,7 +342,7 @@ curl -s https://launchway.example.com/api/v1/info
 
 ```text
 {"status":"ok"}
-{"auth_mode":"oidc","schema":{"code":16,"database":16,"minimum":7},"version":"f717337"}
+{"auth_mode":"oidc","schema":{"code":21,"database":21,"minimum":7},"version":"f717337"}
 ```
 
 After signing in through the proxy, the browser's `launchway_session` cookie should be `HttpOnly`,
@@ -361,7 +361,7 @@ curl -s http://127.0.0.1:8080/readyz
 ```
 
 ```text
-{"schema":{"code":16,"database":16,"minimum":7},"status":"ok"}
+{"schema":{"code":21,"database":21,"minimum":7},"status":"ok"}
 ```
 
 Both need no sign-in. See [Monitoring](monitoring.md) for what to alert on.

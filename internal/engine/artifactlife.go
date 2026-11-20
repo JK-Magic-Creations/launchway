@@ -156,6 +156,7 @@ func (e *Engine) pruneArtifacts() {
 	if err := e.removeBlobs(ctx, e.arts.Store, now); err != nil {
 		e.log.Warn("removing artifact contents nothing refers to; trying again later", "err", err)
 	}
+	e.collectStore(ctx)
 }
 
 func (e *Engine) idsOf(q string, args ...any) ([]string, error) {
@@ -358,12 +359,62 @@ func (e *Engine) checkArtifactStore() error {
 	}
 	if _, err := store.Stat(ctx, key); err != nil {
 		if errors.Is(err, blobstore.ErrNotFound) {
-			return e.disableArtifacts(fmt.Sprintf("this server's %s artifact store is not the one the other servers use "+
-				"(it lacks their marker %s); several servers need one shared store, such as S3", store.Name(), key))
+			return e.markerMissing(ctx, store, key)
 		}
 		return e.disableArtifacts(fmt.Sprintf("the %s artifact store cannot be read: %v", store.Name(), err))
 	}
 	return nil
+}
+
+// markerMissing handles a store that lacks the marker the database
+// records. The database store is shared by every server by definition, so
+// it becomes the marked store: the servers move to it together, and files
+// recorded in the store used before are not forgotten (the server says
+// where they are, and every download of one says how to copy them). Any
+// other store lacking the marker is not where the artifacts are: another
+// server's unshared directory, or the store before artifacts.store was
+// changed. It keeps no artifacts and says which, and how to move them.
+func (e *Engine) markerMissing(ctx context.Context, store blobstore.Store, key string) error {
+	name := store.Name()
+	var elsewhere []StoreCount
+	if e.knows(schemaBlobs) {
+		var err error
+		if elsewhere, err = e.blobsElsewhere(name); err != nil {
+			return err
+		}
+	}
+	if _, ok := store.(*blobstore.Database); ok {
+		mine, err := e.adoptMarker(ctx, store, key)
+		if err != nil {
+			return e.disableArtifacts(fmt.Sprintf("the database artifact store cannot be written: %v", err))
+		}
+		if _, err := store.Stat(ctx, mine); err != nil {
+			return e.disableArtifacts(fmt.Sprintf("this server's database artifact store lacks the marker %s that another server just wrote (%v)", mine, err))
+		}
+		if len(elsewhere) > 0 {
+			e.log.Warn("artifacts kept before are in another store; this server cannot read them until they are copied into the database",
+				"kept_elsewhere", describeElsewhere(elsewhere), "copy_with", "launchway blobs copy --from filesystem|s3 --to database")
+		}
+		return nil
+	}
+	why := fmt.Sprintf("this server's %s artifact store is not the one the other servers use (it lacks their marker %s); "+
+		"several servers need one shared store", name, key)
+	if len(elsewhere) > 0 {
+		from := elsewhere[0].Store
+		if from == "" {
+			from = "filesystem"
+		}
+		why = fmt.Sprintf("this server's %s artifact store does not hold the artifacts kept so far (it lacks the marker %s): "+
+			"the database records %s. If artifacts.store was changed, copy them over with `launchway blobs copy --from %s --to %s` "+
+			"(servers may keep running), or set artifacts.store back", name, key, describeElsewhere(elsewhere), from, name)
+		if name == "filesystem" {
+			why += ". If several servers each have a directory of their own, use the database store (leave artifacts.store unset on PostgreSQL), " +
+				"which needs nothing extra, or S3"
+		}
+	} else if name == "filesystem" {
+		why += ": leave artifacts.store unset (on PostgreSQL the database keeps them), or use S3 or a shared directory"
+	}
+	return e.disableArtifacts(why)
 }
 
 func (e *Engine) disableArtifacts(why string) error {

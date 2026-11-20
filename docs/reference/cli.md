@@ -8,7 +8,9 @@ One binary does everything: the server, runners, local runs and the API client.
 
 ```text
 launchway server   [--config launchway.yaml]   run the server, its web UI and a built-in runner
-launchway runner   --server URL --token T     run a runner that takes work from a server
+launchway runner   --server URL --join J      enrol a runner with a join token, then take work
+                   [--config runner.yaml] [--health-listen ADDR] [--labels a,b]
+launchway runner   --server URL --token T     run a runner with the shared token (no identity)
 launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
 launchway validate [file]                     check a pipeline file
 launchway graph    [file]                     print a pipeline's graph as JSON
@@ -16,6 +18,11 @@ launchway login    --server URL               store an API token for a server
 launchway runs     start|list|show|logs|cancel  start and follow runs on a server
 launchway policy   list|run                   the policies in force; a run's decisions
 launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
+launchway blobs    status|copy                see and move where artifacts are kept
+launchway mcp      [--server URL]             the server's MCP tools for agents, on stdin and stdout
+launchway verifications list|show|mark        verifications on a server
+launchway health-sources | models             what verify and ai steps may name
+launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
 launchway version
 ```
 
@@ -33,7 +40,7 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 | `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
-| `4` | `login`, `runs`, `policy`, `waivers`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
+| `4` | `login`, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
 | `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
@@ -102,13 +109,18 @@ On `SIGINT` or `SIGTERM` it stops gracefully: `/readyz` answers `503` at once, i
 Runs a runner on another machine. It connects out to the server; nothing connects to it.
 
 ```text
+launchway runner --server URL --join JOIN_TOKEN [flags]
 launchway runner --server URL --token TOKEN [flags]
 ```
+
+With `--join`, the runner enrols once: it makes a key that never leaves it (`<data>/identity/key`), registers the public half, and gets a runner ID from the server. From then on it starts with neither `--join` nor `--token`, using its identity; the join token is used up. With `--token` it uses the shared runner token (or a deploy pool's token) and has no identity of its own. See [Runners on other machines and clusters](../guide/runner-identity.md).
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--server` | `LAUNCHWAY_SERVER`, then `server:` in `--config` | The server URL. Required. |
-| `--token` | `LAUNCHWAY_RUNNER_TOKEN` | The runner token, or a runner pool's token. Required. Never read from the file. |
+| `--token` | `LAUNCHWAY_RUNNER_TOKEN` | The shared runner token, or a runner pool's token. Never read from the file. Give this or `--join`, not both; neither is needed once the runner is enrolled. |
+| `--join` | `LAUNCHWAY_JOIN` | A join token, to enrol this runner once and give it an identity of its own. Never read from the file. |
+| `--labels` | `labels:` in the file | Labels this runner has, separated by commas, such as `arm64,gpu`. |
 | `--config` | none | A YAML file of runner settings: the same keys as `runner:` in the server configuration, plus `server`, `name` and `data`. Unknown keys are refused. With a `deploy:` section the runner is a deploy runner. |
 | `--name` | `name:` in the file, else the host name | The runner's name. Its ID is `runner-<name>`. |
 | `--data` | `data:` in the file, else `launchway-runner` | The directory for workspaces. |
@@ -131,11 +143,7 @@ launchway runner --server https://launchway.example.com --name build-2 --concurr
 INFO runner started name=build-2 executor="container (podman)" concurrency=4 server=https://launchway.example.com
 ```
 
-Without a server or token it exits with `1`:
-
-```text
-launchway: a server URL (--server, LAUNCHWAY_SERVER or server: in --config) and a token (--token or LAUNCHWAY_RUNNER_TOKEN) are required
-```
+Without a server it exits with `1`: `launchway: a server URL (--server, LAUNCHWAY_SERVER or server: in --config) is required`. Without a join token or a token, and not yet enrolled, it exits with `1` too: `launchway: a join token (--join or LAUNCHWAY_JOIN) to enrol this runner, or a shared token (--token or LAUNCHWAY_RUNNER_TOKEN), is required`. Giving both is refused.
 
 A wrong token does not stop the runner: it logs `could not reach the server; retrying err="lease: a valid runner token is required (HTTP 401)"` and tries again, waiting up to 30 seconds between tries. On `SIGINT` or `SIGTERM` it tells the server it is leaving and exits with `0`. See [Connect a runner](../howto/connect-runner.md) and [the runner configuration](runner-config.md).
 
@@ -508,6 +516,84 @@ launchway waivers revoke demo-app wvr_06gzde4tsd2z3aje3wh0 --reason "done"
 ```text
 Revoked wvr_06gzde4tsd2z3aje3wh0  revoked  demo-shape/step_images for demo-app, by dana until 2026-11-19 22:10: docs check
 ```
+
+## launchway blobs
+
+Shows and moves where artifacts are kept. It works on the database and the stores directly, not through the server, so it reads the same `--config` as the server (and `LAUNCHWAY_DATABASE`). See [Where artifacts are kept](../artifacts.md).
+
+### launchway blobs status
+
+```text
+launchway blobs status [--config launchway.yaml]
+```
+
+Says which stores the database records artifacts in, and how much each holds.
+
+### launchway blobs copy
+
+```text
+launchway blobs copy --from STORE --to STORE [--config launchway.yaml] [--from-dir DIR] [--to-dir DIR] [--s3 s3.yaml] [--delete-source] [--dry-run] [--json]
+```
+
+Copies every stored artifact file not yet recorded in the target store from the source store to the target, checking each file's SHA-256 as it is read and again after it is written, and records it there. Servers may keep running. It is safe to stop and run again: it carries on where it was, and picks up what servers still on the old store kept meanwhile.
+
+| Flag | Meaning |
+|---|---|
+| `--from`, `--to` | `database`, `filesystem` or `s3`. The database is the one in the configuration file; the filesystem is `--from-dir` or `--to-dir`, else `artifacts.dir`, else `<data>/artifacts`; S3 is the settings in `--s3 FILE` (the same fields as `artifacts.s3`), else `artifacts.s3` |
+| `--delete-source` | Delete each file from the source once it is recorded in the target. Only once no server uses the source |
+| `--dry-run` | List what would be copied |
+| `--json` | Print the report as JSON |
+
+S3 credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or the `_FILE` forms). To move with servers running: copy, set `artifacts.store` to the new store and roll the servers, copy again for what servers still on the old store kept, and optionally copy with `--delete-source` once no server uses the old one.
+
+## launchway mcp
+
+```text
+launchway mcp [--server URL]
+```
+
+Serves the server's MCP tools on standard input and output, for agents that start MCP servers as commands. It uses the server and token `launchway login` stored, or `LAUNCHWAY_SERVER` and `LAUNCHWAY_TOKEN` (a server without sign-in needs no token). Nothing runs on this machine: every message goes to the server's `/mcp` endpoint, which decides what the token may do. See [Agents (MCP)](../guide/agents.md).
+
+## launchway verifications
+
+Shows and marks the verifications of [verify steps](../guide/verification.md). Like `runs`, these use the stored credentials.
+
+```text
+launchway verifications list [--environment E] [--project P] [--service S] [--limit N] [--json]
+launchway verifications show RUN_ID [--json]
+launchway verifications mark RUN_ID STEP passed|failed --reason TEXT
+```
+
+`list` shows recent verifications (default `--limit 20`). `show` prints a run's verifications interval by interval: the verdict, each metric and log query's outcome and reason, the top log clusters, and a model's explanation (marked as untrusted text) if one was asked. `mark` marks a running or paused verification passed or failed; `--reason` is required and is kept in the audit trail (`verification.override`). On a protected environment the person who started the run may not mark it passed.
+
+## launchway health-sources and launchway models
+
+```text
+launchway health-sources [--json]
+launchway models [--json]
+```
+
+`health-sources` lists the health sources your projects may name in verify steps, by name, type and projects. `models` lists the AI models your projects may name, with their limits and today's use. Neither shows where a source or model is or how it is reached, and nothing else if none is configured.
+
+## launchway runners
+
+Lists runners and manages their enrolment. Making join tokens, revoking and rotating need the role `runner_admin` names (`admin` by default) on every project. See [Runners on other machines and clusters](../guide/runner-identity.md).
+
+```text
+launchway runners list [--json]
+launchway runners join-token --pool NAME [--uses N] [--ttl 1h] [--labels a,b] [--ephemeral] [--description TEXT] [--json]
+launchway runners revoke-token ID
+launchway runners revoke RUNNER [--reason TEXT]
+launchway runners rotate RUNNER
+```
+
+| Command | What it does |
+|---|---|
+| `list` | Each runner, whether it is online, offline or revoked, its pool, whether it is enrolled or uses a shared or pool token (no identity), its version and labels, and what it is running |
+| `join-token` | Makes a join token for a pool and prints it once, with the command to run on the runner's machine. `--uses` (default `1`) is how many runners may enrol with it, `--ttl` (default `1h`, at most `168h`) how long it may be used, `--ephemeral` revokes each runner when it leaves. The pool defaults to `default` |
+| `revoke-token` | Stops a join token from enrolling runners |
+| `revoke` | Revokes an enrolled runner at once on every server; the steps it held are queued again. `--reason` is for the audit trail |
+| `rotate` | Asks an enrolled runner to move to a new key the next time it gets an access token |
 
 ## launchway version
 

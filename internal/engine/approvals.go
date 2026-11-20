@@ -31,6 +31,26 @@ func (e *Engine) Decide(runID, stepID string, approve bool, actor, comment strin
 		if def == nil {
 			return fmt.Errorf("%w: step %s", ErrNotFound, stepID)
 		}
+		if def.IsVerify() && c.e.knows(schemaVerify) {
+			// A verification waiting for a person (on_inconclusive: pause)
+			// is decided like an approval: approving marks it passed.
+			s := c.st.Steps[stepID]
+			if s.Status != StepWaitingS || s.WaitKind != WaitVerify {
+				return fmt.Errorf("%w: %s is not waiting for a decision (it is %s)", ErrConflict, stepID, s.Status)
+			}
+			outcome := "failed"
+			if approve {
+				outcome = "passed"
+			}
+			if err := c.overrideRefusal(def, actor, outcome); err != nil {
+				return err
+			}
+			reason := nonEmpty(comment, "decided on the approvals page")
+			c.emit(VerifyOverride, Payload{Step: stepID, Attempt: s.Attempt, Actor: actor, Comment: reason, Verify: &VerifyEvent{Outcome: outcome}})
+			c.applyVerdict(stepID, def, outcome, fmt.Sprintf("marked %s by %s: %s", outcome, actor, reason), actor)
+			c.advance()
+			return nil
+		}
 		if !def.IsApproval() {
 			return fmt.Errorf("%w: %s is not an approval step", ErrConflict, stepID)
 		}
@@ -106,6 +126,9 @@ func (e *Engine) expireWaits() {
 			if def.IsDeployKind() {
 				return c.expireDeploy(d.stepID, def)
 			}
+			if def.IsVerify() {
+				return c.expireVerify(d.stepID, def)
+			}
 			if s.Status != StepWaitingS || !def.IsApproval() {
 				return nil
 			}
@@ -143,6 +166,10 @@ func (e *Engine) Approvals() ([]Approval, error) {
 	onlyApprovals := ""
 	if e.knows(schemaDeploy) {
 		onlyApprovals = ` AND s.wait_kind = ''` // deploy steps wait too, for other things
+		if e.knows(schemaVerify) {
+			// A paused verification waits for a person, like an approval.
+			onlyApprovals = ` AND s.wait_kind IN ('', '` + WaitVerify + `')`
+		}
 	}
 	rows, err := e.db.Query(`SELECT s.run_id, r.project, r.number, s.step_id, r.actor, r.message, r.sha, r.branch, r.tag,
 			r.event, r.ref, s.queued_at, s.deadline
@@ -198,6 +225,9 @@ func (e *Engine) Approvals() ([]Approval, error) {
 		for _, s := range created.Pipeline.Steps {
 			if s.IsApproval() {
 				messages[runID+"/"+s.ID] = s.Message
+			}
+			if s.IsVerify() {
+				messages[runID+"/"+s.ID] = "The verification was inconclusive. Approve to mark it passed, reject to mark it failed."
 			}
 		}
 	}

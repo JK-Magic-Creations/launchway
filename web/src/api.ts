@@ -57,8 +57,13 @@ export interface TestTotals {
   truncated?: boolean;
 }
 
+/** The format a test report file was read as. A newer server may name others. */
+export type TestFormat =
+  | "junit" | "go-test-json" | "cucumber-json" | "karate-json" | "playwright-json" | "mochawesome" | "ctrf"
+  | "testng" | "nunit3" | "xunit2" | "trx" | "tap" | "robot";
+
 export interface TestFile {
-  path: string; format?: "junit" | "go-test-json"; bytes: number; cases: number; error?: string; warning?: string;
+  path: string; format?: TestFormat | string; bytes: number; cases: number; error?: string; warning?: string;
 }
 
 export interface StepTests extends TestTotals {
@@ -91,13 +96,157 @@ export interface TestCase {
   message?: string; has_details: boolean; report_file?: string;
   flaky?: boolean; new_failure?: boolean;
   details?: string; output?: string;
+  /** Tags or labels the report gives the test (@smoke, a JUnit property, a Playwright tag). */
+  tags?: string[];
+  /** What the test ran against: a Playwright project or browser, a matrix entry. */
+  variant?: string;
+  /** In a list: the result has steps or other structure to show when opened. */
+  has_steps?: boolean;
+  // Only in one result fetched on its own:
+  /** How many times the test tool ran the test again. */
+  retries?: number;
+  /** Earlier tries inside the test tool, oldest first; the result is the last. */
+  attempts?: TestAttempt[];
+  steps?: TestStep[];
+  /** Not every step was kept. */
+  steps_cut?: boolean;
+  attachments?: TestAttachment[];
+  properties?: { name: string; value: string }[];
 }
+
+export interface TestAttempt { status: TestStatus; duration_ms: number; message?: string }
+
+export interface TestHeader { name: string; value: string }
+
+/** An HTTP request a step made and its answer (Karate and other API test tools). */
+export interface HTTPExchange {
+  method: string; url: string; status?: number; duration_ms?: number;
+  request_headers?: TestHeader[]; request_body?: string;
+  response_headers?: TestHeader[]; response_body?: string;
+}
+
+/** One step of a test: a Gherkin step, a Playwright step, a Robot keyword. */
+export interface TestStep {
+  /** 0 for a top-level step. */
+  depth?: number;
+  /** Given, When, Then, And, *; a Robot keyword's library. */
+  keyword?: string;
+  name: string; status: TestStatus; duration_ms?: number;
+  error?: string;
+  /** A doc string, data table or log the step wrote. */
+  text?: string;
+  http?: HTTPExchange;
+  /** Indexes into the result's attachments. */
+  attachments?: number[];
+}
+
+export type AttachmentKind = "image" | "video" | "trace" | "text" | "html" | "file";
+
+export interface TestAttachment {
+  name: string; kind: AttachmentKind | string; content_type?: string; size?: number;
+  artifact?: string; path?: string;
+  /** Why it cannot be shown or fetched. */
+  problem?: string;
+}
+
+export interface Facet { value: string; count: number }
 
 export interface CasePage {
   cases: TestCase[]; matching: number; counts: Record<string, number>; offset: number; limit: number;
+  tags?: Facet[]; variants?: Facet[]; suites?: Facet[];
 }
 
-export interface CaseQuery { status?: string; q?: string; step?: string; attempt?: number; limit?: number; offset?: number }
+export type CaseSort = "" | "failures" | "slowest" | "name";
+
+export interface CaseQuery {
+  status?: string; q?: string; step?: string; attempt?: number; limit?: number; offset?: number;
+  tag?: string; suite?: string; variant?: string; sort?: CaseSort;
+}
+
+/** A test whose result differs from, or matches a failure of, the previous run. */
+export interface CompareCase {
+  key: string; id: number; suite: string; name: string; variant?: string;
+  status: TestStatus; before: TestStatus | ""; message?: string; duration_ms: number;
+}
+
+export interface TestCompare {
+  previous?: { id: string; number: number };
+  new_failures: CompareCase[]; fixed: CompareCase[]; still_failing: CompareCase[];
+  counts: { new_failures: number; fixed: number; still_failing: number };
+}
+
+// ---- coverage ----
+
+/** Covered items of one kind; a total of 0 means it was not measured. */
+export interface CoverageCounter { covered: number; total: number }
+
+export interface CoverageTotals {
+  lines: CoverageCounter; branches: CoverageCounter; functions: CoverageCounter;
+  /** What lines counts: "lines", or "statements" (Go). */
+  unit?: string;
+}
+
+export interface CoverageReportFile { path: string; format?: string; bytes: number; files: number; error?: string; warning?: string }
+
+export interface CoverageThreshold { lines?: number; branches?: number; functions?: number }
+
+export interface CoverageStep extends CoverageTotals {
+  step: string; attempt: number; reused_from?: string; reused_from_number?: number;
+  source_files: number; stored: number; pruned?: boolean;
+  reports: CoverageReportFile[]; notes?: string[];
+  /** Why the step failed its fail_under. */
+  failed_under?: string;
+  threshold?: CoverageThreshold;
+}
+
+export interface CoverageCompare { run: { id: string; number: number }; ref: string; totals: CoverageTotals }
+
+export interface RunCoverage {
+  totals: CoverageTotals | null;
+  steps: CoverageStep[];
+  declared: string[];
+  previous?: CoverageCompare;
+  base?: CoverageCompare;
+}
+
+export interface CoverageFileRow {
+  step: string; path: string; package?: string;
+  lines: CoverageCounter; branches: CoverageCounter; functions: CoverageCounter;
+  /** Points of line coverage against the previous run; absent when not known. */
+  change?: number | null;
+}
+
+export interface CoveragePackage {
+  package: string; files: number; lines: CoverageCounter; branches: CoverageCounter; functions: CoverageCounter;
+}
+
+export interface CoverageFiles {
+  files: CoverageFileRow[]; packages: CoveragePackage[]; matching: number; offset: number; limit: number;
+}
+
+export type CoverageSort = "path" | "lines" | "missed";
+
+export interface CoverageTrend {
+  ref: string;
+  runs: { id: string; number: number; sha: string; created_at: number; totals: CoverageTotals }[];
+}
+
+// ---- hosted HTML reports ----
+
+export interface HostedReport {
+  step: string; attempt: number; name: string; artifact: string; index: string;
+  files: number; bytes: number; has_index: boolean; expires_at?: number;
+  /** Opens the report: a signed link that works for a few hours. */
+  url?: string;
+  base: string;
+}
+
+export interface RunReports {
+  reports: HostedReport[];
+  /** Reports the pipeline declares, as step/name. */
+  declared: string[];
+  origin: "sandboxed" | "separate";
+}
 
 export interface HistoryResult {
   run_id: string; number: number; sha: string; ref: string; created_at: number; step: string; attempt: number;
@@ -107,7 +256,7 @@ export interface HistoryResult {
 export interface TestHistory { key: string; suite: string; name: string; file?: string; ref: string; results: HistoryResult[] }
 
 export interface TestStat {
-  key: string; suite: string; name: string; file?: string; runs: number;
+  key: string; suite: string; name: string; file?: string; variant?: string; runs: number;
   avg_ms?: number; max_ms?: number; failures?: number; last_failed?: number;
   commits?: number; tool_retry?: boolean; last_seen?: number;
 }
@@ -119,9 +268,9 @@ export interface TestOverview {
 }
 
 /** What kind of step it is: a step that runs a script has none. */
-export type StepKind = "approval" | "deploy" | "rollback" | "rollout" | "image";
-/** What a waiting deploy step waits for: its environment's lock, or what deploy runners observe. */
-export type WaitKind = "lock" | "observe";
+export type StepKind = "approval" | "deploy" | "rollback" | "rollout" | "image" | "verify" | "ai";
+/** What a waiting deploy step waits for: its environment's lock, or what deploy runners observe; a verify step: a person (verify). */
+export type WaitKind = "lock" | "observe" | "verify";
 /** Why a step was skipped: condition, upstream, not_needed (a rollback with nothing to roll back) or superseded. */
 export type SkipKind = "" | "condition" | "upstream" | "not_needed" | "superseded";
 
@@ -417,13 +566,29 @@ export interface GraphStep {
   group?: string;
   library?: string;
   needs_groups?: string[];
-  reports?: { tests: string[] };
+  reports?: GraphReports;
   /** A rollout, rollback or linked approval step: the deploy step it is about. */
   deployment?: string;
   /** A rollout step: what it does to the rollout. */
   action?: RolloutAction;
   /** An image step: the container image it builds. */
   image_build?: ImageBuild;
+  /** A verify step: what it watches and how it decides. */
+  verify?: GraphVerify;
+  /** An ai step: the model it asks and what. */
+  ai?: GraphAI;
+  /** A verify step watching an environment, not a deployment. */
+  environment?: string;
+  service?: string;
+}
+
+/** What a step reports, as its pipeline declares it. */
+export interface GraphReports {
+  tests?: string[] | null;
+  test_attachments?: string;
+  coverage?: string[] | null;
+  coverage_fail_under?: CoverageThreshold;
+  html?: { name: string; path: string; index?: string }[] | null;
 }
 
 /** A library a pipeline uses, and the commit its version resolved to when the run was created. */
@@ -475,6 +640,8 @@ export interface RunDetail extends RunSummary {
   deployments?: DeploymentView[];
   /** Why a run with image steps may wait long: no runner that builds images has been seen. */
   runner_hint?: string;
+  /** Why no runner may take the run's waiting steps: pools, labels or what runners accept. */
+  pool_hint?: string;
   /** The run's policy decisions summed up; absent if no policy judged it. */
   policy?: { decisions: number; verdict: PolicyVerdict; waived: number };
 }
@@ -648,11 +815,53 @@ export interface Approval {
 // online: seen within the last two minutes. Runners not seen for a day are no longer listed.
 export interface Runner {
   id: string; name: string; executor: string; version: string; last_seen: number; online: boolean;
-  /** A deploy runner (executor "deploy"): its pool, and the targets it serves. */
+  /** Its pool ("default" for build runners of the default pool), and for a deploy runner the targets it serves. */
   pool?: string; targets?: string[];
   /** The runner builds images (it has image builders). */
   images?: boolean;
+  /** build or deploy. */
+  kind?: string;
+  /** identity: enrolled; shared: the shared runner token; pool: a deploy pool's token. */
+  auth?: "identity" | "shared" | "pool";
+  labels?: string[];
+  os?: string; arch?: string;
+  /** What its accept: section allows, as the runner reported it. */
+  accept?: RunnerAccept;
+  identity?: RunnerIdentity;
+  /** The steps it holds now. */
+  work?: { run: string; project: string; number: number; step: string }[];
 }
+
+export interface RunnerAccept {
+  projects?: string[]; repositories?: string[]; images?: string[]; images_by_digest?: boolean; executors?: string[];
+  environments?: string[]; pull_requests?: boolean; drafts?: boolean; max_timeout?: string; env_deny?: string[];
+}
+
+export interface RunnerIdentity {
+  id: string; name: string; pool: string; kind: string; key_fingerprint: string; key_created_at: number;
+  join_token: string; enrolled_by: string; enrolled_at: number; labels: string[]; hostname: string;
+  os: string; arch: string; version: string; executor: string; ephemeral: boolean; last_seen: number;
+  revoked_at?: number; revoked_by?: string; revoke_reason?: string; rotate_asked?: number;
+}
+
+export interface RunnerPool {
+  name: string; kind: "build" | "deploy"; projects: string[]; events: string[]; targets: string[];
+  require_identity: boolean;
+  /** Runners may also use a shared token: the shared runner token, or the deploy pool's own. */
+  shared_token: boolean;
+  /** False for the default pool when the configuration does not name it. */
+  configured: boolean;
+}
+
+export interface RunnerPools { pools: RunnerPool[]; manage: boolean; identities: boolean }
+
+export interface JoinToken {
+  id: string; pool: string; labels: string[]; description: string; max_uses: number; uses: number; ephemeral: boolean;
+  created_by: string; created_at: number; expires_at: number; last_used_at?: number; revoked_by?: string; revoked_at?: number;
+  state: "active" | "used" | "expired" | "revoked";
+}
+
+export interface JoinTokenRequest { pool: string; labels?: string[]; description?: string; max_uses?: number; ttl?: string; ephemeral?: boolean }
 
 /** A problem in pipeline text; with file set, in that template of the library instead. */
 export interface Problem { file?: string; library?: string; line?: number; column?: number; path?: string; message: string }
@@ -681,6 +890,8 @@ export interface Me {
   admin: boolean;
   runners: boolean;
   roles: Record<string, Role>;
+  /** The MCP endpoint for agents: whether it is on, its path, and the OAuth resource if the provider's tokens work there. */
+  mcp?: { enabled: boolean; path: string; oauth_resource?: string };
 }
 
 export interface ApiToken { id: string; name: string; created_at: number; expires_at: number; last_used: number }
@@ -768,6 +979,12 @@ export const api = {
   startRun: (name: string, ref: string, libraries?: LibraryOverrides) =>
     call<RunSummary>("POST", `/api/v1/projects/${encodeURIComponent(name)}/runs`, { ref, libraries }),
   runners: (background = false) => call<Runner[]>("GET", "/api/v1/runners", undefined, { background }),
+  runnerPools: (background = false) => call<RunnerPools>("GET", "/api/v1/runner-pools", undefined, { background }),
+  joinTokens: (background = false) => call<JoinToken[]>("GET", "/api/v1/runner-join-tokens", undefined, { background }),
+  createJoinToken: (req: JoinTokenRequest) => call<{ token: string; join_token: JoinToken }>("POST", "/api/v1/runner-join-tokens", req),
+  revokeJoinToken: (id: string) => call<JoinToken>("POST", `/api/v1/runner-join-tokens/${encodeURIComponent(id)}/revoke`),
+  revokeRunner: (id: string, reason: string) => call<{ released: number }>("POST", `/api/v1/runners/${encodeURIComponent(id)}/revoke`, { reason }),
+  rotateRunner: (id: string) => call<RunnerIdentity>("POST", `/api/v1/runners/${encodeURIComponent(id)}/rotate`),
   /** With a project (or expand), templates are expanded from the server's libraries. */
   validate: (yaml: string, opts: { project?: string; expand?: boolean } = {}) => {
     const p = new URLSearchParams();
@@ -787,6 +1004,20 @@ export const api = {
     return call<CasePage>("GET", `/api/v1/runs/${id}/tests/cases?` + p.toString(), undefined, { background });
   },
   testCase: (id: string, caseId: number) => call<TestCase>("GET", `/api/v1/runs/${id}/tests/cases/${caseId}`),
+  testCompare: (id: string, background = false) => call<TestCompare>("GET", `/api/v1/runs/${id}/tests/compare`, undefined, { background }),
+  runCoverage: (id: string, background = false) => call<RunCoverage>("GET", `/api/v1/runs/${id}/coverage`, undefined, { background }),
+  coverageFiles: (id: string, q: { step?: string; q?: string; sort?: CoverageSort; limit?: number; offset?: number }, background = false) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<CoverageFiles>("GET", `/api/v1/runs/${id}/coverage/files?` + p.toString(), undefined, { background });
+  },
+  projectCoverage: (name: string, ref?: string, runs?: number) => {
+    const p = new URLSearchParams();
+    if (ref) p.set("ref", ref);
+    if (runs) p.set("runs", String(runs));
+    return call<CoverageTrend>("GET", `/api/v1/projects/${encodeURIComponent(name)}/coverage?` + p.toString());
+  },
+  runReports: (id: string, background = false) => call<RunReports>("GET", `/api/v1/runs/${id}/reports`, undefined, { background }),
   projectTests: (name: string, ref?: string, runs?: number) => {
     const p = new URLSearchParams();
     if (ref) p.set("ref", ref);
@@ -815,6 +1046,7 @@ export const api = {
     for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
     return call<{ entries: AuditEntry[]; next_before: number }>("GET", "/api/v1/audit?" + p.toString());
   },
+  artifactStore: (background = false) => call<ArtifactStore>("GET", "/api/v1/artifact-store", undefined, { background }),
   runArtifacts: (id: string, background = false) => call<RunArtifacts>("GET", `/api/v1/runs/${id}/artifacts`, undefined, { background }),
   deleteArtifact: (id: string, artifactId: string) =>
     call<ArtifactView>("DELETE", `/api/v1/runs/${id}/artifacts/${encodeURIComponent(artifactId)}`),
@@ -941,6 +1173,24 @@ export interface RunArtifacts {
   available: boolean;
   problem?: string;
   max_retain_ms: number;
+}
+
+/** What the database records as kept in one store; store is "" for files kept before schema 17. */
+export interface StoreCount { store: string; files: number; bytes: number }
+
+/** Where this server keeps artifacts (GET /api/v1/artifact-store). */
+export interface ArtifactStore {
+  store: string;
+  available: boolean;
+  problem?: string;
+  why?: string;
+  usage?: {
+    used_bytes: number; object_bytes: number; objects: number; open_uploads: number; collect_bytes: number;
+    limit_bytes: number; max_object_bytes: number;
+  };
+  kept: StoreCount;
+  elsewhere: StoreCount[];
+  advice: string[];
 }
 
 export type Severity = "critical" | "high" | "medium" | "low" | "unknown";
@@ -1103,3 +1353,217 @@ export interface ImageHit {
 }
 
 export interface ImageQuery { digest?: string; repository?: string; tag?: string; project?: string; limit?: number }
+
+/** Where one attachment of a test result is served; download asks for a file. */
+export function attachmentURL(run: string, caseId: number, n: number, download = false): string {
+  return `/api/v1/runs/${run}/tests/cases/${caseId}/attachments/${n}${download ? "?download=1" : ""}`;
+}
+
+// ---- Verifications ----
+
+/** How a verification, or one of its checks, stands. */
+export type VerifyOutcome = "running" | "passed" | "failed" | "inconclusive";
+
+export interface VerifyPoint { t: number; v: number }
+
+export interface VerifyCluster { template: string; count: number; samples?: string[] }
+
+/** What a deploy runner read in one interval. */
+export interface VerifyInterval {
+  index: number;
+  start: number;
+  end: number;
+  metrics?: { name: string; canary?: VerifyPoint[]; stable?: VerifyPoint[]; error?: string }[];
+  logs?: {
+    name: string; lines: number; truncated?: boolean; clusters?: VerifyCluster[];
+    stable?: VerifyCluster[]; stable_lines?: number; error?: string;
+  }[];
+}
+
+/** A set of readings summed up; n is 0 when there were none. */
+export interface VerifyStats { n: number; mean: number; sd: number; min: number; max: number }
+
+/** One metric in one interval. */
+export interface IntervalCheck {
+  index: number;
+  outcome: "passed" | "failed" | "no_data";
+  /** The new version's mean in the interval. */
+  value: number;
+  stable_z?: number;
+  baseline_z?: number;
+  reason?: string;
+}
+
+export interface MetricVerdict {
+  name: string;
+  outcome: VerifyOutcome;
+  reason: string;
+  intervals?: IntervalCheck[];
+  canary: VerifyStats;
+  stable: VerifyStats;
+  baseline: VerifyStats;
+}
+
+export type ClusterClass = "known" | "unknown" | "unexpected_frequency" | "no_reference";
+
+export interface ClusterVerdict {
+  template: string;
+  count: number;
+  class: ClusterClass;
+  /** Counts as an error. */
+  error: boolean;
+  reference?: number;
+  rate_ratio?: number;
+  samples?: string[];
+  /** This cluster is why the log query failed. */
+  failing?: boolean;
+}
+
+export interface LogVerdict {
+  name: string; outcome: VerifyOutcome; reason: string; lines: number; clusters?: ClusterVerdict[];
+  /** Each interval's read: value is the lines read in it. */
+  intervals?: IntervalCheck[];
+}
+
+export interface VerifyVerdict {
+  outcome: VerifyOutcome;
+  /** No more intervals are needed. */
+  final: boolean;
+  summary: string;
+  metrics?: MetricVerdict[];
+  logs?: LogVerdict[];
+  /** How many intervals were judged. */
+  intervals: number;
+}
+
+export interface AIUsage { calls: number; input_tokens: number; output_tokens: number; cost_usd?: number; duration_ms?: number }
+
+/** What a model said about a verdict: untrusted text. */
+export interface VerifyExplanation {
+  model: string;
+  summary?: string;
+  cause?: string;
+  suggestion?: string;
+  outcome?: string;
+  /** The model turned the statistics' pass into something else (decide: model-assisted). */
+  changed?: boolean;
+  error?: string;
+  usage?: AIUsage;
+}
+
+export interface BaselineRun { run: string; number: number; step: string; version?: string; at: number }
+
+export interface VerifyQuery { name: string; source: string; query?: string; stable_query?: string; statement?: string; index?: string }
+
+export interface VerificationView {
+  run_id: string;
+  run_number: number;
+  project: string;
+  step: string;
+  /** The step's status. */
+  status: StepStatus;
+  environment: string;
+  service: string;
+  target: string;
+  deployment?: string;
+  version?: string;
+  /** When the first interval starts (Unix ms). */
+  start: number;
+  interval_ms: number;
+  total: number;
+  deadline?: number;
+  sensitivity: "low" | "medium" | "high" | string;
+  on_fail: string;
+  on_inconclusive: string;
+  decide?: string;
+  model?: string;
+  params?: Record<string, string>;
+  /** The earlier passed verifications it is compared with, newest first. */
+  baseline?: BaselineRun[];
+  baseline_metrics?: Record<string, VerifyStats>;
+  intervals: VerifyInterval[];
+  /** The recorded verdict, or what the intervals so far say. */
+  verdict: VerifyVerdict;
+  decided: boolean;
+  explanation?: VerifyExplanation;
+  override?: "passed" | "failed" | "";
+  override_by?: string;
+  override_comment?: string;
+  queries: VerifyQuery[];
+  started_at: number;
+}
+
+export interface VerificationSummary {
+  run_id: string; run_number: number; project: string; step: string; environment: string; service: string;
+  deployment?: string; version?: string; outcome: VerifyOutcome; summary: string; intervals: number; total: number;
+  overridden_by?: string; started_at: number; decided_at?: number;
+  /** The verify step's status ("waiting" while it waits for a person). */
+  status?: StepStatus;
+}
+
+export type VerifyAction = "mark-passed" | "mark-failed";
+
+export interface VerifyControls {
+  environment: string;
+  controls: { action: VerifyAction; available: boolean; reason?: string; forbidden?: boolean }[];
+}
+
+/** The pipeline's definition of a verify step, as the run's graph has it. */
+export interface GraphVerify {
+  delay?: string; duration: string; interval: string; sensitivity: string; baseline: number;
+  on_fail: string; on_inconclusive: string; model?: string; decide?: string;
+  metrics?: { name: string; source: string; direction?: string; max?: number; min?: number; fail_fast_max?: number; fail_fast_min?: number }[];
+  logs?: { name: string; source: string }[];
+}
+
+/** The pipeline's definition of an ai step. */
+export interface GraphAI { model: string; prompt: string; instructions?: string; schema?: string; max_tokens: number }
+
+// ---- AI models ----
+
+export interface ModelUsage { project: string; day: string; calls: number; input_tokens: number; output_tokens: number; cost_usd: number }
+
+export interface ModelView {
+  name: string;
+  provider: string;
+  model: string;
+  /** No key: a model server of the operator's own. */
+  local: boolean;
+  projects: string[];
+  max_tokens: number;
+  max_input_bytes: number;
+  calls_per_run: number;
+  tokens_per_day?: number;
+  temperature: boolean;
+  used_today?: ModelUsage[];
+}
+
+export interface Models { models: ModelView[]; server_can_explain: boolean }
+
+/** A model's explanation of a failed step: untrusted text. */
+export interface ExplanationView {
+  id: string; run_id: string; step: string; attempt: number; model: string; actor: string; text: string;
+  usage: AIUsage; created_at: number;
+}
+
+export interface HealthSourceView { name: string; type: string; projects: string[] }
+
+export const verifyApi = {
+  runVerifications: (id: string, background = true) =>
+    call<VerificationView[]>("GET", `/api/v1/runs/${id}/verifications`, undefined, { background }),
+  verifications: (q: { environment?: string; project?: string; service?: string; limit?: number }, background = false) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
+    return call<VerificationSummary[]>("GET", "/api/v1/verifications?" + p.toString(), undefined, { background });
+  },
+  controls: (run: string, step: string, background = true) =>
+    call<VerifyControls>("GET", `/api/v1/runs/${run}/steps/${encodeURIComponent(step)}/verify/controls`, undefined, { background }),
+  override: (run: string, step: string, outcome: "passed" | "failed", reason: string) =>
+    call<{ ok: boolean }>("POST", `/api/v1/runs/${run}/steps/${encodeURIComponent(step)}/verify/override`, { outcome, reason }),
+  models: (background = true) => call<Models>("GET", "/api/v1/ai/models", undefined, { background }),
+  explain: (run: string, step: string, model: string) =>
+    call<ExplanationView>("POST", `/api/v1/runs/${run}/steps/${encodeURIComponent(step)}/explain`, { model }),
+  explanations: (run: string, step: string, background = true) =>
+    call<ExplanationView[]>("GET", `/api/v1/runs/${run}/steps/${encodeURIComponent(step)}/explanations`, undefined, { background }),
+  healthSources: (background = true) => call<HealthSourceView[]>("GET", "/api/v1/health-sources", undefined, { background }),
+};

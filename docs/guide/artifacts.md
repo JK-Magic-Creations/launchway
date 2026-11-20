@@ -47,11 +47,16 @@ steps:
   is kept, with a download for each file and for all of them as a zip. Operators of the project may
   delete one; the audit trail records who did. Files are always served as downloads, never shown
   as pages.
-- **Storage**: a directory (the default, under the data directory) for one server, or
-  S3-compatible object storage, which several servers need. A file kept twice is stored once.
-  Uploads go in 8 MiB chunks that any server can take, and carry on after a broken connection.
-  Each server checks that it shares the store with the others (a small marker object), and keeps
-  no artifacts, saying why, if it does not.
+- **Storage**: with nothing configured, in the database on PostgreSQL (in 1 MiB chunks, each
+  checked by SHA-256 when read), so any number of servers share artifacts with nothing else to
+  run; in a directory under the data directory on SQLite (one server). S3-compatible object
+  storage, or a shared directory, are options for very large installations. A file kept twice is
+  stored once. Uploads go in 8 MiB chunks that any server can take, and carry on after a broken
+  connection or a server that died. Each server checks that it shares the store with the others
+  (a small marker object), and keeps no artifacts, saying why, if it does not. The Runners page
+  says where a server keeps them and how full the store is. `launchway blobs copy` moves them
+  between stores while servers run. [Where artifacts are kept](../artifacts.md) has the design,
+  measurements, limits, what to know about vacuum and backups, and when to move to S3.
 - **API**: `GET /api/v1/runs/{id}/artifacts`, `GET /api/v1/runs/{id}/artifacts/{artifact}/file?path=`
   (ranges supported), `GET /api/v1/runs/{id}/artifacts/{artifact}/archive` (zip),
   `DELETE /api/v1/runs/{id}/artifacts/{artifact}` (operators). Run summaries carry `artifacts`,
@@ -59,7 +64,9 @@ steps:
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `artifacts.store` | filesystem | `filesystem` or `s3` |
+| `artifacts.store` | database on PostgreSQL, filesystem on SQLite | `database`, `filesystem` or `s3` (see [Where artifacts are kept](../artifacts.md) for an installation that kept artifacts on the filesystem before) |
+| `artifacts.database.max_total_gib` | 100 | how much the database store may hold in all |
+| `artifacts.database.max_blob_mib` | 2048 | the largest file the database store keeps |
 | `artifacts.dir` | `<data>/artifacts` | the filesystem store's directory |
 | `artifacts.s3.endpoint`, `bucket`, `region`, `prefix`, `path_style`, `ca_file` | – | the S3 store; credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or `*_FILE`), never from the file |
 | `artifacts.max_file_mib` | 1024 | the largest file an artifact may hold |

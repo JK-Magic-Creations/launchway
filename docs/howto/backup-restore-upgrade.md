@@ -26,8 +26,8 @@ operators.
 
 | What | Where | Back it up? |
 |---|---|---|
-| The database: runs, steps, events, logs, approvals, test results, findings, artifact records, sessions, API token hashes, the audit trail, the generated runner token | PostgreSQL, or `launchway.db` in the data directory | Yes. Everything that matters is here. |
-| Artifacts and SBOMs | The S3 bucket, or `artifacts/` in the data directory | Yes, at the same time as the database: the database records which objects exist. |
+| The database: runs, steps, events, logs, approvals, test results, findings, artifact records (and artifacts themselves, with the default database store on PostgreSQL), sessions, API token hashes, the audit trail, the generated runner token | PostgreSQL, or `launchway.db` in the data directory | Yes. Everything that matters is here. |
+| Artifacts and SBOMs | The database (the default on PostgreSQL, so already in its backup), the S3 bucket, or `artifacts/` in the data directory | Yes, at the same time as the database when they are outside it: the database records which objects exist. Hosted HTML reports and test attachments are artifacts too. |
 | Configuration | `launchway.yaml`, `runner.yaml`, your Helm values | Yes, with your other configuration (in Git, for example). |
 | Secrets the configuration names | OIDC client secret, `LAUNCHWAY_RUNNER_TOKEN` if you set one, runner pool tokens, S3 keys | Yes, in your secret manager. They are never in the database. |
 | `runner-token` | Data directory | Optional: a copy of the generated token, which is also in the database. |
@@ -90,7 +90,7 @@ pg_dump --format=custom --file=launchway.dump \
 ```
 
 `pg_dump` takes a consistent snapshot while the servers run; you do not need to stop them. Back up
-the artifact bucket at about the same time (S3 versioning, or a copy of the bucket). An artifact
+the artifact bucket at about the same time if you use S3 (S3 versioning, or a copy of the bucket); with the default database store, artifacts are in the dump and its size grows with them (see [Where artifacts are kept](../artifacts.md) for what to know about vacuum and backups). An artifact
 whose object is missing cannot be fetched or downloaded; a step that fetches it fails and says so.
 
 With the Helm chart's development database, which is for trying only:
@@ -129,7 +129,7 @@ kubectl -n launchway exec deploy/launchway-postgresql -- \
    ```
 
    ```text
-   {"schema":{"code":16,"database":16,"minimum":7},"status":"ok"}
+   {"schema":{"code":21,"database":21,"minimum":7},"status":"ok"}
    ```
 
 Restore a backup only into a release that knows its schema or a newer one: a newer server migrates
@@ -198,6 +198,11 @@ take it out again before rolling back. The settings and keys this applies to so 
 | 14 | `protected:` on environments, `environments:` on access bindings | rollout steps, `until: paused`, `pauses`, `abort_first`, `on_cancel: abort` |
 | 15 | the runners' `images:` (`runner.images`) | `kind: image`, deploy changes by `digest` |
 | 16 | `policy:` (`config.policy`) | |
+| 17 | `artifacts.store: database`, `artifacts.database` (`config.artifacts.store`, `config.artifacts.database`) | |
+| 18 | `reports:` (`config.reports`) | `reports.tests.attachments`, `reports.coverage`, `reports.html` |
+| 19 | `verification:`, `ai:`, the runners' `ai:` and `health_sources:` (`delivery.verification`, `ai.*`, `runner.ai`) | `kind: verify`, `kind: ai` |
+| 20 | `runner_admin:`, `require_identity`, the runners' `labels:`, `accept:`, `proxy:`, `no_proxy:`, `ca_file:` (`config.runnerAdmin`, `runner.join`, `runner.labels`, `runner.accept`) | |
+| 21 | `runner_pools:` with `kind: build` (`config.runnerPools`) | `runner:` |
 
 The Helm chart writes these settings only when you set them, so its default configuration can be
 read by the release before.
@@ -227,7 +232,7 @@ helm rollback launchway REVISION -n launchway --wait
 Before rolling back, take out the settings the newer release brought (the table above), so that the
 older servers can read the configuration. Open runs that need the newer release stay as they are,
 shown as needing a newer server; cancel them first, or let them finish after you upgrade again.
-Rolling back from schema 16 has its own steps in [Database schema and upgrades](../development/migrations.md).
+Rolling back from schema 16 or later has its own steps for each schema in [Database schema and upgrades](../development/migrations.md).
 
 > [!TIP]
 > Prefer `helm rollback` to `kubectl rollout undo`. After `kubectl rollout undo`, the next

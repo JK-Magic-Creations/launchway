@@ -20,13 +20,23 @@ import (
 //	kubectl --context kind-launchway-test create namespace launchway-test
 //	kubectl --context kind-launchway-test label --overwrite namespace launchway-test pod-security.kubernetes.io/enforce=restricted
 //	LAUNCHWAY_TEST_KUBE_CONTEXT=kind-launchway-test go test ./internal/executor/ -run Kubernetes
+//
+// LAUNCHWAY_TEST_KUBE_NAMESPACE names another namespace than launchway-test,
+// so that several people (or checkouts) can share a cluster.
+func kubeTestNamespace() string {
+	if ns := os.Getenv("LAUNCHWAY_TEST_KUBE_NAMESPACE"); ns != "" {
+		return ns
+	}
+	return "launchway-test"
+}
+
 func kube(t *testing.T) *Kubernetes {
 	t.Helper()
 	ctxName := os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT")
 	if ctxName == "" {
 		t.Skip("set LAUNCHWAY_TEST_KUBE_CONTEXT to run Kubernetes tests")
 	}
-	k, err := NewKubernetes(KubernetesOptions{Context: ctxName, Namespace: "launchway-test", StartTimeout: "5m"}, "test-"+t.Name())
+	k, err := NewKubernetes(KubernetesOptions{Context: ctxName, Namespace: kubeTestNamespace(), StartTimeout: "5m"}, "test-"+t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +283,7 @@ echo "npm cache: $(npm config get cache)"`, nil)
 func TestKubernetesUnrestrictedRefusedByRestrictedNamespace(t *testing.T) {
 	k := kube(t)
 	requireRestrictedNamespace(t, k)
-	u, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: "launchway-test",
+	u, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: kubeTestNamespace(),
 		Restricted: ptr(false)}, "test-"+t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -291,7 +301,7 @@ func TestKubernetesUnrestrictedRefusedByRestrictedNamespace(t *testing.T) {
 // not know (it may belong to someone else).
 func TestKubernetesCleanupAcrossRunners(t *testing.T) {
 	a := kube(t)
-	b, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: "launchway-test"}, "test-other-"+t.Name())
+	b, err := NewKubernetes(KubernetesOptions{Context: os.Getenv("LAUNCHWAY_TEST_KUBE_CONTEXT"), Namespace: kubeTestNamespace()}, "test-other-"+t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

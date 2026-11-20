@@ -80,12 +80,23 @@ config:
   # -- Where the files steps keep (artifacts: in a pipeline, and SBOMs) are stored, and limits on
   # them. Every setting is unset by default, and only written to the configuration when set (a
   # server of the version before does not know them; see docs/development/migrations.md).
-  # Unset, artifacts go in the pod's data directory, an emptyDir: lost when the pod goes, and not
-  # shared, so with more than one server only the first keeps any (the others say why in their
-  # log). For real use set store: s3 and point it at a bucket all servers share.
+  # Unset, with PostgreSQL (postgresql.enabled or an external database), artifacts are kept in the
+  # database itself, in chunks, shared by every server: nothing else to run (docs/artifacts.md).
+  # With SQLite they go in the pod's data directory. An installation that kept artifacts on the
+  # filesystem before the database store existed keeps doing so, and the servers' log says how to
+  # copy them into the database (launchway blobs copy). For very large or busy installations set
+  # store: s3 and point it at a bucket all servers share.
   artifacts:
-    # -- filesystem or s3. Unset: filesystem.
+    # -- database, filesystem or s3. Unset: database on PostgreSQL, filesystem on SQLite.
+    # Set database only once every server runs a release that knows it (see
+    # docs/development/migrations.md, schema 17).
     store:
+    # -- Limits of the database store. Unset: the built-in defaults shown.
+    database:
+      # -- How much the store may hold in all, in GiB, uploads in progress included. Unset: 100.
+      maxTotalGiB:
+      # -- The largest single file, in MiB. Unset: 2048.
+      maxBlobMiB:
     s3:
       # -- The endpoint, scheme and host only, such as https://s3.eu-west-1.amazonaws.com or
       # http://minio.storage:9000.
@@ -126,6 +137,29 @@ config:
     maxComponentsPerProject:
     # -- MiB of a step's SBOM files read to summarise them (they are kept whole anyway). Unset: 64.
     maxSbomMiB:
+  # -- Test attachments, coverage and HTML reports (reports.tests.attachments, reports.coverage,
+  # reports.html). Unset values take the built-in defaults shown, and are not written to the
+  # configuration, so the release before this one can still read it. Set them only once every
+  # server is upgraded.
+  reports:
+    # -- Files a step's attachments directory may hold; it is kept whole or not at all. Unset: 2000.
+    maxAttachmentFiles:
+    # -- MiB a step's attachments directory may hold. Unset: 512.
+    maxAttachmentMiB:
+    # -- Files one HTML report may hold. Unset: 5000.
+    maxHtmlFiles:
+    # -- MiB one HTML report may hold. Unset: 256.
+    maxHtmlMiB:
+    # -- MiB of coverage reports a server accepts for one step attempt. Unset: 24.
+    maxCoverageUploadMiB:
+    # -- Source files' coverage one run keeps; beyond it only the totals. Unset: 20000.
+    maxCoverageFilesPerRun:
+    # -- Source files' coverage a project keeps; the oldest runs' go first. Unset: 2000000.
+    maxCoverageFilesPerProject:
+    # -- A separate origin that alone serves hosted HTML reports, such as
+    # https://reports.ci.example.com: a host name of its own routed to the same servers (add it to
+    # the ingress). Unset: reports are served from Launchway's own origin, sandboxed.
+    origin:
   # -- Loops in pipelines (for_each).
   loops:
     # -- Combinations one loop may have; a run whose loop has more is refused.
@@ -156,6 +190,39 @@ config:
   #         scope: { environments: [prod] }
   #         rules: { tests: { min: 1 }, approvals: { min: 1 } }
   policy:
+  # -- The MCP endpoint (/mcp), through which agents use Launchway with API tokens. It is on by
+  # default, in every server: it gives a token no right it does not already have over the API.
+  # Every setting is unset by default, and only written to the configuration when set (a server
+  # of the version before does not know mcp:; see docs/development/migrations.md).
+  mcp:
+    # -- false turns the endpoint off on every server. Unset: on.
+    enabled:
+    # -- Origins of web pages, besides the servers' own, that may call /mcp from a browser, such
+    # as https://tools.example.com. Requests without an Origin header are not affected.
+    allowedOrigins: []
+    # -- Requests one token may make to /mcp per minute, on each server. Unset: 120.
+    requestsPerMinute:
+    # -- Requests one token may have in progress at once, on each server. Unset: 4.
+    concurrent:
+    # -- MCP requests in progress at once on each server, all tokens together. Unset: 32.
+    total:
+    # -- Also accept the sign-in provider's OAuth access tokens issued for /mcp (needs
+    # auth.mode: oidc in extraConfig). resource is this endpoint's address as clients reach it,
+    # such as https://launchway.example.com/mcp; scopes, if any, must all be granted.
+    oauth:
+      resource:
+      scopes: []
+  # -- Runner pools (schemas 20 and 21), written as runner_pools: in the configuration's own
+  # keys, after the deploy pool delivery.* makes. Unset: none; every build runner is in the
+  # default pool, which serves every project. Set it only once every server and runner runs a
+  # release that knows it, and take it out before rolling back. For example:
+  #   runnerPools:
+  #     - { name: web, kind: build, projects: ["web-*"] }
+  #     - { name: default, kind: build, projects: ["*"], require_identity: true }
+  runnerPools:
+  # -- The role needed on every project to make join tokens and to revoke or rotate runners:
+  # admin, operator or none. Written as runner_admin only when set. Unset: admin.
+  runnerAdmin:
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -163,9 +230,9 @@ config:
   #   drafts: { allow: operator, secrets: false }   # the defaults
   #   pull_requests: { secrets: false }             # the default
   # The server rejects settings it does not know, so a typo here stops the servers from
-  # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts,
-  # findings, loops, schedules and policy are set by the chart and may not appear here; runner.enabled may
-  # not be true.
+  # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts, reports,
+  # findings, loops, schedules, policy, mcp, verification (delivery.verification) and ai (ai.*) are
+  # set by the chart and may not appear here; runner.enabled may not be true.
   extraConfig: {}
 
 # ---------------------------------------------------------------------------------------------
@@ -314,6 +381,19 @@ runner:
   concurrency: 2
   # -- The server URL runners connect to. Default: the chart's Service.
   serverURL: ""
+  # -- Enrol each runner pod with a join token instead of using the shared runner token
+  # (schema 20): a Secret holding a join token made in the UI (Runners, Add a runner) with
+  # enough uses for every pod start, ideally ephemeral. Unset: the shared runner token.
+  #   join: { existingSecret: launchway-runner-join, existingSecretKey: token }
+  join:
+  # -- Labels the runners have, for pipelines that ask for them (runner: { labels }). Written
+  # only when set. Unset: none.
+  labels:
+  # -- The runners' own limits on the work they take (accept: in runner.yaml), checked on the
+  # runner before anything runs. Written only when set; see docs/guide/runner-identity.md
+  # ("What a runner trusts the server with"). Unset: no limits. For example:
+  #   accept: { projects: [shop], images: ["registry.example.com/*"], pull_requests: false }
+  accept:
   kubernetes:
     # -- The namespace step pods run in. Default: the release namespace. Runners are granted
     # access to pods in this namespace only. It must exist unless createNamespace is true.
@@ -433,6 +513,10 @@ runner:
     maxContextMiB:
     # -- MiB of image the runner accepts back from a builder. Unset: the built-in default, 20480.
     maxImageMiB:
+  # -- Let runners take ai steps, calling the models in ai.models. A model's key is read from
+  # runner.secretStores. Written to the runners' file only when true; needs ai.models.
+  # Unset: the built-in default, false (runners call no model).
+  ai:
   resources:
     requests:
       cpu: 100m
@@ -529,6 +613,57 @@ delivery:
   #     queue: newest            # or all; default newest
   #     protected: true          # the person who started a run may not promote it here; default false
   environments: null
+  # -- Health sources: where verify steps read metrics and logs to judge a deployment. Each entry
+  # is split: name, type and projects go to the servers' verification.sources, and the whole
+  # entry to the deploy runner's health_sources, by name. Needs deployRunner.enabled: the deploy
+  # runner does the queries. Credentials are only secret references, read from
+  # deployRunner.secretStores. Default (unset): none, and verify steps are refused.
+  #
+  # Each source: { name, type, url, projects, and optionally auth, headers, caFile, timeout,
+  # limits, statements, indices, timeField, messageField }.
+  #   type: prometheus (also Thanos, Mimir, VictoriaMetrics), loki, clickhouse, elasticsearch,
+  #     opensearch, postgres or http.
+  #   projects: patterns of the projects that may use it; at least one.
+  #   auth: { type: bearer|basic|header, user, header, secret: { store, key, field } }; for
+  #     clickhouse and postgres type may be left out (user and secret are the database login).
+  #   headers: fixed headers that are not secret, such as X-Scope-OrgID.
+  #   caFile: a PEM file of extra CAs, mounted with deployRunner.extraVolumes.
+  #   timeout: per query; default 10s, at most 60s.
+  #   limits: { maxSeries, maxPoints, maxLines, maxBytes }; defaults 1, 500, 5000, 8 MiB.
+  #   statements: (clickhouse, postgres, http) the only queries pipelines may run there, by name:
+  #     { kind: metric|logs, sql, path, method, body, value, params, projects }.
+  #   indices, timeField, messageField: (elasticsearch) the indices pipelines may search, and the
+  #     documents' time and message fields (default @timestamp and message).
+  # Sources in the cluster need no RBAC. The chart renders no NetworkPolicy; if the deploy
+  # runner's namespace denies egress by default, allow it to reach each source's host and port.
+  # Example:
+  #   sources:
+  #     - name: prometheus
+  #       type: prometheus
+  #       url: http://prometheus-operated.monitoring.svc:9090
+  #       projects: ["*"]
+  #     - name: loki
+  #       type: loki
+  #       url: http://loki-gateway.monitoring.svc
+  #       projects: [shop, "mcp-*"]
+  #       headers: { X-Scope-OrgID: homelab }
+  #       limits: { maxLines: 2000 }
+  #     - name: clickhouse
+  #       type: clickhouse
+  #       url: http://clickhouse.analytics.svc:8123
+  #       projects: [shop]
+  #       auth: { user: launchway, secret: { store: vault, key: ci/clickhouse, field: password } }
+  #       timeout: 20s
+  #       statements:
+  #         checkout_errors:
+  #           kind: metric
+  #           sql: >-
+  #             SELECT toStartOfMinute(ts) AS t, countIf(status >= 500) / count() AS value
+  #             FROM requests WHERE service = {service:String}
+  #             AND ts BETWEEN {start:DateTime64(3)} AND {end:DateTime64(3)} GROUP BY t ORDER BY t
+  #           params: { service: String }
+  verification:
+    sources: null
   deployRunner:
     # -- Run a deploy runner in this cluster, with a runner pool token of its own. It serves
     # deployRunner.target, which must be this cluster.
@@ -553,6 +688,10 @@ delivery:
     # -- Ask Argo CD to look at the repository at once after a commit (the refresh
     # annotation). Default (unset): true.
     refresh: null
+    # -- Let the deploy runner call the models in ai.models to explain its verdicts, with keys
+    # read from deployRunner.secretStores. Written to its file only when true; needs ai.models.
+    # Unset: the built-in default, false.
+    ai: null
     rbac:
       # -- Create the Roles below and bind them to the deploy runner.
       create: true
@@ -594,3 +733,39 @@ delivery:
     extraEnv: []
     extraVolumes: []
     extraVolumeMounts: []
+
+# ---------------------------------------------------------------------------------------------
+# AI: the models steps may ask (ai steps, and explanations of failed steps and verdicts). Off
+# unless set: with no model, nothing is ever sent to one and every other feature works. Set these
+# only once every server and runner runs a release that knows them, and take them out again
+# before rolling back to one that does not. Runners and the deploy runner call models only with
+# runner.ai or delivery.deployRunner.ai.
+# ---------------------------------------------------------------------------------------------
+ai:
+  # -- The model registry, written into the servers' configuration as ai.models exactly as given,
+  # so its keys are the configuration's own (snake_case): name, provider (anthropic, or openai for
+  # any OpenAI-compatible server), endpoint, model, key: { store, key, field }, projects,
+  # max_tokens, max_input_bytes, calls_per_run, tokens_per_day, price: { input_per_mtok,
+  # output_per_mtok, ... }, timeout, effort, stream, headers, max_tokens_field, schema_mode.
+  # A model's projects list is who may use it; empty: no project. The key is a secret reference,
+  # looked up in the secret stores of whoever calls the model (runner.secretStores,
+  # delivery.deployRunner.secretStores, or serverSecretStores below). Default (unset): none.
+  # Example:
+  #   - name: local
+  #     provider: openai
+  #     endpoint: http://ollama.ai.svc:11434/v1
+  #     model: "qwen3:8b"
+  #     projects: ["*"]
+  #     schema_mode: json_object
+  #   - name: claude
+  #     provider: anthropic
+  #     model: claude-sonnet-5-5
+  #     key: { store: vault, key: ai/anthropic, field: key }
+  #     projects: [shop]
+  #     tokens_per_day: 2000000
+  models: null
+  # -- Secret stores the servers read model keys from, to explain failed steps themselves (the
+  # same map as runner.secretStores); written as ai.secrets. Mount any token or certificate files
+  # they refer to with server.extraVolumes/extraVolumeMounts. Default (unset): the servers explain
+  # only with models that need no key.
+  serverSecretStores: null

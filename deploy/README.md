@@ -228,6 +228,12 @@ only the newer version understands (a re-run, for example, when rolling back to 
 re-runs existed) are shown as needing a newer server and left alone by the old servers; they carry
 on once a newer server is back. Every other run is unaffected.
 
+Upgrading to schema 17 moves artifacts into the database (with `config.artifacts.store` unset):
+before it, they were kept in each server's `emptyDir` and only one server kept any. Older servers
+next to newer ones keep none and leave runs with artifacts to the newer ones; to roll back with
+artifacts working, copy them to S3 first. See
+[docs/artifacts.md](../docs/artifacts.md#upgrading-to-schema-17-and-rolling-back).
+
 After `kubectl rollout undo`, the next `helm upgrade` (Helm 4, server-side apply) fails with a
 field-manager conflict on the image; pass `--force-conflicts`, or go back with `helm rollback`
 instead, which keeps Helm the owner of the Deployments.
@@ -279,6 +285,7 @@ removed after each save. Who may start draft runs, and whether drafts may read s
 | Data | Where | Lost when |
 |---|---|---|
 | Runs, steps, events, logs, approvals, runner list, the runner token (unless you set one), the text of draft runs | PostgreSQL | Only with the database: back it up |
+| Artifacts, and the SBOMs and provenance kept as artifacts | PostgreSQL, unless `config.artifacts.store` says S3 ([docs/artifacts.md](../docs/artifacts.md): limits, backups, when to move to S3) | Their retention ends, or with the database |
 | Mirrors of project repositories | Each server's `emptyDir` (`server.dataVolume`) | The pod goes; rebuilt from the repository on start |
 | Checkouts for running steps | Each runner's `emptyDir` (`runner.dataVolume`) | The pod goes; steps then run again elsewhere |
 | A run's workspace | Its step pod in the step namespace | The run succeeds (at once) or fails (after `keepFailed`, 2 hours, to allow a resume); any runner removes it, including the pods of runners that were replaced |

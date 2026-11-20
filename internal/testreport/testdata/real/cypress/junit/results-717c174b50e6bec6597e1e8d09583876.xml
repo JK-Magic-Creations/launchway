@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="1.963" tests="5" failures="1" skipped="1">
+  <testsuite name="Root Suite" timestamp="2026-11-20T00:51:37" tests="0" file="cypress/e2e/shop.cy.js" time="0.000" failures="0">
+  </testsuite>
+  <testsuite name="shop" timestamp="2026-11-20T00:51:37" tests="5" time="1.963" failures="1">
+    <testcase name="shop has a heading" time="0.147" classname="has a heading">
+    </testcase>
+    <testcase name="shop adds an item" time="0.128" classname="adds an item">
+    </testcase>
+    <testcase name="shop shows wrong count (fails)" time="0.726" classname="shows wrong count (fails)">
+      <failure message="Timed out retrying after 500ms: expected &apos;&lt;p#count&gt;&apos; to have text &apos;Items: 2&apos;, but the text was &apos;Items: 1&apos;" type="AssertionError"><![CDATA[AssertionError: Timed out retrying after 500ms: expected '<p#count>' to have text 'Items: 2', but the text was 'Items: 1'
+    at Context.eval (webpack://work/./cypress/e2e/shop.cy.js:17:39)
+
+      + expected - actual
+
+      -'Items: 1'
+      +'Items: 2'
+      ]]></failure>
+    </testcase>
+    <testcase name="shop flaky: passes on retry" time="0.035" classname="flaky: passes on retry">
+    </testcase>
+  </testsuite>
+</testsuites>

@@ -14,7 +14,9 @@ and deploy runners with runner pool tokens.
 > server, with four runs spread over them and the runner on the machine; the trailing-newline token
 > mistake and its fix. **Not verified:** the Docker and host executors, a runner on another physical
 > machine or behind a real firewall or proxy, HTTPS to the server, a deploy runner with a pool token
-> (described from the README and the chart).
+> (described from the code and the chart).
+>
+> Join tokens (below) were added when runner identities were merged; that section was not run for this guide, and comes from [Runners on other machines and clusters](../guide/runner-identity.md) and its tests.
 
 ## What you need
 
@@ -27,11 +29,13 @@ and deploy runners with runner pool tokens.
   that may manage pods there.
 
 > [!CAUTION]
-> Today every build runner of a server presents the same shared token, and any build runner can
-> take any project's steps, with that project's checkout and the secrets its steps ask for from the
-> runner's own stores. Connect runners only to servers you run and trust, and only runners you run
-> and trust to your server. Runner identities with join tokens and per-runner allow-lists are not
-> available yet; see the [roadmap](../roadmap-list.md).
+> A runner with the **shared runner token** has no identity of its own: the server cannot tell such
+> runners apart, trusts the runner ID each one gives, and anyone who holds the token can take the
+> work of the pool it serves, with that project's checkout and the secrets its steps ask for from
+> the runner's own stores. Enrol runners with a **join token** instead, give each pool the projects
+> it serves, and set the runner's own `accept:` limits. See
+> [Runners on other machines and clusters](../guide/runner-identity.md). Connect runners only to
+> servers you run and trust, and only runners you run and trust to your server.
 
 ## How a runner connects
 
@@ -317,6 +321,27 @@ A runner needs only outbound connections:
 Nothing needs to reach the runner. Its health port is for local probes only. Behind a load balancer,
 a runner may talk to any of the servers.
 
+## Enrol a runner with a join token
+
+A runner enrolled with a join token has an identity of its own: a key that never leaves it, a place
+in a pool, and leases that belong to it. This is the better way to connect a runner than the shared
+token. Make a join token on the Runners page (**Add a runner**), or:
+
+```sh
+launchway runners join-token --pool web --ttl 1h
+```
+
+It is shown once. On the runner's machine:
+
+```sh
+launchway runner --server https://launchway.example.com --join lwj_… --config /etc/launchway/runner.yaml
+```
+
+The runner registers its public key, gets a runner ID, and from then on starts without the join
+token. In Kubernetes with the chart, put a join token in a Secret and set `runner.join.existingSecret`.
+The pools, the runner's own `accept:` limits, revoking and rotating keys are described in
+[Runners on other machines and clusters](../guide/runner-identity.md).
+
 ## Deploy runners and runner pools
 
 Deploy steps are done only by [deploy runners](../glossary.md#deploy-runner): `launchway runner` with
@@ -339,8 +364,9 @@ names.
 The deploy runner then starts with that pool's token in `LAUNCHWAY_RUNNER_TOKEN` and a file with
 `server:` and a `deploy:` section naming its targets, Applications and GitOps repositories. The Helm
 chart can run one in the servers' own cluster (`delivery.deployRunner`, see
-[Install on Kubernetes](install-kubernetes.md#deploy-runner)); the README's *Deployments* section has
-a complete deploy runner file.
+[Install on Kubernetes](install-kubernetes.md#deploy-runner)); the
+[runner configuration reference](../reference/runner-config.md#deploy) has a complete deploy runner
+file. A deploy runner can also enrol with a join token for a deploy pool that sets `require_identity`.
 
 ## What next
 

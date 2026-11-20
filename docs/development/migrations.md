@@ -152,6 +152,143 @@ Rolling back from schema 16 to 15:
 During a rolling upgrade, configure policies only once every server runs schema 16: until then an
 older server could start a deploy that a newer one would have judged.
 
+Schema 17 brings the built-in blob store: artifacts kept in the database (`blob_uploads`, `blob_parts`, `blob_chunks`, `blob_objects`, which are
+`blobstore.DatabaseSchema` word for word; `TestBlobSchemaIsFrozen` fails if that text changes), and
+`artifact_blobs.store`, the kind of store each blob was written to (`''` before 17). It is
+additive and adds no event type. With no store configured, a server of 17 on PostgreSQL uses the
+database store; an older server, with the same configuration, uses its own directory, finds the
+store marker missing there (it is in the database store) and keeps no artifacts, saying why. So
+that it does not run steps whose artifacts it cannot keep or fetch, a run that keeps or fetches
+artifacts, created by a server using the database store, carries `"requires": 17` in its pipeline
+(`runs.min_schema` 17): servers of 14 to 16 read it as not understood (in their words, "rollout
+steps or keys that control a rollout", the only words they have for a pipeline's `requires`), list
+and show it, and leave it alone (`TestOlderBuildLeavesDatabaseStoreRunsAlone`). `artifacts.store:
+database` and `artifacts.database` are settings older servers refuse: the Helm chart writes them
+only when set.
+
+Rolling back from schema 17 to 16 is described in full in
+[docs/artifacts.md](../artifacts.md#upgrading-to-schema-17-and-rolling-back). In short: take
+`artifacts.store: database` and `artifacts.database` out of the configuration; to keep artifacts,
+copy them into a store schema 16 knows first (`launchway blobs copy --from database --to s3`, or a
+shared directory) and switch to it; then roll the servers back. Runs at `min_schema` 17 still open
+wait for a schema-17 server. The new tables and column are ignored by schema 16.
+
+Schema 18 brings richer test results, test attachments, coverage and HTML reports. It is additive:
+three columns with defaults on `test_cases` (`tags`, `variant`, `extra`), two new tables
+(`coverage_reports`, derived from the coverage summary in the event that ends an attempt, and
+`coverage_files`, kept beside the events like `test_cases`), and no new event type. Attachments
+and HTML reports are artifacts of kinds `test-attachments`, `test-embedded` and `html-report`
+(schema 12's tables). Older servers write `test_cases` without the new columns (they take their
+defaults), ignore the new tables, and ignore the new summary fields (`tests.attachments`,
+`coverage`), which only record. A pipeline that uses `reports.tests.attachments`,
+`reports.coverage` or `reports.html` has `runs.min_schema` 18 from creation, and older servers
+cannot read it anyway: their strict reading of the pipeline fails on the new keys, so they leave
+the run alone (`TestOlderBuildLeavesReportRunsAlone`). Runners are part of this: a step that
+declares coverage is given only to a runner that reports the feature `coverage`; attachments and
+HTML reports are kept by any runner that knows artifacts (the server adds them to the step's
+artifacts, with their limits, and enforces the limits itself). A test's key now includes its
+variant (browser or project) when a report gives one; results without one keep the keys they had,
+so histories carry on.
+
+Rolling back from schema 18 to 17:
+
+1. Take `reports.tests.attachments`, `reports.coverage` and `reports.html` out of pipeline files
+   first; runs already started with them stay with schema-18 servers, and an older server leaves
+   them alone (they show as needing a newer server).
+2. Take the `reports:` section out of the server configuration (with the Helm chart, unset every
+   `config.reports.*` value): older servers refuse a setting they do not know.
+3. Roll the servers back. Nothing in the database needs undoing: older servers ignore the new
+   columns and tables. Attachments and HTML reports already kept stay listed as artifacts and
+   expire as usual; the older UI shows them on the Artifacts tab only.
+4. Runners may be rolled back in any order; an older runner simply never says `coverage`, so a
+   step that declares coverage waits for a newer one.
+
+Attachments and HTML reports are ordinary artifacts, so they are kept wherever the server keeps
+artifacts, the database store included (`TestReportsInTheDatabaseStore`). Rolling back to 17 leaves
+them readable there; going further back, to 16, they are copied with the other artifacts as above.
+
+A run records the highest schema any of its features needs: a policy governing it 16, artifacts
+kept in the database store 17, attachments, coverage or HTML reports 18
+(`TestRunMinSchemaAcrossFeatures`). A database of schema 16 is migrated to 18 in one start, and a
+build of 16 started against it again runs, says once that the database is newer, and leaves the
+runs of 17 and 18 alone (`TestUpgradeFromSchema16AndBack`).
+
+Schema 19 brings verify steps (`kind: verify`) and ai steps (`kind: ai`). It is additive: four new
+tables (`verifications` and `verify_baselines`, projections of the verification events;
+`ai_usage`, each project's model use per day; `ai_explanations`), a `kind` column on `steps` with a
+default, and four event types of schema 19 (`verify.started`, `verify.interval`, `verify.verdict`,
+`verify.override`). A pipeline with a verify or ai step has `runs.min_schema` 19 from creation and
+carries `"requires": 19`, so older servers leave such runs alone, refuse to start one, and do not
+expire, cancel or re-run them (`TestOlderBuildLeavesVerifyRunsAlone`). A paused verification
+(`on_inconclusive: pause`) waits with `wait_kind = 'verify'`, which older servers do not list among
+their approvals. Runners must say they can do the work: a deploy runner reports the feature `verify`
+only when it has health sources, and a runner reports `ai` only when its operator turned `ai: true`
+on; an older runner reports neither, so it is never given these steps. (Verification was built as
+schema 20 on a branch where 16 to 19 were empty stand-ins; it was renumbered 19 when the branches
+were merged, before any release, so no database ever recorded those stand-ins.)
+
+To roll back from schema 19:
+
+1. Take `kind: verify` and `kind: ai` steps out of the pipeline files, and let the runs that have
+   them finish (or cancel them on a schema-19 server). Runs still open are left alone by older
+   servers and resume when a schema-19 server runs again: a deploy runner takes a verification up
+   where it stopped, reading the intervals not reported yet, and one that waited (queued or paused)
+   past its step's timeout fails, saying why. Intervals that ended meanwhile are read afterwards
+   from the health sources (which keep the data); one whose data are gone has no data, which can
+   make the verdict inconclusive, never a pass.
+2. Remove the settings older releases refuse: the servers' `verification:` and `ai:` sections, the
+   deploy runners' `health_sources:`, and the runners' `ai:`; with the Helm chart,
+   `delivery.verification`, `ai.models`, `ai.serverSecretStores`, `runner.ai` and
+   `delivery.deployRunner.ai`. The default render writes none of them.
+3. Roll the servers and runners back. The new tables stay and are ignored; recorded baselines are
+   used again after a later upgrade. Model use counted on the day of the rollback is not counted by
+   older servers (they call no models).
+
+Schema 20 brings runner identities. It is additive: four new tables (`runner_join_tokens`,
+`runner_identities`, `runner_access_tokens`, `runner_assertions`) and new columns with defaults on
+`runners` (`kind`, `auth`, `labels`, `accept`, `os`, `arch`); no new event type. A step a runner
+refuses (its `accept:` section) ends with outcome `refused`, which servers of schema 19 and older
+read as failed, with the runner's reason. Older servers never read the new tables. So:
+
+- **Runner of this release, server of the previous one.** `launchway runner --join` gets 404 from
+  `/api/runner/v2/join` and stops, saying the server does not enrol runners and to use the shared
+  token. A runner that enrolled with a newer server and then meets an older one (a rolling upgrade,
+  a rollback) is refused (its access token is not the shared token), asks for a new token, gets
+  404, and keeps retrying with that message in its log until a server of schema 20 answers. With
+  the shared token, a new runner works with an old server as before: the fields it adds to what it
+  says about itself (labels, OS, architecture, accept) are ignored, and it still checks `accept:`
+  itself.
+- **Runner of the previous release, server of this one.** Nothing changes for it: the shared token
+  and deploy pool tokens work, it is listed as using a shared token, and it takes the default pool's
+  work (or its deploy pool's), unless the pool sets `require_identity`, which refuses it with a
+  message saying to enrol.
+
+Schema 21 brings build runner pools and the pipeline key `runner:`. It is additive: `runs` gains
+`runner_pool` and `runner_labels` (defaults `''`). A pipeline with `runner:` carries `"requires":
+21` and has `runs.min_schema` 21, so older servers leave its runs alone; and while any build pool is
+configured, every new run's `run.created` carries `requires: 21`, because an older server would
+hand its steps to any runner. A build limited to schema 20 refuses to start with build pools
+configured. The `runner_pools:` entries with `kind: build`, `require_identity`, `runner_admin`, and
+the runner's `labels:`, `accept:`, `proxy:`, `no_proxy:` and `ca_file:` are settings older servers
+and runners refuse: the chart writes them only when set.
+
+Rolling back from schema 21 (and 20) to 19:
+
+1. Take out of every server's configuration `runner_pools` entries with `kind: build` and
+   `require_identity`, and `runner_admin`; take `labels:`, `accept:`, `proxy:`, `no_proxy:` and
+   `ca_file:` out of runners' files (with the chart: `config.runnerPools`, `config.runnerAdmin`,
+   `runner.labels`, `runner.accept`, `runner.join`). Give runners that enrolled the shared token
+   (or their deploy pool's) instead: older servers do not know their identities.
+2. Let the servers of schema 21 restart without build pools, so new runs no longer need 21; cancel
+   runs that do (pipelines with `runner:`, or runs created while build pools were configured), or
+   let a schema-21 server finish them after a roll forward.
+3. Roll the servers back. The new tables and columns are ignored; on a roll forward, identities
+   that were not revoked work again (their access tokens will have expired; runners get new ones).
+
+Runner identities and pools were built as schemas 21 and 22 on a branch where 17 to 20 were empty
+stand-ins; they were renumbered 20 and 21 when the branches were merged, before any release, so no
+database ever recorded those stand-ins.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what
@@ -208,6 +345,10 @@ server or runner refuses a setting it does not know. So:
   values, the configuration must be readable by the release before.
 - An operator who sets a new setting should do so only once every server and runner is upgraded,
   and take it out again before rolling back, as with new pipeline keys.
+
+The MCP endpoint (`mcp:`) follows this rule: it adds no table, column or event, and the chart
+writes `config.mcp.*` only when set, so a release before it reads the default configuration and
+simply has no `/mcp`.
 
 This was learned the hard way: a chart that wrote `tests:` by default left the previous version
 unable to start when a rollout was aborted.

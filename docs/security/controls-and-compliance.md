@@ -42,6 +42,8 @@ data never reach Launchway:
 | Component inventory | SBOMs and a search across projects for a component and version | [Security findings](../guide/security-findings.md) |
 | Back-out | Rollback steps revert the deployment's commit and wait until the previous version is healthy | [Deployments](../guide/deployments.md) |
 | Integrity of what is deployed | Images pinned by digest, signed by the runner, with provenance; policy rule `deployed_images` | [Supply chain](supply-chain.md) |
+| Runner identity | Runners enrol with join tokens and hold their own key; leases are bound to the runner; pools limit a runner to the projects they serve; the runner's own `accept:` list limits what it will run; revocation and key rotation are audited. Runners still on the shared token have no identity | [Runners on other machines](../guide/runner-identity.md) |
+| Post-deployment verification | Metrics and logs are checked after a deploy by built-in statistics; a failing verification can abort, roll back or hold a promotion. Optional AI models only explain, never turn a failure into a pass | [Verifying a deployment](../guide/verification.md) |
 | Audit logging | Every change, sign-in, failed sign-in, refused token, webhook call and waiver, with who, when, from where and the outcome; only ever added to | [Sign-in and access](../guide/access.md#audit-trail) |
 | Records of each change | Each run's event log: commit, pipeline, inputs, approvals with comments, policy decisions with the facts judged, deployments and what was observed | [Events](../reference/events.md) |
 | Exceptions | Policy waivers need a reason and an expiry, are recorded and shown where they changed a verdict | [Policies](../guide/policies.md) |
@@ -71,7 +73,6 @@ These are designed, not built. Status and order are on the [roadmap](../roadmap-
 | Tamper-evident audit | A hash-chained audit trail with a verification command, and streaming to a log archive |
 | Retention | Retention per kind of data, legal hold, and deletion reports |
 | Sensitive-data masking | Masking card-number patterns in logs on the runner, with a finding raised |
-| Runner identity | Per-runner identity with join tokens and runner-side allow-lists (in progress) |
 
 ## How to use this page with an assessor
 

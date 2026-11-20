@@ -61,7 +61,7 @@ func (s *Step) IsRolloutStep() bool { return s.Kind == KindRolloutStep }
 // namesDeployment reports whether the step's Deployment makes it a member of
 // that deployment: a rollback, rollout or approval step.
 func (s *Step) namesDeployment() bool {
-	return s.Deployment != "" && (s.IsRollback() || s.IsRolloutStep() || s.IsApproval())
+	return s.Deployment != "" && (s.IsRollback() || s.IsRolloutStep() || s.IsApproval() || s.IsVerify())
 }
 
 // LinksDeployment reports whether the step is an approval that names a

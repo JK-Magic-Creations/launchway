@@ -1,0 +1,116 @@
+TAP version 13
+# Subtest: cart
+    # Subtest: adds numbers
+    ok 1 - adds numbers
+      ---
+      duration_ms: 0.453948
+      type: 'test'
+      ...
+    # Subtest: fails an assertion
+    not ok 2 - fails an assertion
+      ---
+      duration_ms: 1.234142
+      type: 'test'
+      location: '/work/cart.test.mjs:9:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+        +   total: 20
+        -   total: 25
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        total: 25
+      actual:
+        total: 20
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///work/cart.test.mjs:10:12)
+        Test.runInAsyncScope (node:async_hooks:227:14)
+        Test.run (node:internal/test_runner/test:1402:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:974:18)
+        Test.postRun (node:internal/test_runner/test:1542:19)
+        Test.run (node:internal/test_runner/test:1467:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1905:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+      ...
+    # Subtest: is skipped
+    ok 3 - is skipped # SKIP not ready
+      ---
+      duration_ms: 0.094824
+      type: 'test'
+      ...
+    # Subtest: is todo
+    ok 4 - is todo # TODO write me
+      ---
+      duration_ms: 0.086591
+      type: 'test'
+      ...
+    # Subtest: has subtests
+        # Subtest: child passes
+        ok 1 - child passes
+          ---
+          duration_ms: 0.094397
+          type: 'test'
+          ...
+        # Subtest: child throws
+        not ok 2 - child throws
+          ---
+          duration_ms: 0.072758
+          type: 'test'
+          location: '/work/cart.test.mjs:19:13'
+          failureType: 'testCodeFailure'
+          error: 'boom in child'
+          code: 'ERR_TEST_FAILURE'
+          stack: |-
+            TestContext.<anonymous> (file:///work/cart.test.mjs:20:13)
+            Test.runInAsyncScope (node:async_hooks:227:14)
+            Test.run (node:internal/test_runner/test:1402:25)
+            Test.start (node:internal/test_runner/test:1262:17)
+            TestContext.test (node:internal/test_runner/test:400:20)
+            TestContext.<anonymous> (file:///work/cart.test.mjs:19:13)
+            async Test.run (node:internal/test_runner/test:1409:7)
+            async Suite.processPendingSubtests (node:internal/test_runner/test:974:7)
+          ...
+        1..2
+    not ok 5 - has subtests
+      ---
+      duration_ms: 0.507604
+      type: 'test'
+      location: '/work/cart.test.mjs:17:3'
+      failureType: 'subtestsFailed'
+      error: '1 subtest failed'
+      code: 'ERR_TEST_FAILURE'
+      ...
+    1..5
+not ok 1 - cart
+  ---
+  duration_ms: 3.749375
+  type: 'suite'
+  location: '/work/cart.test.mjs:4:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: top-level with diagnostic
+ok 2 - top-level with diagnostic
+  ---
+  duration_ms: 0.120671
+  type: 'test'
+  ...
+# this is a diagnostic note
+1..2
+# tests 8
+# suites 1
+# pass 3
+# fail 3
+# cancelled 0
+# skipped 1
+# todo 1
+# duration_ms 48.50044

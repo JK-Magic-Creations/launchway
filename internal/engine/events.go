@@ -56,6 +56,13 @@ const (
 	// or before an image step that pushes is handed to a runner. It holds
 	// the policies, the facts and the waivers it was judged from.
 	PolicyEvaluated EventType = "policy.evaluated"
+
+	// Verifications (schema 19; see verify.go). Step events of the verify
+	// step.
+	VerifyStarted  EventType = "verify.started"  // the window, the resolved parameters and the baseline it is judged against
+	VerifyInterval EventType = "verify.interval" // what a deploy runner read in one interval
+	VerifyVerdict  EventType = "verify.verdict"  // the decision, with a model's explanation if one was asked
+	VerifyOverride EventType = "verify.override" // a person marked it passed or failed
 )
 
 // eventSince is the schema version that brought each event type. A server
@@ -71,6 +78,7 @@ var eventSince = map[EventType]int{
 	DeployWaitingLock: 11, DeployOpened: 11, DeployActionDone: 11, DeployObserving: 11, DeployPhase: 11, DeployClosed: 11,
 	DeployCommand: 14, DeployCommandWithdrawn: 14, DeployCommandTaken: 14, DeployCommandDone: 14,
 	PolicyEvaluated: 16,
+	VerifyStarted:   19, VerifyInterval: 19, VerifyVerdict: 19, VerifyOverride: 19,
 }
 
 // Event is one entry in the log.
@@ -158,12 +166,24 @@ type Payload struct {
 	// built, pushed and signed. Older servers never read it: runs with image
 	// steps have min_schema 15.
 	Image *ImageRecord `json:"image,omitempty"`
+	// step.finished and step.canceled (schema 18): what the attempt's
+	// coverage reports said, in brief; each file's counts are in
+	// coverage_files. Older servers never read it: runs whose pipeline
+	// declares coverage have min_schema 18.
+	Coverage *CoverageSummary `json:"coverage,omitempty"`
 	// deploy.* events, and step.queued of a deploy or rollback step (schema
 	// 11): the deployment and what happened to it. Never a credential.
 	Deploy *DeployEvent `json:"deploy,omitempty"`
 	// policy.evaluated (schema 16): the decision and what it was judged
 	// from.
 	Policy *policy.Evaluation `json:"policy,omitempty"`
+	// verify.* events (schema 19): the verification and what happened to
+	// it.
+	Verify *VerifyEvent `json:"verify,omitempty"`
+	// step.finished and step.canceled of an ai step (schema 19): which model
+	// answered and what it cost. Older servers never read it: runs with ai
+	// steps have min_schema 19.
+	AI *AIRecord `json:"ai,omitempty"`
 }
 
 // DeployEvent carries the details of the deploy.* events. Each type uses a

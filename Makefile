@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo run demo clean test-s3
+.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean test-s3
 
 all: web build
 
@@ -57,6 +57,19 @@ test-containers:
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m ./internal/imagebuild/...
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m -run 'ImageStep' ./internal/api/
 
+# Verifications against real health sources in containers (Podman or Docker): Prometheus,
+# Loki, ClickHouse, OpenSearch and PostgreSQL, pulled once by digest. The end-to-end test runs a
+# healthy deploy that passes and a regression that fails and is rolled back, with a real server,
+# build runner and deploy runner.
+test-verify:
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 40m ./internal/verify/...
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 40m -run 'Verify' ./internal/api/
+
+# A real local model: starts Ollama in a container and pulls a small model (about 400 MB,
+# kept in the Podman volume launchway-test-ollama-models). Opt-in; no paid API is called.
+test-local-model:
+	LAUNCHWAY_TEST_LOCAL_MODEL=1 go test -count=1 -timeout 30m -run LocalModel -v ./internal/ai/
+
 # Needs a cluster: kind create cluster --name launchway-test
 #                  kubectl --context kind-launchway-test create namespace launchway-test
 # The test namespace is labelled to enforce Pod Security "restricted", which
@@ -65,11 +78,20 @@ test-containers:
 # profile it needs onto the kind node; it refuses any context not kind-*.
 # Some tests pull python:3.12-slim and node:24-alpine and
 # install a package from PyPI and from npm.
+# KUBE_NAMESPACE and KUBE_BUILD_NAMESPACE name other namespaces than
+# launchway-test and launchway-build-test, so that several checkouts can share
+# one cluster (the build namespace is deleted and made again by the test).
+KUBE_NAMESPACE ?= launchway-test
+KUBE_BUILD_NAMESPACE ?= launchway-build-test
 test-kubernetes:
-	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace launchway-test \
+	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} get namespace $(KUBE_NAMESPACE) >/dev/null 2>&1 || \
+		kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} create namespace $(KUBE_NAMESPACE)
+	kubectl --context $${KUBE_CONTEXT:-kind-launchway-test} label --overwrite namespace $(KUBE_NAMESPACE) \
 		pod-security.kubernetes.io/enforce=restricted
-	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -run Kubernetes ./internal/executor/
-	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} go test -count=1 -timeout 40m -run Kubernetes ./internal/api/
+	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} LAUNCHWAY_TEST_KUBE_NAMESPACE=$(KUBE_NAMESPACE) \
+		go test -count=1 -run Kubernetes ./internal/executor/
+	LAUNCHWAY_TEST_KUBE_CONTEXT=$${KUBE_CONTEXT:-kind-launchway-test} LAUNCHWAY_TEST_KUBE_NAMESPACE=$(KUBE_NAMESPACE) \
+		LAUNCHWAY_TEST_KUBE_BUILD_NAMESPACE=$(KUBE_BUILD_NAMESPACE) go test -count=1 -timeout 40m -run Kubernetes ./internal/api/
 
 # Runs the deploy integration tests against Argo CD and Argo Rollouts in a kind
 # cluster (see deploy/test/argo/README.md). Refuses any context not starting

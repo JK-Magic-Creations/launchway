@@ -25,43 +25,43 @@ provide controls and evidence.
 | Policy gates | Rules pipelines cannot opt out of, at run start, before deploys and image pushes; report or enforce; audited, expiring waivers. |
 | Sign-in and access | OIDC sign-in with groups, roles per project and environment, scoped API tokens, CLI, audit trail. |
 | Public documentation site and roadmap | GitHub Pages site with diagrams, tutorials, install guides and this roadmap; short README. |
+| Built-in artifact storage | Artifacts, test attachments and hosted reports are kept in the database: several servers share them with nothing else to run. S3 and a shared directory remain options. |
+| Rich test, coverage and HTML reports | Test results in 13 formats (JUnit, Playwright, Cucumber and Karate, mochawesome, TRX and more) with screenshots and video, coverage with thresholds, and the tools' own HTML reports hosted sandboxed. |
+| MCP server for AI agents | Agents write and validate pipelines, start and watch runs and diagnose failures through /mcp, with the same permissions as the token they hold. |
+| Verification step with optional AI | Canary and post-deploy analysis on Prometheus, Loki, ClickHouse, OpenSearch, PostgreSQL and JSON APIs; automatic abort or rollback; AI explains, never turns a failure into a pass. |
+| Runner identity and pools | Each runner has its own key and joins with a token; runners serve only the projects of their pool; runner-side allow-lists protect your network. |
 
 ## Being built now
 
 | Rank | Item | Theme | What it gives you |
 |---|---|---|---|
-| 1 | Built-in artifact storage | Platform | Artifacts work on several servers with nothing but the database. Removes the S3 requirement. |
-| 2 | Rich test, coverage and HTML reports | Pipelines & reports | Karate, Playwright, Cypress, pytest, Jest, .NET and more, with screenshots, video, coverage and the tools' own HTML reports. |
-| 3 | MCP server for AI agents | Integrations | Agents can write and validate pipelines, start and watch runs and diagnose failures, with the same permissions as a user. |
-| 4 | Verification step with optional AI | Delivery & verification | Canary and post-deploy analysis on Prometheus, Loki, ClickHouse and OpenSearch; automatic abort or rollback; AI explains, never overrides a failure. |
-| 8 | Runner identity and pools | Security & compliance | Each runner has its own key; runners serve only the projects they are allowed; runner-side allow-lists protect your network. |
-| 10 | Signed releases and installers | Platform | Verified downloads, deb/rpm packages, a one-line VM install with systemd, and a runner-only Helm chart. |
+| 5 | Signed releases and installers | Platform | Verified downloads, deb/rpm packages, a one-line VM install with systemd, and a runner-only Helm chart. |
 
 ## Planned
 
 | Rank | Item | Theme | What it gives you |
 |---|---|---|---|
-| 5 | All configuration in the database, one API | Platform | No file-first configuration: projects, pools, environments, policies and more live in the database with history and audit, managed through UI, API, CLI, MCP and Terraform. |
-| 6 | Public demo on the internet | Platform | A separate, safe instance with realistic demo data anyone can explore, isolated from your real pipelines and network. |
-| 7 | Graphical setup wizards | Platform | Every setup task asks plain questions, explains each option and its effect, validates as it goes and shows what it will create. |
-| 9 | Built-in accounts with MFA | Security & compliance | Small teams without an identity provider still get secure sign-in with TOTP or passkeys. |
-| 11 | Terraform provider | Integrations | Projects, environments, pools, policies, roles and more managed as code. |
-| 12 | Built-in Helm and Kubernetes deploys | Delivery & verification | Deploy and roll back without Argo CD; Argo stays first class for long-lived environments. |
-| 13 | Preview environments per branch or pull request | Delivery & verification | Every pull request gets its own environment and URL, tested automatically and cleaned up on merge. |
-| 14 | Organisations (multi-tenant) | Platform | Installation, Organisation, Unit and Project levels with names you can change; unused levels stay hidden. |
-| 15 | Hosted service | Platform | Offer Launchway as SaaS: sign-up, quotas, usage metering, data residency, customer-side logs and artifacts. |
-| 16 | LDAP, Active Directory and custom roles | Security & compliance | Directory groups mapped to roles at each level, automatic removal of leavers, and a 'who can do what, and why' view. |
-| 17 | Delivery metrics and executive dashboards | Insights | Deployment frequency, lead time from commit to production, change failure rate and time to restore, with drill-down. |
-| 18 | Tamper-evident audit and SIEM export | Security & compliance | An audit trail nobody can quietly edit, streamed to your security tools. |
-| 19 | Change management | Delivery & verification | Automatic change records with risk scores, freezes and CAB approval; optional ServiceNow and Jira Service Management. |
-| 20 | Post-deploy watch, incidents and SLOs | Delivery & verification | Keep watching after release, roll back automatically, tie incidents to the change that caused them. |
-| 21 | Service mesh and traffic control | Delivery & verification | Weighted canaries through Gateway API, Istio, Linkerd or Cilium, with mesh metrics as ready-made health checks. |
-| 22 | Argo CD in depth | Delivery & verification | App-of-apps and ApplicationSet trees, a ready Lua health-check library, hosted or bring-your-own Argo CD. |
-| 23 | Terraform/OpenTofu and Ansible steps | Infrastructure | Reviewed plans, gated applies, built-in state with locking, drift detection; Ansible with per-host results. |
-| 24 | Single pane of glass | Insights | One fleet view across VMs, on-prem clusters and clouds: what runs where, its health, drift and evidence. |
-| 25 | Compliance pack (PCI DSS, HIPAA) | Security & compliance | Policy templates and an evidence report mapping controls to requirements. Evidence support, not certification. |
-| 26 | Retention, legal hold, encryption at rest | Security & compliance | Control how long data is kept, prove deletion, encrypt logs and artifacts with rotating keys; FIPS build option. |
-| 27 | Cloud and serverless targets | Delivery & verification | Cloud Run, Lambda, ECS, managed instance groups and auto-scaling groups, with no stored cloud keys. |
-| 28 | VM deploys and Packer images | Infrastructure | Batch deploys over SSH with verification between batches; baked machine images rolled through instance groups. |
-| 29 | Releases across services | Delivery & verification | Ship several services as one ordered, gated release with a promotion view across environments. |
-| 30 | Smaller integrations | Integrations | Chat approvals, feature-flag mitigation, Chef templates, dependency caches, more event sources. |
+| 1 | All configuration in the database, one API | Platform | No file-first configuration: projects, pools, environments, policies and more live in the database with history and audit, managed through UI, API, CLI, MCP and Terraform. |
+| 2 | Public demo on the internet | Platform | A separate, safe instance with realistic demo data anyone can explore, isolated from your real pipelines and network. |
+| 3 | Graphical setup wizards | Platform | Every setup task asks plain questions, explains each option and its effect, validates as it goes and shows what it will create. |
+| 4 | Built-in accounts with MFA | Security & compliance | Small teams without an identity provider still get secure sign-in with TOTP or passkeys. |
+| 6 | Terraform provider | Integrations | Projects, environments, pools, policies, roles and more managed as code. |
+| 7 | Built-in Helm and Kubernetes deploys | Delivery & verification | Deploy and roll back without Argo CD; Argo stays first class for long-lived environments. |
+| 8 | Preview environments per branch or pull request | Delivery & verification | Every pull request gets its own environment and URL, tested automatically and cleaned up on merge. |
+| 9 | Organisations (multi-tenant) | Platform | Installation, Organisation, Unit and Project levels with names you can change; unused levels stay hidden. |
+| 10 | Hosted service | Platform | Offer Launchway as SaaS: sign-up, quotas, usage metering, data residency, customer-side logs and artifacts. |
+| 11 | LDAP, Active Directory and custom roles | Security & compliance | Directory groups mapped to roles at each level, automatic removal of leavers, and a 'who can do what, and why' view. |
+| 12 | Delivery metrics and executive dashboards | Insights | Deployment frequency, lead time from commit to production, change failure rate and time to restore, with drill-down. |
+| 13 | Tamper-evident audit and SIEM export | Security & compliance | An audit trail nobody can quietly edit, streamed to your security tools. |
+| 14 | Change management | Delivery & verification | Automatic change records with risk scores, freezes and CAB approval; optional ServiceNow and Jira Service Management. |
+| 15 | Post-deploy watch, incidents and SLOs | Delivery & verification | Keep watching after release, roll back automatically, tie incidents to the change that caused them. |
+| 16 | Service mesh and traffic control | Delivery & verification | Weighted canaries through Gateway API, Istio, Linkerd or Cilium, with mesh metrics as ready-made health checks. |
+| 17 | Argo CD in depth | Delivery & verification | App-of-apps and ApplicationSet trees, a ready Lua health-check library, hosted or bring-your-own Argo CD. |
+| 18 | Terraform/OpenTofu and Ansible steps | Infrastructure | Reviewed plans, gated applies, built-in state with locking, drift detection; Ansible with per-host results. |
+| 19 | Single pane of glass | Insights | One fleet view across VMs, on-prem clusters and clouds: what runs where, its health, drift and evidence. |
+| 20 | Compliance pack (PCI DSS, HIPAA) | Security & compliance | Policy templates and an evidence report mapping controls to requirements. Evidence support, not certification. |
+| 21 | Retention, legal hold, encryption at rest | Security & compliance | Control how long data is kept, prove deletion, encrypt logs and artifacts with rotating keys; FIPS build option. |
+| 22 | Cloud and serverless targets | Delivery & verification | Cloud Run, Lambda, ECS, managed instance groups and auto-scaling groups, with no stored cloud keys. |
+| 23 | VM deploys and Packer images | Infrastructure | Batch deploys over SSH with verification between batches; baked machine images rolled through instance groups. |
+| 24 | Releases across services | Delivery & verification | Ship several services as one ordered, gated release with a promotion view across environments. |
+| 25 | Smaller integrations | Integrations | Chat approvals, feature-flag mitigation, Chef templates, dependency caches, more event sources. |

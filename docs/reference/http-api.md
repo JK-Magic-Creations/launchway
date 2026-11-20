@@ -36,7 +36,7 @@ How a request is authenticated depends on the server's `auth.mode` and on the ro
 | Sign-in off (`auth.mode: none`) | anyone | No credentials. Every request acts as the configured `user`, with every right. An `Authorization` header is ignored. |
 | Sign-in on (`auth.mode: oidc`) | a browser | The `launchway_session` cookie set by [`GET /auth/callback`](#sign-in). |
 | Sign-in on | a script | `Authorization: Bearer lw_…`, an [API token](#api-tokens). A request that sends an `Authorization` header is judged by the token alone, never by a cookie. |
-| Either | a runner | `Authorization: Bearer <runner token>`: the shared runner token, or a deploy runner pool's token. Only the [runner API](#runner-api) accepts these. |
+| Either | a runner | `Authorization: Bearer <runner token>`: the shared runner token, a deploy runner pool's token, or the short-lived access token of an enrolled runner. Only the [runner API](#runner-api) accepts these. |
 | Either | a webhook caller | A secret the project's configuration names. See [Webhooks](#webhooks). |
 
 A request without valid credentials answers `401` with `{"error": "sign in first, or send a valid API token"}`.
@@ -75,7 +75,7 @@ Every route belongs to one access class. The server checks it before the handler
 | Class | Who may call | Refusal |
 |---|---|---|
 | `public` | Anyone. The handler decides (health checks, sign-in, webhooks). | — |
-| `runner` | A runner, with the shared runner token or a runner pool's token. | `401` |
+| `runner` | A runner, with the shared runner token, a runner pool's token or an enrolled runner's access token. | `401` |
 | `signed-in` | Anyone signed in (any role, or none). Lists show only what the caller may see. | `401` |
 | `any-viewer` | Someone with at least the viewer role on at least one project. | `403` |
 | `project-viewer` | A viewer of the project in `{name}`. | `404` |
@@ -147,7 +147,7 @@ For load balancers and orchestrators. Neither needs credentials.
 `GET /readyz` answers `200` with the database schema:
 
 ```json
-{"schema": {"code": 16, "database": 16, "minimum": 7}, "status": "ok"}
+{"schema": {"code": 21, "database": 21, "minimum": 7}, "status": "ok"}
 ```
 
 It answers `503` with `status` `stopping` while the server drains before it stops, `unavailable` when the database did not answer, and `incompatible` when the database was migrated by a newer server that this one cannot work with. A runner started with `--health-listen` serves its own `/healthz` and `/readyz`; see [the command-line reference](cli.md#launchway-runner).
@@ -174,7 +174,7 @@ Sign-ins, failed sign-ins and sign-outs are recorded in the audit trail as `auth
 `GET /api/v1/info` with sign-in off:
 
 ```json
-{"actor": "dana", "auth_mode": "none", "projects": 2, "schema": {"code": 16, "database": 16, "minimum": 7}, "version": "f717337"}
+{"actor": "dana", "auth_mode": "none", "projects": 2, "schema": {"code": 21, "database": 21, "minimum": 7}, "version": "f717337"}
 ```
 
 With sign-in on it has only `auth_mode` (`oidc`), `version` and `schema`.
@@ -204,6 +204,13 @@ A project object has the configuration (`name`, `url` with credentials removed, 
 ```
 
 A ref is `{"name", "kind" (branch or tag), "sha", "subject", "author", "committed_at"}`.
+
+## Libraries
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/libraries` | `any-viewer` | — | The shared libraries pipelines may use, by `name`, with the time of the last fetch (`last_fetch`). |
+| `GET /api/v1/libraries/{library}/templates` | `any-viewer` | — | A library's templates at `?version=` (default: its newest tag, else its default branch), with their parameters and outputs. `404` when no libraries are configured. |
 
 ## Runs
 
@@ -304,6 +311,13 @@ When the text is valid, `ok` is `true` and `graph` and `levels` describe it.
 | `GET /api/v1/runs/{id}/tests/cases/{case}` | `run-viewer` | — | One result in full, with its trace and captured output. |
 | `GET /api/v1/projects/{name}/tests` | `project-viewer` | — | A project's tests over its last runs of a ref: totals, slowest, most failing, flaky. |
 | `GET /api/v1/projects/{name}/tests/history` | `project-viewer` | — | One test's results in the project's last runs. |
+| `GET /api/v1/runs/{id}/tests/compare` | `run-viewer` | — | A run's tests beside the previous run of the same ref: new failures, fixed tests and tests still failing. |
+| `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | `run-viewer` | — | One attachment of a test result (a screenshot, video or trace), number `n` from 0. Supports `Range`, so videos can be played and sought. Served as a download or an image, never as a page. |
+| `GET /api/v1/runs/{id}/coverage` | `run-viewer` | — | A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare. |
+| `GET /api/v1/runs/{id}/coverage/files` | `run-viewer` | — | A run's per-file coverage: `?step=`, `?q=`, `?sort=` (`path`, `lines` or `missed`), `?limit=` and `?offset=`. |
+| `GET /api/v1/projects/{name}/coverage` | `project-viewer` | — | A project's coverage over its last runs of a ref (`?ref=`, `?runs=`). |
+| `GET /api/v1/runs/{id}/reports` | `run-viewer` | — | A run's hosted HTML reports, each with a fresh signed link. |
+| `GET /hosted/{link}/{path...}` | `public` | — | A file of a hosted HTML report. It takes no session: the signed `link`, scoped to one report for a few hours and given only to people who may see the run, is the permission. Served with a sandboxing `Content-Security-Policy`, and from the separate origin `reports.origin` when one is configured. |
 
 `…/tests/cases` takes `?status=failed|passed|skipped|flaky`, `?q=` (searched in the name, suite, file and message; at most 200 bytes), `?step=` (with `?attempt=`), `?limit=` and `?offset=`. `{case}` is a result's numeric `id`. The project routes take `?ref=` (a branch, a full ref, or `all`; default the default branch) and `?runs=`. `…/tests/history` needs `?key=`, the `key` of a result. See [Test reports](../tutorials/tests-and-reports.md).
 
@@ -315,6 +329,7 @@ When the text is valid, `ok` is `true` and `graph` and `levels` describe it.
 | `GET /api/v1/runs/{id}/artifacts/{artifact}/file` | `run-viewer` | — | Downloads one file, `?path=`. Supports `Range`. |
 | `GET /api/v1/runs/{id}/artifacts/{artifact}/archive` | `run-viewer` | — | Downloads every file of the artifact as a zip archive. |
 | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` | `run-operator` | `artifact.delete` | Deletes a kept artifact. Answers with what was deleted. |
+| `GET /api/v1/artifact-store` | `any-viewer` | — | Where this server keeps artifacts (`database`, `filesystem` or `s3`), why, and how full the store is. |
 | `GET /api/v1/runs/{id}/findings` | `run-viewer` | — | A run's security findings. |
 | `GET /api/v1/projects/{name}/security` | `project-viewer` | — | A project's findings over its last runs of a ref (`?ref=`, `?runs=`). |
 | `GET /api/v1/components` | `signed-in` | — | The runs whose SBOMs list a component: `?name=` (exact, ignoring case), `?version=`. |
@@ -398,7 +413,37 @@ The create body:
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/runners` | `any-viewer` | — | The runners that have contacted the server: `id`, `name`, `executor`, `version`, `last_seen`, `online`, and for deploy runners their pool and targets. |
+| `GET /api/v1/runners` | `any-viewer` | — | The runners that have contacted the server: `id`, `name`, `executor`, `version`, `last_seen`, `online`, their pool, labels and whether they are enrolled (with the key's fingerprint and age), and for deploy runners their targets. |
+| `GET /api/v1/runner-pools` | `any-viewer` | — | The runner pools (`runner_pools` in the configuration, and the default pool): name, kind, projects, events and whether the pool requires identity. |
+| `GET /api/v1/runner-join-tokens` | `signed-in` | — | The join tokens that are still usable, never their values. Needs the role `runner_admin` names. |
+| `POST /api/v1/runner-join-tokens` | `signed-in` | `runner.join_token.create` | Makes a join token for a pool: `{"pool", "labels", "description", "max_uses", "ttl", "ephemeral"}` (`ttl` such as `1h`, the default; at most 7 days). Answers `201` with the value (`lwj_…`) in `token`, shown once: only its hash is stored. Needs the role `runner_admin` names. |
+| `POST /api/v1/runner-join-tokens/{id}/revoke` | `signed-in` | `runner.join_token.revoke` | Revokes a join token. |
+| `POST /api/v1/runners/{id}/revoke` | `signed-in` | `runner.revoke` | Revokes an enrolled runner: every server refuses it from then on, and the steps it held are queued again. |
+| `POST /api/v1/runners/{id}/rotate` | `signed-in` | `runner.rotate` | Asks an enrolled runner to move to a new key at its next request. |
+
+Making and revoking join tokens, and revoking and rotating runners, need the role that `runner_admin` names on every project (admin by default); the handlers check it after the access class. See [Runners on other machines and clusters](../guide/runner-identity.md).
+
+## Verifications and AI
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/runs/{id}/verifications` | `run-viewer` | — | A run's verifications: each interval's readings, the verdict and its reason in words, log clusters, and any explanation. |
+| `GET /api/v1/verifications` | `signed-in` | — | Recent verifications of the projects the caller may see: `?environment=`, `?project=`, `?service=`, `?limit=`. |
+| `GET /api/v1/runs/{id}/steps/{step}/verify/controls` | `run-viewer` | — | Whether the caller could mark the verification passed or failed now, and why not, in plain words. |
+| `POST /api/v1/runs/{id}/steps/{step}/verify/override` | `run-operator` | `verification.override` | Marks a running or paused verification passed or failed, with a reason: `{"outcome", "reason"}` where `outcome` is `passed` or `failed`. On a protected environment the person who started the run may not mark it passed. |
+| `GET /api/v1/health-sources` | `signed-in` | — | The health sources the caller's projects may use, by name, type and projects; never where they are or how they are reached. |
+| `GET /api/v1/ai/models` | `signed-in` | — | The configured models the caller may use: name, limits and today's use, never endpoints or keys; and `server_can_explain`. |
+| `GET /api/v1/runs/{id}/steps/{step}/explanations` | `run-viewer` | — | The explanations models gave of a failed step. |
+| `POST /api/v1/runs/{id}/steps/{step}/explain` | `run-operator` | `step.explain` | Asks a configured model (`{"model"}`) to explain a failed step from its log tail, failed tests and findings, redacted. `409` when the server has no model or no key store for it. |
+
+## MCP
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `POST /mcp` | `public` | — | The [MCP](../guide/agents.md) endpoint (Streamable HTTP, stateless). The handler checks the `Origin`, the token (`Authorization: Bearer lw_…`, or the sign-in provider's access token when `mcp.oauth` is set) and the per-token limits; session cookies are not accepted. Changes made through a tool are audited under the tool's own action, with `via MCP` in the detail. `404` when `mcp.enabled` is false. |
+| `GET /mcp` | `public` | — | Answers `405`: the server keeps no sessions and has no event stream. |
+| `DELETE /mcp` | `public` | — | Answers `405`: there is no session to end. |
+| `GET /.well-known/oauth-protected-resource/mcp` | `public` | — | OAuth 2.0 Protected Resource Metadata (RFC 9728) for `/mcp`. `404` unless `mcp.oauth.resource` is set. |
 
 ## Audit trail
 
@@ -483,6 +528,11 @@ In outline, a runner long-polls for work (`lease`), says the step started (`star
 | `POST /api/runner/v1/deploy/observe` | `runner` | — | A deploy runner reports what it observes of them. |
 | `POST /api/runner/v1/deploy/commands` | `runner` | — | A deploy runner waits for people's deployment commands. |
 | `POST /api/runner/v1/deploy/command-done` | `runner` | — | A deploy runner reports how a command went. |
+| `POST /api/runner/v1/deploy/verify/lease` | `runner` | — | A deploy runner waits for a verification of its targets to run. |
+| `POST /api/runner/v1/deploy/verify/interval` | `runner` | — | A deploy runner reports one interval's readings of a verification; the answer says whether to go on. |
+| `POST /api/runner/v2/join` | `public` | — | A runner enrols with a join token: `{"join_token", "public_key", "proof", "hostname", "facts"}`. Answers its `runner_id`, pool, kind and labels. The join token is checked in the handler; refusals are audited as `runner.refused`. |
+| `POST /api/runner/v2/token` | `public` | — | An enrolled runner gets an access token (valid 15 minutes) for an assertion it signed with its key (valid 60 seconds, accepted once). A revoked or unknown runner, or a bad assertion, answers `401`; a skewed clock answers `401` with `server_time` and `skew: true`. |
+| `POST /api/runner/v2/rotate` | `public` | — | An enrolled runner moves to a new key, proving it holds both. |
 
 The request and response bodies of these routes are internal to Launchway and may change between releases; runners and servers of mismatched versions are handled by the schema checks described in [Backup, restore and upgrade](../howto/backup-restore-upgrade.md).
 

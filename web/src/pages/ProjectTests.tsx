@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { api, ApiError, type OverviewRun, type TestHistory, type TestOverview, type TestStat } from "../api";
+import { api, ApiError, type CoverageTrend, type OverviewRun, type TestHistory, type TestOverview, type TestStat } from "../api";
 import { ago, shortSha } from "../format";
 import { navigate, onLink } from "../router";
 import { BranchIcon, Empty, ErrorBox, Link } from "../components/ui";
-import { Badge, HistoryStrip, ReportsHowTo, TestCounts, TestIcon, failing, passRate, testDuration, testStatusLabel } from "../components/Tests";
+import { CoverageTrendChart, Delta, MEASURES, measureLabel, pct, ratio } from "../components/Coverage";
+import { Badge, HistoryStrip, ReportsHowTo, TestCounts, TestIcon, failing, passRate, testDuration, testStatusLabel, VariantPill } from "../components/Tests";
 
 function params() { return new URLSearchParams(location.search); }
 
@@ -30,6 +31,14 @@ export function ProjectTestsPage({ name }: { name: string }) {
     return () => { alive = false; };
   }, [name, ref]);
 
+  const [cov, setCov] = useState<CoverageTrend | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setCov(null);
+    api.projectCoverage(name, ref || undefined).then((d) => alive && setCov(d)).catch(() => { /* a server without coverage: no chart */ });
+    return () => { alive = false; };
+  }, [name, ref]);
+
   const go = (changes: { ref?: string; test?: string }) => {
     const q = params();
     for (const [k, v] of Object.entries(changes)) { if (v) q.set(k, v); else q.delete(k); }
@@ -46,7 +55,7 @@ export function ProjectTestsPage({ name }: { name: string }) {
       </nav>
       <header className="page-head">
         <div>
-          <h1>Tests of {name}</h1>
+          <h1>Tests and coverage of {name}</h1>
           <p className="sub">{data?.ref ? <>The last {data.runs.length} runs of <BranchIcon /> <strong>{refName(data.ref)}</strong>: how the results move, and the tests that stand out.</> : "Results of the tests its steps report."}</p>
         </div>
         {data && data.refs.length > 0 && (
@@ -68,6 +77,7 @@ export function ProjectTestsPage({ name }: { name: string }) {
           <ReportsHowTo />
         </Empty>
       )}
+      {data && !latest?.tests && cov && cov.runs.length > 0 && <CoverageCard trend={cov} />}
       {data && latest?.tests && (
         <>
           <section className="card ptrend" aria-label="Results over time">
@@ -98,6 +108,7 @@ export function ProjectTestsPage({ name }: { name: string }) {
               </div>
             </details>
           </section>
+          {cov && cov.runs.length > 0 && <CoverageCard trend={cov} />}
           <div className="pgrid">
             <StatList title="Failing most" empty="Nothing failed in these runs." stats={data.failing} name={name} go={go}
               detail={(s) => <><strong>{s.failures}</strong> of {s.runs} runs{s.last_failed ? <>, last in #{s.last_failed}</> : null}</>} tone="bad" />
@@ -110,6 +121,51 @@ export function ProjectTestsPage({ name }: { name: string }) {
         </>
       )}
     </div>
+  );
+}
+
+// CoverageCard shows the latest coverage and how line and branch coverage
+// moved over the runs.
+function CoverageCard({ trend }: { trend: CoverageTrend }) {
+  const runs = trend.runs;
+  const last = runs[runs.length - 1];
+  const first = runs[0];
+  const t = last.totals;
+  return (
+    <section className="card ptrend" aria-label="Coverage over time">
+      <div className="ptrend-head">
+        <div>
+          <h2 className="h-sm">Coverage, run by run</h2>
+          <p className="sub small">Latest: <Link href={`/runs/${last.id}?tab=coverage`}>#{last.number}</Link>, {ago(last.created_at)}{runs.length > 1 ? <>; since #{first.number}:</> : null}
+            {runs.length > 1 && <> <Delta now={ratio(t.lines)} before={ratio(first.totals.lines)} label={`#${first.number}`} /></>}
+          </p>
+        </div>
+        <dl className="pcov-stats">
+          {MEASURES.map((m) => (
+            <div key={m} className="tstat">
+              <dt>{measureLabel(m, t.unit)}</dt>
+              <dd>{pct(t[m])}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+      {runs.length > 1 ? <CoverageTrendChart trend={trend} /> : <p className="sub small">The chart appears once two runs have reported coverage.</p>}
+      <details className="ptable">
+        <summary>Show as a table</summary>
+        <div className="table-scroll">
+          <table className="inputs-table">
+            <thead><tr><th>Run</th><th>Commit</th>{MEASURES.map((m) => <th key={m}>{measureLabel(m, t.unit)}</th>)}</tr></thead>
+            <tbody>{[...runs].reverse().map((r) => (
+              <tr key={r.id}>
+                <td><Link href={`/runs/${r.id}?tab=coverage`}>#{r.number}</Link></td>
+                <td className="mono">{shortSha(r.sha)}</td>
+                {MEASURES.map((m) => <td key={m}>{pct(r.totals[m])}</td>)}
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </details>
+    </section>
   );
 }
 
@@ -131,6 +187,7 @@ function StatList({ title, empty, stats, detail, name, go, tone }: {
                 <span className="pstat-name">
                   {tone === "flaky" && <Badge kind="flaky">Flaky</Badge>}
                   <span>{s.name}</span>
+                  {s.variant && <VariantPill variant={s.variant} />}
                 </span>
                 <span className="pstat-suite">{s.suite}</span>
                 <span className={"pstat-detail" + (tone === "bad" ? " pstat-bad" : "")}>{detail(s)}</span>

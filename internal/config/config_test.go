@@ -449,3 +449,90 @@ func TestPolicyConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestBuildPoolsAndRunnerAdmin(t *testing.T) {
+	dir := t.TempDir()
+	write := func(body string) string {
+		p := filepath.Join(dir, "launchway.yaml")
+		os.WriteFile(p, []byte(body), 0o644)
+		return p
+	}
+	base := "environments:\n  - { name: prod, target: homelab, projects: [shop] }\nrunner: { enabled: false }\n"
+	c, err := Load(write(base + `runner_admin: operator
+runner_pools:
+  - { name: default, kind: build, projects: [shop], require_identity: true }
+  - { name: web, kind: build, projects: ["web-*"], events: [push, manual] }
+  - { name: deployers, targets: [homelab], require_identity: true }
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pools, err := c.Pools("shared")
+	if err != nil || len(pools) != 3 || pools[1].Kind != "build" || pools[1].Events[1] != "manual" || pools[2].Kind != "deploy" ||
+		pools[2].Token != "" || !pools[2].RequireIdentity {
+		t.Fatalf("%+v %v", pools, err)
+	}
+	if ep := EnginePools(pools); len(ep) != 3 || ep[0].Name != "default" || !ep[0].RequireIdentity {
+		t.Fatalf("%+v", ep)
+	}
+	if r, err := c.RunnerAdminRole(); err != nil || r.String() != "operator" {
+		t.Fatalf("%v %v", r, err)
+	}
+	for body, want := range map[string]string{
+		"runner_pools:\n  - { name: web, kind: build }\n":                                            "list the projects",
+		"runner_pools:\n  - { name: web, kind: build, projects: [a], targets: [homelab] }\n":         "no targets and no token",
+		"runner_pools:\n  - { name: web, kind: gpu }\n":                                              "kind is deploy",
+		"runner_pools:\n  - { name: d, targets: [homelab], projects: [a], token_env: X }\n":          "for build pools",
+		"runner_pools:\n  - { name: default, targets: [homelab], token_env: X }\n":                   "give the deploy pool another name",
+		"runner_pools:\n  - { name: d, targets: [homelab], token_env: X, require_identity: true }\n": "give it none",
+	} {
+		c, err := Load(write(base + body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.Pools("shared"); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: got %v, want %s", body, err, want)
+		}
+	}
+	// The built-in runner uses the shared token.
+	c, _ = Load(write("runner_pools:\n  - { name: default, kind: build, require_identity: true }\n"))
+	if _, err := c.Pools("shared"); err == nil || !strings.Contains(err.Error(), "built-in runner") {
+		t.Errorf("built-in runner with require_identity: %v", err)
+	}
+	if _, err := Load(write("runner_admin: everyone\n")); err == nil || !strings.Contains(err.Error(), "runner_admin") {
+		t.Errorf("bad runner_admin: %v", err)
+	}
+}
+
+func TestRunnerFileAcceptAndProxy(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "runner.yaml")
+	os.WriteFile(p, []byte(`server: https://ci.example.com
+labels: [arm64]
+proxy: http://proxy.example.com:3128
+no_proxy: internal.example.com
+ca_file: certs/ca.pem
+accept:
+  projects: [shop, "web-*"]
+  repositories: ["https://git.example.com/shop/*"]
+  images: ["registry.example.com/*"]
+  images_by_digest: true
+  executors: [podman]
+  pull_requests: false
+  drafts: false
+  max_timeout: 2h
+  env_deny: [LD_PRELOAD, "GIT_*"]
+`), 0o644)
+	f, err := LoadRunner(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.CAFile != filepath.Join(dir, "certs/ca.pem") || f.Proxy == "" || f.Labels[0] != "arm64" || f.Accept == nil ||
+		*f.Accept.PullRequests || f.Accept.Timeout().Hours() != 2 {
+		t.Fatalf("%+v %+v", f, f.Accept)
+	}
+	os.WriteFile(p, []byte("server: x\naccept: { max_timeout: soon }\n"), 0o644)
+	if _, err := LoadRunner(p); err == nil || !strings.Contains(err.Error(), "accept.max_timeout") {
+		t.Fatalf("bad accept: %v", err)
+	}
+}

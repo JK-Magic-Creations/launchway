@@ -31,6 +31,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
+	hsource "github.com/jk-magic-creations/launchway/internal/verify/source"
 )
 
 const poolToken = "integration-pool-token-0123456789abcdef0123"
@@ -65,6 +66,10 @@ type harness struct {
 	log      *slog.Logger
 	runnerWG sync.WaitGroup
 	policy   engine.PolicyOptions // delivery policies the server judges runs by
+	// sources and healthSources, when set, are the health sources the
+	// server knows and the deploy runner reads (verify steps).
+	sources       []engine.HealthSource
+	healthSources *hsource.Sources
 }
 
 func (h *harness) kubectl(args ...string) string {
@@ -281,7 +286,8 @@ func (h *harness) startServer(ln net.Listener) {
 		}
 	}
 	eng, err := engine.Open(engine.Options{Database: h.db, LeaseTTL: 6 * time.Second, Logger: h.log,
-		Environments: []engine.Environment{{Name: "kind", Target: "kind", Projects: []string{"shop"}}}, Policy: h.policy})
+		Environments: []engine.Environment{{Name: "kind", Target: "kind", Projects: []string{"shop"}}}, Policy: h.policy, HealthSources: h.sources,
+		RunnerPools: []engine.RunnerPool{{Name: "deploy-kind", Kind: engine.PoolDeploy, Targets: []string{"kind"}}}})
 	if err != nil {
 		h.t.Fatal(err)
 	}
@@ -330,9 +336,31 @@ func (h *harness) startBuildRunner() {
 // startDeployRunner starts a deploy runner; stop kills it (without waiting
 // for anything it is doing to be handed back).
 func (h *harness) startDeployRunner(name string) (stop func()) {
-	d := &runner.DeployRunner{Client: runner.NewClient("http://"+h.addr, poolToken), Agent: h.agent,
+	return h.startDeployRunnerWith(name, runner.NewClient("http://"+h.addr, poolToken))
+}
+
+// startEnrolledDeployRunner enrols a deploy runner in the pool with a join
+// token (schema 20) and starts it.
+func (h *harness) startEnrolledDeployRunner(name string) (stop func(), id *runner.Identity) {
+	h.t.Helper()
+	secret, _, err := h.engine().CreateJoinToken(engine.JoinTokenSpec{Pool: "deploy-kind"}, "tester")
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	id, err = runner.Join(context.Background(), http.DefaultClient, "http://"+h.addr, secret, filepath.Join(h.dir, name), name,
+		runner.JoinFacts{Name: name, Executor: "deploy"})
+	if err != nil {
+		h.t.Fatal(err)
+	}
+	c := runner.NewClient("http://"+h.addr, "")
+	c.Auth = &runner.IdentityAuth{ID: id, HTTP: http.DefaultClient, Log: h.log}
+	return h.startDeployRunnerWith(name, c), id
+}
+
+func (h *harness) startDeployRunnerWith(name string, c *runner.Client) (stop func()) {
+	d := &runner.DeployRunner{Client: c, Agent: h.agent,
 		Info: engine.RunnerInfo{ID: name, Name: name, Targets: []string{"kind"}}, Log: h.log,
-		ObserveEvery: time.Second, ReportEvery: 3 * time.Second}
+		ObserveEvery: time.Second, ReportEvery: 3 * time.Second, Sources: h.healthSources, Settle: 3 * time.Second}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	go func() { defer close(done); d.Run(ctx) }()
@@ -695,4 +723,31 @@ func TestArgo(t *testing.T) {
 			t.Fatalf("%s", describe(r))
 		}
 	})
+}
+
+// A deploy runner enrolled with a join token for the deploy pool (schema
+// 20) deploys and observes like one with the pool's token, and the leases
+// it takes are its alone.
+func TestArgoEnrolledDeployRunner(t *testing.T) {
+	h := setup(t)
+	_, id := h.startEnrolledDeployRunner("deployer-enrolled")
+	r := h.wait(h.start(with(demo, goodB)))
+	if r.Status != engine.RunSucceeded || r.Deployments[0].Verdict != engine.VerdictDeployed {
+		t.Fatalf("%s", describe(r))
+	}
+	if d := step(r, "deploy"); d.Runner != id.RunnerID {
+		t.Fatalf("the deploy step ran on %q, not the enrolled runner %s", d.Runner, id.RunnerID)
+	}
+	if got := r.Deployments[0].ObservedBy; got != id.RunnerID {
+		t.Fatalf("observed by %q, not %s", got, id.RunnerID)
+	}
+	list, err := h.engine().Runners()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range list {
+		if v.ID == id.RunnerID && (v.Auth != engine.AuthIdentity || v.Kind != engine.PoolDeploy || v.Pool != "deploy-kind") {
+			t.Fatalf("listed as %+v", v)
+		}
+	}
 }

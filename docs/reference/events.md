@@ -25,6 +25,9 @@ read these records through the API, build tools on them, or review them for evid
 > failed `run.*` and `policy.*` entries. **Not verified:** the deployment events (`deploy.*`) and the
 > `deployment` stream message, which need Argo CD; `step.lost`, `step.reused`, `run.cancel_requested` and
 > `step.rejected` were not produced in this session. Their descriptions come from the code.
+>
+> The verification events and the runner and explain audit actions were added when those features
+> were merged; their descriptions come from the code and its tests, and were not produced by a live run.
 
 ## Run events
 
@@ -99,6 +102,21 @@ and `deploy` holds the details. None of them holds a credential.
 | Type | Schema | Written when | Main fields in `data.policy` |
 |---|---|---|---|
 | `policy.evaluated` | 16 | policies are judged: at the run's start (also on a re-run or resume), before a deploy or rollout step acts, and before an image step that pushes is handed to a runner | `point` (`run`, `deploy` or `image`), `step`, `action`, `environment`, `at`, `verdict` (`pass`, `warn` or `block`), `policies` (each with the policy as judged, its verdict and its `rules`: `rule`, `verdict`, `found`, `want`, `evidence`, `waiver`), `input` (the facts judged), `waivers` (those considered) |
+
+### Verification events
+
+These are step events of a `kind: verify` step; see [Verifying a deployment](../guide/verification.md).
+The step's `data.verify` holds the fields below.
+
+| Type | Schema | Written when | Main fields in `data.verify` |
+|---|---|---|---|
+| `verify.started` | 19 | the verification's window begins | `environment`, `service`, `target`, `deployment`, `version`, `start`, `deadline`, `spec` (what is checked), `params` (as resolved), `baseline` (what it is judged against) |
+| `verify.interval` | 19 | a deploy runner read one interval's metrics and logs | `interval`: each metric's readings and the log clusters seen |
+| `verify.verdict` | 19 | the verification is decided: passed, failed or inconclusive | `verdict` (with the reason for each check), `explanation` (a model's, if one was asked; untrusted text), `pause` (it now waits for a person) |
+| `verify.override` | 19 | a person marked a running or paused verification passed or failed | `outcome` (`passed` or `failed`); the person and the reason are the payload's `actor` and `comment` |
+
+Every interval's data and the verdict are events, so any server derives the same verdict from the
+log alone.
 
 The decision is written in the same database transaction as what it allows, so it can be
 reproduced from the log alone. `launchway policy run <run-id>` prints a run's decisions; the
@@ -231,6 +249,16 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `policy.revoke_waiver` | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` |
 | `webhook.git` | `POST /api/v1/projects/{name}/git-hook`: a Git host's call that made the project poll (`ok`) or could not prove itself (`denied`); ignored events and repeated deliveries are not recorded |
 | `webhook.run` | `POST /api/v1/projects/{name}/webhooks/{trigger}`: a webhook trigger's call that started a run (`ok`), failed, or was refused |
+| `step.explain` | `POST /api/v1/runs/{id}/steps/{step}/explain`: asking a model to explain a failed step; the detail names the model |
+| `verification.override` | `POST /api/v1/runs/{id}/steps/{step}/verify/override`: marking a verification passed or failed, with the reason |
+| `runner.join_token.create` | `POST /api/v1/runner-join-tokens`: making a join token (the detail says the pool, the uses and the expiry; the value is never recorded) |
+| `runner.join_token.revoke` | `POST /api/v1/runner-join-tokens/{id}/revoke` |
+| `runner.join` | `POST /api/runner/v2/join`: a runner enrolled with a join token |
+| `runner.rotate` | a runner moved to a new key (`POST /api/runner/v2/rotate`, or `POST /api/v1/runners/{id}/rotate` asking it to) |
+| `runner.revoke` | `POST /api/v1/runners/{id}/revoke`, or an ephemeral runner that left |
+| `runner.refused` | a runner refused a step before running it, because its own `accept:` section does not allow it; the detail says why |
+| `runner.lease_refused` | a runner asked for a lease it does not hold: the logs, results, artifacts or heartbeat of a step taken by another runner |
+| `runner.auth` | a runner's request refused: an unknown, revoked or expired token or identity; the target and detail say which and why |
 | `auth.sign_in` | `GET /auth/callback`: a sign-in that succeeded (with the groups the provider gave) or failed (with why) |
 | `auth.sign_out` | `POST /auth/logout`, for a session that existed |
 

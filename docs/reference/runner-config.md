@@ -35,7 +35,9 @@ A runner takes each setting from the first of:
 | Flag | Variable | File setting | Default |
 |---|---|---|---|
 | `--server URL` | `LAUNCHWAY_SERVER` | `server` | required |
-| `--token T` | `LAUNCHWAY_RUNNER_TOKEN` | never in the file | required |
+| `--token T` | `LAUNCHWAY_RUNNER_TOKEN` | never in the file | the shared runner token or a pool's token; give this or `--join`, not both. Not needed once the runner is enrolled |
+| `--join J` | `LAUNCHWAY_JOIN` | never in the file | a join token, to enrol the runner once and give it an identity of its own. Not needed once the runner is enrolled |
+| `--labels a,b` | | `labels` | none |
 | `--name NAME` | | `name` | the host name |
 | `--data DIR` | | `data` | `launchway-runner` |
 | `--concurrency N` | | `concurrency` | `2` |
@@ -48,7 +50,10 @@ A runner takes each setting from the first of:
 | `--config FILE` | | | none |
 
 The token is the shared runner token for build runners, or a
-[runner pool's](server-config.md#runner-pools) token for a deploy runner. Relative paths in the
+[runner pool's](server-config.md#runner-pools) token for a deploy runner. A runner enrolled with a
+join token has no use for it: it keeps its identity (a key it made, under `<data>/identity`), and
+starts without `--join` or `--token`. See
+[Runners on other machines and clusters](../guide/runner-identity.md). Relative paths in the
 file are relative to the file's directory. Unknown settings are refused, naming the line.
 
 `launchway run`, which runs a pipeline on your own machine, takes `--executor`, the `--k8s-*` flags,
@@ -103,7 +108,75 @@ reports:
 | `name` | text | the host name | Shown on the Runners page. The runner's identity is `runner-<name>` |
 | `data` | directory | `launchway-runner` | Where runs' workspaces are cloned |
 | `concurrency` | whole number | `2` | Steps it runs at once. All of a run's steps go to the runner that took its first step, so a run's parallel steps share this |
+| `ai` | boolean | `false` | Whether this runner may call the AI models the server lists, for `ai` steps (and, on a deploy runner, to explain verifications). Keys come from the runner's own secret stores and never enter a step's container. See [AI models](../guide/ai.md) |
 | `executor` | text | `auto` | Where steps run: `auto` (Podman or Docker if found, else the host), `container` (Podman or Docker), `podman`, `docker`, `host` (directly on the machine: only for trusted pipelines) or `kubernetes` (one pod per run) |
+
+## Identity, labels and the network
+
+A runner enrolled with a join token has an identity of its own and belongs to a pool; see
+[Runners on other machines and clusters](../guide/runner-identity.md). These settings describe it
+and its connection to the server. They are in the runner's file only: the runner built into the
+server has no use for them.
+
+<!-- keys: runner -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `labels` | list | none | What the runner has, such as `arm64` or `gpu`. They add to the labels of its join token. A pipeline's `runner: { labels: [...] }` runs only on runners that have all of them |
+| `proxy` | URL | `HTTPS_PROXY`, `HTTP_PROXY` | The proxy for the runner's requests to the server. Wins over the environment |
+| `no_proxy` | text | `NO_PROXY` | Hosts reached without the proxy. Wins over the environment |
+| `ca_file` | path | the system's | PEM certificates added to the system's, for a server or a proxy whose certificate a private authority signed, such as one that inspects TLS |
+
+A runner waits for work in requests of up to 25 seconds, so a proxy must allow idle requests of at
+least 30. Runners prove who they are inside each request, not with client certificates, so they
+work through proxies that inspect TLS.
+
+## What the runner accepts
+
+`accept` is the runner's own limit on the work the server may send it. It is checked on the runner
+before anything runs: no clone, no secret looked up, no container started. The server cannot change
+it, because it lives only in this file. A job it does not allow is refused: the step fails without
+retries, saying why, and the refusal is audited (`runner.refused`). Every list that is empty allows
+anything; a list that is set allows only what matches one of its patterns. In patterns, `*` matches
+any run of characters (slashes included) and `?` one character.
+
+<!-- keys: runner -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `accept.projects` | list of patterns | any project | Projects whose work the runner takes |
+| `accept.repositories` | list of patterns | any | Repositories it clones, as URLs without credentials such as `https://git.example.com/shop/*`: the run's own and every library's |
+| `accept.images` | list of patterns | any | Images steps and their containers may use, written in full (`docker.io/library/golang:1.27`, not `golang:1.27`), such as `registry.example.com/*` or `docker.io/library/golang@sha256:*` |
+| `accept.images_by_digest` | boolean | `false` | Refuse images that are not pinned by digest (`name@sha256:…`) |
+| `accept.executors` | list | any | The executors it may use: its own (`podman`, `docker`, `host`, `kubernetes`) for ordinary steps, `buildkit` for image steps and `deploy` for deploy steps |
+| `accept.environments` | list of patterns | any | The environments a deploy runner deploys to |
+| `accept.pull_requests` | boolean | allowed | `false` refuses runs of pull requests: code anyone who can open one wrote |
+| `accept.drafts` | boolean | allowed | `false` refuses draft runs: pipeline text that is not in Git |
+| `accept.max_timeout` | duration | none | Refuses steps that may run longer, such as `2h` |
+| `accept.env_deny` | list of patterns | none | Refuses steps that set environment variables (or secrets) with these names, such as `LD_PRELOAD`, `BASH_ENV` or `GIT_*` |
+
+Whatever its settings, a runner also refuses IDs from the server that do not look like the server's
+own (they become paths), and a run whose source is a directory of another machine (only
+`launchway run` makes those). An enrolled runner does not fall back to running steps on its host
+when it finds no Podman or Docker, unless `executor: host` is chosen.
+
+`accept` limits what work reaches the runner's network and secrets. It cannot make the work it does
+accept safe: a server that has been taken over can still send any script for a project, repository
+and image the runner accepts. Keep `accept`, the secret stores and the network as narrow as the
+pool's work.
+
+<!-- validate-config runner -->
+```yaml
+server: https://launchway.example.com
+labels: [arm64]
+accept:
+  projects: [shop, "web-*"]
+  repositories: ["https://git.example.com/shop/*"]
+  images: ["registry.example.com/*", "docker.io/library/golang@sha256:*"]
+  executors: [podman, buildkit]
+  pull_requests: false
+  drafts: false
+  max_timeout: 2h
+  env_deny: [LD_PRELOAD, BASH_ENV, ENV, "GIT_*"]
+```
 
 ## Kubernetes
 
@@ -285,6 +358,92 @@ deploy:
       paths: [ { projects: [shop], files: ["apps/shop/**", "helm-values/shop.yaml"] } ]
 secrets:
   vault: { type: vault, address: https://vault.example.com:8200, role: launchway-deploy }
+```
+
+## Health sources
+
+On a deploy runner, `health_sources` says where the monitoring systems are, for
+[verification steps](../guide/verification.md). The server's `verification.sources` lists the same
+names, types and projects; the deploy runners that serve an environment's target hold the rest, because they are next
+to the monitoring systems and never run anyone's script. A health source needs a `deploy` section.
+Credentials are only secret references, read from the runner's own stores for each query.
+
+<!-- keys: runner -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `health_sources.<name>.type` | text | required | `prometheus` (also Thanos, Mimir, VictoriaMetrics), `loki`, `clickhouse`, `elasticsearch` or `opensearch`, `postgres` or `http` |
+| `health_sources.<name>.url` | URL | required | The base URL. For `postgres`, a `postgres://` URL without a password |
+| `health_sources.<name>.projects` | list of patterns | none: allows no project | The projects that may use the source |
+| `health_sources.<name>.auth.type` | text | | `bearer`, `basic` or `header`. For `clickhouse` and `postgres` it may be left out: the user and the secret are the database account |
+| `health_sources.<name>.auth.user` | text | | The user name, for `basic` and the databases |
+| `health_sources.<name>.auth.header` | text | | The header that carries the secret, for `header` |
+| `health_sources.<name>.auth.secret.store` | name | | The secret store holding the credential |
+| `health_sources.<name>.auth.secret.key` | text | | The key in the store |
+| `health_sources.<name>.auth.secret.field` | text | | The field of the key |
+| `health_sources.<name>.headers` | mapping | none | Fixed headers that are not secret, such as `X-Scope-OrgID` to choose a tenant. `Authorization`, `Cookie` and the like are refused: use `auth` |
+| `health_sources.<name>.ca_file` | path | the system's | PEM certificates to trust for this source |
+| `health_sources.<name>.timeout` | duration | `10s` | The time one query may take, at most `60s` |
+| `health_sources.<name>.limits.max_series` | whole number | `1` | Series a metric query may return. It can only be 1: a verification judges one series per query |
+| `health_sources.<name>.limits.max_points` | whole number | `500` | Points of one metric query |
+| `health_sources.<name>.limits.max_lines` | whole number | `5000` | Log lines of one query |
+| `health_sources.<name>.limits.max_bytes` | whole number | 8 MiB | Bytes of one response |
+| `health_sources.<name>.indices` | list of patterns | required for `elasticsearch` | The only indices pipelines may search |
+| `health_sources.<name>.time_field` | text | `@timestamp` | `elasticsearch`: the document's time |
+| `health_sources.<name>.message_field` | text | `message` | `elasticsearch`: the document's log line |
+| `health_sources.<name>.statements.<name>.kind` | text | required | `metric` or `logs` |
+| `health_sources.<name>.statements.<name>.sql` | text | | `clickhouse` and `postgres`: the query. ClickHouse uses parameters such as `{service:String}`, with `{start:DateTime64(3)}` and `{end:DateTime64(3)}` always passed; PostgreSQL uses `{{name}}` placeholders, sent as typed parameters, with `{{start}}` and `{{end}}`. A metric returns `t` and `value` columns (or one `value`); logs return `message` and optionally `t` |
+| `health_sources.<name>.statements.<name>.path` | text | | `http`: the path added to the source's URL |
+| `health_sources.<name>.statements.<name>.method` | text | `GET` | `http`: `GET` or `POST` |
+| `health_sources.<name>.statements.<name>.body` | text | | `http` `POST`: a JSON document; `{{name}}` placeholders in its string values are replaced |
+| `health_sources.<name>.statements.<name>.value` | text | | `http`: a dotted path into the JSON answer (numbers index arrays): a number, an array of numbers, or an array of `[time, value]` pairs for metrics; an array of strings for logs |
+| `health_sources.<name>.statements.<name>.params` | mapping | none | The parameters a pipeline must pass, by name and type: a ClickHouse type such as `String` or `DateTime64(3)`; for PostgreSQL `text`, `int`, `float` or `timestamptz`; for `http` `string` |
+| `health_sources.<name>.statements.<name>.projects` | list of patterns | the source's | Narrows which of the source's projects may run the statement |
+
+Types `clickhouse`, `postgres` and `http` run only the named `statements`; pipelines never write
+SQL of their own. Every query is read-only where the source can enforce it (ClickHouse with
+`readonly=1`, PostgreSQL in a `READ ONLY` transaction, `http` only to the configured host and
+without following redirects), has a timeout, and is bounded by the limits.
+
+<!-- validate-config runner -->
+```yaml
+server: https://launchway.example.com
+secrets:
+  vault: { type: vault, address: https://vault.example.com:8200, role: launchway-deploy }
+deploy:
+  targets:
+    main-cluster:
+      kubernetes: { in_cluster: true }
+      applications: [ { projects: [shop], names: [shop] } ]
+  repos:
+    gitops:
+      url: https://git.example.com/team/gitops.git
+      paths: [ { projects: [shop], files: ["apps/shop/**"] } ]
+health_sources:
+  prometheus:
+    type: prometheus
+    url: http://prometheus-operated.monitoring.svc:9090
+    projects: ["*"]
+  loki:
+    type: loki
+    url: http://loki-gateway.monitoring.svc
+    headers: { X-Scope-OrgID: platform }
+    auth: { type: bearer, secret: { store: vault, key: ci/loki, field: token } }
+    projects: [shop]
+    timeout: 15s
+    limits: { max_points: 500, max_lines: 5000, max_bytes: 8388608 }
+  clickhouse:
+    type: clickhouse
+    url: https://clickhouse.example.com:8443
+    projects: [shop]
+    statements:
+      service_errors:
+        kind: logs
+        params: { service: String, version: String }
+        sql: >
+          SELECT ts AS t, message FROM logs
+          WHERE service = {service:String} AND version = {version:String} AND level = 'error'
+            AND ts >= {start:DateTime64(3)} AND ts < {end:DateTime64(3)}
+          ORDER BY ts
 ```
 
 ## What next

@@ -61,7 +61,8 @@ Steps say which other steps they **need**; steps whose needs are met run in para
 pass small values (**outputs**) to the steps that need it, keep files (**artifacts**), and report
 test results, security findings and software bills of materials. Special kinds of step build
 container images (`kind: image`), wait for a person (`kind: approval`), deploy (`kind: deploy`),
-roll back (`kind: rollback`) or control a canary rollout (`kind: rollout`).
+roll back (`kind: rollback`), control a canary rollout (`kind: rollout`), verify a deployment from its
+metrics and logs (`kind: verify`) or ask a configured AI model a question (`kind: ai`).
 
 ## Runner
 
@@ -70,7 +71,9 @@ work, runs each step in a container, a Kubernetes pod or directly on its machine
 back and reports the result. The server has a built-in runner; more runners can run on other
 machines or clusters. Runners look up secrets themselves, so secret values never reach the server.
 A **deploy runner** is a runner with a `deploy:` section that does deploy work for a
-**runner pool**. See [Connect a runner](../howto/connect-runner.md).
+**runner pool**. A runner enrolled with a **join token** has an identity of its own and takes only
+the work of its pool's projects. See [Connect a runner](../howto/connect-runner.md) and
+[Runners on other machines and clusters](../guide/runner-identity.md).
 
 ## Environment
 

@@ -12,8 +12,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/accept"
+	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/secrets"
+	hs "github.com/jk-magic-creations/launchway/internal/verify/source"
 )
 
 // DeployRunner does the work of deploy and rollback steps for the targets
@@ -38,6 +42,20 @@ type DeployRunner struct {
 	// IdleEvery is how often it reads an idle service (one nothing is
 	// deploying), reporting it at least every other time; default 30s.
 	IdleEvery time.Duration
+	// Sources, if set, are the health sources the runner reads for verify
+	// steps (schema 19); it then takes verifications of its targets,
+	// VerifyConcurrency at a time (default 8). AI calls models to explain
+	// verdicts, with keys from Secrets.
+	Sources           *hs.Sources
+	VerifyConcurrency int
+	// Settle is how long after an interval ends its data are read; default
+	// 10s.
+	Settle  time.Duration
+	AI      *ai.Client
+	Secrets *secrets.Resolver
+	// Accept is the runner's own limits (its accept: section): projects,
+	// environments, repositories and whether pull-request runs may deploy.
+	Accept *accept.Config
 }
 
 // Run takes actions and observes until ctx ends.
@@ -65,6 +83,13 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	}
 	d.Log.Info("deploy runner started", "name", d.Info.Name, "targets", d.Info.Targets, "server", d.Client.Server)
 	var wg sync.WaitGroup
+	if d.Sources != nil {
+		if !d.Info.Has(FeatureVerify) {
+			d.Info.Features = strings.TrimSpace(d.Info.Features + " " + FeatureVerify)
+		}
+		wg.Add(1)
+		go func() { defer wg.Done(); d.verifications(ctx) }()
+	}
 	wg.Add(3)
 	go func() { defer wg.Done(); d.actions(ctx) }()
 	go func() { defer wg.Done(); d.observe(ctx) }()
@@ -131,6 +156,13 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 	log := d.Log.With("run", job.RunID, "step", job.StepID, "action", job.Deploy.Action, "deployment", job.Deploy.Deployment)
 	report, stop := context.WithTimeout(context.Background(), d.ActionTimeout+time.Minute)
 	defer stop()
+	if why := refusal(d.Accept, job, "deploy", true); why != "" {
+		log.Warn("refusing a deploy action", "project", job.Project, "why", why)
+		if err := refuse(report, d.Client, job, why); err != nil {
+			log.Warn("could not report the refusal", "err", err)
+		}
+		return
+	}
 	if _, err := d.Client.Start(report, job.LeaseID); err != nil {
 		log.Warn("could not start the action", "err", err)
 		return

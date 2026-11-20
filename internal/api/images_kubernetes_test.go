@@ -28,8 +28,19 @@ import (
 
 // buildNamespace is where the Kubernetes test runs BuildKit and a registry,
 // apart from the step namespace (launchway-test), which enforces Pod
-// Security "restricted".
-const buildNamespace = "launchway-build-test"
+// Security "restricted". LAUNCHWAY_TEST_KUBE_BUILD_NAMESPACE and
+// LAUNCHWAY_TEST_KUBE_NAMESPACE name others, so that several checkouts can
+// share a cluster.
+var buildNamespace = envOr("LAUNCHWAY_TEST_KUBE_BUILD_NAMESPACE", "launchway-build-test")
+
+func kubeTestNamespace() string { return envOr("LAUNCHWAY_TEST_KUBE_NAMESPACE", "launchway-test") }
+
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
 
 type kubectl struct {
 	t       *testing.T
@@ -159,7 +170,7 @@ func TestKubernetesImageStep(t *testing.T) {
 	}
 	stores := secrets.NewResolver()
 	stores.Add("files", secrets.File{Dir: dir}, nil, nil)
-	ex, err := executor.NewKubernetes(executor.KubernetesOptions{Context: ctxName, Namespace: "launchway-test", StartTimeout: "5m"},
+	ex, err := executor.NewKubernetes(executor.KubernetesOptions{Context: ctxName, Namespace: kubeTestNamespace(), StartTimeout: "5m"},
 		fmt.Sprintf("test-images-%d", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatal(err)

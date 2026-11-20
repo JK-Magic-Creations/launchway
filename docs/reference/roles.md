@@ -14,9 +14,9 @@ This page says who may do what in Launchway: the three roles, how the server wor
 
 | Role | May |
 |---|---|
-| `viewer` | See a project and everything about its runs: logs, events, pipeline files, test results, findings, artifacts, images, policy decisions, approvals waiting. See the runners and the policies in force. Check pipeline text. |
-| `operator` | Everything a viewer may, and start, cancel, resume and re-run runs, approve and reject approvals, give deployment commands, delete artifacts, save pipelines from the editor, and start draft runs (if `drafts.allow` is `operator`, the default). |
-| `admin` | Everything an operator may, and save a pipeline that has problems, start draft runs if `drafts.allow` is `admin`, and waive policy rules if `policy.waivers.allow` is `admin` (the default). An admin of every project also reads the audit trail and sees and revokes everyone's API tokens. |
+| `viewer` | See a project and everything about its runs: logs, events, pipeline files, test results, findings, artifacts, images, policy decisions, approvals waiting. See the runners and their pools, the policies in force, verifications, and the health sources and AI models their projects may use. Check pipeline text. |
+| `operator` | Everything a viewer may, and start, cancel, resume and re-run runs, approve and reject approvals, give deployment commands, mark a running verification passed or failed, ask a model to explain a failed step, delete artifacts, save pipelines from the editor, and start draft runs (if `drafts.allow` is `operator`, the default). |
+| `admin` | Everything an operator may, and save a pipeline that has problems, start draft runs if `drafts.allow` is `admin`, and waive policy rules if `policy.waivers.allow` is `admin` (the default). An admin of every project also reads the audit trail, sees and revokes everyone's API tokens, and (by default, see `runner_admin`) makes join tokens and revokes and rotates runners. |
 
 Each role includes the ones above it. Someone who signs in but has no role anywhere can sign in, sees no projects, and may still manage their own API tokens.
 
@@ -51,13 +51,17 @@ Rights are worked out on every request, from the configuration and the groups th
 
 Some calls need a role "on every project": reading the audit trail and administering everyone's API tokens. Only an entry **without** `projects` counts for those, so `{ group: payments, role: admin, projects: ["payments-*"] }` makes someone admin of those projects but never lets them read the audit trail.
 
+**Managing runners.** Making join tokens, listing them, and revoking or rotating runners need the role `runner_admin` names (`admin` by default; `operator` or `none`) on every project, as for the audit trail: only an entry without `projects` counts. With `none`, managing runners over the API is off. A token limited to projects, or to a lower role, cannot do it.
+
+**The MCP endpoint.** `POST /mcp` gives an agent exactly what its API token allows: each tool calls the API above with the token, through the same checks. Browser session cookies are not accepted there. See [Agents (MCP)](../guide/agents.md).
+
 ## How a request is decided
 
 ```mermaid
 flowchart TD
   A["Request"] --> B{"Route class"}
   B -->|public| P["Handler decides"]
-  B -->|runner| R{"Runner or pool token?"}
+  B -->|runner| R{"Runner token, pool token or identity?"}
   R -->|no| R401["401"]
   B -->|other| C{"Sign-in on?"}
   C -->|no| CS{"Changes something?"}
@@ -88,7 +92,7 @@ Every route belongs to one class. [The HTTP API reference](http-api.md) gives ea
 | Class | Who passes |
 |---|---|
 | `public` | Anyone; the handler decides. |
-| `runner` | A runner with the shared runner token or a runner pool's token. |
+| `runner` | A runner with the shared runner token, a runner pool's token or an enrolled runner's access token. |
 | `signed-in` | Anyone signed in, with any role or none. Lists and the live stream contain only what the person may see. |
 | `any-viewer` | Someone with at least `viewer` on at least one project. |
 | `project-viewer` | `viewer` or more on the project in the path. |
@@ -132,7 +136,14 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `GET /api/v1/runs/{id}/tests/cases/{case}` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/projects/{name}/tests` | project-viewer | yes | yes | yes |  |
 | `GET /api/v1/projects/{name}/tests/history` | project-viewer | yes | yes | yes |  |
+| `GET /api/v1/runs/{id}/tests/compare` | run-viewer | yes | yes | yes |  |
+| `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | run-viewer | yes | yes | yes |  |
+| `GET /api/v1/runs/{id}/coverage` | run-viewer | yes | yes | yes |  |
+| `GET /api/v1/runs/{id}/coverage/files` | run-viewer | yes | yes | yes |  |
+| `GET /api/v1/projects/{name}/coverage` | project-viewer | yes | yes | yes |  |
+| `GET /api/v1/runs/{id}/reports` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/artifacts` | run-viewer | yes | yes | yes |  |
+| `GET /api/v1/artifact-store` | any-viewer | yes | yes | yes | the role on any project |
 | `GET /api/v1/runs/{id}/artifacts/{artifact}/file` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/artifacts/{artifact}/archive` | run-viewer | yes | yes | yes |  |
 | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` | run-operator | no | yes | yes |  |
@@ -149,6 +160,16 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `POST /api/v1/runs/{id}/deployments/{dep}/abort` | run-operator | no | yes | yes | the operator role on the environment |
 | `POST /api/v1/runs/{id}/deployments/{dep}/retry` | run-operator | no | yes | yes | the operator role on the environment; on a protected environment, not the run's starter |
 | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` | run-operator | no | yes | yes | the operator role on the environment |
+| `GET /api/v1/libraries` | any-viewer | yes | yes | yes | the role on any project |
+| `GET /api/v1/libraries/{library}/templates` | any-viewer | yes | yes | yes | the role on any project |
+| `GET /api/v1/runs/{id}/verifications` | run-viewer | yes | yes | yes |  |
+| `GET /api/v1/verifications` | signed-in | yes | yes | yes |  |
+| `GET /api/v1/runs/{id}/steps/{step}/verify/controls` | run-viewer | yes | yes | yes |  |
+| `POST /api/v1/runs/{id}/steps/{step}/verify/override` | run-operator | no | yes | yes | on a protected environment, not the run's starter marking it passed |
+| `GET /api/v1/health-sources` | signed-in | yes | yes | yes | only the sources of projects the person may see |
+| `GET /api/v1/ai/models` | signed-in | yes | yes | yes | only the models of projects the person may see |
+| `GET /api/v1/runs/{id}/steps/{step}/explanations` | run-viewer | yes | yes | yes |  |
+| `POST /api/v1/runs/{id}/steps/{step}/explain` | run-operator | no | yes | yes |  |
 | `GET /api/v1/policies` | any-viewer | yes | yes | yes | the role on any project |
 | `GET /api/v1/runs/{id}/policy` | run-viewer | yes | yes | yes |  |
 | `GET /api/v1/waivers` | signed-in | yes | yes | yes |  |
@@ -161,6 +182,12 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `GET /api/v1/admin/tokens` | admin | no | no | yes | admin from an entry without `projects` |
 | `DELETE /api/v1/admin/tokens/{id}` | admin | no | no | yes | admin from an entry without `projects` |
 | `GET /api/v1/runners` | any-viewer | yes | yes | yes | the role on any project |
+| `GET /api/v1/runner-pools` | any-viewer | yes | yes | yes | the role on any project |
+| `GET /api/v1/runner-join-tokens` | signed-in | yes | yes | yes | the role `runner_admin` names (admin by default), on every project |
+| `POST /api/v1/runner-join-tokens` | signed-in | yes | yes | yes | as listing |
+| `POST /api/v1/runner-join-tokens/{id}/revoke` | signed-in | yes | yes | yes | as listing |
+| `POST /api/v1/runners/{id}/revoke` | signed-in | yes | yes | yes | as listing |
+| `POST /api/v1/runners/{id}/rotate` | signed-in | yes | yes | yes | as listing |
 | `GET /api/v1/audit` | admin | no | no | yes | admin from an entry without `projects` |
 | `GET /api/v1/stream` | signed-in | yes | yes | yes |  |
 

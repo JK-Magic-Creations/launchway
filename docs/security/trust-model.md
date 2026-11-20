@@ -86,12 +86,15 @@ flowchart TB
 > [!IMPORTANT]
 > These are the known limits of the main branch. Plan your installation around them.
 
-- **Build runners share one token.** Every build runner holds the same runner token, and any
-  build runner can take any project's step. A runner names itself, and the server does not bind
-  a run's steps to an authenticated runner identity. **Being changed:** per-runner identity with
-  join tokens, and runner-side allow-lists of which projects a runner serves, are
-  [in progress](../roadmap-list.md). Until then, treat every build runner as able to see the
-  work of every project, and give secret stores allow-lists.
+- **Runners on the shared token have no identity.** A runner enrolled with a join token has its
+  own key, its steps' leases are bound to it, it serves only the projects of its pool, and it can
+  limit what it accepts with `accept:`; see
+  [Runners on other machines and clusters](../guide/runner-identity.md). A runner that still uses
+  the shared runner token (or a deploy pool's token) gives no identity: the server cannot tell
+  such runners apart, trusts the runner ID each one gives, and anyone who has the token can take
+  that pool's work. Enrol such runners and set `require_identity: true` on their pool. Until
+  then, treat every runner on the shared token as able to see the work of every project the
+  pool serves, and give secret stores allow-lists.
 - **A runner trusts its server.** A runner does what the server it connects to asks, within the
   runner's own configuration; its allow-lists trust the project name the server gives.
   Connect runners only to servers you operate, over HTTPS.

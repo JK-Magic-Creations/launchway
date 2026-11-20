@@ -12,6 +12,10 @@ pipeline with tests, scans and a deployment.
 7. [Build and sign an image](../tutorials/build-and-sign-image.md), then
    [Deploy with approval and rollback](../tutorials/deploy-with-approval.md).
 
+Then, as you need them: [Test reports](../guide/test-reports.md) in 13 formats with coverage and
+hosted HTML reports, [Verifying a deployment](../guide/verification.md), and
+[Agents (MCP)](../guide/agents.md) if an AI assistant writes or watches your pipelines.
+
 Keep at hand:
 
 - [Pipeline reference](../reference/pipeline.md): every key.

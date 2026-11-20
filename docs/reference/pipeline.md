@@ -99,11 +99,12 @@ lists every variable a step receives.
 | `inputs` | mapping | none | The [run inputs](#inputs): values a run is started with. At most 50 |
 | `libraries` | mapping | none | The [shared libraries](#libraries) whose templates steps use. At most 10 |
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
+| `runner` | mapping | none | Which runners may run the pipeline's steps; see [Runner](#runner) |
 | `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display |
 
 Keys that the design has but are not built yet are refused with a hint: `outputs` (write to
-`$LAUNCHWAY_OUTPUTS` instead), `runs_on` (runner pools for build steps; not available yet, see the
-[roadmap](../roadmap-list.md)) and `matrix` (use [`for_each`](#for-each)).
+`$LAUNCHWAY_OUTPUTS` instead), `runs_on` (use [`runner`](#runner)) and `matrix` (use
+[`for_each`](#for-each)).
 
 ## Triggers
 
@@ -286,6 +287,8 @@ steps:
 | `deploy` | Deploys a version to an environment with Argo CD | [Kind deploy](#kind-deploy) |
 | `rollback` | Reverts a deployment when a step guarding it did not succeed | [Kind rollback](#kind-rollback) |
 | `rollout` | Promotes, aborts or retries a deployment's Argo Rollouts rollout | [Kind rollout](#kind-rollout) |
+| `verify` | Watches a deployment's metrics and logs for a window of time and decides passed, failed or inconclusive | [Kind verify](#kind-verify) |
+| `ai` | Asks a model the operator configured one question, with inputs from earlier steps | [Kind ai](#kind-ai) |
 
 A step with `uses:` is replaced by a template's steps; it is not a kind, but it takes its own set of
 keys ([A step that uses a template](#a-step-that-uses-a-template)). The kinds `release`, `promote`,
@@ -298,12 +301,12 @@ The second column says which kinds take the key. `uses` stands for a step that u
 <!-- keys: step-common -->
 | Key | Kinds | Type | Default | Description |
 |---|---|---|---|---|
-| `kind` | `step` `approval` `image` `deploy` `rollback` `rollout` | text | `step` | What the step is. A step that uses a template takes no `kind` |
-| `description` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` | text | none | One line of at most 200 characters, shown under the step's name and on the graph |
-| `needs` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` | step names, one value or a list | none | Steps that must end first. By default a step runs only if all of them succeeded; see [`when.upstream`](#when). A step cannot need itself, and needs may not form a loop. Needing a step that uses a template, or a loop, means needing all of its steps |
-| `when` | `step` `approval` `uses` `image` `deploy` | mapping | none | Conditions for the step to run; see [When](#when). Otherwise the step is skipped |
-| `timeout` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` | duration | depends on the kind | How long the step may take. Defaults and bounds per kind are in the kind's section |
-| `retry` | `step` `uses` `image` | whole number | `0` | Extra attempts after a failure, 0 to 10 |
+| `kind` | `step` `approval` `image` `deploy` `rollback` `rollout` `verify` `ai` | text | `step` | What the step is. A step that uses a template takes no `kind` |
+| `description` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | text | none | One line of at most 200 characters, shown under the step's name and on the graph |
+| `needs` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | step names, one value or a list | none | Steps that must end first. By default a step runs only if all of them succeeded; see [`when.upstream`](#when). A step cannot need itself, and needs may not form a loop. Needing a step that uses a template, or a loop, means needing all of its steps |
+| `when` | `step` `approval` `uses` `image` `deploy` `verify` `ai` | mapping | none | Conditions for the step to run; see [When](#when). Otherwise the step is skipped |
+| `timeout` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | duration | depends on the kind | How long the step may take. Defaults and bounds per kind are in the kind's section |
+| `retry` | `step` `uses` `image` `ai` | whole number | `0` | Extra attempts after a failure, 0 to 10 |
 
 For a step that uses a template, `when`, `retry` and `timeout` apply to every step of the
 template that does not set its own.
@@ -658,6 +661,225 @@ steps:
     abort_first: true
 ```
 
+### Kind verify
+
+A verify step watches a deployment (or an environment) for a window of time, reads its metrics and
+logs from [health sources](runner-config.md#health-sources) an operator configured, and decides
+**passed**, **failed** or **inconclusive** with built-in statistics. It runs no script: a deploy
+runner next to the monitoring systems reads the data. `timeout` defaults to the delay and the
+window plus an hour, and must leave room for the delay, the window and a minute more; at most
+`24h`. It cannot be in a template or in a loop. It needs a server that knows verify steps (schema
+19). See [Verifying a deployment](../guide/verification.md) for how the verdict is reached.
+
+<!-- keys: kind-verify -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `deployment` | step name | one of `deployment` or `environment` with `service` | The deploy step whose deployment to watch: its environment, service and pods |
+| `environment` | name | | Instead of `deployment`: the environment to watch, with `service` |
+| `service` | name | | The service to watch, with `environment` |
+| `delay` | duration | `0s` | Before the first interval, to let the new version warm up. At most `1h` |
+| `duration` | duration | `10m` | The window to watch: a whole number of intervals, at most `6h` |
+| `interval` | duration | `1m` | How often readings are taken and judged, at least `10s`. At most 120 intervals fit in the window |
+| `sensitivity` | text | `medium` | `low`, `medium` or `high`: how large a deviation must be to fail (high fails on smaller ones) |
+| `baseline` | whole number or `false` | `3` | How many earlier passed verifications of the same environment and service to compare with, 0 to 10. `false` or `0` compares with none |
+| `on_fail` | text | `fail` | `fail` (the step fails, and a rollback step that needs it then runs), `abort` (also abort the deployment's rollout at once) or `rollback` (abort the rollout if there is one, and leave the revert to the deployment's rollback step, which must need this step) |
+| `on_inconclusive` | text | `fail` | `fail`, `pass` or `pause` (wait for a person to mark it passed or failed, like an approval) |
+| `params` | mapping | none | Typed values the queries use as `{{name}}`, at most 30: `{ run: sha }`, `{ input: name }`, `{ output: step.key }`, or `{ deployment: fact }` with a fact of the deployment (`canary_hash`, `stable_hash`, `namespace`, `rollout`, `application`, `version`, `previous_version`, `environment`, `service`). Names start with a lower-case letter and use letters, digits and `_`; `start` and `end` are filled in by the deploy runner |
+| `metrics` | list | none | At most 20 metrics to read and judge; see below. At least one of `metrics` and `logs` is required |
+| `logs` | list | none | At most 10 log queries to read, cluster and compare; see below |
+| `model` | text | none | A model of the server's `ai.models`, to explain the verdict. See [AI models](../guide/ai.md) |
+| `decide` | text | `statistics` | `statistics`, or `model-assisted`: the model may turn a pass into inconclusive or a fail, never a fail into a pass. Needs `model` |
+
+The step's outputs are `verdict` and `summary`. A placeholder in a query is checked and escaped for
+the language it goes into, or sent as a typed parameter (SQL); one outside a quoted string is
+refused when the pipeline is checked. Every placeholder a query uses must be under `params`.
+
+Each metric in `metrics`:
+
+<!-- keys: verify-metric -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | name | required | Lower-case letters, digits, `-` and `_`, starting with a letter; unique among metrics and logs |
+| `source` | text | required | A health source of the server's `verification.sources` |
+| `query` | text | | The query in the source's language (PromQL, or an Elasticsearch query as JSON), at most 8 KiB. Exactly one of `query` or `statement` |
+| `stable_query` | text | none | The same for the stable version, read in the same interval to compare with |
+| `statement` | text | | For ClickHouse, PostgreSQL and HTTP sources: the name of a statement the source's operator wrote |
+| `index` | text | | For Elasticsearch and OpenSearch: the index to search |
+| `direction` | text | `higher-is-worse` | `higher-is-worse`, `lower-is-worse` (throughput, say) or `either` |
+| `max` | number | none | A fixed upper bound |
+| `min` | number | none | A fixed lower bound. Not above `max` |
+| `fail_fast` | mapping | none | `{ max, min }`: a reading beyond these fails the whole verification at once |
+| `failures` | whole number | `2` (`1` when the window has one interval) | Failing intervals in a row that fail the metric, 1 to 120 |
+| `min_intervals` | whole number | half the intervals | Intervals with data a metric needs, or the verification is inconclusive, 1 to 120 |
+| `min_points` | whole number | `1` | Readings an interval needs to count as having data, 1 to 500 |
+| `step` | duration | `30s` | The resolution of the readings, `5s` to `1h` |
+| `baseline` | boolean | `true` | `false` turns the comparison with earlier verifications off for this metric |
+
+Each log query in `logs`:
+
+<!-- keys: verify-log -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | name | required | As for a metric |
+| `source` | text | required | A health source, such as Loki, ClickHouse or Elasticsearch |
+| `query` | text | | The query in the source's language (LogQL, or an Elasticsearch query as JSON). Exactly one of `query` or `statement` |
+| `stable_query` | text | none | The same for the stable version |
+| `statement` | text | | The name of a statement the source's operator wrote |
+| `index` | text | | For Elasticsearch and OpenSearch: the index to search |
+| `errors` | text | `auto` | `auto`: clusters whose lines have words such as error, exception or panic are errors; `all`: the query selects only errors |
+| `max_lines` | whole number | `5000` | Lines read per interval, 1 to 50000, within the source's own limit |
+| `baseline` | boolean | `true` | `false` turns the comparison with earlier verifications off |
+
+<!-- validate -->
+```yaml
+pipeline: shop
+on:
+  push: { branches: [main] }
+steps:
+  build:
+    image: alpine:3.22
+    run: echo tag=1.4.2 >> "$LAUNCHWAY_OUTPUTS"
+  deploy-prod:
+    kind: deploy
+    needs: build
+    environment: prod
+    service: shop
+    version: { output: build.tag }
+    argocd:
+      application: shop
+      write_back:
+        repo: gitops
+        branch: main
+        changes:
+          - { file: apps/shop/rollout.yaml, image: team/shop, tag: { output: build.tag } }
+    rollout: { name: shop, namespace: shop, until: paused }
+  verify-canary:
+    kind: verify
+    needs: deploy-prod
+    deployment: deploy-prod
+    delay: 1m
+    duration: 10m
+    interval: 1m
+    on_fail: abort
+    on_inconclusive: pause
+    params:
+      ns: { deployment: namespace }
+      canary: { deployment: canary_hash }
+    metrics:
+      - name: error-rate
+        source: prometheus
+        query: 'sum(rate(http_requests_total{namespace="{{ns}}",pod_template_hash="{{canary}}",code=~"5.."}[1m]))'
+        max: 0.01
+        fail_fast: { max: 0.2 }
+    logs:
+      - { name: app, source: loki, query: '{namespace="{{ns}}", pod_template_hash="{{canary}}"}' }
+  promote:
+    kind: rollout
+    needs: verify-canary
+    deployment: deploy-prod
+    action: promote-full
+  rollback-prod:
+    kind: rollback
+    deployment: deploy-prod
+    needs: [promote]
+    abort_first: true
+```
+
+### Kind ai
+
+An ai step asks a model one question: instructions, a prompt and inputs taken from earlier steps'
+outputs and artifacts. It runs no script. The runner makes the call with a key from its own secret
+stores (`ai: true` in its configuration); the key never enters a step's container. The model's
+answer is untrusted text: it can become the step's outputs and an artifact, never run anything. The
+model must be one of the server's [`ai.models`](server-config.md#ai-models) that the project may
+use. `timeout` defaults to `10m`, from `10s` to `1h`. It cannot be in a template or in a loop, and
+takes no `run`, `image`, `env`, `secrets`, `artifacts`, `reports` or `fetch`. It needs a server that
+knows ai steps (schema 19). See [AI models](../guide/ai.md).
+
+<!-- keys: kind-ai -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `model` | text | required | The model's name in the server's `ai.models` |
+| `instructions` | text | none | The system prompt, at most 64 KiB |
+| `prompt` | text | required | What to ask, at most 64 KiB |
+| `inputs` | list | none | At most 20 inputs the model is given; see below |
+| `schema` | mapping | none | A JSON schema, written as a mapping, the answer must follow; the top level is `type: object`. At most 16 KiB. Each top-level property of a string, number, integer or boolean type becomes an output |
+| `max_tokens` | whole number | `2048` | The most the model may write, 1 to 128000 (the operator's own limit for the model may be lower) |
+| `temperature` | number | the model's own | 0 to 2. Only for OpenAI-compatible models; Anthropic models refuse sampling settings |
+
+An ai step's outputs are `text`, `model`, `input_tokens` and `output_tokens`, and with a `schema` its
+properties. The whole answer is kept as the artifact `response` (`response.txt`, and
+`response.json` with a schema). An answer that does not follow the schema fails the step.
+
+Each input in `inputs`:
+
+<!-- keys: ai-input -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `label` | text | the source's name | What the input is called in the prompt: letters, digits, spaces, `_`, `.` and `-`, at most 60 characters; unique in the step |
+| `output` | `step.key` | | An output of a step this one needs. One of `output` or `artifact` |
+| `artifact` | `step/name` | | An artifact a step this one needs kept |
+| `file` | path | every file | With `artifact`: one file of it, without `..` or a leading `/` |
+| `max_bytes` | whole number | `65536` | How much of it is sent, 1 to 1048576; more is cut, saying so |
+
+<!-- validate -->
+```yaml
+pipeline: release-notes
+steps:
+  changes:
+    image: alpine/git:2.47.2
+    run: |
+      mkdir -p out
+      git log --format='%h %s' -n 50 > out/commits.txt
+    artifacts:
+      - { name: log, paths: [out/commits.txt] }
+  notes:
+    kind: ai
+    needs: changes
+    model: local
+    instructions: You write short release notes for operators. Plain words, no marketing.
+    prompt: Write the release notes for these commits, and say how risky the release looks.
+    inputs:
+      - { artifact: changes/log, file: out/commits.txt, label: commits, max_bytes: 32768 }
+    schema:
+      type: object
+      properties:
+        notes: { type: string }
+        risk: { type: string, enum: [low, medium, high] }
+      required: [notes, risk]
+    max_tokens: 800
+  publish:
+    needs: notes
+    image: alpine:3.22
+    run: printf '%s\n' "$LAUNCHWAY_NEEDS_NOTES_NOTES" > RELEASE_NOTES.md
+```
+
+## Runner
+
+`runner` says which runners may run the pipeline's steps. It is written once, for the whole
+pipeline, because a run's steps share the workspace of the runner that took its first step. It
+needs a server that knows runner pools; see
+[Runners on other machines and clusters](../guide/runner-identity.md). Name a pool, labels, or both.
+
+<!-- keys: runner -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `pool` | name | any pool that serves the project | One of the server's [runner pools](server-config.md#runner-pools); it must serve the project. Lower-case letters, digits, `.`, `_` and `-` |
+| `labels` | list | none | Labels a runner must all have, from its join token and its own [`labels`](runner-config.md). At most 16, each written as a pool name is |
+
+A run that no runner may take says why on its page: no pool serves the project, the pool it asks for
+does not, or none of the runners seen lately has the labels or accepts it.
+
+<!-- validate -->
+```yaml
+pipeline: model-training
+runner: { pool: gpu, labels: [cuda] }
+steps:
+  train:
+    image: python:3.13
+    run: python train.py
+```
+
 ## When
 
 `when` holds conditions; every condition written must hold for the step to run, and within one,
@@ -848,9 +1070,48 @@ most 256 bytes. Reading reports never changes the step's outcome. See
 <!-- keys: reports -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `tests` | glob, one value or a list | none | Test results: JUnit XML or the output of `go test -json` |
+| `tests` | glob, one value or a list; or a mapping | none | Test results in any of the [13 formats](../guide/test-reports.md#formats), such as JUnit XML, `go test -json`, Playwright or Cucumber JSON. A mapping adds attachments: see [`tests` as a mapping](#tests-as-a-mapping) |
 | `findings` | glob, one value or a list | none | Security scanner results in SARIF 2.1.0 |
 | `sbom` | glob, one value or a list | none | Software bills of materials in CycloneDX JSON, kept as the step's artifact `sbom` |
+| `coverage` | glob, one value or a list; or a mapping | none | Coverage reports: Cobertura XML, JaCoCo XML, LCOV or a Go coverprofile. A mapping adds a threshold: see [Coverage](#coverage) |
+| `html` | mapping, or a list of them | none | Directories of HTML reports the tools wrote, hosted sandboxed on the server: see [HTML reports](#html-reports). At most 10 per step |
+
+### `tests` as a mapping
+
+<!-- keys: reports-tests -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `paths` | glob, one value or a list | required | The test result files, as for the plain form |
+| `attachments` | directory | none | A directory below the workspace holding the screenshots, videos and traces that the reports name. The workspace itself is refused. Kept whole or not at all, within the server's [`reports.max_attachment_files`](server-config.md#reports) and `max_attachment_mib` |
+
+### Coverage
+
+`coverage` may be one glob or a list, or a mapping that also sets a threshold.
+
+<!-- keys: reports-coverage -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `paths` | glob, one value or a list | required | The coverage files |
+| `fail_under` | percentage, or a mapping | none | The step fails when coverage is below it: a percentage of lines (`80`, `72.5`, `"80%"`, above 0 and at most 100), or the mapping below |
+
+<!-- keys: reports-fail-under -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `lines` | percentage | none | The least percentage of lines covered |
+| `branches` | percentage | none | The least percentage of branches covered |
+| `functions` | percentage | none | The least percentage of functions covered |
+
+### HTML reports
+
+<!-- keys: reports-html -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | text | the last part of `path` | Lower-case letters, digits, `.`, `-` and `_`, starting with a letter or digit, unique in the step |
+| `path` | directory | required | The directory the tool wrote its report to, such as `playwright-report`. A directory below the workspace; the workspace itself cannot be published |
+| `index` | file | `index.html` | The page the report opens at, relative to `path` |
+
+Hosted reports are served sandboxed, behind a signed link that only people who may see the run are
+given; see [Test reports](../guide/test-reports.md#html-reports).
 
 ## Artifacts
 
