@@ -62,6 +62,12 @@ var mcpPermissionTable = map[string]mcpRow{
 	"mark_verification": {map[string]any{"run_id": "{pay}", "step": "gate", "outcome": "passed", "reason": "checked by hand"}, true,
 		[5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
 	"control_rollout": {map[string]any{"run_id": "{pay}", "deployment": "dep_x", "action": "promote"}, true, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	// Build caches: viewers list, operators delete, only an administrator is
+	// offered the tool that changes the policy.
+	"list_caches":      {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"delete_cache":     {map[string]any{"project": "pay-api", "id": "cch_nope"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"get_cache_policy": {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"set_cache_policy": {map[string]any{"idle_days": 9}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	// Step resources: anyone reads; only an administrator is offered the
 	// tools that change them, as the API refuses everyone else.
 	"get_step_resources":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
@@ -89,7 +95,9 @@ func outcome(errText string) string {
 // Every tool, called by each person with their own token, does exactly
 // what the API lets that person do: the same answer for the same reason.
 func TestMCPPermissionMatrix(t *testing.T) {
-	e := mcpEnv(t, envOpts{})
+	// Every tool is called once by each person: more than a token's default
+	// burst allows in one go.
+	e := mcpEnv(t, envOpts{mcp: &MCPOptions{RequestsPerMinute: 1200}})
 	pay := e.startRun(t, "pay-api")
 	e.startRun(t, "web")
 	tools := make([]string, 0, len(mcpPermissionTable))

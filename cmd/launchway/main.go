@@ -73,6 +73,7 @@ Usage:
   launchway health-sources | models             what verify and ai steps may name
   launchway runners  list|join-token|revoke|rotate  runners, and join tokens to enrol them
   launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
+  launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -119,6 +120,8 @@ func main() {
 		err = cmdRunners(args)
 	case "step-resources":
 		err = cmdStepResources(args)
+	case "caches":
+		err = cmdCaches(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -239,6 +242,14 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
+	// Whose cache entries are the default scope depends on each project's
+	// default branch, which only the source manager knows.
+	eng.SetDefaultBranch(func(name string) string {
+		if p, err := mgr.Get(name); err == nil {
+			return p.DefaultBranch
+		}
+		return ""
+	})
 	token, err := config.RunnerToken(cfg.Data, eng)
 	if err != nil {
 		return err

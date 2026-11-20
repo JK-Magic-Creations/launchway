@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/accept"
@@ -121,13 +122,18 @@ type Engine struct {
 	arts          ArtifactOptions
 	storeWhy      string // why arts.Store was chosen, when nothing was configured
 	strayAfter    string // where removeStrays carries on
-	finds         FindingLimits
-	envs          map[string]Environment
-	pol           PolicyOptions
-	polHash       string // names the configuration's own policies
-	sources       map[string]HealthSource
-	models        *ai.Registry
-	pools         map[string]RunnerPool
+	// cacheStrayAfter is where removeCacheStrays carries on, and
+	// defaultBranch how to find a project's default branch (see
+	// SetDefaultBranch).
+	cacheStrayAfter string
+	defaultBranch   atomic.Pointer[func(string) string]
+	finds           FindingLimits
+	envs            map[string]Environment
+	pol             PolicyOptions
+	polHash         string // names the configuration's own policies
+	sources         map[string]HealthSource
+	models          *ai.Registry
+	pools           map[string]RunnerPool
 
 	// deployKick wakes the reaper to hand free locks to waiting deploy steps
 	// at once (see kickDeploys).
@@ -1523,6 +1529,7 @@ func (e *Engine) reaper(ctx context.Context) {
 				e.pruneCoverage()
 				e.pruneFindings()
 				e.pruneArtifacts()
+				e.pruneCaches()
 				e.PruneTriggers(now.Add(-7 * 24 * time.Hour).UnixMilli())
 			}
 		}

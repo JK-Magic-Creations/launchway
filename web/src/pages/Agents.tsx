@@ -14,9 +14,9 @@ const PLACEHOLDER = "lw_PASTE_YOUR_TOKEN_HERE";
 const READ_TOOLS = [
   "list_projects", "get_project", "list_runs", "get_run", "wait_for_run", "get_step_log", "get_test_results",
   "get_security_findings", "list_artifacts", "read_artifact_file", "list_images", "get_deployments", "get_verification", "list_approvals",
-  "validate_pipeline", "get_pipeline_reference", "list_templates", "get_step_resources",
+  "validate_pipeline", "get_pipeline_reference", "list_templates", "get_step_resources", "list_caches", "get_cache_policy",
 ];
-const CHANGE_TOOLS = ["start_run", "cancel_run", "retry_run", "decide_approval", "control_rollout", "mark_verification"];
+const CHANGE_TOOLS = ["start_run", "cancel_run", "retry_run", "decide_approval", "control_rollout", "mark_verification", "delete_cache"];
 
 // AgentsPage shows how to connect an AI agent to this server over the Model
 // Context Protocol: make a token for it, then paste the configuration for

@@ -40,12 +40,13 @@ the first lines, or lines containing a text: at most 500 lines and 64 KiB), `get
 `list_images`, `get_deployments` (with which rollout commands are possible now), `get_verification`
 (a run's verifications, each check's outcome and why), `list_approvals`,
 `validate_pipeline` (the server's own validator, with line numbers and the text of each line),
-`get_pipeline_reference`, `list_templates` and `get_step_resources` (the default CPU and memory of
-steps, and the limits on what they may ask for). Changing, listed only to tokens that may change
+`get_pipeline_reference`, `list_templates`, `get_step_resources` (the default CPU and memory of
+steps, and the limits on what they may ask for), `list_caches` (a project's build caches against its
+quota) and `get_cache_policy`. Changing, listed only to tokens that may change
 something on some project: `start_run` (with inputs, or with `pipeline_text` as a draft run),
 `cancel_run`, `retry_run` (resume, or re-run from a step), `decide_approval`, `control_rollout` and
-`mark_verification` (passed or failed, with a reason, as on the run page). Listed only to an administrator,
-and audited: `set_step_resource_limits` and `set_step_resource_default`.
+`delete_cache` and `mark_verification` (passed or failed, with a reason, as on the run page). Listed only to an
+administrator, and audited: `set_step_resource_limits`, `set_step_resource_default` and `set_cache_policy`.
 Tools are marked read-only or destructive with the protocol's annotations. Lists page with a cursor.
 The resources `launchway://docs/pipeline-reference`, `launchway://docs/agent-guide` and
 `launchway://docs/examples/<name>` hold the same documentation.

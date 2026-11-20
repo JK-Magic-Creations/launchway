@@ -39,7 +39,7 @@ have advanced the number with an empty placeholder for another branch's migratio
 any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
 the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
 including the recorded database version. The markers currently cover the tables and columns of
-schemas 17 to 22. The migration-order tests use the same marker list and the same SQLite and
+schemas 17 to 22 and 25. The migration-order tests use the same marker list and the same SQLite and
 PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
 
 These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
@@ -336,6 +336,30 @@ operation on the API (`PUT /api/v1/step-resources/defaults/step` with `{"recomme
 the MCP tool `set_step_resource_default`, or with values of their own. A server never changes a row
 that exists. A run's own record holds no sizes, so an older server reads the runs of a newer one as
 before and rolling back needs nothing but rolling the servers back.
+
+Schemas 23 and 24 belong to other branches, and are empty stand-ins here so that schema 25 keeps its
+number; when those branches merge their migrations take these places, and the check that no number
+after 16 is empty (`TestEachSchemaFrom17HoldsItsRealMigration`) already skips them. As with the
+stand-ins before, a database must never be migrated by a build that has the stand-ins and then by
+one that has the real 23 and 24: only test databases are.
+
+Schema 25 brings build caches: the pipeline key `cache:` on a step (see the pipeline reference), and
+three tables. `caches` holds the entries (project, scope, name, key, platform, the blob key under
+`caches/`, size, who wrote it, when it was last used, how often, and a status of `uploading`, `kept`
+or `ended`, with the state of a chunked upload while it is under way); a unique index over project,
+scope, name, key and platform covers the entries that are not ended, so that an ended entry's name
+can be saved again while its bytes wait to be removed. `cache_usage` counts each project's kept
+bytes, like `artifact_usage`. `cache_policy` holds the limits, one row for the installation (project
+`''`) and one per project that overrides it; with no row the values compiled in apply (10 GiB a
+project, 2 GiB an entry, 7 idle days). It is additive: three new tables and nothing else, no new
+event type, and nothing older code reads. `step.finished` may carry a `caches` field (what each cache
+did: hit, fallback, miss, saved or not saved), which older servers ignore like every field they do
+not know. A pipeline with a `cache:` carries `"requires": 25`, so older servers leave its runs
+alone, and runners say they can do it with the feature `cache`, so that no older runner is given
+such a step. On a rollback nothing is lost: the tables are ignored, and entries wait. The objects
+of ended entries are removed by the pruner of any server of schema 25; a server of an older schema
+does not remove them, and they stay until a newer one runs. The startup check covers the three
+tables (`schemaMarkersCache`).
 
 ## Writing a migration
 

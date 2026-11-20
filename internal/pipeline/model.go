@@ -210,6 +210,9 @@ type Step struct {
 	// Fetch puts artifacts of earlier steps of the run into the workspace
 	// before the step runs (see Fetch).
 	Fetch []*Fetch `json:"fetch,omitempty"`
+	// Cache keeps directories between runs: restored before the step's
+	// script, saved after it (see Cache; schema 25).
+	Cache []*Cache `json:"cache,omitempty"`
 
 	// ForEach repeats the step over lists (schema 13). Only a pipeline that
 	// has not been bound has such steps; Bind replaces each by one step per

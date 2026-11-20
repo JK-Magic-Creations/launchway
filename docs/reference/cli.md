@@ -24,6 +24,7 @@ launchway verifications list|show|mark        verifications on a server
 launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
+launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
 launchway version
 ```
 
@@ -41,7 +42,7 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 | `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
-| `4` | `login`, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
+| `4` | `login`, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `caches`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
 | `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
@@ -613,6 +614,28 @@ launchway step-resources set-default KIND [--cpu Q] [--cpu-limit Q] [--memory Q]
 | `set-default` | Changes the default of a kind in the same way. Refused for a quantity that does not read, a limit below what is promised, or a value above the limits |
 
 Quantities are written as in a pipeline: `500m` or `2` for CPU, `512Mi` or `6Gi` for memory. The same operations are `GET /api/v1/step-resources` and the routes under it in the [HTTP API](http-api.md#step-resources), and the MCP tools `get_step_resources`, `set_step_resource_limits` and `set_step_resource_default`.
+
+## launchway caches
+
+Shows a project's build caches (the `cache:` key of a step), deletes entries, and shows and changes the policy that says how much is kept. Listing needs the rights to read the project, deleting those to operate it (it is recorded in the audit trail as `cache.delete`), and the policy is an administrator's (`cache_policy.set`, `cache_policy.set_project`, `cache_policy.clear_project`). The policy is in the database: an installation's default and, optionally, an override for one project.
+
+```text
+launchway caches list PROJECT [--json]
+launchway caches delete PROJECT --name N | --id ID [--json]
+launchway caches policy get [PROJECT] [--json]
+launchway caches policy set [PROJECT] [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N] [--json]
+launchway caches policy clear PROJECT [--json]
+```
+
+| Command | What it does |
+|---|---|
+| `list` | Prints each entry (its ID, name, the start of its key, scope, platform, size, how often and when it was last restored, and the run that wrote it) and the total against the project's quota |
+| `delete` | Ends one entry by `--id`, or every entry of a cache by `--name` (all scopes and keys). The next run that wanted it starts without it and saves it again |
+| `policy get` | Prints the installation's policy, or the one that applies to a project |
+| `policy set` | Changes `enabled`, `max_project_gib` (default 10), `max_entry_gib` (default 2) and `idle_days` (default 7); a flag you leave out keeps its value. With a project, it sets that project's own policy |
+| `policy clear` | Removes a project's own policy, so the installation's applies again |
+
+The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
 
 ## launchway version
 
