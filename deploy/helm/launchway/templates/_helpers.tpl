@@ -160,6 +160,40 @@ its Secret, else a new random one. Kept stable across upgrades.
 {{- if and .Values.database.url (not (regexMatch "^postgres(ql)?://" .Values.database.url)) -}}
 {{- fail "\n\ndatabase.url must be a postgres:// or postgresql:// URL: several servers cannot share a SQLite file.\n" -}}
 {{- end -}}
+{{- include "launchway.validateAI" . -}}
+{{- end -}}
+
+{{/* Checks of the model registry (ai.*) and of who may call models. */}}
+{{- define "launchway.validateAI" -}}
+{{- $ai := .Values.ai | default dict -}}
+{{- $models := $ai.models | default list -}}
+{{- $seen := dict -}}
+{{- range $models -}}
+{{- if not (regexMatch "^[a-z][a-z0-9-]{0,39}$" (toString .name)) -}}
+{{- fail (printf "ai.models: name %q must start with a letter and use only a-z, 0-9 and -, at most 40 characters" (toString .name)) -}}
+{{- end -}}
+{{- if hasKey $seen .name }}{{ fail (printf "ai.models: %s is listed twice" .name) }}{{ end -}}
+{{- $_ := set $seen .name true -}}
+{{- if not (has (toString .provider) (list "anthropic" "openai")) -}}
+{{- fail (printf "ai.models: %s: provider %q: use anthropic, or openai for any OpenAI-compatible server" .name (toString .provider)) -}}
+{{- end -}}
+{{- if not .model }}{{ fail (printf "ai.models: %s: model is missing: the provider's model id" .name) }}{{ end -}}
+{{- if and (eq (toString .provider) "openai") (not .endpoint) -}}
+{{- fail (printf "ai.models: %s: endpoint is required for provider openai, such as http://ollama.ai.svc:11434/v1" .name) -}}
+{{- end -}}
+{{- if and (eq (toString .provider) "anthropic") (not .endpoint) (not .key) -}}
+{{- fail (printf "ai.models: %s: key is required for the hosted API: name the secret that holds the API key, such as {store: vault, key: ai/anthropic, field: key}" .name) -}}
+{{- end -}}
+{{- if and .key (not (and .key.store .key.key)) -}}
+{{- fail (printf "ai.models: %s: key must name a store and a key, such as {store: vault, key: ai/anthropic, field: key}" .name) -}}
+{{- end -}}
+{{- end -}}
+{{- if and $ai.serverSecretStores (not $models) -}}
+{{- fail "ai.serverSecretStores is set, but ai.models is empty" -}}
+{{- end -}}
+{{- if and (eq (toString .Values.runner.ai) "true") (not $models) -}}
+{{- fail "runner.ai is true, but ai.models is empty: list the models runners may call" -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
@@ -168,9 +202,13 @@ owns may not appear in it.
 */}}
 {{- define "launchway.serverConfig" -}}
 {{- $extra := deepCopy (.Values.config.extraConfig | default dict) -}}
-{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "loops" "schedules" -}}
+{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "loops" "schedules" "verification" "ai" -}}
 {{- if hasKey $extra $key -}}
-{{- if eq $key "database" -}}
+{{- if eq $key "verification" -}}
+{{- fail "config.extraConfig.verification is not allowed: use delivery.verification.sources, which also gives the deploy runner the sources." -}}
+{{- else if eq $key "ai" -}}
+{{- fail "config.extraConfig.ai is not allowed: use ai.models and ai.serverSecretStores." -}}
+{{- else if eq $key "database" -}}
 {{- fail "config.extraConfig.database is not allowed: the database URL must not be in the ConfigMap. Use database.existingSecret or database.url." -}}
 {{- else if eq $key "data" -}}
 {{- fail "config.extraConfig.data is not allowed: the chart mounts the data directory at /var/lib/launchway." -}}
@@ -225,6 +263,12 @@ owns may not appear in it.
 {{- with .Values.config.schedules }}{{ if not (kindIs "invalid" .enabled) }}{{ $_ := set $config "schedules" (dict "enabled" .enabled) }}{{ end }}{{ end -}}
 {{- with .Values.config.tokens }}{{ if .maxDays }}{{ $_ := set $config "auth" (dict "tokens" (dict "max_days" (int64 .maxDays))) }}{{ end }}{{ end -}}
 {{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
+{{- /* The model registry (schema 20): only when set. */ -}}
+{{- $ai := .Values.ai | default dict -}}
+{{- $aiOut := dict -}}
+{{- with $ai.models }}{{ $_ := set $aiOut "models" . }}{{ end -}}
+{{- with $ai.serverSecretStores }}{{ $_ := set $aiOut "secrets" . }}{{ end -}}
+{{- if $aiOut }}{{ $_ := set $config "ai" $aiOut }}{{ end -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
 
@@ -256,6 +300,7 @@ in the server configuration, plus the server URL and the data directory.
 {{- /* Only when set: a runner of the version before does not know the setting (see the note on defaults in values.yaml). */ -}}
 {{- if $reports }}{{ $_ := set $runner "reports" $reports }}{{ end -}}
 {{- with include "launchway.runnerImages" . | fromYaml }}{{ if . }}{{ $_ := set $runner "images" . }}{{ end }}{{ end -}}
+{{- if eq (toString .Values.runner.ai) "true" }}{{ $_ := set $runner "ai" true }}{{ end -}}
 {{- toYaml $runner -}}
 {{- end -}}
 

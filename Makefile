@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo run demo clean test-s3
+.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean test-s3
 
 all: web build
 
@@ -56,6 +56,19 @@ test-containers:
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 ./internal/executor/
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m ./internal/imagebuild/...
 	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 60m -run 'ImageStep' ./internal/api/
+
+# Verifications against real health sources in containers (Podman or Docker): Prometheus,
+# Loki, ClickHouse, OpenSearch and PostgreSQL, pulled once by digest. The end-to-end test runs a
+# healthy deploy that passes and a regression that fails and is rolled back, with a real server,
+# build runner and deploy runner.
+test-verify:
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 40m ./internal/verify/...
+	LAUNCHWAY_TEST_CONTAINERS=1 go test -count=1 -timeout 40m -run 'Verify' ./internal/api/
+
+# A real local model: starts Ollama in a container and pulls a small model (about 400 MB,
+# kept in the Podman volume launchway-test-ollama-models). Opt-in; no paid API is called.
+test-local-model:
+	LAUNCHWAY_TEST_LOCAL_MODEL=1 go test -count=1 -timeout 30m -run LocalModel -v ./internal/ai/
 
 # Needs a cluster: kind create cluster --name launchway-test
 #                  kubectl --context kind-launchway-test create namespace launchway-test

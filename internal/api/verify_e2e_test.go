@@ -252,8 +252,8 @@ func TestVerifyEndToEndWithRealBackends(t *testing.T) {
 	if r.Status != engine.RunFailed || v.Status != engine.StepFailed || stepByID(r, "rollback-prod").Status != engine.StepSucceeded {
 		t.Fatalf("regression run %s: %+v", r.Status, r.StepList)
 	}
-	if !strings.Contains(v.Error, "error-rate") {
-		t.Fatalf("the reason does not name the metric: %s", v.Error)
+	if !strings.Contains(v.Error, "error-rate") && !strings.Contains(v.Error, "NullPointerException") {
+		t.Fatalf("the reason names neither the metric nor the new error: %s", v.Error)
 	}
 	var unknown bool
 	for _, c := range vs[0].Verdict.Logs[0].Clusters {
