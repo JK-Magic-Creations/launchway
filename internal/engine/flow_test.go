@@ -781,3 +781,30 @@ func TestRunSummaryCountsAllowedFailures(t *testing.T) {
 		t.Fatalf("%+v", s)
 	}
 }
+
+// A limit lowered after a run was made also holds for its re-runs and
+// resumes, which are refused naming it.
+func TestMaxRunTimeoutHoldsForRerunsAndResumes(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, "pipeline: p\ntimeout: 5h\nsteps:\n  a: {image: x, run: a}\n", Trigger{Event: "manual"})
+	fail(t, e, take(t, e))
+	if _, _, err := e.SetRunLimits(RunLimits{MaxRunTimeout: "4h"}, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	var ps pipeline.Problems
+	if err := e.Resume(id, "ann"); !errors.As(err, &ps) || !strings.Contains(err.Error(), "max_run_timeout 4h") {
+		t.Fatalf("resume: %v", err)
+	}
+	if want(t, statuses(t, e, id), "run", "failed"); countEvents(t, e, id, RunResumed) != 0 {
+		t.Fatal("a refused resume left an event")
+	}
+	if _, err := e.Rerun(RerunRequest{Run: id, From: "a", Actor: "ann"}); !errors.As(err, &ps) || !strings.Contains(err.Error(), "max_run_timeout 4h") {
+		t.Fatalf("rerun: %v", err)
+	}
+	if _, _, err := e.SetRunLimits(RunLimits{MaxRunTimeout: "6h"}, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.Resume(id, "ann"); err != nil {
+		t.Fatalf("within the limit: %v", err)
+	}
+}

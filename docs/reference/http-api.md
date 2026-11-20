@@ -402,7 +402,7 @@ needs an administrator, and every change is audited with the values before and a
 The installation's limits on pipelines, kept in the database: `max_run_timeout`, the longest
 [`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Anyone signed in may read them; changing
 them needs an administrator, and every change is audited with the values before and after. A pipeline
-whose timeout is longer is refused when a run starts and by `POST /api/v1/validate`, with the limit
+whose timeout is longer is refused when a run starts, when it is re-run or resumed (the limit may have been lowered since), and by `POST /api/v1/validate`, with the limit
 in the message.
 
 | Route | Access | Audit | What it does |

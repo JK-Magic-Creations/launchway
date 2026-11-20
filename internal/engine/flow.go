@@ -293,10 +293,18 @@ func (e *Engine) SetRunLimits(l RunLimits, actor string) (before, after RunLimit
 // timeout may not be longer than max_run_timeout. The problem names the
 // limit.
 func (e *Engine) CheckRunLimits(p *pipeline.Pipeline) pipeline.Problems {
+	return e.checkRunLimits(e.db, p)
+}
+
+// checkRunLimits is CheckRunLimits reading the limits through q, which may
+// be the transaction of a command.
+func (e *Engine) checkRunLimits(q interface {
+	QueryRow(string, ...any) *sql.Row
+}, p *pipeline.Pipeline) pipeline.Problems {
 	if !e.knows(schemaFlow) || p == nil || p.Timeout <= 0 {
 		return nil
 	}
-	l, err := readRunLimits(e.db)
+	l, err := readRunLimits(q)
 	if err != nil {
 		e.log.Error("reading the installation's limits", "err", err)
 		return nil

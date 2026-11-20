@@ -972,6 +972,11 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 			return fmt.Errorf("%w: %s made a deployment in this run, and deployments are not resumed: "+
 				"start a new run, or re-run this one from %s", ErrConflict, id, id)
 		}
+		// The limit may have been lowered since the run was made, and a
+		// resume gives a run that timed out a whole new budget.
+		if ps := c.e.checkRunLimits(c.tx, c.st.Pipeline); len(ps) > 0 {
+			return ps
+		}
 		if err := c.takeLaneForResume(); err != nil {
 			return err
 		}

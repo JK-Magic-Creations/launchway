@@ -264,6 +264,10 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 	if err := checkLibraries(orig.Pipeline, orig.Source); err != nil {
 		return nil, err
 	}
+	// The limit may have been lowered since the run was made.
+	if ps := e.CheckRunLimits(orig.Pipeline); len(ps) > 0 {
+		return nil, ps
+	}
 	// The same trigger, but started by whoever asked, so that approvals
 	// after the step are not theirs to approve if self-approval is off.
 	trig, src := orig.Trigger, orig.Source
