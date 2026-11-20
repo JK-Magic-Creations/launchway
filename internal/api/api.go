@@ -1097,6 +1097,22 @@ func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	// Anyone who can read one project may list the runners, but what a
+	// runner holds names other projects' runs and steps, and who enrolled
+	// it and with which join token is for those who manage runners.
+	id := identityFrom(r)
+	if !s.mayManageRunners(id) {
+		for i := range rs {
+			rs[i].Identity = nil
+			work := []engine.RunnerWork{}
+			for _, wk := range rs[i].Work {
+				if s.authorize(id, auth.Read, wk.Project) {
+					work = append(work, wk)
+				}
+			}
+			rs[i].Work = work
+		}
+	}
 	writeJSON(w, http.StatusOK, rs)
 }
 
