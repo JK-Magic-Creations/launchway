@@ -204,6 +204,10 @@ var permissionTable = map[string]matrixRow{
 		[6]int{401, 403, 403, 403, 403, 200}},
 	"POST /api/v1/config/validate": {"POST", "/api/v1/config/validate", `{"changes":[{"kind":"units","name":"m","spec":{}}]}`,
 		[6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/config/check/repository": {"POST", "/api/v1/config/check/repository", `{"repo":"/nonexistent/none"}`,
+		[6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/config/check/signin": {"POST", "/api/v1/config/check/signin", `{"issuer":"not a url"}`,
+		[6]int{401, 403, 403, 403, 403, 200}},
 	"POST /api/v1/config/apply": {"POST", "/api/v1/config/apply", `{"changes":[{"kind":"units","name":"matrix-a","spec":{}}]}`,
 		[6]int{401, 403, 403, 403, 403, 200}},
 	"POST /api/v1/config/{kind}": {"POST", "/api/v1/config/units", `{"name":"matrix-b","spec":{"display_name":"Matrix"}}`,
@@ -237,7 +241,7 @@ func TestEveryRouteIsInThePermissionTable(t *testing.T) {
 			t.Errorf("route %q is not in the permission table in access_test.go; add a row saying who may call it", rt.pattern)
 		}
 		if strings.HasPrefix(rt.pattern, "POST ") || strings.HasPrefix(rt.pattern, "DELETE ") {
-			if rt.audit == "" && rt.access != public && rt.access != runnerOnly && rt.pattern != "POST /api/v1/validate" && rt.pattern != "POST /api/v1/config/validate" {
+			if rt.audit == "" && rt.access != public && rt.access != runnerOnly && rt.pattern != "POST /api/v1/validate" && rt.pattern != "POST /api/v1/config/validate" && !strings.HasPrefix(rt.pattern, "POST /api/v1/config/check/") {
 				t.Errorf("route %q changes something but records nothing in the audit trail", rt.pattern)
 			}
 		}
