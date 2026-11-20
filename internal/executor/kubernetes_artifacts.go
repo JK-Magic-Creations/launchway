@@ -175,17 +175,17 @@ func (k *Kubernetes) PlaceFiles(ctx context.Context, s Spec, files []PlacedFile,
 	// Directories are made by tar as the user that runs it, the same user
 	// as the step's containers in a restricted pod; otherwise everything is
 	// made writable by all, as the workspace is.
-	cmd := "tar xf - -C /workspace"
-	if !k.o.restricted() {
-		var dirs []string
-		for _, f := range files {
-			dirs = append(dirs, "/workspace/"+f.Path)
-		}
-		cmd += " && chmod a+rw " + strings.Join(quoteAll(dirs), " ")
-	}
 	var stderr bytes.Buffer
-	err = k.exec(ctx, rp.name, helperName, []string{"sh", "-c", cmd}, pr, io.Discard, &stderr)
+	err = k.exec(ctx, rp.name, helperName, []string{"sh", "-c", "tar xf - -C /workspace"}, pr, io.Discard, &stderr)
 	pr.Close()
+	if err == nil && len(files) > 0 && !k.o.restricted() {
+		// The names go in by standard input, a NUL after each, and xargs
+		// splits them into as many chmod calls as the system's limit on
+		// arguments needs: a cache restores many thousands of files, far
+		// more than one command line holds.
+		err = k.exec(ctx, rp.name, helperName, []string{"sh", "-c", placedChmodCommand},
+			strings.NewReader(placedChmodInput(files)), io.Discard, &stderr)
+	}
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -195,12 +195,20 @@ func (k *Kubernetes) PlaceFiles(ctx context.Context, s Spec, files []PlacedFile,
 	return nil
 }
 
-func quoteAll(list []string) []string {
-	out := make([]string, len(list))
-	for i, s := range list {
-		out[i] = shellQuote(s)
+// placedChmodCommand makes the placed files writable by all, as the
+// workspace is, when the pod is not restricted to one user. Its input is
+// placedChmodInput.
+const placedChmodCommand = "cd /workspace && xargs -0 chmod a+rw"
+
+// placedChmodInput lists the files for placedChmodCommand: each name
+// relative to the workspace and started with ./ so that none can be taken
+// for an option, a NUL after each.
+func placedChmodInput(files []PlacedFile) string {
+	var b strings.Builder
+	for _, f := range files {
+		b.WriteString("./" + f.Path + "\x00")
 	}
-	return out
+	return b.String()
 }
 
 // writePlacedTar writes the files as a tar stream, with the directories
