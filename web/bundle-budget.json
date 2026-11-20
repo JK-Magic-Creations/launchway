@@ -1,0 +1,5 @@
+{
+  "comment": "Bundle size budget in bytes (raw). Lower it when the bundle shrinks: npm run size:update. Raising it needs a reason in the pull request.",
+  "js_bytes": 645512,
+  "css_bytes": 95157
+}
