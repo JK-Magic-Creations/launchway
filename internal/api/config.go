@@ -65,6 +65,13 @@ func (s *Server) configFail(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "the configuration would not be valid: " + ie.Error(), "problems": ie.Problems})
 		return
 	}
+	var na *settings.NotAppliedError
+	if errors.As(err, &na) {
+		// Stored, so it is not lost and not to be sent again; but not in
+		// effect on the server that answered, which tries again.
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": na.Error(), "stored": true, "revision": na.Revision, "server": na.Server})
+		return
+	}
 	if errors.Is(err, engine.ErrConflict) && strings.Contains(err.Error(), "is at version") {
 		writeErr(w, http.StatusPreconditionFailed, strings.TrimPrefix(err.Error(), "conflict: "))
 		return

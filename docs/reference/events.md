@@ -320,3 +320,7 @@ curl -s 'http://127.0.0.1:8080/api/v1/audit?limit=2'
 
 The trail is kept until you remove old rows from the `audit` table yourself. See the
 [HTTP API](http-api.md) for the other endpoints and [roles](roles.md) for who may call them.
+
+## Servers' configuration state
+
+Besides the actions above, each server writes an audit entry, action `config.server_state`, when it applies a stored configuration revision or cannot: the user is the server's name, the target is `revision N`, the outcome is `ok` or `failed`, and the detail is the reason. `GET /api/v1/config` shows each server's newest one, so an administrator sees which servers have applied the stored revision and which have not.

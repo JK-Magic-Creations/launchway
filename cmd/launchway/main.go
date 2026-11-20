@@ -347,6 +347,10 @@ func cmdServer(args []string) error {
 	mgr.WatchPolicySources(ctx)
 	if store.Available() {
 		// Changes made through any server take effect here within seconds.
+		// Applying is safe to repeat: everything that can fail is worked out
+		// first, then each part is replaced as a whole, so a try that stops
+		// half way is finished by the next one (the service tries again at
+		// every poll until it succeeds).
 		if err := store.Load(func(c *config.Config, _ *settings.Layout) error {
 			l, err := c.EngineLive()
 			if err != nil {
@@ -360,13 +364,14 @@ func cmdServer(args []string) error {
 			if err != nil {
 				return err
 			}
+			libs := c.SourceLibraries()
+			n, _ := c.LoopLimit()
 			if err := eng.Reconfigure(l); err != nil {
 				return err
 			}
-			if err := mgr.Reconfigure(ps, c.SourceLibraries()); err != nil {
+			if err := mgr.Reconfigure(ps, libs); err != nil {
 				return err
 			}
-			n, _ := c.LoopLimit()
 			mgr.SetLoopLimit(n)
 			srv.Reconfigure(sl)
 			return nil

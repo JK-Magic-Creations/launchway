@@ -19,6 +19,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -93,6 +94,10 @@ type Service struct {
 	apply Applier
 	// safe is set when this server started in safe mode.
 	safe *Safe
+	// server names this server in the audit trail's record of which
+	// revision each server applied; recorded is the last state written.
+	server   string
+	recorded string
 	// lastErr is why the newest configuration was not applied, if it was
 	// not.
 	lastErr string
@@ -106,7 +111,11 @@ func New(eng *engine.Engine, boot *config.Config, log *slog.Logger) *Service {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Service{eng: eng, boot: boot, log: log, Poll: 2 * time.Second}
+	host, _ := os.Hostname()
+	if host == "" {
+		host = "server"
+	}
+	return &Service{eng: eng, boot: boot, log: log, Poll: 2 * time.Second, server: host}
 }
 
 // Available reports whether configuration is kept in the database.
@@ -320,20 +329,102 @@ func (s *Service) Current() (*config.Config, *Layout, int64) {
 	return s.cur, s.lay, s.rev
 }
 
-// Status says what this server runs with.
-type Status struct {
+// ServerState is what one server last said about the configuration.
+type ServerState struct {
+	Server string `json:"server"`
+	// Revision is the revision it applied last, or tried and could not.
 	Revision int64  `json:"revision"`
+	State    string `json:"state"` // applied or failed
+	Problem  string `json:"problem,omitempty"`
+	At       int64  `json:"at"`
+}
+
+// Status says what this server runs with, and what the others do.
+type Status struct {
+	// Server is this server's name.
+	Server string `json:"server"`
+	// Revision is the revision this server applied; Stored is the revision
+	// in the database. They differ while a change is on its way, or cannot
+	// be applied (Problem says why; it is tried again every few seconds).
+	Revision int64  `json:"revision"`
+	Stored   int64  `json:"stored_revision"`
 	Problem  string `json:"problem,omitempty"`
 	// Safe: the stored configuration could not be loaded at start-up, and
 	// this server runs with something safer until it can.
 	Safe *Safe `json:"safe_mode,omitempty"`
+	// Servers is each server's last report (from the audit trail), this one
+	// included: which have applied the stored revision and which have not.
+	Servers []ServerState `json:"servers,omitempty"`
 }
 
 // Status returns the revision in effect and why a newer one is not, if not.
+// It reads the database for the stored revision and the servers' reports.
 func (s *Service) Status() Status {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return Status{Revision: s.rev, Problem: s.lastErr, Safe: s.safe}
+	st := Status{Server: s.server, Revision: s.rev, Problem: s.lastErr, Safe: s.safe}
+	s.mu.Unlock()
+	if s.Available() {
+		st.Stored, _ = s.eng.ConfigRevision()
+		st.Servers = s.serverStates()
+	}
+	return st
+}
+
+// ConfigServerAction is the audit action each server records when it applies
+// a revision, or cannot.
+const ConfigServerAction = "config.server_state"
+
+// recordState writes this server's state to the audit trail when it changes,
+// so every server can see which have applied which revision.
+func (s *Service) recordState(rev int64, err error) {
+	state, detail, outcome := "applied", "", "ok"
+	if err != nil {
+		state, detail, outcome = "failed", clipText(redactText(err.Error()), 400), "failed"
+	}
+	key := fmt.Sprintf("%d/%s/%s", rev, state, detail)
+	if key == s.recorded {
+		return
+	}
+	s.recorded = key
+	e := engine.AuditEntry{At: time.Now().UnixMilli(), User: s.server, Source: "server", Action: ConfigServerAction,
+		Target: fmt.Sprintf("revision %d", rev), Outcome: outcome, Detail: detail}
+	if err := s.eng.Audit(e); err != nil {
+		s.log.Warn("could not record the configuration state of this server", "err", err)
+	}
+}
+
+func clipText(s string, n int) string {
+	if len(s) > n {
+		return s[:n] + "..."
+	}
+	return s
+}
+
+func redactText(s string) string { return redact.URLs(s) }
+
+// serverStates reads each server's newest report.
+func (s *Service) serverStates() []ServerState {
+	list, err := s.eng.AuditLog(engine.AuditFilter{Action: ConfigServerAction, Limit: 200})
+	if err != nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []ServerState
+	for _, a := range list { // newest first
+		if seen[a.User] {
+			continue
+		}
+		seen[a.User] = true
+		var rev int64
+		fmt.Sscanf(a.Target, "revision %d", &rev)
+		st := ServerState{Server: a.User, Revision: rev, State: "applied", At: a.At}
+		if a.Outcome != "ok" {
+			st.State, st.Problem = "failed", a.Detail
+		}
+		out = append(out, st)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Server < out[j].Server })
+	return out
 }
 
 // Refresh applies the stored configuration if it changed, or if the last
@@ -370,6 +461,7 @@ func (s *Service) reloadLocked(first bool) error {
 		err = s.apply(cp.cfg, cp.lay)
 	}
 	if err != nil {
+		s.recordState(rev, err)
 		msg := fmt.Sprintf("revision %d: %v", rev, err)
 		if msg != s.lastErr {
 			s.log.Error("the stored configuration cannot be used here; keeping the configuration in effect", "revision", rev, "err", err)
@@ -381,6 +473,7 @@ func (s *Service) reloadLocked(first bool) error {
 		s.log.Info("applied a change to the configuration", "revision", rev)
 	}
 	s.cur, s.lay, s.rev, s.lastErr = cp.cfg, cp.lay, rev, ""
+	s.recordState(rev, nil)
 	if s.safe != nil {
 		s.log.Warn("leaving safe mode: the stored configuration is in effect", "revision", rev)
 		s.safe = nil
@@ -671,14 +764,14 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if dry {
 			return nil, nil
 		}
-		_, recorded, err := s.eng.WriteConfig(rev, actor, writes, imp)
+		stored, recorded, err := s.eng.WriteConfig(rev, actor, writes, imp)
 		if errors.Is(err, engine.ErrConfigMoved) {
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		_ = s.Refresh()
+		applyErr := s.Refresh()
 		_, now, err := s.eng.ConfigSnapshot()
 		if err != nil {
 			return nil, err
@@ -705,6 +798,9 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 			}
 			results = append(results, r)
 		}
+		if applyErr != nil {
+			return results, &NotAppliedError{Revision: stored, Server: s.server, Cause: applyErr}
+		}
 		return results, nil
 	}
 	return nil, fmt.Errorf("%w: other changes kept coming first; try again", engine.ErrConflict)
@@ -722,6 +818,22 @@ func putObjects(after, puts []engine.ConfigObject) []engine.ConfigObject {
 	}
 	return out
 }
+
+// NotAppliedError: the change is stored, but this server could not put it
+// into effect. It is applied by every server as soon as it can: this one is
+// tried again at every poll. The results of the change are still returned.
+type NotAppliedError struct {
+	Revision int64
+	Server   string
+	Cause    error
+}
+
+func (e *NotAppliedError) Error() string {
+	return fmt.Sprintf("the change is stored (revision %d) but server %s could not apply it: %v. It is tried again every few seconds; the servers' state is in the status of GET /api/v1/config",
+		e.Revision, e.Server, redactText(e.Cause.Error()))
+}
+
+func (e *NotAppliedError) Unwrap() error { return e.Cause }
 
 // applyLocally works out the objects after writes, checking versions as
 // the store will (so a dry run says the same).

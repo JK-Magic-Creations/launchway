@@ -2,6 +2,7 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"strings"
@@ -177,5 +178,69 @@ func TestRestoreRevisionOffline(t *testing.T) {
 	}
 	if _, _, err := RestoreRevision(eng, 99, "operator"); err == nil {
 		t.Error("a revision that does not exist")
+	}
+}
+
+// A change that is stored but cannot be applied here says so (it is not a
+// 200), is not lost, is tried again at the next poll, and every server's
+// state, with the revision it applied, is visible.
+func TestAStoredChangeThatCannotBeAppliedIsReportedAndRetried(t *testing.T) {
+	eng := openEngine(t, testdb.New(t))
+	s := New(eng, bootOIDC(t, t.TempDir(), true), quietLog())
+	fail := false
+	tries := 0
+	if err := s.Load(func(*config.Config, *Layout) error {
+		tries++
+		if fail {
+			return errors.New("the project manager is not ready")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	fail = true
+	res, err := s.Apply("ada", []Change{change("project", "web", `{"repo":"https://git.example.com/web.git"}`)})
+	var na *NotAppliedError
+	if !errors.As(err, &na) || na.Revision != 1 || len(res) != 1 || res[0].Object == nil {
+		t.Fatalf("want a NotAppliedError with the stored object: %v %v", err, res)
+	}
+	if !strings.Contains(err.Error(), "stored") || !strings.Contains(err.Error(), "not ready") {
+		t.Errorf("the message: %v", err)
+	}
+	st := s.Status()
+	if st.Revision != 0 || st.Stored != 1 || st.Problem == "" || len(st.Servers) != 1 || st.Servers[0].State != "failed" {
+		t.Fatalf("status while failing: %+v", st)
+	}
+	// The next poll tries again, and succeeds.
+	before := tries
+	fail = false
+	if err := s.Refresh(); err != nil || tries != before+1 {
+		t.Fatalf("retry: %v after %d tries", err, tries-before)
+	}
+	st = s.Status()
+	if st.Revision != 1 || st.Stored != 1 || st.Problem != "" || st.Servers[0].State != "applied" || st.Servers[0].Revision != 1 {
+		t.Errorf("status after the retry: %+v", st)
+	}
+	// An apply that stops half way is finished by the retry: the second
+	// try sees the whole configuration.
+	var seen []int
+	fail = false
+	step := 0
+	s2 := New(eng, bootOIDC(t, t.TempDir(), true), quietLog())
+	if err := s2.Load(func(c *config.Config, _ *Layout) error {
+		step++
+		seen = append(seen, len(c.Projects))
+		if step == 2 {
+			return errors.New("half way")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s2.Apply("ada", []Change{change("project", "api", `{"repo":"https://git.example.com/api.git"}`)}); err == nil {
+		t.Fatal("the half-way failure was not reported")
+	}
+	if err := s2.Refresh(); err != nil || seen[len(seen)-1] != 2 {
+		t.Errorf("the retry: %v, saw %v projects", err, seen)
 	}
 }
