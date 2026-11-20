@@ -115,8 +115,8 @@ func testStore(t *testing.T, s Store) {
 	})
 
 	t.Run("small parts", func(t *testing.T) {
-		if s.Name() == "filesystem" {
-			t.Skip("the filesystem store does not enforce MinPartSize")
+		if s.Name() != "s3" {
+			t.Skipf("the %s store does not enforce MinPartSize", s.Name())
 		}
 		key := "conformance/small-parts.bin"
 		id, err := s.CreateUpload(ctx, key)

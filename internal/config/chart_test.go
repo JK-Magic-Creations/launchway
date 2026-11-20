@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/jk-magic-creations/launchway/internal/engine"
 )
 
 // renderChart renders the Helm chart with values and returns its ConfigMaps'
@@ -215,5 +217,41 @@ runner:
 	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", writeTemp(t, bad)).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "needs mutual TLS") {
 		t.Fatalf("a TCP builder without TLS: %v %s", err, out)
+	}
+}
+
+// The database store (schema 17). The chart's default render writes none
+// of its settings, so a server of the release before reads the file: with
+// nothing set, the store is chosen by the engine. Set, they load.
+func TestChartDatabaseStoreSettings(t *testing.T) {
+	for _, values := range []string{"postgresql: { enabled: true }\n", "database: { url: \"postgres://u@db/launchway\" }\n"} {
+		def := renderChart(t, values)
+		for _, key := range []string{"database:", "max_total_gib", "max_blob_mib", "store:", "artifacts:"} {
+			if strings.Contains(def["server"], "  "+key) || strings.Contains(def["server"], "\n"+key) {
+				t.Errorf("the default server configuration (%s) has %s:\n%s", strings.TrimSpace(values), key, def["server"])
+			}
+		}
+	}
+	srv := renderChart(t, `postgresql: { enabled: true }
+config:
+  artifacts:
+    store: database
+    database: { maxTotalGiB: 20, maxBlobMiB: 1024 }
+`)["server"]
+	c, err := Load(writeTemp(t, srv))
+	if err != nil {
+		t.Fatalf("server: %v\n%s", err, srv)
+	}
+	o, err := c.ArtifactLimits()
+	if err != nil || o.Choice != engine.StoreDatabase || o.DatabaseLimits.MaxBytes != 20<<30 || o.DatabaseLimits.MaxObjectBytes != 1<<30 {
+		t.Fatalf("rendered: %+v %v\n%s", o, err, srv)
+	}
+	// The limits alone, store unset: allowed (they apply when the database is chosen).
+	srv = renderChart(t, "postgresql: { enabled: true }\nconfig: { artifacts: { database: { maxTotalGiB: 5 } } }\n")["server"]
+	if c, err = Load(writeTemp(t, srv)); err != nil {
+		t.Fatalf("server: %v\n%s", err, srv)
+	}
+	if o, err := c.ArtifactLimits(); err != nil || o.Choice != engine.StoreAuto || o.DatabaseLimits.MaxBytes != 5<<30 {
+		t.Fatalf("limits alone: %+v %v", o, err)
 	}
 }

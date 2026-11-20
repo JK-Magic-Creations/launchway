@@ -14,9 +14,17 @@ import (
 // ArtifactsConfig says where artifacts are kept and within which limits.
 // Every setting is optional; zero means the built-in default.
 type ArtifactsConfig struct {
-	// Store is filesystem (the default) or s3. Several servers need one
-	// store they all share: s3, or a directory on a shared filesystem.
+	// Store is database, filesystem or s3. Unset, artifacts are kept in the
+	// database on PostgreSQL (shared by every server, nothing else to run)
+	// and in <data>/artifacts on SQLite; an installation that kept them on
+	// the filesystem before the database store existed keeps doing so until
+	// they are copied (launchway blobs copy). Several servers need one
+	// store they all share: database, s3, or a directory on a shared
+	// filesystem.
 	Store string `yaml:"store"`
+	// Database limits the database store. Optional; written by the Helm
+	// chart only when set.
+	Database *DatabaseStoreConfig `yaml:"database"`
 	// Dir is the filesystem store's directory; default <data>/artifacts.
 	Dir string `yaml:"dir"`
 	// S3 configures the s3 store. Its credentials come from the
@@ -36,6 +44,15 @@ type ArtifactsConfig struct {
 	// whatever the pipeline says; default 90d.
 	Retain    string `yaml:"retain"`
 	MaxRetain string `yaml:"max_retain"`
+}
+
+// DatabaseStoreConfig limits the database store. Zero means the default.
+type DatabaseStoreConfig struct {
+	// MaxTotalGiB is how much the store may hold in all, counting uploads in
+	// progress; default 100.
+	MaxTotalGiB int `yaml:"max_total_gib"`
+	// MaxBlobMiB is the largest single file; default 2048.
+	MaxBlobMiB int `yaml:"max_blob_mib"`
 }
 
 // FindingsConfig limits what the server keeps of security findings and
@@ -81,10 +98,48 @@ func (c *Config) ArtifactLimits() (engine.ArtifactOptions, error) {
 		}
 		*r.out = d
 	}
+	if a.Database != nil {
+		d := a.Database
+		switch {
+		case a.Store != "" && a.Store != "database":
+			return o, errors.New("artifacts: database is set but store is not database (or unset)")
+		case d.MaxTotalGiB < 0 || d.MaxBlobMiB < 0:
+			return o, errors.New("artifacts: database limits cannot be negative")
+		case d.MaxTotalGiB > 1<<20:
+			return o, errors.New("artifacts: database.max_total_gib is too large")
+		case d.MaxBlobMiB > 1<<20:
+			return o, errors.New("artifacts: database.max_blob_mib is too large")
+		}
+		o.DatabaseLimits.MaxBytes = int64(d.MaxTotalGiB) << 30
+		o.DatabaseLimits.MaxObjectBytes = int64(d.MaxBlobMiB) << 20
+	}
+	maxTotal, maxBlob := o.DatabaseLimits.MaxBytes, o.DatabaseLimits.MaxObjectBytes
+	if maxTotal == 0 {
+		maxTotal = blobstore.DefaultDatabaseMaxBytes
+	}
+	if maxBlob == 0 {
+		maxBlob = blobstore.DefaultDatabaseMaxObjectBytes
+	}
 	switch a.Store {
 	case "", "filesystem":
 		if a.S3 != nil {
 			return o, errors.New("artifacts: s3 is set but store is not s3")
+		}
+		o.Choice = engine.StoreAuto
+		if a.Store == "filesystem" {
+			o.Choice = engine.StoreGiven
+		}
+	case "database":
+		if a.S3 != nil || a.Dir != "" {
+			return o, errors.New("artifacts: s3 and dir are not for the database store")
+		}
+		o.Choice = engine.StoreDatabase
+		if maxBlob > maxTotal {
+			return o, fmt.Errorf("artifacts: database.max_blob_mib (%d) cannot be more than database.max_total_gib (%d GiB)", maxBlob>>20, maxTotal>>30)
+		}
+		if file := o.MaxFileBytes; file > maxBlob || (file == 0 && engine.DefaultArtifactFileBytes > maxBlob) {
+			return o, fmt.Errorf("artifacts: max_file_mib (%d) cannot be more than database.max_blob_mib (%d), the largest file the database store keeps",
+				max(file, engine.DefaultArtifactFileBytes)>>20, maxBlob>>20)
 		}
 	case "s3":
 		if a.S3 == nil {
@@ -93,8 +148,9 @@ func (c *Config) ArtifactLimits() (engine.ArtifactOptions, error) {
 		if a.Dir != "" {
 			return o, errors.New("artifacts: dir is for the filesystem store")
 		}
+		o.Choice = engine.StoreGiven
 	default:
-		return o, fmt.Errorf("artifacts: store is filesystem or s3, not %q", a.Store)
+		return o, fmt.Errorf("artifacts: store is database, filesystem or s3, not %q", a.Store)
 	}
 	// Check the combination the engine checks, so a mistake shows when the
 	// file is loaded.
@@ -106,9 +162,14 @@ func (c *Config) ArtifactLimits() (engine.ArtifactOptions, error) {
 	return o, nil
 }
 
-// ArtifactStore makes the blob store the configuration describes.
+// ArtifactStore makes the blob store the configuration describes: nil for
+// the database store, which the engine makes from the database it opens.
+// With no store configured it is the filesystem store, which the engine
+// uses unless it picks the database (see engine.StoreAuto).
 func (c *Config) ArtifactStore() (blobstore.Store, error) {
 	switch c.Artifacts.Store {
+	case "database":
+		return nil, nil
 	case "s3":
 		creds, err := blobstore.CredentialsFromEnv()
 		if err != nil {

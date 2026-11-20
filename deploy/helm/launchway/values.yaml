@@ -80,12 +80,23 @@ config:
   # -- Where the files steps keep (artifacts: in a pipeline, and SBOMs) are stored, and limits on
   # them. Every setting is unset by default, and only written to the configuration when set (a
   # server of the version before does not know them; see docs/development/migrations.md).
-  # Unset, artifacts go in the pod's data directory, an emptyDir: lost when the pod goes, and not
-  # shared, so with more than one server only the first keeps any (the others say why in their
-  # log). For real use set store: s3 and point it at a bucket all servers share.
+  # Unset, with PostgreSQL (postgresql.enabled or an external database), artifacts are kept in the
+  # database itself, in chunks, shared by every server: nothing else to run (docs/artifacts.md).
+  # With SQLite they go in the pod's data directory. An installation that kept artifacts on the
+  # filesystem before the database store existed keeps doing so, and the servers' log says how to
+  # copy them into the database (launchway blobs copy). For very large or busy installations set
+  # store: s3 and point it at a bucket all servers share.
   artifacts:
-    # -- filesystem or s3. Unset: filesystem.
+    # -- database, filesystem or s3. Unset: database on PostgreSQL, filesystem on SQLite.
+    # Set database only once every server runs a release that knows it (see
+    # docs/development/migrations.md, schema 17).
     store:
+    # -- Limits of the database store. Unset: the built-in defaults shown.
+    database:
+      # -- How much the store may hold in all, in GiB, uploads in progress included. Unset: 100.
+      maxTotalGiB:
+      # -- The largest single file, in MiB. Unset: 2048.
+      maxBlobMiB:
     s3:
       # -- The endpoint, scheme and host only, such as https://s3.eu-west-1.amazonaws.com or
       # http://minio.storage:9000.

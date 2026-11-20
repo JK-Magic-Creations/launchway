@@ -214,6 +214,16 @@ owns may not appear in it.
 {{- else if eq (toString $a.store) "s3" -}}
 {{- fail "config.artifacts.store is s3: set config.artifacts.s3.endpoint, bucket and existingSecret" -}}
 {{- end -}}
+{{- /* The database store's limits (schema 17): only what is set, so the version before can still read the file. */ -}}
+{{- $d := $a.database | default dict -}}
+{{- $db := dict -}}
+{{- range $key, $value := dict "max_total_gib" $d.maxTotalGiB "max_blob_mib" $d.maxBlobMiB -}}
+{{- if $value }}{{ $_ := set $db $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- if $db -}}
+{{- if not (has (toString $a.store) (list "" "database" "<nil>")) }}{{ fail "config.artifacts.database is set, but config.artifacts.store is not database (or unset)" }}{{ end -}}
+{{- $_ := set $arts "database" $db -}}
+{{- end -}}
 {{- if $arts }}{{ $_ := set $config "artifacts" $arts }}{{ end -}}
 {{- $f := .Values.config.findings | default dict -}}
 {{- $finds := dict -}}

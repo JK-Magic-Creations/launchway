@@ -10,7 +10,9 @@ import (
 // artifactSettings reads where artifacts are kept and the limits on them
 // and on findings. A store that cannot be made (S3 credentials missing,
 // say) leaves the server running without artifacts, saying why: runs that
-// keep none are not affected.
+// keep none are not affected. The database store, and the choice made when
+// nothing is configured, are settled by the engine once the database is
+// open (see logStore).
 func artifactSettings(cfg *config.Config, log *slog.Logger) (engine.ArtifactOptions, engine.FindingLimits, error) {
 	opts, err := cfg.ArtifactLimits()
 	if err != nil {
@@ -22,11 +24,22 @@ func artifactSettings(cfg *config.Config, log *slog.Logger) (engine.ArtifactOpti
 	}
 	store, err := cfg.ArtifactStore()
 	if err != nil {
-		log.Error("artifacts are turned off on this server", "reason", err)
+		if opts.Choice != engine.StoreAuto {
+			log.Error("artifacts are turned off on this server", "reason", err)
+		}
 		opts.StoreProblem = err.Error()
 		return opts, limits, nil
 	}
 	opts.Store = store
-	log.Info("artifacts are kept in a store", "store", store.Name())
 	return opts, limits, nil
+}
+
+// logStore says where the engine keeps artifacts.
+func logStore(eng *engine.Engine, log *slog.Logger) {
+	o := eng.ArtifactOptions()
+	if o.Store == nil {
+		log.Error("artifacts are turned off on this server", "reason", o.StoreProblem)
+		return
+	}
+	log.Info("artifacts are kept in a store", "store", o.Store.Name(), "why", eng.StoreWhy())
 }

@@ -182,6 +182,7 @@ func (s *Server) routes() []route {
 		{"PUT /api/runner/v1/artifacts/chunk", runnerOnly, "", s.artifactChunk},
 		{"POST /api/runner/v1/artifacts/commit", runnerOnly, "", s.commitArtifact},
 		{"POST /api/runner/v1/artifacts/download", runnerOnly, "", s.fetchArtifact},
+		{"GET /api/v1/artifact-store", readAny, "", s.artifactStore},
 		{"GET /api/v1/runs/{id}/artifacts", runRead, "", s.runArtifacts},
 		{"GET /api/v1/runs/{id}/artifacts/{artifact}/file", runRead, "", s.downloadArtifactFile},
 		{"GET /api/v1/runs/{id}/artifacts/{artifact}/archive", runRead, "", s.downloadArtifactArchive},

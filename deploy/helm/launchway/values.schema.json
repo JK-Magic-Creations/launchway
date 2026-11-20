@@ -132,7 +132,15 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "store": { "type": ["string", "null"], "enum": ["filesystem", "s3", "", null] },
+            "store": { "type": ["string", "null"], "enum": ["database", "filesystem", "s3", "", null] },
+            "database": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "maxTotalGiB": { "type": ["integer", "null"], "minimum": 1, "maximum": 1048576 },
+                "maxBlobMiB": { "type": ["integer", "null"], "minimum": 1, "maximum": 1048576 }
+              }
+            },
             "s3": {
               "type": "object",
               "additionalProperties": false,
