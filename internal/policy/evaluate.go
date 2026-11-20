@@ -376,8 +376,8 @@ func judge(p Policy, rule string, in Input, waivers []Waiver, at int64) RuleResu
 		}
 		return pass(fmt.Sprintf("an SBOM of %d components", best), want)
 
-	case RuleDeployedImages:
-		return judgeDeployed(r, rs.DeployedImages, in)
+	case RuleDeployedImages, RuleAllowedFailures:
+		return judgeFacts(rule, r, rs, in)
 
 	case RuleApprovals:
 		want := fmt.Sprintf("%d approval(s) before %s by people other than the one who started the run", rs.Approvals.Min, in.Step)
@@ -412,23 +412,6 @@ func judge(p Policy, rule string, in Input, waivers []Waiver, at int64) RuleResu
 			return fail(found, want)
 		}
 		return pass("approved by "+strings.Join(by, ", "), want)
-
-	case RuleAllowedFailures:
-		want := "no step before " + in.Step + " that failed and was allowed to"
-		if rs.AllowedFailures.Max > 0 {
-			want = fmt.Sprintf("at most %d step(s) before %s that failed and were allowed to", rs.AllowedFailures.Max, in.Step)
-		}
-		got := in.Evidence.AllowedFailures
-		for _, s := range in.Evidence.Steps {
-			if s.Allowed {
-				r.Evidence = append(r.Evidence, EvidenceRef{Kind: "allowed_failure", Step: s.Step, Run: s.Run, RunNumber: s.RunNumber,
-					Text: s.Step + " failed, and its pipeline allows that"})
-			}
-		}
-		if len(got) > rs.AllowedFailures.Max {
-			return fail(fmt.Sprintf("%d allowed failure(s): %s", len(got), strings.Join(got, ", ")), want)
-		}
-		return pass(fmt.Sprintf("%d allowed failure(s)", len(got)), want)
 
 	case RuleRefs:
 		var wants []string

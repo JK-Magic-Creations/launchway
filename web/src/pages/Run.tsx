@@ -1,6 +1,8 @@
 import { AllowedFailureBadge } from "../components/AllowedFailures";
+import { RerunButton, RerunFailedButton } from "../components/Rerun";
+import { RunFlowBanners } from "../components/RunFlow";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RerunFrom, type RerunPlan, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
+import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { useNow, useStream } from "../live";
 import { canOperate, useMe } from "../auth";
@@ -10,10 +12,9 @@ import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill, shownStatus, 
 import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, freshness, phaseLabel, shortPhase, verdictLabel } from "../components/Deployment";
 import { LibraryList, TemplateFacts } from "../components/Libraries";
 import { openInEditor } from "./EditPipeline";
-import { navigate } from "../router";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
-import { RerunInputsNote, RunTrigger } from "../components/RunTrigger";
+import { RunTrigger } from "../components/RunTrigger";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 import { ArtifactsTab } from "./RunArtifacts";
 import { CoverageTab } from "./RunCoverage";
@@ -186,8 +187,7 @@ export function RunPage({ id }: { id: string }) {
   const loop = loopFor(run, selected);
   const failedCount = run.step_list.filter((s) => s.status === "failed" && !s.allowed_failure).length;
   const firstFailed = run.step_list.find((s) => s.status === "failed" && !s.allowed_failure);
-  const allowedFailed = run.step_list.filter((s) => s.status === "failed" && s.allowed_failure);
-  // Only approvals wait for someone to decide; deploy steps wait for their
+    // Only approvals wait for someone to decide; deploy steps wait for their
   // environment's lock or for the deployment to finish.
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting" && s.kind === "approval");
   const deploying = done ? undefined : run.step_list.find((s) => s.status === "waiting" && (s.kind === "deploy" || s.kind === "rollback" || s.kind === "rollout"));
@@ -356,32 +356,7 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
-      {run.lane?.state === "waiting" && !done && (
-        <div className="callout callout-wait lane-banner">
-          <span>
-            <strong>Waiting for lane {run.lane.label}</strong>
-            {run.lane.behind && <>, behind <Link href={`/runs/${run.lane.behind.id}`}>run #{run.lane.behind.number}</Link></>}
-            {" "}(number {run.lane.position ?? 1} in line). It starts when the run before it ends; none of its steps is queued until then.
-          </span>
-        </div>
-      )}
-      {run.lane && run.lane.state !== "waiting" && run.lane.state !== "holding" && (
-        <div className="callout callout-info lane-banner">
-          {run.lane.state === "replaced"
-            ? <>Replaced in lane <strong>{run.lane.label}</strong> by {run.lane.behind ? <Link href={`/runs/${run.lane.behind.id}`}>run #{run.lane.behind.number}</Link> : "a newer run"}.</>
-            : <>Skipped: lane <strong>{run.lane.label}</strong> was busy{run.lane.behind && <> (<Link href={`/runs/${run.lane.behind.id}`}>run #{run.lane.behind.number}</Link>)</>}. No step ran.</>}
-        </div>
-      )}
-
-      {allowedFailed.length > 0 && (
-        <div className="callout callout-allowed">
-          <strong>{allowedFailed.length === 1 ? `${allowedFailed[0].id} failed, and the pipeline allows that` : `${allowedFailed.length} steps failed, and the pipeline allows that`}.</strong>{" "}
-          Their steps have <code>on_failure: continue</code>, so the run goes on as if they had succeeded:{" "}
-          {allowedFailed.map((s, i) => (
-            <span key={s.id}>{i > 0 && ", "}<button type="button" className="linkbtn" onClick={() => select(s.id)}>{s.id}</button></span>
-          ))}.
-        </div>
-      )}
+      <RunFlowBanners run={run} done={done} onSelect={select} />
 
       {run.status === "failed" && firstFailed && (
         <div className="callout callout-bad">
@@ -955,88 +930,6 @@ function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }
         </details>
       )}
     </section>
-  );
-}
-
-// RerunButton offers a new run of a finished run from the step shown, with
-// a preview of what runs again and what is reused.
-function RerunButton({ run, step }: { run: RunDetail; step: StepView }) {
-  const [open, setOpen] = useState(false);
-  const from = useMemo<RerunFrom>(() => ({ from: [step.id] }), [step.id]);
-  return (
-    <>
-      <button type="button" className="btn btn-sm" onClick={() => setOpen(true)}
-        title={`A new run at the same commit: ${step.id} and the steps after it run again; the others are reused.`}>Re-run from this step</button>
-      {open && <RerunDialog run={run} from={from} onClose={() => setOpen(false)} />}
-    </>
-  );
-}
-
-// RerunFailedButton offers a new run that runs again only what failed or was
-// canceled, when the plan allows it (it asks the server first); the dialog
-// shows what runs and what is reused.
-const FAILED_ONLY: RerunFrom = { failed: true };
-function RerunFailedButton({ run }: { run: RunDetail }) {
-  const [open, setOpen] = useState(false);
-  const [ok, setOk] = useState(false);
-  useEffect(() => { api.rerunPlan(run.id, FAILED_ONLY).then(() => setOk(true)).catch(() => setOk(false)); }, [run.id, run.status]);
-  if (!ok) return null;
-  return (
-    <>
-      <button type="button" className="btn" onClick={() => setOpen(true)}
-        title="A new run at the same commit that runs again the failed and canceled steps and what comes after them, reusing everything else. Resume instead continues this run.">Re-run failed steps</button>
-      {open && <RerunDialog run={run} from={FAILED_ONLY} onClose={() => setOpen(false)} />}
-    </>
-  );
-}
-
-function RerunDialog({ run, from, onClose }: { run: RunDetail; from: RerunFrom; onClose: () => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [plan, setPlan] = useState<RerunPlan | null>(null);
-  const [refusal, setRefusal] = useState<unknown>(null);
-  const [error, setError] = useState<unknown>(null);
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { dialog.current?.showModal(); }, []);
-  useEffect(() => { api.rerunPlan(run.id, from).then(setPlan).catch(setRefusal); }, [run.id, from]);
-  const starts = plan?.from?.length ? plan.from : from.from ?? [];
-  const label = from.failed ? "the failed steps" : starts.join(", ");
-
-  const go = async () => {
-    setBusy(true); setError(null);
-    try {
-      const re = await api.rerun(run.id, from);
-      dialog.current?.close();
-      onClose();
-      navigate(`/runs/${re.id}?step=${encodeURIComponent(re.rerun_from ?? starts[0] ?? "")}`);
-    } catch (e) { setError(e); setBusy(false); }
-  };
-
-  return (
-    <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="rerun-title">
-      <form method="dialog" onSubmit={(e) => { e.preventDefault(); go(); }}>
-        <h2 id="rerun-title">Re-run #{run.number} from {label}</h2>
-        <p className="sub">A new run of {run.project} at the same commit, <Mono>{shortSha(run.sha)}</Mono>, with the same pipeline{run.graph.libraries?.length ? " and library commits" : ""}{run.draft ? " (a draft run of the same text)" : ""}.</p>
-        <div className="callout callout-draft">Outputs are kept. Files earlier steps wrote to the workspace are not; steps that need them should be included in the re-run.</div>
-        {refusal ? <ErrorBox error={refusal} /> : !plan ? <div className="loading">Working out what runs…</div> : (
-          <div className="rerun-plan">
-            <div><h3 className="h-sm">Will run</h3><ul>{plan.run.map((id) => <li key={id}><Mono>{id}</Mono></li>)}</ul></div>
-            <div><h3 className="h-sm">Will be reused from #{run.number}</h3>
-              {plan.reuse.length ? <ul>{plan.reuse.map((id) => {
-                const s = run.step_list.find((x) => x.id === id);
-                return <li key={id}><Mono>{id}</Mono>{s?.kind === "approval" && s.decided_by ? <span className="faint"> (approved by {s.decided_by})</span> : s?.status === "skipped" ? <span className="faint"> (skipped)</span> : null}</li>;
-              })}</ul> : <p className="sub">Nothing: every step runs again.</p>}
-            </div>
-          </div>
-        )}
-        <RerunInputsNote run={run} />
-        <p className="sub"><strong>Resume</strong> continues this run instead: only the steps that did not succeed run again, in the same run and the same workspace, and it is refused once a deployment opened. A <strong>re-run</strong> is a new run from a fresh checkout: outputs of reused steps are kept, files they wrote are not, and deploy steps always run again.</p>
-        <ErrorBox error={error} />
-        <div className="dialog-actions">
-          <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={!plan || busy}>{busy ? "Starting…" : "Re-run"}</button>
-        </div>
-      </form>
-    </dialog>
   );
 }
 

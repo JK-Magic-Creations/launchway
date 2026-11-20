@@ -587,3 +587,18 @@ func (c *cmd) lockLaneBeforeRows() error {
 	}
 	return nil
 }
+
+// takeLane has a run being created join its pipeline's lane (schema 24): it
+// takes the lane, waits for it, or is skipped, before any of its steps is
+// queued. Draft runs never join one. It reports whether the run goes now, and
+// the note to add to the decision about its push or firing.
+func (c *cmd) takeLane(nr *NewRun, draft bool, trig Trigger, number int) (goes bool, note string, err error) {
+	l := nr.Pipeline.Lane
+	if l == nil || draft || !c.e.knows(schemaFlow) {
+		return true, "", nil
+	}
+	if goes, note, err = c.joinLane(nr.Project, l, trig, number); err != nil {
+		return false, "", err
+	}
+	return goes, note, c.noteLaneFiring(nr, note)
+}

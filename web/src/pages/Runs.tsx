@@ -1,6 +1,7 @@
 import { AllowedFailureBadge } from "../components/AllowedFailures";
 import { useCallback, useEffect, useState } from "react";
-import { api, type LaneInfo, type Project, type RunStatus, type RunSummary } from "../api";
+import { api, type Project, type RunStatus, type RunSummary } from "../api";
+import type { LaneInfo } from "../api/flow";
 import { ago, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { useNow, useStream } from "../live";
 import { BranchIcon, CommitIcon, Empty, ErrorBox, Link, StatusIcon, StepStrip, statusLabel } from "../components/ui";

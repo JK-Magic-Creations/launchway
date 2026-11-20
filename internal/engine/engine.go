@@ -677,56 +677,8 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
 		return nil, err
 	}
-	// What each schema brought, in order: a server, or a build limited to
-	// an older schema for testing, refuses what it does not know.
-	if nr.Pipeline.UsesSchema10() && !e.knows(schemaTests) {
-		// A release that old cannot even read the pipeline; a build limited
-		// to it for testing refuses in the same place.
-		return nil, fmt.Errorf("%w: this server does not know test reports (schema %d)", ErrConflict, schemaTests)
-	}
-	if nr.Pipeline.UsesSchema11() {
-		if !e.knows(schemaDeploy) {
-			return nil, fmt.Errorf("%w: this server does not know deploy steps (schema %d)", ErrConflict, schemaDeploy)
-		}
-		if ps := e.CheckDeploys(nr.Project, nr.Pipeline); len(ps) > 0 {
-			return nil, ps
-		}
-	}
-	if nr.Pipeline.UsesSchema12() && !e.knows(schemaArtifacts) {
-		return nil, fmt.Errorf("%w: this server does not know artifacts, fetch or findings (schema %d)", ErrConflict, schemaArtifacts)
-	}
-	if nr.Pipeline.UsesSchema15() && !e.knows(schemaImages) {
-		return nil, fmt.Errorf("%w: this server does not know image steps or deploy changes that pin a digest (schema %d)", ErrConflict, schemaImages)
-	}
-	if nr.Pipeline.UsesSchema18() && !e.knows(schemaReports) {
-		return nil, fmt.Errorf("%w: this server does not know test attachments, coverage or HTML reports (schema %d)", ErrConflict, schemaReports)
-	}
-	if nr.Pipeline.UsesSchemaVerify() {
-		if !e.knows(schemaVerify) {
-			return nil, fmt.Errorf("%w: this server does not know verify or ai steps (schema %d)", ErrConflict, schemaVerify)
-		}
-		if ps := e.CheckVerify(nr.Project, nr.Pipeline); len(ps) > 0 {
-			return nil, ps
-		}
-	}
-	if nr.Pipeline.UsesSchemaPools() && !e.knows(schemaPools) {
-		return nil, fmt.Errorf("%w: this server does not know runner pools (runner:, schema %d)", ErrConflict, schemaPools)
-	}
-	if nr.Pipeline.UsesSchemaResources() {
-		if !e.knows(schemaResources) {
-			return nil, fmt.Errorf("%w: this server does not know step resources (resources:, schema %d)", ErrConflict, schemaResources)
-		}
-	}
-	if nr.Pipeline.UsesSchemaFlow() && !e.knows(schemaFlow) {
-		return nil, fmt.Errorf("%w: this server does not know flow control keys (when.output, on_failure, retry waits, timeout, lane or into, schema %d)", ErrConflict, schemaFlow)
-	}
-	// Step resources above the installation's limits could never be given;
-	// say so now, naming the limit, instead of failing the step later.
-	if ps := e.CheckResources(nr.Pipeline); len(ps) > 0 {
-		return nil, ps
-	}
-	if ps := e.CheckRunLimits(nr.Pipeline); len(ps) > 0 {
-		return nil, ps
+	if err := e.checkSchemas(&nr); err != nil {
+		return nil, err
 	}
 	// While build pools decide where runs go, older servers, which would
 	// hand any run's steps to any runner, must leave new runs alone.
@@ -793,18 +745,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: c.e.withStoreRequires(nr.Pipeline), Trigger: &trig, Source: &src, Draft: draft,
 			PullRequestSecrets: prSecrets, Requires: poolRequires})
-		// A run of a pipeline with a lane takes the lane, waits for it, or is
-		// skipped, before any of its steps is queued (schema 24). Draft runs
-		// never join a lane.
-		goes, laneNote := true, ""
-		if l := nr.Pipeline.Lane; l != nil && draft == nil && c.e.knows(schemaFlow) {
-			var err error
-			if goes, laneNote, err = c.joinLane(nr.Project, l, trig, number); err != nil {
-				return err
-			}
-			if err := c.noteLaneFiring(&nr, laneNote); err != nil {
-				return err
-			}
+		goes, laneNote, err := c.takeLane(&nr, draft != nil, trig, number)
+		if err != nil {
+			return err
 		}
 		if goes {
 			c.advance()
@@ -1070,58 +1013,8 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Queued steps of runs this runner holds and, unless it should leave
-	// them to others, of runs no live runner holds. The transaction below
-	// checks again, against the run's current state.
-	where, args := `runs.runner = ?`, []any{r.ID}
-	if !ownOnly {
-		where = `(runs.runner = ? OR runs.runner = '' OR o.last_seen IS NULL OR o.last_seen < ?)`
-		args = append(args, now.Add(-e.runnerTimeout).UnixMilli())
-	}
-	if e.knows(schemaVerify) && r.Has(FeatureAI) {
-		// An ai step needs no workspace: any runner that calls models may
-		// take it, whoever holds the run.
-		where = `(` + where + ` OR s.kind = 'ai')`
-	}
-	if e.knows(schemaReruns) {
-		// Runs that need a newer server are left to one.
-		where += ` AND runs.min_schema <= ?`
-		args = append(args, e.schema)
-	}
-	if e.knows(schemaDeploy) {
-		// Deploy and rollback steps go to deploy runners (LeaseDeploy).
-		where += ` AND s.target = ''`
-	}
-	if e.knows(schemaFlow) {
-		// A retry that waits is not handed out before its time.
-		where += ` AND s.not_before <= ?`
-		args = append(args, now.UnixMilli())
-	}
-	where += poolWhere
-	args = append(args, poolArgs...)
-	rows, err := e.db.Query(`SELECT s.run_id, s.step_id, s.attempt FROM steps s
-		JOIN runs ON runs.id = s.run_id
-		LEFT JOIN runners o ON o.id = runs.runner
-		WHERE s.status = 'queued' AND `+where+`
-		ORDER BY s.queued_at, s.run_id, s.position LIMIT 20`, args...)
+	cands, err := e.leaseCandidates(r, now, ownOnly, poolWhere, poolArgs)
 	if err != nil {
-		return nil, err
-	}
-	type cand struct {
-		run, step string
-		attempt   int
-	}
-	var cands []cand
-	for rows.Next() {
-		var c cand
-		if err := rows.Scan(&c.run, &c.step, &c.attempt); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		cands = append(cands, c)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	for _, cd := range cands {
@@ -2136,23 +2029,7 @@ func (c *cmd) advance() {
 				}
 				continue
 			}
-			ready, blocked := true, ""
-			for _, n := range def.Needs {
-				switch dep := st.Steps[n]; dep.Status {
-				case StepSucceeded:
-				case StepFailed:
-					// A failure its step tolerates counts as success.
-					if !dep.Allowed && blocked == "" {
-						blocked = fmt.Sprintf("%s %s", n, dep.Status)
-					}
-				case StepSkippedS, StepCanceledS:
-					if blocked == "" {
-						blocked = fmt.Sprintf("%s %s", n, dep.Status)
-					}
-				default:
-					ready = false
-				}
-			}
+			ready, blocked := c.needsState(def)
 			condSkip := ""
 			if rule := def.When.UpstreamRule(); rule != pipeline.UpstreamSucceeded {
 				ready, blocked, condSkip = c.upstreamGate(def, rule)
@@ -2165,11 +2042,8 @@ func (c *cmd) advance() {
 			case condSkip != "":
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: condSkip})
 				changed = true
-			case def.When.OutputWhy(c.condContext(ctx)) != "":
-				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: def.When.OutputWhy(c.condContext(ctx))})
-				changed = true
-			case !def.When.Match(c.condContext(ctx)):
-				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: "its when condition did not match"})
+			case c.whenSkip(def, ctx) != "":
+				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: c.whenSkip(def, ctx)})
 				changed = true
 			case c.loopHolds(id):
 				// Its loop has max_parallel members going; it waits its turn.
@@ -2229,69 +2103,7 @@ func (c *cmd) advance() {
 			}
 		}
 	}
-	c.closeDeployments()
-	failed, canceled := false, false
-	for _, id := range st.Order {
-		switch st.Steps[id].Status {
-		case StepSucceeded, StepSkippedS:
-		case StepFailed:
-			// A failure its step tolerates does not fail the run.
-			failed = failed || !st.Steps[id].Allowed
-		case StepCanceledS:
-			canceled = true
-		default:
-			return // something is still pending or running
-		}
-	}
-	status := RunSucceeded
-	switch {
-	case failed:
-		status = RunFailed
-	case canceled:
-		status = RunCanceled
-	}
-	c.emit(RunFinished, Payload{Status: string(status)})
-}
-
-// lose records that a step's runner disappeared, and queues it again unless
-// it has been lost too often, its retry.on leaves out infrastructure, or the
-// run is being canceled. A lost attempt is an infrastructure failure, so it
-// follows the step's retry policy for those: retry.on says whether it is
-// tried again, and retry.wait and retry.backoff say after how long. Lost
-// attempts are bounded by the server's maxLost, not by retry.times, which
-// counts the step's own failures.
-func (c *cmd) lose(stepID, reason string) {
-	s := c.st.Steps[stepID]
-	c.emit(StepLost, Payload{Step: stepID, Attempt: s.Attempt, Reason: reason})
-	def := c.st.Pipeline.Step(stepID)
-	policy := c.e.knows(schemaFlow) && def != nil
-	switch {
-	case c.st.CancelRequested:
-		c.emit(StepCanceled, Payload{Step: stepID, Attempt: s.Attempt, Reason: c.st.canceledBecause()})
-	case s.Lost <= c.e.maxLost && !(policy && !def.RetriesCause(pipeline.CauseInfrastructure)):
-		q := Payload{Step: stepID, Attempt: s.Attempt + 1, Reason: "requeued after: " + reason}
-		if policy {
-			if wait := def.RetryDelay(s.Lost); wait > 0 {
-				q.NotBefore, q.Requires = c.now+wait.Milliseconds(), schemaFlow
-				q.Reason = "requeued in " + pipeline.Duration(wait).Short() + " after: " + reason
-			}
-		}
-		c.emit(StepQueued, q)
-	case s.Lost <= c.e.maxLost:
-		c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepFailed), Cause: pipeline.CauseInfrastructure,
-			Reason: reason + " (retry.on does not include infrastructure)"})
-	default:
-		c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepFailed), Cause: infraIf(c.e.knows(schemaFlow)),
-			Reason: fmt.Sprintf("%s (gave up after %d tries)", reason, s.Lost)})
-	}
-}
-
-// infraIf is the infrastructure cause where schema 24 can record one.
-func infraIf(knows bool) string {
-	if knows {
-		return pipeline.CauseInfrastructure
-	}
-	return ""
+	c.finishWhenDone()
 }
 
 // job builds what the runner needs, including the outputs of needed steps.

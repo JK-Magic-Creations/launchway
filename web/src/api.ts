@@ -1,4 +1,5 @@
 // Types mirror the Go API in internal/engine and internal/source.
+import { rerunBody, rerunQuery, type RerunFrom } from "./api/flow"; // flow control (schema 24)
 
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
 export type StepStatus =
@@ -36,40 +37,17 @@ export interface RunSummary {
   rerun_of?: string;
   rerun_of_number?: number;
   rerun_from?: string;
-  /** All the steps a re-run started from, when it started from several; rerun_from is the first. */
-  rerun_froms?: string[];
   /** The run has events or a pipeline written by a newer Launchway than this server, which leaves it alone. */
   needs_newer_server: boolean;
   /** A run of a pull request (event "pull_request"): its number. */
   pull_request?: number;
-  /** The branch the pull request targets, for a pull-request run of a pipeline that filters by it. */
-  pull_request_into?: string;
   /** Why the run was asked to cancel, when not by hand, such as "superseded by run #12". */
   cancel_reason?: string;
   /** The newer run that superseded this one, and its number. */
   superseded_by?: string;
   superseded_by_number?: number;
-  /** When the run's timeout will cancel it (Unix ms). Absent when it has none, or while an approval waits (that time does not count). */
-  deadline_at?: number;
-  /** The run's place in its pipeline's lane (runs of the project take turns); absent when it has none. */
-  lane?: LaneInfo;
   /** The run's test results added up; absent when no step has reported any. */
   tests?: TestTotals;
-}
-
-/** Where a run stands in its lane. */
-export interface LaneInfo {
-  name: string;
-  key: string;
-  /** The lane in words: release/ref main. */
-  label: string;
-  /** holding: it goes; waiting: queued behind another run; replaced: a newer run took its place; skipped: the lane was busy. */
-  state: "holding" | "waiting" | "replaced" | "skipped";
-  /** 1 for the run next in line, for a waiting run. */
-  position?: number;
-  /** The run that holds the lane (waiting or skipped), or that took this one's place (replaced). */
-  behind?: { id: string; number: number };
-  reason?: string;
 }
 
 /** Test results counted. Flaky: passed only after the test tool ran them again. */
@@ -465,15 +443,7 @@ export interface EnvironmentView {
   protected?: boolean;
 }
 
-export interface Condition {
-  branch?: string[]; tag?: string[]; event?: string[];
-  /** A run input and the values that run the step (see equals). */
-  input?: string;
-  /** step.key: an output of a step this one needs; the step runs only when it is one of equals. */
-  output?: string;
-  equals?: string[];
-  upstream?: string;
-}
+export interface Condition { branch?: string[]; tag?: string[]; event?: string[] }
 
 /** Where a secret is kept. The value itself never leaves the runner. */
 export interface SecretRef { store: string; key: string; field?: string }
@@ -527,17 +497,6 @@ export interface StepView {
   reused_from?: string;
   reused_from_number?: number;
   reused_attempt?: number;
-  /** A step queued for a retry that waits: when a runner may be given it (Unix ms). */
-  not_before?: number;
-  /** Why the last failed attempt failed: exit, timeout or infrastructure. */
-  failure_cause?: string;
-  retry_wait?: string;
-  retry_backoff?: number;
-  retry_on?: string[];
-  /** The step failed for good and its pipeline allows that (on_failure: continue): shown as failed (allowed). */
-  allowed_failure?: boolean;
-  /** From the definition: continue, or empty for stop. */
-  on_failure?: string;
   /** What each attempt was given, oldest first. */
   inputs: AttemptInputs[];
   /** The step failed because a policy in enforce mode refused it; error says which and why. */
@@ -579,12 +538,9 @@ export interface StepInputs {
 export interface AttemptInputs { attempt: number; inputs: StepInputs }
 
 /** What re-running a run from a step would run again and reuse. */
-/** What a re-run would do: the steps it starts from, those that run again, and those it reuses. */
-export interface RerunPlan { from?: string[]; run: string[]; reuse: string[] }
-/** Where a re-run starts: named steps, or the ones that failed or were canceled. */
-export interface RerunFrom { from?: string[]; failed?: boolean }
+export interface RerunPlan { run: string[]; reuse: string[] }
 
-export interface RerunBrief { id: string; number: number; from: string; froms?: string[]; status: RunStatus; actor: string; created_at: number }
+export interface RerunBrief { id: string; number: number; from: string; status: RunStatus; actor: string; created_at: number }
 
 export interface GraphContainer {
   name: string; image: string; env?: Record<string, string>; cpu?: string; memory?: string; service?: boolean; command?: string[];
@@ -914,8 +870,6 @@ export interface Problem { file?: string; library?: string; line?: number; colum
 
 export interface ValidateResult {
   ok: boolean; problems?: Problem[]; graph?: Graph; levels?: string[][];
-  /** Valid, but will not work as written for the project (for example, a pull-request filter by target branch where the project has no forge). */
-  warnings?: string[];
   /** Templates were expanded from the libraries' current versions. */
   expanded?: boolean;
 }
@@ -995,9 +949,7 @@ export const api = {
   logout: () => call<void>("POST", "/auth/logout"),
   runs: (q: { project?: string; status?: string; lane?: string; limit?: number } = {}, background = false) => {
     const p = new URLSearchParams();
-    if (q.project) p.set("project", q.project);
-    if (q.status) p.set("status", q.status);
-    if (q.lane) p.set("lane", q.lane);
+    for (const k of ["project", "status", "lane"] as const) if (q[k]) p.set(k, q[k]);
     if (q.limit) p.set("limit", String(q.limit));
     return call<RunSummary[]>("GET", "/api/v1/runs?" + p.toString(), undefined, { background });
   },
@@ -1009,14 +961,8 @@ export const api = {
       `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/logs?attempt=${attempt}&after=${after}`),
   cancel: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/cancel`),
   resume: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/resume`),
-  rerunPlan: (id: string, w: string | RerunFrom) => {
-    const q = new URLSearchParams();
-    const r = typeof w === "string" ? { from: [w] } : w;
-    (r.from ?? []).forEach((f) => q.append("from", f));
-    if (r.failed) q.set("failed", "true");
-    return call<RerunPlan>("GET", `/api/v1/runs/${id}/rerun?${q.toString()}`);
-  },
-  rerun: (id: string, w: string | RerunFrom) => call<RunSummary>("POST", `/api/v1/runs/${id}/rerun`, typeof w === "string" ? { from: w } : { from: w.from ?? [], failed: !!w.failed }),
+  rerunPlan: (id: string, w: string | RerunFrom) => call<RerunPlan>("GET", `/api/v1/runs/${id}/rerun?${rerunQuery(w)}`),
+  rerun: (id: string, w: string | RerunFrom) => call<RunSummary>("POST", `/api/v1/runs/${id}/rerun`, rerunBody(w)),
   approve: (id: string, step: string, comment: string) =>
     call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/approve`, { comment }),
   reject: (id: string, step: string, comment: string) =>

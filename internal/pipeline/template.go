@@ -803,11 +803,7 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	if out.UsesSchemaResources() {
 		out.Requires = max(out.Requires, SchemaResources)
 	}
-	// Likewise for flow control keys a template's step uses (on_failure, a
-	// condition on an output).
-	if out.UsesSchemaFlow() {
-		out.Requires = max(out.Requires, SchemaFlow)
-	}
+	out.requireFlow() // likewise for the flow control keys a template's step uses
 	return out, nil
 }
 
@@ -933,19 +929,6 @@ func short(sha string) string {
 		return sha[:10]
 	}
 	return sha
-}
-
-// whenIn is a condition written in the scope that has the given prefix, as
-// the run sees it: an output test names a step of the run by its full ID.
-// The condition is copied, because a template's steps are shared by every
-// use of the template.
-func whenIn(c *Condition, prefix string) *Condition {
-	if c == nil || c.Output == "" || prefix == "" {
-		return c
-	}
-	cc := *c
-	cc.Output = prefix + c.Output
-	return &cc
 }
 
 // dropped reports whether a template step's if left it out.
@@ -1096,11 +1079,7 @@ func (x *expander) emit(sc *scope) {
 		if c.Container != "" {
 			c.Container = sc.containers[s.Container]
 		}
-		if c.When == nil {
-			c.When = sc.when
-		} else {
-			c.When = whenIn(c.When, sc.prefix)
-		}
+		c.When = sc.whenFor(c.When)
 		if !s.retrySet && sc.retry != nil && !s.IsApproval() {
 			c.setRetryPolicy(*sc.retry)
 		}

@@ -532,18 +532,8 @@ func (ps *parser) rule(r *Rules, key string, v *yaml.Node, where string) {
 			ps.add(v, where, "say at least one of digest, built_by_run, signed or scanned")
 		}
 		r.DeployedImages = d
-	case RuleApprovals:
-		a := &Approvals{Min: 1}
-		ps.mapping(v, where, []string{"min"}, func(_ string, _, x *yaml.Node) {
-			a.Min = ps.integer(x, where+".min", 1, 20)
-		})
-		r.Approvals = a
-	case RuleAllowedFailures:
-		af := &AllowedFailures{}
-		ps.mapping(v, where, []string{"max"}, func(_ string, _, x *yaml.Node) {
-			af.Max = ps.integer(x, where+".max", 0, 100)
-		})
-		r.AllowedFailures = af
+	case RuleApprovals, RuleAllowedFailures:
+		ps.countRule(r, key, v, where)
 	case RuleRefs:
 		rf := &Refs{}
 		ps.mapping(v, where, []string{"branches", "tags"}, func(key string, _, x *yaml.Node) {

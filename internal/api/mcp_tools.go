@@ -561,7 +561,7 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 	if len(d.Levels) <= 50 {
 		out.Order = d.Levels
 	}
-	var failed, running, waiting, queued []string
+	var lists stepLists
 	var actions []string
 	for i, s := range d.StepList {
 		sb := stepBrief{ID: s.ID, Kind: s.Kind, Status: string(s.Status), Attempt: s.Attempt, ExitCode: s.ExitCode, Needs: s.Needs, Group: s.Group,
@@ -580,69 +580,7 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 			}
 		}
 		text := &stepText{}
-		switch s.Status {
-		case engine.StepFailed:
-			sb.Why = fmt.Sprintf("failed on attempt %d", s.Attempt)
-			if s.ExitCode != nil {
-				sb.Why += fmt.Sprintf(" with exit code %d", *s.ExitCode)
-			}
-			if s.AllowedFailure {
-				// Not a failure of the run: its step has on_failure: continue.
-				sb.AllowedFailure = true
-				sb.Why += " (allowed: on_failure: continue, so the run goes on)"
-			} else {
-				failed = append(failed, s.ID)
-			}
-			text.Error, text.Output = untrusted(s.Error, 500), untrusted(s.Excerpt, maxExcerptBytes)
-		case engine.StepWaitingS:
-			waiting = append(waiting, s.ID)
-			switch {
-			case s.Kind == pipeline.KindApproval:
-				sb.Why = "waiting for a person to approve or reject it"
-				if s.Deadline > 0 {
-					sb.Why += "; rejected by itself at " + ts(s.Deadline) + " if nobody decides"
-				}
-				text.Message = untrusted(s.Message, 500)
-			case s.WaitKind == engine.WaitLock:
-				sb.Why = "waiting for the lock on environment " + s.Environment + ", which another deployment holds"
-			case s.WaitKind == engine.WaitObserve:
-				sb.Why = "deployed; waiting for deploy runners to observe that it is healthy"
-			default:
-				sb.Why = "waiting"
-			}
-		case engine.StepQueuedS:
-			queued = append(queued, s.ID)
-			sb.Why = "waiting for a runner to take it"
-			if s.NotBefore > time.Now().UnixMilli() {
-				sb.NotBefore = ts(s.NotBefore)
-				sb.Why = fmt.Sprintf("waiting to be retried (attempt %d of %d): a runner is given it from %s", s.Attempt, s.Retry+1, sb.NotBefore)
-			}
-		case engine.StepLeasedS, engine.StepRunning:
-			running = append(running, s.ID)
-			if s.Runner != "" {
-				sb.Why = "running on " + s.Runner
-			}
-		case engine.StepSkippedS:
-			switch s.SkipKind {
-			case "condition":
-				sb.Why = "skipped: its when condition did not hold"
-			case "upstream":
-				sb.Why = "skipped: a step it needs did not succeed"
-			case engine.SkipNotNeeded:
-				sb.Why = "skipped: not needed"
-			case engine.SkipSuperseded:
-				sb.Why = "skipped: a newer run of the same service took its place"
-			default:
-				sb.Why = "skipped"
-			}
-			if s.Error != "" {
-				text.Error = untrusted(s.Error, 500)
-			}
-		case engine.StepCanceledS:
-			if s.Error != "" {
-				text.Error = untrusted(s.Error, 500)
-			}
-		}
+		lists.note(&s, &sb, text)
 		if s.ReusedFrom != "" {
 			sb.Why = strings.TrimPrefix(sb.Why+fmt.Sprintf("; reused from run #%d", s.ReusedFromNumber), "; ")
 		}
@@ -655,6 +593,7 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 			out.StepsCut++
 		}
 	}
+	failed, running, waiting, queued := lists.failed, lists.running, lists.waiting, lists.queued
 	id := d.ID
 	var sum []string
 	switch d.Status {
