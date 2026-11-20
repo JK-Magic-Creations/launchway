@@ -159,7 +159,7 @@ func TestKubernetesImageStep(t *testing.T) {
 	}
 	stores := secrets.NewResolver()
 	stores.Add("files", secrets.File{Dir: dir}, nil, nil)
-	ex, err := executor.NewKubernetes(executor.KubernetesOptions{Context: ctxName, Namespace: "launchway-test", StartTimeout: "5m"},
+	ex, err := executor.NewKubernetes(executor.KubernetesOptions{Context: ctxName, Namespace: testKubeNamespace(), StartTimeout: "5m"},
 		fmt.Sprintf("test-images-%d", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatal(err)
@@ -267,3 +267,12 @@ spec:
   selector: { app: registry }
   ports: [{ port: 5000, targetPort: 5000 }]
 `
+
+// testKubeNamespace is the namespace Kubernetes tests run step pods in:
+// LAUNCHWAY_TEST_KUBE_NAMESPACE, or launchway-test.
+func testKubeNamespace() string {
+	if ns := os.Getenv("LAUNCHWAY_TEST_KUBE_NAMESPACE"); ns != "" {
+		return ns
+	}
+	return "launchway-test"
+}
