@@ -1,0 +1,61 @@
+# The test repository for make test-runner-chart, served by git daemon (git://lw-rc-git/demo.git).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lw-rc-git
+data:
+  pipeline.yaml: |
+    pipeline: chart-test
+    steps:
+      hello:
+        image: docker.io/library/alpine:3.23.8@sha256:469c9ea410b9215eaee7976ba6c0639039b444be8e5d638f7abbada189971eb2
+        run: |
+          echo "chart-test step in pod $(hostname) as uid $(id -u)"
+          # The step namespace's NetworkPolicy allows DNS only.
+          # The test decides what "not blocked" means: some network plugins ignore policies.
+          if wget -q -T 5 -O /dev/null http://lw-rc-launchway.lw-rc-server.svc:8080/readyz; then
+            echo "egress NOT blocked"
+          else
+            echo "egress blocked"
+          fi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lw-rc-git
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: lw-rc-git } }
+  template:
+    metadata:
+      labels: { app: lw-rc-git }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 65532, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: git
+          image: lw-rc-git
+          imagePullPolicy: Never
+          command:
+            - sh
+            - -ec
+            - |
+              export HOME=/tmp
+              mkdir -p /tmp/src/.launchway /tmp/git && cd /tmp/src
+              git init -q -b main .
+              cp /pipeline/pipeline.yaml .launchway/
+              git add . && git -c user.name=test -c user.email=test@example.invalid commit -q -m test
+              git clone -q --bare /tmp/src /tmp/git/demo.git
+              exec git daemon --base-path=/tmp/git --export-all --reuseaddr --listen=0.0.0.0 --port=9418
+          ports: [ { containerPort: 9418 } ]
+          readinessProbe: { tcpSocket: { port: 9418 }, periodSeconds: 2 }
+          securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+          volumeMounts: [ { name: pipeline, mountPath: /pipeline } ]
+      volumes: [ { name: pipeline, configMap: { name: lw-rc-git } } ]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lw-rc-git
+spec:
+  selector: { app: lw-rc-git }
+  ports: [ { port: 9418, targetPort: 9418 } ]
