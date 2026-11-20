@@ -7,6 +7,7 @@ import { ApiError, api } from "../../api";
 import { configApi, notOffered, type ChangeRequest, type ConfigOverview, type LibraryInfo, type LibraryTemplates, type RepoCheck, type Spec } from "../../configApi";
 import { navigate } from "../../router";
 import { Choices, CheckInput, CopyBlock, DefinedAt, ListInput, SelectInput, TextInput } from "../../components/ConfigForm";
+import { AllowHost } from "../../components/AllowHost";
 import { Link } from "../../components/ui";
 import { CreatedList, WizardRunner, type StepDef } from "./Wizards";
 
@@ -321,7 +322,8 @@ function RepoCheckLine({ check, repo }: { check: { state: string; result?: RepoC
     body = check.result.ok
       ? <span><span className="cf-ok">The server can read it: {check.result.branches.length} branch{check.result.branches.length === 1 ? "" : "es"}, default {check.result.default_branch || "unknown"}.</span>{" "}
           <PipelineFileState check={check.result} branch={check.branch || check.result.default_branch || "the default branch"} /></span>
-      : <span className="cf-problem">The server cannot read it: {check.result.problem ?? "no reason given"}. You can continue, but runs will fail until the server has access.</span>;
+      : <span className="cf-problem">The server cannot read it: {check.result.problem ?? "no reason given"}. You can continue, but runs will fail until the server has access.
+          {check.result.blocked && check.result.blocked_host && <AllowHost host={check.result.blocked_host} />}</span>;
   }
   return <span className="cf-checkresult" aria-live="polite">{body}</span>;
 }

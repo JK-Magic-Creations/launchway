@@ -1,12 +1,15 @@
 // The first-run setup: what to call things, how people sign in, and the
-// first project. Sign-in stays in the server's configuration file (the
-// server needs it before it can read the database), so that step writes
-// the lines to put there; it never asks for the client secret.
+// first project. The sign-in answers are checked with the identity provider
+// (the server's guarded check) and saved as the sign-in settings; the client
+// secret is never asked for, only the name of the variable that holds it.
+// Saving does not switch sign-in on: that needs a successful test sign-in by
+// the administrator, which this version cannot do yet, and the step says so.
 
 import { useContext, useEffect, useState } from "react";
 import { MeContext } from "../../auth";
 import { configApi, notOffered, type ChangeRequest, type ConfigOverview, type SignInCheck, type Spec } from "../../configApi";
-import { Choices, CopyBlock, ListInput, TextInput } from "../../components/ConfigForm";
+import { Choices, ListInput, TextInput } from "../../components/ConfigForm";
+import { AllowHost } from "../../components/AllowHost";
 import { Link } from "../../components/ui";
 import { PipelineToCommit, RunItNow, useRepoFlow } from "./ConnectRepo";
 import { CreatedList, WizardRunner, type StepDef } from "./Wizards";
@@ -39,12 +42,14 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   const [adminUsers, setAdminUsers] = useState<string[]>([]);
   const [signinCheck, setSigninCheck] = useState<{ state: "idle" | "checking" | "unavailable" | "error"; result?: SignInCheck; error?: string }>({ state: "idle" });
   const [inst, setInst] = useState<{ spec: Spec; version: number } | null>(null);
+  const [signinObj, setSigninObj] = useState<number>(-1);
   const [org, setOrg] = useState<{ spec: Spec; version: number } | null>(null);
   const flow = useRepoFlow(overview);
 
   // What exists is kept: the levels are set on top of the installation's other settings.
   useEffect(() => {
     configApi.get("installation", "installation").then((o) => setInst({ spec: o.spec, version: o.version })).catch(() => setInst({ spec: {}, version: -1 }));
+    configApi.get("sign-in", "sign-in").then((o) => setSigninObj(o.version > 0 ? o.version : -1)).catch(() => setSigninObj(-1));
     configApi.get("organisation", "default").then((o) => setOrg({ spec: o.spec, version: o.version })).catch(() => setOrg({ spec: {}, version: -1 }));
   }, []);
 
@@ -78,6 +83,12 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
   }
   if (useUnits === "yes" && unitName.trim() && !overview.units?.some((u) => u.name === unitName.trim())) {
     changes.push({ kind: "unit", name: unitName.trim(), spec: unitDisplay.trim() ? { display_name: unitDisplay.trim() } : {}, version: -1 });
+  }
+  if (signin === "oidc" && signinCheck.result && signinCheck.result.problems.length === 0) {
+    changes.push({ kind: "sign-in", name: "sign-in", version: signinObj, spec: {
+      issuer: issuer.trim().replace(/\/+$/, ""), client_id: clientId.trim(), redirect_url: redirect.trim(), client_secret_env: secretEnv.trim(),
+      ...(adminGroups.length || adminUsers.length ? { admins: { ...(adminGroups.length ? { groups: adminGroups } : {}), ...(adminUsers.length ? { users: adminUsers } : {}) } } : {}),
+    } });
   }
   if (flow.name) changes.push({ ...flow.change, unit: useUnits === "yes" && unitName.trim() ? unitName.trim() : flow.change.unit });
 
@@ -162,10 +173,11 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
             </div>
             <div className="cf-row">
               <button type="button" className="btn" disabled={!issuer.trim() || signinCheck.state === "checking"} onClick={checkSignin}>
-                {signinCheck.state === "checking" ? "Checking…" : "Check with the provider and write the settings"}</button>
+                {signinCheck.state === "checking" ? "Checking…" : "Check with the provider"}</button>
             </div>
             <div aria-live="polite">
-              {signinCheck.state === "unavailable" && <p className="faint">This check is not available on this server. You can continue; write the auth: section of the configuration file by hand (see the sign-in guide).</p>}
+              {signinCheck.state === "unavailable" && <p className="faint">This check is not available on this server, so the sign-in answers cannot be checked or saved here.</p>}
+              {signinCheck.result?.blocked && signinCheck.result.blocked_host && <AllowHost host={signinCheck.result.blocked_host} />}
               {signinCheck.state === "error" && <p className="cf-problem">The check failed: {signinCheck.error}</p>}
               {signinCheck.result && (
                 <>
@@ -175,7 +187,11 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
                 </>
               )}
             </div>
-            {signinCheck.result?.snippet && <SignInSnippet snippet={signinCheck.result.snippet} env={secretEnv} />}
+            <div className="callout callout-info" role="note">
+              <strong>What happens with these answers.</strong> They are saved as the sign-in settings and kept with the history of every change. Saving does not switch sign-in on:
+              that needs you to sign in successfully with them first, so that nobody is locked out, and this version cannot do that test sign-in yet. Until it can, this server keeps the
+              sign-in it started with{me?.auth_mode === "oidc" ? " (your identity provider)" : " (none: anyone who can reach it has full access)"}, and the saved answers wait.
+            </div>
           </div>
         )}
       </>
@@ -188,13 +204,13 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
       steps={[namesStep, signinStep, ...flow.steps]} changes={changes}
       summaryExtra={<>
         <PipelineToCommit flow={flow} />
-        {signin === "oidc" && <p className="cf-help">Sign-in is not part of what is created here: it is in the server's configuration file (see the previous step's instructions).</p>}
+        {signin === "oidc" && <p className="cf-help">The sign-in answers are saved, not switched on: that waits for a test sign-in, which this version cannot do yet.</p>}
       </>}
       done={(created) => (
         <>
           <CreatedList objects={created} overview={overview} />
           <PipelineToCommit flow={flow} />
-          {signin === "oidc" && signinCheck.result?.snippet && <SignInSnippet snippet={signinCheck.result.snippet} env={secretEnv} />}
+          {signin === "oidc" && <div className="callout callout-info">Your sign-in answers are saved. They are not switched on: that needs a successful test sign-in with them, which this version cannot do yet, so this server keeps the sign-in it started with.</div>}
           {signin === "none" && <div className="callout callout-draft">Sign-in is still off: anyone who can reach this server has full access. Run the first-run setup again, or follow the sign-in guide, before others can reach it.</div>}
           <h3 className="h-sm">Next</h3>
           {flow.name && <RunItNow name={flow.name} branch={flow.branch} />}
@@ -205,18 +221,5 @@ export function FirstRunWizard({ overview }: { overview: ConfigOverview }) {
           </ul>
         </>
       )} />
-  );
-}
-
-function SignInSnippet({ snippet, env }: { snippet: string; env: string }) {
-  return (
-    <div className="cf-instructions">
-      <CopyBlock title="The auth: section of the server's configuration file" text={snippet} />
-      <ol className="cf-howto">
-        <li>Put these lines in the configuration file every server starts with (<span className="mono">launchway.yaml</span>, or the chart's <span className="mono">config.auth</span> values), replacing any <span className="mono">auth:</span> section there.</li>
-        <li>Set <span className="mono">{env || "the environment variable"}</span> to the client secret on every server, from your secret manager. Do not paste it here or into the file.</li>
-        <li>Restart the servers. Sign-in is read when a server starts, because it is needed before the database can be read.</li>
-      </ol>
-    </div>
   );
 }

@@ -238,6 +238,17 @@ export const FIELDS: Record<string, FieldDef[]> = {
     { path: "defaults.step.memory_limit", label: "Memory it may use at most", type: "text", section: "Defaults for steps that ask for nothing", placeholder: "6Gi",
       help: "Other kinds of step (image builds and the like) have defaults of their own: set them on the Raw tab under defaults." },
   ],
+  "sign-in": [
+    { path: "issuer", label: "The provider's address (issuer)", type: "text", help: "The OpenID Connect issuer URL the provider shows for the application." },
+    { path: "client_id", label: "Client id", type: "text", help: "The application's client id in the provider." },
+    { path: "redirect_url", label: "Redirect address", type: "text", help: "This server's address plus /auth/callback; register exactly it in the provider." },
+    { path: "client_secret_env", label: "Environment variable that holds the client secret", type: "text",
+      help: "Only the name is kept here, never the secret: it is set on every server from your secret manager." },
+    { path: "groups_claim", label: "Groups claim", type: "text", help: "The claim the provider puts groups in; groups by default." },
+    { path: "username_claim", label: "User name claim", type: "text", help: "Which claim names the person; the default is usually right." },
+    { path: "admins.groups", label: "Groups whose members are the first administrators", type: "list", help: "Group names as the provider sends them." },
+    { path: "admins.users", label: "Or users", type: "list", help: "User names of the first administrators." },
+  ],
   "secret-store": [
     { path: "type", label: "Type", type: "select", options: [{ value: "", label: "Choose a type" }, ...SECRET_STORE_TYPES],
       help: "What kind of store pipelines may name. Its address and credentials stay with the runners." },

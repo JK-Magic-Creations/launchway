@@ -60,7 +60,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
   const objName = name || newName.trim();
   const dirty = isNew ? (objName !== "" || Object.keys(spec).length > 0) : !!obj && (JSON.stringify(obj.spec ?? {}) !== JSON.stringify(spec) || (obj.unit ?? "") !== unit);
   const change: ChangeRequest[] | null = dirty && objName
-    ? [{ kind: k.name, name: objName, unit: unit || undefined, spec, version: isNew ? -1 : obj?.version }] : null;
+    ? [{ kind: k.name, name: objName, unit: unit || undefined, spec, version: isNew ? -1 : (obj?.version ?? -1) }] : null;
   const check = useServerCheck(change);
   const fields = useMemo(() => withLevelNames(FIELDS[k.name] ?? [], overview.levels), [k.name, overview.levels]);
   const nameField = { path: "__name", label: "Name", help: "", type: "text" as const, match: ["name", "names", "exists", "already"] };
@@ -86,7 +86,9 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
         navigate(`/config/${k.path}/${encodeURIComponent(r.object.name)}`);
         return;
       }
-      const r = await configApi.put(k.path, name, { unit: unit || undefined, spec, comment: comment || undefined, version: obj!.version });
+      const take = await takeOwnership();
+      if (take === null) { setBusy(false); return; }
+      const r = await configApi.put(k.path, name, { unit: unit || undefined, spec, comment: comment || undefined, version: obj!.version, take_ownership: take || undefined });
       setComment("");
       setSaved(r.changed ? `Saved: version ${r.object.version}. Every server uses it within seconds.` : "Nothing changed, so nothing was saved.");
       if (["installation", "organisation", "unit"].includes(k.name) || unit !== obj?.unit) loadOverview(true).catch(() => {});
@@ -96,19 +98,30 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
       else setError(e);
     } finally { setBusy(false); }
   };
+  // An object Terraform or Git manages is read-only here unless the person
+  // takes it over, which is recorded: ask, and say what it means. null: they
+  // declined.
+  const takeOwnership = async (): Promise<boolean | null> => {
+    const by = obj?.managed_by;
+    if (by !== "terraform" && by !== "git") return false;
+    const who = by === "terraform" ? "Terraform" : "Git";
+    return window.confirm(`${who} manages this. A change made here would be set back by its next run, so changing it here means taking it over from ${who}: it is then managed here, and the change is recorded. Take it over and save?`) ? true : null;
+  };
   const remove = async () => {
     if (!obj) return;
     const what = k.name === "project" ? " Its runs and history are kept; it stops being watched." : "";
     if (!window.confirm(`Delete ${one.toLowerCase()} ${name}? It stops applying at once.${what} You can restore it from this page.`)) return;
     setBusy(true); setError(null);
-    try { await configApi.remove(k.path, name, obj.version, comment || undefined); setComment(""); if (k.name === "unit") loadOverview(true).catch(() => {}); load(); }
+    const take = await takeOwnership();
+    if (take === null) { setBusy(false); return; }
+    try { await configApi.remove(k.path, name, obj.version, comment || undefined, take || undefined); setComment(""); if (k.name === "unit") loadOverview(true).catch(() => {}); load(); }
     catch (e) { if (e instanceof ApiError && e.status === 412) setConflict(true); else setError(e); }
     finally { setBusy(false); }
   };
   const restore = async () => {
     if (!window.confirm(`Restore ${one.toLowerCase()} ${name}? It applies again at once, as it was when it was deleted.`)) return;
     setBusy(true); setError(null);
-    try { await configApi.restore(k.path, name, comment || undefined); setComment(""); if (k.name === "unit") loadOverview(true).catch(() => {}); load(); }
+    try { await configApi.restore(k.path, name, obj?.version ?? -1, comment || undefined); setComment(""); if (k.name === "unit") loadOverview(true).catch(() => {}); load(); }
     catch (e) { setError(e); } finally { setBusy(false); }
   };
 
@@ -146,7 +159,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
 
       {wiz && <div className="callout callout-info">Not sure what to put? <Link href={`/config/wizard/${wiz.id}`}>{wiz.title}</Link> asks a few questions instead.</div>}
       {obj?.managed_by === "terraform" && (
-        <div className="callout callout-draft" role="note"><strong>Managed by Terraform.</strong> A change made here works, but the next Terraform apply will set it back to what Terraform has. Change it in Terraform instead.</div>
+        <div className="callout callout-draft" role="note"><strong>Managed by Terraform.</strong> It is read-only here: change it in Terraform. If you must change it here, saving asks you to take it over from Terraform, which is recorded.</div>
       )}
       {obj?.managed_by === "import" && (
         <div className="callout callout-info" role="note">This was imported from a configuration file. The file's copy is now ignored: changes made here are the ones that count.</div>

@@ -31,8 +31,15 @@ export interface ConfigOverview {
   organisation?: { display_name?: string; description?: string };
   units?: UnitView[];
   units_in_use?: boolean;
-  status?: { revision: number; problem?: string };
+  status?: ConfigStatus;
   admin?: boolean;
+}
+
+/** What the servers run: the stored revision, this server's applied revision and each server's last report. */
+export interface ConfigStatus {
+  revision: number; stored_revision?: number; server?: string; problem?: string;
+  safe_mode?: { reason: string; using: string };
+  servers?: { server: string; revision: number; state: "applied" | "failed"; problem?: string; at: number }[];
 }
 
 export type Spec = Record<string, unknown>;
@@ -51,8 +58,8 @@ export interface ConfigChange {
 
 export interface ChangeRequest {
   kind: string; name: string; action?: "put" | "delete" | "restore"; unit?: string; spec?: Spec;
-  /** 0: any version; -1: must not exist yet; otherwise the version expected. */
-  version?: number; comment?: string;
+  /** Always sent: -1 for an object that does not exist yet, otherwise the version that was read. */
+  version: number; comment?: string;
 }
 
 export interface EffectiveEntry { kind: string; name: string; from: string; unit?: string }
@@ -60,7 +67,7 @@ export interface EffectiveSetting { key: string; value: unknown; from: string }
 export interface Effective { project: string; unit?: string; objects: EffectiveEntry[]; settings: EffectiveSetting[] }
 
 export interface RepoCheck {
-  ok: boolean; problem?: string; default_branch?: string; branches: string[]; has_pipeline_file: boolean;
+  ok: boolean; problem?: string; blocked?: boolean; blocked_host?: string; default_branch?: string; branches: string[]; has_pipeline_file: boolean;
   /** The pipeline file found, the commit it was read at, and whether it is valid there. */
   pipeline_file?: string; commit?: string; valid?: boolean;
   problems?: { file: string; line?: number; column?: number; commit: string; message: string }[];
@@ -72,6 +79,8 @@ export interface SignInRequest {
 }
 export interface SignInCheck {
   ok: boolean; problems: string[]; snippet: string;
+  /** The server refused to contact the address (it is internal); blocked_host is what an administrator may allow. */
+  blocked?: boolean; blocked_host?: string;
   endpoints: { authorization?: string; token?: string; jwks?: string; claims_offered?: string[]; groups_claim_hint?: string };
 }
 
@@ -103,12 +112,15 @@ export const configApi = {
   get: (kind: string, name: string) => call<ConfigObject>("GET", `/api/v1/config/${enc(kind)}/${enc(name)}`),
   create: (kind: string, body: { name: string; unit?: string; spec: Spec; comment?: string }) =>
     call<{ object: ConfigObject; changed: boolean }>("POST", `/api/v1/config/${enc(kind)}`, body),
-  put: (kind: string, name: string, body: { unit?: string; spec: Spec; comment?: string; version: number }) =>
-    call<{ object: ConfigObject; changed: boolean }>("PUT", `/api/v1/config/${enc(kind)}/${enc(name)}`, body),
-  remove: (kind: string, name: string, version: number, comment?: string) =>
-    call<{ object: ConfigObject }>("DELETE", `/api/v1/config/${enc(kind)}/${enc(name)}`, { version, comment }),
-  restore: (kind: string, name: string, comment?: string) =>
-    call<{ object: ConfigObject }>("POST", `/api/v1/config/${enc(kind)}/${enc(name)}/restore`, { comment }),
+  /** A change always names the version it read: the server refuses it if somebody changed the object meanwhile. A version of 0 or less is an object never written (a setting still at its defaults): it is created. */
+  put: (kind: string, name: string, body: { unit?: string; spec: Spec; comment?: string; version: number; take_ownership?: boolean }) =>
+    body.version > 0
+      ? call<{ object: ConfigObject; changed: boolean }>("PUT", `/api/v1/config/${enc(kind)}/${enc(name)}`, body)
+      : call<{ object: ConfigObject; changed: boolean }>("POST", `/api/v1/config/${enc(kind)}`, { name, unit: body.unit, spec: body.spec, comment: body.comment }),
+  remove: (kind: string, name: string, version: number, comment?: string, take_ownership?: boolean) =>
+    call<{ object: ConfigObject }>("DELETE", `/api/v1/config/${enc(kind)}/${enc(name)}`, { version, comment, take_ownership }),
+  restore: (kind: string, name: string, version: number, comment?: string) =>
+    call<{ object: ConfigObject }>("POST", `/api/v1/config/${enc(kind)}/${enc(name)}/restore`, { version, comment }),
   history: (kind: string, name: string) =>
     call<{ changes: ConfigChange[] }>("GET", `/api/v1/config/${enc(kind)}/${enc(name)}/history`),
   allHistory: (limit = 30) => call<{ changes: ConfigChange[] }>("GET", `/api/v1/config/history?limit=${limit}`),

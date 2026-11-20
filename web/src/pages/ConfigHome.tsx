@@ -33,8 +33,8 @@ export function ConfigHomePage() {
       <div className="page">
         <h1>Configuration</h1>
         <Empty title="This server keeps its configuration in its file">
-          This server does not keep configuration in its database, so there is nothing to change here: edit its configuration file and restart it.
-          A newer Launchway keeps everything but the bootstrap settings in the database.
+          This server does not keep configuration in its database, so there is nothing to change here.
+          Upgrade Launchway to a version that does, and everything but the bootstrap settings is set up here instead, with its history.
         </Empty>
       </div>
     );
@@ -54,10 +54,32 @@ export function ConfigHomePage() {
         <a className="btn" href="/api/v1/config/export" download>Export as YAML</a>
       </header>
       <ErrorBox error={loadError} />
-      {overview.status?.problem && (
+      {overview.status?.safe_mode && (
         <div className="callout callout-bad" role="alert">
-          <strong>The newest configuration is not in effect.</strong> {overview.status.problem} The servers keep using revision {overview.status.revision}.
+          <strong>This server is in safe mode.</strong> The stored configuration could not be loaded ({overview.status.safe_mode.reason}), so it runs with {overview.status.safe_mode.using}. It tries the stored configuration again every few seconds; fix the problem named here and it leaves safe mode by itself.
         </div>
+      )}
+      {overview.status?.problem && !overview.status.safe_mode && (
+        <div className="callout callout-bad" role="alert">
+          <strong>The newest configuration is not in effect.</strong> {overview.status.problem} The servers keep using revision {overview.status.revision}; the change is stored and is tried again every few seconds.
+        </div>
+      )}
+      {overview.status?.servers && overview.status.servers.length > 0 && (
+        <details className="cf-servers">
+          <summary>Which revision each server runs (stored revision {overview.status.stored_revision ?? overview.status.revision})</summary>
+          <table className="table">
+            <thead><tr><th>Server</th><th>Applied revision</th><th>State</th></tr></thead>
+            <tbody>
+              {overview.status.servers.map((s) => (
+                <tr key={s.server}>
+                  <td className="mono">{s.server}{s.server === overview.status?.server ? " (this one)" : ""}</td>
+                  <td>{s.revision}</td>
+                  <td>{s.state === "applied" && s.revision === (overview.status?.stored_revision ?? s.revision) ? "up to date" : s.state === "failed" ? `could not apply: ${s.problem ?? ""}` : "behind: it applies the stored revision within seconds"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
       )}
 
       <Checklist overview={overview} counts={counts} />

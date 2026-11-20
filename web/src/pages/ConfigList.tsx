@@ -37,7 +37,7 @@ export function ConfigListPage({ kind }: { kind: string }) {
   const restore = async (o: ConfigObject) => {
     if (!window.confirm(`Restore ${one.toLowerCase()} ${o.name}? It applies again at once, as it was when it was deleted.`)) return;
     setBusy(o.name);
-    try { await configApi.restore(k.path, o.name); load(); } catch (e) { setError(e); } finally { setBusy(""); }
+    try { await configApi.restore(k.path, o.name, o.version); load(); } catch (e) { setError(e); } finally { setBusy(""); }
   };
   return (
     <div className="page cf-page">
