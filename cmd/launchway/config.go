@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -37,6 +36,7 @@ const configUsage = `Usage:
   launchway config imports [--json]                   past imports, the first start's among them
   launchway config effective PROJECT [--json]         what applies to a project, and where it comes from
 
+  launchway health-sources|models|policy-sources get|set|create|delete|restore|history ...   likewise
   launchway projects list|get|set|create|delete|restore|history ...   the same for projects
 
 A spec is the object's settings with the keys of the configuration file, for
@@ -783,4 +783,13 @@ func (cl *client) configEffective(args []string) error {
 	})
 }
 
-var _ = bytes.MinRead
+// configVerb reports whether word is a command that changes or reads one
+// configuration object, for the commands that began as read-only lists
+// (health-sources, models, policy) and now also manage their kind.
+func configVerb(word string) bool {
+	switch word {
+	case "get", "show", "set", "put", "create", "delete", "restore", "history", "list":
+		return true
+	}
+	return false
+}

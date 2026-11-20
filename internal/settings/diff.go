@@ -2,7 +2,6 @@ package settings
 
 import (
 	"encoding/json"
-	"fmt"
 	"path"
 	"sort"
 
@@ -104,12 +103,4 @@ func policyProjects(v any) ([]string, bool) {
 		return ps, len(ps) == 0
 	}
 	return nil, false
-}
-
-// describe names an object for messages.
-func describe(kind, name string) string {
-	if k := kindByName(kind); k != nil {
-		return fmt.Sprintf("%s %s", k.Title, name)
-	}
-	return kind + " " + name
 }
