@@ -32,6 +32,32 @@ When a server starts:
 `schema.minimum`. `/readyz` reads them on every call, so a server that is still running when a
 newer one applies a breaking migration stops reporting ready.
 
+### The recorded version must match the actual schema
+
+A schema number is only a claim that its migration ran. In particular, a feature-branch build may
+have advanced the number with an empty placeholder for another branch's migration. After applying
+any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
+the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
+including the recorded database version. The markers currently cover the tables and columns of
+schemas 17 to 21. The migration-order tests use the same marker list and the same SQLite and
+PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
+
+These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
+on PostgreSQL), not scans of application tables. A correctly migrated database at any supported
+version starts normally, including a database below schema 17, for which no marker is due yet.
+
+If anything due is missing, startup refuses with an error naming the recorded schema and every
+missing table and column, grouped by the migration that should have created it. Restore a
+known-good backup, or recreate only the listed objects using the corresponding migration SQL in
+`internal/engine/db.go`; do not change `meta.schema_version` to conceal the mismatch, and do not
+blindly rerun a whole migration whose other objects already exist.
+
+An operator who knowingly needs to start anyway, for example to repair the database, can set
+`LAUNCHWAY_SKIP_SCHEMA_CHECK=1` in the server process's environment. The refusal message names this
+escape hatch. Using it logs a warning with the missing objects; it does not bypass errors reading
+the database's metadata, and runs may still fail on the missing objects. Remove the variable after
+repair so a later mismatch cannot start unnoticed.
+
 The classes of migrations 1 to 7 were declared after they shipped, and are honest about the
 release before each: 1, 2, 3, 4 and 7 are breaking, 5 and 6 additive (see the comments in
 `db.go`). Releases before schema 8 also refuse any newer database whatever its class, so the
@@ -225,7 +251,8 @@ their approvals. Runners must say they can do the work: a deploy runner reports 
 only when it has health sources, and a runner reports `ai` only when its operator turned `ai: true`
 on; an older runner reports neither, so it is never given these steps. (Verification was built as
 schema 20 on a branch where 16 to 19 were empty stand-ins; it was renumbered 19 when the branches
-were merged, before any release, so no database ever recorded those stand-ins.)
+were merged, before any release. A development database started by such a branch image may still
+have recorded the stand-ins; the startup schema check refuses it and names what is missing.)
 
 To roll back from schema 19:
 
@@ -286,8 +313,9 @@ Rolling back from schema 21 (and 20) to 19:
    that were not revoked work again (their access tokens will have expired; runners get new ones).
 
 Runner identities and pools were built as schemas 21 and 22 on a branch where 17 to 20 were empty
-stand-ins; they were renumbered 20 and 21 when the branches were merged, before any release, so no
-database ever recorded those stand-ins.
+stand-ins; they were renumbered 20 and 21 when the branches were merged, before any release. A
+development database started by such a branch image may still have recorded the stand-ins; the
+startup schema check refuses it and names what is missing.
 
 ## Writing a migration
 
@@ -297,8 +325,11 @@ database ever recorded those stand-ins.
 3. If the code that uses the new tables or columns may be built limited to an older schema (see
    *Testing* below), check `e.knows(N)` before using them, as the code for schema 8 does
    (`schemaReruns`).
-4. New event types: add them to `eventSince` with the new schema's number.
-5. Run the compatibility tests (`go test ./internal/engine/ -run 'Older|Minimum|Concurrent|LeftAlone'`),
+4. If it adds a table or column, add its schema number and those names to `schemaMarkers` in
+   `internal/engine/schema_markers.go`. The migration-order tests and the startup check both use
+   this list; never leave an empty placeholder for a schema number the database can record.
+5. New event types: add them to `eventSince` with the new schema's number.
+6. Run the compatibility tests (`go test ./internal/engine/ -run 'Older|Minimum|Concurrent|LeftAlone'`),
    on SQLite and on PostgreSQL.
 
 ### Changing something in a way older code cannot follow: expand, then contract
