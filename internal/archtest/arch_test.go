@@ -40,6 +40,7 @@ var allowedImports = map[string][]string{
 	"internal/engine":                   {"internal/accept", "internal/ai", "internal/blobstore", "internal/coverage", "internal/deploy", "internal/deploy/edit", "internal/findings", "internal/hub", "internal/ids", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/sbom", "internal/testreport", "internal/verify", "internal/verify/source"},
 	"internal/executor":                 {"internal/resources"},
 	"internal/fakeidp":                  {},
+	"internal/forge":                    {},
 	"internal/gitexec":                  {"internal/redact"},
 	"internal/findings":                 {"internal/findings/jsonscan"},
 	"internal/findings/jsonscan":        {},
@@ -101,7 +102,7 @@ func under(prefixes ...string) func(string) bool {
 var leaves = []string{
 	"internal/redact", "internal/ids", "internal/resources", "internal/hub",
 	"internal/policy", "internal/auth", "internal/verify", "internal/testreport",
-	"internal/blobstore", "internal/coverage", "internal/runnerauth", "internal/accept",
+	"internal/blobstore", "internal/coverage", "internal/runnerauth", "internal/accept", "internal/forge",
 }
 
 // runnerSide packages run on the runner or are linked into it. They must not
@@ -144,6 +145,12 @@ var forbidden = []rule{
 			return p != "cmd/launchway" && p != "internal/config"
 		},
 		to: in("internal/config"),
+	},
+	{
+		label: "clients of the forge never import a provider",
+		why:   "the API, MCP server and screens see only internal/forge (doc 26 section 3.4); providers are wired in by cmd through the registry",
+		from:  func(p string) bool { return p != "cmd/launchway" && !strings.HasPrefix(p, "internal/forge/") },
+		to:    func(p string) bool { return strings.HasPrefix(p, "internal/forge/providers/") },
 	},
 	{
 		label: "nothing imports cmd",
