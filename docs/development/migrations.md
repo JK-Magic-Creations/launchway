@@ -244,6 +244,51 @@ To roll back from schema 19:
    used again after a later upgrade. Model use counted on the day of the rollback is not counted by
    older servers (they call no models).
 
+Schema 20 brings runner identities. It is additive: four new tables (`runner_join_tokens`,
+`runner_identities`, `runner_access_tokens`, `runner_assertions`) and new columns with defaults on
+`runners` (`kind`, `auth`, `labels`, `accept`, `os`, `arch`); no new event type. A step a runner
+refuses (its `accept:` section) ends with outcome `refused`, which servers of schema 19 and older
+read as failed, with the runner's reason. Older servers never read the new tables. So:
+
+- **Runner of this release, server of the previous one.** `launchway runner --join` gets 404 from
+  `/api/runner/v2/join` and stops, saying the server does not enrol runners and to use the shared
+  token. A runner that enrolled with a newer server and then meets an older one (a rolling upgrade,
+  a rollback) is refused (its access token is not the shared token), asks for a new token, gets
+  404, and keeps retrying with that message in its log until a server of schema 20 answers. With
+  the shared token, a new runner works with an old server as before: the fields it adds to what it
+  says about itself (labels, OS, architecture, accept) are ignored, and it still checks `accept:`
+  itself.
+- **Runner of the previous release, server of this one.** Nothing changes for it: the shared token
+  and deploy pool tokens work, it is listed as using a shared token, and it takes the default pool's
+  work (or its deploy pool's), unless the pool sets `require_identity`, which refuses it with a
+  message saying to enrol.
+
+Schema 21 brings build runner pools and the pipeline key `runner:`. It is additive: `runs` gains
+`runner_pool` and `runner_labels` (defaults `''`). A pipeline with `runner:` carries `"requires":
+21` and has `runs.min_schema` 21, so older servers leave its runs alone; and while any build pool is
+configured, every new run's `run.created` carries `requires: 21`, because an older server would
+hand its steps to any runner. A build limited to schema 20 refuses to start with build pools
+configured. The `runner_pools:` entries with `kind: build`, `require_identity`, `runner_admin`, and
+the runner's `labels:`, `accept:`, `proxy:`, `no_proxy:` and `ca_file:` are settings older servers
+and runners refuse: the chart writes them only when set.
+
+Rolling back from schema 21 (and 20) to 19:
+
+1. Take out of every server's configuration `runner_pools` entries with `kind: build` and
+   `require_identity`, and `runner_admin`; take `labels:`, `accept:`, `proxy:`, `no_proxy:` and
+   `ca_file:` out of runners' files (with the chart: `config.runnerPools`, `config.runnerAdmin`,
+   `runner.labels`, `runner.accept`, `runner.join`). Give runners that enrolled the shared token
+   (or their deploy pool's) instead: older servers do not know their identities.
+2. Let the servers of schema 21 restart without build pools, so new runs no longer need 21; cancel
+   runs that do (pipelines with `runner:`, or runs created while build pools were configured), or
+   let a schema-21 server finish them after a roll forward.
+3. Roll the servers back. The new tables and columns are ignored; on a roll forward, identities
+   that were not revoked work again (their access tokens will have expired; runners get new ones).
+
+Runner identities and pools were built as schemas 21 and 22 on a branch where 17 to 20 were empty
+stand-ins; they were renumbered 20 and 21 when the branches were merged, before any release, so no
+database ever recorded those stand-ins.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

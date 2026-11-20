@@ -35,6 +35,10 @@ type Pipeline struct {
 	// refuse (see control.go). Servers that do not know this field refuse
 	// the pipeline, which is the point.
 	Requires int `json:"requires,omitempty"`
+	// Runner chooses the runners the pipeline's steps may run on: a pool,
+	// labels or both (schema 21). Nil: any runner whose pool serves the
+	// project.
+	Runner *RunnerSelector `json:"runner,omitempty"`
 	// Inputs are the values a run is started with (schema 13), in the order
 	// they were written. A person starting a run gives them; runs started
 	// any other way use the defaults, or what the schedule or webhook says.

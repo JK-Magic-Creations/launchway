@@ -20,6 +20,7 @@ import (
 	"os/signal"
 	"os/user"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -52,8 +53,9 @@ const usage = `Launchway: build and deliver software.
 
 Usage:
   launchway server   [--config launchway.yaml]   run the server, its web UI and a built-in runner
-  launchway runner   --server URL --token T     run a runner that takes work from a server
-                     [--config runner.yaml] [--health-listen ADDR]
+  launchway runner   --server URL --join J      enrol a runner with a join token, then take work
+                     [--config runner.yaml] [--health-listen ADDR] [--labels a,b]
+  launchway runner   --server URL --token T     run a runner with the shared token (no identity)
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
                      [-i name=value ...]
   launchway validate [file]                     check a pipeline file
@@ -69,6 +71,7 @@ Usage:
   launchway verifications list|show|mark        verifications on a server
                                                 (launchway verifications, for more)
   launchway health-sources | models             what verify and ai steps may name
+  launchway runners  list|join-token|revoke|rotate  runners, and join tokens to enrol them
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -111,6 +114,8 @@ func main() {
 		err = cmdHealthSources(args)
 	case "models":
 		err = cmdModels(args)
+	case "runners":
+		err = cmdRunners(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -204,9 +209,16 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
+	runnersRole, _ := cfg.RunnerAdminRole() // checked when the file was read
+	// The pools' tokens are read and checked against the shared token
+	// below; here only what the engine needs.
+	poolShapes, err := cfg.Pools("")
+	if err != nil {
+		return fmt.Errorf("%s: %w", *cfgPath, err)
+	}
 	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
 		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits, Policy: policyOpts,
-		Reports: reportOpts, HealthSources: cfg.EngineHealthSources(), Models: models})
+		Reports: reportOpts, HealthSources: cfg.EngineHealthSources(), Models: models, RunnerPools: config.EnginePools(poolShapes)})
 	if err != nil {
 		return err
 	}
@@ -237,7 +249,7 @@ func cmdServer(args []string) error {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
-		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, WaiveRole: &waiveRole, ReportsOrigin: reportsOrigin}
+		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, WaiveRole: &waiveRole, ReportsOrigin: reportsOrigin, RunnersRole: &runnersRole}
 	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
 	if m := cfg.MCP; m.On() {
 		srv.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
@@ -259,7 +271,9 @@ func cmdServer(args []string) error {
 		}
 	}
 	for _, p := range pools {
-		srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets})
+		if p.Kind == engine.PoolDeploy {
+			srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets, RequireIdentity: p.RequireIdentity})
+		}
 	}
 	if authOpts != nil {
 		// Find the provider now, so a mistake shows at once; sign-in tries
@@ -427,6 +441,7 @@ func loopback(addr string) string {
 type runnerOptions struct {
 	config.RunnerFile
 	Token        string
+	Join         string // a join token, to enrol with
 	HealthListen string
 }
 
@@ -437,7 +452,9 @@ func runnerArgs(args []string) (*runnerOptions, error) {
 	fs := flag.NewFlagSet("runner", flag.ContinueOnError)
 	cfgPath := fs.String("config", "", "YAML file of runner settings, the same as runner: in the server's configuration plus server, name and data")
 	server := fs.String("server", "", "server URL (or LAUNCHWAY_SERVER)")
-	token := fs.String("token", "", "runner token (or LAUNCHWAY_RUNNER_TOKEN)")
+	token := fs.String("token", "", "the shared runner token or a deploy pool's (or LAUNCHWAY_RUNNER_TOKEN)")
+	join := fs.String("join", "", "a join token, to enrol this runner once and get an identity of its own (or LAUNCHWAY_JOIN)")
+	labels := fs.String("labels", "", "labels this runner has, separated by commas, such as arm64,gpu")
 	name := fs.String("name", "", "a name for this runner (default: the host name)")
 	data := fs.String("data", "", "directory for workspaces (default launchway-runner)")
 	conc := fs.Int("concurrency", 0, "steps to run at once (default 2)")
@@ -462,6 +479,10 @@ func runnerArgs(args []string) (*runnerOptions, error) {
 	host, _ := os.Hostname()
 	o.Server = cmp.Or(*server, os.Getenv("LAUNCHWAY_SERVER"), o.Server)
 	o.Token = cmp.Or(*token, os.Getenv("LAUNCHWAY_RUNNER_TOKEN"))
+	o.Join = cmp.Or(*join, os.Getenv("LAUNCHWAY_JOIN"))
+	if *labels != "" {
+		o.Labels = strings.Split(*labels, ",")
+	}
 	o.Name = cmp.Or(*name, o.Name, host)
 	o.Data = cmp.Or(*data, o.Data, "launchway-runner")
 	o.Concurrency = cmp.Or(*conc, o.Concurrency, 2)
@@ -478,8 +499,16 @@ func runnerArgs(args []string) (*runnerOptions, error) {
 		}
 		o.Secrets = c
 	}
-	if o.Server == "" || o.Token == "" {
-		return nil, errors.New("a server URL (--server, LAUNCHWAY_SERVER or server: in --config) and a token (--token or LAUNCHWAY_RUNNER_TOKEN) are required")
+	if o.Server == "" {
+		return nil, errors.New("a server URL (--server, LAUNCHWAY_SERVER or server: in --config) is required")
+	}
+	if o.Token != "" && o.Join != "" {
+		return nil, errors.New("give either a join token (--join) or a shared token (--token), not both")
+	}
+	if o.Token == "" && o.Join == "" {
+		if id, err := runner.LoadIdentity(o.Data); err != nil || id == nil {
+			return nil, errors.New("a join token (--join or LAUNCHWAY_JOIN) to enrol this runner, or a shared token (--token or LAUNCHWAY_RUNNER_TOKEN), is required")
+		}
 	}
 	return o, nil
 }
@@ -497,22 +526,36 @@ func cmdRunner(args []string) error {
 	if err != nil {
 		return fmt.Errorf("runner settings: %w", err)
 	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	client, ident, err := runnerClient(ctx, o)
+	if err != nil {
+		return err
+	}
 	id := "runner-" + o.Name
+	if ident != nil {
+		id = ident.RunnerID
+	}
 	if o.Deploy != nil {
-		return runDeployRunner(o, id, secretStores)
+		return runDeployRunner(ctx, o, client, id, secretStores)
 	}
 	ex, err := executor.ByName(o.Executor, executor.Options{Kubernetes: o.Kubernetes, RunnerID: id})
 	if err != nil {
 		return err
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	if _, host := ex.(*executor.Host); host && ident != nil && o.Executor != "host" {
+		// An enrolled runner runs other people's code: never on the host
+		// without being told to.
+		return errors.New("no Podman or Docker was found, and an enrolled runner does not fall back to running steps directly on this host; install one, or choose executor: host explicitly")
+	}
 	if err := checkExecutor(ctx, ex); err != nil {
 		return err
 	}
-	r := &runner.Runner{Client: runner.NewClient(o.Server, o.Token), Exec: ex,
-		Info:    engine.RunnerInfo{ID: id, Name: o.Name, Executor: ex.Name(), Version: version},
-		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores, Reports: reportLimits, Images: o.Images}
+	r := &runner.Runner{Client: client, Exec: ex,
+		Info: engine.RunnerInfo{ID: id, Name: o.Name, Executor: ex.Name(), Version: version, Labels: o.Labels,
+			OS: runtime.GOOS, Arch: runtime.GOARCH},
+		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores, Reports: reportLimits, Images: o.Images,
+		Accept: o.Accept, Remote: true}
 	if o.HealthListen != "" {
 		ln, err := net.Listen("tcp", o.HealthListen)
 		if err != nil {
@@ -522,7 +565,12 @@ func cmdRunner(args []string) error {
 		go hs.Serve(ln)
 		defer hs.Close()
 	}
-	return r.Run(ctx)
+	err = r.Run(ctx)
+	if ident != nil && ident.Ephemeral {
+		// The server revoked it as it left; the next start enrols anew.
+		_ = os.RemoveAll(filepath.Join(o.Data, "identity"))
+	}
+	return err
 }
 
 // ---- validate and graph ----
@@ -893,18 +941,64 @@ func currentUser() string {
 	return "local"
 }
 
+// runnerClient makes the client a runner talks to its server with: through
+// the proxy and with the certificates its settings name, and, for an
+// enrolled runner, with access tokens from its identity. With a join token
+// and no identity yet, it enrols first; an identity kept in the data
+// directory is used on every start after.
+func runnerClient(ctx context.Context, o *runnerOptions) (*runner.Client, *runner.Identity, error) {
+	hc, err := runner.NewHTTPClient(runner.HTTPOptions{Proxy: o.Proxy, NoProxy: o.NoProxy, CAFile: o.CAFile})
+	if err != nil {
+		return nil, nil, err
+	}
+	c := runner.NewClient(o.Server, o.Token)
+	c.HTTP = hc
+	if o.Token != "" {
+		return c, nil, nil
+	}
+	id, err := runner.LoadIdentity(o.Data)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reading the runner's identity: %w", err)
+	}
+	server := strings.TrimRight(o.Server, "/")
+	switch {
+	case id != nil && id.Server != server:
+		return nil, nil, fmt.Errorf("this runner is enrolled with %s, not %s; use another data directory (--data) for another server", id.Server, server)
+	case id == nil:
+		host, _ := os.Hostname()
+		executorName := o.Executor
+		if o.Deploy != nil {
+			executorName = "deploy"
+		}
+		jctx, cancel := context.WithTimeout(ctx, time.Minute)
+		id, err = runner.Join(jctx, hc, server, o.Join, o.Data, host, runner.JoinFacts{Name: o.Name, OS: runtime.GOOS, Arch: runtime.GOARCH,
+			Version: version, Executor: executorName, Labels: o.Labels})
+		cancel()
+		if err != nil {
+			return nil, nil, err
+		}
+		fmt.Fprintf(os.Stderr, "Enrolled as runner %s in pool %s; its identity is in %s\n", id.RunnerID, id.Pool, filepath.Join(o.Data, "identity"))
+	case o.Join != "":
+		fmt.Fprintf(os.Stderr, "Already enrolled as runner %s; the join token is not used\n", id.RunnerID)
+	}
+	c.Auth = &runner.IdentityAuth{ID: id, HTTP: hc}
+	c.Auth.RecoverRotation(ctx)
+	return c, id, nil
+}
+
 // runDeployRunner runs `launchway runner` with a deploy section: a deploy
 // runner, which does the work of deploy and rollback steps only.
-func runDeployRunner(o *runnerOptions, id string, secretStores *secrets.Resolver) error {
+func runDeployRunner(ctx context.Context, o *runnerOptions, client *runner.Client, id string, secretStores *secrets.Resolver) error {
 	targets := make([]string, 0, len(o.Deploy.Targets))
 	for name := range o.Deploy.Targets {
 		targets = append(targets, name)
 	}
 	sort.Strings(targets)
 	d := &runner.DeployRunner{
-		Client:  runner.NewClient(o.Server, o.Token),
+		Client:  client,
 		Agent:   &argocd.Agent{Config: *o.Deploy, DataDir: o.Data, Secrets: secretStores},
-		Info:    engine.RunnerInfo{ID: id, Name: o.Name, Executor: "deploy", Version: version, Targets: targets},
+		Info:    engine.RunnerInfo{ID: id, Name: o.Name, Executor: "deploy", Version: version, Targets: targets, OS: runtime.GOOS, Arch: runtime.GOARCH},
+		Accept:  o.Accept,
 		Secrets: secretStores,
 	}
 	if len(o.HealthSources) > 0 {
@@ -920,8 +1014,6 @@ func runDeployRunner(o *runnerOptions, id string, secretStores *secrets.Resolver
 	if o.AIEnabled() {
 		d.AI = &ai.Client{}
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 	if o.HealthListen != "" {
 		ln, err := net.Listen("tcp", o.HealthListen)
 		if err != nil {

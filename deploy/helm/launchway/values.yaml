@@ -212,6 +212,17 @@ config:
     oauth:
       resource:
       scopes: []
+  # -- Runner pools (schemas 20 and 21), written as runner_pools: in the configuration's own
+  # keys, after the deploy pool delivery.* makes. Unset: none; every build runner is in the
+  # default pool, which serves every project. Set it only once every server and runner runs a
+  # release that knows it, and take it out before rolling back. For example:
+  #   runnerPools:
+  #     - { name: web, kind: build, projects: ["web-*"] }
+  #     - { name: default, kind: build, projects: ["*"], require_identity: true }
+  runnerPools:
+  # -- The role needed on every project to make join tokens and to revoke or rotate runners:
+  # admin, operator or none. Written as runner_admin only when set. Unset: admin.
+  runnerAdmin:
   # -- Any other top-level settings, merged into the file as they are, so that new settings
   # need no chart change. For example:
   #   user: ci-admin
@@ -370,6 +381,19 @@ runner:
   concurrency: 2
   # -- The server URL runners connect to. Default: the chart's Service.
   serverURL: ""
+  # -- Enrol each runner pod with a join token instead of using the shared runner token
+  # (schema 20): a Secret holding a join token made in the UI (Runners, Add a runner) with
+  # enough uses for every pod start, ideally ephemeral. Unset: the shared runner token.
+  #   join: { existingSecret: launchway-runner-join, existingSecretKey: token }
+  join:
+  # -- Labels the runners have, for pipelines that ask for them (runner: { labels }). Written
+  # only when set. Unset: none.
+  labels:
+  # -- The runners' own limits on the work they take (accept: in runner.yaml), checked on the
+  # runner before anything runs. Written only when set; see the README's "What a runner trusts
+  # the server with". Unset: no limits. For example:
+  #   accept: { projects: [shop], images: ["registry.example.com/*"], pull_requests: false }
+  accept:
   kubernetes:
     # -- The namespace step pods run in. Default: the release namespace. Runners are granted
     # access to pods in this namespace only. It must exist unless createNamespace is true.

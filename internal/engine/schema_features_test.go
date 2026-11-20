@@ -11,11 +11,13 @@ import (
 
 // A run records the newest schema any of its features needs: a policy
 // governing it 16, artifacts kept in the database store 17, test
-// attachments, coverage or HTML reports 18; a run using several gets the
-// highest, so a server of any schema between leaves it alone.
+// attachments, coverage or HTML reports 18, a runner: choice 21; a run
+// using several gets the highest, so a server of any schema between leaves
+// it alone.
 func TestRunMinSchemaAcrossFeatures(t *testing.T) {
-	if schemaPolicy != 16 || schemaBlobs != 17 || schemaReports != 18 || schemaVerify != 19 || len(migrations) != 19 {
-		t.Fatalf("schemas: policy %d, blobs %d, reports %d, verify %d, migrations %d", schemaPolicy, schemaBlobs, schemaReports, schemaVerify, len(migrations))
+	if schemaPolicy != 16 || schemaBlobs != 17 || schemaReports != 18 || schemaVerify != 19 || schemaIdentity != 20 || schemaPools != 21 || len(migrations) != 21 {
+		t.Fatalf("schemas: policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, migrations %d",
+			schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, len(migrations))
 	}
 	report := PolicyOptions{Inline: mustPolicies(t, strings.Replace(shapePolicy, "enforce", "report", 1))}
 	open := func(t *testing.T, addr, store string, po PolicyOptions) *Engine {
@@ -53,6 +55,13 @@ func TestRunMinSchemaAcrossFeatures(t *testing.T) {
     needs: e2e
     artifacts: [ {name: bin, paths: [bin/app]} ]
 `, schemaReports},
+		{"runner labels, policy, artifacts in the database and reports", StoreDatabase, report, "runner: { labels: [arm64] }\n" + attachmentsPipeline + `
+  ship:
+    image: x
+    run: ship
+    needs: e2e
+    artifacts: [ {name: bin, paths: [bin/app]} ]
+`, schemaPools},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			addr := testdb.New(t)

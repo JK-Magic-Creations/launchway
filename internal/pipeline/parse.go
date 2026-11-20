@@ -120,8 +120,10 @@ func Parse(data []byte) (*Pipeline, error) {
 
 	p := &Pipeline{}
 	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs"}, func(k, v *yaml.Node) {
+	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner"}, func(k, v *yaml.Node) {
 		switch k.Value {
+		case "runner":
+			ps.parseRunner(v, p)
 		case "pipeline":
 			p.Name = ps.str(v, "pipeline")
 		case "supersede":
@@ -169,6 +171,9 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	if p.UsesSchemaVerify() {
 		p.Requires = SchemaVerify
+	}
+	if p.UsesSchemaPools() {
+		p.Requires = SchemaPools
 	}
 	return p, nil
 }
@@ -219,7 +224,7 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 // Keys from the design that are recognised but not implemented yet.
 var notYet = map[string]string{
 	"outputs": "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
-	"runs_on": "runner pools arrive in a later milestone",
+	"runs_on": "choose runners for the whole pipeline with runner: { pool: …, labels: [ … ] } at its top",
 	"matrix":  "to repeat a step over lists, use for_each",
 }
 

@@ -640,6 +640,8 @@ export interface RunDetail extends RunSummary {
   deployments?: DeploymentView[];
   /** Why a run with image steps may wait long: no runner that builds images has been seen. */
   runner_hint?: string;
+  /** Why no runner may take the run's waiting steps: pools, labels or what runners accept. */
+  pool_hint?: string;
   /** The run's policy decisions summed up; absent if no policy judged it. */
   policy?: { decisions: number; verdict: PolicyVerdict; waived: number };
 }
@@ -813,11 +815,53 @@ export interface Approval {
 // online: seen within the last two minutes. Runners not seen for a day are no longer listed.
 export interface Runner {
   id: string; name: string; executor: string; version: string; last_seen: number; online: boolean;
-  /** A deploy runner (executor "deploy"): its pool, and the targets it serves. */
+  /** Its pool ("default" for build runners of the default pool), and for a deploy runner the targets it serves. */
   pool?: string; targets?: string[];
   /** The runner builds images (it has image builders). */
   images?: boolean;
+  /** build or deploy. */
+  kind?: string;
+  /** identity: enrolled; shared: the shared runner token; pool: a deploy pool's token. */
+  auth?: "identity" | "shared" | "pool";
+  labels?: string[];
+  os?: string; arch?: string;
+  /** What its accept: section allows, as the runner reported it. */
+  accept?: RunnerAccept;
+  identity?: RunnerIdentity;
+  /** The steps it holds now. */
+  work?: { run: string; project: string; number: number; step: string }[];
 }
+
+export interface RunnerAccept {
+  projects?: string[]; repositories?: string[]; images?: string[]; images_by_digest?: boolean; executors?: string[];
+  environments?: string[]; pull_requests?: boolean; drafts?: boolean; max_timeout?: string; env_deny?: string[];
+}
+
+export interface RunnerIdentity {
+  id: string; name: string; pool: string; kind: string; key_fingerprint: string; key_created_at: number;
+  join_token: string; enrolled_by: string; enrolled_at: number; labels: string[]; hostname: string;
+  os: string; arch: string; version: string; executor: string; ephemeral: boolean; last_seen: number;
+  revoked_at?: number; revoked_by?: string; revoke_reason?: string; rotate_asked?: number;
+}
+
+export interface RunnerPool {
+  name: string; kind: "build" | "deploy"; projects: string[]; events: string[]; targets: string[];
+  require_identity: boolean;
+  /** Runners may also use a shared token: the shared runner token, or the deploy pool's own. */
+  shared_token: boolean;
+  /** False for the default pool when the configuration does not name it. */
+  configured: boolean;
+}
+
+export interface RunnerPools { pools: RunnerPool[]; manage: boolean; identities: boolean }
+
+export interface JoinToken {
+  id: string; pool: string; labels: string[]; description: string; max_uses: number; uses: number; ephemeral: boolean;
+  created_by: string; created_at: number; expires_at: number; last_used_at?: number; revoked_by?: string; revoked_at?: number;
+  state: "active" | "used" | "expired" | "revoked";
+}
+
+export interface JoinTokenRequest { pool: string; labels?: string[]; description?: string; max_uses?: number; ttl?: string; ephemeral?: boolean }
 
 /** A problem in pipeline text; with file set, in that template of the library instead. */
 export interface Problem { file?: string; library?: string; line?: number; column?: number; path?: string; message: string }
@@ -935,6 +979,12 @@ export const api = {
   startRun: (name: string, ref: string, libraries?: LibraryOverrides) =>
     call<RunSummary>("POST", `/api/v1/projects/${encodeURIComponent(name)}/runs`, { ref, libraries }),
   runners: (background = false) => call<Runner[]>("GET", "/api/v1/runners", undefined, { background }),
+  runnerPools: (background = false) => call<RunnerPools>("GET", "/api/v1/runner-pools", undefined, { background }),
+  joinTokens: (background = false) => call<JoinToken[]>("GET", "/api/v1/runner-join-tokens", undefined, { background }),
+  createJoinToken: (req: JoinTokenRequest) => call<{ token: string; join_token: JoinToken }>("POST", "/api/v1/runner-join-tokens", req),
+  revokeJoinToken: (id: string) => call<JoinToken>("POST", `/api/v1/runner-join-tokens/${encodeURIComponent(id)}/revoke`),
+  revokeRunner: (id: string, reason: string) => call<{ released: number }>("POST", `/api/v1/runners/${encodeURIComponent(id)}/revoke`, { reason }),
+  rotateRunner: (id: string) => call<RunnerIdentity>("POST", `/api/v1/runners/${encodeURIComponent(id)}/rotate`),
   /** With a project (or expand), templates are expanded from the server's libraries. */
   validate: (yaml: string, opts: { project?: string; expand?: boolean } = {}) => {
     const p = new URLSearchParams();

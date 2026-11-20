@@ -305,6 +305,11 @@ owns may not appear in it.
 {{- with $ai.models }}{{ $_ := set $aiOut "models" . }}{{ end -}}
 {{- with $ai.serverSecretStores }}{{ $_ := set $aiOut "secrets" . }}{{ end -}}
 {{- if $aiOut }}{{ $_ := set $config "ai" $aiOut }}{{ end -}}
+{{- /* Runner pools and who manages runners (schemas 20 and 21): only when set. */ -}}
+{{- if .Values.config.runnerPools -}}
+{{- $_ := set $config "runner_pools" (concat (get $config "runner_pools" | default list) .Values.config.runnerPools) -}}
+{{- end -}}
+{{- if .Values.config.runnerAdmin }}{{ $_ := set $config "runner_admin" (toString .Values.config.runnerAdmin) }}{{ end -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}
 
@@ -337,6 +342,9 @@ in the server configuration, plus the server URL and the data directory.
 {{- if $reports }}{{ $_ := set $runner "reports" $reports }}{{ end -}}
 {{- with include "launchway.runnerImages" . | fromYaml }}{{ if . }}{{ $_ := set $runner "images" . }}{{ end }}{{ end -}}
 {{- if eq (toString .Values.runner.ai) "true" }}{{ $_ := set $runner "ai" true }}{{ end -}}
+{{- /* Labels and the runner's own limits (schemas 20 and 21): only when set. */ -}}
+{{- with .Values.runner.labels }}{{ $_ := set $runner "labels" . }}{{ end -}}
+{{- with .Values.runner.accept }}{{ $_ := set $runner "accept" . }}{{ end -}}
 {{- toYaml $runner -}}
 {{- end -}}
 

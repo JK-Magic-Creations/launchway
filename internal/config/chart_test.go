@@ -398,7 +398,8 @@ config:
 
 // The default render, with either way of reaching PostgreSQL, writes none
 // of the keys that policy gates (16), the database store (17), reports
-// (18), the MCP endpoint and verification (19) brought, in any configuration file, so a
+// (18), the MCP endpoint, verification (19) and runner identities and
+// pools (20, 21) brought, in any configuration file, so a
 // server of the release before them reads it.
 func TestChartDefaultWritesNoNewKeys(t *testing.T) {
 	for _, values := range []string{"postgresql: { enabled: true }\n", "database: { url: \"postgres://u@db/launchway\" }\n"} {
@@ -407,7 +408,7 @@ func TestChartDefaultWritesNoNewKeys(t *testing.T) {
 			if err := yaml.Unmarshal([]byte(f), &doc); err != nil {
 				t.Fatal(err)
 			}
-			for _, key := range []string{"policy", "policies", "reports", "mcp", "verification", "health_sources", "ai"} {
+			for _, key := range []string{"policy", "policies", "reports", "mcp", "verification", "health_sources", "ai", "runner_pools", "runner_admin", "labels", "accept"} {
 				if _, ok := doc[key]; ok {
 					t.Errorf("the default %s configuration (%s) has %s:\n%s", name, strings.TrimSpace(values), key, f)
 				}
@@ -615,5 +616,47 @@ runner: { ai: true }
 	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", writeTemp(t, noModels)).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "runner.ai is true, but ai.models is empty") {
 		t.Errorf("runner.ai without models: %v %s", err, out)
+	}
+}
+
+// Runner identities and pools in the chart: nothing new in any file by
+// default; when set, the server's runner_pools and runner_admin, and the
+// runners' labels and accept:, all of which load, and runner pods that
+// enrol with a join token from a Secret instead of the shared token.
+func TestChartRunnerIdentitySettings(t *testing.T) {
+	def := renderChart(t, "postgresql: { enabled: true }\n")
+	for _, key := range []string{"runner_pools", "runner_admin", "labels:", "accept:", "require_identity"} {
+		for name, f := range def {
+			if strings.Contains(f, key) {
+				t.Errorf("the default %s configuration has %s:\n%s", name, key, f)
+			}
+		}
+	}
+	files := renderChart(t, `postgresql: { enabled: true }
+config:
+  runnerAdmin: operator
+  runnerPools:
+    - { name: web, kind: build, projects: ["web-*"] }
+runner:
+  labels: [arm64]
+  accept: { projects: ["web-*"], pull_requests: false, max_timeout: 2h }
+  join: { existingSecret: lw-join }
+`)
+	c, err := Load(writeTemp(t, files["server"]))
+	if err != nil {
+		t.Fatalf("server: %v\n%s", err, files["server"])
+	}
+	if pools, err := c.Pools("shared"); err != nil || len(pools) != 1 || pools[0].Kind != "build" || c.RunnerAdmin != "operator" {
+		t.Fatalf("%+v %v", pools, err)
+	}
+	f, err := LoadRunner(writeTemp(t, files["runner"]))
+	if err != nil || f.Labels[0] != "arm64" || f.Accept == nil || f.Accept.Projects[0] != "web-*" {
+		t.Fatalf("runner: %+v %v\n%s", f, err, files["runner"])
+	}
+	vf := filepath.Join(t.TempDir(), "values.yaml")
+	os.WriteFile(vf, []byte("postgresql: { enabled: true }\nrunner: { join: { existingSecret: lw-join } }\n"), 0o644)
+	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", vf).CombinedOutput()
+	if err != nil || !strings.Contains(string(out), "LAUNCHWAY_JOIN") || strings.Contains(string(out), "name: LAUNCHWAY_RUNNER_TOKEN\n              valueFrom:\n                secretKeyRef:\n                  name: lw-join") {
+		t.Fatalf("join: %v", err)
 	}
 }

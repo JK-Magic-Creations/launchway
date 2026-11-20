@@ -17,6 +17,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/jk-magic-creations/launchway/internal/accept"
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/deploy/argocd"
@@ -81,6 +82,10 @@ type Config struct {
 	// the targets its runners may serve. Only a pool's token can take deploy
 	// work.
 	RunnerPools []RunnerPoolConfig `yaml:"runner_pools"`
+	// RunnerAdmin is the role needed on every project to manage runners:
+	// make join tokens, revoke and rotate runners. admin (the default),
+	// operator or none.
+	RunnerAdmin string `yaml:"runner_admin"`
 	// Policy holds delivery policies: rules pipelines cannot opt out of,
 	// in this file or loaded from Git sources (schema 16). Every server
 	// sharing a database must have the same ones. Unset: no policies.
@@ -243,6 +248,19 @@ func (c *Config) Models() (*ai.Registry, error) {
 	return r, nil
 }
 
+// RunnerAdminRole reads runner_admin: the role needed on every project to
+// manage runners.
+func (c *Config) RunnerAdminRole() (auth.Role, error) {
+	if c.RunnerAdmin == "" {
+		return auth.Admin, nil
+	}
+	r, err := auth.ParseDraftAllow(c.RunnerAdmin)
+	if err != nil {
+		return auth.NoRole, fmt.Errorf("runner_admin: %w", err)
+	}
+	return r, nil
+}
+
 // EnvironmentConfig is one environment.
 type EnvironmentConfig struct {
 	Name string `yaml:"name"`
@@ -261,13 +279,26 @@ type EnvironmentConfig struct {
 	Protected bool `yaml:"protected"`
 }
 
-// RunnerPoolConfig is one deploy runner pool. Its token is read from an
-// environment variable or a file, never from this file.
+// RunnerPoolConfig is one runner pool. A deploy pool (the default kind)
+// serves targets; its runners use the pool's token, read from an
+// environment variable or a file, never from this file, or enrol with a
+// join token for the pool. A build pool (schema 21) serves projects, and
+// optionally only some events; its runners enrol with join tokens. The
+// pool named default is the build pool of the shared runner token: list
+// it to limit what it serves or to require identities.
 type RunnerPoolConfig struct {
 	Name      string   `yaml:"name"`
+	Kind      string   `yaml:"kind"` // deploy (the default) or build
 	TokenEnv  string   `yaml:"token_env"`
 	TokenFile string   `yaml:"token_file"`
 	Targets   []string `yaml:"targets"`
+	// Projects and Events, for a build pool.
+	Projects []string `yaml:"projects"`
+	Events   []string `yaml:"events"`
+	// RequireIdentity refuses shared tokens: the pool's own (a deploy
+	// pool) or the shared runner token (the default pool). Only runners
+	// enrolled with a join token for the pool serve it.
+	RequireIdentity bool `yaml:"require_identity"`
 }
 
 // EngineEnvironments converts the environments for the engine.
@@ -281,9 +312,24 @@ func (c *Config) EngineEnvironments() []engine.Environment {
 
 // Pool is a runner pool with its token read.
 type Pool struct {
-	Name    string
-	Token   string
-	Targets []string
+	Name     string
+	Kind     string // engine.PoolBuild or engine.PoolDeploy
+	Token    string // a deploy pool's; "" if it requires identities
+	Targets  []string
+	Projects []string
+	Events   []string
+	// RequireIdentity: only enrolled runners serve the pool.
+	RequireIdentity bool
+}
+
+// EnginePools converts pools for the engine.
+func EnginePools(pools []Pool) []engine.RunnerPool {
+	out := make([]engine.RunnerPool, 0, len(pools))
+	for _, p := range pools {
+		out = append(out, engine.RunnerPool{Name: p.Name, Kind: p.Kind, Projects: p.Projects, Events: p.Events,
+			RequireIdentity: p.RequireIdentity, Targets: p.Targets})
+	}
+	return out
 }
 
 // Pools reads the runner pools' tokens and checks them: every pool has a
@@ -303,6 +349,38 @@ func (c *Config) Pools(sharedToken string) ([]Pool, error) {
 			return nil, errors.New("runner_pools: every pool needs a name")
 		case seen[p.Name]:
 			return nil, fmt.Errorf("runner_pools: %s is listed twice", p.Name)
+		case p.Kind != "" && p.Kind != engine.PoolBuild && p.Kind != engine.PoolDeploy:
+			return nil, fmt.Errorf("%s: kind is deploy (the default) or build", where)
+		}
+		if p.Kind == engine.PoolBuild {
+			switch {
+			case len(p.Targets) > 0 || p.TokenEnv != "" || p.TokenFile != "":
+				return nil, fmt.Errorf("%s: a build pool has no targets and no token: its runners enrol with join tokens", where)
+			case len(p.Projects) == 0 && p.Name != engine.DefaultPool:
+				return nil, fmt.Errorf("%s: list the projects it serves (names or patterns such as web-*; [\"*\"] for all)", where)
+			case p.Name == engine.DefaultPool && p.RequireIdentity && c.RunnerEnabled():
+				return nil, fmt.Errorf("%s: require_identity refuses the shared runner token, which the built-in runner uses; turn the built-in runner off (runner.enabled: false)", where)
+			}
+			seen[p.Name] = true
+			out = append(out, Pool{Name: p.Name, Kind: engine.PoolBuild, Projects: p.Projects, Events: p.Events, RequireIdentity: p.RequireIdentity})
+			continue
+		}
+		switch {
+		case len(p.Projects) > 0 || len(p.Events) > 0:
+			return nil, fmt.Errorf("%s: projects and events are for build pools (kind: build); a deploy pool serves targets", where)
+		case p.Name == engine.DefaultPool:
+			return nil, fmt.Errorf("%s: the pool named default is the build pool of the shared runner token; give the deploy pool another name", where)
+		case p.RequireIdentity && p.TokenEnv == "" && p.TokenFile == "" && len(p.Targets) > 0:
+			seen[p.Name] = true
+			for _, t := range p.Targets {
+				if !targets[t] {
+					return nil, fmt.Errorf("%s: no environment has target %q", where, t)
+				}
+			}
+			out = append(out, Pool{Name: p.Name, Kind: engine.PoolDeploy, Targets: p.Targets, RequireIdentity: true})
+			continue
+		case p.RequireIdentity:
+			return nil, fmt.Errorf("%s: require_identity refuses the pool's token, so give it none (no token_env or token_file)", where)
 		case len(p.Targets) == 0:
 			return nil, fmt.Errorf("%s: list the targets its runners may serve", where)
 		case (p.TokenEnv == "") == (p.TokenFile == ""):
@@ -338,7 +416,7 @@ func (c *Config) Pools(sharedToken string) ([]Pool, error) {
 				return nil, fmt.Errorf("%s: the token is also the token of pool %s", where, o.Name)
 			}
 		}
-		out = append(out, Pool{Name: p.Name, Token: tok, Targets: p.Targets})
+		out = append(out, Pool{Name: p.Name, Kind: engine.PoolDeploy, Token: tok, Targets: p.Targets})
 	}
 	return out, nil
 }
@@ -606,6 +684,18 @@ type RunnerFile struct {
 	// for verify steps of its targets, by the names the servers'
 	// verification.sources give them (schema 19).
 	HealthSources map[string]hsource.Config `yaml:"health_sources"`
+	// Labels are what the runner says it has, such as arm64 or gpu, for
+	// pipelines that ask for runners with labels (runner: { labels }).
+	Labels []string `yaml:"labels"`
+	// Accept is the runner's own limits on the work it takes: checked on
+	// the runner before anything runs, whatever the server says.
+	Accept *accept.Config `yaml:"accept"`
+	// Proxy and NoProxy override HTTPS_PROXY, HTTP_PROXY and NO_PROXY for
+	// the runner's requests to the server; CAFile adds certificates (PEM)
+	// to the system's, for a server or proxy a private authority signed.
+	Proxy   string `yaml:"proxy"`
+	NoProxy string `yaml:"no_proxy"`
+	CAFile  string `yaml:"ca_file"`
 }
 
 // LoadRunner reads a runner configuration file. Unknown settings are
@@ -632,6 +722,12 @@ func LoadRunner(path string) (*RunnerFile, error) {
 	c.Secrets.RelativeTo(base)
 	c.Images.RelativeTo(base)
 	if err := c.Images.Check(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if c.CAFile != "" && !filepath.IsAbs(c.CAFile) {
+		c.CAFile = filepath.Join(base, c.CAFile)
+	}
+	if err := c.Accept.Check(); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if c.Deploy != nil {
@@ -825,6 +921,9 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 	if _, err := c.WaiverRole(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if _, err := c.RunnerAdminRole(); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return c, nil

@@ -252,6 +252,15 @@
             }
           }
         },
+        "runnerPools": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": { "name": { "type": "string" }, "kind": { "enum": ["build", "deploy"] } }
+          }
+        },
+        "runnerAdmin": { "enum": ["admin", "operator", "none", null] },
         "extraConfig": { "type": "object" }
       }
     },
@@ -360,6 +369,13 @@
         "replicas": { "type": "integer", "minimum": 0 },
         "concurrency": { "type": "integer", "minimum": 1 },
         "serverURL": { "type": "string", "pattern": "^(https?://.+)?$" },
+        "join": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": { "existingSecret": { "type": "string" }, "existingSecretKey": { "type": "string" } }
+        },
+        "labels": { "type": ["array", "null"], "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,62}$" } },
+        "accept": { "type": ["object", "null"] },
         "kubernetes": {
           "type": "object",
           "additionalProperties": false,

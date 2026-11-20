@@ -61,6 +61,21 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/runs/{id}/steps/{step}/explanations": {"GET", "/api/v1/runs/{pay}/steps/x/explanations", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"POST /api/v1/runs/{id}/steps/{step}/explain": {"POST", "/api/v1/runs/{pay}/steps/x/explain", `{"model":"local"}`,
 		[6]int{401, 404, 403, 409, 404, 409}},
+	// Enrolment proves itself with a join token or a signed assertion in
+	// the body: an empty body is refused by the handler.
+	"POST /api/runner/v2/join":   {"POST", "/api/runner/v2/join", "{}", [6]int{400, 400, 400, 400, 400, 400}},
+	"POST /api/runner/v2/token":  {"POST", "/api/runner/v2/token", "{}", [6]int{400, 400, 400, 400, 400, 400}},
+	"POST /api/runner/v2/rotate": {"POST", "/api/runner/v2/rotate", "{}", [6]int{400, 400, 400, 400, 400, 400}},
+	// Pools are seen by whoever sees runners. Managing runners needs the
+	// role runner_admin names (admin by default) on every project.
+	"GET /api/v1/runner-pools":       {"GET", "/api/v1/runner-pools", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/runner-join-tokens": {"GET", "/api/v1/runner-join-tokens", "", [6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/runner-join-tokens": {"POST", "/api/v1/runner-join-tokens", `{"pool":"default"}`,
+		[6]int{401, 403, 403, 403, 403, 201}},
+	"POST /api/v1/runner-join-tokens/{id}/revoke": {"POST", "/api/v1/runner-join-tokens/join_nope/revoke", "",
+		[6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/runners/{id}/revoke": {"POST", "/api/v1/runners/rnr_nope/revoke", "{}", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/runners/{id}/rotate": {"POST", "/api/v1/runners/rnr_nope/rotate", "", [6]int{401, 403, 403, 403, 403, 404}},
 	// Commands on a deployment: operators of the run's project (and of the
 	// environment); the run has no such deployment, so the handler says 404.
 	"GET /api/v1/runs/{id}/deployments/{dep}/controls":                 {"GET", "/api/v1/runs/{pay}/deployments/dep_x/controls", "", [6]int{401, 404, 404, 404, 404, 404}},
@@ -174,7 +189,7 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).
 var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info",
-	"GET /hosted/{link}/{path...}"}
+	"GET /hosted/{link}/{path...}", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate"}
 
 // Every registered route must be in the permission table, and the table
 // must not list routes that no longer exist.

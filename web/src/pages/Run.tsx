@@ -287,6 +287,12 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
+      {run.pool_hint && (
+        <div className="callout callout-draft" role="status">
+          <strong>Waiting for a runner that may take this run.</strong> {run.pool_hint} <Link href="/runners">Runners and pools</Link>
+        </div>
+      )}
+
       {run.cancel_requested && run.superseded_by && (
         <div className="callout callout-draft">
           <strong>Superseded.</strong> Run <Link href={`/runs/${run.superseded_by}`}>#{run.superseded_by_number}</Link> of the same {run.pull_request ? "pull request" : "branch or tag"} started

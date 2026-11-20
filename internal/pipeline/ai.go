@@ -70,7 +70,7 @@ var (
 	aiKeys      = []string{"kind", "description", "needs", "when", "timeout", "retry", "model", "instructions", "prompt", "inputs", "schema", "max_tokens", "temperature"}
 	aiInputKeys = []string{"label", "output", "artifact", "file", "max_bytes"}
 	modelNameRe = regexp.MustCompile(`^[a-z][a-z0-9-]{0,39}$`)
-	labelRe     = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9 _.-]{0,59}$`)
+	aiLabelRe   = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9 _.-]{0,59}$`)
 )
 
 // IsAI reports whether the step asks a model.
@@ -263,7 +263,7 @@ func (ps *parser) parseAIInput(n *yaml.Node, at string) AIInput {
 		switch k.Value {
 		case "label":
 			in.Label = ps.str(v, where)
-			if !labelRe.MatchString(in.Label) {
+			if !aiLabelRe.MatchString(in.Label) {
 				ps.add(v, where, "a label is a short name: letters, digits, spaces, _, . and -")
 			}
 		case "output":

@@ -1212,7 +1212,110 @@ CREATE INDEX ai_explanations_step ON ai_explanations(run_id, step_id, created_at
 
 ALTER TABLE steps ADD COLUMN kind TEXT NOT NULL DEFAULT '';
 `},
+
+	// 20: runner identities (see runnerids.go and internal/runnerauth). A
+	//     join token, made by a person for one pool and stored hashed, is
+	//     exchanged once (or up to max_uses times) for an identity: a
+	//     server-assigned runner ID and the public half of a key the runner
+	//     made. The runner then gets short-lived access tokens
+	//     (runner_access_tokens, hashed) with assertions signed by its key;
+	//     runner_assertions remembers each assertion's ID until it expires,
+	//     so none is accepted twice by any server. runners gains what the
+	//     runners list shows: the kind of runner (build or deploy), how it
+	//     authenticated (identity, shared token or pool token), its labels,
+	//     what its accept: section allows, and its OS and architecture.
+	//     Compatibility: additive: new tables and new columns with defaults,
+	//     and no new event type. Older servers never read the new tables, so
+	//     they refuse runners' access tokens (enrolled runners work only
+	//     with servers of schema 20 or newer); shared and pool tokens work
+	//     with every server.
+	{additive, `
+CREATE TABLE runner_join_tokens (
+  id           TEXT PRIMARY KEY,
+  hash         TEXT    NOT NULL UNIQUE,
+  pool         TEXT    NOT NULL,
+  labels       TEXT    NOT NULL DEFAULT '',
+  description  TEXT    NOT NULL DEFAULT '',
+  max_uses     INTEGER NOT NULL DEFAULT 1,
+  uses         INTEGER NOT NULL DEFAULT 0,
+  ephemeral    INTEGER NOT NULL DEFAULT 0,
+  created_by   TEXT    NOT NULL,
+  created_at   {{BIG}} NOT NULL,
+  expires_at   {{BIG}} NOT NULL,
+  last_used_at {{BIG}} NOT NULL DEFAULT 0,
+  revoked_by   TEXT    NOT NULL DEFAULT '',
+  revoked_at   {{BIG}} NOT NULL DEFAULT 0
+);
+
+CREATE TABLE runner_identities (
+  id             TEXT PRIMARY KEY,
+  name           TEXT    NOT NULL,
+  pool           TEXT    NOT NULL,
+  public_key     TEXT    NOT NULL,
+  key_created_at {{BIG}} NOT NULL,
+  join_token     TEXT    NOT NULL DEFAULT '',
+  enrolled_by    TEXT    NOT NULL DEFAULT '',
+  enrolled_at    {{BIG}} NOT NULL,
+  labels         TEXT    NOT NULL DEFAULT '',
+  hostname       TEXT    NOT NULL DEFAULT '',
+  os             TEXT    NOT NULL DEFAULT '',
+  arch           TEXT    NOT NULL DEFAULT '',
+  version        TEXT    NOT NULL DEFAULT '',
+  executor       TEXT    NOT NULL DEFAULT '',
+  ephemeral      INTEGER NOT NULL DEFAULT 0,
+  last_seen      {{BIG}} NOT NULL DEFAULT 0,
+  revoked_at     {{BIG}} NOT NULL DEFAULT 0,
+  revoked_by     TEXT    NOT NULL DEFAULT '',
+  revoke_reason  TEXT    NOT NULL DEFAULT '',
+  rotate_asked   {{BIG}} NOT NULL DEFAULT 0
+);
+CREATE INDEX runner_identities_pool ON runner_identities(pool);
+
+CREATE TABLE runner_access_tokens (
+  hash       TEXT PRIMARY KEY,
+  runner     TEXT    NOT NULL,
+  expires_at {{BIG}} NOT NULL
+);
+CREATE INDEX runner_access_tokens_runner ON runner_access_tokens(runner);
+CREATE INDEX runner_access_tokens_expires ON runner_access_tokens(expires_at);
+
+CREATE TABLE runner_assertions (
+  id         TEXT PRIMARY KEY,
+  expires_at {{BIG}} NOT NULL
+);
+CREATE INDEX runner_assertions_expires ON runner_assertions(expires_at);
+
+ALTER TABLE runners ADD COLUMN kind TEXT NOT NULL DEFAULT '';
+ALTER TABLE runners ADD COLUMN auth TEXT NOT NULL DEFAULT '';
+ALTER TABLE runners ADD COLUMN labels TEXT NOT NULL DEFAULT '';
+ALTER TABLE runners ADD COLUMN accept TEXT NOT NULL DEFAULT '';
+ALTER TABLE runners ADD COLUMN os TEXT NOT NULL DEFAULT '';
+ALTER TABLE runners ADD COLUMN arch TEXT NOT NULL DEFAULT '';
+`},
+
+	// 21: runner pools for build steps (see pools.go). A pool serves the
+	//     projects (and, if it says, the events) its configuration names;
+	//     a runner of a pool is only ever given steps of runs its pool
+	//     serves. A pipeline may choose a pool and labels for its runs
+	//     (runner: { pool, labels }), kept in runs.runner_pool and
+	//     runs.runner_labels so that leasing filters on them in SQL.
+	//     Compatibility: additive: new columns with defaults, and no new
+	//     event type. Older servers do not know pools and would hand any
+	//     run's steps to any runner, so runs that a pool decides have
+	//     min_schema 21: a pipeline that chooses runners carries
+	//     "requires": 21, and while any build pool is configured every new
+	//     run's run.created event does. Older servers leave such runs alone.
+	{additive, `
+ALTER TABLE runs ADD COLUMN runner_pool TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN runner_labels TEXT NOT NULL DEFAULT '';
+`},
 }
+
+// schemaIdentity is the schema that brought runner identities.
+const schemaIdentity = 20
+
+// schemaPools is the schema that brought runner pools for build steps.
+const schemaPools = 21
 
 // schemaPolicy is the schema that brought delivery policies.
 const schemaPolicy = 16

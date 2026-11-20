@@ -210,8 +210,12 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 			allowed := orig.PullRequestSecrets
 			prSecrets = &allowed
 		}
+		poolRequires := 0
+		if e.knows(schemaPools) && e.buildPoolsConfigured() {
+			poolRequires = schemaPools // as in CreateRun
+		}
 		c.emit(RunCreated, Payload{Project: orig.Project, Number: number, Pipeline: c.e.withStoreRequires(orig.Pipeline), Trigger: &trig, Source: &src,
-			Draft: draft, Rerun: rerun, PullRequestSecrets: prSecrets})
+			Draft: draft, Rerun: rerun, PullRequestSecrets: prSecrets, Requires: poolRequires})
 		for _, id := range plan.Reuse {
 			s := orig.Steps[id]
 			from := &Reused{Run: orig.ID, Number: orig.Number, Attempt: s.Attempt, DecidedAt: s.DecidedAt}

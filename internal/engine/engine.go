@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/accept"
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/coverage"
 	"github.com/jk-magic-creations/launchway/internal/hub"
@@ -90,6 +91,11 @@ type Options struct {
 	// have the same ones.
 	HealthSources []HealthSource
 	Models        *ai.Registry
+	// RunnerPools are the server's runner pools (schema 21): build pools,
+	// which serve projects, and deploy pools, which serve targets. The
+	// default build pool exists whether or not it is listed. Every server
+	// sharing a database must be given the same ones.
+	RunnerPools []RunnerPool
 
 	// schema, for tests, makes the engine behave as a build that knows only
 	// the first schema migrations and their events; 0 means every one (or
@@ -121,6 +127,7 @@ type Engine struct {
 	polHash       string // names the configuration's own policies
 	sources       map[string]HealthSource
 	models        *ai.Registry
+	pools         map[string]RunnerPool
 
 	// deployKick wakes the reaper to hand free locks to waiting deploy steps
 	// at once (see kickDeploys).
@@ -158,10 +165,40 @@ type RunnerInfo struct {
 	// Targets, for a deploy runner, are the targets its configuration
 	// serves. The server only gives it work for those its pool may serve.
 	Targets []string `json:"targets,omitempty"`
-	// Pool is the runner pool its token belongs to, set by the server from
-	// the token, never by the runner.
+	// Labels are what the runner says it has (schema 21), such as arm64;
+	// a pipeline may ask for runners with some. An enrolled runner also has
+	// the labels its join token gave it.
+	Labels []string `json:"labels,omitempty"`
+	// OS and Arch are the runner's operating system and architecture.
+	OS   string `json:"os,omitempty"`
+	Arch string `json:"arch,omitempty"`
+	// Accept is what the runner's accept: section allows. The server gives
+	// it only work of projects and events it allows, and shows the rest;
+	// the runner checks everything itself either way.
+	Accept *accept.Config `json:"accept,omitempty"`
+
+	// Set by the server from how the runner authenticated, never by the
+	// runner. Pool is the runner pool: the deploy pool of a pool token, or
+	// an enrolled runner's pool ("" for the default build pool). Kind is
+	// PoolBuild or PoolDeploy. Auth is AuthIdentity, AuthShared or
+	// AuthPoolToken. For an enrolled runner, ID is the ID the server gave
+	// it, whatever the runner sent.
 	Pool string `json:"-"`
+	Kind string `json:"-"`
+	Auth string `json:"-"`
 }
+
+// OutcomeRefused is the outcome of a step a runner would not run because
+// its accept: section does not allow it. It ran nothing. The step fails,
+// without retries, saying why. Older servers read it as failed.
+const OutcomeRefused = "refused"
+
+// How a runner authenticated (RunnerInfo.Auth).
+const (
+	AuthIdentity  = "identity" // an enrolled runner's access token
+	AuthShared    = "shared"   // the shared runner token
+	AuthPoolToken = "pool"     // a deploy pool's token
+)
 
 // Job is everything a runner needs to execute one step attempt.
 type Job struct {
@@ -178,12 +215,15 @@ type Job struct {
 	Env       map[string]string `json:"env"`
 	// Secrets are references only. The runner looks the values up, adds
 	// them to the environment and masks them in the step's output.
-	Secrets    map[string]pipeline.SecretRef `json:"secrets,omitempty"`
-	Timeout    pipeline.Duration             `json:"timeout"`
-	Source     Source                        `json:"source"`
-	SHA        string                        `json:"sha,omitempty"`
-	Container  string                        `json:"container"`  // which of Containers the step runs in
-	Containers []pipeline.Container          `json:"containers"` // every container the run needs, services included
+	Secrets map[string]pipeline.SecretRef `json:"secrets,omitempty"`
+	Timeout pipeline.Duration             `json:"timeout"`
+	Source  Source                        `json:"source"`
+	SHA     string                        `json:"sha,omitempty"`
+	// Event is what started the run (push, pull_request, draft, ...), so
+	// that a runner's accept: section can refuse some.
+	Event      string               `json:"event,omitempty"`
+	Container  string               `json:"container"`  // which of Containers the step runs in
+	Containers []pipeline.Container `json:"containers"` // every container the run needs, services included
 	// Workspace names the run's workspace on this runner: the same for every
 	// step the runner takes while it holds the run, and new when it takes
 	// the run over from another runner (see Lease).
@@ -236,7 +276,7 @@ type JobReports struct {
 
 // Result is how a step attempt ended, as reported by its runner.
 type Result struct {
-	Outcome  string            `json:"outcome"` // succeeded, failed, canceled, or lost (the machinery failed; run it again)
+	Outcome  string            `json:"outcome"` // succeeded, failed, canceled, lost (the machinery failed; run it again) or refused (OutcomeRefused)
 	ExitCode *int              `json:"exit_code,omitempty"`
 	Error    string            `json:"error,omitempty"`
 	Outputs  map[string]string `json:"outputs,omitempty"`
@@ -364,6 +404,15 @@ func Open(o Options) (*Engine, error) {
 	if (len(pol.Inline) > 0 || len(pol.Sources) > 0) && known < schemaPolicy {
 		return nil, fmt.Errorf("policies need schema %d; this build knows %d", schemaPolicy, known)
 	}
+	pools, err := checkPools(o.RunnerPools)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range o.RunnerPools {
+		if p.Kind == PoolBuild && known < schemaPools {
+			return nil, fmt.Errorf("build runner pools need schema %d; this build knows %d", schemaPools, known)
+		}
+	}
 	db, _, err := openDB(o.Database, o.ConnectWait, known, o.Logger)
 	if err != nil {
 		return nil, err
@@ -380,6 +429,7 @@ func Open(o Options) (*Engine, error) {
 		polHash:    policy.Hash(pol.Inline),
 		sources:    sources,
 		models:     o.Models,
+		pools:      pools,
 		deployKick: make(chan struct{}, 1),
 		published:  map[string]int64{},
 		selfOK:     o.AllowSelfApproval == nil || *o.AllowSelfApproval,
@@ -643,6 +693,15 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			return nil, ps
 		}
 	}
+	if nr.Pipeline.UsesSchemaPools() && !e.knows(schemaPools) {
+		return nil, fmt.Errorf("%w: this server does not know runner pools (runner:, schema %d)", ErrConflict, schemaPools)
+	}
+	// While build pools decide where runs go, older servers, which would
+	// hand any run's steps to any runner, must leave new runs alone.
+	poolRequires := 0
+	if e.knows(schemaPools) && e.buildPoolsConfigured() {
+		poolRequires = schemaPools
+	}
 	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
 		return nil, err
 	}
@@ -701,7 +760,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			return err
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: c.e.withStoreRequires(nr.Pipeline), Trigger: &trig, Source: &src, Draft: draft,
-			PullRequestSecrets: prSecrets})
+			PullRequestSecrets: prSecrets, Requires: poolRequires})
 		c.advance()
 		var superseded []int
 		if supersede {
@@ -936,7 +995,19 @@ func (e *Engine) Lease(ctx context.Context, r RunnerInfo, wait time.Duration) (*
 
 func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 	now := e.now()
-	ownOnly, err := e.leaveNewRunsToIdle(r.ID, now)
+	if r.Auth == AuthIdentity && e.knows(schemaIdentity) {
+		// Read from the database, not from what authenticated the request:
+		// a runner revoked a moment ago gets nothing more.
+		if err := e.identityUsable(r.ID); err != nil {
+			return nil, err
+		}
+	}
+	// Only steps of runs the runner's pool serves (schema 21).
+	poolWhere, poolArgs, some, err := e.leaseFilter(r)
+	if err != nil || !some {
+		return nil, err
+	}
+	ownOnly, err := e.leaveNewRunsToIdle(r, now)
 	if err != nil {
 		return nil, err
 	}
@@ -962,6 +1033,8 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 		// Deploy and rollback steps go to deploy runners (LeaseDeploy).
 		where += ` AND s.target = ''`
 	}
+	where += poolWhere
+	args = append(args, poolArgs...)
 	rows, err := e.db.Query(`SELECT s.run_id, s.step_id, s.attempt FROM steps s
 		JOIN runs ON runs.id = s.run_id
 		LEFT JOIN runners o ON o.id = runs.runner
@@ -1001,6 +1074,9 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			prev := c.st.Runner
 			if !c.runnerCan(r, cd.step) {
 				return nil // it needs a runner that knows artifacts
+			}
+			if c.e.knows(schemaPools) && c.e.refusesRun(r, c.st.Project, c.st.Trigger.Event, c.st.Pipeline.Runner) != "" {
+				return nil // its pool does not serve the run (checked in SQL too)
 			}
 			if def := c.st.Pipeline.Step(cd.step); def.IsAI() && c.e.knows(schemaVerify) {
 				// An ai step needs no workspace: any runner that can call
@@ -1070,11 +1146,16 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 // leaveNewRunsToIdle reports whether a runner should take steps only of the
 // runs it holds: it holds a lease, and another runner that holds none has
 // been seen within the lease TTL.
-func (e *Engine) leaveNewRunsToIdle(runnerID string, now time.Time) (bool, error) {
+func (e *Engine) leaveNewRunsToIdle(r RunnerInfo, now time.Time) (bool, error) {
 	// Deploy runners (of a pool) never take ordinary steps, so they are not
-	// idle runners to leave work to.
-	notPool := ""
-	if e.knows(schemaDeploy) {
+	// idle runners to leave work to; nor are runners of other build pools,
+	// which may not take this runner's runs.
+	notPool, args := "", []any{r.ID, now.Add(-e.ttl).UnixMilli()}
+	switch {
+	case e.knows(schemaIdentity):
+		notPool = ` AND o.pool = ? AND o.kind <> 'deploy'`
+		args = append(args, r.Pool)
+	case e.knows(schemaDeploy):
 		notPool = ` AND o.pool = ''`
 	}
 	var n int
@@ -1082,7 +1163,7 @@ func (e *Engine) leaveNewRunsToIdle(runnerID string, now time.Time) (bool, error
 		WHERE o.id <> ? AND o.last_seen >= ?`+notPool+`
 		AND NOT EXISTS (SELECT 1 FROM leases WHERE leases.runner = o.id)
 		AND EXISTS (SELECT 1 FROM leases WHERE leases.runner = ?)`,
-		runnerID, now.Add(-e.ttl).UnixMilli(), runnerID).Scan(&n)
+		append(args, r.ID)...).Scan(&n)
 	return n > 0, err
 }
 
@@ -1245,6 +1326,13 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		switch res.Outcome {
 		case "succeeded":
 			p.Outcome = string(StepSucceeded)
+			c.emit(StepFinished, p)
+		case OutcomeRefused:
+			// The runner's accept: section does not allow the step. It ran
+			// nothing; another try would be refused the same way.
+			p.Outcome = string(StepFailed)
+			p.Outputs, p.Tests = nil, nil
+			p.Reason = "the runner refused the step: " + nonEmpty(res.Error, "its accept: section does not allow it")
 			c.emit(StepFinished, p)
 		case "lost":
 			if c.st.CancelRequested {
@@ -1410,6 +1498,7 @@ func (e *Engine) reaper(ctx context.Context) {
 			if now := e.now(); now.Sub(pruned) >= time.Minute {
 				pruned = now
 				e.forgetRunners()
+				e.pruneIdentities()
 				e.pruneTests()
 				e.pruneCoverage()
 				e.pruneFindings()
@@ -1844,6 +1933,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaPools) {
+		if err := c.persistPools(); err != nil {
+			return err
+		}
+	}
 	return c.e.notifyOthers(c.tx, note{Kind: noteRun, Run: c.runID, Steps: changed, Queued: c.queued})
 }
 
@@ -2089,7 +2183,7 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		// read before it is queued; stepSecrets is a second guard, so that
 		// a runner is never asked to look a secret up for one.
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: c.stepSecrets(def),
-		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Workspace: st.Workspace, Library: def.Library,
+		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Event: st.Trigger.Event, Workspace: st.Workspace, Library: def.Library,
 		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def),
 	}
 }
@@ -2232,6 +2326,28 @@ func (e *Engine) touchRunner(r RunnerInfo) {
 	}
 	unlock := e.writeLock()
 	defer unlock()
+	if e.knows(schemaIdentity) {
+		if r.Auth == AuthIdentity && e.identityUsable(r.ID) != nil {
+			return // revoked a moment ago: it must not look alive again
+		}
+		kind := nonEmpty(r.Kind, PoolBuild)
+		if _, err := e.db.Exec(`INSERT INTO runners(id, name, executor, version, last_seen, targets, pool, features, kind, auth, labels, accept, os, arch)
+			VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+			ON CONFLICT(id) DO UPDATE SET name = excluded.name, executor = excluded.executor, version = excluded.version,
+				last_seen = excluded.last_seen, targets = excluded.targets, pool = excluded.pool, features = excluded.features,
+				kind = excluded.kind, auth = excluded.auth, labels = excluded.labels, accept = excluded.accept, os = excluded.os, arch = excluded.arch`,
+			r.ID, clipText(r.Name, 200), clipText(r.Executor, 50), clipText(r.Version, 100), e.now().UnixMilli(), strings.Join(r.Targets, ","), r.Pool,
+			r.Features, kind, r.Auth, labelText(validLabels(r.Labels)), encodeAccept(r), clipText(r.OS, 50), clipText(r.Arch, 50)); err != nil {
+			e.log.Error("recording runner", "err", err)
+		}
+		if r.Auth == AuthIdentity {
+			if _, err := e.db.Exec(`UPDATE runner_identities SET last_seen = ?, version = ?, executor = ? WHERE id = ?`,
+				e.now().UnixMilli(), clipText(r.Version, 100), clipText(r.Executor, 50), r.ID); err != nil {
+				e.log.Error("recording runner", "err", err)
+			}
+		}
+		return
+	}
 	if e.knows(schemaImages) {
 		if _, err := e.db.Exec(`INSERT INTO runners(id, name, executor, version, last_seen, targets, pool, features) VALUES(?,?,?,?,?,?,?,?)
 			ON CONFLICT(id) DO UPDATE SET name = excluded.name, executor = excluded.executor, version = excluded.version,
@@ -2256,6 +2372,17 @@ func (e *Engine) touchRunner(r RunnerInfo) {
 		r.ID, r.Name, r.Executor, r.Version, e.now().UnixMilli()); err != nil {
 		e.log.Error("recording runner", "err", err)
 	}
+}
+
+// validLabels keeps the labels that are valid, at most 32.
+func validLabels(l []string) []string {
+	var out []string
+	for _, s := range l {
+		if pipeline.ValidLabel(s) && len(out) < 2*pipeline.MaxRunnerLabels {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func boolInt(b bool) int {
