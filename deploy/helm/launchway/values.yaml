@@ -692,6 +692,11 @@ delivery:
     # read from deployRunner.secretStores. Written to its file only when true; needs ai.models.
     # Unset: the built-in default, false.
     ai: null
+    # -- The deploy runner's own limits on the work it takes (accept: in its runner.yaml), checked
+    # on the runner before anything runs: which projects it serves and which environments it
+    # deploys to. Written only when set. For example:
+    #   accept: { projects: [launchway], environments: [launchway-dev, launchway-sandbox], executors: [deploy] }
+    accept: null
     rbac:
       # -- Create the Roles below and bind them to the deploy runner.
       create: true

@@ -197,6 +197,7 @@ export default defineConfig({
           { text: 'Sign-in with OIDC and roles', link: '/howto/oidc-and-roles' },
           { text: 'Secret stores', link: '/howto/secrets' },
           { text: 'Backup, restore, upgrade', link: '/howto/backup-restore-upgrade' },
+          { text: 'Self-deploy', link: '/howto/self-deploy' },
           { text: 'Monitor Launchway', link: '/howto/monitoring' },
           { text: 'Troubleshooting', link: '/howto/troubleshooting' },
         ],

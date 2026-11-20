@@ -101,6 +101,38 @@ delivery:
 	}
 }
 
+// delivery.deployRunner.accept reaches the deploy runner's file, loads, and
+// is absent when unset (a release before it reads the file unchanged).
+func TestChartDeployRunnerAccept(t *testing.T) {
+	const base = `postgresql: { enabled: true }
+delivery:
+  environments:
+    - { name: dev, target: homelab, projects: [shop] }
+  deployRunner:
+    enabled: true
+    target: homelab
+    applications: [ { projects: [shop], names: [shop] } ]
+    repos:
+      gitops:
+        url: http://git.example/gitops.git
+        paths: [ { projects: [shop], files: ["apps/shop/**"] } ]
+`
+	if f := renderChart(t, base)["deploy-runner"]; strings.Contains(f, "accept:") {
+		t.Errorf("accept is written when unset:\n%s", f)
+	}
+	f := renderChart(t, base+"    accept: { projects: [shop], environments: [dev], executors: [deploy] }\n")["deploy-runner"]
+	if !strings.Contains(f, "accept:") {
+		t.Fatalf("accept missing:\n%s", f)
+	}
+	if err := loadFile(t, f, true); err != nil {
+		t.Fatalf("deploy runner with accept: %v\n%s", err, f)
+	}
+	c, err := LoadRunner(writeTemp(t, f))
+	if err != nil || len(c.Accept.Projects) != 1 || c.Accept.Environments[0] != "dev" {
+		t.Fatalf("accept not loaded: %v %+v", err, c)
+	}
+}
+
 func writeTemp(t *testing.T, body string) string {
 	p := filepath.Join(t.TempDir(), "c.yaml")
 	os.WriteFile(p, []byte(body), 0o644)

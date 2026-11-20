@@ -21,5 +21,6 @@ and what was not.
 | [Sign-in with OIDC and roles](oidc-and-roles.md) | turning on sign-in and granting roles |
 | [Secret stores](secrets.md) | Vault, OpenBao, files and environment variables |
 | [Backup, restore, upgrade](backup-restore-upgrade.md) | keeping data safe, and changing versions |
+| [Let Launchway deploy itself](self-deploy.md) | building and deploying its own image, break-glass and rollback |
 | [Monitor Launchway](monitoring.md) | health checks, logs and what to alert on |
 | [Troubleshooting](troubleshooting.md) | error messages and what to do |
