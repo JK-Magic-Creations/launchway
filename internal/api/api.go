@@ -449,7 +449,7 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 		Runner      engine.RunnerInfo `json:"runner"`
 		WaitSeconds int               `json:"wait_seconds"`
 	}
-	if !decode(w, r, &in) || s.refusePools(w, r) {
+	if !decode(w, r, &in) || s.refusePools(w, r) || s.claimsEnrolled(w, r, in.Runner) {
 		return
 	}
 	info := s.callerInfo(r, in.Runner)
