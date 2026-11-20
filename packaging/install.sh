@@ -360,7 +360,7 @@ write_settings() {
 	install -d -m 0750 -o root -g "$USER_NAME" "$CONF_DIR"
 	changed_settings=no
 	{
-		echo "# Written by install.sh; run it again to change these. See the README's Commands section."
+		echo "# Written by install.sh; run it again to change these. See https://jk-magic-creations.github.io/launchway/reference/runner-config"
 		echo "server: $(yaml_quote "$server")"
 		[ -z "$name" ] || echo "name: $(yaml_quote "$name")"
 		echo "data: $DATA_DIR"

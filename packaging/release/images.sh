@@ -71,7 +71,7 @@ cosignflags=
 commit=$(git rev-parse HEAD)
 epoch=${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}
 created=$(date -u -d "@$epoch" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -r "$epoch" +%Y-%m-%dT%H:%M:%SZ)
-source_repo=${SOURCE_REPOSITORY:-https://github.com/jk-magic-creations/launchway}
+source_repo=${SOURCE_REPOSITORY:-https://github.com/JK-Magic-Creations/launchway}
 
 work=$(mktemp -d)
 cfg=$work/signing-config.json

@@ -73,7 +73,7 @@ for target in server runner; do
 	[ $target = server ] || name=launchway-runner
 	podman build -q --platform linux/amd64 -f packaging/release/Containerfile --target $target \
 		--build-arg VERSION="$ver" --build-arg REVISION="$(git rev-parse HEAD)" \
-		--build-arg CREATED="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "localhost/$name:$tag" "$rel" >/dev/null
+		--build-arg CREATED="$(TZ=UTC0 git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ)" -t "localhost/$name:$tag" "$rel" >/dev/null
 done
 podman build -q -t "localhost/lw-rc-git:$tag" --build-arg BASE="$ALPINE" -f $here/git.Containerfile $here >/dev/null
 archive=$(mktemp -d)

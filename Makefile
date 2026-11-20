@@ -16,10 +16,15 @@ build:
 # Builds the container image (see Dockerfile). Docker works too: CONTAINER=docker.
 CONTAINER ?= podman
 IMAGE ?= launchway:$(VERSION)
-REVISION ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+# The image's OCI labels: the full commit, and the commit's time as its creation time (so two
+# builds of one commit carry the same labels). The Dockerfile refuses a build without a commit.
+REVISION ?= $(shell git rev-parse HEAD 2>/dev/null)
+CREATED ?= $(shell TZ=UTC0 git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ 2>/dev/null)
+SOURCE_REPOSITORY ?= https://github.com/JK-Magic-Creations/launchway
 image:
+	@test -n "$(REVISION)" || { echo "make image: no Git commit; build from a clone or set REVISION=<full commit sha> and CREATED" >&2; exit 1; }
 	$(CONTAINER) build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) \
-		--build-arg CREATED=$(shell date -u +%Y-%m-%dT%H:%M:%SZ) -t $(IMAGE) .
+		--build-arg CREATED=$(CREATED) --build-arg SOURCE=$(SOURCE_REPOSITORY) -t $(IMAGE) .
 
 # Checks the Helm charts in deploy/helm.
 chart-lint: charts-sync

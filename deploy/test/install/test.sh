@@ -5,7 +5,8 @@
 #   install.sh  install (signature and checksum verified), settings and permissions, the unit
 #               running as launchway-runner, a pipeline step run through a real server, an
 #               idempotent re-run, a re-run with new options, refusal of a tampered binary and
-#               of a tampered SHA256SUMS, upgrade to the next release, uninstall --purge;
+#               of a tampered SHA256SUMS, upgrade to the next release, uninstall --purge; and
+#               --join: enrolment with a join token, the identity kept across a restart;
 #   packages    the deb or rpm from the generated (signed) apt or yum repository: install the
 #               older release, configure, start, run a step, upgrade with apt or dnf, run a step
 #               again, remove.
@@ -286,6 +287,45 @@ test_script() { # DISTRO
 	podman rm -f "$m" >/dev/null
 }
 
+# test_join DISTRO: install.sh --join with a join token made through the API; the runner enrols on
+# its first start (launchway runner --join, through LAUNCHWAY_JOIN), keeps its key in its state
+# directory, and starts again after the token is used up.
+test_join() {
+	m=lw-it-$1-join
+	name=$m
+	log "$1: install.sh --join"
+	start_machine "$m" "localhost/lw-it/$1"
+	jt=$(api -X POST -d '{"pool":"default","ttl":"1h"}' http://127.0.0.1:8080/api/v1/runner-join-tokens | jq -r .token)
+	case $jt in lwj_*) ;; *) fail "$m: no join token from the server ($jt)" ;; esac
+	lwinstall "$m" "$NEW" --from-dir /release/$NEW \
+		--server http://lw-server:8080 --join "$jt" --name "$name" || fail "$m: install.sh --join"
+	check_installed "$m" /usr/local/bin/launchway
+	podman exec "$m" grep -q "^LAUNCHWAY_JOIN=$jt\$" /etc/launchway/runner.env || fail "$m: runner.env lacks LAUNCHWAY_JOIN"
+	! podman exec "$m" grep -q '^LAUNCHWAY_RUNNER_TOKEN=' /etc/launchway/runner.env || fail "$m: runner.env holds a shared token"
+	run_step "$name"
+	auth=$(api http://127.0.0.1:8080/api/v1/runners | jq -r --arg n "$name" '.[] | select(.name == $n) | .auth')
+	[ "$auth" = identity ] || fail "$m: the server sees the runner with auth '$auth', not identity"
+	perms=$(podman exec "$m" stat -c '%a %U' /var/lib/launchway-runner/identity/key)
+	[ "$perms" = "600 launchway-runner" ] || fail "$m: the identity key is $perms"
+	pass "$m: enrolled with a join token; the server sees an identity; key 600 launchway-runner"
+	# The token is used up: a restart must use the identity, not enrol again.
+	podman exec "$m" systemctl restart launchway-runner
+	i=0
+	until podman exec "$m" curl -fsS http://127.0.0.1:8081/readyz >/dev/null 2>&1; do
+		i=$((i + 1))
+		[ $i -lt 60 ] || { podman exec "$m" journalctl -u launchway-runner --no-pager | tail -20; fail "$m: not ready after a restart"; }
+		sleep 1
+	done
+	podman exec "$m" journalctl -u launchway-runner --no-pager | grep -q 'Already enrolled as runner' ||
+		fail "$m: the restarted runner did not use its identity"
+	run_step "$name"
+	pass "$m: restarted with its identity (join token used up)"
+	podman exec "$m" sh /release/$NEW/install.sh uninstall --purge >/dev/null || fail "$m: uninstall"
+	podman exec "$m" test ! -e /var/lib/launchway-runner || fail "$m: the identity is still there after --purge"
+	pass "$m: uninstall --purge removed the identity"
+	podman rm -f "$m" >/dev/null
+}
+
 test_packages() { # DISTRO
 	m=lw-it-$1-pkg
 	name=$m
@@ -352,6 +392,7 @@ test_packages() { # DISTRO
 
 for d in $DISTROS; do
 	test_script "$d"
+	test_join "$d"
 	test_packages "$d"
 done
 log "test-install passed on: $DISTROS (install.sh and packages). Alpine/OpenRC: not supported."

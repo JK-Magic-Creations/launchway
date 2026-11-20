@@ -55,12 +55,10 @@ Launchway is early software. Turn on sign-in before anyone else can reach a serv
 
 ## Releases and verification
 
-Release archives contain Linux and macOS binaries, runner deb/rpm packages, both Helm charts,
-CycloneDX SBOMs, checksums, Sigstore signatures and SLSA provenance. Server and runner images are
-multi-architecture, signed, and carry SBOM and provenance attestations. See
-[version support and verification instructions](SUPPORT.md), [packaging and local releases](packaging/README.md),
-and [installing a runner on another machine](docs/howto/connect-runner.md). Air-gapped bundles
-include the release files, packages and images.
+Releases are signed, with SBOMs and provenance, and rebuild byte for byte from their commit; see
+[verifying downloads](docs/security/verify-downloads.md) and [versions and support](SUPPORT.md).
+Runners install on Linux with `install.sh`, deb or rpm packages, or the runner-only Helm chart:
+see [connect a runner](docs/howto/connect-runner.md).
 
 ## Contributing and security
 

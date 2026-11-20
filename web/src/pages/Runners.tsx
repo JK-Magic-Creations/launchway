@@ -7,15 +7,31 @@ import { bytes } from "../components/Security";
 import { HealthSourcesSection, ModelsSection } from "../components/Explain";
 import "../runners.css";
 
-// INSTALLER_URL is where the one-line installer for a runner on a plain
-// machine is served. The packaging work provides the script; until it is
-// served by the server, this is the address it will have.
-// TODO(packaging): keep in step with the installer's real path.
-export const INSTALLER_URL = `${location.origin}/install/runner.sh`;
+// Where Launchway's releases are published (see packaging/README.md): every release holds
+// install.sh, the binaries and packages, both Helm charts as .tgz files, and SHA256SUMS with its
+// Sigstore signature. Images are ghcr.io/jk-magic-creations/launchway and .../launchway-runner.
+export const RELEASES_URL = "https://github.com/JK-Magic-Creations/launchway/releases";
+export const RUNNER_IMAGE = "ghcr.io/jk-magic-creations/launchway-runner";
 
-// RUNNER_CHART is the Helm chart runners in Kubernetes are installed with.
-// TODO(packaging): the runner-only chart, once it is published.
-export const RUNNER_CHART = "oci://ghcr.io/jk-magic-creations/charts/launchway";
+// releaseVersion is the server's version when it is a release (v1.4.0, v1.4.0-rc.1), so that a
+// new runner gets the same release as the server; development builds give "".
+export function releaseVersion(v: string | undefined): string {
+  return v && /^v\d+\.\d+\.\d+(-(rc|alpha|beta)(\.\d+)?)?$/.test(v) ? v : "";
+}
+
+// INSTALLER_URL is the runner installer of the latest release; installerURL gives the one of a
+// given release. The script checks the binary against SHA256SUMS and its signature itself.
+export const INSTALLER_URL = `${RELEASES_URL}/latest/download/install.sh`;
+export function installerURL(version: string): string {
+  return version ? `${RELEASES_URL}/download/${version}/install.sh` : INSTALLER_URL;
+}
+
+// RUNNER_CHART is the runner-only Helm chart in a source checkout; runnerChart gives the chart
+// archive a release publishes (the chart's version is the release's, without the v).
+export const RUNNER_CHART = "deploy/helm/launchway-runner";
+export function runnerChart(version: string): string {
+  return version ? `${RELEASES_URL}/download/${version}/launchway-runner-${version.slice(1)}.tgz` : RUNNER_CHART;
+}
 
 const TTLS: [string, string][] = [["1h", "1 hour"], ["24h", "1 day"], ["168h", "7 days"]];
 
@@ -292,6 +308,8 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
   const [made, setMade] = useState<{ token: string; t: JoinToken } | null>(null);
   const [tab, setTab] = useState<"vm" | "container" | "kubernetes">("vm");
   const [copied, setCopied] = useState("");
+  const [serverVersion, setServerVersion] = useState("");
+  useEffect(() => { api.info().then((i) => setServerVersion(i.version)).catch(() => {}); }, []);
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -309,7 +327,7 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
 
   const p = pools.find((x) => x.name === pool);
   const origin = location.origin;
-  const commands = made ? installCommands(origin, made.token, made.t, p) : null;
+  const commands = made ? installCommands(origin, made.token, made.t, releaseVersion(serverVersion), p) : null;
   return (
     <section className="card rn-add">
       <h2 className="h-sm">Add a runner</h2>
@@ -375,7 +393,7 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
 
 type Cmd = { title: string; text: string };
 
-function installCommands(origin: string, token: string, t: JoinToken, p?: RunnerPool): Record<"vm" | "container" | "kubernetes", Cmd[]> {
+function installCommands(origin: string, token: string, t: JoinToken, version: string, p?: RunnerPool): Record<"vm" | "container" | "kubernetes", Cmd[]> {
   const labels = t.labels.length ? `\nlabels: [${t.labels.join(", ")}]` : "";
   const projects = p && p.kind === "build" && p.projects.length ? p.projects : [];
   const acceptYaml = `accept:${projects.length ? `\n  projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}]` : "\n  # projects: [shop, \"web-*\"]"}
@@ -386,20 +404,23 @@ function installCommands(origin: string, token: string, t: JoinToken, p?: Runner
   env_deny: [LD_PRELOAD, BASH_ENV, ENV, "GIT_*"]`;
   return {
     vm: [
-      { title: "Install and enrol (one line)", text: `curl -fsSL ${INSTALLER_URL} | sudo sh -s -- --server ${origin} --join ${token}` },
+      {
+        title: "Install and enrol (Linux with systemd; the installer verifies what it downloads)",
+        text: `curl -fsSLO ${installerURL(version)}\nsudo sh install.sh ${version ? `--version ${version} ` : ""}--server ${origin} --join ${token}`,
+      },
       { title: "Or, with the launchway binary already on the machine", text: `launchway runner --server ${origin} --join ${token} --config /etc/launchway/runner.yaml` },
       { title: "/etc/launchway/runner.yaml: the runner's own limits (optional)", text: `server: ${origin}\ndata: /var/lib/launchway-runner${labels}\n${acceptYaml}` },
     ],
     container: [
-      { title: "Run the runner in a container", text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ghcr.io/jk-magic-creations/launchway \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host` },
+      { title: "Run the runner in a container", text: `podman run -d --name launchway-runner -v lw-runner:/var/lib/launchway-runner \\\n  -e LAUNCHWAY_JOIN=${token} ${RUNNER_IMAGE}:${version ? version.slice(1) : "latest"} \\\n  runner --server ${origin} --data /var/lib/launchway-runner --executor host` },
     ],
     kubernetes: [
-      { title: "The join token, as a Secret", text: `kubectl -n launchway create secret generic launchway-runner-join --from-literal=token=${token}` },
+      { title: "The join token, as a Secret", text: `kubectl create namespace launchway-runner\nkubectl -n launchway-runner create secret generic launchway-runner-join --from-literal=token=${token}` },
       {
-        title: "Helm values (runner section of the Launchway chart)",
-        text: `runner:\n  enabled: true\n  serverURL: ${origin}\n  join: { existingSecret: launchway-runner-join }${t.labels.length ? `\n  labels: [${t.labels.join(", ")}]` : ""}${projects.length ? `\n  accept: { projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}], pull_requests: false }` : ""}`,
+        title: "runner-values.yaml (the runner-only chart)",
+        text: `server:\n  url: ${origin}\nrunner:\n  join: { existingSecret: launchway-runner-join }\n  kubernetes: { namespace: launchway-steps, createNamespace: true }${t.labels.length ? `\n  labels: [${t.labels.join(", ")}]` : ""}${projects.length ? `\n  accept: { projects: [${projects.map((x) => JSON.stringify(x)).join(", ")}], pull_requests: false }` : ""}`,
       },
-      { title: "Install", text: `helm upgrade --install launchway-runners ${RUNNER_CHART} -n launchway -f runner-values.yaml` },
+      { title: version ? "Install" : "Install (from a source checkout; releases publish the chart as a .tgz)", text: `helm upgrade --install launchway-runners ${runnerChart(version)} -n launchway-runner -f runner-values.yaml` },
       ...(t.ephemeral || t.max_uses > 1 ? [] : [{ title: "Note", text: "Each pod enrols when it starts: make the token ephemeral, with enough uses for every pod start." }]),
     ],
   };

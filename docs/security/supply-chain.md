@@ -31,7 +31,7 @@ flowchart LR
 | Push rules | Nothing is pushed without a rule naming the project and the repository. Pull requests and drafts never push. | [Container images](../guide/images.md) |
 | Digest pinning | Deploy steps can write `repository@sha256:...`, which nobody can move. | [Deployments](../guide/deployments.md) |
 | Policy gates | Require tests, findings below a severity, an SBOM, images built, signed and scanned by the run, approvals, pinned libraries, images by digest from named registries. | [Policies](../guide/policies.md) |
-| Launchway releases | Reproducible binaries, packages and charts with CycloneDX SBOMs, signed checksums and SLSA provenance; signed server and runner images with SBOM and provenance attestations. | [Verifying releases](../../SUPPORT.md#verifying-what-you-downloaded) |
+| Launchway releases | Reproducible binaries, packages and charts with CycloneDX SBOMs, signed checksums and SLSA provenance; signed server and runner images with SBOM and provenance attestations. | [Verifying downloads](verify-downloads.md) |
 
 Verify a signature and provenance made by an image step:
 

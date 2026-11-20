@@ -62,42 +62,8 @@ servers; and read the release notes of every minor release you cross.
 
 ## Verifying what you downloaded
 
-Every release has `SHA256SUMS`, listing every file, and `SHA256SUMS.sigstore.json`, a
-[Sigstore](https://www.sigstore.dev) signature on it made by the release workflow (keyless: the
-certificate names the workflow and the tag). With [cosign](https://docs.sigstore.dev/cosign/system_config/installation/):
-
-```sh
-cosign verify-blob SHA256SUMS --bundle SHA256SUMS.sigstore.json \
-  --certificate-identity-regexp '^https://github\.com/jk-magic-creations/launchway/\.github/workflows/release\.yml@refs/tags/v' \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-sha256sum --ignore-missing -c SHA256SUMS
-```
-
-GitHub's build provenance for the same files: `gh attestation verify launchway-1.4.0-linux-amd64
---repo jk-magic-creations/launchway`. Each artifact has a CycloneDX SBOM next to it
-(`<file>.cdx.json`).
-
-Images (`ghcr.io/jk-magic-creations/launchway` and `.../launchway-runner`) are signed the same way,
-and carry an SBOM per platform and SLSA provenance as signed attestations:
-
-```sh
-img=ghcr.io/jk-magic-creations/launchway:1.4.0
-id='^https://github\.com/jk-magic-creations/launchway/\.github/workflows/release\.yml@refs/tags/v'
-cosign verify $img --certificate-identity-regexp "$id" \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-cosign verify-attestation $img --type slsaprovenance1 --certificate-identity-regexp "$id" \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-gh attestation verify oci://$img --repo jk-magic-creations/launchway
-```
-
-(`cosign verify-attestation --type cyclonedx` on a platform's image digest gives its SBOM.) Pin
-images by digest in production: `images.txt` in the release lists them.
-
-`install.sh` does the checks itself: it refuses a binary whose checksum does not match, and checks
-the signature with cosign when it is installed (`--require-signature` makes that mandatory).
-
-Releases rebuilt from source with `make release-local` (for example inside a network with no
-internet access) are signed with a key instead: verify with `cosign verify-blob --key cosign.pub
---insecure-ignore-tlog ...`, or `install.sh --public-key cosign.pub`, which also works with only
-openssl. Building the same commit twice gives byte-identical binaries, packages, charts and SBOMs
-(`make release-reproduce`), so anyone can check a published binary against its source.
+Every release has `SHA256SUMS` with a keyless Sigstore signature by the release workflow, a
+CycloneDX SBOM per file, and build provenance; the images are signed and carry SBOM and provenance
+attestations. The commands to check them, and to rebuild a release and compare it byte for byte,
+are in [Verifying downloads](docs/security/verify-downloads.md). `install.sh` checks the
+checksum, and the signature when cosign is installed, before it installs anything.

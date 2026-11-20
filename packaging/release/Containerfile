@@ -12,6 +12,13 @@ ARG ALPINE_IMAGE=docker.io/library/alpine:3.23.8@sha256:469c9ea410b9215eaee7976b
 
 FROM --platform=$BUILDPLATFORM ${ALPINE_IMAGE} AS rootfs
 ARG TARGETARCH
+# The OCI labels below need the full commit and its time; a build without them stops here.
+ARG REVISION=
+ARG CREATED=
+RUN echo "$REVISION" | grep -Eq '^[0-9a-f]{40}([0-9a-f]{24})?$' \
+    || { echo "REVISION must be the full commit: got '$REVISION'" >&2; exit 1; } \
+    && echo "$CREATED" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' \
+    || { echo "CREATED must be a UTC time such as 2026-11-20T06:12:56Z: got '$CREATED'" >&2; exit 1; }
 RUN case "$TARGETARCH" in amd64) a=x86_64 ;; arm64) a=aarch64 ;; *) echo "unsupported $TARGETARCH" >&2; exit 1 ;; esac \
     && keys=/usr/share/apk/keys/$a && [ -d "$keys" ] || keys=/etc/apk/keys \
     && apk add --root /rootfs --arch "$a" --initdb --no-cache --no-scripts \
@@ -30,9 +37,9 @@ RUN case "$TARGETARCH" in amd64) a=x86_64 ;; arm64) a=aarch64 ;; *) echo "unsupp
 FROM scratch AS server
 ARG TARGETARCH
 ARG VERSION
-ARG REVISION=unknown
-ARG CREATED=
-ARG SOURCE=https://github.com/jk-magic-creations/launchway
+ARG REVISION
+ARG CREATED
+ARG SOURCE=https://github.com/JK-Magic-Creations/launchway
 LABEL org.opencontainers.image.title="Launchway" \
       org.opencontainers.image.description="A build and delivery platform: server, web UI and runner in one binary" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \

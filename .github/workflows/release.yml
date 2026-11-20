@@ -7,7 +7,8 @@
 #
 # Repository settings this needs: Actions may create releases and write packages (the
 # GITHUB_TOKEN permissions below), and, for the apt and yum repositories, the secret
-# REPO_GPG_PRIVATE_KEY (an armored OpenPGP key without a passphrase). See packaging/README.md.
+# REPO_GPG_PRIVATE_KEY (an armored OpenPGP key without a passphrase) and the repository variable
+# PACKAGE_REPO_URL (where the repositories will be served). See packaging/README.md.
 name: Release
 on:
   push:
@@ -85,17 +86,20 @@ jobs:
           mkdir -p ~/.docker && cp "${XDG_RUNTIME_DIR}/containers/auth.json" ~/.docker/config.json
           IMAGE_REPO="ghcr.io/$owner" PATH="$PWD/bin/tools:$PATH" packaging/release/images.sh "$VERSION" "dist/$VERSION"
 
+      # The repositories have directories (dists/, repodata/), which release assets cannot have:
+      # they are attached as one archive, to be served from the static host PACKAGE_REPO_URL names.
       - name: Apt and yum repositories
         env:
           REPO_GPG_PRIVATE_KEY: ${{ secrets.REPO_GPG_PRIVATE_KEY }}
+          PACKAGE_REPO_URL: ${{ vars.PACKAGE_REPO_URL }}
         run: |
-          if [ -z "$REPO_GPG_PRIVATE_KEY" ]; then
-            echo "::warning::REPO_GPG_PRIVATE_KEY is not set: no apt or yum repository in this release"
+          if [ -z "$REPO_GPG_PRIVATE_KEY" ] || [ -z "$PACKAGE_REPO_URL" ]; then
+            echo "::warning::REPO_GPG_PRIVATE_KEY or PACKAGE_REPO_URL is not set: no apt or yum repository in this release"
             exit 0
           fi
           key=$(mktemp)
           printf '%s\n' "$REPO_GPG_PRIVATE_KEY" >"$key"
-          REPO_GPG_KEY=$key BASE_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$VERSION" \
+          REPO_GPG_KEY=$key BASE_URL="$PACKAGE_REPO_URL" \
             packaging/release/repo.sh "dist/$VERSION"
           rm -f "$key"
           tar -C "dist/$VERSION" -czf "dist/$VERSION/launchway-repositories-$VERSION.tar.gz" repo
@@ -138,4 +142,4 @@ jobs:
           case $VERSION in *-*) prerelease=--prerelease ;; esac
           find . -maxdepth 1 -type f -print0 | xargs -0 \
             gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --draft --verify-tag $prerelease \
-              --title "Launchway $VERSION" --notes "See SUPPORT.md for verifying these files and the images."
+              --title "Launchway $VERSION" --notes "Verify these files and the images as https://jk-magic-creations.github.io/launchway/security/verify-downloads describes."

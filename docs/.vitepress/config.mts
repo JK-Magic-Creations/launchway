@@ -226,6 +226,7 @@ export default defineConfig({
           { text: 'Trust model and threats', link: '/security/trust-model' },
           { text: 'Hardening checklist', link: '/security/hardening' },
           { text: 'Supply chain', link: '/security/supply-chain' },
+          { text: 'Verifying downloads', link: '/security/verify-downloads' },
           { text: 'Controls and compliance', link: '/security/controls-and-compliance' },
           { text: 'Reporting a vulnerability', link: '/security/reporting' },
         ],

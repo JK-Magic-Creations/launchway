@@ -46,6 +46,10 @@ your Git host and your secret stores, all outbound.
 
 ## Build and push the image
 
+Once releases are published you can mirror the signed release image
+`ghcr.io/jk-magic-creations/launchway:VERSION` into ECR instead (check it first as
+[Verifying downloads](../security/verify-downloads.md#check-an-image) describes). Until then:
+
 Build the image from a clone of the repository and push it to ECR:
 
 ```sh

@@ -1,7 +1,7 @@
 # The Launchway runner as a systemd service. Installed by the deb and rpm packages (in
 # /usr/lib/systemd/system) and by install.sh (in /etc/systemd/system); @BIN@ is the binary's path.
 #
-# Settings live in /etc/launchway/runner.yaml (see the README's Commands section); the token and
+# Settings live in /etc/launchway/runner.yaml (see the runner configuration reference); the credentials and
 # any proxy settings in /etc/launchway/runner.env, readable by root only. The runner makes only
 # outbound connections. Its workspaces and Git mirrors are in /var/lib/launchway-runner, the
 # runner user's home and the only place it may write.

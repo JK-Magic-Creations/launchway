@@ -21,7 +21,7 @@ Kubernetes 1.30 or later and Helm 3.8 or later are needed.
 
 Released images are `ghcr.io/jk-magic-creations/launchway` (the chart's default; the tag defaults
 to the chart's version) and `ghcr.io/jk-magic-creations/launchway-runner`, for linux/amd64 and
-linux/arm64, signed, with an SBOM and provenance attached ([SUPPORT.md](../SUPPORT.md) shows how
+linux/arm64, signed, with an SBOM and provenance attached ([Verifying downloads](../docs/security/verify-downloads.md) shows how
 to verify them). Pin `image.digest` in production. To build your own from source, use the
 [`Dockerfile`](../Dockerfile) (`make image`), or `make release-local release-images` for the
 release images; push to your registry and set `image.repository` and `image.tag`. Without

@@ -81,11 +81,13 @@ What each executor needs relaxed, and why:
    repository.
 2. For the apt and yum repositories: make an OpenPGP signing key without a passphrase
    (`gpg --quick-gen-key 'Launchway releases <...>' ed25519 sign 2y`), store its armored private
-   key as the secret `REPO_GPG_PRIVATE_KEY`, and publish its public key in the README. Without it
-   the release has no repositories (the workflow warns), everything else still works. The
-   repositories are attached as `launchway-repositories-VERSION.tar.gz`; serve its contents from
-   a static host (GitHub Pages, a bucket) at the `BASE_URL` the `.repo` and `.sources` files name.
+   key as the secret `REPO_GPG_PRIVATE_KEY`, set the repository variable `PACKAGE_REPO_URL` to
+   where the repositories will be served (a static host such as a GitHub Pages site or a bucket;
+   release assets cannot hold their directories), and publish the key's fingerprint in the docs.
+   Without both the release has no repositories (the workflow warns); everything else still
+   works. The repositories are attached as `launchway-repositories-VERSION.tar.gz`; copy its
+   contents to `PACKAGE_REPO_URL` after publishing the release.
 3. Protect tags `v*` (rulesets) so only maintainers can create them.
 4. Tag and push: `git tag -s v0.1.0 -m 'Launchway v0.1.0' && git push origin v0.1.0`. The workflow
    runs the checks, builds, signs, pushes the images and creates a **draft** release; check it
-   (`SUPPORT.md` has the verification commands) and publish it.
+   ([Verifying downloads](../docs/security/verify-downloads.md) has the commands) and publish it.
