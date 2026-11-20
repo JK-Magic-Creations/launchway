@@ -1369,7 +1369,12 @@ CREATE TABLE step_resource_limits (
 	//     out from its events (0: none, or paused while an approval waits)
 	//     so that every server's reaper finds the runs that are due in SQL.
 	//     installation_limits holds the installation's limits on pipelines:
-	//     for now the longest run timeout one may ask for.
+	//     for now the longest run timeout one may ask for. Lanes (run-level
+	//     concurrency) are derived from the run.lane_* events like
+	//     deploy_locks and deploy_queue are from the deploy events:
+	//     lane_holders has the run that holds each lane and lane_waiting the
+	//     runs queued behind it, and runs.lane_* says which lane a run is in
+	//     and how it stands in it.
 	//     Compatibility: additive: new columns with defaults and, in the
 	//     lanes' case, new tables. Pipelines that use the new keys carry
 	//     "requires": 24 and the events that use new fields carry
@@ -1387,6 +1392,31 @@ CREATE TABLE installation_limits (
   updated_at     {{BIG}} NOT NULL DEFAULT 0,
   updated_by     TEXT    NOT NULL DEFAULT ''
 );
+
+ALTER TABLE runs ADD COLUMN lane_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN lane_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN lane_label TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN lane_state TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN lane_other TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN lane_other_number INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX runs_lane ON runs(project, lane_name);
+
+CREATE TABLE lane_holders (
+  project  TEXT    NOT NULL,
+  lane_key TEXT    NOT NULL,
+  run_id   TEXT    NOT NULL,
+  since    {{BIG}} NOT NULL DEFAULT 0,
+  PRIMARY KEY (project, lane_key)
+);
+
+CREATE TABLE lane_waiting (
+  run_id   TEXT PRIMARY KEY,
+  project  TEXT    NOT NULL,
+  lane_key TEXT    NOT NULL,
+  position INTEGER NOT NULL,
+  since    {{BIG}} NOT NULL DEFAULT 0
+);
+CREATE INDEX lane_waiting_lane ON lane_waiting(project, lane_key, position);
 `},
 }
 

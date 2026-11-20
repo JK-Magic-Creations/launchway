@@ -205,6 +205,7 @@ libraries:
 containers:
   py: { image: python:3.13 }
 runner: { pool: gpu, labels: [cuda] }
+lane: { name: probe, per: [ref], when_busy: wait }
 steps:
   build:
     image: alpine:3.22
@@ -362,6 +363,7 @@ var probes = []probe{
 	{table: "reports-fail-under", path: []any{"steps", "build", "reports", "coverage", "fail_under"}},
 	{table: "reports-html", path: []any{"steps", "build", "reports", "html", 0}},
 	{table: "runner", path: []any{"runner"}},
+	{table: "lane", path: []any{"lane"}},
 	{table: "step-resources", path: []any{"steps", "build", "resources"}},
 	{table: "ai-input", path: []any{"steps", "notes", "inputs", 0}},
 	{table: "verify-metric", path: []any{"steps", "verify", "metrics", 0}},

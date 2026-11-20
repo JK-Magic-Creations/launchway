@@ -68,8 +68,10 @@ type runBrief struct {
 	// TimesOutAt is when the run's timeout cancels it, if it has one and is
 	// not paused by an approval; CancelReason says why it was canceled, when
 	// not by hand (such as "run timeout of 2h reached").
-	TimesOutAt   string `json:"times_out_at,omitempty"`
-	CancelReason string `json:"cancel_reason,omitempty"`
+	TimesOutAt string `json:"times_out_at,omitempty"`
+	// Lane is the run's place in its pipeline's lane, if it has one.
+	Lane         *laneBrief `json:"lane,omitempty"`
+	CancelReason string     `json:"cancel_reason,omitempty"`
 	// Allowed are steps that failed for good and were allowed to
 	// (on_failure: continue): the run does not count them as failed.
 	Allowed []string `json:"failed_steps_allowed,omitempty"`
@@ -106,6 +108,7 @@ func (c *mcpCall) brief(r *engine.RunSummary) runBrief {
 		b.TimesOutAt = ts(r.DeadlineAt)
 	}
 	b.CancelReason = r.CancelReason
+	b.Lane = briefLane(r.Lane)
 	if r.StartedAt > 0 {
 		end := r.FinishedAt
 		if end == 0 {
@@ -247,6 +250,7 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 	addVerifyTools(srv, c)
 	addStepResourceTools(srv, c)
 	addRunLimitTools(srv, c)
+	addLaneTools(srv, c)
 	if c.mayOperate {
 		addChangeTools(srv, c)
 		addVerifyChangeTools(srv, c)

@@ -325,13 +325,14 @@ launchway: the run's inputs have problems:
 Lists runs, newest first.
 
 ```text
-launchway runs list [--project P] [--status S] [--limit N] [--json]
+launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json]
 ```
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--project` | every project you may see | Only this project's runs. |
 | `--status` | any | Only runs with this status: `queued`, `running`, `succeeded`, `failed` or `canceled`. |
+| `--lane` | any | Only runs in the [lane](pipeline.md#lane) of this name. |
 | `--limit` | `20` | At most this many (the server allows up to 500). |
 | `--json` | off | Print JSON. |
 
@@ -415,7 +416,23 @@ launchway runs cancel run_06gzde34x0b6151zjapg
 Asked run run_06gzde34x0b6151zjapg to cancel.
 ```
 
-A run that has finished exits with `4`: `launchway: the run has already finished`.
+A run that has finished exits with `4`: `launchway: the run has already finished`. A run waiting for its [lane](pipeline.md#lane) is canceled like any other, and leaves the line.
+
+### launchway runs lanes
+
+Lists a project's [lanes](pipeline.md#lane) that have a run going or runs waiting.
+
+```text
+launchway runs lanes PROJECT [--json]
+```
+
+```text
+release/ref main: held by run #41 (running)
+  1. run #42 waits
+  2. run #43 waits
+```
+
+`launchway runs show` prints a run's own place in its lane (`lane release/ref main: waiting, number 1 in line, behind run #41`). The same data is `GET /api/v1/projects/{name}/lanes` in the [HTTP API](http-api.md) and the MCP tool `list_lanes`.
 
 ## launchway policy
 

@@ -119,9 +119,11 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 
 	p := &Pipeline{}
-	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner", "timeout"}, func(k, v *yaml.Node) {
+	var stepsNode, laneNode *yaml.Node
+	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner", "timeout", "lane"}, func(k, v *yaml.Node) {
 		switch k.Value {
+		case "lane":
+			laneNode = v
 		case "timeout":
 			ps.parseRunTimeout(p, v)
 		case "runner":
@@ -142,6 +144,9 @@ func Parse(data []byte) (*Pipeline, error) {
 			ps.parseInputs(v, p)
 		}
 	})
+	if laneNode != nil {
+		ps.parseLane(p, laneNode) // after supersede, which it may not be written with
+	}
 	if p.Name == "" {
 		ps.add(root, "pipeline", "a name is required, for example: pipeline: my-service")
 	} else if !nameRe.MatchString(p.Name) {
@@ -161,6 +166,7 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	ps.checkUses(p)
 	ps.checkInputs(p)
+	ps.checkLane(p)
 	ps.checkArtifacts(p)
 	if len(ps.problems) > 0 {
 		sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })

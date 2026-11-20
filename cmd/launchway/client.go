@@ -42,10 +42,11 @@ const clientUsage = `Usage:
   launchway login --server URL              store an API token for the server (read from
                   [--allow-http]            LAUNCHWAY_TOKEN, or typed or piped in)
   launchway runs start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
-  launchway runs list [--project P] [--status S] [--limit N] [--json]
+  launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json]
   launchway runs show <run-id> [--json]
   launchway runs logs <run-id> [--step S] [--follow]
   launchway runs cancel <run-id>
+  launchway runs lanes <project> [--json]          each lane: the run that holds it, and the runs waiting
   launchway runs tests <run-id> [--all | --status S] [--tag T] [--json]   failures first, with messages
   launchway runs coverage <run-id> [--files] [--json]
   launchway runs reports <run-id> [--json]                links to its HTML reports
@@ -342,6 +343,8 @@ func cmdRuns(args []string) error {
 			return cl.reports(args[1:])
 		case "cancel":
 			return cl.cancel(args[1:])
+		case "lanes":
+			return cl.lanes(args[1:])
 		}
 		return usageErr("unknown command runs %s\n\n%s", args[0], clientUsage)
 	})
@@ -386,7 +389,17 @@ type runView struct {
 	// "run timeout of 2h reached"; DeadlineAt is when its timeout cancels it.
 	CancelReason string `json:"cancel_reason"`
 	DeadlineAt   int64  `json:"deadline_at"`
-	StepList     []struct {
+	// Lane is the run's place in its pipeline's lane, if it has one.
+	Lane *struct {
+		Label    string `json:"label"`
+		State    string `json:"state"`
+		Position int    `json:"position"`
+		Behind   *struct {
+			Number int `json:"number"`
+		} `json:"behind"`
+		Reason string `json:"reason"`
+	} `json:"lane"`
+	StepList []struct {
 		ID       string `json:"id"`
 		Status   string `json:"status"`
 		Attempt  int    `json:"attempt"`
@@ -526,6 +539,7 @@ func (cl *client) list(args []string) error {
 	fs := flag.NewFlagSet("runs list", flag.ContinueOnError)
 	project := fs.String("project", "", "only this project's runs")
 	status := fs.String("status", "", "only runs with this status")
+	lane := fs.String("lane", "", "only runs in the lane of this name")
 	limit := fs.Int("limit", 20, "at most this many")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if _, err := parseArgs(fs, args); err != nil {
@@ -537,6 +551,9 @@ func (cl *client) list(args []string) error {
 	}
 	if *status != "" {
 		q.Set("status", *status)
+	}
+	if *lane != "" {
+		q.Set("lane", *lane)
 	}
 	q.Set("limit", strconv.Itoa(*limit))
 	var runs []runView
@@ -599,6 +616,16 @@ func (cl *client) show(args []string) error {
 		sort.Strings(names)
 		for _, n := range names {
 			fmt.Fprintf(cl.out, "  input %s = %s\n", n, d.Inputs[n])
+		}
+	}
+	if l := r.Lane; l != nil {
+		switch {
+		case l.State == "waiting" && l.Behind != nil:
+			fmt.Fprintf(cl.out, "  lane %s: waiting, number %d in line, behind run #%d\n", l.Label, l.Position, l.Behind.Number)
+		case l.Behind != nil:
+			fmt.Fprintf(cl.out, "  lane %s: %s (run #%d)\n", l.Label, l.State, l.Behind.Number)
+		default:
+			fmt.Fprintf(cl.out, "  lane %s: %s\n", l.Label, l.State)
 		}
 	}
 	if r.CancelReason != "" {
@@ -738,4 +765,45 @@ func bindLocal(p *pipeline.Pipeline, given []string) (*pipeline.Pipeline, map[st
 		resolved = nil
 	}
 	return b, resolved, nil
+}
+
+// lanes lists a project's lanes that are held or have runs waiting.
+func (cl *client) lanes(args []string) error {
+	fs := flag.NewFlagSet("runs lanes", flag.ContinueOnError)
+	asJSON := fs.Bool("json", false, "print JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("say which project: launchway runs lanes <project> [--json]")
+	}
+	type ref struct {
+		ID     string `json:"id"`
+		Number int    `json:"number"`
+		Status string `json:"status"`
+	}
+	var lanes []struct {
+		Label   string `json:"label"`
+		Holder  *ref   `json:"holder"`
+		Waiting []ref  `json:"waiting"`
+	}
+	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(pos[0])+"/lanes", nil, &lanes); err != nil {
+		return err
+	}
+	return cl.print(lanes, *asJSON, func() {
+		if len(lanes) == 0 {
+			fmt.Fprintln(cl.out, "No lane is held and no run is waiting for one.")
+		}
+		for _, l := range lanes {
+			holder := "no run holds it"
+			if l.Holder != nil {
+				holder = fmt.Sprintf("held by run #%d (%s)", l.Holder.Number, l.Holder.Status)
+			}
+			fmt.Fprintf(cl.out, "%s: %s\n", l.Label, holder)
+			for i, w := range l.Waiting {
+				fmt.Fprintf(cl.out, "  %d. run #%d waits\n", i+1, w.Number)
+			}
+		}
+	})
 }

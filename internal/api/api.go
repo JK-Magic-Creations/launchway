@@ -207,6 +207,7 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/admin/tokens", administer, "", s.listAllTokens},
 		{"DELETE /api/v1/admin/tokens/{id}", administer, "token.revoke", s.revokeAnyToken},
 		{"GET /api/v1/projects/{name}/schedules", projectRead, "", s.projectSchedules},
+		{"GET /api/v1/projects/{name}/lanes", projectRead, "", s.projectLanes},
 		{"GET /api/v1/libraries", readAny, "", s.listLibraries},
 		{"GET /api/v1/libraries/{library}/templates", readAny, "", s.libraryTemplates},
 		// Webhooks prove themselves with a secret, not a session or token;
@@ -838,7 +839,7 @@ func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	f := engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Limit: limit, OnlyProjects: only}
+	f := engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Lane: q.Get("lane"), Limit: limit, OnlyProjects: only}
 	if v := q.Get("before"); v != "" {
 		// The next page: after the run "<created_at>.<id>", as the last run
 		// of the previous page gives them.

@@ -84,6 +84,9 @@ type RunState struct {
 	// why. Both are cleared by a resume.
 	CancelReason string
 	SupersededBy *Superseder
+	// Lane is the lane the run joined, and how it stands in it (schema 24);
+	// nil if it joined none.
+	Lane *LaneState
 	// Excluded is how long the run has spent in ways its timeout does not
 	// count (schema 24): waiting for approvals that were decided, and the
 	// time between its end and a resume (milliseconds).
@@ -111,6 +114,31 @@ type RunState struct {
 	// every schema this build has.
 	vocab int
 }
+
+// LaneState is a run's place in a lane.
+type LaneState struct {
+	Name, Key, Label string
+	// State is holding (the run goes, or went, with the lane), waiting,
+	// replaced (a newer run took its place or the lane) or skipped.
+	State string
+	// Other is the run on the other side: the holder a waiting or skipped run
+	// is behind, or the run that replaced this one; OtherNumber its number.
+	Other       string
+	OtherNumber int
+	Since       int64 // when the state began
+}
+
+// The states of a run in a lane.
+const (
+	LaneHolding  = "holding"
+	LaneWaiting  = "waiting"
+	LaneReplaced = "replaced"
+	LaneSkipped  = "skipped"
+)
+
+// laneWaiting reports whether the run waits for its lane, so that none of its
+// steps are queued.
+func (st *RunState) laneWaiting() bool { return st.Lane != nil && st.Lane.State == LaneWaiting }
 
 // StepState is one step as its events describe it.
 type StepState struct {
@@ -410,7 +438,7 @@ func (st *RunState) check(ev Event) bool {
 		st.notUnderstood("step %s, which is not in the pipeline", p.Step)
 		return false
 	}
-	if p.Step == "" && ev.Type != RunCancelRequested && ev.Type != RunResumed && ev.Type != RunFinished && ev.Type != PolicyEvaluated {
+	if p.Step == "" && ev.Type != RunCancelRequested && ev.Type != RunResumed && ev.Type != RunFinished && ev.Type != PolicyEvaluated && !ev.Type.isLane() {
 		st.notUnderstood("a %s event without a step", ev.Type)
 		return false
 	}
@@ -653,6 +681,9 @@ func (st *RunState) apply(ev Event) {
 		s.ReusedFrom, s.ReusedNumber, s.ReusedAttempt = p.Reused.Run, p.Reused.Number, p.Reused.Attempt
 		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, p.Reused.DecidedAt, p.Comment
 
+	case RunLaneWaiting, RunLaneStarted, RunLaneReplaced, RunLaneSkipped:
+		st.applyLane(ev)
+
 	case PolicyEvaluated:
 		if p.Policy == nil {
 			break
@@ -701,7 +732,7 @@ func (st *RunState) approvalWaiting() bool {
 // person does not count against the timeout; the deadline is worked out
 // again when they decide).
 func (st *RunState) deadline() int64 {
-	if st.Pipeline == nil || st.Pipeline.Timeout <= 0 || st.Status.Terminal() || st.CancelRequested || st.approvalWaiting() {
+	if st.Pipeline == nil || st.Pipeline.Timeout <= 0 || st.Status.Terminal() || st.CancelRequested || st.approvalWaiting() || st.laneWaiting() {
 		return 0
 	}
 	return st.CreatedAt + st.Pipeline.Timeout.D().Milliseconds() + st.Excluded

@@ -196,6 +196,7 @@ With sign-in on it has only `auth_mode` (`oidc`), `version` and `schema`.
 | `GET /api/v1/projects/{name}/refs` | `project-viewer` | — | The project's branches and tags. |
 | `GET /api/v1/projects/{name}/inputs` | `project-viewer` | — | The inputs the pipeline declares at `?ref=` (default: the default branch), for a start form. |
 | `GET /api/v1/projects/{name}/schedules` | `project-viewer` | — | The schedules read from the default branch, when each fires next, recent firings, and the project's webhook triggers. |
+| `GET /api/v1/projects/{name}/lanes` | `project-viewer` | — | The project's [lanes](pipeline.md#lane) that have a run going or runs waiting: for each, its `name`, `key` and `label`, the run that holds it (`holder`) and the runs waiting, in the order they start (`waiting`, each with its `position`). A run's own place is its `lane` block in the run JSON: `name`, `key`, `label`, `state` (`holding`, `waiting`, `replaced` or `skipped`), `position`, and `behind` (the run it waits behind, or that replaced it). `GET /api/v1/runs?lane=NAME` lists only runs in that lane. A waiting run is canceled with the run's cancel route. |
 
 A project object has the configuration (`name`, `url` with credentials removed, `default_branch`, `poll_seconds`, `push`), the latest poll (`last_fetch`, `decisions`), its newest run as `last_run`, and `editor`, what the caller may do in the pipeline editor:
 

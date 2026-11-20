@@ -787,7 +787,22 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: c.e.withStoreRequires(nr.Pipeline), Trigger: &trig, Source: &src, Draft: draft,
 			PullRequestSecrets: prSecrets, Requires: poolRequires})
-		c.advance()
+		// A run of a pipeline with a lane takes the lane, waits for it, or is
+		// skipped, before any of its steps is queued (schema 24). Draft runs
+		// never join a lane.
+		goes, laneNote := true, ""
+		if l := nr.Pipeline.Lane; l != nil && draft == nil && c.e.knows(schemaFlow) {
+			var err error
+			if goes, laneNote, err = c.joinLane(nr.Project, l, trig, number); err != nil {
+				return err
+			}
+			if err := c.noteLaneFiring(&nr, laneNote); err != nil {
+				return err
+			}
+		}
+		if goes {
+			c.advance()
+		}
 		var superseded []int
 		if supersede {
 			var err error
@@ -805,7 +820,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 				detail += ", superseding " + strings.Join(nums, ", ")
 			}
 			return insertDecision(c.tx, nr.Project, PushDecision{At: c.now, Ref: nr.Push.Ref, SHA: nr.Push.New,
-				Outcome: "started", Detail: strings.TrimSpace(detail + " " + nr.Note), RunID: runID})
+				Outcome: "started", Detail: strings.TrimSpace(detail + " " + nr.Note + laneDetail(laneNote)), RunID: runID})
 		}
 		return nil
 	})
@@ -950,6 +965,9 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 		if id := c.st.openedDeployment(); id != "" {
 			return fmt.Errorf("%w: %s made a deployment in this run, and deployments are not resumed: "+
 				"start a new run, or re-run this one from %s", ErrConflict, id, id)
+		}
+		if err := c.takeLaneForResume(); err != nil {
+			return err
 		}
 		c.emit(RunResumed, Payload{Actor: actor, DraftSecrets: draftSecrets})
 		for _, id := range c.st.Order {
@@ -1536,6 +1554,7 @@ func (e *Engine) reaper(ctx context.Context) {
 			e.reap()
 			e.expireWaits()
 			e.expireRunTimeouts()
+			e.recoverLanes()
 			e.dispatchLocks()
 			if now := e.now(); now.Sub(pruned) >= time.Minute {
 				pruned = now
@@ -1937,6 +1956,9 @@ func (c *cmd) persist() error {
 		if err := c.persistFlow(changed); err != nil {
 			return err
 		}
+		if err := c.persistLanes(); err != nil {
+			return err
+		}
 	}
 	if c.e.knows(schemaPullRequests) {
 		if err := c.persistSchema9(); err != nil {
@@ -2067,6 +2089,9 @@ func (c *cmd) advance() {
 	st := c.st
 	if st.Status.Terminal() {
 		return
+	}
+	if st.laneWaiting() && !st.CancelRequested {
+		return // the run waits for its lane; none of its steps is queued
 	}
 	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.startedOrResumed() {
 		c.policyChecked = true

@@ -31,6 +31,9 @@ type Pipeline struct {
 	// too were started by a push or a pull request. Runs started by hand,
 	// drafts and re-runs never supersede and are never superseded.
 	Supersede bool `json:"supersede,omitempty"`
+	// Lane controls which runs of the project may go at the same time
+	// (schema 24); nil: runs overlap freely. See Lane.
+	Lane *Lane `json:"lane,omitempty"`
 	// Timeout bounds how long a run may stay open (schema 24); 0: no limit.
 	// Time spent waiting for an approval does not count.
 	Timeout Duration `json:"timeout,omitempty"`

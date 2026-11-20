@@ -364,6 +364,19 @@ new fields older servers ignore harmlessly because the pipeline's `requires` alr
 cancels such a run for its timeout, since it leaves the run alone. The cancel is an event, so of two
 servers that find a run overdue exactly one appends it.
 
+Lanes are schema 24's too. Four event types, `run.lane_waiting`, `run.lane_started`,
+`run.lane_replaced` and `run.lane_skipped` (all in `eventSince`), say where a run stands in its lane;
+`lane_holders` and `lane_waiting` are derived from them as `deploy_locks` and `deploy_queue` are from
+the deploy events, and `runs` gains `lane_name`, `lane_key`, `lane_label`, `lane_state`, `lane_other` and
+`lane_other_number` for lists and filters. A pipeline with `lane` carries `"requires": 24`, so older
+servers leave its runs alone and never see a waiting run as one with steps to lease. A run joins its lane
+in the transaction that creates it, after taking the project's `run_counters` row, which is why servers
+creating runs at once take turns; a holder that ends releases its lane in its own transaction, which
+takes the same row, and starts the first waiting run. A promotion that was lost leaves a lane with
+waiting runs and no live holder: every server's reaper (`recoverLanes`) starts the first of them, and a
+run that arrives meanwhile does not jump the queue. On a rollback, waiting runs stay waiting until a
+server of schema 24 runs again.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

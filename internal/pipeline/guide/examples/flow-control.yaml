@@ -4,6 +4,7 @@
 # after a pause, and a bound on how long the whole run may stay open.
 pipeline: flow-control
 timeout: 2h
+lane: { per: [ref], when_busy: wait, queue: newest }   # one run of a branch at a time
 
 steps:
   lint:

@@ -59,6 +59,9 @@ type RunSummary struct {
 	// DeadlineAt is when the run's timeout will cancel it (Unix ms; schema
 	// 24); 0 when it has none, or it is paused (an approval waits) or over.
 	DeadlineAt int64 `json:"deadline_at,omitempty"`
+	// Lane is the run's place in its lane (schema 24); nil when its pipeline
+	// has no lane.
+	Lane *LaneInfo `json:"lane,omitempty"`
 	// Tests adds up the run's test results (see RunTests); nil when no step
 	// has reported any.
 	Tests *TestTotals `json:"tests,omitempty"`
@@ -267,7 +270,7 @@ func (e *Engine) runCols() string {
 }
 
 // runCols24 are the columns of runs that schema 24 added.
-const runCols24 = `, deadline_at`
+const runCols24 = `, deadline_at, lane_name, lane_key, lane_label, lane_state, lane_other, lane_other_number`
 
 func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error) {
 	r := &RunSummary{}
@@ -280,10 +283,15 @@ func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error
 	if e.knows(schemaPullRequests) {
 		dst = append(dst, &r.CancelReason, &r.SupersededBy, &r.SupersededByNumber)
 	}
+	var lane struct {
+		name, key, label, state, other string
+		number                         int
+	}
 	if e.knows(schemaFlow) {
-		dst = append(dst, &r.DeadlineAt)
+		dst = append(dst, &r.DeadlineAt, &lane.name, &lane.key, &lane.label, &lane.state, &lane.other, &lane.number)
 	}
 	err := sc.Scan(dst...)
+	r.Lane = laneInfo(lane.name, lane.key, lane.label, lane.state, lane.other, lane.number, 0)
 	r.PullRequest = pullRequestNumber(r.Event, r.Ref)
 	r.CancelRequested = cancel != 0
 	r.Draft = draft != 0
@@ -345,7 +353,9 @@ func (e *Engine) Summary(id string) (*RunSummary, error) { return e.runSummary(i
 type RunFilter struct {
 	Project string
 	Status  string
-	Limit   int
+	// Lane, if set, lists only runs in the lane of this name (schema 24).
+	Lane  string
+	Limit int
 	// OnlyProjects, if not nil, limits the list to runs of these projects;
 	// an empty, non-nil list matches nothing.
 	OnlyProjects []string
@@ -374,6 +384,10 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 	if f.Status != "" {
 		where = append(where, "status = ?")
 		args = append(args, f.Status)
+	}
+	if f.Lane != "" && e.knows(schemaFlow) {
+		where = append(where, "lane_name = ?")
+		args = append(args, f.Lane)
 	}
 	if f.OnlyProjects != nil {
 		if len(f.OnlyProjects) == 0 {
@@ -465,6 +479,9 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		return err
 	}
 	rows.Close()
+	if err := e.attachLanePositions(runs); err != nil {
+		return err
+	}
 	if err := e.attachTests(runs); err != nil {
 		return err
 	}

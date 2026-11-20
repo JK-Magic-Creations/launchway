@@ -100,6 +100,7 @@ lists every variable a step receives.
 | `libraries` | mapping | none | The [shared libraries](#libraries) whose templates steps use. At most 10 |
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
 | `runner` | mapping | none | Which runners may run the pipeline's steps; see [Runner](#runner) |
+| `lane` | mapping | none | Makes runs of the project take turns, and says what a run that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
 | `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A run past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a run's end and its resume. Needs schema 24 |
 | `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display |
 
@@ -980,6 +981,45 @@ maximum) and writes one line to the step's log saying what it lowered and why. A
 memory only is held to its memory, and its CPU default is lowered if need be, and the other way
 round.
 
+## Lane
+
+A lane makes runs take turns: at most one run of a lane goes at a time. A run that arrives while the
+lane is held waits its turn, replaces the run that holds it, or is skipped. A lane belongs to one
+project; two pipelines of a project that give their lanes the same `name` (and `per`) share one.
+
+<!-- keys: lane -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | name | the pipeline's name | The lane's name: lower-case letters, digits, hyphens and underscores, as a step's |
+| `per` | list | none | What splits the name into separate lanes, so that runs of different branches do not wait for each other: `ref` (each branch, tag or pull-request ref), `pull_request` (each pull request) or `input:<name>` (each value of a `string` or `choice` [input](#inputs)) |
+| `when_busy` | `wait`, `cancel` or `skip` | `wait` | What a run that arrives while the lane is held does. `wait`: it is created and queued, with no step queued, and starts when the run before it ends. `cancel`: the run that holds the lane and every run waiting for it are canceled, saying `replaced in lane … by run #N`, and the new run goes; a holder with an open deployment finishes it first, and the new run waits. `skip`: the new run is created and canceled at once, saying `skipped: lane busy (run #N)`; it appears in lists and status posts and runs no step |
+| `queue` | `newest` or `all` | `newest` | For `wait`. `newest`: a newer run replaces an older one that is still waiting, which ends canceled saying `replaced in lane … by run #N`, so at most one run waits. `all`: every run waits, and they start in order |
+
+Runs started by a push, a pull request, a schedule, a webhook or by hand are all subject to the lane.
+A draft run never joins one, and a re-run does not either. A run that waits for its lane does not
+count that time against its [`timeout`](#top-level-keys). Cancel a waiting run with the cancel button
+(or `launchway runs cancel`): it leaves the line. Resuming a finished run of a lane is refused while
+another run holds it, and takes the lane otherwise. A lane is released whenever its holder ends, however
+it ends: a run that fails, is canceled or is lost to a server that died frees the lane, and a server that
+finds a lane with runs waiting and no live holder starts the first of them.
+
+<!-- validate -->
+```yaml
+pipeline: release
+lane:
+  name: release
+  per: [ref]        # one lane for each branch
+  when_busy: wait
+  queue: all        # every run goes, in turn
+steps:
+  ship:
+    image: alpine:3.22
+    run: ./ship.sh
+```
+
+`supersede: true` stays as the short form of `lane: { per: [ref], when_busy: cancel }` for runs
+started by a push or a pull request; writing both is an error.
+
 ## Retry
 
 `retry: 2` retries a failed step twice at once, whatever the cause. The mapping form adds a pause and
@@ -1470,7 +1510,7 @@ older server. Use them only once every server and runner is upgraded; see
 | 14 | rollout steps, `rollout.until: paused`, `rollout.pauses`, an approval's `deployment`, `abort_first`, `on_cancel: abort` |
 | 15 | image steps, a change's `digest` |
 | 22 | a step's `resources` |
-| 24 | `when.output`, `on_failure`, `retry` with `wait`, `backoff` or `on`, the pipeline's `timeout` |
+| 24 | `when.output`, `on_failure`, `retry` with `wait`, `backoff` or `on`, the pipeline's `timeout`, `lane` |
 
 ## What next
 

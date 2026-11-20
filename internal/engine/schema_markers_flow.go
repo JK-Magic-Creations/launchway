@@ -6,6 +6,6 @@ package engine
 // number is a stand-in, which the migration tests allow.
 var schemaMarkersFlow = schemaMarker{
 	schema: schemaFlow, feature: "flow control",
-	tables:  []string{"installation_limits"},
-	columns: []string{"steps.allowed", "steps.not_before", "steps.fail_cause", "runs.deadline_at"},
+	tables:  []string{"installation_limits", "lane_holders", "lane_waiting"},
+	columns: []string{"steps.allowed", "steps.not_before", "steps.fail_cause", "runs.deadline_at", "runs.lane_name", "runs.lane_key", "runs.lane_label", "runs.lane_state", "runs.lane_other", "runs.lane_other_number"},
 }

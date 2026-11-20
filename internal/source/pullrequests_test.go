@@ -327,3 +327,31 @@ func TestTwoServersStartOneRunPerPullRequestChange(t *testing.T) {
 		t.Fatalf("decisions: %d and %d", len(sa.Decisions), len(sb.Decisions))
 	}
 }
+
+// A configured pipeline's lane becomes the pipeline's lane, and is checked
+// by the same parser as a lane written in a file.
+func TestConfiguredPipelineLane(t *testing.T) {
+	pp := &ProjectPipeline{Library: "lib", Version: "v1", Template: "check",
+		Lane: &ProjectLane{Name: "deploys", Per: []string{"ref"}, WhenBusy: "cancel"}}
+	text, err := configuredText("app", pp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := pipeline.Parse([]byte(text))
+	if err != nil {
+		t.Fatalf("%v\n%s", err, text)
+	}
+	if p.Lane == nil || p.Lane.Name != "deploys" || p.Lane.WhenBusy != "cancel" || len(p.Lane.Per) != 1 {
+		t.Fatalf("%+v\n%s", p.Lane, text)
+	}
+	pp.Lane.WhenBusy = "queue"
+	text, _ = configuredText("app", pp)
+	if _, err := pipeline.Parse([]byte(text)); err == nil || !strings.Contains(err.Error(), "wait (the default), cancel or skip") {
+		t.Fatalf("%v", err)
+	}
+	pp.Lane, pp.Supersede = &ProjectLane{}, true
+	text, _ = configuredText("app", pp)
+	if _, err := pipeline.Parse([]byte(text)); err == nil || !strings.Contains(err.Error(), "supersede or a lane, not both") {
+		t.Fatalf("%v", err)
+	}
+}

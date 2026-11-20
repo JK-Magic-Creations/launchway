@@ -66,6 +66,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	// tools that change them, as the API refuses everyone else.
 	"get_step_resources":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"set_step_resource_limits": {map[string]any{"memory_per_thread": "1Gi"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"list_lanes":               {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
 	"get_run_limits":           {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"set_run_limits":           {map[string]any{"max_run_timeout": "48h"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"set_step_resource_default": {map[string]any{"kind": "step", "cpu": "1", "memory": "2Gi"}, false,
@@ -91,7 +92,8 @@ func outcome(errText string) string {
 // Every tool, called by each person with their own token, does exactly
 // what the API lets that person do: the same answer for the same reason.
 func TestMCPPermissionMatrix(t *testing.T) {
-	e := mcpEnv(t, envOpts{})
+	// The matrix calls every tool: more than the default burst allows.
+	e := mcpEnv(t, envOpts{mcp: &MCPOptions{RequestsPerMinute: 1000}})
 	pay := e.startRun(t, "pay-api")
 	e.startRun(t, "web")
 	tools := make([]string, 0, len(mcpPermissionTable))

@@ -47,8 +47,25 @@ export interface RunSummary {
   superseded_by_number?: number;
   /** When the run's timeout will cancel it (Unix ms). Absent when it has none, or while an approval waits (that time does not count). */
   deadline_at?: number;
+  /** The run's place in its pipeline's lane (runs of the project take turns); absent when it has none. */
+  lane?: LaneInfo;
   /** The run's test results added up; absent when no step has reported any. */
   tests?: TestTotals;
+}
+
+/** Where a run stands in its lane. */
+export interface LaneInfo {
+  name: string;
+  key: string;
+  /** The lane in words: release/ref main. */
+  label: string;
+  /** holding: it goes; waiting: queued behind another run; replaced: a newer run took its place; skipped: the lane was busy. */
+  state: "holding" | "waiting" | "replaced" | "skipped";
+  /** 1 for the run next in line, for a waiting run. */
+  position?: number;
+  /** The run that holds the lane (waiting or skipped), or that took this one's place (replaced). */
+  behind?: { id: string; number: number };
+  reason?: string;
 }
 
 /** Test results counted. Flaky: passed only after the test tool ran them again. */
@@ -967,10 +984,11 @@ export const api = {
   info: () => call<{ version: string; auth_mode: "none" | "oidc"; actor?: string }>("GET", "/api/v1/info"),
   me: () => call<Me>("GET", "/api/v1/me"),
   logout: () => call<void>("POST", "/auth/logout"),
-  runs: (q: { project?: string; status?: string; limit?: number } = {}, background = false) => {
+  runs: (q: { project?: string; status?: string; lane?: string; limit?: number } = {}, background = false) => {
     const p = new URLSearchParams();
     if (q.project) p.set("project", q.project);
     if (q.status) p.set("status", q.status);
+    if (q.lane) p.set("lane", q.lane);
     if (q.limit) p.set("limit", String(q.limit));
     return call<RunSummary[]>("GET", "/api/v1/runs?" + p.toString(), undefined, { background });
   },

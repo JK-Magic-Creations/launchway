@@ -117,6 +117,38 @@ superseded, and the new run's own pipeline is what decides. The cancelling happe
 database transaction that creates the new run, so it is exact however many servers there are.
 A superseded run can be resumed like any cancelled run.
 
+## Lanes: one run at a time
+
+`supersede` only ever cancels. A **lane** makes the runs of a project take turns, and says what a
+run that arrives while another goes does:
+
+```yaml
+lane:
+  name: release          # default: the pipeline's name
+  per: [ref]             # a lane for each branch, tag or pull request; also pull_request, input:<name>
+  when_busy: wait        # wait (the default), cancel or skip
+  queue: all             # for wait: all, or newest (a waiting run is replaced by a newer one)
+```
+
+- **wait** puts the run in line: it is created, shown as *waiting for lane release/ref main (run #41
+  is running)*, and none of its steps is queued until the run before it ends. With `queue: newest`
+  (the default) a run that is still waiting is replaced by a newer one, and says so; with `all`
+  every run goes, in order.
+- **cancel** cancels the run that holds the lane and every run waiting for it, and the new run goes
+  at once. A holder with an open deployment finishes the deployment first, and the new run waits.
+- **skip** creates the new run and cancels it at once, so it appears in lists and status posts
+  but runs no step.
+
+Every kind of run is subject to a lane: pushes, pull requests, schedules (a schedule's firing
+records *skipped* or *waiting*), webhooks and runs started by hand. Draft runs and re-runs never join
+one. A lane is released when its holder ends, however it ends, and the next run starts in the same
+database transaction, so it is exact however many servers there are; a server that finds a lane
+with runs waiting and no live holder starts the first of them. Resuming a finished run is
+refused while another run holds its lane. See the runs a project has in line with `launchway runs
+lanes PROJECT`, on the run page, or with the MCP tool `list_lanes`. `lane` and `supersede` cannot be written together:
+`supersede: true` is the short form of `lane: { per: [ref], when_busy: cancel }` for pushes and
+pull requests.
+
 ## Run inputs
 
 A pipeline may declare the values a run is started with:

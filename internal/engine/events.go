@@ -57,6 +57,12 @@ const (
 	// the policies, the facts and the waivers it was judged from.
 	PolicyEvaluated EventType = "policy.evaluated"
 
+	// Lanes (schema 24; see lanes.go). Run events, with no step.
+	RunLaneWaiting  EventType = "run.lane_waiting"  // the lane is held by another run: this one waits its turn
+	RunLaneStarted  EventType = "run.lane_started"  // this run took the lane and goes
+	RunLaneReplaced EventType = "run.lane_replaced" // a newer run took this run's place in the lane (waiting run) or the lane (holder)
+	RunLaneSkipped  EventType = "run.lane_skipped"  // the lane was busy, and the lane says to skip: this run is canceled at once
+
 	// Verifications (schema 19; see verify.go). Step events of the verify
 	// step.
 	VerifyStarted  EventType = "verify.started"  // the window, the resolved parameters and the baseline it is judged against
@@ -79,6 +85,7 @@ var eventSince = map[EventType]int{
 	DeployCommand: 14, DeployCommandWithdrawn: 14, DeployCommandTaken: 14, DeployCommandDone: 14,
 	PolicyEvaluated: 16,
 	VerifyStarted:   19, VerifyInterval: 19, VerifyVerdict: 19, VerifyOverride: 19,
+	RunLaneWaiting: schemaFlow, RunLaneStarted: schemaFlow, RunLaneReplaced: schemaFlow, RunLaneSkipped: schemaFlow,
 }
 
 // Event is one entry in the log.
@@ -127,6 +134,9 @@ type Payload struct {
 	// is given the step (Unix ms).
 	Cause     string `json:"cause,omitempty"`
 	NotBefore int64  `json:"not_before,omitempty"`
+
+	// run.lane_* (schema 24): the lane, and the run on the other side of it.
+	Lane *LaneEvent `json:"lane,omitempty"`
 
 	// shared
 	Reason string `json:"reason,omitempty"`
@@ -199,6 +209,17 @@ type Payload struct {
 	// answered and what it cost. Older servers never read it: runs with ai
 	// steps have min_schema 19.
 	AI *AIRecord `json:"ai,omitempty"`
+}
+
+// LaneEvent carries the details of the run.lane_* events: the lane a run is
+// in, and the run on the other side: the holder a waiting or skipped run is
+// behind, or the run that replaced this one.
+type LaneEvent struct {
+	Name   string `json:"name"`
+	Key    string `json:"key"`   // what identifies the lane in the project
+	Label  string `json:"label"` // the lane in words: release/ref main
+	Run    string `json:"run,omitempty"`
+	Number int    `json:"number,omitempty"`
 }
 
 // DeployEvent carries the details of the deploy.* events. Each type uses a

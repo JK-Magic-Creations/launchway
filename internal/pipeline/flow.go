@@ -8,6 +8,7 @@ package pipeline
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -30,7 +31,7 @@ const (
 // UsesSchemaFlow reports whether the pipeline uses a key servers older
 // than schema 24 do not know.
 func (p *Pipeline) UsesSchemaFlow() bool {
-	if p.Timeout > 0 {
+	if p.Timeout > 0 || p.Lane != nil {
 		return true
 	}
 	for _, s := range p.Steps {
@@ -248,4 +249,187 @@ func (ps *parser) parseRunTimeout(p *Pipeline, n *yaml.Node) {
 	default:
 		p.Timeout, p.TimeoutLine = Duration(d), n.Line
 	}
+}
+
+// ---- lanes ----
+
+// Lane makes runs of a project take turns: at most one run of a lane is
+// going at a time, and a run that arrives while another goes waits its
+// turn, replaces it, or is skipped. A lane belongs to one project.
+type Lane struct {
+	// Name names the lane; by default the pipeline's name. Two pipelines of
+	// a project that use the same name share the lane.
+	Name string `json:"name"`
+	// Per says what splits the name into separate lanes: ref (each branch,
+	// tag or pull request ref has its own), pull_request (each pull
+	// request) or input:<name> (each value of a string or choice input).
+	// Empty: one lane for the name.
+	Per []string `json:"per,omitempty"`
+	// WhenBusy is what happens to a run that arrives while the lane is
+	// held: wait (the default), cancel (the holder and the runs waiting
+	// are canceled and the new run goes) or skip (the new run is canceled
+	// at once).
+	WhenBusy string `json:"when_busy"`
+	// Queue, for wait: newest (a waiting run is replaced by a newer one,
+	// which says so) or all (every waiting run goes in turn).
+	Queue string `json:"queue"`
+
+	line int
+	// inputLines are where each per: input:<name> was written.
+	perLines []int
+}
+
+// Lane settings.
+const (
+	LaneWait   = "wait"
+	LaneCancel = "cancel"
+	LaneSkip   = "skip"
+
+	LaneNewest = "newest"
+	LaneAll    = "all"
+
+	LanePerRef         = "ref"
+	LanePerPullRequest = "pull_request"
+	LanePerInput       = "input:"
+)
+
+var (
+	laneKeys     = []string{"name", "per", "when_busy", "queue"}
+	laneNameRe   = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,62}$`)
+	laneBusyList = []string{LaneWait, LaneCancel, LaneSkip}
+)
+
+// parseLane reads the pipeline's lane.
+func (ps *parser) parseLane(p *Pipeline, n *yaml.Node) {
+	l := &Lane{WhenBusy: LaneWait, Queue: LaneNewest, line: n.Line}
+	queueGiven := false
+	ps.eachKey(n, "lane", laneKeys, func(k, v *yaml.Node) {
+		where := "lane." + k.Value
+		switch k.Value {
+		case "name":
+			l.Name = ps.str(v, where)
+			if !laneNameRe.MatchString(l.Name) {
+				ps.add(v, where, "%q is not a lane name: use lower-case letters, digits, hyphens and underscores, as for a step", clipText(l.Name, 60))
+			}
+		case "per":
+			for _, e := range ps.strList(v, where) {
+				switch {
+				case e == LanePerRef || e == LanePerPullRequest:
+				case strings.HasPrefix(e, LanePerInput) && strings.TrimPrefix(e, LanePerInput) != "":
+					l.perLines = append(l.perLines, v.Line)
+				default:
+					ps.add(v, where, "%q is not something a lane can be split by; use ref, pull_request or input:<name>", clipText(e, 60))
+					continue
+				}
+				if slices.Contains(l.Per, e) {
+					ps.add(v, where, "%s is listed twice", e)
+					continue
+				}
+				l.Per = append(l.Per, e)
+			}
+		case "when_busy":
+			l.WhenBusy = ps.str(v, where)
+			if !slices.Contains(laneBusyList, l.WhenBusy) {
+				ps.add(v, where, "when_busy is wait (the default), cancel or skip")
+			}
+		case "queue":
+			queueGiven = true
+			l.Queue = ps.str(v, where)
+			if l.Queue != LaneNewest && l.Queue != LaneAll {
+				ps.add(v, where, "queue is newest (the default) or all")
+			}
+		}
+	})
+	if queueGiven && l.WhenBusy != LaneWait {
+		ps.add(n, "lane.queue", "queue is for when_busy: wait: a run that cancels or skips does not queue")
+	}
+	if p.Supersede {
+		ps.add(n, "lane", "a pipeline has supersede or a lane, not both: supersede: true is the short form of "+
+			"lane: { per: [ref], when_busy: cancel } for push and pull-request runs")
+	}
+	p.Lane = l
+}
+
+// checkLane checks what needs the whole pipeline: the lane's name defaults
+// to the pipeline's, and per: input:<name> must name an input a value can be
+// taken from.
+func (ps *parser) checkLane(p *Pipeline) {
+	l := p.Lane
+	if l == nil {
+		return
+	}
+	if l.Name == "" {
+		l.Name = p.Name
+	}
+	i := 0
+	for _, e := range l.Per {
+		name, ok := strings.CutPrefix(e, LanePerInput)
+		if !ok {
+			continue
+		}
+		line := l.line
+		if i < len(l.perLines) {
+			line = l.perLines[i]
+		}
+		i++
+		in := p.Input(name)
+		switch {
+		case in == nil && len(p.Inputs) == 0:
+			ps.problems = append(ps.problems, Problem{Line: line, Path: "lane.per", Message: fmt.Sprintf("there is no input called %q: declare it under inputs:", clipText(name, 60))})
+		case in == nil:
+			ps.problems = append(ps.problems, Problem{Line: line, Path: "lane.per", Message: fmt.Sprintf("there is no input called %q; the pipeline has %s", clipText(name, 60), inputNames(p))})
+		case in.Type != InputString && in.Type != InputChoice:
+			ps.problems = append(ps.problems, Problem{Line: line, Path: "lane.per", Message: fmt.Sprintf(
+				"%s is a %s input; a lane can be split by a string or choice input", name, in.Type)})
+		}
+	}
+}
+
+// Label says in words which lane a run is in, for messages: the name, then
+// what it is split by, such as release/ref main or ci/pull request 12.
+func (l *Lane) Label(ref string, pullRequest int, inputs map[string]string) string {
+	label := l.Name
+	for _, e := range l.Per {
+		switch {
+		case e == LanePerRef:
+			switch {
+			case strings.HasPrefix(ref, "refs/heads/"):
+				label += "/ref " + strings.TrimPrefix(ref, "refs/heads/")
+			case strings.HasPrefix(ref, "refs/tags/"):
+				label += "/tag " + strings.TrimPrefix(ref, "refs/tags/")
+			case ref != "":
+				label += "/ref " + ref
+			}
+		case e == LanePerPullRequest:
+			if pullRequest > 0 {
+				label += "/pull request " + strconv.Itoa(pullRequest)
+			}
+		default:
+			name := strings.TrimPrefix(e, LanePerInput)
+			label += "/" + name + " " + inputs[name]
+		}
+	}
+	return label
+}
+
+// LaneKey is the identity of the lane a run of the pipeline joins: the lane's
+// name, followed by what it is split by, as the run's trigger says.
+func (l *Lane) LaneKey(ref string, pullRequest int, inputs map[string]string) string {
+	key := l.Name
+	for _, e := range l.Per {
+		switch {
+		case e == LanePerRef:
+			key += "@" + ref
+		case e == LanePerPullRequest:
+			if pullRequest > 0 {
+				key += "#" + strconv.Itoa(pullRequest)
+			} else {
+				key += "#"
+			}
+		default:
+			name := strings.TrimPrefix(e, LanePerInput)
+			key += "[" + name + "=" + inputs[name] + "]"
+		}
+	}
+	return key
 }

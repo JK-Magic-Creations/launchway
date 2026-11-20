@@ -21,6 +21,7 @@ on:                         # what starts runs by itself (a run can always be st
   webhook: { name: deploy-request, ref: main, inputs: { version: body.release.version } }
 supersede: true             # a new push or pull-request run cancels older ones of the same ref
 timeout: 2h                 # a run open longer than this is canceled (waiting for approvals does not count)
+lane: { per: [ref], when_busy: wait, queue: newest }   # runs of the project take turns; see Lane
 inputs: { … }               # values a run is started with; see Inputs
 libraries: { … }            # shared template libraries; see Templates
 containers: { … }           # named toolboxes and services; see Containers
@@ -32,6 +33,7 @@ steps: { … }                # required: the steps, by name
 | `pipeline` | The pipeline's name |
 | `on` | `push` (with `branches` and `tags` patterns), `pull_request: {}`, `schedule` (a list of `cron`, `timezone`, `ref`, `inputs`) and `webhook` (`name`, `ref`, `inputs` mapping fields of the request body). Schedules and webhooks are read from the default branch only |
 | `supersede` | `true`: a run started by a push or pull request cancels the older such runs of the same branch, tag or pull request that are still going |
+| `lane` | `name` (default the pipeline's), `per` (`ref`, `pull_request`, `input:<name>`: what splits it into separate lanes), `when_busy` (`wait`, `cancel` or `skip`: what a run that arrives while the lane is held does) and `queue` (`newest`: a waiting run is replaced by a newer one; or `all`). At most one run of a lane goes at a time. Not with `supersede` |
 | `timeout` | How long a run may stay open, `1m` to `720h` (and no more than the installation's limit): a run past it is canceled with the reason `run timeout of 2h reached`. Time spent waiting for an approval does not count |
 | `inputs` | Values a run is started with |
 | `libraries` | Template libraries: `name: { repo: <library the server lists>, version: <tag, branch or full commit> }` |

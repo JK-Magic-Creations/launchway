@@ -281,3 +281,61 @@ steps:
 		t.Fatal(p.Requires)
 	}
 }
+
+func TestLaneParses(t *testing.T) {
+	p, err := Parse([]byte(`
+pipeline: demo
+inputs:
+  target: {type: choice, options: [a, b], default: a}
+  who: {type: string, default: x}
+lane:
+  per: [ref, pull_request, "input:target"]
+  when_busy: cancel
+steps:
+  a: {image: x, run: a}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := p.Lane
+	if l.Name != "demo" || l.WhenBusy != "cancel" || l.Queue != "newest" || len(l.Per) != 3 || p.Requires != SchemaFlow {
+		t.Fatalf("%+v requires %d", l, p.Requires)
+	}
+	got := l.LaneKey("refs/heads/main", 12, map[string]string{"target": "b"})
+	if got != "demo@refs/heads/main#12[target=b]" {
+		t.Fatal(got)
+	}
+	if got := l.Label("refs/heads/main", 12, map[string]string{"target": "b"}); got != "demo/ref main/pull request 12/target b" {
+		t.Fatal(got)
+	}
+	plain, err := Parse([]byte("pipeline: demo\nlane: {name: release}\nsteps:\n  a: {image: x, run: a}\n"))
+	if err != nil || plain.Lane.WhenBusy != "wait" || plain.Lane.Name != "release" || plain.Lane.LaneKey("refs/heads/x", 0, nil) != "release" {
+		t.Fatalf("%v %+v", err, plain)
+	}
+}
+
+func TestLaneProblems(t *testing.T) {
+	const steps = "steps:\n  a: {image: x, run: a}\n"
+	for name, tc := range map[string]struct{ text, want, path string }{
+		"supersede too":     {"supersede: true\nlane: {name: x}\n", "supersede or a lane, not both", "lane"},
+		"supersede after":   {"lane: {name: x}\nsupersede: true\n", "supersede or a lane, not both", "lane"},
+		"bad name":          {"lane: {name: Release}\n", "is not a lane name", "lane.name"},
+		"bad per":           {"lane: {per: [branch]}\n", "not something a lane can be split by", "lane.per"},
+		"per twice":         {"lane: {per: [ref, ref]}\n", "ref is listed twice", "lane.per"},
+		"bad when_busy":     {"lane: {when_busy: queue}\n", "wait (the default), cancel or skip", "lane.when_busy"},
+		"bad queue":         {"lane: {queue: some}\n", "newest (the default) or all", "lane.queue"},
+		"queue with cancel": {"lane: {when_busy: cancel, queue: all}\n", "queue is for when_busy: wait", "lane.queue"},
+		"unknown key":       {"lane: {group: x}\n", `unknown key "group"`, "lane.group"},
+		"unknown input":     {"lane: {per: [\"input:nope\"]}\n", `there is no input called "nope"`, "lane.per"},
+		"bad input type":    {"inputs:\n  n: {type: number, default: 1}\nlane: {per: [\"input:n\"]}\n", "a lane can be split by a string or choice input", "lane.per"},
+		"not a mapping":     {"lane: wait\n", "expected a mapping", "lane"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := Parse([]byte("pipeline: demo\n" + tc.text + steps))
+			p := findProblem(t, problemsOf(t, err), tc.want)
+			if p.Line == 0 || p.Path != tc.path {
+				t.Fatalf("%+v, want path %s with a line", p, tc.path)
+			}
+		})
+	}
+}

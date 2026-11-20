@@ -220,6 +220,7 @@ export function RunPage({ id }: { id: string }) {
         <div className="run-head-main">
           <div className="run-title-row">
             {run.cancel_requested && !done ? <StatusPill status={run.status} label="Canceling" />
+              : run.lane?.state === "waiting" && !done ? <StatusPill status="waiting" label="Waiting for lane" />
               : waitingStep ? <StatusPill status="waiting" label="Waiting for approval" />
               : verifyWaiting ? <StatusPill status="waiting" label="Waiting for a person" />
               : deploying ? <StatusPill status={shownStatus(deploying)} label={stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying))} />
@@ -233,6 +234,7 @@ export function RunPage({ id }: { id: string }) {
             {refLabel(run) && <span className="meta" title={run.ref}><BranchIcon />{refLabel(run)}</span>}
             {run.sha && <span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span>}
             <span className="meta">{starterLabel(run)}</span>
+            {run.lane && <span className="meta" title="This run's pipeline has a lane: its runs take turns">lane {run.lane.label}</span>}
             <span className="meta" title={clock(run.created_at)}>{ago(run.created_at, now)}</span>
             {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
             {!done && !run.cancel_requested && (run.deadline_at ?? 0) > 0 && (
@@ -348,6 +350,23 @@ export function RunPage({ id }: { id: string }) {
         <div className="callout callout-info callout-row">
           <span><strong>{deploying.id}</strong>: {stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying)).replace(/^./, (c) => c.toLowerCase())}</span>
           <button type="button" className="btn btn-sm" onClick={() => select(deploying.id)}>View</button>
+        </div>
+      )}
+
+      {run.lane?.state === "waiting" && !done && (
+        <div className="callout callout-wait lane-banner">
+          <span>
+            <strong>Waiting for lane {run.lane.label}</strong>
+            {run.lane.behind && <>, behind <Link href={`/runs/${run.lane.behind.id}`}>run #{run.lane.behind.number}</Link></>}
+            {" "}(number {run.lane.position ?? 1} in line). It starts when the run before it ends; none of its steps is queued until then.
+          </span>
+        </div>
+      )}
+      {run.lane && run.lane.state !== "waiting" && run.lane.state !== "holding" && (
+        <div className="callout callout-info lane-banner">
+          {run.lane.state === "replaced"
+            ? <>Replaced in lane <strong>{run.lane.label}</strong> by {run.lane.behind ? <Link href={`/runs/${run.lane.behind.id}`}>run #{run.lane.behind.number}</Link> : "a newer run"}.</>
+            : <>Skipped: lane <strong>{run.lane.label}</strong> was busy{run.lane.behind && <> (<Link href={`/runs/${run.lane.behind.id}`}>run #{run.lane.behind.number}</Link>)</>}. No step ran.</>}
         </div>
       )}
 
