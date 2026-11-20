@@ -918,3 +918,14 @@ a.btn:hover { text-decoration: none; }
   .imgtable td:nth-child(-n+4) { display: inline-block; padding-right: 8px; }
   .imgtable td:nth-child(1) { font-weight: 600; }
 }
+
+/* Artifact storage, on the Runners page. */
+.store { display: grid; gap: 10px; }
+.store .card-head { margin-bottom: 0; }
+.store .sub { margin: 0; }
+.store-usage { display: grid; gap: 6px; }
+.store-meter { height: 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+.store-meter-fill { display: block; height: 100%; background: var(--ok); border-radius: 999px; }
+.store-meter-high { background: var(--warn); }
+.store-figures { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
+.store-advice { white-space: normal; overflow-wrap: anywhere; }

@@ -409,8 +409,10 @@ func (e *Engine) StoreStatus(ctx context.Context) (*StoreStatus, error) {
 			if from == "" {
 				from = "filesystem"
 			}
-			out.Advice = append(out.Advice, fmt.Sprintf("%s. This server cannot read them from its %s store: copy them with "+
-				"`launchway blobs copy --from %s --to %s`.", describeElsewhere([]StoreCount{c}), name, from, name))
+			desc := describeElsewhere([]StoreCount{c})
+			out.Advice = append(out.Advice, fmt.Sprintf("%s%s. This server cannot read %s from its %s store: copy %s with "+
+				"`launchway blobs copy --from %s --to %s`.", strings.ToUpper(desc[:1]), desc[1:], plural(c.Files, "it", "them"), name,
+				plural(c.Files, "it", "them"), from, name))
 		}
 	}
 	return out, nil

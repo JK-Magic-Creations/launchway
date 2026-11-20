@@ -34,11 +34,16 @@ func artifactSettings(cfg *config.Config, log *slog.Logger) (engine.ArtifactOpti
 	return opts, limits, nil
 }
 
-// logStore says where the engine keeps artifacts.
+// logStore says where the engine keeps artifacts. (When it keeps none,
+// the engine or artifactSettings has said why already.)
 func logStore(eng *engine.Engine, log *slog.Logger) {
 	o := eng.ArtifactOptions()
 	if o.Store == nil {
-		log.Error("artifacts are turned off on this server", "reason", o.StoreProblem)
+		if o.Choice == engine.StoreAuto {
+			// artifactSettings left this to the engine, which may have
+			// chosen the database instead of the directory it could not make.
+			log.Error("artifacts are turned off on this server", "reason", o.StoreProblem)
+		}
 		return
 	}
 	log.Info("artifacts are kept in a store", "store", o.Store.Name(), "why", eng.StoreWhy())

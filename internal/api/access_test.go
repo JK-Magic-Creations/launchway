@@ -92,6 +92,7 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/runs/{id}/steps/{step}/reject":  {"POST", "/api/v1/runs/{pay}/steps/gate/reject", "", [6]int{401, 404, 403, allowed, 404, allowed}},
 	"GET /api/v1/approvals":                       {"GET", "/api/v1/approvals", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/runners":                         {"GET", "/api/v1/runners", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/artifact-store":                  {"GET", "/api/v1/artifact-store", "", [6]int{401, 403, 200, 200, 200, 200}},
 	"GET /api/v1/environments":                    {"GET", "/api/v1/environments", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/deployments":                     {"GET", "/api/v1/deployments", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"POST /api/v1/validate":                       {"POST", "/api/v1/validate", "pipeline: x", [6]int{401, 403, 200, 200, 200, 200}},

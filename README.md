@@ -26,6 +26,26 @@ It is early. What is described below works and is tested, including with several
 real Kubernetes, PostgreSQL and OpenBao. Much of the rest is designed but not built yet (see
 [Status](#status)). Turn on [sign-in](#sign-in-and-access) before anyone else can reach it.
 
+## What Launchway needs
+
+One binary, plus Git. Everything else is built in or only needed for the feature that uses it.
+
+| For | You need | Where |
+|---|---|---|
+| Everything | the `launchway` binary; the `git` program, and Git repositories for your projects | server and runners |
+| Its data: runs, logs, test reports, security findings, SBOMs, artifacts, sessions, tokens | nothing: an embedded SQLite file, for one server | server |
+| Several servers (high availability) | one PostgreSQL database they share. Artifacts are kept in it too, so nothing else: no shared filesystem, no object store | servers |
+| Steps in containers | Podman or Docker (service containers need Podman, or Kubernetes); or steps run on the host with `/bin/sh` | runner |
+| Steps in Kubernetes pods | a cluster and a kubeconfig or service account (no `kubectl`); the runner pulls a small `busybox` image | runner |
+| Image builds (`kind: image`) | a BuildKit daemon; a registry to push to; a cosign key file to sign; the scanner (Trivy) runs as an image inside BuildKit and downloads its vulnerability database | runner, BuildKit host |
+| Deployments | Argo CD (driven through its Kubernetes resources) on each target cluster, a GitOps repository, and Argo Rollouts for rollout steps | deploy runner |
+| Secrets | optional: values from the environment or files need nothing; Vault or OpenBao for a secret store | runner |
+| Sign-in | optional: an OpenID Connect provider | server |
+| Very large artifact storage | optional: S3-compatible object storage, or a shared directory (see [docs/artifacts.md](docs/artifacts.md) for when) | server |
+
+Test reports, SARIF findings and SBOMs are read by Launchway itself; no other tool is needed for
+them.
+
 ## Running several servers
 
 Point every server at the same PostgreSQL database and put them behind a load balancer:
@@ -47,7 +67,8 @@ once, keeps serving for `server.drain_delay` (default `0s`) so that load balance
 any server. With no `database` setting a
 single server keeps its data in an embedded SQLite file, which suits development and small
 installs. Sessions, API tokens and sign-ins in progress are kept in the database too, so a browser
-or script may be sent to any server.
+or script may be sent to any server, and so are artifacts unless you choose another
+[store](#artifacts).
 
 ## Run it on Kubernetes
 
@@ -915,11 +936,16 @@ steps:
   is kept, with a download for each file and for all of them as a zip. Operators of the project may
   delete one; the audit trail records who did. Files are always served as downloads, never shown
   as pages.
-- **Storage**: a directory (the default, under the data directory) for one server, or
-  S3-compatible object storage, which several servers need. A file kept twice is stored once.
-  Uploads go in 8 MiB chunks that any server can take, and carry on after a broken connection.
-  Each server checks that it shares the store with the others (a small marker object), and keeps
-  no artifacts, saying why, if it does not.
+- **Storage**: with nothing configured, in the database on PostgreSQL (in 1 MiB chunks, each
+  checked by SHA-256 when read), so any number of servers share artifacts with nothing else to
+  run; in a directory under the data directory on SQLite (one server). S3-compatible object
+  storage, or a shared directory, are options for very large installations. A file kept twice is
+  stored once. Uploads go in 8 MiB chunks that any server can take, and carry on after a broken
+  connection or a server that died. Each server checks that it shares the store with the others
+  (a small marker object), and keeps no artifacts, saying why, if it does not. The Runners page
+  says where a server keeps them and how full the store is. `launchway blobs copy` moves them
+  between stores while servers run. [docs/artifacts.md](docs/artifacts.md) has the design,
+  measurements, limits, what to know about vacuum and backups, and when to move to S3.
 - **API**: `GET /api/v1/runs/{id}/artifacts`, `GET /api/v1/runs/{id}/artifacts/{artifact}/file?path=`
   (ranges supported), `GET /api/v1/runs/{id}/artifacts/{artifact}/archive` (zip),
   `DELETE /api/v1/runs/{id}/artifacts/{artifact}` (operators). Run summaries carry `artifacts`,
@@ -927,7 +953,9 @@ steps:
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `artifacts.store` | filesystem | `filesystem` or `s3` |
+| `artifacts.store` | database on PostgreSQL, filesystem on SQLite | `database`, `filesystem` or `s3` (see [docs/artifacts.md](docs/artifacts.md) for an installation that kept artifacts on the filesystem before) |
+| `artifacts.database.max_total_gib` | 100 | how much the database store may hold in all |
+| `artifacts.database.max_blob_mib` | 2048 | the largest file the database store keeps |
 | `artifacts.dir` | `<data>/artifacts` | the filesystem store's directory |
 | `artifacts.s3.endpoint`, `bucket`, `region`, `prefix`, `path_style`, `ca_file` | – | the S3 store; credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or `*_FILE`), never from the file |
 | `artifacts.max_file_mib` | 1024 | the largest file an artifact may hold |
@@ -1692,6 +1720,8 @@ launchway login    --server URL               store an API token for a server
 launchway runs     start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
 launchway runs     list [--project P] [--status S] | show <run-id> | logs <run-id> [--step S] [--follow]
 launchway runs     cancel <run-id>
+launchway blobs    status [--config FILE]     which stores the database records artifacts in, and how much
+launchway blobs    copy --from STORE --to STORE [--delete-source] [--dry-run]   move artifacts between stores
 ```
 
 `launchway login` reads a token (from `LAUNCHWAY_TOKEN`, or typed, or piped in), checks it with the

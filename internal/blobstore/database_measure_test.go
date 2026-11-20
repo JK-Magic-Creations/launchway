@@ -40,38 +40,8 @@ func TestDatabaseMeasure(t *testing.T) {
 	if s.pg {
 		must(t, db.QueryRow(`SELECT pg_current_wal_lsn()::text`).Scan(&lsn))
 	}
-	buf := make([]byte, part)
 	for _, size := range sizes {
-		key := fmt.Sprintf("measure/%d", size)
-		// Random content: artifacts are mostly compressed already, and random
-		// bytes defeat TOAST's compression, so this is the worst case for size.
-		h := sha256.New()
-		start := time.Now()
-		id, err := s.CreateUpload(ctx, key)
-		must(t, err)
-		var parts []Part
-		for n, left := 1, size; left > 0; n++ {
-			chunk := buf[:min(left, part)]
-			rand.Read(chunk)
-			h.Write(chunk)
-			etag, err := s.UploadPart(ctx, key, id, n, chunk)
-			must(t, err)
-			parts = append(parts, Part{Number: n, ETag: etag})
-			left -= int64(len(chunk))
-		}
-		must(t, s.CompleteUpload(ctx, key, id, parts))
-		up := time.Since(start)
-		start = time.Now()
-		r, err := s.Open(ctx, key, 0, -1)
-		must(t, err)
-		h2 := sha256.New()
-		n, err := io.Copy(h2, r)
-		must(t, err)
-		r.Close()
-		down := time.Since(start)
-		if n != size || string(h2.Sum(nil)) != string(h.Sum(nil)) {
-			t.Fatalf("%s read back wrong", key)
-		}
+		up, down := roundTrip(t, s, fmt.Sprintf("measure/%d", size), size)
 		grown := dbSize(t, db, s.pg) - before
 		t.Logf("%7s: upload %6.1f MB/s (%v), download %6.1f MB/s (%v); store tables now %s over %s stored (%.3fx)",
 			mib(size), float64(size)/1e6/up.Seconds(), up.Round(time.Millisecond), float64(size)/1e6/down.Seconds(), down.Round(time.Millisecond),
@@ -89,6 +59,58 @@ func TestDatabaseMeasure(t *testing.T) {
 	_, err := s.Collect(ctx)
 	must(t, err)
 	t.Logf("after deleting everything: store tables %s (space is reused by later writes; VACUUM FULL or pg_repack gives it back to the system)", mib(dbSize(t, db, s.pg)-before))
+}
+
+// TestFilesystemMeasure is the same measurement on the filesystem store,
+// in a temporary directory, for comparison.
+func TestFilesystemMeasure(t *testing.T) {
+	if os.Getenv("LAUNCHWAY_TEST_MEASURE") == "" {
+		t.Skip("set LAUNCHWAY_TEST_MEASURE=1 to measure")
+	}
+	s := newFS(t)
+	for _, size := range []int64{1 << 20, 100 << 20, 1 << 30} {
+		key := fmt.Sprintf("measure/%d", size)
+		up, down := roundTrip(t, s, key, size)
+		t.Logf("filesystem %7s: upload %6.1f MB/s, download %6.1f MB/s", mib(size), float64(size)/1e6/up.Seconds(), float64(size)/1e6/down.Seconds())
+		must(t, s.Delete(ctx, key))
+	}
+}
+
+// roundTrip uploads size random bytes (artifacts are mostly compressed
+// already, and random bytes defeat TOAST's compression: the worst case for
+// size) in the runners' 8 MiB parts, reads them back whole, checks them,
+// and says how long each took.
+func roundTrip(t *testing.T, s Store, key string, size int64) (up, down time.Duration) {
+	const part = 8 << 20
+	buf := make([]byte, part)
+	h := sha256.New()
+	start := time.Now()
+	id, err := s.CreateUpload(ctx, key)
+	must(t, err)
+	var parts []Part
+	for n, left := 1, size; left > 0; n++ {
+		chunk := buf[:min(left, part)]
+		rand.Read(chunk)
+		h.Write(chunk)
+		etag, err := s.UploadPart(ctx, key, id, n, chunk)
+		must(t, err)
+		parts = append(parts, Part{Number: n, ETag: etag})
+		left -= int64(len(chunk))
+	}
+	must(t, s.CompleteUpload(ctx, key, id, parts))
+	up = time.Since(start)
+	start = time.Now()
+	r, err := s.Open(ctx, key, 0, -1)
+	must(t, err)
+	h2 := sha256.New()
+	n, err := io.Copy(h2, r)
+	must(t, err)
+	r.Close()
+	down = time.Since(start)
+	if n != size || string(h2.Sum(nil)) != string(h.Sum(nil)) {
+		t.Fatalf("%s read back wrong", key)
+	}
+	return up, down
 }
 
 // total is the sum of sizes up to and including last.
