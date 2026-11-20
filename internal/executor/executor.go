@@ -34,6 +34,13 @@ type Spec struct {
 	// Mask, if set, hides secret values in stdout and stderr. It is applied
 	// to whole lines, before long lines are split.
 	Mask func(string) string
+	// AsksResources says that this step wrote resources of its own. An
+	// executor that cannot limit anything refuses such a step rather than
+	// ignore it; for a step that asks for nothing it only says that the
+	// defaults are not enforced. It is about the step, not the container:
+	// another step that runs in the same container may ask while this one
+	// does not.
+	AsksResources bool
 }
 
 // Sink receives output lines as they are produced.
@@ -69,9 +76,6 @@ type ContainerSpec struct {
 	// Threads is how many parallel jobs the tools in it should start so that
 	// they fit its limits; 0 leaves the tools to decide.
 	Threads int
-	// Explicit says that a step asked for resources. An executor that
-	// cannot limit anything refuses such a step rather than ignore it.
-	Explicit bool
 	// ExplicitCPU and ExplicitMemory say that the container's CPU, or
 	// memory, was asked for by a step or by the container itself, and is
 	// not a default the server chose. An executor whose operator or

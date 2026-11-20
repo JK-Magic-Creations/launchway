@@ -86,12 +86,6 @@ type Container struct {
 	// Threads is how many parallel jobs the tools in it should start, so
 	// that they fit the limits (0: no opinion); see resources.Threads.
 	Threads int `json:"threads,omitempty"`
-	// Explicit says that a step in the container asked for resources (the
-	// resources key), as opposed to getting the installation's defaults or
-	// the container's own cpu and memory, which the host executor has always
-	// ignored. A host executor, which cannot limit anything, refuses only
-	// steps that ask.
-	Explicit bool `json:"explicit,omitempty"`
 	// ExplicitCPU and ExplicitMemory say that something the container's
 	// CPU, or memory, came from what a step (or the container's own cpu or
 	// memory) asked for, and not from the installation's defaults. A runner

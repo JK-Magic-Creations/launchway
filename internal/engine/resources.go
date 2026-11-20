@@ -482,7 +482,7 @@ func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourceP
 			legacy.MemoryLimit = legacy.Memory // as it was: what is asked for is also the cap
 		}
 		var folded resources.Amount
-		explicit, declaredAny, any := false, false, false
+		declaredAny, any := false, false
 		// What the container's CPU and memory come from: asked for by a
 		// step or by the container's own cpu and memory, or the defaults.
 		askedCPU, askedMemory := legacy.CPU > 0, legacy.Memory > 0
@@ -501,7 +501,7 @@ func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourceP
 				base = legacy
 			}
 			if s.Resources != nil {
-				explicit, declaredAny = true, true // a step asked: the host executor must refuse
+				declaredAny = true
 				askedCPU = askedCPU || declared.CPU > 0 || declared.CPULimit > 0
 				askedMemory = askedMemory || declared.Memory > 0 || declared.MemoryLimit > 0
 			}
@@ -516,7 +516,6 @@ func sizeContainers(p *pipeline.Pipeline, cs []pipeline.Container, pol resourceP
 		r := folded.Request()
 		ct.CPU, ct.CPULimit, ct.Memory, ct.MemoryLimit = r.CPU, r.CPULimit, r.Memory, r.MemoryLimit
 		ct.Threads = resources.Threads(folded.CPULimit, folded.MemoryLimit, pol.limits.MemoryPerThread)
-		ct.Explicit = explicit
 		ct.ExplicitCPU, ct.ExplicitMemory = askedCPU, askedMemory
 	}
 	return cs

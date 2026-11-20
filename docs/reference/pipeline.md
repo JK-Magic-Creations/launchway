@@ -961,8 +961,9 @@ starting defaults that is 4 jobs; `memory: 6Gi` with no CPU written is 4 as well
 
 **Where it is applied.** Kubernetes sets the pod's requests and limits. Podman and Docker run each
 step with `--memory`, `--memory-reservation` and `--cpus`. The host executor cannot limit anything:
-a step that asks for resources there is refused with a message saying so, and the defaults are not
-applied. The runner log says what each container was given.
+a step that writes `resources` there is refused with a message saying so. A step that does not
+(another step that uses the same image may) runs, the defaults are not applied, and its log has one
+line, "resources not enforced on the host executor", saying what it would have been given. The runner log says what each container was given.
 
 **Checks.** `launchway validate` checks the quantities. A run is refused when it is created if a
 step asks for more than the installation's `max_cpu` or `max_memory`, the message naming the step,

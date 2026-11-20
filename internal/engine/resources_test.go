@@ -49,7 +49,7 @@ func TestDefaultsAreSeededIntoTheDatabaseAndApplyToAStepThatAsksForNothing(t *te
 	// What a step gets when it asks for nothing: promised 1 CPU and 2 GiB,
 	// and may use 4 CPUs and 6 GiB, the memory of a build, not the
 	// namespace's 2 GiB. Four parallel jobs fit in it.
-	if c.CPU != "1" || c.CPULimit != "4" || c.Memory != "2Gi" || c.MemoryLimit != "6Gi" || c.Threads != 4 || c.Explicit {
+	if c.CPU != "1" || c.CPULimit != "4" || c.Memory != "2Gi" || c.MemoryLimit != "6Gi" || c.Threads != 4 || c.ExplicitCPU || c.ExplicitMemory {
 		t.Fatalf("a step that asks for nothing got %+v", c)
 	}
 }
@@ -114,7 +114,7 @@ func TestAStepThatDeclaresResourcesGetsThem(t *testing.T) {
 	e, _ := newEngine(t)
 	create(t, e, "pipeline: p\nsteps:\n  build:\n    image: golang:1.27\n    run: go build ./...\n    resources: { cpu: 16, memory: 6Gi }\n", Trigger{Event: "manual"})
 	c := firstContainer(t, take(t, e))
-	if c.Memory != "6Gi" || c.MemoryLimit != "6Gi" || c.CPU != "16" || c.CPULimit != "16" || !c.Explicit {
+	if c.Memory != "6Gi" || c.MemoryLimit != "6Gi" || c.CPU != "16" || c.CPULimit != "16" || !c.ExplicitCPU || !c.ExplicitMemory {
 		t.Fatalf("%+v", c)
 	}
 	// 16 CPUs would be 16 compilations; 6 GiB feeds six.
@@ -169,13 +169,13 @@ func TestAContainersOwnSizeStandsInForTheDefault(t *testing.T) {
 	e, _ := newEngine(t)
 	create(t, e, "pipeline: p\ncontainers:\n  go: { image: golang:1.27, cpu: 500m, memory: 1Gi }\nsteps:\n  a: { container: go, run: a }\n", Trigger{Event: "manual"})
 	c := firstContainer(t, take(t, e))
-	if c.CPU != "500m" || c.CPULimit != "" || c.Memory != "1Gi" || c.MemoryLimit != "1Gi" || c.Explicit || c.Threads != 1 {
+	if c.CPU != "500m" || c.CPULimit != "" || c.Memory != "1Gi" || c.MemoryLimit != "1Gi" || !c.ExplicitCPU || !c.ExplicitMemory || c.Threads != 1 {
 		t.Fatalf("as written: %+v", c)
 	}
 	e2, _ := newEngine(t)
 	create(t, e2, "pipeline: p\ncontainers:\n  go: { image: golang:1.27, cpu: 500m, memory: 1Gi }\nsteps:\n  a: { container: go, run: a, resources: { memory: 4Gi } }\n", Trigger{Event: "manual"})
 	c = firstContainer(t, take(t, e2))
-	if c.Memory != "4Gi" || c.MemoryLimit != "4Gi" || c.CPU != "500m" || !c.Explicit {
+	if c.Memory != "4Gi" || c.MemoryLimit != "4Gi" || c.CPU != "500m" || !c.ExplicitMemory {
 		t.Fatalf("the step's memory, the container's cpu: %+v", c)
 	}
 }
@@ -184,7 +184,7 @@ func TestServicesAreLeftAsWritten(t *testing.T) {
 	e, _ := newEngine(t)
 	create(t, e, "pipeline: p\ncontainers:\n  db: { image: postgres:17, service: true, memory: 512Mi }\nsteps:\n  a: { image: x, run: a }\n", Trigger{Event: "manual"})
 	j := take(t, e)
-	if c := containerOf(t, j, "db"); c.Memory != "512Mi" || c.MemoryLimit != "" || c.Threads != 0 || c.Explicit {
+	if c := containerOf(t, j, "db"); c.Memory != "512Mi" || c.MemoryLimit != "" || c.Threads != 0 || c.ExplicitCPU || c.ExplicitMemory {
 		t.Fatalf("%+v", c)
 	}
 }
@@ -333,7 +333,7 @@ func TestUpgradedInstallationIsSeededWithNothingSized(t *testing.T) {
 	if err != nil || j == nil {
 		t.Fatalf("%v %v", j, err)
 	}
-	if c := firstContainer(t, j); c.CPU != "" || c.CPULimit != "" || c.Memory != "" || c.MemoryLimit != "" || c.Threads != 0 || c.Explicit {
+	if c := firstContainer(t, j); c.CPU != "" || c.CPULimit != "" || c.Memory != "" || c.MemoryLimit != "" || c.Threads != 0 || c.ExplicitCPU || c.ExplicitMemory {
 		t.Fatalf("a step of an upgraded installation was sized: %+v", c)
 	}
 
@@ -369,5 +369,25 @@ func TestContainersSayWhichOfCPUAndMemoryWereAskedFor(t *testing.T) {
 		if ct.ExplicitCPU != c.cpu || ct.ExplicitMemory != c.memory {
 			t.Errorf("%s: explicit cpu %v memory %v, want %v %v", c.name, ct.ExplicitCPU, ct.ExplicitMemory, c.cpu, c.memory)
 		}
+	}
+}
+
+// A container is shared by the steps that use its image; whether a step
+// asked for resources is the step's own, so that the host executor refuses
+// only a step that asked.
+func TestJobSaysWhetherThisStepAskedForResources(t *testing.T) {
+	e, _ := newEngine(t)
+	create(t, e, "pipeline: p\nsteps:\n  a: { image: x, run: a }\n  b: { image: x, run: b, needs: a, resources: { memory: 3Gi } }\n", Trigger{Event: "manual"})
+	j := take(t, e)
+	if j.StepID != "a" || j.ResourcesAsked {
+		t.Fatalf("%s asked: %v", j.StepID, j.ResourcesAsked)
+	}
+	// Both run in the one container, which holds b's 3Gi.
+	if c := firstContainer(t, j); c.Memory != "3Gi" || !c.ExplicitMemory {
+		t.Fatalf("%+v", c)
+	}
+	ok(t, e, j, nil)
+	if j = take(t, e); j.StepID != "b" || !j.ResourcesAsked {
+		t.Fatalf("%s asked: %v", j.StepID, j.ResourcesAsked)
 	}
 }

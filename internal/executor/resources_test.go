@@ -150,7 +150,7 @@ func TestContainerExecutorAppliesTheLimitsAndParallelism(t *testing.T) {
 	var out capture
 	s := spec(t, "true")
 	s.Container = "go"
-	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "1", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", Threads: 4, Explicit: true}}
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "1", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", Threads: 4}}
 	if code, err := c.Run(context.Background(), s, out.sink); err != nil || code != 0 {
 		t.Fatalf("code %d err %v\n%s", code, err, out.text())
 	}
@@ -203,7 +203,7 @@ func TestContainerExecutorLimitsAreReal(t *testing.T) {
 	var out capture
 	s := spec(t, "echo gomaxprocs=$GOMAXPROCS\ncat /sys/fs/cgroup/memory.max 2>/dev/null || cat /sys/fs/cgroup/memory/memory.limit_in_bytes")
 	s.Container = "go"
-	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, Memory: "256Mi", MemoryLimit: "256Mi", Threads: 2, Explicit: true}}
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, Memory: "256Mi", MemoryLimit: "256Mi", Threads: 2}}
 	if code, err := c.Run(context.Background(), s, out.sink); err != nil || code != 0 {
 		t.Fatalf("code %d err %v\n%s", code, err, out.text())
 	}
@@ -218,7 +218,8 @@ func TestHostRefusesAStepThatAsksForResources(t *testing.T) {
 	var out capture
 	s := spec(t, "echo ran")
 	s.Container = "go"
-	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "4", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", Threads: 4, Explicit: true}}
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "4", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", Threads: 4}}
+	s.AsksResources = true
 	code, err := (&Host{}).Run(context.Background(), s, out.sink)
 	if err == nil || code != -1 || errors.Is(err, ErrInfrastructure) {
 		t.Fatalf("code %d err %v: a refusal is a failure of the step, not of the machinery", code, err)
@@ -233,13 +234,47 @@ func TestHostRefusesAStepThatAsksForResources(t *testing.T) {
 	}
 
 	// Defaults are not a request, and the host applies none of them.
-	s.Containers[0].Explicit = false
+	s.AsksResources = false
 	s.Script = "echo \"ran gomaxprocs=${GOMAXPROCS:-unset}\""
 	if code, err := (&Host{}).Run(context.Background(), s, out.sink); err != nil || code != 0 {
 		t.Fatalf("code %d err %v", code, err)
 	}
 	if !strings.Contains(out.text(), "ran gomaxprocs=unset") {
 		t.Fatalf("the host must not apply limits it cannot enforce:\n%s", out.text())
+	}
+	// ...and it says so, once, in the step's log, so nobody believes the
+	// step is limited.
+	if n := strings.Count(out.text(), "resources not enforced on the host executor: cpu 4, memory 6Gi"); n != 1 {
+		t.Fatalf("the step's log says it %d times:\n%s", n, out.text())
+	}
+}
+
+// Containers are shared by the steps that use an image. The host refuses a
+// step for what that step asked, not for another step's resources in the
+// same container.
+func TestHostRefusesOnlyTheStepThatAsked(t *testing.T) {
+	var out capture
+	s := spec(t, "echo ran")
+	s.Container = "go"
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image, CPU: "4", CPULimit: "4", Memory: "6Gi", MemoryLimit: "6Gi", ExplicitCPU: true, ExplicitMemory: true}}
+	// A step of the same container that asked for nothing runs, with the line.
+	if code, err := (&Host{}).Run(context.Background(), s, out.sink); err != nil || code != 0 {
+		t.Fatalf("code %d err %v", code, err)
+	}
+	if !strings.Contains(out.text(), "resources not enforced on the host executor") || !strings.Contains(out.text(), "ran") {
+		t.Fatalf("%s", out.text())
+	}
+	// The step that asked is refused.
+	s.AsksResources = true
+	if code, err := (&Host{}).Run(context.Background(), s, out.sink); err == nil || code != -1 {
+		t.Fatalf("code %d err %v", code, err)
+	}
+	// A container with no sizing at all says nothing.
+	var quiet capture
+	s.AsksResources = false
+	s.Containers = []ContainerSpec{{Name: "go", Image: s.Image}}
+	if code, err := (&Host{}).Run(context.Background(), s, quiet.sink); err != nil || code != 0 || strings.Contains(quiet.text(), "not enforced") {
+		t.Fatalf("code %d err %v\n%s", code, err, quiet.text())
 	}
 }
 
