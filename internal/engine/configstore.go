@@ -551,3 +551,39 @@ func (e *Engine) ConfigAtRevision(rev int64) ([]ConfigObject, error) {
 	}
 	return out, rows.Err()
 }
+
+// ConfigInUse says what active runs depend on a project, an environment or
+// a runner pool: one sentence each, at most ten. Deleting such an object
+// from under them would change what they were allowed to do.
+func (e *Engine) ConfigInUse(kind, name string) ([]string, error) {
+	var q string
+	switch kind {
+	case "project":
+		q = `SELECT 'run #' || number || ' of ' || project || ' is ' || status FROM runs WHERE project = ? AND status IN ('queued','running') ORDER BY created_at LIMIT 10`
+	case "environment":
+		q = `SELECT 'run #' || run_number || ' of ' || project || ' is deploying ' || service || ' to ' || environment FROM deploy_locks WHERE environment = ?
+			UNION ALL SELECT 'run #' || run_number || ' of ' || project || ' waits to deploy ' || service || ' to ' || environment FROM deploy_queue WHERE environment = ? LIMIT 10`
+	case "runner-pool":
+		q = `SELECT 'run ' || l.run_id || ' step ' || l.step_id || ' is running on runner ' || r.name FROM leases l JOIN runners r ON r.id = l.runner WHERE r.pool = ? LIMIT 10`
+	default:
+		return nil, nil
+	}
+	args := []any{name}
+	if kind == "environment" {
+		args = append(args, name)
+	}
+	rows, err := e.db.Query(q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}

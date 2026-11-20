@@ -215,7 +215,7 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 			poolRequires = schemaPools // as in CreateRun
 		}
 		c.emit(RunCreated, Payload{Project: orig.Project, Number: number, Pipeline: c.e.withStoreRequires(orig.Pipeline), Trigger: &trig, Source: &src,
-			Draft: draft, Rerun: rerun, PullRequestSecrets: prSecrets, Requires: poolRequires})
+			Draft: draft, Rerun: rerun, PullRequestSecrets: prSecrets, SelfApproval: c.e.selfApprovalNow(), Requires: poolRequires})
 		for _, id := range plan.Reuse {
 			s := orig.Steps[id]
 			from := &Reused{Run: orig.ID, Number: orig.Number, Attempt: s.Attempt, DecidedAt: s.DecidedAt}

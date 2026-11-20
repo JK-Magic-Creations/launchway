@@ -79,6 +79,9 @@ type RunState struct {
 	// PullRequestSecrets says whether the steps of a pull-request run may
 	// read secrets. It means nothing for other runs.
 	PullRequestSecrets bool
+	// SelfApproval is whether the starter could approve their own run when
+	// it was created; nil for a run created before it was recorded.
+	SelfApproval *bool
 	// CancelReason is why the run was asked to cancel, when it was not by
 	// hand, and SupersededBy the newer run that superseded it, if that is
 	// why. Both are cleared by a resume.
@@ -193,6 +196,9 @@ type DeployState struct {
 	Phases     int // deploy.phase events in this attempt
 	Closed     bool
 	Verdict    string
+	// Protected is whether the environment was protected when the
+	// deployment opened; nil for one that predates the record.
+	Protected *bool
 	// Command, for a rollout step, is the command it gave in this attempt
 	// (schema 14).
 	Command string
@@ -200,6 +206,16 @@ type DeployState struct {
 
 // Opened reports whether the deployment was opened (it took the lock).
 func (d *DeployState) Opened() bool { return d != nil && d.ID != "" }
+
+// selfApproval says whether the person who started the run may approve it:
+// what was in force when it was created, or, for a run that predates the
+// record, the server's setting now.
+func (st *RunState) selfApproval(e *Engine) bool {
+	if st.SelfApproval != nil {
+		return *st.SelfApproval
+	}
+	return e.live().selfOK
+}
 
 // secretsAllowed reports whether the run's steps may read secrets: not in a
 // draft run or a pull-request run unless the project allowed it when the run
@@ -445,6 +461,7 @@ func (st *RunState) apply(ev Event) {
 			st.Rerun = &r
 		}
 		st.PullRequestSecrets = p.PullRequestSecrets != nil && *p.PullRequestSecrets
+		st.SelfApproval = p.SelfApproval
 		st.Status = RunQueued
 		st.CreatedAt = ev.At
 		st.Steps = map[string]*StepState{}

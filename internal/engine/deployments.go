@@ -258,7 +258,7 @@ func (st *RunState) applyDeploy(ev Event, s *StepState) {
 		}
 	case DeployOpened:
 		s.Dep = &DeployState{ID: d.ID, Environment: d.Environment, Service: d.Service, Target: d.Target,
-			Application: d.Application, Mode: d.Mode, Version: d.Version, Previous: d.Previous, OpenedAt: ev.At}
+			Application: d.Application, Mode: d.Mode, Version: d.Version, Previous: d.Previous, OpenedAt: ev.At, Protected: d.Protected}
 		s.Deadline = d.Deadline
 		s.WaitKind = ""
 		if st.Status == RunQueued {
@@ -362,7 +362,7 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 		return
 	}
 	// Before anything reaches the environment, the policies judge the run.
-	if !c.gateDeploy(id, def, def, env.Name, "deploy") {
+	if !c.gateDeploy(id, def, def, env.Name, "deploy", env.Protected) {
 		return
 	}
 	// The lock is free: take it. Another server taking it at the same moment
@@ -380,7 +380,7 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 	}
 	deadline := c.now + def.Timeout.D().Milliseconds()
 	c.emit(DeployOpened, Payload{Step: id, Deploy: &DeployEvent{ID: depID, Environment: u.env, Service: u.service, Target: env.Target,
-		Application: def.ArgoCD.Application, Mode: "write_back", Version: version, Previous: prev, Deadline: deadline}})
+		Application: def.ArgoCD.Application, Mode: "write_back", Version: version, Previous: prev, Deadline: deadline, Protected: &env.Protected}})
 	c.emit(StepQueued, Payload{Step: id, Attempt: s.Attempt + 1, Deploy: &DeployEvent{ID: depID, Action: ActionApply}})
 	c.after(c.e.kickDeploys)
 }
@@ -1003,4 +1003,32 @@ type TimelineEntry struct {
 	Step   string `json:"step"`
 	Phase  string `json:"phase"`
 	Detail string `json:"detail"`
+}
+
+// protected says whether a deployment's environment is protected: as it
+// was when the deployment opened, or, for one that predates the record, as
+// it is now. An environment that is not configured at all counts as
+// protected: a missing setting never unprotects anything.
+func (c *cmd) protected(d *DeployState) bool {
+	if d != nil && d.Protected != nil {
+		return *d.Protected
+	}
+	if d == nil {
+		return true
+	}
+	env, ok := c.e.live().envs[d.Environment]
+	return env.Protected || !ok
+}
+
+// verifyProtected is protected for a verification: that of the deployment it
+// watches if it has one, else of its environment now (a missing environment
+// counts as protected).
+func (c *cmd) verifyProtected(v *VerifyState) bool {
+	if v.Deployment != "" {
+		if _, ds := c.st.deploymentStep(v.Deployment); ds != nil && ds.Dep != nil && ds.Dep.Protected != nil {
+			return *ds.Dep.Protected
+		}
+	}
+	env, ok := c.e.live().envs[v.Environment]
+	return env.Protected || !ok
 }

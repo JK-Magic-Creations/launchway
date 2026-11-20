@@ -1153,10 +1153,9 @@ func (c *cmd) overrideRefusal(def *pipeline.Step, actor, outcome string) error {
 	if s.Ver == nil {
 		return fmt.Errorf("%w: %s has not started", ErrConflict, def.ID)
 	}
-	env := c.e.live().envs[s.Ver.Environment]
-	if env.Protected && !c.e.live().selfOK && outcome == verify.Passed && actor == c.st.Trigger.Actor {
+	if c.verifyProtected(s.Ver) && !c.st.selfApproval(c.e) && outcome == verify.Passed && actor == c.st.Trigger.Actor {
 		return fmt.Errorf("%w: %s started this run, and %s is a protected environment, so someone else must mark the verification passed (you may still mark it failed)",
-			ErrForbidden, actor, env.Name)
+			ErrForbidden, actor, s.Ver.Environment)
 	}
 	return nil
 }

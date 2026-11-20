@@ -268,8 +268,7 @@ func (c *cmd) commandRefusal(depID, action, actor string) (string, deploy.Expect
 			return deployID, deploy.Expect{}, fmt.Errorf("%w: %s is rolling the deployment back", ErrConflict, rb.ID)
 		}
 	}
-	env := c.e.live().envs[dep.Environment]
-	if env.Protected && !c.e.live().selfOK && action != pipeline.ActionAbort && actor == st.Trigger.Actor {
+	if c.protected(dep) && !c.st.selfApproval(c.e) && action != pipeline.ActionAbort && actor == st.Trigger.Actor {
 		return deployID, deploy.Expect{}, fmt.Errorf("%w: %s started this run, and %s is a protected environment, so someone else must %s it (you may still abort it)",
 			ErrForbidden, actor, dep.Environment, verbOf(action))
 	}
@@ -657,7 +656,7 @@ func (c *cmd) startRolloutStep(id string, def *pipeline.Step) {
 	// Promoting or retrying moves the new version further in: the policies
 	// judge it first. An abort is never judged.
 	if def.Action != pipeline.ActionAbort {
-		if !c.gateDeploy(id, def, c.st.Pipeline.Step(def.Deployment), d.Dep.Environment, def.Action) {
+		if !c.gateDeploy(id, def, c.st.Pipeline.Step(def.Deployment), d.Dep.Environment, def.Action, c.protected(d.Dep)) {
 			return
 		}
 	}

@@ -684,3 +684,47 @@ func TestCommandHandedBack(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// What protects a run is decided when it is created or its deployment opens
+// and does not change under it: editing the environment or the approvals
+// setting while a deployment is paused neither unprotects it nor lets the
+// starter promote it, and an environment that vanished counts as protected.
+func TestSettingsChangedMidRunDoNotUnprotectADeployment(t *testing.T) {
+	clk := &clock{t: time.Date(2026, 11, 14, 9, 0, 0, 0, time.UTC)}
+	no := false
+	e, err := Open(Options{Database: testdb.New(t), LeaseTTL: ttl, Now: clk.Now, Environments: protectedEnv, AllowSelfApproval: &no})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { e.Close() })
+	r, err := e.CreateRun(NewRun{Project: "shop", Pipeline: parse(t, waitPipeline), Source: gitSource,
+		Trigger: Trigger{Event: "manual", Ref: "refs/heads/main", Branch: "main", SHA: strings.Repeat("1", 40), Actor: "ann"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := r.ID
+	build(t, e, id, "2")
+	applied(t, e, leaseDeploy(t, e, deployer), "c2")
+	observe(t, e, deployer, watchOf(t, e, deployer, "deploy-prod"), paused())
+	dep := onlyDep(t, e, id).ID
+	promote := func() error {
+		_, err := e.RequestCommand(CommandRequest{Run: id, Deployment: dep, Action: "promote", Actor: "ann"})
+		return err
+	}
+	// Someone unprotects the environment, allows self-approval and then the
+	// environment is deleted; none of it reaches this run.
+	yes := true
+	live := func(envs []Environment, self *bool) {
+		if err := e.Reconfigure(LiveOptions{Environments: envs, AllowSelfApproval: self}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	live([]Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}}}, &yes)
+	if err := promote(); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("after unprotecting the environment and allowing self-approval: %v", err)
+	}
+	live(nil, &yes)
+	if err := promote(); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("after the environment was deleted: %v", err)
+	}
+}

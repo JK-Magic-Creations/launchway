@@ -60,7 +60,7 @@ func (e *Engine) Decide(runID, stepID string, approve bool, actor, comment strin
 			return fmt.Errorf("%w: %s is not waiting for a decision (it is %s)", ErrConflict, stepID, s.Status)
 		case c.now >= s.Deadline:
 			return fmt.Errorf("%w: %s is no longer waiting: nobody decided within %s", ErrConflict, stepID, def.Timeout.Short())
-		case approve && !c.e.live().selfOK && actor == c.st.Trigger.Actor:
+		case approve && !c.st.selfApproval(c.e) && actor == c.st.Trigger.Actor:
 			return fmt.Errorf("%w: %s started this run, so someone else must approve it (you may still reject it)", ErrForbidden, actor)
 		}
 		p := Payload{Step: stepID, Attempt: s.Attempt, Actor: actor, Comment: comment}

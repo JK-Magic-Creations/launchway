@@ -10,6 +10,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -242,5 +243,36 @@ func TestAStoredChangeThatCannotBeAppliedIsReportedAndRetried(t *testing.T) {
 	}
 	if err := s2.Refresh(); err != nil || seen[len(seen)-1] != 2 {
 		t.Errorf("the retry: %v, saw %v projects", err, seen)
+	}
+}
+
+// Deleting a project that a run is using is refused with what depends on it;
+// with force it goes, and the history and audit say so.
+func TestDeletingWhatActiveRunsUseNeedsForce(t *testing.T) {
+	eng := openEngine(t, testdb.New(t))
+	s := New(eng, bootOIDC(t, t.TempDir(), true), quietLog())
+	if _, err := s.Apply("ada", []Change{change("project", "shop", `{"repo":"https://git.example.com/shop.git"}`)}); err != nil {
+		t.Fatal(err)
+	}
+	p, err := pipeline.Parse([]byte("pipeline: x\nsteps:\n  a:\n    image: none\n    run: echo hi\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := eng.CreateRun(engine.NewRun{Project: "shop", Pipeline: p, Source: engine.Source{Kind: "git", URL: "https://git.example.com/shop.git"},
+		Trigger: engine.Trigger{Event: "manual", Ref: "refs/heads/main", Branch: "main", SHA: strings.Repeat("1", 40), Actor: "ann"}}); err != nil {
+		t.Fatal(err)
+	}
+	del := Change{Kind: kindByName("project"), Name: "shop", Action: engine.ConfigDelete, IfVersion: -1, Comment: "tidy"}
+	if _, err := s.Apply("ada", []Change{del}); err == nil || !strings.Contains(err.Error(), "in use") || !strings.Contains(err.Error(), "force") {
+		t.Fatalf("a delete under a running run: %v", err)
+	}
+	del.Force = true
+	res, err := s.Apply("ada", []Change{del})
+	if err != nil || len(res[0].Forced) != 1 {
+		t.Fatalf("forced: %v %+v", err, res)
+	}
+	h, _ := s.History(engine.ConfigHistoryFilter{Kind: "project", Name: "shop"})
+	if len(h) == 0 || !strings.Contains(h[0].Comment, "forced while in use") || !strings.Contains(h[0].Comment, "tidy") {
+		t.Errorf("the history does not say it was forced: %+v", h)
 	}
 }

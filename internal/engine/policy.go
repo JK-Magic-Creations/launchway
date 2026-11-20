@@ -235,7 +235,7 @@ func (c *cmd) policyInput(point string) policy.Input {
 	st := c.st
 	t := st.Trigger
 	return policy.Input{Point: point, Project: st.Project, Run: st.ID, RunNumber: st.Number, Event: t.Event, Branch: t.Branch, Tag: t.Tag,
-		Starter: t.Actor, SelfApproval: c.e.live().selfOK}
+		Starter: t.Actor, SelfApproval: c.st.selfApproval(c.e)}
 }
 
 // pipelineFacts are what the run-point rules judge.
@@ -520,13 +520,13 @@ const (
 // gateDeploy judges a deploy step (or a rollout step that promotes or
 // retries) before it acts. It reports false, having failed the step, if
 // the decision blocks it.
-func (c *cmd) gateDeploy(id string, def, deployDef *pipeline.Step, envName, action string) bool {
+func (c *cmd) gateDeploy(id string, def, deployDef *pipeline.Step, envName, action string, protected bool) bool {
 	if !c.e.policiesOn() {
 		return true
 	}
 	in := c.policyInput(policy.PointDeploy)
 	in.Step, in.Action, in.Environment = id, action, envName
-	in.Protected = c.e.live().envs[envName].Protected
+	in.Protected = protected
 	ev := c.judge(&in, func(set policy.Set) error {
 		var applicable []policy.Policy
 		for _, p := range set.Policies() {
@@ -771,7 +771,7 @@ func (e *Engine) GrantWaiver(rq WaiverRequest) (*WaiverView, error) {
 		runNumber = st.Number
 		// The person who started a run may not waive a deploy gate of it on
 		// a protected environment, unless people may approve their own runs.
-		if policy.PointOf(rq.Rule) == policy.PointDeploy && !e.live().selfOK && rq.Actor != "" && rq.Actor == st.Trigger.Actor {
+		if policy.PointOf(rq.Rule) == policy.PointDeploy && !st.selfApproval(e) && rq.Actor != "" && rq.Actor == st.Trigger.Actor {
 			for _, env := range e.Environments() {
 				if !env.Protected || (rq.Environment != "" && env.Name != rq.Environment) {
 					continue

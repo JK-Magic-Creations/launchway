@@ -578,6 +578,10 @@ type Change struct {
 	IfVersion int64
 	ManagedBy string
 	Comment   string
+	// Force deletes an object that active runs depend on (see ConfigInUse);
+	// without it such a delete is refused. A forced delete is recorded in
+	// the object's history and the audit trail.
+	Force bool
 }
 
 // Result is what a change did.
@@ -585,6 +589,8 @@ type Result struct {
 	Object  *engine.ConfigObject `json:"object"`
 	Change  *engine.ConfigChange `json:"change,omitempty"`
 	Changed bool                 `json:"changed"`
+	// Forced lists what a forced delete cut short.
+	Forced []string `json:"forced,omitempty"`
 }
 
 // Problem is a reason a change is refused.
@@ -728,10 +734,25 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 	}
 	writes := make([]engine.ConfigWrite, 0, len(changes))
 	puts := []engine.ConfigObject{}
+	forced := map[string][]string{}
 	for _, c := range changes {
 		w, obj, err := s.prepare(c)
 		if err != nil {
 			return nil, err
+		}
+		if c.Action == engine.ConfigDelete {
+			use, err := s.eng.ConfigInUse(c.Kind.Name, c.Name)
+			if err != nil {
+				return nil, err
+			}
+			switch {
+			case len(use) > 0 && !c.Force:
+				return nil, invalid(fmt.Errorf("%s %s is in use: %s. Wait for these to finish, or delete it anyway with force (the runs in flight then lose what it gave them, and the forced delete is recorded)",
+					c.Kind.Name, c.Name, strings.Join(use, "; ")))
+			case len(use) > 0:
+				forced[c.Kind.Name+"\x00"+c.Name] = use
+				w.Comment = clipText(strings.TrimSpace(w.Comment+" [forced while in use: "+strings.Join(use, "; ")+"]"), 500)
+			}
 		}
 		writes = append(writes, w)
 		if obj != nil {
@@ -796,6 +817,7 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 					r.Change, r.Changed = &c, true
 				}
 			}
+			r.Forced = forced[w.Kind+"\x00"+w.Name]
 			results = append(results, r)
 		}
 		if applyErr != nil {

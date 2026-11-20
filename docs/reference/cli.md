@@ -607,7 +607,7 @@ launchway config list KIND [--deleted] [--json]
 launchway config get KIND NAME [--json]
 launchway config set KIND NAME -f SPEC.yaml [--unit U] [--version N] [--comment TEXT] [--manager terraform]
 launchway config create KIND NAME -f SPEC.yaml
-launchway config delete KIND NAME [--version N] [--comment TEXT]
+launchway config delete KIND NAME [--version N] [--comment TEXT] [--force-in-use]
 launchway config restore KIND NAME
 launchway config restore --offline --revision N [--config FILE]
 launchway config history [KIND [NAME]] [--import ID] [--limit N] [--json]

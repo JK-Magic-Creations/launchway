@@ -136,3 +136,9 @@ func (e *Engine) Reconfigure(o LiveOptions) error {
 	e.notify()
 	return nil
 }
+
+// selfApprovalNow is the setting to record in a run being created.
+func (e *Engine) selfApprovalNow() *bool {
+	v := e.live().selfOK
+	return &v
+}

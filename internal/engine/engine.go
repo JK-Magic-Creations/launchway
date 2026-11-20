@@ -750,7 +750,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			return err
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: c.e.withStoreRequires(nr.Pipeline), Trigger: &trig, Source: &src, Draft: draft,
-			PullRequestSecrets: prSecrets, Requires: poolRequires})
+			PullRequestSecrets: prSecrets, SelfApproval: c.e.selfApprovalNow(), Requires: poolRequires})
 		c.advance()
 		var superseded []int
 		if supersede {

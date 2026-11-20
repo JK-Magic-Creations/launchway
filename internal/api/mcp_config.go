@@ -158,10 +158,11 @@ func putConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in putIn
 }
 
 type lifecycleIn struct {
-	Kind    string `json:"kind" jsonschema:"the kind, as for list_config"`
-	Name    string `json:"name" jsonschema:"the object's name"`
-	Version int64  `json:"version,omitempty" jsonschema:"the version you read; refused if the object has moved on"`
-	Comment string `json:"comment,omitempty" jsonschema:"why, for the history"`
+	Kind       string `json:"kind" jsonschema:"the kind, as for list_config"`
+	Name       string `json:"name" jsonschema:"the object's name"`
+	Version    int64  `json:"version,omitempty" jsonschema:"the version you read; refused if the object has moved on"`
+	Comment    string `json:"comment,omitempty" jsonschema:"why, for the history"`
+	ForceInUse bool   `json:"force_in_use,omitempty" jsonschema:"delete even though active runs depend on it (project, environment, runner pool); recorded in the history and the audit trail"`
 }
 
 func deleteConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in lifecycleIn) (obj, error) {
@@ -183,6 +184,9 @@ func lifecycle(ctx context.Context, c *mcpCall, tool, method, suffix string, in 
 	body := obj{"comment": in.Comment}
 	if in.Version != 0 {
 		body["version"] = in.Version
+	}
+	if in.ForceInUse {
+		body["force_in_use"] = true
 	}
 	err := c.apiJSON(ctx, tool, method, apiPath("/api/v1/config/%s/%s", in.Kind, in.Name)+suffix, body, &out)
 	return out, err
@@ -223,13 +227,14 @@ type changesIn struct {
 }
 
 type changeIn struct {
-	Kind    string `json:"kind" jsonschema:"the kind, as for list_config"`
-	Name    string `json:"name" jsonschema:"the object's name"`
-	Action  string `json:"action,omitempty" jsonschema:"put (the default), delete or restore"`
-	Unit    string `json:"unit,omitempty" jsonschema:"the unit; empty is the organisation"`
-	Spec    any    `json:"spec,omitempty" jsonschema:"the settings, for put"`
-	Version int64  `json:"version,omitempty" jsonschema:"the version expected; -1 means it must not exist yet"`
-	Comment string `json:"comment,omitempty"`
+	Kind       string `json:"kind" jsonschema:"the kind, as for list_config"`
+	Name       string `json:"name" jsonschema:"the object's name"`
+	Action     string `json:"action,omitempty" jsonschema:"put (the default), delete or restore"`
+	ForceInUse bool   `json:"force_in_use,omitempty" jsonschema:"for delete: even though active runs depend on the object"`
+	Unit       string `json:"unit,omitempty" jsonschema:"the unit; empty is the organisation"`
+	Spec       any    `json:"spec,omitempty" jsonschema:"the settings, for put"`
+	Version    int64  `json:"version,omitempty" jsonschema:"the version expected; -1 means it must not exist yet"`
+	Comment    string `json:"comment,omitempty"`
 }
 
 func validateConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in changesIn) (obj, error) {

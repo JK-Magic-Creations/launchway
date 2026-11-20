@@ -436,6 +436,7 @@ func (cl *client) configLifecycle(args []string, action string) error {
 	fs := flag.NewFlagSet("config "+action, flag.ContinueOnError)
 	ver := fs.Int64("version", 0, "only if it is at this version")
 	comment := fs.String("comment", "", "why, for the history")
+	inUse := fs.Bool("force-in-use", false, "delete even though active runs depend on it (recorded and audited)")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
@@ -452,9 +453,12 @@ func (cl *client) configLifecycle(args []string, action string) error {
 	if action == "restore" {
 		method, path = "POST", path+"/restore"
 	}
-	var body any
+	body := map[string]any{}
 	if *comment != "" {
-		body = map[string]string{"comment": *comment}
+		body["comment"] = *comment
+	}
+	if *inUse {
+		body["force_in_use"] = true
 	}
 	var res struct {
 		Object cfgObject `json:"object"`

@@ -290,6 +290,8 @@ func (s *Server) lifecycle(w http.ResponseWriter, r *http.Request, action string
 	var b struct {
 		Comment string `json:"comment"`
 		Version int64  `json:"version"`
+		// ForceInUse deletes an object that active runs depend on.
+		ForceInUse bool `json:"force_in_use"`
 	}
 	if r.ContentLength != 0 && !decode(w, r, &b) {
 		return
@@ -301,12 +303,15 @@ func (s *Server) lifecycle(w http.ResponseWriter, r *http.Request, action string
 	}
 	name := r.PathValue("obj")
 	setAudit(r, k.Name+"/"+name, "")
-	res, err := st.Apply(identityFrom(r).User, []settings.Change{{Kind: k, Name: name, Action: action, IfVersion: v, ManagedBy: manager(r), Comment: b.Comment}})
+	res, err := st.Apply(identityFrom(r).User, []settings.Change{{Kind: k, Name: name, Action: action, IfVersion: v, ManagedBy: manager(r), Comment: b.Comment, Force: b.ForceInUse}})
 	if err != nil {
 		s.configFail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"object": objectView(res[0].Object), "change": res[0].Change})
+	if len(res[0].Forced) > 0 {
+		setAudit(r, "", "forced while in use: "+clip(strings.Join(res[0].Forced, "; "), 400))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"object": objectView(res[0].Object), "change": res[0].Change, "forced": res[0].Forced})
 }
 
 // changeBody is one change of a batch.
@@ -318,6 +323,8 @@ type changeBody struct {
 	Spec    json.RawMessage `json:"spec"`
 	Version int64           `json:"version"` // 0: any; -1: must not exist
 	Comment string          `json:"comment"`
+	// ForceInUse, for a delete: even if active runs depend on the object.
+	ForceInUse bool `json:"force_in_use"`
 }
 
 func readChanges(r *http.Request, in []changeBody) ([]settings.Change, error) {
@@ -333,7 +340,7 @@ func readChanges(r *http.Request, in []changeBody) ([]settings.Change, error) {
 		if k == nil {
 			return nil, fmt.Errorf("changes[%d]: no kind %q", i, c.Kind)
 		}
-		ch := settings.Change{Kind: k, Name: c.Name, Unit: c.Unit, Spec: c.Spec, ManagedBy: manager(r), Comment: c.Comment, IfVersion: -1}
+		ch := settings.Change{Kind: k, Name: c.Name, Unit: c.Unit, Spec: c.Spec, ManagedBy: manager(r), Comment: c.Comment, IfVersion: -1, Force: c.ForceInUse}
 		switch c.Version {
 		case 0:
 		case -1:
@@ -419,14 +426,23 @@ func (s *Server) applyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := make([]map[string]any, 0, len(res))
+	var forced []string
 	changed := 0
 	for _, x := range res {
 		if x.Changed {
 			changed++
 		}
-		out = append(out, map[string]any{"object": objectView(x.Object), "changed": x.Changed, "change": x.Change})
+		out = append(out, map[string]any{"object": objectView(x.Object), "changed": x.Changed, "change": x.Change, "forced": x.Forced})
+		if len(x.Forced) > 0 {
+			forced = append(forced, clip(strings.Join(x.Forced, "; "), 200))
+		}
 	}
-	setAudit(r, "", fmt.Sprintf("%d of %d changed", changed, len(res)))
+	if len(forced) > 0 {
+		setAudit(r, "", "forced while in use: "+clip(strings.Join(forced, " | "), 400))
+	}
+	if len(forced) == 0 {
+		setAudit(r, "", fmt.Sprintf("%d of %d changed", changed, len(res)))
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"results": out})
 }
 

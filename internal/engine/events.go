@@ -147,6 +147,11 @@ type Payload struct {
 	// such runs alone because the pipeline of a pull-request run always has
 	// on.pull_request, a key they do not know (see RunState.check).
 	PullRequestSecrets *bool `json:"pull_request_secrets,omitempty"`
+	// run.created: whether people may approve their own runs, as the
+	// server's setting said when the run was created. The run keeps it, so
+	// changing the setting never changes what a run in flight allows. Runs
+	// created before this was recorded use the setting in effect.
+	SelfApproval *bool `json:"self_approval,omitempty"`
 	// run.cancel_requested (schema 9): the newer run that superseded this
 	// one, if that is why it is cancelled; Reason says so in words. Older
 	// servers ignore it, which is harmless: it only records.
@@ -197,7 +202,11 @@ type DeployEvent struct {
 	// deploy.waiting_lock: the deployment that holds the lock.
 	Holder *DeployRef `json:"holder,omitempty"`
 	// deploy.opened
-	Target      string     `json:"target,omitempty"`
+	Target string `json:"target,omitempty"`
+	// Protected, on deploy.opened: whether the environment was protected
+	// when the deployment opened. The deployment keeps it, so editing the
+	// environment never unprotects a deployment in flight.
+	Protected   *bool      `json:"protected,omitempty"`
 	Application string     `json:"application,omitempty"`
 	Mode        string     `json:"mode,omitempty"` // write_back
 	Version     string     `json:"version,omitempty"`
