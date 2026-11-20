@@ -29,6 +29,12 @@ const POLLS = [
   { value: "10m", label: "Every 10 minutes", help: "For repositories that change rarely, or a Git host that limits requests. A Git webhook can still make it look at once." },
 ];
 
+/** sentence ends a template parameter's description with a full stop, so "Default: …" can follow. */
+function sentence(d?: string): string {
+  if (!d) return "";
+  return /[.!?]$/.test(d.trim()) ? d.trim() : d.trim() + ".";
+}
+
 function nameFromRepo(url: string): string {
   const m = url.trim().replace(/\/+$/, "").replace(/\.git$/, "").split(/[/:]/).pop() ?? "";
   return m.replace(/[^A-Za-z0-9._-]/g, "-").replace(/^[^A-Za-z0-9]+/, "").slice(0, 100);
@@ -251,15 +257,15 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
                 <div className="cf-grid">
                   {tmpl.params.map((p) => p.options?.length ? (
                     <SelectInput key={p.name} label={p.name} value={withVals[p.name] ?? ""} onChange={(v) => setWithVals({ ...withVals, [p.name]: v })}
-                      help={(p.description ?? "") + (p.default !== undefined ? ` Default: ${p.default}.` : "")}
+                      help={sentence(p.description) + (p.default !== undefined ? ` Default: ${p.default}.` : "")}
                       options={[{ value: "", label: p.default !== undefined ? `the default (${p.default})` : "Choose" }, ...p.options.map((o) => ({ value: o, label: o }))]} />
                   ) : p.type === "boolean" ? (
                     <SelectInput key={p.name} label={p.name} value={withVals[p.name] ?? ""} onChange={(v) => setWithVals({ ...withVals, [p.name]: v })}
-                      help={(p.description ?? "") + (p.default !== undefined ? ` Default: ${p.default}.` : "")}
+                      help={sentence(p.description) + (p.default !== undefined ? ` Default: ${p.default}.` : "")}
                       options={[{ value: "", label: p.default !== undefined ? `the default (${p.default})` : "Choose" }, { value: "true", label: "true" }, { value: "false", label: "false" }]} />
                   ) : (
                     <TextInput key={p.name} label={p.name} value={withVals[p.name] ?? ""} onChange={(v) => setWithVals({ ...withVals, [p.name]: v })} mono
-                      placeholder={p.default ?? (p.type === "number" ? "a number" : "")} help={(p.description ?? "") + (p.default !== undefined ? ` Default: ${p.default}.` : " Required.")}
+                      placeholder={p.default ?? (p.type === "number" ? "a number" : "")} help={sentence(p.description) + (p.default !== undefined ? ` Default: ${p.default}.` : " Required.")}
                       problems={by.with?.filter((x) => x.includes(p.name))} />
                   ))}
                 </div>
