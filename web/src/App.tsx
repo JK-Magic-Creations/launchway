@@ -65,7 +65,7 @@ function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
     const to = redirectFor(path, location.search);
     if (to) replace(to);
   }, [path]);
-  useEffect(() => { document.title = pageTitle(path); setOpen(false); }, [path]);
+  useEffect(() => { document.title = pageTitle(path); }, [path]);
 
   const ctx = { me, facts: inst.facts };
   return (

@@ -21,7 +21,7 @@ export function TemplatePage({ library, name }: { library: string; name: string 
   const [tab, setTab] = useTab(TABS.map((t) => t.id), "overview");
   const inst = useInstallation();
   useCrumbLabel(name);
-  useEffect(() => { setData(null); configApi.templates(library, version || undefined).then((d) => { setData(d); setError(null); }).catch(setError); }, [library, version]);
+  useEffect(() => { configApi.templates(library, version || undefined).then((d) => { setData(d); setError(null); }).catch(setError); }, [library, version]);
 
   const tpl: TemplateInfo | undefined = data?.templates.find((t) => t.name === name);
   const users = inst.projects.filter((p) => p.pipeline?.library === library && p.pipeline.template === name);

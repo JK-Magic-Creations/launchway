@@ -107,7 +107,7 @@ export function attention(i: AttentionInput): Attention[] {
     }
   }
   for (const a of i.approvals) {
-    out.push({ key: `approval:${a.run_id}/${a.step_id}`, tone: "warn", title: `Waiting for you: ${a.message || a.step_id}`, entities: [], detail: `Run #${a.run_number} of ${a.project}${a.started_by ? `, started by ${a.started_by}` : ""}`, detailEntities: [{ kind: "project", name: a.project }], href: `/runs/${a.run_id}?step=${encodeURIComponent(a.step_id)}`, button: "Review" });
+    out.push({ key: `approval:${a.run_id}/${a.step_id}`, tone: "warn", title: `Waiting for you: ${a.message || a.step_id}`, entities: [{ kind: "project", name: a.project }], detail: `Run #${a.run_number} of ${a.project}${a.started_by ? `, started by ${a.started_by}` : ""}`, detailEntities: [{ kind: "project", name: a.project }], href: `/runs/${a.run_id}?step=${encodeURIComponent(a.step_id)}`, button: "Review" });
   }
   for (const a of i.applications) {
     if (a.sync === "OutOfSync" && a.health !== "Degraded" && a.health !== "Missing") {

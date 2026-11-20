@@ -6,16 +6,18 @@ import { Link, StatusPill } from "../components/ui";
 import { ago } from "../format";
 import { attention, checklist, nextStep, type Attention, type CheckItem, type AppRow } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
+import { useNow } from "../live";
 
 /** Home answers one question: what should I do next? A new installation sees what to set up, in order;
  * a busy one sees what needs it today. Everything on it comes from the server's own state. */
 export function HomePage() {
   const me = useMe();
   const inst = useInstallation();
+  const now = useNow(30000);
   if (!me) return null;
   if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
   return <Home me={me} projects={inst.projects} runs={inst.runs} runners={inst.runners} environments={inst.environments}
-    applications={inst.applications} approvals={inst.approvals} />;
+    applications={inst.applications} approvals={inst.approvals} now={now} />;
 }
 
 export interface HomeProps {
@@ -26,10 +28,10 @@ export interface HomeProps {
   environments: import("../api").EnvironmentView[];
   applications: AppRow[];
   approvals: Approval[];
-  now?: number;
+  now: number;
 }
 
-export function Home({ me, projects, runs, runners, environments, applications, approvals, now = Date.now() }: HomeProps) {
+export function Home({ me, projects, runs, runners, environments, applications, approvals, now }: HomeProps) {
   const items = me.admin ? checklist(me, { projects, runners, runs, environments }) : [];
   const next = nextStep(items);
   const needs = attention({ projects, approvals, runners, applications, me });
