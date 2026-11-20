@@ -45,7 +45,7 @@ func matchPattern(patterns []string, project string) bool {
 
 // roleOn is the role the identity acts with on a project.
 func (s *Server) roleOn(id *identity, project string) auth.Role {
-	return id.limit(s.Auth.Policy.RoleOn(id.User, id.Groups, project), project)
+	return id.limit(s.cur().Policy.RoleOn(id.User, id.Groups, project), project)
 }
 
 // limitedAllows is Policy.Allows for a token with limits.
@@ -71,7 +71,7 @@ func (s *Server) limitedAllows(id *identity, a auth.Action, project string) bool
 	case auth.Administer:
 		// Admin of every project: a token limited to some projects never is.
 		return len(id.scope) == 0 && (id.capRole == auth.NoRole || id.capRole >= auth.Admin) &&
-			s.Auth.Policy.RoleEverywhere(id.User, id.Groups) >= auth.Admin
+			s.cur().Policy.RoleEverywhere(id.User, id.Groups) >= auth.Admin
 	}
 	return false
 }

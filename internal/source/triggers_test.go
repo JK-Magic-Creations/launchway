@@ -97,7 +97,7 @@ func TestSchedulesFire(t *testing.T) {
 	m, eng := prManager(t, addr, dir, Project{Name: "app", URL: repo})
 	ctx := context.Background()
 	pollOnce(t, m)
-	p := m.projects["app"]
+	p := m.c().projects["app"]
 	t0 := time.Date(2026, 11, 15, 10, 20, 0, 0, time.UTC)
 
 	// First seen now: nothing fires for the past.
@@ -150,7 +150,7 @@ func TestSchedulesTurnedOffAreSkipped(t *testing.T) {
 	m, eng := prManager(t, testdb.New(t), dir, Project{Name: "app", URL: repo, SchedulesOff: true})
 	ctx := context.Background()
 	pollOnce(t, m)
-	p := m.projects["app"]
+	p := m.c().projects["app"]
 	t0 := time.Date(2026, 11, 15, 10, 20, 0, 0, time.UTC)
 	m.fireDue(ctx, p, t0)
 	m.fireDue(ctx, p, t0.Add(2*time.Hour))
@@ -202,7 +202,7 @@ func TestTwoServersFireAScheduleOnce(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				mm.fireDue(context.Background(), mm.projects["app"], at)
+				mm.fireDue(context.Background(), mm.c().projects["app"], at)
 			}()
 		}
 		wg.Wait()

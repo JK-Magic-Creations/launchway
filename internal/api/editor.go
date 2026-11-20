@@ -88,7 +88,7 @@ func (s *Server) startDraft(w http.ResponseWriter, r *http.Request) {
 	// with the run, never in the trail.
 	setAudit(r, "", fmt.Sprintf("ref %s, pipeline %s%s", in.Ref, hash, overridesDetail(in.Libraries)))
 	run, err := s.Projects.StartDraft(r.Context(), source.DraftRequest{Project: name, Ref: in.Ref, Text: in.Pipeline,
-		Actor: identityFrom(r).User, Secrets: s.Drafts.For(name).Secrets, Libraries: in.Libraries, Inputs: given})
+		Actor: identityFrom(r).User, Secrets: s.cur().Drafts.For(name).Secrets, Libraries: in.Libraries, Inputs: given})
 	if err != nil {
 		s.fail(w, err)
 		return

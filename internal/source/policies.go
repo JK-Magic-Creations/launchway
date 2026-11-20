@@ -43,9 +43,9 @@ type PolicyLoad struct {
 
 // LoadPolicySource loads a source's policies at its pinned version.
 func (m *Manager) LoadPolicySource(ctx context.Context, sc engine.PolicySourceConfig) PolicyLoad {
-	lib := m.libraries[sc.Library]
+	lib := m.c().libraries[sc.Library]
 	if lib == nil {
-		return PolicyLoad{Refused: fmt.Errorf("library %q is not one of the server's libraries (%s)", sc.Library, m.libraryNames())}
+		return PolicyLoad{Refused: fmt.Errorf("library %q is not one of the server's libraries (%s)", sc.Library, m.c().libraryNames())}
 	}
 	sha, kind, err := lib.resolveVersion(ctx, sc.Version, 0)
 	switch {

@@ -104,9 +104,9 @@ func (e *Engine) parseCoverage(in *CollectedReports) *parsedCoverage {
 	for _, n := range in.Notes {
 		s.note(n)
 	}
-	budget := e.reps.CoverageUploadBytes
+	budget := e.live().reps.CoverageUploadBytes
 	lim := coverage.DefaultLimits()
-	lim.MaxFiles = max(e.reps.CoverageFilesPerRun, 1)
+	lim.MaxFiles = max(e.live().reps.CoverageFilesPerRun, 1)
 	var reports []*coverage.Report
 	for i, f := range in.Files {
 		if i >= maxReportFiles {
@@ -116,7 +116,7 @@ func (e *Engine) parseCoverage(in *CollectedReports) *parsedCoverage {
 		}
 		cf := CoverageReportFile{Path: nonEmpty(cleanText(f.Path, maxReportText), "(no name)"), Bytes: int64(len(f.Data))}
 		if int64(len(f.Data)) > budget {
-			cf.Error = fmt.Sprintf("not read: the step's coverage files came to more than the %s the server accepts", sizeText(e.reps.CoverageUploadBytes))
+			cf.Error = fmt.Sprintf("not read: the step's coverage files came to more than the %s the server accepts", sizeText(e.live().reps.CoverageUploadBytes))
 			s.Truncated = true
 			s.Reports = append(s.Reports, cf)
 			budget = 0
@@ -177,7 +177,7 @@ func (c *cmd) keepCoverage(step string, attempt int, pc *parsedCoverage) (*Cover
 	if err := c.tx.QueryRow(`SELECT COALESCE(SUM(stored), 0) FROM coverage_reports WHERE run_id = ?`, c.runID).Scan(&kept); err != nil {
 		return nil, err
 	}
-	room := max(c.e.reps.CoverageFilesPerRun-kept, 0)
+	room := max(c.e.live().reps.CoverageFilesPerRun-kept, 0)
 	files := pc.files
 	if len(files) > room {
 		files = files[:room]
@@ -186,7 +186,7 @@ func (c *cmd) keepCoverage(step string, attempt int, pc *parsedCoverage) (*Cover
 	sum.Stored = len(files)
 	if sum.Stored < sum.SourceFiles {
 		sum.note(fmt.Sprintf("%d of the %d source files' counts were kept with the run, which keeps at most %d; the totals count them all",
-			sum.Stored, sum.SourceFiles, c.e.reps.CoverageFilesPerRun))
+			sum.Stored, sum.SourceFiles, c.e.live().reps.CoverageFilesPerRun))
 	}
 	if c.cover == nil {
 		c.cover = map[stepAttempt][]coverage.File{}
@@ -731,7 +731,7 @@ func (e *Engine) pruneCoverage() {
 	if !e.knows(schemaReports) {
 		return
 	}
-	limit := e.reps.CoverageFilesPerProject
+	limit := e.live().reps.CoverageFilesPerProject
 	rows, err := e.db.Query(`SELECT project FROM coverage_reports GROUP BY project HAVING SUM(stored) > ?`, limit)
 	if err != nil {
 		e.log.Error("looking for projects with too much coverage kept", "err", err)

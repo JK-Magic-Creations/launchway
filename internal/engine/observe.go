@@ -653,7 +653,7 @@ func (e *Engine) dispatchLocks() {
 			return
 		}
 		cur, seen := first[w.u]
-		newest := e.envs[w.u.env].Queue != "all"
+		newest := e.live().envs[w.u.env].Queue != "all"
 		switch {
 		case !seen:
 			order = append(order, w.u)

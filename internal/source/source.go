@@ -17,11 +17,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -107,27 +109,49 @@ type ProjectStatus struct {
 
 type project struct {
 	Project
-	dir       string
+	dir string
+	// The mirror outlives a change of the project's settings: the new
+	// project shares it with the old one.
+	*mirror
+}
+
+// mirror is a project's or library's local mirror.
+type mirror struct {
 	mu        sync.Mutex // one git operation at a time per mirror
 	stateMu   sync.Mutex
 	lastFetch time.Time // of this server's mirror
 	lastErr   string
 }
 
-// Manager owns every project.
-type Manager struct {
-	eng      *engine.Engine
-	log      *slog.Logger
-	dataDir  string
+// catalog is the projects and libraries in force. It is never changed once
+// made; Reconfigure makes a new one.
+type catalog struct {
 	order    []string
 	projects map[string]*project
 	// libraries are mirrors of the libraries pipelines may use, by name.
 	libraries map[string]*project
 	libOrder  []string
+}
+
+// Manager owns every project.
+type Manager struct {
+	eng     *engine.Engine
+	log     *slog.Logger
+	dataDir string
+	cat     atomic.Pointer[catalog]
 	// trig is what schedules and webhooks keep (see triggers.go).
 	trig     *triggerState
 	trigOnce sync.Once
+
+	// Watching: started once by Start; Reconfigure starts and stops the
+	// watchers of the projects it adds, changes and removes.
+	watchMu  sync.Mutex
+	watchCtx context.Context
+	watching map[string]context.CancelFunc
 }
+
+// c returns the projects and libraries in force.
+func (m *Manager) c() *catalog { return m.cat.Load() }
 
 var nameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
 
@@ -142,15 +166,36 @@ func NewManagerWithLibraries(eng *engine.Engine, dataDir string, projects []Proj
 	if log == nil {
 		log = slog.Default()
 	}
-	m := &Manager{eng: eng, log: log, dataDir: dataDir, projects: map[string]*project{}}
-	if err := m.addLibraries(libraries); err != nil {
+	m := &Manager{eng: eng, log: log, dataDir: dataDir, watching: map[string]context.CancelFunc{}}
+	cat, err := m.build(projects, libraries, nil)
+	if err != nil {
+		return nil, err
+	}
+	m.cat.Store(cat)
+	removeStaleSaves(dataDir, time.Hour)
+	return m, nil
+}
+
+// CheckProjects checks projects and libraries as a server does before
+// using them, without a server: the check a change to them must pass.
+func CheckProjects(projects []Project, libraries []Library) error {
+	m := &Manager{dataDir: "-"}
+	_, err := m.build(projects, libraries, nil)
+	return err
+}
+
+// build checks the projects and libraries and makes a catalog of them,
+// sharing the mirrors of old (if given) for those that stay.
+func (m *Manager) build(projects []Project, libraries []Library, old *catalog) (*catalog, error) {
+	cat := &catalog{projects: map[string]*project{}}
+	if err := m.addLibraries(cat, libraries, old); err != nil {
 		return nil, err
 	}
 	for _, p := range projects {
 		if !nameRe.MatchString(p.Name) {
 			return nil, fmt.Errorf("project name %q: use lower-case letters, digits and hyphens", p.Name)
 		}
-		if m.projects[p.Name] != nil {
+		if cat.projects[p.Name] != nil {
 			return nil, fmt.Errorf("project %q is listed twice", p.Name)
 		}
 		if p.URL == "" {
@@ -173,23 +218,77 @@ func NewManagerWithLibraries(eng *engine.Engine, dataDir string, projects []Proj
 			p.Push = &push
 		}
 		if p.Pipeline != nil {
-			if err := m.checkProjectPipeline(&p); err != nil {
+			if err := checkProjectPipeline(cat, &p); err != nil {
 				return nil, err
 			}
 		}
-		m.projects[p.Name] = &project{Project: p, dir: filepath.Join(dataDir, "repos", p.Name+".git")}
-		m.order = append(m.order, p.Name)
+		np := &project{Project: p, dir: filepath.Join(m.dataDir, "repos", p.Name+".git"), mirror: &mirror{}}
+		if old != nil {
+			if was := old.projects[p.Name]; was != nil && was.URL == p.URL {
+				np.mirror = was.mirror
+			}
+		}
+		cat.projects[p.Name] = np
+		cat.order = append(cat.order, p.Name)
 	}
-	removeStaleSaves(dataDir, time.Hour)
-	return m, nil
+	return cat, nil
+}
+
+// Reconfigure replaces the projects and libraries while the server runs:
+// projects added are watched at once, removed ones are no longer polled,
+// and changed ones carry on with their new settings (and their mirror,
+// unless their repository changed). Runs in progress are not touched.
+func (m *Manager) Reconfigure(projects []Project, libraries []Library) error {
+	m.watchMu.Lock()
+	defer m.watchMu.Unlock()
+	old := m.c()
+	cat, err := m.build(projects, libraries, old)
+	if err != nil {
+		return err
+	}
+	t := m.ts()
+	t.mu.Lock()
+	for _, name := range cat.order {
+		if t.wake[name] == nil {
+			t.wake[name] = make(chan struct{}, 1)
+		}
+	}
+	t.mu.Unlock()
+	m.cat.Store(cat)
+	if m.watchCtx == nil {
+		return nil // not started yet: Start watches what is there then
+	}
+	for name, stop := range m.watching {
+		if np := cat.projects[name]; np == nil || !reflect.DeepEqual(old.projects[name].Project, np.Project) || old.projects[name].mirror != np.mirror {
+			stop()
+			delete(m.watching, name)
+		}
+	}
+	for _, name := range cat.order {
+		if m.watching[name] == nil {
+			m.startWatch(cat.projects[name])
+		}
+	}
+	return nil
 }
 
 // Start polls every project until ctx ends.
 func (m *Manager) Start(ctx context.Context) {
-	for _, name := range m.order {
-		go m.watch(ctx, m.projects[name])
+	m.watchMu.Lock()
+	m.watchCtx = ctx
+	cat := m.c()
+	for _, name := range cat.order {
+		m.startWatch(cat.projects[name])
 	}
+	m.watchMu.Unlock()
 	go m.runSchedules(ctx)
+}
+
+// startWatch starts polling one project; the caller holds watchMu.
+func (m *Manager) startWatch(p *project) {
+	ctx, cancel := context.WithCancel(m.watchCtx)
+	m.watching[p.Name] = cancel
+	go m.watch(ctx, p)
 }
 
 func (m *Manager) watch(ctx context.Context, p *project) {
@@ -208,16 +307,17 @@ func (m *Manager) watch(ctx context.Context, p *project) {
 
 // List returns every project's status.
 func (m *Manager) List() []ProjectStatus {
-	out := make([]ProjectStatus, 0, len(m.order))
-	for _, name := range m.order {
-		out = append(out, m.status(m.projects[name]))
+	cat := m.c()
+	out := make([]ProjectStatus, 0, len(cat.order))
+	for _, name := range cat.order {
+		out = append(out, m.status(cat.projects[name]))
 	}
 	return out
 }
 
 // Get returns one project's status.
 func (m *Manager) Get(name string) (ProjectStatus, error) {
-	p := m.projects[name]
+	p := m.c().projects[name]
 	if p == nil {
 		return ProjectStatus{}, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}
@@ -253,7 +353,7 @@ func (p *project) setErr(err error) {
 
 // Refs fetches and lists a project's branches and tags, newest first.
 func (m *Manager) Refs(ctx context.Context, name string) ([]Ref, error) {
-	p := m.projects[name]
+	p := m.c().projects[name]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}
@@ -269,7 +369,7 @@ func (m *Manager) Refs(ctx context.Context, name string) ([]Ref, error) {
 // overrides the versions of the libraries the pipeline uses: library name →
 // tag, branch or commit, to try a change to a library before releasing it.
 func (m *Manager) StartRun(ctx context.Context, name, ref, actor string, libraries map[string]string) (*engine.RunSummary, error) {
-	p := m.projects[name]
+	p := m.c().projects[name]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}
@@ -635,7 +735,7 @@ func (p *project) listRefs(ctx context.Context, prefixes ...string) ([]Ref, erro
 
 // ReadPipeline returns the pipeline file at a commit, for showing in the UI.
 func (m *Manager) ReadPipeline(ctx context.Context, name, sha string) (string, error) {
-	p := m.projects[name]
+	p := m.c().projects[name]
 	if p == nil {
 		return "", fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}

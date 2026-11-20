@@ -1,0 +1,84 @@
+# The shape of a real installation's Helm-rendered configuration, with
+# invented names: projects whose pipeline is a library template, pull
+# request triggers written the way YAML 1.1 tools write them, supersede,
+# sign-in with OpenID Connect and groups, environments, deploy pools,
+# policies and limits.
+listen: 0.0.0.0:8080
+data: /var/lib/launchway
+server:
+  trust_proxy: true
+auth:
+  mode: oidc
+  oidc:
+    issuer: https://sso.example.test/application/o/launchway/
+    client_id: launchway
+    client_secret_env: TEST_OIDC_SECRET
+    redirect_url: https://launchway.example.test/auth/callback
+    groups_claim: groups
+  access:
+    - { group: platform-admins, role: admin }
+    - { group: developers, role: operator, projects: ["mcp-*", "web"] }
+    - { group: release-managers, role: operator, projects: ["*"], environments: [prod] }
+    - { user: auditor, role: viewer }
+  tokens:
+    max_days: 90
+libraries:
+  - name: ci-templates
+    repo: https://git.example.test/platform/ci-templates.git
+projects:
+  - name: mcp-weather
+    repo: https://git.example.test/apps/mcp-weather.git
+    branch: main
+    poll: 1m
+    pull_requests: { secrets: false }
+    pipeline:
+      library: ci-templates
+      version: v3
+      template: go-service
+      with: { image: mcp-weather }
+      "true":
+        push: { branches: [main], tags: ["v*"] }
+        pull_request: {}
+      supersede: true
+  - name: mcp-frigate
+    repo: https://git.example.test/apps/mcp-frigate.git
+    pipeline:
+      library: ci-templates
+      version: v3
+      template: go-service
+      "on":
+        push: { branches: [main] }
+        pull_request:
+  - name: web
+    repo: https://git.example.test/apps/web.git
+    push: {}
+    drafts: { allow: admin }
+    schedules: { enabled: false }
+environments:
+  - { name: staging, target: home, projects: ["mcp-*", web] }
+  - { name: prod, target: home, projects: ["mcp-*"], protected: true, queue: all }
+runner_pools:
+  - name: deploy-home
+    token_env: TEST_POOL_TOKEN
+    targets: [home]
+approvals:
+  allow_self: false
+pull_requests:
+  secrets: false
+drafts:
+  allow: operator
+tests:
+  max_cases_per_run: 20000
+artifacts:
+  retain: 14d
+  max_retain: 60d
+runner_admin: admin
+policy:
+  waivers: { allow: admin, max_days: 14 }
+  policies:
+    - name: prod-evidence
+      mode: enforce
+      scope: { environments: [prod] }
+      rules:
+        tests: { min: 1 }
+        sbom: {}

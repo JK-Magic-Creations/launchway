@@ -63,7 +63,7 @@ func TestPollingStartsRunsAndExplainsDecisions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := m.projects["app"]
+	p := m.c().projects["app"]
 	ctx := context.Background()
 
 	// First sight: history does not start runs.
@@ -202,7 +202,7 @@ func TestTwoServersStartOneRunPerPush(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := m.poll(context.Background(), m.projects["app"]); err != nil {
+				if err := m.poll(context.Background(), m.c().projects["app"]); err != nil {
 					t.Error(err)
 				}
 			}()

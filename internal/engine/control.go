@@ -268,8 +268,8 @@ func (c *cmd) commandRefusal(depID, action, actor string) (string, deploy.Expect
 			return deployID, deploy.Expect{}, fmt.Errorf("%w: %s is rolling the deployment back", ErrConflict, rb.ID)
 		}
 	}
-	env := c.e.envs[dep.Environment]
-	if env.Protected && !c.e.selfOK && action != pipeline.ActionAbort && actor == st.Trigger.Actor {
+	env := c.e.live().envs[dep.Environment]
+	if env.Protected && !c.e.live().selfOK && action != pipeline.ActionAbort && actor == st.Trigger.Actor {
 		return deployID, deploy.Expect{}, fmt.Errorf("%w: %s started this run, and %s is a protected environment, so someone else must %s it (you may still abort it)",
 			ErrForbidden, actor, dep.Environment, verbOf(action))
 	}
@@ -986,7 +986,7 @@ func (e *Engine) Controls(runID, depID, actor string) (env Environment, out []Co
 		if ds == nil {
 			return fmt.Errorf("%w: deployment %s in run %s", ErrNotFound, depID, runID)
 		}
-		env = c.e.envs[ds.Dep.Environment]
+		env = c.e.live().envs[ds.Dep.Environment]
 		for _, a := range pipeline.RolloutActions {
 			ctl := Control{Action: a, Available: true}
 			if _, _, err := c.commandRefusal(depID, a, actor); err != nil {

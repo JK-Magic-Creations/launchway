@@ -53,32 +53,38 @@ const MaxOverrides = pipeline.MaxLibraries
 
 // addLibraries checks the libraries and prepares their mirrors. It runs
 // before the projects are checked, since their pipelines may name them.
-func (m *Manager) addLibraries(libs []Library) error {
-	m.libraries = map[string]*project{}
+func (m *Manager) addLibraries(cat *catalog, libs []Library, old *catalog) error {
+	cat.libraries = map[string]*project{}
 	for _, l := range libs {
 		if !pipeline.ValidLibraryName(l.Name) {
 			return fmt.Errorf("library name %q: use lower-case letters, digits and hyphens, starting with a letter (at most 40)", l.Name)
 		}
-		if m.libraries[l.Name] != nil {
+		if cat.libraries[l.Name] != nil {
 			return fmt.Errorf("library %q is listed twice", l.Name)
 		}
 		if l.URL == "" {
 			return fmt.Errorf("library %q has no repo", l.Name)
 		}
-		m.libraries[l.Name] = &project{Project: Project{Name: l.Name, URL: l.URL, DefaultBranch: "main"},
-			dir: filepath.Join(m.dataDir, "libraries", l.Name+".git")}
-		m.libOrder = append(m.libOrder, l.Name)
+		lib := &project{Project: Project{Name: l.Name, URL: l.URL, DefaultBranch: "main"},
+			dir: filepath.Join(m.dataDir, "libraries", l.Name+".git"), mirror: &mirror{}}
+		if old != nil {
+			if was := old.libraries[l.Name]; was != nil && was.URL == l.URL {
+				lib.mirror = was.mirror
+			}
+		}
+		cat.libraries[l.Name] = lib
+		cat.libOrder = append(cat.libOrder, l.Name)
 	}
 	return nil
 }
 
 // checkProjectPipeline checks a project's configured pipeline, so that a
 // mistake in the configuration stops the server at once.
-func (m *Manager) checkProjectPipeline(p *Project) error {
+func checkProjectPipeline(cat *catalog, p *Project) error {
 	pp := p.Pipeline
 	switch {
-	case m.libraries[pp.Library] == nil:
-		return fmt.Errorf("project %s: pipeline.library %q is not one of the libraries (%s)", p.Name, pp.Library, m.libraryNames())
+	case cat.libraries[pp.Library] == nil:
+		return fmt.Errorf("project %s: pipeline.library %q is not one of the libraries (%s)", p.Name, pp.Library, cat.libraryNames())
 	case !pipeline.ValidVersion(pp.Version):
 		return fmt.Errorf("project %s: pipeline.version %q is not a tag, branch or full commit id", p.Name, pp.Version)
 	case !pipeline.ValidTemplateName(pp.Template):
@@ -94,11 +100,11 @@ func (m *Manager) checkProjectPipeline(p *Project) error {
 	return nil
 }
 
-func (m *Manager) libraryNames() string {
-	if len(m.libOrder) == 0 {
+func (cat *catalog) libraryNames() string {
+	if len(cat.libOrder) == 0 {
 		return "none are configured"
 	}
-	return strings.Join(m.libOrder, ", ")
+	return strings.Join(cat.libOrder, ", ")
 }
 
 // configuredText writes a project's configured pipeline as the pipeline
@@ -252,10 +258,10 @@ func (m *Manager) expand(ctx context.Context, pl *pipeline.Pipeline, overrides m
 	mirrors := map[string]*project{}
 	for _, l := range pl.Libraries {
 		at := "libraries." + l.Name
-		lib := m.libraries[l.Repo]
+		lib := m.c().libraries[l.Repo]
 		if lib == nil {
 			problems = append(problems, pipeline.Problem{Line: l.Line, Path: at + ".repo",
-				Message: fmt.Sprintf("%q is not a library this server allows (%s); an administrator lists libraries in the server's configuration", l.Repo, m.libraryNames())})
+				Message: fmt.Sprintf("%q is not a library this server allows (%s); an administrator lists libraries in the server's configuration", l.Repo, m.c().libraryNames())})
 			continue
 		}
 		l.Override = overrides[l.Name]
@@ -393,9 +399,9 @@ const (
 // LibraryTemplates lists the templates of a library at a version, with
 // their parameters and outputs. An unknown library is ErrNotFound.
 func (m *Manager) LibraryTemplates(ctx context.Context, name, version string) (*LibraryTemplates, error) {
-	lib := m.libraries[name]
+	lib := m.c().libraries[name]
 	if lib == nil {
-		return nil, fmt.Errorf("%w: library %q (the libraries are: %s)", engine.ErrNotFound, name, m.libraryNames())
+		return nil, fmt.Errorf("%w: library %q (the libraries are: %s)", engine.ErrNotFound, name, m.c().libraryNames())
 	}
 	out := &LibraryTemplates{Library: name, Versions: []string{}, Templates: []pipeline.TemplateInfo{}}
 	lib.mu.Lock()
@@ -463,9 +469,10 @@ func (m *Manager) LibraryTemplates(ctx context.Context, name, version string) (*
 
 // Libraries lists the libraries pipelines may use.
 func (m *Manager) Libraries() []LibraryStatus {
-	out := make([]LibraryStatus, 0, len(m.libOrder))
-	for _, name := range m.libOrder {
-		l := m.libraries[name]
+	cat := m.c()
+	out := make([]LibraryStatus, 0, len(cat.libOrder))
+	for _, name := range cat.libOrder {
+		l := cat.libraries[name]
 		l.stateMu.Lock()
 		var last int64
 		if !l.lastFetch.IsZero() {

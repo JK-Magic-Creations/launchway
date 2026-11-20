@@ -112,15 +112,15 @@ func (l FindingLimits) withDefaults() (FindingLimits, error) {
 }
 
 // FindingLimits returns the limits findings and SBOMs are kept within.
-func (e *Engine) FindingLimits() FindingLimits { return e.finds }
+func (e *Engine) FindingLimits() FindingLimits { return e.live().finds }
 
 // ResultLimit is the largest step result, in bytes of JSON, the server
 // accepts from a runner: its test reports and SARIF files (base64 in JSON)
 // with room for the rest.
 func (e *Engine) ResultLimit() int64 {
-	n := e.tests.MaxUploadBytes
+	n := e.live().tests.MaxUploadBytes
 	if e.knows(schemaArtifacts) {
-		n += e.finds.MaxUploadBytes
+		n += e.live().finds.MaxUploadBytes
 	}
 	return n*4/3 + 4<<20
 }
@@ -262,8 +262,8 @@ func (e *Engine) parseFindings(in *CollectedReports) *parsedFindings {
 	for _, n := range in.Notes {
 		s.note(n)
 	}
-	budget := e.finds.MaxUploadBytes
-	room := e.finds.MaxPerRun
+	budget := e.live().finds.MaxUploadBytes
+	room := e.live().finds.MaxPerRun
 	seen := map[string]bool{}
 	rules := map[string]findings.Rule{}
 	tools := map[string]bool{}
@@ -275,7 +275,7 @@ func (e *Engine) parseFindings(in *CollectedReports) *parsedFindings {
 		}
 		ff := FindingFile{Path: nonEmpty(cleanText(f.Path, maxReportText), "(no name)"), Bytes: int64(len(f.Data))}
 		if int64(len(f.Data)) > budget {
-			ff.Error = fmt.Sprintf("not read: the step's SARIF files came to more than the %s the server accepts", sizeText(e.finds.MaxUploadBytes))
+			ff.Error = fmt.Sprintf("not read: the step's SARIF files came to more than the %s the server accepts", sizeText(e.live().finds.MaxUploadBytes))
 			s.Truncated = true
 			s.Files = append(s.Files, ff)
 			budget = 0
@@ -384,8 +384,8 @@ func (e *Engine) readSBOM(l leaseRef) *parsedSBOM {
 	defer cancel()
 	out := &parsedSBOM{summary: SBOMSummary{Files: []SBOMFile{}, Licences: map[string]int{}, Artifact: a.ID}, licences: map[string]int{}}
 	s := &out.summary
-	budget := e.finds.MaxSBOMBytes
-	room := e.finds.MaxComponentsPerRun
+	budget := e.live().finds.MaxSBOMBytes
+	room := e.live().finds.MaxComponentsPerRun
 	for _, f := range files {
 		sf := SBOMFile{Path: cleanText(f.Path, maxReportText), Bytes: f.Size}
 		if len(s.Files) >= maxFindingFiles {
@@ -394,7 +394,7 @@ func (e *Engine) readSBOM(l leaseRef) *parsedSBOM {
 			break
 		}
 		if f.Size > budget || f.Size > sbomPartMax*4 {
-			sf.Error = fmt.Sprintf("not read: the SBOM files came to more than the %s the server reads; the file is kept whole in the artifact", sizeText(e.finds.MaxSBOMBytes))
+			sf.Error = fmt.Sprintf("not read: the SBOM files came to more than the %s the server reads; the file is kept whole in the artifact", sizeText(e.live().finds.MaxSBOMBytes))
 			s.Truncated = true
 			s.Files = append(s.Files, sf)
 			continue
@@ -490,7 +490,7 @@ func (c *cmd) keepFindings(step string, attempt int, f *parsedFindings) (*Findin
 	if err := c.tx.QueryRow(`SELECT COALESCE(SUM(stored), 0) FROM finding_reports WHERE run_id = ?`, c.runID).Scan(&kept); err != nil {
 		return nil, err
 	}
-	room := max(c.e.finds.MaxPerRun-kept, 0)
+	room := max(c.e.live().finds.MaxPerRun-kept, 0)
 	list := f.findings
 	if len(list) > room {
 		list = list[:room]
@@ -499,7 +499,7 @@ func (c *cmd) keepFindings(step string, attempt int, f *parsedFindings) (*Findin
 	sum.Stored = len(list)
 	if sum.Stored < sum.Total {
 		sum.note(fmt.Sprintf("%d of the %d findings were kept with the run, which keeps at most %d; the counts include them all",
-			sum.Stored, sum.Total, c.e.finds.MaxPerRun))
+			sum.Stored, sum.Total, c.e.live().finds.MaxPerRun))
 	}
 	c.s12().findings[stepAttempt{step, attempt}] = &keptFindings{list: list, rules: f.rules}
 	return &sum, nil
@@ -514,7 +514,7 @@ func (c *cmd) keepSBOM(step string, attempt int, p *parsedSBOM) (*SBOMSummary, e
 	if err := c.tx.QueryRow(`SELECT COALESCE(SUM(stored), 0) FROM sbom_reports WHERE run_id = ?`, c.runID).Scan(&kept); err != nil {
 		return nil, err
 	}
-	room := max(c.e.finds.MaxComponentsPerRun-kept, 0)
+	room := max(c.e.live().finds.MaxComponentsPerRun-kept, 0)
 	list := p.components
 	if len(list) > room {
 		list = list[:room]
@@ -523,7 +523,7 @@ func (c *cmd) keepSBOM(step string, attempt int, p *parsedSBOM) (*SBOMSummary, e
 	sum.Stored = len(list)
 	if sum.Stored < sum.Components {
 		sum.note(fmt.Sprintf("%d of the %d components were kept for searching; the run keeps at most %d", sum.Stored, sum.Components,
-			c.e.finds.MaxComponentsPerRun))
+			c.e.live().finds.MaxComponentsPerRun))
 	}
 	c.s12().sbom[stepAttempt{step, attempt}] = &keptSBOM{list: list, licences: p.licences}
 	return &sum, nil
@@ -687,8 +687,8 @@ func (e *Engine) pruneFindings() {
 		limit   int
 		what    string
 	}{
-		{"finding_reports", []string{"findings", "finding_rules"}, e.finds.MaxPerProject, "findings"},
-		{"sbom_reports", []string{"sbom_components"}, e.finds.MaxComponentsPerProject, "SBOM components"},
+		{"finding_reports", []string{"findings", "finding_rules"}, e.live().finds.MaxPerProject, "findings"},
+		{"sbom_reports", []string{"sbom_components"}, e.live().finds.MaxComponentsPerProject, "SBOM components"},
 	} {
 		projects, err := e.idsOf(`SELECT project FROM `+k.reports+` GROUP BY project HAVING SUM(stored) > ?`, k.limit)
 		if err != nil {

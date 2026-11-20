@@ -136,8 +136,8 @@ func validName(s string) bool {
 
 // Environments returns the configured environments, by name.
 func (e *Engine) Environments() []Environment {
-	out := make([]Environment, 0, len(e.envs))
-	for _, env := range e.envs {
+	out := make([]Environment, 0, len(e.live().envs))
+	for _, env := range e.live().envs {
 		out = append(out, env)
 	}
 	sortEnvs(out)
@@ -155,14 +155,14 @@ func (e *Engine) CheckDeploys(project string, p *pipeline.Pipeline) pipeline.Pro
 			continue
 		}
 		line := s.EnvironmentLine()
-		env, ok := e.envs[s.Environment]
+		env, ok := e.live().envs[s.Environment]
 		switch {
-		case !ok && len(e.envs) == 0:
+		case !ok && len(e.live().envs) == 0:
 			out = append(out, pipeline.Problem{Line: line, Path: "steps." + s.ID + ".environment",
 				Message: fmt.Sprintf("%s: this server has no environments configured, so it cannot deploy to %s", s.ID, s.Environment)})
 		case !ok:
 			out = append(out, pipeline.Problem{Line: line, Path: "steps." + s.ID + ".environment",
-				Message: fmt.Sprintf("%s: environment %q is not configured on this server; it knows %s", s.ID, s.Environment, envNames(e.envs))})
+				Message: fmt.Sprintf("%s: environment %q is not configured on this server; it knows %s", s.ID, s.Environment, envNames(e.live().envs))})
 		case project != "" && !env.Allows(project):
 			out = append(out, pipeline.Problem{Line: line, Path: "steps." + s.ID + ".environment",
 				Message: fmt.Sprintf("%s: project %s may not deploy to %s (see the environment's projects in the server's configuration)", s.ID, project, s.Environment)})
@@ -334,7 +334,7 @@ func (c *cmd) startDeploy(id string, def *pipeline.Step) {
 		c.failStep(id, why)
 		return
 	}
-	env, ok := c.e.envs[def.Environment]
+	env, ok := c.e.live().envs[def.Environment]
 	if !ok {
 		c.failStep(id, fmt.Sprintf("environment %s is not configured on this server", def.Environment))
 		return

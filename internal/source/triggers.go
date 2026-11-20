@@ -90,7 +90,7 @@ type projectSchedules struct {
 func (m *Manager) ts() *triggerState {
 	m.trigOnce.Do(func() {
 		m.trig = &triggerState{schedules: map[string]*projectSchedules{}, wake: map[string]chan struct{}{}}
-		for _, name := range m.order {
+		for _, name := range m.c().order {
 			m.trig.wake[name] = make(chan struct{}, 1)
 		}
 	})
@@ -158,7 +158,7 @@ type StartRequest struct {
 
 // StartRunWith starts a run by hand, with input values.
 func (m *Manager) StartRunWith(ctx context.Context, rq StartRequest) (*engine.RunSummary, error) {
-	p := m.projects[rq.Project]
+	p := m.c().projects[rq.Project]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, rq.Project)
 	}
@@ -212,7 +212,7 @@ type InputsInfo struct {
 
 // InputsAt reads the inputs of the pipeline at a branch or tag.
 func (m *Manager) InputsAt(ctx context.Context, name, ref string) (*InputsInfo, error) {
-	p := m.projects[name]
+	p := m.c().projects[name]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}
@@ -274,7 +274,7 @@ func (m *Manager) PollNow(name string) bool {
 // Hook returns how a project's Git host proves its webhook calls; nil if
 // the project takes none (or does not exist).
 func (m *Manager) Hook(name string) *GitHook {
-	if p := m.projects[name]; p != nil {
+	if p := m.c().projects[name]; p != nil {
 		return p.Hook
 	}
 	return nil
@@ -284,7 +284,7 @@ func (m *Manager) Hook(name string) *GitHook {
 // prove; nil if the server's configuration has nothing for it, in which
 // case the trigger cannot be called.
 func (m *Manager) TriggerAuth(project, trigger string) *TriggerAuth {
-	if p := m.projects[project]; p != nil {
+	if p := m.c().projects[project]; p != nil {
 		return p.Triggers[trigger]
 	}
 	return nil
@@ -344,11 +344,12 @@ func (m *Manager) runSchedules(ctx context.Context) {
 	tick := time.NewTicker(scheduleTick)
 	defer tick.Stop()
 	for {
-		for _, name := range m.order {
+		cat := m.c()
+		for _, name := range cat.order {
 			if ctx.Err() != nil {
 				return
 			}
-			m.fireDue(ctx, m.projects[name], time.Now())
+			m.fireDue(ctx, cat.projects[name], time.Now())
 		}
 		select {
 		case <-ctx.Done():
@@ -483,7 +484,7 @@ type WebhookView struct {
 // Schedules lists a project's schedules, as read from its default branch,
 // with when each fires next and the recent firings.
 func (m *Manager) Schedules(name string) (*SchedulesView, error) {
-	p := m.projects[name]
+	p := m.c().projects[name]
 	if p == nil {
 		return nil, fmt.Errorf("%w: project %s", engine.ErrNotFound, name)
 	}
@@ -559,7 +560,7 @@ var ErrKeyReused = errors.New("the idempotency key was used before with a differ
 // its ref is what runs. With an idempotency key that was used before (by
 // any server), it returns the run the first call started, and repeat true.
 func (m *Manager) StartWebhook(ctx context.Context, rq WebhookRequest) (run *engine.RunSummary, repeat bool, err error) {
-	p := m.projects[rq.Project]
+	p := m.c().projects[rq.Project]
 	if p == nil {
 		return nil, false, fmt.Errorf("%w: project %s", engine.ErrNotFound, rq.Project)
 	}

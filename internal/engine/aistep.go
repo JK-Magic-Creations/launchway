@@ -80,18 +80,18 @@ type AIJobInput struct {
 
 // model returns a model of the registry.
 func (e *Engine) model(name string) (ai.Model, bool) {
-	if e.models == nil {
+	if e.live().models == nil {
 		return ai.Model{}, false
 	}
-	return e.models.Get(name)
+	return e.live().models.Get(name)
 }
 
 // Models returns the registry's models.
 func (e *Engine) Models() []ai.Model {
-	if e.models == nil {
+	if e.live().models == nil {
 		return nil
 	}
-	return e.models.List()
+	return e.live().models.List()
 }
 
 // checkModel checks that a step may use a model.

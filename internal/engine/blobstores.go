@@ -112,10 +112,12 @@ func (e *Engine) newDatabaseStore() (*blobstore.Database, error) {
 	if err != nil {
 		return nil, fmt.Errorf("artifacts: %w", err)
 	}
-	if _, most := store.Limits(); e.arts.MaxFileBytes > most {
+	if _, most := store.Limits(); most > 0 {
+		e.objectCap = most
+	}
+	if _, most := store.Limits(); e.live().arts.MaxFileBytes > most {
 		e.log.Warn("artifacts: files larger than the database store's largest object cannot be kept",
-			"max_file", sizeText(e.arts.MaxFileBytes), "largest_object", sizeText(most))
-		e.arts.MaxFileBytes = most
+			"max_file", sizeText(e.live().arts.MaxFileBytes), "largest_object", sizeText(most))
 	}
 	return store, nil
 }

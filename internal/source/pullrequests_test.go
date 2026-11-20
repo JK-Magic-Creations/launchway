@@ -67,7 +67,7 @@ func prManager(t *testing.T, addr, dir string, p Project) (*Manager, *engine.Eng
 
 func pollOnce(t *testing.T, m *Manager) {
 	t.Helper()
-	if err := m.poll(context.Background(), m.projects["app"]); err != nil {
+	if err := m.poll(context.Background(), m.c().projects["app"]); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -296,7 +296,7 @@ func TestTwoServersStartOneRunPerPullRequestChange(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := m.poll(context.Background(), m.projects["app"]); err != nil {
+				if err := m.poll(context.Background(), m.c().projects["app"]); err != nil {
 					t.Error(err)
 				}
 			}()

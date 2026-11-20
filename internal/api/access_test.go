@@ -180,6 +180,33 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/runs/{id}/reports":        {"GET", "/api/v1/runs/{pay}/reports", "", [6]int{401, 404, 200, 200, 404, 200}},
 	// A hosted report needs its signed link, whoever asks (see TestHostedReports).
 	"GET /hosted/{link}/{path...}": {"GET", "/hosted/art_x.zz.bad/index.html", "", [6]int{404, 404, 404, 404, 404, 404}},
+
+	// Configuration in the database (schema 23): the overview names the
+	// levels for anyone with a role; reading and changing objects needs the
+	// admin role on every project. Objects that do not exist are not found
+	// after the permission check.
+	"GET /api/v1/config":              {"GET", "/api/v1/config", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"GET /api/v1/config/history":      {"GET", "/api/v1/config/history", "", [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/config/export":       {"GET", "/api/v1/config/export", "", [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/config/imports":      {"GET", "/api/v1/config/imports", "", [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/config/{kind}":       {"GET", "/api/v1/config/projects", "", [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/config/{kind}/{obj}": {"GET", "/api/v1/config/projects/nope", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"GET /api/v1/config/{kind}/{obj}/history": {"GET", "/api/v1/config/projects/nope/history", "",
+		[6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/config/effective/{project}": {"GET", "/api/v1/config/effective/nope", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/config/import": {"POST", "/api/v1/config/import", `{"text":"libraries: []\n"}`,
+		[6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/config/validate": {"POST", "/api/v1/config/validate", `{"changes":[{"kind":"units","name":"m","spec":{}}]}`,
+		[6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/config/apply": {"POST", "/api/v1/config/apply", `{"changes":[{"kind":"units","name":"matrix-a","spec":{}}]}`,
+		[6]int{401, 403, 403, 403, 403, 200}},
+	"POST /api/v1/config/{kind}": {"POST", "/api/v1/config/units", `{"name":"matrix-b","spec":{"display_name":"Matrix"}}`,
+		[6]int{401, 403, 403, 403, 403, 201}},
+	"PUT /api/v1/config/{kind}/{obj}": {"PUT", "/api/v1/config/units/matrix-c", `{"spec":{}}`,
+		[6]int{401, 403, 403, 403, 403, 201}},
+	"DELETE /api/v1/config/{kind}/{obj}": {"DELETE", "/api/v1/config/units/nope", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/config/{kind}/{obj}/restore": {"POST", "/api/v1/config/units/nope/restore", "",
+		[6]int{401, 403, 403, 403, 403, 404}},
 }
 
 // draftBody starts a draft run that waits for an approval, so it needs no
@@ -204,7 +231,7 @@ func TestEveryRouteIsInThePermissionTable(t *testing.T) {
 			t.Errorf("route %q is not in the permission table in access_test.go; add a row saying who may call it", rt.pattern)
 		}
 		if strings.HasPrefix(rt.pattern, "POST ") || strings.HasPrefix(rt.pattern, "DELETE ") {
-			if rt.audit == "" && rt.access != public && rt.access != runnerOnly && rt.pattern != "POST /api/v1/validate" {
+			if rt.audit == "" && rt.access != public && rt.access != runnerOnly && rt.pattern != "POST /api/v1/validate" && rt.pattern != "POST /api/v1/config/validate" {
 				t.Errorf("route %q changes something but records nothing in the audit trail", rt.pattern)
 			}
 		}

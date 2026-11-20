@@ -25,6 +25,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
+	"github.com/jk-magic-creations/launchway/internal/settings"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -71,6 +72,9 @@ type Server struct {
 	// make join tokens, revoke and rotate runners (runner_admin); nil means
 	// admin, NoRole nobody.
 	RunnersRole *auth.Role
+	// Settings is the configuration kept in the database (schema 23),
+	// served under /api/v1/config; nil on a server that keeps none.
+	Settings *settings.Service
 
 	sealerMu  sync.Mutex
 	sealer    *auth.Sealer // seals the state of sign-ins in progress
@@ -80,6 +84,7 @@ type Server struct {
 	MCP *MCPOptions
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
+	live     atomic.Pointer[Live] // see Reconfigure
 	draining atomic.Bool    // see Drain
 	stopMu   sync.Mutex
 	stopped  chan struct{} // closed by Stop; see longLived
@@ -270,6 +275,25 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/ai/models", signedIn, "", s.listModels},
 		{"GET /api/v1/runs/{id}/steps/{step}/explanations", runRead, "", s.stepExplanations},
 		{"POST /api/v1/runs/{id}/steps/{step}/explain", runOperate, "step.explain", s.explainStep},
+
+		// Configuration in the database (schema 23): every object an
+		// administrator manages, with its history. The overview names the
+		// levels for everyone; the rest needs the admin role everywhere.
+		{"GET /api/v1/config", readAny, "", s.configOverview},
+		{"GET /api/v1/config/history", administer, "", s.configHistory},
+		{"GET /api/v1/config/export", administer, "", s.exportConfig},
+		{"POST /api/v1/config/import", administer, "config.import", s.importConfig},
+		{"GET /api/v1/config/imports", administer, "", s.configImports},
+		{"POST /api/v1/config/validate", administer, "", s.validateConfig},
+		{"POST /api/v1/config/apply", administer, "config.apply", s.applyConfig},
+		{"GET /api/v1/config/effective/{project}", administer, "", s.effectiveConfig},
+		{"GET /api/v1/config/{kind}", administer, "", s.listConfig},
+		{"POST /api/v1/config/{kind}", administer, "config.create", s.createConfig},
+		{"GET /api/v1/config/{kind}/{obj}", administer, "", s.getConfig},
+		{"PUT /api/v1/config/{kind}/{obj}", administer, "config.put", s.putConfig},
+		{"DELETE /api/v1/config/{kind}/{obj}", administer, "config.delete", s.deleteConfig},
+		{"POST /api/v1/config/{kind}/{obj}/restore", administer, "config.restore", s.restoreConfig},
+		{"GET /api/v1/config/{kind}/{obj}/history", administer, "", s.configHistory},
 	}
 }
 
@@ -685,7 +709,7 @@ func (s *Server) view(id *identity, p source.ProjectStatus) projectView {
 	if runs, err := s.Engine.ListRuns(engine.RunFilter{Project: p.Name, Limit: 1}); err == nil && len(runs) > 0 {
 		v.LastRun = runs[0]
 	}
-	rule := s.Drafts.For(p.Name)
+	rule := s.cur().Drafts.For(p.Name)
 	v.Editor = editorRights{DraftsAllow: "none", MayDraft: s.authorize(id, auth.RunDraft, p.Name), DraftSecrets: rule.Secrets,
 		MaySave: p.Push != nil && s.authorize(id, auth.Operate, p.Name), MayForce: s.authorize(id, auth.AdministerProject, p.Name)}
 	if rule.Allow != auth.NoRole {
@@ -973,7 +997,7 @@ func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		setAudit(r, "", "draft run, pipeline "+sum.PipelineHash)
-		err = s.Engine.ResumeDraft(sum.ID, id.User, s.Drafts.For(sum.Project).Secrets)
+		err = s.Engine.ResumeDraft(sum.ID, id.User, s.cur().Drafts.For(sum.Project).Secrets)
 	} else {
 		err = s.Engine.Resume(sum.ID, id.User)
 	}
@@ -1028,7 +1052,7 @@ func (s *Server) rerunRun(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, s.draftRefusal(sum.Project))
 			return
 		}
-		secrets := s.Drafts.For(sum.Project).Secrets
+		secrets := s.cur().Drafts.For(sum.Project).Secrets
 		rq.DraftSecrets = &secrets
 	}
 	run, err := s.Engine.Rerun(rq)

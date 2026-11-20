@@ -42,6 +42,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
+	"github.com/jk-magic-creations/launchway/internal/settings"
 	"github.com/jk-magic-creations/launchway/internal/source"
 	hsource "github.com/jk-magic-creations/launchway/internal/verify/source"
 	"github.com/jk-magic-creations/launchway/web"
@@ -147,7 +148,7 @@ func cmdServer(args []string) error {
 	data := fs.String("data", "", "data directory (overrides the config)")
 	fs.Parse(args)
 
-	cfg, err := config.Load(*cfgPath)
+	cfg, err := config.LoadBootstrap(*cfgPath)
 	if err != nil {
 		return err
 	}
@@ -179,11 +180,6 @@ func cmdServer(args []string) error {
 	slog.SetDefault(log)
 
 	dbAddr := cfg.DatabaseAddr()
-	allowSelf := cfg.AllowSelfApproval()
-	testLimits, err := cfg.TestLimits()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
 	reportLimits, err := cfg.Runner.Reports.Limits()
 	if err != nil {
 		return fmt.Errorf("%s: runner.%w", *cfgPath, err)
@@ -192,45 +188,59 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
-	policyOpts, err := cfg.PolicyOptions() // checked when the file was read
-	if err != nil {
-		return err
-	}
-	waiveRole, _ := cfg.WaiverRole()
-	reportOpts, err := cfg.ReportOptions()
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
 	reportsOrigin, err := cfg.ReportsOrigin()
 	if err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
-	models, err := cfg.Models()
+	// The engine opens with the file's settings; those kept in the
+	// database replace them below, before anything is served.
+	live, err := cfg.EngineLive()
 	if err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
-	runnersRole, _ := cfg.RunnerAdminRole() // checked when the file was read
-	// The pools' tokens are read and checked against the shared token
-	// below; here only what the engine needs.
-	poolShapes, err := cfg.Pools("")
-	if err != nil {
-		return fmt.Errorf("%s: %w", *cfgPath, err)
-	}
-	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: &allowSelf, ConnectWait: dbWait,
-		Tests: testLimits, Environments: cfg.EngineEnvironments(), Artifacts: artifactOpts, Findings: findingLimits, Policy: policyOpts,
-		Reports: reportOpts, HealthSources: cfg.EngineHealthSources(), Models: models, RunnerPools: config.EnginePools(poolShapes)})
+	live.Artifacts = artifactOpts // the limits, and where artifacts are kept
+	live.Findings = findingLimits
+	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: live.AllowSelfApproval, ConnectWait: dbWait,
+		Tests: live.Tests, Environments: live.Environments, Artifacts: live.Artifacts, Findings: live.Findings, Policy: live.Policy,
+		Reports: live.Reports, HealthSources: live.HealthSources, Models: live.Models, RunnerPools: live.RunnerPools})
 	if err != nil {
 		return err
 	}
 	defer eng.Close()
 	logStore(eng, log)
-	projects, err := cfg.SourceProjects()
+
+	// Everything but the bootstrap settings is kept in the database
+	// (schema 23): the file's copies are imported once, then ignored.
+	store := settings.New(eng, cfg, log)
+	eff := cfg
+	if store.Available() {
+		if eff, err = startSettings(store, log); err != nil {
+			return err
+		}
+	} else {
+		// A build limited to an older schema: the file is the whole
+		// configuration, checked in full.
+		cfg.Auth.SetAccessInDatabase(false)
+		if err := cfg.Validate(*cfgPath); err != nil {
+			return err
+		}
+	}
+	if eff != cfg {
+		l, err := eff.EngineLive()
+		if err != nil {
+			return err
+		}
+		if err := eng.Reconfigure(l); err != nil {
+			return err
+		}
+	}
+	projects, err := eff.SourceProjects()
 	if err != nil {
 		return err
 	}
-	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, cfg.SourceLibraries(), log)
+	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, eff.SourceLibraries(), log)
 	if err == nil {
-		loopLimit, _ := cfg.LoopLimit() // checked when the file was read
+		loopLimit, _ := eff.LoopLimit() // checked when the configuration was read
 		mgr.SetLoopLimit(loopLimit)
 	}
 	if err != nil {
@@ -240,17 +250,26 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	drafts, err := cfg.DraftRules()
-	if err != nil {
-		return err
+	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts,
+		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: reportsOrigin}
+	if store.Available() {
+		srv.Settings = store
 	}
-	pools, err := cfg.Pools(token)
-	if err != nil {
+	applyLive := func(c *config.Config) error {
+		l, err := serverLive(c, token, authOpts != nil)
+		if err != nil {
+			return err
+		}
+		srv.Reconfigure(l)
+		return nil
+	}
+	if err := applyLive(eff); err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
-	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
-		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, WaiveRole: &waiveRole, ReportsOrigin: reportsOrigin, RunnersRole: &runnersRole}
-	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
+	models := live.Models
+	if eff != cfg {
+		models, _ = eff.Models()
+	}
 	if m := cfg.MCP; m.On() {
 		srv.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
 		if o := m.OAuth; o != nil {
@@ -260,19 +279,15 @@ func cmdServer(args []string) error {
 			}
 		}
 	}
-	if models != nil {
+	if models != nil || store.Available() {
 		// The server calls models only to explain a failed step, with keys
-		// from its own stores (ai.secrets), if it has any.
+		// from its own stores (ai.secrets), if it has any. With models in
+		// the database, any may be added while the server runs.
 		srv.AI = &ai.Client{}
 		if len(cfg.AI.Secrets) > 0 {
 			if srv.AISecrets, err = secrets.Open(cfg.AI.Secrets); err != nil {
 				return fmt.Errorf("%s: ai.secrets: %w", *cfgPath, err)
 			}
-		}
-	}
-	for _, p := range pools {
-		if p.Kind == engine.PoolDeploy {
-			srv.RunnerPools = append(srv.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets, RequireIdentity: p.RequireIdentity})
 		}
 	}
 	if authOpts != nil {
@@ -300,6 +315,36 @@ func cmdServer(args []string) error {
 	}()
 	mgr.Start(ctx)
 	mgr.WatchPolicySources(ctx)
+	if store.Available() {
+		// Changes made through any server take effect here within seconds.
+		if err := store.Load(func(c *config.Config, _ *settings.Layout) error {
+			l, err := c.EngineLive()
+			if err != nil {
+				return err
+			}
+			sl, err := serverLive(c, token, authOpts != nil)
+			if err != nil {
+				return err
+			}
+			ps, err := c.SourceProjects()
+			if err != nil {
+				return err
+			}
+			if err := eng.Reconfigure(l); err != nil {
+				return err
+			}
+			if err := mgr.Reconfigure(ps, c.SourceLibraries()); err != nil {
+				return err
+			}
+			n, _ := c.LoopLimit()
+			mgr.SetLoopLimit(n)
+			srv.Reconfigure(sl)
+			return nil
+		}); err != nil {
+			return err
+		}
+		go store.Watch(ctx)
+	}
 
 	url := "http://" + loopback(ln.Addr().String())
 	runnerCtx, stopRunner := context.WithCancel(context.Background())
@@ -376,6 +421,78 @@ func shutdown(hs *http.Server, srv *api.Server, drain time.Duration, stopRunner 
 		return fmt.Errorf("requests still in flight after %s were cut off: %w", shutdownTimeout, err)
 	}
 	return nil
+}
+
+// startSettings imports the file's settings into the database the first time
+// a server of schema 23 starts, says which of the file's settings are
+// ignored since, and returns the configuration in force: the file's
+// bootstrap settings and the database's.
+func startSettings(store *settings.Service, log *slog.Logger) (*config.Config, error) {
+	res, err := store.ImportBootstrap()
+	if err != nil {
+		return nil, err
+	}
+	when := time.UnixMilli(res.Import.At).UTC().Format(time.RFC3339)
+	switch {
+	case res.Done && len(res.Ignored) > 0:
+		log.Info("imported the configuration file's settings into the database; from now on they are changed in the web UI, the API, the MCP server or with launchway config, and the file's copies are ignored",
+			"import", res.Import.ID, "keys", strings.Join(res.Ignored, ", "))
+	case res.Done:
+		log.Info("the configuration is kept in the database; the file holds only how to start", "import", res.Import.ID)
+	case len(res.Ignored) > 0:
+		for _, k := range res.Ignored {
+			log.Warn("the configuration file sets a key that is kept in the database since it was imported; the file's value is ignored. Change it in the web UI, the API or with launchway config, or import the file again with launchway config import",
+				"key", k, "import", res.Import.ID, "imported_at", when)
+		}
+	}
+	rev, objs, err := store.Engine().ConfigSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	c, _, err := settings.Compose(store.Boot(), objs)
+	if err == nil {
+		err = settings.Check(c, store.Engine())
+	}
+	if err != nil {
+		return nil, fmt.Errorf("the configuration in the database (revision %d) cannot be used: %w", rev, err)
+	}
+	return c, nil
+}
+
+// serverLive makes the API server's live settings from a configuration.
+func serverLive(c *config.Config, runnerToken string, signIn bool) (api.Live, error) {
+	var l api.Live
+	var err error
+	if signIn {
+		if l.Policy, err = c.Auth.Policy(); err != nil {
+			return l, err
+		}
+	}
+	if l.Drafts, err = c.DraftRules(); err != nil {
+		return l, err
+	}
+	waive, err := c.WaiverRole()
+	if err != nil {
+		return l, err
+	}
+	runners, err := c.RunnerAdminRole()
+	if err != nil {
+		return l, err
+	}
+	l.WaiveRole, l.RunnersRole = &waive, &runners
+	if l.TokenMaxDays, err = c.TokenMaxDays(); err != nil {
+		return l, err
+	}
+	pools, err := c.Pools(runnerToken)
+	if err != nil {
+		return l, err
+	}
+	for _, p := range pools {
+		if p.Kind == engine.PoolDeploy {
+			l.RunnerPools = append(l.RunnerPools, api.RunnerPool{Name: p.Name, Token: p.Token, Targets: p.Targets, RequireIdentity: p.RequireIdentity})
+		}
+	}
+	return l, nil
 }
 
 // serverAuth builds the sign-in settings, or returns nil if sign-in is off.
