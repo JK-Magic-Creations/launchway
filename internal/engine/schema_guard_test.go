@@ -10,7 +10,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
-// A feature-branch build could record schema 21 while leaving placeholders
+// A feature-branch build could record the latest schema while leaving placeholders
 // for migrations owned by another branch. Opening the merged build must say
 // exactly which objects those placeholders omitted, before serving any work.
 func TestSchemaGuardRefusesIncompleteDatabase(t *testing.T) {
@@ -28,11 +28,11 @@ func TestSchemaGuardRefusesIncompleteDatabase(t *testing.T) {
 	}
 
 	_, err := openAs(t, addr, clk, 0, &syncBuffer{})
-	want := "database schema check failed: recorded schema 21 does not match its tables and columns: " +
-		"schema 18 (richer test reports and coverage): missing table coverage_files; " +
-		"schema 19 (verify and ai steps): missing column steps.kind. " +
-		"Restore the database from a known-good backup, or recreate only the listed objects with the corresponding migration SQL in internal/engine/db.go; " +
-		"do not change meta.schema_version to hide the mismatch. To start anyway, set LAUNCHWAY_SKIP_SCHEMA_CHECK=1 (unsafe: runs may fail later)"
+	want := fmt.Sprintf("database schema check failed: recorded schema %d does not match its tables and columns: "+
+		"schema 18 (richer test reports and coverage): missing table coverage_files; "+
+		"schema 19 (verify and ai steps): missing column steps.kind. "+
+		"Restore the database from a known-good backup, or recreate only the listed objects with the corresponding migration SQL in internal/engine/db.go; "+
+		"do not change meta.schema_version to hide the mismatch. To start anyway, set LAUNCHWAY_SKIP_SCHEMA_CHECK=1 (unsafe: runs may fail later)", len(migrations))
 	if err == nil || err.Error() != want {
 		t.Fatalf("opening an incomplete database:\n got: %v\nwant: %s", err, want)
 	}
