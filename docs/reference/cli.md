@@ -41,7 +41,7 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 | `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
-| `4` | `login`, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
+| `4` | `login`, `config` and the commands that take its verbs, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
 | `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
@@ -595,6 +595,44 @@ launchway runners rotate RUNNER
 | `revoke-token` | Stops a join token from enrolling runners |
 | `revoke` | Revokes an enrolled runner at once on every server; the steps it held are queued again. `--reason` is for the audit trail |
 | `rotate` | Asks an enrolled runner to move to a new key the next time it gets an access token |
+
+## launchway config
+
+Reads and changes the [configuration objects](config-objects.md) kept in the database: projects, libraries, environments, runner pools, role bindings, policies, policy sources, health sources, AI models, secret stores, step resources, units, and the installation's settings. Every command is a call of the [HTTP API](http-api.md#configuration) and needs the admin role on every project; changes are recorded in the object's history and the audit trail.
+
+```text
+launchway config overview [--json]
+launchway config list KIND [--deleted] [--json]
+launchway config get KIND NAME [--json]
+launchway config set KIND NAME -f SPEC.yaml [--unit U] [--version N] [--comment TEXT] [--manager terraform]
+launchway config create KIND NAME -f SPEC.yaml
+launchway config delete KIND NAME [--version N] [--comment TEXT]
+launchway config restore KIND NAME
+launchway config history [KIND [NAME]] [--import ID] [--limit N] [--json]
+launchway config validate -f CHANGES.yaml
+launchway config apply -f CHANGES.yaml
+launchway config export [-o FILE]
+launchway config import FILE [--prune] [--apply]
+launchway config imports [--json]
+launchway config effective PROJECT [--json]
+launchway config check-repository URL [--branch B] [--json]
+launchway config check-signin --issuer URL --client-id ID --redirect-url URL --secret-env VAR [--admin-group G] [--admin-user U] [--json]
+```
+
+KIND is `projects`, `libraries`, `environments`, `runner-pools`, `role-bindings`, `policies`, `policy-sources`, `health-sources`, `models`, `secret-stores`, `step-resources`, `units`, `installation` or `organisation`. Each kind except the last three also has its own command: `launchway projects`, `launchway libraries`, `launchway environments`, `launchway policies`, `launchway runner-pools`, `launchway role-bindings`, `launchway policy-sources`, `launchway secret-stores`, `launchway units`, and `launchway health-sources` and `launchway models` (which still list when given no verb) take the same verbs without KIND: `launchway projects set shop -f shop.yaml`. A spec is the object's settings with the keys the configuration file uses (see the kinds' pages in [Configuration objects](config-objects.md)); `-` reads standard input.
+
+| Command | What it does |
+|---|---|
+| `overview` | The configuration revision this server runs with, what the levels are called here, and each kind with a sentence on what it is |
+| `list`, `get` | Reads objects. `get` prints the spec as YAML, with the version, who manages it and who changed it last |
+| `set`, `create` | `set` creates or replaces an object (the whole spec replaces the old one); `create` fails if it exists. `--version N` refuses the change if the object has moved on, so two people do not overwrite each other. The same checks as the configuration file are applied and every problem is listed |
+| `delete`, `restore` | Deletes an object, which is kept and can be brought back. Refused if something depends on it |
+| `history` | Who changed what and when, with the fields that changed |
+| `validate`, `apply` | `CHANGES.yaml` is a list of `{kind, name, unit, spec, action (put, delete or restore), version}`; `validate` checks them, `apply` makes them all or none |
+| `export`, `import` | `export` writes every object as configuration text for backup, review or Git. `import FILE` shows what importing would create, change and (with `--prune`) delete; `--apply` makes exactly those changes, recorded as one import |
+| `check-repository`, `check-signin` | The checks the setup wizards use: read a repository the way the server would, and check sign-in answers against the identity provider and print the `auth:` block for the configuration file |
+
+The same operations are the MCP tools `list_config`, `get_config`, `put_config`, `delete_config`, `restore_config`, `get_config_history`, `validate_config`, `apply_config`, `get_effective_config`, `export_config`, `import_config`, `list_config_imports`, `check_repository` and `check_signin`; see [Interface parity](interface-parity.md) for the table that ties every API operation to its tool and command.
 
 ## launchway step-resources
 

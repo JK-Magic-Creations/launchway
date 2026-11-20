@@ -302,3 +302,24 @@ mcp:
 		t.Errorf("ArtifactsFromInstallation: %+v %v", c.Artifacts, err)
 	}
 }
+
+// Pipelines, templates and libraries' content live in Git. A project holds
+// the reference to a repository and, at most, which library template to use
+// (by name and pinned version); any attempt to put pipeline text or steps in
+// the database is refused, so there is no second copy to drift from Git.
+func TestProjectsHoldNoPipelineContent(t *testing.T) {
+	k := kindByName("project")
+	for name, spec := range map[string]string{
+		"text":           `{"repo":"https://git.example.test/a.git","pipeline_text":"steps: {}"}`,
+		"steps":          `{"repo":"https://git.example.test/a.git","steps":{"a":{"run":"echo"}}}`,
+		"inline in pipe": `{"repo":"https://git.example.test/a.git","pipeline":{"steps":{"a":{"run":"echo"}}}}`,
+		"template text":  `{"repo":"https://git.example.test/a.git","pipeline":{"library":"l","version":"v1","template":"t","text":"x"}}`,
+	} {
+		if _, _, err := decodeSpec(k, "a", []byte(spec)); err == nil {
+			t.Errorf("%s: a project spec with pipeline content was accepted", name)
+		}
+	}
+	if _, _, err := decodeSpec(kindByName("library"), "l", []byte(`{"repo":"https://git.example.test/l.git","templates":{}}`)); err == nil {
+		t.Error("a library spec with templates was accepted")
+	}
+}

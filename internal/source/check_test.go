@@ -24,7 +24,7 @@ func TestCheckRepository(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, ".launchway"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, ".launchway", "pipeline.yaml"), []byte("pipeline: x\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, ".launchway", "pipeline.yaml"), []byte("pipeline: x\nsteps:\n  a:\n    image: none\n    run: echo hi\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	checkGit(t, dir, "add", ".")
@@ -32,8 +32,20 @@ func TestCheckRepository(t *testing.T) {
 	checkGit(t, dir, "branch", "dev")
 
 	got := CheckRepository(context.Background(), dir, "")
-	if !got.OK || got.DefaultBranch != "main" || len(got.Branches) != 2 || !got.HasPipelineFile {
+	if !got.OK || got.DefaultBranch != "main" || len(got.Branches) != 2 || !got.HasPipelineFile || !got.Valid {
 		t.Errorf("a repository with a pipeline file: %+v", got)
+	}
+	if got.PipelineFile != ".launchway/pipeline.yaml" || got.Commit == "" {
+		t.Errorf("the file and commit are not reported: %+v", got)
+	}
+	// A pipeline with a mistake: its file, line and commit are reported.
+	if err := os.WriteFile(filepath.Join(dir, ".launchway", "pipeline.yaml"), []byte("pipeline: x\nsteps:\n  a:\n    run: [oops\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	checkGit(t, dir, "commit", "-q", "-am", "break it")
+	if bad := CheckRepository(context.Background(), dir, "main"); !bad.OK || bad.Valid || len(bad.Problems) == 0 ||
+		bad.Problems[0].File != ".launchway/pipeline.yaml" || bad.Problems[0].Line == 0 || bad.Problems[0].Commit != bad.Commit {
+		t.Errorf("a broken pipeline: %+v", bad)
 	}
 	got = CheckRepository(context.Background(), dir, "nope")
 	if got.OK || got.Problem == "" {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"os"
 	"regexp"
 	"sort"
@@ -21,6 +22,22 @@ type RepositoryCheck struct {
 	// HasPipelineFile: the branch (the default branch if none was asked
 	// for) has .launchway/pipeline.yaml.
 	HasPipelineFile bool `json:"has_pipeline_file"`
+	// PipelineFile is the path found, Commit the commit it was read at,
+	// Valid whether the file passes the checks a run would make of it, and
+	// Problems what does not, each with its file, line and the commit.
+	PipelineFile string            `json:"pipeline_file,omitempty"`
+	Commit       string            `json:"commit,omitempty"`
+	Valid        bool              `json:"valid"`
+	Problems     []PipelineProblem `json:"problems"`
+}
+
+// PipelineProblem is something wrong in the pipeline file, where it is.
+type PipelineProblem struct {
+	File    string `json:"file"`
+	Line    int    `json:"line,omitempty"`
+	Column  int    `json:"column,omitempty"`
+	Commit  string `json:"commit"`
+	Message string `json:"message"`
 }
 
 // CheckRepository reads a repository the way the server would, with the
@@ -28,7 +45,7 @@ type RepositoryCheck struct {
 // its default branch and whether a branch has a pipeline file. A repository
 // that cannot be read is reported in Problem, not as an error.
 func CheckRepository(ctx context.Context, repo, branch string) RepositoryCheck {
-	out := RepositoryCheck{Branches: []string{}}
+	out := RepositoryCheck{Branches: []string{}, Problems: []PipelineProblem{}}
 	repo = strings.TrimSpace(repo)
 	switch {
 	case repo == "":
@@ -85,7 +102,26 @@ func CheckRepository(ctx context.Context, repo, branch string) RepositoryCheck {
 		return out
 	}
 	out.OK = true
-	out.HasPipelineFile = pipelineFileOn(ctx, repo, want, env)
+	path, text, sha := pipelineFileOn(ctx, repo, want, env)
+	out.HasPipelineFile, out.PipelineFile, out.Commit = path != "", path, sha
+	if path != "" {
+		if _, err := pipeline.Parse([]byte(text)); err != nil {
+			var ps pipeline.Problems
+			if errors.As(err, &ps) {
+				for _, p := range ps {
+					file := path
+					if p.File != "" {
+						file = p.File
+					}
+					out.Problems = append(out.Problems, PipelineProblem{File: file, Line: p.Line, Column: p.Column, Commit: sha, Message: problemText(p)})
+				}
+			} else {
+				out.Problems = append(out.Problems, PipelineProblem{File: path, Commit: sha, Message: err.Error()})
+			}
+		} else {
+			out.Valid = true
+		}
+	}
 	return out
 }
 
@@ -97,28 +133,31 @@ func clipList(l []string, n int) []string {
 }
 
 // pipelineFileOn fetches the branch's tip into a temporary repository and
-// looks for the pipeline file. It reports false if it cannot tell.
-func pipelineFileOn(ctx context.Context, repo, branch string, env []string) bool {
+// reads the pipeline file: its path, its text and the commit. The path is ""
+// if there is none or it cannot be told.
+func pipelineFileOn(ctx context.Context, repo, branch string, env []string) (path, text, sha string) {
 	dir, err := os.MkdirTemp("", "launchway-check-")
 	if err != nil {
-		return false
+		return "", "", ""
 	}
 	defer os.RemoveAll(dir)
 	if _, err := gitRun(ctx, dir, nil, "", "init", "-q"); err != nil {
-		return false
+		return "", "", ""
 	}
 	if _, err := gitRun(ctx, dir, env, "", "fetch", "-q", "--depth=1", "--filter=blob:none", "--", repo, "refs/heads/"+branch); err != nil {
 		// A host that cannot filter: fetch the full tip.
 		if _, err := gitRun(ctx, dir, env, "", "fetch", "-q", "--depth=1", "--", repo, "refs/heads/"+branch); err != nil {
-			return false
+			return "", "", ""
 		}
 	}
+	head, _ := gitRun(ctx, dir, nil, "", "rev-parse", "FETCH_HEAD")
+	sha = strings.TrimSpace(head)
 	for _, p := range PipelinePaths {
-		if _, err := gitRun(ctx, dir, nil, "", "cat-file", "-e", "FETCH_HEAD:"+p); err == nil {
-			return true
+		if out, err := gitRun(ctx, dir, nil, "", "show", "FETCH_HEAD:"+p); err == nil {
+			return p, out, sha
 		}
 	}
-	return false
+	return "", "", sha
 }
 
 // explainGit turns what Git said into something a person can act on.
@@ -149,3 +188,10 @@ func clipMsg(s string) string {
 
 // transportRE finds Git's helper transports (ext::, fd::), which run commands.
 var transportRE = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*::`)
+
+func problemText(p pipeline.Problem) string {
+	if p.Path != "" {
+		return p.Path + ": " + p.Message
+	}
+	return p.Message
+}

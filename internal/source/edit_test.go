@@ -510,3 +510,28 @@ func TestPullRequestURL(t *testing.T) {
 		}
 	}
 }
+
+// A project that comes from the database (added while the server runs, as
+// configuration in the database does) is saved from the editor the same
+// way: as a commit on a new branch of its Git repository. The configuration
+// holds only the repository; the pipeline text is in Git and nowhere else.
+func TestSaveFromTheEditorIsAGitCommitForAProjectAddedLive(t *testing.T) {
+	dir := t.TempDir()
+	origin := remote(t, dir, pl)
+	m := manager(t, newTestEngine(t, testdb.New(t)), filepath.Join(dir, "data"), origin, nil)
+	if err := m.Reconfigure([]Project{{Name: "app", URL: origin, Push: &PushSettings{}}}, nil); err != nil {
+		t.Fatal(err)
+	}
+	base := gitIn(t, origin, "rev-parse", "main")
+	res, err := m.Save(context.Background(), SaveRequest{Project: "app", BaseRef: "main", BaseSHA: base, Text: edited, Now: saveTime,
+		Author: Author{User: "dana"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Direct || gitIn(t, origin, "rev-parse", "main") != base {
+		t.Fatalf("the save went to main, not a new branch: %+v", res)
+	}
+	if got := gitIn(t, origin, "show", res.Branch+":.launchway/pipeline.yaml"); got != strings.TrimSpace(edited) {
+		t.Fatalf("the pipeline in Git: %q", got)
+	}
+}
