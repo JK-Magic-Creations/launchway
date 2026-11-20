@@ -59,6 +59,8 @@ Usage:
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel  start and follow runs on a server
                                                 (launchway runs, for more)
+  launchway policy   list|run                   the policies in force; a run's decisions
+  launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -87,6 +89,10 @@ func main() {
 		err = cmdLogin(args)
 	case "runs":
 		err = cmdRuns(args)
+	case "policy":
+		err = cmdPolicy(args)
+	case "waivers":
+		err = cmdWaivers(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":

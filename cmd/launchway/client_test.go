@@ -18,6 +18,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/policy"
 	"github.com/jk-magic-creations/launchway/internal/source"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
@@ -41,10 +42,14 @@ steps:
 // cliServer is a real server with sign-in, one project, a token for ci (an
 // operator), and a stand-in runner that ends each step as the run's
 // outcome input says.
-func cliServer(t *testing.T) (credentials, *engine.Engine) {
+func cliServer(t *testing.T, po ...engine.PolicyOptions) (credentials, *engine.Engine) {
 	t.Helper()
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	eng, err := engine.Open(engine.Options{Database: testdb.New(t), Logger: quiet})
+	opts := engine.Options{Database: testdb.New(t), Logger: quiet}
+	if len(po) > 0 {
+		opts.Policy = po[0]
+	}
+	eng, err := engine.Open(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,8 +72,9 @@ func cliServer(t *testing.T) (credentials, *engine.Engine) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	operator := auth.Operator
 	s := &api.Server{Engine: eng, Projects: mgr, Log: quiet, RunnerToken: "r",
-		Auth: &api.Auth{Policy: pol, IdleTimeout: time.Hour, Lifetime: time.Hour}}
+		Auth: &api.Auth{Policy: pol, IdleTimeout: time.Hour, Lifetime: time.Hour}, WaiveRole: &operator}
 	srv := httptest.NewServer(s.Handler())
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(func() { cancel(); srv.Close(); eng.Close() })
@@ -247,5 +253,55 @@ func TestCLILogin(t *testing.T) {
 	t.Setenv("LAUNCHWAY_TOKEN", c.Token)
 	if err := cmdLogin([]string{"--server", "http://ci.example.com"}); !errors.Is(err, exitErr(exitUsage)) {
 		t.Fatalf("plain http: %v", err)
+	}
+}
+
+func TestCLIPolicyAndWaivers(t *testing.T) {
+	ps, err := policy.ParseFile([]byte(`policies:
+  - name: shape
+    mode: enforce
+    rules:
+      max_timeout: 30m
+`), "t.yaml", "config")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := cliServer(t, engine.PolicyOptions{Inline: ps})
+	var out bytes.Buffer
+	cl := newClient(c, &out)
+	// Steps run up to an hour by default, so the run is refused.
+	if err := cl.start([]string{"app", "--json"}); err != nil {
+		t.Fatal(err)
+	}
+	var started struct{ ID string }
+	json.Unmarshal(out.Bytes(), &started)
+	out.Reset()
+	if err := cl.policyRun([]string{started.ID}); err != nil || !strings.Contains(out.String(), "run start: BLOCK") ||
+		!strings.Contains(out.String(), "max_timeout        fail   longer timeouts: build: 1h0m0s") {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	out.Reset()
+	if err := cl.policyList(nil); err != nil || !strings.Contains(out.String(), "shape") || !strings.Contains(out.String(), "fail") {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	out.Reset()
+	if err := cl.waiverGrant([]string{"app", "--policy", "shape", "--rule", "max_timeout", "--reason", "long builds this week", "--expires", "48h"}); err != nil ||
+		!strings.Contains(out.String(), "Granted wvr_") {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	id := strings.Fields(strings.TrimPrefix(out.String(), "Granted "))[0]
+	if err := cl.waiverGrant([]string{"app", "--policy", "shape", "--rule", "tests", "--reason", "x", "--expires", "1h"}); exitCode(err) != exitAPI {
+		t.Fatalf("%v", err)
+	}
+	if err := cl.waiverGrant([]string{"app", "--policy", "shape"}); exitCode(err) != exitUsage {
+		t.Fatalf("%v", err)
+	}
+	out.Reset()
+	if err := cl.waiverList([]string{"--active"}); err != nil || !strings.Contains(out.String(), id+"  active") {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	out.Reset()
+	if err := cl.waiverRevoke([]string{"app", id, "--reason", "done"}); err != nil || !strings.Contains(out.String(), "revoked") {
+		t.Fatalf("%v\n%s", err, out.String())
 	}
 }
