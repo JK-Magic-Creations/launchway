@@ -210,7 +210,7 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 			allowed := orig.PullRequestSecrets
 			prSecrets = &allowed
 		}
-		c.emit(RunCreated, Payload{Project: orig.Project, Number: number, Pipeline: orig.Pipeline, Trigger: &trig, Source: &src,
+		c.emit(RunCreated, Payload{Project: orig.Project, Number: number, Pipeline: c.e.withStoreRequires(orig.Pipeline), Trigger: &trig, Source: &src,
 			Draft: draft, Rerun: rerun, PullRequestSecrets: prSecrets})
 		for _, id := range plan.Reuse {
 			s := orig.Steps[id]

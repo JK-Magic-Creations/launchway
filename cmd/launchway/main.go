@@ -61,6 +61,8 @@ Usage:
                                                 (launchway runs, for more)
   launchway policy   list|run                   the policies in force; a run's decisions
   launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
+  launchway blobs    status|copy                see and move where artifacts are kept
+                                                (launchway blobs, for more)
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -87,6 +89,8 @@ func main() {
 		err = cmdGraph(args)
 	case "login":
 		err = cmdLogin(args)
+	case "blobs":
+		err = cmdBlobs(args)
 	case "runs":
 		err = cmdRuns(args)
 	case "policy":
@@ -180,6 +184,7 @@ func cmdServer(args []string) error {
 		return err
 	}
 	defer eng.Close()
+	logStore(eng, log)
 	projects, err := cfg.SourceProjects()
 	if err != nil {
 		return err

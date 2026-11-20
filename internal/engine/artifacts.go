@@ -63,6 +63,14 @@ type ArtifactOptions struct {
 	Store blobstore.Store
 	// StoreProblem says why Store is nil, for those messages.
 	StoreProblem string
+	// Choice says how the store is chosen: StoreGiven (Store as it is),
+	// StoreDatabase (the database the engine opens), or StoreAuto (nothing
+	// configured: the database on PostgreSQL, Store otherwise; see
+	// chooseStore).
+	Choice string
+	// DatabaseLimits are the database store's limits (its WriteLock and Now
+	// are the engine's).
+	DatabaseLimits blobstore.DatabaseOptions
 	// MaxFileBytes is the largest file an artifact may hold. Default 1 GiB.
 	MaxFileBytes int64
 	// MaxRunBytes is how many bytes of artifacts one run may keep. Default
@@ -597,6 +605,17 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 	if total > e.arts.MaxRunBytes {
 		return nil, fmt.Errorf("%w: the artifact is %s; a run keeps at most %s", ErrQuota, sizeText(total), sizeText(e.arts.MaxRunBytes))
 	}
+	if u, ok := e.arts.Store.(blobstore.UsageReporter); ok {
+		// Say so before anything is sent, not half-way through.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		usage, err := u.Usage(ctx)
+		cancel()
+		if err == nil && usage.LimitBytes > 0 && usage.UsedBytes+total > usage.LimitBytes {
+			return nil, fmt.Errorf("%w: the %s artifact store is full: it holds %s of its limit of %s, and this artifact is %s. "+
+				"Delete artifacts or shorten their retention, raise the limit (artifacts.database.max_total_gib), or move to S3",
+				ErrQuota, e.arts.Store.Name(), sizeText(usage.UsedBytes), sizeText(usage.LimitBytes), sizeText(total))
+		}
+	}
 
 	var out *BegunArtifact
 	err = e.artifactTx(func(tx *txx, now int64) error {
@@ -671,9 +690,18 @@ func (e *Engine) BeginArtifact(leaseID string, in BeginArtifact) (*BegunArtifact
 				// Content kept already is not sent again. Refreshing used_at
 				// only while the blob is stored keeps it from being removed
 				// before this artifact is committed (see pruneArtifacts).
+				// Only content in this server's store: what is recorded in
+				// another (before artifacts.store changed, and not copied yet)
+				// cannot be read here. Content from before schema 17 recorded
+				// no store; it is in this one unless this is the database store,
+				// which did not exist then.
+				q, args := `SELECT id FROM artifact_blobs WHERE sha256 = ? AND size = ? AND state = ?`, []any{f.SHA256, f.Size, blobStored}
+				if e.knows(schemaBlobs) {
+					q += ` AND (store = ? OR (store = '' AND ? <> 'database'))`
+					args = append(args, e.arts.Store.Name(), e.arts.Store.Name())
+				}
 				var cand string
-				err := tx.QueryRow(`SELECT id FROM artifact_blobs WHERE sha256 = ? AND size = ? AND state = ? ORDER BY created_at LIMIT 1`,
-					f.SHA256, f.Size, blobStored).Scan(&cand)
+				err := tx.QueryRow(q+` ORDER BY created_at LIMIT 1`, args...).Scan(&cand)
 				switch {
 				case errors.Is(err, sql.ErrNoRows):
 				case err != nil:
@@ -864,6 +892,9 @@ func (e *Engine) PutArtifactChunk(ctx context.Context, leaseID, artifactID, file
 	}
 	n := int(offset/ArtifactChunkBytes) + 1
 	etag, err := store.UploadPart(ctx, b.Key, b.UploadID, n, data)
+	if errors.Is(err, blobstore.ErrFull) || errors.Is(err, blobstore.ErrTooLarge) {
+		return 0, fmt.Errorf("%w: storing %s: %v", ErrQuota, filePath, err)
+	}
 	if err != nil {
 		return 0, fmt.Errorf("storing part %d of %s: %w", n, filePath, err)
 	}
@@ -937,6 +968,9 @@ func (e *Engine) startBlob(ctx context.Context, store blobstore.Store, artifactI
 		}
 		_, err = tx.Exec(`INSERT INTO artifact_blobs(id, sha256, size, store_key, state, upload_id, created_at, used_at)
 			VALUES(?,?,?,?,?,?,?,?)`, id, f.SHA256, f.Size, key, blobUploading, uploadID, now, now)
+		if err == nil && e.knows(schemaBlobs) {
+			_, err = tx.Exec(`UPDATE artifact_blobs SET store = ? WHERE id = ?`, store.Name(), id)
+		}
 		return err
 	})
 	if err != nil || !won {
@@ -1110,7 +1144,11 @@ func (e *Engine) openBlob(ctx context.Context, f artifactFile, offset int64) (io
 	if b.State != blobStored {
 		return nil, fmt.Errorf("%w: the content of %s is no longer kept", ErrNotFound, f.Path)
 	}
-	return store.Open(ctx, b.Key, offset, -1)
+	r, err := store.Open(ctx, b.Key, offset, -1)
+	if errors.Is(err, blobstore.ErrNotFound) {
+		return nil, e.missingContent(store, b, f.Path)
+	}
+	return r, err
 }
 
 // OpenFetch opens a file of an artifact for the step attempt a lease holds,

@@ -102,6 +102,8 @@ type Engine struct {
 	channel       string // the PostgreSQL notification channel
 	tests         TestLimits
 	arts          ArtifactOptions
+	storeWhy      string // why arts.Store was chosen, when nothing was configured
+	strayAfter    string // where removeStrays carries on
 	finds         FindingLimits
 	envs          map[string]Environment
 	pol           PolicyOptions
@@ -346,6 +348,10 @@ func Open(o Options) (*Engine, error) {
 		e.channel = channelFor(schema)
 	}
 	if err := e.recoverLeases(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := e.chooseStore(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -635,7 +641,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		if err := c.claimNewRun(&nr, number); err != nil {
 			return err
 		}
-		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: nr.Pipeline, Trigger: &trig, Source: &src, Draft: draft,
+		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: c.e.withStoreRequires(nr.Pipeline), Trigger: &trig, Source: &src, Draft: draft,
 			PullRequestSecrets: prSecrets})
 		c.advance()
 		var superseded []int

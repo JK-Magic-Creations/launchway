@@ -815,6 +815,7 @@ export const api = {
     for (const [k, v] of Object.entries(q)) if (v !== undefined && v !== "" && v !== 0) p.set(k, String(v));
     return call<{ entries: AuditEntry[]; next_before: number }>("GET", "/api/v1/audit?" + p.toString());
   },
+  artifactStore: (background = false) => call<ArtifactStore>("GET", "/api/v1/artifact-store", undefined, { background }),
   runArtifacts: (id: string, background = false) => call<RunArtifacts>("GET", `/api/v1/runs/${id}/artifacts`, undefined, { background }),
   deleteArtifact: (id: string, artifactId: string) =>
     call<ArtifactView>("DELETE", `/api/v1/runs/${id}/artifacts/${encodeURIComponent(artifactId)}`),
@@ -941,6 +942,24 @@ export interface RunArtifacts {
   available: boolean;
   problem?: string;
   max_retain_ms: number;
+}
+
+/** What the database records as kept in one store; store is "" for files kept before schema 17. */
+export interface StoreCount { store: string; files: number; bytes: number }
+
+/** Where this server keeps artifacts (GET /api/v1/artifact-store). */
+export interface ArtifactStore {
+  store: string;
+  available: boolean;
+  problem?: string;
+  why?: string;
+  usage?: {
+    used_bytes: number; object_bytes: number; objects: number; open_uploads: number; collect_bytes: number;
+    limit_bytes: number; max_object_bytes: number;
+  };
+  kept: StoreCount;
+  elsewhere: StoreCount[];
+  advice: string[];
 }
 
 export type Severity = "critical" | "high" | "medium" | "low" | "unknown";

@@ -443,3 +443,16 @@ func (s *Server) searchImages(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"hits": hits})
 }
+
+// artifactStore says where this server keeps artifacts, why, and how full
+// the store is (for the Runners page, and operators).
+func (s *Server) artifactStore(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	st, err := s.Engine.StoreStatus(ctx)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, st)
+}

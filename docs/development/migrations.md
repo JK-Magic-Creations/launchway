@@ -152,6 +152,22 @@ Rolling back from schema 16 to 15:
 During a rolling upgrade, configure policies only once every server runs schema 16: until then an
 older server could start a deploy that a newer one would have judged.
 
+Schema 17 brings the built-in blob store: artifacts kept in the
+database (`blob_uploads`, `blob_parts`, `blob_chunks`, `blob_objects`, which are
+`blobstore.DatabaseSchema` word for word; `TestBlobSchemaIsFrozen` fails if that text changes), and
+`artifact_blobs.store`, the kind of store each blob was written to (`''` before 17). It is
+additive and adds no event type. With no store configured, a server of 17 on PostgreSQL uses the
+database store; an older server, with the same configuration, uses its own directory, finds the
+store marker missing there (it is in the database store) and keeps no artifacts, saying why. So
+that it does not run steps whose artifacts it cannot keep or fetch, a run that keeps or fetches
+artifacts, created by a server using the database store, carries `"requires": 17` in its pipeline
+(`runs.min_schema` 17): servers of 14 to 16 read it as not understood (in their words, "rollout
+steps or keys that control a rollout", the only words they have for a pipeline's `requires`), list
+and show it, and leave it alone (`TestOlderBuildLeavesDatabaseStoreRunsAlone`). `artifacts.store:
+database` and `artifacts.database` are settings older servers refuse: the Helm chart writes them
+only when set. Rolling back, and copying artifacts into a store an older release knows first, is
+described in [docs/artifacts.md](../artifacts.md#upgrading-to-schema-17-and-rolling-back).
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what
