@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -80,5 +81,41 @@ func TestSchemaGuardEscapeHatch(t *testing.T) {
 	if !strings.Contains(log.String(), "starting despite an incomplete database schema") ||
 		!strings.Contains(log.String(), "coverage_files") || !strings.Contains(log.String(), schemaCheckSkipEnv+"=1") {
 		t.Fatalf("escape hatch log does not name the mismatch and reason:\n%s", log.String())
+	}
+}
+
+// A migration that removes a marked table sets retired on its marker: from
+// that schema on the guard no longer asks for the table, while a database
+// recorded before still must have it.
+func TestSchemaGuardSkipsRetiredMarkers(t *testing.T) {
+	t.Setenv(schemaCheckSkipEnv, "")
+	e := mustOpenAs(t, testdb.New(t), newClock(), 0, &syncBuffer{})
+	old := schemaMarkers
+	t.Cleanup(func() { schemaMarkers = old })
+	log := slog.New(slog.NewTextHandler(&syncBuffer{}, nil))
+	const future = 40
+	schemaMarkers = append(append([]schemaMarker{}, old...),
+		schemaMarker{schema: future, feature: "a future table", tables: []string{"no_such_table"}, retired: future + 2})
+
+	if err := checkSchemaMarkers(e.db, future-1, log); err != nil {
+		t.Errorf("before the marker's schema: %v", err)
+	}
+	if err := checkSchemaMarkers(e.db, future, log); err == nil || !strings.Contains(err.Error(), "no_such_table") {
+		t.Errorf("at the marker's schema the missing table is not refused: %v", err)
+	}
+	if err := checkSchemaMarkers(e.db, future+1, log); err == nil {
+		t.Errorf("before the marker is retired the missing table is not refused")
+	}
+	for _, recorded := range []int{future + 2, future + 5} {
+		if err := checkSchemaMarkers(e.db, recorded, log); err != nil {
+			t.Errorf("recorded %d, at or past the retirement: %v", recorded, err)
+		}
+	}
+	// A retired marker does not excuse the others.
+	if _, err := e.db.Exec(`DROP TABLE coverage_files`); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkSchemaMarkers(e.db, future+5, log); err == nil || !strings.Contains(err.Error(), "coverage_files") {
+		t.Errorf("a retired marker hid another marker's missing table: %v", err)
 	}
 }

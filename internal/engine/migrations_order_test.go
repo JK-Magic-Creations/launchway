@@ -34,7 +34,7 @@ func hasTable(t *testing.T, e *Engine, table string) bool {
 func checkMarkers(t *testing.T, e *Engine, n int) {
 	t.Helper()
 	for _, m := range schemaMarkers {
-		should := m.schema <= n
+		should := m.dueAt(n)
 		for _, tb := range m.tables {
 			if got := hasTable(t, e, tb); got != should {
 				t.Errorf("at schema %d table %s (%s, schema %d): present %v, want %v", n, tb, m.feature, m.schema, got, should)

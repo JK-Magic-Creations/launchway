@@ -18,18 +18,33 @@ const schemaCheckSkipEnv = "LAUNCHWAY_SKIP_SCHEMA_CHECK"
 // real migration belongs (or the other way round) would show here. Tables
 // are listed by name; columns as table.column. The migration tests and the
 // startup guard share this list so their expectations cannot drift apart.
-var schemaMarkers = []struct {
+//
+// A migration that drops or renames a marked table or column must set
+// retired on that marker to its own schema number: a database recorded at or
+// past it no longer has the object, and is not refused for lacking it.
+var schemaMarkers = []schemaMarker{
+	{schema: schemaBlobs, feature: "the built-in blob store", tables: []string{"blob_uploads", "blob_parts", "blob_chunks", "blob_objects"}, columns: []string{"artifact_blobs.store"}},
+	{schema: schemaReports, feature: "richer test reports and coverage", tables: []string{"coverage_reports", "coverage_files"}, columns: []string{"test_cases.tags", "test_cases.variant", "test_cases.extra"}},
+	{schema: schemaVerify, feature: "verify and ai steps", tables: []string{"verifications", "verify_baselines", "ai_usage", "ai_explanations"}, columns: []string{"steps.kind"}},
+	{schema: schemaIdentity, feature: "runner identities", tables: []string{"runner_join_tokens", "runner_identities", "runner_access_tokens", "runner_assertions"},
+		columns: []string{"runners.kind", "runners.auth", "runners.labels", "runners.accept", "runners.os", "runners.arch"}},
+	{schema: schemaPools, feature: "build runner pools", columns: []string{"runs.runner_pool", "runs.runner_labels"}},
+}
+
+type schemaMarker struct {
 	schema  int
 	feature string
 	tables  []string
 	columns []string
-}{
-	{schemaBlobs, "the built-in blob store", []string{"blob_uploads", "blob_parts", "blob_chunks", "blob_objects"}, []string{"artifact_blobs.store"}},
-	{schemaReports, "richer test reports and coverage", []string{"coverage_reports", "coverage_files"}, []string{"test_cases.tags", "test_cases.variant", "test_cases.extra"}},
-	{schemaVerify, "verify and ai steps", []string{"verifications", "verify_baselines", "ai_usage", "ai_explanations"}, []string{"steps.kind"}},
-	{schemaIdentity, "runner identities", []string{"runner_join_tokens", "runner_identities", "runner_access_tokens", "runner_assertions"},
-		[]string{"runners.kind", "runners.auth", "runners.labels", "runners.accept", "runners.os", "runners.arch"}},
-	{schemaPools, "build runner pools", nil, []string{"runs.runner_pool", "runs.runner_labels"}},
+	// retired is the schema whose migration removed or renamed these
+	// objects; 0 if none has. From that schema on, the marker is not checked.
+	retired int
+}
+
+// dueAt reports whether a database recorded at schema n must have what the
+// marker lists: the migration has run and no later one removed it.
+func (m schemaMarker) dueAt(n int) bool {
+	return m.schema <= n && (m.retired == 0 || n < m.retired)
 }
 
 // schemaTableExists reports whether the database has the table.
@@ -74,7 +89,7 @@ type missingSchemaMarker struct {
 func checkSchemaMarkers(d *dbx, recorded int, log *slog.Logger) error {
 	var missing []missingSchemaMarker
 	for _, m := range schemaMarkers {
-		if m.schema > recorded {
+		if !m.dueAt(recorded) {
 			continue
 		}
 		mm := missingSchemaMarker{schema: m.schema, feature: m.feature}

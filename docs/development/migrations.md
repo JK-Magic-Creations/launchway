@@ -52,6 +52,12 @@ known-good backup, or recreate only the listed objects using the corresponding m
 `internal/engine/db.go`; do not change `meta.schema_version` to conceal the mismatch, and do not
 blindly rerun a whole migration whose other objects already exist.
 
+The markers are checked for every database at or past their schema, whatever build opens it, so
+a migration that drops or renames a marked table or column would make every upgraded database
+refuse to start. Such a migration must set `retired` on that marker to its own schema number
+(0, the default, means never): a database recorded at or past `retired` is not asked for the
+object. `checkMarkers` in the migration-order tests honours it too.
+
 An operator who knowingly needs to start anyway, for example to repair the database, can set
 `LAUNCHWAY_SKIP_SCHEMA_CHECK=1` in the server process's environment. The refusal message names this
 escape hatch. Using it logs a warning with the missing objects; it does not bypass errors reading
@@ -327,7 +333,9 @@ startup schema check refuses it and names what is missing.
    (`schemaReruns`).
 4. If it adds a table or column, add its schema number and those names to `schemaMarkers` in
    `internal/engine/schema_markers.go`. The migration-order tests and the startup check both use
-   this list; never leave an empty placeholder for a schema number the database can record.
+   this list; never leave an empty placeholder for a schema number the database can record. A
+   migration that removes or renames a marked object sets `retired` on its marker to that
+   migration's number.
 5. New event types: add them to `eventSince` with the new schema's number.
 6. Run the compatibility tests (`go test ./internal/engine/ -run 'Older|Minimum|Concurrent|LeftAlone'`),
    on SQLite and on PostgreSQL.
