@@ -1,0 +1,16 @@
+# The smallest useful pipeline: test on every push to main, then build.
+pipeline: my-service
+on:
+  push: { branches: [main] }
+
+steps:
+  test:
+    description: Run the unit tests
+    image: docker.io/library/golang:1.27
+    run: go test ./...
+
+  build:
+    description: Build the binary
+    image: docker.io/library/golang:1.27
+    needs: test
+    run: go build -o bin/app ./cmd/app

@@ -170,6 +170,18 @@ func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 	return &identity{User: sess.User, Groups: sess.Groups, Profile: sess.Profile, Via: viaSession, session: hash}, nil
 }
 
+// requestIdentity is who a request acts for. A call that a tool of the
+// MCP endpoint makes in process for someone signed in with the provider's
+// access token carries their identity, which /mcp worked out; nothing from
+// the network can put it there. Every other request is identified from
+// its token or session.
+func (s *Server) requestIdentity(r *http.Request) (*identity, error) {
+	if id, ok := r.Context().Value(mcpIdentityKey).(*identity); ok && id != nil {
+		return id, nil
+	}
+	return s.identify(r, true)
+}
+
 // guard wraps a route's handler with everything access needs: who is
 // calling, the CSRF check, the permission check, and the audit record.
 func (s *Server) guard(rt route) http.Handler {
@@ -183,7 +195,7 @@ func (s *Server) guard(rt route) http.Handler {
 		if r.Header.Get("Authorization") != "" && s.tooManyFailures(w, r) {
 			return
 		}
-		id, err := s.identify(r, true)
+		id, err := s.requestIdentity(r)
 		if err != nil {
 			s.fail(w, err)
 			return
@@ -201,19 +213,22 @@ func (s *Server) guard(rt route) http.Handler {
 			writeErr(w, code, msg)
 			if entry != nil {
 				entry.Outcome, entry.Detail = "denied", msg
+				markMCP(r, id, entry)
 				s.record(entry)
-			} else if id.Via == viaToken {
-				s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), Action: "token.use",
-					Project: r.PathValue("name"), Target: id.tokenTag, Outcome: "denied", Detail: r.Method + " " + r.URL.Path + ": " + msg})
+			} else if id.Via == viaToken || id.Via == viaOAuth {
+				e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r), Action: "token.use",
+					Project: r.PathValue("name"), Target: id.tokenTag, Outcome: "denied", Detail: r.Method + " " + r.URL.Path + ": " + msg}
+				markMCP(r, id, e)
+				s.record(e)
 			}
 		}
-		if id.Via != viaToken && fromSandboxOrOtherSite(r) {
+		if id.Via != viaToken && id.Via != viaOAuth && fromSandboxOrOtherSite(r) {
 			// A page of another site, or a sandboxed HTML report, must
 			// not act as whoever is viewing it (see reports.go).
 			deny(http.StatusForbidden, "requests from other sites or from sandboxed reports cannot use a Launchway session")
 			return
 		}
-		if !isSafeMethod(r.Method) && id.Via != viaToken {
+		if !isSafeMethod(r.Method) && id.Via != viaToken && id.Via != viaOAuth {
 			if msg := checkCSRF(r); msg != "" {
 				deny(http.StatusForbidden, msg)
 				return
@@ -260,6 +275,7 @@ func (s *Server) guard(rt route) http.Handler {
 				entry.Detail = body.Error
 			}
 		}
+		markMCP(r, id, entry)
 		s.record(entry)
 	})
 }
@@ -451,11 +467,17 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	if groups == nil {
 		groups = []string{}
 	}
+	// Whether agents can connect, so the UI can show how.
+	agents := map[string]any{"enabled": s.MCP != nil, "path": mcpPath}
+	if s.MCP != nil && s.MCP.OAuth != nil {
+		agents["oauth_resource"] = s.MCP.OAuth.Resource
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user": id.User, "groups": groups, "auth_mode": mode, "via": id.Via,
 		"admin":   s.authorize(id, auth.Administer, ""),
 		"runners": s.authorize(id, auth.ReadAny, ""),
 		"roles":   roles,
+		"mcp":     agents,
 	})
 }
 

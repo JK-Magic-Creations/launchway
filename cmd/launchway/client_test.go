@@ -73,7 +73,7 @@ func cliServer(t *testing.T, po ...engine.PolicyOptions) (credentials, *engine.E
 		t.Fatal(err)
 	}
 	operator := auth.Operator
-	s := &api.Server{Engine: eng, Projects: mgr, Log: quiet, RunnerToken: "r",
+	s := &api.Server{Engine: eng, Projects: mgr, Log: quiet, RunnerToken: "r", MCP: &api.MCPOptions{},
 		Auth: &api.Auth{Policy: pol, IdleTimeout: time.Hour, Lifetime: time.Hour}, WaiveRole: &operator}
 	srv := httptest.NewServer(s.Handler())
 	ctx, cancel := context.WithCancel(context.Background())

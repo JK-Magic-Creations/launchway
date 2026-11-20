@@ -361,3 +361,61 @@ func TestReportsOrigin(t *testing.T) {
 		t.Error("a negative limit was accepted")
 	}
 }
+
+// The MCP endpoint in the chart: nothing in any configuration file by
+// default (so the release before can read it, and the endpoint is on), and
+// with values set, a file the server loads with them.
+func TestChartMCPSettings(t *testing.T) {
+	def := renderChart(t, "postgresql: { enabled: true }\n")
+	for name, f := range def {
+		if strings.Contains(f, "mcp") {
+			t.Errorf("the default %s configuration has mcp:\n%s", name, f)
+		}
+	}
+	if c, err := Load(writeTemp(t, def["server"])); err != nil || !c.MCP.On() {
+		t.Fatalf("the endpoint is not on by default: %v", err)
+	}
+	files := renderChart(t, `postgresql: { enabled: true }
+config:
+  mcp:
+    enabled: false
+    allowedOrigins: [https://tools.example.com]
+    requestsPerMinute: 60
+    concurrent: 2
+    total: 16
+`)
+	c, err := Load(writeTemp(t, files["server"]))
+	if err != nil {
+		t.Fatalf("server: %v\n%s", err, files["server"])
+	}
+	if c.MCP.On() || c.MCP.RequestsPerMinute != 60 || c.MCP.Concurrent != 2 || c.MCP.Total != 16 || len(c.MCP.AllowedOrigins) != 1 {
+		t.Fatalf("mcp: %+v", c.MCP)
+	}
+}
+
+// The default render, with either way of reaching PostgreSQL, writes none
+// of the keys that policy gates (16), the database store (17), reports
+// (18) and the MCP endpoint brought, in any configuration file, so a
+// server of the release before them reads it.
+func TestChartDefaultWritesNoNewKeys(t *testing.T) {
+	for _, values := range []string{"postgresql: { enabled: true }\n", "database: { url: \"postgres://u@db/launchway\" }\n"} {
+		for name, f := range renderChart(t, values) {
+			var doc map[string]any
+			if err := yaml.Unmarshal([]byte(f), &doc); err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range []string{"policy", "policies", "reports", "mcp"} {
+				if _, ok := doc[key]; ok {
+					t.Errorf("the default %s configuration (%s) has %s:\n%s", name, strings.TrimSpace(values), key, f)
+				}
+			}
+			if a, ok := doc["artifacts"].(map[string]any); ok {
+				for _, key := range []string{"store", "database"} {
+					if _, ok := a[key]; ok {
+						t.Errorf("the default %s configuration (%s) has artifacts.%s:\n%s", name, strings.TrimSpace(values), key, f)
+					}
+				}
+			}
+		}
+	}
+}

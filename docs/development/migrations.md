@@ -270,5 +270,9 @@ server or runner refuses a setting it does not know. So:
 - An operator who sets a new setting should do so only once every server and runner is upgraded,
   and take it out again before rolling back, as with new pipeline keys.
 
+The MCP endpoint (`mcp:`) follows this rule: it adds no table, column or event, and the chart
+writes `config.mcp.*` only when set, so a release before it reads the default configuration and
+simply has no `/mcp`.
+
 This was learned the hard way: a chart that wrote `tests:` by default left the previous version
 unable to start when a rollout was aborted.

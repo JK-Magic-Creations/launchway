@@ -65,7 +65,11 @@ type Server struct {
 	sealer    *auth.Sealer // seals the state of sign-ins in progress
 	reportKey []byte       // signs links to HTML reports
 
-	draining atomic.Bool // see Drain
+	// MCP turns on the Model Context Protocol endpoint, /mcp; nil is off.
+	MCP *MCPOptions
+
+	mux      *http.ServeMux // the routes, which MCP tools call in process
+	draining atomic.Bool    // see Drain
 	stopMu   sync.Mutex
 	stopped  chan struct{} // closed by Stop; see longLived
 }
@@ -179,6 +183,8 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/admin/tokens", administer, "", s.listAllTokens},
 		{"DELETE /api/v1/admin/tokens/{id}", administer, "token.revoke", s.revokeAnyToken},
 		{"GET /api/v1/projects/{name}/schedules", projectRead, "", s.projectSchedules},
+		{"GET /api/v1/libraries", readAny, "", s.listLibraries},
+		{"GET /api/v1/libraries/{library}/templates", readAny, "", s.libraryTemplates},
 		// Webhooks prove themselves with a secret, not a session or token;
 		// their handlers check and audit them (see hooks.go).
 		{"POST /api/v1/projects/{name}/git-hook", public, "", s.gitHook},
@@ -220,6 +226,14 @@ func (s *Server) routes() []route {
 		// A hosted report takes no session: its signed link is the
 		// permission (see reports.go).
 		{"GET /hosted/{link}/{path...}", public, "", s.hosted},
+
+		// The MCP endpoint for agents. It checks callers itself (only bearer
+		// tokens, with limits of their own; see mcp.go), and its tools call
+		// the routes above in process, through guard.
+		{"POST /mcp", public, "", s.mcpEndpoint},
+		{"GET /mcp", public, "", s.mcpEndpoint},
+		{"DELETE /mcp", public, "", s.mcpEndpoint},
+		{"GET /.well-known/oauth-protected-resource/mcp", public, "", s.protectedResourceMetadata},
 	}
 }
 
@@ -242,6 +256,7 @@ func (s *Server) Handler() http.Handler {
 		writeErr(w, http.StatusNotFound, "no such API endpoint")
 	})
 	mux.Handle("/", s.ui())
+	s.mux = mux
 	return s.recoverer(securityHeaders(s.splitOrigin(mux)))
 }
 
@@ -736,7 +751,19 @@ func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	runs, err := s.Engine.ListRuns(engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Limit: limit, OnlyProjects: only})
+	f := engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Limit: limit, OnlyProjects: only}
+	if v := q.Get("before"); v != "" {
+		// The next page: after the run "<created_at>.<id>", as the last run
+		// of the previous page gives them.
+		at, id, ok := strings.Cut(v, ".")
+		ms, err := strconv.ParseInt(at, 10, 64)
+		if !ok || err != nil || id == "" {
+			writeErr(w, http.StatusBadRequest, "before is <created_at>.<id> of the last run of the previous page")
+			return
+		}
+		f.Before = &engine.RunCursor{CreatedAt: ms, ID: id}
+	}
+	runs, err := s.Engine.ListRuns(f)
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -834,7 +861,15 @@ func (s *Server) stepLogs(w http.ResponseWriter, r *http.Request) {
 	attempt, _ := strconv.Atoi(q.Get("attempt"))
 	after, _ := strconv.Atoi(q.Get("after"))
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	lines, att, err := s.Engine.Logs(r.PathValue("id"), r.PathValue("step"), attempt, after, limit)
+	// ?tail=1 reads the last lines rather than the first; ?q= only lines
+	// that contain it, ignoring case.
+	search := q.Get("q")
+	if len(search) > 200 {
+		writeErr(w, http.StatusBadRequest, "the search text is longer than 200 bytes")
+		return
+	}
+	lines, att, err := s.Engine.QueryLogs(r.PathValue("id"), r.PathValue("step"),
+		engine.LogQuery{Attempt: attempt, After: after, Limit: limit, Tail: q.Get("tail") == "1", Search: search})
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -992,6 +1027,41 @@ func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, rs)
+}
+
+// listLibraries lists the shared libraries pipelines may use, by name.
+func (s *Server) listLibraries(w http.ResponseWriter, r *http.Request) {
+	type lib struct {
+		Name      string `json:"name"`
+		LastFetch int64  `json:"last_fetch"`
+	}
+	out := []lib{}
+	if s.Projects != nil {
+		for _, l := range s.Projects.Libraries() {
+			out = append(out, lib{Name: l.Name, LastFetch: l.LastFetch})
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// libraryTemplates lists a library's templates at ?version= (default: its
+// newest tag, else its default branch), with their parameters and outputs.
+func (s *Server) libraryTemplates(w http.ResponseWriter, r *http.Request) {
+	if s.Projects == nil {
+		writeErr(w, http.StatusNotFound, "no libraries are configured")
+		return
+	}
+	version := r.URL.Query().Get("version")
+	if version != "" && !pipeline.ValidVersion(version) {
+		writeErr(w, http.StatusBadRequest, "the version is not a tag, branch or commit id")
+		return
+	}
+	out, err := s.Projects.LibraryTemplates(r.Context(), r.PathValue("library"), version)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 // validate checks a pipeline file without running it. With ?project=NAME

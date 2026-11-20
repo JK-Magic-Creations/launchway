@@ -233,6 +233,25 @@
             "policies": { "type": ["array", "null"], "items": { "type": "object" } }
           }
         },
+        "mcp": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": ["boolean", "null"] },
+            "allowedOrigins": { "type": ["array", "null"], "items": { "type": "string", "pattern": "^https?://[^/]+/?$" } },
+            "requestsPerMinute": { "type": ["integer", "null"], "minimum": 1, "maximum": 100000 },
+            "concurrent": { "type": ["integer", "null"], "minimum": 1, "maximum": 100000 },
+            "total": { "type": ["integer", "null"], "minimum": 1, "maximum": 100000 },
+            "oauth": {
+              "type": ["object", "null"],
+              "additionalProperties": false,
+              "properties": {
+                "resource": { "type": ["string", "null"], "pattern": "^(https?://[^/]+/.*mcp)?$" },
+                "scopes": { "type": ["array", "null"], "items": { "type": "string" } }
+              }
+            }
+          }
+        },
         "extraConfig": { "type": "object" }
       }
     },

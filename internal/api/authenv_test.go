@@ -119,6 +119,8 @@ type envOpts struct {
 	// policies are delivery policies; waiveRole who may waive them.
 	policies  engine.PolicyOptions
 	waiveRole *auth.Role
+	// mcp, if set, turns the MCP endpoint on.
+	mcp *MCPOptions
 }
 
 func setupAuth(t *testing.T, o envOpts) *authEnv {
@@ -155,7 +157,7 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 		t.Fatal(err)
 	}
 	s := &Server{Engine: eng, Projects: mgr, RunnerToken: "runner-secret", Log: quiet(), Now: o.clk.Now,
-		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts, WaiveRole: o.waiveRole}
+		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts, WaiveRole: o.waiveRole, MCP: o.mcp}
 	srv := httptest.NewUnstartedServer(nil)
 	redirect := o.redirectURL
 	if redirect == "" {

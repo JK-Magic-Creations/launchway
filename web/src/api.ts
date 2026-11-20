@@ -839,6 +839,8 @@ export interface Me {
   admin: boolean;
   runners: boolean;
   roles: Record<string, Role>;
+  /** The MCP endpoint for agents: whether it is on, its path, and the OAuth resource if the provider's tokens work there. */
+  mcp?: { enabled: boolean; path: string; oauth_resource?: string };
 }
 
 export interface ApiToken { id: string; name: string; created_at: number; expires_at: number; last_used: number }

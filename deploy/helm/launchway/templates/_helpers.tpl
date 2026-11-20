@@ -168,7 +168,7 @@ owns may not appear in it.
 */}}
 {{- define "launchway.serverConfig" -}}
 {{- $extra := deepCopy (.Values.config.extraConfig | default dict) -}}
-{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "reports" "loops" "schedules" "policy" -}}
+{{- range $key := list "listen" "data" "database" "projects" "tests" "artifacts" "findings" "reports" "loops" "schedules" "policy" "mcp" -}}
 {{- if hasKey $extra $key -}}
 {{- if eq $key "database" -}}
 {{- fail "config.extraConfig.database is not allowed: the database URL must not be in the ConfigMap. Use database.existingSecret or database.url." -}}
@@ -243,6 +243,23 @@ owns may not appear in it.
 {{- with .Values.config.schedules }}{{ if not (kindIs "invalid" .enabled) }}{{ $_ := set $config "schedules" (dict "enabled" .enabled) }}{{ end }}{{ end -}}
 {{- with .Values.config.tokens }}{{ if .maxDays }}{{ $_ := set $config "auth" (dict "tokens" (dict "max_days" (int64 .maxDays))) }}{{ end }}{{ end -}}
 {{- with include "launchway.policyConfig" . | fromYaml }}{{ if . }}{{ $_ := set $config "policy" . }}{{ end }}{{ end -}}
+{{- /* The MCP endpoint: only what is set, so the version before can still read the file. */ -}}
+{{- $m := .Values.config.mcp | default dict -}}
+{{- $mcp := dict -}}
+{{- if kindIs "bool" $m.enabled }}{{ $_ := set $mcp "enabled" $m.enabled }}{{ end -}}
+{{- if $m.allowedOrigins }}{{ $_ := set $mcp "allowed_origins" $m.allowedOrigins }}{{ end -}}
+{{- range $key, $value := dict "requests_per_minute" $m.requestsPerMinute "concurrent" $m.concurrent "total" $m.total -}}
+{{- if $value }}{{ $_ := set $mcp $key (int64 $value) }}{{ end -}}
+{{- end -}}
+{{- $o := $m.oauth | default dict -}}
+{{- if $o.resource -}}
+{{- $oauth := dict "resource" (toString $o.resource) -}}
+{{- if $o.scopes }}{{ $_ := set $oauth "scopes" $o.scopes }}{{ end -}}
+{{- $_ := set $mcp "oauth" $oauth -}}
+{{- else if $o.scopes -}}
+{{- fail "config.mcp.oauth.scopes is set, but config.mcp.oauth.resource is not" -}}
+{{- end -}}
+{{- if $mcp }}{{ $_ := set $config "mcp" $mcp }}{{ end -}}
 {{- $config = merge $config (include "launchway.deliveryServerConfig" . | fromYaml) -}}
 {{- toYaml (merge $config $extra) -}}
 {{- end -}}

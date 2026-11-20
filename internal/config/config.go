@@ -84,6 +84,9 @@ type Config struct {
 	// sharing a database must have the same ones. Unset: no policies.
 	Policy *PolicyConfig `yaml:"policy"`
 
+	// MCP controls the endpoint agents use, /mcp; see mcp.go.
+	MCP MCPConfig `yaml:"mcp"`
+
 	// file is the path the configuration was read from, for messages.
 	file string
 }
@@ -710,6 +713,12 @@ func Load(path string) (*Config, error) {
 	}
 	if err := c.checkTriggers(); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := c.MCP.Check(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if c.MCP.OAuth != nil && c.Auth.Mode != AuthOIDC {
+		return nil, fmt.Errorf("%s: mcp.oauth needs sign-in with OpenID Connect (auth.mode: oidc)", path)
 	}
 	if _, err := c.DraftRules(); err != nil {
 		if path != "" {
