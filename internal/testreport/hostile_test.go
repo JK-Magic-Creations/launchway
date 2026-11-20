@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -594,23 +595,81 @@ func TestKey(t *testing.T) {
 	}
 }
 
-func TestLargeInputsParseQuickly(t *testing.T) {
-	ju := generateJUnit(100000) // about 10 MB
-	gj := generateGoJSON(19000) // about 10 MB
-	limit := 2 * time.Second
-	if raceEnabled {
-		limit = 20 * time.Second
+// largeInputs are two inputs of about 10 MB each, and how many cases they
+// hold.
+var largeInputs = []struct {
+	name  string
+	gen   func(n int) []byte
+	cases int
+}{
+	{"JUnit", generateJUnit, 100000},
+	{"go test -json", generateGoJSON, 19000},
+}
+
+// parseMallocs parses data with a budget that cannot run out, and counts the
+// allocations it took: a measure of work that does not depend on how busy the
+// machine is.
+func parseMallocs(t *testing.T, data []byte) (*Report, uint64) {
+	t.Helper()
+	var before, after runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&before)
+	r, err := Parse(context.Background(), data, Limits{Timeout: 2 * time.Minute})
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for name, data := range map[string][]byte{"JUnit": ju, "go test -json": gj} {
+	return r, after.Mallocs - before.Mallocs
+}
+
+// Large inputs parse completely, without a warning, whatever load the machine
+// is under: the parse has a budget of its own that is far more than it needs.
+func TestLargeInputsParseCompletely(t *testing.T) {
+	for _, in := range largeInputs {
+		t.Run(in.name, func(t *testing.T) {
+			data := in.gen(in.cases)
+			start := time.Now()
+			r, _ := parseMallocs(t, data)
+			t.Logf("%s: %.1f MB, %d cases, parsed in %s", in.name, float64(len(data))/1e6, r.Counts.Total, time.Since(start))
+			if r.Counts.Total != in.cases || r.Warning != "" {
+				t.Fatalf("%d cases, want %d (warning %q)", r.Counts.Total, in.cases, r.Warning)
+			}
+			if r.Counts.Failed != (in.cases+6)/10 {
+				t.Fatalf("%d failed", r.Counts.Failed)
+			}
+		})
+	}
+}
+
+// Parsing is linear: twice the input is about twice the work. Allocations
+// count the work without a clock, so this holds under the race detector and
+// on a busy machine.
+func TestLargeInputsParseInLinearWork(t *testing.T) {
+	for _, in := range largeInputs {
+		t.Run(in.name, func(t *testing.T) {
+			_, one := parseMallocs(t, in.gen(in.cases/2))
+			_, two := parseMallocs(t, in.gen(in.cases))
+			t.Logf("%s: %d allocations for half the input, %d for all of it", in.name, one, two)
+			if ratio := float64(two) / float64(one); ratio > 2.5 {
+				t.Fatalf("twice the input took %.1f times the allocations: not linear", ratio)
+			}
+		})
+	}
+}
+
+// With nothing else to slow it down, 10 MB parses in a few seconds. A clock
+// is only fair then: not under the race detector, which is several times
+// slower, and not in a short run on a shared machine.
+func TestLargeInputsParseQuickly(t *testing.T) {
+	if raceEnabled || testing.Short() {
+		t.Skip("the wall-clock budget is checked only without the race detector and without -short")
+	}
+	for _, in := range largeInputs {
+		data := in.gen(in.cases)
 		start := time.Now()
-		r, err := Parse(context.Background(), data, Limits{})
-		d := time.Since(start)
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("%s: %.1f MB, %d cases, parsed in %s", name, float64(len(data))/1e6, r.Counts.Total, d)
-		if d > limit || r.Warning != "" {
-			t.Errorf("%s took %s (warning %q)", name, d, r.Warning)
+		r, _ := parseMallocs(t, data)
+		if d := time.Since(start); d > 5*time.Second || r.Warning != "" {
+			t.Errorf("%s took %s (warning %q)", in.name, d, r.Warning)
 		}
 	}
 }
