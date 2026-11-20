@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -274,5 +276,41 @@ func TestDeletingWhatActiveRunsUseNeedsForce(t *testing.T) {
 	h, _ := s.History(engine.ConfigHistoryFilter{Kind: "project", Name: "shop"})
 	if len(h) == 0 || !strings.Contains(h[0].Comment, "forced while in use") || !strings.Contains(h[0].Comment, "tidy") {
 		t.Errorf("the history does not say it was forced: %+v", h)
+	}
+}
+
+// Settings that name a file on the server are the operator's: the bootstrap
+// file brings them in, the API keeps them but cannot set or change one.
+func TestServerFilePathsAreNotSettableThroughTheAPI(t *testing.T) {
+	eng := openEngine(t, testdb.New(t))
+	s := New(eng, bootOIDC(t, t.TempDir(), true), quietLog())
+	for name, c := range map[string]Change{
+		"token_file":     change("runner-pool", "p", `{"token_file":"/var/run/secrets/kubernetes.io/serviceaccount/token","targets":["home"]}`),
+		"artifacts.dir":  change("installation", "installation", `{"artifacts":{"store":"filesystem","dir":"/etc"}}`),
+		"ca_file":        change("installation", "installation", `{"artifacts":{"store":"s3","s3":{"endpoint":"https://s3.example.com","bucket":"b","ca_file":"/etc/shadow"}}}`),
+		"webhook secret": change("project", "web", `{"repo":"https://git.example.com/web.git","git_webhook":{"secret_file":"/etc/passwd"}}`),
+	} {
+		if _, err := s.Apply("ada", []Change{c}); err == nil || !strings.Contains(err.Error(), "only be set in the bootstrap file") {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	// What the bootstrap import brought in stays and can be left alone.
+	tokenFile := filepath.Join(t.TempDir(), "pool-token")
+	if err := os.WriteFile(tokenFile, []byte(strings.Repeat("ab", 24)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Apply("ada", []Change{change("environment", "home", `{"target":"home","projects":["*"]}`), change("environment", "edge", `{"target":"edge","projects":["*"]}`)}); err != nil {
+		t.Fatal(err)
+	}
+	rev, _ := eng.ConfigRevision()
+	if _, _, err := eng.WriteConfig(rev, "import", []engine.ConfigWrite{{Kind: "runner-pool", Name: "p", Action: engine.ConfigUpdate, IfVersion: -1,
+		Spec: json.RawMessage(`{"token_file":"` + tokenFile + `","targets":["home"]}`)}}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Apply("ada", []Change{change("runner-pool", "p", `{"token_file":"`+tokenFile+`","targets":["home","edge"]}`)}); err != nil {
+		t.Errorf("changing another setting of an object that has a file path: %v", err)
+	}
+	if _, err := s.Apply("ada", []Change{change("runner-pool", "p", `{"token_file":"/etc/shadow","targets":["home"]}`)}); err == nil {
+		t.Error("changing the path was accepted")
 	}
 }

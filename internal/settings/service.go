@@ -772,6 +772,11 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if err != nil {
 			return nil, err
 		}
+		if imp == nil || imp.Origin != OriginBootstrap {
+			if err := checkServerPaths(objs, putObjects(after, puts)); err != nil {
+				return nil, invalid(err)
+			}
+		}
 		cp, err := s.composeChecked(after)
 		if err != nil {
 			return nil, invalid(err)

@@ -91,6 +91,17 @@ The older routes (`PUT /api/v1/step-resources/...`, `launchway step-resources`) 
 object, so there is one history. Before the first change the object reads as what the installation
 holds, at version 0.
 
+## Settings that name a file on the server
+
+`token_file`, `secret_file`, `hmac_secret_file`, `ca_file` and `artifacts.dir` name files and directories on the
+server host, and a repository address that is a path on the server (or a `file:` address) reads one. They are the
+operator's to set, not an API administrator's: the admin role on every project is not a login on the server, but
+a server that reads whatever file such a setting names would turn it into one (its own service-account token, for
+one). So they are set in the bootstrap file, and local repository paths also need `egress.allow_local` there. The
+first start's import brings them into the database; the API, the web UI, the CLI, MCP and Terraform keep what is
+there, may change everything else about the object, and refuse a change to the path itself, naming it. Use a
+secret store reference, an environment variable (`token_env`) or an `https://` address where you can.
+
 ## Terraform
 
 The provider is the next item; the API is shaped for it. Each kind is one resource (names above) and
