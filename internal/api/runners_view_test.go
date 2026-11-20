@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"database/sql"
 	"net/http"
 	"slices"
 	"strings"
@@ -120,5 +122,65 @@ func TestRunnersListShowsOnlyWhatTheViewerMayRead(t *testing.T) {
 	}
 	if i := ada["enrolled"].Identity; i == nil || i.Hostname != "build-host-7" || i.EnrolledBy != "ada" || i.JoinToken == "" {
 		t.Errorf("ada does not see the identity: %+v", i)
+	}
+}
+
+// Whether a runner is enrolled decides whether a shared-token caller may
+// say it is that runner. If the database cannot answer, the answer is not
+// "no": the lease and the leave are refused with a 500.
+func TestEnrolmentCheckFailsClosed(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	ctx := context.Background()
+	token, _, err := e.eng.CreateJoinToken(engine.JoinTokenSpec{}, "ada")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := runner.Join(ctx, http.DefaultClient, e.srv.URL, token, t.TempDir(), "host",
+		runner.JoinFacts{Name: "enrolled", OS: "linux", Arch: "amd64", Version: "test", Executor: "host"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	post := func(path, body string) int {
+		t.Helper()
+		req, err := http.NewRequest("POST", e.srv.URL+path, bytes.NewBufferString(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Authorization", "Bearer runner-secret")
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	lease := `{"runner":{"id":"` + id.RunnerID + `","name":"imposter"},"wait_seconds":0}`
+	leave := `{"runner_id":"` + id.RunnerID + `"}`
+	// With the database answering, the impersonation is refused outright.
+	if got := post("/api/runner/v1/lease", lease); got != http.StatusForbidden {
+		t.Fatalf("lease as an enrolled runner: %d, want 403", got)
+	}
+	if got := post("/api/runner/v1/leave", leave); got != http.StatusForbidden {
+		t.Fatalf("leave as an enrolled runner: %d, want 403", got)
+	}
+	// Take the identities table away, as a database fault would.
+	driver := "sqlite"
+	if strings.HasPrefix(e.db, "postgres") {
+		driver = "pgx"
+	}
+	db, err := sql.Open(driver, e.db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(`ALTER TABLE runner_identities RENAME TO runner_identities_gone`); err != nil {
+		t.Fatal(err)
+	}
+	if got := post("/api/runner/v1/lease", lease); got != http.StatusInternalServerError {
+		t.Errorf("lease with the identity check failing: %d, want 500", got)
+	}
+	if got := post("/api/runner/v1/leave", leave); got != http.StatusInternalServerError {
+		t.Errorf("leave with the identity check failing: %d, want 500", got)
 	}
 }

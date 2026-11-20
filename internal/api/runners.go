@@ -121,9 +121,19 @@ func (s *Server) callerInfo(r *http.Request, said engine.RunnerInfo) engine.Runn
 // claimsEnrolled refuses a runner that has no identity of its own but says
 // it is an enrolled runner, whose ID anyone who can read a project can see:
 // it would write that runner's row and bind leases to an ID it cannot use.
-// It audits and writes the refusal, and reports true.
+// It audits and writes the refusal, and reports true. If the database cannot
+// say whether the runner is enrolled it fails closed: it writes a 500 and
+// reports true.
 func (s *Server) claimsEnrolled(w http.ResponseWriter, r *http.Request, said engine.RunnerInfo) bool {
-	if callerIdentity(r) != nil || !s.Engine.IsEnrolled(said.ID) {
+	if callerIdentity(r) != nil {
+		return false
+	}
+	enrolled, err := s.Engine.IsEnrolled(said.ID)
+	if err != nil {
+		s.fail(w, err)
+		return true
+	}
+	if !enrolled {
 		return false
 	}
 	msg := "runner " + said.ID + " is enrolled; only it may say it is that runner"

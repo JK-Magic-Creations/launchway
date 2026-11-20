@@ -598,7 +598,10 @@ func (s *Server) leave(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		in.RunnerID = id.ID
-	} else if s.Engine.IsEnrolled(in.RunnerID) {
+	} else if enrolled, err := s.Engine.IsEnrolled(in.RunnerID); err != nil {
+		s.fail(w, err)
+		return
+	} else if enrolled {
 		writeErr(w, http.StatusForbidden, "runner "+in.RunnerID+" is enrolled; only it may say it leaves")
 		return
 	}
