@@ -3,6 +3,7 @@ package pipeline
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestOutputConditionParses(t *testing.T) {
@@ -156,4 +157,127 @@ steps:
   one: { uses: platform/scanner }
 `, map[string]string{"scanner": strings.Replace(tmpl, "needs: scan, ", "", 1)})
 	findProblem(t, problemsOf(t, err), "not a step this step needs")
+}
+
+func TestRetryMapForm(t *testing.T) {
+	p, err := Parse([]byte(`
+pipeline: demo
+timeout: 2h
+steps:
+  a: {image: x, run: a, retry: 2}
+  b: {image: x, run: b, retry: {times: 3, wait: 30s, backoff: 2, on: [exit, timeout]}}
+  c: {image: x, run: c, retry: {times: 2}}
+  d: {kind: image, file: Dockerfile, tags: [{registry: harbor, repository: team/app, tag: {run: short_sha}}], retry: {times: 1, wait: 5s, on: [infrastructure]}}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a := p.Step("a"); a.Retry != 2 || a.RetryFlow() {
+		t.Fatalf("retry: 2 must stay what it was: %+v", a)
+	}
+	b := p.Step("b")
+	if b.Retry != 3 || b.RetryWait.D() != 30*time.Second || b.RetryBackoff != 2 || len(b.RetryOn) != 2 || !b.RetryFlow() {
+		t.Fatalf("%+v", b)
+	}
+	if c := p.Step("c"); c.Retry != 2 || c.RetryFlow() {
+		t.Fatalf("a map with only times is a whole number: %+v", c)
+	}
+	if d := p.Step("d"); d.RetryWait.D() != 5*time.Second || d.RetryOn[0] != "infrastructure" {
+		t.Fatalf("%+v", d)
+	}
+	if p.Timeout.D() != 2*time.Hour || p.Requires != SchemaFlow {
+		t.Fatalf("timeout %v requires %d", p.Timeout, p.Requires)
+	}
+	// The pause doubles and stops at an hour.
+	for i, want := range []time.Duration{30 * time.Second, time.Minute, 2 * time.Minute, 4 * time.Minute} {
+		if got := b.RetryDelay(i + 1); got != want {
+			t.Fatalf("delay before retry %d: %v, want %v", i+1, got, want)
+		}
+	}
+	if got := b.RetryDelay(40); got != time.Hour {
+		t.Fatalf("a pause is capped at an hour: %v", got)
+	}
+	if got := p.Step("a").RetryDelay(1); got != 0 {
+		t.Fatalf("no wait, no pause: %v", got)
+	}
+	if !b.RetriesCause("exit") || b.RetriesCause("infrastructure") || !p.Step("a").RetriesCause("infrastructure") {
+		t.Fatal("causes")
+	}
+	// Only the keys of schema 24 need a newer server.
+	old, err := Parse([]byte("pipeline: demo\nsteps:\n  a: {image: x, run: a, retry: 2}\n"))
+	if err != nil || old.Requires != 0 || old.UsesSchemaFlow() {
+		t.Fatalf("retry: 2 needs nothing newer: %v %+v", err, old)
+	}
+}
+
+func TestRetryAndTimeoutProblems(t *testing.T) {
+	for name, tc := range map[string]struct{ text, want, path string }{
+		"unknown cause":  {"a: {image: x, run: a, retry: {times: 1, on: [flaky]}}", `"flaky" is not a cause`, "steps.a.retry.on"},
+		"wait over 1h":   {"a: {image: x, run: a, retry: {times: 1, wait: 2h}}", "wait must be between 1s and 1h", "steps.a.retry.wait"},
+		"wait too small": {"a: {image: x, run: a, retry: {times: 1, wait: 100ms}}", "wait must be between 1s", "steps.a.retry.wait"},
+		"times over 10":  {"a: {image: x, run: a, retry: {times: 11}}", "times must be between 0 and 10", "steps.a.retry.times"},
+		"scalar over 10": {"a: {image: x, run: a, retry: 11}", "retry must be between 0 and 10", "steps.a.retry"},
+		"no times":       {"a: {image: x, run: a, retry: {wait: 5s}}", "say how many extra attempts", "steps.a.retry"},
+		"backoff alone":  {"a: {image: x, run: a, retry: {times: 1, backoff: 2}}", "goes with wait", "steps.a.retry.backoff"},
+		"backoff range":  {"a: {image: x, run: a, retry: {times: 1, wait: 1s, backoff: 11}}", "backoff must be between 1 and 10", "steps.a.retry.backoff"},
+		"empty on":       {"a: {image: x, run: a, retry: {times: 1, on: []}}", "list at least one cause", "steps.a.retry.on"},
+		"twice":          {"a: {image: x, run: a, retry: {times: 1, on: [exit, exit]}}", "exit is listed twice", "steps.a.retry.on"},
+		"unknown key":    {"a: {image: x, run: a, retry: {times: 1, delay: 5s}}", `unknown key "delay"`, "steps.a.retry.delay"},
+		"approval":       {"a: {kind: approval, message: 'ok?', retry: {times: 1}}", "takes no retry", "steps.a.retry"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := Parse([]byte("pipeline: demo\nsteps:\n  " + tc.text + "\n"))
+			p := findProblem(t, problemsOf(t, err), tc.want)
+			if p.Line == 0 || p.Path != tc.path {
+				t.Fatalf("%+v, want path %s with a line", p, tc.path)
+			}
+		})
+	}
+	for name, tc := range map[string]struct{ val, want string }{
+		"not a duration": {"soon", "write a duration"},
+		"too short":      {"10s", "must be between 1m and 720h"},
+		"too long":       {"800h", "must be between 1m and 720h"},
+	} {
+		t.Run("run timeout "+name, func(t *testing.T) {
+			_, err := Parse([]byte("pipeline: demo\ntimeout: " + tc.val + "\nsteps:\n  a: {image: x, run: a}\n"))
+			p := findProblem(t, problemsOf(t, err), tc.want)
+			if p.Line != 2 || p.Path != "timeout" {
+				t.Fatalf("%+v", p)
+			}
+		})
+	}
+}
+
+// A template may take retry and timeout from its parameters, and a uses
+// step's retry map applies to the template's steps that set none.
+func TestTemplateRetryMapAndParams(t *testing.T) {
+	const tmpl = `template: flaky
+params:
+  tries: { type: string, default: "2" }
+  pause: { type: string, default: 15s }
+steps:
+  a: { image: x, run: a, retry: { times: { param: tries }, wait: { param: pause }, on: [timeout] } }
+  b: { image: x, run: b, needs: a }
+`
+	p := mustExpand(t, `pipeline: demo
+libraries:
+  platform: { repo: ci-templates, version: v3 }
+steps:
+  one: { uses: platform/flaky, with: { tries: "4" } }
+  two: { uses: platform/flaky, retry: { times: 1, wait: 1m, backoff: 3 } }
+`, map[string]string{"flaky": tmpl})
+	a := p.Step("one/a")
+	if a.Retry != 4 || a.RetryWait.D() != 15*time.Second || len(a.RetryOn) != 1 {
+		t.Fatalf("%+v", a)
+	}
+	b := p.Step("two/b") // set none of its own: takes the uses step's
+	if b.Retry != 1 || b.RetryWait.D() != time.Minute || b.RetryBackoff != 3 {
+		t.Fatalf("%+v", b)
+	}
+	if two := p.Step("two/a"); two.Retry != 2 || two.RetryWait.D() != 15*time.Second {
+		t.Fatalf("a step that sets its own keeps it: %+v", two)
+	}
+	if p.Requires != SchemaFlow {
+		t.Fatal(p.Requires)
+	}
 }

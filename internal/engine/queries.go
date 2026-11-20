@@ -56,6 +56,9 @@ type RunSummary struct {
 	CancelReason       string `json:"cancel_reason,omitempty"`
 	SupersededBy       string `json:"superseded_by,omitempty"`
 	SupersededByNumber int    `json:"superseded_by_number,omitempty"`
+	// DeadlineAt is when the run's timeout will cancel it (Unix ms; schema
+	// 24); 0 when it has none, or it is paused (an approval waits) or over.
+	DeadlineAt int64 `json:"deadline_at,omitempty"`
 	// Tests adds up the run's test results (see RunTests); nil when no step
 	// has reported any.
 	Tests *TestTotals `json:"tests,omitempty"`
@@ -134,6 +137,16 @@ type StepView struct {
 	// OnFailure is the step's on_failure, from its definition: continue or
 	// empty (stop).
 	OnFailure string `json:"on_failure,omitempty"`
+	// NotBefore, for a step queued to be retried after a wait, is when it
+	// may be handed to a runner (Unix ms); FailureCause is why its last
+	// failed attempt failed (exit, timeout or infrastructure). RetryWait,
+	// RetryBackoff and RetryOn are its retry's other keys, from the
+	// definition (schema 24).
+	NotBefore    int64    `json:"not_before,omitempty"`
+	FailureCause string   `json:"failure_cause,omitempty"`
+	RetryWait    string   `json:"retry_wait,omitempty"`
+	RetryBackoff float64  `json:"retry_backoff,omitempty"`
+	RetryOn      []string `json:"retry_on,omitempty"`
 	// PolicyBlocked says the step failed because a policy in enforce mode
 	// refused it (schema 16); Error says which policy and rule, and why.
 	PolicyBlocked bool `json:"policy_blocked,omitempty"`
@@ -240,14 +253,21 @@ const runCols9 = `, cancel_reason, superseded_by, superseded_by_number`
 
 // runCols is the columns scanRun reads.
 func (e *Engine) runCols() string {
-	switch {
-	case e.knows(schemaPullRequests):
-		return runCols + runCols8 + runCols9
-	case e.knows(schemaReruns):
-		return runCols + runCols8
+	cols := runCols
+	if e.knows(schemaReruns) {
+		cols += runCols8
 	}
-	return runCols
+	if e.knows(schemaPullRequests) {
+		cols += runCols9
+	}
+	if e.knows(schemaFlow) {
+		cols += runCols24
+	}
+	return cols
 }
+
+// runCols24 are the columns of runs that schema 24 added.
+const runCols24 = `, deadline_at`
 
 func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error) {
 	r := &RunSummary{}
@@ -259,6 +279,9 @@ func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error
 	}
 	if e.knows(schemaPullRequests) {
 		dst = append(dst, &r.CancelReason, &r.SupersededBy, &r.SupersededByNumber)
+	}
+	if e.knows(schemaFlow) {
+		dst = append(dst, &r.DeadlineAt)
 	}
 	err := sc.Scan(dst...)
 	r.PullRequest = pullRequestNumber(r.Event, r.Ref)
@@ -464,7 +487,7 @@ func (e *Engine) stepCols() string {
 		cols += `, wait_kind`
 	}
 	if e.knows(schemaFlow) {
-		cols += `, allowed`
+		cols += `, allowed, not_before, fail_cause`
 	}
 	return cols
 }
@@ -483,7 +506,7 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 	}
 	var allowed int
 	if e.knows(schemaFlow) {
-		dst = append(dst, &allowed)
+		dst = append(dst, &allowed, &v.NotBefore, &v.FailureCause)
 	}
 	if err := sc.Scan(dst...); err != nil {
 		return nil, err
@@ -561,6 +584,10 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		if def := st.Pipeline.Step(v.ID); def != nil {
 			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout.Short()
 			v.OnFailure = def.OnFailure
+			if def.RetryWait > 0 {
+				v.RetryWait = def.RetryWait.Short()
+			}
+			v.RetryBackoff, v.RetryOn = def.RetryBackoff, def.RetryOn
 			v.Secrets = def.Secrets
 			v.Container = st.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description

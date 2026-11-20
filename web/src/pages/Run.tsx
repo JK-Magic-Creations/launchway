@@ -123,7 +123,7 @@ export function RunPage({ id }: { id: string }) {
       setRun((prev) => {
         if (!prev) return prev;
         // Live step updates carry the step's state, not its definition.
-        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets, kind: x.kind, message: x.message, description: x.description, retry: x.retry, timeout: x.timeout, group: x.group } : x)) };
+        return { ...prev, step_list: prev.step_list.map((x) => (x.id === s.id ? { ...x, ...s, not_before: s.not_before, failure_cause: s.failure_cause, allowed_failure: s.allowed_failure, image: x.image, run: x.run, needs: x.needs, when: x.when, secrets: x.secrets, kind: x.kind, message: x.message, description: x.description, retry: x.retry, timeout: x.timeout, group: x.group } : x)) };
       });
     },
     deployment: (d) => {
@@ -235,6 +235,11 @@ export function RunPage({ id }: { id: string }) {
             <span className="meta">{starterLabel(run)}</span>
             <span className="meta" title={clock(run.created_at)}>{ago(run.created_at, now)}</span>
             {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
+            {!done && !run.cancel_requested && (run.deadline_at ?? 0) > 0 && (
+              <span className="meta" title={`The pipeline's timeout cancels the run at ${clock(run.deadline_at!)}. Time spent waiting for an approval does not count.`}>
+                times out in {duration(Math.max(0, run.deadline_at! - now))}</span>
+            )}
+            {run.cancel_requested && run.cancel_reason && <span className="meta">{run.cancel_reason}</span>}
             <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
           </div>
           {(run.rerun_of || run.reruns.length > 0) && (
@@ -507,6 +512,15 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
             {reused && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.started_at > 0 && <span className="meta" title={since < step.started_at ? `since the verification started; this attempt started ${clock(step.started_at)}` : undefined}>
               {elapsed(since, step.finished_at, now)}</span>}
+            {step.status === "queued" && (step.not_before ?? 0) > now && (
+              <span className="meta wait" title={`It is handed to a runner at ${clock(step.not_before!)}`}>
+                retrying in {duration(step.not_before! - now)} (attempt {step.attempt} of {step.retry + 1})
+                {step.failure_cause && <>, after {step.failure_cause === "exit" ? "a failed exit" : step.failure_cause}</>}
+              </span>
+            )}
+            {step.status === "failed" && step.failure_cause && step.failure_cause !== "exit" && (
+              <span className="meta" title="Why the last attempt failed">cause: {step.failure_cause}</span>
+            )}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
             {step.runner && <span className="meta">on {step.runner}</span>}
             {step.container && !step.container.startsWith("image-") && <span className="meta">in <strong>{step.container}</strong></span>}
@@ -575,6 +589,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {step.needs && step.needs.length > 0 && <><dt>Needs</dt><dd>{step.needs.join(", ")}</dd></>}
           {step.when && <><dt>When</dt><dd className="mono">{JSON.stringify(step.when)}</dd></>}
           {step.on_failure === "continue" && <><dt>On failure</dt><dd className="mono">continue</dd></>}
+          {step.retry_wait && <><dt>Retry</dt><dd className="mono">{step.retry} times, wait {step.retry_wait}{step.retry_backoff && step.retry_backoff > 1 ? `, backoff ${step.retry_backoff}` : ""}{step.retry_on?.length ? `, on ${step.retry_on.join(", ")}` : ""}</dd></>}
           {secrets.length > 0 && <><dt>Secrets</dt><dd>{secrets.map(([name, r]) => <div key={name}><Mono>{name}</Mono> ← <Mono>{`${r.store}:${r.key}${r.field ? `#${r.field}` : ""}`}</Mono></div>)}</dd></>}
           <dt>Retry</dt><dd>{step.retry ? `up to ${step.retry} more time${step.retry > 1 ? "s" : ""}` : "no"}</dd>
           <dt>Timeout</dt><dd>{step.timeout}</dd>

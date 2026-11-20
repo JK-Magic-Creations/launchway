@@ -84,6 +84,10 @@ type RunState struct {
 	// why. Both are cleared by a resume.
 	CancelReason string
 	SupersededBy *Superseder
+	// Excluded is how long the run has spent in ways its timeout does not
+	// count (schema 24): waiting for approvals that were decided, and the
+	// time between its end and a resume (milliseconds).
+	Excluded int64
 	// Commands are the commands given to the run's deployments' rollouts,
 	// in the order given (schema 14; see control.go).
 	Commands []*CommandState
@@ -129,6 +133,11 @@ type StepState struct {
 	// Allowed says a failed step has on_failure: continue (schema 24): it
 	// failed for good, and the run goes on as if it had succeeded.
 	Allowed bool
+	// NotBefore is, for a step queued to be retried after a wait, the time
+	// before which it is not handed to a runner (schema 24); FailCause is
+	// why the last failed attempt failed: exit, timeout or infrastructure.
+	NotBefore int64
+	FailCause string
 	// Approvals only.
 	Deadline  int64  // when a waiting approval is rejected because nobody decided
 	DecidedBy string // who approved or rejected it; empty if it expired
@@ -485,6 +494,9 @@ func (st *RunState) apply(ev Event) {
 		st.CancelReason, st.SupersededBy = "", nil
 		st.RunGate = nil // a resume is judged again
 		st.Status = RunRunning
+		if st.FinishedAt > 0 && ev.At > st.FinishedAt {
+			st.Excluded += ev.At - st.FinishedAt // the run's timeout does not run while it is over
+		}
 		st.FinishedAt = 0
 
 	case RunFinished:
@@ -508,6 +520,7 @@ func (st *RunState) apply(ev Event) {
 		s.Excerpt = ""
 		s.Evidence = nil
 		s.Allowed = false
+		s.NotBefore = p.NotBefore
 
 	case StepSkipped:
 		s.Status = StepSkippedS
@@ -518,6 +531,7 @@ func (st *RunState) apply(ev Event) {
 
 	case StepLeased:
 		s.Status = StepLeasedS
+		s.NotBefore = 0
 		s.LeaseID = p.Lease
 		s.Runner = p.Runner
 		// A deploy runner's actions need no workspace: they do not move the
@@ -558,6 +572,11 @@ func (st *RunState) apply(ev Event) {
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
 		s.Allowed = s.Status == StepFailed && p.Allowed
+		s.FailCause = ""
+		if s.Status == StepFailed {
+			s.FailCause = p.Cause
+		}
+		s.NotBefore = 0
 		s.Evidence = evidenceOf(p)
 		if p.AI != nil {
 			s.AI = p.AI
@@ -569,6 +588,7 @@ func (st *RunState) apply(ev Event) {
 		s.LeaseID = ""
 
 	case StepCanceled:
+		st.endApprovalWait(s, ev.At)
 		s.Status = StepCanceledS
 		s.WaitKind = ""
 		s.Error = p.Reason
@@ -583,6 +603,7 @@ func (st *RunState) apply(ev Event) {
 		s.Failures, s.Lost = 0, 0
 		s.Error, s.SkipKind, s.Excerpt = "", "", ""
 		s.Allowed = false
+		s.NotBefore, s.FailCause = 0, ""
 		s.ExitCode = nil
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.clearDecision()
@@ -604,6 +625,7 @@ func (st *RunState) apply(ev Event) {
 		}
 
 	case StepApproved, StepRejected:
+		st.endApprovalWait(s, ev.At)
 		if ev.Type == StepApproved {
 			s.Status = StepSucceeded
 			s.Error = ""
@@ -648,6 +670,41 @@ func (st *RunState) apply(ev Event) {
 	default:
 		st.applyDeploy(ev, s)
 	}
+}
+
+// endApprovalWait counts the time an approval waited, now that it ends,
+// among what the run's timeout does not count.
+func (st *RunState) endApprovalWait(s *StepState, at int64) {
+	if s.Status == StepWaitingS && s.StartedAt > 0 && at > s.StartedAt && st.Pipeline != nil {
+		if def := st.Pipeline.Step(s.ID); def != nil && def.IsApproval() {
+			st.Excluded += at - s.StartedAt
+		}
+	}
+}
+
+// approvalWaiting reports whether an approval is waiting for a decision
+// now, which stops the run's timeout.
+func (st *RunState) approvalWaiting() bool {
+	for _, id := range st.Order {
+		if s := st.Steps[id]; s.Status == StepWaitingS {
+			if def := st.Pipeline.Step(id); def != nil && def.IsApproval() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// deadline is when the run's timeout ends it (Unix ms), or 0 if it has none
+// that can run out now: the pipeline sets no timeout, the run is over or
+// being canceled, or it waits for an approval (time spent waiting for a
+// person does not count against the timeout; the deadline is worked out
+// again when they decide).
+func (st *RunState) deadline() int64 {
+	if st.Pipeline == nil || st.Pipeline.Timeout <= 0 || st.Status.Terminal() || st.CancelRequested || st.approvalWaiting() {
+		return 0
+	}
+	return st.CreatedAt + st.Pipeline.Timeout.D().Milliseconds() + st.Excluded
 }
 
 // evidenceOf is what an event that ends a step attempt says it reported,

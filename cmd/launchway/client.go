@@ -382,7 +382,11 @@ type runView struct {
 	Message    string `json:"message"`
 	CreatedAt  int64  `json:"created_at"`
 	FinishedAt int64  `json:"finished_at"`
-	StepList   []struct {
+	// CancelReason says why a run was canceled when not by hand, such as
+	// "run timeout of 2h reached"; DeadlineAt is when its timeout cancels it.
+	CancelReason string `json:"cancel_reason"`
+	DeadlineAt   int64  `json:"deadline_at"`
+	StepList     []struct {
 		ID       string `json:"id"`
 		Status   string `json:"status"`
 		Attempt  int    `json:"attempt"`
@@ -390,6 +394,11 @@ type runView struct {
 		ExitCode *int   `json:"exit_code"`
 		// AllowedFailure: failed, and its pipeline allows that.
 		AllowedFailure bool `json:"allowed_failure"`
+		// NotBefore is when a retry that waits is handed to a runner;
+		// FailureCause why the last attempt failed.
+		NotBefore    int64  `json:"not_before"`
+		FailureCause string `json:"failure_cause"`
+		Retry        int    `json:"retry"`
 	} `json:"step_list"`
 	TriggerDetail *struct {
 		Inputs   map[string]string `json:"inputs"`
@@ -592,6 +601,12 @@ func (cl *client) show(args []string) error {
 			fmt.Fprintf(cl.out, "  input %s = %s\n", n, d.Inputs[n])
 		}
 	}
+	if r.CancelReason != "" {
+		fmt.Fprintf(cl.out, "  canceled: %s\n", r.CancelReason)
+	}
+	if r.DeadlineAt > 0 && !terminal(r.Status) {
+		fmt.Fprintf(cl.out, "  times out at %s\n", time.UnixMilli(r.DeadlineAt).Format(time.DateTime))
+	}
 	fmt.Fprintf(cl.out, "  %s/runs/%s\n\nSteps:\n", cl.c.Server, r.ID)
 	for _, s := range r.StepList {
 		status := s.Status
@@ -599,6 +614,12 @@ func (cl *client) show(args []string) error {
 			status = "failed (allowed)"
 		}
 		line := fmt.Sprintf("  %-10s %s", status, s.ID)
+		if s.Status == "queued" && s.NotBefore > time.Now().UnixMilli() {
+			line += fmt.Sprintf(": retrying in %s (attempt %d of %d)", time.Until(time.UnixMilli(s.NotBefore)).Round(time.Second), s.Attempt, s.Retry+1)
+		}
+		if s.FailureCause != "" && s.FailureCause != "exit" {
+			line += " [cause: " + s.FailureCause + "]"
+		}
 		if s.Error != "" {
 			line += ": " + s.Error
 		}

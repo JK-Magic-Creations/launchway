@@ -20,6 +20,7 @@ on:                         # what starts runs by itself (a run can always be st
   schedule: [ { cron: "0 3 * * *", timezone: Europe/Berlin, ref: main, inputs: { dry_run: false } } ]
   webhook: { name: deploy-request, ref: main, inputs: { version: body.release.version } }
 supersede: true             # a new push or pull-request run cancels older ones of the same ref
+timeout: 2h                 # a run open longer than this is canceled (waiting for approvals does not count)
 inputs: { … }               # values a run is started with; see Inputs
 libraries: { … }            # shared template libraries; see Templates
 containers: { … }           # named toolboxes and services; see Containers
@@ -31,6 +32,7 @@ steps: { … }                # required: the steps, by name
 | `pipeline` | The pipeline's name |
 | `on` | `push` (with `branches` and `tags` patterns), `pull_request: {}`, `schedule` (a list of `cron`, `timezone`, `ref`, `inputs`) and `webhook` (`name`, `ref`, `inputs` mapping fields of the request body). Schedules and webhooks are read from the default branch only |
 | `supersede` | `true`: a run started by a push or pull request cancels the older such runs of the same branch, tag or pull request that are still going |
+| `timeout` | How long a run may stay open, `1m` to `720h` (and no more than the installation's limit): a run past it is canceled with the reason `run timeout of 2h reached`. Time spent waiting for an approval does not count |
 | `inputs` | Values a run is started with |
 | `libraries` | Template libraries: `name: { repo: <library the server lists>, version: <tag, branch or full commit> }` |
 | `containers` | Named containers steps run in, and services beside them |
@@ -73,7 +75,7 @@ steps:
 | `when` | Conditions; the step is skipped when they do not hold (below) |
 | `env` | Extra environment variables: `NAME: value` |
 | `secrets` | Environment variables whose values the runner looks up: `NAME: { store: vault, key: path, field: name }`. The server never sees the values; they are masked in logs |
-| `retry` | Extra attempts after a failure (default 0) |
+| `retry` | Extra attempts after a failure (default 0). A mapping adds a pause and causes: `retry: { times: 3, wait: 30s, backoff: 2, on: [timeout, infrastructure] }`; `wait` is the pause before the first retry (`1s` to `1h`), `backoff` multiplies it for each retry after (1 to 10), `on` lists the causes retried (`exit`, `timeout`, `infrastructure`; default every cause) |
 | `timeout` | Per attempt, such as `90s`, `10m`, `1h` (default 1h, at most 24h). For an approval, how long to wait (default 24h, at most 30 days) |
 | `reports` | Files read when the step ends, pass or fail: `tests` (JUnit XML or `go test -json`), `findings` (SARIF 2.1.0), `sbom` (CycloneDX JSON). Each is a glob or a list of globs relative to the workspace |
 | `resources` | CPU and memory for a step that runs a script: `{ cpu: 2, memory: 6Gi }`, with `cpu_limit` and `memory_limit` to let it use more than it is promised. A limit left out is the amount promised. Without it the step gets the installation's default for its kind (up to 4 CPUs and 6 GiB to start with). Tools are told to start only as many parallel jobs as fit (`GOMAXPROCS`, `MAKEFLAGS`, `CARGO_BUILD_JOBS`, `LAUNCHWAY_PARALLELISM`). A run is refused if a step asks for more than the installation or the cluster allows. Not for image, deploy, rollout, rollback, verify, ai or approval steps |

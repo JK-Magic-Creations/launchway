@@ -40,7 +40,7 @@ steps:
 | `env` | Extra environment variables |
 | `secrets` | Environment variables whose values a runner looks up; see [Secrets](secrets.md) |
 | `container` | A named container from the `containers` section, instead of `image` |
-| `retry` | Extra attempts after a failure |
+| `retry` | Extra attempts after a failure; a mapping adds a wait and the causes worth retrying, see [Retrying after a wait](#retrying-after-a-wait-and-limiting-a-run) |
 | `on_failure` | `stop` (the default) or `continue`: with `continue` a step that fails for good is shown as failed (allowed) and the run goes on; see [Tolerating a failure](#tolerating-a-failure-and-testing-an-output) |
 | `timeout` | Per attempt; default 1h, at most 24h. For an approval, how long to wait for a decision; default 24h, at most 30 days |
 | `reports` | `tests:` one glob or a list, relative to the workspace: test result files read once the step ends; see [Test reports](test-reports.md) |
@@ -217,6 +217,35 @@ would fit the engine this way: the producing step's outputs are recorded in its 
 event, so a new event (a loop's members, recorded when that step finishes) would add the member
 steps to the run, and every server would rebuild them from the log as it does now; servers that
 do not know the event would leave such runs alone, as they do any run they do not fully understand.
+
+## Retrying after a wait, and limiting a run
+
+`retry: 3` tries a failed step again at once, whatever went wrong. A flaky test or a service that
+needs a moment to come back wants a pause, and a failure that no retry can fix (a compile error)
+should not be tried again:
+
+```yaml
+  integration:
+    image: alpine:3.22
+    run: ./integration.sh
+    retry: { times: 3, wait: 20s, backoff: 2, on: [timeout, infrastructure] }
+```
+
+`wait` is the pause before the first retry and `backoff` multiplies it for each retry after (20 s,
+40 s, 80 s here; never more than an hour). While it lasts the step is queued but no runner is
+given it, and the run page says `retrying in 20s (attempt 2 of 4)`. `on` names the causes that are
+retried: `exit` (the script ended non-zero), `timeout` (the step ran past its `timeout`) and
+`infrastructure` (the image could not be pulled, the workspace could not be prepared, or a runner
+refused the step). Without `on`, every cause is retried, as with a whole number, except that a
+runner's refusal is retried only when you list `infrastructure`. A lost runner is always run again, a
+bounded number of times, whatever `retry` says.
+
+A pipeline can also bound a whole run: `timeout: 2h` at the top. A run still open after that is
+canceled with the reason `run timeout of 2h reached`; running steps are stopped as for any cancel,
+and a deployment the run holds is handled as when someone cancels it (`on_cancel` is honoured). **Time
+spent waiting for an approval does not count**, and neither does the time between a run's end and
+its resume. An administrator can cap what pipelines may ask for with `launchway run-limits set
+--max-run-timeout 48h`; a pipeline that asks for more is refused, with the limit in the message.
 
 ## Tolerating a failure and testing an output
 

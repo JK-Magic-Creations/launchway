@@ -1,10 +1,14 @@
 package engine
 
 import (
+	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -248,5 +252,350 @@ func TestOlderServerLeavesFlowControlRunsAlone(t *testing.T) {
 	again := mustOpenAs(t, addr, clk, 0, &syncBuffer{})
 	if j := take(t, again); j.StepID != "lint" && j.StepID != "scan" {
 		t.Fatalf("leased %s", j.StepID)
+	}
+}
+
+// retryWait is a step that waits between its tries.
+const retryWait = `
+pipeline: demo
+steps:
+  flaky: {image: x, run: f, retry: {times: 2, wait: 10s}}
+  after: {image: x, run: g, needs: flaky}
+`
+
+// A retry with a wait is queued at once but handed out only when its time
+// has come, once for each retry.
+func TestRetryWaitsBeforeEachRetry(t *testing.T) {
+	e, clk := newEngine(t)
+	id := create(t, e, retryWait, Trigger{Event: "manual"})
+	fail(t, e, take(t, e))
+	s := stepOf(t, e, id, "flaky")
+	if s.Status != StepQueuedS || s.Attempt != 2 || s.NotBefore != clk.Now().Add(10*time.Second).UnixMilli() || s.FailureCause != "exit" {
+		t.Fatalf("%+v", s)
+	}
+	none(t, e)
+	clk.Add(9 * time.Second)
+	none(t, e)
+	clk.Add(time.Second + time.Millisecond)
+	j := take(t, e)
+	if j.StepID != "flaky" || j.Attempt != 2 {
+		t.Fatalf("%+v", j)
+	}
+	if s := stepOf(t, e, id, "flaky"); s.NotBefore != 0 {
+		t.Fatalf("a step handed out no longer waits: %+v", s)
+	}
+	fail(t, e, j)
+	none(t, e) // another ten seconds
+	clk.Add(10 * time.Second)
+	fail(t, e, take(t, e)) // the third and last attempt
+	want(t, statuses(t, e, id), "run", "failed", "flaky", "failed", "after", "skipped")
+}
+
+// A Lease that waits for work looks again when a retry's time comes, on
+// SQLite as on PostgreSQL.
+func TestWaitingLeaseWakesForARetryThatIsDue(t *testing.T) {
+	addr := testdb.New(t)
+	e, err := Open(Options{Database: addr, LeaseTTL: ttl})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer e.Close()
+	create(t, e, "pipeline: demo\nsteps:\n  flaky: {image: x, run: f, retry: {times: 1, wait: 1s}}\n", Trigger{Event: "manual"})
+	fail(t, e, take(t, e))
+	start := time.Now()
+	j, err := e.Lease(context.Background(), runner, 5*time.Second)
+	if err != nil || j == nil || j.Attempt != 2 {
+		t.Fatalf("%+v %v", j, err)
+	}
+	if took := time.Since(start); took < 900*time.Millisecond || took > 3*time.Second {
+		t.Fatalf("handed out after %v: it should come when the retry is due, 1s", took)
+	}
+}
+
+func TestRetryBackoffMultipliesTheWait(t *testing.T) {
+	e, clk := newEngine(t)
+	id := create(t, e, "pipeline: demo\nsteps:\n  flaky: {image: x, run: f, retry: {times: 3, wait: 10s, backoff: 2}}\n", Trigger{Event: "manual"})
+	for i, wait := range []time.Duration{10 * time.Second, 20 * time.Second, 40 * time.Second} {
+		fail(t, e, take(t, e))
+		s := stepOf(t, e, id, "flaky")
+		if got := time.UnixMilli(s.NotBefore).Sub(clk.Now()); got != wait {
+			t.Fatalf("wait before retry %d: %v, want %v", i+1, got, wait)
+		}
+		clk.Add(wait)
+	}
+	fail(t, e, take(t, e))
+	want(t, statuses(t, e, id), "run", "failed")
+}
+
+// A canceled run does not wait for its retries.
+func TestCancelDuringARetryWait(t *testing.T) {
+	e, _ := newEngine(t)
+	id := create(t, e, retryWait, Trigger{Event: "manual"})
+	fail(t, e, take(t, e))
+	if err := e.Cancel(id, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	want(t, statuses(t, e, id), "run", "canceled", "flaky", "canceled")
+}
+
+func finishWith(t *testing.T, e *Engine, res Result) {
+	t.Helper()
+	j := take(t, e)
+	if err := e.Finish(j.LeaseID, res); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// retry.on decides which failures are tried again; with none listed every
+// cause is, as for a whole number.
+func TestRetryOnCauses(t *testing.T) {
+	one := 1
+	exit := Result{Outcome: "failed", ExitCode: &one, Error: "exit code 1"}
+	timeout := Result{Outcome: "failed", Error: "timed out after 1h0m0s"}
+	infra := Result{Outcome: "failed", Error: "preparing the workspace: disk full"}
+	refused := Result{Outcome: OutcomeRefused, Error: "its accept: section does not allow it"}
+	for _, tc := range []struct {
+		name    string
+		retry   string
+		res     Result
+		retried bool
+	}{
+		{"timeout only: a non-zero exit is final", "{times: 2, on: [timeout]}", exit, false},
+		{"timeout only: a timeout is retried", "{times: 2, on: [timeout]}", timeout, true},
+		{"exit only: a timeout is final", "{times: 2, on: [exit]}", timeout, false},
+		{"infrastructure only: the workspace is retried", "{times: 2, on: [infrastructure]}", infra, true},
+		{"infrastructure only: an exit is final", "{times: 2, on: [infrastructure]}", exit, false},
+		{"no causes: an exit is retried", "{times: 2, wait: 5s}", exit, true},
+		{"no causes: a timeout is retried", "2", timeout, true},
+		{"no causes: the workspace is retried", "2", infra, true},
+		{"no causes: a refusal is final, as it always was", "2", refused, false},
+		{"infrastructure listed: a refusal is retried", "{times: 2, on: [infrastructure]}", refused, true},
+		{"exit and timeout: a refusal is final", "{times: 2, on: [exit, timeout]}", refused, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e, _ := newEngine(t)
+			id := create(t, e, "pipeline: demo\nsteps:\n  s: {image: x, run: f, retry: "+tc.retry+"}\n", Trigger{Event: "manual"})
+			finishWith(t, e, tc.res)
+			s := stepOf(t, e, id, "s")
+			if tc.retried != (s.Status == StepQueuedS) {
+				t.Fatalf("status %s, retried should be %v", s.Status, tc.retried)
+			}
+			if !tc.retried && s.Status != StepFailed {
+				t.Fatalf("%+v", s)
+			}
+		})
+	}
+}
+
+// What the finish handler reads from a runner's report. Cases it does not
+// know count as exit.
+func TestFailureCauseTable(t *testing.T) {
+	zero := 2
+	for _, tc := range []struct {
+		res  Result
+		want string
+	}{
+		{Result{Outcome: "failed", ExitCode: &zero, Error: "exit code 2"}, "exit"},
+		{Result{Outcome: "failed", Error: "timed out after 30m0s"}, "timeout"},
+		{Result{Outcome: "failed", Error: "preparing the workspace: clone failed"}, "infrastructure"},
+		{Result{Outcome: "failed", Error: "preparing to fetch artifacts: no space"}, "infrastructure"},
+		{Result{Outcome: "failed", Error: "cannot pull alpine:nope: manifest unknown"}, "infrastructure"},
+		{Result{Outcome: "failed", Error: "this runner has no image builders configured (images.builders)"}, "infrastructure"},
+		{Result{Outcome: "failed", Error: "secret TOKEN (vault:ci/token): the store is unavailable"}, "infrastructure"},
+		{Result{Outcome: OutcomeRefused, Error: "not allowed"}, "infrastructure"},
+		{Result{Outcome: "failed", Error: "secret TOKEN (vault:ci/token): not found"}, "exit"},
+		{Result{Outcome: "failed", Error: "Could not run the step: exec format error"}, "exit"},
+		{Result{Outcome: "failed"}, "exit"},
+		{Result{Outcome: "failed", Error: "something nobody has seen before"}, "exit"},
+	} {
+		if got := failureCause(tc.res); got != tc.want {
+			t.Errorf("%+v: %s, want %s", tc.res, got, tc.want)
+		}
+	}
+}
+
+const timed = `
+pipeline: demo
+timeout: 1h
+steps:
+  a: {image: x, run: a}
+  b: {image: x, run: b, needs: a}
+`
+
+// A run past its timeout is canceled, saying why; before it, nothing
+// happens.
+func TestRunTimeoutCancelsTheRun(t *testing.T) {
+	e, clk := newEngine(t)
+	id := create(t, e, timed, Trigger{Event: "manual"})
+	sum, _ := e.Summary(id)
+	if sum.DeadlineAt != clk.Now().Add(time.Hour).UnixMilli() {
+		t.Fatalf("deadline %d", sum.DeadlineAt)
+	}
+	take(t, e) // a is running
+	clk.Add(59 * time.Minute)
+	e.expireRunTimeouts()
+	want(t, statuses(t, e, id), "run", "running", "a", "running")
+	clk.Add(2 * time.Minute)
+	e.expireRunTimeouts()
+	d, _ := e.GetRun(id)
+	if !d.CancelRequested || d.CancelReason != "run timeout of 1h reached" {
+		t.Fatalf("%+v", d.RunSummary)
+	}
+	// The running step is stopped by its runner, like for any cancel; b never starts.
+	want(t, statuses(t, e, id), "b", "canceled")
+	if cancel, err := e.Heartbeat(take2(t, e, id)); err != nil || !cancel {
+		t.Fatalf("the runner should be told to stop: %v %v", cancel, err)
+	}
+}
+
+// take2 finds the lease of the run's running step.
+func take2(t *testing.T, e *Engine, run string) string {
+	t.Helper()
+	var lease string
+	if err := e.db.QueryRow(`SELECT lease_id FROM steps WHERE run_id = ? AND status IN ('leased', 'running')`, run).Scan(&lease); err != nil {
+		t.Fatal(err)
+	}
+	return lease
+}
+
+// Two servers on one database cancel an overdue run exactly once.
+func TestRunTimeoutIsExpiredByExactlyOneServer(t *testing.T) {
+	clk, addr := newClock(), testdb.New(t)
+	e1, e2 := open(t, addr, clk), open(t, addr, clk)
+	defer e1.Close()
+	defer e2.Close()
+	id := create(t, e1, timed, Trigger{Event: "manual"})
+	clk.Add(2 * time.Hour)
+	var wg sync.WaitGroup
+	for _, e := range []*Engine{e1, e2, e1, e2} {
+		wg.Add(1)
+		go func() { defer wg.Done(); e.expireRunTimeouts() }()
+	}
+	wg.Wait()
+	if n := countEvents(t, e1, id, RunCancelRequested); n != 1 {
+		t.Fatalf("%d cancel requests", n)
+	}
+	want(t, statuses(t, e2, id), "run", "canceled")
+}
+
+// Time spent waiting for an approval does not count against the timeout; a
+// run that waits for a person is never timed out, and once they decide the
+// clock carries on from where it stood.
+func TestApprovalWaitDoesNotCountAgainstTheRunTimeout(t *testing.T) {
+	e, clk := newEngine(t)
+	id := create(t, e, `
+pipeline: demo
+timeout: 1h
+steps:
+  a: {image: x, run: a}
+  gate: {kind: approval, needs: a, message: 'go?', timeout: 72h}
+  b: {image: x, run: b, needs: gate}
+`, Trigger{Event: "manual"})
+	clk.Add(10 * time.Minute)
+	ok(t, e, take(t, e), nil) // gate waits from minute 10
+	if sum, _ := e.Summary(id); sum.DeadlineAt != 0 {
+		t.Fatalf("a run waiting for a person has no deadline: %d", sum.DeadlineAt)
+	}
+	clk.Add(30 * time.Hour)
+	e.expireRunTimeouts()
+	want(t, statuses(t, e, id), "run", "running", "gate", "waiting")
+	// A person decides at hour 30 and 10 minutes; the run has used 10 minutes.
+	if err := e.Decide(id, "gate", true, "ann", ""); err != nil {
+		t.Fatal(err)
+	}
+	sum, _ := e.Summary(id)
+	if want := clk.Now().Add(50 * time.Minute).UnixMilli(); sum.DeadlineAt != want {
+		t.Fatalf("deadline %d, want %d (50 minutes left)", sum.DeadlineAt, want)
+	}
+	clk.Add(49 * time.Minute)
+	e.expireRunTimeouts()
+	want(t, statuses(t, e, id), "run", "running")
+	clk.Add(2 * time.Minute)
+	e.expireRunTimeouts()
+	want(t, statuses(t, e, id), "run", "canceled", "b", "canceled")
+}
+
+// A resumed run's timeout does not run while it was over.
+func TestRunTimeoutIgnoresTimeBetweenEndAndResume(t *testing.T) {
+	e, clk := newEngine(t)
+	id := create(t, e, timed, Trigger{Event: "manual"})
+	clk.Add(20 * time.Minute)
+	fail(t, e, take(t, e))
+	clk.Add(5 * time.Hour)
+	if err := e.Resume(id, "ann"); err != nil {
+		t.Fatal(err)
+	}
+	sum, _ := e.Summary(id)
+	if want := clk.Now().Add(40 * time.Minute).UnixMilli(); sum.DeadlineAt != want {
+		t.Fatalf("deadline %d, want %d", sum.DeadlineAt, want)
+	}
+}
+
+// The installation can cap run timeouts; a pipeline that asks for more is
+// refused, naming the limit.
+func TestMaxRunTimeoutRefusesALongerTimeout(t *testing.T) {
+	e, _ := newEngine(t)
+	if l, err := e.RunLimits(); err != nil || l.MaxRunTimeout != "" {
+		t.Fatalf("%+v %v", l, err)
+	}
+	if _, err := e.CreateRun(NewRun{Project: "demo", Pipeline: parse(t, "pipeline: p\ntimeout: 5h\nsteps:\n  a: {image: x, run: a}\n"),
+		Source: Source{Kind: "dir", Path: "/tmp"}}); err != nil {
+		t.Fatalf("no limit set: %v", err)
+	}
+	before, after, err := e.SetRunLimits(RunLimits{MaxRunTimeout: "4h"}, "ann")
+	if err != nil || before.MaxRunTimeout != "" || after.MaxRunTimeout != "4h" || after.UpdatedBy != "ann" {
+		t.Fatalf("%+v %+v %v", before, after, err)
+	}
+	_, err = e.CreateRun(NewRun{Project: "demo", Pipeline: parse(t, "pipeline: p\ntimeout: 5h\nsteps:\n  a: {image: x, run: a}\n"),
+		Source: Source{Kind: "dir", Path: "/tmp"}})
+	var ps pipeline.Problems
+	if !errors.As(err, &ps) || !strings.Contains(err.Error(), "max_run_timeout 4h") || ps[0].Line != 2 {
+		t.Fatalf("%v", err)
+	}
+	if _, err := e.CreateRun(NewRun{Project: "demo", Pipeline: parse(t, "pipeline: p\ntimeout: 4h\nsteps:\n  a: {image: x, run: a}\n"),
+		Source: Source{Kind: "dir", Path: "/tmp"}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"soon", "10s", "800h"} {
+		if _, _, err := e.SetRunLimits(RunLimits{MaxRunTimeout: bad}, "ann"); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("%s: %v", bad, err)
+		}
+	}
+	if _, after, err := e.SetRunLimits(RunLimits{}, "ann"); err != nil || after.MaxRunTimeout != "" {
+		t.Fatalf("clearing: %+v %v", after, err)
+	}
+}
+
+// Old pipelines, and servers that do not know the new keys.
+func TestOlderServerLeavesRetryAndTimeoutRunsAlone(t *testing.T) {
+	clk, addr := newClock(), testdb.New(t)
+	cur := mustOpenAs(t, addr, clk, 0, &syncBuffer{})
+	waits := create(t, cur, retryWait, Trigger{Event: "manual"})
+	timeout := create(t, cur, timed, Trigger{Event: "manual"})
+	plain := create(t, cur, "pipeline: demo\nsteps:\n  a: {image: x, run: a, retry: 2}\n", Trigger{Event: "manual"})
+	for id, want := range map[string]int{waits: schemaFlow, timeout: schemaFlow} {
+		if sum, err := cur.Summary(id); err != nil || sum.MinSchema != want {
+			t.Fatalf("%s: min_schema %d %v", id, sum.MinSchema, err)
+		}
+	}
+	if sum, _ := cur.Summary(plain); sum.MinSchema >= schemaFlow {
+		t.Fatalf("retry: 2 must not need schema 24: %d", sum.MinSchema)
+	}
+	cur.Close()
+	old := mustOpenAs(t, addr, clk, schemaResources, &syncBuffer{})
+	j := take(t, old)
+	if j.RunID != plain {
+		t.Fatalf("an older server leased %s of %s, want the plain run's step", j.StepID, j.RunID)
+	}
+	none(t, old)
+	for _, id := range []string{waits, timeout} {
+		if err := old.Cancel(id, "ann"); !errors.Is(err, ErrNeedsNewer) {
+			t.Fatalf("%v", err)
+		}
+	}
+	// A plain retry of an older server's is exactly as before: at once.
+	fail(t, old, j)
+	if again := take(t, old); again.RunID != plain || again.Attempt != 2 {
+		t.Fatalf("%+v", again)
 	}
 }

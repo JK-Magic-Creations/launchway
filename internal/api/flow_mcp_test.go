@@ -3,6 +3,7 @@ package api
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
 )
@@ -30,5 +31,24 @@ func TestMCPDescribeRunAllowedFailure(t *testing.T) {
 	}
 	if line := progressLine(d); strings.Contains(line, "1 failed,") || !strings.Contains(line, "1 failed (allowed)") {
 		t.Fatalf("%s", line)
+	}
+}
+
+func TestMCPDescribeRunRetryWaitAndTimeout(t *testing.T) {
+	c := &mcpCall{s: &Server{}}
+	due := time.Now().Add(time.Minute).UnixMilli()
+	d := &engine.RunDetail{RunSummary: engine.RunSummary{ID: "run_1", Number: 3, Project: "demo", Status: engine.RunRunning, DeadlineAt: due + 3600_000},
+		StepList: []engine.StepView{{ID: "flaky", Status: engine.StepQueuedS, Attempt: 2, Retry: 3, NotBefore: due, FailureCause: "timeout"}}}
+	out := c.describeRun(d)
+	s := out.Steps[0]
+	if s.NotBefore == "" || !strings.Contains(s.Why, "waiting to be retried (attempt 2 of 4)") || s.FailureCause != "timeout" {
+		t.Fatalf("%+v", s)
+	}
+	if out.Run.TimesOutAt == "" {
+		t.Fatalf("%+v", out.Run)
+	}
+	d.Status, d.DeadlineAt, d.CancelReason = engine.RunCanceled, 0, "run timeout of 1h reached"
+	if got := c.brief(&d.RunSummary); got.CancelReason != "run timeout of 1h reached" || got.TimesOutAt != "" {
+		t.Fatalf("%+v", got)
 	}
 }

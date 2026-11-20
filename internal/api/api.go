@@ -278,6 +278,11 @@ func (s *Server) routes() []route {
 		{"PUT /api/v1/step-resources/limits", administer, "step_resources.set_limits", s.setStepResourceLimits},
 		{"GET /api/v1/step-resources/defaults/{kind}", signedIn, "", s.getStepResourceDefault},
 		{"PUT /api/v1/step-resources/defaults/{kind}", administer, "step_resources.set_default", s.setStepResourceDefault},
+
+		// The installation's limits on pipelines (schema 24): anyone signed
+		// in reads them; an administrator changes them.
+		{"GET /api/v1/run-limits", signedIn, "", s.getRunLimits},
+		{"PUT /api/v1/run-limits", administer, "run_limits.set", s.setRunLimits},
 	}
 }
 
@@ -1204,6 +1209,11 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 	// The second pass, against this server's configuration: the
 	// environments deploy steps name.
 	if ps := s.Engine.CheckDeploys(project, p); len(ps) > 0 {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
+		return
+	}
+	// And against the installation's limits on pipelines.
+	if ps := s.Engine.CheckRunLimits(p); len(ps) > 0 {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
 		return
 	}

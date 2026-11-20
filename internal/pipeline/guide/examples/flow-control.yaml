@@ -1,7 +1,9 @@
 # A pipeline that reacts to what its steps found: a linter whose failure
 # is reported but does not fail the run, and a fix step that runs only
-# when the scan says something changed.
+# when the scan says something changed, a flaky integration test retried
+# after a pause, and a bound on how long the whole run may stay open.
 pipeline: flow-control
+timeout: 2h
 
 steps:
   lint:
@@ -20,8 +22,13 @@ steps:
     when: { output: scan.changed, equals: true }
     run: ./apply-fixes.sh
 
+  integration:
+    image: alpine:3.22
+    run: ./integration.sh
+    retry: { times: 3, wait: 20s, backoff: 2, on: [timeout, infrastructure] }
+
   report:
     image: alpine:3.22
-    needs: [lint, fix]
+    needs: [lint, fix, integration]
     when: { upstream: always }
     run: ./report.sh

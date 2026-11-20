@@ -614,6 +614,22 @@ launchway step-resources set-default KIND [--cpu Q] [--cpu-limit Q] [--memory Q]
 
 Quantities are written as in a pipeline: `500m` or `2` for CPU, `512Mi` or `6Gi` for memory. The same operations are `GET /api/v1/step-resources` and the routes under it in the [HTTP API](http-api.md#step-resources), and the MCP tools `get_step_resources`, `set_step_resource_limits` and `set_step_resource_default`.
 
+## launchway run-limits
+
+Shows and changes the installation's limits on pipelines: `max_run_timeout`, the longest top-level [`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the audit trail (`run_limits.set`). The values live in the database, so a change applies to every server at once.
+
+```text
+launchway run-limits get [--json]
+launchway run-limits set --max-run-timeout D [--json]
+```
+
+| Command | What it does |
+|---|---|
+| `get` | Prints the longest run timeout, or `not set` |
+| `set` | Changes it: a duration from `1m` to `720h`, such as `48h`; `--max-run-timeout ""` removes the limit. A pipeline whose timeout is longer is refused when a run starts and by validation in the editor and the MCP tool |
+
+The same operations are `GET` and `PUT /api/v1/run-limits` in the [HTTP API](http-api.md#run-limits), and the MCP tools `get_run_limits` and `set_run_limits`.
+
 ## launchway version
 
 Prints the version. `--version` and `-v` do the same.

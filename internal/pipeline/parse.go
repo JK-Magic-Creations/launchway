@@ -120,8 +120,10 @@ func Parse(data []byte) (*Pipeline, error) {
 
 	p := &Pipeline{}
 	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner"}, func(k, v *yaml.Node) {
+	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner", "timeout"}, func(k, v *yaml.Node) {
 		switch k.Value {
+		case "timeout":
+			ps.parseRunTimeout(p, v)
 		case "runner":
 			ps.parseRunner(v, p)
 		case "pipeline":
@@ -445,11 +447,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				secretsNode = v2
 				s.Secrets = ps.parseSecrets(v2, where)
 			case "retry":
-				s.Retry = ps.int(v2, where)
-				s.retrySet = true
-				if s.Retry < 0 || s.Retry > MaxRetry {
-					ps.add(v2, where, "retry must be between 0 and %d", MaxRetry)
-				}
+				ps.parseRetry(s, v2, where)
 			case "timeout":
 				d, err := time.ParseDuration(ps.scalar(v2, where))
 				if err != nil {

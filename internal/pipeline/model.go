@@ -31,6 +31,11 @@ type Pipeline struct {
 	// too were started by a push or a pull request. Runs started by hand,
 	// drafts and re-runs never supersede and are never superseded.
 	Supersede bool `json:"supersede,omitempty"`
+	// Timeout bounds how long a run may stay open (schema 24); 0: no limit.
+	// Time spent waiting for an approval does not count.
+	Timeout Duration `json:"timeout,omitempty"`
+	// TimeoutLine is where the timeout was written, for messages.
+	TimeoutLine int `json:"-"`
 	// Requires is the schema a server must know to run the pipeline, when
 	// the pipeline uses something older servers would misread rather than
 	// refuse (see control.go). Servers that do not know this field refuse
@@ -144,6 +149,13 @@ type Step struct {
 	Env         map[string]string    `json:"env,omitempty"`
 	Secrets     map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
 	Retry       int                  `json:"retry"`             // extra attempts after a failure
+	// RetryWait, RetryBackoff and RetryOn are the rest of the map form of
+	// retry (schema 24): the pause before the first retry, what multiplies
+	// it each time (0 or 1: nothing), and the causes that are retried
+	// (empty: every cause, as for a whole number).
+	RetryWait    Duration `json:"retry_wait,omitempty"`
+	RetryBackoff float64  `json:"retry_backoff,omitempty"`
+	RetryOn      []string `json:"retry_on,omitempty"`
 	// OnFailure is continue when a step that fails for good (after its
 	// retries) must not fail the run (schema 24); empty means stop.
 	OnFailure string   `json:"on_failure,omitempty"`

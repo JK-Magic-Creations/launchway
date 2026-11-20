@@ -220,11 +220,7 @@ func (ps *parser) parseImageStep(k, v *yaml.Node, at string) *Step {
 				s.timeoutSet = true
 			}
 		case "retry":
-			s.Retry = ps.int(n, where)
-			s.retrySet = true
-			if s.Retry < 0 || s.Retry > MaxRetry {
-				ps.add(n, where, "retry must be between 0 and %d", MaxRetry)
-			}
+			ps.parseRetry(s, n, where)
 		case "on_failure":
 			ps.parseOnFailure(s, n, where)
 		case "fetch":

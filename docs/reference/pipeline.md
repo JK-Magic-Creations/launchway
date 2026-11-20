@@ -100,6 +100,7 @@ lists every variable a step receives.
 | `libraries` | mapping | none | The [shared libraries](#libraries) whose templates steps use. At most 10 |
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
 | `runner` | mapping | none | Which runners may run the pipeline's steps; see [Runner](#runner) |
+| `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A run past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a run's end and its resume. Needs schema 24 |
 | `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display |
 
 Keys that the design has but are not built yet are refused with a hint: `outputs` (write to
@@ -306,7 +307,7 @@ The second column says which kinds take the key. `uses` stands for a step that u
 | `needs` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | step names, one value or a list | none | Steps that must end first. By default a step runs only if all of them succeeded; see [`when.upstream`](#when). A step cannot need itself, and needs may not form a loop. Needing a step that uses a template, or a loop, means needing all of its steps |
 | `when` | `step` `approval` `uses` `image` `deploy` `verify` `ai` | mapping | none | Conditions for the step to run; see [When](#when). Otherwise the step is skipped |
 | `timeout` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | duration | depends on the kind | How long the step may take. Defaults and bounds per kind are in the kind's section |
-| `retry` | `step` `uses` `image` `ai` | whole number | `0` | Extra attempts after a failure, 0 to 10 |
+| `retry` | `step` `uses` `image` `ai` | whole number, or a mapping | `0` | Extra attempts after a failure, 0 to 10; the mapping also says how long to wait and for which causes (see [Retry](#retry)) |
 | `on_failure` | `step` `image` | `stop` or `continue` | `stop` | What a failure that is final (after its retries) does to the run. With `continue` the step ends `failed (allowed)`: the run's outcome ignores it, `fail_fast` ignores it, and the steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }`. Not for deploy, rollback, rollout, verify, ai or approval steps (each has its own failure handling), and not on a step that uses a template: set it inside the template. Needs schema 24 |
 
 For a step that uses a template, `when`, `retry` and `timeout` apply to every step of the
@@ -979,6 +980,37 @@ maximum) and writes one line to the step's log saying what it lowered and why. A
 memory only is held to its memory, and its CPU default is lowered if need be, and the other way
 round.
 
+## Retry
+
+`retry: 2` retries a failed step twice at once, whatever the cause. The mapping form adds a pause and
+the causes worth retrying:
+
+<!-- keys: retry -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `times` | whole number | required | Extra attempts after a failure, 0 to 10 |
+| `wait` | duration | none | The pause before the first retry, `1s` to `1h`. The step is queued but not handed to a runner until it is over; the run page says `retrying in 20s (attempt 2 of 4)` |
+| `backoff` | number | `1` | What the pause is multiplied by for each retry after the first, 1 to 10; no pause is longer than `1h`. Goes with `wait` |
+| `on` | list of causes | every cause | The causes that are retried: `exit` (the script ended non-zero, and any failure that is none of the others), `timeout` (the step ran past its `timeout`) and `infrastructure` (the machinery failed: the image could not be pulled, the workspace or the fetched artifacts could not be prepared, or, only when `infrastructure` is listed here, a runner refused the step). A cause not listed fails the step at once |
+
+A step whose runner is lost, or whose secret store is unavailable, is run again whatever `retry` says,
+a bounded number of times, as before. A step that fails its coverage threshold, is refused by a
+policy or is rejected is never retried. In a template, `times`, `wait`, `backoff` and `on` may be
+`{ param: name }`, and a `retry` written on the step that uses the template applies to the
+template's steps that write none of their own. The failed attempt's cause is shown on the step, in
+the API as `failure_cause`.
+
+<!-- validate -->
+```yaml
+pipeline: flaky-integration
+timeout: 2h
+steps:
+  integration:
+    image: alpine:3.22
+    run: ./integration.sh
+    retry: { times: 3, wait: 20s, backoff: 2, on: [timeout, infrastructure] }
+```
+
 ## When
 
 `when` holds conditions; every condition written must hold for the step to run, and within one,
@@ -1438,7 +1470,7 @@ older server. Use them only once every server and runner is upgraded; see
 | 14 | rollout steps, `rollout.until: paused`, `rollout.pauses`, an approval's `deployment`, `abort_first`, `on_cancel: abort` |
 | 15 | image steps, a change's `digest` |
 | 22 | a step's `resources` |
-| 24 | `when.output`, `on_failure` |
+| 24 | `when.output`, `on_failure`, `retry` with `wait`, `backoff` or `on`, the pipeline's `timeout` |
 
 ## What next
 

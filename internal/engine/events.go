@@ -121,6 +121,12 @@ type Payload struct {
 	// fail the run and the steps that need it run as if it had succeeded
 	// (schema 24).
 	Allowed bool `json:"allowed,omitempty"`
+	// Cause, on a step.finished that failed (schema 24), is why: exit,
+	// timeout or infrastructure (see failureCause). NotBefore, on the
+	// step.queued of a retry that waits, is the time before which no runner
+	// is given the step (Unix ms).
+	Cause     string `json:"cause,omitempty"`
+	NotBefore int64  `json:"not_before,omitempty"`
 
 	// shared
 	Reason string `json:"reason,omitempty"`

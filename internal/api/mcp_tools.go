@@ -65,6 +65,11 @@ type runBrief struct {
 	// Waiting are approval steps waiting for a decision.
 	Waiting []string `json:"waiting_for_approval,omitempty"`
 	Failed  []string `json:"failed_steps,omitempty"`
+	// TimesOutAt is when the run's timeout cancels it, if it has one and is
+	// not paused by an approval; CancelReason says why it was canceled, when
+	// not by hand (such as "run timeout of 2h reached").
+	TimesOutAt   string `json:"times_out_at,omitempty"`
+	CancelReason string `json:"cancel_reason,omitempty"`
 	// Allowed are steps that failed for good and were allowed to
 	// (on_failure: continue): the run does not count them as failed.
 	Allowed []string `json:"failed_steps_allowed,omitempty"`
@@ -97,6 +102,10 @@ func (c *mcpCall) brief(r *engine.RunSummary) runBrief {
 	if r.RerunOf != "" {
 		b.Event = fmt.Sprintf("rerun of #%d from %s", r.RerunOfNumber, r.RerunFrom)
 	}
+	if r.DeadlineAt > 0 && !r.Status.Terminal() {
+		b.TimesOutAt = ts(r.DeadlineAt)
+	}
+	b.CancelReason = r.CancelReason
 	if r.StartedAt > 0 {
 		end := r.FinishedAt
 		if end == 0 {
@@ -237,6 +246,7 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 	addReadTools(srv, c)
 	addVerifyTools(srv, c)
 	addStepResourceTools(srv, c)
+	addRunLimitTools(srv, c)
 	if c.mayOperate {
 		addChangeTools(srv, c)
 		addVerifyChangeTools(srv, c)
@@ -488,6 +498,8 @@ type stepBrief struct {
 	// Why says in words why the step is in this state, when that is not
 	// plain from the status.
 	Why            string            `json:"why,omitempty"`
+	FailureCause   string            `json:"failure_cause,omitempty" jsonschema:"why the last failed attempt failed: exit, timeout or infrastructure"`
+	NotBefore      string            `json:"retry_not_before,omitempty" jsonschema:"a step queued to be retried after a wait: when a runner may be given it"`
 	AllowedFailure bool              `json:"allowed_failure,omitempty" jsonschema:"the step failed for good and its pipeline allows that (on_failure: continue): the run goes on as if it had succeeded"`
 	Needs          []string          `json:"needs,omitempty"`
 	Group          string            `json:"group,omitempty" jsonschema:"the uses step a template's step came from"`
@@ -541,7 +553,8 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 	var failed, running, waiting, queued []string
 	var actions []string
 	for i, s := range d.StepList {
-		sb := stepBrief{ID: s.ID, Kind: s.Kind, Status: string(s.Status), Attempt: s.Attempt, ExitCode: s.ExitCode, Needs: s.Needs, Group: s.Group}
+		sb := stepBrief{ID: s.ID, Kind: s.Kind, Status: string(s.Status), Attempt: s.Attempt, ExitCode: s.ExitCode, Needs: s.Needs, Group: s.Group,
+			FailureCause: s.FailureCause}
 		if s.StartedAt > 0 {
 			end := s.FinishedAt
 			if end == 0 {
@@ -589,6 +602,10 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 		case engine.StepQueuedS:
 			queued = append(queued, s.ID)
 			sb.Why = "waiting for a runner to take it"
+			if s.NotBefore > time.Now().UnixMilli() {
+				sb.NotBefore = ts(s.NotBefore)
+				sb.Why = fmt.Sprintf("waiting to be retried (attempt %d of %d): a runner is given it from %s", s.Attempt, s.Retry+1, sb.NotBefore)
+			}
 		case engine.StepLeasedS, engine.StepRunning:
 			running = append(running, s.ID)
 			if s.Runner != "" {

@@ -45,6 +45,8 @@ export interface RunSummary {
   /** The newer run that superseded this one, and its number. */
   superseded_by?: string;
   superseded_by_number?: number;
+  /** When the run's timeout will cancel it (Unix ms). Absent when it has none, or while an approval waits (that time does not count). */
+  deadline_at?: number;
   /** The run's test results added up; absent when no step has reported any. */
   tests?: TestTotals;
 }
@@ -504,6 +506,13 @@ export interface StepView {
   reused_from?: string;
   reused_from_number?: number;
   reused_attempt?: number;
+  /** A step queued for a retry that waits: when a runner may be given it (Unix ms). */
+  not_before?: number;
+  /** Why the last failed attempt failed: exit, timeout or infrastructure. */
+  failure_cause?: string;
+  retry_wait?: string;
+  retry_backoff?: number;
+  retry_on?: string[];
   /** The step failed for good and its pipeline allows that (on_failure: continue): shown as failed (allowed). */
   allowed_failure?: boolean;
   /** From the definition: continue, or empty for stop. */

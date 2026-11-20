@@ -354,6 +354,16 @@ older server, which is why the pipeline, not the event, carries the guard. Nothi
 roll back: the column is ignored, and runs of pipelines that use the keys wait for a server of schema
 24.
 
+Retry waits and causes, and the run timeout, are schema 24's too. `steps` gains `not_before` (when a
+queued retry may be handed to a runner; leasing skips queued steps whose time has not come) and
+`fail_cause`; `runs` gains `deadline_at` (when the run's timeout ends it, from its events: 0 for none,
+and while an approval waits), with a partial index so every server's reaper finds the runs that are
+due in SQL; and `installation_limits` holds the installation's `max_run_timeout`. The events carry
+new fields older servers ignore harmlessly because the pipeline's `requires` already keeps them away:
+`cause` on `step.finished`, `not_before` on `step.queued`. A server of schema 22 or older never
+cancels such a run for its timeout, since it leaves the run alone. The cancel is an event, so of two
+servers that find a run overdue exactly one appends it.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

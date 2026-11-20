@@ -719,6 +719,9 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if ps := e.CheckResources(nr.Pipeline); len(ps) > 0 {
 		return nil, ps
 	}
+	if ps := e.CheckRunLimits(nr.Pipeline); len(ps) > 0 {
+		return nil, ps
+	}
 	// While build pools decide where runs go, older servers, which would
 	// hand any run's steps to any runner, must leave new runs alone.
 	poolRequires := 0
@@ -1001,6 +1004,10 @@ func (e *Engine) Lease(ctx context.Context, r RunnerInfo, wait time.Duration) (*
 		if e.db.pg {
 			left = min(left, recheckEvery)
 		}
+		if due := e.nextRetryDue(e.now().UnixMilli()); due > 0 {
+			// A retry is waiting for its time: look again when it comes.
+			left = min(left, time.Duration(due-e.now().UnixMilli())*time.Millisecond+10*time.Millisecond)
+		}
 		t := time.NewTimer(left)
 		select {
 		case <-ch:
@@ -1055,6 +1062,11 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 	if e.knows(schemaDeploy) {
 		// Deploy and rollback steps go to deploy runners (LeaseDeploy).
 		where += ` AND s.target = ''`
+	}
+	if e.knows(schemaFlow) {
+		// A retry that waits is not handed out before its time.
+		where += ` AND s.not_before <= ?`
+		args = append(args, now.UnixMilli())
 	}
 	where += poolWhere
 	args = append(args, poolArgs...)
@@ -1356,7 +1368,12 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Outputs, p.Tests = nil, nil
 			p.Reason = "the runner refused the step: " + nonEmpty(res.Error, "its accept: section does not allow it")
-			c.emit(StepFinished, p)
+			def := c.st.Pipeline.Step(l.stepID)
+			retry, wait := c.retryDue(def, s, pipeline.CauseInfrastructure, true)
+			c.emitFailure(&p, res, retry)
+			if retry {
+				c.queueRetry(l.stepID, s, wait)
+			}
 		case "lost":
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
@@ -1383,11 +1400,10 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Reason = nonEmpty(res.Error, "the step failed")
 			p.Excerpt = CleanExcerpt(res.Excerpt)
 			def := c.st.Pipeline.Step(l.stepID)
-			retry := def != nil && s.Failures+1 <= def.Retry && !c.st.CancelRequested
-			p.retrying = retry
-			c.emit(StepFinished, p)
+			retry, wait := c.retryDue(def, s, failureCause(res), false)
+			c.emitFailure(&p, res, retry)
 			if retry {
-				c.emit(StepQueued, Payload{Step: l.stepID, Attempt: s.Attempt + 1, Reason: "retry"})
+				c.queueRetry(l.stepID, s, wait)
 			}
 		}
 		c.advance()
@@ -1519,6 +1535,7 @@ func (e *Engine) reaper(ctx context.Context) {
 			e.markAlive()
 			e.reap()
 			e.expireWaits()
+			e.expireRunTimeouts()
 			e.dispatchLocks()
 			if now := e.now(); now.Sub(pruned) >= time.Minute {
 				pruned = now

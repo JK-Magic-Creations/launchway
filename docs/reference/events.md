@@ -61,11 +61,11 @@ oldest schema whose servers understand it.
 
 | Type | Schema | Written when | Main fields in `data` |
 |---|---|---|---|
-| `step.queued` | 1 | a step is ready and waits for a runner; again for each retry, after a lost runner, or when a lease is handed back | `step`, `attempt`, `reason` (`retry`, `requeued after: ...`, `handed back before it started`); for a deploy or rollback step `deploy` (`id`, `action` apply or revert) |
+| `step.queued` | 1 | a step is ready and waits for a runner; again for each retry, after a lost runner, or when a lease is handed back | `step`, `attempt`, `not_before` (a retry that waits: when a runner may be given it, Unix ms), `reason` (`retry`, `retry in 20s`, `requeued after: ...`, `handed back before it started`); for a deploy or rollback step `deploy` (`id`, `action` apply or revert) |
 | `step.skipped` | 1 | a step will not run | `step`, `skip_kind` (`condition`: its `when` did not match; `upstream`: a step it needs failed; `not_needed` or `superseded` for deploy and rollback steps), `reason` |
 | `step.leased` | 1 | a runner takes the step | `step`, `attempt`, `lease`, `runner`, and `inputs`: what the attempt was given apart from secret values (image, container, script, library commit, environment with where each value came from, template parameters, secret references) |
 | `step.started` | 1 | the runner begins running it | `step`, `attempt`, `lease` |
-| `step.finished` | 1 | the attempt ended | `step`, `attempt`, `lease`, `outcome` (`succeeded` or `failed`), `exit_code`, `outputs`, `reason` and `excerpt` (the last lines of output, masked) when it failed; summaries of what it reported: `tests`, `findings`, `sbom`, `artifacts`, and `image` for an image step |
+| `step.finished` | 1 | the attempt ended | `step`, `attempt`, `lease`, `outcome` (`succeeded` or `failed`), `exit_code`, `outputs`, `reason`, `excerpt` (the last lines of output, masked) and `cause` (`exit`, `timeout` or `infrastructure`) when it failed, and `allowed` when its pipeline tolerates the failure (`on_failure: continue`); summaries of what it reported: `tests`, `findings`, `sbom`, `artifacts`, and `image` for an image step |
 | `step.lost` | 1 | the runner holding the step stopped answering and its lease expired | `step`, `attempt`, `reason`; it is then queued again, cancelled, or failed after too many tries |
 | `step.canceled` | 1 | the run was cancelled while the step was waiting or running | `step`, `attempt`, `reason`; may carry the same report summaries as `step.finished` |
 | `step.reset` | 1 | a resume makes a failed, cancelled or upstream-skipped step pending again | `step` |
@@ -247,6 +247,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `token.use` | a request with an API token that is refused: malformed, unknown, revoked or expired, or not allowed by its limits or its owner's role on a call that has no action of its own |
 | `step_resources.set_limits` | `PUT /api/v1/step-resources/limits` (also `launchway step-resources set-limits`); the detail holds the limits before and after |
 | `step_resources.set_default` | `PUT /api/v1/step-resources/defaults/{kind}` (also `launchway step-resources set-default`); the detail holds the default before and after |
+| `run_limits.set` | `PUT /api/v1/run-limits` (also `launchway run-limits set`); the detail holds the limits before and after |
 | `policy.waive` | `POST /api/v1/projects/{name}/waivers`: granting a waiver (also `launchway waivers grant`) |
 | `policy.revoke_waiver` | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` |
 | `webhook.git` | `POST /api/v1/projects/{name}/git-hook`: a Git host's call that made the project poll (`ok`) or could not prove itself (`denied`); ignored events and repeated deliveries are not recorded |

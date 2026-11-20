@@ -66,6 +66,8 @@ var mcpPermissionTable = map[string]mcpRow{
 	// tools that change them, as the API refuses everyone else.
 	"get_step_resources":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"set_step_resource_limits": {map[string]any{"memory_per_thread": "1Gi"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"get_run_limits":           {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"set_run_limits":           {map[string]any{"max_run_timeout": "48h"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"set_step_resource_default": {map[string]any{"kind": "step", "cpu": "1", "memory": "2Gi"}, false,
 		[5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 }

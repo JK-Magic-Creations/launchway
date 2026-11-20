@@ -1362,13 +1362,31 @@ CREATE TABLE step_resource_limits (
 	//     timeout, lanes, the target branch of a pull request, and
 	//     re-running from several steps. A step that failed and was allowed
 	//     to (on_failure: continue) is marked in steps.allowed so that every
-	//     view of the run, including live updates, can say so.
+	//     view of the run, including live updates, can say so. A retry that
+	//     waits is queued with steps.not_before, which leasing respects, and
+	//     a failed attempt's cause is kept in steps.fail_cause. A run's
+	//     timeout is kept as the time it runs out, runs.deadline_at, worked
+	//     out from its events (0: none, or paused while an approval waits)
+	//     so that every server's reaper finds the runs that are due in SQL.
+	//     installation_limits holds the installation's limits on pipelines:
+	//     for now the longest run timeout one may ask for.
 	//     Compatibility: additive: new columns with defaults and, in the
 	//     lanes' case, new tables. Pipelines that use the new keys carry
 	//     "requires": 24 and the events that use new fields carry
 	//     Requires, so older servers leave such runs alone.
 	{additive, `
 ALTER TABLE steps ADD COLUMN allowed INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE steps ADD COLUMN not_before {{BIG}} NOT NULL DEFAULT 0;
+ALTER TABLE steps ADD COLUMN fail_cause TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN deadline_at {{BIG}} NOT NULL DEFAULT 0;
+CREATE INDEX runs_deadline ON runs(deadline_at) WHERE deadline_at > 0;
+
+CREATE TABLE installation_limits (
+  name           TEXT PRIMARY KEY,
+  max_run_timeout {{BIG}} NOT NULL DEFAULT 0,
+  updated_at     {{BIG}} NOT NULL DEFAULT 0,
+  updated_by     TEXT    NOT NULL DEFAULT ''
+);
 `},
 }
 

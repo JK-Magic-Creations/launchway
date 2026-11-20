@@ -746,7 +746,7 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 		x.loopLimit = DefaultMaxLoopMembers
 	}
 	out := &Pipeline{Name: p.Name, On: p.On, Origin: p.Origin, Supersede: p.Supersede, Inputs: p.Inputs, Loops: p.Loops, maxLoop: p.maxLoop,
-		Runner: p.Runner, Requires: p.Requires}
+		Runner: p.Runner, Requires: p.Requires, Timeout: p.Timeout, TimeoutLine: p.TimeoutLine}
 	if !p.Bound() {
 		return nil, Problems{{Message: "the pipeline has loops or input references that have not been bound to a run's values"}}
 	}
@@ -837,7 +837,7 @@ type scope struct {
 	inherit       []string // the steps it needs
 	inheritGroups []string
 	when          *Condition
-	retry         *int
+	retry         *retryPolicy
 	timeout       *Duration
 	each          map[string]string // the loop values of the uses step, and of those around it
 }
@@ -1066,7 +1066,7 @@ func (x *expander) emit(sc *scope) {
 				child.when = whenIn(s.When, sc.prefix)
 			}
 			if s.retrySet {
-				r := s.Retry
+				r := s.retryPolicy()
 				child.retry = &r
 			}
 			if s.timeoutSet {
@@ -1102,7 +1102,7 @@ func (x *expander) emit(sc *scope) {
 			c.When = whenIn(c.When, sc.prefix)
 		}
 		if !s.retrySet && sc.retry != nil && !s.IsApproval() {
-			c.Retry = *sc.retry
+			c.setRetryPolicy(*sc.retry)
 		}
 		if !s.timeoutSet && sc.timeout != nil {
 			c.Timeout = *sc.timeout

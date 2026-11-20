@@ -156,11 +156,7 @@ func (ps *parser) parseAIStep(k, v *yaml.Node, at string) *Step {
 				s.timeoutSet = true
 			}
 		case "retry":
-			s.Retry = ps.int(n, where)
-			s.retrySet = true
-			if s.Retry < 0 || s.Retry > MaxRetry {
-				ps.add(n, where, "retry must be between 0 and %d", MaxRetry)
-			}
+			ps.parseRetry(s, n, where)
 		case "model":
 			a.Model = ps.str(n, where)
 			if !modelNameRe.MatchString(a.Model) {

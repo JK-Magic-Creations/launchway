@@ -210,6 +210,7 @@ steps:
     image: alpine:3.22
     run: "true"
     when: { branch: main }
+    retry: { times: 2, wait: 10s }
     resources: { cpu: 2, memory: 4Gi }
     secrets:
       TOKEN: { store: vault, key: ci/token, field: token }
@@ -354,6 +355,7 @@ var probes = []probe{
 	{table: "secret-ref", path: []any{"steps", "image", "secrets", 0, "secret"}},
 	{table: "secret-ref", path: []any{"steps", "image", "sign", "key"}},
 	{table: "when", path: []any{"steps", "build", "when"}},
+	{table: "retry", path: []any{"steps", "build", "retry"}},
 	{table: "reports", path: []any{"steps", "build", "reports"}},
 	{table: "reports-tests", path: []any{"steps", "build", "reports", "tests"}},
 	{table: "reports-coverage", path: []any{"steps", "build", "reports", "coverage"}},

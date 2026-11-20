@@ -396,6 +396,19 @@ needs an administrator, and every change is audited with the values before and a
 | `GET /api/v1/step-resources/defaults/{kind}` | `signed-in` | — | One kind's default. `404` for a kind that has none. |
 | `PUT /api/v1/step-resources/defaults/{kind}` | `admin` | `step_resources.set_default` | Replaces a kind's default: `{"cpu", "cpu_limit", "memory", "memory_limit"}`. A value left out is not set. `400` for a quantity that does not read, a limit below what is promised, or a value above the installation's limits. |
 
+## Run limits
+
+The installation's limits on pipelines, kept in the database: `max_run_timeout`, the longest
+[`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Anyone signed in may read them; changing
+them needs an administrator, and every change is audited with the values before and after. A pipeline
+whose timeout is longer is refused when a run starts and by `POST /api/v1/validate`, with the limit
+in the message.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/run-limits` | `signed-in` | — | `{"max_run_timeout", "updated_at", "updated_by"}`. An empty `max_run_timeout` is not set: pipelines may ask for up to `720h`. |
+| `PUT /api/v1/run-limits` | `admin` | `run_limits.set` | Replaces the limits: `{"max_run_timeout": "48h"}`; empty or left out removes the limit. `400` for a duration that does not read or is outside `1m` to `720h`. |
+
 ## API tokens
 
 These routes need sign-in on: with sign-in off they answer `404` with `API tokens need sign-in, which is off on this server (auth.mode: none)`.
