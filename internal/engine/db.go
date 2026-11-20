@@ -969,7 +969,85 @@ CREATE INDEX image_refs_run ON image_refs(run_id, step_id, attempt);
 
 ALTER TABLE runners ADD COLUMN features TEXT NOT NULL DEFAULT '';
 `},
+
+	// 16: delivery policies (see policy.go and internal/policy). The
+	//     policy.evaluated event records each decision with the policies,
+	//     the facts and the waivers it was judged from; policy_evaluations
+	//     is derived from those events. policy_sources holds what servers
+	//     loaded from Git sources of policies, so every server judges from
+	//     the same policies; policy_waiver_events is the log of waivers
+	//     granted and revoked, and policy_waivers is derived from it.
+	//     Compatibility: additive. New tables only, which older servers
+	//     never read. A run judged by a policy has a policy.evaluated event
+	//     from its creation (or from the first gate it meets), which gives it
+	//     min_schema 16, so older servers leave it alone rather than run its
+	//     steps without the gates. Findings summaries gain by_tool, which
+	//     older servers ignore, as it only records.
+	{additive, `
+CREATE TABLE policy_sources (
+  name           TEXT PRIMARY KEY,
+  ref            TEXT    NOT NULL DEFAULT '',
+  version        TEXT    NOT NULL DEFAULT '',
+  policies       TEXT    NOT NULL DEFAULT '',
+  error          TEXT    NOT NULL DEFAULT '',
+  loaded_at      {{BIG}} NOT NULL DEFAULT 0,
+  checked_at     {{BIG}} NOT NULL DEFAULT 0,
+  fetch_error    TEXT    NOT NULL DEFAULT '',
+  fetch_error_at {{BIG}} NOT NULL DEFAULT 0,
+  server         TEXT    NOT NULL DEFAULT ''
+);
+
+CREATE TABLE policy_evaluations (
+  run_id      TEXT    NOT NULL,
+  seq         {{BIG}} NOT NULL,
+  project     TEXT    NOT NULL,
+  run_number  INTEGER NOT NULL,
+  point       TEXT    NOT NULL,
+  step_id     TEXT    NOT NULL DEFAULT '',
+  environment TEXT    NOT NULL DEFAULT '',
+  policy      TEXT    NOT NULL,
+  source      TEXT    NOT NULL DEFAULT '',
+  version     TEXT    NOT NULL DEFAULT '',
+  mode        TEXT    NOT NULL DEFAULT '',
+  verdict     TEXT    NOT NULL,
+  at          {{BIG}} NOT NULL,
+  PRIMARY KEY (run_id, seq, policy)
+);
+CREATE INDEX policy_evaluations_policy ON policy_evaluations(policy, at);
+CREATE INDEX policy_evaluations_project ON policy_evaluations(project, at);
+
+CREATE TABLE policy_waiver_events (
+  seq       {{ID}},
+  waiver_id TEXT    NOT NULL,
+  type      TEXT    NOT NULL,
+  at        {{BIG}} NOT NULL,
+  actor     TEXT    NOT NULL,
+  data      TEXT    NOT NULL
+);
+CREATE INDEX policy_waiver_events_waiver ON policy_waiver_events(waiver_id, seq);
+
+CREATE TABLE policy_waivers (
+  id            TEXT PRIMARY KEY,
+  project       TEXT    NOT NULL,
+  policy        TEXT    NOT NULL,
+  rule          TEXT    NOT NULL,
+  run_id        TEXT    NOT NULL DEFAULT '',
+  environment   TEXT    NOT NULL DEFAULT '',
+  finding       TEXT    NOT NULL DEFAULT '',
+  reason        TEXT    NOT NULL,
+  granted_by    TEXT    NOT NULL,
+  granted_at    {{BIG}} NOT NULL,
+  expires_at    {{BIG}} NOT NULL,
+  revoked_by    TEXT    NOT NULL DEFAULT '',
+  revoked_at    {{BIG}} NOT NULL DEFAULT 0,
+  revoke_reason TEXT    NOT NULL DEFAULT ''
+);
+CREATE INDEX policy_waivers_project ON policy_waivers(project, expires_at);
+`},
 }
+
+// schemaPolicy is the schema that brought delivery policies.
+const schemaPolicy = 16
 
 // schemaImages is the schema that brought image steps.
 const schemaImages = 15

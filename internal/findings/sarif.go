@@ -251,7 +251,7 @@ func newParser(dl *jsonscan.Deadline, lim Limits) *parser {
 		lim:      lim,
 		dl:       dl,
 		shrinkAt: max(64<<10, 4*biggest),
-		rep:      Report{Format: FormatSARIF, Tools: []string{}, Findings: []Finding{}, Rules: []Rule{}},
+		rep:      Report{Format: FormatSARIF, Tools: []string{}, Findings: []Finding{}, Rules: []Rule{}, ByTool: map[string]Counts{}},
 		rules:    map[string]*Rule{},
 		tools:    map[string]bool{},
 		fpStats:  map[string]*fpStat{},
@@ -688,20 +688,14 @@ func (p *parser) result(rc *runCtx, v []byte) {
 	secret := rc.secret || (ri != nil && ri.secret) || (ri == nil && mentionsSecret(ruleID))
 	sev, level := severityOf(&r, ri, secret)
 
-	n := &p.rep.Counts
-	n.Total++
-	switch sev {
-	case Critical:
-		n.Critical++
-	case High:
-		n.High++
-	case Medium:
-		n.Medium++
-	case Low:
-		n.Low++
-	default:
-		n.Unknown++
+	p.rep.Counts.add(sev)
+	tool := rc.tool
+	if _, ok := p.rep.ByTool[tool]; !ok && len(p.rep.ByTool) >= MaxToolCounts {
+		tool = OtherTools
 	}
+	tc := p.rep.ByTool[tool]
+	tc.add(sev)
+	p.rep.ByTool[tool] = tc
 	ids := r.PartialFingerprints
 	for _, kv := range r.Fingerprints {
 		ids = append(ids, fpPair{"fingerprints/" + kv.k, kv.v})

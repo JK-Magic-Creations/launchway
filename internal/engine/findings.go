@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -182,9 +183,12 @@ type FindingFile struct {
 // its event.
 type FindingsSummary struct {
 	FindingCounts
-	Tools []string      `json:"tools"`
-	Files []FindingFile `json:"files"`
-	Notes []string      `json:"notes,omitempty"`
+	Tools []string `json:"tools"`
+	// ByTool counts the findings by the tool that reported them (schema
+	// 16; older servers ignore it, as it only records). Policies judge it.
+	ByTool map[string]FindingCounts `json:"by_tool,omitempty"`
+	Files  []FindingFile            `json:"files"`
+	Notes  []string                 `json:"notes,omitempty"`
 	// Stored is how many findings were kept in the findings table.
 	Stored int `json:"stored"`
 }
@@ -309,6 +313,17 @@ func (e *Engine) parseFindings(in *CollectedReports) *parsedFindings {
 		c := rep.Counts
 		s.add(FindingCounts{Total: c.Total, Critical: c.Critical, High: c.High, Medium: c.Medium, Low: c.Low, Unknown: c.Unknown,
 			Suppressed: c.Suppressed, Truncated: rep.Truncated})
+		for tool, tc := range rep.ByTool {
+			if s.ByTool == nil {
+				s.ByTool = map[string]FindingCounts{}
+			}
+			if _, ok := s.ByTool[tool]; !ok && len(s.ByTool) >= findings.MaxToolCounts {
+				tool = findings.OtherTools
+			}
+			x := s.ByTool[tool]
+			x.add(FindingCounts{Total: tc.Total, Critical: tc.Critical, High: tc.High, Medium: tc.Medium, Low: tc.Low, Unknown: tc.Unknown})
+			s.ByTool[tool] = x
+		}
 		for _, r := range rep.Rules {
 			if len(rules) < maxFindingRulesPerAttempt {
 				rules[r.Tool+"\x00"+r.ID] = r
@@ -470,6 +485,7 @@ func (c *cmd) keepFindings(step string, attempt int, f *parsedFindings) (*Findin
 	sum.Files = slices.Clone(f.summary.Files)
 	sum.Notes = slices.Clone(f.summary.Notes)
 	sum.Tools = slices.Clone(f.summary.Tools)
+	sum.ByTool = maps.Clone(f.summary.ByTool)
 	var kept int
 	if err := c.tx.QueryRow(`SELECT COALESCE(SUM(stored), 0) FROM finding_reports WHERE run_id = ?`, c.runID).Scan(&kept); err != nil {
 		return nil, err

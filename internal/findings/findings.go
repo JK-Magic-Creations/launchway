@@ -148,15 +148,42 @@ type Counts struct {
 	Suppressed                                  int
 }
 
+// MaxToolCounts bounds the tools a report counts findings for one by one,
+// and OtherTools is where findings of any more tools are counted.
+const (
+	MaxToolCounts = 50
+	OtherTools    = "(other tools)"
+)
+
+// add counts one finding of a severity.
+func (c *Counts) add(sev Severity) {
+	c.Total++
+	switch sev {
+	case Critical:
+		c.Critical++
+	case High:
+		c.High++
+	case Medium:
+		c.Medium++
+	case Low:
+		c.Low++
+	default:
+		c.Unknown++
+	}
+}
+
 // Report is the result of parsing one file.
 type Report struct {
-	Format    string    // FormatSARIF
-	Tools     []string  // tool names in the order their runs appear, each once
-	Findings  []Finding // at most Limits.MaxFindings, in file order
-	Rules     []Rule    // the rules kept findings refer to, sorted by Tool then ID
-	Counts    Counts    // every finding found, including any beyond MaxFindings
-	Truncated bool      // fewer Findings than Counts.Total, or rules beyond MaxRules were not read
-	Warning   string    // a problem that did not stop parsing
+	Format   string    // FormatSARIF
+	Tools    []string  // tool names in the order their runs appear, each once
+	Findings []Finding // at most Limits.MaxFindings, in file order
+	Rules    []Rule    // the rules kept findings refer to, sorted by Tool then ID
+	Counts   Counts    // every finding found, including any beyond MaxFindings
+	// ByTool counts them by the tool that reported them, for at most
+	// MaxToolCounts tools; the rest are counted under OtherTools.
+	ByTool    map[string]Counts
+	Truncated bool   // fewer Findings than Counts.Total, or rules beyond MaxRules were not read
+	Warning   string // a problem that did not stop parsing
 }
 
 // Limits bounds the work and memory one parse may use.
