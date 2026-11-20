@@ -5,9 +5,10 @@
 #
 #   packaging/release/release.sh VERSION OUTDIR
 #
-# Each step is a script of its own (build.sh, packages.sh, finish.sh); see them for the
-# environment they read. Container images are built separately (images.sh), as they need a
-# registry to sign and attach to.
+# Each step is a script of its own (build.sh, packages.sh, charts.sh, finish.sh); see them for
+# the environment they read. RELEASE_PLATFORMS (os/arch pairs, space-separated) limits the
+# platforms. Container images are built separately (images.sh), as they need a registry to sign
+# and attach to.
 set -eu
 
 [ $# -eq 2 ] || { echo "usage: $0 VERSION OUTDIR" >&2; exit 2; }
@@ -19,8 +20,13 @@ rm -rf "$out"
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
 
-packaging/release/build.sh "$version" "$out"
-packaging/release/packages.sh "$version" "$out"
+# RELEASE_PLATFORMS narrows the build (tests build linux/amd64 only); default: every platform.
+platforms=${RELEASE_PLATFORMS:-linux/amd64 linux/arm64 darwin/amd64 darwin/arm64}
+# shellcheck disable=SC2086 # a list of platforms
+packaging/release/build.sh "$version" "$out" $platforms
+arches=$(printf '%s\n' $platforms | sed -n 's#^linux/##p' | tr '\n' ' ')
+# shellcheck disable=SC2086
+[ -z "$arches" ] || packaging/release/packages.sh "$version" "$out" $arches
 
 # The install script names its release, so that `sh install.sh` without --version installs the
 # release it came with.

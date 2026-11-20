@@ -101,8 +101,10 @@ cp "$key" "$repo/.signing.asc"
 	export GNUPGHOME=$(mktemp -d)
 	gpg --batch --quiet --import /key.asc
 	fpr=$(gpg --batch --with-colons --list-secret-keys | awk -F: "\$1 == \"fpr\" { print \$10; exit }")
+	set --
+	for f in x86_64/*.rpm aarch64/*.rpm; do [ ! -f "$f" ] || set -- "$@" "$f"; done
 	rpmsign --define "_gpg_name $fpr" --define "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase \"\"" \
-		--addsign x86_64/*.rpm aarch64/*.rpm >/dev/null
+		--addsign "$@" >/dev/null
 	createrepo_c -q --simple-md-filenames --set-timestamp-to-revision --revision 1 .'
 rm -f "$repo/.signing.asc"
 sign --armor --detach-sign --output "$repo/yum/repodata/repomd.xml.asc" "$repo/yum/repodata/repomd.xml"
