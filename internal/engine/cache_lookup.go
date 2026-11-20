@@ -174,7 +174,8 @@ func (e *Engine) OpenCache(ctx context.Context, leaseID, id string, offset int64
 // store, or not an archive Launchway made. Entries are never changed, so
 // without this a damaged one would be found, fail and be found again until
 // it fell idle. Only an entry the lease's step could restore may be
-// discarded, and only the run's own project's.
+// discarded, only the run's own project's, and only one of the scope the run
+// writes to.
 func (e *Engine) DiscardCache(leaseID, id, why string) error {
 	row, err := cacheRow(e.db, id)
 	if err != nil {
@@ -189,6 +190,12 @@ func (e *Engine) DiscardCache(leaseID, id, why string) error {
 	}
 	if row.Project != cc.st.Project || !cc.scopes.canRead(row.Scope) || row.Status != cacheKept {
 		return fmt.Errorf("%w: cache entry %s", ErrNotFound, id)
+	}
+	// Reading an entry does not give the right to end it: a pull-request
+	// run restores the default branch's entries, and must not be able to
+	// remove them, only its own.
+	if row.Scope != cc.scopes.write {
+		return fmt.Errorf("%w: this run may not end the cache entry %s, which is in the %s scope; a run ends only entries of the scope it saves to", ErrForbidden, id, row.Scope)
 	}
 	e.log.Warn("a runner could not restore a cache entry and it is ended", "project", row.Project, "entry", id, "why", why)
 	return e.endCacheByID(id, "runner", "could not be restored: "+cleanText(why, 150))
