@@ -25,7 +25,8 @@
 set -eu
 
 [ $# -eq 2 ] || { echo "usage: $0 VERSION OUTDIR" >&2; exit 2; }
-version=$1 out=$2
+version=$1
+out=$(cd "$2" && pwd)
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
 tools=$root/bin/tools
@@ -45,20 +46,23 @@ for f in "$out"/launchway-*; do
 	case $f in *.cdx.json | *.service | *.conf) continue ;; esac
 	[ -f "$f" ] || continue
 	name=$(basename "$f")
-	src=file:$f
+	# syft derives references from the path it is given, so it is always given a relative one.
+	scandir=$out
+	src=file:./$name
 	case $name in
 	*.deb | *.rpm)
 		# syft does not look inside a package's payload; the package holds the release binary
 		# (and text files), so its SBOM is that of a directory holding the same binary.
 		case $name in *amd64* | *x86_64*) a=amd64 ;; *) a=arm64 ;; esac
-		pkgdir=$(mktemp -d)
-		cp "$out/launchway-${version#v}-linux-$a" "$pkgdir/launchway"
-		src=dir:$pkgdir
+		scandir=$(mktemp -d)
+		mkdir "$scandir/package"
+		cp "$out/launchway-${version#v}-linux-$a" "$scandir/package/launchway"
+		src=dir:./package
 		;;
 	esac
-	"$SYFT" scan "$src" --quiet --source-name "$name" --source-version "$version" \
-		-o "cyclonedx-json=$f.cdx.tmp"
-	case $src in dir:*) rm -rf "${src#dir:}" ;; esac
+	(cd "$scandir" && "$SYFT" scan "$src" --quiet --source-name "$name" --source-version "$version" \
+		-o "cyclonedx-json=$f.cdx.tmp")
+	[ "$scandir" = "$out" ] || rm -rf "$scandir"
 	d=$(sha256sum "$f" | cut -c1-32)
 	uuid=$(printf '%s' "$d" | sed 's/^\(.\{8\}\)\(.\{4\}\)\(.\{4\}\)\(.\{4\}\)\(.\{12\}\)$/\1-\2-\3-\4-\5/')
 	sed -e "s/\"serialNumber\":\"urn:uuid:[0-9a-f-]*\"/\"serialNumber\":\"urn:uuid:$uuid\"/" \
