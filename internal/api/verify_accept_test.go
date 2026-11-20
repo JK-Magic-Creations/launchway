@@ -154,6 +154,10 @@ func TestServerOffersVerificationsOnlyToRunnersThatAcceptThem(t *testing.T) {
 	if s := e.step(t); s.Status != engine.StepQueuedS {
 		t.Fatalf("the step: %+v", s)
 	}
+	// The step waits, and the run says why instead of leaving it unexplained.
+	if d, err := e.eng.GetRun(e.run); err != nil || !strings.Contains(d.PoolHint, "accepts it") || !strings.Contains(d.PoolHint, "accept.") {
+		t.Fatalf("the run does not say why its verification waits: %q %v", d.PoolHint, err)
+	}
 	info := engine.RunnerInfo{ID: "d-ok", Name: "ok", Targets: []string{"homelab"}, Features: "verify",
 		Accept: &accept.Config{Projects: []string{"shop"}, Environments: []string{"prod"}}}
 	if j, err := c.LeaseVerify(ctx, info, 0); err != nil || j == nil || j.Verify == nil {
