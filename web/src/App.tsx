@@ -76,6 +76,7 @@ function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
         <strong>Launchway</strong>
       </header>
       <nav className={"nav" + (open ? " nav-open" : "")} id="menu" aria-label="Main">
+        <div className="nav-in">
         <a href="/" onClick={onLink} className="brand">
           <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2563eb" /><path d="M8 22l8-12 8 12" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <span>Launchway</span>
@@ -84,6 +85,7 @@ function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
         <div className="nav-foot">
           <UserMenu me={me} />
           {version && <span>Launchway {version}</span>}
+        </div>
         </div>
       </nav>
       <main className="main" id="main" tabIndex={-1}>

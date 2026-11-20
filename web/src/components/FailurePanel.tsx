@@ -12,7 +12,7 @@ export function FailurePanel({ failure, actions }: { failure: Failure; actions: 
       {failure.others > 0 && <p className="faint">{failure.others === 1 ? "One more step also failed." : `${failure.others} more steps also failed.`} The first one is explained here.</p>}
       <h3 className="h-sm">What you can do</h3>
       <ul className="explain-advice">{failure.advice.map((a) => <li key={a}>{a}</li>)}</ul>
-      <p className="faint">Steps that succeeded are kept: resuming runs only what did not finish, at the same commit.</p>
+      <p className="faint">Running again from the failed step keeps the steps that passed and stays in this run. Running everything again starts a new run at the same commit.</p>
       {failure.excerpt && (
         <figure className="excerpt">
           <figcaption>The last lines {failure.step} wrote{failure.exitCode !== null ? ` before exit code ${failure.exitCode}` : ""}:</figcaption>

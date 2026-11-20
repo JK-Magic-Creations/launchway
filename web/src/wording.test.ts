@@ -9,6 +9,7 @@ const FORBIDDEN = [
   /restart\s+it\b/i,
   /edit\s+(the\s+|its\s+)?(server's\s+)?config(uration)?(\s+file)?\b/i,
   /add\s+\S+\s+to\s+`?launchway\.yaml/i,
+  /ai\.models/i,
   /put these lines in the configuration file/i,
 ];
 

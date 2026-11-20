@@ -265,7 +265,7 @@ export function RunPage({ id }: { id: string }) {
           {mayOperate && !done && !run.cancel_requested && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
-          {mayOperate && !run.needs_newer_server && (run.status === "failed" || run.status === "canceled") && (
+          {mayOperate && !run.needs_newer_server && run.status === "canceled" && (
             <button type="button" className="btn btn-primary" disabled={busy}
               title="Runs again, in this run, only the steps that did not succeed. To start a new run from a step of your choice, open the step and choose Re-run from this step."
               onClick={() => act(async () => { await api.resume(run.id); if (firstFailed) select(firstFailed.id); })}>
@@ -351,9 +351,10 @@ export function RunPage({ id }: { id: string }) {
         <FailurePanel failure={failure} actions={<>
           {mayOperate && !run.needs_newer_server && (
             <button type="button" className="btn btn-primary" disabled={busy}
-              onClick={() => act(async () => { await api.resume(run.id); select(firstFailed.id); })}>Run it again from {firstFailed.id}</button>
+              title="Runs again, in this same run, only the steps that did not succeed. The steps that passed are kept."
+              onClick={() => act(async () => { await api.resume(run.id); select(firstFailed.id); })}>Run again from the failed step</button>
           )}
-          {mayRerun && <RerunButton run={run} step={firstFailed} />}
+          {mayRerun && run.step_list.length > 1 && <RerunButton run={run} step={run.step_list[0]} label="Run everything again" />}
           <button type="button" className="btn btn-sm" onClick={() => { select(firstFailed.id); setTab("graph"); }}>Open the log of {firstFailed.id}</button>
           {firstFailed.policy_blocked && <button type="button" className="btn btn-sm" onClick={() => setTab("policy")}>See the policy decision</button>}
         </>} />
@@ -427,6 +428,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   const [lines, setLines] = useState<LogLine[]>([]);
   const [loaded, setLoaded] = useState(false);
   const following = attempt === step.attempt;
+  // The what-went-wrong panel above shows the last lines of the first failed step.
+  const excerptInPanel = run.status === "failed" && run.step_list.find((x) => x.status === "failed")?.id === step.id;
 
   // Follow the newest attempt when a retry starts.
   useEffect(() => { setAttempt(step.attempt); }, [step.id, step.attempt]);
@@ -515,7 +518,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
               ))}
             </div>
           )}
-          {rerun && <RerunButton run={run} step={step} />}
+          {rerun && step.status !== "failed" && <RerunButton run={run} step={step} />}
         </div>
       </div>
       {reused && <ReusedNote run={run} step={step} />}
@@ -541,10 +544,10 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           <button type="button" className="btn btn-sm" onClick={showPolicy}>See the decision</button>
         </div>
       )}
-      {step.status === "failed" && following && step.kind !== "verify" && (step.excerpt || (step.error && !/^exit code \d+$/.test(step.error))) && (
+      {step.status === "failed" && following && step.kind !== "verify" && ((step.excerpt && !excerptInPanel) || (step.error && !/^exit code \d+$/.test(step.error))) && (
         <div className="callout callout-bad">
           {step.error && !/^exit code \d+$/.test(step.error) && <div>{step.error}</div>}
-          {step.excerpt && <Excerpt step={step} />}
+          {step.excerpt && !excerptInPanel && <Excerpt step={step} />}
         </div>
       )}
       {step.status === "failed" && following && !reused && <ExplainFailure run={run} step={step} />}
@@ -915,12 +918,12 @@ function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }
 
 // RerunButton offers a new run of a finished run from the step shown, with
 // a preview of what runs again and what is reused.
-function RerunButton({ run, step }: { run: RunDetail; step: StepView }) {
+function RerunButton({ run, step, label = "Re-run from this step" }: { run: RunDetail; step: StepView; label?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" className="btn btn-sm" onClick={() => setOpen(true)}
-        title={`A new run at the same commit: ${step.id} and the steps after it run again; the others are reused.`}>Re-run from this step</button>
+        title={`A new run at the same commit: ${step.id} and the steps after it run again; the others are reused.`}>{label}</button>
       {open && <RerunDialog run={run} step={step} onClose={() => setOpen(false)} />}
     </>
   );
