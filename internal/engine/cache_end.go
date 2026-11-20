@@ -11,16 +11,40 @@ import (
 
 // ---- ending entries ----
 
+// lockCacheUsage takes a project's usage row, which every change of the
+// project's entries must do before it touches an entry: the usage row first,
+// then entries, in every transaction (CommitCache and BeginCache through
+// reserveCacheBytes, the pruner, deletion), so that servers working on the
+// same project at once wait for each other in one order and cannot deadlock.
+func lockCacheUsage(tx *txx, project string) error {
+	if _, err := tx.Exec(`INSERT INTO cache_usage(project, bytes) VALUES(?, 0) ON CONFLICT(project) DO NOTHING`, project); err != nil {
+		return err
+	}
+	_, err := tx.Exec(`UPDATE cache_usage SET bytes = bytes WHERE project = ?`, project)
+	return err
+}
+
 // endKeptCache ends a kept entry and gives its bytes back to its project's
 // usage. It is conditional on the entry being kept, so of several servers
 // ending one entry exactly one does, and the bytes are given back once. It
-// returns how many entries it ended (0 or 1) and their size. The caller has
-// taken the project's usage row (see CommitCache).
+// returns how many entries it ended (0 or 1) and their size. It takes the
+// project's usage row before the entry's (see lockCacheUsage), which is
+// harmless for a caller that holds it already.
 func endKeptCache(tx *txx, id, by, note string, now int64) (int, int64, error) {
 	var project string
+	err := tx.QueryRow(`SELECT project FROM caches WHERE id = ?`, id).Scan(&project)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, 0, nil
+	}
+	if err != nil {
+		return 0, 0, err
+	}
+	if err := lockCacheUsage(tx, project); err != nil {
+		return 0, 0, err
+	}
 	var bytes int64
-	err := tx.QueryRow(`UPDATE caches SET status = ?, ended_at = ?, ended_by = ? WHERE id = ? AND status = ? RETURNING project, bytes`,
-		cacheEnded, now, clipNote(by, note), id, cacheKept).Scan(&project, &bytes)
+	err = tx.QueryRow(`UPDATE caches SET status = ?, ended_at = ?, ended_by = ? WHERE id = ? AND status = ? RETURNING bytes`,
+		cacheEnded, now, clipNote(by, note), id, cacheKept).Scan(&bytes)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, 0, nil
 	}
@@ -71,10 +95,7 @@ const cacheVictimSQL = `SELECT id FROM caches WHERE project = ? AND status = ?
 // cacheVictimSQL) until they fit within max. It says how many it ended and
 // how many bytes they held, and whether the bytes now fit.
 func reserveCacheBytes(tx *txx, project string, bytes, max, now int64) (evicted int, freed int64, fits bool, err error) {
-	// Every transaction that changes a project's usage and an entry
-	// takes the usage row first, so that servers doing both at once
-	// cannot wait for each other.
-	if _, err := tx.Exec(`INSERT INTO cache_usage(project, bytes) VALUES(?, 0) ON CONFLICT(project) DO NOTHING`, project); err != nil {
+	if err := lockCacheUsage(tx, project); err != nil {
 		return 0, 0, false, err
 	}
 	for {
@@ -105,7 +126,7 @@ func reserveCacheBytes(tx *txx, project string, bytes, max, now int64) (evicted 
 // endCacheTx ends an entry in whichever of uploading or kept it is, and
 // gives its bytes back to the project's usage either way.
 func endCacheTx(tx *txx, r *cacheRowT, by, note string, now int64) (bool, error) {
-	if _, err := tx.Exec(`INSERT INTO cache_usage(project, bytes) VALUES(?, 0) ON CONFLICT(project) DO NOTHING`, r.Project); err != nil {
+	if err := lockCacheUsage(tx, r.Project); err != nil {
 		return false, err
 	}
 	n, _, err := endKeptCache(tx, r.ID, by, note, now)

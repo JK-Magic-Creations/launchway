@@ -66,7 +66,7 @@ func (e *Engine) expireCaches(now int64) error {
 		}
 		for _, id := range list {
 			err := e.artifactTx(func(tx *txx, now int64) error {
-				if _, err := tx.Exec(`INSERT INTO cache_usage(project, bytes) VALUES(?, 0) ON CONFLICT(project) DO NOTHING`, project); err != nil {
+				if err := lockCacheUsage(tx, project); err != nil {
 					return err
 				}
 				k, _, err := endKeptCache(tx, id, "", fmt.Sprintf("not used for %d days", int(lim.idle/(24*time.Hour))), now)
@@ -138,6 +138,9 @@ func (e *Engine) trimCaches() error {
 			continue
 		}
 		err = e.artifactTx(func(tx *txx, now int64) error {
+			if err := lockCacheUsage(tx, u.project); err != nil {
+				return err
+			}
 			var used int64
 			if err := tx.QueryRow(`SELECT bytes FROM cache_usage WHERE project = ?`, u.project).Scan(&used); err != nil {
 				return err
