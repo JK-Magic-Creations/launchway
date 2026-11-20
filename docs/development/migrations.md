@@ -152,8 +152,7 @@ Rolling back from schema 16 to 15:
 During a rolling upgrade, configure policies only once every server runs schema 16: until then an
 older server could start a deploy that a newer one would have judged.
 
-Schema 17 brings the built-in blob store: artifacts kept in the
-database (`blob_uploads`, `blob_parts`, `blob_chunks`, `blob_objects`, which are
+Schema 17 brings the built-in blob store: artifacts kept in the database (`blob_uploads`, `blob_parts`, `blob_chunks`, `blob_objects`, which are
 `blobstore.DatabaseSchema` word for word; `TestBlobSchemaIsFrozen` fails if that text changes), and
 `artifact_blobs.store`, the kind of store each blob was written to (`''` before 17). It is
 additive and adds no event type. With no store configured, a server of 17 on PostgreSQL uses the
@@ -165,8 +164,14 @@ artifacts, created by a server using the database store, carries `"requires": 17
 steps or keys that control a rollout", the only words they have for a pipeline's `requires`), list
 and show it, and leave it alone (`TestOlderBuildLeavesDatabaseStoreRunsAlone`). `artifacts.store:
 database` and `artifacts.database` are settings older servers refuse: the Helm chart writes them
-only when set. Rolling back, and copying artifacts into a store an older release knows first, is
-described in [docs/artifacts.md](../artifacts.md#upgrading-to-schema-17-and-rolling-back).
+only when set.
+
+Rolling back from schema 17 to 16 is described in full in
+[docs/artifacts.md](../artifacts.md#upgrading-to-schema-17-and-rolling-back). In short: take
+`artifacts.store: database` and `artifacts.database` out of the configuration; to keep artifacts,
+copy them into a store schema 16 knows first (`launchway blobs copy --from database --to s3`, or a
+shared directory) and switch to it; then roll the servers back. Runs at `min_schema` 17 still open
+wait for a schema-17 server. The new tables and column are ignored by schema 16.
 
 Schema 18 brings richer test results, test attachments, coverage and HTML reports. It is additive:
 three columns with defaults on `test_cases` (`tags`, `variant`, `extra`), two new tables
@@ -197,6 +202,16 @@ Rolling back from schema 18 to 17:
    expire as usual; the older UI shows them on the Artifacts tab only.
 4. Runners may be rolled back in any order; an older runner simply never says `coverage`, so a
    step that declares coverage waits for a newer one.
+
+Attachments and HTML reports are ordinary artifacts, so they are kept wherever the server keeps
+artifacts, the database store included (`TestReportsInTheDatabaseStore`). Rolling back to 17 leaves
+them readable there; going further back, to 16, they are copied with the other artifacts as above.
+
+A run records the highest schema any of its features needs: a policy governing it 16, artifacts
+kept in the database store 17, attachments, coverage or HTML reports 18
+(`TestRunMinSchemaAcrossFeatures`). A database of schema 16 is migrated to 18 in one start, and a
+build of 16 started against it again runs, says once that the database is newer, and leaves the
+runs of 17 and 18 alone (`TestUpgradeFromSchema16AndBack`).
 
 ## Writing a migration
 
