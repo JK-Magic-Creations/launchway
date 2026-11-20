@@ -223,3 +223,13 @@ func setCacheValue(caches []*Cache, part, v string) {
 		}
 	}
 }
+
+// parseKept reads what a step keeps after it runs: artifacts, for the run's
+// later steps, or cache, for later runs.
+func (ps *parser) parseKept(s *Step, key string, v *yaml.Node, where string) {
+	if key == "cache" {
+		s.Cache = ps.parseCaches(v, where)
+		return
+	}
+	s.Artifacts = ps.parseArtifacts(v, where)
+}

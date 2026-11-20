@@ -589,8 +589,8 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		if in := inputs[v.ID]; in != nil {
 			v.Inputs = in
 		}
-		if s := st.Steps[v.ID]; s != nil && len(s.Caches) > 0 {
-			v.Caches = s.Caches
+		if s := st.Steps[v.ID]; s != nil && s.Evidence != nil && len(s.Evidence.Caches) > 0 {
+			v.Caches = s.Evidence.Caches
 		}
 		d.StepList = append(d.StepList, *v)
 	}

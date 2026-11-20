@@ -1,4 +1,4 @@
-import { type CacheResult } from "../api";
+import { type CacheResult } from "../cacheApi";
 import { bytes } from "./Security";
 import { Link, Mono } from "./ui";
 import "../caches.css";

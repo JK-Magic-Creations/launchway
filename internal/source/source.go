@@ -143,6 +143,7 @@ func NewManagerWithLibraries(eng *engine.Engine, dataDir string, projects []Proj
 		log = slog.Default()
 	}
 	m := &Manager{eng: eng, log: log, dataDir: dataDir, projects: map[string]*project{}}
+	eng.SetDefaultBranch(m.defaultBranchOf) // which entries of the build caches are the default scope
 	if err := m.addLibraries(libraries); err != nil {
 		return nil, err
 	}

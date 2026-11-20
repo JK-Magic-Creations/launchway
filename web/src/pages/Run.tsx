@@ -26,6 +26,7 @@ import { useRunVerifications, VerificationPanel, VerificationsTab, VerificationS
 import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
 import { CacheResults } from "../components/CacheResults";
+import { Excerpt } from "../components/Excerpt";
 
 // Stands for the run until it is loaded, so hooks run in the same order.
 const EMPTY_RUN = { id: "", step_list: [] } as unknown as RunDetail;
@@ -968,17 +969,6 @@ function RerunDialog({ run, step, onClose }: { run: RunDetail; step: StepView; o
         </div>
       </form>
     </dialog>
-  );
-}
-
-// Excerpt shows the last lines a failed step wrote, as the runner kept them
-// (secrets masked).
-function Excerpt({ step }: { step: StepView }) {
-  return (
-    <figure className="excerpt">
-      <figcaption>The last lines {step.id} wrote{step.exit_code !== null && step.exit_code !== undefined ? ` before exit code ${step.exit_code}` : ""}:</figcaption>
-      <pre>{step.excerpt}</pre>
-    </figure>
   );
 }
 

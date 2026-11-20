@@ -165,3 +165,16 @@ func namesGitDir(glob string) bool {
 	}
 	return false
 }
+
+// requiresNewer is the schema a pipeline needs, given the one the older
+// features it uses need: raised for step resources and build caches, which
+// servers older than they are would run without.
+func (p *Pipeline) requiresNewer(cur int) int {
+	if p.UsesSchemaResources() {
+		cur = max(cur, SchemaResources)
+	}
+	if p.UsesSchemaCache() {
+		cur = max(cur, SchemaCache)
+	}
+	return cur
+}

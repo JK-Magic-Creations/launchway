@@ -148,8 +148,6 @@ type StepState struct {
 	// its test totals, findings, SBOM and image, as in the event that
 	// ended it.
 	Evidence *StepEvidence
-	// Caches is what the latest attempt's caches did (schema 25).
-	Caches []CacheResult
 	// Ver, for a verify step, is its verification once started (schema
 	// 19); AI, for an ai step, what its last call used.
 	Ver *VerifyState
@@ -163,6 +161,7 @@ type StepEvidence struct {
 	Findings *FindingsSummary
 	SBOM     *SBOMSummary
 	Image    *ImageRecord
+	Caches   []CacheResult // what the attempt's build caches did (schema 25)
 }
 
 // What a waiting deploy or rollback step waits for.
@@ -497,7 +496,6 @@ func (st *RunState) apply(ev Event) {
 		s.Outputs = nil
 		s.Excerpt = ""
 		s.Evidence = nil
-		s.Caches = nil
 
 	case StepSkipped:
 		s.Status = StepSkippedS
@@ -548,7 +546,6 @@ func (st *RunState) apply(ev Event) {
 		s.FinishedAt = ev.At
 		s.LeaseID = ""
 		s.Evidence = evidenceOf(p)
-		s.Caches = p.Caches
 		if p.AI != nil {
 			s.AI = p.AI
 		}
@@ -567,7 +564,6 @@ func (st *RunState) apply(ev Event) {
 		if e := evidenceOf(p); e != nil {
 			s.Evidence = e
 		}
-		s.Caches = p.Caches
 
 	case StepReset:
 		s.Status = StepPending
@@ -577,7 +573,7 @@ func (st *RunState) apply(ev Event) {
 		s.StartedAt, s.FinishedAt = 0, 0
 		s.clearDecision()
 		s.WaitKind, s.Dep = "", nil
-		s.Gate, s.Evidence, s.Caches = nil, nil, nil
+		s.Gate, s.Evidence = nil, nil
 		s.Ver, s.AI = nil, nil
 
 	case StepWaiting:
@@ -639,8 +635,8 @@ func (st *RunState) apply(ev Event) {
 // evidenceOf is what an event that ends a step attempt says it reported,
 // or nil.
 func evidenceOf(p Payload) *StepEvidence {
-	if p.Tests == nil && p.Findings == nil && p.SBOM == nil && p.Image == nil {
+	if p.Tests == nil && p.Findings == nil && p.SBOM == nil && p.Image == nil && len(p.Caches) == 0 {
 		return nil
 	}
-	return &StepEvidence{Tests: p.Tests, Findings: p.Findings, SBOM: p.SBOM, Image: p.Image}
+	return &StepEvidence{Tests: p.Tests, Findings: p.Findings, SBOM: p.SBOM, Image: p.Image, Caches: p.Caches}
 }

@@ -242,14 +242,6 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	// Whose cache entries are the default scope depends on each project's
-	// default branch, which only the source manager knows.
-	eng.SetDefaultBranch(func(name string) string {
-		if p, err := mgr.Get(name); err == nil {
-			return p.DefaultBranch
-		}
-		return ""
-	})
 	token, err := config.RunnerToken(cfg.Data, eng)
 	if err != nil {
 		return err
@@ -908,34 +900,6 @@ func k8sFlags(fs *flag.FlagSet) *executor.KubernetesOptions {
 // settings, the same as runner.secrets in the server's configuration.
 func secretsFlag(fs *flag.FlagSet) *string {
 	return fs.String("secrets-config", "", "YAML file of secret stores")
-}
-
-// localSecrets is openSecrets for 'launchway run' on your own machine, where
-// your environment is yours to use: it adds the env store. A server or
-// shared runner must never do this, or any pipeline could read the runner's
-// environment.
-func localSecrets(file string) (*secrets.Resolver, error) {
-	r, err := openSecrets(file)
-	if err != nil {
-		return nil, err
-	}
-	return r.AddLocalEnv(), nil
-}
-
-// openSecrets reads and checks the secret stores in file, if one is given.
-func openSecrets(file string) (*secrets.Resolver, error) {
-	if file == "" {
-		return secrets.NewResolver(), nil
-	}
-	c, err := secrets.LoadConfig(file)
-	if err != nil {
-		return nil, err
-	}
-	r, err := secrets.Open(c)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
-	}
-	return r, nil
 }
 
 // checkExecutor lets executors that can verify their setup do so at start-up.

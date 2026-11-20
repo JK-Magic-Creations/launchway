@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, type CacheEntry, type CacheList } from "../api";
+import { cacheApi, type CacheEntry, type CacheList } from "../cacheApi";
 import { useMe, canOperate } from "../auth";
 import { ago, clock } from "../format";
 import { useNow } from "../live";
@@ -49,7 +49,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
   const now = useNow(5000);
 
   const load = useCallback((background: boolean) => {
-    api.caches(name, background).then((l) => { setList(l); setError(null); }).catch(setError);
+    cacheApi.list(name, background).then((l) => { setList(l); setError(null); }).catch(setError);
   }, [name]);
   useEffect(() => {
     load(false);
@@ -82,11 +82,11 @@ export function ProjectCachesPage({ name }: { name: string }) {
   };
   const deleteEntry = (e: CacheEntry) => {
     if (!window.confirm(`End the ${e.name} entry ${shortKey(e.key)}… (${e.scope}, ${bytes(e.bytes)})?\n\nThe next run that wanted it starts without it, and saves it again.`)) return;
-    act(() => api.deleteCache(name, e.id));
+    act(() => cacheApi.deleteEntry(name, e.id));
   };
   const deleteName = (n: string, count: number) => {
     if (!window.confirm(`End all ${count} ${count === 1 ? "entry" : "entries"} of the cache ${n}, in every scope and key?\n\nThe next run that wanted one starts without it, and saves it again.`)) return;
-    act(() => api.deleteCachesNamed(name, n));
+    act(() => cacheApi.deleteCachesNamed(name, n));
   };
   const sortBy = (col: Column) => setSort((s) => (s.col === col ? { col, desc: !s.desc } : { col, desc: col !== "name" && col !== "scope" && col !== "platform" }));
 

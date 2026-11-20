@@ -175,12 +175,7 @@ func Parse(data []byte) (*Pipeline, error) {
 	if p.UsesSchemaPools() {
 		p.Requires = SchemaPools
 	}
-	if p.UsesSchemaResources() {
-		p.Requires = SchemaResources
-	}
-	if p.UsesSchemaCache() {
-		p.Requires = max(p.Requires, SchemaCache)
-	}
+	p.Requires = p.requiresNewer(p.Requires) // step resources, build caches
 	return p, nil
 }
 
@@ -462,10 +457,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			case "resources":
 				s.Resources = ps.parseResources(v2, where)
 				s.resourcesLine = v2.Line
-			case "artifacts":
-				s.Artifacts = ps.parseArtifacts(v2, where)
-			case "cache":
-				s.Cache = ps.parseCaches(v2, where)
+			case "artifacts", "cache":
+				ps.parseKept(s, k2.Value, v2, where) // files for the run's later steps, or caches for later runs
 			case "fetch":
 				s.Fetch = ps.parseFetch(v2, where)
 			case "uses":
