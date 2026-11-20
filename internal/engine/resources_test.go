@@ -349,3 +349,25 @@ func TestUpgradedInstallationIsSeededWithNothingSized(t *testing.T) {
 		t.Fatalf("a kind with no default: %v", err)
 	}
 }
+
+// The runner is told which of a container's CPU and memory a step asked for,
+// so that it fails the step for those and only lowers the defaults.
+func TestContainersSayWhichOfCPUAndMemoryWereAskedFor(t *testing.T) {
+	for _, c := range []struct {
+		name, src   string
+		cpu, memory bool
+	}{
+		{"nothing", "pipeline: p\nsteps:\n  a: { image: x, run: a }\n", false, false},
+		{"memory", "pipeline: p\nsteps:\n  a: { image: x, run: a, resources: { memory: 3Gi } }\n", false, true},
+		{"cpu", "pipeline: p\nsteps:\n  a: { image: x, run: a, resources: { cpu_limit: 2 } }\n", true, false},
+		{"both", "pipeline: p\nsteps:\n  a: { image: x, run: a, resources: { cpu: 1, memory_limit: 3Gi } }\n", true, true},
+		{"the container's own", "pipeline: p\ncontainers:\n  c: { image: x, memory: 1Gi }\nsteps:\n  a: { container: c, run: a }\n", false, true},
+	} {
+		e, _ := newEngine(t)
+		create(t, e, c.src, Trigger{Event: "manual"})
+		ct := firstContainer(t, take(t, e))
+		if ct.ExplicitCPU != c.cpu || ct.ExplicitMemory != c.memory {
+			t.Errorf("%s: explicit cpu %v memory %v, want %v %v", c.name, ct.ExplicitCPU, ct.ExplicitMemory, c.cpu, c.memory)
+		}
+	}
+}

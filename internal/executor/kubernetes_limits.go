@@ -3,6 +3,8 @@ package executor
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,46 +42,135 @@ type podAsk struct {
 }
 
 // checkResources fails, naming the limit, if the containers ask for more than
-// is allowed. A shortage that may pass (other pods use the quota now) is an
-// infrastructure error: the step is run again later.
-func (k *Kubernetes) checkResources(ctx context.Context, specs []ContainerSpec, sys func(string, ...any)) error {
+// is allowed, and returns the containers as the pod is made from them. What a
+// step or a container asked for is held to the limits: asking for more fails
+// the step. What the server chose on its own, the installation's defaults,
+// is never the step's fault: it is lowered to what the runner's operator and
+// the namespace's LimitRanges allow a container, and one line says so (see
+// limitDefaults). A shortage that may pass (other pods use the quota now) is
+// an infrastructure error: the step is run again later.
+func (k *Kubernetes) checkResources(ctx context.Context, specs []ContainerSpec, sys func(string, ...any)) ([]ContainerSpec, error) {
+	var lrs []corev1.LimitRange
+	ns := k.o.Namespace
+	if k.client != nil {
+		list, err := k.client.CoreV1().LimitRanges(ns).List(ctx, metav1.ListOptions{})
+		switch {
+		case err == nil:
+			lrs = list.Items
+		case apierrors.IsForbidden(err):
+			k.noteOnce("limitranges", sys, "The runner may not read the namespace's LimitRanges, so it cannot check what the containers ask for against them; "+
+				"the cluster will. Set kubernetes.max_memory and kubernetes.max_cpu to have the runner check, or let its service account list limitranges")
+		case ctx.Err() != nil:
+			return nil, ctx.Err()
+		default:
+			return nil, infra("reading the LimitRanges of namespace %s: %v", ns, err)
+		}
+	}
+	specs = k.limitDefaults(specs, lrs, sys)
 	asks := []podAsk{{name: helperName, image: k.o.HelperImage, res: k.resources(ContainerSpec{})}}
 	for _, sp := range specs {
 		asks = append(asks, podAsk{name: sp.Name, image: sp.Image, res: k.resources(sp)})
 	}
 	if err := k.checkOperatorLimits(asks); err != nil {
-		return err
+		return nil, err
 	}
 	if k.client == nil {
-		return nil
+		return specs, nil
 	}
-	ns := k.o.Namespace
-	lrs, err := k.client.CoreV1().LimitRanges(ns).List(ctx, metav1.ListOptions{})
-	switch {
-	case err == nil:
-		if err := checkLimitRanges(ns, lrs.Items, asks); err != nil {
-			return err
-		}
-	case apierrors.IsForbidden(err):
-		k.noteOnce("limitranges", sys, "The runner may not read the namespace's LimitRanges, so it cannot check what the containers ask for against them; "+
-			"the cluster will. Set kubernetes.max_memory and kubernetes.max_cpu to have the runner check, or let its service account list limitranges")
-	case ctx.Err() != nil:
-		return ctx.Err()
-	default:
-		return infra("reading the LimitRanges of namespace %s: %v", ns, err)
+	if err := checkLimitRanges(ns, lrs, asks); err != nil {
+		return nil, err
 	}
 	rqs, err := k.client.CoreV1().ResourceQuotas(ns).List(ctx, metav1.ListOptions{})
 	switch {
 	case err == nil:
-		return checkQuotas(ns, rqs.Items, asks)
+		return specs, checkQuotas(ns, rqs.Items, asks)
 	case apierrors.IsForbidden(err):
 		k.noteOnce("resourcequotas", sys, "The runner may not read the namespace's ResourceQuotas, so it cannot check the pod against them; the cluster will")
 	case ctx.Err() != nil:
-		return ctx.Err()
+		return nil, ctx.Err()
 	default:
-		return infra("reading the ResourceQuotas of namespace %s: %v", ns, err)
+		return nil, infra("reading the ResourceQuotas of namespace %s: %v", ns, err)
 	}
-	return nil
+	return specs, nil
+}
+
+// limitDefaults lowers the CPU and memory the server chose on its own (the
+// installation's defaults, as opposed to what a step or the container asked
+// for) to the most the runner's operator (kubernetes.max_cpu, max_memory) and
+// the namespace's LimitRanges allow one container, so that a default never
+// fails a step. It says so in one line per container. The containers it is
+// given are not changed.
+func (k *Kubernetes) limitDefaults(specs []ContainerSpec, lrs []corev1.LimitRange, sys func(string, ...any)) []ContainerSpec {
+	out := slices.Clone(specs)
+	for i := range out {
+		sp := &out[i]
+		if sp.Service {
+			continue
+		}
+		var notes []string
+		if !sp.ExplicitCPU {
+			for _, f := range []struct {
+				name string
+				v    *string
+			}{{"cpu", &sp.CPU}, {"cpu_limit", &sp.CPULimit}} {
+				if note := k.lower(f.name, f.v, resCPU, k.o.MaxCPU, "kubernetes.max_cpu", lrs); note != "" {
+					notes = append(notes, note)
+				}
+			}
+		}
+		if !sp.ExplicitMemory {
+			for _, f := range []struct {
+				name string
+				v    *string
+			}{{"memory", &sp.Memory}, {"memory_limit", &sp.MemoryLimit}} {
+				if note := k.lower(f.name, f.v, resMemory, k.o.MaxMemory, "kubernetes.max_memory", lrs); note != "" {
+					notes = append(notes, note)
+				}
+			}
+		}
+		if len(notes) > 0 {
+			sys("Container %s: the server's default resources are above what this namespace or runner allows a container, so they were lowered (%s)",
+				sp.Name, strings.Join(notes, "; "))
+		}
+	}
+	return out
+}
+
+// lower lowers one default quantity to the runner's maximum or the smallest
+// max of the namespace's container LimitRanges, if it is above, and says
+// what it did.
+func (k *Kubernetes) lower(field string, v *string, r corev1.ResourceName, operatorMax, setting string, lrs []corev1.LimitRange) string {
+	if *v == "" {
+		return ""
+	}
+	got, err := resource.ParseQuantity(*v)
+	if err != nil {
+		return ""
+	}
+	best, why := resource.Quantity{}, ""
+	consider := func(max resource.Quantity, from string) {
+		if why == "" || max.Cmp(best) < 0 {
+			best, why = max, from
+		}
+	}
+	if operatorMax != "" {
+		consider(resource.MustParse(operatorMax), setting+" in this runner's configuration")
+	}
+	for _, lr := range lrs {
+		for _, item := range lr.Spec.Limits {
+			if item.Type != corev1.LimitTypeContainer {
+				continue
+			}
+			if max, ok := item.Max[r]; ok {
+				consider(max, fmt.Sprintf("LimitRange %q", lr.Name))
+			}
+		}
+	}
+	if why == "" || got.Cmp(best) <= 0 {
+		return ""
+	}
+	*v = best.String()
+	return fmt.Sprintf("%s %s to %s, %s", field, got.String(), best.String(), why)
 }
 
 // noteOnce says something once for this runner.

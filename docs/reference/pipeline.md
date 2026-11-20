@@ -969,7 +969,13 @@ step asks for more than the installation's `max_cpu` or `max_memory`, the messag
 the value and the limit. On Kubernetes the executor checks again before it creates the pod, against
 the namespace's LimitRange (the container's and the pod's maximum) and ResourceQuota, and against
 the runner's own `kubernetes.max_cpu` and `kubernetes.max_memory`; the step then fails at once with
-a message naming which of them it exceeds.
+a message naming which of them it exceeds. That applies to what the step, or the container under
+`containers`, asked for. A default that the installation chose never fails a step: if it is above
+what the runner or the namespace allows one container, the runner lowers it to the most allowed
+(the runner's `kubernetes.max_cpu` and `kubernetes.max_memory`, and each LimitRange's container
+maximum) and writes one line to the step's log saying what it lowered and why. A step that asks for
+memory only is held to its memory, and its CPU default is lowered if need be, and the other way
+round.
 
 ## When
 

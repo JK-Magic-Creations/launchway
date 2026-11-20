@@ -757,7 +757,8 @@ func containerSpecs(job *engine.Job) []executor.ContainerSpec {
 	for i, c := range job.Containers {
 		out[i] = executor.ContainerSpec{Name: c.Name, Image: c.Image, Env: c.Env, CPU: c.CPU, Memory: c.Memory,
 			Service: c.Service, Command: c.Command,
-			CPULimit: c.CPULimit, MemoryLimit: c.MemoryLimit, Threads: c.Threads, Explicit: c.Explicit}
+			CPULimit: c.CPULimit, MemoryLimit: c.MemoryLimit, Threads: c.Threads, Explicit: c.Explicit,
+			ExplicitCPU: c.ExplicitCPU, ExplicitMemory: c.ExplicitMemory}
 	}
 	return out
 }

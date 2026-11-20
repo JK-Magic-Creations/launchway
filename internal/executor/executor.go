@@ -72,6 +72,12 @@ type ContainerSpec struct {
 	// Explicit says that a step asked for resources. An executor that
 	// cannot limit anything refuses such a step rather than ignore it.
 	Explicit bool
+	// ExplicitCPU and ExplicitMemory say that the container's CPU, or
+	// memory, was asked for by a step or by the container itself, and is
+	// not a default the server chose. An executor whose operator or
+	// namespace allows less fails a step for what it asked for, and lowers
+	// a default (see Kubernetes.limitDefaults).
+	ExplicitCPU, ExplicitMemory bool
 }
 
 // services returns the service containers.

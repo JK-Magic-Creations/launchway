@@ -387,9 +387,11 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 		return nil, infra("looking up pod %s: %v", rp.name, err)
 	}
 
-	if err := k.checkResources(ctx, s.Containers, sys); err != nil {
+	specs, err := k.checkResources(ctx, s.Containers, sys)
+	if err != nil {
 		return nil, err
 	}
+	s.Containers = specs
 	pod, containers := k.podSpec(rp.name, s.RunID, s.Containers)
 	var names []string
 	for _, c := range s.Containers {
