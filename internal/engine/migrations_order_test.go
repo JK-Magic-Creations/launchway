@@ -10,62 +10,31 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
-// What each of the schemas 17 to 21 brought, which no other schema may
-// have: the feature branches that wrote them each carried empty stand-ins
-// for the numbers of the others, and a merge that left a stand-in where a
-// real migration belongs (or the other way round) would show here. Tables
-// are listed by name; columns as table.column.
-var schemaMarkers = []struct {
-	schema  int
-	feature string
-	tables  []string
-	columns []string
-}{
-	{schemaBlobs, "the built-in blob store", []string{"blob_uploads", "blob_parts", "blob_chunks", "blob_objects"}, []string{"artifact_blobs.store"}},
-	{schemaReports, "richer test reports and coverage", []string{"coverage_reports", "coverage_files"}, []string{"test_cases.tags", "test_cases.variant", "test_cases.extra"}},
-	{schemaVerify, "verify and ai steps", []string{"verifications", "verify_baselines", "ai_usage", "ai_explanations"}, []string{"steps.kind"}},
-	{schemaIdentity, "runner identities", []string{"runner_join_tokens", "runner_identities", "runner_access_tokens", "runner_assertions"},
-		[]string{"runners.kind", "runners.auth", "runners.labels", "runners.accept", "runners.os", "runners.arch"}},
-	{schemaPools, "build runner pools", nil, []string{"runs.runner_pool", "runs.runner_labels"}},
-}
-
 // hasColumn reports whether the database has the table's column.
 func hasColumn(t *testing.T, e *Engine, table, column string) bool {
 	t.Helper()
-	var q string
-	if e.db.pg {
-		q = `SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? AND column_name = ?`
-	} else {
-		q = `SELECT count(*) FROM pragma_table_info(?) WHERE name = ?`
-	}
-	var n int
-	if err := e.db.QueryRow(q, table, column).Scan(&n); err != nil {
+	ok, err := schemaColumnExists(e.db, table, column)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return n > 0
+	return ok
 }
 
 // hasTable reports whether the database has the table.
 func hasTable(t *testing.T, e *Engine, table string) bool {
 	t.Helper()
-	var q string
-	if e.db.pg {
-		q = `SELECT count(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = ?`
-	} else {
-		q = `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?`
-	}
-	var n int
-	if err := e.db.QueryRow(q, table).Scan(&n); err != nil {
+	ok, err := schemaTableExists(e.db, table)
+	if err != nil {
 		t.Fatal(err)
 	}
-	return n > 0
+	return ok
 }
 
 // checkMarkers fails unless exactly what schemas up to n brought is there.
 func checkMarkers(t *testing.T, e *Engine, n int) {
 	t.Helper()
 	for _, m := range schemaMarkers {
-		should := m.schema <= n
+		should := m.dueAt(n)
 		for _, tb := range m.tables {
 			if got := hasTable(t, e, tb); got != should {
 				t.Errorf("at schema %d table %s (%s, schema %d): present %v, want %v", n, tb, m.feature, m.schema, got, should)
