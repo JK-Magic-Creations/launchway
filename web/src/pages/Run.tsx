@@ -23,6 +23,7 @@ import { CopyValue, serious, seriousLabel } from "../components/Security";
 import { ImagesTab, imageSteps } from "./RunImages";
 import { PolicyTab } from "./RunPolicy";
 import { useRunVerifications, VerificationPanel, VerificationsTab, VerificationSummaryRows } from "../components/Verification";
+import { EntityLink } from "../components/EntityLink";
 import { FailurePanel } from "../components/FailurePanel";
 import { explainFailure } from "../guided/derive";
 import { useCrumbLabel } from "../nav/crumbs";
@@ -229,7 +230,7 @@ export function RunPage({ id }: { id: string }) {
             <h1>{run.message || run.pipeline}</h1>
           </div>
           <div className="run-meta">
-            <span className="meta"><strong>{run.project}</strong> #{run.number}</span>
+            <span className="meta"><strong><EntityLink kind="project" name={run.project} /></strong> #{run.number}</span>
             {refLabel(run) && <span className="meta" title={run.ref}><BranchIcon />{refLabel(run)}</span>}
             {run.sha && <span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span>}
             <span className="meta">{starterLabel(run)}</span>

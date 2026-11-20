@@ -41,7 +41,7 @@ export function TemplatePage({ library, name }: { library: string; name: string 
           <div><dt>What is this?</dt><dd>{tpl.description || "A template with no description."}</dd></div>
           <div><dt>Where does it come from?</dt><dd>The Git repository of the library <Mono>{library}</Mono>, version <Mono>{data.version}</Mono>.</dd></div>
           <div><dt>Who uses it?</dt><dd>{users.length === 0 ? "No project on this server uses it yet." : users.map((p, i) => <span key={p.name}>{i > 0 && ", "}<EntityLink kind="project" name={p.name} /></span>)}</dd></div>
-          <div><dt>What happened to it recently?</dt><dd>{data.versions.length > 0 ? <>{data.versions.length} version{data.versions.length > 1 ? "s" : ""} exist; the newest is <Mono>{data.versions[0]}</Mono>.</> : "It has no tagged versions."}</dd></div>
+          <div><dt>What happened to it recently?</dt><dd>{data.versions.length > 0 ? <>{data.versions.length} version{data.versions.length > 1 ? "s" : ""} exist; this page shows <Mono>{data.version}</Mono>.</> : "It has no tagged versions."}</dd></div>
           <div><dt>What can I do with it?</dt><dd className="glance-actions"><button type="button" className="linkbtn" onClick={() => setTab("interface")}>See what it takes</button><button type="button" className="linkbtn" onClick={() => setTab("versions")}>See its versions</button></dd></div>
         </dl>
       </section>
@@ -98,8 +98,7 @@ export function TemplatePage({ library, name }: { library: string; name: string 
           <h2 className="h-sm">Used by</h2>
           {users.length === 0 ? <p className="faint">No project on this server pins this template. A project that does is listed here with the version it uses.</p> : (
             <ul className="guided-list">{users.map((p) => (
-              <li key={p.name}><EntityLink kind="project" name={p.name} /><span className="guided-grow faint">pinned to <Mono>{p.pipeline?.version}</Mono></span>
-                {p.pipeline?.version !== data.version && data.versions[0] === data.version && <span className="pill pill-warn">Behind</span>}</li>
+              <li key={p.name}><EntityLink kind="project" name={p.name} /><span className="guided-grow faint">pinned to <Mono>{p.pipeline?.version}</Mono></span></li>
             ))}</ul>
           )}
         </section>
