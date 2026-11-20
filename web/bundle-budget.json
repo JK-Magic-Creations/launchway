@@ -1,5 +1,5 @@
 {
-  "comment": "Bundle size budget in bytes (raw). Lower it when the bundle shrinks: npm run size:update. Raising it needs a reason in the pull request.",
-  "js_bytes": 645512,
-  "css_bytes": 95157
+  "comment": "Bundle size budget in bytes (raw). Lower it when the bundle shrinks: npm run size:update. Raising it needs a reason in the pull request. Raised 2026-11-20 when the configuration area and wizards (feat/config-db) and the guided interface joined: every page is a lazy chunk, the first page loads index (about 83 kB gzipped).",
+  "js_bytes": 860000,
+  "css_bytes": 120000
 }
