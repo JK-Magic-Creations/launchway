@@ -96,6 +96,8 @@ steps:
     sign: true                  # the runner's own key; step pods never see it
     scan: { fail_on: high, mode: enforce }   # nothing is pushed if this fails
     when: { branch: main }      # pull requests build and scan in their own run, never push
+    retry: 2                    # a first connection to a registry is sometimes refused while the
+                                # cluster's DNS-based egress rules catch up; a scan finding is not retried away
     timeout: 45m
 
   # ---- sandbox first -----------------------------------------------------------------------
