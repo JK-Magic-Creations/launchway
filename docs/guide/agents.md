@@ -44,7 +44,7 @@ the first lines, or lines containing a text: at most 500 lines and 64 KiB), `get
 steps, and the limits on what they may ask for), `get_run_limits` (the longest run timeout a pipeline
 may ask for) and `list_lanes` (a project's lanes: who holds each, and who waits). Changing, listed only to tokens that may change
 something on some project: `start_run` (with inputs, or with `pipeline_text` as a draft run),
-`cancel_run`, `retry_run` (resume, or re-run from a step), `decide_approval`, `control_rollout` and
+`cancel_run`, `retry_run` (resume, or re-run from a step, several steps or the failed ones), `decide_approval`, `control_rollout` and
 `mark_verification` (passed or failed, with a reason, as on the run page). Listed only to an administrator,
 and audited: `set_step_resource_limits`, `set_step_resource_default` and `set_run_limits`.
 Tools are marked read-only or destructive with the protocol's annotations. Lists page with a cursor.

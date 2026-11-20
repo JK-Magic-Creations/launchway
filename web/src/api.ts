@@ -36,6 +36,8 @@ export interface RunSummary {
   rerun_of?: string;
   rerun_of_number?: number;
   rerun_from?: string;
+  /** All the steps a re-run started from, when it started from several; rerun_from is the first. */
+  rerun_froms?: string[];
   /** The run has events or a pipeline written by a newer Launchway than this server, which leaves it alone. */
   needs_newer_server: boolean;
   /** A run of a pull request (event "pull_request"): its number. */
@@ -577,9 +579,12 @@ export interface StepInputs {
 export interface AttemptInputs { attempt: number; inputs: StepInputs }
 
 /** What re-running a run from a step would run again and reuse. */
-export interface RerunPlan { run: string[]; reuse: string[] }
+/** What a re-run would do: the steps it starts from, those that run again, and those it reuses. */
+export interface RerunPlan { from?: string[]; run: string[]; reuse: string[] }
+/** Where a re-run starts: named steps, or the ones that failed or were canceled. */
+export interface RerunFrom { from?: string[]; failed?: boolean }
 
-export interface RerunBrief { id: string; number: number; from: string; status: RunStatus; actor: string; created_at: number }
+export interface RerunBrief { id: string; number: number; from: string; froms?: string[]; status: RunStatus; actor: string; created_at: number }
 
 export interface GraphContainer {
   name: string; image: string; env?: Record<string, string>; cpu?: string; memory?: string; service?: boolean; command?: string[];
@@ -1004,8 +1009,14 @@ export const api = {
       `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/logs?attempt=${attempt}&after=${after}`),
   cancel: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/cancel`),
   resume: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/resume`),
-  rerunPlan: (id: string, from: string) => call<RerunPlan>("GET", `/api/v1/runs/${id}/rerun?from=${encodeURIComponent(from)}`),
-  rerun: (id: string, from: string) => call<RunSummary>("POST", `/api/v1/runs/${id}/rerun`, { from }),
+  rerunPlan: (id: string, w: string | RerunFrom) => {
+    const q = new URLSearchParams();
+    const r = typeof w === "string" ? { from: [w] } : w;
+    (r.from ?? []).forEach((f) => q.append("from", f));
+    if (r.failed) q.set("failed", "true");
+    return call<RerunPlan>("GET", `/api/v1/runs/${id}/rerun?${q.toString()}`);
+  },
+  rerun: (id: string, w: string | RerunFrom) => call<RunSummary>("POST", `/api/v1/runs/${id}/rerun`, typeof w === "string" ? { from: w } : { from: w.from ?? [], failed: !!w.failed }),
   approve: (id: string, step: string, comment: string) =>
     call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/approve`, { comment }),
   reject: (id: string, step: string, comment: string) =>

@@ -74,6 +74,36 @@ the values they would have. Its log stays in the run where it ran, which the UI 
   to the workspace are not there. Outputs are kept; steps that need files an earlier step made
   should be included in the re-run (re-run from that earlier step).
 
-**Resume** is different: it continues the same run and runs again only the steps that did not
-succeed. Use it after a failure that has been put right; use a re-run to go again from a chosen
-step, for example to redeploy what a run built.
+**From several steps at once.** Two independent branches of a run may both have failed. A re-run
+takes several starting steps, `{"from": ["lint", "unit"]}`, and the steps that run again are those
+after any of them; or `{"failed": true}`, the smallest set of steps that covers every step that
+failed or was canceled (a failure the pipeline allows with `on_failure: continue` is not one). The
+UI offers *Re-run failed steps* on a failed run when that can be done, with the same dialog that
+lists what runs and what is reused; `GET …/rerun?from=a&from=b` or `?failed=true` answers the plan
+without making a run. From the command line:
+
+```sh
+launchway runs rerun RUN --failed --plan      # what would run, and what would be reused
+launchway runs rerun RUN --failed --wait
+launchway runs rerun RUN --from lint --from unit
+launchway runs resume RUN --wait
+```
+
+The rules for what is reused do not change: a step outside every starting step's followers that did
+not succeed still refuses the re-run, saying which. The new run records all its starting steps
+(`rerun_froms`; `rerun_from` is the first), and a server that does not know the list leaves such a
+run alone.
+
+**Resume or re-run?**
+
+| | Resume | Re-run |
+|---|---|---|
+| Makes | no new run: the same run goes on | a new run, linked to the original |
+| Runs again | the steps that failed, were canceled, or were not run because of them | the steps you name (or the failed ones) and everything after them |
+| Reuses | every step that succeeded stays as it is | every other step, recorded as reused, with its outcome and outputs |
+| Workspace files | the run's workspace on its runner is kept, for up to a day | a fresh checkout: files earlier steps wrote are gone |
+| Deployments | refused once a deployment opened | deploy steps always run again, and are never reused |
+| Use it | after a failure that has been put right | to go again from a chosen step, to redeploy what a run built, or when a fresh checkout is wanted |
+
+The MCP tool `retry_run` does both: without steps it resumes, with `from_step`, `from_steps` or
+`failed_only` it re-runs.

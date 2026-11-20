@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/jk-magic-creations/launchway/internal/engine"
 )
 
 // Anyone signed in reads the installation's limits on pipelines; only an
@@ -107,5 +109,52 @@ func TestValidateWarnsWhenTheProjectHasNoForge(t *testing.T) {
 	plain := "pipeline: p\non: { pull_request: {} }\nsteps:\n  a: {image: x, run: a}\n"
 	if r := ada.do(http.MethodPost, e.srv.URL+"/api/v1/validate?project=pay-api", plain); strings.Contains(string(r.body), "warnings") {
 		t.Fatalf("pull_request: {} needs no forge: %s", r.body)
+	}
+}
+
+// A re-run takes one step, a list of steps, or failed: true; the plan route
+// takes repeated from= or failed=true; and an old single-step request works.
+func TestRerunFromSeveralStepsOverTheAPI(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	otto, vic := e.signIn(t, "otto"), e.signIn(t, "vic")
+	orig := e.startRun(t, "pay-api")
+	runURL := e.srv.URL + "/api/v1/runs/" + orig
+	if r := e.signIn(t, "ada").do(http.MethodPost, runURL+"/steps/gate/reject", `{"comment":"no"}`); r.status != http.StatusOK {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	waitRun(t, e.eng, orig)
+
+	var plan engine.RerunPlan
+	for _, q := range []string{"?from=gate", "?failed=true", "?from=gate&from=after"} {
+		r := vic.get(runURL + "/rerun" + q)
+		if r.status != http.StatusOK {
+			t.Fatalf("%s: %d %s", q, r.status, r.body)
+		}
+		r.json(t, &plan)
+		if len(plan.Run) != 2 || plan.Run[0] != "gate" || plan.From[0] != "gate" {
+			t.Fatalf("%s: %+v", q, plan)
+		}
+	}
+	if r := vic.get(runURL + "/rerun"); r.status != http.StatusBadRequest && r.status != http.StatusConflict {
+		t.Fatalf("a plan from nothing: %d %s", r.status, r.body)
+	}
+	for _, body := range []string{`{}`, `{"from": 3}`, `{"from": []}`} {
+		if r := otto.do(http.MethodPost, runURL+"/rerun", body); r.status != http.StatusBadRequest {
+			t.Errorf("%s: %d %s", body, r.status, r.body)
+		}
+	}
+	r := otto.do(http.MethodPost, runURL+"/rerun", `{"failed": true}`)
+	if r.status != http.StatusCreated || !strings.Contains(string(r.body), `"rerun_from":"gate"`) {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	if r := otto.do(http.MethodPost, runURL+"/rerun", `{"from": ["gate"]}`); r.status != http.StatusCreated {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	found := false
+	for _, a := range e.auditEntries(t) {
+		found = found || a.Action == "run.rerun" && a.Outcome == "ok" && strings.Contains(a.Detail, "from the failed steps")
+	}
+	if !found {
+		t.Fatal("no audit entry for the failed-steps re-run")
 	}
 }

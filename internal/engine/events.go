@@ -301,7 +301,11 @@ type Superseder struct {
 type Rerun struct {
 	Of       string `json:"of"`        // the run's ID
 	OfNumber int    `json:"of_number"` // and number
-	From     string `json:"from"`      // the step the re-run starts from
+	From     string `json:"from"`      // the step the re-run starts from (the first, if several)
+	// Froms are all the steps the re-run starts from, when it starts from
+	// several (schema 24). Older servers read From only, so such a run
+	// carries Requires and they leave it alone.
+	Froms []string `json:"froms,omitempty"`
 }
 
 // Reused says where a reused step actually ran: the earlier run, and the

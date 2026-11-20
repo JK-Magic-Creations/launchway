@@ -15,7 +15,7 @@ launchway run      [--file F] [--executor E]  run this directory's pipeline on t
 launchway validate [file] [--project P]       check a pipeline file
 launchway graph    [file]                     print a pipeline's graph as JSON
 launchway login    --server URL               store an API token for a server
-launchway runs     start|list|show|logs|cancel  start and follow runs on a server
+launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs on a server
 launchway policy   list|run                   the policies in force; a run's decisions
 launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
 launchway blobs    status|copy                see and move where artifacts are kept
@@ -419,6 +419,43 @@ Asked run run_06gzde34x0b6151zjapg to cancel.
 ```
 
 A run that has finished exits with `4`: `launchway: the run has already finished`. A run waiting for its [lane](pipeline.md#lane) is canceled like any other, and leaves the line.
+
+### launchway runs resume
+
+Continues a failed or canceled run: the same run goes on, running again its failed and canceled steps and keeping what succeeded.
+
+```text
+launchway runs resume RUN_ID [--wait] [--timeout D] [--json]
+```
+
+With `--wait` it follows the run and exits as [`runs start`](#launchway-runs-start) does: `0` if it succeeded, `1` if it failed, `3` if it was canceled, `5` if `--timeout` passed first. A run that is not failed or canceled, or that opened a deployment, is refused with `4`. The same operation is `POST /api/v1/runs/{id}/resume`.
+
+### launchway runs rerun
+
+Makes a new run of a finished one, from steps you name or from the ones that failed; every other step is reused.
+
+```text
+launchway runs rerun RUN_ID [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
+```
+
+| Flag | Meaning |
+|---|---|
+| `--from` | A step to start from; give it once for each step. The steps after any of them run again |
+| `--failed` | The smallest set of steps that covers every failed and canceled step |
+| `--plan` | Print what would run and what would be reused, or why it cannot be done (exit `4`), and make no run |
+| `--wait`, `--timeout` | As for `runs start`, with the same exit codes |
+| `--json` | Print JSON |
+
+```text
+launchway runs rerun run_06gzde1rb0s24hb652q0 --failed --plan
+Re-running from lint, unit would run again:
+  run    lint
+  run    unit
+  run    deploy
+  reuse  build
+```
+
+The same operation is `POST /api/v1/runs/{id}/rerun`, and the MCP tool `retry_run` with `from_steps` or `failed_only`. See [Re-running](../guide/approvals-and-reruns.md#re-running-from-a-step-and-what-each-step-was-given) for what a re-run reuses and how it differs from a resume.
 
 ### launchway runs lanes
 

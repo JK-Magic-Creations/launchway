@@ -377,6 +377,12 @@ waiting runs and no live holder: every server's reaper (`recoverLanes`) starts t
 run that arrives meanwhile does not jump the queue. On a rollback, waiting runs stay waiting until a
 server of schema 24 runs again.
 
+Re-running from several steps is schema 24's too, and needs no pipeline key: `runs` gains `rerun_froms`
+(the steps as JSON; `rerun_from` keeps the first, as before), and the `rerun` of a `run.created`
+event gains `froms`. A re-run from one step is exactly as it was. A re-run from several carries
+`requires` 24 on its `run.created`, which an older server does not know, so it leaves the run alone
+instead of reading it as a re-run from the first step.
+
 `on.pull_request.into` is schema 24's last pipeline key. A pipeline with it carries `"requires": 24`,
 so older servers refuse to read it as a pipeline file (they do not know the key) and leave its runs
 alone. `runs` gains `pull_request_into`, and a run's trigger gains `pull_request_into`: the branch the

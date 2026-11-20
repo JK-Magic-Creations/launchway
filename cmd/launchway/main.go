@@ -61,7 +61,7 @@ Usage:
   launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that project too)
   launchway graph    [file]                     print a pipeline's graph as JSON
   launchway login    --server URL               store an API token for a server
-  launchway runs     start|list|show|logs|cancel  start and follow runs on a server
+  launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs
                                                 (launchway runs, for more)
   launchway policy   list|run                   the policies in force; a run's decisions
   launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason

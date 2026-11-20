@@ -7,5 +7,5 @@ package engine
 var schemaMarkersFlow = schemaMarker{
 	schema: schemaFlow, feature: "flow control",
 	tables:  []string{"installation_limits", "lane_holders", "lane_waiting"},
-	columns: []string{"steps.allowed", "steps.not_before", "steps.fail_cause", "runs.deadline_at", "runs.lane_name", "runs.lane_key", "runs.lane_label", "runs.lane_state", "runs.lane_other", "runs.lane_other_number", "runs.pull_request_into"},
+	columns: []string{"steps.allowed", "steps.not_before", "steps.fail_cause", "runs.deadline_at", "runs.lane_name", "runs.lane_key", "runs.lane_label", "runs.lane_state", "runs.lane_other", "runs.lane_other_number", "runs.pull_request_into", "runs.rerun_froms"},
 }

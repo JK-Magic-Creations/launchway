@@ -225,8 +225,8 @@ A ref is `{"name", "kind" (branch or tag), "sha", "subject", "author", "committe
 | `GET /api/v1/runs/{id}/steps/{step}/logs` | `run-viewer` | — | A step's log lines. |
 | `POST /api/v1/runs/{id}/cancel` | `run-operator` | `run.cancel` | Cancels the run. |
 | `POST /api/v1/runs/{id}/resume` | `run-operator` | `run.resume` | Resumes a failed or canceled run, from the steps that did not succeed. |
-| `GET /api/v1/runs/{id}/rerun` | `run-viewer` | — | What re-running from `?from=<step>` would run again and reuse. |
-| `POST /api/v1/runs/{id}/rerun` | `run-operator` | `run.rerun` | Starts a new run that re-runs a finished one from a step. Answers `201` with the new run. |
+| `GET /api/v1/runs/{id}/rerun` | `run-viewer` | — | What re-running from `?from=<step>` (given once for each step) or `?failed=true` would run again and reuse. |
+| `POST /api/v1/runs/{id}/rerun` | `run-operator` | `run.rerun` | Starts a new run that re-runs a finished one from a step, several steps or the failed ones. Answers `201` with the new run. |
 
 **Start a run.** The body:
 
@@ -264,7 +264,7 @@ curl -s -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
 
 **Cancel and resume.** No body. Answers `{"ok": true}`. Resuming a draft run needs the right to start draft runs.
 
-**Re-run.** `GET …/rerun?from=smoke-test` answers `{"run": ["smoke-test", …], "reuse": ["lint", …]}`, or `409` with why it cannot be re-run from there. `POST …/rerun` takes `{"from": "smoke-test"}`.
+**Re-run.** `GET …/rerun?from=smoke-test` answers `{"from": ["smoke-test"], "run": ["smoke-test", …], "reuse": ["lint", …]}`, or `409` with why it cannot be re-run from there. `from=` may be repeated, and `failed=true` asks for the smallest set of steps that covers every failed and canceled step. `POST …/rerun` takes `{"from": "smoke-test"}`, `{"from": ["lint", "unit"]}` or `{"failed": true}`; the new run's JSON has `rerun_from` (the first step) and, for several, `rerun_froms`. The command line has `launchway runs resume` and `launchway runs rerun`, and the MCP tool `retry_run` takes `from_step`, `from_steps` and `failed_only`.
 
 ## Approvals
 

@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -1004,7 +1005,8 @@ func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
 // rerunPlan says what re-running the run from ?from= would run again and
 // reuse, or, as an error, why it cannot be re-run from there.
 func (s *Server) rerunPlan(w http.ResponseWriter, r *http.Request) {
-	plan, err := s.Engine.PlanRerun(r.PathValue("id"), r.URL.Query().Get("from"))
+	q := r.URL.Query()
+	plan, err := s.Engine.PlanRerunFrom(r.PathValue("id"), q["from"], q.Get("failed") == "true")
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -1013,18 +1015,31 @@ func (s *Server) rerunPlan(w http.ResponseWriter, r *http.Request) {
 }
 
 // rerunRun creates a new run that re-runs a finished one from a step:
-// {"from": "<step>"}. The step and every step after it run again; the
-// others are reused with their outcomes and outputs. A draft run's re-run
+// {"from": "<step>"}, from several, {"from": ["a", "b"]}, or from what
+// failed, {"failed": true}. The steps and every step after them run again;
+// the others are reused with their outcomes and outputs. A draft run's re-run
 // runs its unsaved text again, so it needs the right to start draft runs,
 // and whether its steps may read secrets is decided by the current setting.
 func (s *Server) rerunRun(w http.ResponseWriter, r *http.Request) {
 	var in struct {
-		From string `json:"from"`
+		From   json.RawMessage `json:"from"`
+		Failed bool            `json:"failed"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	if in.From == "" {
+	var froms []string
+	if len(in.From) > 0 && string(in.From) != "null" {
+		var one string
+		if json.Unmarshal(in.From, &one) == nil {
+			froms = []string{one}
+		} else if err := json.Unmarshal(in.From, &froms); err != nil {
+			writeErr(w, http.StatusBadRequest, "from is a step, or a list of steps: {\"from\": [\"a\", \"b\"]}")
+			return
+		}
+	}
+	froms = slices.DeleteFunc(froms, func(f string) bool { return f == "" })
+	if len(froms) == 0 && !in.Failed {
 		writeErr(w, http.StatusBadRequest, "say which step to re-run from: {\"from\": \"<step>\"}")
 		return
 	}
@@ -1034,8 +1049,17 @@ func (s *Server) rerunRun(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	rq := engine.RerunRequest{Run: sum.ID, From: in.From, Actor: id.User}
-	detail := fmt.Sprintf("re-run of #%d from step %s", sum.Number, in.From)
+	rq := engine.RerunRequest{Run: sum.ID, Failed: in.Failed, Actor: id.User}
+	if len(froms) > 0 {
+		rq.From, rq.Froms = froms[0], froms[1:]
+	}
+	detail := fmt.Sprintf("re-run of #%d from step %s", sum.Number, strings.Join(froms, ", "))
+	if in.Failed {
+		detail = fmt.Sprintf("re-run of #%d from the failed steps", sum.Number)
+		if len(froms) > 0 {
+			detail += " and " + strings.Join(froms, ", ")
+		}
+	}
 	if sum.Draft {
 		detail += ", draft run, pipeline " + sum.PipelineHash
 	}

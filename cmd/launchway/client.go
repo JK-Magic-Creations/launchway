@@ -46,6 +46,9 @@ const clientUsage = `Usage:
   launchway runs show <run-id> [--json]
   launchway runs logs <run-id> [--step S] [--follow]
   launchway runs cancel <run-id>
+  launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same run goes on, running its failed steps again
+  launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
+                                                          a new run from those steps (or the failed ones), reusing the rest
   launchway runs lanes <project> [--json]          each lane: the run that holds it, and the runs waiting
   launchway runs tests <run-id> [--all | --status S] [--tag T] [--json]   failures first, with messages
   launchway runs coverage <run-id> [--files] [--json]
@@ -352,6 +355,10 @@ func cmdRuns(args []string) error {
 			return cl.cancel(args[1:])
 		case "lanes":
 			return cl.lanes(args[1:])
+		case "resume":
+			return cl.resume(args[1:])
+		case "rerun":
+			return cl.rerun(args[1:])
 		}
 		return usageErr("unknown command runs %s\n\n%s", args[0], clientUsage)
 	})
@@ -827,4 +834,114 @@ func (cl *client) lanes(args []string) error {
 			}
 		}
 	})
+}
+
+// resume continues a failed or canceled run: the same run, its failed and
+// canceled steps run again, what succeeded is kept. With --wait it exits as
+// runs start --wait does.
+func (cl *client) resume(args []string) error {
+	fs := flag.NewFlagSet("runs resume", flag.ContinueOnError)
+	wait := fs.Bool("wait", false, "wait for the run to finish, and exit with its outcome")
+	timeout := fs.Duration("timeout", 0, "with --wait, stop waiting after this long (the run goes on)")
+	asJSON := fs.Bool("json", false, "print the run as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("say which run: launchway runs resume <run-id> [--wait]")
+	}
+	if err := cl.call("POST", "/api/v1/runs/"+url.PathEscape(pos[0])+"/resume", map[string]any{}, nil); err != nil {
+		return err
+	}
+	return cl.followRun(pos[0], *wait, *timeout, *asJSON, "Resumed run %s: its failed steps run again.\n")
+}
+
+// followRun prints, or waits for, a run a command just made or resumed.
+func (cl *client) followRun(id string, wait bool, timeout time.Duration, asJSON bool, started string) error {
+	if !wait {
+		var run runView
+		if err := cl.call("GET", "/api/v1/runs/"+url.PathEscape(id), nil, &run); err != nil {
+			return err
+		}
+		return cl.print(run, asJSON, func() {
+			fmt.Fprintf(cl.out, started, id)
+			fmt.Fprintf(cl.out, "Run #%d of %s: %s/runs/%s\n", run.Number, run.Project, cl.c.Server, run.ID)
+		})
+	}
+	if !asJSON {
+		fmt.Fprintf(os.Stderr, started, id)
+	}
+	final, err := cl.waitFor(id, timeout, !asJSON)
+	if err != nil {
+		return err
+	}
+	if err := cl.print(final, asJSON, func() {
+		fmt.Fprintf(cl.out, "Run #%d %s\n", final.Number, final.Status)
+	}); err != nil {
+		return err
+	}
+	return outcome(final.Status)
+}
+
+// rerunPlan is what a re-run would do, as the server says.
+type rerunPlan struct {
+	From  []string `json:"from"`
+	Run   []string `json:"run"`
+	Reuse []string `json:"reuse"`
+}
+
+// rerun makes a new run of a finished one from steps, or from the ones that
+// failed. With --plan it only says what would run and what would be reused,
+// or why it cannot be done.
+func (cl *client) rerun(args []string) error {
+	fs := flag.NewFlagSet("runs rerun", flag.ContinueOnError)
+	var froms multi
+	fs.Var(&froms, "from", "a step to start from; give it once for each step")
+	failed := fs.Bool("failed", false, "start from the smallest set of steps that covers every failed and canceled step")
+	plan := fs.Bool("plan", false, "only say what would run again and what would be reused")
+	wait := fs.Bool("wait", false, "wait for the new run to finish, and exit with its outcome")
+	timeout := fs.Duration("timeout", 0, "with --wait, stop waiting after this long (the run goes on)")
+	asJSON := fs.Bool("json", false, "print JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 || (len(froms) == 0 && !*failed) {
+		return usageErr("launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait]: name the steps with --from, or use --failed")
+	}
+	id := pos[0]
+	if *plan {
+		q := url.Values{}
+		for _, f := range froms {
+			q.Add("from", f)
+		}
+		if *failed {
+			q.Set("failed", "true")
+		}
+		var p rerunPlan
+		if err := cl.call("GET", "/api/v1/runs/"+url.PathEscape(id)+"/rerun?"+q.Encode(), nil, &p); err != nil {
+			return err
+		}
+		return cl.print(p, *asJSON, func() {
+			fmt.Fprintf(cl.out, "Re-running from %s would run again:\n", strings.Join(p.From, ", "))
+			for _, s := range p.Run {
+				fmt.Fprintf(cl.out, "  run    %s\n", s)
+			}
+			for _, s := range p.Reuse {
+				fmt.Fprintf(cl.out, "  reuse  %s\n", s)
+			}
+		})
+	}
+	body := map[string]any{"from": []string(froms), "failed": *failed}
+	var run runView
+	if err := cl.call("POST", "/api/v1/runs/"+url.PathEscape(id)+"/rerun", body, &run); err != nil {
+		return err
+	}
+	if !*wait {
+		return cl.print(run, *asJSON, func() {
+			fmt.Fprintf(cl.out, "Started run #%d of %s, a re-run: %s/runs/%s\n", run.Number, run.Project, cl.c.Server, run.ID)
+		})
+	}
+	return cl.followRun(run.ID, true, *timeout, *asJSON, "Started a re-run, run %s.\n")
 }

@@ -2,6 +2,7 @@ package engine
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -55,6 +56,12 @@ func (c *cmd) persistFlow(changed []string) error {
 		return err
 	}
 	for _, ev := range c.events {
+		if ev.Type == RunCreated && c.st.Rerun != nil && len(c.st.Rerun.Froms) > 1 {
+			text, _ := json.Marshal(c.st.Rerun.Froms)
+			if _, err := c.tx.Exec(`UPDATE runs SET rerun_froms = ? WHERE id = ?`, string(text), c.st.ID); err != nil {
+				return err
+			}
+		}
 		if ev.Type == RunCreated && c.st.Trigger.PullRequestInto != "" {
 			if _, err := c.tx.Exec(`UPDATE runs SET pull_request_into = ? WHERE id = ?`, c.st.Trigger.PullRequestInto, c.st.ID); err != nil {
 				return err
@@ -310,4 +317,17 @@ func (c *cmd) queueRetry(stepID string, s *StepState, wait time.Duration) {
 		q.Reason = "retry in " + pipeline.Duration(wait).Short()
 	}
 	c.emit(StepQueued, q)
+}
+
+// rerunFroms reads the steps a re-run started from, as runs.rerun_froms
+// keeps them; nil for a re-run from one step (or none).
+func rerunFroms(text string) []string {
+	if text == "" {
+		return nil
+	}
+	var out []string
+	if json.Unmarshal([]byte(text), &out) != nil {
+		return nil
+	}
+	return out
 }

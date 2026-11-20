@@ -1375,7 +1375,9 @@ CREATE TABLE step_resource_limits (
 	//     lane_holders has the run that holds each lane and lane_waiting the
 	//     runs queued behind it, and runs.lane_* says which lane a run is in
 	//     and how it stands in it. A pull-request run records the branch it
-	//     targets in runs.pull_request_into, when the project's forge said.
+	//     targets in runs.pull_request_into, when the project's forge said. A
+	//     re-run from several steps lists them as JSON in runs.rerun_froms
+	//     (rerun_from keeps the first).
 	//     Compatibility: additive: new columns with defaults and, in the
 	//     lanes' case, new tables. Pipelines that use the new keys carry
 	//     "requires": 24 and the events that use new fields carry
@@ -1402,6 +1404,7 @@ ALTER TABLE runs ADD COLUMN lane_other TEXT NOT NULL DEFAULT '';
 ALTER TABLE runs ADD COLUMN lane_other_number INTEGER NOT NULL DEFAULT 0;
 CREATE INDEX runs_lane ON runs(project, lane_name);
 ALTER TABLE runs ADD COLUMN pull_request_into TEXT NOT NULL DEFAULT '';
+ALTER TABLE runs ADD COLUMN rerun_froms TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE lane_holders (
   project  TEXT    NOT NULL,

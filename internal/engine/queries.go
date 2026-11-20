@@ -42,6 +42,9 @@ type RunSummary struct {
 	RerunOf       string `json:"rerun_of,omitempty"`
 	RerunOfNumber int    `json:"rerun_of_number,omitempty"`
 	RerunFrom     string `json:"rerun_from,omitempty"`
+	// RerunFroms are all the steps a re-run started from, when it started
+	// from several (schema 24); RerunFrom is the first.
+	RerunFroms []string `json:"rerun_froms,omitempty"`
 	// MinSchema is the oldest schema whose servers understand the whole
 	// run; NeedsNewerServer says this server is older, so it leaves the
 	// run alone.
@@ -200,9 +203,11 @@ type RunPolicySummary struct {
 
 // RerunBrief is a re-run as listed with the run it re-runs.
 type RerunBrief struct {
-	ID     string    `json:"id"`
-	Number int       `json:"number"`
-	From   string    `json:"from"`
+	ID     string `json:"id"`
+	Number int    `json:"number"`
+	From   string `json:"from"`
+	// Froms are all the steps, when it started from several.
+	Froms  []string  `json:"froms,omitempty"`
 	Status RunStatus `json:"status"`
 	Actor  string    `json:"actor"`
 	At     int64     `json:"created_at"`
@@ -273,7 +278,7 @@ func (e *Engine) runCols() string {
 }
 
 // runCols24 are the columns of runs that schema 24 added.
-const runCols24 = `, deadline_at, lane_name, lane_key, lane_label, lane_state, lane_other, lane_other_number, pull_request_into`
+const runCols24 = `, deadline_at, lane_name, lane_key, lane_label, lane_state, lane_other, lane_other_number, pull_request_into, rerun_froms`
 
 func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error) {
 	r := &RunSummary{}
@@ -286,14 +291,16 @@ func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error
 	if e.knows(schemaPullRequests) {
 		dst = append(dst, &r.CancelReason, &r.SupersededBy, &r.SupersededByNumber)
 	}
+	var froms string
 	var lane struct {
 		name, key, label, state, other string
 		number                         int
 	}
 	if e.knows(schemaFlow) {
-		dst = append(dst, &r.DeadlineAt, &lane.name, &lane.key, &lane.label, &lane.state, &lane.other, &lane.number, &r.PullRequestInto)
+		dst = append(dst, &r.DeadlineAt, &lane.name, &lane.key, &lane.label, &lane.state, &lane.other, &lane.number, &r.PullRequestInto, &froms)
 	}
 	err := sc.Scan(dst...)
+	r.RerunFroms = rerunFroms(froms)
 	r.Lane = laneInfo(lane.name, lane.key, lane.label, lane.state, lane.other, lane.number, 0)
 	r.PullRequest = pullRequestNumber(r.Event, r.Ref)
 	r.CancelRequested = cancel != 0
@@ -659,7 +666,13 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 
 // reruns lists the runs that re-run a run, oldest first.
 func (e *Engine) reruns(runID string) ([]RerunBrief, error) {
-	rows, err := e.db.Query(`SELECT id, number, rerun_from, status, actor, created_at FROM runs WHERE rerun_of = ?
+	cols := `rerun_from`
+	if e.knows(schemaFlow) {
+		cols += `, rerun_froms`
+	} else {
+		cols += `, ''`
+	}
+	rows, err := e.db.Query(`SELECT id, number, `+cols+`, status, actor, created_at FROM runs WHERE rerun_of = ?
 		ORDER BY created_at, number`, runID)
 	if err != nil {
 		return nil, err
@@ -668,9 +681,11 @@ func (e *Engine) reruns(runID string) ([]RerunBrief, error) {
 	out := []RerunBrief{}
 	for rows.Next() {
 		var b RerunBrief
-		if err := rows.Scan(&b.ID, &b.Number, &b.From, &b.Status, &b.Actor, &b.At); err != nil {
+		var froms string
+		if err := rows.Scan(&b.ID, &b.Number, &b.From, &froms, &b.Status, &b.Actor, &b.At); err != nil {
 			return nil, err
 		}
+		b.Froms = rerunFroms(froms)
 		out = append(out, b)
 	}
 	return out, rows.Err()

@@ -105,7 +105,11 @@ func (c *mcpCall) brief(r *engine.RunSummary) runBrief {
 		b.Ref = r.Ref
 	}
 	if r.RerunOf != "" {
-		b.Event = fmt.Sprintf("rerun of #%d from %s", r.RerunOfNumber, r.RerunFrom)
+		from := r.RerunFrom
+		if len(r.RerunFroms) > 1 {
+			from = strings.Join(r.RerunFroms, ", ")
+		}
+		b.Event = fmt.Sprintf("rerun of #%d from %s", r.RerunOfNumber, from)
 	}
 	if r.DeadlineAt > 0 && !r.Status.Terminal() {
 		b.TimesOutAt = ts(r.DeadlineAt)

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RerunPlan, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
+import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RerunFrom, type RerunPlan, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { useNow, useStream } from "../live";
 import { canOperate, useMe } from "../auth";
@@ -248,13 +248,13 @@ export function RunPage({ id }: { id: string }) {
             <div className="run-meta">
               {run.rerun_of && (
                 <span className="meta rerun-of">
-                  Re-run of <Link href={`/runs/${run.rerun_of}?step=${encodeURIComponent(run.rerun_from ?? "")}`}>#{run.rerun_of_number}</Link> from <strong>{run.rerun_from}</strong>
+                  Re-run of <Link href={`/runs/${run.rerun_of}?step=${encodeURIComponent(run.rerun_from ?? "")}`}>#{run.rerun_of_number}</Link> from <strong>{(run.rerun_froms?.length ? run.rerun_froms : [run.rerun_from]).join(", ")}</strong>
                 </span>
               )}
               {run.reruns.length > 0 && (
                 <span className="meta">
                   Re-run as {run.reruns.map((r, i) => (
-                    <span key={r.id}>{i > 0 && ", "}<Link href={`/runs/${r.id}`}>#{r.number}</Link> from {r.from}</span>
+                    <span key={r.id}>{i > 0 && ", "}<Link href={`/runs/${r.id}`}>#{r.number}</Link> from {(r.froms?.length ? r.froms : [r.from]).join(", ")}</span>
                   ))}
                 </span>
               )}
@@ -271,6 +271,7 @@ export function RunPage({ id }: { id: string }) {
           {mayOperate && !done && !run.cancel_requested && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
+          {mayOperate && !run.needs_newer_server && (run.status === "failed" || run.status === "canceled") && !run.draft && <RerunFailedButton run={run} />}
           {mayOperate && !run.needs_newer_server && (run.status === "failed" || run.status === "canceled") && (
             <button type="button" className="btn btn-primary" disabled={busy}
               title="Runs again, in this run, only the steps that did not succeed. To start a new run from a step of your choice, open the step and choose Re-run from this step."
@@ -959,38 +960,59 @@ function InputsView({ inputs, step }: { inputs?: AttemptInputs; step: StepView }
 // a preview of what runs again and what is reused.
 function RerunButton({ run, step }: { run: RunDetail; step: StepView }) {
   const [open, setOpen] = useState(false);
+  const from = useMemo<RerunFrom>(() => ({ from: [step.id] }), [step.id]);
   return (
     <>
       <button type="button" className="btn btn-sm" onClick={() => setOpen(true)}
         title={`A new run at the same commit: ${step.id} and the steps after it run again; the others are reused.`}>Re-run from this step</button>
-      {open && <RerunDialog run={run} step={step} onClose={() => setOpen(false)} />}
+      {open && <RerunDialog run={run} from={from} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function RerunDialog({ run, step, onClose }: { run: RunDetail; step: StepView; onClose: () => void }) {
+// RerunFailedButton offers a new run that runs again only what failed or was
+// canceled, when the plan allows it (it asks the server first); the dialog
+// shows what runs and what is reused.
+const FAILED_ONLY: RerunFrom = { failed: true };
+function RerunFailedButton({ run }: { run: RunDetail }) {
+  const [open, setOpen] = useState(false);
+  const [ok, setOk] = useState(false);
+  useEffect(() => { api.rerunPlan(run.id, FAILED_ONLY).then(() => setOk(true)).catch(() => setOk(false)); }, [run.id, run.status]);
+  if (!ok) return null;
+  return (
+    <>
+      <button type="button" className="btn" onClick={() => setOpen(true)}
+        title="A new run at the same commit that runs again the failed and canceled steps and what comes after them, reusing everything else. Resume instead continues this run.">Re-run failed steps</button>
+      {open && <RerunDialog run={run} from={FAILED_ONLY} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function RerunDialog({ run, from, onClose }: { run: RunDetail; from: RerunFrom; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [plan, setPlan] = useState<RerunPlan | null>(null);
   const [refusal, setRefusal] = useState<unknown>(null);
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { dialog.current?.showModal(); }, []);
-  useEffect(() => { api.rerunPlan(run.id, step.id).then(setPlan).catch(setRefusal); }, [run.id, step.id]);
+  useEffect(() => { api.rerunPlan(run.id, from).then(setPlan).catch(setRefusal); }, [run.id, from]);
+  const starts = plan?.from?.length ? plan.from : from.from ?? [];
+  const label = from.failed ? "the failed steps" : starts.join(", ");
 
   const go = async () => {
     setBusy(true); setError(null);
     try {
-      const re = await api.rerun(run.id, step.id);
+      const re = await api.rerun(run.id, from);
       dialog.current?.close();
       onClose();
-      navigate(`/runs/${re.id}?step=${encodeURIComponent(step.id)}`);
+      navigate(`/runs/${re.id}?step=${encodeURIComponent(re.rerun_from ?? starts[0] ?? "")}`);
     } catch (e) { setError(e); setBusy(false); }
   };
 
   return (
     <dialog ref={dialog} className="dialog" onClose={onClose} aria-labelledby="rerun-title">
       <form method="dialog" onSubmit={(e) => { e.preventDefault(); go(); }}>
-        <h2 id="rerun-title">Re-run #{run.number} from {step.id}</h2>
+        <h2 id="rerun-title">Re-run #{run.number} from {label}</h2>
         <p className="sub">A new run of {run.project} at the same commit, <Mono>{shortSha(run.sha)}</Mono>, with the same pipeline{run.graph.libraries?.length ? " and library commits" : ""}{run.draft ? " (a draft run of the same text)" : ""}.</p>
         <div className="callout callout-draft">Outputs are kept. Files earlier steps wrote to the workspace are not; steps that need them should be included in the re-run.</div>
         {refusal ? <ErrorBox error={refusal} /> : !plan ? <div className="loading">Working out what runs…</div> : (
@@ -1005,7 +1027,7 @@ function RerunDialog({ run, step, onClose }: { run: RunDetail; step: StepView; o
           </div>
         )}
         <RerunInputsNote run={run} />
-        <p className="sub">To run again only the steps that did not succeed, in this same run, use Resume instead.</p>
+        <p className="sub"><strong>Resume</strong> continues this run instead: only the steps that did not succeed run again, in the same run and the same workspace, and it is refused once a deployment opened. A <strong>re-run</strong> is a new run from a fresh checkout: outputs of reused steps are kept, files they wrote are not, and deploy steps always run again.</p>
         <ErrorBox error={error} />
         <div className="dialog-actions">
           <button type="button" className="btn" onClick={() => { dialog.current?.close(); }}>Cancel</button>

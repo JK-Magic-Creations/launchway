@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -25,17 +26,36 @@ import (
 
 // RerunRequest asks for a re-run.
 type RerunRequest struct {
-	Run   string // the run to re-run; it must have finished
-	From  string // the step to start from
-	Actor string // who asked: the re-run's trigger names them
+	Run  string // the run to re-run; it must have finished
+	From string // the step to start from
+	// Froms are further steps to start from (schema 24): the steps that run
+	// again are those after any of From and Froms.
+	Froms []string
+	// Failed asks for the smallest set of starting steps that covers every
+	// step that failed or was canceled, instead of naming them.
+	Failed bool
+	Actor  string // who asked: the re-run's trigger names them
 	// DraftSecrets, for a draft run only, says whether the re-run's steps
 	// may read secrets, as the configuration says now.
 	DraftSecrets *bool
 }
 
-// RerunPlan says what a re-run from a step would do.
+// starts is every starting step a request names, in the order written,
+// without repeats.
+func (rq RerunRequest) starts() []string {
+	var out []string
+	for _, f := range append([]string{rq.From}, rq.Froms...) {
+		if f != "" && !slices.Contains(out, f) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// RerunPlan says what a re-run would do.
 type RerunPlan struct {
-	Run   []string `json:"run"`   // the step and everything after it, in pipeline order
+	From  []string `json:"from"`  // the steps it starts from (those asked for, or found for failed)
+	Run   []string `json:"run"`   // those steps and everything after them, in pipeline order
 	Reuse []string `json:"reuse"` // every other step
 }
 
@@ -79,15 +99,61 @@ func before(p *pipeline.Pipeline, from string) map[string]bool {
 	return out
 }
 
-// planRerun works out a re-run of a finished run from a step, or explains
-// why there can be none.
-func planRerun(orig *RunState, from string) (RerunPlan, error) {
-	plan := RerunPlan{Run: []string{}, Reuse: []string{}}
-	if orig.Pipeline.Step(from) == nil {
-		return plan, fmt.Errorf("%w: run #%d has no step %s", ErrNotFound, orig.Number, from)
+// failedStarts finds the smallest set of steps to start a re-run from so
+// that every step that failed or was canceled runs again: those that no
+// other such step comes before. A failure its step allows (on_failure:
+// continue) blocked nothing and is not one.
+func failedStarts(orig *RunState) []string {
+	bad := map[string]bool{}
+	for _, id := range orig.Order {
+		if s := orig.Steps[id]; (s.Status == StepFailed && !s.Allowed) || s.Status == StepCanceledS {
+			bad[id] = true
+		}
 	}
-	again := after(orig.Pipeline, from)
-	needed := before(orig.Pipeline, from)
+	var out []string
+	for id := range bad {
+		covered := false
+		for other := range bad {
+			if other != id && before(orig.Pipeline, id)[other] {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			out = append(out, id)
+		}
+	}
+	slices.SortFunc(out, func(a, b string) int { return orig.Steps[a].Position - orig.Steps[b].Position })
+	return out
+}
+
+// planRerun works out a re-run of a finished run from steps (or, with failed,
+// from the failed and canceled ones), or explains why there can be none.
+func planRerun(orig *RunState, froms []string, failed bool) (RerunPlan, error) {
+	plan := RerunPlan{From: []string{}, Run: []string{}, Reuse: []string{}}
+	if failed {
+		for _, f := range failedStarts(orig) {
+			if !slices.Contains(froms, f) {
+				froms = append(froms, f)
+			}
+		}
+		if len(froms) == 0 {
+			return plan, fmt.Errorf("%w: run #%d has no step that failed or was canceled, so there is nothing to run again", ErrConflict, orig.Number)
+		}
+	}
+	if len(froms) == 0 {
+		return plan, fmt.Errorf("%w: say which step to re-run from", ErrInvalid)
+	}
+	again, needed := map[string]bool{}, map[string]bool{}
+	for _, from := range froms {
+		if orig.Pipeline.Step(from) == nil {
+			return plan, fmt.Errorf("%w: run #%d has no step %s", ErrNotFound, orig.Number, from)
+		}
+		maps.Copy(again, after(orig.Pipeline, from))
+		maps.Copy(needed, before(orig.Pipeline, from))
+	}
+	plan.From = slices.Clone(froms)
+	named := strings.Join(froms, ", ")
 	var upstream, others []string
 	for _, id := range orig.Order {
 		if again[id] {
@@ -108,25 +174,27 @@ func planRerun(orig *RunState, from string) (RerunPlan, error) {
 	}
 	// Deployments: a re-run never reuses a deploy or rollback step, and
 	// starts a deployment from its deploy step.
-	for _, s := range orig.Pipeline.Steps {
-		if s.IsDeploy() && s.ID != from && slices.Contains(orig.Pipeline.DeploymentScope(s.ID), from) {
-			return plan, fmt.Errorf("%w: cannot re-run from %s: it is part of deployment %s, which must be made again; re-run from %s",
-				ErrConflict, from, s.ID, s.ID)
+	for _, from := range froms {
+		for _, s := range orig.Pipeline.Steps {
+			if s.IsDeploy() && s.ID != from && slices.Contains(orig.Pipeline.DeploymentScope(s.ID), from) {
+				return plan, fmt.Errorf("%w: cannot re-run from %s: it is part of deployment %s, which must be made again; re-run from %s",
+					ErrConflict, from, s.ID, s.ID)
+			}
 		}
 	}
 	for _, id := range plan.Reuse {
 		if def := orig.Pipeline.Step(id); def.IsDeployKind() && orig.Steps[id].Status != StepSkippedS {
 			return plan, fmt.Errorf("%w: cannot re-run from %s: deploy step %s would be reused, and deploy steps always run again; "+
-				"re-run from %s or a step it needs", ErrConflict, from, id, id)
+				"re-run from %s or a step it needs", ErrConflict, named, id, id)
 		}
 	}
 	switch {
 	case len(upstream) > 0:
 		return plan, fmt.Errorf("%w: cannot re-run from %s: it needs %s, which did not succeed in run #%d, so there is nothing to reuse. "+
-			"Re-run from an earlier step, or resume the run", ErrConflict, from, strings.Join(upstream, ", "), orig.Number)
+			"Re-run from an earlier step, or resume the run", ErrConflict, named, strings.Join(upstream, ", "), orig.Number)
 	case len(others) > 0:
 		return plan, fmt.Errorf("%w: cannot re-run from %s: %s did not succeed in run #%d and does not come after %s, so it can be neither reused nor run again. "+
-			"Re-run from a step it needs, or resume the run", ErrConflict, from, strings.Join(others, ", "), orig.Number, from)
+			"Re-run from a step it needs, or resume the run", ErrConflict, named, strings.Join(others, ", "), orig.Number, named)
 	}
 	return plan, nil
 }
@@ -134,11 +202,16 @@ func planRerun(orig *RunState, from string) (RerunPlan, error) {
 // PlanRerun says what re-running a run from a step would run and reuse, or
 // why it cannot be re-run from there.
 func (e *Engine) PlanRerun(runID, from string) (RerunPlan, error) {
+	return e.PlanRerunFrom(runID, []string{from}, false)
+}
+
+// PlanRerunFrom is PlanRerun from several steps, or from the failed ones.
+func (e *Engine) PlanRerunFrom(runID string, froms []string, failed bool) (RerunPlan, error) {
 	orig, err := e.finishedRun(runID)
 	if err != nil {
-		return RerunPlan{Run: []string{}, Reuse: []string{}}, err
+		return RerunPlan{From: []string{}, Run: []string{}, Reuse: []string{}}, err
 	}
-	return planRerun(orig, from)
+	return planRerun(orig, froms, failed)
 }
 
 // finishedRun reads a run that may be re-run: one this server understands
@@ -175,7 +248,7 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	plan, err := planRerun(orig, rq.From)
+	plan, err := planRerun(orig, rq.starts(), rq.Failed)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +268,13 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 	// after the step are not theirs to approve if self-approval is off.
 	trig, src := orig.Trigger, orig.Source
 	trig.Actor = rq.Actor
-	rerun := &Rerun{Of: orig.ID, OfNumber: orig.Number, From: rq.From}
+	rerun := &Rerun{Of: orig.ID, OfNumber: orig.Number, From: plan.From[0]}
+	requires := 0
+	if len(plan.From) > 1 {
+		// Servers that do not know the list would read a re-run from the
+		// first step alone: they leave this run to one that does.
+		rerun.Froms, requires = plan.From, schemaFlow
+	}
 	runID := ids.New("run")
 	err = e.runTx(runID, true, func(c *cmd) error {
 		var number int
@@ -215,7 +294,7 @@ func (e *Engine) Rerun(rq RerunRequest) (*RunSummary, error) {
 			poolRequires = schemaPools // as in CreateRun
 		}
 		c.emit(RunCreated, Payload{Project: orig.Project, Number: number, Pipeline: c.e.withStoreRequires(orig.Pipeline), Trigger: &trig, Source: &src,
-			Draft: draft, Rerun: rerun, PullRequestSecrets: prSecrets, Requires: poolRequires})
+			Draft: draft, Rerun: rerun, PullRequestSecrets: prSecrets, Requires: max(poolRequires, requires)})
 		for _, id := range plan.Reuse {
 			s := orig.Steps[id]
 			from := &Reused{Run: orig.ID, Number: orig.Number, Attempt: s.Attempt, DecidedAt: s.DecidedAt}
