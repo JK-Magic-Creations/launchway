@@ -91,6 +91,8 @@ type Service struct {
 	lay   *Layout
 	rev   int64
 	apply Applier
+	// safe is set when this server started in safe mode.
+	safe *Safe
 	// lastErr is why the newest configuration was not applied, if it was
 	// not.
 	lastErr string
@@ -108,7 +110,7 @@ func New(eng *engine.Engine, boot *config.Config, log *slog.Logger) *Service {
 }
 
 // Available reports whether configuration is kept in the database.
-func (s *Service) Available() bool { return s != nil && s.eng.ConfigKnown() }
+func (s *Service) Available() bool { return s != nil && s.eng != nil && s.eng.ConfigKnown() }
 
 // Boot is the file the server started with.
 func (s *Service) Boot() *config.Config { return s.boot }
@@ -292,7 +294,23 @@ func (s *Service) Load(apply Applier) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.apply = apply
-	return s.reloadLocked(true)
+	err := s.reloadLocked(true)
+	if err == nil {
+		return nil
+	}
+	// A stored configuration that cannot be used must not stop every server
+	// with no way back: run with the last one that worked (or the file
+	// alone), say so, and keep trying (Watch).
+	fb, using := s.fallback()
+	if aerr := apply(fb.cfg, fb.lay); aerr != nil {
+		return fmt.Errorf("the stored configuration cannot be used (%v) and neither can %s: %w", err, using, aerr)
+	}
+	s.cur, s.lay = fb.cfg, fb.lay
+	if s.safe == nil {
+		s.safe = &Safe{Reason: s.lastErr, Using: using}
+		s.log.Error("SAFE MODE: the stored configuration cannot be used, so this server runs with "+using, "err", err)
+	}
+	return nil
 }
 
 // Current returns the configuration in effect, its layout and revision.
@@ -306,25 +324,27 @@ func (s *Service) Current() (*config.Config, *Layout, int64) {
 type Status struct {
 	Revision int64  `json:"revision"`
 	Problem  string `json:"problem,omitempty"`
+	// Safe: the stored configuration could not be loaded at start-up, and
+	// this server runs with something safer until it can.
+	Safe *Safe `json:"safe_mode,omitempty"`
 }
 
 // Status returns the revision in effect and why a newer one is not, if not.
 func (s *Service) Status() Status {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return Status{Revision: s.rev, Problem: s.lastErr}
+	return Status{Revision: s.rev, Problem: s.lastErr, Safe: s.safe}
 }
 
-// Refresh applies the stored configuration if it changed.
-func (s *Service) Refresh() {
+// Refresh applies the stored configuration if it changed, or if the last
+// try failed. It returns why it could not.
+func (s *Service) Refresh() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.apply == nil {
-		return
+		return nil
 	}
-	if err := s.reloadLocked(false); err != nil {
-		s.log.Error("the configuration in the database changed but cannot be used here; keeping the configuration in effect", "err", err)
-	}
+	return s.reloadLocked(false)
 }
 
 func (s *Service) reloadLocked(first bool) error {
@@ -332,7 +352,7 @@ func (s *Service) reloadLocked(first bool) error {
 	if err != nil {
 		return err
 	}
-	if !first && rev == s.rev {
+	if !first && rev == s.rev && s.lastErr == "" {
 		return nil
 	}
 	rev, objs, err := s.eng.ConfigSnapshot()
@@ -341,22 +361,32 @@ func (s *Service) reloadLocked(first bool) error {
 	}
 	cp, err := s.composeChecked(objs)
 	if err == nil {
+		err = checkAdministrable(cp.cfg)
+	}
+	if err == nil {
 		err = s.projectStepResources(objs)
 	}
 	if err == nil {
 		err = s.apply(cp.cfg, cp.lay)
 	}
 	if err != nil {
-		s.lastErr = fmt.Sprintf("revision %d: %v", rev, err)
-		if !first {
-			s.rev = rev // do not try again until it changes
+		msg := fmt.Sprintf("revision %d: %v", rev, err)
+		if msg != s.lastErr {
+			s.log.Error("the stored configuration cannot be used here; keeping the configuration in effect", "revision", rev, "err", err)
 		}
+		s.lastErr = msg // tried again at the next poll, and when the revision changes
 		return err
 	}
 	if !first && s.rev != rev {
 		s.log.Info("applied a change to the configuration", "revision", rev)
 	}
 	s.cur, s.lay, s.rev, s.lastErr = cp.cfg, cp.lay, rev, ""
+	if s.safe != nil {
+		s.log.Warn("leaving safe mode: the stored configuration is in effect", "revision", rev)
+		s.safe = nil
+	}
+	warnUnknown(s.log, objs)
+	s.saveLastGood(rev, objs)
 	_ = egress.Default.Set(EgressPolicy(cp.cfg))
 	return nil
 }
@@ -635,6 +665,9 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if err := checkEgress(cp.cfg, putObjects(after, puts)); err != nil {
 			return nil, invalid(err)
 		}
+		if err := checkAdministrable(cp.cfg); err != nil {
+			return nil, invalid(err)
+		}
 		if dry {
 			return nil, nil
 		}
@@ -645,7 +678,7 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if err != nil {
 			return nil, err
 		}
-		s.Refresh()
+		_ = s.Refresh()
 		_, now, err := s.eng.ConfigSnapshot()
 		if err != nil {
 			return nil, err

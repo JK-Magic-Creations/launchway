@@ -53,7 +53,9 @@ func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *
 	lay := &Layout{Levels: DefaultLevels, ProjectUnit: map[string]string{}, Units: []UnitView{}}
 	live := make([]engine.ConfigObject, 0, len(objs))
 	for _, o := range objs {
-		if !o.Deleted() {
+		// Objects of a kind this version does not know were written by a
+		// newer version; they are ignored (the service warns).
+		if !o.Deleted() && kindByName(o.Kind) != nil {
 			live = append(live, o)
 		}
 	}

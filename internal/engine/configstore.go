@@ -502,3 +502,52 @@ func (e *Engine) artifactsFromDatabase(from func([]byte) (ArtifactOptions, error
 	}
 	return nil
 }
+
+// ConfigAtRevision returns the objects as they were once the configuration
+// reached revision rev, worked out from the log (deleted ones included, with
+// DeletedAt set). It is what an offline restore puts back.
+func (e *Engine) ConfigAtRevision(rev int64) ([]ConfigObject, error) {
+	if err := e.configCheck(); err != nil {
+		return nil, err
+	}
+	cur, err := e.ConfigRevision()
+	if err != nil {
+		return nil, err
+	}
+	if rev < 0 || rev > cur {
+		return nil, fmt.Errorf("%w: revision %d: the configuration is at revision %d", ErrNotFound, rev, cur)
+	}
+	rows, err := e.db.Query(`SELECT kind, name, action, unit_after, spec_after, managed_by, at, actor, version FROM config_changes
+		WHERE org = ? AND revision <= ? ORDER BY id`, "", rev)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	idx := map[string]int{}
+	var out []ConfigObject
+	for rows.Next() {
+		var kind, name, action, unit, spec, by, actor string
+		var at, version int64
+		if err := rows.Scan(&kind, &name, &action, &unit, &spec, &by, &at, &actor, &version); err != nil {
+			return nil, err
+		}
+		i, ok := idx[kind+"\x00"+name]
+		if !ok {
+			i = len(out)
+			idx[kind+"\x00"+name] = i
+			out = append(out, ConfigObject{Kind: kind, Name: name, Spec: json.RawMessage("{}"), CreatedAt: at, CreatedBy: actor})
+		}
+		o := &out[i]
+		o.Version, o.ManagedBy, o.UpdatedAt, o.UpdatedBy = version, by, at, actor
+		switch action {
+		case ConfigCreate, ConfigUpdate, ConfigRestore:
+			o.Unit, o.DeletedAt = unit, 0
+			if spec != "" {
+				o.Spec = json.RawMessage(spec)
+			}
+		case ConfigDelete:
+			o.DeletedAt, o.DeletedBy = at, actor
+		}
+	}
+	return out, rows.Err()
+}
