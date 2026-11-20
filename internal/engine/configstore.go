@@ -36,6 +36,8 @@ const (
 	ManagedByAPI       = "api"
 	ManagedByImport    = "import"
 	ManagedByTerraform = "terraform"
+	// ManagedByGit: kept in step with a file in Git by a pipeline of its own.
+	ManagedByGit = "git"
 )
 
 // Config actions, in the history.

@@ -314,3 +314,49 @@ func TestServerFilePathsAreNotSettableThroughTheAPI(t *testing.T) {
 		t.Error("changing the path was accepted")
 	}
 }
+
+// An object Terraform owns is read-only to everyone else unless they take
+// ownership explicitly; the manager label a client sends never claims an
+// object by itself.
+func TestOwnershipIsEnforced(t *testing.T) {
+	eng := openEngine(t, testdb.New(t))
+	s := New(eng, bootOIDC(t, t.TempDir(), true), quietLog())
+	as := func(manager string, take bool, c Change) (*Result, error) {
+		c.ManagedBy, c.TakeOwnership = manager, take
+		r, err := s.Apply("ada", []Change{c})
+		if err != nil {
+			return nil, err
+		}
+		return &r[0], nil
+	}
+	spec := func(branch string) Change {
+		return change("project", "web", `{"repo":"https://git.example.com/web.git","branch":"`+branch+`"}`)
+	}
+	if _, err := as("terraform", false, spec("main")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := as("terraform", false, spec("dev")); err != nil {
+		t.Errorf("the owner changing its own object: %v", err)
+	}
+	for name, c := range map[string]Change{"edit": spec("hotfix"),
+		"delete": {Kind: kindByName("project"), Name: "web", Action: engine.ConfigDelete, IfVersion: -1}} {
+		if _, err := as("api", false, c); err == nil || !strings.Contains(err.Error(), "managed by terraform") {
+			t.Errorf("%s by the UI: %v", name, err)
+		}
+	}
+	r, err := as("api", true, spec("hotfix"))
+	if err != nil || r.TookOwnership != "terraform" || r.Object.ManagedBy != "api" {
+		t.Fatalf("taking ownership: %v %+v", err, r)
+	}
+	h, _ := s.History(engine.ConfigHistoryFilter{Kind: "project", Name: "web", Limit: 1})
+	if !strings.Contains(h[0].Comment, "took ownership from terraform") {
+		t.Errorf("not in the history: %+v", h[0])
+	}
+	// Terraform cannot claim an object the UI manages by sending a label.
+	if _, err := as("terraform", false, spec("main")); err == nil || !strings.Contains(err.Error(), "take ownership") {
+		t.Errorf("a claim by label: %v", err)
+	}
+	if _, err := as("terraform", true, spec("main")); err != nil {
+		t.Errorf("an explicit claim: %v", err)
+	}
+}

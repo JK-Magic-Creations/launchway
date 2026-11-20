@@ -172,6 +172,9 @@ type configBody struct {
 	Comment string          `json:"comment"`
 	// Version, if not 0, is the version the change expects (as If-Match).
 	Version int64 `json:"version"`
+	// TakeOwnership: change an object Terraform or Git manages, and become
+	// its owner. Recorded.
+	TakeOwnership bool `json:"take_ownership"`
 }
 
 // ifVersion reads If-Match ("3", "*") or the body's version: the version
@@ -192,13 +195,20 @@ func ifVersion(r *http.Request, body int64) (int64, error) {
 	return v, nil
 }
 
-func manager(r *http.Request) string {
-	switch m := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Launchway-Manager"))); m {
-	case "":
-		return engine.ManagedByAPI
-	default:
-		return m
+// manager reads who the client says it is acting for. A signed-in browser
+// is always the API (the web UI); other managers (terraform, git) are tools
+// that authenticate with a token. The label only says who the writer is: it
+// never lets a change to another manager's object through (see
+// settings.checkOwnership).
+func manager(r *http.Request) (string, error) {
+	m := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Launchway-Manager")))
+	if m == "" || m == engine.ManagedByAPI {
+		return engine.ManagedByAPI, nil
 	}
+	if id := identityFrom(r); id != nil && id.Via == viaSession {
+		return "", fmt.Errorf("a signed-in browser acts as the web UI; %s acts with an API token", m)
+	}
+	return m, nil
 }
 
 // POST /api/v1/config/{kind}: create; 409 if it exists.
@@ -247,9 +257,14 @@ func (s *Server) putConfig1(w http.ResponseWriter, r *http.Request, create bool)
 	if create {
 		v = 0
 	}
+	mgr, err := manager(r)
+	if err != nil {
+		writeErr(w, http.StatusForbidden, err.Error())
+		return
+	}
 	setAudit(r, k.Name+"/"+name, "")
 	res, err := st.Apply(identityFrom(r).User, []settings.Change{{Kind: k, Name: name, Action: engine.ConfigUpdate, Unit: b.Unit, Spec: b.Spec,
-		IfVersion: v, ManagedBy: manager(r), Comment: b.Comment}})
+		IfVersion: v, ManagedBy: mgr, Comment: b.Comment, TakeOwnership: b.TakeOwnership}})
 	if err != nil {
 		s.configFail(w, err)
 		return
@@ -259,7 +274,9 @@ func (s *Server) putConfig1(w http.ResponseWriter, r *http.Request, create bool)
 	if out.Change != nil && out.Change.Action == engine.ConfigCreate {
 		code = http.StatusCreated
 	}
-	if out.Change != nil {
+	if out.TookOwnership != "" {
+		setAudit(r, "", fmt.Sprintf("took ownership from %s; %s, version %d", out.TookOwnership, out.Change.Action, out.Change.Version))
+	} else if out.Change != nil {
 		setAudit(r, "", fmt.Sprintf("%s, version %d", out.Change.Action, out.Change.Version))
 	} else {
 		setAudit(r, "", "unchanged")
@@ -291,7 +308,8 @@ func (s *Server) lifecycle(w http.ResponseWriter, r *http.Request, action string
 		Comment string `json:"comment"`
 		Version int64  `json:"version"`
 		// ForceInUse deletes an object that active runs depend on.
-		ForceInUse bool `json:"force_in_use"`
+		ForceInUse    bool `json:"force_in_use"`
+		TakeOwnership bool `json:"take_ownership"`
 	}
 	if r.ContentLength != 0 && !decode(w, r, &b) {
 		return
@@ -302,8 +320,13 @@ func (s *Server) lifecycle(w http.ResponseWriter, r *http.Request, action string
 		return
 	}
 	name := r.PathValue("obj")
+	mgr, err := manager(r)
+	if err != nil {
+		writeErr(w, http.StatusForbidden, err.Error())
+		return
+	}
 	setAudit(r, k.Name+"/"+name, "")
-	res, err := st.Apply(identityFrom(r).User, []settings.Change{{Kind: k, Name: name, Action: action, IfVersion: v, ManagedBy: manager(r), Comment: b.Comment, Force: b.ForceInUse}})
+	res, err := st.Apply(identityFrom(r).User, []settings.Change{{Kind: k, Name: name, Action: action, IfVersion: v, ManagedBy: mgr, Comment: b.Comment, Force: b.ForceInUse, TakeOwnership: b.TakeOwnership}})
 	if err != nil {
 		s.configFail(w, err)
 		return
@@ -324,10 +347,15 @@ type changeBody struct {
 	Version int64           `json:"version"` // 0: any; -1: must not exist
 	Comment string          `json:"comment"`
 	// ForceInUse, for a delete: even if active runs depend on the object.
-	ForceInUse bool `json:"force_in_use"`
+	ForceInUse    bool `json:"force_in_use"`
+	TakeOwnership bool `json:"take_ownership"`
 }
 
 func readChanges(r *http.Request, in []changeBody) ([]settings.Change, error) {
+	mgr, err := manager(r)
+	if err != nil {
+		return nil, err
+	}
 	if len(in) == 0 {
 		return nil, errors.New("changes is empty")
 	}
@@ -340,7 +368,7 @@ func readChanges(r *http.Request, in []changeBody) ([]settings.Change, error) {
 		if k == nil {
 			return nil, fmt.Errorf("changes[%d]: no kind %q", i, c.Kind)
 		}
-		ch := settings.Change{Kind: k, Name: c.Name, Unit: c.Unit, Spec: c.Spec, ManagedBy: manager(r), Comment: c.Comment, IfVersion: -1, Force: c.ForceInUse}
+		ch := settings.Change{Kind: k, Name: c.Name, Unit: c.Unit, Spec: c.Spec, ManagedBy: mgr, Comment: c.Comment, IfVersion: -1, Force: c.ForceInUse, TakeOwnership: c.TakeOwnership}
 		switch c.Version {
 		case 0:
 		case -1:

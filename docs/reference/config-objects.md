@@ -22,8 +22,13 @@ command line, the MCP server and the planned Terraform provider name them. For t
 - **Deleting is reversible.** A deleted object is kept and `restore` brings it back as it was. The
   installation settings, the organisation and the step resources cannot be deleted; change them.
 - **Managed by.** `managed_by` says who owns an object: `api` (the UI, the CLI, MCP or a direct
-  call), `import`, or `terraform` (set with the header `X-Launchway-Manager: terraform`). The UI
-  warns before editing an object Terraform manages.
+  call), `import`, `terraform` or `git` (a tool says which with the header `X-Launchway-Manager`, and
+  only with an API token: a signed-in browser is always the web UI). The label is enforced, not
+  advisory: an object that Terraform or Git manages is read-only to everyone else, because the next
+  run of the tool would undo their change. Whoever really needs to change it sends `take_ownership`
+  (`--take-ownership`, or the confirmation in the web UI): it makes them the owner and is recorded in
+  the object's history and the audit trail. Sending the header alone never changes who owns an
+  object; claiming one the UI manages needs `take_ownership` too.
 - **Units.** Objects that can be defined at a level carry a `unit`; empty is the organisation. A
   project's `unit` is the unit it belongs to.
 

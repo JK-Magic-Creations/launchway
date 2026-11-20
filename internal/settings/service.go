@@ -578,6 +578,10 @@ type Change struct {
 	IfVersion int64
 	ManagedBy string
 	Comment   string
+	// TakeOwnership lets a change be made to an object another manager owns
+	// (Terraform, Git), and makes the caller its owner; recorded in the
+	// history and the audit trail.
+	TakeOwnership bool
 	// Force deletes an object that active runs depend on (see ConfigInUse);
 	// without it such a delete is refused. A forced delete is recorded in
 	// the object's history and the audit trail.
@@ -591,6 +595,8 @@ type Result struct {
 	Changed bool                 `json:"changed"`
 	// Forced lists what a forced delete cut short.
 	Forced []string `json:"forced,omitempty"`
+	// TookOwnership says whose the object was, when the change took it.
+	TookOwnership string `json:"took_ownership,omitempty"`
 }
 
 // Problem is a reason a change is refused.
@@ -639,8 +645,8 @@ func (s *Service) prepare(c Change) (engine.ConfigWrite, *engine.ConfigObject, e
 	case len(c.Comment) > 500:
 		return w, nil, invalid(errors.New("a comment is at most 500 characters"))
 	}
-	if c.ManagedBy != "" && c.ManagedBy != engine.ManagedByAPI && c.ManagedBy != engine.ManagedByTerraform && c.ManagedBy != engine.ManagedByImport {
-		return w, nil, invalid(fmt.Errorf("managed by %q: api, terraform or import", c.ManagedBy))
+	if c.ManagedBy != "" && c.ManagedBy != engine.ManagedByAPI && c.ManagedBy != engine.ManagedByTerraform && c.ManagedBy != engine.ManagedByImport && c.ManagedBy != engine.ManagedByGit {
+		return w, nil, invalid(fmt.Errorf("managed by %q: api, terraform, git or import", c.ManagedBy))
 	}
 	if c.Action == engine.ConfigUpdate || c.Action == engine.ConfigCreate {
 		v, stored, err := decodeSpec(k, c.Name, c.Spec)
@@ -768,6 +774,10 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		if err != nil {
 			return nil, err
 		}
+		took, err := checkOwnership(objs, changes, writes)
+		if err != nil {
+			return nil, invalid(err)
+		}
 		after, err := applyLocally(objs, writes)
 		if err != nil {
 			return nil, err
@@ -823,6 +833,7 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 				}
 			}
 			r.Forced = forced[w.Kind+"\x00"+w.Name]
+			r.TookOwnership = took[w.Kind+"\x00"+w.Name]
 			results = append(results, r)
 		}
 		if applyErr != nil {
@@ -831,6 +842,52 @@ func (s *Service) apply1(actor string, changes []Change, imp *engine.ConfigImpor
 		return results, nil
 	}
 	return nil, fmt.Errorf("%w: other changes kept coming first; try again", engine.ErrConflict)
+}
+
+// protectedOwner: a manager whose objects another writer must not change
+// without saying so, because its next run would undo the change.
+func protectedOwner(m string) bool { return m == engine.ManagedByTerraform || m == engine.ManagedByGit }
+
+// checkOwnership refuses a change to an object that Terraform (or Git) owns
+// from anyone who is not that owner, unless they explicitly take ownership,
+// and a claim of an object that this server's API owns the same way. The
+// declared manager is only a label the client sends: it never lets a change
+// through by itself. It returns whose objects were taken, by object.
+func checkOwnership(objs []engine.ConfigObject, changes []Change, writes []engine.ConfigWrite) (map[string]string, error) {
+	cur := map[string]engine.ConfigObject{}
+	for _, o := range objs {
+		cur[o.Kind+"\x00"+o.Name] = o
+	}
+	took := map[string]string{}
+	var errs []error
+	for i, w := range writes {
+		o, ok := cur[w.Kind+"\x00"+w.Name]
+		if !ok || o.Deleted() && w.Action != engine.ConfigRestore {
+			continue
+		}
+		owner, declared := o.ManagedBy, w.ManagedBy
+		if declared == "" {
+			declared = engine.ManagedByAPI
+		}
+		if owner == "" || owner == declared {
+			continue
+		}
+		claim := protectedOwner(declared) && owner == engine.ManagedByAPI
+		if !protectedOwner(owner) && !claim {
+			continue // an imported or unowned object is anyone's
+		}
+		if !changes[i].TakeOwnership {
+			what := fmt.Sprintf("%s %s is managed by %s", w.Kind, w.Name, owner)
+			if claim {
+				what = fmt.Sprintf("%s %s is managed here (the API, web UI and CLI)", w.Kind, w.Name)
+			}
+			errs = append(errs, fmt.Errorf("%s: a change from %s would be undone or would take it over. Change it where it is managed, or take ownership explicitly (take_ownership, or --take-ownership), which is recorded", what, declared))
+			continue
+		}
+		took[w.Kind+"\x00"+w.Name] = owner
+		writes[i].Comment = clipText(strings.TrimSpace(w.Comment+" [took ownership from "+owner+"]"), 500)
+	}
+	return took, errors.Join(errs...)
 }
 
 // putObjects returns the objects of after that puts describe.

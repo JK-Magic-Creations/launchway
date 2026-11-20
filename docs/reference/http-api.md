@@ -390,7 +390,8 @@ changes are checked and how a Terraform provider uses them. Reading and changing
 needs the admin role on every project, except the overview, which any signed-in person with a role
 may read (the web UI names the levels from it). A change names the version it expects (`If-Match`
 or `version` in the body); `412` says someone changed the object meanwhile. `X-Launchway-Manager:
-terraform` marks the object as managed by Terraform. `{kind}` is one of `projects`, `libraries`,
+terraform` (or `git`), sent with an API token, says a tool manages the object; only that
+manager may change it afterwards, unless the caller sends `take_ownership: true`, which is audited. `{kind}` is one of `projects`, `libraries`,
 `environments`, `runner-pools`, `role-bindings`, `policies`, `policy-sources`, `health-sources`,
 `models`, `secret-stores`, `step-resources`, `units`, `installation` and `organisation`.
 

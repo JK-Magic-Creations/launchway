@@ -124,12 +124,13 @@ func getConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in nameI
 }
 
 type putIn struct {
-	Kind    string `json:"kind" jsonschema:"the kind, as for list_config"`
-	Name    string `json:"name" jsonschema:"the object's name"`
-	Unit    string `json:"unit,omitempty" jsonschema:"the unit the object belongs to or is defined at; empty is the organisation"`
-	Spec    any    `json:"spec" jsonschema:"the object's settings, with the keys the configuration file uses (get_config shows an example)"`
-	Version int64  `json:"version,omitempty" jsonschema:"the version you read; the change is refused if the object has moved on; -1 means it must not exist yet"`
-	Comment string `json:"comment,omitempty" jsonschema:"why, for the history"`
+	Kind          string `json:"kind" jsonschema:"the kind, as for list_config"`
+	Name          string `json:"name" jsonschema:"the object's name"`
+	Unit          string `json:"unit,omitempty" jsonschema:"the unit the object belongs to or is defined at; empty is the organisation"`
+	Spec          any    `json:"spec" jsonschema:"the object's settings, with the keys the configuration file uses (get_config shows an example)"`
+	Version       int64  `json:"version,omitempty" jsonschema:"the version you read; the change is refused if the object has moved on; -1 means it must not exist yet"`
+	Comment       string `json:"comment,omitempty" jsonschema:"why, for the history"`
+	TakeOwnership bool   `json:"take_ownership,omitempty" jsonschema:"change an object that Terraform or Git manages, and become its owner; recorded"`
 }
 
 func putConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in putIn) (obj, error) {
@@ -144,6 +145,9 @@ func putConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in putIn
 		return out, errors.New("give the object's settings: spec")
 	}
 	body := obj{"unit": in.Unit, "spec": in.Spec, "comment": in.Comment}
+	if in.TakeOwnership {
+		body["take_ownership"] = true
+	}
 	if in.Version != 0 {
 		body["version"] = in.Version
 	}
@@ -158,11 +162,12 @@ func putConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in putIn
 }
 
 type lifecycleIn struct {
-	Kind       string `json:"kind" jsonschema:"the kind, as for list_config"`
-	Name       string `json:"name" jsonschema:"the object's name"`
-	Version    int64  `json:"version,omitempty" jsonschema:"the version you read; refused if the object has moved on"`
-	Comment    string `json:"comment,omitempty" jsonschema:"why, for the history"`
-	ForceInUse bool   `json:"force_in_use,omitempty" jsonschema:"delete even though active runs depend on it (project, environment, runner pool); recorded in the history and the audit trail"`
+	Kind          string `json:"kind" jsonschema:"the kind, as for list_config"`
+	Name          string `json:"name" jsonschema:"the object's name"`
+	Version       int64  `json:"version,omitempty" jsonschema:"the version you read; refused if the object has moved on"`
+	Comment       string `json:"comment,omitempty" jsonschema:"why, for the history"`
+	ForceInUse    bool   `json:"force_in_use,omitempty" jsonschema:"delete even though active runs depend on it (project, environment, runner pool); recorded in the history and the audit trail"`
+	TakeOwnership bool   `json:"take_ownership,omitempty" jsonschema:"change an object that Terraform or Git manages, and become its owner; recorded"`
 }
 
 func deleteConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in lifecycleIn) (obj, error) {
@@ -187,6 +192,9 @@ func lifecycle(ctx context.Context, c *mcpCall, tool, method, suffix string, in 
 	}
 	if in.ForceInUse {
 		body["force_in_use"] = true
+	}
+	if in.TakeOwnership {
+		body["take_ownership"] = true
 	}
 	err := c.apiJSON(ctx, tool, method, apiPath("/api/v1/config/%s/%s", in.Kind, in.Name)+suffix, body, &out)
 	return out, err
@@ -227,14 +235,15 @@ type changesIn struct {
 }
 
 type changeIn struct {
-	Kind       string `json:"kind" jsonschema:"the kind, as for list_config"`
-	Name       string `json:"name" jsonschema:"the object's name"`
-	Action     string `json:"action,omitempty" jsonschema:"put (the default), delete or restore"`
-	ForceInUse bool   `json:"force_in_use,omitempty" jsonschema:"for delete: even though active runs depend on the object"`
-	Unit       string `json:"unit,omitempty" jsonschema:"the unit; empty is the organisation"`
-	Spec       any    `json:"spec,omitempty" jsonschema:"the settings, for put"`
-	Version    int64  `json:"version,omitempty" jsonschema:"the version expected; -1 means it must not exist yet"`
-	Comment    string `json:"comment,omitempty"`
+	Kind          string `json:"kind" jsonschema:"the kind, as for list_config"`
+	Name          string `json:"name" jsonschema:"the object's name"`
+	Action        string `json:"action,omitempty" jsonschema:"put (the default), delete or restore"`
+	ForceInUse    bool   `json:"force_in_use,omitempty" jsonschema:"for delete: even though active runs depend on the object"`
+	TakeOwnership bool   `json:"take_ownership,omitempty" jsonschema:"change an object that Terraform or Git manages, and become its owner; recorded"`
+	Unit          string `json:"unit,omitempty" jsonschema:"the unit; empty is the organisation"`
+	Spec          any    `json:"spec,omitempty" jsonschema:"the settings, for put"`
+	Version       int64  `json:"version,omitempty" jsonschema:"the version expected; -1 means it must not exist yet"`
+	Comment       string `json:"comment,omitempty"`
 }
 
 func validateConfig(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in changesIn) (obj, error) {

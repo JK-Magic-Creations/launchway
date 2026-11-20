@@ -29,7 +29,7 @@ const configUsage = `Usage:
                                                       installation, organisation
   launchway config get KIND NAME [--json]             one object, as YAML (or JSON)
   launchway config set KIND NAME -f SPEC.yaml         create or replace an object; - reads standard input
-                     [--unit U] [--version N] [--comment TEXT] [--manager terraform]
+                     [--unit U] [--version N] [--comment TEXT] [--manager terraform] [--take-ownership]
   launchway config create KIND NAME -f SPEC.yaml      create an object; fails if it exists
   launchway config delete KIND NAME [--version N] [--comment TEXT]   delete (it can be restored)
   launchway config restore KIND NAME                  bring a deleted object back
@@ -377,7 +377,8 @@ func (cl *client) configSet(args []string, create bool) error {
 	unit := fs.String("unit", "", "the unit it belongs to (a project), or is defined at (anything else)")
 	ver := fs.Int64("version", 0, "change it only if it is at this version")
 	comment := fs.String("comment", "", "why, for the history")
-	mgr := fs.String("manager", "", "who manages it: api (the default) or terraform")
+	mgr := fs.String("manager", "", "who manages it: api (the default), terraform or git; needs an API token")
+	take := fs.Bool("take-ownership", false, "change an object that Terraform or Git manages, and become its owner (recorded)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
@@ -400,6 +401,9 @@ func (cl *client) configSet(args []string, create bool) error {
 		spec = json.RawMessage("{}")
 	}
 	body := map[string]any{"unit": *unit, "spec": spec, "comment": *comment}
+	if *take {
+		body["take_ownership"] = true
+	}
 	headers := map[string]string{}
 	if *ver > 0 {
 		headers["If-Match"] = strconv.Quote(strconv.FormatInt(*ver, 10))
@@ -437,6 +441,7 @@ func (cl *client) configLifecycle(args []string, action string) error {
 	ver := fs.Int64("version", 0, "only if it is at this version")
 	comment := fs.String("comment", "", "why, for the history")
 	inUse := fs.Bool("force-in-use", false, "delete even though active runs depend on it (recorded and audited)")
+	take := fs.Bool("take-ownership", false, "change an object that Terraform or Git manages, and become its owner (recorded)")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
@@ -459,6 +464,9 @@ func (cl *client) configLifecycle(args []string, action string) error {
 	}
 	if *inUse {
 		body["force_in_use"] = true
+	}
+	if *take {
+		body["take_ownership"] = true
 	}
 	var res struct {
 		Object cfgObject `json:"object"`

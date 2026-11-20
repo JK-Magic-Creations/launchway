@@ -84,3 +84,34 @@ func TestOverviewShowsOnlyWhatTheCallerMaySee(t *testing.T) {
 		t.Errorf("the administrator's overview lacks them: %s", full)
 	}
 }
+
+// A signed-in browser is the web UI: it cannot say it is Terraform, and a
+// token can, but cannot change what Terraform owns without taking it.
+func TestOnlyTokensActAsTerraformAndOwnershipIsKept(t *testing.T) {
+	e := setupAuth(t, envOpts{})
+	ada := e.signIn(t, "ada")
+	url := e.srv.URL + "/api/v1/config/libraries/shared"
+	body := `{"spec":{"repo":"https://git.example.com/shared.git"}}`
+	if r := ada.do(http.MethodPut, url, body, "X-Launchway-Manager", "terraform"); r.status != http.StatusForbidden {
+		t.Fatalf("a browser claiming to be terraform: %d %s", r.status, r.body)
+	}
+	_, tok := ada.newToken(e.srv.URL, "terraform")
+	tf := newBrowser(t)
+	if r := tf.do(http.MethodPut, url, body, append(bearer(tok), "X-Launchway-Manager", "terraform")...); r.status != 201 {
+		t.Fatalf("terraform with a token: %d %s", r.status, r.body)
+	}
+	r := ada.do(http.MethodPut, url, `{"spec":{"repo":"https://git.example.com/other.git"}}`)
+	if r.status != http.StatusBadRequest || !strings.Contains(string(r.body), "managed by terraform") {
+		t.Fatalf("the UI changing terraform's object: %d %s", r.status, r.body)
+	}
+	if r := ada.do(http.MethodPut, url, `{"take_ownership":true,"spec":{"repo":"https://git.example.com/other.git"}}`); r.status != 200 {
+		t.Fatalf("taking ownership: %d %s", r.status, r.body)
+	}
+	found := false
+	for _, a := range e.auditEntries(t) {
+		found = found || (a.Action == "config.put" && strings.Contains(a.Detail, "took ownership from terraform"))
+	}
+	if !found {
+		t.Error("taking ownership is not in the audit trail")
+	}
+}
