@@ -849,7 +849,7 @@ func TestStalledCacheUploadsEnd(t *testing.T) {
 	if _, err := r.e.BeginCache(j2.LeaseID, BeginCache{Name: "pip", Key: cacheKey("t"), Platform: linux, Bytes: 5, Files: 1, SHA256: sum([]byte("hello"))}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.e.db.Exec(`UPDATE leases SET expires_at = ?`, r.clk.t.Add(1000*time.Hour).UnixMilli()); err != nil {
+	if _, err := r.e.db.Exec(`UPDATE leases SET expires_at = ?`, r.clk.Now().Add(1000*time.Hour).UnixMilli()); err != nil {
 		t.Fatal(err)
 	}
 	r.advance(49 * time.Hour)
@@ -1182,10 +1182,10 @@ func TestOlderServerHasNoCaches(t *testing.T) {
 // jumps days would otherwise lose it to the reaper.
 func advanceClock(t *testing.T, e *Engine, clk *clock, d time.Duration) {
 	t.Helper()
-	if _, err := e.db.Exec(`UPDATE leases SET expires_at = ?`, clk.t.Add(d+24*time.Hour).UnixMilli()); err != nil {
+	if _, err := e.db.Exec(`UPDATE leases SET expires_at = ?`, clk.Now().Add(d+24*time.Hour).UnixMilli()); err != nil {
 		t.Fatal(err)
 	}
-	clk.t = clk.t.Add(d)
+	clk.Add(d)
 }
 
 func (r *cacheRig) advance(d time.Duration) { advanceClock(r.t, r.e, r.clk, d) }
