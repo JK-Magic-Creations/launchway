@@ -1,0 +1,22 @@
+# Only a deploy runner, in the cluster Argo CD deploys to. The server's configuration must have
+# an environment with target: prod-eu and a runner pool deploy-prod-eu whose token is in the
+# Secret below.
+server:
+  url: https://launchway.example.com
+runner:
+  enabled: false
+deployRunner:
+  enabled: true
+  target: prod-eu
+  token:
+    existingSecret: launchway-deploy-pool-token
+  applications:
+    - { projects: [shop], names: [shop] }
+  rolloutNamespaces: [shop]
+  repos:
+    gitops:
+      url: https://git.example.com/platform/gitops.git
+      credentials: { store: vault, key: gitops/launchway }
+      paths: [ { projects: [shop], files: ["apps/shop/**"] } ]
+  secretStores:
+    vault: { type: vault, address: https://vault.example.com, auth: { kubernetes: { role: launchway-deploy } } }

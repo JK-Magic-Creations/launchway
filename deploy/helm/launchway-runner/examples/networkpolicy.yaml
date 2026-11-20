@@ -1,0 +1,26 @@
+# NetworkPolicies for runners and their step pods. Use with examples/remote.yaml:
+#   helm install runners deploy/helm/launchway-runner -n launchway-runners \
+#     -f examples/remote.yaml -f examples/networkpolicy.yaml
+networkPolicy:
+  enabled: true
+  server:
+    # The addresses the server's URL resolves to (or, for a server in this cluster, its
+    # namespace and pods: namespaceSelector / podSelector).
+    cidrs: [203.0.113.10/32]
+  kubernetesAPI:
+    # kubectl get endpoints kubernetes -n default
+    cidrs: [10.0.0.1/32]
+    ports: [443, 6443]
+  extraEgress:
+    # Git hosts the runners clone from.
+    - to: [ { ipBlock: { cidr: 198.51.100.0/24 } } ]
+      ports: [ { protocol: TCP, port: 443 }, { protocol: TCP, port: 22 } ]
+  steps:
+    enabled: true
+    egress:
+      # Package registries and the like, over HTTPS, but not the cluster's own networks.
+      - to:
+          - ipBlock:
+              cidr: 0.0.0.0/0
+              except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16]
+        ports: [ { protocol: TCP, port: 443 } ]

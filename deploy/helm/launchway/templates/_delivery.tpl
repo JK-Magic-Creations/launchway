@@ -33,15 +33,6 @@ the configuration stays readable by releases that do not know these settings.
 {{- toYaml $out -}}
 {{- end -}}
 
-{{/* The deploy runner's file, for `launchway runner --config`. */}}
-{{- define "launchway.deployRunnerConfig" -}}
-{{- $r := .Values.delivery.deployRunner -}}
-{{- $target := dict "kubernetes" (dict "in_cluster" true) "argocd_namespace" $r.argocdNamespace "applications" $r.applications "rollout_namespaces" ($r.rolloutNamespaces | default list) -}}
-{{- if not (kindIs "invalid" $r.refresh) }}{{ $_ := set $target "refresh" $r.refresh }}{{ end -}}
-{{- $server := .Values.runner.serverURL | default (printf "http://%s.%s.svc:%v" (include "launchway.fullname" .) .Release.Namespace .Values.service.port) -}}
-{{- toYaml (dict "server" $server "data" "/var/lib/launchway-runner" "secrets" ($r.secretStores | default dict) "deploy" (dict "targets" (dict $r.target $target) "repos" $r.repos)) -}}
-{{- end -}}
-
 {{/* Checks of the delivery values. */}}
 {{- define "launchway.validateDelivery" -}}
 {{- $r := .Values.delivery.deployRunner -}}
@@ -66,10 +57,4 @@ the configuration stays readable by releases that do not know these settings.
 {{- end -}}
 {{- end -}}
 {{- end -}}
-{{- end -}}
-
-{{/* The fields of a rollout's status the deploy runner may not change (Argo Rollouts v1.8
-CRD): everything but pauseConditions (promote), promoteFull and abort (abort, retry). */}}
-{{- define "launchway.rolloutStatusFixed" -}}
-HPAReplicas abortedAt alb albs availableReplicas blueGreen canary collisionCount conditions controllerPause currentPodHash currentStepHash currentStepIndex message observedGeneration phase readyReplicas replicas restartedAt selector stableRS updatedReplicas workloadObservedGeneration
 {{- end -}}

@@ -1,0 +1,25 @@
+{{- include "launchway.validate" . -}}
+{{- if .Values.runner.enabled }}
+{{- $name := include "launchway.fullname" . -}}
+{{- $stepNamespace := include "launchway.stepNamespace" . -}}
+{{- $config := include "launchway.shared.runnerConfig" (dict "root" . "r" .Values.runner "server" .Values.server.url "stepNamespace" $stepNamespace) -}}
+{{- $conn := include "launchway.connectionVolumes" . | fromYaml -}}
+{{- $ctx := dict "root" . "r" .Values.runner "name" $name "sa" (include "launchway.runnerServiceAccount" .) "component" "runner" "stepNamespace" $stepNamespace "server" .Values.server.url "tokenSecret" .Values.token.existingSecret "tokenKey" .Values.token.existingSecretKey "config" $config "env" (include "launchway.connectionEnv" . | fromYaml).env "volumes" $conn.volumes "mounts" $conn.mounts -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "runner") | nindent 4 }}
+data:
+  runner.yaml: |
+    # Rendered by the launchway-runner Helm chart from runner.* in the values; read with
+    # `launchway runner --config`. The token comes from a Secret, as an environment variable.
+    {{- $config | nindent 4 }}
+---
+{{- /* The step namespace, the ServiceAccount, the RBAC and the Deployment are rendered by the
+templates shared with the launchway chart (deploy/helm/shared), so the two cannot differ. */ -}}
+{{- include "launchway.shared.executorAccess" $ctx }}
+{{ include "launchway.shared.runnerDeployment" $ctx }}
+{{- end }}
