@@ -475,3 +475,30 @@ func (e *Engine) configChanged() {
 		go fn()
 	}
 }
+
+// artifactsFromDatabase lets the stored installation settings decide where
+// artifacts are kept (Options.ArtifactsFromDatabase).
+func (e *Engine) artifactsFromDatabase(from func([]byte) (ArtifactOptions, error)) error {
+	if from == nil || !e.ConfigKnown() {
+		return nil
+	}
+	_, objs, err := e.ConfigSnapshot()
+	if err != nil {
+		return err
+	}
+	for _, o := range objs {
+		if o.Kind != "installation" || o.Deleted() {
+			continue
+		}
+		opts, err := from(o.Spec)
+		if err != nil {
+			return fmt.Errorf("the artifact settings stored in the database: %w", err)
+		}
+		arts, err := opts.withDefaults()
+		if err != nil {
+			return err
+		}
+		e.arts = arts
+	}
+	return nil
+}

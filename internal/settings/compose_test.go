@@ -251,3 +251,54 @@ func TestUnitsNarrowWhatTheirObjectsApplyTo(t *testing.T) {
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
+
+// The artifact backend and the MCP endpoint's settings are the
+// installation's: imported from the file once, read back from the database,
+// and the engine opens with the database's artifact store.
+func TestArtifactBackendAndMCPLiveInTheDatabase(t *testing.T) {
+	file, _, err := config.ParseSections([]byte(`
+artifacts:
+  store: filesystem
+  dir: /srv/launchway/artifacts
+  max_file_mib: 512
+mcp:
+  enabled: true
+  requests_per_minute: 300
+  allowed_origins: [https://tools.example.com]
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keys := strings.Join(movedKeys(file), ","); !strings.Contains(keys, "artifacts store") || !strings.Contains(keys, "mcp") {
+		t.Errorf("the file's artifact store and mcp are not reported as moved: %s", keys)
+	}
+	objs, err := FromConfig(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, _, err := Compose(&config.Config{}, storeRoundTrip(t, objs))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Artifacts.Store != "filesystem" || got.Artifacts.Dir != "/srv/launchway/artifacts" || got.Artifacts.MaxFileMiB != 512 {
+		t.Errorf("artifacts: %+v", got.Artifacts)
+	}
+	if got.MCP.RequestsPerMinute != 300 || len(got.MCP.AllowedOrigins) != 1 {
+		t.Errorf("mcp: %+v", got.MCP)
+	}
+	// The bootstrap file keeps neither.
+	if b := Bootstrap(file); b.Artifacts.Store != "" || b.Artifacts.Dir != "" || b.MCP.RequestsPerMinute != 0 {
+		t.Errorf("the bootstrap still has them: %+v %+v", b.Artifacts, b.MCP)
+	}
+	// What the engine reads as it opens.
+	var inst []byte
+	for _, o := range objs {
+		if o.Kind == "installation" {
+			inst = o.Spec
+		}
+	}
+	c, err := ArtifactsFromInstallation(&config.Config{Data: "/data"}, inst)
+	if err != nil || c.Artifacts.Store != "filesystem" || c.Artifacts.Dir != "/srv/launchway/artifacts" || c.Data != "/data" {
+		t.Errorf("ArtifactsFromInstallation: %+v %v", c.Artifacts, err)
+	}
+}

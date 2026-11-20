@@ -28,6 +28,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/jk-magic-creations/launchway/internal/ai"
+	"github.com/jk-magic-creations/launchway/internal/blobstore"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 )
@@ -157,7 +158,10 @@ type Installation struct {
 	Reports config.ServerReportsConfig `yaml:"reports"`
 	// Artifacts are the limits and retention of artifacts.* (where they
 	// are kept stays in the file).
-	Artifacts     ArtifactLimits             `yaml:"artifacts"`
+	Artifacts ArtifactLimits `yaml:"artifacts"`
+	// MCP is the endpoint agents use: on or off, the origins and limits,
+	// and OAuth.
+	MCP           config.MCPConfig           `yaml:"mcp"`
 	RunnerAdmin   string                     `yaml:"runner_admin"`
 	PolicyWaivers config.PolicyWaiversConfig `yaml:"policy_waivers"`
 	Tokens        config.TokensConfig        `yaml:"tokens"`
@@ -165,11 +169,19 @@ type Installation struct {
 
 // ArtifactLimits are the artifacts settings that moved to the database.
 type ArtifactLimits struct {
-	MaxFileMiB    int    `yaml:"max_file_mib"`
-	MaxRunMiB     int    `yaml:"max_run_mib"`
-	MaxProjectGiB int    `yaml:"max_project_gib"`
-	Retain        string `yaml:"retain"`
-	MaxRetain     string `yaml:"max_retain"`
+	// Store is where artifacts are kept: database, filesystem or s3 (see
+	// config.ArtifactsConfig). The store is chosen when a server starts, so a
+	// change here takes effect when each server next restarts, after the
+	// artifacts have been copied (launchway blobs copy).
+	Store         string                      `yaml:"store"`
+	Database      *config.DatabaseStoreConfig `yaml:"database"`
+	Dir           string                      `yaml:"dir"`
+	S3            *blobstore.S3Config         `yaml:"s3"`
+	MaxFileMiB    int                         `yaml:"max_file_mib"`
+	MaxRunMiB     int                         `yaml:"max_run_mib"`
+	MaxProjectGiB int                         `yaml:"max_project_gib"`
+	Retain        string                      `yaml:"retain"`
+	MaxRetain     string                      `yaml:"max_retain"`
 }
 
 // Levels are the display names of the levels, singular and plural.

@@ -468,9 +468,9 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		groups = []string{}
 	}
 	// Whether agents can connect, so the UI can show how.
-	agents := map[string]any{"enabled": s.MCP != nil, "path": mcpPath}
-	if s.MCP != nil && s.MCP.OAuth != nil {
-		agents["oauth_resource"] = s.MCP.OAuth.Resource
+	agents := map[string]any{"enabled": s.mcpOpts() != nil, "path": mcpPath}
+	if m := s.mcpOpts(); m != nil && m.OAuth != nil {
+		agents["oauth_resource"] = m.OAuth.Resource
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user": id.User, "groups": groups, "auth_mode": mode, "via": id.Via,

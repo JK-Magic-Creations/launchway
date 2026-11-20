@@ -211,7 +211,17 @@ func cmdServer(args []string) error {
 	}
 	live.Artifacts = artifactOpts // the limits, and where artifacts are kept
 	live.Findings = findingLimits
-	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: live.AllowSelfApproval, ConnectWait: dbWait,
+	// Once the database holds the installation's settings, it, not the file,
+	// says where artifacts are kept.
+	fromDatabase := func(spec []byte) (engine.ArtifactOptions, error) {
+		c, err := settings.ArtifactsFromInstallation(cfg, spec)
+		if err != nil {
+			return engine.ArtifactOptions{}, err
+		}
+		o, _, err := artifactSettings(c, log)
+		return o, err
+	}
+	eng, err := engine.Open(engine.Options{Database: dbAddr, Logger: log, AllowSelfApproval: live.AllowSelfApproval, ConnectWait: dbWait, ArtifactsFromDatabase: fromDatabase,
 		Tests: live.Tests, Environments: live.Environments, Artifacts: live.Artifacts, Findings: live.Findings, Policy: live.Policy,
 		Reports: live.Reports, HealthSources: live.HealthSources, Models: live.Models, RunnerPools: live.RunnerPools})
 	if err != nil {
@@ -267,7 +277,7 @@ func cmdServer(args []string) error {
 		srv.Settings = store
 	}
 	applyLive := func(c *config.Config) error {
-		l, err := serverLive(c, token, authOpts != nil)
+		l, err := serverLive(c, token, authOpts)
 		if err != nil {
 			return err
 		}
@@ -280,15 +290,6 @@ func cmdServer(args []string) error {
 	models := live.Models
 	if eff != cfg {
 		models, _ = eff.Models()
-	}
-	if m := cfg.MCP; m.On() {
-		srv.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
-		if o := m.OAuth; o != nil {
-			srv.MCP.OAuth = &api.MCPOAuth{Resource: o.Resource, Scopes: o.Scopes}
-			if err := api.CheckMCPOAuth(srv.MCP.OAuth, authOpts); err != nil {
-				return fmt.Errorf("%s: %w", *cfgPath, err)
-			}
-		}
 	}
 	if models != nil || store.Available() {
 		// The server calls models only to explain a failed step, with keys
@@ -333,7 +334,7 @@ func cmdServer(args []string) error {
 			if err != nil {
 				return err
 			}
-			sl, err := serverLive(c, token, authOpts != nil)
+			sl, err := serverLive(c, token, authOpts)
 			if err != nil {
 				return err
 			}
@@ -471,9 +472,19 @@ func startSettings(store *settings.Service, log *slog.Logger) (*config.Config, e
 }
 
 // serverLive makes the API server's live settings from a configuration.
-func serverLive(c *config.Config, runnerToken string, signIn bool) (api.Live, error) {
+func serverLive(c *config.Config, runnerToken string, auth *api.Auth) (api.Live, error) {
 	var l api.Live
 	var err error
+	signIn := auth != nil
+	if m := c.MCP; m.On() {
+		l.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
+		if o := m.OAuth; o != nil {
+			l.MCP.OAuth = &api.MCPOAuth{Resource: o.Resource, Scopes: o.Scopes}
+			if err := api.CheckMCPOAuth(l.MCP.OAuth, auth); err != nil {
+				return l, err
+			}
+		}
+	}
 	if signIn {
 		if l.Policy, err = c.Auth.Policy(); err != nil {
 			return l, err

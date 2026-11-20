@@ -16,6 +16,17 @@ type Live struct {
 	WaiveRole    *auth.Role
 	RunnersRole  *auth.Role
 	TokenMaxDays int
+	// MCP turns on the Model Context Protocol endpoint, /mcp, and sets its
+	// origins, limits and OAuth; nil is off.
+	MCP *MCPOptions
+}
+
+// mcpOpts returns the MCP settings in force: nil when the endpoint is off.
+func (s *Server) mcpOpts() *MCPOptions {
+	if l := s.live.Load(); l != nil {
+		return l.MCP
+	}
+	return s.MCP
 }
 
 // Reconfigure replaces the live settings. Requests in flight finish with
@@ -28,9 +39,19 @@ func (s *Server) cur() *Live {
 	if l := s.live.Load(); l != nil {
 		return l
 	}
-	l := &Live{Drafts: s.Drafts, RunnerPools: s.RunnerPools, WaiveRole: s.WaiveRole, RunnersRole: s.RunnersRole, TokenMaxDays: s.TokenMaxDays}
+	l := &Live{MCP: s.MCP, Drafts: s.Drafts, RunnerPools: s.RunnerPools, WaiveRole: s.WaiveRole, RunnersRole: s.RunnersRole, TokenMaxDays: s.TokenMaxDays}
 	if s.Auth != nil {
 		l.Policy = s.Auth.Policy
 	}
 	return l
+}
+
+// mcpNow is mcpOpts for code that runs once the endpoint has been found
+// on: if it was turned off meanwhile, the settings are empty ones, which
+// ask for nothing.
+func (s *Server) mcpNow() *MCPOptions {
+	if m := s.mcpOpts(); m != nil {
+		return m
+	}
+	return &MCPOptions{}
 }

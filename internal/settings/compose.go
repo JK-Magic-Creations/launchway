@@ -275,6 +275,8 @@ func applyInstallation(c *config.Config, s *Installation) {
 	c.Artifacts.MaxProjectGiB = s.Artifacts.MaxProjectGiB
 	c.Artifacts.Retain = s.Artifacts.Retain
 	c.Artifacts.MaxRetain = s.Artifacts.MaxRetain
+	c.Artifacts.Store, c.Artifacts.Database, c.Artifacts.Dir, c.Artifacts.S3 = s.Artifacts.Store, s.Artifacts.Database, s.Artifacts.Dir, s.Artifacts.S3
+	c.MCP = s.MCP
 	c.RunnerAdmin = s.RunnerAdmin
 	if s.PolicyWaivers != (config.PolicyWaiversConfig{}) {
 		ensurePolicy(c).Waivers = s.PolicyWaivers
@@ -296,6 +298,8 @@ func Bootstrap(boot *config.Config) *config.Config {
 	c.Reports = config.ServerReportsConfig{Origin: boot.Reports.Origin}
 	c.Artifacts.MaxFileMiB, c.Artifacts.MaxRunMiB, c.Artifacts.MaxProjectGiB = 0, 0, 0
 	c.Artifacts.Retain, c.Artifacts.MaxRetain = "", ""
+	c.Artifacts.Store, c.Artifacts.Database, c.Artifacts.Dir, c.Artifacts.S3 = "", nil, "", nil
+	c.MCP = config.MCPConfig{}
 	c.Loops = config.LoopsConfig{}
 	c.Schedules = config.SchedulesConfig{}
 	c.Environments = nil
@@ -441,7 +445,9 @@ func installationOf(c *config.Config) Installation {
 	s := Installation{Approvals: c.Approvals, Drafts: c.Drafts, PullRequests: c.PullRequests, Schedules: c.Schedules, Loops: c.Loops,
 		Tests: c.Tests, Findings: c.Findings, Reports: c.Reports, RunnerAdmin: c.RunnerAdmin, Tokens: c.Auth.Tokens,
 		Artifacts: ArtifactLimits{MaxFileMiB: c.Artifacts.MaxFileMiB, MaxRunMiB: c.Artifacts.MaxRunMiB, MaxProjectGiB: c.Artifacts.MaxProjectGiB,
-			Retain: c.Artifacts.Retain, MaxRetain: c.Artifacts.MaxRetain}}
+			Retain: c.Artifacts.Retain, MaxRetain: c.Artifacts.MaxRetain,
+			Store: c.Artifacts.Store, Database: c.Artifacts.Database, Dir: c.Artifacts.Dir, S3: c.Artifacts.S3},
+		MCP: c.MCP}
 	s.Reports.Origin = ""
 	if c.Policy != nil {
 		s.PolicyWaivers = c.Policy.Waivers
@@ -471,6 +477,8 @@ func movedKeys(c *config.Config) []string {
 	a := c.Artifacts
 	set(a.MaxFileMiB != 0 || a.MaxRunMiB != 0 || a.MaxProjectGiB != 0 || a.Retain != "" || a.MaxRetain != "",
 		"artifacts limits (max_file_mib, max_run_mib, max_project_gib, retain, max_retain)")
+	set(a.Store != "" || a.Database != nil || a.Dir != "" || a.S3 != nil, "artifacts store (store, database, dir, s3)")
+	set(!reflect.DeepEqual(c.MCP, config.MCPConfig{}), "mcp")
 	set(c.Loops != (config.LoopsConfig{}), "loops")
 	set(c.Schedules != (config.SchedulesConfig{}), "schedules")
 	set(len(c.Environments) > 0, "environments")

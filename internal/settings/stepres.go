@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/resources"
 )
@@ -163,4 +164,22 @@ func (s *Service) putStepResources(actor string, spec *StepResources, comment st
 	_, err = s.Apply(actor, []Change{{Kind: kindByName("step-resources"), Name: StepResourcesName, Action: engine.ConfigUpdate,
 		Spec: json.RawMessage(raw), IfVersion: -1, ManagedBy: engine.ManagedByAPI, Comment: comment}})
 	return err
+}
+
+// ArtifactsFromInstallation returns the configuration with its artifact
+// settings replaced by those of the installation object's spec: where
+// artifacts are kept and their limits. The engine uses it as it opens, when
+// the database can be read but the rest of the configuration has not been
+// composed yet. A spec that cannot be read leaves the configuration alone
+// and says why.
+func ArtifactsFromInstallation(boot *config.Config, spec json.RawMessage) (*config.Config, error) {
+	v, _, err := decodeSpec(kindByName("installation"), "installation", spec)
+	if err != nil {
+		return boot, err
+	}
+	c := *boot
+	a := v.(*Installation).Artifacts
+	c.Artifacts = config.ArtifactsConfig{Store: a.Store, Database: a.Database, Dir: a.Dir, S3: a.S3,
+		MaxFileMiB: a.MaxFileMiB, MaxRunMiB: a.MaxRunMiB, MaxProjectGiB: a.MaxProjectGiB, Retain: a.Retain, MaxRetain: a.MaxRetain}
+	return &c, nil
 }

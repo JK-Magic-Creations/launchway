@@ -67,11 +67,11 @@ func CheckMCPOAuth(o *MCPOAuth, a *Auth) error {
 // protectedResourceMetadata serves RFC 9728 metadata for /mcp: 404 unless
 // OAuth is configured.
 func (s *Server) protectedResourceMetadata(w http.ResponseWriter, r *http.Request) {
-	if s.MCP == nil || s.MCP.OAuth == nil || s.Auth == nil {
+	if s.mcpNow().OAuth == nil || s.Auth == nil {
 		writeErr(w, http.StatusNotFound, "this server does not accept OAuth access tokens at /mcp; use a Launchway API token")
 		return
 	}
-	o := s.MCP.OAuth
+	o := s.mcpNow().OAuth
 	meta := map[string]any{
 		"resource":                 o.Resource,
 		"authorization_servers":    []string{s.Auth.OIDC.Issuer()},
@@ -94,7 +94,7 @@ func (s *Server) protectedResourceMetadata(w http.ResponseWriter, r *http.Reques
 func (s *Server) oauthIdentity(r *http.Request, raw string) (*identity, error) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	claims, client, err := s.Auth.OIDC.VerifyAccessToken(ctx, raw, s.MCP.OAuth.Resource, s.MCP.OAuth.Scopes)
+	claims, client, err := s.Auth.OIDC.VerifyAccessToken(ctx, raw, s.mcpNow().OAuth.Resource, s.mcpNow().OAuth.Scopes)
 	if err != nil {
 		s.tokenDenied(r, true, "", "", "an OAuth access token that does not check out: "+clip(err.Error(), 200))
 		return nil, nil

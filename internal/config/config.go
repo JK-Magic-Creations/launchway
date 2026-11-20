@@ -929,6 +929,9 @@ func (c *Config) Validate(path string) error {
 	if c.MCP.OAuth != nil && c.Auth.Mode != AuthOIDC {
 		return fmt.Errorf("%s: mcp.oauth needs sign-in with OpenID Connect (auth.mode: oidc)", path)
 	}
+	if o := c.MCP.OAuth; o != nil && o.Resource == c.Auth.OIDC.ClientID {
+		return fmt.Errorf("%s: mcp.oauth.resource must not be the sign-in client ID: ID tokens carry that audience", path)
+	}
 	if _, err := c.Models(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}

@@ -54,9 +54,16 @@ var (
 
 // Options configure an Engine.
 type Options struct {
-	Database string        // a SQLite file, or a postgres:// URL that several servers share
-	LeaseTTL time.Duration // how long a runner may go silent; default 30s
-	MaxLost  int           // times a step is requeued after losing its runner; default 3
+	Database string // a SQLite file, or a postgres:// URL that several servers share
+	// ArtifactsFromDatabase, if set, is called as the engine opens with the
+	// spec of the stored installation object (schema 23), if there is one;
+	// it returns the artifact options that spec says (where artifacts are
+	// kept and their limits), which replace Artifacts. The database, not
+	// the file, decides where artifacts are kept once it has an
+	// installation object.
+	ArtifactsFromDatabase func(installation []byte) (ArtifactOptions, error)
+	LeaseTTL              time.Duration // how long a runner may go silent; default 30s
+	MaxLost               int           // times a step is requeued after losing its runner; default 3
 	// RunnerTimeout is how long a runner may go unseen before another runner
 	// may take over its runs (see Lease); default 3 × LeaseTTL.
 	RunnerTimeout time.Duration
@@ -411,6 +418,10 @@ func Open(o Options) (*Engine, error) {
 		e.channel = channelFor(schema)
 	}
 	if err := e.recoverLeases(); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := e.artifactsFromDatabase(o.ArtifactsFromDatabase); err != nil {
 		db.Close()
 		return nil, err
 	}
