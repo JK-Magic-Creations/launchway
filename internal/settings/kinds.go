@@ -106,6 +106,10 @@ var kinds = []*Kind{
 		FileKey: "(step resources: defaults and limits, kept in the database since schema 22)",
 		Doc:     "The CPU and memory a step gets when it asks for none, by kind of step, and the most any step may ask for.",
 		spec:    func() any { return &StepResources{} }},
+	{Name: "sign-in", Path: "sign-in", Title: "Sign-in", Plural: "Sign-in", Singleton: "sign-in",
+		FileKey: "(auth.mode, auth.oidc, auth.admins: the bootstrap file keeps its own, which is the break-glass way in)",
+		Doc:     "How people sign in: the identity provider, the client, the reference to its secret and who the first administrators are. Saved and checked here; it is not switched on by saving (see the sign-in page).",
+		spec:    func() any { return &SignIn{} }},
 	{Name: "secret-store", Path: "secret-stores", Title: "Secret store", Plural: "Secret stores", Levels: true,
 		Doc:  "The definition of a secret store pipelines may name: its type and which projects may use it. Its address and credentials stay with the runners.",
 		spec: func() any { return &SecretStore{} }},
@@ -165,7 +169,10 @@ type Installation struct {
 	// Egress lists the internal hosts and ranges the server may fetch from
 	// for people (a Git server on the private network); everything
 	// internal is refused otherwise.
-	Egress        EgressAllow                `yaml:"egress"`
+	Egress EgressAllow `yaml:"egress"`
+	// History is how long the change history of configuration objects is
+	// kept; unset keeps all of it.
+	History       config.HistoryConfig       `yaml:"history"`
 	RunnerAdmin   string                     `yaml:"runner_admin"`
 	PolicyWaivers config.PolicyWaiversConfig `yaml:"policy_waivers"`
 	Tokens        config.TokensConfig        `yaml:"tokens"`
@@ -256,6 +263,26 @@ type Organisation struct {
 type Unit struct {
 	DisplayName string `yaml:"display_name" json:"display_name"`
 	Description string `yaml:"description" json:"description"`
+}
+
+// SignIn is the sign-in settings (kind sign-in): what the sign-in wizard
+// collects and checks. The client secret is never here: only the name of
+// the environment variable that holds it on the servers.
+//
+// Saving it does not switch sign-in on. A server reads its sign-in before it
+// can read this object, and switching on needs the acting administrator to
+// sign in successfully with it first (so that nobody locks themselves out);
+// until that is built, Enabled must stay false and the servers keep the
+// sign-in of their bootstrap file, which also stays the break-glass way in.
+type SignIn struct {
+	Enabled         bool                `yaml:"enabled"`
+	Issuer          string              `yaml:"issuer"`
+	ClientID        string              `yaml:"client_id"`
+	RedirectURL     string              `yaml:"redirect_url"`
+	ClientSecretEnv string              `yaml:"client_secret_env"`
+	GroupsClaim     string              `yaml:"groups_claim"`
+	UsernameClaim   string              `yaml:"username_claim"`
+	Admins          config.AdminsConfig `yaml:"admins"`
 }
 
 // SecretStore is a secret-store definition (kind secret-store): what

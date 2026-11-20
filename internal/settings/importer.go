@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 
@@ -239,19 +240,17 @@ func sortPlan(items []PlanItem) {
 		}
 		return 3
 	}
-	// Stable: by action, then kind order, then name.
-	for i := 1; i < len(items); i++ {
-		for j := i; j > 0; j-- {
-			a, b := items[j-1], items[j]
-			less := order(b.Action) < order(a.Action) ||
-				(order(b.Action) == order(a.Action) && (kindOrder(b.Kind) < kindOrder(a.Kind) ||
-					(kindOrder(b.Kind) == kindOrder(a.Kind) && b.Name < a.Name)))
-			if !less {
-				break
-			}
-			items[j-1], items[j] = b, a
+	// By action, then kind order, then name.
+	sort.SliceStable(items, func(i, j int) bool {
+		a, b := items[i], items[j]
+		if order(a.Action) != order(b.Action) {
+			return order(a.Action) < order(b.Action)
 		}
-	}
+		if kindOrder(a.Kind) != kindOrder(b.Kind) {
+			return kindOrder(a.Kind) < kindOrder(b.Kind)
+		}
+		return a.Name < b.Name
+	})
 }
 
 func problemsOf(err error) []string {

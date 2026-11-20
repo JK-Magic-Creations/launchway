@@ -94,6 +94,10 @@ type Config struct {
 	// MCP controls the endpoint agents use, /mcp; see mcp.go.
 	MCP MCPConfig `yaml:"mcp"`
 
+	// History is how long the change history of the configuration kept in
+	// the database is kept. Moved to the database with the rest.
+	History HistoryConfig `yaml:"history"`
+
 	// Egress says which addresses the server may fetch from on a user's
 	// behalf (see internal/egress). AllowLocal stays in this file; the
 	// allowed hosts are an administrator's setting in the database.
@@ -1163,4 +1167,12 @@ type EgressConfig struct {
 	// ranges. A self-hosted Git server on the private network goes here.
 	// Kept in the database, set by an administrator.
 	Allow []string `yaml:"allow"`
+}
+
+// HistoryConfig is the retention of the configuration's change history.
+type HistoryConfig struct {
+	// Retain is how long changes are kept (90d, 52w; at least 7d); empty
+	// keeps all of them. The newest change of every object is always kept.
+	// Revisions older than what is kept can no longer be put back.
+	Retain string `yaml:"retain"`
 }

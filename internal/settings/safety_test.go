@@ -3,12 +3,14 @@ package settings
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -358,5 +360,49 @@ func TestOwnershipIsEnforced(t *testing.T) {
 	}
 	if _, err := as("terraform", true, spec("main")); err != nil {
 		t.Errorf("an explicit claim: %v", err)
+	}
+}
+
+// History is kept for ever by default; with history.retain old changes go,
+// except each object's newest, and revisions that were removed cannot be
+// put back. The setting survives an export and an import.
+func TestHistoryRetention(t *testing.T) {
+	eng := openEngine(t, testdb.New(t))
+	s := New(eng, bootOIDC(t, t.TempDir(), true), quietLog())
+	for i := 0; i < 3; i++ {
+		if _, err := s.Apply("ada", []Change{change("project", "web", fmt.Sprintf(`{"repo":"https://git.example.com/web.git","branch":"b%d"}`, i))}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.Apply("ada", []Change{change("installation", "installation", `{"history":{"retain":"1d"}}`)}); err == nil {
+		t.Fatal("a retention under a week was accepted")
+	}
+	if _, err := s.Apply("ada", []Change{change("installation", "installation", `{"history":{"retain":"90d"}}`)}); err != nil {
+		t.Fatal(err)
+	}
+	// Nothing is old yet: nothing goes.
+	if n, err := eng.PruneConfigHistory(time.Now().Add(-90 * 24 * time.Hour).UnixMilli()); err != nil || n != 0 {
+		t.Fatalf("prune of nothing: %d %v", n, err)
+	}
+	// Everything is older than "now": all but the newest change of each object goes.
+	n, err := eng.PruneConfigHistory(time.Now().Add(time.Hour).UnixMilli())
+	if err != nil || n != 2 {
+		t.Fatalf("prune: %d %v", n, err)
+	}
+	h, _ := s.History(engine.ConfigHistoryFilter{Kind: "project", Name: "web"})
+	if len(h) != 1 || !strings.Contains(string(h[0].After), "b2") {
+		t.Errorf("the newest change was not kept: %+v", h)
+	}
+	if _, _, err := RestoreRevision(eng, 1, "operator"); err == nil || !strings.Contains(err.Error(), "retention") {
+		t.Errorf("restoring a revision that was pruned: %v", err)
+	}
+	// The setting is part of an export, and imports back.
+	objs, _ := s.List(nil, false)
+	text, err := Export(objs)
+	if err != nil || !strings.Contains(string(text), "retain: 90d") {
+		t.Fatalf("export: %v\n%s", err, text)
+	}
+	if _, err := ParseFile(text); err != nil {
+		t.Errorf("the export does not read back: %v", err)
 	}
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
@@ -96,8 +97,9 @@ type Service struct {
 	safe *Safe
 	// server names this server in the audit trail's record of which
 	// revision each server applied; recorded is the last state written.
-	server   string
-	recorded string
+	server    string
+	recorded  string
+	lastPrune time.Time
 	// lastErr is why the newest configuration was not applied, if it was
 	// not.
 	lastErr string
@@ -503,7 +505,31 @@ func (s *Service) Watch(ctx context.Context) {
 		case <-t.C:
 		case <-kick:
 		}
-		s.Refresh()
+		_ = s.Refresh()
+		s.pruneHistory()
+	}
+}
+
+// pruneHistory removes the changes older than history.retain, at most once
+// an hour. Every server may do it; the removal is the same.
+func (s *Service) pruneHistory() {
+	s.mu.Lock()
+	cur, last := s.cur, s.lastPrune
+	s.mu.Unlock()
+	if cur == nil || cur.History.Retain == "" || time.Since(last) < time.Hour {
+		return
+	}
+	d, ok := pipeline.ParseRetain(cur.History.Retain)
+	if !ok {
+		return
+	}
+	s.mu.Lock()
+	s.lastPrune = time.Now()
+	s.mu.Unlock()
+	if n, err := s.eng.PruneConfigHistory(time.Now().Add(-d).UnixMilli()); err != nil {
+		s.log.Warn("could not remove old configuration history", "err", err)
+	} else if n > 0 {
+		s.log.Info("removed configuration history older than the retention setting", "changes", n, "retain", cur.History.Retain)
 	}
 }
 
@@ -667,6 +693,11 @@ func (s *Service) prepare(c Change) (engine.ConfigWrite, *engine.ConfigObject, e
 func checkOwn(k *Kind, v any) error {
 	switch t := v.(type) {
 	case *Installation:
+		if t.History.Retain != "" {
+			if d, ok := pipeline.ParseRetain(t.History.Retain); !ok || d < 7*24*time.Hour {
+				return fmt.Errorf("history.retain %q: a length of time such as 90d or 52w, at least 7d; leave it empty to keep every change", t.History.Retain)
+			}
+		}
 		if t.Reports.Origin != "" {
 			return errors.New("reports.origin stays in the configuration file: it is part of how the server is reached")
 		}
@@ -685,6 +716,16 @@ func checkOwn(k *Kind, v any) error {
 		return checkHeaders("headers", t.Headers)
 	case *StepResources:
 		return checkStepResources(t)
+	case *SignIn:
+		if t.Enabled {
+			return errors.New("enabled: sign-in cannot be switched on from here yet: that needs a successful test sign-in by the acting administrator first. Save the settings with enabled: false; the servers keep the sign-in of their bootstrap file")
+		}
+		if err := checkAddress("issuer", t.Issuer); err != nil {
+			return err
+		}
+		a := config.AuthConfig{Mode: config.AuthOIDC, OIDC: config.OIDCConfig{Issuer: t.Issuer, ClientID: t.ClientID, RedirectURL: t.RedirectURL,
+			ClientSecretEnv: t.ClientSecretEnv, GroupsClaim: t.GroupsClaim, UsernameClaim: t.UsernameClaim}, Admins: t.Admins}
+		return a.Check()
 	case *SecretStore:
 		if !containsString(SecretStoreTypes, t.Type) {
 			return fmt.Errorf("type %q: one of %s", t.Type, strings.Join(SecretStoreTypes, ", "))
@@ -919,51 +960,32 @@ func (e *NotAppliedError) Error() string {
 
 func (e *NotAppliedError) Unwrap() error { return e.Cause }
 
-// applyLocally works out the objects after writes, checking versions as
-// the store will (so a dry run says the same).
+// applyLocally works out the objects after writes, as the store will (it
+// uses the store's own rules, engine.PlanConfigWrite, so a dry run says the
+// same).
 func applyLocally(objs []engine.ConfigObject, writes []engine.ConfigWrite) ([]engine.ConfigObject, error) {
 	out := append([]engine.ConfigObject(nil), objs...)
-	find := func(kind, name string) int {
-		for i := range out {
-			if out[i].Kind == kind && out[i].Name == name {
-				return i
-			}
-		}
-		return -1
-	}
 	for _, w := range writes {
-		i := find(w.Kind, w.Name)
-		what := w.Kind + " " + w.Name
-		if w.IfVersion > 0 && (i < 0 || out[i].Version != w.IfVersion) {
-			have := int64(0)
-			if i >= 0 {
-				have = out[i].Version
+		i := -1
+		for j := range out {
+			if out[j].Kind == w.Kind && out[j].Name == w.Name {
+				i = j
 			}
-			return nil, fmt.Errorf("%w: %s is at version %d, not %d: someone changed it meanwhile; read it again", engine.ErrConflict, what, have, w.IfVersion)
 		}
-		switch w.Action {
-		case engine.ConfigUpdate, engine.ConfigCreate:
-			if w.IfVersion == 0 && i >= 0 && !out[i].Deleted() {
-				return nil, fmt.Errorf("%w: %s already exists", engine.ErrConflict, what)
-			}
-			if i < 0 {
-				out = append(out, engine.ConfigObject{Kind: w.Kind, Name: w.Name, Unit: w.Unit, Spec: w.Spec})
-			} else {
-				out[i].Spec, out[i].Unit, out[i].DeletedAt = w.Spec, w.Unit, 0
-			}
-		case engine.ConfigDelete:
-			if i < 0 || out[i].Deleted() {
-				return nil, fmt.Errorf("%w: %s", engine.ErrNotFound, what)
-			}
-			out[i].DeletedAt = 1
-		case engine.ConfigRestore:
-			if i < 0 {
-				return nil, fmt.Errorf("%w: %s", engine.ErrNotFound, what)
-			}
-			if !out[i].Deleted() {
-				return nil, fmt.Errorf("%w: %s is not deleted", engine.ErrConflict, what)
-			}
-			out[i].DeletedAt = 0
+		var cur *engine.ConfigObject
+		if i >= 0 {
+			cur = &out[i]
+		}
+		next, _, changed, err := engine.PlanConfigWrite(cur, w)
+		if err != nil {
+			return nil, err
+		}
+		switch {
+		case !changed:
+		case i < 0:
+			out = append(out, next)
+		default:
+			out[i] = next
 		}
 	}
 	return out, nil

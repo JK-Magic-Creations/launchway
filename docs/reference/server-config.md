@@ -521,6 +521,17 @@ refused too, because through the API they would read any repository the server's
 | `egress.allow_local` | boolean | `false` | Allows repository addresses that are paths on this server or `file:` addresses. Bootstrap file only, never through the API. `examples/local.yaml` (`make run`) sets it |
 | `egress.allow` | list | none | Internal hosts (`git.internal`, `*.corp.internal`), addresses and ranges (`10.0.0.0/8`) the server may reach, such as a self-hosted Git server. Kept in the database: an administrator sets it in the installation settings, and the wizards offer to add the host that was refused |
 
+## History
+
+How long the change history of the configuration kept in the database is kept. By default all of it
+is, for ever. Like the other settings that moved, it is set in the installation settings once the
+database holds them.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `history.retain` | duration | keep all | How long changes are kept, such as `90d` or `52w`, at least `7d`. Older changes are removed hourly, except the newest change of every object. A revision older than what is kept can no longer be put back with `launchway config restore --offline` |
+
 ## Policy
 
 Delivery policies: rules pipelines cannot opt out of. The rules themselves are listed in the

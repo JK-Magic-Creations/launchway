@@ -274,73 +274,106 @@ func (e *Engine) WriteConfig(base int64, actor string, writes []ConfigWrite, imp
 	return next, changes, nil
 }
 
-func (e *Engine) writeOne(tx *txx, w ConfigWrite, actor string, now, rev int64, impID string) (*ConfigChange, error) {
-	cur, err := scanConfig(tx.QueryRow(`SELECT `+configCols+` FROM config_objects WHERE org = ? AND kind = ? AND name = ?`, "", w.Kind, w.Name))
-	exists := err == nil
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, err
-	}
+// PlanConfigWrite works out what a write does to an object, without storing
+// anything: the object's state after it, the action recorded in its history
+// and whether anything changes. cur is nil if the object does not exist. The
+// store applies it inside its transaction and a dry run applies it to a copy,
+// so the two cannot disagree about what a write means.
+func PlanConfigWrite(cur *ConfigObject, w ConfigWrite) (next ConfigObject, action string, changed bool, err error) {
 	what := w.Kind + " " + w.Name
+	exists := cur != nil
 	switch {
 	case w.IfVersion > 0 && (!exists || cur.Version != w.IfVersion):
 		have := int64(0)
 		if exists {
 			have = cur.Version
 		}
-		return nil, fmt.Errorf("%w: %s is at version %d, not %d: someone changed it meanwhile; read it again", ErrConflict, what, have, w.IfVersion)
+		return next, "", false, fmt.Errorf("%w: %s is at version %d, not %d: someone changed it meanwhile; read it again", ErrConflict, what, have, w.IfVersion)
 	case w.IfVersion == 0 && exists && !cur.Deleted() && (w.Action == ConfigCreate || w.Action == ConfigUpdate):
-		return nil, fmt.Errorf("%w: %s already exists", ErrConflict, what)
+		return next, "", false, fmt.Errorf("%w: %s already exists", ErrConflict, what)
 	}
 	if w.ManagedBy == "" {
 		w.ManagedBy = ManagedByAPI
 	}
-	c := &ConfigChange{Revision: rev, Kind: w.Kind, Name: w.Name, Actor: actor, At: now, ManagedBy: w.ManagedBy, ImportID: impID, Comment: w.Comment}
+	if exists {
+		next = *cur
+	}
+	next.Kind, next.Name = w.Kind, w.Name
+	switch w.Action {
+	case ConfigCreate, ConfigUpdate:
+		spec := compactJSON(w.Spec)
+		if exists && !cur.Deleted() && cur.Unit == w.Unit && bytes.Equal(compactJSON(cur.Spec), spec) && cur.ManagedBy == w.ManagedBy {
+			return next, "", false, nil // nothing changes
+		}
+		next.Unit, next.Spec, next.ManagedBy, next.DeletedAt, next.DeletedBy = w.Unit, spec, w.ManagedBy, 0, ""
+		switch {
+		case !exists:
+			action, next.Version = ConfigCreate, 1
+		case cur.Deleted():
+			action, next.Version = ConfigCreate, cur.Version+1 // made again, keeping its history
+		default:
+			action, next.Version = ConfigUpdate, cur.Version+1
+		}
+	case ConfigDelete:
+		if !exists || cur.Deleted() {
+			return next, "", false, fmt.Errorf("%w: %s", ErrNotFound, what)
+		}
+		action, next.Version, next.DeletedAt = ConfigDelete, cur.Version+1, 1
+	case ConfigRestore:
+		if !exists {
+			return next, "", false, fmt.Errorf("%w: %s", ErrNotFound, what)
+		}
+		if !cur.Deleted() {
+			return next, "", false, fmt.Errorf("%w: %s is not deleted", ErrConflict, what)
+		}
+		action, next.Version, next.DeletedAt, next.DeletedBy = ConfigRestore, cur.Version+1, 0, ""
+	default:
+		return next, "", false, fmt.Errorf("%w: unknown action %q", ErrInvalid, w.Action)
+	}
+	return next, action, true, nil
+}
+
+func (e *Engine) writeOne(tx *txx, w ConfigWrite, actor string, now, rev int64, impID string) (*ConfigChange, error) {
+	cur, err := scanConfig(tx.QueryRow(`SELECT `+configCols+` FROM config_objects WHERE org = ? AND kind = ? AND name = ?`, "", w.Kind, w.Name))
+	exists := err == nil
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	var curp *ConfigObject
+	if exists {
+		curp = &cur
+	}
+	next, action, changed, err := PlanConfigWrite(curp, w)
+	if err != nil || !changed {
+		return nil, err
+	}
+	c := &ConfigChange{Revision: rev, Kind: w.Kind, Name: w.Name, Actor: actor, At: now, ManagedBy: next.ManagedBy, ImportID: impID, Comment: w.Comment,
+		Action: action, Version: next.Version}
 	if exists {
 		c.UnitBefore, c.Before = cur.Unit, cur.Spec
 		if cur.Deleted() {
 			c.Before = nil
 		}
 	}
-	switch w.Action {
+	switch action {
 	case ConfigCreate, ConfigUpdate:
-		spec := compactJSON(w.Spec)
-		if exists && !cur.Deleted() && cur.Unit == w.Unit && bytes.Equal(compactJSON(cur.Spec), spec) && cur.ManagedBy == w.ManagedBy {
-			return nil, nil // nothing changes
-		}
-		c.UnitAfter, c.After = w.Unit, spec
+		c.UnitAfter, c.After = next.Unit, next.Spec
 		if !exists {
-			c.Action, c.Version = ConfigCreate, 1
 			_, err = tx.Exec(`INSERT INTO config_objects(org, `+configCols+`) VALUES(?,?,?,?,?,?,?,?,?,?,?,0,'')`,
-				"", w.Kind, w.Name, w.Unit, string(spec), 1, w.ManagedBy, now, actor, now, actor)
+				"", w.Kind, w.Name, next.Unit, string(next.Spec), 1, next.ManagedBy, now, actor, now, actor)
 		} else {
-			c.Action, c.Version = ConfigUpdate, cur.Version+1
-			if cur.Deleted() {
-				c.Action = ConfigCreate // made again, keeping its history
-			}
 			_, err = tx.Exec(`UPDATE config_objects SET unit = ?, spec = ?, version = ?, managed_by = ?, updated_at = ?, updated_by = ?,
 				deleted_at = 0, deleted_by = '' WHERE org = ? AND kind = ? AND name = ?`,
-				w.Unit, string(spec), c.Version, w.ManagedBy, now, actor, "", w.Kind, w.Name)
+				next.Unit, string(next.Spec), next.Version, next.ManagedBy, now, actor, "", w.Kind, w.Name)
 		}
 	case ConfigDelete:
-		if !exists || cur.Deleted() {
-			return nil, fmt.Errorf("%w: %s", ErrNotFound, what)
-		}
-		c.Action, c.Version, c.UnitAfter = ConfigDelete, cur.Version+1, cur.Unit
+		c.UnitAfter = cur.Unit
 		_, err = tx.Exec(`UPDATE config_objects SET version = ?, updated_at = ?, updated_by = ?, deleted_at = ?, deleted_by = ?
-			WHERE org = ? AND kind = ? AND name = ?`, c.Version, now, actor, now, actor, "", w.Kind, w.Name)
+			WHERE org = ? AND kind = ? AND name = ?`, next.Version, now, actor, now, actor, "", w.Kind, w.Name)
 	case ConfigRestore:
-		if !exists {
-			return nil, fmt.Errorf("%w: %s", ErrNotFound, what)
-		}
-		if !cur.Deleted() {
-			return nil, fmt.Errorf("%w: %s is not deleted", ErrConflict, what)
-		}
-		c.Action, c.Version, c.UnitAfter, c.After = ConfigRestore, cur.Version+1, cur.Unit, cur.Spec
-		c.Before = nil
+		c.UnitAfter, c.After, c.Before = cur.Unit, cur.Spec, nil
 		_, err = tx.Exec(`UPDATE config_objects SET version = ?, updated_at = ?, updated_by = ?, deleted_at = 0, deleted_by = ''
-			WHERE org = ? AND kind = ? AND name = ?`, c.Version, now, actor, "", w.Kind, w.Name)
-	default:
-		return nil, fmt.Errorf("%w: unknown action %q", ErrInvalid, w.Action)
+			WHERE org = ? AND kind = ? AND name = ?`, next.Version, now, actor, "", w.Kind, w.Name)
 	}
 	if err != nil {
 		return nil, err
@@ -519,6 +552,14 @@ func (e *Engine) ConfigAtRevision(rev int64) ([]ConfigObject, error) {
 	if rev < 0 || rev > cur {
 		return nil, fmt.Errorf("%w: revision %d: the configuration is at revision %d", ErrNotFound, rev, cur)
 	}
+	var pruned string
+	if err := e.db.QueryRow(`SELECT value FROM meta WHERE key = ?`, metaPruned).Scan(&pruned); err == nil {
+		var p int64
+		fmt.Sscan(pruned, &p)
+		if rev < p {
+			return nil, fmt.Errorf("%w: revision %d: the history up to revision %d was removed by the history retention setting; the oldest revision that can be put back is %d", ErrNotFound, rev, p, p)
+		}
+	}
 	rows, err := e.db.Query(`SELECT kind, name, action, unit_after, spec_after, managed_by, at, actor, version FROM config_changes
 		WHERE org = ? AND revision <= ? ORDER BY id`, "", rev)
 	if err != nil {
@@ -588,4 +629,42 @@ func (e *Engine) ConfigInUse(kind, name string) ([]string, error) {
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+// metaPruned is the meta key that records up to which revision the history
+// was removed by the retention setting.
+const metaPruned = "config_history_pruned_revision"
+
+// PruneConfigHistory removes changes made before cutoff (Unix ms), except
+// the newest change of every object, which is what the state folds from.
+// It returns how many it removed. Revisions up to the newest one removed
+// can then no longer be put back (ConfigAtRevision says so).
+func (e *Engine) PruneConfigHistory(cutoff int64) (int, error) {
+	if err := e.configCheck(); err != nil {
+		return 0, err
+	}
+	unlock := e.writeLock()
+	defer unlock()
+	tx, err := e.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	const old = `FROM config_changes WHERE org = ? AND at < ? AND id NOT IN (SELECT MAX(id) FROM config_changes WHERE org = ? GROUP BY kind, name)`
+	var top sql.NullInt64
+	if err := tx.QueryRow(`SELECT MAX(revision) `+old, "", cutoff, "").Scan(&top); err != nil {
+		return 0, err
+	}
+	if !top.Valid {
+		return 0, nil
+	}
+	res, err := tx.Exec(`DELETE `+old, "", cutoff, "")
+	if err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec(`INSERT INTO meta(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`, metaPruned, fmt.Sprint(top.Int64)); err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), tx.Commit()
 }

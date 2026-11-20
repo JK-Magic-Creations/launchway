@@ -152,6 +152,8 @@ func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *
 		case *ai.Model:
 			t.Projects = narrow(t.Projects)
 			c.AI.Models = append(c.AI.Models, *t)
+		case *SignIn:
+			// Saved and checked; not live (see SignIn).
 		case *SecretStore:
 			// Definitions only: what pipelines may name. Nothing in the
 			// running server reads them yet beyond showing them.
@@ -280,6 +282,7 @@ func applyInstallation(c *config.Config, s *Installation) {
 	c.Artifacts.Store, c.Artifacts.Database, c.Artifacts.Dir, c.Artifacts.S3 = s.Artifacts.Store, s.Artifacts.Database, s.Artifacts.Dir, s.Artifacts.S3
 	c.MCP = s.MCP
 	c.Egress.Allow = s.Egress.Allow
+	c.History = s.History
 	c.RunnerAdmin = s.RunnerAdmin
 	if s.PolicyWaivers != (config.PolicyWaiversConfig{}) {
 		ensurePolicy(c).Waivers = s.PolicyWaivers
@@ -304,6 +307,7 @@ func Bootstrap(boot *config.Config) *config.Config {
 	c.Artifacts.Store, c.Artifacts.Database, c.Artifacts.Dir, c.Artifacts.S3 = "", nil, "", nil
 	c.MCP = config.MCPConfig{}
 	c.Egress.Allow = nil
+	c.History = config.HistoryConfig{}
 	c.Loops = config.LoopsConfig{}
 	c.Schedules = config.SchedulesConfig{}
 	c.Environments = nil
@@ -451,7 +455,7 @@ func installationOf(c *config.Config) Installation {
 		Artifacts: ArtifactLimits{MaxFileMiB: c.Artifacts.MaxFileMiB, MaxRunMiB: c.Artifacts.MaxRunMiB, MaxProjectGiB: c.Artifacts.MaxProjectGiB,
 			Retain: c.Artifacts.Retain, MaxRetain: c.Artifacts.MaxRetain,
 			Store: c.Artifacts.Store, Database: c.Artifacts.Database, Dir: c.Artifacts.Dir, S3: c.Artifacts.S3},
-		MCP: c.MCP, Egress: EgressAllow{Allow: c.Egress.Allow}}
+		MCP: c.MCP, Egress: EgressAllow{Allow: c.Egress.Allow}, History: c.History}
 	s.Reports.Origin = ""
 	if c.Policy != nil {
 		s.PolicyWaivers = c.Policy.Waivers
@@ -484,6 +488,7 @@ func movedKeys(c *config.Config) []string {
 	set(a.Store != "" || a.Database != nil || a.Dir != "" || a.S3 != nil, "artifacts store (store, database, dir, s3)")
 	set(!reflect.DeepEqual(c.MCP, config.MCPConfig{}), "mcp")
 	set(len(c.Egress.Allow) > 0, "egress.allow")
+	set(c.History != (config.HistoryConfig{}), "history")
 	set(c.Loops != (config.LoopsConfig{}), "loops")
 	set(c.Schedules != (config.SchedulesConfig{}), "schedules")
 	set(len(c.Environments) > 0, "environments")
@@ -542,7 +547,7 @@ func Export(objs []engine.ConfigObject) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if o.Kind == "role-binding" || (k.Levels && o.Unit != "") || o.Kind == "unit" || o.Kind == "organisation" || o.Kind == "secret-store" || o.Kind == "step-resources" {
+		if o.Kind == "role-binding" || (k.Levels && o.Unit != "") || o.Kind == "unit" || o.Kind == "organisation" || o.Kind == "secret-store" || o.Kind == "step-resources" || o.Kind == "sign-in" {
 			// Kept with its name and level, under objects.
 			entry := map[string]any{"kind": o.Kind, "name": o.Name}
 			if o.Unit != "" {
