@@ -19,7 +19,7 @@ describe("sections", () => {
   });
   it("shows the applications page only when an application has been seen", () => {
     const tabs = (n: number | null) => visibleTabs(section("deployments"), { me: me(), facts: facts({ applications: n }) }).map((t) => t.id);
-    expect(tabs(null)).toEqual(["overview", "environments", "hosts", "machine-images"]);
+    expect(tabs(null)).toEqual(["overview", "environments", "releases", "hosts", "machine-images"]);
     expect(tabs(2)).toContain("applications");
   });
   it("marks the pages that are not built yet", () => {
@@ -50,7 +50,7 @@ describe("where pages sit", () => {
       ["/", "home"], ["/projects", "projects"], ["/projects/x", "projects"], ["/projects/x/pipeline", "pipelines"], ["/projects/x/pipeline/edit", "pipelines"],
       ["/projects/x/tests", "pipelines"], ["/projects/x/security", "pipelines"], ["/projects/x/caches", "pipelines"], ["/playground", "projects"],
       ["/activity", "activity"], ["/activity/approvals", "activity"], ["/runs/abc", "activity"],
-      ["/deployments", "deployments"], ["/deployments/environments", "deployments"], ["/deployments/applications/a", "deployments"],
+      ["/deployments", "deployments"], ["/deployments/environments", "deployments"], ["/deployments/releases", "deployments"], ["/deployments/releases/matrix", "deployments"], ["/deployments/releases/shop/1.0.0", "deployments"], ["/deployments/applications/a", "deployments"],
       ["/library/templates/lib/t", "library"], ["/images", "images"], ["/images/components", "images"], ["/images/charts", "images"],
       ["/pipelines", "pipelines"], ["/traffic", "traffic"], ["/traffic/protection", "traffic"], ["/changes", "changes"], ["/changes/freezes", "changes"],
       ["/deployments/hosts", "deployments"], ["/code/files", "projects"], ["/kit", "settings"],

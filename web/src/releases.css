@@ -1,0 +1,64 @@
+/* Releases: the list, one release, the matrix, the calendar, formations and the report. */
+.rel-nav { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 16px; padding: 0; list-style: none; border-bottom: 1px solid var(--line-2); }
+.rel-nav a { display: block; padding: 8px 12px; color: var(--ink-2); text-decoration: none; border-bottom: 2px solid transparent; font-weight: 500; }
+.rel-nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.rel-nav a:hover { color: var(--ink); }
+.rel-form { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px 16px; min-width: min(560px, 88vw); max-height: 80vh; overflow: auto; }
+.rel-form h2 { margin: 0; font-size: 18px; }
+.rel-form label.field { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; font-weight: 600; }
+.rel-form input[type="text"], .rel-form input[type="datetime-local"], .rel-form select, .rel-form textarea, .rel-inline input[type="text"], .rel-inline select, .rel-inline input[type="datetime-local"] {
+  font: inherit; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: var(--r1); background: var(--sheet); color: var(--ink); font-weight: 400; }
+.rel-form textarea { min-height: 120px; resize: vertical; font-family: var(--mono, ui-monospace, monospace); font-size: 13px; }
+.rel-inline { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; padding: 12px 16px; }
+.rel-inline label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
+.rel-hint { color: var(--ink-3); font-size: 13px; margin: 0; }
+.rel-dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; padding: 14px 16px; font-size: 14px; }
+.rel-dl dt { color: var(--ink-3); }
+.rel-dl dd { margin: 0; overflow-wrap: anywhere; }
+.rel-notes { padding: 14px 18px; max-width: 80ch; }
+.rel-notes h2, .rel-notes h3 { margin: 14px 0 6px; font-size: 15px; }
+.rel-notes ul { padding-left: 20px; }
+.rel-edit { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.rel-edit textarea { min-height: 220px; font: 13px/1.5 var(--mono, ui-monospace, monospace); padding: 10px; border: 1px solid var(--line-2); border-radius: var(--r1); background: var(--sheet); color: var(--ink); resize: vertical; }
+.rel-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; }
+.rel-sha { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }
+.rel-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.rel-table caption { text-align: left; padding: 10px 16px; color: var(--ink-3); font-size: 13px; }
+.rel-table th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); padding: 8px 14px; background: var(--sheet-2); font-weight: 600; }
+.rel-table td { padding: 10px 14px; border-top: 1px solid var(--line-2); vertical-align: top; }
+.rel-table td.n, .rel-table th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.rel-table-wrap { overflow-x: auto; max-width: 100%; }
+.rel-cell { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.rel-cell .v { font-weight: 600; }
+.rel-cell .m { color: var(--ink-3); font-size: 12.5px; }
+.rel-checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rel-checks li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; font-size: 14px; }
+.rel-checks .mark { font-weight: 700; text-align: center; }
+.rel-checks .pass .mark { color: var(--ok, #1a7f37); }
+.rel-checks .fail .mark { color: var(--bad, #cf222e); }
+.rel-checks .waiting .mark { color: var(--warn, #9a6700); }
+.rel-checks .skipped { color: var(--ink-3); }
+.rel-checks .d { color: var(--ink-3); font-size: 13px; display: block; }
+.rel-cal { list-style: none; margin: 0; padding: 0; }
+.rel-cal li { display: grid; grid-template-columns: 170px 1fr auto; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--line-2); align-items: center; }
+.rel-cal li:first-child { border-top: 0; }
+.rel-cal .when { color: var(--ink-3); font-size: 13px; }
+.rel-cal li.freeze { background: var(--sheet-2); }
+.rel-cal li.today { box-shadow: inset 3px 0 0 var(--accent); }
+.rel-measures { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; padding: 14px 16px; }
+.rel-measures > div { border: 1px solid var(--line-2); border-radius: var(--r2); padding: 12px 14px; background: var(--sheet); }
+.rel-measures .k { color: var(--ink-3); font-size: 13px; }
+.rel-measures .v { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.rel-measures .f { color: var(--ink-3); font-size: 12.5px; }
+.rel-chart { padding: 8px 16px 0; }
+.rel-chart svg { max-width: 100%; height: auto; display: block; }
+.rel-chart .ok-bar { fill: var(--accent); }
+.rel-chart .bad-bar { fill: var(--bad, #cf222e); }
+.rel-chart .axis { stroke: var(--line-2); }
+.rel-chart text { fill: var(--ink-3); font-size: 11px; }
+.rel-member { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+@media (max-width: 640px) {
+  .rel-cal li { grid-template-columns: 1fr; gap: 4px; }
+  .rel-dl { grid-template-columns: 1fr; gap: 2px; }
+  .rel-dl dd { margin-bottom: 8px; }
+}
