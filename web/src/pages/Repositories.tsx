@@ -5,7 +5,9 @@ import { PageHead, Sheet } from "../kit/layout";
 import { Chip } from "../kit/Status";
 import { forgeApi, type HostedRepo, type SshKey } from "../forgeApi";
 import { HooksPanel } from "./HooksPanel";
+import { PageTabs, useTab } from "../components/PageTabs";
 import { useHosting } from "./SshKeys";
+import "../styles/forge.css";
 
 function Off() {
   return (
@@ -145,14 +147,12 @@ function Protected({ repo }: { repo: HostedRepo }) {
   );
 }
 
-type Tab = "clone" | "keys" | "hooks" | "branches";
-
 /** One hosted repository: where to clone it from, and its settings. */
 export function RepositoryPage({ owner, name }: { owner: string; name: string }) {
   const [repo, setRepo] = useState<HostedRepo | null>(null);
   const [admin, setAdmin] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [tab, setTab] = useState<Tab>("clone");
+  const [tab, setTab] = useTab(["clone", "keys", "hooks", "branches"], "clone");
   useEffect(() => {
     forgeApi.repository(owner, name).then(setRepo).catch(setError);
     // The settings are for the repository's administrators: the tabs appear only when the server lets this person see them.
@@ -165,15 +165,12 @@ export function RepositoryPage({ owner, name }: { owner: string; name: string })
       <PageHead eyebrow={<Link href="/repositories">Repositories</Link>} title={repo.path}
         badge={<> <Chip>{repo.visibility}</Chip>{repo.archived && <Chip tone="warn">archived</Chip>}</>}
         sentence={`Default branch ${repo.default_branch}.`} />
-      <div className="tabs" role="tablist" aria-label="Repository">
-        {([["clone", "Clone"], ["keys", "Deploy keys"], ["hooks", "Webhooks"], ["branches", "Protected branches"]] as [Tab, string][]).filter(([t]) => t === "clone" || admin).map(([t, label]) => (
-          <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? "tab on" : "tab"} onClick={() => setTab(t)}>{label}</button>
-        ))}
-      </div>
+      <PageTabs current={tab} onChange={setTab}
+        tabs={[{ id: "clone", label: "Clone" }, ...(admin ? [{ id: "keys", label: "Deploy keys" }, { id: "hooks", label: "Webhooks" }, { id: "branches", label: "Protected branches" }] : [])]} />
       {tab === "clone" && <CloneBox repo={repo} />}
-      {tab === "keys" && <DeployKeys repo={repo} />}
-      {tab === "hooks" && <HooksPanel scope={{ owner: repo.home ?? "", name: repo.name }} who={`events of ${repo.path}`} />}
-      {tab === "branches" && <Protected repo={repo} />}
+      {admin && tab === "keys" && <DeployKeys repo={repo} />}
+      {admin && tab === "hooks" && <HooksPanel scope={{ owner: repo.home ?? "", name: repo.name }} who={`events of ${repo.path}`} />}
+      {admin && tab === "branches" && <Protected repo={repo} />}
     </div>
   );
 }

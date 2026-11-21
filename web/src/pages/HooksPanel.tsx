@@ -59,7 +59,7 @@ export function HooksPanel({ scope, who }: { scope: HookScope; who: string }) {
             <label className="field"><span>Name (optional)</span><input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} /></label>
             <label className="field"><span>Secret (optional)</span><input value={secret} type="password" autoComplete="off" placeholder="left empty, one is made and shown once" onChange={(e) => setSecret(e.target.value)} /></label>
           </div>
-          <fieldset className="field"><legend>Events</legend>
+          <fieldset className="events"><legend>Events</legend>
             {events.map((ev) => (
               <label key={ev} className="check"><input type="checkbox" checked={chosen.includes(ev)} onChange={() => toggle(ev)} /> <Mono>{ev}</Mono> <span className="faint">{EVENT_HELP[ev]}</span></label>
             ))}
