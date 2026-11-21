@@ -119,6 +119,10 @@ var ErrSetupCode = errors.New("the setup code is not valid")
 // spending the setup code: if the code does not match the unused, unexpired
 // one, or an account already exists, nothing is created.
 func (e *Engine) CompleteSetup(codeHash string, a *LocalAccount, recoveryHashes []string, now int64) error {
+	sealed, err := e.sealTOTP(a.Username, a.TOTPSecret)
+	if err != nil {
+		return err
+	}
 	unlock := e.writeLock()
 	defer unlock()
 	tx, err := e.db.Begin()
@@ -140,7 +144,7 @@ func (e *Engine) CompleteSetup(codeHash string, a *LocalAccount, recoveryHashes 
 	if c, _ := res.RowsAffected(); c != 1 {
 		return ErrSetupCode
 	}
-	if err := insertLocalAccount(tx, a); err != nil {
+	if err := insertLocalAccount(tx, a, sealed); err != nil {
 		return err
 	}
 	for _, h := range recoveryHashes {

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +13,9 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/keyring"
 	"github.com/jk-magic-creations/launchway/internal/localauth"
+	"github.com/jk-magic-creations/launchway/internal/sealing"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -28,11 +31,34 @@ const goodPassword = "purple walrus drinks coffee"
 
 func setupLocal(t *testing.T, mutate func(*LocalAuth)) *localEnv {
 	t.Helper()
+	return setupLocalKey(t, mutate, true)
+}
+
+// setupLocalKey is setupLocal with or without a root key. With one (as every
+// fresh installation has) authenticator secrets are stored sealed; without,
+// no second factor can be stored.
+func setupLocalKey(t *testing.T, mutate func(*LocalAuth), rootKey bool) *localEnv {
+	t.Helper()
 	clk := &testClock{t: testClockStart}
 	eng, err := engine.Open(engine.Options{Database: testdb.New(t), Logger: quiet()})
 	if err != nil {
 		t.Fatal(err)
 	}
+	var holder keyring.Holder
+	if rootKey {
+		k, err := keyring.NewRandomKey()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if holder, err = keyring.FromKey("key_file", "test", k); err != nil {
+			t.Fatal(err)
+		}
+	}
+	seal, err := sealing.Start(context.Background(), sealing.Options{DB: eng.Database(), Holder: holder, Log: quiet(), Instance: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	eng.SetTOTPBox(seal.TOTP())
 	pol, err := auth.NewPolicy([]auth.Binding{{Group: auth.LocalGroup(auth.Admin), Role: auth.Admin},
 		{Group: auth.LocalGroup(auth.Operator), Role: auth.Operator}, {Group: auth.LocalGroup(auth.Viewer), Role: auth.Viewer}})
 	if err != nil {
@@ -42,7 +68,7 @@ func setupLocal(t *testing.T, mutate func(*LocalAuth)) *localEnv {
 	if mutate != nil {
 		mutate(la)
 	}
-	s := &Server{Engine: eng, RunnerToken: "runner-secret", Log: quiet(), Now: clk.Now,
+	s := &Server{Engine: eng, RunnerToken: "runner-secret", Log: quiet(), Now: clk.Now, Secrets: seal,
 		Auth: &Auth{Policy: pol, IdleTimeout: 8 * time.Hour, Lifetime: 24 * time.Hour, Local: la}}
 	s.Settings = testSettings(t, eng)
 	s.Variables = testVariables(eng)
@@ -119,7 +145,10 @@ func TestFirstAdministerWithSetupCode(t *testing.T) {
 		t.Fatalf("bad name: %d %v", st, out)
 	}
 	// The second factor is required for the administrator: a wrong code creates nothing.
-	_, begin := e.post(b, "/api/v1/setup/begin", map[string]string{"code": e.code, "username": "ada", "display_name": "Ada", "password": goodPassword})
+	st0, begin := e.post(b, "/api/v1/setup/begin", map[string]string{"code": e.code, "username": "ada", "display_name": "Ada", "password": goodPassword})
+	if st0 != 200 {
+		t.Fatalf("begin: %d %v", st0, begin)
+	}
 	if st, out := e.post(b, "/api/v1/setup/complete", map[string]string{"pending": begin["pending"].(string), "code": "000000"}); st != 422 || out["code"] != "invalid_code" {
 		t.Fatalf("wrong totp: %d %v", st, out)
 	}
@@ -358,5 +387,89 @@ func TestSetupCodeFileExpiryAndNewCode(t *testing.T) {
 	e.setUpAdmin(t, b, "ada")
 	if _, err := e.api.NewSetupCode("console"); err == nil {
 		t.Fatal("a setup code was issued after setup")
+	}
+}
+
+// A second factor stores a secret, and secrets are only kept sealed under the
+// root key. With no root key and an installation that is not loopback-only,
+// an administrator (who must have a second factor) cannot be created at all
+// until encryption is on; an explicit "second factor off" lets accounts with
+// a password only exist, and no one can then enroll an authenticator.
+func TestSecondFactorNeedsARootKey(t *testing.T) {
+	e := setupLocalKey(t, nil, false)
+	b := newBrowser(t)
+	st, out := e.post(b, "/api/v1/setup/begin", map[string]string{"code": e.code, "username": "ada", "display_name": "Ada", "password": goodPassword})
+	if st != http.StatusConflict || out["code"] != "second_factor_needs_encryption" || out["totp_secret"] != nil {
+		t.Fatalf("an administrator needing a second factor with no root key: %d %v", st, out)
+	}
+	if n, _ := e.eng.CountLocalAccounts(); n != 0 {
+		t.Fatal("an account was made")
+	}
+
+	off := setupLocalKey(t, func(l *LocalAuth) { l.SecondFactor = "off" }, false)
+	b = newBrowser(t)
+	st, begin := off.post(b, "/api/v1/setup/begin", map[string]string{"code": off.code, "username": "ada", "display_name": "Ada", "password": goodPassword})
+	if st != 200 || begin["totp_secret"] != nil || begin["second_factor_available"] != false {
+		t.Fatalf("with the second factor explicitly off and no key: %d %v", st, begin)
+	}
+	st, done := off.post(b, "/api/v1/setup/complete", map[string]string{"pending": begin["pending"].(string)})
+	if st != 200 || done["signed_in"] != true {
+		t.Fatalf("complete: %d %v", st, done)
+	}
+	a, err := off.eng.LocalAccountByName("ada")
+	if err != nil || a.TOTPSecret != "" || a.TOTPConfirmed {
+		t.Fatalf("%+v %v", a, err)
+	}
+	st, out = off.post(b, "/api/v1/account/second-factor", map[string]string{"current_password": goodPassword})
+	if st != http.StatusConflict || out["code"] != "no_root_key" {
+		t.Fatalf("enrolling an authenticator with no root key: %d %v", st, out)
+	}
+}
+
+// With a root key the authenticator secret and recovery codes are stored
+// sealed and hashed: neither the secret nor a recovery code is in the
+// database as text, and a recovery code still signs in, once.
+func TestAuthenticatorSecretSealedAndRecoveryCodesHashed(t *testing.T) {
+	e := setupLocal(t, nil)
+	first := newBrowser(t)
+	secret, codes := e.setUpAdmin(t, first, "ada")
+	var stored string
+	if err := e.eng.Database().QueryRow(context.Background(), `SELECT totp_secret FROM local_accounts WHERE username = 'ada'`).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored == secret || strings.Contains(stored, secret) || !keyring.IsSealed(stored) {
+		t.Fatalf("the authenticator secret is not sealed: %q", stored)
+	}
+	rows, err := e.eng.Database().Query(context.Background(), `SELECT code_hash FROM local_recovery_codes WHERE username = 'ada'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	n := 0
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			t.Fatal(err)
+		}
+		n++
+		for _, c := range codes {
+			if strings.Contains(h, strings.ReplaceAll(c.(string), "-", "")) || h == c.(string) || !strings.HasPrefix(h, "$argon2id$") {
+				t.Fatalf("a recovery code is stored as %q", h)
+			}
+		}
+	}
+	if n != 10 {
+		t.Fatalf("%d recovery hashes", n)
+	}
+	b := newBrowser(t)
+	_, step1 := e.post(b, "/api/v1/auth/local/signin", map[string]string{"username": "ada", "password": goodPassword})
+	st, out := e.post(b, "/api/v1/auth/local/second-factor", map[string]string{"ticket": step1["ticket"].(string), "recovery_code": codes[0].(string)})
+	if st != 200 {
+		t.Fatalf("a recovery code did not sign in: %d %v", st, out)
+	}
+	b2 := newBrowser(t)
+	_, step1 = e.post(b2, "/api/v1/auth/local/signin", map[string]string{"username": "ada", "password": goodPassword})
+	if st, _ := e.post(b2, "/api/v1/auth/local/second-factor", map[string]string{"ticket": step1["ticket"].(string), "recovery_code": codes[0].(string)}); st != 401 {
+		t.Fatalf("a recovery code worked twice: %d", st)
 	}
 }

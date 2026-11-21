@@ -265,7 +265,7 @@ func (s *Server) localSignIn(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if acct.TOTPConfirmed {
-		sealer, err := s.loginSealer()
+		sealer, err := s.loginSealer(r.Context())
 		if err != nil {
 			s.fail(w, err)
 			return
@@ -303,7 +303,7 @@ func (s *Server) localSecondFactor(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &rq) || s.throttled(w, r, &s.local.ipLimit, 30, 5*time.Minute) {
 		return
 	}
-	sealer, err := s.loginSealer()
+	sealer, err := s.loginSealer(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -327,7 +327,7 @@ func (s *Server) localSecondFactor(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case rq.RecoveryCode != "":
 		method = "recovery code"
-		ok, err = s.Engine.UseRecoveryCode(acct.Username, localauth.HashCode(rq.RecoveryCode), now.UnixMilli())
+		ok, err = s.spendRecoveryCode(acct.Username, rq.RecoveryCode, now.UnixMilli())
 	default:
 		if step, good := localauth.CheckTOTP(acct.TOTPSecret, rq.Code, now.Unix(), acct.TOTPLastStep); good {
 			ok, err = s.Engine.RecordTOTPStep(acct.Username, step)
@@ -373,4 +373,20 @@ func roleOf(s string) auth.Role {
 		return auth.NoRole
 	}
 	return r
+}
+
+// spendRecoveryCode finds the person's unused code that matches the typed one
+// and spends it. The codes are stored as slow salted hashes, so every unused
+// one is tried; the sign-in throttle bounds how often that happens.
+func (s *Server) spendRecoveryCode(user, typed string, now int64) (bool, error) {
+	hashes, err := s.Engine.RecoveryCodeHashes(user)
+	if err != nil {
+		return false, err
+	}
+	for _, h := range hashes {
+		if localauth.SameRecoveryCode(typed, h) {
+			return s.Engine.SpendRecoveryCode(user, h, now)
+		}
+	}
+	return false, nil
 }

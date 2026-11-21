@@ -16,6 +16,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
 	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
 	"github.com/jk-magic-creations/launchway/internal/keyring"
+	"github.com/jk-magic-creations/launchway/internal/localauth"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -113,7 +114,36 @@ const (
 	cWebhook = "CANARY-webhook-secret-1b4d7a9e2c6f8053"
 	// cHookPath is the token of a chat service's incoming webhook: it sits in the address's path.
 	cHookPath = "CANARY-webhook-path-token-6a0e3d8c5b2f9147"
+	// cTOTP is a built-in account's authenticator secret (base32), cRecovery one of its recovery codes.
+	cTOTP     = "CANARYTOTPSECRETKEY234567ABCD"
+	cRecovery = "RCVRY-ZK9X2"
 )
+
+// makeSecondFactor stores an account with an authenticator secret and
+// recovery codes, as the sign-in setup does: the secret sealed by the engine,
+// the codes as hashes.
+func makeSecondFactor(t *testing.T, e *engine.Engine, s *Service) {
+	t.Helper()
+	e.SetTOTPBox(s.TOTP())
+	h, err := localauth.HashRecoveryCode(cRecovery)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.CompleteSetup("setup-hash", &engine.LocalAccount{Username: "ada", Role: "admin", PasswordHash: "x", TOTPSecret: cTOTP, TOTPConfirmed: true, CreatedAt: 1},
+		[]string{h}, 1); err == nil {
+		t.Fatal("setup without an issued code worked")
+	}
+	if err := e.IssueSetupCode("setup-hash", 1, 1<<50, "test"); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.CompleteSetup("setup-hash", &engine.LocalAccount{Username: "ada", Role: "admin", PasswordHash: "x", TOTPSecret: cTOTP, TOTPConfirmed: true, CreatedAt: 1},
+		[]string{h}, 2); err != nil {
+		t.Fatal(err)
+	}
+	if a, err := e.LocalAccountByName("ada"); err != nil || a.TOTPSecret != cTOTP {
+		t.Fatalf("the secret does not open: %v", err)
+	}
+}
 
 // The canary test: every kind of secret the server stores, made with a
 // recognizable value; a full dump of the database; the marker must not be in
@@ -154,8 +184,12 @@ func TestCanaryNoSecretAppearsInADatabaseDump(t *testing.T) {
 		privates = append(privates, der, privateScalar(t, der))
 	}
 	_ = hook
+	makeSecondFactor(t, e, s)
 
 	dump := dumpAll(t, e, addr)
+	mustNotAppear(t, dump, "a built-in account's authenticator secret", []byte(cTOTP))
+	mustNotAppear(t, dump, "a recovery code", []byte(cRecovery))
+	mustNotAppear(t, dump, "a recovery code (normalized)", []byte("RCVRYZK9X2"))
 	for what, v := range map[string]string{"the shared runner token": cRunner, "the login state key": cLogin, "the report link key": cReport,
 		"the Git run token key": cRunTok, "a webhook secret": cWebhook, "the token in a webhook address": cHookPath} {
 		mustNotAppear(t, dump, what, []byte(v))
@@ -208,6 +242,11 @@ func TestCanaryOldPlaintextIsGoneAfterSealingInPlace(t *testing.T) {
 	put("login_state_key", cLogin)
 	put("hosted_report_key", cReport)
 	put("git_run_token_key", cRunTok)
+	// A built-in account's authenticator secret stored in the clear (a database
+	// that held one from before it was sealed) is sealed in place too.
+	if _, err := e.Database().Exec(ctx, `INSERT INTO local_accounts(username, role, created_at, totp_secret, totp_confirmed) VALUES('ada','admin',1,?,1)`, cTOTP); err != nil {
+		t.Fatal(err)
+	}
 
 	// Before: an installation without a root key keeps them in the clear, and the test sees it.
 	plain, err := Start(ctx, Options{DB: e.Database(), Log: quiet})
@@ -218,14 +257,18 @@ func TestCanaryOldPlaintextIsGoneAfterSealingInPlace(t *testing.T) {
 		t.Fatal("an installation without a root key claims a dump is useless")
 	}
 	before := dumpAll(t, e, addr)
-	for _, v := range []string{cRunner, cLogin, cReport, cRunTok} {
+	for _, v := range []string{cRunner, cLogin, cReport, cRunTok, cTOTP} {
 		mustAppear(t, before, v, []byte(v))
 	}
 
 	s := start(t, e, newHolder(t))
 	after := dumpAll(t, e, addr)
-	for _, v := range []string{cRunner, cLogin, cReport, cRunTok} {
+	for _, v := range []string{cRunner, cLogin, cReport, cRunTok, cTOTP} {
 		mustNotAppear(t, after, "a legacy secret after sealing in place", []byte(v))
+	}
+	e.SetTOTPBox(s.TOTP())
+	if a, err := e.LocalAccountByName("ada"); err != nil || a.TOTPSecret != cTOTP {
+		t.Fatalf("the sealed authenticator secret does not open: %v", err)
 	}
 	if r, _ := s.Report(ctx); !r.DumpAloneIsUseless {
 		t.Fatalf("%+v", r)

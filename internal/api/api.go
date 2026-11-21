@@ -22,6 +22,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/hub"
+	"github.com/jk-magic-creations/launchway/internal/keyring"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
@@ -339,6 +340,8 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "invalid: "))
 	case errors.Is(err, engine.ErrNeedsNewer):
 		writeErr(w, http.StatusConflict, err.Error())
+	case errors.Is(err, keyring.ErrNoRootKey):
+		writeNoRootKey(w, "Second-factor secrets")
 	case errors.Is(err, engine.ErrClosed), engine.IsTransientDBError(err):
 		s.failUnavailable(w, err)
 	case errors.As(err, new(pipeline.InputErrors)):

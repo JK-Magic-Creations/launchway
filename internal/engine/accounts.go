@@ -1,10 +1,13 @@
 package engine
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/keyring"
 )
 
 // Built-in accounts (schema 36): what the database keeps about people who
@@ -20,7 +23,7 @@ type LocalAccount struct {
 	Role          string // viewer, operator or admin
 	PasswordHash  string // Argon2id; empty for an invited person who has not chosen one yet
 	PasswordSetAt int64
-	TOTPSecret    string // base32; sealed by the encryption layer when that is on
+	TOTPSecret    string // base32; always sealed under the root key in the database, in the clear only here
 	TOTPConfirmed bool
 	TOTPLastStep  int64
 	FailedCount   int64
@@ -34,6 +37,66 @@ type LocalAccount struct {
 
 const localAccountColumns = `username, display_name, email, role, password_hash, password_set_at, totp_secret, totp_confirmed,
 	totp_last_step, failed_count, locked_until, disabled, break_glass, created_at, created_by, last_login_at`
+
+// SecretBox seals and opens the values of one registered secret column, each
+// bound to its row; internal/sealing's Box satisfies it. The engine cannot
+// import that package, so the server hands the box in (SetTOTPBox).
+type SecretBox interface {
+	Enabled() bool
+	Seal(ctx context.Context, row string, plain []byte) (string, error)
+	Open(ctx context.Context, row, stored string) ([]byte, error)
+}
+
+// SetTOTPBox gives the engine the box that seals local_accounts.totp_secret.
+func (e *Engine) SetTOTPBox(b SecretBox) {
+	e.totpMu.Lock()
+	e.totpBox = b
+	e.totpMu.Unlock()
+}
+
+func (e *Engine) totpBoxNow() SecretBox {
+	e.totpMu.RLock()
+	defer e.totpMu.RUnlock()
+	return e.totpBox
+}
+
+// TOTPSealing says whether a second factor can be stored: a root key is in use.
+func (e *Engine) TOTPSealing() bool {
+	b := e.totpBoxNow()
+	return b != nil && b.Enabled()
+}
+
+// sealTOTP is the stored form of a TOTP secret (empty stays empty).
+func (e *Engine) sealTOTP(name, secret string) (string, error) {
+	if secret == "" {
+		return "", nil
+	}
+	b := e.totpBoxNow()
+	if b == nil || !b.Enabled() {
+		return "", fmt.Errorf("a second factor stores a secret: %w", keyring.ErrNoRootKey)
+	}
+	return b.Seal(context.Background(), name, []byte(secret))
+}
+
+// openTOTP turns the stored form back into the secret, in place.
+func (e *Engine) openTOTP(a *LocalAccount) error {
+	if a.TOTPSecret == "" {
+		return nil
+	}
+	b := e.totpBoxNow()
+	if b == nil {
+		// No box was given (the console commands, which never use the secret):
+		// the sealed text stays as it is and is not a usable secret.
+		a.TOTPSecret = ""
+		return nil
+	}
+	plain, err := b.Open(context.Background(), a.Username, a.TOTPSecret)
+	if err != nil {
+		return fmt.Errorf("opening the second factor of %s: %w", a.Username, err)
+	}
+	a.TOTPSecret = string(plain)
+	return nil
+}
 
 func scanLocalAccount(row interface{ Scan(...any) error }) (*LocalAccount, error) {
 	a := &LocalAccount{}
@@ -55,15 +118,23 @@ type execer interface {
 	Exec(string, ...any) (sql.Result, error)
 }
 
-func insertLocalAccount(q execer, a *LocalAccount) error {
-	_, err := q.Exec(`INSERT INTO local_accounts(`+localAccountColumns+`) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		a.Username, a.DisplayName, a.Email, a.Role, a.PasswordHash, a.PasswordSetAt, a.TOTPSecret, b2i(a.TOTPConfirmed),
+// insertLocalAccount stores the account with its second factor already
+// sealed (sealTOTP, which must run before the write lock is taken: sealing
+// uses the database too).
+func insertLocalAccount(q execer, a *LocalAccount, sealed string) error {
+	_, err := q.Exec(`INSERT INTO local_accounts(username, display_name, email, role, password_hash, password_set_at, totp_secret, totp_confirmed,
+	totp_last_step, failed_count, locked_until, disabled, break_glass, created_at, created_by, last_login_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		a.Username, a.DisplayName, a.Email, a.Role, a.PasswordHash, a.PasswordSetAt, sealed, b2i(a.TOTPConfirmed),
 		a.TOTPLastStep, a.FailedCount, a.LockedUntil, b2i(a.Disabled), b2i(a.BreakGlass), a.CreatedAt, a.CreatedBy, a.LastLoginAt)
 	return err
 }
 
 // CreateLocalAccount adds an account; ErrConflict if the name is taken.
 func (e *Engine) CreateLocalAccount(a *LocalAccount) error {
+	sealed, err := e.sealTOTP(a.Username, a.TOTPSecret)
+	if err != nil {
+		return err
+	}
 	unlock := e.writeLock()
 	defer unlock()
 	var n int
@@ -73,7 +144,7 @@ func (e *Engine) CreateLocalAccount(a *LocalAccount) error {
 	if n > 0 {
 		return fmt.Errorf("%w: there is already an account called %s", ErrConflict, a.Username)
 	}
-	return insertLocalAccount(e.db, a)
+	return insertLocalAccount(e.db, a, sealed)
 }
 
 // LocalAccountByName returns the account, or ErrNotFound.
@@ -82,7 +153,10 @@ func (e *Engine) LocalAccountByName(name string) (*LocalAccount, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: account %s", ErrNotFound, name)
 	}
-	return a, err
+	if err != nil {
+		return nil, err
+	}
+	return a, e.openTOTP(a)
 }
 
 // ListLocalAccounts returns every account by name.
@@ -100,7 +174,15 @@ func (e *Engine) ListLocalAccounts() ([]*LocalAccount, error) {
 		}
 		out = append(out, a)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for _, a := range out {
+		if err := e.openTOTP(a); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
 // CountLocalAdmins counts the enabled administrators among the accounts.
@@ -170,8 +252,18 @@ func (e *Engine) SetLocalProfile(name, display, email string) error {
 // with a code) or, with an empty secret, removes the second factor and the
 // recovery codes with it.
 func (e *Engine) SetLocalTOTP(name, secret string, confirmed bool) error {
-	if err := e.updateAccount(name, `totp_secret = ?, totp_confirmed = ?, totp_last_step = 0`, secret, b2i(confirmed)); err != nil {
+	sealed, err := e.sealTOTP(name, secret)
+	if err != nil {
 		return err
+	}
+	unlock := e.writeLock()
+	res, err := e.db.Exec(`UPDATE local_accounts SET totp_secret = ?, totp_confirmed = ?, totp_last_step = 0 WHERE username = ?`, sealed, b2i(confirmed), name)
+	unlock()
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("%w: account %s", ErrNotFound, name)
 	}
 	if secret == "" {
 		return e.ReplaceRecoveryCodes(name, nil)
@@ -284,8 +376,28 @@ func (e *Engine) ReplaceRecoveryCodes(name string, hashes []string) error {
 	return tx.Commit()
 }
 
-// UseRecoveryCode spends a recovery code; false if there is no such unused code.
-func (e *Engine) UseRecoveryCode(name, hash string, now int64) (bool, error) {
+// RecoveryCodeHashes returns the stored hashes of the unused recovery codes
+// of an account, for the caller to compare a typed code with.
+func (e *Engine) RecoveryCodeHashes(name string) ([]string, error) {
+	rows, err := e.db.Query(`SELECT code_hash FROM local_recovery_codes WHERE username = ? AND used_at = 0`, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			return nil, err
+		}
+		out = append(out, h)
+	}
+	return out, rows.Err()
+}
+
+// SpendRecoveryCode marks the code with that stored hash used; false if it
+// was already used (two servers racing, or a replay).
+func (e *Engine) SpendRecoveryCode(name, hash string, now int64) (bool, error) {
 	unlock := e.writeLock()
 	defer unlock()
 	res, err := e.db.Exec(`UPDATE local_recovery_codes SET used_at = ? WHERE username = ? AND code_hash = ? AND used_at = 0`, now, name, hash)

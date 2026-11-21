@@ -38,7 +38,7 @@ func TestSchema33UpgradesFrom31KeepingBranchRules(t *testing.T) {
 	if strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, schemaSSH)) {
 		t.Errorf("migration 31, already applied, was applied again")
 	}
-	checkMarkers(t, cur, schemaAccounts)
+	checkMarkers(t, cur, schemaPulls)
 	var approvals, noSelf int
 	var role, checks string
 	if err := cur.db.QueryRow(`SELECT required_approvals, approval_role, required_checks, no_self_approval FROM branch_rules WHERE id = 'r1'`).Scan(&approvals, &role, &checks, &noSelf); err != nil {
@@ -61,7 +61,7 @@ func TestSchema33UpgradesFrom31KeepingBranchRules(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer older.Close()
-	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaAccounts || info.Code != schemaSSH || !info.Compatible() {
+	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaPulls || info.Code != schemaSSH || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	var n int
@@ -92,7 +92,7 @@ func TestSchema33UpgradesFrom32KeepingRollbacks(t *testing.T) {
 	if strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, schemaRollback)) {
 		t.Errorf("migration 32, already applied, was applied again")
 	}
-	checkMarkers(t, cur, schemaAccounts)
+	checkMarkers(t, cur, schemaPulls)
 	if !hasTable(t, cur, "rollbacks") || !hasTable(t, cur, "rollback_reverts") || !hasTable(t, cur, "pull_requests") {
 		t.Fatal("tables after 32 to 33")
 	}

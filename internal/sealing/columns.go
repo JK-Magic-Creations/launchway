@@ -80,6 +80,11 @@ var (
 		Writers: []string{"internal/forge/webhooks/store.go"},
 		Why:     "the address a webhook delivers to: chat services' incoming webhooks carry their token in the path",
 	}
+	totpColumn = Column{
+		Table: "local_accounts", Column: "totp_secret", Key: "username", Purpose: keyring.PurposeSecrets,
+		Writers: []string{"internal/engine/accounts.go"},
+		Why:     "the authenticator (TOTP) secrets of built-in accounts: with one, a code can be made for that person",
+	}
 	webhooksColumn = Column{
 		Table: "repo_webhooks", Column: "secret_sealed", Key: "id", Purpose: keyring.PurposeSecrets,
 		Writers: []string{"internal/forge/webhooks/store.go"},
@@ -106,7 +111,7 @@ var (
 // same change. TestSchemaSecretColumnsAreRegistered fails on a column whose
 // name looks like it holds a secret and that is neither here nor explained in
 // ExplainedColumns.
-var Registry = []Column{webhooksColumn, webhookURLColumn, hostKeysColumn, metaColumn}
+var Registry = []Column{webhooksColumn, webhookURLColumn, totpColumn, hostKeysColumn, metaColumn}
 
 // ExplainedColumns lists columns whose names look like they hold a secret, and why
 // they do not: a hash of a random value (a fast hash is right for 256 random
@@ -142,6 +147,13 @@ var explained = []struct{ column, why string }{
 	{"runner_identities.public_key", "a public key; the private half stays on the runner"},
 	{"runner_identities.join_token", "the join token's id, not the token (whose hash is runner_join_tokens.hash)"},
 	{"findings.secret", "a flag saying a finding is a secret that was found; the secret itself is never stored"},
+
+	// Built-in accounts: hashes, never the value.
+	{"local_accounts.password_set_at", "a time"},
+	{"local_accounts.password_hash", "an Argon2id hash of the password (salted, 64 MiB, 3 passes), never the password"},
+	{"local_recovery_codes.code_hash", "an Argon2id hash of a single-use recovery code (salted), never the code"},
+	{"local_links.token_hash", "SHA-256 of a 160-bit random one-time link token"},
+	{"setup_state.code_hash", "SHA-256 of a 123-bit random one-time setup code"},
 
 	// Names, identifiers and keys of rows, not secrets.
 	{"blob_objects.key", "the object's name in the blob store"},
@@ -186,6 +198,10 @@ type HookBox struct {
 	*Box
 	urls *Box
 }
+
+// TOTP is the box of built-in accounts' authenticator secrets
+// (local_accounts.totp_secret); the engine seals and opens through it.
+func (s *Service) TOTP() *Box { return &Box{s, totpColumn} }
 
 // Webhooks is the box of webhook secrets and addresses.
 func (s *Service) Webhooks() *HookBox {

@@ -71,6 +71,18 @@ func SameCode(typed, storedHash string) bool {
 	return subtle.ConstantTimeCompare([]byte(HashCode(typed)), []byte(storedHash)) == 1
 }
 
+// HashRecoveryCode is how a recovery code is stored: a salted Argon2id hash
+// of the normalized code. A recovery code has only about 50 bits, so unlike
+// the setup code and the links (123 and 160 bits, hashed with SHA-256) a
+// copy of the database must not let anyone try them at the speed of a fast
+// hash.
+func HashRecoveryCode(code string) (string, error) { return HashPassword(NormalizeCode(code)) }
+
+// SameRecoveryCode says whether the typed code is the one stored as hash.
+func SameRecoveryCode(typed, storedHash string) bool {
+	return VerifyPassword(NormalizeCode(typed), storedHash)
+}
+
 // NewRecoveryCodes returns n single-use recovery codes, each ten characters
 // in two groups of five (about 50 bits each: they are limited by the sign-in
 // throttle, and each is single use).

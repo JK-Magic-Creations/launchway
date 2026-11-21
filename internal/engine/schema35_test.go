@@ -30,7 +30,7 @@ func TestUpgradeFromSchema32ToCacheTrustAndBack(t *testing.T) {
 	old.Close()
 
 	var log syncBuffer
-	cur, err := openAs(t, addr, clk, 0, &log)
+	cur, err := openAs(t, addr, clk, schemaCacheTrust, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
@@ -108,7 +108,7 @@ func TestSchema35UpgradesFrom34WithSealedSecretsAndCacheEntries(t *testing.T) {
 	old.Close()
 
 	var log syncBuffer
-	cur, err := openAs(t, addr, clk, 0, &log)
+	cur, err := openAs(t, addr, clk, schemaCacheTrust, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
@@ -155,7 +155,7 @@ func TestSchema35UpgradesFrom31(t *testing.T) {
 	}
 	old.Close()
 	var log syncBuffer
-	cur, err := openAs(t, addr, clk, 0, &log)
+	cur, err := openAs(t, addr, clk, schemaCacheTrust, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}

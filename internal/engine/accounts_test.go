@@ -1,17 +1,94 @@
 package engine
 
 import (
+	"context"
 	"errors"
+	"io"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/keyring"
+	"github.com/jk-magic-creations/launchway/internal/sealing"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
+// accountsEngine opens an engine with a root key in use, as every server of a
+// fresh installation has, so authenticator secrets can be stored.
 func accountsEngine(t *testing.T) *Engine {
 	t.Helper()
+	e := accountsEngineNoKey(t)
+	k, err := keyring.NewRandomKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := keyring.FromKey("key_file", "test", k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc, err := sealing.Start(context.Background(), sealing.Options{DB: e.Database(), Holder: h, Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Instance: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.SetTOTPBox(svc.TOTP())
+	return e
+}
+
+// accountsEngineNoKey is an installation with no root key: the sealing
+// service runs without one and refuses to keep a second factor.
+func accountsEngineNoKey(t *testing.T) *Engine {
+	t.Helper()
 	var buf syncBuffer
-	return mustOpenAs(t, testdb.New(t), newClock(), 0, &buf)
+	e := mustOpenAs(t, testdb.New(t), newClock(), 0, &buf)
+	svc, err := sealing.Start(context.Background(), sealing.Options{DB: e.Database(), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Instance: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.SetTOTPBox(svc.TOTP())
+	return e
+}
+
+// An authenticator secret is stored sealed (never the base32 text), opens
+// again for its own account, and cannot be stored at all without a root key.
+func TestTOTPSecretIsStoredSealedAndNeedsARootKey(t *testing.T) {
+	e := accountsEngine(t)
+	now := time.Now().UnixMilli()
+	if err := e.CreateLocalAccount(&LocalAccount{Username: "ann", Role: "admin", PasswordHash: "h", TOTPSecret: "JBSWY3DPEHPK3PXP", TOTPConfirmed: true, CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	var stored string
+	if err := e.db.QueryRow(`SELECT totp_secret FROM local_accounts WHERE username = 'ann'`).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored == "" || strings.Contains(stored, "JBSWY3DPEHPK3PXP") || !keyring.IsSealed(stored) {
+		t.Fatalf("the stored secret is not sealed: %q", stored)
+	}
+	got, err := e.LocalAccountByName("ann")
+	if err != nil || got.TOTPSecret != "JBSWY3DPEHPK3PXP" {
+		t.Fatalf("the secret does not open: %q %v", got.TOTPSecret, err)
+	}
+	// Bound to its row: the same text under another name does not open.
+	if _, err := e.db.Exec(`INSERT INTO local_accounts(username, role, created_at, totp_secret, totp_confirmed) VALUES('bob','admin',1,?,1)`, stored); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.LocalAccountByName("bob"); err == nil {
+		t.Fatal("a sealed secret copied to another account opened")
+	}
+
+	n := accountsEngineNoKey(t)
+	if err := n.CreateLocalAccount(&LocalAccount{Username: "cy", Role: "admin", PasswordHash: "h", TOTPSecret: "JBSWY3DPEHPK3PXP", TOTPConfirmed: true, CreatedAt: now}); !errors.Is(err, keyring.ErrNoRootKey) {
+		t.Fatalf("a second factor was created with no root key: %v", err)
+	}
+	if err := n.CreateLocalAccount(&LocalAccount{Username: "cy", Role: "viewer", PasswordHash: "h", CreatedAt: now}); err != nil {
+		t.Fatalf("an account with a password only needs no key: %v", err)
+	}
+	if err := n.SetLocalTOTP("cy", "JBSWY3DPEHPK3PXP", false); !errors.Is(err, keyring.ErrNoRootKey) {
+		t.Fatalf("a second factor was stored with no root key: %v", err)
+	}
+	if n.TOTPSealing() {
+		t.Fatal("TOTPSealing true with no root key")
+	}
 }
 
 func TestSetupCodeIsSingleUseAndExpires(t *testing.T) {
@@ -96,10 +173,13 @@ func TestLocalAccountLifecycle(t *testing.T) {
 	if err := e.ReplaceRecoveryCodes("ann", []string{"c1", "c2"}); err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := e.UseRecoveryCode("ann", "c1", ms); !ok {
+	if hs, _ := e.RecoveryCodeHashes("ann"); len(hs) != 2 {
+		t.Fatalf("hashes %v", hs)
+	}
+	if ok, _ := e.SpendRecoveryCode("ann", "c1", ms); !ok {
 		t.Fatal("recovery code")
 	}
-	if ok, _ := e.UseRecoveryCode("ann", "c1", ms); ok {
+	if ok, _ := e.SpendRecoveryCode("ann", "c1", ms); ok {
 		t.Fatal("a recovery code worked twice")
 	}
 	if err := e.SetLocalTOTP("ann", "", false); err != nil {

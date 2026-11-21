@@ -221,6 +221,7 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
+	eng.SetTOTPBox(secretsSvc.TOTP()) // authenticator secrets of built-in accounts are stored sealed
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Secrets: secretsSvc, Actor: cfg.User, Auth: authOpts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin}
 	if store.Available() {

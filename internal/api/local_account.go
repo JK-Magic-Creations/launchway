@@ -160,7 +160,11 @@ func (s *Server) secondFactorConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = s.Engine.RecordTOTPStep(a.Username, step)
-	codes, hashes := recoveryCodes(true)
+	codes, hashes, err := recoveryCodes(true)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
 	if err := s.Engine.ReplaceRecoveryCodes(a.Username, hashes); err != nil {
 		s.fail(w, err)
 		return
@@ -208,7 +212,11 @@ func (s *Server) newRecoveryCodes(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusConflict, map[string]string{"error": "recovery codes go with a second factor, and there is none", "code": "conflict", "next": "Set up an authenticator first."})
 		return
 	}
-	codes, hashes := recoveryCodes(true)
+	codes, hashes, err := recoveryCodes(true)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
 	if err := s.Engine.ReplaceRecoveryCodes(a.Username, hashes); err != nil {
 		s.fail(w, err)
 		return

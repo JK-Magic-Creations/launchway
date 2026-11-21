@@ -112,13 +112,27 @@ func (s *Server) beginEnrollment(w http.ResponseWriter, r *http.Request, p pendi
 	}
 	required := s.Auth.Local.secondFactorRequired(p.Role)
 	out := map[string]any{"second_factor_required": required, "username": p.Username}
-	if p.Secret, err = localauth.NewTOTPSecret(); err != nil {
-		s.fail(w, err)
-		return
+	// A second factor stores a secret, and secrets are kept sealed under the
+	// root key: with none, a person cannot enroll one. Where the role must
+	// have one, the account cannot be made until encryption is on (or the
+	// administrator explicitly sets auth.local.second_factor to off).
+	if !s.Engine.TOTPSealing() {
+		if required {
+			writeJSON(w, http.StatusConflict, map[string]string{"error": "this role must have a second factor, and a second factor stores a secret, which this server cannot keep because it has no root key (encryption at rest is off)",
+				"code": "second_factor_needs_encryption", "next": "Turn encryption at rest on (a fresh install has a root key), or set auth.local.second_factor to off if you accept accounts with a password only. See docs/guide/encryption-at-rest.md."})
+			return
+		}
+		out["second_factor_available"] = false
+	} else {
+		if p.Secret, err = localauth.NewTOTPSecret(); err != nil {
+			s.fail(w, err)
+			return
+		}
+		out["second_factor_available"] = true
+		out["totp_secret"], out["totp_uri"] = p.Secret, localauth.TOTPURI(s.siteName(), p.Username, p.Secret)
 	}
-	out["totp_secret"], out["totp_uri"] = p.Secret, localauth.TOTPURI(s.siteName(), p.Username, p.Secret)
 	p.Expires = s.Now().Add(pendingTTL).UnixMilli()
-	sealer, err := s.loginSealer()
+	sealer, err := s.loginSealer(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -141,7 +155,7 @@ func (s *Server) siteName() string {
 // openPending reads the sealed state, checks it has not expired and, where a
 // second factor is wanted, the code.
 func (s *Server) openPending(w http.ResponseWriter, r *http.Request, rq completeRequest) (*pending, bool) {
-	sealer, err := s.loginSealer()
+	sealer, err := s.loginSealer(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return nil, false
@@ -158,6 +172,9 @@ func (s *Server) openPending(w http.ResponseWriter, r *http.Request, rq complete
 // ("" when the person has none and none is required) and the recovery codes to show.
 func (s *Server) factorFor(w http.ResponseWriter, p *pending, code string) (secret string, step int64, ok bool) {
 	required := s.Auth.Local.secondFactorRequired(p.Role)
+	if p.Secret == "" && !required {
+		return "", 0, true // no second factor was offered: this server has no root key
+	}
 	if strings.TrimSpace(code) == "" && !required {
 		return "", 0, true
 	}
@@ -192,7 +209,11 @@ func (s *Server) setupComplete(w http.ResponseWriter, r *http.Request) {
 	now := s.Now().UnixMilli()
 	acct := &engine.LocalAccount{Username: p.Username, DisplayName: p.Display, Email: p.Email, Role: p.Role, PasswordHash: p.PwHash,
 		PasswordSetAt: now, TOTPSecret: secret, TOTPConfirmed: secret != "", TOTPLastStep: step, BreakGlass: true, CreatedAt: now, CreatedBy: "setup"}
-	codes, hashes := recoveryCodes(secret != "")
+	codes, hashes, err := recoveryCodes(secret != "")
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
 	switch err := s.Engine.CompleteSetup(p.Proof, acct, hashes, now); {
 	case errors.Is(err, engine.ErrSetupCode):
 		s.audit(r, p.Username, "auth.setup", "failed", "the setup code was used, replaced or expired before the step finished")
@@ -207,16 +228,22 @@ func (s *Server) setupComplete(w http.ResponseWriter, r *http.Request) {
 	s.signInAfterEnroll(w, r, acct, codes)
 }
 
-func recoveryCodes(has bool) ([]string, []string) {
+// recoveryCodes makes a person's set of single-use codes and the Argon2id
+// hashes that are stored in their place.
+func recoveryCodes(has bool) ([]string, []string, error) {
 	if !has {
-		return nil, nil
+		return nil, nil, nil
 	}
 	codes := localauth.NewRecoveryCodes(10)
 	hashes := make([]string, len(codes))
 	for i, c := range codes {
-		hashes[i] = localauth.HashCode(c)
+		h, err := localauth.HashRecoveryCode(c)
+		if err != nil {
+			return nil, nil, err
+		}
+		hashes[i] = h
 	}
-	return codes, hashes
+	return codes, hashes, nil
 }
 
 func (s *Server) signInAfterEnroll(w http.ResponseWriter, r *http.Request, acct *engine.LocalAccount, codes []string) {
@@ -313,7 +340,11 @@ func (s *Server) acceptComplete(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	codes, hashes := recoveryCodes(secret != "")
+	codes, hashes, err := recoveryCodes(secret != "")
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
 	if secret != "" {
 		_, _ = s.Engine.RecordTOTPStep(p.Username, step)
 		if err := s.Engine.ReplaceRecoveryCodes(p.Username, hashes); err != nil {

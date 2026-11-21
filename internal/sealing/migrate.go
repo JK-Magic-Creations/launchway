@@ -195,6 +195,9 @@ func (s *Service) pass(ctx context.Context, reseal bool) (Result, error) {
 				rows = append(rows, r)
 				return nil
 			})
+			if isMissingTable(err) {
+				break // a column of a later schema than this database's: nothing to seal in it yet
+			}
 			if err != nil {
 				return res, err
 			}
