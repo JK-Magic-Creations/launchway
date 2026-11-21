@@ -96,7 +96,7 @@ An exception is never silent. It lives in a file, with a reason and an end date:
 |---|---|---|
 | Trivy (charts, Dockerfile, image) | `quality/trivy-ignore.yaml`, `expired_at` | an expired entry stops hiding the finding |
 | osv-scanner | `osv-scanner.toml`, `ignoreUntil` | same |
-| gitleaks | `quality/gitleaks-baseline.json` | may only shrink |
+| gitleaks | `quality/gitleaks-baseline.json`; deliberate fakes by path or `CANARY-` pattern in `quality/gitleaks.toml`, each with its reason | baseline may only shrink |
 | ZAP | `quality/zap-rules.tsv`, a reason above each rule | reviewed with each release |
 | golangci-lint | `quality/lint-baseline.json` | may only shrink |
 

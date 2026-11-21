@@ -21,4 +21,10 @@
 // with the hooks installed as symlinks to the test binary (the production
 // design: no shell, no scripts in the repository), and every failure is
 // injected inside those real processes, by name, through the environment.
+//
+// Run length: the default test run is a smoke run (the injection campaign does 24 rounds, 4 under the
+// race detector, where every hook start costs seconds); the whole package finishes in about a minute
+// on two cores. The full campaign is opt-in: FORGE_SPIKE_ROUNDS=100 (the report ran 1,150), with
+// FORGE_SPIKE_SEED to vary it and FORGE_SPIKE_MEASURE=1 for the measurements. See
+// docs/development/forge-storage-spike.md.
 package storagespike
