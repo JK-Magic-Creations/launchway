@@ -46,6 +46,25 @@ type Target struct {
 	// patch on the Application; without that right it is skipped, with a
 	// note in the step's log.
 	RefreshAnnotation *bool `yaml:"refresh"`
+	// Inspect says what people may look at and do through this runner in
+	// the namespaces above. Everything is off unless set: the runner's
+	// cluster role must grant the matching rights (the chart value
+	// delivery.deployRunner.rbac.inspect).
+	Inspect Inspect `yaml:"inspect"`
+}
+
+// Inspect is what a target lets people see and do (see inspect.go).
+type Inspect struct {
+	// Read lets the runner build the tree of a delivery's objects and show
+	// manifests (names and keys of Secrets only, never their values).
+	Read bool `yaml:"read"`
+	// Logs lets it read pods' logs.
+	Logs bool `yaml:"logs"`
+	// Control lets it pause, resume, restart and scale a delivery's workload.
+	Control bool `yaml:"control"`
+	// ScaleMax is the most replicas a person may scale a workload to; 0
+	// turns scaling off.
+	ScaleMax int `yaml:"scale_max"`
 }
 
 // Kubernetes says how to reach a target's cluster. It must say so

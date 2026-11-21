@@ -244,3 +244,11 @@ type Measurement struct {
 	Value string `json:"value,omitempty"`
 	Note  string `json:"note,omitempty"`
 }
+
+// Redactor returns what hides this release's secrets, for logs of its pods.
+func (t *Tree) Redactor() *Redactor {
+	if t.red == nil {
+		return NewRedactor()
+	}
+	return t.red
+}

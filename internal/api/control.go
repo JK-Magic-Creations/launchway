@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
@@ -63,6 +64,10 @@ func (s *Server) command(action string) http.HandlerFunc {
 		// is recorded when it reports (deployment.command_outcome).
 		setAudit(r, r.PathValue("id")+"/"+dep, clip("requested: "+in.Comment, 300))
 		if !s.deploymentAccess(w, r, dep) {
+			return
+		}
+		if action == "promote-full" && strings.TrimSpace(in.Comment) == "" {
+			writeErr(w, http.StatusBadRequest, "promote full skips the remaining steps and checks of the rollout: say why in the comment, which is kept in the audit trail")
 			return
 		}
 		cmd, err := s.Engine.RequestCommand(engine.CommandRequest{Run: r.PathValue("id"), Deployment: dep, Action: action,

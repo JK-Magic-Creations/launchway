@@ -266,3 +266,29 @@ func (c *Client) FinishCommand(ctx context.Context, info engine.RunnerInfo, res 
 	_, err := c.call(ctx, "deploy/command-done", map[string]any{"runner": info, "result": res}, nil)
 	return err
 }
+
+// TakeInspect asks for a request to look into a delivery of the runner's
+// targets (schema 60), waiting up to wait; nil when there is none.
+func (c *Client) TakeInspect(ctx context.Context, info engine.RunnerInfo, wait time.Duration) (*engine.InspectJob, error) {
+	var job engine.InspectJob
+	code, err := c.call(ctx, "deploy/inspect", map[string]any{"runner": info, "wait_seconds": int(wait / time.Second)}, &job)
+	if err != nil || code == http.StatusNoContent {
+		return nil, err
+	}
+	return &job, nil
+}
+
+// InspectChunk sends lines of a followed log; stop says to end it.
+func (c *Client) InspectChunk(ctx context.Context, info engine.RunnerInfo, id, body string) (stop bool, err error) {
+	var out struct {
+		Stop bool `json:"stop"`
+	}
+	_, err = c.call(ctx, "deploy/inspect-chunk", map[string]any{"runner": info, "id": id, "body": body}, &out)
+	return out.Stop, err
+}
+
+// FinishInspect reports the answer to an inspect request, or why there is none.
+func (c *Client) FinishInspect(ctx context.Context, info engine.RunnerInfo, id, result, errMsg string) error {
+	_, err := c.call(ctx, "deploy/inspect-done", map[string]any{"runner": info, "id": id, "result": result, "error": errMsg}, nil)
+	return err
+}

@@ -17,6 +17,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/jk-magic-creations/launchway/internal/deploy/inspect"
 )
 
 // The resources a deploy runner reads and writes, by group, version and
@@ -41,6 +43,10 @@ type Cluster struct {
 	rights rightsCache
 	// jobLogs keeps the logs read of failed analysis jobs, by namespace/name.
 	jobLogs sync.Map
+	// cfg and Logs serve the inspector (see inspect.go): cfg opens pod logs
+	// lazily; tests give Logs a fake.
+	cfg  *rest.Config
+	Logs inspect.LogSource
 }
 
 // Connect makes a client for a target. It does not contact the cluster.
@@ -68,6 +74,7 @@ func Connect(t Target) (*Cluster, error) {
 	}
 	c := NewCluster(dyn, t.ArgoCDNamespace)
 	c.logs = podLogReader(cfg)
+	c.cfg = cfg
 	return c, nil
 }
 

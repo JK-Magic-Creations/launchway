@@ -3,6 +3,7 @@ package inspect
 import (
 	"context"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/deploy/inspect/inspectfake"
 	"io"
 	"strings"
 	"testing"
@@ -19,14 +20,16 @@ func (f fakeLogs) Open(_ context.Context, ns, pod, c string, o LogOptions) (io.R
 	return io.NopCloser(strings.NewReader(strings.Join(ls, "\n") + "\n")), nil
 }
 
-func ln(sec int, s string) string { return t0.Add(time.Duration(sec)*time.Second).Format(time.RFC3339Nano) + " " + s }
+func ln(sec int, s string) string {
+	return inspectfake.T0.Add(time.Duration(sec)*time.Second).Format(time.RFC3339Nano) + " " + s
+}
 
 func TestLogsAreRedactedMergedAndTagged(t *testing.T) {
 	tr := buildTree(t, false)
-	lg := &Logger{Red: NewRedactor(canarySecret), Src: fakeLogs{lines: map[string][]string{
-		"shop-aaa-1": {ln(1, "stable request ok"), ln(5, "stable password=" + canaryPassword)},
+	lg := &Logger{Red: NewRedactor(inspectfake.CanarySecret), Src: fakeLogs{lines: map[string][]string{
+		"shop-aaa-1": {ln(1, "stable request ok"), ln(5, "stable password="+inspectfake.CanaryPassword)},
 		"shop-aaa-2": {ln(3, "x")}, "shop-aaa-3": {ln(4, "y")},
-		"shop-bbb-1": {ln(2, "canary booted"), ln(6, "using token " + canaryToken + " and " + canarySecret)},
+		"shop-bbb-1": {ln(2, "canary booted"), ln(6, "using token "+inspectfake.CanaryToken+" and "+inspectfake.CanarySecret)},
 	}}}
 	targets, _, err := tr.Targets(LogSpec{Role: RoleCanary})
 	if err != nil || len(targets) != 1 || targets[0].Source != "canary/shop-bbb-1" {
@@ -44,7 +47,7 @@ func TestLogsAreRedactedMergedAndTagged(t *testing.T) {
 		}
 	}
 	all := fmt.Sprint(got)
-	for _, s := range []string{canaryPassword, canaryToken, canarySecret} {
+	for _, s := range []string{inspectfake.CanaryPassword, inspectfake.CanaryToken, inspectfake.CanarySecret} {
 		if strings.Contains(all, s) {
 			t.Errorf("log carries %q: %s", s, all)
 		}
@@ -89,9 +92,9 @@ func TestFollowStopsWhenTheReaderStops(t *testing.T) {
 }
 
 func TestControlActionsAndRefusals(t *testing.T) {
-	fc := canaryFixture(false)
+	fc := fakeCluster(false)
 	d := Dynamic{Client: fc}
-	b := &Builder{R: d, Red: NewRedactor(), Now: func() time.Time { return t0 }}
+	b := &Builder{R: d, Red: NewRedactor(), Now: func() time.Time { return inspectfake.T0 }}
 	tr := b.Build(context.Background(), Request{Application: "shop", Namespaces: []string{"shop"}, Resources: listed()})
 	ro := Ref{Kind: "Rollout", Namespace: "shop", Name: "shop"}
 	ctx := context.Background()
@@ -128,18 +131,18 @@ func TestControlActionsAndRefusals(t *testing.T) {
 }
 
 func TestManifestIsRedactedAndScoped(t *testing.T) {
-	b := &Builder{R: Dynamic{Client: canaryFixture(false)}, Red: NewRedactor(), Now: func() time.Time { return t0 }}
+	b := &Builder{R: Dynamic{Client: fakeCluster(false)}, Red: NewRedactor(), Now: func() time.Time { return inspectfake.T0 }}
 	tr := b.Build(context.Background(), Request{Application: "shop", Namespaces: []string{"shop"}, Resources: listed()})
 	y, err := b.Manifest(context.Background(), tr, "Rollout/shop/shop")
-	if err != nil || strings.Contains(y, canaryPassword) || !strings.Contains(y, "DB_PASSWORD") || strings.Contains(y, "managedFields") {
+	if err != nil || strings.Contains(y, inspectfake.CanaryPassword) || !strings.Contains(y, "DB_PASSWORD") || strings.Contains(y, "managedFields") {
 		t.Fatalf("rollout manifest: %v\n%s", err, y)
 	}
 	y, err = b.Manifest(context.Background(), tr, "Secret/shop/shop-creds")
-	if err != nil || strings.Contains(y, base64Of(canarySecret)) || !strings.Contains(y, "hidden") {
+	if err != nil || strings.Contains(y, inspectfake.Base64Of(inspectfake.CanarySecret)) || !strings.Contains(y, "hidden") {
 		t.Fatalf("secret manifest: %v\n%s", err, y)
 	}
 	y, _ = b.Manifest(context.Background(), tr, "ConfigMap/shop/shop-config")
-	if strings.Contains(y, canarySecret) || strings.Contains(y, canaryToken) || strings.Contains(y, canaryPassword) {
+	if strings.Contains(y, inspectfake.CanarySecret) || strings.Contains(y, inspectfake.CanaryToken) || strings.Contains(y, inspectfake.CanaryPassword) {
 		t.Fatalf("configmap manifest:\n%s", y)
 	}
 	if _, err := b.Manifest(context.Background(), tr, "ConfigMap/shop/someone-elses"); err == nil {

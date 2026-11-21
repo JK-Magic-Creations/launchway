@@ -496,6 +496,9 @@ type recorder struct {
 	body   []byte
 }
 
+// Unwrap lets http.ResponseController reach the real writer to flush it.
+func (r *recorder) Unwrap() http.ResponseWriter { return r.ResponseWriter }
+
 func (r *recorder) WriteHeader(code int) {
 	if r.status == 0 {
 		r.status = code

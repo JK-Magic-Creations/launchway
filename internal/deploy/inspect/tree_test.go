@@ -3,6 +3,8 @@ package inspect
 import (
 	"context"
 	"encoding/json"
+	"github.com/jk-magic-creations/launchway/internal/deploy/inspect/inspectfake"
+	dynfake "k8s.io/client-go/dynamic/fake"
 	"strings"
 	"testing"
 	"time"
@@ -10,8 +12,8 @@ import (
 
 func buildTree(t *testing.T, broken bool) *Tree {
 	t.Helper()
-	b := &Builder{R: Dynamic{Client: canaryFixture(broken)}, Red: NewRedactor(), Now: func() time.Time { return t0 }}
-	return b.Build(context.Background(), Request{Application: "shop", Namespaces: []string{"shop"}, Resources: listed(), Since: t0.Add(-2 * time.Minute).UnixMilli()})
+	b := &Builder{R: Dynamic{Client: fakeCluster(broken)}, Red: NewRedactor(), Now: func() time.Time { return inspectfake.T0 }}
+	return b.Build(context.Background(), Request{Application: "shop", Namespaces: []string{"shop"}, Resources: listed(), Since: inspectfake.T0.Add(-2 * time.Minute).UnixMilli()})
 }
 
 func node(t *testing.T, tr *Tree, id string) Node {
@@ -84,7 +86,7 @@ func TestTreeScopeAndLeftovers(t *testing.T) {
 func TestNoSecretValueOrCanaryLeavesTheRunner(t *testing.T) {
 	tr := buildTree(t, true)
 	raw, _ := json.Marshal(tr)
-	for _, s := range []string{canaryPassword, canarySecret, canaryToken, base64Of(canarySecret), "shopuser"} {
+	for _, s := range []string{inspectfake.CanaryPassword, inspectfake.CanarySecret, inspectfake.CanaryToken, inspectfake.Base64Of(inspectfake.CanarySecret), "shopuser"} {
 		if strings.Contains(string(raw), s) {
 			t.Errorf("the tree carries %q", s)
 		}
@@ -94,7 +96,7 @@ func TestNoSecretValueOrCanaryLeavesTheRunner(t *testing.T) {
 		t.Errorf("secret: %+v", sec)
 	}
 	cm := node(t, tr, "ConfigMap/shop/shop-config")
-	if cm.Data["LOG_LEVEL"] != "info" || strings.Contains(cm.Data["plain"], canarySecret) {
+	if cm.Data["LOG_LEVEL"] != "info" || strings.Contains(cm.Data["plain"], inspectfake.CanarySecret) {
 		t.Errorf("configmap: %+v", cm.Data)
 	}
 }
@@ -105,7 +107,7 @@ func TestBrokenCanaryPodSaysWhy(t *testing.T) {
 	if p.Health != Degraded || p.NotReady == nil || !strings.Contains(p.NotReady.Why, "CrashLoopBackOff") || !strings.Contains(p.NotReady.Why, "BackOff") {
 		t.Fatalf("pod: %+v %+v", p, p.NotReady)
 	}
-	if len(p.Events) != 1 || strings.Contains(p.Events[0].Message, canaryPassword) {
+	if len(p.Events) != 1 || strings.Contains(p.Events[0].Message, inspectfake.CanaryPassword) {
 		t.Fatalf("events: %+v", p.Events)
 	}
 	if !p.Containers[0].Previous || p.Containers[0].Restarts != 5 {
@@ -132,4 +134,14 @@ func TestRolloutView(t *testing.T) {
 	if len(m.Points) != 2 || m.Points[1].Phase != "Failed" || m.Success != "result[0] >= 0.95" || !strings.Contains(m.Query, "http_requests_total") {
 		t.Fatalf("metric: %+v", m)
 	}
+}
+
+func fakeCluster(broken bool) *dynfake.FakeDynamicClient { return inspectfake.New(KindLists(), broken) }
+
+func listed() []Ref {
+	var out []Ref
+	for _, o := range inspectfake.Listed() {
+		out = append(out, Ref{Kind: o.Kind, Namespace: o.Namespace, Name: o.Name})
+	}
+	return out
 }
