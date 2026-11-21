@@ -44,3 +44,33 @@ func TestCLIReposVerify(t *testing.T) {
 	}
 	_ = strings.Contains
 }
+
+// --against takes an address as well as a connection's name; --refs lists every ref with its hashes.
+func TestCLIReposVerifyAgainstAnAddressWithRefs(t *testing.T) {
+	hc := newHostedCLI(t)
+	root := t.TempDir()
+	bare, _ := bareWith(t)
+	if err := os.MkdirAll(filepath.Join(root, "old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(bare, filepath.Join(root, "old", "shop.git")); err != nil {
+		t.Fatal(err)
+	}
+	other := otherServer(t, root)
+	var ao bytes.Buffer
+	ada := hc.client("ada", "root", &ao)
+	addr := other.URL + "/old/shop.git"
+	if err := ada.reposImport([]string{"--url", addr}); err != nil {
+		t.Fatal(err)
+	}
+	ao.Reset()
+	if err := ada.reposVerify([]string{"--against", addr, "--refs"}); err != nil {
+		t.Fatalf("%v %q", err, ao.String())
+	}
+	out := ao.String()
+	for _, want := range []string{"NAMESPACE", "refs/heads", "STATUS", "equal", "refs/heads/main", "Every ref of all 1 repositories"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("report lacks %q:\n%s", want, out)
+		}
+	}
+}

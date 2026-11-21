@@ -113,7 +113,7 @@ func (s *Server) pushPolicy(c gitCaller, repo forge.Repository) func(context.Con
 	return func(ctx context.Context, ups []githttp.RefUpdate) error {
 		for _, u := range ups {
 			if pulls.ReservedRef(u.Name) {
-				return fmt.Errorf("%s belongs to a pull request: the server keeps refs/pull/ itself, so nothing can be pushed there", u.Name)
+				return fmt.Errorf("%s is kept by the server (refs/pull/ for pull requests, refs/imported/ for history brought from another server), so nothing can be pushed there", u.Name)
 			}
 		}
 		pats, err := s.Forge.Rules.Patterns(ctx, repo.ID)

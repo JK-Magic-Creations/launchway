@@ -11,12 +11,17 @@ import (
 
 func addVerifyRepositoriesTool(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "verify_repositories", Annotations: readOnly("Verify repositories against their source"),
-		Description: "Administrators only. Prove that every repository of the source exists here with exactly the branches, tags and notes at exactly the commits the source has. Returns, per repository, equal, different (naming the refs), missing or error, and equal true only when all are equal. Run it before a cut-over. Reads only; audited."},
+		Description: "Administrators only. Prove that every repository of the source exists here with exactly the branches, tags, notes and pull request refs (kept under refs/imported/pull/) at exactly the hashes the source has. Returns, per repository, equal, different (naming the refs), missing or error, and equal true only when all are equal. Run it before a cut-over. Reads only; audited."},
 		mirrorSyncTimeout, verifyRepositories)
 }
 
-func verifyRepositories(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in sourceIn) (mirror.VerifyResult, error) {
+func verifyRepositories(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in verifyIn) (mirror.VerifyResult, error) {
 	var out mirror.VerifyResult
 	err := c.apiJSON(ctx, "verify_repositories", http.MethodPost, "/api/v1/imports/verify", in, &out)
 	return out, err
+}
+
+type verifyIn struct {
+	sourceIn
+	Refs bool `json:"refs,omitempty" jsonschema:"list every ref with its hashes, not only the ones that differ"`
 }

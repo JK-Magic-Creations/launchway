@@ -17,10 +17,11 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 )
 
-// Managed are the ref namespaces a mirror keeps equal: branches, tags and
-// notes. Other refs (a forge's pull request refs, Launchway's own) are never
-// copied and never touched.
-var Managed = []string{"refs/heads/", "refs/tags/", "refs/notes/"}
+// Managed are the ref namespaces a mirror keeps equal: branches, tags, notes,
+// and the source's pull request refs, which are kept here under
+// refs/imported/pull/ (read-only: refs/pull/ is this server's own, see
+// refs.go). Other refs (Launchway's own) are never copied and never touched.
+var Managed = []string{"refs/heads/", "refs/tags/", "refs/notes/", importedPullNS}
 
 // Storage is what the service needs of the repository storage.
 type Storage interface {

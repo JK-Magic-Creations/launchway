@@ -135,7 +135,7 @@ func firstLine(s string) string {
 }
 
 // Refspecs of a mirror: the managed namespaces, forced.
-var fetchSpecs = []string{"+refs/heads/*:refs/heads/*", "+refs/tags/*:refs/tags/*", "+refs/notes/*:refs/notes/*"}
+var fetchSpecs = []string{"+refs/heads/*:refs/heads/*", "+refs/tags/*:refs/tags/*", "+refs/notes/*:refs/notes/*", "+refs/pull/*:" + importedPullNS + "*"}
 
 // runPull brings a pull mirror's repository to what its address has.
 func (s *Service) runPull(ctx context.Context, m Mirror) (int, error) {

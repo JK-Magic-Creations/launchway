@@ -101,7 +101,7 @@ func TestPullRequestThroughTheAPI(t *testing.T) {
 		t.Fatalf("ls-remote: %q (head %s)", out, pr.HeadSHA)
 	}
 	// Nobody can push to the server's own refs.
-	if out, err := git(t, src, "push", url, "HEAD:refs/pull/9/head"); err == nil || !strings.Contains(out, "belongs to a pull request") {
+	if out, err := git(t, src, "push", url, "HEAD:refs/pull/9/head"); err == nil || !strings.Contains(out, "is kept by the server") {
 		t.Fatalf("a push to refs/pull/: %v\n%s", err, out)
 	}
 
