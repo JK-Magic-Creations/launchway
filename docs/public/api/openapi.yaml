@@ -1837,7 +1837,7 @@ paths:
             x-launchway-access: public
     /api/v1/launch-lines:
         get:
-            description: 'Where each recent change is on its way, as stations worked out from a run''s steps and deployments (commit, checks, tests, package, each environment, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50). Only projects the caller may see.'
+            description: 'Where each recent change is on its way, as stations worked out from a run''s steps and deployments (commit, checks, tests, package, each environment, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one run (404 for a run of a project the caller may not see). Only projects the caller may see.'
             operationId: get_api_v1_launch_lines
             responses:
                 "200":
@@ -1854,7 +1854,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Where each recent change is on its way, as stations worked out from a run''s steps and deployments (commit, checks, tests, package, each environment, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50).'
+            summary: 'Where each recent change is on its way, as stations worked out from a run''s steps and deployments (commit, checks, tests, package, each environment, verified), each with a state and one plain sentence; a station that stands for several steps also has parallel (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step''s state): ?project=, ?limit= (12, at most 50), or ?run= for the line of one run (404 for a run of a project the caller may not see).'
             tags:
                 - launch-lines
             x-launchway-access: signed-in
