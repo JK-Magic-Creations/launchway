@@ -13,6 +13,7 @@ or replace it. It is for operators.
 | The shared runner token | Sealed in the `meta` table. The server must hand it to its own runner and to the data directory's `runner-token` file, so it cannot be a one-way hash (the file is `0600` and is not in the database) |
 | The private host keys of Git over SSH | Sealed in `ssh_host_keys`, bound to the algorithm |
 | Webhook secrets | Sealed in `repo_webhooks`, bound to the hook |
+| Webhook addresses | Sealed in `repo_webhooks.url`, bound to the hook, because a chat service's incoming webhook carries its token in the path. After they are added, the address is shown with the host only (`https://hooks.example/...`); to change it, enter the whole address again. The answer a receiver gave to a delivery is stored redacted (token-like strings and Authorization or Cookie values removed, and the address's own path) |
 | Addresses with a password or token in them (mirrors, webhooks, connections) | Refused when written, so none is stored; `launchway doctor encryption` counts any that an older release stored |
 | Sessions, API tokens, runner join and access tokens | Already stored only as SHA-256 hashes of 256 random bits, which cannot be reversed even with every key |
 
@@ -20,7 +21,7 @@ or replace it. It is for operators.
 |---|---|
 | Artifacts, test attachments and reports | Encrypt the volume or the database, and the S3 bucket (server-side encryption) |
 | Logs and run records | The same |
-| Build caches | The same |
+| Build caches | The same. The cached archives are not encrypted, and cache entries are not signed; see [build caches](build-caches.md#what-a-cache-entry-is-not-yet) |
 | Hosted Git repository packs | The same |
 | Run metadata, project names, states, counts, the audit trail | These are searched, so they stay readable; use database and volume encryption |
 

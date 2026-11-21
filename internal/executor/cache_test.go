@@ -99,33 +99,75 @@ func staged(t *testing.T, files map[string]string) []StagedFile {
 	return out
 }
 
-func sumOf(s string) string { return CacheKey("p", "n", s, nil) } // any stable hex string
+func ck(in CacheKeyInput) string { k, _ := CacheKey(in); return k }
+
+func sumOf(s string) string { return ck(CacheKeyInput{Platform: "p", Name: "n", Text: s}) } // any stable hex string
 
 // The key depends on everything it is made of, and on nothing else.
 func TestCacheKey(t *testing.T) {
 	f := func(path, sum string) StagedFile { return StagedFile{Path: path, SHA256: sum} }
-	base := CacheKey("linux/amd64", "pip", "v1", []StagedFile{f("a.txt", "11"), f("b.txt", "22")})
+	in := func(mod func(*CacheKeyInput)) string {
+		k := CacheKeyInput{Platform: "linux/amd64", Name: "pip", Text: "v1", Image: ImageIdentity{Ref: "python:3.13", ID: "sha256:aa"},
+			Versions: []VersionValue{{Label: "command: python -V", Value: "Python 3.13.1"}}, Files: []StagedFile{f("a.txt", "11"), f("b.txt", "22")}}
+		if mod != nil {
+			mod(&k)
+		}
+		return ck(k)
+	}
+	base := in(nil)
 	if len(base) != 64 {
 		t.Fatalf("%q", base)
 	}
-	if again := CacheKey("linux/amd64", "pip", "v1", []StagedFile{f("b.txt", "22"), f("a.txt", "11")}); again != base {
+	if again := in(func(k *CacheKeyInput) { k.Files = []StagedFile{f("b.txt", "22"), f("a.txt", "11")} }); again != base {
 		t.Error("the order the files were found in changed the key")
 	}
 	for name, got := range map[string]string{
-		"platform":                       CacheKey("linux/arm64", "pip", "v1", []StagedFile{f("a.txt", "11"), f("b.txt", "22")}),
-		"name":                           CacheKey("linux/amd64", "npm", "v1", []StagedFile{f("a.txt", "11"), f("b.txt", "22")}),
-		"text":                           CacheKey("linux/amd64", "pip", "v2", []StagedFile{f("a.txt", "11"), f("b.txt", "22")}),
-		"a file changed":                 CacheKey("linux/amd64", "pip", "v1", []StagedFile{f("a.txt", "12"), f("b.txt", "22")}),
-		"a file renamed":                 CacheKey("linux/amd64", "pip", "v1", []StagedFile{f("a.txt", "11"), f("c.txt", "22")}),
-		"a file added":                   CacheKey("linux/amd64", "pip", "v1", []StagedFile{f("a.txt", "11"), f("b.txt", "22"), f("c.txt", "33")}),
-		"contents swapped between files": CacheKey("linux/amd64", "pip", "v1", []StagedFile{f("a.txt", "22"), f("b.txt", "11")}),
+		"platform":                       in(func(k *CacheKeyInput) { k.Platform = "linux/arm64" }),
+		"name":                           in(func(k *CacheKeyInput) { k.Name = "npm" }),
+		"text":                           in(func(k *CacheKeyInput) { k.Text = "v2" }),
+		"image digest (same tag)":        in(func(k *CacheKeyInput) { k.Image.ID = "sha256:bb" }),
+		"image reference":                in(func(k *CacheKeyInput) { k.Image.Ref = "python:3.12" }),
+		"a tool version output":          in(func(k *CacheKeyInput) { k.Versions[0].Value = "Python 3.13.2" }),
+		"a version input removed":        in(func(k *CacheKeyInput) { k.Versions = nil }),
+		"a file changed":                 in(func(k *CacheKeyInput) { k.Files[0].SHA256 = "12" }),
+		"a file renamed":                 in(func(k *CacheKeyInput) { k.Files[1].Path = "c.txt" }),
+		"a file added":                   in(func(k *CacheKeyInput) { k.Files = append(k.Files, f("c.txt", "33")) }),
+		"contents swapped between files": in(func(k *CacheKeyInput) { k.Files = []StagedFile{f("a.txt", "22"), f("b.txt", "11")} }),
 		// Boundaries are not ambiguous: moving text into the name does not
 		// make the same key.
-		"text moved into the name": CacheKey("linux/amd64", "pipv1", "", []StagedFile{f("a.txt", "11"), f("b.txt", "22")}),
+		"text moved into the name": in(func(k *CacheKeyInput) { k.Name, k.Text = "pipv1", "" }),
 	} {
 		if got == base {
 			t.Errorf("%s did not change the key", name)
 		}
+	}
+}
+
+// The parts say, in words, what the key is made of; the image is shown with
+// what it resolved to.
+func TestCacheKeyPartsNameTheImageAndVersions(t *testing.T) {
+	_, parts := CacheKey(CacheKeyInput{Platform: "linux/amd64", Name: "m2", Image: ImageIdentity{Ref: "maven:3", ID: "sha256:abc"},
+		Versions: []VersionValue{{Label: "command: java -version", Value: "openjdk 21"}}})
+	text := ""
+	for _, p := range parts {
+		text += p.Label + "=" + p.Value + "\n"
+	}
+	for _, want := range []string{"platform=linux/amd64", "image=maven:3 = sha256:abc", "version command: java -version=openjdk 21"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("no %q in\n%s", want, text)
+		}
+	}
+}
+
+// A reference with a digest is that digest, and the host executor, which
+// ignores the image, has none.
+func TestResolveImageWithoutAnEngine(t *testing.T) {
+	d := "sha256:" + strings.Repeat("a", 64)
+	if id := ResolveImage(context.Background(), &Host{}, "golang@"+d); id.ID != d {
+		t.Errorf("%+v", id)
+	}
+	if id := ResolveImage(context.Background(), &Host{}, "golang:1.26"); id.ID != "" || id.Ref != "golang:1.26" {
+		t.Errorf("%+v", id)
 	}
 }
 
@@ -357,13 +399,13 @@ func cacheAcrossSteps(t *testing.T, ex Executor, s1, s2 Spec) {
 	if err != nil || len(keyFiles.Files) != 1 {
 		t.Fatalf("%+v %v", keyFiles, err)
 	}
-	key := CacheKey("test/arch", "deps", "v1", keyFiles.Files)
+	key := ck(CacheKeyInput{Platform: "test/arch", Name: "deps", Text: "v1", Files: keyFiles.Files})
 	if code, err := ex.Run(ctx, s1, c.sink); err != nil || code != 0 {
 		t.Fatalf("step 1: %d %v\n%s", code, err, c.text())
 	}
 	// After it: the same key from the same file as the step left it.
 	after, err := StageWorkspace(ctx, ex, s1, []string{"requirements.txt"}, StageLimits{}, t.TempDir())
-	if err != nil || CacheKey("test/arch", "deps", "v1", after.Files) != key {
+	if err != nil || ck(CacheKeyInput{Platform: "test/arch", Name: "deps", Text: "v1", Files: after.Files}) != key {
 		t.Fatalf("the key changed: %+v %v", after, err)
 	}
 	staged, err := StageWorkspace(ctx, ex, s1, []string{".cache/deps"}, StageLimits{MaxFiles: 100000}, t.TempDir())
@@ -476,17 +518,5 @@ func TestStagingForACacheLeavesOutGitDirectories(t *testing.T) {
 	staged, err := stageLocal(context.Background(), ws, []string{".cache/deps", ".cache/deps/.git", ".cache/deps/sub/.git/HEAD"}, StageLimits{}.withDefaults(), t.TempDir())
 	if err != nil || len(staged.Files) != 3 {
 		t.Fatalf("%v %v", staged, err)
-	}
-}
-
-func TestSecretLikeFiles(t *testing.T) {
-	var files []StagedFile
-	for _, p := range []string{".cache/a.txt", "x/.env", ".env.production", "keys/server.pem", "id_ed25519", "id_ed25519.pub", ".npmrc", "node_modules/y/index.js", "deploy/prod.tfvars", "cert.key"} {
-		files = append(files, StagedFile{Path: p})
-	}
-	got := strings.Join(SecretLikeFiles(files), " ")
-	want := "x/.env .env.production keys/server.pem id_ed25519 .npmrc deploy/prod.tfvars cert.key"
-	if got != want {
-		t.Errorf("got  %s\nwant %s", got, want)
 	}
 }

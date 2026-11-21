@@ -111,6 +111,8 @@ const (
 	cReport  = "CANARY-hosted-report-key-9d2b6e1f4a8c7350"
 	cRunTok  = "CANARY-git-run-token-key-5e8a2c9b1d7f4036"
 	cWebhook = "CANARY-webhook-secret-1b4d7a9e2c6f8053"
+	// cHookPath is the token of a chat service's incoming webhook: it sits in the address's path.
+	cHookPath = "CANARY-webhook-path-token-6a0e3d8c5b2f9147"
 )
 
 // The canary test: every kind of secret the server stores, made with a
@@ -130,7 +132,7 @@ func TestCanaryNoSecretAppearsInADatabaseDump(t *testing.T) {
 		}
 	}
 	hooks := webhooks.New(webhooks.Options{DB: e.Database(), Sealer: s.Webhooks(), Log: quiet})
-	hook, _, err := hooks.Create(ctx, webhooks.NewHook{RepoID: "repo1", Name: "ci", URL: "https://example.test/hook", Events: []string{"push"}, Secret: cWebhook, CreatedBy: "ada"})
+	hook, _, err := hooks.Create(ctx, webhooks.NewHook{RepoID: "repo1", Name: "ci", URL: "https://example.test/services/" + cHookPath, Events: []string{"push"}, Secret: cWebhook, CreatedBy: "ada"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +157,7 @@ func TestCanaryNoSecretAppearsInADatabaseDump(t *testing.T) {
 
 	dump := dumpAll(t, e, addr)
 	for what, v := range map[string]string{"the shared runner token": cRunner, "the login state key": cLogin, "the report link key": cReport,
-		"the Git run token key": cRunTok, "a webhook secret": cWebhook} {
+		"the Git run token key": cRunTok, "a webhook secret": cWebhook, "the token in a webhook address": cHookPath} {
 		mustNotAppear(t, dump, what, []byte(v))
 	}
 	for i, p := range privates {

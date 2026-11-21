@@ -24,6 +24,7 @@ import (
 const (
 	cMirrorEnv  = "CANARY-mirror-token-in-the-environment-6a1f3c8e"
 	cInlineCred = "CANARY-inline-credential-in-an-address-2d7b9e40"
+	cHookEcho   = "CANARY-echoed-bearer-token-2f7b9d4e6a1c8035"
 	cVarValue   = "CANARY-text-given-as-a-secret-variable-8c4e1a97"
 )
 
@@ -75,16 +76,17 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 	var sawSignature string
 	recv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sawSignature = r.Header.Get("X-Launchway-Signature-256")
-		_, _ = w.Write([]byte("received " + sawSignature))
+		// A chat service often echoes what it was given: the signature, the address and a token.
+		_, _ = w.Write([]byte("received " + sawSignature + " at " + r.URL.Path + " Authorization: Bearer " + cHookEcho))
 	}))
 	defer recv.Close()
 	hooks := webhooks.New(webhooks.Options{DB: db, Sealer: s.Webhooks(), Log: debug})
-	hook, _, err := hooks.Create(ctx, webhooks.NewHook{RepoID: "repo1", Name: "ci", URL: recv.URL, Events: []string{"push", "pull_request"}, Secret: cWebhook, CreatedBy: "ada"})
+	hook, _, err := hooks.Create(ctx, webhooks.NewHook{RepoID: "repo1", Name: "ci", URL: recv.URL + "/services/" + cHookPath, Events: []string{"push", "pull_request"}, Secret: cWebhook, CreatedBy: "ada"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	d, err := hooks.Ping(ctx, hook.ID, webhooks.Repo{Path: "acme/shop", Owner: "acme", Name: "shop"}, "ada")
-	if err != nil || d.Status != 200 || !strings.Contains(d.Response, sawSignature) || sawSignature == "" {
+	if err != nil || d.Status != 200 || !strings.Contains(d.Response, "received") || sawSignature == "" {
 		t.Fatalf("the delivery did not happen: %+v %v", d, err)
 	}
 
@@ -150,16 +152,17 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 	dump := dumpAll(t, e, addr)
 	for what, v := range map[string]string{"the shared runner token": cRunner, "the login state key": cLogin, "the report link key": cReport, "the Git run token key": cRunTok,
 		"a webhook secret": cWebhook, "the mirror's credential, read from the environment": cMirrorEnv, "a credential written into a mirror address": cInlineCred,
-		"a secret variable given as text": cVarValue} {
+		"a secret variable given as text": cVarValue, "the token in a webhook address": cHookPath, "a token the receiver echoed back": cHookEcho} {
 		mustNotAppear(t, dump, what, []byte(v))
 	}
 	// Nothing logged at debug level, the most talkative, holds a secret either.
-	for what, v := range map[string]string{"the shared runner token": cRunner, "the login state key": cLogin, "a webhook secret": cWebhook, "the mirror's credential": cMirrorEnv} {
+	for what, v := range map[string]string{"the shared runner token": cRunner, "the login state key": cLogin, "a webhook secret": cWebhook, "the mirror's credential": cMirrorEnv, "the token in a webhook address": cHookPath} {
 		mustNotAppear(t, []byte(logs.String()), what+" in the debug log", []byte(v))
 	}
-	// The webhook's own signature, which the delivery record holds (the receiver echoed it), is not the secret.
-	if !bytes.Contains(dump, []byte(sawSignature)) {
-		t.Log("the delivery response is not in the dump: nothing to check there")
+	// The delivery response is kept redacted: the address's path and the
+	// Authorization value the receiver echoed are not in it.
+	if bytes.Contains([]byte(d.Response), []byte(cHookEcho)) || bytes.Contains([]byte(d.Response), []byte(cHookPath)) {
+		t.Errorf("the stored response holds a token: %q", d.Response)
 	}
 	// What was stored is there (the test saw the records it made).
 	for _, want := range []string{"Fix rounding", "bad release", "198.51.100.7", "CANARY_MIRROR_TOKEN", "apps/shop"} {

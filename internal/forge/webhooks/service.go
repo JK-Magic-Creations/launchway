@@ -13,9 +13,12 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/verify"
 )
 
 // Options configure a Service. Zero values are the defaults noted.
@@ -114,7 +117,7 @@ func (s *Service) Create(ctx context.Context, n NewHook) (h Hook, generated stri
 	}
 	name := strings.TrimSpace(n.Name)
 	if name == "" {
-		name = n.URL
+		name = MaskURL(n.URL) // the full address may carry a token: it is not the default name
 	}
 	if len(name) > 100 {
 		return h, "", invalid("the name is longer than 100 characters")
@@ -129,6 +132,7 @@ func (s *Service) Create(ctx context.Context, n NewHook) (h Hook, generated stri
 	if err != nil {
 		return h, "", err
 	}
+	h.URL = MaskURL(h.URL)
 	h.Scope = ScopeOwner
 	if h.RepoID != "" {
 		h.Scope = ScopeRepository
@@ -145,17 +149,26 @@ func randomSecret() string {
 // Get returns a hook.
 func (s *Service) Get(ctx context.Context, id string) (Hook, error) {
 	h, _, err := s.st.hook(ctx, id)
+	h.URL = MaskURL(h.URL)
 	return h, err
 }
 
 // ForRepository lists the hooks of one repository.
 func (s *Service) ForRepository(ctx context.Context, repoID string) ([]Hook, error) {
-	return s.st.hooks(ctx, `repo_id = ?`, repoID)
+	return masked(s.st.hooks(ctx, `repo_id = ?`, repoID))
 }
 
 // ForOwner lists the hooks that cover an owner's repositories.
 func (s *Service) ForOwner(ctx context.Context, owner string) ([]Hook, error) {
-	return s.st.hooks(ctx, `repo_id = '' AND owner = ?`, owner)
+	return masked(s.st.hooks(ctx, `repo_id = '' AND owner = ?`, owner))
+}
+
+// masked hides the path of each hook's address (see MaskURL).
+func masked(hs []Hook, err error) ([]Hook, error) {
+	for i := range hs {
+		hs[i].URL = MaskURL(hs[i].URL)
+	}
+	return hs, err
 }
 
 // Patch is a change to a hook; nil fields stay.
@@ -204,6 +217,7 @@ func (s *Service) Update(ctx context.Context, id string, p Patch) (Hook, error) 
 	if p.Secret != nil {
 		h.HasSecret = *p.Secret != ""
 	}
+	h.URL = MaskURL(h.URL)
 	return h, nil
 }
 
@@ -388,13 +402,13 @@ func (s *Service) attempt(ctx context.Context, id string, once bool) (Delivery, 
 	}
 	status, took, body, sendErr := s.send(ctx, h, d, secret)
 	d.Attempts++
-	d.Status, d.DurationMS, d.Response = status, took.Milliseconds(), clip(body, 1024)
+	d.Status, d.DurationMS, d.Response = status, took.Milliseconds(), clip(redactFor(h.URL, body), 1024)
 	switch {
 	case sendErr == nil && status >= 200 && status < 300:
 		d.State, d.Error = Delivered, ""
 		_, _ = s.st.hookFailures(ctx, h.ID, 0, true)
 	default:
-		d.Error = failureText(status, sendErr)
+		d.Error = redactFor(h.URL, failureText(status, sendErr))
 		if once || d.Attempts >= s.o.MaxAttempts {
 			d.State = Failed
 			s.noteFailure(ctx, h, d)
@@ -408,6 +422,25 @@ func (s *Service) attempt(ctx context.Context, id string, once bool) (Delivery, 
 	}
 	s.st.prune(ctx, h.ID, s.o.KeepDeliveries)
 	return d, nil
+}
+
+// redactFor removes what must not be stored from text that came back from a
+// hook's address (or from the connection to it): the address's own path and
+// query (which may be the token), then the product's redaction of token-like
+// strings and Authorization and Cookie values. The response of a chat service
+// often echoes the address or a token; the log shows it only redacted.
+func redactFor(address, text string) string {
+	if u, err := url.Parse(address); err == nil {
+		for _, v := range []string{u.RawQuery, u.EscapedPath(), u.Path} {
+			if len(strings.Trim(v, "/")) >= 4 {
+				text = strings.ReplaceAll(text, v, "...")
+			}
+		}
+		if len(address) >= 4 {
+			text = strings.ReplaceAll(text, address, MaskURL(address))
+		}
+	}
+	return verify.Redact(text)
 }
 
 func failureText(status int, err error) string {

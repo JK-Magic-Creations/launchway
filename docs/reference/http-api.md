@@ -468,10 +468,10 @@ database, as the installation's default with an override for a project.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/projects/{name}/caches` | `project-viewer` | — | The project's entries, most recently used first: `id`, `name`, `key`, `scope`, `platform`, `bytes`, `files`, `status` (`kept` or `uploading`), `created_at`, `last_used_at`, `hits`, and `run_id` and `run_number` of the run that wrote it; `totals` (`entries`, `bytes`, `quota_bytes`, `max_entry_bytes`, `idle_days`) and the `policy` that applies. |
+| `GET /api/v1/projects/{name}/caches` | `project-viewer` | — | The project's entries, most recently used first: `id`, `name`, `key`, `scope`, `platform`, `bytes`, `files`, `status` (`kept` or `uploading`), `created_at`, `last_used_at`, `hits`, `pipeline`, `generation`, `sensitive`, and `run_id` and `run_number` of the run that wrote it; `totals` (`entries`, `bytes`, `quota_bytes`, `max_entry_bytes`, `idle_days`) and the `policy` that applies. |
 | `DELETE /api/v1/projects/{name}/caches/{id}` | `project-operator` | `cache.delete` | Ends one entry; the next run that wanted it starts without it. Answers `{"ended", "bytes"}`; `404` for an entry that does not exist or is another project's. |
 | `DELETE /api/v1/projects/{name}/caches` | `project-operator` | `cache.delete` | Ends every entry of the cache named by `?name=pip`, in every scope, key and platform. `404` if there is none. |
-| `GET /api/v1/cache-policy` | `signed-in` | — | The installation's policy: `enabled`, `max_project_gib`, `max_entry_gib`, `idle_days`, and `source` (`default` until an administrator sets one). |
+| `GET /api/v1/cache-policy` | `signed-in` | — | The installation's policy: `enabled`, `max_project_gib`, `max_entry_gib`, `idle_days`, `max_age_days`, and `source` (`default` until an administrator sets one). |
 | `PUT /api/v1/cache-policy` | `admin` | `cache_policy.set` | Changes the installation's policy; a field left out keeps its value. `400` for a value out of range (an entry limit above the project's quota, idle days outside 1 to 3650). Audited with the policy before and after. |
 | `GET /api/v1/projects/{name}/cache-policy` | `project-viewer` | — | The policy that applies to the project, with `source` `project` (its own override), `installation` or `default`. |
 | `PUT /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.set_project` | Overrides the policy for one project; a field left out keeps the value that applies to it now. |

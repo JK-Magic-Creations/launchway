@@ -182,6 +182,10 @@ type cacheRun struct {
 	platform string
 	dir      string
 	tasks    []*cacheTask
+
+	// image is what the step's image resolved to, once imageDone.
+	image     executor.ImageIdentity
+	imageDone bool
 }
 
 type cacheTask struct {
@@ -190,6 +194,13 @@ type cacheTask struct {
 	// which case skip says why and the cache is neither restored nor saved.
 	key  string
 	skip string
+	// keyParts is what the key is made of, in words; keyIn is the input it
+	// was worked out from (its files' contents as they were before the step).
+	keyParts []executor.KeyPart
+	keyIn    executor.CacheKeyInput
+	// base is the entry the restore used, or found too old: what a save
+	// starts from.
+	base *engine.CacheEntry
 	// restored is what the restore found: hit, fallback or miss.
 	restored string
 	res      engine.CacheResult
@@ -250,6 +261,19 @@ func cacheSize(n int64) string {
 	return sizeText(n)
 }
 
+// ageText is a duration of seconds as days, hours or minutes.
+func ageText(s int64) string {
+	switch d := time.Duration(s) * time.Second; {
+	case d >= 48*time.Hour:
+		return strconv.Itoa(int(d.Hours()/24)) + " days"
+	case d >= 2*time.Hour:
+		return strconv.Itoa(int(d.Hours())) + " hours"
+	case d >= 2*time.Minute:
+		return strconv.Itoa(int(d.Minutes())) + " minutes"
+	}
+	return "under 2 minutes"
+}
+
 func seconds(d time.Duration) float64 { return d.Round(100 * time.Millisecond).Seconds() }
 
 func secondsText(d time.Duration) string {
@@ -282,13 +306,13 @@ func (cr *cacheRun) restore(parent context.Context, out executor.Sink) {
 func (cr *cacheRun) restoreOne(ctx context.Context, t *cacheTask, out executor.Sink) {
 	name := t.entry.Name
 	start := time.Now()
-	t.key, t.skip = cr.workOutKey(ctx, t)
+	t.key, t.keyParts, t.skip = cr.workOutKey(ctx, t)
 	if t.skip != "" {
 		t.res.Reason = t.skip
 		cr.sys("Cache %s: not used: %s", name, cr.mask(t.skip))
 		return
 	}
-	t.res.Key = t.key
+	t.res.Key, t.res.KeyParts = t.key, keyParts(t.keyParts)
 	var found *engine.CacheLookupResult
 	err := retry(ctx, func() error {
 		var err error
@@ -299,6 +323,16 @@ func (cr *cacheRun) restoreOne(ctx context.Context, t *cacheTask, out executor.S
 		reason := "the server could not be asked: " + err.Error()
 		t.res.Reason = cr.mask(reason)
 		cr.sys("Cache %s: no entry (%s); the step runs without it", name, t.res.Reason)
+		return
+	}
+	t.res.MaxAgeSeconds = found.MaxAgeSeconds
+	if found.Entry == nil && found.Expired != nil {
+		ex := found.Expired
+		t.restored, t.base = engine.CacheExpired, ex
+		t.res.Result, t.res.EntryKey, t.res.Generation, t.res.AgeSeconds = engine.CacheExpired, ex.Key, ex.Generation, ex.AgeSeconds
+		t.res.Reason = fmt.Sprintf("the entry is %s old, more than the %s this cache may be", ageText(ex.AgeSeconds), ageText(found.MaxAgeSeconds))
+		cr.sys("Cache %s: the entry with this key (generation %d) is %s old, more than the %s this cache may be; it is not restored and the step rebuilds it",
+			name, ex.Generation, ageText(ex.AgeSeconds), ageText(found.MaxAgeSeconds))
 		return
 	}
 	if found.Entry == nil {
@@ -328,20 +362,24 @@ func (cr *cacheRun) restoreOne(ctx context.Context, t *cacheTask, out executor.S
 	}
 	took := time.Since(start)
 	t.res.Bytes, t.res.Scope, t.res.Seconds = en.Bytes, en.Scope, seconds(took)
+	// The entry restored is recorded as it is: its own key (which on a
+	// fallback is not the step's), generation and age.
+	t.base = en
+	t.res.EntryKey, t.res.Generation, t.res.AgeSeconds = en.Key, en.Generation, en.AgeSeconds
 	if en.Exact {
 		t.restored, t.res.Result = engine.CacheHit, engine.CacheHit
-		cr.sys("Cache %s: restored key %s (exact, %s, %s)", name, shortKey(en.Key), cacheSize(en.Bytes), secondsText(took))
+		cr.sys("Cache %s: restored key %s (exact, generation %d, %s old, %s, %s)", name, shortKey(en.Key), en.Generation, ageText(en.AgeSeconds), cacheSize(en.Bytes), secondsText(took))
 		return
 	}
 	t.restored, t.res.Result = engine.CacheFallback, engine.CacheFallback
-	t.res.Key = t.key // the key worked out; the entry restored had another
-	cr.sys("Cache %s: restored key %s (fallback: the step's key is %s; %s, %s)", name, shortKey(en.Key), shortKey(t.key), cacheSize(en.Bytes), secondsText(took))
+	cr.sys("Cache %s: restored key %s (fallback: the step's key is %s; generation %d, %s old, %s, %s)", name, shortKey(en.Key), shortKey(t.key), en.Generation, ageText(en.AgeSeconds), cacheSize(en.Bytes), secondsText(took))
 }
 
-// workOutKey stages the key's files and hashes them. It returns the key, or
-// why there is none.
-func (cr *cacheRun) workOutKey(ctx context.Context, t *cacheTask) (string, string) {
-	var files []executor.StagedFile
+// workOutKey stages the key's files and hashes them with everything else the
+// key is made of. It returns the key and what it is made of, or why there is
+// none.
+func (cr *cacheRun) workOutKey(ctx context.Context, t *cacheTask) (string, []executor.KeyPart, string) {
+	in := executor.CacheKeyInput{Platform: cr.platform, Name: t.entry.Name, Text: t.entry.KeyText, Image: cr.imageIdentity(ctx)}
 	if len(t.entry.KeyFiles) > 0 {
 		dir := filepath.Join(cr.dir, "key-"+t.entry.Name)
 		staged, err := executor.StageWorkspace(ctx, cr.r.execFor(cr.job), cr.spec, t.entry.KeyFiles, cacheKeyLimits, dir)
@@ -349,15 +387,30 @@ func (cr *cacheRun) workOutKey(ctx context.Context, t *cacheTask) (string, strin
 		if err != nil {
 			if errors.Is(err, executor.ErrNotKept) {
 				if staged != nil && len(staged.Files) == 0 {
-					return "", "key.files matched no file, so there is nothing to tell this cache's key from another's"
+					return "", nil, "key.files matched no file, so there is nothing to tell this cache's key from another's"
 				}
-				return "", "the key's files cannot be read: " + strings.TrimPrefix(err.Error(), executor.ErrNotKept.Error()+": ")
+				return "", nil, "the key's files cannot be read: " + strings.TrimPrefix(err.Error(), executor.ErrNotKept.Error()+": ")
 			}
-			return "", "the key's files cannot be read: " + err.Error()
+			return "", nil, "the key's files cannot be read: " + err.Error()
 		}
-		files = staged.Files
+		in.Files = staged.Files
 	}
-	return executor.CacheKey(cr.platform, t.entry.Name, t.entry.KeyText, files), ""
+	vs, why := cr.versionValues(ctx, t)
+	if why != "" {
+		return "", nil, why
+	}
+	in.Versions = vs
+	t.keyIn = in
+	key, parts := executor.CacheKey(in)
+	return key, parts, ""
+}
+
+func keyParts(in []executor.KeyPart) []engine.CacheKeyPart {
+	out := make([]engine.CacheKeyPart, len(in))
+	for i, p := range in {
+		out[i] = engine.CacheKeyPart{Label: p.Label, Value: p.Value}
+	}
+	return out
 }
 
 // fetchEntry downloads an entry, checks it, unpacks it safely and puts it in
@@ -446,7 +499,7 @@ func (cr *cacheRun) save(outcome string) {
 	ctx, cancel := context.WithTimeout(context.Background(), cacheTimeout)
 	defer cancel()
 	for _, t := range cr.tasks {
-		if t.skip != "" || !(&pipeline.Cache{Save: t.entry.Save}).SaveAfter(outcome) || t.restored == engine.CacheHit {
+		if t.skip != "" || !(&pipeline.Cache{Save: t.entry.Save}).SaveAfter(outcome) {
 			continue
 		}
 		cr.saveOne(ctx, t)
@@ -467,6 +520,11 @@ func (cr *cacheRun) notSaved(t *cacheTask, why string) {
 func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	name := t.entry.Name
 	start := time.Now()
+	changed, why := cr.rekey(ctx, t)
+	if why != "" {
+		cr.notSaved(t, why)
+		return
+	}
 	dir := filepath.Join(cr.dir, "save-"+name)
 	defer os.RemoveAll(dir)
 	maxEntry := cr.job.Cache.MaxEntryBytes
@@ -488,7 +546,23 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 		cr.notSaved(t, strings.TrimPrefix(err.Error(), executor.ErrNotKept.Error()+": "))
 		return
 	}
-	cr.warnSecretLike(name, staged.Files)
+	if why := cr.refuseCredentials(staged.Files); why != "" {
+		cr.notSaved(t, why)
+		return
+	}
+	// A step that started from an entry with this key and left the paths as
+	// they were restored has nothing to add; one that changed them (an
+	// install that fetched something newer) saves the next generation of the
+	// key, and the entry it replaces ends.
+	content := executor.ContentDigest(staged.Files)
+	if t.restored == engine.CacheHit && !changed && t.base != nil && t.base.Content == content {
+		cr.sys("Cache %s: the step left the cached paths as they were restored; nothing to save", name)
+		return
+	}
+	base := ""
+	if !changed && t.base != nil {
+		base = t.base.ID
+	}
 	archive, err := executor.PackCache(staged.Files, filepath.Join(dir, "archive"))
 	if err != nil {
 		cr.notSaved(t, "packing the files failed: "+err.Error())
@@ -503,7 +577,7 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	err = retry(ctx, func() error {
 		var err error
 		begun, err = cr.r.Client.CacheBegin(ctx, cr.job.LeaseID, engine.BeginCache{Name: name, Key: t.key, Platform: cr.platform,
-			Bytes: archive.Bytes, Files: archive.Files, SHA256: archive.SHA256})
+			Bytes: archive.Bytes, Files: archive.Files, SHA256: archive.SHA256, Base: base, Content: content})
 		return err
 	})
 	if err != nil {
@@ -537,27 +611,32 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	}
 	t.res.Restored, t.res.Result, t.res.Reason = t.restored, engine.CacheSaved, ""
 	t.res.Bytes, t.res.Scope, t.res.Seconds = archive.Bytes, begun.Scope, seconds(time.Since(start))
-	t.res.Key = t.key
+	t.res.Key, t.res.SavedGeneration = t.key, begun.Generation
+	if begun.Generation > 1 {
+		cr.sys("Cache %s: saved %s as generation %d of key %s (the step changed what was restored)", name, cacheSize(archive.Bytes), begun.Generation, shortKey(t.key))
+		return
+	}
 	cr.sys("Cache %s: saved %s as key %s", name, cacheSize(archive.Bytes), shortKey(t.key))
 }
 
-// warnSecretLike says in the step's log that a cache is about to keep files
-// named like credentials: every run that may restore the entry gets them.
-func (cr *cacheRun) warnSecretLike(name string, files []executor.StagedFile) {
-	names := executor.SecretLikeFiles(files)
-	if len(names) == 0 {
-		return
+// refuseCredentials is the message for a cache that holds files that look
+// like credentials, or "". Such a cache is never saved: every run that may
+// restore it would receive them.
+func (cr *cacheRun) refuseCredentials(files []executor.StagedFile) string {
+	found := executor.CredentialFiles(files)
+	if len(found) == 0 {
+		return ""
 	}
-	shown := names
-	if len(shown) > 5 {
-		shown = shown[:5]
+	var shown []string
+	for i, f := range found {
+		if i == 5 {
+			shown = append(shown, fmt.Sprintf("and %d more", len(found)-5))
+			break
+		}
+		shown = append(shown, f.Path+" ("+f.Why+")")
 	}
-	more := ""
-	if len(names) > len(shown) {
-		more = fmt.Sprintf(" and %d more", len(names)-len(shown))
-	}
-	cr.sys("Cache %s: warning: %d file(s) named like credentials are saved in this cache (%s%s); every run that may restore it can read them. Keep secrets out of cached paths.",
-		name, len(names), cr.mask(strings.Join(shown, ", ")), more)
+	return fmt.Sprintf("it holds %d file(s) that look like credentials: %s. Every run that may restore a cache receives what is in it, so it is not saved. Narrow the cache's paths so they leave the file out (cache .m2/repository, not the whole .m2), and use short-lived registry credentials that are not written into the workspace",
+		len(found), strings.Join(shown, ", "))
 }
 
 func maxInt64(a, b int64) int64 {

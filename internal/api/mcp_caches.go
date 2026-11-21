@@ -23,7 +23,7 @@ func addCacheTools(srv *mcp.Server, c *mcpCall) {
 		Description: "A project's build caches: each entry with its name, key, scope (default, ref:<ref> or pull:<n>), platform, size, when it was last restored, how often, and the run that wrote it, with the total against the project's quota and idle days."},
 		mcpCallTimeout, listCaches)
 	addTool(srv, c, &mcp.Tool{Name: "get_cache_policy", Annotations: readOnly("Get the cache policy"),
-		Description: "Whether build caches are kept and how much: max_project_gib, max_entry_gib and idle_days, for one project (its own override, else the installation's) or, without a project, the installation's."},
+		Description: "Whether build caches are kept and how much: max_project_gib, max_entry_gib, idle_days and max_age_days, for one project (its own override, else the installation's) or, without a project, the installation's."},
 		mcpCallTimeout, getCachePolicy)
 	if c.mayOperate {
 		addCacheChangeTools(srv, c)
@@ -32,7 +32,7 @@ func addCacheTools(srv *mcp.Server, c *mcpCall) {
 		return
 	}
 	addTool(srv, c, &mcp.Tool{Name: "set_cache_policy", Annotations: changes("Set the cache policy", true, true),
-		Description: "Administrators only. Change the cache policy of one project (an override) or, without a project, the installation's: enabled, max_project_gib, max_entry_gib, idle_days. A field left out keeps its value. Lowering the quota ends the project's least recently used entries. Audited."},
+		Description: "Administrators only. Change the cache policy of one project (an override) or, without a project, the installation's: enabled, max_project_gib, max_entry_gib, idle_days, max_age_days. A field left out keeps its value. Lowering the quota ends the project's least recently used entries. Audited."},
 		mcpCallTimeout, setCachePolicy)
 }
 
@@ -119,6 +119,7 @@ type cachePolicyToolIn struct {
 	MaxProjectGiB *float64 `json:"max_project_gib,omitempty" jsonschema:"how much one project's entries may add up to, in GiB (10 by default)"`
 	MaxEntryGiB   *float64 `json:"max_entry_gib,omitempty" jsonschema:"the most one entry may hold, in GiB (2 by default)"`
 	IdleDays      *int     `json:"idle_days,omitempty" jsonschema:"how long an entry nobody restored is kept (7 by default)"`
+	MaxAgeDays    *int     `json:"max_age_days,omitempty" jsonschema:"how old an entry may be, from when its contents were started from scratch, before a restore treats it as missing (7 by default); a cache's own max_age may be shorter"`
 }
 
 func getCachePolicy(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in struct {
@@ -139,7 +140,7 @@ func setCachePolicy(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 	if in.Project != "" {
 		path = apiPath("/api/v1/projects/%s/cache-policy", in.Project)
 	}
-	body := cachePolicyIn{Enabled: in.Enabled, MaxProjectGiB: in.MaxProjectGiB, MaxEntryGiB: in.MaxEntryGiB, IdleDays: in.IdleDays}
+	body := cachePolicyIn{Enabled: in.Enabled, MaxProjectGiB: in.MaxProjectGiB, MaxEntryGiB: in.MaxEntryGiB, IdleDays: in.IdleDays, MaxAgeDays: in.MaxAgeDays}
 	err := c.apiJSON(ctx, "set_cache_policy", http.MethodPut, path, body, &out)
 	return out, err
 }
@@ -148,11 +149,19 @@ func setCachePolicy(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 // gives it.
 type cacheBrief struct {
 	Name     string `json:"name"`
-	Result   string `json:"result" jsonschema:"hit, fallback, miss, saved or not_saved"`
+	Result   string `json:"result" jsonschema:"hit, fallback, miss, expired, saved or not_saved"`
 	Restored string `json:"restored,omitempty" jsonschema:"when the cache was saved or not saved: what the restore before the step found"`
 	Bytes    int64  `json:"bytes,omitempty"`
 	Scope    string `json:"scope,omitempty"`
 	Reason   string `json:"reason,omitempty" jsonschema:"why there was no entry, or why nothing was saved"`
+	Key      string `json:"key,omitempty" jsonschema:"the key worked out for the step"`
+	// EntryKey, Generation and AgeSeconds describe the entry restored (or found too old), whose key differs from the step's on a fallback.
+	EntryKey        string                `json:"entry_key,omitempty" jsonschema:"the key of the entry that was restored or found too old"`
+	Generation      int                   `json:"generation,omitempty" jsonschema:"which generation of its key that entry is"`
+	AgeSeconds      int64                 `json:"age_seconds,omitempty" jsonschema:"how long ago that entry's contents were started from scratch"`
+	MaxAgeSeconds   int64                 `json:"max_age_seconds,omitempty" jsonschema:"the longest the cache may be before a restore treats it as missing"`
+	SavedGeneration int                   `json:"saved_generation,omitempty" jsonschema:"the generation this attempt saved, if it did"`
+	KeyParts        []engine.CacheKeyPart `json:"key_parts,omitempty" jsonschema:"what the key was made of: image digest, platform, versions, key files"`
 }
 
 // cacheBriefs describes what a step's caches did. The text comes from the
@@ -161,7 +170,17 @@ func cacheBriefs(in []engine.CacheResult) []cacheBrief {
 	var out []cacheBrief
 	for _, ca := range in {
 		out = append(out, cacheBrief{Name: untrusted(ca.Name, 80), Result: ca.Result, Restored: ca.Restored, Bytes: ca.Bytes,
-			Scope: untrusted(ca.Scope, 200), Reason: untrusted(ca.Reason, 400)})
+			Scope: untrusted(ca.Scope, 200), Reason: untrusted(ca.Reason, 400), Key: ca.Key, EntryKey: ca.EntryKey, Generation: ca.Generation,
+			AgeSeconds: ca.AgeSeconds, MaxAgeSeconds: ca.MaxAgeSeconds, SavedGeneration: ca.SavedGeneration, KeyParts: untrustedParts(ca.KeyParts)})
+	}
+	return out
+}
+
+// untrustedParts clips the parts of a key, whose text comes from the runner.
+func untrustedParts(in []engine.CacheKeyPart) []engine.CacheKeyPart {
+	var out []engine.CacheKeyPart
+	for _, p := range in {
+		out = append(out, engine.CacheKeyPart{Label: untrusted(p.Label, 200), Value: untrusted(p.Value, 300)})
 	}
 	return out
 }

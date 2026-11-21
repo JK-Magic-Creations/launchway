@@ -78,6 +78,28 @@ func (e *Engine) expireCaches(now int64) error {
 				return err
 			}
 		}
+		// An entry whose contents were started from scratch longer ago than
+		// the maximum age is never restored (the step rebuilds it); it only
+		// takes room. A cache's own max_age may be shorter than the policy's,
+		// never longer, so the policy's is when none can be restored.
+		old, err := e.idsOf(`SELECT id FROM caches WHERE project = ? AND status = ? AND born_at < ? ORDER BY born_at LIMIT ?`,
+			project, cacheKept, now-lim.maxAge.Milliseconds(), pruneBatchCaches)
+		if err != nil {
+			return err
+		}
+		for _, id := range old {
+			err := e.artifactTx(func(tx *txx, now int64) error {
+				if err := lockCacheUsage(tx, project); err != nil {
+					return err
+				}
+				k, _, err := endKeptCache(tx, id, "", fmt.Sprintf("older than the maximum age of %d days", int(lim.maxAge/(24*time.Hour))), now)
+				n += k
+				return err
+			})
+			if err != nil {
+				return err
+			}
+		}
 	}
 	if n > 0 {
 		e.log.Info("idle caches ended", "count", n)

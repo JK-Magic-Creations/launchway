@@ -55,7 +55,7 @@ func TestSchema34UpgradesFrom33WithDataAndIsThenSealedCorrectly(t *testing.T) {
 	old.Close()
 
 	var log syncBuffer
-	cur, err := openAs(t, addr, clk, 0, &log)
+	cur, err := openAs(t, addr, clk, schemaEncryption, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
@@ -130,7 +130,7 @@ func TestSchema34UpgradesFrom33(t *testing.T) {
 	clk, addr := newClock(), testdb.New(t)
 	mustOpenAs(t, addr, clk, schemaPulls, &syncBuffer{}).Close()
 	var log syncBuffer
-	cur := mustOpenAs(t, addr, clk, 0, &log)
+	cur := mustOpenAs(t, addr, clk, schemaEncryption, &log)
 	info, err := cur.Schema(context.Background())
 	if err != nil || info.Database != schemaEncryption || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)

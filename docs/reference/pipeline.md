@@ -533,6 +533,13 @@ Other output names are refused.
 | `registry` | name | required | A registry the runner's configuration names |
 | `repository` | text | required | The cache repository, such as `team/cache/app` |
 
+The cache is kept per trust scope, as a script step's caches are: the tag `buildcache` is the
+protected cache, written only by a default-branch run that pushes; a branch, tag or pull request
+exports to `buildcache-<scope>` (`pull-<n>`, or `ref-` and a hash of the ref), imports its own and
+the protected one, and a fork's pull request imports only its own. A pull request or draft that may
+not read secrets has no registry credentials and only reads. The build log says what is imported and
+exported, and that a failed export does not fail the build (`ignore-error`).
+
 #### Image build secrets
 
 <!-- keys: image-secret -->
@@ -1554,21 +1561,50 @@ that keeps build layers, is a different thing with a different shape.
 | `name` | text | required | `^[a-z0-9][a-z0-9._-]{0,63}$`, unique in the step. It groups the entries of one cache across keys. In a template it may be a [parameter](#parameter-values), in a looped step an [`{ each: key }`](#value-forms) |
 | `paths` | glob, one value or a list | required | Directories or files to keep, relative to the workspace, as for [artifacts](#artifacts): a directory keeps everything below it. At most 20. Only regular files are kept; symbolic links are left out and the log says how many |
 | `key` | mapping | required | What the entry's key is made of: the keys below |
-| `fallback` | text | `none` | `latest`: when no entry has the exact key, start from the newest entry of the same name and platform that the run may read |
+| `fallback` | text | `none` | `latest`: when no entry has the exact key, start from the newest entry of the same name and platform that the run may read and that is younger than the maximum age. Set `max_age` with it |
 | `save` | text | `success` | After which outcomes the paths are saved: `success`, `always` (the step succeeded or failed) or `never` |
+| `sensitive` | boolean | `false` | `true`: the cache is never read outside the scope that wrote it. A pull request, another branch or a draft does not restore what the default branch saved, and an entry saved as sensitive stays unreadable to them even if their own pipeline says otherwise |
+| `share` | text | none | A group name, as for `name`. Caches of one project that name the same group, the same cache `name` and the same scope see each other's entries, whichever pipeline they are in. Without it a cache belongs to its pipeline: two pipelines that use one cache name do not share it |
+| `max_age` | duration | the policy's, 7 days | How old an entry may be, counted from when it was made, before a restore treats it as missing and the step rebuilds it: `7d`, `36h`, `90m`; between 1 hour and 365 days. An administrator's cache policy sets the longest allowed |
 
 <!-- keys: cache-key -->
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `files` | glob, one value or a list | none | Files whose paths and contents are hashed, in sorted order, such as a lock file. At most 20 globs. If the globs match no file the cache is not used and the log says so |
 | `text` | text | none | Mixed into the key literally, so that a team can start over by hand by changing it. At most 256 characters |
+| `versions` | list | none | Things the cache depends on that Launchway cannot know: a command run in the step's image, whose output is part of the key (`java -version`, `node --version`), or `{ file: .nvmrc }`, whose contents are. A plain string is a command; `{ run: ... }` says so. At most 10, each command at most 200 characters |
 
-A key needs `files`, `text` or both. The runner's operating system and architecture are always part
-of the key and of the entry's platform: an entry saved on `linux/amd64` is never restored on
-`linux/arm64`.
+<!-- keys: cache-version -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `run` | text | none | A command run in the step's image before the script; its output is part of the key. A command that fails counts as its output and exit status |
+| `file` | glob | none | A file whose SHA-256 is part of the key. Exactly one of `run` and `file` |
 
-An entry is never changed once saved: a key that has an entry is not saved again, and a changed lock
-file is a new key, so a new entry. What a run may read and write depends on how it started, and the
+A key needs `files`, `text` or both. Always part of the key, whatever the author wrote: the format of
+the entry, the runner's operating system and architecture (an entry saved on `linux/amd64` is never
+restored on `linux/arm64`), the cache's name, and **the step's image resolved to its digest**, so a
+tag that moves to another JDK, Node or Python is a different key, not an incompatible restore. A
+reference that carries a digest is used as it is; for others a container engine reports its own copy
+of the image and the Kubernetes executor asks the image's registry. If neither can say, the key uses
+the reference as written and the step's log says so: pin the image by digest, or name the tool's
+version under `versions`. The run page and `launchway runs show` list everything a key was made of.
+Entries made before this was added have keys of the old shape and are never restored again; they
+age out under the cache policy.
+
+An entry is never changed once saved. A step that restored an entry and left different contents saves
+the next **generation** of the same key (a restore takes the newest; the older ends); one that left
+the paths as restored saves nothing; a changed lock file is a new key, so a new entry. An entry
+whose contents were started from scratch longer ago than `max_age` is not restored (the run says
+`expired`), so a chain of refreshes or fallbacks is rebuilt from nothing. Restored files keep the
+modification time they were saved with, never later than the restore, so they are older than the
+sources of the fresh checkout. A cache that holds a file that looks like a credential is not saved.
+Cache patterns that hand a build stale or unsafe content (build output directories, a whole
+`.m2`, a dependency cache with no lock file in its key, `fallback: latest` without `max_age`,
+`save: always`, paths where tools leave credentials) are reported as warnings by `launchway validate`
+and the pipeline editor; they do not stop the pipeline, and each carries a code (`cache-build-outputs`,
+`cache-whole-tool-home`, `cache-key-without-lock`, `cache-fallback-without-max-age`,
+`cache-credential-path`, `cache-save-always`) for an installation's policy to treat as blocking
+later (no policy does today). See the [build caches guide](../guide/build-caches.md). What a run may read and write depends on how it started, and the
 server decides it, not the runner:
 
 | Run | Reads | Writes |
@@ -1576,9 +1612,11 @@ server decides it, not the runner:
 | A push, schedule, webhook or manual run on the project's default branch | `default` | `default` |
 | Another branch or a tag | its own scope (`ref:` and the full ref), then `default` | its own scope |
 | A pull request | `pull:<number>`, then `default` | `pull:<number>` |
+| A pull request from a fork | `pull:<number>` only | `pull:<number>` |
 | A draft run | `default` | nothing |
 
-So a pull request, which runs code from anyone who can open one, starts from what the default
+Within a scope, an entry belongs to its pipeline (or the `share` group the cache names), and a
+`sensitive` cache is read only from the scope that wrote it. So a pull request, which runs code from anyone who can open one, starts from what the default
 branch built but can never put anything where the default branch will read it. Nothing is shared
 between projects. How much a project keeps (10 GiB), how large one entry may be (2 GiB) and how long
 an entry nobody restored is kept (7 days) are the [cache policy](http-api.md#build-caches), set by an

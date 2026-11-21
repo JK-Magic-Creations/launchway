@@ -145,13 +145,16 @@ func TestCacheRestoreAndSaveEndToEnd(t *testing.T) {
 	}
 	key1 := c[0].Key
 
-	// Second run, same lock file: restored whole, and nothing is saved.
+	// Second run, same lock file: restored whole. This step changes what it
+	// restored (it counts the runs), so the key is saved again as generation 2,
+	// which replaces generation 1.
 	d, log = ce.runWith(t, "demo", text, pushMain(sha1))
 	if d.Status != "succeeded" || !strings.Contains(log, "found n=1") || !strings.Contains(log, "now n=2") ||
-		!strings.Contains(log, "Cache deps: restored key "+key1[:4]+"… (exact, ") || strings.Contains(log, "Cache deps: saved") {
+		!strings.Contains(log, "Cache deps: restored key "+key1[:4]+"… (exact, generation 1") || !strings.Contains(log, "as generation 2 of key") {
 		t.Fatalf("%s\n%s", d.Status, log)
 	}
-	if c := cachesOf(t, d); len(c) != 1 || c[0].Result != engine.CacheHit || c[0].Key != key1 || c[0].Bytes < 9_000_000 {
+	if c := cachesOf(t, d); len(c) != 1 || c[0].Result != engine.CacheSaved || c[0].Restored != engine.CacheHit || c[0].Key != key1 || c[0].EntryKey != key1 ||
+		c[0].Generation != 1 || c[0].SavedGeneration != 2 || c[0].Bytes < 9_000_000 {
 		t.Fatalf("%+v", c)
 	}
 
@@ -159,7 +162,7 @@ func TestCacheRestoreAndSaveEndToEnd(t *testing.T) {
 	// is restored, and the result saved under the new key.
 	sha2 := ce.commit(t, "requirements.txt", "requests==2\n")
 	d, log = ce.runWith(t, "demo", text, pushMain(sha2))
-	if d.Status != "succeeded" || !strings.Contains(log, "found n=1") || !strings.Contains(log, "restored key "+key1[:4]+"… (fallback") ||
+	if d.Status != "succeeded" || !strings.Contains(log, "found n=2") || !strings.Contains(log, "restored key "+key1[:4]+"… (fallback") ||
 		!strings.Contains(log, "Cache deps: saved ") {
 		t.Fatalf("%s\n%s", d.Status, log)
 	}
@@ -348,7 +351,7 @@ func TestHostileCacheEntriesNeverReachOutsideTheWorkspace(t *testing.T) {
 	p, _ := pipeline.Parse([]byte(keyed))
 	for name, data := range cases {
 		sha := ce.commit(t, "requirements.txt", "requests=="+name+"\n")
-		key := executor.CacheKey(platform, "deps", "v1", stagedKey(t, ce, "requirements.txt"))
+		key, _ := executor.CacheKey(executor.CacheKeyInput{Platform: platform, Name: "deps", Text: "v1", Image: executor.ImageIdentity{Ref: "none"}, Files: stagedKey(t, ce, "requirements.txt")})
 		if err := plant(t, ce.env, p, key, platform, data); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -514,25 +517,29 @@ func TestCacheEndToEndOnKubernetes(t *testing.T) {
 	_ = ex.Cleanup(context.Background(), func(context.Context, []string) (map[string]executor.RunInfo, error) { return nil, nil })
 }
 
-// A cache that is about to keep files named like credentials says so in the
-// step's log; the entry is still saved, and the .git directory of the
-// repository is never part of one.
-func TestCacheWarnsAboutFilesNamedLikeSecrets(t *testing.T) {
+// A cache that holds files that look like credentials is not saved, from any
+// scope: every run that may restore it would receive them. The log names the
+// files and the fix; nothing is kept; the same cache without them saves.
+func TestCacheRefusesToSaveCredentialFiles(t *testing.T) {
 	ce := newCacheEnv(t)
 	text := cachePipelineText("deps", "none", "success", "      echo token > .cache/deps/.env\n      echo key > .cache/deps/server.pem\n      mkdir -p .cache/deps/.git && echo history > .cache/deps/.git/config\n")
 	d, log := ce.runWith(t, "demo", text, pushMain(ce.head(t)))
-	if d.Status != "succeeded" || !strings.Contains(log, "Cache deps: saved ") {
+	if d.Status != "succeeded" || strings.Contains(log, "Cache deps: saved ") {
 		t.Fatalf("%s\n%s", d.Status, log)
 	}
-	if !strings.Contains(log, "Cache deps: warning: 2 file(s) named like credentials are saved in this cache (.cache/deps/.env, .cache/deps/server.pem)") {
-		t.Fatalf("no warning about the secret-like files:\n%s", log)
+	if !strings.Contains(log, "Cache deps: not saved: it holds 1 file(s) that look like credentials: .cache/deps/.env (an environment file") || !strings.Contains(log, "Narrow the cache's paths") {
+		t.Fatalf("no refusal naming the file and the fix:\n%s", log)
+	}
+	if r := cachesOf(t, d)[0]; r.Result != "not_saved" || !strings.Contains(r.Reason, ".cache/deps/.env") {
+		t.Fatalf("%+v", r)
 	}
 	if strings.Contains(log, ".cache/deps/.git") {
 		t.Errorf("the log speaks of the .git directory's files:\n%s", log)
 	}
-	// And a restore has no .git directory in it.
-	d, log = ce.runWith(t, "demo", cachePipelineText("deps", "none", "success", "      ls -A .cache/deps | tr '\\n' ' '; echo\n"), pushMain(ce.head(t)))
-	if d.Status != "succeeded" || !strings.Contains(log, ".env") || strings.Contains(log, ".git") {
+	// Nothing was kept, so the next run starts without it, and saves when the
+	// credential is gone.
+	d, log = ce.runWith(t, "demo", cachePipelineText("deps", "none", "success", "      rm -f .cache/deps/.env .cache/deps/server.pem\n"), pushMain(ce.head(t)))
+	if d.Status != "succeeded" || !strings.Contains(log, "Cache deps: no entry") || !strings.Contains(log, "Cache deps: saved ") {
 		t.Fatalf("%s\n%s", d.Status, log)
 	}
 }

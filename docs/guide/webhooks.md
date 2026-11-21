@@ -133,6 +133,13 @@ The check is made when the connection is made, on the address actually connected
 changes its answer cannot get around it. Addresses with a user name or password in them are refused when
 you add the hook; the secret signs the delivery instead.
 
+Many chat services put their token in the path of the address, so Launchway treats the address as a
+secret: with a root key it is sealed in the database (see [encryption at rest](encryption-at-rest.md)),
+and it is shown with the host only (`https://hooks.chat.example/...`) in the interface, the API and
+the command line. To change the address, enter the whole of it again. The start of the receiver's
+answer, which the delivery log keeps, has token-like strings and Authorization and Cookie values
+removed before it is stored.
+
 ## Pipelines start on a push
 
 When a push commits, over HTTPS or SSH, Launchway makes every project whose address is that repository

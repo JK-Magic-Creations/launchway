@@ -4,6 +4,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -32,9 +33,11 @@ const SchemaCache = 25
 //
 // The key is made from the contents of the files key.files names (their
 // paths and SHA-256, in sorted order), the text of key.text mixed in
-// literally, and the runner's operating system and architecture, which are
-// always part of it. An entry is never changed once saved: a new key is a
-// new entry.
+// literally, the values of key.versions (commands run in the step's image,
+// files), and, always, the runner's operating system and architecture and
+// the step's image resolved to its digest: a cache made in one JDK, Node or
+// base image is never restored into another. An entry is never changed once
+// saved: a new key is a new entry.
 type Cache struct {
 	// Name tells the caches of a step apart and groups the entries of one
 	// cache across keys; it is a name as for artifacts.
@@ -50,7 +53,20 @@ type Cache struct {
 	// Save says after which outcomes the paths are saved: success (the
 	// default, written as empty), always (succeeded or failed) or never.
 	Save string `json:"save,omitempty"`
-	Line int    `json:"-"`
+	// Sensitive marks a cache that is never read outside the scope that
+	// wrote it: a pull request, a branch or a draft does not restore what
+	// the default branch saved.
+	Sensitive bool `json:"sensitive,omitempty"`
+	// Share, when set, is the name of a group of caches shared by pipelines
+	// of the project: caches that name the same group (and the same cache
+	// name and scope) see each other's entries. Without it, a cache is the
+	// pipeline's own.
+	Share string `json:"share,omitempty"`
+	// MaxAge is how old an entry may be, from when it was made, before a
+	// restore treats it as missing and the step rebuilds it; 0 is the cache
+	// policy's (7 days unless changed).
+	MaxAge Duration `json:"max_age,omitempty"`
+	Line   int      `json:"-"`
 }
 
 // CacheKey says what the key of a cache entry is made of.
@@ -59,7 +75,26 @@ type CacheKey struct {
 	Files []string `json:"files,omitempty"`
 	// Text is mixed in literally, so that a team can start over by hand.
 	Text string `json:"text,omitempty"`
+	// Versions name things whose value the cache depends on and the
+	// product cannot know: the output of a command run in the step's image
+	// (java -version) or the contents of a file (.nvmrc). A change of any of
+	// them is a different key.
+	Versions []CacheVersion `json:"versions,omitempty"`
 }
+
+// CacheVersion is one version input of a cache key: a command run in the
+// step's image, whose output is the value, or a file, whose SHA-256 is.
+// Exactly one is set.
+type CacheVersion struct {
+	Run  string `json:"run,omitempty"`
+	File string `json:"file,omitempty"`
+}
+
+// Limits of version inputs.
+const (
+	MaxCacheVersions   = 10
+	MaxCacheVersionRun = 200
+)
 
 // Values of Cache.Fallback and Cache.Save.
 const (
@@ -73,6 +108,8 @@ const (
 // Limits on caches.
 const (
 	MaxCachesPerStep  = 10
+	MinCacheMaxAge    = time.Hour
+	MaxCacheMaxAge    = 365 * 24 * time.Hour
 	MaxCachePaths     = 20
 	MaxCacheKeyFiles  = 20
 	MaxCacheKeyText   = 256
@@ -132,6 +169,12 @@ func CacheProblems(c *Cache) []string {
 			out = append(out, msg)
 		}
 	}
+	if c.Share != "" && !ValidArtifactName(c.Share) {
+		out = append(out, quoteText(c.Share)+" is not a valid share name: use lower-case letters, digits, '.', '-' and '_', starting with a letter or digit, at most 64")
+	}
+	if c.MaxAge != 0 && (c.MaxAge.D() < MinCacheMaxAge || c.MaxAge.D() > MaxCacheMaxAge) {
+		out = append(out, "max_age is between 1h and 365d, such as 7d")
+	}
 	switch {
 	case len(c.Key.Files) == 0 && c.Key.Text == "":
 		out = append(out, "a key needs files, text or both, such as key: { files: [requirements.txt] }; with neither, the entry would never change")
@@ -141,6 +184,21 @@ func CacheProblems(c *Cache) []string {
 	for _, g := range c.Key.Files {
 		if _, msg := checkGlob(g, "key files"); msg != "" {
 			out = append(out, msg)
+		}
+	}
+	if len(c.Key.Versions) > MaxCacheVersions {
+		out = append(out, "key.versions has at most "+strconv.Itoa(MaxCacheVersions)+" entries")
+	}
+	for _, v := range c.Key.Versions {
+		switch {
+		case (v.Run == "") == (v.File == ""):
+			out = append(out, "a version is a command (java -version) or { file: .nvmrc }, not both and not neither")
+		case v.Run != "" && (utf8.RuneCountInString(v.Run) > MaxCacheVersionRun || strings.ContainsFunc(v.Run, func(r rune) bool { return unicode.IsControl(r) })):
+			out = append(out, "a version command is at most "+strconv.Itoa(MaxCacheVersionRun)+" characters on one line")
+		case v.File != "":
+			if _, msg := checkGlob(v.File, "version files"); msg != "" {
+				out = append(out, msg)
+			}
 		}
 	}
 	if utf8.RuneCountInString(c.Key.Text) > MaxCacheKeyText || !utf8.ValidString(c.Key.Text) || strings.ContainsFunc(c.Key.Text, unicode.IsControl) {

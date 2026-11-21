@@ -162,6 +162,13 @@ type CacheEntryView struct {
 	CreatedAt  int64  `json:"created_at"`
 	LastUsedAt int64  `json:"last_used_at"`
 	Hits       int64  `json:"hits"`
+	// Pipeline is whose entry it is: pipeline:<name>, or shared:<name> for a
+	// group of caches that pipelines share; Generation which of the entries
+	// of its key it is (the newest is restored); Sensitive whether it is
+	// never read outside its scope.
+	Pipeline   string `json:"pipeline"`
+	Generation int    `json:"generation"`
+	Sensitive  bool   `json:"sensitive,omitempty"`
 	// RunID and RunNumber are the run that wrote it.
 	RunID     string `json:"run_id"`
 	RunNumber int    `json:"run_number"`
@@ -199,7 +206,7 @@ func (e *Engine) Caches(project string) (*CacheList, error) {
 	}
 	out := &CacheList{Project: project, Entries: []CacheEntryView{}, Policy: lim.view()}
 	rows, err := e.db.Query(`SELECT c.id, c.name, c.key, c.scope, c.platform, c.bytes, c.files, c.status, c.created_at, c.last_used_at, c.hits,
-		c.created_run, COALESCE(r.number, 0) FROM caches c LEFT JOIN runs r ON r.id = c.created_run
+		c.pipeline, c.generation, c.sensitive, c.created_run, COALESCE(r.number, 0) FROM caches c LEFT JOIN runs r ON r.id = c.created_run
 		WHERE c.project = ? AND c.status IN (?, ?) ORDER BY c.last_used_at DESC, c.created_at DESC, c.id DESC`, project, cacheKept, cacheUploading)
 	if err != nil {
 		return nil, err
@@ -207,10 +214,12 @@ func (e *Engine) Caches(project string) (*CacheList, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var v CacheEntryView
+		var sens int
 		if err := rows.Scan(&v.ID, &v.Name, &v.Key, &v.Scope, &v.Platform, &v.Bytes, &v.Files, &v.Status, &v.CreatedAt, &v.LastUsedAt, &v.Hits,
-			&v.RunID, &v.RunNumber); err != nil {
+			&v.Pipeline, &v.Generation, &sens, &v.RunID, &v.RunNumber); err != nil {
 			return nil, err
 		}
+		v.Sensitive = sens != 0
 		out.Entries = append(out.Entries, v)
 		// What counts against the quota is what is kept and what is being
 		// uploaded.

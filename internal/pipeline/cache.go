@@ -3,6 +3,7 @@ package pipeline
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -54,7 +55,7 @@ func (ps *parser) parseCaches(n *yaml.Node, at string) []*Cache {
 			return s
 		}
 		var pathsNode, keyNode *yaml.Node
-		ps.eachKey(item, where, []string{"name", "paths", "key", "fallback", "save"}, func(k, v *yaml.Node) {
+		ps.eachKey(item, where, []string{"name", "paths", "key", "fallback", "save", "sensitive", "share", "max_age"}, func(k, v *yaml.Node) {
 			w := where + "." + k.Value
 			switch k.Value {
 			case "name":
@@ -66,21 +67,15 @@ func (ps *parser) parseCaches(n *yaml.Node, at string) []*Cache {
 				keyNode = v
 				c.Key = ps.cacheKey(v, w, idx, scalar)
 			case "fallback":
-				switch f := ps.str(v, w); f {
-				case CacheFallbackNone:
-				case CacheFallbackLatest:
-					c.Fallback = f
-				default:
-					ps.add(v, w, "fallback is none (the default) or latest")
-				}
+				c.Fallback = ps.cacheChoice(v, w, "fallback is none (the default) or latest", CacheFallbackNone, CacheFallbackLatest)
+			case "sensitive":
+				c.Sensitive = ps.bool(v, w)
+			case "share":
+				c.Share = ps.str(v, w)
+			case "max_age":
+				c.MaxAge = ps.cacheAge(v, w)
 			case "save":
-				switch f := ps.str(v, w); f {
-				case CacheSaveSuccess:
-				case CacheSaveAlways, CacheSaveNever:
-					c.Save = f
-				default:
-					ps.add(v, w, "save is success (the default), always or never")
-				}
+				c.Save = ps.cacheChoice(v, w, "save is success (the default), always or never", CacheSaveSuccess, CacheSaveAlways, CacheSaveNever)
 			}
 		})
 		if pathsNode == nil {
@@ -148,7 +143,7 @@ func (ps *parser) cacheKey(v *yaml.Node, where, idx string, scalar func(*yaml.No
 		ps.add(v, where, "key is a mapping: key: { files: [requirements.txt], text: v1 }")
 		return k
 	}
-	ps.eachKey(v, where, []string{"files", "text"}, func(kk, vv *yaml.Node) {
+	ps.eachKey(v, where, []string{"files", "text", "versions"}, func(kk, vv *yaml.Node) {
 		w := where + "." + kk.Value
 		switch kk.Value {
 		case "files":
@@ -177,9 +172,80 @@ func (ps *parser) cacheKey(v *yaml.Node, where, idx string, scalar func(*yaml.No
 			}
 		case "text":
 			k.Text = scalar(vv, w, "text")
+		case "versions":
+			k.Versions = ps.cacheVersions(vv, w)
 		}
 	})
 	return k
+}
+
+// cacheChoice reads one of the choices, the first of which is the default and
+// is stored as empty.
+func (ps *parser) cacheChoice(v *yaml.Node, where, problem string, choices ...string) string {
+	got := ps.str(v, where)
+	for i, c := range choices {
+		if got == c {
+			if i == 0 {
+				return ""
+			}
+			return got
+		}
+	}
+	ps.add(v, where, "%s", problem)
+	return ""
+}
+
+// cacheAge reads a duration written as 7d, 36h or 90m; a day is 24 hours.
+func (ps *parser) cacheAge(v *yaml.Node, where string) Duration {
+	text := ps.scalar(v, where)
+	var d time.Duration
+	var err error
+	if days, ok := strings.CutSuffix(text, "d"); ok {
+		var n int
+		if n, err = strconv.Atoi(days); err == nil {
+			d = time.Duration(n) * 24 * time.Hour
+		}
+	} else {
+		d, err = time.ParseDuration(text)
+	}
+	if err != nil || d < MinCacheMaxAge || d > MaxCacheMaxAge {
+		ps.add(v, where, "max_age is between 1h and 365d, such as 7d or 36h")
+		return 0
+	}
+	return Duration(d)
+}
+
+// cacheVersions reads key.versions: a list of commands (a plain string) or
+// { run: command } or { file: path }.
+func (ps *parser) cacheVersions(v *yaml.Node, where string) []CacheVersion {
+	if v.Kind != yaml.SequenceNode || len(v.Content) == 0 {
+		ps.add(v, where, "versions is a list of commands or files, such as versions: [java -version, { file: .nvmrc }]")
+		return nil
+	}
+	var out []CacheVersion
+	for i, item := range v.Content {
+		if i >= MaxCacheVersions {
+			ps.add(v, where, "at most %d versions", MaxCacheVersions)
+			break
+		}
+		switch item.Kind {
+		case yaml.ScalarNode:
+			out = append(out, CacheVersion{Run: item.Value})
+		case yaml.MappingNode:
+			var cv CacheVersion
+			ps.eachKey(item, where, []string{"run", "file"}, func(kk, vv *yaml.Node) {
+				if kk.Value == "run" {
+					cv.Run = ps.str(vv, where+".run")
+				} else {
+					cv.File = ps.str(vv, where+".file")
+				}
+			})
+			out = append(out, cv)
+		default:
+			ps.add(item, where, "a version is a command or { file: path }")
+		}
+	}
+	return out
 }
 
 // cloneCaches copies caches so that a loop's members can each take their
@@ -193,6 +259,7 @@ func cloneCaches(in []*Cache) []*Cache {
 		cc := *c
 		cc.Paths = append([]string(nil), c.Paths...)
 		cc.Key.Files = append([]string(nil), c.Key.Files...)
+		cc.Key.Versions = append([]CacheVersion(nil), c.Key.Versions...)
 		out[i] = &cc
 	}
 	return out

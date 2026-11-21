@@ -75,6 +75,11 @@ var (
 			return der, nil
 		},
 	}
+	webhookURLColumn = Column{
+		Table: "repo_webhooks", Column: "url", Key: "id", Purpose: keyring.PurposeSecrets,
+		Writers: []string{"internal/forge/webhooks/store.go"},
+		Why:     "the address a webhook delivers to: chat services' incoming webhooks carry their token in the path",
+	}
 	webhooksColumn = Column{
 		Table: "repo_webhooks", Column: "secret_sealed", Key: "id", Purpose: keyring.PurposeSecrets,
 		Writers: []string{"internal/forge/webhooks/store.go"},
@@ -101,7 +106,7 @@ var (
 // same change. TestSchemaSecretColumnsAreRegistered fails on a column whose
 // name looks like it holds a secret and that is neither here nor explained in
 // ExplainedColumns.
-var Registry = []Column{webhooksColumn, hostKeysColumn, metaColumn}
+var Registry = []Column{webhooksColumn, webhookURLColumn, hostKeysColumn, metaColumn}
 
 // ExplainedColumns lists columns whose names look like they hold a secret, and why
 // they do not: a hash of a random value (a fast hash is right for 256 random
@@ -175,8 +180,27 @@ type Box struct {
 // HostKeys is the box of the SSH host keys (ssh_host_keys.sealed).
 func (s *Service) HostKeys() *Box { return &Box{s, hostKeysColumn} }
 
-// Webhooks is the box of webhook secrets (repo_webhooks.secret_sealed).
-func (s *Service) Webhooks() *Box { return &Box{s, webhooksColumn} }
+// HookBox is the box of webhook secrets (repo_webhooks.secret_sealed), which
+// also seals the hook's address (repo_webhooks.url, SealURL and OpenURL).
+type HookBox struct {
+	*Box
+	urls *Box
+}
+
+// Webhooks is the box of webhook secrets and addresses.
+func (s *Service) Webhooks() *HookBox {
+	return &HookBox{&Box{s, webhooksColumn}, &Box{s, webhookURLColumn}}
+}
+
+// SealURL seals a hook's address, bound to the hook.
+func (b *HookBox) SealURL(ctx context.Context, row string, plain []byte) (string, error) {
+	return b.urls.Seal(ctx, row, plain)
+}
+
+// OpenURL opens the stored address of a hook.
+func (b *HookBox) OpenURL(ctx context.Context, row, stored string) ([]byte, error) {
+	return b.urls.Open(ctx, row, stored)
+}
 
 // Enabled says whether new values can be sealed.
 func (b *Box) Enabled() bool { return b.s.Encrypted() }

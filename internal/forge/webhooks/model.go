@@ -51,6 +51,21 @@ type Hook struct {
 	CreatedBy      string    `json:"created_by,omitempty"`
 }
 
+// MaskURL is how a hook's address is shown once it is stored: the scheme and
+// host, with the path, query and anything after elided, because the token of a
+// chat service's incoming webhook sits in the path. To change the address, the
+// whole of it is entered again.
+func MaskURL(raw string) string {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	if u.Path == "" && u.RawQuery == "" && u.Fragment == "" {
+		return u.Scheme + "://" + u.Host
+	}
+	return u.Scheme + "://" + u.Host + "/..."
+}
+
 // Wants reports whether the hook asked for an event.
 func (h Hook) Wants(ev string) bool {
 	if ev == EventPing {

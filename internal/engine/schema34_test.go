@@ -30,7 +30,7 @@ func TestSchema34UpgradesFrom31KeepingWhatIsStored(t *testing.T) {
 	old.Close()
 
 	var log syncBuffer
-	cur, err := openAs(t, addr, clk, 0, &log)
+	cur, err := openAs(t, addr, clk, schemaEncryption, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}

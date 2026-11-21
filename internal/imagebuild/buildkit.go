@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/containerd/platforms"
@@ -129,8 +130,8 @@ type solveRequest struct {
 	buildArgs     map[string]string
 	secrets       map[string][]byte
 	hosts         map[string]hostAuth
-	cacheFrom     string // registry cache ref to read
-	cacheTo       string // registry cache ref to write; empty: none
+	cacheFrom     []string // registry cache refs to read, in order
+	cacheTo       string   // registry cache ref to write; empty: none
 	provenance    bool
 	builderID     string
 	vcsSource     string
@@ -203,8 +204,8 @@ func (b *builder) solve(ctx context.Context, req solveRequest) (*solveStats, err
 			},
 		}},
 	}
-	if req.cacheFrom != "" {
-		opt.CacheImports = []client.CacheOptionsEntry{{Type: "registry", Attrs: map[string]string{"ref": req.cacheFrom}}}
+	for _, ref := range req.cacheFrom {
+		opt.CacheImports = append(opt.CacheImports, client.CacheOptionsEntry{Type: "registry", Attrs: map[string]string{"ref": ref}})
 	}
 	if req.cacheTo != "" {
 		opt.CacheExports = []client.CacheOptionsEntry{{Type: "registry", Attrs: map[string]string{
@@ -215,13 +216,18 @@ func (b *builder) solve(ctx context.Context, req solveRequest) (*solveStats, err
 	stats := &solveStats{}
 	pr, pw := io.Pipe()
 	var lines sync.WaitGroup
+	var cacheFailed atomic.Bool
 	lines.Add(1)
 	go func() {
 		defer lines.Done()
 		sc := bufio.NewScanner(pr)
 		sc.Buffer(make([]byte, 64*1024), 1024*1024)
 		for sc.Scan() {
-			req.log(sc.Text())
+			line := sc.Text()
+			req.log(line)
+			if cacheTrouble(line) {
+				cacheFailed.Store(true)
+			}
 		}
 		_, _ = io.Copy(io.Discard, pr)
 	}()
@@ -260,6 +266,9 @@ func (b *builder) solve(ctx context.Context, req solveRequest) (*solveStats, err
 	})
 	_ = g.Wait()
 	lines.Wait()
+	if cacheFailed.Load() {
+		req.log("Image cache: the build output above mentions a cache that could not be read or written. The build is not affected: a cache that cannot be read is skipped, and a failed export is ignored (ignore-error), so this run's layers may not be there for the next one.")
+	}
 	if limited.over {
 		return stats, fmt.Errorf("the image is larger than this runner accepts (%s); see images.max_image_mib", mib(req.maxBytes))
 	}

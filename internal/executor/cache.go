@@ -5,17 +5,16 @@ import (
 	"bufio"
 	"context"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -46,7 +45,7 @@ import (
 // CacheFormat is mixed into every key, so that a change of how entries are
 // made starts every cache over instead of restoring what a newer runner
 // cannot read.
-const CacheFormat = "launchway-cache-v1"
+const CacheFormat = "launchway-cache-v2"
 
 // ErrCacheArchive says an archive cannot be restored: it is damaged, or not
 // what a run of this project would have made, or too large.
@@ -54,32 +53,6 @@ var ErrCacheArchive = errors.New("the cache entry cannot be restored")
 
 func badArchive(format string, a ...any) error {
 	return fmt.Errorf("%w: %s", ErrCacheArchive, fmt.Sprintf(format, a...))
-}
-
-// CacheKey works out the key of a cache: the platform (operating system and
-// architecture of the runner), the cache's name, the literal text, and the
-// path and SHA-256 of each key file, in sorted order. The files must be
-// those Stage returns for the key's globs.
-func CacheKey(platform, name, text string, files []StagedFile) string {
-	h := sha256.New()
-	put := func(s string) {
-		var n [8]byte
-		binary.BigEndian.PutUint64(n[:], uint64(len(s)))
-		h.Write(n[:])
-		h.Write([]byte(s))
-	}
-	put(CacheFormat)
-	put(platform)
-	put(name)
-	put(text)
-	sorted := slices.Clone(files)
-	slices.SortFunc(sorted, func(a, b StagedFile) int { return strings.Compare(a.Path, b.Path) })
-	put(strconv.Itoa(len(sorted)))
-	for _, f := range sorted {
-		put(f.Path)
-		put(f.SHA256)
-	}
-	return hex.EncodeToString(h.Sum(nil))
 }
 
 // CacheArchive is a packed entry, in a file.
@@ -94,7 +67,15 @@ type CacheArchive struct {
 
 // PackCache writes the staged files as a tar archive compressed with zstd
 // into dst. Only regular files, with their permissions reduced to 0644 or
-// 0755; directories are made again when the entry is restored.
+// 0755 and with their modification times (to the nanosecond); directories are
+// made again when the entry is restored.
+//
+// The times are kept because timestamp-driven tools (make, Maven's
+// incremental compilation, Cargo, bundlers, the resolvers' "checked less than
+// a day ago" files) decide what is up to date by comparing them. A restore
+// that stamped every file with the moment of the restore would make restored
+// outputs newer than the sources of a fresh checkout, and such a tool would
+// keep output built from other sources.
 func PackCache(files []StagedFile, dst string) (*CacheArchive, error) {
 	f, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
@@ -123,7 +104,11 @@ func PackCache(files []StagedFile, dst string) (*CacheArchive, error) {
 			enc.Close()
 			return nil, err
 		}
-		if err := tw.WriteHeader(&tar.Header{Typeflag: tar.TypeReg, Name: sf.Path, Mode: mode, Size: sf.Size, Format: tar.FormatPAX}); err != nil {
+		hdr := &tar.Header{Typeflag: tar.TypeReg, Name: sf.Path, Mode: mode, Size: sf.Size, Format: tar.FormatPAX}
+		if sf.ModTime > 0 {
+			hdr.ModTime = time.Unix(0, sf.ModTime)
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
 			src.Close()
 			enc.Close()
 			return nil, err
@@ -244,6 +229,7 @@ func UnpackCache(ctx context.Context, src, dir string, globs []string, lim Unpac
 	}
 	defer root.Close()
 	g := &expansionGuard{lim: lim, read: &cr.n}
+	now := time.Now()
 	tr := tar.NewReader(dec)
 	out := &Unpacked{}
 	seen := map[string]bool{}
@@ -320,9 +306,29 @@ func UnpackCache(ctx context.Context, src, dir string, globs []string, lim Unpac
 		if h.Mode&0o111 != 0 {
 			mode = 0o755
 		}
-		out.Files = append(out.Files, PlacedFile{Path: h.Name, Local: filepath.Join(dir, strconv.Itoa(n)), Mode: mode})
+		out.Files = append(out.Files, PlacedFile{Path: h.Name, Local: filepath.Join(dir, strconv.Itoa(n)), Mode: mode, ModTime: restoredModTime(h.ModTime, now)})
 		out.Bytes += h.Size
 	}
+}
+
+// restoredModTime is the modification time a restored file gets: the one it
+// was saved with, but never later than now, so that an archive cannot make a
+// file newer than the sources of the checkout it is restored into. 0 (leave
+// the time of the restore) when the archive carries none.
+//
+// What the times are relative to: the checkout is made before the restore, so
+// its files carry the time of the checkout, and everything restored carries
+// the time it had when it was last written in an earlier run, which is
+// earlier. A restored file is therefore older than every source of the
+// checkout, as a file left by a build in a cache is expected to be.
+func restoredModTime(t, now time.Time) int64 {
+	if t.IsZero() || t.UnixNano() <= 0 {
+		return 0
+	}
+	if t.After(now) {
+		t = now
+	}
+	return t.UnixNano()
 }
 
 // expansionGuard fails a copy that expands past the limits.
@@ -407,37 +413,4 @@ func StageWorkspace(ctx context.Context, ex Executor, s Spec, globs []string, li
 // as a worktree has) in it.
 func inGitDir(name string) bool {
 	return slices.Contains(strings.Split(name, "/"), ".git")
-}
-
-// secretNames and secretPatterns are the names of files that hold
-// credentials in most projects. A cache is restored by every run that may
-// read it, so a secret kept in one reaches more places than it was written
-// for.
-var (
-	secretNames = []string{".env", ".npmrc", ".pypirc", ".netrc", ".git-credentials", ".htpasswd", ".dockercfg", ".pgpass", ".my.cnf",
-		"id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "credentials", "credentials.json", "service-account.json", "secrets.json", "secrets.yaml", "secrets.yml",
-		"terraform.tfvars"}
-	secretPatterns = []string{".env.*", "*.pem", "*.key", "*.p12", "*.pfx", "*.jks", "*.keystore", "*.kdbx", "*.tfvars", "*_rsa", "*_ed25519", "*_ecdsa", "*.ppk"}
-)
-
-// SecretLikeFiles returns the paths of the staged files whose names are
-// those of files that usually hold credentials (.env, private keys,
-// .npmrc, ...). The caller warns; the files are still kept, as a project
-// may cache a directory that holds such a file for a reason of its own.
-func SecretLikeFiles(files []StagedFile) []string {
-	var out []string
-	for _, f := range files {
-		base := path.Base(f.Path)
-		match := slices.Contains(secretNames, base)
-		for _, p := range secretPatterns {
-			if ok, _ := path.Match(p, base); ok {
-				match = true
-				break
-			}
-		}
-		if match && !strings.HasSuffix(base, ".pub") {
-			out = append(out, f.Path)
-		}
-	}
-	return out
 }

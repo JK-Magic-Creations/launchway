@@ -244,7 +244,11 @@ func writePlacedTar(w io.Writer, files []PlacedFile) error {
 		if f.Mode&0o111 != 0 {
 			mode = 0o755
 		}
-		if err := tw.WriteHeader(&tar.Header{Typeflag: tar.TypeReg, Name: f.Path, Mode: mode, Size: info.Size(), ModTime: now}); err != nil {
+		mtime := now
+		if f.ModTime > 0 {
+			mtime = time.Unix(0, f.ModTime)
+		}
+		if err := tw.WriteHeader(&tar.Header{Typeflag: tar.TypeReg, Name: f.Path, Mode: mode, Size: info.Size(), ModTime: mtime}); err != nil {
 			src.Close()
 			return err
 		}
@@ -322,6 +326,9 @@ func (k *Kubernetes) copyOutMany(ctx context.Context, pod string, names []string
 			f.Mode = 0o644
 			if h.FileInfo().Mode()&0o111 != 0 {
 				f.Mode = 0o755
+			}
+			if !h.ModTime.IsZero() {
+				f.ModTime = h.ModTime.UnixNano()
 			}
 			if total += f.Size; total > lim.MaxBytes {
 				return notKept("its files come to more than %s", bytesText(lim.MaxBytes))

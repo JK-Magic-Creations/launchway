@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -22,11 +23,20 @@ type DB interface {
 var ErrNotFound = errors.New("no such webhook")
 
 // Sealer keeps secrets sealed at rest, each bound to the row it belongs to
-// (internal/sealing's Box for repo_webhooks.secret_sealed does). Sealing
+// (internal/sealing's Webhooks box does, for repo_webhooks.secret_sealed). Sealing
 // refuses, saying how to create a root key, when the server has none.
 type Sealer interface {
 	Seal(ctx context.Context, row string, plain []byte) (string, error)
 	Open(ctx context.Context, row, stored string) ([]byte, error)
+	// SealURL and OpenURL do the same for the hook's address, a separate
+	// column with its own binding.
+	SealURL(ctx context.Context, row string, plain []byte) (string, error)
+	OpenURL(ctx context.Context, row, stored string) ([]byte, error)
+	// Enabled says whether new values can be sealed (the server has a root
+	// key). The address of a hook is sealed when it is, and kept as it was
+	// given when it is not: a hook needs an address, so having no root key
+	// must not stop one being added, and the first start with a key seals it.
+	Enabled() bool
 }
 
 type store struct {
@@ -77,19 +87,41 @@ func scanHook(sc interface{ Scan(...any) error }) (Hook, string, error) {
 	return h, sealed, nil
 }
 
+// sealURL is the stored form of a hook's address: its token can sit in the
+// path (chat services' incoming webhooks), so it is sealed like the secret.
+func (s *store) sealURL(ctx context.Context, id, u string) (string, error) {
+	if !s.seal.Enabled() {
+		return u, nil
+	}
+	return s.seal.SealURL(ctx, id, []byte(u))
+}
+
+// openURL turns the stored address of a scanned hook back into the address.
+func (s *store) openURL(ctx context.Context, h *Hook) error {
+	b, err := s.seal.OpenURL(ctx, h.ID, h.URL)
+	if err != nil {
+		return fmt.Errorf("the address of webhook %s could not be opened with this server's key: %w", h.ID, err)
+	}
+	h.URL = string(b)
+	return nil
+}
+
 func (s *store) insertHook(ctx context.Context, h Hook, secret string) (Hook, error) {
 	h.ID = ids.New("hok")
+	storedURL, err := s.sealURL(ctx, h.ID, h.URL)
+	if err != nil {
+		return h, err
+	}
 	sealed := ""
 	if secret != "" {
-		var err error
 		if sealed, err = s.sealSecret(ctx, h.ID, secret); err != nil {
 			return h, err
 		}
 	}
 	h.CreatedAt = s.now().UTC()
 	ev, _ := json.Marshal(h.Events)
-	_, err := s.db.Exec(ctx, `INSERT INTO repo_webhooks(`+hookCols+`) VALUES(?,?,?,?,?,?,?,?,0,'',0,?,?)`,
-		h.ID, h.RepoID, h.Owner, h.Name, h.URL, string(ev), sealed, b2i(h.Active), ms(h.CreatedAt), h.CreatedBy)
+	_, err = s.db.Exec(ctx, `INSERT INTO repo_webhooks(`+hookCols+`) VALUES(?,?,?,?,?,?,?,?,0,'',0,?,?)`,
+		h.ID, h.RepoID, h.Owner, h.Name, storedURL, string(ev), sealed, b2i(h.Active), ms(h.CreatedAt), h.CreatedBy)
 	h.HasSecret = sealed != ""
 	return h, err
 }
@@ -110,7 +142,10 @@ func (s *store) hook(ctx context.Context, id string) (Hook, string, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return h, "", ErrNotFound
 	}
-	return h, sealed, err
+	if err != nil {
+		return h, sealed, err
+	}
+	return h, sealed, s.openURL(ctx, &h)
 }
 
 func (s *store) hooks(ctx context.Context, where string, args ...any) ([]Hook, error) {
@@ -125,6 +160,9 @@ func (s *store) hooks(ctx context.Context, where string, args ...any) ([]Hook, e
 		if err != nil {
 			return nil, err
 		}
+		if err := s.openURL(ctx, &h); err != nil {
+			h.URL = "" // one hook whose address cannot be opened must not hide the others; it says so when used
+		}
 		out = append(out, h)
 	}
 	return out, rows.Err()
@@ -132,6 +170,10 @@ func (s *store) hooks(ctx context.Context, where string, args ...any) ([]Hook, e
 
 func (s *store) saveHook(ctx context.Context, h Hook, newSecret *string) error {
 	ev, _ := json.Marshal(h.Events)
+	storedURL, err := s.sealURL(ctx, h.ID, h.URL)
+	if err != nil {
+		return err
+	}
 	if newSecret != nil {
 		sealed := ""
 		if *newSecret != "" {
@@ -144,8 +186,8 @@ func (s *store) saveHook(ctx context.Context, h Hook, newSecret *string) error {
 			return err
 		}
 	}
-	_, err := s.db.Exec(ctx, `UPDATE repo_webhooks SET name = ?, url = ?, events = ?, active = ?, failures = ?, disabled_reason = ?, disabled_at = ? WHERE id = ?`,
-		h.Name, h.URL, string(ev), b2i(h.Active), h.Failures, h.DisabledReason, ms(h.DisabledAt), h.ID)
+	_, err = s.db.Exec(ctx, `UPDATE repo_webhooks SET name = ?, url = ?, events = ?, active = ?, failures = ?, disabled_reason = ?, disabled_at = ? WHERE id = ?`,
+		h.Name, storedURL, string(ev), b2i(h.Active), h.Failures, h.DisabledReason, ms(h.DisabledAt), h.ID)
 	return err
 }
 

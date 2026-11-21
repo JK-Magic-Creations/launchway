@@ -42,12 +42,21 @@ type ImageJob struct {
 	// PullCredentials says the build may have registries' pull credentials
 	// (schema 15): pull-request and draft runs only when they may read
 	// secrets. A runner treats a job without it, for such a run, as no.
-	PullCredentials bool                `json:"pull_credentials,omitempty"`
-	Cache           *ImageJobRepo       `json:"cache,omitempty"`
-	SBOM            bool                `json:"sbom,omitempty"`
-	Provenance      bool                `json:"provenance,omitempty"`
-	Sign            *pipeline.ImageSign `json:"sign,omitempty"`
-	Scan            *pipeline.ImageScan `json:"scan,omitempty"`
+	PullCredentials bool          `json:"pull_credentials,omitempty"`
+	Cache           *ImageJobRepo `json:"cache,omitempty"`
+	// CacheScope names whose registry cache the build writes: empty for the
+	// protected one (a default-branch run), else a tag-safe name of the
+	// branch, tag or pull request. CacheWrite says the run may write its
+	// scope at all, and CacheNoProtected that it may not read the protected
+	// cache (a fork's pull request). Worked out by the server from how the
+	// run started.
+	CacheScope       string              `json:"cache_scope,omitempty"`
+	CacheWrite       bool                `json:"cache_write,omitempty"`
+	CacheNoProtected bool                `json:"cache_no_protected,omitempty"`
+	SBOM             bool                `json:"sbom,omitempty"`
+	Provenance       bool                `json:"provenance,omitempty"`
+	Sign             *pipeline.ImageSign `json:"sign,omitempty"`
+	Scan             *pipeline.ImageScan `json:"scan,omitempty"`
 	// What provenance records: the run's event, ref and commit, where its
 	// source and libraries came from (credentials removed).
 	Event      string            `json:"event"`
@@ -234,6 +243,7 @@ func (c *cmd) imageJob(def *pipeline.Step) (*ImageJob, error) {
 	}
 	if b.Cache != nil {
 		j.Cache = &ImageJobRepo{Registry: b.Cache.Registry, Repository: b.Cache.Repository}
+		j.CacheScope, j.CacheWrite, j.CacheNoProtected = c.e.imageCacheScope(st)
 	}
 	// Pull requests and drafts never push, whatever the pipeline at their
 	// head says; that pipeline is not reviewed.

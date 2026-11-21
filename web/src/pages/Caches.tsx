@@ -182,7 +182,8 @@ export function ProjectCachesPage({ name }: { name: string }) {
                   <tr key={e.id}>
                     <td>
                       <strong>{e.name}</strong>{e.status === "uploading" && <span className="faint"> (being saved)</span>}
-                      <div className="cc-key" title={e.key}>{shortKey(e.key)}…</div>
+                      <div className="cc-key" title={e.key}>{shortKey(e.key)}…{e.generation > 1 ? `, generation ${e.generation}` : ""}</div>
+                      <div className="faint small">{e.pipeline || "an older entry, no longer restored"}{e.sensitive ? ", sensitive" : ""}</div>
                     </td>
                     <td className="cc-scope">{e.scope}</td>
                     <td>{e.platform}</td>

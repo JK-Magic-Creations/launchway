@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Artifacts. After a step, the runner copies the files of each artifact it
@@ -60,6 +61,9 @@ type StagedFile struct {
 	Size   int64
 	SHA256 string // hex
 	Mode   uint32 // 0644, or 0755 when someone may run it
+	// ModTime is the file's modification time in Unix nanoseconds, or 0
+	// when the executor could not read it. A cache keeps it (see PackCache).
+	ModTime int64
 }
 
 // Staged is an artifact's files, copied out.
@@ -270,6 +274,7 @@ func copyLocal(root *os.Root, name, local string, lim StageLimits) (StagedFile, 
 	}
 	f, err := copyHashed(src, name, local, lim.MaxFileBytes)
 	f.Mode = mode
+	f.ModTime = info.ModTime().UnixNano()
 	return f, err
 }
 
@@ -306,6 +311,11 @@ type PlacedFile struct {
 	Path  string // relative to the workspace, with /
 	Local string // where it is on the runner
 	Mode  uint32
+	// ModTime, when not 0, is the modification time to give the file, in
+	// Unix nanoseconds. Only a cache sets it: a restored file keeps the time
+	// it had when it was saved, so that a tool that compares times sees the
+	// files of the fresh checkout as newer than what was restored.
+	ModTime int64
 }
 
 // FilePlacer is implemented by executors whose workspace is not a
@@ -372,6 +382,10 @@ func placeOne(root *os.Root, f PlacedFile) error {
 		// The umask may have taken bits away; containers may run as
 		// another user, so the file is readable by all.
 		err = root.Chmod(f.Path, mode)
+	}
+	if err == nil && f.ModTime > 0 {
+		t := time.Unix(0, f.ModTime)
+		err = root.Chtimes(f.Path, t, t)
 	}
 	if err != nil {
 		return fmt.Errorf("writing %s: %w", f.Path, unwrapPath(err))

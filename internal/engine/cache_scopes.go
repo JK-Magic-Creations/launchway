@@ -1,9 +1,12 @@
 package engine
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
@@ -38,7 +41,18 @@ type cacheScopes struct {
 	whyNone string // why nothing is written
 }
 
-func (s cacheScopes) canRead(scope string) bool { return slices.Contains(s.read, scope) }
+// readFor is the scopes a cache is read from: those the run reads, or, for a
+// sensitive cache, only the scope the run writes (an entry that never leaves
+// its own scope is never handed to a run of another).
+func (s cacheScopes) readFor(sensitive bool) []string {
+	if !sensitive {
+		return s.read
+	}
+	if s.write == "" {
+		return nil
+	}
+	return []string{s.write}
+}
 
 // scopesOf works out the scopes of a run from what the server recorded of
 // how it started. Nothing a runner says takes part.
@@ -56,6 +70,12 @@ func (e *Engine) scopesOf(st *RunState) cacheScopes {
 		if t.PullRequest > 0 {
 			own := cacheScopePull + strconv.Itoa(t.PullRequest)
 			s.read, s.write = []string{own, cacheScopeDefault}, own
+			if t.Fork {
+				// Code from a fork is the least trusted there is: it reads
+				// only what its own pull request wrote, never what the
+				// project's branches built (no cache is public).
+				s.read = []string{own}
+			}
 		} else {
 			s.read = []string{cacheScopeDefault}
 			s.whyNone = "a pull-request run without a pull request number saves no cache"
@@ -76,6 +96,50 @@ func (e *Engine) scopesOf(st *RunState) cacheScopes {
 		s.whyNone = "this run was not started from a branch, tag or pull request, so it saves no cache"
 	}
 	return s
+}
+
+// cacheNamespace says whose entries a cache's are: its pipeline's own, or
+// those of the group of caches it shares (cache.share). Two pipelines of a
+// project using one cache name do not see each other's entries unless both
+// name the same group, so a lint pipeline cannot seed a release pipeline.
+func cacheNamespace(pipelineName string, c *pipeline.Cache) string {
+	if c != nil && c.Share != "" {
+		return "shared:" + c.Share
+	}
+	return "pipeline:" + pipelineName
+}
+
+// sensitive says whether the step declares the named cache sensitive.
+func (cc *cacheContext) sensitive(name string) bool {
+	d := cc.declared(name)
+	return d != nil && d.Sensitive
+}
+
+// declared is the cache the step declares under the name, or nil.
+func (cc *cacheContext) declared(name string) *pipeline.Cache {
+	for _, c := range cc.def.Cache {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
+// namespace of the named cache of this run.
+func (cc *cacheContext) namespace(name string) string {
+	return cacheNamespace(cc.st.Pipeline.Name, cc.declared(name))
+}
+
+// mayRead says whether the run may restore, or download, an entry: of its
+// project, its pipeline's namespace and a scope it reads; a sensitive entry,
+// or a cache the step declares sensitive, only from the run's own scope.
+func (cc *cacheContext) mayRead(r *cacheRowT) bool {
+	d := cc.declared(r.Name)
+	sens := d != nil && d.Sensitive
+	if r.Project != cc.st.Project || r.Pipeline != cc.namespace(r.Name) || !slices.Contains(cc.scopes.readFor(sens), r.Scope) {
+		return false
+	}
+	return !r.Sensitive || r.Scope == cc.scopes.write
 }
 
 // cacheContext is what every runner call about a cache is checked against:
@@ -124,4 +188,30 @@ func (e *Engine) cacheFor(leaseID, name string) (*cacheContext, error) {
 		return nil, err
 	}
 	return &cacheContext{l: l, st: st, def: def, scopes: e.scopesOf(st), limits: limits}, nil
+}
+
+// imageCacheScope says whose registry cache an image step of the run writes
+// (see imagebuild's cache references): "" for the protected cache, written by
+// a default-branch run; else a tag-safe name made from the scope the run's
+// build caches would use (pull-<n>, or ref-<hash> of the ref). write says
+// the run may write at all: never a draft, and a pull request only when it
+// may read secrets (it then has registry credentials to push with; one that
+// may not has none, and only reads). noProtected is a fork's pull request,
+// which reads no cache of the project's.
+func (e *Engine) imageCacheScope(st *RunState) (scope string, write, noProtected bool) {
+	s := e.scopesOf(st)
+	switch s.write {
+	case "":
+		return "", false, false
+	case cacheScopeDefault:
+		return "", true, false
+	}
+	untrusted := st.Trigger.Event == pipeline.EventPullRequest
+	if after, ok := strings.CutPrefix(s.write, cacheScopePull); ok {
+		scope = "pull-" + after
+	} else {
+		sum := sha256.Sum256([]byte(s.write))
+		scope = "ref-" + hex.EncodeToString(sum[:])[:12]
+	}
+	return scope, !untrusted || st.secretsAllowed(), st.Trigger.Fork
 }

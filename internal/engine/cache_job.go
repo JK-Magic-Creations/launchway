@@ -31,8 +31,10 @@ type JobCacheEntry struct {
 	Paths    []string `json:"paths"`
 	KeyFiles []string `json:"key_files,omitempty"`
 	KeyText  string   `json:"key_text,omitempty"`
-	Fallback string   `json:"fallback,omitempty"`
-	Save     string   `json:"save,omitempty"`
+	// KeyVersions are the author's version inputs (key.versions).
+	KeyVersions []pipeline.CacheVersion `json:"key_versions,omitempty"`
+	Fallback    string                  `json:"fallback,omitempty"`
+	Save        string                  `json:"save,omitempty"`
 }
 
 // Outcomes of a cache in a step, in CacheResult.Result.
@@ -40,6 +42,7 @@ const (
 	CacheHit      = "hit"       // restored the entry with the key
 	CacheFallback = "fallback"  // restored the newest entry instead
 	CacheMiss     = "miss"      // nothing to restore
+	CacheExpired  = "expired"   // the entry with the key was older than the maximum age, so not restored
 	CacheSaved    = "saved"     // saved an entry
 	CacheNotSaved = "not_saved" // would have saved, and could not or may not
 )
@@ -54,9 +57,22 @@ type CacheResult struct {
 	// Key is the key worked out for the step, 64 hex digits, or empty if it
 	// could not be worked out.
 	Key string `json:"key,omitempty"`
+	// KeyParts is what the key was made of, in words: the image resolved to
+	// its digest, the platform, the author's versions, the key files.
+	KeyParts []CacheKeyPart `json:"key_parts,omitempty"`
 	// Result is hit, fallback or miss for a restore, and saved or not_saved
 	// for a save that was tried.
 	Result string `json:"result"`
+	// EntryKey, Generation and AgeSeconds say which entry the restore used
+	// (or found too old): its own key, which differs from Key on a fallback,
+	// which of its key's generations it is, and how long ago its contents
+	// were started from scratch. MaxAgeSeconds is the longest the cache may
+	// be, and SavedGeneration the generation this attempt saved, if it did.
+	EntryKey        string `json:"entry_key,omitempty"`
+	Generation      int    `json:"generation,omitempty"`
+	AgeSeconds      int64  `json:"age_seconds,omitempty"`
+	MaxAgeSeconds   int64  `json:"max_age_seconds,omitempty"`
+	SavedGeneration int    `json:"saved_generation,omitempty"`
 	// Restored is what the restore found (hit, fallback or miss) when Result
 	// is about the save.
 	Restored string `json:"restored,omitempty"`
@@ -72,7 +88,13 @@ type CacheResult struct {
 	Seconds float64 `json:"seconds,omitempty"`
 }
 
-var cacheResults = []string{CacheHit, CacheFallback, CacheMiss, CacheSaved, CacheNotSaved}
+// CacheKeyPart is one input of a cache key, as shown on the run page.
+type CacheKeyPart struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+var cacheResults = []string{CacheHit, CacheFallback, CacheMiss, CacheExpired, CacheSaved, CacheNotSaved}
 
 // needsCache reports whether a step needs a runner that knows caches.
 func needsCache(def *pipeline.Step) bool { return def != nil && len(def.Cache) > 0 }
@@ -86,7 +108,7 @@ func (c *cmd) jobCache(def *pipeline.Step) *JobCache {
 	jc := &JobCache{ChunkBytes: ArtifactChunkBytes}
 	for _, ca := range def.Cache {
 		jc.Caches = append(jc.Caches, JobCacheEntry{Name: ca.Name, Paths: slices.Clone(ca.Paths), KeyFiles: slices.Clone(ca.Key.Files),
-			KeyText: ca.Key.Text, Fallback: ca.Fallback, Save: ca.Save})
+			KeyText: ca.Key.Text, KeyVersions: slices.Clone(ca.Key.Versions), Fallback: ca.Fallback, Save: ca.Save})
 	}
 	if lim, err := c.e.readCacheLimits(c.tx, c.st.Project); err == nil {
 		jc.MaxEntryBytes = lim.maxEntry
@@ -117,9 +139,13 @@ func (c *cmd) keepCacheResults(def *pipeline.Step, in []CacheResult) []CacheResu
 		}
 		seen[r.Name] = true
 		r.Key = cleanKey(r.Key)
-		if r.Restored != "" && !slices.Contains(cacheResults[:3], r.Restored) {
+		r.KeyParts = cleanKeyParts(r.KeyParts)
+		if r.Restored != "" && !slices.Contains(cacheResults[:4], r.Restored) {
 			r.Restored = ""
 		}
+		r.EntryKey = cleanKey(r.EntryKey)
+		r.Generation, r.SavedGeneration = min(max(r.Generation, 0), 1<<20), min(max(r.SavedGeneration, 0), 1<<20)
+		r.AgeSeconds, r.MaxAgeSeconds = max(r.AgeSeconds, 0), max(r.MaxAgeSeconds, 0)
 		r.Bytes = max(r.Bytes, 0)
 		r.Seconds = min(max(r.Seconds, 0), 86400)
 		r.Scope = cleanText(r.Scope, 200)
@@ -134,4 +160,16 @@ func cleanKey(k string) string {
 		return k
 	}
 	return ""
+}
+
+// cleanKeyParts keeps a bounded number of short lines of text.
+func cleanKeyParts(in []CacheKeyPart) []CacheKeyPart {
+	var out []CacheKeyPart
+	for _, p := range in {
+		if len(out) == 40 {
+			break
+		}
+		out = append(out, CacheKeyPart{Label: cleanText(p.Label, 200), Value: cleanText(p.Value, 300)})
+	}
+	return out
 }

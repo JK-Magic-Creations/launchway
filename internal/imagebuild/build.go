@@ -58,6 +58,15 @@ type Request struct {
 	Tags  []Tag
 	Push  bool
 	Cache *Repo
+	// CacheScope says whose build cache this run writes: empty for the
+	// protected cache (a default-branch run), else a tag-safe name for the
+	// branch, tag or pull request (the server decides it). Every run reads
+	// the protected cache, unless CacheNoProtected (a fork's pull request),
+	// and its own scope's. A run writes only its own scope, and only if
+	// CacheWrite.
+	CacheScope       string
+	CacheWrite       bool
+	CacheNoProtected bool
 	// PullCredentials says the run may have registries' pull credentials:
 	// always for runs started by a push, by hand, a schedule or a webhook;
 	// for pull-request and draft runs only when they may read secrets. The
@@ -199,16 +208,9 @@ func Build(ctx context.Context, cfg *Config, req Request) (*Result, error) {
 			return res, fmt.Errorf("registry %s has no credentials to push with (images.registries.%s.credentials)", t.Registry, t.Registry)
 		}
 	}
-	cacheWrite := false
-	if req.Cache != nil {
-		rc, err := cfg.Registry(req.Cache.Registry)
-		if err != nil {
-			return res, err
-		}
-		cacheWrite = req.Push && rc.Credentials != nil && rc.MayPush(req.Project, req.Cache.Repository)
-		if req.Push && !cacheWrite {
-			log(fmt.Sprintf("The cache %s/%s is only read: project %s may not push there", rc.Host, req.Cache.Repository, req.Project))
-		}
+	cacheWrite, err := mayWriteCache(cfg, req, log)
+	if err != nil {
+		return res, err
 	}
 	hosts, err := rs.builderHosts(ctx, cacheWrite)
 	if err != nil {
@@ -286,21 +288,18 @@ func Build(ctx context.Context, cfg *Config, req Request) (*Result, error) {
 			res.Builders = append(res.Builders, b.cfg.Name)
 		}
 	}
-	cacheRef := func(p *part) (from, to string) {
+	cacheRef := func(p *part) (from []string, to string) {
 		if req.Cache == nil {
-			return "", ""
+			return nil, ""
 		}
 		rc, _ := cfg.Registry(req.Cache.Registry)
-		tag := "buildcache"
+		suffix := ""
 		if len(parts) > 1 {
-			tag += "-" + strings.ReplaceAll(strings.Join(p.platforms, "_"), "/", "-")
+			suffix = "-" + strings.ReplaceAll(strings.Join(p.platforms, "_"), "/", "-")
 		}
-		ref := rc.Host + "/" + req.Cache.Repository + ":" + tag
+		repo := rc.Host + "/" + req.Cache.Repository + ":"
 		res.Cache = rc.Host + "/" + req.Cache.Repository
-		if cacheWrite {
-			return ref, ref
-		}
-		return ref, ""
+		return cacheRefs(repo, req.CacheScope, req.CacheNoProtected, suffix, cacheWrite)
 	}
 	dfDir, dfName := cleanDockerfile(req.DockerfilePath)
 	var wg sync.WaitGroup
@@ -314,6 +313,11 @@ func Build(ctx context.Context, cfg *Config, req Request) (*Result, error) {
 				prefix = "[" + p.b.cfg.Name + "] "
 			}
 			from, to := cacheRef(p)
+			if i == 0 && req.Cache != nil {
+				logMu.Lock()
+				log(cacheNote(from, to, req.CacheScope))
+				logMu.Unlock()
+			}
 			if len(parts) == 1 || i == 0 {
 				what := "for " + nonEmptyStr(strings.Join(p.platforms, ", "), "its own platform")
 				logMu.Lock()
@@ -665,9 +669,9 @@ func (rs *registrySet) builderHosts(ctx context.Context, cacheWrite bool) (map[s
 		for _, t := range req.Tags {
 			usedForPush[t.Registry] = true
 		}
-		if cacheWrite && req.Cache != nil {
-			usedForPush[req.Cache.Registry] = true
-		}
+	}
+	if cacheWrite && req.Cache != nil {
+		usedForPush[req.Cache.Registry] = true
 	}
 	hosts := map[string]hostAuth{}
 	for _, regName := range slices.Sorted(maps.Keys(rs.cfg.Registries)) {
@@ -688,6 +692,26 @@ func (rs *registrySet) builderHosts(ctx context.Context, cacheWrite bool) (map[s
 		hosts[trimHost(rc.Host)] = r.hostAuth()
 	}
 	return hosts, nil
+}
+
+// mayWriteCache says whether this build exports its registry cache. The
+// protected cache is written only by a run that pushes (a default-branch
+// run); another scope's by a run the server lets write it. Nothing a pull
+// request or a branch builds ever lands in the protected cache.
+func mayWriteCache(cfg *Config, req Request, log func(string)) (bool, error) {
+	if req.Cache == nil {
+		return false, nil
+	}
+	rc, err := cfg.Registry(req.Cache.Registry)
+	if err != nil {
+		return false, err
+	}
+	wants := req.CacheWrite && (req.CacheScope != "" || req.Push)
+	write := wants && rc.Credentials != nil && rc.MayPush(req.Project, req.Cache.Repository)
+	if wants && !write {
+		log(fmt.Sprintf("The cache %s/%s is only read: project %s may not push there", rc.Host, req.Cache.Repository, req.Project))
+	}
+	return write, nil
 }
 
 // loadSigning reads the key to sign with: the runner's own, or the one the

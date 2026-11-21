@@ -177,7 +177,7 @@ func legacySeed(t *testing.T, e *engine.Engine) (hostDER []byte) {
 	}
 	ws, _ := auth.NewSealer(whSeal, "webhook-secret")
 	wblob, _ := ws.Seal("legacy-webhook-secret-canary")
-	if _, err := db.Exec(ctx, `INSERT INTO repo_webhooks(id, name, url, secret_sealed) VALUES('hok_1','h','https://example.test/h',?)`, wblob); err != nil {
+	if _, err := db.Exec(ctx, `INSERT INTO repo_webhooks(id, name, url, secret_sealed) VALUES('hok_1','h','https://example.test/h/legacy-url-token-canary',?)`, wblob); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(ctx, `INSERT INTO repo_webhooks(id, name, url, secret_sealed) VALUES('hok_2','nosecret','https://example.test/n','')`); err != nil {
@@ -196,7 +196,7 @@ func TestFirstStartWithAKeySealsExistingPlaintextInPlace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r, _ := plain.Report(ctx); r.Remaining != 8 { // six shared values (the two old sealing keys among them), a host key and a webhook secret; the empty secret is not one
+	if r, _ := plain.Report(ctx); r.Remaining != 10 { // six shared values (the two old sealing keys among them), a host key, a webhook secret, and the two webhook addresses; the empty secret is not one
 		t.Fatalf("before: %d remaining", r.Remaining)
 	}
 	if v, _ := plain.SharedValue("login_state_key", "x"); v != "legacy-login-key-canary" {
@@ -231,6 +231,15 @@ func TestFirstStartWithAKeySealsExistingPlaintextInPlace(t *testing.T) {
 	_ = e.Database().QueryRow(ctx, `SELECT secret_sealed FROM repo_webhooks WHERE id = 'hok_1'`).Scan(&hook)
 	if got, err := s.Webhooks().Open(ctx, "hok_1", hook); err != nil || string(got) != "legacy-webhook-secret-canary" {
 		t.Fatalf("webhook: %q %v", got, err)
+	}
+	// The address (a chat service's token sits in its path) was sealed in place too.
+	var storedURL string
+	_ = e.Database().QueryRow(ctx, `SELECT url FROM repo_webhooks WHERE id = 'hok_1'`).Scan(&storedURL)
+	if !keyring.IsSealed(storedURL) {
+		t.Fatalf("the webhook address was left in the clear: %q", storedURL[:min(len(storedURL), 12)])
+	}
+	if got, err := s.Webhooks().OpenURL(ctx, "hok_1", storedURL); err != nil || string(got) != "https://example.test/h/legacy-url-token-canary" {
+		t.Fatalf("webhook address: %q %v", got, err)
 	}
 	// A webhook secret does not open as another hook's.
 	if _, err := s.Webhooks().Open(ctx, "hok_2", hook); err == nil {
@@ -294,8 +303,9 @@ func TestSeveralServersStartingTogetherSealOnce(t *testing.T) {
 		}
 		sealed += svcs[i].sealedRows.Load()
 	}
-	if sealed != 8 {
-		t.Errorf("rows sealed across all servers: %d (each exactly once is %d)", sealed, 8)
+	const want = 10 + 150 // the rows of legacySeed, and the address of each of the 150 webhooks
+	if sealed != want {
+		t.Errorf("rows sealed across all servers: %d (each exactly once is %d)", sealed, want)
 	}
 	r, _ := svcs[0].Report(ctx)
 	if r.Remaining != 0 || r.Migration.State != "complete" {
