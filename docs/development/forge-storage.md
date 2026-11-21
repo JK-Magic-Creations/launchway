@@ -65,7 +65,7 @@ capacity; past that, use the S3 or filesystem store.
 
 ## Git version
 
-`reference-transaction` needs git 2.28. The sequence of hooks and the one-pack-per-push behaviour were
+`reference-transaction` needs git 2.28. The sequence of hooks and the one-pack-per-push behavior were
 checked on git 2.28.0 and 2.56.1. The server logs the installed version at start-up and warns about what
 it is too old for.
 

@@ -22,7 +22,7 @@ push is a database compare-and-swap inside git's `reference-transaction` hook.
 The usual way to host Git is bare repositories on a filesystem, serving them with the real git
 (`git upload-pack` and `git receive-pack` with `--stateless-rpc`, `--advertise-refs` for the first call,
 gzip request bodies, `GIT_PROTOCOL` from the `Git-Protocol` header). Nothing takes a repository lock of
-its own around a push: git's per-ref lock files are the only serialisation. Hooks (`pre-receive`,
+its own around a push: git's per-ref lock files are the only serialization. Hooks (`pre-receive`,
 `update`, `post-receive`) are subcommands of the server's own binary that call back into the server with
 the push's context in environment variables. This is the same shape as the hooks built here (symlinks to
 one binary, a socket back to the server).
@@ -53,12 +53,12 @@ client's `git push` exited 0.
 ## Results
 
 Hardware and versions: an Intel laptop with 20 threads, 31 GB RAM, NVMe, Linux 7.3, git 2.56.1 (the hook
-order and the one-pack-per-push behaviour were checked on git 2.28.0 too, built in a container), Go 1.27.4,
+order and the one-pack-per-push behavior were checked on git 2.28.0 too, built in a container), Go 1.27.4,
 SQLite through modernc, PostgreSQL 17 in a container for the concurrency run. Timings were taken on a quiet
 machine (load about 3) with the temporary directory on the NVMe. The large repository is **200 MB** of
 incompressible data (twenty 10 MB files in one commit), not the 500 MB of the brief: an earlier 500 MB run
 on a loaded machine (load 20) took 266 s to push on candidate A and was discarded as noise; the owner's
-whole homelab is 45 MB.
+whole reference installation is 45 MB.
 
 ### Properties
 
@@ -108,7 +108,7 @@ the same time as on a small one, and a second server that is one push behind fet
 Storage: B holds the data twice on one machine (blob store and cache) and once more in each other server's
 cache: 210 MB stored for 210 MB of data, plus a 210 MB cache per server. The database store costs 210 MB in
 the database for 210 MB of data; the write-ahead log doubling that doc 26 measured on PostgreSQL (1.2 GiB of
-log for 1.1 GiB uploaded) applies to it and is not reproduced on SQLite, where the log is checkpointed.
+log for 1.1 GiB uploaded) applies to it and is not reproduced on SQLite, where the log is written to a checkpoint.
 
 ### What the spike found, besides the comparison
 
@@ -117,7 +117,7 @@ log for 1.1 GiB uploaded) applies to it and is not reproduced on SQLite, where t
    receive-pack holds the cache's flock shared; whoever can take it exclusively knows none is running, and
    removes the locks. Any server that takes no repository lock of its own has the same exposure; an operator
    cleans the files by hand.
-2. **A pack read back is the only defence against an object store that lies.** Size checks catch a pack cut
+2. **A pack read back is the only defense against an object store that lies.** Size checks catch a pack cut
    short; one changed byte is caught only by hashing what was stored. Read-back is on by default in
    S34-09 (it costs nothing measurable here, the file was in the page cache; for S3 it is a second transfer,
    unless the store checks content on write).
@@ -139,14 +139,14 @@ log for 1.1 GiB uploaded) applies to it and is not reproduced on SQLite, where t
 
 Plain storage is proven for one node, has no moving parts beyond git, and is the fastest to a working
 push. It meets every property except two, and both matter here: a lost
-node or volume (the homelab's repositories sit on one NVMe that dropped out of the machine once this week) loses what
+node or volume (a single-server installation keeps its repositories on one disk) loses what
 the last mirror run had not copied, and there is no restore drill that covers the repositories and the
 database together (document 32, HG-24, is exactly this gap). Adding a synchronous off-node copy to A means
 uploading the pack to a second store before acknowledging, which is B's pre-receive step; the design then
-has two sources of truth. Replicating bare repositories (Gitaly's way) needs a component to run, and its
+has two sources of truth. Replicating bare repositories needs a component to run, and its
 own documentation lists snapshot backups as unsupported and a stale-replica race.
 
-B is better on every durability property, needs only the database and a blob store the homelab already
+B is better on every durability property, needs only the database and a blob store a small installation already
 backs up and drills, and with the database store the one nightly database dump holds the repositories:
 the owner's 44 repositories are 45 MB. Its costs are code (the hook socket, the manifest, maintenance), about
 15 ms per push, and two limits stated below. The provider interface does not depend on the choice: storage
@@ -154,7 +154,7 @@ is behind `internal/forge/storage`, and a volume implementation can be added beh
 
 ## Recommendation for Milestone 1
 
-**Commit to B ("ledger, packs and cache"), with the database as the blob store on the homelab and
+**Commit to B ("ledger, packs and cache"), with the database as the blob store on a small installation and
 read-back verification on, and build it as `internal/forge/storage` (done: S34-09).** The coordinator's
 expectation, that A is simpler and is fastest to a working server on one node, is confirmed as to effort and
 refuted as to the requirement the owner set first: no acknowledged push is ever lost. A fails it on the loss
