@@ -213,14 +213,14 @@ func (m *Manager) StartDraft(ctx context.Context, d DraftRequest) (*engine.RunSu
 	if err != nil {
 		return nil, err
 	}
-	pl, libs, vals, err := m.prepare(ctx, pl, d.Inputs, d.Libraries)
+	pl, libs, vals, rec, err := m.prepare(ctx, d.Project, pl, d.Inputs, d.Libraries)
 	if err != nil {
 		return nil, err
 	}
 	t := trigger(r, pipeline.EventDraft, d.Actor)
 	t.Inputs = vals
-	return m.eng.CreateRun(engine.NewRun{Project: d.Project, Pipeline: pl, Trigger: t,
-		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Draft: &engine.Draft{Text: d.Text, Secrets: d.Secrets}})
+	return m.createRun(ctx, engine.NewRun{Project: d.Project, Pipeline: pl, Trigger: t,
+		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Draft: &engine.Draft{Text: d.Text, Secrets: d.Secrets}}, rec)
 }
 
 // ---- saving ----
