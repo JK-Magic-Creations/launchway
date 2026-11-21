@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { PipelineEditor, type PipelineEditorHandle } from "../components/PipelineEditor";
 import { PipelinePreview } from "../components/PipelinePreview";
 import { Link } from "../components/ui";
+import { KeyHelp } from "../learn/LearnLink";
 import { useValidation } from "../validation";
 
 const SAMPLE = `pipeline: my-service
@@ -58,6 +59,7 @@ export function PlaygroundPage() {
     try { localStorage.setItem(EXPAND_KEY, expand ? "1" : "0"); } catch { /* private mode */ }
   }, [expand]);
   const editor = useRef<PipelineEditorHandle>(null);
+  const [cursorLine, setCursorLine] = useState("");
   useEffect(() => {
     try { localStorage.setItem(KEY, text); } catch { /* private mode */ }
   }, [text]);
@@ -74,12 +76,13 @@ export function PlaygroundPage() {
           <label className="checkline" title="Steps that say uses: library/template are expanded from the libraries this server allows">
             <input type="checkbox" checked={expand} onChange={(e) => setExpand(e.target.checked)} /> Expand templates
           </label>
+          <KeyHelp line={cursorLine} />
           <button type="button" className="btn" onClick={() => setText(SAMPLE)}>Reset example</button>
         </div>
       </header>
       <div className="split split-play">
         <section className="card card-flush">
-          <PipelineEditor ref={editor} text={text} onChange={setText} problems={res?.ok ? [] : res?.problems} label="Pipeline file" />
+          <PipelineEditor ref={editor} text={text} onChange={setText} problems={res?.ok ? [] : res?.problems} label="Pipeline file" onCursorLine={setCursorLine} />
         </section>
         <PipelinePreview res={res} error={error} onJump={(line) => editor.current?.goToLine(line)} />
       </div>

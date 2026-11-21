@@ -2,9 +2,11 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useModels } from "../components/Explain";
 import { Icon } from "../kit/Icon";
 import { onLink } from "../router";
-import { locate, section, visibleSections, type Ctx } from "../nav/model";
+import { isLearn, locate, section, visibleSections, type Ctx } from "../nav/model";
 import { COMING } from "./comingData";
 import { guideFor } from "./guideData";
+import { learnFor } from "../learn/links";
+import { LearnLink } from "../learn/LearnLink";
 
 /** A page that can offer its own explanation (the run page, for a failed step) puts it here; the Guide
  * shows it as a button, only when a model is configured. */
@@ -35,6 +37,12 @@ export function Guide({ ctx, path, explainer, onClose }: { ctx: Ctx; path: strin
           <div className="do">
             {g.does!.map((d) => <a key={d.href} href={d.href} onClick={onLink}><Icon name={d.icon} />{d.label}<Icon name="arrow" size="s" className="go" /></a>)}
           </div>
+        </>
+      )}
+      {!isLearn(path) && (
+        <>
+          <div className="eyebrow rail-h">Learn</div>
+          <LearnLink to={(at && learnFor(at.info.pattern, path)) || { slug: "", label: "Open Learn, the documentation" }} />
         </>
       )}
       {at?.info.pattern === "/" && (

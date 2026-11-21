@@ -3,6 +3,7 @@
 // choice cards wizards ask with, the wizard frame, and readable summaries
 // and diffs of specs.
 
+import { PageLearn } from "../learn/LearnLink";
 import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { configApi, type ChangeRequest, type ConfigOverview, type Spec } from "../configApi";
@@ -580,6 +581,7 @@ export function WizardFrame({ title, intro, steps, at, children, onBack, onNext,
   return (
     <div className="page cf-wizard">
       <PageHead eyebrow="Settings · Set-up" title={title} sentence={intro} actions={<button type="button" className="btn btn-ghost" onClick={cancel}>Leave the set-up</button>} />
+      <PageLearn className="cf-learn" />
       <nav aria-label="Steps" className="cf-steps-nav">
         <ol className="cf-steps">
           {steps.map((s, i) => (
