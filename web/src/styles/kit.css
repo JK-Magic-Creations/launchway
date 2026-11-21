@@ -202,3 +202,15 @@ a.brow:hover { background: var(--sheet-2); text-decoration: none; }
 .wrong .excerpt { margin: 0; } .wrong .excerpt figcaption { color: var(--ink-3); font-size: 12.5px; margin-bottom: 6px; }
 .wrong .excerpt pre { margin: 0; background: var(--log); color: var(--log-ink); border-radius: var(--r1); padding: 10px 12px; font: 12.5px / 1.6 var(--mono); overflow: auto; max-height: 220px; white-space: pre-wrap; }
 @media (max-width: 760px) { .runline .lline.big { min-width: 0; } }
+/* A station that stands for several steps: a count on its pin, and each step on hover or when the row has focus. */
+.lline .ls .pstack { position: absolute; top: -5px; left: calc(50% + 7px); z-index: 3; }
+.lline .ls .pstack-n { display: block; min-width: 15px; padding: 0 4px; height: 15px; line-height: 15px; border-radius: 8px; font-size: 10px; font-weight: 700; text-align: center; background: var(--sheet-2); color: var(--ink); border: 1.5px solid var(--control-line); box-shadow: 2px 2px 0 -1px var(--sheet), 2px 2px 0 0 var(--control-line); }
+.lline .ls .pstack.together .pstack-n { background: var(--signal-wash); color: var(--signal-ink); border-color: var(--signal); box-shadow: 2px 2px 0 -1px var(--sheet), 2px 2px 0 0 var(--signal); }
+.lline .ls .ppop { display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 20; min-width: 190px; max-width: 280px; text-align: left; padding: 8px 10px; border-radius: 10px; background: var(--sheet); border: 1px solid var(--control-line); box-shadow: var(--shadow); font-size: 12px; color: var(--ink); }
+.lline .ls .ppop b { display: block; margin-bottom: 4px; font-size: 12px; }
+.lline .ls .ppop > span { display: flex; justify-content: space-between; gap: 10px; padding: 1px 0; }
+.lline .ls .ppop i { font-style: normal; color: var(--ink-2); }
+.lline .ls .ppop .pp-failed i { color: var(--bad-ink); font-weight: 600; } .lline .ls .ppop .pp-running i { color: var(--signal-ink); font-weight: 600; } .lline .ls .ppop .pp-waiting i { color: var(--warn-ink); font-weight: 600; }
+.lline .ls:hover .ppop, a:focus-visible .lline .ls.run .ppop, a:focus-visible .lline .ls.bad .ppop, a:focus-visible .lline .ls.wait .ppop { display: block; }
+.lline .ls:hover { z-index: 10; }
+@media (hover: none) { .lline.compact .ls .pstack-n { min-width: 18px; height: 18px; line-height: 18px; } }

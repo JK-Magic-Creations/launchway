@@ -6,9 +6,12 @@ import { approval, environment, me, project, run, runner, step } from "./fixture
  * for anything else. `overrides` maps a path (without the query) to the JSON to answer with. */
 export function installServer(overrides: Record<string, unknown> = {}, who = me()) {
   const failed = run({ id: "run_7", number: 7, status: "failed", message: "Fix the price rounding", steps: [{ id: "test", status: "failed" }] });
+  // Two steps run together after check-code, so the run page's graph has a stage with parallel steps.
+  const parallel = [step({ id: "check-code", status: "succeeded", needs: [] }), step({ id: "test", needs: ["check-code"] }),
+    step({ id: "security-go", status: "running", needs: ["check-code"] }), step({ id: "build", status: "skipped", needs: ["test", "security-go"], skip_kind: "not_needed" })];
   const detail: RunDetail = {
-    ...failed, source: { kind: "git", url: "https://git.example/acme/shop-api.git" }, graph: { name: "shop-api", on: {}, steps: [{ id: "test", image: "golang", run: "go test", retry: 0 }] } as unknown as RunDetail["graph"],
-    levels: [["test"]], step_list: [step()], reruns: [], not_understood: [],
+    ...failed, source: { kind: "git", url: "https://git.example/acme/shop-api.git" }, graph: { name: "shop-api", on: {}, steps: parallel.map((s) => ({ id: s.id, needs: s.needs, image: "golang", run: "go test", retry: 0 })) } as unknown as RunDetail["graph"],
+    levels: [["check-code"], ["test", "security-go"], ["build"]], step_list: parallel, reruns: [], not_understood: [],
   };
   const answers: Record<string, unknown> = {
     "/api/v1/me": who,

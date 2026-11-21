@@ -2,7 +2,6 @@ import { RollbackBanner, RolledBackLine } from "../components/RollbackRun";
 import { EXPLAIN } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
 import { RunHeader, storedDensity, saveDensity, type Density } from "../components/RunHeader";
-import { RunLine } from "../components/RunLine";
 import { whyWaiting } from "../components/whyWaiting";
 import { RerunButton, RerunFailedButton, RerunPicker } from "../components/Rerun";
 import { StepCauseView } from "../components/StepCause";
@@ -392,12 +391,9 @@ export function RunPage({ id }: { id: string }) {
       {shownTab === "graph" && (
         <>
           <section className="sheet runline-sheet" aria-label="The pipeline of this run">
-            <div className="sh-h"><h2>The pipeline</h2><div className="r"><span className="faint small">Choose a step to see it below</span></div></div>
-            <div className="sh-b"><RunLine run={run} selected={selected} onSelect={select} now={now} /></div>
+            <div className="sh-h"><h2>The pipeline</h2><div className="r"><span className="faint small">Steps in the same column run at the same time. Choose a step to see it below</span></div></div>
+            <div className="sh-b"><Graph steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} /></div>
           </section>
-          {density === "everything" && <section className="card card-flush only-everything" aria-label="Dependency graph">
-            <Graph levels={loopView.levels} steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} />
-          </section>}
           {loop && <LoopPanel run={run} loop={loop} selected={selected} onSelect={select} />}
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />

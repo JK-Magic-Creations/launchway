@@ -150,3 +150,27 @@ func TestLaunchLineStepsAfterAnApprovalAreTheRelease(t *testing.T) {
 		t.Errorf("tests detail %q", s.Detail)
 	}
 }
+
+// A station that stands for several steps says how many can run together and how each is doing.
+func TestLaunchLineStationSaysWhatRunsTogether(t *testing.T) {
+	d := &engine.RunDetail{
+		Levels: [][]string{{"vet"}, {"lint-go", "lint-web", "audit"}, {"unit-tests"}},
+		StepList: []engine.StepView{
+			stepOf("vet", "", engine.StepSucceeded, 0),
+			stepOf("lint-go", "", engine.StepSucceeded, 1), stepOf("lint-web", "", engine.StepSucceeded, 2), stepOf("audit", "", engine.StepRunning, 3),
+			stepOf("unit-tests", "", engine.StepPending, 4),
+		},
+	}
+	l := launchLineOf(d)
+	checks := stationByKey(l, "checks")
+	if checks == nil || checks.Parallel == nil {
+		t.Fatalf("checks station %+v", checks)
+	}
+	p := checks.Parallel
+	if p.Total != 4 || p.Together != 3 || p.Done != 3 || p.Running != 1 || len(p.Steps) != 4 || p.Steps[3].State != stationRunning {
+		t.Errorf("parallel %+v", p)
+	}
+	if tests := stationByKey(l, "tests"); tests.Parallel != nil {
+		t.Errorf("a one-step station is not parallel: %+v", tests.Parallel)
+	}
+}

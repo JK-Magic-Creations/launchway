@@ -38,7 +38,7 @@
 .ic-line { flex: none; stroke: currentColor; fill: none; stroke-width: 1.5; }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .spin, .dot, .edge-active { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .spin, .dot, .edge-active, .pg-edge-active, .pg-node.t-run, .pg-node.t-run::after { animation: none !important; } }
 
 .live { display: inline-flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 13px; }
 .live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); }

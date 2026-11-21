@@ -57,7 +57,7 @@ export function PipelinePreview({ res, error, onJump, notes }: Props) {
             {notes}
           </section>
           <section className="card card-flush">
-            <Graph levels={res.levels} steps={steps} groups={res.graph.groups} selected={sel} onSelect={setSel} now={0} compact
+            <Graph steps={steps} groups={res.graph.groups} selected={sel} onSelect={setSel} now={0} compact
               describe={(s) => s.uses ? "template (not expanded)" : (s.when ? "conditional · " : "") +
                 (s.kind === "approval" ? "approval" : s.kind === "rollout" ? "rollout" : s.container ?? (s.image ?? "").replace(/^docker\.io\/library\//, ""))} />
           </section>

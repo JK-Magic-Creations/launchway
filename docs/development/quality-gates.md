@@ -137,6 +137,39 @@ of `make check` because of the time and the container; run it when you change an
 `internal/forge/storage`, and add it to a pipeline step on a runner that has a container tool.
 When you raise the minimum, change `MinGit`, `GIT_VERSION` and `GIT_SHA256` together.
 
+## Before you push
+
+`make check` is fast, but it is not what the pipeline runs. Three pushes in a row once failed only in
+the pipeline, each for an environment reason: an older git in the build image, a generated file that
+was stale because only part of the suite had been run, and a step user with no account entry.
+`make test-like-ci` closes that gap:
+
+```sh
+make test-like-ci   # the pipeline's own test step, in its image, as the pipeline runs it
+make prepush        # make check, then make docs, then make test-like-ci, in that order
+```
+
+`test-like-ci` reads the image and the `run:` block of the `test` step from `.launchway/pipeline.yaml`,
+so the two cannot drift, and runs them in a container (Podman or Docker; `CONTAINER=docker` to choose)
+that differs from a normal local run in exactly the ways that bit us:
+
+- the user is `1000:1000` with no entry in `/etc/passwd` (`podman --passwd=false`), and `HOME` is a
+  temporary directory; then the user is given an account entry exactly as the runner's step pods give
+  one (`internal/executor/user_entry.sh`, the same script, in the same image), so the ssh tests run as
+  they do in the pipeline once the runner has that fix (`TEST_LIKE_CI_USER_ENTRY=0` leaves it out, to see
+  what a step without it sees);
+- the tree is `git archive HEAD`, a copy of what is committed, so a file that is uncommitted, or
+  generated and never committed, is missing exactly as it is in the pipeline (the copy is a throwaway
+  and writable, because the step writes `reports/`; your working tree is never touched);
+- the module cache is mounted read-only, the root filesystem is read-only, all capabilities are
+  dropped, and memory is capped at 8 GB (`TEST_LIKE_CI_MEMORY` to change it);
+- the failure summary the pipeline prints (`scripts/ci/go-test-summary.sh`) is part of the step, so a
+  failure reads the same here as there.
+
+The exit status is the step's. When neither Podman nor Docker is installed it says so and skips. It
+takes several minutes and several gigabytes of memory, so run it once, after `make check` passes and
+your work is committed, and not in a loop.
+
 ## Security gates
 
 `make check` stays fast. The security scans need the network (vulnerability databases, images) or

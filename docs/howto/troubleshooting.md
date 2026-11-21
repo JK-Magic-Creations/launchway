@@ -365,6 +365,16 @@ This run builds images, so all its steps wait for a runner that can build them, 
 No connected runner has `images.builders` in its configuration. Configure one; see
 [Build and sign an image](../tutorials/build-and-sign-image.md).
 
+## A tool says "No user exists for uid 1000"
+
+The OpenSSH client (and so `git` over ssh), and some other tools and language runtimes, look the current user up in
+`/etc/passwd` and stop when there is no entry. The Kubernetes executor runs steps as a numeric user (1000 by default) that
+most images do not list. Runners from this version on give that user an entry (`launchway`, home `/home/launchway`)
+through an init container in each step image, and say so at the start of each step: `Running as launchway (uid 1000,
+gid 1000)`. If your step shows `Running as uid 1000, gid 1000, with no account entry`, the operator set
+`kubernetes.user_entry: false`; if it shows nothing like that, the runner is older than this fix: upgrade it. If the step
+fails to start and names the init container, see [The step's user](../reference/runner-config.md#the-steps-user).
+
 ## Deploy steps fail
 
 ```text
