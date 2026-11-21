@@ -338,6 +338,11 @@ func (s *Server) certificate(ctx context.Context, cert *ssh.Certificate, remote 
 		},
 		Clock: s.c.Now,
 	}
+	// CheckCert judges validity (signature, dates, principals); whether the signer is one
+	// we trust is the caller's to decide, and it is decided here.
+	if !chk.IsUserAuthority(cert.SignatureKey) {
+		return Identity{}, errors.New("the certificate is signed by an authority this server does not trust")
+	}
 	var verr error
 	for _, p := range cert.ValidPrincipals {
 		if verr = chk.CheckCert(p, cert); verr == nil {

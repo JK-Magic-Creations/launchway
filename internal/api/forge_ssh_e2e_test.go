@@ -19,6 +19,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
@@ -35,14 +36,20 @@ type sshHarness struct {
 	dir   string
 }
 
-func sshEnv(t *testing.T) *sshHarness {
+func sshEnv(t *testing.T) *sshHarness { return sshEnvWith(t, envOpts{}, nil) }
+
+func sshEnvWith(t *testing.T, o envOpts, mod func(*SSHOptions)) *sshHarness {
 	t.Helper()
 	if _, err := exec.LookPath("ssh"); err != nil {
 		t.Skip("no ssh client")
 	}
-	e, _ := hostedEnv(t, envOpts{})
+	e, _ := hostedEnv(t, o)
 	addr := make(chan net.Addr, 1)
-	if err := e.api.StartSSH(t.Context(), SSHOptions{Listen: "127.0.0.1:0", Ready: func(a net.Addr) { addr <- a }}); err != nil {
+	so := SSHOptions{Listen: "127.0.0.1:0", Ready: func(a net.Addr) { addr <- a }}
+	if mod != nil {
+		mod(&so)
+	}
+	if err := e.api.StartSSH(t.Context(), so); err != nil {
 		t.Fatal(err)
 	}
 	a := <-addr
@@ -137,6 +144,10 @@ func TestSSHCloneFetchPushAndProtocolV2(t *testing.T) {
 	h.mustGit(t, key, src, "fetch", "-q", h.url("acme/shop"), "main")
 	if got := strings.TrimSpace(mustGit(t, src, "rev-parse", "FETCH_HEAD")); got != id {
 		t.Fatalf("fetch saw %s, want %s", got, id)
+	}
+	// git archive --remote is git-upload-archive over the same connection.
+	if tar := h.mustGit(t, key, src, "archive", "--format=tar", "--remote="+h.url("acme/shop"), "main"); !strings.Contains(tar, "a.txt") || !strings.Contains(tar, "b.txt") {
+		t.Errorf("the archive does not hold the files (%d bytes)", len(tar))
 	}
 	// Protocol version 2 was used for the clone.
 	cmd := exec.Command("git", "-c", "protocol.version=2", "ls-remote", h.url("acme/shop"))
@@ -516,4 +527,74 @@ func launchwayLines(out string) string {
 		}
 	}
 	return b.String()
+}
+
+// A certificate signed by the configured authority signs a person in by its
+// first principal; one signed by another authority, an expired one and one
+// with a critical option are refused; with no authority configured,
+// certificates are not accepted at all.
+func TestSSHCertificatesFromTheConfiguredAuthority(t *testing.T) {
+	p, err := auth.NewPolicy([]auth.Binding{{User: "cert-user", Role: auth.Operator, Projects: []string{"acme/*"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	caPub, caPriv, _ := ed25519.GenerateKey(rand.Reader)
+	ca, _ := ssh.NewSignerFromKey(caPriv)
+	caKey, _ := ssh.NewPublicKey(caPub)
+	h := sshEnvWith(t, envOpts{policy: p}, func(o *SSHOptions) { o.UserCAs = []ssh.PublicKey{caKey} })
+	hostedRepo(t, h.e, "acme/shop")
+
+	sign := func(name string, signer ssh.Signer, mod func(*ssh.Certificate)) string {
+		keyPath, pub := h.key(t, name)
+		pk, _, _, _, _ := ssh.ParseAuthorizedKey([]byte(pub))
+		now := time.Now()
+		cert := &ssh.Certificate{Key: pk, Serial: 7, CertType: ssh.UserCert, KeyId: name, ValidPrincipals: []string{"cert-user"},
+			ValidAfter: uint64(now.Add(-time.Hour).Unix()), ValidBefore: uint64(now.Add(time.Hour).Unix())}
+		if mod != nil {
+			mod(cert)
+		}
+		if err := cert.SignCert(rand.Reader, signer); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(keyPath+"-cert.pub", ssh.MarshalAuthorizedKey(cert), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return keyPath
+	}
+	good := sign("good", ca, nil)
+	// ssh offers <key>-cert.pub next to the identity file by itself.
+	src := work(t)
+	h.mustGit(t, good, src, "push", "-q", h.url("acme/shop"), "HEAD:refs/heads/topic")
+	h.mustGit(t, good, t.TempDir(), "clone", "-q", h.url("acme/shop"), "x")
+
+	_, otherPriv, _ := ed25519.GenerateKey(rand.Reader)
+	otherCA, _ := ssh.NewSignerFromKey(otherPriv)
+	for name, key := range map[string]string{
+		"a certificate from another authority": sign("foreign", otherCA, nil),
+		"an expired certificate": sign("expired", ca, func(c *ssh.Certificate) {
+			c.ValidAfter, c.ValidBefore = uint64(time.Now().Add(-2*time.Hour).Unix()), uint64(time.Now().Add(-time.Hour).Unix())
+		}),
+		"a certificate with a critical option": sign("critical", ca, func(c *ssh.Certificate) {
+			c.CriticalOptions = map[string]string{"force-command": "ls"}
+		}),
+		"a host certificate": sign("host", ca, func(c *ssh.Certificate) { c.CertType = ssh.HostCert }),
+	} {
+		if out, err := h.git(t, key, t.TempDir(), "ls-remote", h.url("acme/shop")); err == nil {
+			t.Errorf("%s was accepted:\n%s", name, out)
+		}
+	}
+	// The person is the principal; a push is audited as theirs, with the certificate.
+	var found bool
+	for _, a := range h.e.auditEntries(t) {
+		found = found || a.Action == "git.push" && a.User == "cert-user" && strings.Contains(a.Detail, "ssh key certificate 7")
+	}
+	if !found {
+		t.Error("the push by certificate is not in the audit trail")
+	}
+	// With no authority configured, a certificate gets nowhere.
+	plain := sshEnvWith(t, envOpts{policy: p}, nil)
+	hostedRepo(t, plain.e, "acme/shop")
+	if out, err := plain.git(t, good, t.TempDir(), "ls-remote", plain.url("acme/shop")); err == nil {
+		t.Errorf("a certificate was accepted with no authority configured:\n%s", out)
+	}
 }
