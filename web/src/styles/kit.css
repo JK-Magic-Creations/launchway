@@ -15,13 +15,13 @@ svg.i.s { width: 15px; height: 15px; } svg.i.l { width: 22px; height: 22px; } sv
 /* status disc: shape plus colour plus word */
 .st { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; flex: none; box-sizing: border-box; }
 .st svg.i { width: 12px; height: 12px; stroke-width: 2.6; }
-.st.ok { background: var(--ok); color: #fff; }
-.st.bad { background: var(--bad); color: #fff; }
-.st.warn { background: var(--warn); color: #fff; }
+.st.ok { background: var(--ok); color: var(--on-solid); }
+.st.bad { background: var(--bad); color: var(--on-solid); }
+.st.warn { background: var(--warn); color: var(--on-solid); }
 .st.idle { border: 2px dashed var(--idle); color: var(--idle); }
 .st.run { border: 2.5px solid var(--signal-wash); border-top-color: var(--signal); animation: spin .9s linear infinite; }
 .st.wait { background: var(--warn-wash); color: var(--warn); border: 2px solid var(--warn); }
-.st.skip { border: 2px solid var(--line-2); color: var(--ink-3); }
+.st.skip { border: 2px solid var(--control-line); color: var(--ink-3); }
 .st.l { width: 28px; height: 28px; } .st.l svg.i { width: 16px; height: 16px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -69,7 +69,7 @@ svg.i.s { width: 15px; height: 15px; } svg.i.l { width: 22px; height: 22px; } sv
 .dcard { border: 1px solid var(--line); border-radius: var(--r2); background: var(--sheet); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
 .dcard.warn { border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); } .dcard.bad { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
 .d-top { display: flex; gap: 14px; align-items: flex-start; }
-.d-top h3 { font: 650 17px var(--display); letter-spacing: -.02em; margin: 0; } .d-top p { margin: 4px 0 0; color: var(--ink-2); }
+.d-top h2 { font: 650 17px var(--display); letter-spacing: -.02em; margin: 0; } .d-top p { margin: 4px 0 0; color: var(--ink-2); }
 .d-top .tx { min-width: 0; }
 .evid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; background: var(--sheet); margin: 0; }
 .evid > div { padding: 12px 14px; border-right: 1px solid var(--line); min-width: 0; } .evid > div:last-child { border-right: 0; }
@@ -88,7 +88,7 @@ svg.i.s { width: 15px; height: 15px; } svg.i.l { width: 22px; height: 22px; } sv
 
 /* empty state */
 .empty-v2 { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 40px 20px; color: var(--ink-2); }
-.empty-v2 h3 { font: 650 18px var(--display); color: var(--ink); margin: 0; }
+.empty-v2 h2 { font: 650 18px var(--display); color: var(--ink); margin: 0; }
 .empty-v2 p { margin: 0; max-width: 62ch; }
 .empty-v2 .art { width: 96px; height: 56px; color: var(--line-2); }
 .empty-v2 .acts { justify-content: center; }
@@ -97,8 +97,8 @@ svg.i.s { width: 15px; height: 15px; } svg.i.l { width: 22px; height: 22px; } sv
 .lline { display: grid; position: relative; align-items: start; }
 .lline .ls { position: relative; text-align: center; color: inherit; background: none; border: 0; padding: 0; font: inherit; min-width: 0; }
 .lline button.ls { cursor: pointer; }
-.lline .ls .p { width: 22px; height: 22px; border-radius: 50%; margin: 0 auto; border: 3px solid var(--line-2); background: var(--sheet); position: relative; z-index: 2; display: grid; place-items: center; transition: transform var(--t-med); box-sizing: border-box; }
-.lline .ls .p svg.i { width: 11px; height: 11px; stroke-width: 3.4; color: #fff; }
+.lline .ls .p { width: 22px; height: 22px; border-radius: 50%; margin: 0 auto; border: 3px solid var(--control-line); background: var(--sheet); position: relative; z-index: 2; display: grid; place-items: center; transition: transform var(--t-med); box-sizing: border-box; }
+.lline .ls .p svg.i { width: 11px; height: 11px; stroke-width: 3.4; color: var(--on-solid); }
 .lline .ls .p .st.spinner { width: 100%; height: 100%; border-width: 3px; }
 .lline .ls::before { content: ""; position: absolute; left: -50%; right: 50%; top: 9px; height: 4px; background: var(--line-2); z-index: 0; }
 .lline .ls:first-child::before { display: none; }

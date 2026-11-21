@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { onLink } from "../router";
 import { Icon, type IconName } from "./Icon";
 
@@ -73,7 +73,7 @@ export function EmptyState({ title, children, action }: { title: string; childre
         <circle cx="48" cy="40" r="6" stroke="currentColor" strokeWidth="3" strokeDasharray="3 4" />
         <circle cx="82" cy="40" r="6" stroke="currentColor" strokeWidth="3" strokeDasharray="3 4" />
       </svg>
-      <h3>{title}</h3>
+      <h2>{title}</h2>
       {children && <p>{children}</p>}
       {action && <div className="acts">{action}</div>}
     </div>
@@ -82,9 +82,10 @@ export function EmptyState({ title, children, action }: { title: string; childre
 
 /** DetailPanel is docked beside a drawing and shows the selected thing, so a quick look never needs a new page. */
 export function DetailPanel({ title, status, children, actions, id }: { title: ReactNode; status?: ReactNode; children: ReactNode; actions?: ReactNode; id?: string }) {
+  const heading = useId();
   return (
-    <aside className="panel sheet" id={id} aria-label="Details">
-      <div className="ph"><div>{status}</div><div style={{ flex: 1, minWidth: 0 }}><h3>{title}</h3></div>{actions}</div>
+    <aside className="panel sheet" id={id} aria-labelledby={heading}>
+      <div className="ph"><div>{status}</div><div style={{ flex: 1, minWidth: 0 }}><h3 id={heading}>{title}</h3></div>{actions}</div>
       {children}
     </aside>
   );
@@ -113,7 +114,7 @@ export function Decision({ icon = "gate", tone, title, children, evidence, actio
     <article className={`dcard ${tone ?? "warn"}`}>
       <div className="d-top">
         <div className={`ico-tile ${tone ?? "warn"}`}><Icon name={icon} /></div>
-        <div className="tx"><h3>{title}</h3>{children && <p>{children}</p>}</div>
+        <div className="tx"><h2>{title}</h2>{children && <p>{children}</p>}</div>
       </div>
       {evidence && evidence.length > 0 && <EvidenceList items={evidence} />}
       {actions && <div className="acts decide">{actions}</div>}

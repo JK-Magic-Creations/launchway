@@ -103,7 +103,7 @@ export function RunnersPage() {
                 return (
                   <tr key={r.id} className={revoked ? "rn-revoked" : ""}>
                     <td>
-                      <span className={"online " + (r.online ? "online-on" : "")} aria-label={r.online ? "online" : "offline"} />{r.name}
+                      <span className={"online " + (r.online ? "online-on" : "")} role="img" aria-label={r.online ? "online" : "offline"} />{r.name}
                       <div className="faint small mono">{r.id}</div>
                       <div className="faint small">
                         {r.executor === "deploy" ? "deploy runner" : r.executor}{r.version && <> · <Mono>{r.version}</Mono></>}

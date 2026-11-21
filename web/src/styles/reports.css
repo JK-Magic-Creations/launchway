@@ -1,5 +1,5 @@
 /* ---- test reports: rows, filters, comparison ---- */
-.ic-flaky { fill: var(--warn); stroke: #fff; }
+.ic-flaky { fill: var(--warn); stroke: var(--on-solid); }
 .tstat-warn dd { color: var(--warn-ink); }
 .chip { display: inline-flex; align-items: center; gap: 6px; }
 .chip-on .ic { stroke: var(--accent); fill: #fff; }

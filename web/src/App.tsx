@@ -1,6 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, SIGNED_OUT, type Me } from "./api";
 import { MeContext } from "./auth";
+import { Announcer, announce } from "./kit/announce";
 import { useApprovals } from "./live";
 import { nextFromHere, SignInPage } from "./pages/SignIn";
 import { useOverview } from "./configApi";
@@ -19,7 +20,13 @@ type Who = { state: "loading" } | { state: "out"; next: string } | { state: "in"
 // ends while they use the page, sees the sign-in page and comes back to
 // where they were afterwards.
 export function App() {
+  return <><Announcer /><AppBody /></>;
+}
+
+function AppBody() {
   const [who, setWho] = useState<Who>({ state: "loading" });
+  const whoState = useRef(who.state);
+  useEffect(() => { whoState.current = who.state; }, [who.state]);
   const loadMe = useCallback(() => {
     api.me().then((me) => setWho({ state: "in", me })).catch((e) => {
       if (e instanceof ApiError && e.status === 401) setWho({ state: "out", next: nextFromHere() });
@@ -28,7 +35,11 @@ export function App() {
   }, []);
   useEffect(loadMe, [loadMe]);
   useEffect(() => {
-    const out = () => setWho((w) => (w.state === "out" ? w : { state: "out", next: nextFromHere() }));
+    const out = () => {
+      // Said once, outside the state update: a person using a screen reader hears that the session ended, not only sees a new page.
+      if (whoState.current !== "out") announce("Your session ended. Sign in again to continue where you were.", "assertive");
+      setWho((w) => (w.state === "out" ? w : { state: "out", next: nextFromHere() }));
+    };
     window.addEventListener(SIGNED_OUT, out);
     return () => window.removeEventListener(SIGNED_OUT, out);
   }, []);

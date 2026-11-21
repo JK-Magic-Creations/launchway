@@ -57,6 +57,40 @@ function shareColours(html) {
 }
 
 const diagrams = new Set()
+/** The words of a diagram, for a reader who cannot see it: a flowchart as "A leads to B" lines, a sequence diagram as
+ * "A to B: message" lines. Anything else is shown as its source. Returns HTML for a <details> block. */
+function diagramText(code) {
+  const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const clean = (t) => esc(t.replace(/<br\s*\/?>/gi, ', ').replace(/^"|"$/g, '').trim())
+  const lines = code.split('\n').map((l) => l.trim()).filter(Boolean)
+  const kind = lines[0] ?? ''
+  const items = []
+  if (/^(flowchart|graph)\b/.test(kind)) {
+    const label = new Map()
+    const node = (t) => {
+      const m = /^([A-Za-z0-9_]+)\s*(?:\[\(?"?([^\]"]*)"?\)?\]|\(+"?([^)"]*)"?\)+|\{"?([^}"]*)"?\})?$/.exec(t.trim())
+      if (!m) return clean(t)
+      const text = m[2] ?? m[3] ?? m[4]
+      if (text !== undefined) label.set(m[1], clean(text))
+      return label.get(m[1]) ?? m[1]
+    }
+    for (const l of lines.slice(1)) {
+      const m = /^(.+?)\s*(?:-->|-\.->|==>|---)\s*(?:\|([^|]*)\|\s*)?(.+)$/.exec(l.replace(/\s--\s*("[^"]*"|[^>]*?)\s*-->/, ' -->|$1| '))
+      if (m) { const from = node(m[1]); const to = node(m[3]); items.push(`${from} leads to ${to}${m[2] ? ` (${clean(m[2])})` : ''}.`) } else node(l)
+    }
+  } else if (/^sequenceDiagram\b/.test(kind)) {
+    const who = new Map()
+    for (const l of lines.slice(1)) {
+      let m
+      if ((m = /^(?:participant|actor)\s+(\S+)(?:\s+as\s+(.+))?$/.exec(l))) who.set(m[1], clean(m[2] ?? m[1]))
+      else if ((m = /^(\S+?)\s*(?:->>|-->>|->|-->|-x)\+?\s*(\S+?):\s*(.+)$/.exec(l))) items.push(`${who.get(m[1]) ?? esc(m[1])} to ${who.get(m[2]) ?? esc(m[2])}: ${clean(m[3])}.`)
+      else if ((m = /^Note (?:over|left of|right of)\s+([^:]+):\s*(.+)$/.exec(l))) items.push(`Note on ${who.get(m[1].trim()) ?? esc(m[1].trim())}: ${clean(m[2])}.`)
+    }
+  }
+  if (items.length === 0) return `<details class="lx-text"><summary>The diagram as text</summary><pre>${esc(code)}</pre></details>`
+  return `<details class="lx-text"><summary>The diagram as text</summary><ol>${items.map((i) => `<li>${i}</li>`).join('')}</ol></details>`
+}
+
 function renderPage(rel) {
   let src = readFileSync(join(docs, rel), 'utf8')
   src = src.replace(/^---\n[\s\S]*?\n---\n/, '')
@@ -70,7 +104,8 @@ function renderPage(rel) {
     diagrams.add(key)
     // A wide drawing may shrink to four fifths of its size to fit; below that it scrolls, so its words stay readable.
     const draw = (f) => readFileSync(f, 'utf8').replace(/<svg ([^>]*?)viewBox="[-\d.]+ [-\d.]+ ([\d.]+) [\d.]+"/, (m, pre, w) => m.replace(/ style="/, ` style="min-width: ${Math.round(+w * 0.8)}px; `))
-    return `<figure class="lx-diagram"><div class="lx-light">${draw(light)}</div><div class="lx-dark">${draw(dark)}</div></figure>`
+    // The drawing is hidden from screen readers; the same content follows as text. The figure scrolls, so it takes focus.
+    return `<figure class="lx-diagram" role="group" aria-label="Diagram, with its text below" tabindex="0"><div class="lx-light" aria-hidden="true">${draw(light)}</div><div class="lx-dark" aria-hidden="true">${draw(dark)}</div>${diagramText(decodeURIComponent(code))}</figure>`
   })
   // Links: to a Learn page, to a place in the product (app:), or to something that is not here.
   html = html.replace(/<a ([^>]*?)href="([^"]*)"([^>]*)>([\s\S]*?)<\/a>/g, (all, pre, href, post, inner) => {

@@ -239,6 +239,21 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
           const s = n.step!;
           const t = elapsed(s.started_at, s.finished_at, now);
           const label = s.group ? s.id.slice(topGroup(s.group).length + 1) : s.id;
+          const sub = describe ? describe(s) : s.reused_from ? `reused from #${s.reused_from_number}`
+            : s.status === "skipped" ? lowerFirst(stepLabel(s))
+            : s.status === "failed" && s.policy_blocked ? "blocked by policy"
+            : s.status === "pending" ? "waiting"
+            : s.status === "queued" ? "waiting for a runner"
+            : s.status === "waiting" ? phases?.[s.id] ?? lowerFirst(stepLabel(s))
+            : s.kind === "approval" && s.status === "succeeded" ? `${terms().lower("go")} from ${s.decided_by}`
+            : s.kind === "approval" && s.status === "failed" ? (s.decided_by ? `${terms().lower("no_go")} from ${s.decided_by}` : "nobody decided")
+            : t || statusLabel(s.status);
+          const nodeName = (st: typeof s, name: string, shown: string) => {
+            // The visible words first (the name, its badges, what it says under it), so the name contains them; then what the picture only shows.
+            const state = phases?.[st.id] ?? stepLabel(st);
+            const badges = `${st.kind === "image" ? " image" : ""}${st.kind === "verify" ? " verify" : ""}${st.kind === "ai" ? " ai" : ""}${st.attempt > 1 ? ` #${st.attempt}` : ""}`;
+            return `${name}${badges}, ${shown}${shown.toLowerCase().includes(state.toLowerCase()) ? "" : `. ${state}`}${st.reused_from ? `, reused from run #${st.reused_from_number}` : ""}${st.description ? `. ${st.description}` : ""}`;
+          };
           return (
             <button key={s.id} type="button"
               className={`node t-${tone(shownStatus(s))}` + (selected === s.id ? " node-selected" : "") + (s.uses ? " node-template" : "") + (s.reused_from ? " node-reused" : "")}
@@ -246,7 +261,7 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
               onClick={() => onSelect(s.id)}
               aria-pressed={selected === s.id}
               title={s.description || s.id}
-              aria-label={`${s.id}${s.kind === "image" ? ", builds an image" : ""}: ${phases?.[s.id] ?? stepLabel(s)}${s.reused_from ? `, reused from run #${s.reused_from_number}` : ""}${s.description ? `. ${s.description}` : ""}`}>
+              aria-label={nodeName(s, label, sub)}>
               <span className="node-top">
                 <StatusIcon status={shownStatus(s)} />
                 <span className="node-name">{label}</span>
@@ -255,17 +270,9 @@ export function Graph({ levels, steps, groups, selected, onSelect, now, compact,
                 {s.kind === "verify" && <span className="node-kind" title="Watches an environment's metrics and logs">verify</span>}
                 {s.kind === "ai" && <span className="node-kind" title="Asks a model">ai</span>}
                 {s.attempt > 1 && <span className="node-attempt" title={`Attempt ${s.attempt}`}>#{s.attempt}</span>}
-              </span>
+              </span>{" "}
               <span className="node-sub">
-                {describe ? describe(s) : s.reused_from ? `reused from #${s.reused_from_number}`
-                  : s.status === "skipped" ? lowerFirst(stepLabel(s))
-                  : s.status === "failed" && s.policy_blocked ? "blocked by policy"
-                  : s.status === "pending" ? "waiting"
-                  : s.status === "queued" ? "waiting for a runner"
-                  : s.status === "waiting" ? phases?.[s.id] ?? lowerFirst(stepLabel(s))
-                  : s.kind === "approval" && s.status === "succeeded" ? `${terms().lower("go")} from ${s.decided_by}`
-                  : s.kind === "approval" && s.status === "failed" ? (s.decided_by ? `${terms().lower("no_go")} from ${s.decided_by}` : "nobody decided")
-                  : t || statusLabel(s.status)}
+                {sub}
               </span>
             </button>
           );

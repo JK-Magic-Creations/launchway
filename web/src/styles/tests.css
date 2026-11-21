@@ -146,12 +146,12 @@
 .phist-ago { margin-left: auto; }
 .hstrip { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 3px; }
 .hcell { position: relative; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--border-strong); background: var(--idle-soft); }
-.hcell .ic { stroke: #fff; }
+.hcell .ic { stroke: var(--on-solid); }
 .hcell-passed { background: var(--ok-soft); border-color: var(--ok); }
 .hcell-failed, .hcell-errored { background: var(--bad-soft); border-color: var(--bad); }
 .hcell-current { box-shadow: 0 0 0 2px var(--accent); }
 .hcell:hover, .hcell:focus-visible { text-decoration: none; transform: translateY(-1px); }
-.hcell-tip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); padding: 4px 8px; border-radius: 6px; background: var(--nav); color: #fff; font-size: 12px; white-space: nowrap; z-index: 3; pointer-events: none; }
+.hcell-tip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); padding: 4px 8px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: 12px; white-space: nowrap; z-index: 3; pointer-events: none; }
 .hcell:hover .hcell-tip, .hcell:focus-visible .hcell-tip { display: block; }
 .pstat-more { margin-top: 8px; font-weight: 600; font-size: 13px; }
 .tab { white-space: nowrap; flex: none; }

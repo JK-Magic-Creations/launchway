@@ -3,7 +3,7 @@
 .editor { display: flex; height: 600px; min-height: 320px; position: relative; }
 .editor-gutter { flex: 0 0 46px; overflow: hidden; text-align: right; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--text-3); background: var(--surface-2); user-select: none; }
 .editor-gutter-inner { padding: 14px 8px 40px 0; }
-.gutter-bad { color: #fff; background: var(--bad); border-radius: 0 4px 4px 0; font-weight: 700; cursor: help; }
+.gutter-bad { color: var(--on-solid); background: var(--bad); border-radius: 0 4px 4px 0; font-weight: 700; cursor: help; }
 .editor-area { flex: 1; min-width: 0; position: relative; background: var(--surface); }
 .editor-marks { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .editor-marks-inner { padding: 14px 0 40px; font-size: 13px; line-height: 1.6; }

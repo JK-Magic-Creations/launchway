@@ -1,7 +1,8 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type Approval, type Me } from "../api";
 import { attention } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
+import { announce } from "../kit/announce";
 import { Icon } from "../kit/Icon";
 import { CrumbLabelContext } from "../nav/crumbs";
 import { Breadcrumbs } from "../nav/Navigation";
@@ -14,6 +15,7 @@ import { ExplainerContext, Guide, type Explainer } from "./Guide";
 import { Launcher } from "./Launcher";
 import { Pulse, Route, TabBar, type PulseState } from "./Route";
 import { SideNav } from "./SideNav";
+import { useFocusableScrollers } from "./scrollers";
 import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
 import { terms, useTerms } from "../terms";
@@ -72,12 +74,20 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
     if (to) replace(to);
   }, [path]);
   useEffect(() => { document.title = pageTitle(path); }, [path]);
+  // A page change in a single-page app is silent: say where we are, and put the reading position at the top of the page.
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    announce(pageTitle(path).replace(/ · Launchway$/, ""));
+    document.getElementById("main")?.focus({ preventScroll: true });
+  }, [path]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (opensDoBar(e)) { e.preventDefault(); setLayer("do"); } };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, []);
 
+  useFocusableScrollers();
   const ctx = { me, facts: inst.facts };
   const area = sectionOf(path);
   const needs = useMemo(() => attention({ projects: inst.projects, approvals: approvals.list ?? ([] as Approval[]), runners: inst.runners, applications: inst.applications, me }),
@@ -85,13 +95,23 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
   const pulse = pulseOf(needs.filter((n) => n.tone === "bad").length, needs.filter((n) => n.tone === "warn").length, inst.runs.some((r) => r.status === "running"));
   // Wide screens remember the choice, and open the Guide on Home. A narrow screen shows it as a sheet, closed until asked.
   const wide = useWide();
+  // What needs a person is said once when it changes, not on every refresh.
+  const lastPulse = useRef(pulse);
+  useEffect(() => {
+    if (lastPulse.current === pulse) return;
+    lastPulse.current = pulse;
+    if (pulse === "failing") announce("Something failed and needs you.", "assertive");
+    else if (pulse === "waiting") announce("Something is waiting for a decision.");
+    else if (pulse === "quiet") announce("Nothing needs you now.");
+  }, [pulse]);
   const [sheetAt, setSheetAt] = useState<string | null>(null); // the page the sheet was opened on: it closes on the next page
   const sheet = sheetAt === path;
   const guideOpen = wide ? (guidePref ?? path === "/") : sheet;
   const toggleGuide = useCallback(() => {
     const next = !guideOpen;
-    if (!wide) { setSheetAt(next ? path : null); return; }
+    if (!wide) { setSheetAt(next ? path : null); if (!next) requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-act='guide']")?.focus()); return; }
     setGuidePref(next);
+    if (!next) requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-act='guide']")?.focus());
     try { localStorage.setItem(GUIDE_KEY, next ? "1" : "0"); } catch { /* storage may be blocked */ }
   }, [guideOpen, wide, path]);
   const flip = () => { const t = theme === "dark" ? "light" : "dark"; setTheme(t); setThemeState(t); };
@@ -99,7 +119,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
 
   return (
     <ExplainerContext.Provider value={setExplainer}>
-      <a href="#main" className="skip-link">Skip to the page</a>
+      <a href="#main" className="skip-link" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>Skip to the page</a>
       <header className="top">
         <div className="top-in">
           <a className="brand" href="/" onClick={(e) => { e.preventDefault(); navigate("/"); }} aria-label="Launchway home">
@@ -110,7 +130,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           <div className="top-r">
             <button type="button" className="iconbtn" onClick={() => setLayer("areas")} aria-label="All areas and what each is for" title="All areas" data-act="areas"><Icon name="apps" /></button>
             <a className={"btn btn-sm" + (isLearn(path) ? " on" : "")} href="/learn" onClick={onLink} aria-label="Learn: the documentation of this release" aria-current={isLearn(path) ? "page" : undefined} data-act="learn"><Icon name="book" size="s" /><span className="hide-s">Learn</span></a>
-            <button type="button" className={"btn btn-sm" + (guideOpen ? " on" : "")} onClick={toggleGuide} aria-pressed={guideOpen} aria-label={terms().label("guide")}><Icon name="info" size="s" /><span className="hide-s">{terms().label("guide")}</span></button>
+            <button type="button" className={"btn btn-sm" + (guideOpen ? " on" : "")} onClick={toggleGuide} aria-pressed={guideOpen} aria-label={terms().label("guide")} data-act="guide"><Icon name="info" size="s" /><span className="hide-s">{terms().label("guide")}</span></button>
             <button type="button" className="iconbtn" onClick={flip} aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}><Icon name={theme === "dark" ? "sun" : "moon"} /></button>
             <UserMenu me={me} />
           </div>
@@ -131,7 +151,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
           </CrumbLabelContext.Provider>
           {version && <footer className="foot faint small">Launchway {version}</footer>}
         </main>
-        {guideOpen && <Guide ctx={ctx} path={path} explainer={explainer} onClose={toggleGuide} />}
+        {guideOpen && <Guide ctx={ctx} path={path} explainer={explainer} onClose={toggleGuide} focusOnOpen={!wide} />}
         {guideOpen && <div className="rail-back" onClick={toggleGuide} aria-hidden="true" />}
       </div>
       <TabBar ctx={ctx} on={area} needs={needs.length} onAreas={() => setLayer("areas")} />

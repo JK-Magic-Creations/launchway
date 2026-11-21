@@ -152,10 +152,10 @@ select.cf-input { padding: 0 10px; }
 .cf-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 4px; }
 .cf-stepdot { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; color: var(--text-3); font-size: 13px; font-weight: 600; }
 .cf-stepnum { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid var(--border-strong); font-size: 12px; background: var(--surface); }
-.cf-done .cf-stepnum { background: var(--ok); border-color: var(--ok); color: #fff; }
+.cf-done .cf-stepnum { background: var(--ok); border-color: var(--ok); color: var(--on-solid); }
 .cf-done { color: var(--text-2); }
 .cf-now { background: var(--accent-soft); color: var(--accent-ink); }
-.cf-now .cf-stepnum { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cf-now .cf-stepnum { background: var(--accent); border-color: var(--accent); color: var(--on-signal); }
 .cf-stepcount { display: none; color: var(--text-3); font-size: 13px; }
 .cf-stepcard { padding: 22px 24px; }
 .cf-step-h { font-size: 19px; margin: 0 0 14px; }
@@ -226,6 +226,6 @@ select.cf-input { padding: 0 10px; }
 .cf-checkitems { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .cf-checkitems li { display: flex; gap: 12px; align-items: flex-start; }
 .cf-checkmark { flex: none; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--border-strong); font-size: 12px; font-weight: 700; color: var(--text-2); }
-.cf-check-on .cf-checkmark { background: var(--ok); border-color: var(--ok); color: #fff; }
+.cf-check-on .cf-checkmark { background: var(--ok); border-color: var(--ok); color: var(--on-solid); }
 .cf-checktext { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-weight: 600; }
 .cf-check-on .cf-checktext > a { color: var(--text-2); }
