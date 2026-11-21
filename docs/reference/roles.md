@@ -154,6 +154,7 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `GET /api/v1/images` | signed-in | yes | yes | yes |  |
 | `GET /api/v1/environments` | signed-in | yes | yes | yes |  |
 | `GET /api/v1/deployments` | signed-in | yes | yes | yes |  |
+| `GET /api/v1/launch-lines` | signed-in | yes | yes | yes |  |
 | `GET /api/v1/runs/{id}/deployments/{dep}/controls` | run-viewer | yes | yes | yes |  |
 | `POST /api/v1/runs/{id}/deployments/{dep}/promote` | run-operator | no | yes | yes | the operator role on the environment; on a protected environment, not the run's starter |
 | `POST /api/v1/runs/{id}/deployments/{dep}/promote-full` | run-operator | no | yes | yes | the operator role on the environment; on a protected environment, not the run's starter |

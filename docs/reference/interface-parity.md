@@ -69,6 +69,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
 | `GET /api/v1/info` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /api/v1/launch-lines` | — | — | — | exempt: a read model for the Home page, worked out from a run's steps and deployments, which list_runs, get_run and get_deployments already give in full |
 | `GET /api/v1/libraries` | `list_config (kind libraries)` | `libraries list` | `launchway_library` | equal |
 | `GET /api/v1/libraries/{library}/templates` | `list_templates` | — | — | gap: launchway has no templates command yet |
 | `GET /api/v1/me` | — | — | — | exempt: the caller's own identity: the token is the credential for MCP and the CLI |

@@ -200,6 +200,7 @@ func (s *Server) mainRoutes() []route {
 		{"POST /api/v1/runners/{id}/rotate", signedIn, "runner.rotate", s.rotateRunner},
 		{"GET /api/v1/environments", signedIn, "", s.listEnvironments},
 		{"GET /api/v1/deployments", signedIn, "", s.listDeployments},
+		{"GET /api/v1/launch-lines", signedIn, "", s.listLaunchLines},
 		{"GET /api/v1/runs/{id}/deployments/{dep}/controls", runRead, "", s.controls},
 		{"POST /api/v1/runs/{id}/deployments/{dep}/promote", runOperate, "deployment.promote", s.command("promote")},
 		{"POST /api/v1/runs/{id}/deployments/{dep}/promote-full", runOperate, "deployment.promote_full", s.command("promote-full")},
