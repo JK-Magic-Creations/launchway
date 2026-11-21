@@ -1,0 +1,10 @@
+# A tiny operating-system image for the boot tests: the stock base with one
+# service baked in. RELEASE and the binary decide what it answers.
+ARG BASE=quay.io/fedora/fedora-coreos:stable
+FROM ${BASE}
+COPY web /usr/libexec/lw-web/web
+RUN chmod 0755 /usr/libexec/lw-web/web \
+ && printf '[Unit]\nDescription=lw web\nAfter=network.target\n[Service]\nExecStart=/usr/libexec/lw-web/web\nRestart=on-failure\n[Install]\nWantedBy=multi-user.target\n' > /usr/lib/systemd/system/lw-web.service \
+ && mkdir -p /usr/lib/systemd/system/multi-user.target.wants \
+ && ln -s ../lw-web.service /usr/lib/systemd/system/multi-user.target.wants/lw-web.service \
+ && printf 'image-release\n' > /usr/share/lw-release
