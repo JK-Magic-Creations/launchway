@@ -337,7 +337,7 @@ export function RunPage({ id }: { id: string }) {
         <div className="callout callout-info callout-row" role="status">
           <span><strong>This run cannot be resumed.</strong> {run.resume?.reason}. Re-run from <Mono>{rerunTarget?.id ?? ""}</Mono> instead: it makes a new
             deployment attempt of the same version and reuses every step before it, so nothing is rebuilt.</span>
-          {rerunTarget && <RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary />}
+          {run.status !== "failed" && rerunTarget && <RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary />}
         </div>
       )}
 
@@ -558,8 +558,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           <button type="button" className="btn btn-sm" onClick={showPolicy}>See the decision</button>
         </div>
       )}
-      {step.status === "failed" && following && !reused && step.cause && step.cause.kind !== "script_exit" && step.cause.kind !== "other" && (
-        <div className="callout callout-bad"><StepCauseView cause={step.cause} /></div>
+      {step.status === "failed" && following && !reused && !excerptInPanel && step.cause && step.cause.kind !== "script_exit" && step.cause.kind !== "other" && (
+        <div className="callout callout-bad"><StepCauseView cause={step.cause} summary={!excerptInPanel} evidence={!excerptInPanel} /></div>
       )}
       {step.status === "failed" && following && step.kind !== "verify" && !(step.cause && step.cause.kind !== "script_exit" && step.cause.kind !== "other") && ((step.excerpt && !excerptInPanel) || (step.error && !/^exit code \d+$/.test(step.error))) && (
         <div className="callout callout-bad">
