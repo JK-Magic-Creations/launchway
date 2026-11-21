@@ -124,6 +124,7 @@ database's URL is never a stored value: the servers build it from the Secret tha
 
 {{/* Checks that run on every render. */}}
 {{- define "launchway.validate" -}}
+{{- include "launchway.validateKnownValues" . -}}
 {{- if and (not .Values.database.url) (not .Values.database.existingSecret) (not .Values.postgresql.enabled) -}}
 {{- fail "\n\nLaunchway needs a PostgreSQL database shared by all servers. Either leave postgresql.enabled=true (the chart runs one), or set database.existingSecret (a Secret holding a postgres:// URL) or database.url.\nWithout one, each server would keep its own SQLite file and they would not agree.\n" -}}
 {{- end -}}

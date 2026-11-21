@@ -49,3 +49,14 @@ func mustRead(t *testing.T, p string) []byte {
 	}
 	return b
 }
+
+func TestIgnoredValuesNotice(t *testing.T) {
+	env := func(v string) func(string) string { return func(string) string { return v } }
+	if IgnoredValuesNotice(env("")) != "" {
+		t.Fatal("none ignored must say nothing")
+	}
+	m := IgnoredValuesNotice(env("networkPolicy.x,typo,a.b"))
+	if !strings.Contains(m, "3 values were ignored by this chart version: networkPolicy.x, typo, a.b: a typo, or a setting for a newer chart") {
+		t.Fatal(m)
+	}
+}

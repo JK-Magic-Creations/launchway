@@ -26,6 +26,18 @@
 # =============================================================================================
 
 # ---------------------------------------------------------------------------------------------
+# VALUES THIS CHART DOES NOT KNOW. A key that is not in this chart's values (a typo, or a setting
+# only a newer chart has) does NOT stop the render: it is ignored, listed in the NOTES, in the
+# Deployment's annotation launchway.io/ignored-values and in LAUNCHWAY_IGNORED_VALUES, and the
+# server and `launchway doctor` say so. That is what lets you prepare a value ahead of an upgrade
+# and roll the chart back without editing the values. Values it does know keep their types.
+#   strictValues: false   (default) unknown keys are reported, not fatal. Use it for GitOps.
+#   strictValues: true    unknown keys fail the render. Use it in `helm lint`, in CI of your own
+#                         values, and while you are typing them (`launchway install` does).
+# ---------------------------------------------------------------------------------------------
+strictValues: false
+
+# ---------------------------------------------------------------------------------------------
 # The shared PostgreSQL database. Every server must use the same one. Choose ONE:
 #   - nothing (default): the chart runs a PostgreSQL of its own, postgresql.* below;
 #   - database.url or database.existingSecret: your own (managed or operator-run). The bundled

@@ -42,3 +42,26 @@ func ChartNotice(getenv func(string) string, inKubernetes bool) (msg string, war
 	}
 	return fmt.Sprintf("rendered by chart revision %d, as this server expects", n), false
 }
+
+// EnvIgnoredValues is set by the chart (comma-separated dotted keys) when the values file held keys
+// this chart version does not know.
+const EnvIgnoredValues = "LAUNCHWAY_IGNORED_VALUES"
+
+// IgnoredValuesNotice says which values the chart ignored, as one plain sentence; empty when none.
+func IgnoredValuesNotice(getenv func(string) string) string {
+	var keys []string
+	for _, k := range strings.Split(getenv(EnvIgnoredValues), ",") {
+		if k = strings.TrimSpace(k); k != "" {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return ""
+	}
+	noun := "values were"
+	if len(keys) == 1 {
+		noun = "value was"
+	}
+	return fmt.Sprintf("%d %s ignored by this chart version: %s: a typo, or a setting for a newer chart. They change nothing here; fix the name or remove them (strictValues: true makes the chart refuse them)",
+		len(keys), noun, strings.Join(keys, ", "))
+}

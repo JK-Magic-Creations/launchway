@@ -138,3 +138,12 @@ func SortedKeys(m map[string]string) []string {
 	sort.Strings(ks)
 	return ks
 }
+
+// RenderValues are the values the installer renders its own preview with: strict, so a key the
+// chart does not know fails here. The values FILE it writes (and the GitOps manifests) leave
+// strictValues out, so the same file still renders under an older chart after a rollback.
+func (s Settings) RenderValues() map[string]any {
+	v := s.Values()
+	v["strictValues"] = true
+	return v
+}

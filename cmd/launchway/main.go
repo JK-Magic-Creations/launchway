@@ -905,4 +905,7 @@ func logChartNotice(log *slog.Logger) {
 	default:
 		log.Info(msg, "binary_version", version)
 	}
+	if m := config.IgnoredValuesNotice(os.Getenv); m != "" {
+		log.Warn(m)
+	}
 }

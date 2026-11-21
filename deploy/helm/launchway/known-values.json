@@ -1,0 +1,428 @@
+{
+  "ai": {
+    "models": true,
+    "serverSecretStores": true
+  },
+  "bootstrap": {
+    "activeDeadlineSeconds": true,
+    "nodeSelector": true,
+    "resources": {
+      "limits": true,
+      "requests": true
+    },
+    "tolerations": true
+  },
+  "commonLabels": true,
+  "config": {
+    "artifacts": {
+      "database": {
+        "maxBlobMiB": true,
+        "maxTotalGiB": true
+      },
+      "maxFileMiB": true,
+      "maxProjectGiB": true,
+      "maxRetain": true,
+      "maxRunMiB": true,
+      "retain": true,
+      "s3": {
+        "bucket": true,
+        "endpoint": true,
+        "existingSecret": true,
+        "pathStyle": true,
+        "prefix": true,
+        "region": true
+      },
+      "store": true
+    },
+    "automation": {
+      "accounts": true
+    },
+    "extraConfig": true,
+    "findings": {
+      "maxComponentsPerProject": true,
+      "maxComponentsPerRun": true,
+      "maxPerProject": true,
+      "maxPerRun": true,
+      "maxSbomMiB": true,
+      "maxUploadMiB": true
+    },
+    "listen": true,
+    "loops": {
+      "maxMembers": true
+    },
+    "mcp": {
+      "allowedOrigins": true,
+      "concurrent": true,
+      "enabled": true,
+      "oauth": {
+        "resource": true,
+        "scopes": true
+      },
+      "requestsPerMinute": true,
+      "total": true
+    },
+    "notifications": {
+      "channels": true,
+      "rules": true
+    },
+    "policy": {
+      "policies": true,
+      "sources": true,
+      "waivers": {
+        "allow": true,
+        "maxDays": true
+      }
+    },
+    "projects": true,
+    "pullRequests": {
+      "untrusted": true
+    },
+    "queues": {
+      "automationRuns": true,
+      "manualRuns": true,
+      "maxWait": true,
+      "pipelineRuns": true,
+      "pullRequestRuns": true,
+      "pushRuns": true,
+      "runs": true,
+      "scheduleRuns": true,
+      "supersedePullRequests": true
+    },
+    "reports": {
+      "maxAttachmentFiles": true,
+      "maxAttachmentMiB": true,
+      "maxCoverageFilesPerProject": true,
+      "maxCoverageFilesPerRun": true,
+      "maxCoverageUploadMiB": true,
+      "maxHtmlFiles": true,
+      "maxHtmlMiB": true,
+      "origin": true
+    },
+    "runnerAdmin": true,
+    "runnerPools": true,
+    "schedules": {
+      "enabled": true
+    },
+    "tests": {
+      "maxCasesPerProject": true,
+      "maxCasesPerRun": true,
+      "maxUploadMiB": true
+    },
+    "tokens": {
+      "maxDays": true
+    }
+  },
+  "database": {
+    "existingSecret": true,
+    "existingSecretKey": true,
+    "url": true
+  },
+  "delivery": {
+    "deployRunner": {
+      "accept": true,
+      "admissionPolicy": {
+        "enabled": true
+      },
+      "ai": true,
+      "applications": true,
+      "argocdNamespace": true,
+      "enabled": true,
+      "extraEnv": true,
+      "extraVolumeMounts": true,
+      "extraVolumes": true,
+      "healthPort": true,
+      "nodeSelector": true,
+      "podAnnotations": true,
+      "poolToken": {
+        "existingSecret": true,
+        "existingSecretKey": true
+      },
+      "rbac": {
+        "controlRollouts": true,
+        "create": true,
+        "patchApplications": true,
+        "readDeployments": true,
+        "readPods": true
+      },
+      "refresh": true,
+      "replicas": true,
+      "repos": true,
+      "resources": {
+        "limits": true,
+        "requests": true
+      },
+      "rolloutNamespaces": true,
+      "secretStores": true,
+      "target": true,
+      "tolerations": true
+    },
+    "environments": true,
+    "verification": {
+      "sources": true
+    }
+  },
+  "encryption": {
+    "env": {
+      "existingSecret": true,
+      "existingSecretKey": true
+    },
+    "holder": true,
+    "keyFile": {
+      "existingSecret": true,
+      "existingSecretKey": true,
+      "generate": true
+    },
+    "passphrase": {
+      "keystoreSecret": true,
+      "keystoreSecretKey": true,
+      "passphraseSecret": true,
+      "passphraseSecretKey": true
+    },
+    "previousKey": {
+      "existingSecret": true,
+      "existingSecretKey": true
+    },
+    "transit": {
+      "address": true,
+      "authPath": true,
+      "caSecret": true,
+      "key": true,
+      "mount": true,
+      "namespace": true,
+      "role": true,
+      "tokenSecret": true,
+      "tokenSecretKey": true
+    }
+  },
+  "externalURL": true,
+  "fullnameOverride": true,
+  "httpRoute": {
+    "annotations": true,
+    "enabled": true,
+    "hostnames": true,
+    "parentRefs": true
+  },
+  "image": {
+    "digest": true,
+    "pullPolicy": true,
+    "repository": true,
+    "tag": true
+  },
+  "imagePullSecrets": true,
+  "ingress": {
+    "annotations": true,
+    "className": true,
+    "enabled": true,
+    "hosts": true,
+    "tls": true
+  },
+  "nameOverride": true,
+  "networkPolicy": {
+    "database": {
+      "cidrs": true,
+      "port": true
+    },
+    "deployRunner": {
+      "extraEgress": true
+    },
+    "dns": {
+      "enabled": true,
+      "namespace": true,
+      "podLabels": true
+    },
+    "enabled": true,
+    "runner": {
+      "extraEgress": true,
+      "kubernetesAPI": {
+        "cidrs": true,
+        "ports": true
+      }
+    },
+    "server": {
+      "extraEgress": true,
+      "ingressFrom": true,
+      "publicHTTPS": {
+        "allowIPv6": true,
+        "enabled": true,
+        "exceptCIDRs": true,
+        "ports": true
+      }
+    },
+    "steps": {
+      "allowIPv6": true,
+      "enabled": true,
+      "exceptCIDRs": true,
+      "extraEgress": true,
+      "internet": true,
+      "ports": true
+    }
+  },
+  "podSecurityContext": true,
+  "postgresql": {
+    "database": true,
+    "enabled": true,
+    "image": {
+      "pullPolicy": true,
+      "repository": true,
+      "tag": true
+    },
+    "password": true,
+    "persistence": {
+      "size": true,
+      "storageClass": true
+    },
+    "resources": {
+      "limits": true,
+      "requests": true
+    },
+    "username": true
+  },
+  "runner": {
+    "accept": true,
+    "affinity": true,
+    "ai": true,
+    "concurrency": true,
+    "dataVolume": {
+      "sizeLimit": true
+    },
+    "enabled": true,
+    "extraArgs": true,
+    "extraEnv": true,
+    "extraVolumeMounts": true,
+    "extraVolumes": true,
+    "healthPort": true,
+    "images": {
+      "builders": true,
+      "maxContextMiB": true,
+      "maxImageMiB": true,
+      "registries": true,
+      "scanner": {
+        "dbRepository": true,
+        "image": true,
+        "javaDBRepository": true
+      },
+      "signingSecret": true,
+      "tlsSecret": true
+    },
+    "join": {
+      "existingSecret": true,
+      "existingSecretKey": true
+    },
+    "kubernetes": {
+      "cpu": true,
+      "createNamespace": true,
+      "helperImage": true,
+      "imagePullSecrets": true,
+      "keepFailed": true,
+      "maxCpu": true,
+      "maxMemory": true,
+      "maxPodAge": true,
+      "memory": true,
+      "memoryLimit": true,
+      "namespace": true,
+      "namespaceLabels": true,
+      "nodeSelector": true,
+      "restricted": true,
+      "runAsGroup": true,
+      "runAsUser": true,
+      "serviceAccount": true,
+      "startTimeout": true
+    },
+    "labels": true,
+    "livenessProbe": true,
+    "nodeSelector": true,
+    "podAnnotations": true,
+    "podDisruptionBudget": {
+      "enabled": true,
+      "maxUnavailable": true
+    },
+    "podLabels": true,
+    "priorityClassName": true,
+    "rbac": {
+      "create": true
+    },
+    "readinessProbe": true,
+    "replicas": true,
+    "reports": {
+      "maxFileMiB": true,
+      "maxFiles": true,
+      "maxTotalMiB": true
+    },
+    "resources": {
+      "limits": true,
+      "requests": true
+    },
+    "secretStores": true,
+    "serverURL": true,
+    "serviceAccount": {
+      "annotations": true,
+      "create": true,
+      "name": true
+    },
+    "spreadAcrossNodes": true,
+    "terminationGracePeriodSeconds": true,
+    "tolerations": true,
+    "topologySpreadConstraints": true
+  },
+  "runnerToken": {
+    "existingSecret": true,
+    "existingSecretKey": true
+  },
+  "securityContext": true,
+  "server": {
+    "affinity": true,
+    "dataVolume": {
+      "sizeLimit": true
+    },
+    "extraEnv": true,
+    "extraVolumeMounts": true,
+    "extraVolumes": true,
+    "livenessProbe": true,
+    "nodeSelector": true,
+    "podAnnotations": true,
+    "podDisruptionBudget": {
+      "enabled": true,
+      "maxUnavailable": true
+    },
+    "podLabels": true,
+    "preStopSleepSeconds": true,
+    "priorityClassName": true,
+    "readinessProbe": true,
+    "replicas": true,
+    "resources": {
+      "limits": true,
+      "requests": true
+    },
+    "serviceAccount": {
+      "annotations": true,
+      "create": true,
+      "name": true
+    },
+    "spreadAcrossNodes": true,
+    "startupProbe": true,
+    "strategy": {
+      "rollingUpdate": {
+        "maxSurge": true,
+        "maxUnavailable": true
+      }
+    },
+    "terminationGracePeriodSeconds": true,
+    "tolerations": true,
+    "topologySpreadConstraints": true
+  },
+  "service": {
+    "annotations": true,
+    "port": true,
+    "type": true
+  },
+  "ssh": {
+    "enabled": true,
+    "port": true,
+    "service": {
+      "annotations": true,
+      "port": true,
+      "type": true
+    }
+  },
+  "strictValues": true
+}

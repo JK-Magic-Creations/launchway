@@ -10,3 +10,9 @@
 4. Follow the setup guide in the browser.
 {{- end }}
 5. KEEP the root key: Secret {{ include "launchway.rootKeySecretName" . }} is NOT deleted by `helm uninstall` and is the only way to read the installation's secrets; copy it somewhere safe (docs/guide/encryption-at-rest.md).
+
+{{- with include "launchway.ignoredValues" . }}
+
+WARNING: {{ splitList "," . | len }} value(s) in your values file were ignored by this chart version ({{ $.Chart.Version }}, app {{ $.Chart.AppVersion }}): {{ replace "," ", " . }}.
+A typo, or a setting for a newer chart. Set strictValues: true to make this an error while you edit.
+{{- end }}

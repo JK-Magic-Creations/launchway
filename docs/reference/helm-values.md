@@ -132,6 +132,7 @@ runner:
 | Value | Type | Default | Description |
 |---|---|---|---|
 | `externalURL` | string | none (required for built-in accounts, `ingress` and `httpRoute`) | The address people open: `https://` or `http://`, a host, optional port, no path. Names the ingress and route host, is passed to the servers as `LAUNCHWAY_EXTERNAL_URL` and is shown in the install notes |
+| `strictValues` | bool | `false` | `false`: a values key this chart version does not know is ignored and listed (in the install notes, the server's start-up warning, `launchway doctor` and the Deployment annotation `launchway.io/ignored-values`), so values prepared for a newer chart still render after a rollback. `true`: such a key fails the render, which catches typos. `make chart-lint` and `launchway install` use `true`; use `false` for GitOps |
 | `nameOverride` | string | `""` | Overrides the chart name in resource names |
 | `fullnameOverride` | string | `""` | Overrides the full resource name prefix; default `<release>-launchway` |
 | `commonLabels` | map | `{}` | Labels added to every resource the chart creates |

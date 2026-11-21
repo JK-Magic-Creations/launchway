@@ -415,7 +415,7 @@ func (in *Installer) execute(ctx context.Context, e *installer.Env, a *installer
 		return res, err
 	}
 	st.values = valuesPath
-	rendered, err := Render(chart, s.Values(), s.Release, s.Namespace, Caps{KubeVersion: st.facts.ServerVersion, APIVersions: st.facts.APIVersions})
+	rendered, err := Render(chart, s.RenderValues(), s.Release, s.Namespace, Caps{KubeVersion: st.facts.ServerVersion, APIVersions: st.facts.APIVersions})
 	if err != nil {
 		return res, err
 	}
@@ -548,7 +548,7 @@ func (in *Installer) waitRetry(ctx context.Context, e *installer.Env, a *install
 			if cerr != nil {
 				return cerr
 			}
-			r, rerr := Render(chart, st.s.Values(), st.s.Release, st.s.Namespace, Caps{KubeVersion: st.facts.ServerVersion, APIVersions: st.facts.APIVersions})
+			r, rerr := Render(chart, st.s.RenderValues(), st.s.Release, st.s.Namespace, Caps{KubeVersion: st.facts.ServerVersion, APIVersions: st.facts.APIVersions})
 			if rerr != nil {
 				return rerr
 			}

@@ -23,6 +23,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+  {{- with include "launchway.ignoredValues" . }}
+  annotations:
+    launchway.io/ignored-values: {{ . | quote }}
+  {{- end }}
 spec:
   replicas: {{ .Values.server.replicas }}
   revisionHistoryLimit: 5

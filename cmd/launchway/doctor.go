@@ -156,6 +156,12 @@ func cmdDoctor(args []string) error {
 		}
 	}
 	if section == "" {
+		if m := config.IgnoredValuesNotice(os.Getenv); m != "" {
+			fmt.Println("Chart values: WARNING " + m)
+		}
+		if m, warn := config.ChartNotice(os.Getenv, os.Getenv("KUBERNETES_SERVICE_HOST") != ""); warn {
+			fmt.Println("Chart: WARNING " + m)
+		}
 		for _, l := range signInFinding(cfg) {
 			fmt.Println(l)
 		}

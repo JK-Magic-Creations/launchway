@@ -210,7 +210,30 @@ func TestRunnerChartSchema(t *testing.T) {
 		}
 		return s
 	}
-	m, r := load(mainChart+"/values.schema.json"), load(runnerChart+"/values.schema.json")
+	// The main chart's schema is open (unknown keys are reported by its templates, so a rollback can
+	// render); the runner chart's stays closed. Compare them as if both were closed.
+	var closed func(v any) any
+	closed = func(v any) any {
+		switch x := v.(type) {
+		case map[string]any:
+			out := map[string]any{}
+			for k, e := range x {
+				if k == "additionalProperties" && e == false {
+					continue
+				}
+				out[k] = closed(e)
+			}
+			return out
+		case []any:
+			out := make([]any, len(x))
+			for i, e := range x {
+				out[i] = closed(e)
+			}
+			return out
+		}
+		return v
+	}
+	m, r := closed(load(mainChart+"/values.schema.json")).(map[string]any), closed(load(runnerChart+"/values.schema.json")).(map[string]any)
 	mp, rp := m["properties"].(map[string]any), r["properties"].(map[string]any)
 	mr := mp["runner"].(map[string]any)["properties"].(map[string]any)
 	rr := rp["runner"].(map[string]any)["properties"].(map[string]any)

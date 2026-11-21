@@ -40,8 +40,8 @@ image:
 # Checks the Helm charts in deploy/helm: lint, example renders, and that the server chart renders
 # the same every time with no Secret material (scripts/chart-determinism.sh).
 chart-lint: charts-sync
-	helm lint deploy/helm/launchway --set externalURL=https://launchway.example.com
-	helm template t deploy/helm/launchway -f deploy/helm/launchway/examples/ha.yaml >/dev/null
+	helm lint deploy/helm/launchway --set externalURL=https://launchway.example.com --set strictValues=true
+	helm template t deploy/helm/launchway -f deploy/helm/launchway/examples/ha.yaml --set strictValues=true >/dev/null
 	scripts/chart-determinism.sh
 	helm lint deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml
 	helm template t deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml -f deploy/helm/launchway-runner/examples/networkpolicy.yaml >/dev/null
