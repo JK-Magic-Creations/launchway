@@ -94,7 +94,7 @@ repacks mixed in) ran as two runs of 600 rounds on candidate B with the filesyst
 property held at the end and every 40 rounds, with no acknowledged push lost. Candidate A, 600 rounds
 (543 injected): every property held too (the node-loss case is separate, above). The database blob store
 shares the code and ran the smaller campaigns of the test suite; the PostgreSQL run is the 100-round race
-only (the repository gives no more PostgreSQL time to this suite).
+only (run before the instruction to run no more PostgreSQL suites).
 
 ### Latency and storage (200 MB large repository, SQLite, quiet machine)
 
