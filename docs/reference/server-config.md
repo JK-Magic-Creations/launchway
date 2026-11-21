@@ -525,7 +525,7 @@ Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` mean
 
 ## Airfields {#environments}
 
-`environments` lists where [launch (deploy) steps](pipeline.md#kind-launch) may deploy. Without any, deploy
+`environments` lists where [launch (deploy) steps](pipeline.md#kind-deploy) may deploy. Without any, deploy
 steps are refused. Checked when the server starts.
 
 <!-- keys: server -->
