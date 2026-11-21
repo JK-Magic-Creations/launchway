@@ -51,7 +51,7 @@ export function HostingStep({ step, kubernetes, onChange }: { step: GuideStep; k
       {step.state !== "done" && <Unavailable action={on} />}
       {saved && (
         <div className="callout callout-info" role="status">
-          Saved. A restart is needed: this server reads the setting only when it starts. {kubernetes ? <>Restart it with <code>kubectl rollout restart deploy -l app.kubernetes.io/component=server</code> in the Launchway namespace.</> : <>Restart the service (<code>systemctl restart launchway</code>) or run the server again.</>} Then come back to this step.
+          Saved. A restart is needed: this server reads the setting only when it starts. {kubernetes ? <>In the Launchway namespace, roll the pods with <code>kubectl rollout restart deploy -l app.kubernetes.io/component=server</code>.</> : <>Restart the service (<code>systemctl restart launchway</code>) or start the program again.</>} Then come back to this step.
         </div>
       )}
       {err && <div className="callout callout-bad" role="alert">{err}</div>}
