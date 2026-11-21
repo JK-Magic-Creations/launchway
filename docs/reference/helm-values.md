@@ -76,7 +76,7 @@ modified afterwards:
 
 **The root key Secret is kept when you uninstall.** It is not owned by Helm, so `helm uninstall` and a GitOps
 prune leave it (and the other Secrets) in place; without it, a restored database's secrets cannot be read.
-Copy it somewhere safe (see [encryption at rest](../guide/encryption-at-rest.md)). The hook's ServiceAccount, Role,
+Copy it somewhere safe (see encryption at rest (`docs/guide/encryption-at-rest.md`, from the encryption work)). The hook's ServiceAccount, Role,
 RoleBinding and NetworkPolicy are hooks too and also remain; remove them with
 `kubectl -n NS delete serviceaccount,role,rolebinding,networkpolicy -l app.kubernetes.io/component=bootstrap`
 when you remove the installation for good, and delete the Secrets only when you mean to destroy its data.
@@ -423,7 +423,7 @@ trial. It is not highly available. For production at scale use a managed or oper
 ## Encryption at rest
 
 Every secret the server stores is sealed under a root key that is not in the database. The servers refuse to start
-without one. See [encryption at rest](../guide/encryption-at-rest.md) for the holders and for rotating the key.
+without one. See encryption at rest (`docs/guide/encryption-at-rest.md`, from the encryption work) for the holders and for rotating the key.
 
 <!-- keys: helm -->
 | Value | Type | Default | Description |

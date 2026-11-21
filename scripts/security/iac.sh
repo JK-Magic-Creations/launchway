@@ -13,7 +13,9 @@ command -v helm >/dev/null 2>&1 || { echo "iac: needs helm" >&2; exit 2; }
 out="$(mktemp -d)"; chmod 755 "$out"; trap 'rm -rf "$out"' EXIT
 mkdir "$out/rendered"
 scripts/charts-sync.sh --check
-helm template t deploy/helm/launchway --set postgresql.enabled=true > "$out/rendered/server-default.yaml"
+helm template t deploy/helm/launchway --set externalURL=https://launchway.example.com > "$out/rendered/server-default.yaml"
+helm template t deploy/helm/launchway --set externalURL=https://launchway.example.com --set ingress.enabled=true \
+  --set httpRoute.enabled=true --set httpRoute.parentRefs[0].name=gateway > "$out/rendered/server-published.yaml"
 helm template t deploy/helm/launchway -f deploy/helm/launchway/examples/ha.yaml > "$out/rendered/server-ha.yaml"
 helm template t deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml \
   -f deploy/helm/launchway-runner/examples/networkpolicy.yaml > "$out/rendered/runner-remote.yaml"

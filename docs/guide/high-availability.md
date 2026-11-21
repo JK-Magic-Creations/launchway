@@ -55,7 +55,7 @@ namespace of your choice:
 
 ```sh
 helm install launchway deploy/helm/launchway -n launchway --create-namespace \
-  --set database.existingSecret=launchway-database
+  --set externalURL=https://launchway.example.com --set database.existingSecret=launchway-database
 ```
 
 See [deploy/README.md](https://github.com/JK-Magic-Creations/launchway/blob/main/deploy/README.md) for the required values, a high-availability example,

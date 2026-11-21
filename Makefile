@@ -37,10 +37,12 @@ image:
 	$(CONTAINER) build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) \
 		--build-arg CREATED=$(CREATED) --build-arg SOURCE=$(SOURCE_REPOSITORY) -t $(IMAGE) .
 
-# Checks the Helm charts in deploy/helm.
+# Checks the Helm charts in deploy/helm: lint, example renders, and that the server chart renders
+# the same every time with no Secret material (scripts/chart-determinism.sh).
 chart-lint: charts-sync
-	helm lint deploy/helm/launchway --set postgresql.enabled=true
+	helm lint deploy/helm/launchway --set externalURL=https://launchway.example.com
 	helm template t deploy/helm/launchway -f deploy/helm/launchway/examples/ha.yaml >/dev/null
+	scripts/chart-determinism.sh
 	helm lint deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml
 	helm template t deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml -f deploy/helm/launchway-runner/examples/networkpolicy.yaml >/dev/null
 	helm template t deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/deploy-runner.yaml >/dev/null
@@ -232,7 +234,7 @@ license-check: tools
 # shellcheck on the packaging, release and test scripts (installed, or in a container).
 SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
 SHELL_SCRIPTS = $(shell git ls-files -co --exclude-standard 'packaging/*.sh' 'deploy/test/install/*.sh' \
-	'deploy/test/runner-chart/*.sh' 'deploy/test/bundle/*.sh' 'scripts/charts-sync.sh')
+	'deploy/test/runner-chart/*.sh' 'deploy/test/bundle/*.sh' 'scripts/charts-sync.sh' 'scripts/chart-determinism.sh')
 lint-scripts:
 	if command -v shellcheck >/dev/null 2>&1; then shellcheck $(SHELL_SCRIPTS); \
 	else $(CONTAINER) run --rm --security-opt label=disable -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) $(SHELL_SCRIPTS); fi

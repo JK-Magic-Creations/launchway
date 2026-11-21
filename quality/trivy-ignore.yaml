@@ -18,6 +18,6 @@ misconfigurations:
   # cluster-wide. Removing the need (an init container that fetches the script, then plain log
   # streaming) is on the security backlog (design doc 53, story "runner without pods/exec").
   - id: KSV-0053
-    paths: [server-default.yaml, server-ha.yaml, runner-remote.yaml, runner-deploy.yaml]
+    paths: [server-default.yaml, server-published.yaml, server-ha.yaml, runner-remote.yaml, runner-deploy.yaml]
     statement: "step-namespace Role for the Kubernetes executor; see the comment above"
     expired_at: 2027-05-21
