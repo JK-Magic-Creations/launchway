@@ -302,6 +302,7 @@ curl -s -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/approvals` | `signed-in` | — | Approval steps waiting for a decision, in the projects the caller may see. |
+| `GET /api/v1/notifications` | `signed-in` | — | The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read. `limit` (at most 500). |
 | `POST /api/v1/runs/{id}/steps/{step}/approve` | `run-operator` | `approval.approve` | Approves a waiting approval step. |
 | `POST /api/v1/runs/{id}/steps/{step}/reject` | `run-operator` | `approval.reject` | Rejects it. |
 
@@ -814,6 +815,7 @@ In outline, a runner long-polls for work (`lease`), says the step started (`star
 | `POST /api/runner/v1/deploy/commands` | `runner` | — | A deploy runner waits for people's deployment commands. |
 | `POST /api/runner/v1/deploy/command-done` | `runner` | — | A deploy runner reports how a command went. |
 | `POST /api/runner/v1/deploy/verify/lease` | `runner` | — | A deploy runner waits for a verification of its targets to run. |
+| `POST /api/runner/v1/deploy/pull-request` | `runner` | — | A deploy runner opens, or asks about, the pull request of a deployment that writes back by pull request, with the deploy credential the server gave it for that deployment. |
 | `POST /api/runner/v1/deploy/verify/interval` | `runner` | — | A deploy runner reports one interval's readings of a verification; the answer says whether to go on. |
 | `POST /api/runner/v2/join` | `public` | — | A runner enrols with a join token: `{"join_token", "public_key", "proof", "hostname", "facts"}`. Answers its `runner_id`, pool, kind and labels. The join token is checked in the handler; refusals are audited as `runner.refused`. |
 | `POST /api/runner/v2/token` | `public` | — | An enrolled runner gets an access token (valid 15 minutes) for an assertion it signed with its key (valid 60 seconds, accepted once). A revoked or unknown runner, or a bad assertion, answers `401`; a skewed clock answers `401` with `server_time` and `skew: true`. |

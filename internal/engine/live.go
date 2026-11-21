@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/notify"
 
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/policy"
@@ -32,6 +33,8 @@ type LiveOptions struct {
 	Models        *ai.Registry
 	RunnerPools   []RunnerPool
 	Queues        QueueSettings
+	// Notifications are the notification channels and rules (schema 38).
+	Notifications notify.Config
 }
 
 // Live returns the options' live part.
@@ -57,6 +60,7 @@ type liveConfig struct {
 	models    *ai.Registry
 	pools     map[string]RunnerPool
 	queues    QueueSettings
+	notify    notify.Config
 }
 
 // live returns the configuration in force.
@@ -102,6 +106,9 @@ func buildLive(o LiveOptions, known int) (*liveConfig, error) {
 	if (len(pol.Inline) > 0 || len(pol.Sources) > 0) && known < schemaPolicy {
 		return nil, fmt.Errorf("policies need schema %d; this build knows %d", schemaPolicy, known)
 	}
+	if err := o.Notifications.Check(); err != nil {
+		return nil, err
+	}
 	pools, err := checkPools(o.RunnerPools)
 	if err != nil {
 		return nil, err
@@ -117,7 +124,7 @@ func buildLive(o LiveOptions, known int) (*liveConfig, error) {
 	return &liveConfig{
 		selfOK: o.AllowSelfApproval == nil || *o.AllowSelfApproval, emergency: o.EmergencyRollback,
 		tests: tests, finds: finds, reps: reps, arts: arts,
-		envs: envs, pol: pol, polHash: policy.Hash(pol.Inline), sources: sources, models: o.Models, pools: pools, queues: o.Queues,
+		envs: envs, pol: pol, polHash: policy.Hash(pol.Inline), sources: sources, models: o.Models, pools: pools, queues: o.Queues, notify: o.Notifications,
 	}, nil
 }
 

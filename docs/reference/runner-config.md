@@ -386,6 +386,7 @@ Kubernetes API with its own identity, and runs no other steps. Its token must be
 | `deploy.repos.<name>.credentials.key` | text | | |
 | `deploy.repos.<name>.credentials.field` | text | | |
 | `deploy.repos.<name>.username` | text | `launchway` | The user name sent with the credentials |
+| `deploy.repos.<name>.hosted` | boolean | `false` | The repository is hosted by Launchway and `url` is its address. Deploy steps then write with their own credential, which the server gives each deployment (the environment's `write_back`), and never with a stored one; `credentials`, if any, only read. A hosted repository needs the environment's `write_back`, and `write_back` needs `hosted: true` |
 | `deploy.repos.<name>.paths[].projects` | list of patterns | required | Projects a rule allows |
 | `deploy.repos.<name>.paths[].files` | list of patterns | required | Files they may change; `**` matches any number of directories. At least one rule is required |
 | `deploy.repos.<name>.author.name` | text | `Launchway` | The commits' author |
@@ -424,8 +425,8 @@ Credentials are only secret references, read from the runner's own stores for ea
 <!-- keys: runner -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `health_sources.<name>.type` | text | required | `prometheus` (also Thanos, Mimir, VictoriaMetrics), `loki`, `clickhouse`, `elasticsearch` or `opensearch`, `postgres` or `http` |
-| `health_sources.<name>.url` | URL | required | The base URL. For `postgres`, a `postgres://` URL without a password |
+| `health_sources.<name>.type` | text | required | `prometheus` (also Thanos, Mimir, VictoriaMetrics), `loki`, `clickhouse`, `elasticsearch` or `opensearch`, `postgres`, `http`, or `check` (the deploy runner's own health calls) |
+| `health_sources.<name>.url` | URL | required (not for `check`) | The base URL. For `postgres`, a `postgres://` URL without a password |
 | `health_sources.<name>.projects` | list of patterns | none: allows no project | The projects that may use the source |
 | `health_sources.<name>.auth.type` | text | | `bearer`, `basic` or `header`. For `clickhouse` and `postgres` it may be left out: the user and the secret are the database account |
 | `health_sources.<name>.auth.user` | text | | The user name, for `basic` and the databases |
@@ -443,6 +444,9 @@ Credentials are only secret references, read from the runner's own stores for ea
 | `health_sources.<name>.indices` | list of patterns | required for `elasticsearch` | The only indices pipelines may search |
 | `health_sources.<name>.time_field` | text | `@timestamp` | `elasticsearch`: the document's time |
 | `health_sources.<name>.message_field` | text | `message` | `elasticsearch`: the document's log line |
+| `health_sources.<name>.hosts` | list | none | `check` only: the hosts a pipeline's health check may call: names (`api.example.com`, `*.shop.svc.cluster.local`), addresses and ranges. An address literal must be inside a listed range |
+| `health_sources.<name>.namespaces` | list | none | `check` only: Kubernetes namespaces whose Services may be called as `<service>.<namespace>`, `.svc` or `.svc.cluster.local`. A `check` source needs `hosts` or `namespaces`; an empty list allows nothing |
+| `health_sources.<name>.allow_insecure_tls` | boolean | `false` | `check` only: lets a pipeline's check skip certificate verification |
 | `health_sources.<name>.statements.<name>.kind` | text | required | `metric` or `logs` |
 | `health_sources.<name>.statements.<name>.sql` | text | | `clickhouse` and `postgres`: the query. ClickHouse uses parameters such as `{service:String}`, with `{start:DateTime64(3)}` and `{end:DateTime64(3)}` always passed; PostgreSQL uses `{{name}}` placeholders, sent as typed parameters, with `{{start}}` and `{{end}}`. A metric returns `t` and `value` columns (or one `value`); logs return `message` and optionally `t` |
 | `health_sources.<name>.statements.<name>.path` | text | | `http`: the path added to the source's URL |

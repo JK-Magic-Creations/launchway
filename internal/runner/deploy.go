@@ -84,6 +84,9 @@ func (d *DeployRunner) Run(ctx context.Context) error {
 	if d.IdleEvery <= 0 {
 		d.IdleEvery = 30 * time.Second
 	}
+	if d.Agent != nil && d.Agent.Pulls == nil {
+		d.Agent.Pulls = d.Client
+	}
 	d.Log.Info("deploy runner started", "name", d.Info.Name, "targets", d.Info.Targets, "server", d.Client.Server)
 	var wg sync.WaitGroup
 	if d.Sources != nil {

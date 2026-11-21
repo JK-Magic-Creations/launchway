@@ -37,6 +37,7 @@ func (c *Config) EngineLive() (engine.LiveOptions, error) {
 	if err != nil {
 		return o, err
 	}
+	o.Notifications = c.Notifications
 	o.Environments = c.EngineEnvironments()
 	o.HealthSources = c.EngineHealthSources()
 	o.RunnerPools = EnginePools(pools)

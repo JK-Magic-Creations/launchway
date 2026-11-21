@@ -116,6 +116,10 @@ type Change struct {
 	Image  string `json:"image,omitempty"`
 	Tag    *Value `json:"tag,omitempty"`
 	Digest *Value `json:"digest,omitempty"`
+	// Format says which form an image change writes: tag, digest, or
+	// tag_and_digest (image:tag@sha256:..., readable and pinned). Without it
+	// the values given decide: both make tag_and_digest.
+	Format string `json:"format,omitempty"`
 	Set    string `json:"set,omitempty"`
 	Value  *Value `json:"value,omitempty"`
 	Line   int    `json:"-"`
@@ -272,7 +276,7 @@ var (
 	rollbackKeys = []string{"kind", "description", "needs", "timeout", "deployment", "abort_first"}
 	argocdKeys   = []string{"application", "write_back", "sync", "health"}
 	writeKeys    = []string{"repo", "branch", "changes"}
-	changeKeys   = []string{"file", "image", "tag", "digest", "set", "value"}
+	changeKeys   = []string{"file", "image", "tag", "digest", "format", "set", "value"}
 	syncKeys     = []string{"request", "resources", "prune", "windows"}
 	resourceKeys = []string{"group", "kind", "name", "namespace"}
 	rolloutKeys  = []string{"name", "namespace", "until", "pauses"}
@@ -366,6 +370,7 @@ func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step
 			key := v.Content[i]
 			switch {
 			case contains(known, key.Value):
+			case key.Value == "if" && ps.tmpl != nil: // a template's step may be left out by a parameter
 			case deployNotYet[key.Value] != "":
 				ps.add(key, at+"."+key.Value, "%q is not supported yet (%s)", key.Value, deployNotYet[key.Value])
 			case contains(loopKeys, key.Value):
@@ -568,7 +573,10 @@ func (ps *parser) parseWriteBack(n *yaml.Node, at string) *WriteBack {
 				ps.add(v, where, "at most %d changes", MaxChanges)
 			}
 			for i, c := range v.Content {
-				w.Changes = append(w.Changes, ps.parseChange(c, fmt.Sprintf("%s[%d]", where, i)))
+				c, keep := ps.entry(c, fmt.Sprintf("%s[%d]", where, i))
+				if keep {
+					w.Changes = append(w.Changes, ps.parseChange(c, fmt.Sprintf("%s[%d]", where, i)))
+				}
 			}
 		}
 	})
@@ -621,6 +629,8 @@ func (ps *parser) parseChange(n *yaml.Node, at string) Change {
 					ps.add(v, where, "%s", err)
 				}
 			}
+		case "format":
+			c.Format = ps.scalar(v, where)
 		case "set":
 			c.Set = ps.scalar(v, where)
 			if c.Set != "" {
@@ -645,8 +655,8 @@ func (ps *parser) parseChange(n *yaml.Node, at string) Change {
 	switch {
 	case image && set:
 		ps.add(n, at, "a change either sets an image's tag or digest (image and tag, or image and digest) or a value at a YAML path (set and value), not both")
-	case image && c.Tag != nil && c.Digest != nil:
-		ps.add(n, at, "give an image change a tag or a digest, not both: with a digest the reference becomes image@sha256:..., which pins it")
+	case image && !validChangeFormat(c):
+		ps.add(n, at, "format is %s, and tag_and_digest needs both a tag and a digest (tag needs a tag, digest a digest)", strings.Join(ChangeFormats, ", "))
 	case image && (c.Image == "" || (c.Tag == nil && c.Digest == nil)):
 		ps.add(n, at, "an image change needs image, and tag or digest")
 	case set && (c.Set == "" || c.Value == nil):
@@ -655,6 +665,36 @@ func (ps *parser) parseChange(n *yaml.Node, at string) Change {
 		ps.add(n, at, "say what to change: image and tag, or set and value")
 	}
 	return c
+}
+
+// ChangeFormats are the forms an image change may write.
+var ChangeFormats = []string{"tag", "digest", "tag_and_digest"}
+
+// ChangeForm is the form an image change writes.
+func (c Change) ChangeForm() string {
+	switch {
+	case c.Format != "":
+		return c.Format
+	case c.Tag != nil && c.Digest != nil:
+		return "tag_and_digest"
+	case c.Digest != nil:
+		return "digest"
+	}
+	return "tag"
+}
+
+func validChangeFormat(c Change) bool {
+	switch c.Format {
+	case "":
+		return true
+	case "tag":
+		return c.Tag != nil
+	case "digest":
+		return c.Digest != nil
+	case "tag_and_digest":
+		return c.Tag != nil && c.Digest != nil
+	}
+	return false
 }
 
 func cleanRelPath(p string) bool {

@@ -34,6 +34,9 @@ func addKeyTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "list_deploy_keys", Annotations: readOnly("List the deploy keys of a repository"),
 		Description: "The deploy keys of one repository (its administrators only): name, fingerprint, whether the key may push, expiry, last use."},
 		mcpCallTimeout, listDeployKeys)
+	addTool(srv, c, &mcp.Tool{Name: "list_notifications", Annotations: readOnly("List notifications"),
+		Description: "The log of notifications Launchway sent or tried to send (an approval waiting, a failed run or deployment, a rollback): channel, event, status (sent, pending a retry, or failed), attempts and why one failed. Never an address or key of a channel."},
+		mcpCallTimeout, listNotifications)
 	addTool(srv, c, &mcp.Tool{Name: "get_protected_branches", Annotations: readOnly("Get the protected branches of a repository"),
 		Description: "The branch names and patterns (such as main or release/*) that take no direct push except from the repository's administrators and cannot be deleted."},
 		mcpCallTimeout, getProtectedBranches)
@@ -188,7 +191,15 @@ func deleteDeployKey(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in
 }
 
 type protectedOut struct {
-	Patterns []string `json:"patterns"`
+	Patterns        []string         `json:"patterns"`
+	PipelineWriters []pipelineWriter `json:"pipeline_writers"`
+}
+
+// pipelineWriter admits a pipeline to a protected branch, for exactly some files.
+type pipelineWriter struct {
+	Branch   string   `json:"branch" jsonschema:"the protected branch or pattern the rule covers, such as main"`
+	Projects []string `json:"projects" jsonschema:"project names or patterns whose deploy steps are admitted, such as mcp-*"`
+	Files    []string `json:"files" jsonschema:"the files the pipeline may change, relative to the repository's root; ** matches any number of directories"`
 }
 
 func getProtectedBranches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in repositoryIn) (protectedOut, error) {
@@ -204,6 +215,8 @@ type setProtectedIn struct {
 	Owner    string   `json:"owner" jsonschema:"the repository's owner"`
 	Name     string   `json:"name" jsonschema:"the repository's name"`
 	Patterns []string `json:"patterns" jsonschema:"branch names or patterns such as main or release/*; an empty list removes the protection"`
+	// PipelineWriters replaces the rules that admit pipelines (deploy steps that write back to this repository); leave it out to keep them.
+	PipelineWriters *[]pipelineWriter `json:"pipeline_writers,omitempty" jsonschema:"rules that admit a deploy step's own credential to a protected branch for exactly the files it may write; leave out to keep the current rules, give an empty list to remove them"`
 }
 
 func setProtectedBranches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in setProtectedIn) (protectedOut, error) {
@@ -211,6 +224,6 @@ func setProtectedBranches(ctx context.Context, c *mcpCall, _ *mcp.CallToolReques
 		return protectedOut{}, errors.New("say which repository: owner and name")
 	}
 	var out protectedOut
-	err := c.apiJSON(ctx, "set_protected_branches", http.MethodPut, apiPath("/api/v1/repositories/%s/%s/protected-branches", in.Owner, in.Name), map[string]any{"patterns": in.Patterns}, &out)
+	err := c.apiJSON(ctx, "set_protected_branches", http.MethodPut, apiPath("/api/v1/repositories/%s/%s/protected-branches", in.Owner, in.Name), map[string]any{"patterns": in.Patterns, "pipeline_writers": in.PipelineWriters}, &out)
 	return out, err
 }

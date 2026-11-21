@@ -12,12 +12,15 @@ import (
 
 // Param is one parameter a template declares.
 type Param struct {
-	Name        string   `json:"name"`
-	Type        string   `json:"type"` // string, number, boolean, list, environment or application
-	Default     *string  `json:"default,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Options     []string `json:"options,omitempty"`
-	From        string   `json:"from,omitempty"` // the variable it takes (variables.go)
+	Name    string  `json:"name"`
+	Type    string  `json:"type"` // string, number, boolean, list, environment or application
+	Default *string `json:"default,omitempty"`
+	// DefaultFrom, instead of Default, takes the default from another
+	// parameter (see template_derive.go).
+	DefaultFrom *DefaultFrom `json:"default_from,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Options     []string     `json:"options,omitempty"`
+	From        string       `json:"from,omitempty"` // the variable it takes (variables.go)
 	// SecretReference says a step takes its secret reference's store, key or
 	// field from the parameter; set when templates are described.
 	SecretReference bool `json:"secret_reference,omitempty"`
@@ -101,6 +104,9 @@ func fillParams(params []*Param, values, with map[string]string, template string
 			}
 			continue
 		}
+		if p.DefaultFrom != nil {
+			continue // filled in below, once what it derives from is known
+		}
 		if p.Default == nil {
 			if _, given := with[p.Name]; !given {
 				ok = false
@@ -109,6 +115,16 @@ func fillParams(params []*Param, values, with map[string]string, template string
 			continue
 		}
 		values[p.Name] = *p.Default
+	}
+	for _, msg := range derive(params, values) {
+		ok = false
+		withProblem(usesLine, 0, "with", msg)
+	}
+	for _, p := range params {
+		if _, set := values[p.Name]; !set && p.DefaultFrom != nil {
+			ok = false
+			withProblem(usesLine, 0, "with."+p.Name, fmt.Sprintf("the default of %s is taken from %s, which has no value here: add one of them under with:", p.Name, p.DefaultFrom.Param))
+		}
 	}
 	return ok
 }

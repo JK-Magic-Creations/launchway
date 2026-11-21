@@ -487,6 +487,8 @@ func (s *Service) send(ctx context.Context, h Hook, d Delivery, secret string) (
 	req.Header.Set("User-Agent", s.o.UserAgent)
 	req.Header.Set("X-Launchway-Event", d.Event)
 	req.Header.Set("X-Launchway-Delivery", d.ID)
+	// GitHub's name for the event, for receivers written for its format.
+	req.Header.Set("X-GitHub-Event", d.Event)
 	if secret != "" {
 		sig := Sign(secret, d.Payload)
 		req.Header.Set("X-Launchway-Signature-256", sig)

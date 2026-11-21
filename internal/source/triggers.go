@@ -143,9 +143,7 @@ func (m *Manager) prepare(ctx context.Context, project string, pl *pipeline.Pipe
 // preview binds a pipeline for showing it: with the defaults, loops whose
 // values are not known standing aside.
 func (m *Manager) preview(pl *pipeline.Pipeline) (*pipeline.Pipeline, error) {
-	o := m.bindOptions()
-	o.Preview = true
-	return pipeline.Bind(pl, pipeline.PreviewValues(pl), o)
+	return pipeline.Preview(pl, m.bindOptions())
 }
 
 // StartRequest is a run started by a person.

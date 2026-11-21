@@ -511,6 +511,10 @@ steps are refused. Checked when the server starts.
 | `environments[].reviewers.users` | list of names | none | With `reviewers.groups`: who may acknowledge an emergency rollback of this environment; when neither is given, any operator of the project other than the person who asked for it (unless `approvals.allow_self` lets them) |
 | `environments[].reviewers.groups` | list of names | none | Groups whose members may acknowledge an emergency rollback of this environment |
 | `environments[].emergency_rollback` | `allow` or `require_approval` | the installation's | Overrides `approvals.emergency_rollback` for this environment |
+| `environments[].write_back.repo` | `owner/name` | none | A GitOps repository hosted by this Launchway that the environment's deploy steps write to with a credential of their own (nothing stored). Without `write_back` they use the deploy runner's configured credentials. See [GitOps write-back](../guide/gitops-write-back.md) |
+| `environments[].write_back.mode` | `direct` or `pull_request` | required with `write_back` | `direct`: the step pushes to the branch, and a pipeline writer rule of the repository admits its project for exactly the files it may write. `pull_request`: the step pushes a branch of its own and opens a pull request |
+| `environments[].write_back.merge` | `auto` or `person` | `auto` | `pull_request` only: `auto` merges the pull request itself as soon as the repository's merge rules are met; `person` waits for a person to merge it |
+| `environments[].write_back.method` | `merge`, `squash` or `rebase` | the repository's default | `pull_request` only: how the pull request is merged |
 | `environments[].min_approvals` | whole number | `0` | With `protected: true`: the fewest distinct approvals an approval step that guards a deployment here needs, 1 to 5, whatever its pipeline's `approvers.count` says |
 
 ## Runner pools
@@ -553,7 +557,7 @@ Unset, verify steps are refused.
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `verification.sources[].name` | name | required | What pipelines call the source |
-| `verification.sources[].type` | text | required | `prometheus`, `loki`, `clickhouse`, `elasticsearch`, `opensearch`, `postgres` or `http` |
+| `verification.sources[].type` | text | required | `prometheus`, `loki`, `clickhouse`, `elasticsearch`, `opensearch`, `postgres`, `http` or `check` |
 | `verification.sources[].projects` | list of patterns | none | The projects that may use it |
 
 ## AI models
@@ -690,3 +694,25 @@ policy:
   targets.
 - [Helm values](helm-values.md): the same settings when Launchway runs on Kubernetes.
 - [Back up, restore and upgrade](../howto/backup-restore-upgrade.md).
+
+## Notifications
+
+Who is told when an approval waits or something went wrong, and where. See [Notifications](../guide/notifications.md).
+
+<!-- keys: server -->
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `notifications.channels[].name` | name | required | What rules call the channel |
+| `notifications.channels[].kind` | text | required | `webhook` (a JSON body, signed when there is a `secret`), `slack`, `discord` or `teams` (the incoming-webhook address of that chat service) |
+| `notifications.channels[].url.store` | name | required | The server's secret store (`ai.secrets`) that holds the channel's address. The address of a chat webhook is a credential, so it is only ever a reference |
+| `notifications.channels[].url.key` | text | required | The key in the store |
+| `notifications.channels[].url.field` | text | | The field of the key |
+| `notifications.channels[].secret.store` | name | none | `webhook` only: the store that holds the key the body is signed with (`X-Launchway-Signature-256`, as repository webhooks are) |
+| `notifications.channels[].secret.key` | text | | The key in the store |
+| `notifications.channels[].secret.field` | text | | The field of the key |
+| `notifications.rules[].on` | list | required | The events: `approval.requested`, `run.failed`, `deployment.succeeded`, `deployment.failed`, `deployment.rolled_back`, `rollback.needs_review`, `step.waiting_long` |
+| `notifications.rules[].to` | list | required | The names of the channels that get them |
+| `notifications.rules[].projects` | list of patterns | all | Only events of these projects |
+| `notifications.rules[].environments` | list of patterns | all | Only events of these environments (deployments and rollbacks) |
+| `notifications.rules[].branches` | list of patterns | all | Only runs made from these branches |
+| `notifications.rules[].after` | duration | `1h` | For `step.waiting_long`: how long a step waits before it is reported, at least `1m` |

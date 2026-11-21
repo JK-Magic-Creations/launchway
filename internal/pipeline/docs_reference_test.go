@@ -296,6 +296,7 @@ steps:
       ns: { deployment: namespace }
     metrics:
       - { name: error-rate, source: prometheus, query: 'sum(rate(errors{namespace="{{ns}}"}[1m]))', max: 0.01, fail_fast: { max: 0.5 } }
+      - { name: healthy, source: checks, check: { url: 'http://api.shop.svc.cluster.local/healthz', json: { path: status, equals: ok } } }
     logs:
       - { name: errors, source: loki, query: '{namespace="{{ns}}"}' }
   notes:
@@ -377,6 +378,8 @@ var probes = []probe{
 	{table: "ai-input", path: []any{"steps", "notes", "inputs", 0}},
 	{table: "verify-metric", path: []any{"steps", "verify", "metrics", 0}},
 	{table: "verify-log", path: []any{"steps", "verify", "logs", 0}},
+	{table: "verify-check", path: []any{"steps", "verify", "metrics", 1, "check"}},
+	{table: "verify-check-json", path: []any{"steps", "verify", "metrics", 1, "check", "json"}},
 	{table: "artifacts", path: []any{"steps", "build", "artifacts", 0}},
 	{table: "approvers", path: []any{"steps", "approve", "approvers"}},
 	{table: "fetch", path: []any{"steps", "test", "fetch", 0}},

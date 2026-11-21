@@ -5,6 +5,7 @@ import {
 } from "../api";
 import { clock, duration } from "../format";
 import { costText, usageText } from "./usageText";
+import { HealthCalls } from "./HealthCalls";
 
 export { costText, usageText };
 import { useNow } from "../live";
@@ -397,6 +398,7 @@ function MetricBlock({ v, m, g }: { v: VerificationView; m: MetricVerdict; g?: G
       </div>
       {m.reason && <p className="vmetric-reason">{m.reason}</p>}
       <MetricChart v={v} m={m} baseline={baseline} max={def?.max} min={def?.min} />
+      <HealthCalls v={v} name={m.name} />
       {checks.length > 0 && (
         <details className="vreadings">
           <summary>Readings by interval</summary>

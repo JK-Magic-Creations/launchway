@@ -60,6 +60,7 @@ Usage:
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs
                                                 (launchway runs, for more)
   launchway approvals list|approve|reject       approvals waiting for a decision, and deciding them
+  launchway notifications [--limit N]           the log of notifications sent, retried or failed
   launchway deployments options|rollback|review  roll a service back after a deployment succeeded; review emergency rollbacks
   launchway templates list [library]            the shared libraries' templates and their parameters
   launchway policy   list|run                   the policies in force; a run's decisions
@@ -97,6 +98,7 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 var commands = map[string]func([]string) error{
 	"runs":           cmdRuns,
 	"approvals":      cmdApprovals,
+	"notifications":  cmdNotifications,
 	"deployments":    cmdDeployments,
 	"templates":      cmdTemplates,
 	"policy":         cmdPolicy,
@@ -274,6 +276,7 @@ func cmdServer(args []string) error {
 	}()
 	mgr.Start(ctx)
 	mgr.WatchPolicySources(ctx)
+	startNotifications(ctx, eng, srv, eff, log)
 	if store.Available() {
 		// Changes made through any server take effect here within seconds.
 		// Applying is safe to repeat: everything that can fail is worked out

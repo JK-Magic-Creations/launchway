@@ -33,6 +33,10 @@ type Agent struct {
 	// WindowEvery is how often an action held by a sync window looks again;
 	// default 30s.
 	WindowEvery time.Duration
+	// Pulls opens and follows pull requests, for deployments that write
+	// back by pull request; PullEvery is how often it asks (default 5s).
+	Pulls     Pulls
+	PullEvery time.Duration
 
 	mu       sync.Mutex
 	clusters map[string]*Cluster
@@ -104,6 +108,35 @@ func (a *Agent) repo(ctx context.Context, project, name, branch string, log func
 	return r, rc, l.Unlock, nil
 }
 
+// repoWrite opens the clone for a deploy action that writes: with the step's
+// own credential when the repository is hosted by Launchway (and the
+// environment says how to write back), with the configuration's otherwise.
+func (a *Agent) repoWrite(ctx context.Context, job *engine.Job, log func(string, ...any)) (*gitops.Repo, func(), error) {
+	d := job.Deploy
+	rc, ok := a.Config.Repos[d.Repo]
+	switch {
+	case !ok:
+		return nil, nil, fmt.Errorf("repository %s is not in this deploy runner's configuration (deploy.repos)", d.Repo)
+	case d.WriteBack != nil && d.WriteBack.Error != "":
+		return nil, nil, errors.New(d.WriteBack.Error)
+	case d.WriteBack != nil && !rc.Hosted:
+		return nil, nil, fmt.Errorf("environment %s writes back to the hosted repository %s, but this runner's deploy.repos.%s is not marked hosted: true (its url must then be Launchway's address)", d.Environment, d.WriteBack.Repo, d.Repo)
+	case d.WriteBack == nil && rc.Hosted:
+		return nil, nil, fmt.Errorf("deploy.repos.%s is hosted by Launchway, but environment %s has no write_back: set it (mode direct or pull_request) so the step has a credential of its own", d.Repo, d.Environment)
+	case d.WriteBack != nil && d.WriteBack.Token == "":
+		return nil, nil, errors.New("the server gave this step no credential for the hosted repository")
+	}
+	repo, _, unlock, err := a.repo(ctx, job.Project, d.Repo, d.Branch, log)
+	if err != nil {
+		return nil, nil, err
+	}
+	if d.WriteBack != nil {
+		repo.Auth = &gitops.Auth{Username: "launchway", Password: d.WriteBack.Token}
+		repo.WorkBranch = d.WriteBack.WorkBranch
+	}
+	return repo, unlock, nil
+}
+
 // check refuses what the runner's configuration does not allow.
 func (a *Agent) check(project string, d *engine.DeployJob) (Target, error) {
 	t, ok := a.Config.Targets[d.Target]
@@ -133,7 +166,7 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 	if _, err := a.check(job.Project, d); err != nil {
 		return nil, err
 	}
-	repo, _, unlock, err := a.repo(ctx, job.Project, d.Repo, d.Branch, log)
+	repo, unlock, err := a.repoWrite(ctx, job, log)
 	if err != nil {
 		return nil, err
 	}
@@ -143,6 +176,13 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 		cs.Files = append(cs.Files, gitops.FileEdit{Path: c.File, Edit: func(path string, data []byte) ([]byte, error) {
 			if data == nil {
 				return nil, fmt.Errorf("%s does not exist on branch %s", path, d.Branch)
+			}
+			if c.Image != "" && c.Digest != "" && c.Tag != "" {
+				out, n, err := edit.ImageTagDigest(data, c.Image, c.Tag, c.Digest)
+				if err == nil {
+					log("%s: %d reference(s) to %s set to %s and pinned to %s", path, n, c.Image, c.Tag, c.Digest)
+				}
+				return out, err
 			}
 			if c.Image != "" && c.Digest != "" {
 				out, n, err := edit.ImageDigest(data, c.Image, c.Digest)
@@ -171,6 +211,14 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 		return nil, err
 	}
 	facts := &engine.DeployFacts{Repo: d.Repo, Branch: d.Branch, Commit: res.Commit, Changed: res.Changed, Existing: res.Existing, Files: res.Files}
+	if d.WriteBack != nil && d.WriteBack.Mode == engine.WriteBackPullRequest && res.Changed && (res.OnWork || !res.Existing) {
+		merged, err := a.landPull(ctx, job, log)
+		if err != nil {
+			return facts, err
+		}
+		facts.Commit, facts.Existing = merged, false
+		res.Commit = merged
+	}
 	switch {
 	case res.Existing:
 		log("Commit %s of this deployment is already on %s (an earlier try made it)", short(res.Commit), d.Branch)
@@ -200,7 +248,7 @@ func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ..
 			return nil, err
 		}
 	}
-	repo, _, unlock, err := a.repo(ctx, job.Project, d.Repo, d.Branch, log)
+	repo, unlock, err := a.repoWrite(ctx, job, log)
 	if err != nil {
 		return nil, err
 	}
@@ -228,6 +276,13 @@ func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ..
 	}
 	if err != nil {
 		return facts, err
+	}
+	if d.WriteBack != nil && d.WriteBack.Mode == engine.WriteBackPullRequest && (res.OnWork || !res.Existing) {
+		merged, err := a.landPull(ctx, job, log)
+		if err != nil {
+			return facts, err
+		}
+		res.Commit, res.Existing = merged, false
 	}
 	facts.Revert, facts.Reverted, facts.Existing = res.Commit, true, res.Existing
 	if res.Existing {
@@ -510,7 +565,10 @@ func short(sha string) string {
 // stands in the way and what to do.
 func (a *Agent) revertSeries(ctx context.Context, job *engine.Job, log func(string, ...any)) (*engine.DeployFacts, error) {
 	d := job.Deploy
-	repo, _, unlock, err := a.repo(ctx, job.Project, d.Repo, d.Branch, log)
+	if d.WriteBack != nil && d.WriteBack.Mode == engine.WriteBackPullRequest {
+		return nil, errors.New("rolling back several deployments at once is not done by pull request yet: use write_back mode direct for this environment, or revert the commits in a pull request by hand")
+	}
+	repo, unlock, err := a.repoWrite(ctx, job, log)
 	if err != nil {
 		return nil, err
 	}

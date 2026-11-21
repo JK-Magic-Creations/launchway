@@ -201,6 +201,39 @@ cannot run templates, which come from a server's libraries.
   Protect its tags and branches on the Git host as you would a deployment script, and pin
   pipelines to tags or commits rather than branches where that matters.
 
+## Defaults that follow other parameters, and parts that can be left out
+
+A service's names usually follow its name, so a template can say so instead of every file repeating
+them:
+
+```yaml
+template: service-cd
+params:
+  workload:    { type: string }
+  application: { type: string, default: { param: workload, format: "%s-dev" } }
+  manifest:    { type: string, default: { param: workload, format: "apps/%s-dev/base.yaml" } }
+  verify:      { type: boolean, default: true }
+  moving_tag:  { type: boolean, default: true }
+steps:
+  image:
+    kind: image
+    tags:
+      - { registry: harbor, repository: homelab/app, tag: { output: tag.tag } }
+      - { registry: harbor, repository: homelab/app, tag: ci-latest, if: { param: moving_tag } }
+  verify:
+    kind: verify
+    if: { param: verify }              # a deploy, verify, rollback or rollout step may be left out too
+    ...
+```
+
+A use that gives `workload: mcp-weather` gets `application: mcp-weather-dev` and `manifest:
+apps/mcp-weather-dev/base.yaml` unless it writes its own. With `verify: false` the verify step is
+left out, and the rollback step that needed it needs what it needed; `moving_tag: false` leaves the
+second tag out. A default that derives from another parameter is checked where the template is used:
+if the result is not a valid value ("the default of mode, taken from name ("mcp-weather"), does not
+fit: mode is one of a, b…"), the message says which parameter to give a value for. Defaults derive
+only for string parameters, from string parameters, and not in a circle.
+
 ## Listing templates from the command line
 
 ```sh

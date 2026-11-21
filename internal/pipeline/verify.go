@@ -83,15 +83,18 @@ type VerifyMetric struct {
 	// Query is written in the source's language (PromQL, LogQL, or an
 	// Elasticsearch query as JSON); Statement names a query the source's
 	// operator wrote (SQL and HTTP sources). Exactly one is set.
-	Query       string   `json:"query,omitempty"`
-	StableQuery string   `json:"stable_query,omitempty"` // the stable version's, to compare in the same interval
-	Statement   string   `json:"statement,omitempty"`
-	Index       string   `json:"index,omitempty"`     // Elasticsearch and OpenSearch
-	Direction   string   `json:"direction,omitempty"` // higher-is-worse (default), lower-is-worse or either
-	Max         *float64 `json:"max,omitempty"`
-	Min         *float64 `json:"min,omitempty"`
-	FailFastMax *float64 `json:"fail_fast_max,omitempty"`
-	FailFastMin *float64 `json:"fail_fast_min,omitempty"`
+	Query       string `json:"query,omitempty"`
+	StableQuery string `json:"stable_query,omitempty"` // the stable version's, to compare in the same interval
+	Statement   string `json:"statement,omitempty"`
+	Index       string `json:"index,omitempty"` // Elasticsearch and OpenSearch
+	// Check, instead of a query, is a call the deploy runner makes itself
+	// to the deployed service (see HealthCheck).
+	Check       *HealthCheck `json:"check,omitempty"`
+	Direction   string       `json:"direction,omitempty"` // higher-is-worse (default), lower-is-worse or either
+	Max         *float64     `json:"max,omitempty"`
+	Min         *float64     `json:"min,omitempty"`
+	FailFastMax *float64     `json:"fail_fast_max,omitempty"`
+	FailFastMin *float64     `json:"fail_fast_min,omitempty"`
 	// Failures is how many failing intervals in a row fail the metric.
 	Failures     int      `json:"failures,omitempty"`
 	MinIntervals int      `json:"min_intervals,omitempty"`
@@ -139,7 +142,7 @@ var (
 
 var (
 	verifyKeys       = []string{"kind", "description", "needs", "when", "timeout", "deployment", "environment", "service", "delay", "duration", "interval", "sensitivity", "baseline", "on_fail", "on_inconclusive", "params", "metrics", "logs", "model", "decide"}
-	verifyMetricKeys = []string{"name", "source", "query", "stable_query", "statement", "index", "direction", "max", "min", "fail_fast", "failures", "min_intervals", "min_points", "step", "baseline"}
+	verifyMetricKeys = []string{"name", "source", "query", "stable_query", "statement", "index", "check", "direction", "max", "min", "fail_fast", "failures", "min_intervals", "min_points", "step", "baseline"}
 	verifyLogKeys    = []string{"name", "source", "query", "stable_query", "statement", "index", "errors", "max_lines", "baseline"}
 	verifyNameRe     = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,39}$`)
 	verifyParamRe    = regexp.MustCompile(`^[a-z][a-z0-9_]{0,39}$`)
@@ -207,6 +210,7 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 			key := v.Content[i]
 			switch {
 			case contains(verifyKeys, key.Value):
+			case key.Value == "if" && ps.tmpl != nil: // a template's step may be left out by a parameter
 			case contains(loopKeys, key.Value):
 				ps.add(key, at+"."+key.Value, "a verify step cannot be repeated by for_each; write one verify step for each environment")
 			case contains(runOnly, key.Value) || key.Value == "uses" || key.Value == "with":
@@ -226,11 +230,13 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 		}
 		return d, true
 	}
-	ps.eachKey(v, at, append(append([]string{}, verifyKeys...), loopKeys...), func(key, n *yaml.Node) {
+	ps.eachKey(v, at, ps.verifyKnown(), func(key, n *yaml.Node) {
 		where := at + "." + key.Value
 		vf.lines[key.Value] = n.Line
 		switch key.Value {
 		case "kind":
+		case "if":
+			s.ifTest = ps.parseIf(n, where)
 		case "description":
 			s.Description = strings.TrimSpace(ps.scalar(n, where))
 			switch {
@@ -306,27 +312,9 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 		case "params":
 			ps.parseVerifyParams(n, where, vf)
 		case "metrics":
-			if n.Kind != yaml.SequenceNode {
-				ps.add(n, where, "metrics is a list, for example: - { name: error-rate, source: prometheus, query: '...', max: 0.01 }")
-				return
-			}
-			if len(n.Content) > MaxVerifyMetrics {
-				ps.add(n, where, "at most %d metrics", MaxVerifyMetrics)
-			}
-			for i, m := range n.Content {
-				vf.Metrics = append(vf.Metrics, ps.parseVerifyMetric(m, fmt.Sprintf("%s[%d]", where, i)))
-			}
+			ps.parseVerifyMetrics(n, where, vf)
 		case "logs":
-			if n.Kind != yaml.SequenceNode {
-				ps.add(n, where, "logs is a list, for example: - { name: app, source: loki, query: '{namespace=\"shop\"}' }")
-				return
-			}
-			if len(n.Content) > MaxVerifyLogs {
-				ps.add(n, where, "at most %d log queries", MaxVerifyLogs)
-			}
-			for i, m := range n.Content {
-				vf.Logs = append(vf.Logs, ps.parseVerifyLog(m, fmt.Sprintf("%s[%d]", where, i)))
-			}
+			ps.parseVerifyLogs(n, where, vf)
 		case "model":
 			vf.Model = ps.scalar(n, where)
 			if !modelNameRe.MatchString(vf.Model) {
@@ -408,6 +396,47 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 		}
 	}
 	return s
+}
+
+// parseVerifyMetrics reads a verify step's metrics list.
+func (ps *parser) parseVerifyMetrics(n *yaml.Node, where string, vf *Verify) {
+	if n.Kind != yaml.SequenceNode {
+		ps.add(n, where, "metrics is a list, for example: - { name: error-rate, source: prometheus, query: '...', max: 0.01 }")
+		return
+	}
+	if len(n.Content) > MaxVerifyMetrics {
+		ps.add(n, where, "at most %d metrics", MaxVerifyMetrics)
+	}
+	for i, m := range n.Content {
+		if m, keep := ps.entry(m, fmt.Sprintf("%s[%d]", where, i)); keep {
+			vf.Metrics = append(vf.Metrics, ps.parseVerifyMetric(m, fmt.Sprintf("%s[%d]", where, i)))
+		}
+	}
+}
+
+// parseVerifyLogs reads a verify step's log queries.
+func (ps *parser) parseVerifyLogs(n *yaml.Node, where string, vf *Verify) {
+	if n.Kind != yaml.SequenceNode {
+		ps.add(n, where, "logs is a list, for example: - { name: app, source: loki, query: '{namespace=\"shop\"}' }")
+		return
+	}
+	if len(n.Content) > MaxVerifyLogs {
+		ps.add(n, where, "at most %d log queries", MaxVerifyLogs)
+	}
+	for i, m := range n.Content {
+		if m, keep := ps.entry(m, fmt.Sprintf("%s[%d]", where, i)); keep {
+			vf.Logs = append(vf.Logs, ps.parseVerifyLog(m, fmt.Sprintf("%s[%d]", where, i)))
+		}
+	}
+}
+
+// verifyKnown are the keys of a verify step; a template's may carry if.
+func (ps *parser) verifyKnown() []string {
+	known := append(append([]string{}, verifyKeys...), loopKeys...)
+	if ps.tmpl != nil {
+		known = append(known, "if") // a step of a template may be left out by a parameter
+	}
+	return known
 }
 
 func (ps *parser) parseVerifyParams(n *yaml.Node, at string, vf *Verify) {
@@ -541,6 +570,8 @@ func (ps *parser) parseVerifyMetric(n *yaml.Node, at string) *VerifyMetric {
 			m.Statement = ps.scalar(v, where)
 		case "index":
 			m.Index = ps.scalar(v, where)
+		case "check":
+			m.Check = ps.parseHealthCheck(v, where)
 		case "direction":
 			m.Direction = ps.scalar(v, where)
 			if !slices.Contains(VerifyDirections, m.Direction) {
@@ -584,17 +615,7 @@ func (ps *parser) parseVerifyMetric(n *yaml.Node, at string) *VerifyMetric {
 			m.NoBaseline = !ps.bool(v, where)
 		}
 	})
-	if n.Kind != yaml.MappingNode {
-		return m
-	}
-	ps.checkVerifySource(n, at, m.Name, m.Source, m.Query, m.StableQuery, m.Statement)
-	if m.Direction == "" {
-		m.Direction = "higher-is-worse"
-	}
-	if m.Max != nil && m.Min != nil && *m.Min > *m.Max {
-		ps.add(n, at, "min is above max")
-	}
-	return m
+	return ps.finishVerifyMetric(n, at, m)
 }
 
 func (ps *parser) parseVerifyLog(n *yaml.Node, at string) *VerifyLog {

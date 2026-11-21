@@ -61,6 +61,33 @@ func ImageDigest(data []byte, image, digest string) (out []byte, matches int, er
 	return imageRef(data, image, "", digest)
 }
 
+// ImageTagDigest pins every reference to an image to a digest and keeps a
+// readable tag beside it: each becomes [registry/]repository:tag@digest,
+// whatever tag or digest it had. A registry resolves such a reference by the
+// digest alone; the tag is for the people who read the file. As for Image,
+// a value with neither tag nor digest counts only under a key named image,
+// and zero references is an error.
+func ImageTagDigest(data []byte, image, tag, digest string) (out []byte, matches int, err error) {
+	if err := CheckTag(tag); err != nil {
+		return nil, 0, err
+	}
+	if err := CheckDigest(digest); err != nil {
+		return nil, 0, err
+	}
+	return imageRef(data, image, tag, digest)
+}
+
+// refText writes a reference: name:tag, name@digest or name:tag@digest.
+func refText(name, tag, digest string) string {
+	if tag != "" {
+		name += ":" + tag
+	}
+	if digest != "" {
+		name += "@" + digest
+	}
+	return name
+}
+
 func imageRef(data []byte, image, tag, digest string) (out []byte, matches int, err error) {
 	if err := CheckImage(image); err != nil {
 		return nil, 0, err
@@ -107,10 +134,7 @@ func imageRef(data []byte, image, tag, digest string) (out []byte, matches int, 
 		matches++
 		lead := n.Value[:strings.Index(n.Value, v)]
 		trail := n.Value[len(lead)+len(v):]
-		nv := lead + r.name() + ":" + tag + trail
-		if digest != "" {
-			nv = lead + r.name() + "@" + digest + trail
-		}
+		nv := lead + refText(r.name(), tag, digest) + trail
 		if nv == n.Value {
 			return nil
 		}

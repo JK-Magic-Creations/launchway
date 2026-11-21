@@ -77,9 +77,11 @@
         "guide/security-findings",
         "guide/images",
         "guide/deployments",
+        "guide/gitops-write-back",
         "guide/rollback-after-success",
         "guide/policies",
         "guide/verification",
+        "guide/notifications",
         "guide/ai",
         "guide/git-over-ssh",
         "guide/pull-requests",
@@ -217,11 +219,13 @@
       "steps": [
         "concepts/environments-and-deployments",
         "guide/deployments",
+        "guide/gitops-write-back",
         "guide/rollback-after-success",
         "concepts/approvals",
         "tutorials/deploy-with-approval",
         "guide/verification",
         "guide/approvals-and-reruns",
+        "guide/notifications",
         "howto/troubleshooting"
       ]
     },

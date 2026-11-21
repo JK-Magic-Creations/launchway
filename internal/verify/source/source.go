@@ -51,6 +51,7 @@ const (
 	Elasticsearch = "elasticsearch"
 	Postgres      = "postgres"
 	HTTP          = "http"
+	Check         = "check" // the deploy runner's own health calls (check.go)
 )
 
 // Kinds of query.
@@ -105,6 +106,14 @@ type Config struct {
 	// time and log line; default @timestamp and message.
 	TimeField    string `yaml:"time_field,omitempty" json:"time_field,omitempty"`
 	MessageField string `yaml:"message_field,omitempty" json:"message_field,omitempty"`
+	// Hosts and Namespaces, for check, are the only places a health check
+	// may call (see check.go): host patterns such as *.shop.svc.cluster.local
+	// or api.example.com, CIDR ranges, and the Kubernetes namespaces whose
+	// Services it may reach. Empty lists allow nothing.
+	Hosts      []string `yaml:"hosts,omitempty" json:"hosts,omitempty"`
+	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty"`
+	// AllowInsecureTLS lets a pipeline's check skip certificate checks.
+	AllowInsecureTLS bool `yaml:"allow_insecure_tls,omitempty" json:"allow_insecure_tls,omitempty"`
 }
 
 // Auth is how a source logs in. The secret is looked up for each query, so
@@ -252,6 +261,8 @@ type src struct {
 
 	once sync.Once
 	hc   *http.Client
+
+	check *checkAllow // for a check source: where it may call
 }
 
 // backend is one kind of source.
@@ -305,11 +316,14 @@ func openOne(name string, c Config) (*src, error) {
 		c.Type = Postgres
 	case "mysql", "mariadb":
 		return nil, fmt.Errorf("type %s is not supported: Launchway has no MySQL driver and adds no dependencies for one; put a small HTTP service in front of the database and use type http", c.Type)
-	case Prometheus, Loki, ClickHouse, Elasticsearch, Postgres, HTTP:
+	case Prometheus, Loki, ClickHouse, Elasticsearch, Postgres, HTTP, Check:
 	case "":
-		return nil, fmt.Errorf("type is missing: one of prometheus, loki, clickhouse, elasticsearch, opensearch, postgres or http")
+		return nil, fmt.Errorf("type is missing: one of prometheus, loki, clickhouse, elasticsearch, opensearch, postgres, http or check")
 	default:
-		return nil, fmt.Errorf("unknown type %q: one of prometheus, loki, clickhouse, elasticsearch, opensearch, postgres or http", c.Type)
+		return nil, fmt.Errorf("unknown type %q: one of prometheus, loki, clickhouse, elasticsearch, opensearch, postgres, http or check", c.Type)
+	}
+	if s, done, err := openCheck(name, c); done {
+		return s, err
 	}
 	s := &src{name: name, cfg: c}
 	for _, p := range c.Projects {
@@ -444,26 +458,8 @@ func openOne(name string, c Config) (*src, error) {
 	if c.Type != Elasticsearch && (len(c.Indices) > 0 || c.TimeField != "" || c.MessageField != "") {
 		return nil, fmt.Errorf("indices, time_field and message_field are for elasticsearch sources")
 	}
-	for sn, st := range c.Statements {
-		if !paramRE.MatchString(sn) {
-			return nil, fmt.Errorf("statement name %q must be lower-case letters, digits and '_', starting with a letter", sn)
-		}
-		if st.Kind != Metric && st.Kind != Logs {
-			return nil, fmt.Errorf("statement %s: kind must be metric or logs", sn)
-		}
-		for _, p := range st.Projects {
-			if _, err := path.Match(p, ""); err != nil {
-				return nil, fmt.Errorf("statement %s: project pattern %q is not a valid pattern", sn, p)
-			}
-		}
-		for pn := range st.Params {
-			if !paramRE.MatchString(pn) {
-				return nil, fmt.Errorf("statement %s: parameter name %q must match [a-z][a-z0-9_]{0,39}", sn, pn)
-			}
-			if pn == "start" || pn == "end" {
-				return nil, fmt.Errorf("statement %s: parameters start and end are the verification window and are always passed; do not declare them", sn)
-			}
-		}
+	if err := checkStatements(c); err != nil {
+		return nil, err
 	}
 	switch c.Type {
 	case Prometheus:
@@ -499,6 +495,32 @@ func openOne(name string, c Config) (*src, error) {
 		return nil, fmt.Errorf("a %s source needs statements: the queries pipelines may run, by name", c.Type)
 	}
 	return s, nil
+}
+
+// checkStatements validates the operator statements of a source.
+func checkStatements(c Config) error {
+	for sn, st := range c.Statements {
+		if !paramRE.MatchString(sn) {
+			return fmt.Errorf("statement name %q must be lower-case letters, digits and '_', starting with a letter", sn)
+		}
+		if st.Kind != Metric && st.Kind != Logs {
+			return fmt.Errorf("statement %s: kind must be metric or logs", sn)
+		}
+		for _, p := range st.Projects {
+			if _, err := path.Match(p, ""); err != nil {
+				return fmt.Errorf("statement %s: project pattern %q is not a valid pattern", sn, p)
+			}
+		}
+		for pn := range st.Params {
+			if !paramRE.MatchString(pn) {
+				return fmt.Errorf("statement %s: parameter name %q must match [a-z][a-z0-9_]{0,39}", sn, pn)
+			}
+			if pn == "start" || pn == "end" {
+				return fmt.Errorf("statement %s: parameters start and end are the verification window and are always passed; do not declare them", sn)
+			}
+		}
+	}
+	return nil
 }
 
 func validHeaderName(k string) bool {

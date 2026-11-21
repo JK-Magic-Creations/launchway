@@ -679,7 +679,8 @@ scalar at a YAML path gets a value. Comments and layout are kept.
 | `file` | path | required | The file, relative to the repository's root, without `..` or a leading `/` |
 | `image` | image name | with `tag` or `digest` | The image whose references change, such as `team/shop`. A file with no reference to it is an error |
 | `tag` | [value](#value-forms) | | The new tag |
-| `digest` | [value](#value-forms) | | The new digest, such as `{ output: image.digest }`: references become `image@sha256:...`, which nobody can move. Not with `tag` |
+| `digest` | [value](#value-forms) | | The new digest, such as `{ output: image.digest }`: references become `image@sha256:...`, which nobody can move. With a `tag` as well, they become `image:tag@sha256:...`: readable and pinned |
+| `format` | text | from the values given | `tag`, `digest` or `tag_and_digest`. Without it a tag alone writes the tag, a digest alone pins by digest, and both write `image:tag@sha256:...`. Rolling back restores the previous text exactly, both parts |
 | `set` | YAML path | with `value` | The scalar to change, such as `image.tag` |
 | `value` | [value](#value-forms) | | Its new value |
 
@@ -846,6 +847,7 @@ Each metric in `metrics`:
 | `stable_query` | text | none | The same for the stable version, read in the same interval to compare with |
 | `statement` | text | | For ClickHouse, PostgreSQL and HTTP sources: the name of a statement the source's operator wrote |
 | `index` | text | | For Elasticsearch and OpenSearch: the index to search |
+| `check` | mapping | | Instead of `query`: a call the deploy runner makes itself to the service, see below. The metric is then the share of calls that answered as expected, which is lower-is-worse and must reach the check's `success`; `source` names a source of type `check` |
 | `direction` | text | `higher-is-worse` | `higher-is-worse`, `lower-is-worse` (throughput, say) or `either` |
 | `max` | number | none | A fixed upper bound |
 | `min` | number | none | A fixed lower bound. Not above `max` |
@@ -855,6 +857,34 @@ Each metric in `metrics`:
 | `min_points` | whole number | `1` | Readings an interval needs to count as having data, 1 to 500 |
 | `step` | duration | `30s` | The resolution of the readings, `5s` to `1h` |
 | `baseline` | boolean | `true` | `false` turns the comparison with earlier verifications off for this metric |
+
+A `check` is the built-in health proof. The deploy runner calls the address again and again while
+each interval runs (not afterwards) and records every call. Nothing has to scrape the service
+first. See [the health proof](../guide/verification.md#the-built-in-health-proof) for examples and
+the limits the deploy runner enforces.
+
+<!-- keys: verify-check -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `kind` | text | `http` | `http`, or `tcp` (the call only connects; there is no gRPC health check yet) |
+| `url` | text | required | `http://host:port/path` or `https://...`; for `tcp` `host:port`. A Service address such as `api.shop.svc.cluster.local:8080`. No user, no password, no placeholders |
+| `method` | text | `GET` | `GET` or `HEAD`: a health check never changes anything |
+| `status` | list | `[2xx]` | The statuses that count as healthy: `200`, a class such as `2xx`, or a range such as `200-299` |
+| `body_contains` | text | none | Text the first 64 KiB of the answer must contain |
+| `json` | mapping | none | `{ path, equals }`: the answer is JSON and the value at the dotted path (numbers index arrays) equals the text |
+| `headers` | mapping | none | Headers sent as written, at most 10. `Host` sets the request's host, for a service that routes by it. `Authorization` and `Cookie` are refused here |
+| `secret_headers` | mapping | none | Header name to a secret reference (`store`, `key`, `field`); the deploy runner reads the value for each interval and it is never shown or recorded |
+| `timeout` | duration | `5s` | One call, 1s to 30s |
+| `every` | duration | `5s` | The time between calls, at least `1s`; an interval of `30s` makes six calls |
+| `success` | number | `1` | The share of calls in an interval that must be healthy, above 0 and at most 1. `0.95` allows one failure in twenty. It becomes the metric's `min` unless the metric sets its own bounds |
+| `server_name` | text | | The name to verify in the TLS certificate, when the address is not that name |
+| `insecure_tls` | boolean | `false` | Skip the certificate check. Refused unless the deploy runner's source sets `allow_insecure_tls` |
+
+<!-- keys: verify-check-json -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `path` | text | required | A dotted path into the JSON answer |
+| `equals` | text | required | The text the value there must equal |
 
 Each log query in `logs`:
 
@@ -1705,7 +1735,7 @@ Each entry of `params` maps a name (`^[a-z][a-z0-9_-]{0,39}$`) to its settings.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment` or `application`. The last two are strings that mean something: an environment's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the deploy runs. Both take `options` and `format` as a string does |
-| `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list |
+| `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list. A string parameter's default may be taken from another string parameter: `default: { param: name, format: "apps/%s/base.yaml" }`, where `%s` (once or more) stands for the other parameter's value (without `format`, the value itself). A value given under `with` still wins, and a default that does not fit (an option not in `options`) is refused where the template is used, saying so |
 | `description` | text | none | One line of at most 200 characters |
 | `options` | one value or a list | none | The values allowed. For `string` and `number` only |
 | `from` | variable name | none | The [variable](../guide/variables.md) (set at a level) the parameter takes when `with` gives no value: it stands before `default`. A locked variable refuses a different value written under `with`, with the level that locked it and who can change it. Not for secrets or maps |
@@ -1744,7 +1774,7 @@ same library by name alone; and they take one more key:
 <!-- keys: template-step-extra -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `if` | mapping | none | Leave the step out unless the test holds; what needed it then needs what it needed. Steps of kind `step`, `approval` and `image`, and steps that use a template |
+| `if` | mapping | none | Leave the step out unless the test holds; what needed it then needs what it needed. Steps of every kind (`step`, `approval`, `image`, `deploy`, `rollback`, `rollout`, `verify`) and steps that use a template. A list entry may carry `if` too, and is left out unless it holds: an image step's `tags`, a deploy step's `write_back.changes`, a verify step's `metrics` and `logs` |
 
 <!-- keys: template-if -->
 | Key | Type | Default | Description |

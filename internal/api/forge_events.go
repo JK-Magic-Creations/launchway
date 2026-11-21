@@ -20,7 +20,8 @@ import (
 
 func (s *Server) hookRepo(r forge.Repository) webhooks.Repo {
 	return webhooks.Repo{Path: r.Path, Owner: r.Home, Name: r.Name, DefaultBranch: r.DefaultBranch, Visibility: string(r.Visibility),
-		CloneHTTPS: r.Clone.HTTPS, CloneSSH: r.Clone.SSH}
+		CloneHTTPS: r.Clone.HTTPS, CloneSSH: r.Clone.SSH,
+		FullName: r.Path, HTMLURL: strings.TrimSuffix(r.Clone.HTTPS, ".git"), CloneURL: r.Clone.HTTPS, SSHURL: r.Clone.SSH}
 }
 
 func zeroSHA(sha string) bool { return strings.Trim(sha, "0") == "" }

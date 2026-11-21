@@ -136,7 +136,25 @@ type MetricData struct {
 	Canary []Point `json:"canary,omitempty"`
 	Stable []Point `json:"stable,omitempty"`
 	Error  string  `json:"error,omitempty"`
+	// Attempts and Note come from the built-in health proof: every call the
+	// deploy runner made in the interval (the Canary points are 1 for a
+	// healthy call and 0 for the rest), and, when some failed, one plain
+	// sentence about them ("3 of 20 requests to /healthz returned 503").
+	Attempts []Attempt `json:"attempts,omitempty"`
+	Note     string    `json:"note,omitempty"`
 }
+
+// Attempt is one call of a health check.
+type Attempt struct {
+	T         int64  `json:"t"`                // Unix ms the call started
+	OK        bool   `json:"ok"`               // answered as expected
+	Status    int    `json:"status,omitempty"` // HTTP status, when there was an answer
+	LatencyMS int64  `json:"latency_ms"`
+	Error     string `json:"error,omitempty"` // why it did not count, in words
+}
+
+// MaxAttempts bounds the calls one interval report carries.
+const MaxAttempts = 200
 
 // LogData is one log query's clusters in one interval.
 type LogData struct {

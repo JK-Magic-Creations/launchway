@@ -267,6 +267,13 @@ func (j *metricJudge) interval(iv Interval) (IntervalCheck, string, bool) {
 		}
 	}
 
+	if md.Note != "" {
+		if len(fails) > 0 {
+			fails[0] += " (" + clip(md.Note, MaxErrorBytes) + ")"
+		} else {
+			notes = append(notes, clip(md.Note, MaxErrorBytes))
+		}
+	}
 	if len(fails) > 0 {
 		chk.Outcome = Failed
 		chk.Reason = strings.Join(append(fails, notes...), "; ")

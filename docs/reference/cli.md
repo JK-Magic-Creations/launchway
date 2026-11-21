@@ -201,10 +201,17 @@ It exits with `0` if the run succeeded and `1` otherwise. The first Ctrl-C cance
 Checks a pipeline file and prints a summary.
 
 ```text
-launchway validate [FILE] [--project NAME]
+launchway validate [FILE] [--project NAME] [--library NAME=DIRECTORY ...] [--resolved]
 ```
 
-`FILE` defaults to `.launchway/pipeline.yaml`. Steps that use library templates are not expanded: the command reads only the file. To check them, use the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
+`FILE` defaults to `.launchway/pipeline.yaml`. By default steps that use library templates are not expanded: the command reads only the file. To check them without a server, give each library's directory with `--library` (below); to check them against a server, use `--project`, the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
+
+With `--library NAME=DIRECTORY`, once for each library the pipeline uses, the templates are expanded from those directories, with no server and no network. `NAME` is what the pipeline's `libraries:` section calls the library; `DIRECTORY` is the library's root, the directory that holds `templates/`. It is the same parse, binding and expansion a server runs when it checks a pipeline (a test compares the two on the example library), so the same problems come out, each with the file and line of the template it is in. Which libraries and environments a server allows, and its limits, are the server's to say: add `--project` against a server for that. `--resolved` prints the resolved pipeline (every step of every template, with its needs, containers and environment) as JSON, the graph `POST /api/v1/validate` returns; it needs `--library` for each library the pipeline uses. The library's own version is not looked at: the directory is what is read, so check out the tag you mean.
+
+```sh
+launchway validate .launchway/pipeline.yaml --library platform=../pipeline-library
+launchway validate .launchway/pipeline.yaml --library platform=../pipeline-library --resolved
+```
 
 With `--project NAME` the server you are signed in to checks the file for that project as well, as its editor does: the libraries templates use, the limits the installation sets (such as `max_run_timeout`), and what the project must have for the pipeline to work. It warns, for example, that a pipeline that filters pull requests by their target branch (`on.pull_request.into`) will run none in a project with no forge connection. Warnings are printed to standard error and do not change the exit code; problems do.
 

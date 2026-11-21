@@ -918,6 +918,10 @@ func (ps *parser) parseDeployStep(k, v *yaml.Node, at, kind string) *Step {
 			if kind == KindDeploy {
 				s.When = ps.parseWhen(n, where)
 			}
+		case "if":
+			if ps.tmpl != nil {
+				s.ifTest = ps.parseIf(n, where)
+			}
 		case "timeout":
 			d, err := time.ParseDuration(ps.scalar(n, where))
 			if err != nil {

@@ -562,6 +562,31 @@ paths:
             tags:
                 - runner
             x-launchway-access: runner
+    /api/runner/v1/deploy/pull-request:
+        post:
+            description: A deploy runner opens, or asks about, the pull request of a deployment that writes back by pull request, with the deploy credential the server gave it for that deployment.
+            operationId: post_api_runner_v1_deploy_pull_request
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security:
+                - runnerToken: []
+            summary: A deploy runner opens, or asks about, the pull request of a deployment that writes back by pull request, with the deploy credential the server gave it for that deployment.
+            tags:
+                - runner
+            x-launchway-access: runner
     /api/runner/v1/deploy/verify/interval:
         post:
             description: A deploy runner reports one interval's readings of a verification; the answer says whether to go on.
@@ -2358,6 +2383,29 @@ paths:
             summary: Every mirror of the repositories the caller may read; ?behind=true lists only those that have fallen behind.
             tags:
                 - mirrors
+            x-launchway-access: signed-in
+    /api/v1/notifications:
+        get:
+            description: 'The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read. limit (at most 500).'
+            operationId: get_api_v1_notifications
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The log of notifications sent or tried: channel, event, status, attempts and why a delivery failed, for the projects the caller may read.'
+            tags:
+                - notifications
             x-launchway-access: signed-in
     /api/v1/owners/{owner}/hooks:
         get:

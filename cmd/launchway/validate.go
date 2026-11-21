@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net/url"
@@ -12,11 +13,20 @@ import (
 func cmdValidate(args []string) error {
 	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
 	project := fs.String("project", "", "also check the file against this project on the server you are signed in to: its libraries, and whether it has what the pipeline needs, such as a forge")
+	var libs libraryFlag
+	fs.Var(&libs, "library", "expand templates from a library directory, with no server: NAME=DIRECTORY, where NAME is what the pipeline's libraries section calls it (repeat for each library)")
+	resolved := fs.Bool("resolved", false, "print the resolved pipeline (templates expanded) as JSON; needs --library for each library the pipeline uses")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	path := pipelineFile(pos)
+	if len(libs) > 0 || *resolved {
+		if *project != "" {
+			return errors.New("--library and --resolved work offline; --project asks a server. Use one or the other")
+		}
+		return validateOffline(path, libs, *resolved)
+	}
 	p, err := load(path)
 	if err != nil {
 		return err

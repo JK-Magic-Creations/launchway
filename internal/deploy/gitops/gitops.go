@@ -17,11 +17,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/redact"
@@ -46,11 +48,23 @@ type Repo struct {
 	// "Committed 3f2a9c1 to main: Deploy beacon 1.4.2 to prod". Never
 	// credentials. May be nil.
 	Log func(format string, args ...any)
-	// MaxPushTries bounds pushes rejected because the branch moved; default 5.
+	// MaxPushTries bounds pushes rejected because the branch moved; default
+	// 12. Between tries the runner waits a little, longer each time and with
+	// some chance in it, so that several writers of one branch (other
+	// pipelines, other deploy runners) do not collide again and again.
 	MaxPushTries int
+	// Wait is how long to wait before try number try (2 and up); default
+	// 40 ms times try, plus up to as much again at random, at most 1 s.
+	Wait func(try int) time.Duration
 	// HistoryDepth is how many commits of the branch are searched for an
 	// earlier commit of the same deployment; default 200.
 	HistoryDepth int
+
+	// WorkBranch, when set, is the branch a change is pushed to instead of
+	// Branch: the change is made on the tip of Branch and a pull request
+	// brings it there. A change already on the work branch (an earlier try
+	// pushed it) is found by its trailer and not made again.
+	WorkBranch string
 
 	// beforePush, when set, is called just before each push. Tests use it to
 	// move the branch on the server at the worst moment.
@@ -82,11 +96,14 @@ type ApplyResult struct {
 	Changed  bool     // the branch has a commit of this deployment (made now or earlier)
 	Existing bool     // that commit was found, not made now; nothing was pushed
 	Files    []string // files the commit changes (made now only)
+	// OnWork says the commit is on the work branch, not yet on the branch.
+	OnWork bool
 }
 
 type RevertResult struct {
 	Commit   string // the revert commit, made now or found
 	Existing bool   // found by its trailer; nothing pushed
+	OnWork   bool   // the commit is on the work branch, not yet on the branch
 }
 
 // ConflictError means the revert does not apply to the branch's tip (later
@@ -149,6 +166,12 @@ func (r *Repo) Apply(ctx context.Context, cs ChangeSet) (ApplyResult, error) {
 			r.logf("Deployment %s is already in %s as %s; nothing to push", cs.Deployment, r.Branch, short(found))
 			return ApplyResult{Commit: found, Changed: true, Existing: true}, nil
 		}
+		if w, err := r.existingWork(ctx, deploymentKey+cs.Deployment); err != nil {
+			return ApplyResult{}, err
+		} else if w != "" {
+			r.logf("Deployment %s is already on %s as %s; nothing to push", cs.Deployment, r.WorkBranch, short(w))
+			return ApplyResult{Commit: w, Changed: true, Existing: true, OnWork: true}, nil
+		}
 		files, err := r.applyEdits(cs.Files)
 		if err != nil {
 			r.discard(ctx)
@@ -180,11 +203,15 @@ func (r *Repo) Apply(ctx context.Context, cs ChangeSet) (ApplyResult, error) {
 		}
 		err = r.push(ctx)
 		if errors.Is(err, errMoved) && try < tries {
-			r.logf("%s moved on the server; fetching and applying the change again (try %d of %d)", r.Branch, try+1, tries)
+			r.logf("%s moved on the server (another pipeline wrote to it); fetching and applying only this change again on top (try %d of %d)", r.Branch, try+1, tries)
+			if err := r.sleep(ctx, try+1); err != nil {
+				return ApplyResult{}, err
+			}
 			continue
 		}
 		if errors.Is(err, errMoved) {
-			return ApplyResult{}, fmt.Errorf("%s kept moving on the server; gave up after %d tries to push", r.Branch, tries)
+			return ApplyResult{}, fmt.Errorf("%s kept moving on the server: other pipelines were writing to it all the time; gave up after %d tries to push this change on top of theirs. "+
+				"Nothing was changed. Run the deploy step again; if it keeps happening, fewer pipelines should write to this repository at once", r.Branch, tries)
 		}
 		if err != nil {
 			return ApplyResult{}, err
@@ -554,7 +581,7 @@ func (r *Repo) push(ctx context.Context) error {
 	if r.beforePush != nil {
 		r.beforePush()
 	}
-	code, out, err := r.gitCode(ctx, nil, "push", "--quiet", "origin", "HEAD:refs/heads/"+r.Branch)
+	code, out, err := r.gitCode(ctx, nil, "push", "--quiet", "origin", "HEAD:refs/heads/"+cmpOr(r.WorkBranch, r.Branch))
 	if err != nil {
 		return err
 	}
@@ -845,7 +872,26 @@ func (r *Repo) tries() int {
 	if r.MaxPushTries > 0 {
 		return r.MaxPushTries
 	}
-	return 5
+	return 12
+}
+
+// sleep waits before a push is tried again.
+func (r *Repo) sleep(ctx context.Context, try int) error {
+	d := time.Duration(try) * 40 * time.Millisecond
+	d += rand.N(d + 1) // #nosec G404 -- spreading retries, not security
+	d = min(d, time.Second)
+	if r.Wait != nil {
+		d = r.Wait(try)
+	}
+	if d <= 0 {
+		return ctx.Err()
+	}
+	select {
+	case <-time.After(d):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (r *Repo) depth() int {

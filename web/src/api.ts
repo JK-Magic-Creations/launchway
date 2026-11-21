@@ -1368,7 +1368,7 @@ export interface VerifyInterval {
   index: number;
   start: number;
   end: number;
-  metrics?: { name: string; canary?: VerifyPoint[]; stable?: VerifyPoint[]; error?: string }[];
+  metrics?: { name: string; canary?: VerifyPoint[]; stable?: VerifyPoint[]; error?: string; note?: string; attempts?: { t: number; ok: boolean; status?: number; latency_ms: number; error?: string }[] }[];
   logs?: {
     name: string; lines: number; truncated?: boolean; clusters?: VerifyCluster[];
     stable?: VerifyCluster[]; stable_lines?: number; error?: string;

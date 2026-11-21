@@ -178,6 +178,73 @@ host only, without following redirects); or read without bounds (each query has 
 one series per metric query, and limits on points, lines and bytes; log lines are redacted before
 they are clustered, stored or shown).
 
+## The built-in health proof
+
+Most services have a health address and no metric. A metric with a `check` needs no monitoring
+system at all: the deploy runner calls the service it just deployed, from inside the cluster, again
+and again for the whole window, and the share of calls that answered as expected is the metric.
+
+```yaml
+# server: launchway.yaml
+verification:
+  sources:
+    - { name: checks, type: check, projects: ["mcp-*"] }
+
+# deploy runner: runner.yaml
+health_sources:
+  checks:
+    type: check
+    namespaces: [mcp, mcp-weather-dev]          # Services in these namespaces may be called
+    hosts: ["*.example.com"]                    # and these hosts
+    projects: ["mcp-*"]
+```
+
+```yaml
+# the pipeline
+steps:
+  verify:
+    kind: verify
+    needs: deploy
+    deployment: deploy
+    duration: 2m
+    interval: 30s
+    metrics:
+      - name: healthy
+        source: checks
+        check:
+          url: http://mcp-weather.mcp.svc.cluster.local:8001/health
+          status: [200]
+          json: { path: status, equals: ok }     # optional
+          success: 0.95                          # per interval; one failure in twenty is fine
+```
+
+Each interval the runner makes a call every `every` (default 5 seconds) and records each one with
+its time, status and latency. If some failed, the verification says so in words: "3 of 20 requests
+to the health address returned 503", or "2 did not answer within 5s". The run page lists the failed calls under
+the metric, and the deployment panel shows the same sentence. As with any metric, `failures` (default
+2) consecutive failing intervals fail the verification, and `on_fail: rollback` rolls back; use
+`on_fail: abort` to stop a canary at once, which makes the proof a smoke test of a rollout step.
+Because a check is made while the interval runs, the verdict is ready when the window ends: there is
+no ingestion delay to wait for.
+
+What the deploy runner will not do, whatever a pipeline says:
+
+- It calls only the hosts and Service namespaces its own `check` source lists (an empty list allows
+  nothing), and only for the projects the source lists. An address literal must be in a listed range.
+- The connection goes to what the name resolves to at the moment of the call, so a name that answers
+  differently later cannot lead into the network around it. No redirect is followed (a 302 is reported
+  as an answer that is not healthy) and no proxy is used.
+- Only `GET` and `HEAD`; at most 30 seconds a call; at most 64 KiB of the answer is read; at most 200
+  calls are recorded per interval.
+- Credentials are `secret_headers`, secret references the runner reads from its own stores. They are
+  never written in the pipeline, the record or the log; a header that is not secret (`Host`, say) goes
+  under `headers`.
+- Certificates are verified (the source's `ca_file` adds authorities); `insecure_tls` works only if the
+  operator set `allow_insecure_tls` on the source.
+
+`kind: tcp` only checks that a connection opens. A gRPC health call is not built in yet: put an HTTP
+health address in front of it, or keep reading a probe metric.
+
 ## How it decides
 
 Each interval, a metric's value is the mean of its readings, checked against `fail_fast` bounds,

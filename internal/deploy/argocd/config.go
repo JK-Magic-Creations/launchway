@@ -73,6 +73,11 @@ type Repo struct {
 	// token or password for HTTP basic authentication. Never in this file.
 	Credentials *pipeline.SecretRef `yaml:"credentials"`
 	Username    string              `yaml:"username"` // default launchway
+	// Hosted says Launchway itself hosts the repository, and url is its
+	// address. Deploy steps then write to it with the step's own credential
+	// (the environment's write_back) and never with a stored one; credentials
+	// here, if any, only read (observing what Argo CD has synced).
+	Hosted bool `yaml:"hosted"`
 	// Paths lists which projects may change which files (patterns, where
 	// ** matches any number of directories).
 	Paths  []PathRule `yaml:"paths"`
@@ -134,8 +139,8 @@ func (c *Config) Check() error {
 		if r.URL == "" {
 			return fmt.Errorf("%s: url is required", where)
 		}
-		if strings.Contains(r.URL, "@") && strings.Contains(r.URL, "://") {
-			return fmt.Errorf("%s: the url must not hold credentials; name them under credentials", where)
+		if err := r.checkAddress(where); err != nil {
+			return err
 		}
 		if r.ArgoCDURL == "" {
 			r.ArgoCDURL = r.URL
@@ -164,6 +169,18 @@ func (c *Config) Check() error {
 			}
 		}
 		c.Repos[name] = r
+	}
+	return nil
+}
+
+// checkAddress checks a repository's address: no credentials in it, and a
+// hosted repository's is Launchway's, over http or https.
+func (r Repo) checkAddress(where string) error {
+	if strings.Contains(r.URL, "@") && strings.Contains(r.URL, "://") {
+		return fmt.Errorf("%s: the url must not hold credentials; name them under credentials", where)
+	}
+	if r.Hosted && !strings.HasPrefix(r.URL, "https://") && !strings.HasPrefix(r.URL, "http://") {
+		return fmt.Errorf("%s: a hosted repository's url is Launchway's address over http or https", where)
 	}
 	return nil
 }

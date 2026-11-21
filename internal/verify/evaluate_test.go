@@ -369,3 +369,18 @@ func TestFirstReportOfAnIndexWins(t *testing.T) {
 		t.Errorf("%+v", v.Metrics[0].Intervals)
 	}
 }
+
+// A health check's plain sentence is part of why an interval failed.
+func TestCheckNoteExplainsAFailedInterval(t *testing.T) {
+	min := 1.0
+	spec := Spec{Intervals: 2, IntervalMS: 60_000, Metrics: []MetricSpec{{Name: "healthy", Direction: LowerIsWorse, Min: &min}}}
+	bad := func(i int) Interval {
+		return Interval{Index: i, Start: int64(i) * 60_000, End: int64(i+1) * 60_000, Metrics: []MetricData{{
+			Name: "healthy", Canary: []Point{{T: int64(i) * 60_000, V: 1}, {T: int64(i)*60_000 + 1, V: 0}},
+			Note: "1 of 2 requests to /healthz returned 503"}}}
+	}
+	v := Evaluate(spec, Baseline{}, []Interval{bad(0), bad(1)})
+	if v.Outcome != Failed || !v.Final || !strings.Contains(v.Summary, "(1 of 2 requests to /healthz returned 503)") {
+		t.Fatalf("%+v", v)
+	}
+}

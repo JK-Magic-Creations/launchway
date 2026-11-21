@@ -46,10 +46,10 @@ func TestUpgradeFromSchema22AndBack(t *testing.T) {
 		t.Fatalf("the newest build on a schema-22 database: %v\n%s", err, logCur.String())
 	}
 	info, err := cur.Schema(context.Background())
-	if err != nil || info.Database != schemaQueues || info.Code != schemaQueues || !info.Compatible() || info.Minimum != 7 {
+	if err != nil || info.Database != schemaDelivery || info.Code != schemaDelivery || !info.Compatible() || info.Minimum != 7 {
 		t.Fatalf("after the upgrade: %+v %v", info, err)
 	}
-	for v := schemaResources + 1; v <= schemaQueues; v++ {
+	for v := schemaResources + 1; v <= schemaDelivery; v++ {
 		if !strings.Contains(logCur.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, logCur.String())
 		}
@@ -57,7 +57,7 @@ func TestUpgradeFromSchema22AndBack(t *testing.T) {
 	if strings.Contains(logCur.String(), "schema check failed") {
 		t.Fatalf("the startup guard spoke:\n%s", logCur.String())
 	}
-	checkMarkers(t, cur, schemaQueues)
+	checkMarkers(t, cur, schemaDelivery)
 	if j := take(t, cur); j.RunID != half {
 		t.Fatalf("the half-done run did not carry on: %+v", j)
 	}
@@ -72,11 +72,11 @@ func TestUpgradeFromSchema22AndBack(t *testing.T) {
 	var log syncBuffer
 	older, err := openAs(t, addr, clk, schemaResources, &log)
 	if err != nil {
-		t.Fatalf("a build of schema 22 on a database of schema %d: %v\n%s", schemaAccounts, err, log.String())
+		t.Fatalf("a build of schema 22 on a database of schema %d: %v\n%s", schemaDelivery, err, log.String())
 	}
 	t.Cleanup(func() { older.Close() })
 	got, err := older.Schema(context.Background())
-	if err != nil || got.Database != schemaQueues || got.Code != schemaResources || !got.Compatible() {
+	if err != nil || got.Database != schemaDelivery || got.Code != schemaResources || !got.Compatible() {
 		t.Fatalf("the schema-22 build's view: %+v %v", got, err)
 	}
 	if c := strings.Count(log.String(), "running against a database written by a newer version"); c != 1 {

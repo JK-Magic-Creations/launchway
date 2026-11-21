@@ -627,7 +627,8 @@ func (c *cmd) restoreJob(def *pipeline.Step, s *StepState) *DeployJob {
 	r, dep := def.Restore, s.Dep
 	dj := &DeployJob{Action: ActionRevert, Deployment: dep.ID, Environment: dep.Environment, Service: dep.Service, Target: dep.Target,
 		Application: dep.Application, Version: dep.Version, PreviousVersion: r.From.Version,
-		Repo: def.ArgoCD.WriteBack.Repo, Branch: def.ArgoCD.WriteBack.Branch, Sync: def.ArgoCD.Sync, Deadline: s.Deadline}
+		Repo: def.ArgoCD.WriteBack.Repo, Branch: def.ArgoCD.WriteBack.Branch, Sync: def.ArgoCD.Sync, Deadline: s.Deadline,
+		WriteBack: c.writeBack(dep.Environment, dep.ID)}
 	dj.Message = fmt.Sprintf("Roll back %s in %s from %s to %s\n\nRun #%d of %s, asked for by %s: %s.",
 		dep.Service, dep.Environment, r.From.Version, r.To.Version, st.Number, st.Project, r.Actor, r.Reason)
 	for _, rv := range r.Reverts {

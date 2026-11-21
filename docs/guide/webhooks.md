@@ -55,6 +55,7 @@ A delivery is an HTTP `POST` of JSON with these headers:
 | `X-Launchway-Delivery` | A unique ID; the same ID is in the body, and a replay repeats it |
 | `X-Launchway-Signature-256` | `sha256=` and the hex HMAC-SHA256 of the **raw body** under the secret |
 | `X-Hub-Signature-256` | The same value, for receivers that already read that header |
+| `X-GitHub-Event` | The event's name again, for receivers written for GitHub's format |
 
 Verify it by computing the HMAC over the bytes you received and comparing in constant time:
 
@@ -160,3 +161,17 @@ There are no path filters in the trigger language yet.
 
 `webhook.add`, `webhook.update`, `webhook.delete`, `webhook.test`, `webhook.redeliver` (who, which hook,
 which address) and `webhook.disable` (by `system`) are in the audit trail. The secret is never written there.
+
+## Telling Argo CD about a commit at once
+
+Argo CD polls Git every three minutes unless it is told. A deploy step that writes to the GitOps
+repository already asks Argo CD to refresh the application it deployed (the refresh annotation, on by
+default; it needs the right to patch that Application). For changes made by anyone else (a person
+pushing to the GitOps repository), add a webhook to the repository that sends **push** events to
+`https://<argocd>/api/webhook`, with the secret you set as `webhook.github.secret` in Argo CD's `argocd-secret`.
+Argo CD's receiver accepts the formats of several Git hosts, GitHub's among them; Launchway's push
+payload carries GitHub's names (`ref`, `before`, `after`, `repository.html_url`, `clone_url`, `ssh_url`) and
+header (`X-GitHub-Event: push`, `X-Hub-Signature-256`), so it is read as GitHub's. Argo CD matches the
+repository's address with the applications' `repoURL`: it must be the address Argo CD reads from. Argo CD
+refreshes the applications of that repository and branch within seconds. If the receiver does not accept it,
+polling and the deploy step's refresh remain the supported path.

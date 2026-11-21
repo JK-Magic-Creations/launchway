@@ -107,6 +107,9 @@ func (s *Server) hostKeySealer(ctx context.Context) (sshkeys.Sealer, error) {
 // pushPolicy is the rule applied inside every push of this repository, from
 // either transport: protected branches. nil when there are none.
 func (s *Server) pushPolicy(c gitCaller, repo forge.Repository) func(context.Context, []githttp.RefUpdate) error {
+	if c.pipe != nil {
+		return s.pushPolicyPipeline(c, repo)
+	}
 	if s.Forge == nil || s.Forge.Rules == nil {
 		return nil
 	}

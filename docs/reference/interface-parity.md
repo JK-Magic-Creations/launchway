@@ -25,6 +25,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/runner/v1/deploy/commands` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/lease` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/observe` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/deploy/pull-request` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/verify/interval` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/verify/lease` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/watch` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
@@ -96,6 +97,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/libraries/{library}/templates` | `list_templates` | — | — | gap: launchway has no templates command yet |
 | `GET /api/v1/me` | — | — | — | exempt: the caller's own identity: the token is the credential for MCP and the CLI |
 | `GET /api/v1/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |
+| `GET /api/v1/notifications` | `list_notifications` | `notifications` | — | equal |
 | `GET /api/v1/owners/{owner}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/owners/{owner}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
 | `DELETE /api/v1/owners/{owner}/hooks/{id}` | `delete_webhook` | `repos hooks delete` | `planned: launchway_webhook` | equal |

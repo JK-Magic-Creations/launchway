@@ -200,7 +200,7 @@ func (st *pushState) handle(ctx context.Context, req hookRequest) hookReply {
 			return fail(err)
 		}
 		if st.policy != nil {
-			if err := st.policy(ctx, req.Updates); err != nil {
+			if err := st.policy(st.withChangedFiles(ctx, req.Quarantine), req.Updates); err != nil {
 				return fail(err)
 			}
 		}

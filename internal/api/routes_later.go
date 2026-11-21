@@ -37,6 +37,8 @@ func (s *Server) laterRoutes() []route {
 		{"GET /.well-known/oauth-protected-resource/mcp", public, "", s.protectedResourceMetadata},
 
 		// Verifications and AI models (schema 19).
+		{"GET /api/v1/notifications", signedIn, "", s.listNotifications},
+		{"POST /api/runner/v1/deploy/pull-request", runnerOnly, "", s.deployPullRequest},
 		{"POST /api/runner/v1/deploy/verify/lease", runnerOnly, "", s.verifyLease},
 		{"POST /api/runner/v1/deploy/verify/interval", runnerOnly, "", s.verifyInterval},
 		{"GET /api/v1/runs/{id}/verifications", runRead, "", s.runVerifications},

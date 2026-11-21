@@ -21,6 +21,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
+	"github.com/jk-magic-creations/launchway/internal/notify"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/policy"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
@@ -111,6 +112,9 @@ type Config struct {
 	// configuration (health_sources); every server must list the same ones.
 	// Unset: verify steps are refused.
 	Verification VerificationConfig `yaml:"verification"`
+	// Notifications are the channels and rules that tell people an approval
+	// waits or something went wrong (schema 38); see internal/notify.
+	Notifications notify.Config `yaml:"notifications"`
 	// AI lists the models steps may ask (schema 19). Unset: no model, and
 	// nothing is ever sent to one; every other feature works.
 	AI AIConfig `yaml:"ai"`
@@ -226,7 +230,7 @@ type VerificationConfig struct {
 // HealthSourceConfig names one health source.
 type HealthSourceConfig struct {
 	Name     string   `yaml:"name"`
-	Type     string   `yaml:"type"` // prometheus, loki, clickhouse, elasticsearch, opensearch, postgres or http
+	Type     string   `yaml:"type"` // prometheus, loki, clickhouse, elasticsearch, opensearch, postgres, http or check
 	Projects []string `yaml:"projects"`
 }
 
@@ -300,6 +304,8 @@ type EnvironmentConfig struct {
 	// EmergencyRollback overrides approvals.emergency_rollback for this
 	// environment: allow or require_approval.
 	EmergencyRollback string `yaml:"emergency_rollback"`
+	// WriteBack: how deploy steps write to a repository Launchway hosts.
+	WriteBack *WriteBackConfig `yaml:"write_back"`
 }
 
 // ReviewersConfig names who may acknowledge an emergency rollback.
@@ -339,7 +345,7 @@ func (c *Config) EngineEnvironments() []engine.Environment {
 			reviewers = &pipeline.Approvers{Users: e.Reviewers.Users, Groups: e.Reviewers.Groups, Count: 1}
 		}
 		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue, Protected: e.Protected, MinApprovals: e.MinApprovals,
-			Reviewers: reviewers, EmergencyRollback: e.EmergencyRollback})
+			Reviewers: reviewers, EmergencyRollback: e.EmergencyRollback, WriteBack: e.WriteBack.engine()})
 	}
 	return out
 }
@@ -749,6 +755,9 @@ func readConfig(path string, bootstrap bool) (*Config, error) {
 // any change to it is stored, so both are held to exactly the same rules.
 // path names where it came from in messages.
 func (c *Config) Validate(path string) error {
+	if err := c.Notifications.Check(); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	if err := c.Auth.check(); err != nil {
 		where := "auth"
 		if path != "" {

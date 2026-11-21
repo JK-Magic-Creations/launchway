@@ -25,7 +25,7 @@ func TestSchema37UpgradesFrom33KeepingPullRequests(t *testing.T) {
 	old.Close()
 
 	var log syncBuffer
-	cur, err := openAs(t, addr, clk, 0, &log)
+	cur, err := openAs(t, addr, clk, schemaQueues, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
