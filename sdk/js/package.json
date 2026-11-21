@@ -1,0 +1,35 @@
+{
+  "name": "@launchway/toggles",
+  "version": "0.1.0",
+  "description": "Feature toggles for Launchway: local evaluation for Node (server keys) and remote evaluation for browsers (client keys), with an OpenFeature provider",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/src/index.d.ts", "default": "./dist/src/index.js" },
+    "./web": { "types": "./dist/src/web.d.ts", "default": "./dist/src/web.js" },
+    "./openfeature": { "types": "./dist/src/openfeature.d.ts", "default": "./dist/src/openfeature.js" }
+  },
+  "files": ["dist/src"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "tsc -p . && node --test dist/test/",
+    "typecheck": "tsc -p . --noEmit"
+  },
+  "peerDependencies": {
+    "@openfeature/server-sdk": "^1.15.0",
+    "@openfeature/web-sdk": "^1.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@openfeature/server-sdk": { "optional": true },
+    "@openfeature/web-sdk": { "optional": true }
+  },
+  "devDependencies": {
+    "@openfeature/server-sdk": "1.18.0",
+    "@openfeature/web-sdk": "1.5.0",
+    "@types/node": "22.10.5",
+    "typescript": "5.7.3"
+  }
+}

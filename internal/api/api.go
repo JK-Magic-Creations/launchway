@@ -28,6 +28,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/settings"
 	"github.com/jk-magic-creations/launchway/internal/source"
+	"github.com/jk-magic-creations/launchway/internal/togglestore"
 )
 
 // Server holds what the handlers need.
@@ -70,16 +71,15 @@ type Server struct {
 	AI        *ai.Client
 	AISecrets *secrets.Resolver
 	// RunnersRole is the role needed on every project to manage runners:
-	// make join tokens, revoke and rotate runners (runner_admin); nil means
-	// admin, NoRole nobody.
+	// make join tokens, revoke and rotate runners (runner_admin); nil means admin, NoRole nobody.
 	RunnersRole *auth.Role
-	// Settings is the configuration kept in the database (schema 23), under /api/v1/config; nil if none.
-	Settings  *settings.Service
-	Variables *settings.VariableService // variables set at levels (schema 29)
-	Secrets   *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
-	sealerMu  sync.Mutex
-	sealer    *auth.Sealer // seals the state of sign-ins in progress
-	reportKey []byte       // signs links to HTML reports
+	Settings    *settings.Service         // the configuration kept in the database (schema 23), under /api/v1/config; nil if none
+	Variables   *settings.VariableService // variables set at levels (schema 29)
+	Toggles     *togglestore.Service      // feature toggles (schema 41); nil: off
+	Secrets     *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
+	sealerMu    sync.Mutex
+	sealer      *auth.Sealer // seals the state of sign-ins in progress
+	reportKey   []byte       // signs links to HTML reports
 
 	MCP      *MCPOptions      // turns on the Model Context Protocol endpoint, /mcp; nil is off
 	Forge    *ForgeHosting    // Git hosting; nil is off

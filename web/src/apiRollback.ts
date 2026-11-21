@@ -6,8 +6,10 @@ import type { RollbackTarget, ServerAction } from "./apiDeploy";
 
 export interface RunRef { id: string; number: number; actor?: string; reason?: string }
 
+export interface RollbackToggles { since: number; note: string; changes: { id: number; toggle: string; actor: string; reason: string; at: number }[] }
+
 export interface RollbackPlan {
-  project: string; environment: string; service: string; protected: boolean;
+  project: string; environment: string; service: string; protected: boolean; toggles?: RollbackToggles;
   current?: { deployment: string; run: string; number: number; version: string };
   holder?: { deployment: string; run: string; number: number; version?: string };
   action: ServerAction;
@@ -49,11 +51,11 @@ declare module "./api" {
   }
 }
 
-export interface RollbackRequest { environment: string; service?: string; to?: string; reason: string; queue?: boolean }
+export interface RollbackRequest { environment: string; service?: string; to?: string; reason: string; queue?: boolean; revert_toggles?: boolean }
 
 export const rollbackApi = {
-  plan: (project: string, environment: string, service?: string) =>
-    call<RollbackPlan>("GET", `/api/v1/projects/${encodeURIComponent(project)}/rollback?environment=${encodeURIComponent(environment)}${service ? `&service=${encodeURIComponent(service)}` : ""}`),
+  plan: (project: string, environment: string, service?: string, to?: string) =>
+    call<RollbackPlan>("GET", `/api/v1/projects/${encodeURIComponent(project)}/rollback?environment=${encodeURIComponent(environment)}${service ? `&service=${encodeURIComponent(service)}` : ""}${to ? `&to=${encodeURIComponent(to)}` : ""}`),
   request: (project: string, body: RollbackRequest) =>
     call<{ id: string; number: number; message: string }>("POST", `/api/v1/projects/${encodeURIComponent(project)}/rollbacks`, body),
   reviews: (background = false) => call<ReviewItem[]>("GET", "/api/v1/rollbacks/review", undefined, { background }),

@@ -278,6 +278,27 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `variable.delete` | `DELETE /api/v1/variables/{name}` (also `launchway variables delete`) |
 | `variable.lock` | `PUT /api/v1/variables/{name}/lock` (also `launchway variables lock`); the detail is the reason |
 | `variable.unlock` | `DELETE /api/v1/variables/{name}/lock` (also `launchway variables unlock`) |
+| `toggle.apply` | A toggles file applied; the detail is the reason |
+| `toggle.approve` | A waiting change approved |
+| `toggle.create` | A toggle made; the detail is the reason |
+| `toggle.delete` | A toggle removed (it can be restored by reverting the change) |
+| `toggle.evaluate` | A context tried against a toggle; the context is not recorded |
+| `toggle.key_create` | An SDK key made; the target names the environment and the detail the kind and name, never the key |
+| `toggle.key_revoke` | An SDK key revoked |
+| `toggle.key_rotate` | An SDK key rotated; the old one works until its expiry |
+| `toggle.lock` | A shared toggle locked at its level |
+| `toggle.plan` | A toggles file compared with the live state |
+| `toggle.reject` | A waiting change turned down |
+| `toggle.revert` | A change reverted |
+| `toggle.revert_since` | The toggle changes of an environment since a time reverted together, as when a rollback is asked to take them back |
+| `toggle.safeguards_set` | The safeguards changed at a level; turning one down is recorded with its reason |
+| `toggle.schedule_cancel` | A scheduled change canceled |
+| `toggle.segment_delete` | A segment removed |
+| `toggle.segment_set` | A segment made or replaced |
+| `toggle.set` | A toggle changed in an environment (made, or held for approval); the detail is the reason. The toggle's own history holds before and after |
+| `toggle.unlock` | A lock removed |
+| `toggle.update` | A toggle's definition changed |
+| `toggle.withdraw` | A waiting change taken back by the person who asked |
 | `cache_policy.clear_project` | `DELETE /api/v1/projects/{name}/cache-policy` |
 | `registry.push` | a manifest was pushed to the built-in registry over `/v2/` (the target is `repository:tag` or `repository@digest`, the detail names the run when a step pushed it); a push refused for lack of the operator role is recorded with outcome `denied` |
 | `registry.pull` | a pull or read refused over `/v2/` (outcome `denied`); allowed pulls are not recorded one by one |

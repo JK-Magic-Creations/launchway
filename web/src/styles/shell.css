@@ -36,10 +36,11 @@
 /* the pulse: the whole installation in one hairline */
 .pulse { height: 2px; background: var(--line); position: relative; overflow: hidden; }
 .pulse i { position: absolute; top: 0; bottom: 0; display: none; }
-.pulse .p-run { display: block; left: -20%; width: 20%; background: linear-gradient(90deg, transparent, var(--signal), transparent); animation: comet 5s linear infinite; opacity: 0; }
+.pulse .p-run { display: block; left: -20%; width: 20%; background: linear-gradient(90deg, transparent, var(--signal), transparent); animation: comet 5s linear infinite; opacity: 0; z-index: 1; }
 .pulse[data-state="running"] .p-run, .pulse[data-state="waiting"] .p-run, .pulse[data-state="failing"] .p-run { opacity: .7; }
-.pulse[data-state="waiting"] .p-wait, .pulse[data-state="failing"] .p-wait { display: block; background: var(--warn); width: 5%; right: 40%; }
-.pulse[data-state="failing"] .p-bad { display: block; background: var(--bad); width: 8%; right: 18%; }
+/* Amber or red is the whole hairline, never a stretch of it: a segment at a fixed share of the width landed under whichever area happened to be there (Library, the Learn button) and read as a mark on that item. */
+.pulse[data-state="waiting"] .p-wait, .pulse[data-state="failing"] .p-wait { display: block; background: var(--warn); left: 0; right: 0; }
+.pulse[data-state="failing"] .p-bad { display: block; background: var(--bad); left: 0; right: 0; }
 @keyframes comet { to { left: 100%; } }
 
 /* the do bar */

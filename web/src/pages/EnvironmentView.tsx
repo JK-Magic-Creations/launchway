@@ -2,6 +2,7 @@ import { rollbackApi, type ReviewItem } from "../apiRollback";
 import { RollbackControl } from "../components/Rollback";
 import { HistoryNote, NeedsReview } from "../components/RollbackRun";
 import { useCallback } from "react";
+import { EnvironmentChanges } from "../components/ToggleChanges";
 import { api, type DeploymentView } from "../api";
 import { useMe } from "../auth";
 import { EntityLink } from "../components/EntityLink";
@@ -82,6 +83,7 @@ export function EnvironmentViewPage({ name }: { name: string }) {
           </ul>
         )}
       </Sheet>
+      <EnvironmentChanges environment={env.name} projects={env.projects} deployments={hist.data ?? []} />
     </div>
   );
 }

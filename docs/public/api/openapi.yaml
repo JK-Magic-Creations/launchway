@@ -897,6 +897,105 @@ paths:
             tags:
                 - runner
             x-launchway-access: public
+    /api/sdk/v1/evaluate:
+        options:
+            description: The preflight of a browser's request; carries no key.
+            operationId: options_api_sdk_v1_evaluate
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: The preflight of a browser's request; carries no key.
+            tags:
+                - v1
+            x-launchway-access: public
+        post:
+            description: 'With a client or server key: {context, toggles} answers {values: {key: {value, reason}}}. A client key gets client-visible toggles only, never a rule, and only from the websites it names.'
+            operationId: post_api_sdk_v1_evaluate
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'With a client or server key: {context, toggles} answers {values: {key: {value, reason}}}.'
+            tags:
+                - v1
+            x-launchway-access: public
+    /api/sdk/v1/ruleset:
+        get:
+            description: 'With a server key: the environment''s ruleset, with ETag; 304 for a matching If-None-Match. 401 for a key that is missing, unknown, revoked or expired, without saying which; 403 for a client key. Rate limited per key. See the [protocol](toggles-protocol.md).'
+            operationId: get_api_sdk_v1_ruleset
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'With a server key: the environment''s ruleset, with ETag; 304 for a matching If-None-Match.'
+            tags:
+                - v1
+            x-launchway-access: public
+    /api/sdk/v1/stream:
+        get:
+            description: 'With a server key: server-sent events. event: ruleset, id the ETag, data the ruleset, on connection (unless Last-Event-ID is current) and whenever it changes; : ping comments in between.'
+            operationId: get_api_sdk_v1_stream
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'With a server key: server-sent events.'
+            tags:
+                - v1
+            x-launchway-access: public
+    /api/sdk/v1/telemetry:
+        post:
+            description: 'With a server key: {counts: [{toggle, value, reason, count}]}, aggregated evaluation counts. No context.'
+            operationId: post_api_sdk_v1_telemetry
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: 'With a server key: {counts: [{toggle, value, reason, count}]}, aggregated evaluation counts.'
+            tags:
+                - v1
+            x-launchway-access: public
     /api/v1/account:
         get:
             description: 'The caller''s built-in account: second factor on, recovery codes left, whether a second factor is required for their role.'
@@ -3685,6 +3784,1128 @@ paths:
                 "503":
                     $ref: '#/components/responses/Error'
             summary: One test's results in the project's last runs.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/toggle-apply:
+        post:
+            description: 'Makes the live state match the file: {file, reason, origin}. Each change goes through the safeguards; those that need approval wait (waiting). Never removes what the file leaves out.'
+            operationId: post_api_v1_projects_name_toggle_apply
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes the live state match the file: {file, reason, origin}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.apply
+    /api/v1/projects/{name}/toggle-changes:
+        get:
+            description: Changes that wait for approval.
+            operationId: get_api_v1_projects_name_toggle_changes
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Changes that wait for approval.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/toggle-changes/{id}/approve:
+        post:
+            description: 'Approves a waiting change: {comment}. Needs the operator role in its environment, and not to be the person who asked (unless approvals.allow_self); if the environment names reviewers, one of them. With enough approvals the change is made.'
+            operationId: post_api_v1_projects_name_toggle_changes_id_approve
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Approves a waiting change: {comment}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.approve
+    /api/v1/projects/{name}/toggle-changes/{id}/reject:
+        post:
+            description: Turns a waiting change down.
+            operationId: post_api_v1_projects_name_toggle_changes_id_reject
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Turns a waiting change down.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.reject
+    /api/v1/projects/{name}/toggle-changes/{id}/revert:
+        post:
+            description: 'Goes back over a change: {reason} is required. A retreat: never held for approval. Says how many later changes it also undid (also_undone). 409 if already reverted.'
+            operationId: post_api_v1_projects_name_toggle_changes_id_revert
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Goes back over a change: {reason} is required.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.revert
+    /api/v1/projects/{name}/toggle-changes/{id}/withdraw:
+        post:
+            description: Takes back a change you asked for.
+            operationId: post_api_v1_projects_name_toggle_changes_id_withdraw
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Takes back a change you asked for.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.withdraw
+    /api/v1/projects/{name}/toggle-file:
+        get:
+            description: The project's own toggles and segments as a YAML file (file), conventionally .launchway/toggles.yaml.
+            operationId: get_api_v1_projects_name_toggle_file
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The project's own toggles and segments as a YAML file (file), conventionally .launchway/toggles.yaml.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/toggle-keys:
+        get:
+            description: 'The SDK keys of the project (?environment=): kind, prefix, expiry, last use. Never a secret.'
+            operationId: get_api_v1_projects_name_toggle_keys
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The SDK keys of the project (?environment=): kind, prefix, expiry, last use.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+        post:
+            description: 'Makes an SDK key: {environment, kind (server or client), name, origins}. Needs the admin role. The key''s text is in key, shown once.'
+            operationId: post_api_v1_projects_name_toggle_keys
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes an SDK key: {environment, kind (server or client), name, origins}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.key_create
+    /api/v1/projects/{name}/toggle-keys/{id}:
+        delete:
+            description: Ends a key at once. Needs the admin role.
+            operationId: delete_api_v1_projects_name_toggle_keys_id
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Ends a key at once.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.key_revoke
+    /api/v1/projects/{name}/toggle-keys/{id}/rotate:
+        post:
+            description: 'Makes a new key like the old one: {overlap_hours}; the old one works until then (default 24 h). Needs the admin role.'
+            operationId: post_api_v1_projects_name_toggle_keys_id_rotate
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes a new key like the old one: {overlap_hours}; the old one works until then (default 24 h).'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.key_rotate
+    /api/v1/projects/{name}/toggle-plan:
+        post:
+            description: 'How a file differs from the live state: {file}. drift lists add, change and only_live. Changes nothing.'
+            operationId: post_api_v1_projects_name_toggle_plan
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'How a file differs from the live state: {file}.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+            x-launchway-audit: toggle.plan
+    /api/v1/projects/{name}/toggle-revert-since:
+        post:
+            description: 'Reverts every toggle change made in an environment since a time: {environment, since, reason, dry_run}. What a rollback page offers.'
+            operationId: post_api_v1_projects_name_toggle_revert_since
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Reverts every toggle change made in an environment since a time: {environment, since, reason, dry_run}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.revert_since
+    /api/v1/projects/{name}/toggle-safeguards:
+        get:
+            description: The safeguards in each environment and which level set each.
+            operationId: get_api_v1_projects_name_toggle_safeguards
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The safeguards in each environment and which level set each.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: 'Sets safeguards at the project (or level/scope): {environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}. Needs the admin role on the project (the level''s admin above it). Turning one down needs a reason; 409 for one a level above locked.'
+            operationId: put_api_v1_projects_name_toggle_safeguards
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Sets safeguards at the project (or level/scope): {environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.safeguards_set
+    /api/v1/projects/{name}/toggle-schedules:
+        get:
+            description: Scheduled changes (?toggle=, ?all=true for those that ran too).
+            operationId: get_api_v1_projects_name_toggle_schedules
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Scheduled changes (?toggle=, ?all=true for those that ran too).
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/toggle-schedules/{id}:
+        delete:
+            description: Cancels a scheduled change that has not run.
+            operationId: delete_api_v1_projects_name_toggle_schedules_id
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Cancels a scheduled change that has not run.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.schedule_cancel
+    /api/v1/projects/{name}/toggle-segments:
+        get:
+            description: The segments the project sees.
+            operationId: get_api_v1_projects_name_toggle_segments
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The segments the project sees.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/toggle-segments/{segment}:
+        delete:
+            description: Removes a segment (?reason= required); 409 while a rule names it.
+            operationId: delete_api_v1_projects_name_toggle_segments_segment
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: segment
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes a segment (?reason= required); 409 while a rule names it.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.segment_delete
+        put:
+            description: 'Makes or replaces a segment: {included, excluded, rules: [{clauses}], description, reason}.'
+            operationId: put_api_v1_projects_name_toggle_segments_segment
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: segment
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes or replaces a segment: {included, excluded, rules: [{clauses}], description, reason}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.segment_set
+    /api/v1/projects/{name}/toggle-timeline:
+        get:
+            description: The toggle changes of an environment (?environment= required; ?since= Unix ms), newest first, for the environment's page beside its deployments.
+            operationId: get_api_v1_projects_name_toggle_timeline
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The toggle changes of an environment (?environment= required; ?since= Unix ms), newest first, for the environment's page beside its deployments.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/toggles:
+        get:
+            description: 'The project''s toggles with their state in each environment (environments), stale mentions and changes waiting (waiting). A toggle defined at a level above the project shows with inherited: true.'
+            operationId: get_api_v1_projects_name_toggles
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The project's toggles with their state in each environment (environments), stale mentions and changes waiting (waiting).
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        post:
+            description: 'Makes a toggle: {key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}. Types boolean, string, number, json. It starts off in every environment. At a level above the project it needs an administrator of that level. 409 if the key exists, or is locked above.'
+            operationId: post_api_v1_projects_name_toggles
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes a toggle: {key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.create
+    /api/v1/projects/{name}/toggles/{key}:
+        delete:
+            description: Removes the toggle with its states; ?reason= is required. The removal is kept in the history and can be reverted.
+            operationId: delete_api_v1_projects_name_toggles_key
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes the toggle with its states; ?reason= is required.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.delete
+        get:
+            description: 'One toggle: its definition, each environment''s state and rules, lock, stale mentions, when it was last evaluated.'
+            operationId: get_api_v1_projects_name_toggles_key
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'One toggle: its definition, each environment''s state and rules, lock, stale mentions, when it was last evaluated.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        patch:
+            description: Changes the definition (description, owner, kind, expires, tags, default, safe_value, client_visible); never the type or the key. 400 for a client-visible toggle that needs one that is not.
+            operationId: patch_api_v1_projects_name_toggles_key
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Changes the definition (description, owner, kind, expires, tags, default, safe_value, client_visible); never the type or the key.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.update
+    /api/v1/projects/{name}/toggles/{key}/environments/{env}:
+        put:
+            description: 'Sets what the toggle does in an environment: {state: {on, off_value, prerequisites, rules, fallthrough}, reason, at}. Needs the operator role in the environment. 400 without a reason when the safeguard asks for one; 202 with waiting: true when it needs approval first; with at (RFC 3339) 202 with the scheduled change.'
+            operationId: put_api_v1_projects_name_toggles_key_environments_env
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: env
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Sets what the toggle does in an environment: {state: {on, off_value, prerequisites, rules, fallthrough}, reason, at}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.set
+    /api/v1/projects/{name}/toggles/{key}/evaluate:
+        post:
+            description: Tries {context, environment} against the toggle as it is now in each environment; nothing is counted or stored. The audit entry never holds the context.
+            operationId: post_api_v1_projects_name_toggles_key_evaluate
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Tries {context, environment} against the toggle as it is now in each environment; nothing is counted or stored.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+            x-launchway-audit: toggle.evaluate
+    /api/v1/projects/{name}/toggles/{key}/history:
+        get:
+            description: 'Every change to the toggle, newest first (?environment=&limit=): who, when, why, how, before and after, approvals, and what it reverted.'
+            operationId: get_api_v1_projects_name_toggles_key_history
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Every change to the toggle, newest first (?environment=&limit=): who, when, why, how, before and after, approvals, and what it reverted.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/toggles/{key}/lock:
+        delete:
+            description: Removes the lock.
+            operationId: delete_api_v1_projects_name_toggles_key_lock
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes the lock.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.unlock
+        put:
+            description: 'Locks a toggle shared from a level above its projects: {reason}. Needs an administrator of that level.'
+            operationId: put_api_v1_projects_name_toggles_key_lock
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Locks a toggle shared from a level above its projects: {reason}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: toggle.lock
+    /api/v1/projects/{name}/toggles/{key}/usage:
+        get:
+            description: Evaluation counts per environment, per value, for the last ?days=, and when it was last evaluated. Counts only, never who.
+            operationId: get_api_v1_projects_name_toggles_key_usage
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: key
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Evaluation counts per environment, per value, for the last ?days=, and when it was last evaluated.
             tags:
                 - projects
             x-launchway-access: project-viewer

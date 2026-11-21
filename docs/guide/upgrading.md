@@ -25,8 +25,9 @@ from the release before this one. A fresh installation does not need this page: 
   `launchway doctor encryption` ("waiting for older servers", then "complete"). New secrets made meanwhile are
   sealed at once. Set `LAUNCHWAY_SEAL_QUIET_SECONDS=0` (server environment) to seal at start instead, which brings
   back the window: a few seconds in the rehearsal, during which an old server fails to read webhook addresses.
-- **Schema.** Migrations 34 (encryption), 35 (build caches) and 36 (built-in accounts) are additive; the previous
-  build runs against the new schema.
+- **Schema.** Migrations 34 (encryption), 35 (build caches), 36 (built-in accounts) and 47 (feature toggles) are
+  additive; the previous build runs against the new schema. Numbers 37 to 46 are held, empty, for work that has not
+  merged, so that 47 is the number it will have when they do.
 
 ## Sign-in on upgrade
 

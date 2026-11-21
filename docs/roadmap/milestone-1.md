@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 31 in progress · 57 planned · 111 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 20 available · 34 in progress · 57 planned · 111 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -48,7 +48,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Host your code](#g-host-your-code) | 20 | 7 | 0 | 13 |
+| [Host your code](#g-host-your-code) | 20 | 4 | 3 | 13 |
 | [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 1 | 6 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
@@ -117,7 +117,7 @@ The files of a repository at any branch, tag or commit, with the last commit of 
 
 #### Search inside a repository {#search-inside-a-repository}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.
 
@@ -137,7 +137,7 @@ Markdown, diagrams, math, tables of data, images with before and after, document
 
 #### Edit in the browser, as a commit {#edit-in-the-browser-as-a-commit}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.
 
@@ -177,7 +177,7 @@ A deleted repository goes to a trash and can come back within a set time. Delete
 
 #### Mirrors in and out {#mirrors-in-and-out}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Pull a repository from another host on a schedule, or push every change to another host as a safety copy. Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace. Today both directions work, and a stale mirror is flagged.
 

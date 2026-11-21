@@ -26,10 +26,10 @@ import (
 // SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if len(migrations) != schemaRegistry || schemaRegistry != 40 {
-		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 40", schemaRegistry, len(migrations))
+	if len(migrations) != schemaToggles || schemaToggles != 41 {
+		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 41", schemaToggles, len(migrations))
 	}
-	for i := schemaEncryption; i <= schemaRegistry; i++ {
+	for i := schemaEncryption; i <= schemaToggles; i++ {
 		if strings.TrimSpace(migrations[i-1].sql) == "" {
 			t.Fatalf("migration %d is an empty stand-in", i)
 		}
@@ -74,17 +74,17 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	for v := schemaEncryption; v <= schemaRegistry; v++ {
+	for v := schemaEncryption; v <= schemaToggles; v++ {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	if n := strings.Count(log.String(), "applied a database migration"); n != schemaRegistry-schemaPulls {
-		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaRegistry-schemaPulls, log.String())
+	if n := strings.Count(log.String(), "applied a database migration"); n != schemaToggles-schemaPulls {
+		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaToggles-schemaPulls, log.String())
 	}
-	checkMarkers(t, cur, schemaRegistry)
+	checkMarkers(t, cur, schemaToggles)
 	info, err := cur.Schema(ctx)
-	if err != nil || info.Database != schemaRegistry || info.Code != schemaRegistry || !info.Compatible() {
+	if err != nil || info.Database != schemaToggles || info.Code != schemaToggles || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	count := func(q string) (n int) {
@@ -114,7 +114,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	// A build of schema 33 (a server of the release in use during a rolling update, or after a rollback)
 	// still starts against the upgraded database and reads the old data.
 	older := mustOpenAs(t, addr, clk, schemaPulls, &syncBuffer{})
-	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaRegistry || oi.Code != schemaPulls || !oi.Compatible() {
+	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaToggles || oi.Code != schemaPulls || !oi.Compatible() {
 		t.Fatalf("the build of schema 33 against the final schema: %+v %v", oi, err)
 	}
 	var title, whSecret string

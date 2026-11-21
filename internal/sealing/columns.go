@@ -176,6 +176,12 @@ var explained = []struct{ column, why string }{
 	{"notifications.event_key", "the identity of the event a notification is about (run, kind), kept so that no message is sent twice; never a credential"},
 	{"encryption_state.key", "the name of a fact (the table holds the installation id and migration progress, no key material)"},
 	{"meta.key", "the name of a meta row"},
+	{"toggles.key", "the toggle's name, as the code that reads it names it"},
+	{"toggle_envs.key", "the toggle's name"},
+	{"toggle_changes.key", "the toggle's name"},
+	{"toggle_schedules.key", "the toggle's name"},
+	{"toggle_evals.key", "the toggle's name, with a count of evaluations"},
+	{"toggle_keys.secret_hash", "SHA-256 of a 256-bit random server SDK key; nothing can be recovered from it"},
 
 	// Counts.
 	{"ai_explanations.input_tokens", "a count of model tokens"},

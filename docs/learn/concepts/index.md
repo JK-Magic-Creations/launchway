@@ -10,6 +10,7 @@ a word in the product is unfamiliar. The [glossary](../../glossary.md) lists eve
 | [Templates, libraries and Flight plans](templates-and-libraries.md) | How do many projects share the same steps? |
 | [Variables](variables.md) | Where does a step get its settings and secrets from? |
 | [The built-in registry](registry.md) | Where do my images and charts live, and who may touch them? |
+| [Feature toggles](feature-toggles.md) | How do I ship a feature turned off, roll it out to some users, and turn it off in seconds? |
 | [Environments and deployments](environments-and-deployments.md) | What is a place my software runs, and how does a change get there safely? |
 | [Approvals](approvals.md) | How does a person say go or no-go? |
 | [High availability](high-availability.md) | What happens when a server, a runner or the database fails? |

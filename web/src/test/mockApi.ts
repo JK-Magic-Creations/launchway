@@ -60,6 +60,7 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     ...rollbackFixtures(detail),
     ...pullFixtures(),
     ...browseFixtures(),
+    ...toggleFixtures(),
     ...overrides,
   };
   class FakeSource { onopen = null; onerror = null; addEventListener() {} removeEventListener() {} close() {} }
@@ -222,5 +223,42 @@ export function browseFixtures(): Record<string, unknown> {
     [`${b}/search`]: { commit: c2, files: [{ path: "price.go", matches: [{ line: 4, text: "func Round(x float64) float64 {", ranges: [[5, 10]] }] }], matches: 1, partial: true, reason: "the search stopped after 10 seconds; narrow it by folder or extension", millis: 12 },
     [`${b}/compare`]: { base: "main", head: "fix-rounding", base_sha: c1, head_sha: c2, merge_base: c1, ahead: 1, behind: 1, commits: [{ sha: c2, author: "ada", authored_at: "2026-11-20T10:00:00Z", subject: "Round prices" }],
       changes: { files: [{ path: "price.go", status: "modified", additions: 1, deletions: 1, binary: false }], total: 1, additions: 1, deletions: 1 }, mergeability: { state: "clean", behind: 1, ahead: 1 } },
+  };
+}
+
+/** Feature toggles of shop-api: one rolling out in dev and off in prod with a change waiting for approval, one settled
+ * for a long time (a stale note), their history, keys, safeguards and the toggle changes in prod. */
+export function toggleFixtures(): Record<string, unknown> {
+  const on = { on: true, off_value: false, fallthrough: { value: true } };
+  const rollout = { on: true, off_value: false, rules: [{ id: "r1", clauses: [{ attribute: "plan", op: "equals", values: ["pro"] }], serve: { value: true } }],
+    fallthrough: { rollout: { buckets: [{ value: true, weight: 2500 }, { value: false, weight: 7500 }] } } };
+  const env = (environment: string, state: unknown, mode: string, serves: string, extra: Record<string, unknown> = {}) =>
+    ({ environment, configured: true, state, mode, serves, version: 2, updated_at: 1_700_000_000_000, updated_by: "ada", waiting: 0, ...extra });
+  const checkout = { level: "project", scope: "shop-api", key: "checkout-v2", type: "boolean", kind: "release", description: "The new checkout page", salt: "checkout-v2.ab12", default: false, safe_value: null,
+    client_visible: false, owner: "team-payments", tags: [], expires_at: 1_800_000_000_000, version: 3, created_at: 1_699_000_000_000, created_by: "ada", updated_at: 1_700_000_000_000, updated_by: "ada", inherited: false,
+    environments: [env("dev", rollout, "targeted", "1 rule(s), then 25% true, 75% false"), { ...env("prod", { on: false, off_value: false, fallthrough: { value: false } }, "off", "off: false for everyone"), configured: true, waiting: 1 }],
+    stale: [], last_evaluated: { dev: "2026-11-20" } };
+  const old = { ...checkout, key: "legacy-banner", description: "The banner for the old sale", owner: "", expires_at: undefined,
+    environments: [env("dev", on, "on", "true for everyone", { settled_since: 1_690_000_000_000 }), env("prod", on, "on", "true for everyone", { settled_since: 1_690_000_000_000 })],
+    stale: [{ reason: "settled", detail: "It has served true to everyone in every environment for 120 days. If it has done its job, remove the check from the code and then delete the toggle." }] };
+  const waiting = { id: 12, at: 1_700_000_100_000, project: "shop-api", level: "project", scope: "shop-api", toggle: "checkout-v2", environment: "prod", action: "state", actor: "bob", reason: "launch to everyone",
+    via: "ui", status: "pending", approvals: { need: 1, by: [] } };
+  const applied = { id: 11, at: 1_700_000_000_000, project: "shop-api", level: "project", scope: "shop-api", toggle: "checkout-v2", environment: "dev", action: "state", actor: "ada", reason: "start at 25%", via: "cli", status: "applied", approvals: { need: 0, by: [] } };
+  const guards = (approval: boolean) => ({ require_reason: true, require_approval: approval, approvals: 1, watch_minutes: 0, from: { require_reason: "default", require_approval: "default", approvals: "default", watch_minutes: "default" } });
+  const p = "/api/v1/projects/shop-api";
+  return {
+    [`${p}/toggles`]: { project: "shop-api", environments: ["dev", "prod"], toggles: [checkout, old], waiting: [waiting] },
+    [`${p}/toggles/checkout-v2`]: checkout,
+    [`${p}/toggles/payments-kill`]: { ...checkout, key: "payments-kill", kind: "kill", description: "Stops taking card payments", default: true, safe_value: false, expires_at: undefined,
+      environments: [env("prod", { on: true, off_value: true, fallthrough: { value: true } }, "on", "true for everyone")] },
+    [`${p}/toggles/checkout-v2/history`]: { toggle: "checkout-v2", changes: [waiting, applied] },
+    [`${p}/toggles/checkout-v2/usage`]: { toggle: "checkout-v2", usage: [{ environment: "dev", evaluations: 1200, last_evaluated: "2026-11-20", variations: { true: 300, false: 900 } }], privacy: "Counts only: how many evaluations, per environment, per day, per value. Nothing about who was evaluated is stored." },
+    [`${p}/toggle-timeline`]: { environment: "prod", changes: [{ ...applied, environment: "prod" }] },
+    [`${p}/toggle-segments`]: { segments: [{ name: "staff" }] },
+    [`${p}/toggle-safeguards`]: { project: "shop-api", environments: { dev: guards(false), prod: guards(true) } },
+    [`${p}/toggle-keys`]: { keys: [{ id: "a1b2c3", project: "shop-api", environment: "prod", kind: "server", name: "api", prefix: "lwt_srv_a1b2c3_...", created_at: 1_700_000_000_000, created_by: "ada", last_used_at: 1_700_000_050_000 }] },
+    [`${p}/toggle-schedules`]: { schedules: [{ id: 3, toggle: { key: "checkout-v2" }, environment: "dev", run_at: 1_900_000_000_000, reason: "launch", created_by: "ada", status: "pending" }] },
+    [`${p}/rollback`]: { project: "shop-api", environment: "prod", service: "shop", protected: false, action: { name: "rollback", available: true, who: "operator" },
+      toggles: { since: 1_700_000_000_000, note: "1 toggle change(s) were made here after version 1.3.2 went live.", changes: [{ id: 11, toggle: "checkout-v2", actor: "ada", reason: "start at 25%", at: 1_700_000_050_000 }] } },
   };
 }

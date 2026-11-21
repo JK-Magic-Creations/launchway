@@ -20,12 +20,15 @@ const deploymentsUsage = `Usage:
   launchway deployments options  --env E [--project P] [--service S] [--json]
         what a service can be rolled back to in an environment, and what each choice does
   launchway deployments rollback --env E [--project P] [--service S] [--to DEPLOYMENT|VERSION]
-                                 --reason TEXT [--queue] [--dry-run]
+                                 --reason TEXT [--queue] [--revert-toggles] [--dry-run]
         roll a service back to an earlier successful deployment (the previous one by default)
   launchway deployments review list [--json]       emergency rollbacks waiting for a review
   launchway deployments review RUN-ID --comment TEXT   acknowledge one, saying what you checked
 
-A rollback never restores a database or configuration. With --queue it waits behind
+A rollback never restores a database or configuration, and restores a version, not the feature
+toggles: the plan lists the toggle changes made here since that version went live, and
+--revert-toggles reverts them with the rollback (or: launchway toggles revert-since).
+With --queue it waits behind
 a deployment that holds the environment's lock instead of being refused.
 `
 
@@ -178,6 +181,7 @@ func (cl *client) rollback(args []string) error {
 	to := fs.String("to", "", "the deployment or version to restore (default: the previous successful one)")
 	reason := fs.String("reason", "", "why; required, and recorded with the rollback")
 	queue := fs.Bool("queue", false, "wait behind a deployment that holds the lock")
+	revertToggles := fs.Bool("revert-toggles", false, "also revert the toggle changes made since that version went live")
 	dry := fs.Bool("dry-run", false, "only say what it would do")
 	if pos, err := parseArgs(fs, args); err != nil {
 		return err
@@ -196,15 +200,29 @@ func (cl *client) rollback(args []string) error {
 		return err
 	}
 	cl.printPlan(plan)
+	cl.printToggleChanges(project, env, service, *to)
 	if *dry {
 		return nil
 	}
-	body := map[string]any{"environment": env, "service": service, "to": *to, "reason": *reason, "queue": *queue}
-	var sum engine.RunSummary
+	body := map[string]any{"environment": env, "service": service, "to": *to, "reason": *reason, "queue": *queue, "revert_toggles": *revertToggles}
+	var sum struct {
+		engine.RunSummary
+		ToggleReverts []struct {
+			Toggle string `json:"toggle"`
+			Error  string `json:"error"`
+		} `json:"toggle_reverts"`
+	}
 	if err := cl.call("POST", "/api/v1/projects/"+url.PathEscape(project)+"/rollbacks", body, &sum); err != nil {
 		return err
 	}
 	fmt.Fprintf(cl.out, "\nStarted rollback run #%d (%s): %s\nFollow it with: launchway runs show %s\n", sum.Number, sum.ID, sum.Message, sum.ID)
+	for _, r := range sum.ToggleReverts {
+		if r.Error != "" {
+			fmt.Fprintf(cl.out, "Toggle %s could not be reverted: %s\n", r.Toggle, r.Error)
+		} else {
+			fmt.Fprintf(cl.out, "Toggle %s reverted.\n", r.Toggle)
+		}
+	}
 	return nil
 }
 
@@ -249,4 +267,26 @@ func (cl *client) rollbackReview(args []string) error {
 	}
 	fmt.Fprintln(cl.out, "Acknowledged. It is no longer waiting for review.")
 	return nil
+}
+
+// printToggleChanges says which toggle changes a rollback would leave behind.
+func (cl *client) printToggleChanges(project, env, service, to string) {
+	q := url.Values{"environment": {env}, "service": {service}, "to": {to}}
+	var plan struct {
+		Toggles *struct {
+			Changes []struct {
+				ID     int64  `json:"id"`
+				Toggle string `json:"toggle"`
+				Actor  string `json:"actor"`
+				Reason string `json:"reason"`
+			} `json:"changes"`
+		} `json:"toggles"`
+	}
+	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(project)+"/rollback?"+q.Encode(), nil, &plan); err != nil || plan.Toggles == nil || len(plan.Toggles.Changes) == 0 {
+		return
+	}
+	fmt.Fprintf(cl.out, "\nToggle changes made here since that version went live (a rollback leaves them as they are; --revert-toggles reverts them):\n")
+	for _, c := range plan.Toggles.Changes {
+		fmt.Fprintf(cl.out, "  #%d %s by %s: %s\n", c.ID, c.Toggle, c.Actor, c.Reason)
+	}
 }

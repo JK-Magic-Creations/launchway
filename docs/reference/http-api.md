@@ -568,6 +568,55 @@ A variable is a name with a type, a value, an optional environment and an option
 | `GET /api/v1/projects/{name}/variables` | `project-viewer` | — | Every variable in effect for a project, optionally `?environment=`, each with its whole chain: the winning value, its level, each overridden value in order, the lock and why |
 | `GET /api/v1/runs/{id}/variables` | `run-viewer` | — | The variables the run used, as recorded when it was created; a re-run shows the original's |
 
+## Feature toggles
+
+A toggle is a value an application reads at run time, so that a feature can be turned on, off or rolled out to a share of users without a deployment. It belongs to a project, or is shared from a unit, the organization or the installation (the levels variables have). Each environment has its own state; safeguards (a reason, an approval in a protected environment) are on by default. See the [guide](../guide/feature-toggles.md). People and agents use the routes of the first table; applications use the SDK routes of the second, with an SDK key and nothing else.
+
+| Route | Who | Audit action | What it does |
+|---|---|---|---|
+| `GET /api/v1/projects/{name}/toggles` | `project-viewer` | — | The project's toggles with their state in each environment (`environments`), stale mentions and changes waiting (`waiting`). A toggle defined at a level above the project shows with `inherited: true`. |
+| `POST /api/v1/projects/{name}/toggles` | `project-operator` | `toggle.create` | Makes a toggle: `{key, type, kind, default, safe_value, description, owner, expires, client_visible, tags, level, scope, reason}`. Types `boolean`, `string`, `number`, `json`. It starts off in every environment. At a level above the project it needs an administrator of that level. `409` if the key exists, or is locked above. |
+| `GET /api/v1/projects/{name}/toggles/{key}` | `project-viewer` | — | One toggle: its definition, each environment's state and rules, lock, stale mentions, when it was last evaluated. |
+| `PATCH /api/v1/projects/{name}/toggles/{key}` | `project-operator` | `toggle.update` | Changes the definition (`description`, `owner`, `kind`, `expires`, `tags`, `default`, `safe_value`, `client_visible`); never the type or the key. `400` for a client-visible toggle that needs one that is not. |
+| `DELETE /api/v1/projects/{name}/toggles/{key}` | `project-operator` | `toggle.delete` | Removes the toggle with its states; `?reason=` is required. The removal is kept in the history and can be reverted. |
+| `PUT /api/v1/projects/{name}/toggles/{key}/lock` | `project-operator` | `toggle.lock` | Locks a toggle shared from a level above its projects: `{reason}`. Needs an administrator of that level. |
+| `DELETE /api/v1/projects/{name}/toggles/{key}/lock` | `project-operator` | `toggle.unlock` | Removes the lock. |
+| `PUT /api/v1/projects/{name}/toggles/{key}/environments/{env}` | `project-operator` | `toggle.set` | Sets what the toggle does in an environment: `{state: {on, off_value, prerequisites, rules, fallthrough}, reason, at}`. Needs the operator role in the environment. `400` without a reason when the safeguard asks for one; `202` with `waiting: true` when it needs approval first; with `at` (RFC 3339) `202` with the scheduled change. |
+| `GET /api/v1/projects/{name}/toggles/{key}/history` | `project-viewer` | — | Every change to the toggle, newest first (`?environment=&limit=`): who, when, why, how, before and after, approvals, and what it reverted. |
+| `GET /api/v1/projects/{name}/toggles/{key}/usage` | `project-viewer` | — | Evaluation counts per environment, per value, for the last `?days=`, and when it was last evaluated. Counts only, never who. |
+| `POST /api/v1/projects/{name}/toggles/{key}/evaluate` | `project-viewer` | `toggle.evaluate` | Tries `{context, environment}` against the toggle as it is now in each environment; nothing is counted or stored. The audit entry never holds the context. |
+| `GET /api/v1/projects/{name}/toggle-changes` | `project-viewer` | — | Changes that wait for approval. |
+| `POST /api/v1/projects/{name}/toggle-changes/{id}/revert` | `project-operator` | `toggle.revert` | Goes back over a change: `{reason}` is required. A retreat: never held for approval. Says how many later changes it also undid (`also_undone`). `409` if already reverted. |
+| `POST /api/v1/projects/{name}/toggle-changes/{id}/approve` | `project-operator` | `toggle.approve` | Approves a waiting change: `{comment}`. Needs the operator role in its environment, and not to be the person who asked (unless `approvals.allow_self`); if the environment names reviewers, one of them. With enough approvals the change is made. |
+| `POST /api/v1/projects/{name}/toggle-changes/{id}/reject` | `project-operator` | `toggle.reject` | Turns a waiting change down. |
+| `POST /api/v1/projects/{name}/toggle-changes/{id}/withdraw` | `project-operator` | `toggle.withdraw` | Takes back a change you asked for. |
+| `GET /api/v1/projects/{name}/toggle-timeline` | `project-viewer` | — | The toggle changes of an environment (`?environment=` required; `?since=` Unix ms), newest first, for the environment's page beside its deployments. |
+| `POST /api/v1/projects/{name}/toggle-revert-since` | `project-operator` | `toggle.revert_since` | Reverts every toggle change made in an environment since a time: `{environment, since, reason, dry_run}`. What a rollback page offers. |
+| `GET /api/v1/projects/{name}/toggle-schedules` | `project-viewer` | — | Scheduled changes (`?toggle=`, `?all=true` for those that ran too). |
+| `DELETE /api/v1/projects/{name}/toggle-schedules/{id}` | `project-operator` | `toggle.schedule_cancel` | Cancels a scheduled change that has not run. |
+| `GET /api/v1/projects/{name}/toggle-segments` | `project-viewer` | — | The segments the project sees. |
+| `PUT /api/v1/projects/{name}/toggle-segments/{segment}` | `project-operator` | `toggle.segment_set` | Makes or replaces a segment: `{included, excluded, rules: [{clauses}], description, reason}`. |
+| `DELETE /api/v1/projects/{name}/toggle-segments/{segment}` | `project-operator` | `toggle.segment_delete` | Removes a segment (`?reason=` required); `409` while a rule names it. |
+| `GET /api/v1/projects/{name}/toggle-safeguards` | `project-viewer` | — | The safeguards in each environment and which level set each. |
+| `PUT /api/v1/projects/{name}/toggle-safeguards` | `project-operator` | `toggle.safeguards_set` | Sets safeguards at the project (or `level`/`scope`): `{environment, require_reason, require_approval, approvals, watch_minutes, locked, reason}`. Needs the admin role on the project (the level's admin above it). Turning one down needs a `reason`; `409` for one a level above locked. |
+| `GET /api/v1/projects/{name}/toggle-keys` | `project-operator` | — | The SDK keys of the project (`?environment=`): kind, prefix, expiry, last use. Never a secret. |
+| `POST /api/v1/projects/{name}/toggle-keys` | `project-operator` | `toggle.key_create` | Makes an SDK key: `{environment, kind (server or client), name, origins}`. Needs the admin role. The key's text is in `key`, shown once. |
+| `POST /api/v1/projects/{name}/toggle-keys/{id}/rotate` | `project-operator` | `toggle.key_rotate` | Makes a new key like the old one: `{overlap_hours}`; the old one works until then (default 24 h). Needs the admin role. |
+| `DELETE /api/v1/projects/{name}/toggle-keys/{id}` | `project-operator` | `toggle.key_revoke` | Ends a key at once. Needs the admin role. |
+| `GET /api/v1/projects/{name}/toggle-file` | `project-viewer` | — | The project's own toggles and segments as a YAML file (`file`), conventionally `.launchway/toggles.yaml`. |
+| `POST /api/v1/projects/{name}/toggle-plan` | `project-viewer` | `toggle.plan` | How a file differs from the live state: `{file}`. `drift` lists `add`, `change` and `only_live`. Changes nothing. |
+| `POST /api/v1/projects/{name}/toggle-apply` | `project-operator` | `toggle.apply` | Makes the live state match the file: `{file, reason, origin}`. Each change goes through the safeguards; those that need approval wait (`waiting`). Never removes what the file leaves out. |
+
+The routes for applications, which prove themselves with an SDK key (`Authorization: Bearer lwt_srv_...` or `lwt_cli_...`) and record nothing in the audit trail (a context is never logged):
+
+| Route | Who | Audit action | What it does |
+|---|---|---|---|
+| `GET /api/sdk/v1/ruleset` | `public` | — | With a server key: the environment's ruleset, with `ETag`; `304` for a matching `If-None-Match`. `401` for a key that is missing, unknown, revoked or expired, without saying which; `403` for a client key. Rate limited per key. See the [protocol](toggles-protocol.md). |
+| `GET /api/sdk/v1/stream` | `public` | — | With a server key: server-sent events. `event: ruleset`, `id` the ETag, `data` the ruleset, on connection (unless `Last-Event-ID` is current) and whenever it changes; `: ping` comments in between. |
+| `POST /api/sdk/v1/evaluate` | `public` | — | With a client or server key: `{context, toggles}` answers `{values: {key: {value, reason}}}`. A client key gets client-visible toggles only, never a rule, and only from the websites it names. |
+| `OPTIONS /api/sdk/v1/evaluate` | `public` | — | The preflight of a browser's request; carries no key. |
+| `POST /api/sdk/v1/telemetry` | `public` | — | With a server key: `{counts: [{toggle, value, reason, count}]}`, aggregated evaluation counts. No context. |
+
 ## Repositories (Git hosting)
 
 Only with the Base setting `forge.hosting` on (Configuration, Base settings; a change applies when each server next restarts); otherwise every route answers `404` with `{"error": "feature_off: ...", "code": "feature_off"}` and the repositories are kept. A repository is `<owner>/<name>`; a bindings' project patterns match that path (`jkhunter/*`).

@@ -1,0 +1,45 @@
+/* Feature toggles: the list at a glance, the toggle's page, the rules editor. Loaded with the pages, never in the first load. */
+.tg-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tg-table caption { text-align: left; padding: 0 0 8px; color: var(--text-2); }
+.tg-table th, .tg-table td { padding: 9px 10px; border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
+.tg-table thead th { border-top: 0; font-size: 12.5px; color: var(--text-3); font-weight: 600; }
+.tg-key { font-family: var(--mono); font-size: 14px; }
+.tg-meta { display: block; font-size: 12.5px; color: var(--text-3); }
+.tg-cell { display: flex; flex-direction: column; gap: 2px; }
+.tg-mode { font-weight: 600; }
+.tg-mode.on { color: var(--ok-ink); }
+.tg-mode.targeted, .tg-mode.rollout { color: var(--text); }
+.tg-mode.off { color: var(--text-3); }
+.tg-note { font-size: 12.5px; color: var(--warn-ink); }
+.tg-quiet { font-size: 13px; color: var(--text-2); }
+.tg-callout { padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); font-size: 13.5px; margin: 8px 0; }
+.tg-form { display: flex; flex-direction: column; gap: 10px; min-width: min(480px, 86vw); }
+.tg-form label, .tg-field { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; font-weight: 600; }
+.tg-form input, .tg-form select, .tg-form textarea, .tg-editor input, .tg-editor select, .tg-field input, .tg-field select { font: inherit; font-weight: 400; padding: 6px 8px; border: 1px solid var(--control-line); border-radius: var(--r1); background: var(--sheet); color: var(--ink); }
+.tg-editor { display: flex; flex-direction: column; gap: 12px; }
+.tg-editor h3 { margin: 4px 0 0; font-size: 14px; }
+.tg-editor fieldset { border: 1px solid var(--border); border-radius: var(--r2); padding: 10px 12px; margin: 0; min-width: 0; }
+.tg-editor legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
+.tg-rules, .tg-clauses { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.tg-clauses { gap: 6px; }
+.tg-clause { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.tg-clause label { display: flex; gap: 6px; align-items: center; font-weight: 400; font-size: 13.5px; }
+.tg-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13.5px; }
+.tg-row label { display: inline-flex; gap: 6px; align-items: center; }
+.tg-check { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 600; }
+.tg-valfield { display: inline-flex; flex-direction: column; gap: 2px; }
+.tg-bad { color: var(--bad-ink); font-size: 12.5px; }
+.tg-help { margin: 4px 0 0; }
+.tg-serve .tg-row { margin-top: 6px; }
+.tg-env { display: flex; flex-direction: column; gap: 10px; }
+.tg-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tg-history li { padding: 10px 0; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.tg-history li:first-child { border-top: 0; }
+.tg-when { color: var(--text-3); font-size: 12.5px; }
+.tg-secret { font-family: var(--mono); word-break: break-all; padding: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r1); }
+.tg-keys { list-style: none; margin: 0; padding: 0; }
+.tg-keys li { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--border); }
+.tg-timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tg-timeline li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.tg-timeline li:first-child { border-top: 0; }
+.tg-kind { font-size: 12px; font-weight: 700; padding: 0 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); }

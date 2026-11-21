@@ -1,0 +1,4258 @@
+{
+ "description": "Evaluation test vectors shared by the server (internal/toggles), the Go SDK (sdk/go/toggles) and the TypeScript SDK (sdk/js). Each case gives a ruleset, a toggle, a context and the result every implementation must return. 'hashes' pins the bucketing function: SHA-256 of salt + '.' + value, first four bytes big-endian, modulo 10000.",
+ "hashes": [
+  {
+   "salt": "rollout-salt",
+   "value": "user-1",
+   "bucket": 9178
+  },
+  {
+   "salt": "rollout-salt",
+   "value": "user-2",
+   "bucket": 9128
+  },
+  {
+   "salt": "checkout",
+   "value": "alice@example.com",
+   "bucket": 9560
+  },
+  {
+   "salt": "checkout",
+   "value": "",
+   "bucket": 9452
+  },
+  {
+   "salt": "s",
+   "value": "42",
+   "bucket": 2786
+  },
+  {
+   "salt": "s",
+   "value": "ünïcödé",
+   "bucket": 7639
+  },
+  {
+   "salt": "x.y",
+   "value": "a.b",
+   "bucket": 6677
+  },
+  {
+   "salt": "a",
+   "value": "b.c",
+   "bucket": 5252
+  }
+ ],
+ "cases": [
+  {
+   "name": "unknown toggle",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "a": {
+      "key": "a",
+      "type": "boolean",
+      "salt": "a",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "nope",
+   "context": {
+    "key": "u"
+   },
+   "expect": {
+    "value": null,
+    "reason": "not_found"
+   }
+  },
+  {
+   "name": "off serves the off value",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "a": {
+      "key": "a",
+      "type": "boolean",
+      "salt": "a",
+      "on": false,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "a",
+   "context": {
+    "key": "u"
+   },
+   "expect": {
+    "value": false,
+    "reason": "off"
+   }
+  },
+  {
+   "name": "on with no rules serves the fallthrough",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "a": {
+      "key": "a",
+      "type": "boolean",
+      "salt": "a",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "a",
+   "context": {
+    "key": "u"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "no context at all",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "a": {
+      "key": "a",
+      "type": "boolean",
+      "salt": "a",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "a",
+   "context": {},
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "string type",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "s": {
+      "key": "s",
+      "type": "string",
+      "salt": "s",
+      "on": true,
+      "off_value": "blue",
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": "green"
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "s",
+   "context": {},
+   "expect": {
+    "value": "green",
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "number type",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "n": {
+      "key": "n",
+      "type": "number",
+      "salt": "n",
+      "on": true,
+      "off_value": 0,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": 2.5
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "n",
+   "context": {},
+   "expect": {
+    "value": 2.5,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "json type",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "j": {
+      "key": "j",
+      "type": "json",
+      "salt": "j",
+      "on": true,
+      "off_value": {},
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": {
+        "limit": 5,
+        "tags": [
+         "a"
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "j",
+   "context": {},
+   "expect": {
+    "value": {
+     "limit": 5,
+     "tags": [
+      "a"
+     ]
+    },
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "first rule matches",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "rules": {
+      "key": "rules",
+      "type": "boolean",
+      "salt": "rules",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "beta",
+        "clauses": [
+         {
+          "attribute": "plan",
+          "op": "equals",
+          "values": [
+           "beta"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       },
+       {
+        "id": "eu",
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "in",
+          "values": [
+           "DE",
+           "FR",
+           "ES"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "rules",
+   "context": {
+    "key": "u",
+    "plan": "beta"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "beta"
+   }
+  },
+  {
+   "name": "second rule matches",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "rules": {
+      "key": "rules",
+      "type": "boolean",
+      "salt": "rules",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "beta",
+        "clauses": [
+         {
+          "attribute": "plan",
+          "op": "equals",
+          "values": [
+           "beta"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       },
+       {
+        "id": "eu",
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "in",
+          "values": [
+           "DE",
+           "FR",
+           "ES"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "rules",
+   "context": {
+    "key": "u",
+    "country": "FR"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "eu"
+   }
+  },
+  {
+   "name": "no rule matches",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "rules": {
+      "key": "rules",
+      "type": "boolean",
+      "salt": "rules",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "beta",
+        "clauses": [
+         {
+          "attribute": "plan",
+          "op": "equals",
+          "values": [
+           "beta"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       },
+       {
+        "id": "eu",
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "in",
+          "values": [
+           "DE",
+           "FR",
+           "ES"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "rules",
+   "context": {
+    "key": "u",
+    "country": "US",
+    "plan": "free"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "rules are in order, first wins",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "o": {
+      "key": "o",
+      "type": "string",
+      "salt": "o",
+      "on": true,
+      "off_value": "x",
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "a",
+        "clauses": [
+         {
+          "attribute": "k",
+          "op": "equals",
+          "values": [
+           "1"
+          ]
+         }
+        ],
+        "serve": {
+         "value": "first"
+        }
+       },
+       {
+        "id": "b",
+        "clauses": [
+         {
+          "attribute": "k",
+          "op": "equals",
+          "values": [
+           "1"
+          ]
+         }
+        ],
+        "serve": {
+         "value": "second"
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": "x"
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "o",
+   "context": {
+    "k": "1"
+   },
+   "expect": {
+    "value": "first",
+    "reason": "rule_match",
+    "rule_id": "a"
+   }
+  },
+  {
+   "name": "all clauses of a rule must match",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "and": {
+      "key": "and",
+      "type": "boolean",
+      "salt": "and",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "both",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           "1"
+          ]
+         },
+         {
+          "attribute": "b",
+          "op": "equals",
+          "values": [
+           "2"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "and",
+   "context": {
+    "a": "1",
+    "b": "3"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "all clauses match",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "and": {
+      "key": "and",
+      "type": "boolean",
+      "salt": "and",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "both",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           "1"
+          ]
+         },
+         {
+          "attribute": "b",
+          "op": "equals",
+          "values": [
+           "2"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "and",
+   "context": {
+    "a": "1",
+    "b": "2"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "both"
+   }
+  },
+  {
+   "name": "equals text",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           "x"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": "x"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "equals is exact",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           "x"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": "X"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "equals does not coerce number to text",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           "1"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": 1
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "equals number",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           1
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": 1
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "equals number as float",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           1.0
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": 1
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "equals boolean",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           true
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": true
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "in matches any",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "in",
+          "values": [
+           "x",
+           "y",
+           "z"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": "z"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "in matches none",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "in",
+          "values": [
+           "x",
+           "y"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": "q"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "prefix",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "prefix",
+          "values": [
+           "admin@"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "email": "admin@example.com"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "prefix no",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "prefix",
+          "values": [
+           "admin@"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "email": "bob@example.com"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "suffix",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "suffix",
+          "values": [
+           "@example.com"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "email": "bob@example.com"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "suffix on a number is false",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "suffix",
+          "values": [
+           "1"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": 11
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "contains",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "ua",
+          "op": "contains",
+          "values": [
+           "Mobile"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "ua": "Mozilla Mobile Safari"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "exists present",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "exists"
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": "anything"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "exists absent",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "exists"
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "b": "anything"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "missing attribute is false",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           "x"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {},
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "negate flips a match",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           "x"
+          ],
+          "negate": true
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": "x"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "negate of a missing attribute is true",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "equals",
+          "values": [
+           "x"
+          ],
+          "negate": true
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {},
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "negate of a different value is true",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "a",
+          "op": "in",
+          "values": [
+           "x",
+           "y"
+          ],
+          "negate": true
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "a": "q"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "list attribute matches any element",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "groups",
+          "op": "equals",
+          "values": [
+           "staff"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "groups": [
+     "a",
+     "staff"
+    ]
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "list attribute with no match",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "groups",
+          "op": "equals",
+          "values": [
+           "staff"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "groups": [
+     "a",
+     "b"
+    ]
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "number less than",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "age",
+          "op": "number_lt",
+          "values": [
+           18
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "age": 17
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "number less than, equal",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "age",
+          "op": "number_lt",
+          "values": [
+           18
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "age": 18
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "number lte",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "age",
+          "op": "number_lte",
+          "values": [
+           18
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "age": 18
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "number gt",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "age",
+          "op": "number_gt",
+          "values": [
+           1.5
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "age": 2
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "number gte",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "age",
+          "op": "number_gte",
+          "values": [
+           10
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "age": 9.99
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "number eq",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "age",
+          "op": "number_eq",
+          "values": [
+           3
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "age": 3
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "number comparison needs a number, text is false",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "age",
+          "op": "number_gt",
+          "values": [
+           1
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "age": "5"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "semver gte",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_gte",
+          "values": [
+           "2.0.0"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "2.1.0"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver compares numbers not text",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_gt",
+          "values": [
+           "2.9.0"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "2.10.0"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver lt",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_lt",
+          "values": [
+           "1.4.0"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "1.3.9"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver leading v",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_eq",
+          "values": [
+           "1.2.3"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "v1.2.3"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver build metadata ignored",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_eq",
+          "values": [
+           "1.2.3"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "1.2.3+build5"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver pre-release is before the release",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_lt",
+          "values": [
+           "1.0.0"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "1.0.0-rc.1"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver pre-release numbers by value",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_gt",
+          "values": [
+           "1.0.0-rc.2"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "1.0.0-rc.10"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver numeric identifier before alphanumeric",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_lt",
+          "values": [
+           "1.0.0-alpha"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "1.0.0-1"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver shorter pre-release is first",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_lt",
+          "values": [
+           "1.0.0-alpha.1"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "1.0.0-alpha"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "m"
+   }
+  },
+  {
+   "name": "semver not a version is false",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_gte",
+          "values": [
+           "1.0.0"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "latest"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "semver two parts is not a version",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "t": {
+      "key": "t",
+      "type": "boolean",
+      "salt": "t",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "m",
+        "clauses": [
+         {
+          "attribute": "app",
+          "op": "semver_gte",
+          "values": [
+           "1.0.0"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "t",
+   "context": {
+    "app": "1.0"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "segment: included key",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "seg": {
+      "key": "seg",
+      "type": "boolean",
+      "salt": "seg",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "in-seg",
+        "clauses": [
+         {
+          "attribute": "",
+          "op": "in_segment",
+          "values": [
+           "beta-testers"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {
+     "beta-testers": {
+      "included": [
+       "vip-1",
+       "vip-2"
+      ],
+      "excluded": [
+       "banned"
+      ],
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "suffix",
+          "values": [
+           "@corp.example"
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "banned-too": {
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "equals",
+          "values": [
+           "XX"
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "toggle": "seg",
+   "context": {
+    "key": "vip-1"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "in-seg"
+   }
+  },
+  {
+   "name": "segment: rule match",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "seg": {
+      "key": "seg",
+      "type": "boolean",
+      "salt": "seg",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "in-seg",
+        "clauses": [
+         {
+          "attribute": "",
+          "op": "in_segment",
+          "values": [
+           "beta-testers"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {
+     "beta-testers": {
+      "included": [
+       "vip-1",
+       "vip-2"
+      ],
+      "excluded": [
+       "banned"
+      ],
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "suffix",
+          "values": [
+           "@corp.example"
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "banned-too": {
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "equals",
+          "values": [
+           "XX"
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "toggle": "seg",
+   "context": {
+    "key": "zed",
+    "email": "z@corp.example"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "in-seg"
+   }
+  },
+  {
+   "name": "segment: excluded beats rule",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "seg": {
+      "key": "seg",
+      "type": "boolean",
+      "salt": "seg",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "in-seg",
+        "clauses": [
+         {
+          "attribute": "",
+          "op": "in_segment",
+          "values": [
+           "beta-testers"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {
+     "beta-testers": {
+      "included": [
+       "vip-1",
+       "vip-2"
+      ],
+      "excluded": [
+       "banned"
+      ],
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "suffix",
+          "values": [
+           "@corp.example"
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "banned-too": {
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "equals",
+          "values": [
+           "XX"
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "toggle": "seg",
+   "context": {
+    "key": "banned",
+    "email": "b@corp.example"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "segment: no match",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "seg": {
+      "key": "seg",
+      "type": "boolean",
+      "salt": "seg",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "in-seg",
+        "clauses": [
+         {
+          "attribute": "",
+          "op": "in_segment",
+          "values": [
+           "beta-testers"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {
+     "beta-testers": {
+      "included": [
+       "vip-1",
+       "vip-2"
+      ],
+      "excluded": [
+       "banned"
+      ],
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "suffix",
+          "values": [
+           "@corp.example"
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "banned-too": {
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "equals",
+          "values": [
+           "XX"
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "toggle": "seg",
+   "context": {
+    "key": "other",
+    "email": "o@elsewhere"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "segment: unknown segment never matches",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "x": {
+      "key": "x",
+      "type": "boolean",
+      "salt": "x",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "q",
+        "clauses": [
+         {
+          "attribute": "",
+          "op": "in_segment",
+          "values": [
+           "ghost"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "x",
+   "context": {
+    "key": "a"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "segment: negated",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "neg": {
+      "key": "neg",
+      "type": "boolean",
+      "salt": "neg",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "not-in",
+        "clauses": [
+         {
+          "attribute": "",
+          "op": "in_segment",
+          "values": [
+           "beta-testers"
+          ],
+          "negate": true
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {
+     "beta-testers": {
+      "included": [
+       "vip-1",
+       "vip-2"
+      ],
+      "excluded": [
+       "banned"
+      ],
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "suffix",
+          "values": [
+           "@corp.example"
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "banned-too": {
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "equals",
+          "values": [
+           "XX"
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "toggle": "neg",
+   "context": {
+    "key": "stranger"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "not-in"
+   }
+  },
+  {
+   "name": "segment: any of several",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "any": {
+      "key": "any",
+      "type": "boolean",
+      "salt": "any",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "q",
+        "clauses": [
+         {
+          "attribute": "",
+          "op": "in_segment",
+          "values": [
+           "nobody",
+           "banned-too"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     }
+    },
+    "segments": {
+     "beta-testers": {
+      "included": [
+       "vip-1",
+       "vip-2"
+      ],
+      "excluded": [
+       "banned"
+      ],
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "email",
+          "op": "suffix",
+          "values": [
+           "@corp.example"
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     "banned-too": {
+      "rules": [
+       {
+        "clauses": [
+         {
+          "attribute": "country",
+          "op": "equals",
+          "values": [
+           "XX"
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "toggle": "any",
+   "context": {
+    "key": "a",
+    "country": "XX"
+   },
+   "expect": {
+    "value": true,
+    "reason": "rule_match",
+    "rule_id": "q"
+   }
+  },
+  {
+   "name": "prerequisite met",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "base": {
+      "key": "base",
+      "type": "boolean",
+      "salt": "base",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     },
+     "dep": {
+      "key": "dep",
+      "type": "boolean",
+      "salt": "dep",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [
+       {
+        "toggle": "base",
+        "value": true
+       }
+      ],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "dep",
+   "context": {
+    "key": "u"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "prerequisite off",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "base": {
+      "key": "base",
+      "type": "boolean",
+      "salt": "base",
+      "on": false,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     },
+     "dep": {
+      "key": "dep",
+      "type": "boolean",
+      "salt": "dep",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [
+       {
+        "toggle": "base",
+        "value": true
+       }
+      ],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "dep",
+   "context": {
+    "key": "u"
+   },
+   "expect": {
+    "value": false,
+    "reason": "prerequisite_failed"
+   }
+  },
+  {
+   "name": "prerequisite missing",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "dep": {
+      "key": "dep",
+      "type": "boolean",
+      "salt": "dep",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [
+       {
+        "toggle": "base",
+        "value": true
+       }
+      ],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "dep",
+   "context": {
+    "key": "u"
+   },
+   "expect": {
+    "value": false,
+    "reason": "prerequisite_failed"
+   }
+  },
+  {
+   "name": "prerequisite serves another value",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "base": {
+      "key": "base",
+      "type": "string",
+      "salt": "base",
+      "on": true,
+      "off_value": "x",
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "value": "y"
+      }
+     },
+     "dep": {
+      "key": "dep",
+      "type": "boolean",
+      "salt": "dep",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [
+       {
+        "toggle": "base",
+        "value": "x"
+       }
+      ],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "dep",
+   "context": {
+    "key": "u"
+   },
+   "expect": {
+    "value": false,
+    "reason": "prerequisite_failed"
+   }
+  },
+  {
+   "name": "a prerequisite is itself evaluated for the context",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "base": {
+      "key": "base",
+      "type": "boolean",
+      "salt": "base",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "p",
+        "clauses": [
+         {
+          "attribute": "plan",
+          "op": "equals",
+          "values": [
+           "pro"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     },
+     "dep": {
+      "key": "dep",
+      "type": "boolean",
+      "salt": "dep",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [
+       {
+        "toggle": "base",
+        "value": true
+       }
+      ],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "dep",
+   "context": {
+    "key": "u",
+    "plan": "pro"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "prerequisite not met for the context",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "base": {
+      "key": "base",
+      "type": "boolean",
+      "salt": "base",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "p",
+        "clauses": [
+         {
+          "attribute": "plan",
+          "op": "equals",
+          "values": [
+           "pro"
+          ]
+         }
+        ],
+        "serve": {
+         "value": true
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": false
+      }
+     },
+     "dep": {
+      "key": "dep",
+      "type": "boolean",
+      "salt": "dep",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [
+       {
+        "toggle": "base",
+        "value": true
+       }
+      ],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "dep",
+   "context": {
+    "key": "u",
+    "plan": "free"
+   },
+   "expect": {
+    "value": false,
+    "reason": "prerequisite_failed"
+   }
+  },
+  {
+   "name": "a loop of prerequisites is an error and serves the off value",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "a": {
+      "key": "a",
+      "type": "boolean",
+      "salt": "a",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [
+       {
+        "toggle": "b",
+        "value": true
+       }
+      ],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     },
+     "b": {
+      "key": "b",
+      "type": "boolean",
+      "salt": "b",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [
+       {
+        "toggle": "a",
+        "value": true
+       }
+      ],
+      "rules": [],
+      "fallthrough": {
+       "value": true
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "a",
+   "context": {
+    "key": "u"
+   },
+   "expect": {
+    "value": false,
+    "reason": "prerequisite_failed"
+   }
+  },
+  {
+   "name": "rollout 25%: user-0 is in bucket 1822",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-0"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "rollout 25%: user-3 is in bucket 4467",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-3"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "rollout 25%: user-1 is in bucket 9178",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-1"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "raising to 50% keeps the 25% in",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 5000
+         },
+         {
+          "value": false,
+          "weight": 5000
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-0"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "raising to 50% adds the next quarter",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 5000
+         },
+         {
+          "value": false,
+          "weight": 5000
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-3"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "raising to 50% leaves the rest out",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 5000
+         },
+         {
+          "value": false,
+          "weight": 5000
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-1"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "rollout 0%",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 0
+         },
+         {
+          "value": false,
+          "weight": 10000
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-0"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "rollout 100%",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 10000
+         },
+         {
+          "value": false,
+          "weight": 0
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-1"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "rollout with no key cannot bucket and serves the off value",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {},
+   "expect": {
+    "value": false,
+    "reason": "missing_bucket_key"
+   }
+  },
+  {
+   "name": "rollout with an empty key cannot bucket",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": ""
+   },
+   "expect": {
+    "value": false,
+    "reason": "missing_bucket_key"
+   }
+  },
+  {
+   "name": "another salt buckets differently",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "other-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-3"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "another salt buckets differently, outside",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "other-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-0"
+   },
+   "expect": {
+    "value": false,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "rollout by another attribute",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ],
+        "by": "account"
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "zzz-not-used",
+    "account": "acct-0"
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "rollout by an attribute the context lacks",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "ro": {
+      "key": "ro",
+      "type": "boolean",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2500
+         },
+         {
+          "value": false,
+          "weight": 7500
+         }
+        ],
+        "by": "account"
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "ro",
+   "context": {
+    "key": "user-0"
+   },
+   "expect": {
+    "value": false,
+    "reason": "missing_bucket_key"
+   }
+  },
+  {
+   "name": "a whole number buckets as its digits (42 is bucket 2745)",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "nb": {
+      "key": "nb",
+      "type": "boolean",
+      "salt": "n-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2746
+         },
+         {
+          "value": false,
+          "weight": 7254
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "nb",
+   "context": {
+    "key": 42
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "the same number as a float buckets alike",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "nb": {
+      "key": "nb",
+      "type": "boolean",
+      "salt": "n-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2746
+         },
+         {
+          "value": false,
+          "weight": 7254
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "nb",
+   "context": {
+    "key": 42.0
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "a fraction buckets as its shortest text (1.5 is bucket 1425)",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "nb": {
+      "key": "nb",
+      "type": "boolean",
+      "salt": "n-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 1426
+         },
+         {
+          "value": false,
+          "weight": 8574
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "nb",
+   "context": {
+    "key": 1.5
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "a boolean buckets as true or false (true is bucket 2559)",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "nb": {
+      "key": "nb",
+      "type": "boolean",
+      "salt": "n-salt",
+      "on": true,
+      "off_value": false,
+      "prerequisites": [],
+      "rules": [],
+      "fallthrough": {
+       "rollout": {
+        "buckets": [
+         {
+          "value": true,
+          "weight": 2560
+         },
+         {
+          "value": false,
+          "weight": 7440
+         }
+        ]
+       }
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "nb",
+   "context": {
+    "key": true
+   },
+   "expect": {
+    "value": true,
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "a rule serves a rollout of strings",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "variant": {
+      "key": "variant",
+      "type": "string",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": "control",
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "exp",
+        "clauses": [
+         {
+          "attribute": "plan",
+          "op": "equals",
+          "values": [
+           "pro"
+          ]
+         }
+        ],
+        "serve": {
+         "rollout": {
+          "buckets": [
+           {
+            "value": "treatment",
+            "weight": 5000
+           },
+           {
+            "value": "control",
+            "weight": 5000
+           }
+          ]
+         }
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": "control"
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "variant",
+   "context": {
+    "key": "user-1",
+    "plan": "pro"
+   },
+   "expect": {
+    "value": "control",
+    "reason": "rule_match",
+    "rule_id": "exp"
+   }
+  },
+  {
+   "name": "a rule's rollout is skipped when the rule does not match",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "variant": {
+      "key": "variant",
+      "type": "string",
+      "salt": "rollout-salt",
+      "on": true,
+      "off_value": "control",
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "exp",
+        "clauses": [
+         {
+          "attribute": "plan",
+          "op": "equals",
+          "values": [
+           "pro"
+          ]
+         }
+        ],
+        "serve": {
+         "rollout": {
+          "buckets": [
+           {
+            "value": "treatment",
+            "weight": 10000
+           }
+          ]
+         }
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": "control"
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "variant",
+   "context": {
+    "key": "user-0",
+    "plan": "free"
+   },
+   "expect": {
+    "value": "control",
+    "reason": "fallthrough"
+   }
+  },
+  {
+   "name": "off ignores rules",
+   "ruleset": {
+    "schema": 1,
+    "environment": "production",
+    "toggles": {
+     "off": {
+      "key": "off",
+      "type": "string",
+      "salt": "off",
+      "on": false,
+      "off_value": "no",
+      "prerequisites": [],
+      "rules": [
+       {
+        "id": "a",
+        "clauses": [
+         {
+          "attribute": "k",
+          "op": "exists"
+         }
+        ],
+        "serve": {
+         "value": "yes"
+        }
+       }
+      ],
+      "fallthrough": {
+       "value": "yes"
+      }
+     }
+    },
+    "segments": {}
+   },
+   "toggle": "off",
+   "context": {
+    "k": 1
+   },
+   "expect": {
+    "value": "no",
+    "reason": "off"
+   }
+  }
+ ]
+}

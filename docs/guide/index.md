@@ -16,6 +16,8 @@ key and setting see the [reference](../reference/index.md).
 | [Artifacts](artifacts.md) | Files steps keep and fetch, storage, limits |
 | [Variables at levels](variables.md) | A variable set at a level, overridden by a nearer one, locked from above, and how a pipeline takes it |
 | [The built-in registry](registry.md) | Images and Helm charts stored in Launchway: who may push and pull, run credentials, quotas, retention, collection |
+| [Feature toggles](feature-toggles.md) | Toggles per environment with rules and percentages, safeguards, history and revert, SDK keys, the toggles file |
+| [Toggle SDKs](toggles-sdks.md) | Reading toggles from Go and TypeScript, offline use, OpenFeature |
 | [Build caches](build-caches.md) | Keeping dependencies between runs, keys, who can read and write what, limits |
 | [Where artifacts are kept](../artifacts.md) | The database, filesystem and S3 stores, measurements, moving between them |
 | [Security findings and SBOMs](security-findings.md) | SARIF findings, new and fixed, SBOMs, component search |

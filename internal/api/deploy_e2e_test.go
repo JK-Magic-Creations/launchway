@@ -156,6 +156,7 @@ func setupDeployEnvs(t *testing.T, db string, envs []engine.Environment) *deploy
 	}
 	s := &Server{Engine: eng, RunnerToken: "secret", Actor: "tester", Log: quiet(),
 		RunnerPools: []RunnerPool{{Name: "deploy-homelab", Token: poolToken, Targets: []string{"homelab"}}}}
+	s.Toggles = testToggles(eng)
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
 	de := &deployEnv{env: &env{eng: eng, srv: srv, dir: dir, db: db}}

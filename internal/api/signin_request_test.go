@@ -26,6 +26,7 @@ func TestOpenInstallKeepsWorkingWarnsAndOffersSignIn(t *testing.T) {
 	s := &Server{Engine: eng, RunnerToken: "runner-secret", Log: quiet(), Now: clk.Now, OpenInstall: true}
 	s.Settings = testSettings(t, eng)
 	s.Variables = testVariables(eng)
+	s.Toggles = testToggles(eng)
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
 	b := newBrowser(t)

@@ -37,6 +37,7 @@ func startServices(ctx context.Context, eff, cfg *config.Config, eng *engine.Eng
 	if err := announceSetup(srv, cfg, log); err != nil {
 		return err
 	}
+	startToggles(ctx, eng, srv)
 	if err := startHosting(ctx, eff, eng, log, srv); err != nil {
 		return err
 	}

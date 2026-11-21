@@ -24,11 +24,11 @@ const modulePath = "github.com/jk-magic-creations/launchway/"
 // (TestTableHasNoStaleEdges makes the table shrink as the code is cleaned up).
 // Edges the audit calls harmful may not be added at all: see forbidden below.
 var allowedImports = map[string][]string{
-	"cmd/launchway":                      {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/bootstrap", "internal/config", "internal/deploy/argocd", "internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/preview", "internal/depupdate/propose", "internal/depupdate/service", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/installer", "internal/installer/kube", "internal/keyring", "internal/keyring/transit", "internal/localauth", "internal/pipeline", "internal/runner", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/starters", "internal/verify/source", "internal/registry", "internal/registry/enginedb"},
+	"cmd/launchway":                      {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/bootstrap", "internal/config", "internal/deploy/argocd", "internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/preview", "internal/depupdate/propose", "internal/depupdate/service", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/installer", "internal/installer/kube", "internal/keyring", "internal/keyring/transit", "internal/localauth", "internal/pipeline", "internal/runner", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/starters", "internal/verify/source", "internal/registry", "internal/registry/enginedb", "internal/toggles", "internal/togglestore"},
 	"internal/accept":                    {},
 	"internal/ai":                        {"internal/pipeline"},
 	"internal/ai/aitest":                 {},
-	"internal/api":                       {"internal/depupdate", "internal/depupdate/preview", "internal/ai", "internal/auth", "internal/engine", "internal/forge", "internal/forge/archive", "internal/forge/files", "internal/localauth", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/gitssh", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/webhooks", "internal/hub", "internal/ids", "internal/keyring", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/verify", "internal/registry"},
+	"internal/api":                       {"internal/depupdate", "internal/depupdate/preview", "internal/ai", "internal/auth", "internal/engine", "internal/forge", "internal/forge/archive", "internal/forge/files", "internal/localauth", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/gitssh", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/webhooks", "internal/hub", "internal/ids", "internal/keyring", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/verify", "internal/registry", "internal/toggles", "internal/togglestore"},
 	"internal/auth":                      {},
 	"internal/blobstore":                 {},
 	"internal/bootstrap":                 {},
@@ -99,6 +99,8 @@ var allowedImports = map[string][]string{
 	"internal/registry/enginedb":         {"internal/engine", "internal/registry"},
 	"internal/runnerauth":                {},
 	"internal/sealing":                   {"internal/auth", "internal/keyring"},
+	"internal/toggles":                   {},
+	"internal/togglestore":               {"internal/engine", "internal/toggles"},
 	"internal/sbom":                      {"internal/findings/jsonscan"},
 	"internal/secrets":                   {"internal/pipeline"},
 	"internal/starters":                  {},

@@ -39,6 +39,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/runner/v2/join` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /api/runner/v2/rotate` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /api/runner/v2/token` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `OPTIONS /api/sdk/v1/evaluate` | — | — | — | exempt: the application protocol: SDKs call it with an SDK key, which only reads toggles; it is not an operation for people, agents or Terraform |
+| `POST /api/sdk/v1/evaluate` | — | — | — | exempt: the application protocol: SDKs call it with an SDK key, which only reads toggles; it is not an operation for people, agents or Terraform |
+| `GET /api/sdk/v1/ruleset` | — | — | — | exempt: the application protocol: SDKs call it with an SDK key, which only reads toggles; it is not an operation for people, agents or Terraform |
+| `GET /api/sdk/v1/stream` | — | — | — | exempt: the application protocol: SDKs call it with an SDK key, which only reads toggles; it is not an operation for people, agents or Terraform |
+| `POST /api/sdk/v1/telemetry` | — | — | — | exempt: the application protocol: SDKs call it with an SDK key, which only reads toggles; it is not an operation for people, agents or Terraform |
 | `GET /api/v1/account` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/password` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/recovery-codes` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
@@ -138,6 +143,38 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/security` | `get_security_findings` | — | — | gap: launchway has no findings command yet |
 | `GET /api/v1/projects/{name}/tests` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/projects/{name}/tests/history` | `get_test_results` | `runs tests` | — | equal |
+| `POST /api/v1/projects/{name}/toggle-apply` | `apply_toggles_file` | `toggles apply` | `the file is the declarative form: toggles.yaml applied with launchway toggles apply` | equal |
+| `GET /api/v1/projects/{name}/toggle-changes` | `list_toggle_changes_waiting` | `toggles waiting` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/toggle-changes/{id}/approve` | `approve_toggle_change` | `toggles approve` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/toggle-changes/{id}/reject` | `reject_toggle_change` | `toggles reject` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/toggle-changes/{id}/revert` | `revert_toggle_change` | `toggles revert` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/toggle-changes/{id}/withdraw` | `withdraw_toggle_change` | `toggles withdraw` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/toggle-file` | `export_toggles_file` | `toggles export` | `the file is the declarative form: toggles.yaml applied with launchway toggles apply` | equal |
+| `GET /api/v1/projects/{name}/toggle-keys` | `list_toggle_keys` | `toggles keys` | `planned: data source launchway_toggle_keys` | equal |
+| `POST /api/v1/projects/{name}/toggle-keys` | — | `toggles keys` | `planned: resource launchway_toggle_key (the secret as a write-only attribute)` | exempt: an SDK key is a secret and is shown once: it is made in the web page or with the CLI, never through an agent's context, which would keep it |
+| `DELETE /api/v1/projects/{name}/toggle-keys/{id}` | `revoke_toggle_key` | `toggles keys` | `planned: resource launchway_toggle_key` | equal |
+| `POST /api/v1/projects/{name}/toggle-keys/{id}/rotate` | — | `toggles keys` | `planned: resource launchway_toggle_key (the secret as a write-only attribute)` | exempt: an SDK key is a secret and is shown once: it is made in the web page or with the CLI, never through an agent's context, which would keep it |
+| `POST /api/v1/projects/{name}/toggle-plan` | `plan_toggles_file` | `toggles plan` | `the file is the declarative form: toggles.yaml applied with launchway toggles apply` | equal |
+| `POST /api/v1/projects/{name}/toggle-revert-since` | `revert_toggle_changes_since` | `toggles revert-since` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/toggle-safeguards` | `get_toggle_safeguards` | `toggles safeguards` | `planned: data source launchway_toggle_safeguards` | equal |
+| `PUT /api/v1/projects/{name}/toggle-safeguards` | `set_toggle_safeguards` | `toggles safeguards` | `planned: resource launchway_toggle_safeguards` | equal |
+| `GET /api/v1/projects/{name}/toggle-schedules` | `list_toggle_schedules` | `toggles schedules` | `planned: data source launchway_toggle_schedules` | equal |
+| `DELETE /api/v1/projects/{name}/toggle-schedules/{id}` | `cancel_toggle_schedule` | `toggles schedules` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/toggle-segments` | `list_toggle_segments` | `toggles segments` | `planned: data source launchway_toggle_segments` | equal |
+| `DELETE /api/v1/projects/{name}/toggle-segments/{segment}` | `delete_toggle_segment` | `toggles segments` | `planned: resource launchway_toggle_segment` | equal |
+| `PUT /api/v1/projects/{name}/toggle-segments/{segment}` | `save_toggle_segment` | `toggles segments` | `planned: resource launchway_toggle_segment` | equal |
+| `GET /api/v1/projects/{name}/toggle-timeline` | `toggle_timeline` | `toggles timeline` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/toggles` | `list_toggles` | `toggles list` | `planned: data source launchway_toggles` | equal |
+| `POST /api/v1/projects/{name}/toggles` | `create_toggle` | `toggles create` | `planned: resource launchway_toggle` | equal |
+| `DELETE /api/v1/projects/{name}/toggles/{key}` | `delete_toggle` | `toggles create` | `planned: resource launchway_toggle` | equal |
+| `GET /api/v1/projects/{name}/toggles/{key}` | `get_toggle` | `toggles get` | `planned: data source launchway_toggle` | equal |
+| `PATCH /api/v1/projects/{name}/toggles/{key}` | `update_toggle` | `toggles create` | `planned: resource launchway_toggle` | equal |
+| `PUT /api/v1/projects/{name}/toggles/{key}/environments/{env}` | `set_toggle_state` | `toggles set` | `planned: resource launchway_toggle_environment` | equal |
+| `POST /api/v1/projects/{name}/toggles/{key}/evaluate` | `evaluate_toggle` | `toggles evaluate` | `planned: data source launchway_toggle_evaluation` | equal |
+| `GET /api/v1/projects/{name}/toggles/{key}/history` | `toggle_history` | `toggles history` | `not needed by terraform` | equal |
+| `DELETE /api/v1/projects/{name}/toggles/{key}/lock` | `unlock_toggle` | `toggles unlock` | `planned: resource launchway_toggle (lock block)` | equal |
+| `PUT /api/v1/projects/{name}/toggles/{key}/lock` | `lock_toggle` | `toggles lock` | `planned: resource launchway_toggle (lock block)` | equal |
+| `GET /api/v1/projects/{name}/toggles/{key}/usage` | `get_toggle_usage` | `toggles usage` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/variables` | `get_effective_variables` | `variables effective` | `planned: data source launchway_effective_variables` | equal |
 | `POST /api/v1/projects/{name}/waivers` | — | `waivers grant` | — | gap: no MCP tool grants waivers yet |
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | — | `waivers revoke` | — | gap: no MCP tool revokes waivers yet |

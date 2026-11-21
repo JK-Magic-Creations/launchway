@@ -9,6 +9,7 @@ import baseline from "./baseline.json";
 // by axe-core. See docs/contributing/design-principles.md; the browser pass (make web-a11y) covers what jsdom cannot.
 const PAGES = [
   "/", "/projects", "/projects/shop-api", "/projects/shop-api/pipeline", "/projects/shop-api/tests", "/projects/shop-api/variables",
+  "/projects/shop-api/toggles", "/projects/shop-api/toggles/checkout-v2", "/projects/shop-api/toggle-settings",
   "/pipelines", "/activity", "/activity/approvals", "/runs/run_7", "/deployments", "/deployments/environments", "/deployments/environments/prod", "/runs/run_rb",
   "/deployments/applications", "/images", "/images/components", "/images/registry", "/images/registry/shop-api", "/images/registry/shop-api?repository=shop-api/web", "/library", "/library/starters", "/library/templates", "/playground", "/kit",
   "/settings", "/settings/runners", "/settings/access", "/settings/access/keys", "/settings/access/ssh-keys", "/settings/access/agents", "/repositories", "/repositories/acme/shop", "/repositories/acme/shop?tab=merge", "/repositories/acme/shop/mirrors", "/repositories/acme/shop/history", "/repositories/acme/shop/pulls", "/repositories/acme/shop/pulls/1", "/repositories/acme/shop/pulls/new?head=fix-rounding", "/owners/acme", "/settings/approvals",

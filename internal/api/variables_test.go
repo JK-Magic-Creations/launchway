@@ -1,6 +1,9 @@
 package api
 
 import (
+	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/togglestore"
 	"strings"
 	"testing"
 
@@ -60,4 +63,16 @@ func TestVariablesOverHTTP(t *testing.T) {
 	if code, body := put(dana, "/api/v1/variables/tok", `{"level":"project","scope":"web","type":"secret","value":{"store":"vault","key":"a/b"}}`); code != 200 || strings.Contains(body, "hunter2") {
 		t.Fatalf("%d %s", code, body)
 	}
+}
+
+// testToggles is the toggle service of a test server: the same units as the variables, production protected.
+func testToggles(eng *engine.Engine) *togglestore.Service {
+	return togglestore.New(togglestore.Deps{DB: eng.Database(), CheckEvery: time.Millisecond,
+		UnitOf: func(p string) string {
+			if p == "pay-api" || p == "ledger" {
+				return "pay"
+			}
+			return ""
+		},
+		Environment: func(n string) togglestore.Env { return togglestore.Env{Known: true, Protected: n == "production"} }})
 }

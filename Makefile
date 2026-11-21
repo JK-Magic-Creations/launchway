@@ -58,6 +58,13 @@ test:
 test-like-ci:
 	sh scripts/ci/test-like-ci.sh
 
+# Builds and tests the toggle SDKs (sdk/go/toggles, its OpenFeature provider, sdk/js): they are modules of their own,
+# outside `go test ./...`. Not part of make check; docs/guide/toggles-sdks.md.
+test-sdks:
+	cd sdk/go/toggles && go vet ./... && go test -count=1 -race ./...
+	cd sdk/go/toggles/openfeature && go vet ./... && go test -count=1 ./...
+	cd sdk/js && npm ci --no-audit --no-fund --prefer-offline && npm test
+
 # Everything to run before a push, in order: the fast gates, the docs build, the pipeline's test step.
 prepush:
 	$(MAKE) check
@@ -329,7 +336,7 @@ GOLANGCI_LINT_VERSION := v2.15.0
 GOLANGCI_LINT := $(TOOLS)/bin/golangci-lint
 QUALITY_DIR := $(CURDIR)/quality
 
-.PHONY: tracked-files tools lint lint-baseline-update arch ratchet ratchet-update fmt-check vet \
+.PHONY: tracked-files test-sdks tools lint lint-baseline-update arch ratchet ratchet-update fmt-check vet \
 	web-lint web-test web-size web-a11y coverage coverage-check coverage-update check check-all
 
 tools: $(GOLANGCI_LINT)

@@ -212,6 +212,12 @@
     },
     {
       "theme": "Platform",
+      "title": "Feature toggles (first slice)",
+      "value": "Toggles per environment with rules and sticky percentages, reasons and approvals on by default, history with revert, SDK keys, Go and TypeScript libraries, and a toggles file; rollbacks list the toggle changes since the version they restore.",
+      "link": "guide/feature-toggles"
+    },
+    {
+      "theme": "Platform",
       "title": "Shared pipeline templates and Flight plans",
       "value": "A template or a Flight plan set once for a Wing or Squadron, used by every project beneath it, with deploy, verify and approval steps included.",
       "link": "guide/libraries"
@@ -370,7 +376,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "available",
+              "status": "in-progress",
               "title": "Search inside a repository",
               "value": "Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension.",
               "detail": "Search reads a disposable copy of the repository with bounded time and size and says when its results are partial, so there is no index to keep in step. Not yet: results for pipeline files, templates and steps as such, and search across repositories.",
@@ -386,7 +392,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "available",
+              "status": "in-progress",
               "title": "Edit in the browser, as a commit",
               "value": "Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request.",
               "detail": "It uses the same one-file commit path as the HTTP API, the CLI and the tools, with the branch rules of a push. Not yet: upload, cherry-pick, revert and patch download.",
@@ -418,7 +424,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "available",
+              "status": "in-progress",
               "title": "Mirrors in and out",
               "value": "Pull a repository from another host on a schedule, or push every change to another host as a safety copy.",
               "detail": "Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace. Today both directions work, and a stale mirror is flagged.",
@@ -2190,11 +2196,12 @@
           "blurb": "Settings, keys and toggles managed together, per zone and environment.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Feature toggles",
-              "value": "A built-in toggle service that applications and agents read through the OpenFeature standard, per environment, with percentages and rules.",
-              "detail": "It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.",
-              "area": "platform-services"
+              "value": "Toggles per environment with rules, percentages that keep the same people, kill switches, approvals and a reason on every change, history with revert, and Go and TypeScript libraries.",
+              "detail": "Built: the model, the safeguards, the history and revert, scheduled changes, SDK keys, the evaluation protocol with streaming and the Go and TypeScript libraries with OpenFeature providers, the toggles file, and the web, command line and agent tools. Still to come: a pipeline keyword, plans with proofs between steps, webhook events, and libraries for more languages.",
+              "area": "traffic",
+              "link": "guide/feature-toggles"
             },
             {
               "status": "planned",
@@ -4091,28 +4098,31 @@
           "blurb": "Second phase. Everything that can change behavior without a new build is versioned, rolled out and returnable.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "A toggle service in the model",
-              "value": "Toggles are known to Launchway, rolled out in steps by a plan and returned with the rest of the stable state.",
-              "detail": "It speaks an open protocol, so existing applications read toggles with no Launchway library.",
+              "value": "Toggles are known to Launchway, shown beside deployments on an environment's timeline, and offered for reverting with a rollback.",
+              "detail": "Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.",
               "needs": "Feature toggles.",
-              "area": "zero-downtime"
+              "area": "zero-downtime",
+              "link": "guide/feature-toggles"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Kill switches and automatic toggle-back",
-              "value": "A toggle marked as a kill switch is switched off at once, and a toggle that caused errors is switched back automatically.",
-              "detail": "Launchway names the toggle and shows the errors that led to the decision.",
+              "value": "A toggle marked as a kill switch has a safe value, and turning it to that value is never held for an approval.",
+              "detail": "Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.",
               "needs": "The watch; a toggle service in the model.",
-              "area": "zero-downtime"
+              "area": "zero-downtime",
+              "link": "guide/feature-toggles"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Stale-toggle hygiene",
-              "value": "A list of toggles nobody has changed for a long time, with a suggestion to remove them.",
-              "detail": "Removing a toggle is a pull request.",
+              "value": "Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed.",
+              "detail": "A suggested pull request that removes the check and the toggle is still to come.",
               "needs": "A toggle service in the model.",
-              "area": "zero-downtime"
+              "area": "zero-downtime",
+              "link": "guide/feature-toggles"
             },
             {
               "status": "planned",

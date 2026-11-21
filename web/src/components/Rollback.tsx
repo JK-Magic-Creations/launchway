@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { DeploymentView } from "../api";
 import type { RollbackTarget, ServerAction } from "../apiDeploy";
-import { rollbackApi } from "../apiRollback";
+import { rollbackApi, type RollbackToggles } from "../apiRollback";
 import { ago, clock } from "../format";
 import { Dialog } from "../kit/Dialog";
 import { Button } from "../kit/layout";
@@ -69,13 +69,22 @@ function RollbackDialog({ action, unit, pick, queue, onClose }: { action: Server
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [alsoToggles, setAlsoToggles] = useState(false);
+  const [toggles, setToggles] = useState<RollbackToggles | undefined>();
   const t: RollbackTarget | undefined = targets.find((x) => x.deployment === chosen) ?? targets[0];
+  const service = unit.service === unit.project ? undefined : unit.service;
+  const target = t?.deployment;
+  useEffect(() => { // the toggle changes made since the version being restored went live
+    let alive = true;
+    rollbackApi.plan(unit.project, unit.environment, service, target).then((p) => { if (alive) { setToggles(p.toggles); } }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [unit.project, unit.environment, service, target]);
   if (!t) return null;
   const noReason = reason.trim() === "";
   const go = async () => {
     setBusy(true); setError(null);
     try {
-      const run = await rollbackApi.request(unit.project, { environment: unit.environment, service: unit.service === unit.project ? undefined : unit.service, to: t.deployment, reason: reason.trim(), queue });
+      const run = await rollbackApi.request(unit.project, { environment: unit.environment, service: unit.service === unit.project ? undefined : unit.service, to: t.deployment, reason: reason.trim(), queue, ...(alsoToggles && (toggles?.changes.length ?? 0) > 0 ? { revert_toggles: true } : {}) });
       onClose();
       navigate(`/runs/${run.id}`);
     } catch (e) { setError(e); setBusy(false); }
@@ -106,6 +115,14 @@ function RollbackDialog({ action, unit, pick, queue, onClose }: { action: Server
         {(t.suggestions ?? []).length > 0 && <div><div className="faint small">Before you go ahead</div><ul className="rb-suggest">{t.suggestions!.map((s) => <li key={s}>{s}</li>)}</ul></div>}
         {action.emergency && !action.requires_approval && <div className="callout callout-wait">This is an emergency action on a protected environment: it needs no approval first, and an approver reviews it afterwards.</div>}
         {action.emergency && action.requires_approval && <div className="callout callout-wait">This environment asks for an approval first, even for an emergency: the rollback waits for one.</div>}
+        {toggles && toggles.changes.length > 0 && (
+          <fieldset className="rb-toggles">
+            <legend>Toggle changes since {t.version} went live</legend>
+            <p className="rb-note">{toggles.note}</p>
+            <ul className="rb-suggest">{toggles.changes.map((c) => <li key={c.id}><b>{c.toggle}</b> by {c.actor}: {c.reason}</li>)}</ul>
+            <label className="row"><input type="checkbox" checked={alsoToggles} onChange={(e) => setAlsoToggles(e.target.checked)} /> Also revert these toggle changes (recorded, never held for approval)</label>
+          </fieldset>
+        )}
         {queue && <div className="callout callout-wait">Another deployment holds the lock. The rollback waits for it and then goes first.</div>}
         <label className="field"><span>Why are you rolling back? (required, kept with the rollback)</span>
           <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} data-autofocus required placeholder="For example: checkout fails for customers since this version" /></label>

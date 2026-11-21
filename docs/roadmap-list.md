@@ -96,6 +96,7 @@ compliance items provide controls and evidence.
 | Launchway’s own words | Two built-in sets of words (aviation-flavored and plain business names), a rename for any word, and the same words in the interface, documentation and messages. ([more](guide/words.md)) |
 | Learn, inside the product | The documentation of the release you are running, with pictures and an offline search, opened from the interface with no separate website. ([more](learn/start-here.md)) |
 | Variables at levels | The same variable declared at a nearer level overrides the one above, with locks from above and a hierarchy view that shows where each value comes from. ([more](guide/variables.md)) |
+| Feature toggles (first slice) | Toggles per environment with rules and sticky percentages, reasons and approvals on by default, history with revert, SDK keys, Go and TypeScript libraries, and a toggles file; rollbacks list the toggle changes since the version they restore. ([more](guide/feature-toggles.md)) |
 | Shared pipeline templates and Flight plans | A template or a Flight plan set once for a Wing or Squadron, used by every project beneath it, with deploy, verify and approval steps included. ([more](guide/libraries.md)) |
 | Rides through outages | Database errors are retried, runner writes are safe to repeat, a runner keeps its logs and results while the server is away, and a doctor command checks the database. ([more](guide/high-availability.md)) |
 | Accessible by design | Automated scans, contrast tests and keyboard journeys run on every change, with a published conformance statement and a quality bar for the API, the agent endpoint and the command line. ([more](guide/accessibility.md)) |
@@ -120,13 +121,13 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Git over SSH](roadmap/milestone-1.md#git-over-ssh) | Available | Clone, fetch and push over SSH with your own keys, beside HTTPS. ([docs](guide/git-over-ssh.md)) |
 | [Create, rename, archive and set visibility](roadmap/milestone-1.md#create-rename-archive-and-set-visibility) | Planned | The everyday repository lifecycle: create, rename with redirects, transfer, archive as read-only, and private, internal or public visibility. |
 | [Browse and search your code](roadmap/milestone-1.md#browse-and-search-your-code) | Available | The files of a repository at any branch, tag or commit, with the last commit of each, a README, history, blame, comparing two branches, and permanent links with line ranges. |
-| [Search inside a repository](roadmap/milestone-1.md#search-inside-a-repository) | Available | Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. |
+| [Search inside a repository](roadmap/milestone-1.md#search-inside-a-repository) | In progress | Find text, a regular expression or a file name in the branch, tag or commit you are looking at, narrowed by folder and extension. |
 | [Show every kind of file properly](roadmap/milestone-1.md#show-every-kind-of-file-properly) | Planned | Markdown, diagrams, math, tables of data, images with before and after, documents and notebooks render in the browser. |
-| [Edit in the browser, as a commit](roadmap/milestone-1.md#edit-in-the-browser-as-a-commit) | Available | Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. |
+| [Edit in the browser, as a commit](roadmap/milestone-1.md#edit-in-the-browser-as-a-commit) | In progress | Edit, add or delete one file from the web page; every save is a real commit, on the branch or on a new branch with a pull request. |
 | [Verified commits and tags](roadmap/milestone-1.md#verified-commits-and-tags) | Planned | Verify signatures on commits and tags, manage signing keys, and let a rule require signed commits. |
 | [Repository maintenance and health](roadmap/milestone-1.md#repository-maintenance-and-health) | Planned | Scheduled housekeeping, an integrity check, a size report and a health note on the home page. |
 | [Repository trash](roadmap/milestone-1.md#repository-trash) | Planned | A deleted repository goes to a trash and can come back within a set time. |
-| [Mirrors in and out](roadmap/milestone-1.md#mirrors-in-and-out) | Available | Pull a repository from another host on a schedule, or push every change to another host as a safety copy. |
+| [Mirrors in and out](roadmap/milestone-1.md#mirrors-in-and-out) | In progress | Pull a repository from another host on a schedule, or push every change to another host as a safety copy. |
 | [Repository settings screens](roadmap/milestone-1.md#repository-settings-screens) | Planned | Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. |
 | [Branch and tag manager](roadmap/milestone-1.md#branch-and-tag-manager) | Planned | List, rename, delete and restore branches, set the default, and delete merged branches automatically. |
 | [Large files](roadmap/milestone-1.md#large-files) | Planned | Store large binary files outside the normal history, with locks and quotas. |
@@ -455,7 +456,7 @@ See and control everything you run, whether it is an application in a cluster, a
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Feature toggles](roadmap/milestone-3.md#feature-toggles) | Planned | A built-in toggle service that applications and agents read through the OpenFeature standard, per environment, with percentages and rules. |
+| [Feature toggles](roadmap/milestone-3.md#feature-toggles) | In progress | Toggles per environment with rules, percentages that keep the same people, kill switches, approvals and a reason on every change, history with revert, and Go and TypeScript libraries. ([docs](guide/feature-toggles.md)) |
 | [Configuration, keys and toggles per zone](roadmap/milestone-3.md#configuration-keys-and-toggles-per-zone) | Planned | Manage settings and secrets together per zone and environment, for virtual machines and Kubernetes alike. |
 | [Routing by client attributes](roadmap/milestone-3.md#routing-by-client-attributes) | Planned | Decide which version a request gets from who sent it, such as a share of mobile clients, inside the application or at the network. |
 | [A guided change for every lever](roadmap/milestone-3.md#a-guided-change-for-every-lever) | Planned | Preview, policy check, approval where required, applied and audited, with an undo, for toggles, weights and limits. |
@@ -811,9 +812,9 @@ Every deployment, whatever it is made of, brings the new version up beside the o
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [A toggle service in the model](roadmap/milestone-8.md#a-toggle-service-in-the-model) | Planned | Toggles are known to Launchway, rolled out in steps by a plan and returned with the rest of the stable state. |
-| [Kill switches and automatic toggle-back](roadmap/milestone-8.md#kill-switches-and-automatic-toggle-back) | Planned | A toggle marked as a kill switch is switched off at once, and a toggle that caused errors is switched back automatically. |
-| [Stale-toggle hygiene](roadmap/milestone-8.md#stale-toggle-hygiene) | Planned | A list of toggles nobody has changed for a long time, with a suggestion to remove them. |
+| [A toggle service in the model](roadmap/milestone-8.md#a-toggle-service-in-the-model) | In progress | Toggles are known to Launchway, shown beside deployments on an environment's timeline, and offered for reverting with a rollback. ([docs](guide/feature-toggles.md)) |
+| [Kill switches and automatic toggle-back](roadmap/milestone-8.md#kill-switches-and-automatic-toggle-back) | In progress | A toggle marked as a kill switch has a safe value, and turning it to that value is never held for an approval. ([docs](guide/feature-toggles.md)) |
+| [Stale-toggle hygiene](roadmap/milestone-8.md#stale-toggle-hygiene) | In progress | Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed. ([docs](guide/feature-toggles.md)) |
 | [Configuration and secrets as rollouts](roadmap/milestone-8.md#configuration-and-secrets-as-rollouts) | Planned | A change to configuration or to a secret’s version is rolled out by a plan and can be returned. |
 | [Drift detection for settings](roadmap/milestone-8.md#drift-detection-for-settings) | Planned | Find configuration that differs between what is declared and what runs, and between environments. |
 | [Revert the latest change](roadmap/milestone-8.md#revert-the-latest-change) | Planned | When something breaks, one action reverts the most recent change on the timeline, whatever kind it was. |

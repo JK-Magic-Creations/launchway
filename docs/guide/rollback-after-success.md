@@ -63,8 +63,14 @@ recorded with the run, and then it goes ahead.
 
 A rollback restores the version only. It never restores a database or configuration, and says so in the
 confirmation and in the result. If the version you are undoing changed a schema, check that the
-older version still works with it first. Restoring a version together with its toggles and configuration (a
-"stable state") is future work.
+older version still works with it first.
+
+It does not restore **feature toggles** by itself either, but it tells you about them. The confirmation lists the
+[toggle changes](feature-toggles.md) made in the environment since the version it restores went live, and offers to
+revert them with the rollback (`--revert-toggles` on the command line). It is unchecked by default: it is your call
+whether they belong to what you are undoing. They are reverted after the rollback is accepted, never held for an
+approval, and each one is recorded. Restoring a version together with its configuration as one "stable state" record
+is future work.
 
 ## When the action is not offered
 

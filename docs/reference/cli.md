@@ -863,6 +863,44 @@ launchway variables unlock NAME LEVEL [--environment E]
 
 The same operations are the routes under [Variables](http-api.md#variables) in the HTTP API, and the MCP tools `list_variables`, `get_effective_variables`, `get_run_variables`, `set_variable`, `delete_variable`, `lock_variable` and `unlock_variable`.
 
+## launchway toggles
+
+Feature toggles: make them, change what they do in an environment, read their history, revert, and manage the keys
+applications use. See the [guide](../guide/feature-toggles.md). Every change is audited (`toggle.*`) and goes through the
+project's safeguards: a reason, and in a protected environment another person's approval (the command says when a change
+waits, and who approves it).
+
+```
+launchway toggles list    PROJECT [--json]
+launchway toggles get     PROJECT KEY [--json]
+launchway toggles create  PROJECT KEY --type boolean|string|number|json [--default V] [--kind K] [--owner O] [--description D] [--expires DATE] [--client-visible] [--reason R]
+launchway toggles set     PROJECT KEY ENV (--on | --off | --percent N) [--serve JSON] [--reason R] [--at TIME]
+launchway toggles rules   PROJECT KEY ENV -f FILE [--reason R] [--at TIME]
+launchway toggles evaluate PROJECT KEY --context JSON
+launchway toggles history PROJECT KEY [--environment E] [--json]
+launchway toggles revert  PROJECT CHANGE --reason R
+launchway toggles waiting PROJECT
+launchway toggles approve|reject|withdraw PROJECT CHANGE [--comment C]
+launchway toggles timeline PROJECT ENV
+launchway toggles revert-since PROJECT ENV --since MS --reason R [--dry-run]
+launchway toggles usage   PROJECT KEY
+launchway toggles schedules list PROJECT | cancel PROJECT ID
+launchway toggles lock|unlock PROJECT KEY [--reason R]
+launchway toggles keys list PROJECT | create PROJECT ENV --kind server|client [--name N] [--origin URL]... | rotate PROJECT ID [--overlap-hours N] | revoke PROJECT ID
+launchway toggles safeguards get PROJECT [--environment E]
+launchway toggles safeguards set PROJECT [--environment E] [--require-reason=BOOL] [--require-approval=BOOL] [--approvals N] [--watch-minutes N] [--lock NAME]... --reason R
+launchway toggles export  PROJECT [-o FILE]
+launchway toggles plan    PROJECT -f FILE
+launchway toggles apply   PROJECT -f FILE --reason R [--origin config:<commit>]
+launchway toggles segments list PROJECT | set PROJECT NAME -f FILE [--reason R] | delete PROJECT NAME --reason R
+```
+
+`set --on` and `--off` keep the rules the environment already has; `--percent N` serves the value to N percent of
+keys (for a boolean, true) and the off value to the rest. `rules` replaces the environment's whole state from a YAML
+file. `--at` makes the change at a time (RFC 3339) instead of now. A key made by `keys create` or `keys rotate` is
+printed once. `plan` changes nothing; `apply` never removes what the file leaves out. `deployments rollback`
+lists the toggle changes made since the version it restores, and `--revert-toggles` reverts them with it.
+
 ## launchway doctor
 
 Checks an installation and says what it finds in plain words. With no section it runs both, git first. It reads the same `--config` as the server (and `LAUNCHWAY_DATABASE`) and opens the database directly, not through a server.

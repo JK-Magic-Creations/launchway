@@ -82,6 +82,7 @@ Usage:
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway registry status|list|tags|inspect|delete|retention|policy|gc   the built-in image and chart registry
+  launchway toggles list|get|create|set|rules|history|revert|keys|safeguards|plan|apply  feature toggles: roll a feature out to a share of users without a deployment
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
@@ -117,6 +118,7 @@ var commands = map[string]func([]string) error{
 	"run-limits":     cmdRunLimits,
 	"caches":         cmdCaches,
 	"variables":      cmdVariables,
+	"toggles":        cmdToggles,
 	"doctor":         cmdDoctor,
 	"users":          cmdUsers,
 	"install":        cmdInstall,
@@ -241,11 +243,9 @@ func cmdServer(args []string) error {
 	if store.Available() {
 		srv.Settings = store
 	}
-	// Variables set at levels (schema 29): the manager binds pipelines to
-	// them, the server serves and changes them.
-	vars := store.Variables()
-	mgr.SetVariables(vars)
-	srv.Variables = vars
+	// Variables set at levels (schema 29): the manager binds pipelines to them, the server serves and changes them.
+	srv.Variables = store.Variables()
+	mgr.SetVariables(srv.Variables)
 	applyLive := func(c *config.Config) error {
 		l, err := serverLive(c, token, authOpts)
 		if err != nil {

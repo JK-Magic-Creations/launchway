@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 3 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 5 in progress · 87 planned · 96 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 6 in progress · 86 planned · 96 capabilities</p>
 
 See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.
 
@@ -54,7 +54,7 @@ flowchart TD
 | [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 0 | 2 | 3 |
 | [Where it deploys](#g-where-it-deploys) | 12 | 0 | 0 | 12 |
 | [Infrastructure as code](#g-infrastructure-as-code) | 5 | 0 | 0 | 5 |
-| [Runtime configuration](#g-runtime-configuration) | 6 | 0 | 0 | 6 |
+| [Runtime configuration](#g-runtime-configuration) | 6 | 0 | 1 | 5 |
 | [Watch and protect](#g-watch-and-protect) | 10 | 0 | 0 | 10 |
 | [Change and insight](#g-change-and-insight) | 7 | 0 | 0 | 7 |
 | [Moving over from other delivery platforms](#g-moving-over-from-other-delivery-platforms) | 3 | 0 | 0 | 3 |
@@ -458,11 +458,11 @@ Settings, keys and toggles managed together, per zone and environment.
 
 #### Feature toggles {#feature-toggles}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A built-in toggle service that applications and agents read through the OpenFeature standard, per environment, with percentages and rules. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.
+Toggles per environment with rules, percentages that keep the same people, kill switches, approvals and a reason on every change, history with revert, and Go and TypeScript libraries. Built: the model, the safeguards, the history and revert, scheduled changes, SDK keys, the evaluation protocol with streaming and the Go and TypeScript libraries with OpenFeature providers, the toggles file, and the web, command line and agent tools. Still to come: a pipeline keyword, plans with proofs between steps, webhook events, and libraries for more languages.
 
-[Area page](platform-services.md)
+[Read the documentation](../guide/feature-toggles.md) · [Area page](traffic.md)
 
 #### Configuration, keys and toggles per zone {#configuration-keys-and-toggles-per-zone}
 

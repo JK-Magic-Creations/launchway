@@ -6,6 +6,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/togglestore"
 )
 
 // Rollback after a successful deployment (schema 32; see
@@ -69,7 +70,7 @@ func (s *Server) rollbackOptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.roleAction(identityFrom(r), plan.Project, env, &plan.Action)
-	writeJSON(w, http.StatusOK, plan)
+	writeJSON(w, http.StatusOK, s.withToggles(r, plan))
 }
 
 // requestRollback asks for a rollback: {"environment", "service", "to",
@@ -81,6 +82,9 @@ func (s *Server) requestRollback(w http.ResponseWriter, r *http.Request) {
 		To          string `json:"to"`
 		Reason      string `json:"reason"`
 		Queue       bool   `json:"queue"`
+		// RevertToggles also reverts the toggle changes made since the version
+		// being restored went live (see toggles_rollback.go).
+		RevertToggles bool `json:"revert_toggles"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -96,6 +100,13 @@ func (s *Server) requestRollback(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusForbidden, msg)
 		return
 	}
+	since, withToggles := int64(0), false
+	if in.RevertToggles {
+		if since, withToggles = s.toggleSince(project, in.Environment, in.Service, in.To); !withToggles {
+			writeErr(w, http.StatusConflict, "the toggle changes cannot be told apart from this rollback's version: there is nothing to revert with it")
+			return
+		}
+	}
 	sum, err := s.Engine.RequestRollback(engine.RollbackRequest{Project: project, Environment: in.Environment, Service: in.Service,
 		To: in.To, Reason: in.Reason, Actor: id.User, Queue: in.Queue})
 	if err != nil {
@@ -103,6 +114,21 @@ func (s *Server) requestRollback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, fmt.Sprintf("%s/%s", project, in.Environment), clip(fmt.Sprintf("run #%d %s: %s", sum.Number, sum.ID, sum.Message), 400))
+	if withToggles {
+		// The rollback was accepted; now the toggles go back to what they were
+		// when that version went live. A toggle that cannot be reverted is
+		// reported and the rest go on; the rollback itself is not undone.
+		res, err := s.Toggles.RevertSince(r.Context(), s.toggleActor(r), project, in.Environment, since,
+			fmt.Sprintf("with rollback run #%d: %s", sum.Number, in.Reason))
+		if err != nil {
+			s.Log.Error("reverting toggles with a rollback", "err", err)
+		}
+		writeJSON(w, http.StatusCreated, struct {
+			*engine.RunSummary
+			ToggleReverts []togglestore.RevertResult `json:"toggle_reverts"`
+		}{sum, res})
+		return
+	}
 	writeJSON(w, http.StatusCreated, sum)
 }
 

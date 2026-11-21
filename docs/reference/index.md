@@ -13,6 +13,7 @@ behind it.
 | [Command line](cli.md) | every command and flag of `launchway` |
 | [HTTP API](http-api.md) | every route, who may call it, and what it returns |
 | [Configuration objects](config-objects.md) | the kinds of configuration kept in the database, their settings, and how the API, CLI, MCP and Terraform name them |
+| [Toggle protocol](toggles-protocol.md) | the HTTP calls, ruleset format, evaluation rules, bucketing hash and test vectors an SDK implements |
 | [Interface parity](interface-parity.md) | every API operation against its MCP tool, CLI command and Terraform resource |
 | [Accessibility conformance](accessibility-conformance.md) | each WCAG 2.2 criterion: what is supported, partly supported or not, with remarks |
 | [Archive format](archive-format.md) | the document that stores another server's issues and comments read-only in a repository |

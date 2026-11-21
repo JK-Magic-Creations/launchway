@@ -47,6 +47,7 @@ var schemaMarkers = []schemaMarker{
 	schemaMarkersDelivery,
 	schemaMarkersArchive,
 	schemaMarkersRegistry,
+	schemaMarkersToggles,
 }
 
 type schemaMarker struct {

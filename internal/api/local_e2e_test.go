@@ -72,6 +72,7 @@ func setupLocalKey(t *testing.T, mutate func(*LocalAuth), rootKey bool) *localEn
 		Auth: &Auth{Policy: pol, IdleTimeout: 8 * time.Hour, Lifetime: 24 * time.Hour, Local: la}}
 	s.Settings = testSettings(t, eng)
 	s.Variables = testVariables(eng)
+	s.Toggles = testToggles(eng)
 	srv := httptest.NewServer(s.Handler())
 	t.Cleanup(func() { srv.Close(); eng.Close() })
 	code, err := s.EnsureSetupCode()

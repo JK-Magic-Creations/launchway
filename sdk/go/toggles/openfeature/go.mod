@@ -1,0 +1,13 @@
+module github.com/jk-magic-creations/launchway/sdk/go/toggles/openfeature
+
+go 1.22
+
+require github.com/jk-magic-creations/launchway/sdk/go/toggles v0.0.0
+
+require (
+	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/open-feature/go-sdk v1.14.1
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
+)
+
+replace github.com/jk-magic-creations/launchway/sdk/go/toggles => ../

@@ -22,6 +22,9 @@ const ProjectTestsPage = lz(() => import("../pages/ProjectTests"), "ProjectTests
 const ProjectSecurityPage = lz(() => import("../pages/ProjectSecurity"), "ProjectSecurityPage");
 const ProjectCachesPage = lz(() => import("../pages/Caches"), "ProjectCachesPage");
 const ProjectVariablesPage = lz(() => import("../pages/Variables"), "ProjectVariablesPage");
+const ProjectTogglesPage = lz(() => import("../pages/Toggles"), "ProjectTogglesPage");
+const ToggleDetailPage = lz(() => import("../pages/Toggles"), "ToggleDetailPage");
+const ToggleSettingsPage = lz(() => import("../pages/ToggleSettings"), "ToggleSettingsPage");
 const SettingsVariablesPage = lz(() => import("../pages/Variables"), "SettingsVariablesPage");
 const PlaygroundPage = lz(() => import("../pages/Playground"), "PlaygroundPage");
 const RunsPage = lz(() => import("../pages/Activity"), "ActivityPage");
@@ -85,6 +88,9 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/caches": return <ProjectCachesPage key={p.name} name={p.name} />;
     case "/projects/:name/variables": return <ProjectVariablesPage key={p.name} name={p.name} />;
     case "/setup/guide": return <SetupGuidePage />;
+    case "/projects/:name/toggles": return <ProjectTogglesPage key={p.name} name={p.name} />;
+    case "/projects/:name/toggles/:toggle": return <ToggleDetailPage key={p.name + "/" + p.toggle} project={p.name} toggle={p.toggle} />;
+    case "/projects/:name/toggle-settings": return <ToggleSettingsPage key={p.name} name={p.name} />;
     case "/repositories/import": return <ImportRepositoriesPage />;
     case "/repositories/:owner/:name": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="overview" />;
     case "/repositories/:owner/:name/:view": case "/repositories/:owner/:name/commit/:sha":

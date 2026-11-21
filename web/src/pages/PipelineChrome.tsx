@@ -14,6 +14,7 @@ const PAGES: { id: string; label: string; path: (enc: string) => string }[] = [
   { id: "security", label: "Security", path: (e) => `/projects/${e}/security` },
   { id: "caches", label: "Build caches", path: (e) => `/projects/${e}/caches` },
   { id: "variables", label: "Variables", path: (e) => `/projects/${e}/variables` },
+  { id: "toggles", label: "Toggles", path: (e) => `/projects/${e}/toggles` },
 ];
 
 /** ProjectHead opens every page about one project's pipeline: the title and sentence, the way across to its

@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 8 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 1 in progress · 46 planned · 48 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 4 in progress · 43 planned · 48 capabilities</p>
 
 Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.
 
@@ -51,7 +51,7 @@ flowchart TD
 | [One model for every deployment](#g-one-model-for-every-deployment) | 8 | 0 | 1 | 7 |
 | [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 0 | 0 | 5 |
 | [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 5 | 1 | 0 | 4 |
-| [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 0 | 0 | 6 |
+| [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 0 | 3 | 3 |
 | [Hosts, serverless and other workloads](#g-hosts-serverless-and-other-workloads) | 8 | 0 | 0 | 8 |
 | [Argo CD, first class](#g-argo-cd-first-class) | 9 | 0 | 0 | 9 |
 | [Prove it: chaos, performance and temporary capacity](#g-prove-it-chaos-performance-and-temporary-capacity) | 7 | 0 | 0 | 7 |
@@ -252,33 +252,33 @@ Second phase. Everything that can change behavior without a new build is version
 
 #### A toggle service in the model {#a-toggle-service-in-the-model}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Toggles are known to Launchway, rolled out in steps by a plan and returned with the rest of the stable state. It speaks an open protocol, so existing applications read toggles with no Launchway library.
+Toggles are known to Launchway, shown beside deployments on an environment's timeline, and offered for reverting with a rollback. Rolling a toggle out in steps by a plan with proofs between them, and returning it with the rest of one stable-state record, are still to come.
 
 **Depends on:** Feature toggles.
 
-[Area page](zero-downtime.md)
+[Read the documentation](../guide/feature-toggles.md) · [Area page](zero-downtime.md)
 
 #### Kill switches and automatic toggle-back {#kill-switches-and-automatic-toggle-back}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A toggle marked as a kill switch is switched off at once, and a toggle that caused errors is switched back automatically. Launchway names the toggle and shows the errors that led to the decision.
+A toggle marked as a kill switch has a safe value, and turning it to that value is never held for an approval. Switching a toggle back automatically when errors rise after a change is still to come: today the change is shown as recent and a person reverts it.
 
 **Depends on:** The watch; a toggle service in the model.
 
-[Area page](zero-downtime.md)
+[Read the documentation](../guide/feature-toggles.md) · [Area page](zero-downtime.md)
 
 #### Stale-toggle hygiene {#stale-toggle-hygiene}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A list of toggles nobody has changed for a long time, with a suggestion to remove them. Removing a toggle is a pull request.
+Toggles that have served one value to everyone for a month, have not been evaluated, or are past their removal date are noted on their page, never changed. A suggested pull request that removes the check and the toggle is still to come.
 
 **Depends on:** A toggle service in the model.
 
-[Area page](zero-downtime.md)
+[Read the documentation](../guide/feature-toggles.md) · [Area page](zero-downtime.md)
 
 #### Configuration and secrets as rollouts {#configuration-and-secrets-as-rollouts}
 

@@ -279,13 +279,54 @@ var permissionTable = map[string]matrixRow{
 	// at a project needs the operator role, locking the admin role; the wider
 	// levels need an admin of every project. A name that does not exist is a
 	// 404 after the permission check, which is why the delete rows end so.
-	"GET /api/v1/variables":                       {"GET", "/api/v1/variables?level=installation", "", [6]int{401, 403, 200, 200, 200, 200}},
-	"PUT /api/v1/variables/{name}":                {"PUT", "/api/v1/variables/x", `{"level":"project","scope":"pay-api","type":"string","value":"v"}`, [6]int{401, 404, 403, 200, 404, 200}},
-	"DELETE /api/v1/variables/{name}":             {"DELETE", "/api/v1/variables/gone?level=project&scope=pay-api", "", [6]int{401, 404, 403, 404, 404, 404}},
-	"PUT /api/v1/variables/{name}/lock":           {"PUT", "/api/v1/variables/x/lock", `{"level":"project","scope":"pay-api","reason":"fixed"}`, [6]int{401, 404, 403, 403, 404, 200}},
-	"DELETE /api/v1/variables/{name}/lock":        {"DELETE", "/api/v1/variables/x/lock?level=project&scope=pay-api", "", [6]int{401, 404, 403, 403, 404, 200}},
-	"GET /api/v1/projects/{name}/variables":       {"GET", "/api/v1/projects/pay-api/variables", "", [6]int{401, 404, 200, 200, 404, 200}},
-	"GET /api/v1/runs/{id}/variables":             {"GET", "/api/v1/runs/{pay}/variables", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/variables":                 {"GET", "/api/v1/variables?level=installation", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"PUT /api/v1/variables/{name}":          {"PUT", "/api/v1/variables/x", `{"level":"project","scope":"pay-api","type":"string","value":"v"}`, [6]int{401, 404, 403, 200, 404, 200}},
+	"DELETE /api/v1/variables/{name}":       {"DELETE", "/api/v1/variables/gone?level=project&scope=pay-api", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"PUT /api/v1/variables/{name}/lock":     {"PUT", "/api/v1/variables/x/lock", `{"level":"project","scope":"pay-api","reason":"fixed"}`, [6]int{401, 404, 403, 403, 404, 200}},
+	"DELETE /api/v1/variables/{name}/lock":  {"DELETE", "/api/v1/variables/x/lock?level=project&scope=pay-api", "", [6]int{401, 404, 403, 403, 404, 200}},
+	"GET /api/v1/projects/{name}/variables": {"GET", "/api/v1/projects/pay-api/variables", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/variables":       {"GET", "/api/v1/runs/{pay}/variables", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// Feature toggles. Viewers read; operators of the project make toggles and change
+	// states (and approve other people's changes); safeguards and SDK keys need the
+	// admin role. What does not exist is a 404 after the permission check.
+	"GET /api/v1/projects/{name}/toggles":                          {"GET", "/api/v1/projects/pay-api/toggles", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/v1/projects/{name}/toggles":                         {"POST", "/api/v1/projects/pay-api/toggles", `{"key":"t1","type":"boolean","reason":"new"}`, [6]int{401, 404, 403, allowed, 404, allowed}},
+	"GET /api/v1/projects/{name}/toggle-changes":                   {"GET", "/api/v1/projects/pay-api/toggle-changes", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/v1/projects/{name}/toggle-changes/{id}/revert":      {"POST", "/api/v1/projects/pay-api/toggle-changes/999999/revert", `{"reason":"x"}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"POST /api/v1/projects/{name}/toggle-changes/{id}/approve":     {"POST", "/api/v1/projects/pay-api/toggle-changes/999999/approve", `{}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"POST /api/v1/projects/{name}/toggle-changes/{id}/reject":      {"POST", "/api/v1/projects/pay-api/toggle-changes/999999/reject", `{}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"POST /api/v1/projects/{name}/toggle-changes/{id}/withdraw":    {"POST", "/api/v1/projects/pay-api/toggle-changes/999999/withdraw", `{}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/toggle-timeline":                  {"GET", "/api/v1/projects/pay-api/toggle-timeline?environment=production", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/v1/projects/{name}/toggle-revert-since":             {"POST", "/api/v1/projects/pay-api/toggle-revert-since", `{"environment":"production","since":1,"dry_run":true}`, [6]int{401, 404, 403, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/toggle-schedules":                 {"GET", "/api/v1/projects/pay-api/toggle-schedules", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"DELETE /api/v1/projects/{name}/toggle-schedules/{id}":         {"DELETE", "/api/v1/projects/pay-api/toggle-schedules/999999", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/toggle-file":                      {"GET", "/api/v1/projects/pay-api/toggle-file", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/v1/projects/{name}/toggle-plan":                     {"POST", "/api/v1/projects/pay-api/toggle-plan", `{"file":"toggles: {}"}`, [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/v1/projects/{name}/toggle-apply":                    {"POST", "/api/v1/projects/pay-api/toggle-apply", `{"file":"toggles: {}","reason":"x"}`, [6]int{401, 404, 403, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/toggles/{key}":                    {"GET", "/api/v1/projects/pay-api/toggles/nope", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PATCH /api/v1/projects/{name}/toggles/{key}":                  {"PATCH", "/api/v1/projects/pay-api/toggles/nope", `{"owner":"x"}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"DELETE /api/v1/projects/{name}/toggles/{key}":                 {"DELETE", "/api/v1/projects/pay-api/toggles/nope?reason=x", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"PUT /api/v1/projects/{name}/toggles/{key}/lock":               {"PUT", "/api/v1/projects/pay-api/toggles/nope/lock", `{"reason":"x"}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"DELETE /api/v1/projects/{name}/toggles/{key}/lock":            {"DELETE", "/api/v1/projects/pay-api/toggles/nope/lock", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"PUT /api/v1/projects/{name}/toggles/{key}/environments/{env}": {"PUT", "/api/v1/projects/pay-api/toggles/nope/environments/dev", `{"state":{"on":true,"off_value":false,"fallthrough":{"value":true}},"reason":"x"}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/toggles/{key}/history":            {"GET", "/api/v1/projects/pay-api/toggles/nope/history", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/toggles/{key}/usage":              {"GET", "/api/v1/projects/pay-api/toggles/nope/usage", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/v1/projects/{name}/toggles/{key}/evaluate":          {"POST", "/api/v1/projects/pay-api/toggles/nope/evaluate", `{"context":{"key":"u"}}`, [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/toggle-segments":                  {"GET", "/api/v1/projects/pay-api/toggle-segments", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"PUT /api/v1/projects/{name}/toggle-segments/{segment}":        {"PUT", "/api/v1/projects/pay-api/toggle-segments/staff", `{"rules":[{"clauses":[{"attribute":"a","op":"equals","values":["x"]}]}],"reason":"r"}`, [6]int{401, 404, 403, 200, 404, 200}},
+	"DELETE /api/v1/projects/{name}/toggle-segments/{segment}":     {"DELETE", "/api/v1/projects/pay-api/toggle-segments/gone?reason=x", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/toggle-safeguards":                {"GET", "/api/v1/projects/pay-api/toggle-safeguards", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"PUT /api/v1/projects/{name}/toggle-safeguards":                {"PUT", "/api/v1/projects/pay-api/toggle-safeguards", `{"require_reason":true}`, [6]int{401, 404, 403, 403, 404, 200}},
+	"GET /api/v1/projects/{name}/toggle-keys":                      {"GET", "/api/v1/projects/pay-api/toggle-keys", "", [6]int{401, 404, 403, 200, 404, 200}},
+	"POST /api/v1/projects/{name}/toggle-keys":                     {"POST", "/api/v1/projects/pay-api/toggle-keys", `{"environment":"dev","kind":"server","name":"x"}`, [6]int{401, 404, 403, 403, 404, 201}},
+	"POST /api/v1/projects/{name}/toggle-keys/{id}/rotate":         {"POST", "/api/v1/projects/pay-api/toggle-keys/nope/rotate", `{}`, [6]int{401, 404, 403, 403, 404, 404}},
+	"DELETE /api/v1/projects/{name}/toggle-keys/{id}":              {"DELETE", "/api/v1/projects/pay-api/toggle-keys/nope", "", [6]int{401, 404, 403, 403, 404, 404}},
+	// The routes for applications prove themselves with an SDK key, not a session.
+	"GET /api/sdk/v1/ruleset":                     {"GET", "/api/sdk/v1/ruleset", "", [6]int{401, 401, 401, 401, 401, 401}},
+	"GET /api/sdk/v1/stream":                      {"GET", "/api/sdk/v1/stream", "", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/sdk/v1/evaluate":                   {"POST", "/api/sdk/v1/evaluate", `{"context":{"key":"u"}}`, [6]int{401, 401, 401, 401, 401, 401}},
+	"OPTIONS /api/sdk/v1/evaluate":                {"OPTIONS", "/api/sdk/v1/evaluate", "", [6]int{204, 204, 204, 204, 204, 204}},
+	"POST /api/sdk/v1/telemetry":                  {"POST", "/api/sdk/v1/telemetry", `{"counts":[]}`, [6]int{401, 401, 401, 401, 401, 401}},
 	"GET /api/v1/projects/{name}/cache-policy":    {"GET", "/api/v1/projects/pay-api/cache-policy", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"PUT /api/v1/projects/{name}/cache-policy":    {"PUT", "/api/v1/projects/pay-api/cache-policy", `{"idle_days":3}`, [6]int{401, 403, 403, 403, 403, 200}},
 	"DELETE /api/v1/projects/{name}/cache-policy": {"DELETE", "/api/v1/projects/pay-api/cache-policy", "", [6]int{401, 403, 403, 403, 403, 200}},
@@ -394,7 +435,7 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).
 var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /schema/pipeline.json", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info",
-	"GET /hosted/{link}/{path...}", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate"}
+	"GET /hosted/{link}/{path...}", "GET /api/sdk/v1/ruleset", "GET /api/sdk/v1/stream", "POST /api/sdk/v1/evaluate", "OPTIONS /api/sdk/v1/evaluate", "POST /api/sdk/v1/telemetry", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate"}
 
 // Every registered route must be in the permission table, and the table
 // must not list routes that no longer exist.

@@ -20,6 +20,7 @@ func addStepResourceTools(srv *mcp.Server, c *mcpCall) {
 	addRegistryTools(srv, c)
 	addRepositoryTools(srv, c)
 	addVariableTools(srv, c)   // variables at levels (schema 29)
+	addToggleTools(srv, c)     // feature toggles (schema 41)
 	addConfigTools(srv, c)     // the configuration tools are registered with the step resources, which are configuration too
 	addMirrorTools(srv, c)     // the tools of hosted repositories' mirrors (mcp_mirrors.go)
 	addDependencyTools(srv, c) // dependency updates (mcp_depupdates.go)

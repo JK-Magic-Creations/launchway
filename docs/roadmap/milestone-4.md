@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 4 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 0 in progress · 15 planned · 16 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 6 in progress · 9 planned · 16 capabilities</p>
 
 Images, Helm charts and other OCI artifacts stored beside the code, under the same permissions and policies.
 
@@ -46,7 +46,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [The registry](#g-the-registry) | 16 | 1 | 0 | 15 |
+| [The registry](#g-the-registry) | 16 | 1 | 6 | 9 |
 
 ### The registry {#g-the-registry}
 
