@@ -39,8 +39,6 @@ func init() {
 	for k, v := range rows {
 		permissionTable[k] = v
 	}
-	for _, p := range []string{"GET /api/v1/setup", "POST /api/v1/setup/begin", "POST /api/v1/setup/complete", "POST /api/v1/auth/local/signin",
-		"POST /api/v1/auth/local/second-factor", "POST /api/v1/auth/link", "POST /api/v1/auth/link/begin", "POST /api/v1/auth/link/complete"} {
-		publicRoutes = append(publicRoutes, p)
-	}
+	publicRoutes = append(publicRoutes, "GET /api/v1/setup", "POST /api/v1/setup/begin", "POST /api/v1/setup/complete", "POST /api/v1/auth/local/signin",
+		"POST /api/v1/auth/local/second-factor", "POST /api/v1/auth/link", "POST /api/v1/auth/link/begin", "POST /api/v1/auth/link/complete")
 }

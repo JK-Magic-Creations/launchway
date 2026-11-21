@@ -52,7 +52,7 @@ func TOTPCode(secret string, unix int64) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("the secret is not base32: %w", err)
 	}
-	return hotp(raw, uint64(unix/TOTPPeriod)), nil
+	return hotp(raw, uint64(unix/TOTPPeriod)), nil //nolint:gosec // a time after 1970
 }
 
 // CheckTOTP reports whether the code is right at the time, and for which

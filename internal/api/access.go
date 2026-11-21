@@ -162,6 +162,19 @@ func (s *Server) requestIdentity(r *http.Request) (*identity, error) {
 // guard wraps a route's handler with everything access needs: who is
 // calling, the CSRF check, the permission check, and the audit record.
 func (s *Server) guard(rt route) http.Handler {
+	h := s.guardAccess(rt)
+	if rt.access == public || rt.access == runnerOnly {
+		return h
+	}
+	// A new installation has no administrator: nothing signed-in works until setup is done.
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !s.refuseUntilSetup(w) {
+			h.ServeHTTP(w, r)
+		}
+	})
+}
+
+func (s *Server) guardAccess(rt route) http.Handler {
 	switch rt.access {
 	case public:
 		return rt.handler
@@ -169,9 +182,6 @@ func (s *Server) guard(rt route) http.Handler {
 		return s.runnerAuth(rt.handler)
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.refuseUntilSetup(w) {
-			return
-		}
 		if r.Header.Get("Authorization") != "" && s.tooManyFailures(w, r) {
 			return
 		}
@@ -187,10 +197,7 @@ func (s *Server) guard(rt route) http.Handler {
 		var entry *engine.AuditEntry
 		if rt.audit != "" {
 			entry = &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r),
-				Action: rt.audit, Target: r.PathValue("id")}
-			if entry.Target == "" && strings.HasPrefix(r.URL.Path, "/api/v1/users/") {
-				entry.Target = r.PathValue("name") // the person an administrator acted on
-			}
+				Action: rt.audit, Target: auditTarget(r)}
 		}
 		deny := func(code int, msg string) {
 			writeErr(w, code, msg)
@@ -613,4 +620,13 @@ func apiToken(h string) (string, bool) {
 		return pass, pass != ""
 	}
 	return "", false
+}
+
+// auditTarget is what a guarded call acted on: the run, or the person an
+// administrator managed.
+func auditTarget(r *http.Request) string {
+	if t := r.PathValue("id"); t != "" || !strings.HasPrefix(r.URL.Path, "/api/v1/users/") {
+		return t
+	}
+	return r.PathValue("name")
 }

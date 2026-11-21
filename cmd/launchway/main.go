@@ -251,9 +251,6 @@ func cmdServer(args []string) error {
 		}
 	}
 	warmUpSignIn(authOpts, log)
-	if err := announceSetup(srv, cfg, log); err != nil {
-		return err
-	}
 
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -261,7 +258,7 @@ func cmdServer(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	if err := startHosting(ctx, eff, eng, log, srv); err != nil {
+	if err := startServices(ctx, eff, cfg, eng, log, srv); err != nil {
 		return err
 	}
 	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}

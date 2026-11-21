@@ -229,7 +229,7 @@ func (e *Engine) DeleteLocalAccount(name string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	res, err := tx.Exec(`DELETE FROM local_accounts WHERE username = ?`, name)
 	if err != nil {
 		return err
@@ -272,7 +272,7 @@ func (e *Engine) ReplaceRecoveryCodes(name string, hashes []string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.Exec(`DELETE FROM local_recovery_codes WHERE username = ?`, name); err != nil {
 		return err
 	}

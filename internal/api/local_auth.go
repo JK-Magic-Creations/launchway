@@ -7,7 +7,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -51,7 +50,6 @@ const (
 type localRuntime struct {
 	ipLimit  localauth.Limiter
 	setupLim localauth.Limiter
-	setupMu  sync.Mutex
 	done     atomic.Bool // setup is complete: never checked again
 }
 
@@ -185,9 +183,9 @@ func (s *Server) localGuard(w http.ResponseWriter, r *http.Request) bool {
 }
 
 // throttled applies the per-address limit that protects the cost of hashing.
-func (s *Server) throttled(w http.ResponseWriter, r *http.Request, lim *localauth.Limiter, max int, window time.Duration) bool {
+func (s *Server) throttled(w http.ResponseWriter, r *http.Request, lim *localauth.Limiter, limit int, window time.Duration) bool {
 	if lim.Max == 0 {
-		lim.Max, lim.Window = max, window
+		lim.Max, lim.Window = limit, window
 	}
 	if ok, wait := lim.Allow(s.clientAddr(r), s.Now()); !ok {
 		tooMany(w, wait)

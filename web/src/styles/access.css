@@ -49,3 +49,6 @@ a.btn-primary:hover { text-decoration: none; color: #fff; }
 .outcome-ok { background: var(--ok-soft); color: var(--ok-ink); }
 .outcome-denied { background: var(--warn-soft); color: var(--warn-ink); }
 .outcome-failed { background: var(--bad-soft); color: var(--bad-ink); }
+.signin-card .stack { display: flex; flex-direction: column; gap: 12px; }
+.signin-card .codes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; list-style: none; padding: 0; margin: 0; }
+.signin-card .codes li { padding: 6px 8px; border: 1px solid var(--border, #d0d7de); border-radius: 6px; text-align: center; }

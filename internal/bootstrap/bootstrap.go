@@ -173,7 +173,7 @@ func ensureOne(ctx context.Context, cs kubernetes.Interface, o Options, s Spec) 
 
 func checkKey(sec *corev1.Secret, s Spec) (Result, error) {
 	if len(sec.Data[s.Key]) == 0 {
-		return Result{}, fmt.Errorf("Secret %s exists but has no %q key (or it is empty); it is not changed. Add the key, or delete the Secret so a new one is made", s.Name, s.Key)
+		return Result{}, fmt.Errorf("the Secret %s exists but has no %q key (or it is empty); it is not changed. Add the key, or delete the Secret so a new one is made", s.Name, s.Key)
 	}
 	return Result{Name: s.Name, Outcome: Present}, nil
 }
@@ -240,10 +240,10 @@ func SetupCode(r io.Reader) (string, error) {
 
 // pick draws n characters uniformly (no modulo bias) from alphabet.
 func pick(r io.Reader, alphabet string, n int) (string, error) {
-	max := big.NewInt(int64(len(alphabet)))
+	limit := big.NewInt(int64(len(alphabet)))
 	out := make([]byte, n)
 	for i := range out {
-		v, err := rand.Int(r, max)
+		v, err := rand.Int(r, limit)
 		if err != nil {
 			return "", err
 		}

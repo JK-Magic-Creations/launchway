@@ -35,7 +35,7 @@ func (e *Engine) CreateLink(l Link) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.Exec(`DELETE FROM local_links WHERE username = ? AND kind = ? AND used_at = 0`, l.Username, l.Kind); err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (e *Engine) CompleteSetup(codeHash string, a *LocalAccount, recoveryHashes 
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var n int
 	if err := tx.QueryRow(`SELECT count(*) FROM local_accounts`).Scan(&n); err != nil {
 		return err

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/config"
+	"github.com/jk-magic-creations/launchway/internal/engine"
 )
 
 // announceSetup makes sure a brand-new installation has its one-time setup
@@ -27,4 +29,12 @@ func announceSetup(srv *api.Server, cfg *config.Config, log *slog.Logger) error 
 		"  Lost it or expired? Run `launchway users setup-code` on this server for a new one.\n\n", code)
 	log.Info("waiting for first-run setup", "listen", cfg.Listen)
 	return nil
+}
+
+// startServices starts what runs beside the API: Git hosting, and the first-run setup code.
+func startServices(ctx context.Context, eff, cfg *config.Config, eng *engine.Engine, log *slog.Logger, srv *api.Server) error {
+	if err := announceSetup(srv, cfg, log); err != nil {
+		return err
+	}
+	return startHosting(ctx, eff, eng, log, srv)
 }

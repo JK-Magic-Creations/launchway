@@ -87,7 +87,7 @@ func VerifyPassword(password, encoded string) bool {
 		return false
 	}
 	hashSlots <- struct{}{}
-	key := argon2.IDKey([]byte(password), p.salt, p.t, p.m, p.p, uint32(len(p.key)))
+	key := argon2.IDKey([]byte(password), p.salt, p.t, p.m, p.p, uint32(len(p.key))) //nolint:gosec // parseHash accepts keys of a few bytes only (checked there)
 	<-hashSlots
 	return subtle.ConstantTimeCompare(key, p.key) == 1
 }
