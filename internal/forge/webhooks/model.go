@@ -157,6 +157,13 @@ type Repo struct {
 	Visibility    string `json:"visibility,omitempty"`
 	CloneHTTPS    string `json:"clone_https,omitempty"`
 	CloneSSH      string `json:"clone_ssh,omitempty"`
+	// The names GitHub's push payload uses for the same addresses, so that
+	// a receiver written for GitHub's format (Argo CD's /api/webhook, which
+	// matches them to its applications' repoURL) reads this payload as it is.
+	FullName string `json:"full_name,omitempty"`
+	HTMLURL  string `json:"html_url,omitempty"`
+	CloneURL string `json:"clone_url,omitempty"`
+	SSHURL   string `json:"ssh_url,omitempty"`
 }
 
 // Sender is who did it.

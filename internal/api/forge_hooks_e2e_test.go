@@ -145,6 +145,22 @@ func TestWebhookPushIsSignedAndComplete(t *testing.T) {
 	if want := webhooks.Sign("s3cret", push.body); push.header.Get("X-Launchway-Signature-256") != want || push.header.Get("X-Hub-Signature-256") != want {
 		t.Errorf("signature %q, want %q", push.header.Get("X-Launchway-Signature-256"), want)
 	}
+	// Read as GitHub's push event, as Argo CD's /api/webhook does.
+	if push.header.Get("X-GitHub-Event") != "push" {
+		t.Errorf("X-GitHub-Event %q", push.header.Get("X-GitHub-Event"))
+	}
+	var gh struct {
+		Ref        string `json:"ref"`
+		After      string `json:"after"`
+		Repository struct {
+			HTMLURL  string `json:"html_url"`
+			CloneURL string `json:"clone_url"`
+		} `json:"repository"`
+	}
+	if err := json.Unmarshal(push.body, &gh); err != nil || gh.Ref != "refs/heads/main" || gh.After != id ||
+		!strings.HasSuffix(gh.Repository.HTMLURL, "/git/acme/shop") || !strings.HasSuffix(gh.Repository.CloneURL, "/git/acme/shop.git") {
+		t.Errorf("GitHub-shaped fields: %+v %v", gh, err)
+	}
 	var p webhooks.Payload
 	if err := json.Unmarshal(push.body, &p); err != nil {
 		t.Fatal(err)
