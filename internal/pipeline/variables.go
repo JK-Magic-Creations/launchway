@@ -200,3 +200,16 @@ func (b *varBinding) param(p *Param) (text string, found bool, msg string) {
 	}
 	return text, true, ""
 }
+
+// checkWith checks a value a use writes for a parameter: that it fits, and
+// that it does not beat a lock on the parameter's variable.
+func (b *varBinding) checkWith(p *Param, written string) string {
+	if msg := p.check(written); msg != "" {
+		return msg
+	}
+	value := written
+	if p.Type == paramTypeList {
+		value = canonList(written)
+	}
+	return b.lockedWith(p, value, written)
+}

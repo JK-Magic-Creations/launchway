@@ -474,7 +474,7 @@ database, as the installation's default with an override for a project.
 
 ## Variables
 
-A variable is a name with a type, a value, an optional environment and an optional lock, set at a level: `installation`, `organization`, `unit` or `project`. A level and its scope (the unit's or the project's name) are given as `?level=&scope=` or in the body. The rule, the same sentence everywhere: **the nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross organizations. See the [guide](../guide/variables.md).
+A variable is a name with a type, a value, an optional environment and an optional lock, set at a level: `installation`, `organization`, `unit` or `project`. A level and its scope (the unit's or the project's name) are given as `?level=&scope=` or in the body. The rule, the same sentence everywhere: **The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross organizations. See the [guide](../guide/variables.md).
 
 | Route | Who | Audit action | What it does |
 |---|---|---|---|

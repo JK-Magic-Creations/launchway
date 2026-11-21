@@ -211,6 +211,7 @@ export default defineConfig({
           { text: 'Approvals and re-runs', link: '/guide/approvals-and-reruns' },
           { text: 'Test reports', link: '/guide/test-reports' },
           { text: 'Artifacts', link: '/guide/artifacts' },
+          { text: 'Variables at levels', link: '/guide/variables' },
           { text: 'Build caches', link: '/guide/build-caches' },
           { text: 'Where artifacts are kept', link: '/artifacts' },
           { text: 'Security findings and SBOMs', link: '/guide/security-findings' },

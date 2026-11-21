@@ -31,7 +31,7 @@ func (s *VariableService) RecordRun(ctx context.Context, runID, environment stri
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	for _, u := range used {
 		var r Resolved
 		if len(u.Detail) > 0 {

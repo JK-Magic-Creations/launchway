@@ -33,7 +33,6 @@ func (m *Manager) variables() VariableSource {
 	return nil
 }
 
-
 // varRecord is what a run used, kept once the run exists.
 type varRecord struct {
 	env  string

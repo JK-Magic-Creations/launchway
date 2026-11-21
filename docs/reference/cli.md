@@ -755,7 +755,7 @@ The same operations are the routes under [Build caches](http-api.md#build-caches
 
 ## launchway variables
 
-Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The rule: the nearest setting wins (what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default); at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the unit, organization or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
+Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the unit, organization or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
 
 ```text
 launchway variables list --installation|--organization|--unit U|--project P [--environment E] [--json]

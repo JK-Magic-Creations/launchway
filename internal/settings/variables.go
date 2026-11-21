@@ -242,6 +242,11 @@ func CheckValue(t VarType, of string, raw json.RawMessage) (json.RawMessage, err
 	if of != "" && t != VarConnection {
 		return nil, variableProblem("of is for connections; this is a %s", t)
 	}
+	return checkTyped(t, of, v)
+}
+
+// checkTyped checks a decoded value against its type.
+func checkTyped(t VarType, of string, v any) (json.RawMessage, error) {
 	switch t {
 	case VarString:
 		s, ok := v.(string)

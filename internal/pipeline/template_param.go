@@ -77,3 +77,34 @@ func quoteAll(list []string) []string {
 	}
 	return out
 }
+
+// fillParams gives each parameter a use wrote no value for the value of its
+// variable, else its default, and reports a parameter that has neither. It
+// returns false if any problem was reported.
+func fillParams(params []*Param, values, with map[string]string, template string, usesLine int,
+	withProblem func(line, col int, path, msg string), vb *varBinding) bool {
+	ok := true
+	for _, p := range params {
+		if _, set := values[p.Name]; set {
+			continue
+		}
+		if text, found, msg := vb.param(p); found {
+			if msg != "" {
+				ok = false
+				withProblem(usesLine, 0, "with."+p.Name, msg)
+			} else {
+				values[p.Name] = text
+			}
+			continue
+		}
+		if p.Default == nil {
+			if _, given := with[p.Name]; !given {
+				ok = false
+				withProblem(usesLine, 0, "with."+p.Name, fmt.Sprintf("the template %s needs a value for %s, which has no default: add it under with:%s", template, p.Name, noValueHint(p.From)))
+			}
+			continue
+		}
+		values[p.Name] = *p.Default
+	}
+	return ok
+}

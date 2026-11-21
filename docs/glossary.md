@@ -198,6 +198,12 @@ decides passed, failed or inconclusive. See [Verifying a deployment](guide/verif
 ### Viewer
 The [role](#role) that may see a project's runs, logs and pipelines, but not change anything.
 
+### Variable
+A named, typed setting set at a [level](#base) (installation, organization, unit or project), for everything or for one environment. A nearer level overrides a wider one and a lock stops that. A secret variable is a reference, never the secret. See [Variables at levels](guide/variables.md).
+
+### Variable lock
+A lock on a variable at a level, with a reason: nobody below the level may change it, a pipeline file and a run included. In code terms, `final`. See [Variables at levels](guide/variables.md#locks).
+
 ### Waiver
 A recorded, expiring exception that lets one policy rule pass for a project, with a reason.
 

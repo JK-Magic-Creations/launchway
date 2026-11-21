@@ -459,7 +459,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 			withProblem(pos.Line, pos.Column, "with."+k, msg)
 			continue
 		}
-		if msg := p.check(with[k]); msg != "" {
+		if msg := vb.checkWith(p, with[k]); msg != "" {
 			withOK = false
 			withProblem(pos.Line, pos.Column, "with."+k, msg)
 			continue
@@ -468,32 +468,9 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 		if p.Type == paramTypeList {
 			scope.values[k] = canonList(with[k])
 		}
-		if msg := vb.lockedWith(p, scope.values[k], with[k]); msg != "" {
-			withOK = false
-			withProblem(pos.Line, pos.Column, "with."+k, msg)
-		}
 	}
-	for _, p := range t.Params {
-		if _, ok := scope.values[p.Name]; ok {
-			continue
-		}
-		if text, found, msg := vb.param(p); found {
-			if msg != "" {
-				withOK = false
-				withProblem(usesLine, 0, "with."+p.Name, msg)
-			} else {
-				scope.values[p.Name] = text
-			}
-			continue
-		}
-		if p.Default == nil {
-			if _, given := with[p.Name]; !given {
-				withOK = false
-				withProblem(usesLine, 0, "with."+p.Name, fmt.Sprintf("the template %s needs a value for %s, which has no default: add it under with:%s", name, p.Name, noValueHint(p.From)))
-			}
-			continue
-		}
-		scope.values[p.Name] = *p.Default
+	if !fillParams(t.Params, scope.values, with, name, usesLine, withProblem, vb) {
+		withOK = false
 	}
 	t.Values = scope.values
 	if !withOK || len(ps.problems) > 0 {

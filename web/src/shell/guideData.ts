@@ -86,6 +86,14 @@ export const GUIDE: Record<string, GuideEntry> = {
     text: "Runners are the machines that do the work of your steps. Each says when it was last seen, so you know which are answering.",
     does: [{ icon: "plus", label: "Add a runner", href: "/config/wizard/add-runner" }],
   },
+  "/settings/variables": {
+    title: "Variables",
+    text: "A variable is a named setting you set once at a level: the {installation}, the {organization}, a {unit} or a project. Everything below gets it. A nearer level can set the same name to override it, and a lock keeps it from being overridden. Nothing here is needed to run a pipeline.",
+  },
+  "/projects/:name/variables": {
+    title: "Variables of this project",
+    text: "What reaches this project from above, and what it sets itself. The nearest setting wins; struck-through values are what it overrides. Override here with one click, unless a lock above stops it.",
+  },
   "/settings/words": {
     title: "Words",
     text: "Launchway's own words for its levels and parts: the {guide} and the {logbook}. Choose a set or rename any word; only the labels change.",

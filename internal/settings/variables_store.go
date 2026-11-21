@@ -123,7 +123,7 @@ func (s *VariableStore) Set(ctx context.Context, actor string, in SetInput) (*Va
 	if err != nil {
 		return nil, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := checkTypeAgrees(ctx, tx, in); err != nil {
 		return nil, false, err
 	}
@@ -212,7 +212,7 @@ func (s *VariableStore) Delete(ctx context.Context, actor string, k VarKey) erro
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	old, err := getVariable(ctx, tx.QueryRow(ctx, `SELECT `+varCols+` FROM variables
 		WHERE org = ? AND level = ? AND scope = ? AND name = ? AND environment = ?`, DefaultOrg, string(k.Level), k.Scope, k.Name, k.Environment), k)
 	if err != nil {
@@ -248,7 +248,7 @@ func (s *VariableStore) lock(ctx context.Context, actor string, k VarKey, on boo
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	old, err := getVariable(ctx, tx.QueryRow(ctx, `SELECT `+varCols+` FROM variables
 		WHERE org = ? AND level = ? AND scope = ? AND name = ? AND environment = ?`, DefaultOrg, string(k.Level), k.Scope, k.Name, k.Environment), k)
 	if err != nil {

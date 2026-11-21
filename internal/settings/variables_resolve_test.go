@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"testing"
 )
@@ -285,5 +286,26 @@ func TestAllNamesAreResolvedWhenNoneIsAsked(t *testing.T) {
 	res := ResolveVariables(ResolveInput{Variables: vars, Project: "cart", Unit: "pay"})
 	if len(res.Variables) != 2 || res.Variables[0].Name != "registry" || res.Rule != VariableRule {
 		t.Fatalf("%+v", res)
+	}
+}
+
+// The rule is one sentence and must be the same everywhere it is written:
+// the guide, the concept page, the references and the pipeline guide.
+func TestTheRuleIsTheSameInEveryDocument(t *testing.T) {
+	core := strings.TrimSuffix(VariableRule, " Lists replace, never merge. Variables and locks never cross organizations.")
+	for _, f := range []string{"docs/guide/variables.md", "docs/learn/concepts/variables.md", "docs/reference/http-api.md", "docs/reference/cli.md"} {
+		b, err := os.ReadFile("../../" + f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), core) {
+			t.Errorf("%s does not hold the rule, word for word:\n%s", f, core)
+		}
+	}
+	b, _ := os.ReadFile("../pipeline/guide/reference.md")
+	for _, part := range []string{"the nearest setting wins", "a lock set at a level beats everything below it"} {
+		if !strings.Contains(strings.ToLower(string(b)), part) {
+			t.Errorf("the pipeline guide lacks %q", part)
+		}
 	}
 }
