@@ -16,3 +16,10 @@ keywords:
   - pipelines
 annotations:
   licenses: AGPL-3.0-only
+annotations:
+  # The level of what this chart gives the server (the mounted root key, its
+  # environment, network policies). The server prints it at start and warns
+  # when it is older than the level the binary expects. Raise it, and
+  # config.ChartRevision with it, whenever the server starts to rely on
+  # something new in the chart.
+  launchway.io/chart-revision: "2"

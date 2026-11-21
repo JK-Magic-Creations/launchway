@@ -225,6 +225,13 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
+	if msg, warn := config.ChartNotice(os.Getenv, os.Getenv("KUBERNETES_SERVICE_HOST") != ""); msg != "" {
+		if warn {
+			log.Warn(msg, "binary_version", version)
+		} else {
+			log.Info(msg, "binary_version", version)
+		}
+	}
 	secretsSvc, token, err := su.secretsAndToken(eng)
 	if err != nil {
 		return err
