@@ -35,6 +35,7 @@ import (
 type Server struct {
 	Engine      *engine.Engine
 	Projects    *source.Manager
+	Standards   *StandardsService // Standing orders (standards.go); nil: off
 	RunnerToken string
 	// RunnerPools are the deploy runner pools, each with its own token.
 	RunnerPools []RunnerPool
@@ -139,7 +140,6 @@ func (s *Server) mainRoutes() []route {
 		// Health checks for load balancers and orchestrators.
 		{"GET /healthz", public, "", s.healthz},
 		{"GET /readyz", public, "", s.readyz},
-
 		// Runner API.
 		{"POST /api/runner/v1/lease", runnerOnly, "", s.lease},
 		{"POST /api/runner/v1/start", runnerOnly, "", s.start},

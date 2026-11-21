@@ -199,6 +199,16 @@ var mcpPermissionTable = map[string]mcpRow{
 	"revoke_toggle_key":           {map[string]any{"project": "pay-api", "key": "nope"}, false, [5]string{mUnlisted, mUnlisted, mRefused, mNotFound, mNotFound}},
 	// Step resources: anyone reads; only an administrator is offered the
 	// tools that change them, as the API refuses everyone else.
+	// Standing orders: the test server has none (404 after the permission check); tools that change are listed to operators.
+	"get_standards_profile":    {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"get_standards":            {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_standards_settings":   {map[string]any{"level": "installation"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_standards_coverage":   {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"list_findings":            {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"export_findings":          {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_run_inspection":       {map[string]any{"run_id": "{pay}"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"accept_finding":           {map[string]any{"project": "pay-api", "fingerprint": "abc", "reason": "a good enough reason", "expires": "2027-01-01"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"reopen_finding":           {map[string]any{"project": "pay-api", "fingerprint": "abc"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"get_step_resources":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
 	"set_step_resource_limits": {map[string]any{"memory_per_thread": "1Gi"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	// Configuration in the database: anyone reads the overview; the rest is

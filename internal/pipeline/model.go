@@ -278,6 +278,12 @@ type Step struct {
 	// script, saved after it (see Cache; schema 25).
 	Cache []*Cache `json:"cache,omitempty"`
 
+	// Added is set on a step the server put in the pipeline (Standing
+	// orders); Gate on the step that gives the Inspection's verdict
+	// (Kind gate). Neither is ever written in a pipeline file. See standing.go.
+	Added *Added `json:"added,omitempty"`
+	Gate  *Gate  `json:"gate,omitempty"`
+
 	// ForEach repeats the step over lists (schema 13). Only a pipeline that
 	// has not been bound has such steps; Bind replaces each by one step per
 	// combination of values.

@@ -42,6 +42,10 @@ installed system-wide. The versions are in `scripts/security/lib.sh` and the Mak
 | Reproducible release | a release that cannot be rebuilt byte for byte | `make release-reproduce` | CI | yes |
 | Project posture | repository settings, review, pinning | OpenSSF Scorecard | `make scorecard`, Scorecard workflow | no |
 
+## The same checks for your repositories
+
+Launchway offers repositories it hosts or builds the same kind of checks, on by default: see [Standing orders](../guide/standing-orders.md) and [its reference](../reference/standing-orders.md). They use the same pinned-image approach (every tool image is pinned by digest in `internal/standards/tools.yaml`), the same free tools where one exists (gitleaks, osv-scanner, govulncheck, gosec, ruff, Trivy, hadolint, kube-linter, shellcheck), and the same rule that nothing is bundled into the server: each tool runs as a step in its own container on a runner.
+
 ### Choices and why
 
 - **Go vulnerabilities: govulncheck.** It is the Go team's tool and reads the Go vulnerability

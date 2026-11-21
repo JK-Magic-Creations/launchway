@@ -1,0 +1,1833 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "govulncheck",
+          "semanticVersion": "v1.1.4",
+          "informationUri": "https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck",
+          "properties": {
+            "protocol_version": "v1.0.0",
+            "scanner_name": "govulncheck",
+            "scanner_version": "v1.1.4",
+            "db": "https://vuln.go.dev",
+            "db_last_modified": "2026-11-11T02:51:11Z",
+            "go_version": "go1.26.11",
+            "scan_level": "symbol",
+            "scan_mode": "source"
+          },
+          "rules": [
+            {
+              "id": "GO-2024-2687",
+              "shortDescription": {
+                "text": "[GO-2024-2687] HTTP/2 CONTINUATION flood in net/http"
+              },
+              "fullDescription": {
+                "text": "HTTP/2 CONTINUATION flood in net/http"
+              },
+              "help": {
+                "text": "An attacker may cause an HTTP/2 endpoint to read arbitrary amounts of header data by sending an excessive number of CONTINUATION frames.\n\nMaintaining HPACK state requires parsing and processing all HEADERS and CONTINUATION frames on a connection. When a request's headers exceed MaxHeaderBytes, no memory is allocated to store the excess headers, but they are still parsed.\n\nThis permits an attacker to cause an HTTP/2 endpoint to read arbitrary amounts of header data, all associated with a request which is going to be rejected. These headers can include Huffman-encoded data which is significantly more expensive for the receiver to decode than for an attacker to send.\n\nThe fix sets a limit on the amount of excess header frames we will process before closing a connection."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2024-2687",
+              "properties": {
+                "tags": [
+                  "CVE-2023-45288",
+                  "GHSA-4v7x-pqxf-cx7m"
+                ]
+              }
+            },
+            {
+              "id": "GO-2024-3333",
+              "shortDescription": {
+                "text": "[GO-2024-3333] Non-linear parsing of case-insensitive content in golang.org/x/net/html"
+              },
+              "fullDescription": {
+                "text": "Non-linear parsing of case-insensitive content in golang.org/x/net/html"
+              },
+              "help": {
+                "text": "An attacker can craft an input to the Parse functions that would be processed non-linearly with respect to its length, resulting in extremely slow parsing. This could cause a denial of service."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2024-3333",
+              "properties": {
+                "tags": [
+                  "CVE-2024-45338",
+                  "GHSA-w32m-9786-jp63"
+                ]
+              }
+            },
+            {
+              "id": "GO-2025-3503",
+              "shortDescription": {
+                "text": "[GO-2025-3503] HTTP Proxy bypass using IPv6 Zone IDs in golang.org/x/net"
+              },
+              "fullDescription": {
+                "text": "HTTP Proxy bypass using IPv6 Zone IDs in golang.org/x/net"
+              },
+              "help": {
+                "text": "Matching of hosts against proxy patterns can improperly treat an IPv6 zone ID as a hostname component. For example, when the NO_PROXY environment variable is set to \"*.example.com\", a request to \"[::1%25.example.com]:80` will incorrectly match and not be proxied."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2025-3503",
+              "properties": {
+                "tags": [
+                  "CVE-2025-22870",
+                  "GHSA-qxp5-gwg8-xv66"
+                ]
+              }
+            },
+            {
+              "id": "GO-2025-3595",
+              "shortDescription": {
+                "text": "[GO-2025-3595] Incorrect Neutralization of Input During Web Page Generation in x/net in golang.org/x/net"
+              },
+              "fullDescription": {
+                "text": "Incorrect Neutralization of Input During Web Page Generation in x/net in golang.org/x/net"
+              },
+              "help": {
+                "text": "The tokenizer incorrectly interprets tags with unquoted attribute values that end with a solidus character (/) as self-closing. When directly using Tokenizer, this can result in such tags incorrectly being marked as self-closing, and when using the Parse functions, this can result in content following such tags as being placed in the wrong scope during DOM construction, but only when tags are in foreign content (e.g. \u003cmath\u003e, \u003csvg\u003e, etc contexts)."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2025-3595",
+              "properties": {
+                "tags": [
+                  "CVE-2025-22872"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-4440",
+              "shortDescription": {
+                "text": "[GO-2026-4440] Quadratic parsing complexity in golang.org/x/net/html"
+              },
+              "fullDescription": {
+                "text": "Quadratic parsing complexity in golang.org/x/net/html"
+              },
+              "help": {
+                "text": "The html.Parse function in golang.org/x/net/html has quadratic parsing complexity when processing certain inputs, which can lead to denial of service (DoS) if an attacker provides specially crafted HTML content."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-4440",
+              "properties": {
+                "tags": [
+                  "CVE-2025-47911"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-4441",
+              "shortDescription": {
+                "text": "[GO-2026-4441] Infinite parsing loop in golang.org/x/net"
+              },
+              "fullDescription": {
+                "text": "Infinite parsing loop in golang.org/x/net"
+              },
+              "help": {
+                "text": "The html.Parse function in golang.org/x/net/html has an infinite parsing loop when processing certain inputs, which can lead to denial of service (DoS) if an attacker provides specially crafted HTML content."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-4441",
+              "properties": {
+                "tags": [
+                  "CVE-2025-58190"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-4918",
+              "shortDescription": {
+                "text": "[GO-2026-4918] Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in net/http/internal/http2 in golang.org/x/net"
+              },
+              "fullDescription": {
+                "text": "Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in net/http/internal/http2 in golang.org/x/net"
+              },
+              "help": {
+                "text": "When processing HTTP/2 SETTINGS frames, transport will enter an infinite loop of writing CONTINUATION frames if it receives a SETTINGS_MAX_FRAME_SIZE with a value of 0."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-4918",
+              "properties": {
+                "tags": [
+                  "CVE-2026-33814"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-5025",
+              "shortDescription": {
+                "text": "[GO-2026-5025] Invoking incorrect handling of namespaced elements in foreign content in golang.org/x/net/html"
+              },
+              "fullDescription": {
+                "text": "Invoking incorrect handling of namespaced elements in foreign content in golang.org/x/net/html"
+              },
+              "help": {
+                "text": "Parsing arbitrary HTML which is then rendered using Render can result in an unexpected HTML tree. This can be leveraged to execute XSS attacks in applications that attempt to sanitize input HTML before rendering."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-5025",
+              "properties": {
+                "tags": [
+                  "CVE-2026-42506"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-5026",
+              "shortDescription": {
+                "text": "[GO-2026-5026] Invoking failure to reject ASCII-only Punycode-encoded labels in golang.org/x/net/idna"
+              },
+              "fullDescription": {
+                "text": "Invoking failure to reject ASCII-only Punycode-encoded labels in golang.org/x/net/idna"
+              },
+              "help": {
+                "text": "The ToASCII and ToUnicode functions incorrectly accept Punycode-encoded labels that decode to an ASCII-only label. For example, ToUnicode(\"xn--example-.com\") incorrectly returns the name \"example.com\" rather than an error.\n\nThis behavior can lead to privilege escalation in programs using the idna package. For example, a program which performs privilege checks on the ASCII hostname may reject \"example.com\" but permit \"xn--example-.com\". If that program subsequently converts the ASCII hostname to Unicode, it will inadvertently permits access to the Unicode name \"example.com\"."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-5026",
+              "properties": {
+                "tags": [
+                  "CVE-2026-39821"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-5027",
+              "shortDescription": {
+                "text": "[GO-2026-5027] Invoking incorrect handling of HTML elements in foreign content in golang.org/x/net/html"
+              },
+              "fullDescription": {
+                "text": "Invoking incorrect handling of HTML elements in foreign content in golang.org/x/net/html"
+              },
+              "help": {
+                "text": "Parsing arbitrary HTML which is then rendered using Render can result in an unexpected HTML tree. This can be leveraged to execute XSS attacks in applications that attempt to sanitize input HTML before rendering."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-5027",
+              "properties": {
+                "tags": [
+                  "CVE-2026-42502"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-5028",
+              "shortDescription": {
+                "text": "[GO-2026-5028] Invoking denial of service when parsing arbitrary HTML in golang.org/x/net/html"
+              },
+              "fullDescription": {
+                "text": "Invoking denial of service when parsing arbitrary HTML in golang.org/x/net/html"
+              },
+              "help": {
+                "text": "Parsing arbitrary HTML can consume excessive CPU time, possibly leading to denial of service."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-5028",
+              "properties": {
+                "tags": [
+                  "CVE-2026-25680"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-5029",
+              "shortDescription": {
+                "text": "[GO-2026-5029] Invoking incorrect handling of character references in DOCTYPE nodes in golang.org/x/net/html"
+              },
+              "fullDescription": {
+                "text": "Invoking incorrect handling of character references in DOCTYPE nodes in golang.org/x/net/html"
+              },
+              "help": {
+                "text": "Parsing arbitrary HTML which is then rendered using Render can result in an unexpected HTML tree. This can be leveraged to execute XSS attacks in applications that attempt to sanitize input HTML before rendering."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-5029",
+              "properties": {
+                "tags": [
+                  "CVE-2026-25681"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-5030",
+              "shortDescription": {
+                "text": "[GO-2026-5030] Invoking duplicate attributes can cause XSS in golang.org/x/net/html"
+              },
+              "fullDescription": {
+                "text": "Invoking duplicate attributes can cause XSS in golang.org/x/net/html"
+              },
+              "help": {
+                "text": "Parsing arbitrary HTML which is then rendered using Render can result in an unexpected HTML tree. This can be leveraged to execute XSS attacks in applications that attempt to sanitize input HTML before rendering."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-5030",
+              "properties": {
+                "tags": [
+                  "CVE-2026-27136"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-5942",
+              "shortDescription": {
+                "text": "[GO-2026-5942] Parsing an invalid SVCB or HTTPS RR can panic in golang.org/x/net/dns/dnsmessage"
+              },
+              "fullDescription": {
+                "text": "Parsing an invalid SVCB or HTTPS RR can panic in golang.org/x/net/dns/dnsmessage"
+              },
+              "help": {
+                "text": "Parsing an invalid SVCB or HTTPS RR can panic when the size of a parameter value overflows the message buffer."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-5942",
+              "properties": {
+                "tags": [
+                  "CVE-2026-46600"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-6603",
+              "shortDescription": {
+                "text": "[GO-2026-6603] HTTP/2 server memory exhaustion due to Trailer headers in net/http"
+              },
+              "fullDescription": {
+                "text": "HTTP/2 server memory exhaustion due to Trailer headers in net/http"
+              },
+              "help": {
+                "text": "When \"Trailer\" headers are sent by a client, the HTTP server internally uses the header values to populate the Request.Trailer map passed to the server handler. Because Request.Trailer is a map, each entry incurs memory overhead. For HTTP/2 servers, a malicious client can exploit this by sending a \"Trailer\" header that declares a large number of fields, causing the server to allocate a disproportionate amount of memory while bypassing Server.MaxHeaderValueCount and Server.MaxHeaderBytes limits. This exploit is not applicable for HTTP/1 servers, which do not support multiplexing a large number of requests over one TCP connection, and whose Server.MaxHeaderBytes are calculated differently."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-6603",
+              "properties": {
+                "tags": [
+                  "CVE-2026-78659"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-6610",
+              "shortDescription": {
+                "text": "[GO-2026-6610] HTTP/2 transport accepts malformed framing-related headers in net/http"
+              },
+              "fullDescription": {
+                "text": "HTTP/2 transport accepts malformed framing-related headers in net/http"
+              },
+              "help": {
+                "text": "Historically, we have been rather lax about malformed framing-related headers in our HTTP/2 implementation, as they cannot interfere with HTTP/2 framing. However, this makes it possible for our HTTP/2 implementation to forward responses containing such headers to an HTTP/1 client when acting as a reverse proxy. If the HTTP/1 client also does not behave strictly enough, this can result in response smuggling."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-6610",
+              "properties": {
+                "tags": [
+                  "CVE-2026-78660"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-6611",
+              "shortDescription": {
+                "text": "[GO-2026-6611] Excessive CPU consumption from repeated initial window changes in net/http"
+              },
+              "fullDescription": {
+                "text": "Excessive CPU consumption from repeated initial window changes in net/http"
+              },
+              "help": {
+                "text": "A malicious HTTP/2 peer can cause excessive CPU consumption in the client or server by opening a large number of streams and then sending many small SETTINGS frames containing SETTINGS_INITIAL_WINDOW_SIZE values."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-6611",
+              "properties": {
+                "tags": [
+                  "CVE-2026-78669"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-6612",
+              "shortDescription": {
+                "text": "[GO-2026-6612] Double flow control refund on HTTP/2 server streams in net/http"
+              },
+              "fullDescription": {
+                "text": "Double flow control refund on HTTP/2 server streams in net/http"
+              },
+              "help": {
+                "text": "The HTTP/2 server can refund connection-level flow control twice for the same data: Once when a client resets a stream (refunding data for any sent-but-unread portion of the stream), and again when a request handler reads the buffered data. A malicious client can exploit this to bypass the configured connection-level flow control limit (MaxReceiveBufferPerConnection). Total buffered data is still limited by the concurrent stream limit and stream-level flow control."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-6612",
+              "properties": {
+                "tags": [
+                  "CVE-2026-78663"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-6617",
+              "shortDescription": {
+                "text": "[GO-2026-6617] HTTP/2 server crash due to HPACK encoder race in net/http"
+              },
+              "fullDescription": {
+                "text": "HTTP/2 server crash due to HPACK encoder race in net/http"
+              },
+              "help": {
+                "text": "HTTP/2 servers could end up crashing due to inadvertently modifying its HPACK encoder concurrently. This happens because the server modifies the HPACK encoder from two goroutines without synchronization: one uses the encoder to encode a HEADERS frame as part of a response sent to a client and the other modifies the encoder's table size when handling a SETTINGS frame containing SETTINGS_HEADER_TABLE_SIZE that a client sends. A malicious client can repeatedly send a request while changing the header table size to crash the server."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-6617",
+              "properties": {
+                "tags": [
+                  "CVE-2026-97032"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-6860",
+              "shortDescription": {
+                "text": "[GO-2026-6860] Avoid quadratic complexity when coalescing text nodes in html in golang.org/x/net"
+              },
+              "fullDescription": {
+                "text": "Avoid quadratic complexity when coalescing text nodes in html in golang.org/x/net"
+              },
+              "help": {
+                "text": "When coalescing adjacent text nodes in addText and fosterParent, appending to an existing TextNode's Data via string concatenation (n.Data += text) reallocated and copied the accumulated string on every token. Inputs containing many short text runs separated by ignored end tags (such as \"a\u003c/x\u003e\") caused O(n^2) allocations and byte copies.\n\nAccumulate coalesced text in per-node byte slices during parsing and materialize Data strings once at the end of parse."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-6860",
+              "properties": {
+                "tags": [
+                  "CVE-2026-78661"
+                ]
+              }
+            },
+            {
+              "id": "GO-2026-6866",
+              "shortDescription": {
+                "text": "[GO-2026-6866] Check all ancestor namespace transitions when rendering raw text in html in golang.org/x/net"
+              },
+              "fullDescription": {
+                "text": "Check all ancestor namespace transitions when rendering raw text in html in golang.org/x/net"
+              },
+              "help": {
+                "text": "In childTextNodesAreLiteral, walking up the tree previously stopped at the nearest foreign ancestor once an HTML integration point was found. However, that integration point may itself be a descendant of an element that was foster-parented into a foreign namespace (such as \u003cmglyph\u003e or \u003cmalignmark\u003e fostered under \u003cmtext\u003e), causing a parser to resolve the subtree in a different foreign namespace upon re-parsing the rendered output.\n\nContinue walking the full ancestor chain and verify that every transition from a non-empty namespace occurs at an HTML integration point before emitting literal text."
+              },
+              "helpUri": "https://pkg.go.dev/vuln/GO-2026-6866",
+              "properties": {
+                "tags": [
+                  "CVE-2026-97045"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "GO-2024-2687",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2024-2687"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2024-3333",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2024-3333"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2025-3503",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2025-3503"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2025-3595",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2025-3595"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-4440",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-4440"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-4441",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-4441"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-4918",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-4918"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-5025",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-5025"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-5026",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-5026"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-5027",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-5027"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-5028",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-5028"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-5029",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-5029"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-5030",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-5030"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-5942",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-5942"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-6603",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-6603"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-6610",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-6610"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-6611",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-6611"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-6612",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-6612"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-6617",
+          "level": "note",
+          "message": {
+            "text": "Your code depends on 1 vulnerable module (golang.org/x/net), but doesn't appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-6617"
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-6860",
+          "level": "error",
+          "message": {
+            "text": "Your code calls vulnerable functions in 1 package (golang.org/x/net/html)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-6860"
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "module": "example.com/fx@",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "main.go",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 21,
+                            "startColumn": 19
+                          }
+                        },
+                        "message": {
+                          "text": "example.com/fx.main"
+                        }
+                      }
+                    },
+                    {
+                      "module": "golang.org/x/net@v0.17.0",
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                            "uriBaseId": "%GOMODCACHE%"
+                          },
+                          "region": {
+                            "startLine": 2343,
+                            "startColumn": 6
+                          }
+                        },
+                        "message": {
+                          "text": "golang.org/x/net/html.Parse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ],
+              "message": {
+                "text": "A summarized code flow for vulnerable function golang.org/x/net/html.Parse"
+              }
+            }
+          ],
+          "stacks": [
+            {
+              "message": {
+                "text": "A call stack for vulnerable function golang.org/x/net/html.Parse"
+              },
+              "frames": [
+                {
+                  "module": "example.com/fx@",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "main.go",
+                        "uriBaseId": "%SRCROOT%"
+                      },
+                      "region": {
+                        "startLine": 21,
+                        "startColumn": 19
+                      }
+                    },
+                    "message": {
+                      "text": "example.com/fx.main"
+                    }
+                  }
+                },
+                {
+                  "module": "golang.org/x/net@v0.17.0",
+                  "location": {
+                    "physicalLocation": {
+                      "artifactLocation": {
+                        "uri": "golang.org/x/net@v0.17.0/html/parse.go",
+                        "uriBaseId": "%GOMODCACHE%"
+                      },
+                      "region": {
+                        "startLine": 2343,
+                        "startColumn": 6
+                      }
+                    },
+                    "message": {
+                      "text": "golang.org/x/net/html.Parse"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "GO-2026-6866",
+          "level": "warning",
+          "message": {
+            "text": "Your code imports 1 vulnerable package (golang.org/x/net/html), but doesn’t appear to call any of the vulnerable symbols."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "go.mod",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "message": {
+                "text": "Findings for vulnerability GO-2026-6866"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

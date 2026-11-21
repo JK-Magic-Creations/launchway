@@ -126,8 +126,13 @@ steps:
     reports:
       tests: ["**/build/test-results/test/*.xml"]
       coverage: ["**/build/reports/jacoco/test/jacocoTestReport.xml"]
-  secrets:
+  # Named inspect-secrets so that Standing orders keep this step and do not add the same check a second time
+  # (docs/reference/standing-orders.md); it writes the report the Inspection's verdict reads.
+  inspect-secrets:
     description: Look for secrets committed by mistake
     if: { param: secret_scan }
-    image: { param: tools_image }
-    run: "$LAUNCHWAY_LIB/scripts/secrets.sh"
+    image: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb
+    on_failure: continue
+    timeout: 10m
+    reports: { findings: [.standing/secrets.sarif] }
+    run: "$LAUNCHWAY_LIB/scripts/inspect-secrets.sh"

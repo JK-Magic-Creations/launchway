@@ -123,6 +123,7 @@ export const SECTIONS: Section[] = [
       { id: "approvals", get label() { return say("{Clearances}"); }, href: "/settings/approvals", icon: "gate", aka: "Approvals" },
       { id: "rules", get label() { return say("{Standards}"); }, href: "/settings/rules", icon: "shield", aka: "Rules", show: ({ me }) => me.runners },
       { id: "variables", label: "Variables", href: "/settings/variables", icon: "list" },
+      { id: "standards", label: "Standing orders", href: "/settings/standards", icon: "shield" },
       { id: "import", label: "Import repositories", href: "/repositories/import", icon: "code", show: ({ me }) => me.admin && (me as Me & { hosting?: boolean }).hosting === true },
       { id: "words", label: "Words", href: "/settings/words", icon: "info", show: ({ me }) => me.admin },
       { id: "security", label: "Security", href: "/settings/security", icon: "shield", show: ({ me }) => me.admin },
@@ -177,6 +178,13 @@ function page(pattern: string, section: SectionId, tab: string | undefined, titl
 }
 
 /** Every page, most specific first. The pattern is the router's. */
+/** A page of one project's pipeline: its title, and the trail back to the project. */
+const projectSub = (sub: string, title: string, label: string) =>
+  page(`/projects/:name/${sub}`, "pipelines", undefined, (p) => `${title} of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label }]);
+
+/** A page of Settings whose tab, title and trail are one word. */
+const settingsPage = (tab: string, label: string) => page(`/settings/${tab}`, "settings", tab, () => label, () => [{ label }]);
+
 export const PAGES: PageInfo[] = [
   page("/", "home", undefined, () => terms().say("{Home}"), () => []),
 
@@ -187,10 +195,11 @@ export const PAGES: PageInfo[] = [
   page("/projects/:name/pipeline", "pipelines", undefined, (p) => `Pipeline of ${p.name}`, (p) => [{ label: p.name }]),
   page("/projects/:name/pipeline/edit", "pipelines", undefined, (p) => `Edit the pipeline of ${p.name}`,
     (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Edit" }]),
-  page("/projects/:name/tests", "pipelines", undefined, (p) => `Tests of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Tests and coverage" }]),
-  page("/projects/:name/security", "pipelines", undefined, (p) => `Security of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Security" }]),
-  page("/projects/:name/caches", "pipelines", undefined, (p) => `Caches of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Build caches" }]),
-  page("/projects/:name/variables", "pipelines", undefined, (p) => `Variables of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Variables" }]),
+  projectSub("tests", "Tests", "Tests and coverage"),
+  projectSub("security", "Security", "Security"),
+  projectSub("caches", "Caches", "Build caches"),
+  projectSub("standards", "Standing orders", "Standing orders"),
+  projectSub("variables", "Variables", "Variables"),
   page("/setup/guide", "settings", "guide", () => "Setup guide", () => [{ label: "Setup guide" }]),
   page("/projects/:name/toggles", "pipelines", undefined, (p) => `Toggles of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}") }]),
   page("/projects/:name/toggles/:toggle", "pipelines", undefined, (p) => `Toggle ${p.toggle} of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}"), href: `/projects/${enc(p.name)}/toggles` }, { label: p.toggle }]),
@@ -263,7 +272,7 @@ export const PAGES: PageInfo[] = [
 
   page("/settings", "settings", "overview", () => "Settings", () => []),
   page("/settings/runners", "settings", "runners", () => terms().say("{Runners}"), () => [{ label: terms().say("{Runners}") }]),
-  page("/settings/access", "settings", "access", () => "People and access", () => [{ label: "People and access" }]),
+  settingsPage("access", "People and access"),
   page("/settings/access/keys", "settings", "access", () => "Keys for scripts",
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Keys for scripts" }]),
   page("/settings/access/ssh-keys", "settings", "access", () => "SSH keys",
@@ -271,9 +280,10 @@ export const PAGES: PageInfo[] = [
   page("/settings/access/agents", "settings", "access", () => "Connect an agent",
     () => [{ label: "People and access", href: "/settings/access" }, { label: "Connect an agent" }]),
   page("/settings/approvals", "settings", "approvals", () => say("{Clearances}"), () => [{ label: say("{Clearances}") }]),
-  page("/settings/variables", "settings", "variables", () => "Variables", () => [{ label: "Variables" }]),
-  page("/settings/words", "settings", "words", () => "Words", () => [{ label: "Words" }]),
-  page("/settings/rules", "settings", "rules", () => "Rules", () => [{ label: "Rules" }]),
+  settingsPage("standards", "Standing orders"),
+  settingsPage("variables", "Variables"),
+  settingsPage("words", "Words"),
+  settingsPage("rules", "Rules"),
   page("/settings/audit", "settings", "audit", () => say("{Logbook}"), () => [{ label: say("{Logbook}") }]),
 
   page("/config", "settings", "config", () => "Configuration", () => [{ label: "Configuration" }]),

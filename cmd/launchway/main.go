@@ -40,6 +40,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/settings"
 	"github.com/jk-magic-creations/launchway/internal/source"
+	standardsservice "github.com/jk-magic-creations/launchway/internal/standards/service"
 	"github.com/jk-magic-creations/launchway/web"
 )
 
@@ -88,6 +89,8 @@ Usage:
   launchway events   list|show|replay            what reached the server and what was decided about it; start one again
   launchway event-sources list|create|change|delete|test   incoming webhook sources: a signed address that starts a run
   launchway run-triggers list|create|delete|allow|allowed|revoke   start a run when another project's run or launch ends
+  launchway standards show|set|explain|coverage|profile  the Standing orders every repository has: checks, gates, settings by level
+  launchway findings list|show|accept|reopen|export|inspect  what the checks found: the backlog, decisions, a run's verdict
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
@@ -127,6 +130,8 @@ var commands = map[string]func([]string) error{
 	"events":         cmdEvents,
 	"event-sources":  cmdEventSources,
 	"run-triggers":   cmdRunTriggers,
+	"standards":      cmdStandards,
+	"findings":       cmdFindings,
 	"variables":      cmdVariables,
 	"toggles":        cmdToggles,
 	"doctor":         cmdDoctor,
@@ -257,6 +262,11 @@ func cmdServer(args []string) error {
 	// Variables set at levels (schema 29): the manager binds pipelines to them, the server serves and changes them.
 	srv.Variables = store.Variables()
 	mgr.SetVariables(srv.Variables)
+	// Standing orders (schema 45): the manager adds the Inspection to every
+	// run it makes, the server serves the settings and the findings.
+	stds := &standardsservice.Service{Eng: eng, Layout: store.LayoutOrFile}
+	mgr.SetInspector(stds)
+	srv.Standards = stds
 	applyLive := func(c *config.Config) error {
 		l, err := serverLive(c, token, authOpts)
 		if err != nil {

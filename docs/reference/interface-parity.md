@@ -129,6 +129,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/projects/{name}/event-sources/{source}` | `delete_event_source` | `event-sources delete` | `not needed by terraform` | equal |
 | `POST /api/v1/projects/{name}/event-sources/{source}` | — | `event-sources change` | — | exempt: the signing secret is shown once and must not enter an agent's context; the console and the web interface make and rotate sources (launchway event-sources) |
 | `POST /api/v1/projects/{name}/event-sources/{source}/test` | `test_event_source` | `event-sources test` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/findings` | `list_findings` | `findings list` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/findings/export` | `export_findings` | `findings export` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/findings/history` | `list_findings` | `findings list` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/findings/{fingerprint}` | `list_findings` | `findings show` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/findings/{fingerprint}/accept` | `accept_finding` | `findings accept` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/findings/{fingerprint}/reopen` | `reopen_finding` | `findings reopen` | `not needed by terraform` | equal |
 | `POST /api/v1/projects/{name}/git-hook` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
 | `GET /api/v1/projects/{name}/inputs` | `get_project` | `projects get` | — | equal |
 | `GET /api/v1/projects/{name}/lanes` | `list_lanes` | `runs lanes` | `not needed by terraform` | equal |
@@ -156,6 +162,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/schedules` | `get_project` | `projects get` | — | equal |
 | `GET /api/v1/projects/{name}/security` | `get_security_findings` | — | — | gap: launchway has no findings command yet |
 | `POST /api/v1/projects/{name}/sources/{source}` | — | — | — | exempt: the address other systems call, signed with the source's secret: not an operation for people or agents (the console tests it with launchway event-sources test) |
+| `GET /api/v1/projects/{name}/standards` | `get_standards` | `standards show`, `standards explain` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/standards/file` | `get_standards` | `standards show` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/tests` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/projects/{name}/tests/flaky` | `list_flaky_tests` | `tests flaky` | — | equal |
 | `GET /api/v1/projects/{name}/tests/history` | `get_test_results` | `runs tests` | — | equal |
@@ -313,6 +321,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/events` | `wait_for_run` | `runs logs` | — | equal |
 | `GET /api/v1/runs/{id}/findings` | `get_security_findings` | — | — | gap: launchway has no findings command yet |
 | `GET /api/v1/runs/{id}/images` | `list_images` | — | — | gap: launchway has no images command yet |
+| `GET /api/v1/runs/{id}/inspection` | `get_run_inspection` | `findings inspect` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/pipeline-file` | `get_run` | — | — | gap: the pipeline text a run used is shown in the UI; get_run has the steps, the CLI has no command for the text |
 | `GET /api/v1/runs/{id}/policy` | — | `policy run` | — | gap: no MCP tool shows a run's policy decisions yet |
 | `POST /api/v1/runs/{id}/queue` | `queue_run` | `runs queue` | `not needed by terraform` | equal |
@@ -344,6 +353,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/signin/test` | — | — | — | exempt: the result of a provider test a person is doing in the browser; the same record is in the audit trail, which every interface reads |
 | `POST /api/v1/signin/test` | — | — | — | exempt: testing an identity provider means a person completing the provider's own sign-in page in a second browser window; an API token or agent cannot and must not do that |
 | `GET /api/v1/ssh` | `get_ssh_info` | `keys host` | — | equal |
+| `GET /api/v1/standards/coverage` | `get_standards_coverage` | `standards coverage` | `not needed by terraform` | equal |
+| `GET /api/v1/standards/profile` | `get_standards_profile` | `standards profile` | `not needed by terraform` | equal |
+| `GET /api/v1/standards/settings` | `get_standards_settings` | `standards show` | `not needed by terraform` | equal |
+| `PUT /api/v1/standards/settings` | — | `standards set` | — | exempt: settings can weaken what protects a repository, so they are changed by people who administer the level, in the interface, the API and the command line; the MCP tools only read them and accept findings, and the API refuses a value weaker than a lock above |
 | `GET /api/v1/step-resources` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
 | `GET /api/v1/step-resources/defaults/{kind}` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
 | `PUT /api/v1/step-resources/defaults/{kind}` | `set_step_resource_default` | `step-resources set-default` | `launchway_step_resources` | equal |

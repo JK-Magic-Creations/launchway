@@ -2,7 +2,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Standards and scanning · <a href="../roadmap-list.html">as a list</a></p>
 
-The scans Launchway holds itself to are offered to every repository it hosts or builds. **Status:** planned, in [Milestone 12](milestone-12.md). Launchway already runs these scans on its own code.
+The scans Launchway holds itself to are offered to every repository it hosts or builds. **Status:** in progress, in [Milestone 12](milestone-12.md): the first slice is built and tested and is not on `main` yet. Standing orders add an Inspection to every run (secrets, dependency vulnerabilities, reachable Go vulnerabilities, security rules for Go and Python, licenses, a bill of materials, Dockerfiles, manifests, Kubernetes practice, shell, unsafe pipeline files), on by default, with settings by level and a file in the repository. Still to come: more ecosystems (Java and JavaScript code analysis, Rust, Ruby), fix pull requests opened from a finding, re-checking stored parts lists when an advisory appears, and adapters for commercial scanners. Launchway already runs these scans on its own code.
 
 ## From a new repository to a fix
 

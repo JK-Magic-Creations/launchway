@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 12 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 1 in progress · 33 planned · 38 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 2 in progress · 32 planned · 38 capabilities</p>
 
 Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.
 
@@ -48,7 +48,7 @@ flowchart TD
 | [Launchway’s own vault](#g-launchway-s-own-vault) | 4 | 0 | 0 | 4 |
 | [The security program](#g-the-security-program) | 4 | 2 | 0 | 2 |
 | [Certification, in an honest order](#g-certification-in-an-honest-order) | 6 | 0 | 0 | 6 |
-| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 0 | 0 | 15 |
+| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 15 | 0 | 1 | 14 |
 
 ### Encryption at rest {#g-encryption-at-rest}
 
@@ -364,9 +364,9 @@ Start a campaign that opens one fix per affected repository and tracks it until 
 
 #### Standards kept in Git, edited in either place {#standards-kept-in-git-edited-in-either-place}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor.
+A level’s standards can live as files in a repository that level owns, so a change to them is reviewed like any other change, and the same settings stay editable in the interface, with the two kept in step. Teams control their own repositories: every default can be changed, the nearest level wins, and a level above can set a floor. Built and tested, not yet merged: the file `.launchway/standards.yaml` is read from the default branch, validated in plain words, and settings by level, with locks, are edited in Settings.
 
 **Depends on:** Every check on, advice or block.
 
@@ -386,7 +386,7 @@ The results of commercial Cargo repositories, code-analysis and security product
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository. The score is a view, never a gate by itself.
+See a score with what moves it, the top risks, repositories without a profile and trends, per Wing, team and repository. The score is a view, never a gate by itself. The first slice is built and not yet merged: which repositories have which checks, and each project's open findings over time with the mean time to fix. A score is not built.
 
 [Area page](repository-standards.md)
 

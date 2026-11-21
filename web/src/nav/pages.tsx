@@ -20,6 +20,8 @@ const PipelinePage = lz(() => import("../pages/PipelineView"), "PipelineViewPage
 const EditPipelinePage = lz(() => import("../pages/EditPipeline"), "EditPipelinePage");
 const ProjectTestsPage = lz(() => import("../pages/ProjectTests"), "ProjectTestsPage");
 const ProjectSecurityPage = lz(() => import("../pages/ProjectSecurity"), "ProjectSecurityPage");
+const ProjectStandardsPage = lz(() => import("../pages/Standards"), "ProjectStandardsPage");
+const SettingsStandardsPage = lz(() => import("../pages/Standards"), "SettingsStandardsPage");
 const ProjectCachesPage = lz(() => import("../pages/Caches"), "ProjectCachesPage");
 const ProjectVariablesPage = lz(() => import("../pages/Variables"), "ProjectVariablesPage");
 const ProjectTogglesPage = lz(() => import("../pages/Toggles"), "ProjectTogglesPage");
@@ -85,6 +87,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/pipeline/edit": return <EditPipelinePage key={p.name} name={p.name} />;
     case "/projects/:name/tests": return <ProjectTestsPage key={p.name} name={p.name} />;
     case "/projects/:name/security": return <ProjectSecurityPage key={p.name} name={p.name} />;
+    case "/projects/:name/standards": return <ProjectStandardsPage key={p.name} name={p.name} />;
     case "/projects/:name/caches": return <ProjectCachesPage key={p.name} name={p.name} />;
     case "/projects/:name/variables": return <ProjectVariablesPage key={p.name} name={p.name} />;
     case "/setup/guide": return <SetupGuidePage />;
@@ -140,6 +143,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/settings/audit": return <AuditPage />;
     case "/settings/variables": return <SettingsVariablesPage />;
     case "/settings/words": return <SettingsWordsPage />;
+    case "/settings/standards": return <SettingsStandardsPage />;
     case "/settings/security": return <SettingsSecurityPage />;
     case "/config": return <ConfigHomePage />;
     case "/config/wizard/:id": return <WizardPage key={p.id} id={p.id} />;

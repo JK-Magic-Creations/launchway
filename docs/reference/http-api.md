@@ -504,7 +504,6 @@ in the message.
 | `GET /api/v1/run-limits` | `signed-in` | — | `{"max_run_timeout", "updated_at", "updated_by"}`. An empty `max_run_timeout` is not set: pipelines may ask for up to `720h`. |
 | `PUT /api/v1/run-limits` | `admin` | `run_limits.set` | Replaces the limits: `{"max_run_timeout": "48h"}`; empty or left out removes the limit. `400` for a duration that does not read or is outside `1m` to `720h`. |
 ## Built-in Depot (registry) {#built-in-registry}
-
 Launchway serves an OCI registry for container images, Helm charts and other OCI Cargo. The Depot
 protocol itself is under `/v2/` (see [the Depot guide](../guide/registry.md)); these routes manage what
 is in it. A repository is `PROJECT/NAME`: the first path component is the project, and the project's roles
@@ -512,7 +511,6 @@ decide everything: viewer pulls and lists, operator pushes, admin deletes and se
 someone may not read is answered as one that does not exist. The Depot is off (`404`, code `feature_off`)
 when `registry.enabled` is false or the server has no Cargo store, and answers `503` (code
 `needs_sign_in`) while sign-in is off: there is no anonymous Depot.
-
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /api/v1/registry` | `signed-in` | — | Whether the Depot is on, its `address`, the `host` clients write before a repository, whether it is plain HTTP (`insecure`), the blob `store`, `limits`, the number of `repositories` the caller may see, how to log in, and `encryption`: `blobs_encrypted_by_launchway` is `false` in this release, with a note saying what protects blobs at rest. An administrator also gets `last_gc`. |
@@ -529,9 +527,7 @@ when `registry.enabled` is false or the server has no Cargo store, and answers `
 | `PUT /api/v1/projects/{name}/registry/policy` | `project-operator` | `registry.policy` | Replaces it; project admin only. A project admin may lower the quota but not raise it above the installation's. |
 | `GET /api/v1/projects/{name}/registry/retention` | `project-viewer` | — | What the retention rules would delete now (`?repository=` for one repository): each `candidate` with its tags, size and reason. Deletes nothing. |
 | `POST /api/v1/projects/{name}/registry/retention` | `project-operator` | `registry.retention_run` | Deletes them; project admin only. Answers what was `deleted`. |
-
 ### The Depot protocol under `/v2/` {#the-registry-protocol-under-v2}
-
 These endpoints speak the OCI Distribution API (version 1.1) and are not JSON-API routes: errors are the
 protocol's (`{"errors": [{"code", "message"}]}`, with Launchway's `error`, `code` and `next` beside them).
 Everything needs credentials: `GET /v2/` answers `401` with a `WWW-Authenticate: Bearer realm=".../v2/token"`
@@ -541,7 +537,6 @@ credential made for their Sortie (`lwi_...`), which pulls its own project's repo
 policy shares with it, pushes only to its own project and never for a pull request or draft run, and stops
 working when the Sortie ends. Passwords and tokens are accepted over HTTPS, or over HTTP only on a loopback
 listener or with `registry.allow_insecure_http`.
-
 | Endpoint | Does |
 |---|---|
 | `GET /v2/` | version check (authenticated) |
@@ -552,6 +547,23 @@ listener or with `registry.allow_insecure_http`.
 | `POST /v2/{name}/blobs/uploads/` | start an upload; `?digest=` for a monolithic push, `?mount=&from=` for a cross-repository mount (inside one Wing only) |
 | `GET`, `PATCH`, `PUT`, `DELETE /v2/{name}/blobs/uploads/{id}` | status, chunk (with `Content-Range`), finish (`?digest=`), cancel; any server of a group may take any request |
 | `GET /v2/{name}/referrers/{digest}?artifactType=` | manifests whose `subject` is the digest (signatures, SBOMs, attestations) as an image index |
+## Standing orders
+The same scans and best-practice checks for every repository, on by default (see [Standing orders](../guide/standing-orders.md)). The routes serve what can run, the settings of each level, a repository's effective profile with where each value comes from, the findings the default branch has had and what people decided about them, and a run's Inspection. A level's settings are changed by someone who administers the level (the project's admin at a project); a value weaker than a lock above is refused with `409` and the plain sentence that names the lock.
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/standards/profile` | `signed-in` | — | The profile: every check with what it looks for, why, its ecosystem, tool, the tool's license and image digest, default state, whether it can block, its time budget and what it needs from the network; the gate defaults and the setting keys. |
+| `GET /api/v1/standards/settings` | `signed-in` | — | The settings one level has: `?level=` (`installation`, `organization`, `unit` or `project`: a Base, a Wing, a Squadron or a Project) and `&scope=NAME`, with `version` (0 when none are stored). |
+| `PUT /api/v1/standards/settings` | `signed-in` | `standards.settings_set` | Replaces one level's settings (`level`, `scope`, `settings`, and `version` as read: a different version is `409`). `400` with the plain problems for an invalid value; `409` for a value weaker than a lock above. Switching Standing orders off needs a reason and is recorded as such. |
+| `GET /api/v1/standards/coverage` | `signed-in` | — | For the projects of a level that the caller may read: whether Standing orders are off, each check's state and whether it runs, open findings by severity. |
+| `GET /api/v1/projects/{name}/standards` | `project-viewer` | — | The effective profile of a project at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository's own file with its problems. |
+| `GET /api/v1/projects/{name}/standards/file` | `project-viewer` | — | The repository's `.launchway/standards.yaml` as it is, its problems, and the file the project's own settings would make. |
+| `GET /api/v1/projects/{name}/findings` | `project-viewer` | — | The findings the default branch has had: `?status=` open, fixed, accepted or all, `severity`, `check`, `q`, `sort=oldest`, `limit`, `offset`; with totals by severity and check. |
+| `GET /api/v1/projects/{name}/findings/history` | `project-viewer` | — | Open findings by day, the mean days to fix, the oldest open finding. |
+| `GET /api/v1/projects/{name}/findings/export` | `project-viewer` | — | The findings as `?format=` json, csv or sarif (`status` as above). SARIF carries the fingerprint as a partial fingerprint. |
+| `GET /api/v1/projects/{name}/findings/{fingerprint}` | `project-viewer` | — | One finding with its decision. |
+| `POST /api/v1/projects/{name}/findings/{fingerprint}/accept` | `project-operator` | `finding.accept` | Accepts a risk or marks a false positive: `reason` (at least 10 characters), `expires` (`YYYY-MM-DD`, at most 365 days away), `status` (`accepted-risk` or `false-positive`). Audited with the reason. |
+| `POST /api/v1/projects/{name}/findings/{fingerprint}/reopen` | `project-operator` | `finding.reopen` | Ends the decision in force, so the finding counts again. |
+| `GET /api/v1/runs/{id}/inspection` | `run-viewer` | — | A run's Inspection: the verdict and its sentence, the profile in force when the run was made, each check and whether it ran, and the findings with their standing (new, existing, accepted, false positive), filtered by `standing`, `check`, `severity`. |
 
 ## Build caches
 
