@@ -8,6 +8,7 @@ import { type ChangeRequest, type ConfigOverview, type Spec } from "../../config
 import { Choices, DefinedAt, TextInput } from "../../components/ConfigForm";
 import { Link } from "../../components/ui";
 import { CreatedList, PickNames, WizardRunner, useNames, useObjects, type StepDef } from "./Wizards";
+import { terms } from "../../terms";
 
 export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview }) {
   const proj = overview.levels.project;
@@ -84,8 +85,8 @@ export function AddEnvironmentWizard({ overview }: { overview: ConfigOverview })
               { value: "all", label: "Every run deploys, in turn", help: "Each waiting run deploys in order. Slower, but every version passes through the environment (useful when each must be tested there)." },
             ]} />
           <div className="callout callout-info">
-            <strong>Approvals.</strong> To have someone approve before a deployment here, either add an approval step before the deploy step in the pipeline,
-            or <Link href="/config/wizard/add-policy">add a policy</Link> with the <span className="mono">approvals</span> rule for this environment, which every pipeline must then meet.
+            <strong>{terms().label("clearance")} and {terms().lower("preflight")}.</strong> To have someone give {terms().lower("clearance")} before a deployment here, either add an approval step (kind <span className="mono">approval</span>) before the deploy step in the pipeline,
+            or <Link href="/config/wizard/add-policy">add a policy</Link> with the <span className="mono">approvals</span> rule for this environment, which every pipeline must then meet in its {terms().lower("preflight")}.
           </div>
         </>
       ),

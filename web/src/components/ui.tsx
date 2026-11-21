@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { RunStatus, StepStatus } from "../api";
 import { onLink } from "../router";
+import { terms } from "../terms";
 
 type AnyStatus = RunStatus | StepStatus;
 
@@ -70,7 +71,7 @@ export function stepLabel(s: {
   if (s.status === "waiting") {
     // A verification that was inconclusive waits for someone to mark it.
     if (s.kind === "verify" || s.wait_kind === "verify") return "Waiting for a person";
-    if (s.kind === "approval" || (!s.kind && !s.wait_kind)) return "Waiting for approval";
+    if (s.kind === "approval" || (!s.kind && !s.wait_kind)) return terms().say("Waiting for {clearance}");
     const env = s.environment;
     if (s.wait_kind === "lock") return env ? `Waiting for ${env}'s lock` : "Waiting for the environment's lock";
     const what = s.kind === "rollback" ? "Rolling back" : s.kind === "rollout" ? (env ? `Acting on the rollout in ${env}` : "Acting on the rollout") : env ? `Deploying to ${env}` : "Deploying";

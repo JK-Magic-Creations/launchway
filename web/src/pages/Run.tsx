@@ -35,6 +35,7 @@ import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
 import { CacheResults } from "../components/CacheResults";
 import { Excerpt } from "../components/Excerpt";
+import { terms } from "../terms";
 
 // Stands for the run until it is loaded, so hooks run in the same order.
 const EMPTY_RUN = { id: "", step_list: [] } as unknown as RunDetail;
@@ -295,7 +296,7 @@ export function RunPage({ id }: { id: string }) {
 
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">
-          <span><strong>{waitingStep.id}</strong> is waiting for approval: {waitingStep.message}</span>
+          <span><strong>{waitingStep.id}</strong> is waiting for {terms().lower("clearance")}: {waitingStep.message}</span>
           <button type="button" className="btn" onClick={() => select(waitingStep.id)}>{mayOperate ? "Decide" : "View"}</button>
         </div>
       )}
@@ -631,7 +632,7 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
           {step.description && <p className="sub step-desc">{step.description}</p>}
           <div className="run-meta">
             <StatusPill status={step.status} />
-            <span className="meta">approval</span>
+            <span className="meta">{terms().lower("clearance")}</span>
             {step.reused_from && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.attempt > 1 && <span className="meta">asked {step.attempt} times</span>}
           </div>
@@ -643,8 +644,8 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
         {step.deployment && (
           <p className="sub approval-guards">
             {guarded
-              ? <>This approval guards the deployment of {guarded.service} to {guarded.environment}: it is rejected by itself if the rollout is aborted.</>
-              : <>This approval guards the deployment made by {step.deployment}: it is rejected by itself if the rollout is aborted.</>}
+              ? <>This {terms().lower("clearance")} guards the deployment of {guarded.service} to {guarded.environment}: it is rejected by itself if the rollout is aborted.</>
+              : <>This {terms().lower("clearance")} guards the deployment made by {step.deployment}: it is refused by itself ({terms().label("no_go")}) if the rollout is aborted.</>}
           </p>
         )}
         <div className="run-meta">
@@ -674,14 +675,14 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
             </label>
             <ErrorBox error={error} />
             <div className="approval-actions">
-              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)}>Approve</button>
-              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)}>Reject</button>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => decide(true)} title={`${terms().label("go")}: ${terms().lower("clearance")} is given and the run goes on`}>{terms().label("go")}</button>
+              <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => decide(false)} title={`${terms().label("no_go")}: ${terms().lower("clearance")} is refused and the run stops here`}>{terms().label("no_go")}</button>
             </div>
           </form>
         )}
         {step.status === "succeeded" && (
           <div className="callout callout-ok">
-            <strong>Approved by {step.decided_by}</strong>, {clock(step.decided_at)}
+            <strong>{terms().label("go")} from {step.decided_by}</strong>, {clock(step.decided_at)}
             {step.reused_from && <> in <Link href={`/runs/${step.reused_from}?step=${encodeURIComponent(step.id)}`}>run #{step.reused_from_number}</Link>. This re-run reused that decision; nobody was asked again.</>}
             {said}
           </div>
@@ -689,8 +690,8 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
         {step.status === "failed" && (
           <div className="callout callout-bad">
             {step.decided_by
-              ? <><strong>Rejected by {step.decided_by}</strong>, {clock(step.decided_at)}{said}</>
-              : <><strong>{step.error}</strong>, so it was rejected at {clock(step.decided_at)}.</>}
+              ? <><strong>{terms().label("no_go")} from {step.decided_by}</strong>, {clock(step.decided_at)}{said}</>
+              : <><strong>{step.error}</strong>, so it was refused ({terms().label("no_go")}) at {clock(step.decided_at)}.</>}
             {run.status === "failed" && <div>Resuming the run asks again.</div>}
           </div>
         )}
@@ -718,8 +719,8 @@ const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
   "step.lost": (d) => `${d.step}: ${d.reason}`,
   "step.canceled": (d) => `${d.step}: canceled`,
   "step.reset": (d) => `${d.step}: reset to run again`,
-  "step.waiting": (d) => `${d.step}: waiting for approval until ${clock(d.deadline as number)}`,
-  "step.approved": (d) => `${d.step}: approved by ${d.actor}${d.comment ? `: ${d.comment}` : ""}`,
+  "step.waiting": (d) => `${d.step}: waiting for ${terms().lower("clearance")} until ${clock(d.deadline as number)}`,
+  "step.approved": (d) => `${d.step}: ${terms().label("go")} from ${d.actor}${d.comment ? `: ${d.comment}` : ""}`,
   "step.rejected": (d) => `${d.step}: ${d.reason}`,
   "deploy.waiting_lock": (d) => {
     const x = deployOf(d);
@@ -935,7 +936,7 @@ function DefinitionTab({ run }: { run: RunDetail }) {
         )}
         {file?.draft && (
           <p className="sub">Not in Git: it was typed in the editor and is kept only with this run.
-            It is named <Mono>{file.hash}</Mono> in the audit trail. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
+            It is named <Mono>{file.hash}</Mono> in the {terms().lower("logbook")}. The file on {branch || run.tag} at <Mono>{shortSha(run.sha)}</Mono> may say something else.</p>
         )}
         {file !== null ? <pre className="code">{file.text}</pre> : failed ? <p className="sub">The file is only kept for runs from a Git project.</p> : <div className="loading">Loading…</div>}
       </section>

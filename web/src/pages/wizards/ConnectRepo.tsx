@@ -10,6 +10,7 @@ import { Choices, CheckInput, CopyBlock, DefinedAt, ListInput, SelectInput, Text
 import { AllowHost } from "../../components/AllowHost";
 import { Link } from "../../components/ui";
 import { CreatedList, WizardRunner, type StepDef } from "./Wizards";
+import { terms } from "../../terms";
 
 type Source = "template" | "file" | "sample";
 
@@ -234,8 +235,8 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
             { value: "file", label: "A pipeline file in the repository",
               help: <>The pipeline lives in Git, the team owns it and reviews changes to it like any other code; Launchway stores only the repository's address.{" "}
                 {check.result?.ok ? <PipelineFileState check={check.result} branch={effBranch} /> : null}</> },
-            { value: "sample", label: "Start from a small sample",
-              help: "You get a minimal working pipeline to copy and commit to the repository as .launchway/pipeline.yaml, with the triggers you choose next. Launchway does not keep pipeline text: Git stays the only source. The pipeline editor can also save it for you, as a commit on a new branch." },
+            { value: "sample", label: `Start from a ${terms().lower("flight_plan")}`,
+              help: `A ${terms().lower("flight_plan")} is the ready-made pipeline for a kind of project. You get a minimal working pipeline to copy and commit to the repository as .launchway/pipeline.yaml, with the triggers you choose next. Launchway does not keep pipeline text: Git stays the only source. The pipeline editor can also save it for you, as a commit on a new branch.` },
           ]} />
         {source === "template" && libs && libs.length > 0 && (
           <div className="cf-sub">

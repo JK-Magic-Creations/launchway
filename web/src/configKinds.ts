@@ -5,6 +5,7 @@
 
 import type { FieldDef, Option } from "./components/ConfigForm";
 import type { Levels, Spec } from "./configApi";
+import { terms } from "./terms";
 
 const roleOpts = (unset: string): Option[] => [
   { value: "", label: unset }, { value: "admin", label: "admin" }, { value: "operator", label: "operator" }, { value: "none", label: "none (nobody)" },
@@ -30,17 +31,27 @@ export const EVENTS = ["push", "manual", "draft", "pull_request", "schedule", "w
 
 function levelFields(): FieldDef[] {
   const out: FieldDef[] = [];
-  for (const [k, what] of [["installation", "this whole installation"], ["organisation", "the organisation that owns the projects"],
-    ["unit", "a group of projects with shared settings (a team, a department)"], ["project", "one repository Launchway watches"]] as const) {
+  for (const [k, w, what] of [["installation", "{Installation}", "this whole {installation}"], ["organisation", "{Organization}", "the {organization} that owns the {projects}"],
+    ["unit", "{Unit}", "a group of {projects} with shared settings (a team, a department)"], ["project", "{Project}", "one repository Launchway watches"]] as const) {
     out.push(
-      { path: `levels.${k}.singular`, label: `${cap(k)}: one`, help: `What to call ${what}. Empty keeps "${cap(k)}".`, type: "text", section: "What things are called", match: [`levels.${k}`] },
-      { path: `levels.${k}.plural`, label: `${cap(k)}: several`, help: `The plural, as lists and menus show it.`, type: "text", section: "What things are called", match: [`levels.${k}`] },
+      { path: `levels.${k}.singular`, label: `${w}: one`, help: `What to call ${what}. Empty keeps the word of the chosen set. The Words page does this for every word at once.`, type: "text", section: "What things are called", match: [`levels.${k}`] },
+      { path: `levels.${k}.plural`, label: `${w}: several`, help: `The plural, as lists and menus show it.`, type: "text", section: "What things are called", match: [`levels.${k}`] },
     );
   }
+  out.push(
+    { path: "terms.set", label: "Set of words", type: "select", section: "What things are called", options: [{ value: "", label: "Aviation (the default)" }, { value: "aviation", label: "Aviation" }, { value: "business", label: "Plain business" }],
+      help: "Labels only: no address, command or file changes with it." },
+    { path: "terms.overrides", label: "Renamed words", type: "map", section: "What things are called", help: "A word (such as guide or flight_plan; add _plural for a plural) and what to call it. The Words page is easier." },
+  );
   return out;
 }
 
-function cap(s: string) { return s.slice(0, 1).toUpperCase() + s.slice(1); }
+/** sayField puts the words in effect into a field's text: {clearance} is what this installation calls it. */
+export function sayField(f: FieldDef): FieldDef {
+  const t = terms();
+  return { ...f, label: t.say(f.label), help: typeof f.help === "string" ? t.say(f.help) : f.help, section: f.section && t.say(f.section),
+    unsetMeans: f.unsetMeans && t.say(f.unsetMeans), options: f.options?.map((o) => ({ ...o, label: t.say(o.label) })) };
+}
 
 const num = (path: string, label: string, help: string, section: string): FieldDef => ({ path, label, help, type: "number", section, placeholder: "default" });
 
@@ -93,11 +104,11 @@ export const FIELDS: Record<string, FieldDef[]> = {
       help: "The longest any artifact is kept, whatever the pipeline says." },
   ],
   organisation: [
-    { path: "display_name", label: "Display name", type: "text", placeholder: "Acme", help: "The organisation's name as people read it, such as your company's name." },
+    { path: "display_name", label: "Display name", type: "text", placeholder: "Acme", help: "The {organization}'s name as people read it, such as your company's name." },
     { path: "description", label: "Description", type: "textarea", help: "A sentence about it, shown where it helps." },
   ],
   unit: [
-    { path: "display_name", label: "Display name", type: "text", placeholder: "Payments team", help: "How the unit is shown. The name above stays the same in URLs and the command line." },
+    { path: "display_name", label: "Display name", type: "text", placeholder: "Payments team", help: "How the {unit} is shown. The name above stays the same in URLs and the command line." },
     { path: "description", label: "Description", type: "textarea", help: "Who it is and what its projects are." },
   ],
   library: [
@@ -131,14 +142,14 @@ export const FIELDS: Record<string, FieldDef[]> = {
       help: "Start a run for each pull request and each push to it." },
     { path: "pipeline.supersede", label: "A newer run cancels older ones", type: "bool", section: "Pipeline from a library template", match: ["supersede"],
       help: "A new run of a push or pull request cancels the older runs of the same branch that are still going, so only the latest commit uses runners." },
-    { path: "pull_requests.secrets", label: "Pull-request runs may read secrets", type: "tri", section: "What runs may do", unsetMeans: "Not set: the installation's setting",
-      match: ["pull_requests"], help: "Overrides the installation's setting for this project. Whoever opens a pull request can change what its steps do." },
-    { path: "drafts.allow", label: "Who may start draft runs", type: "select", section: "What runs may do", options: roleOpts("Not set: the installation's setting"),
-      match: ["drafts"], help: "Overrides the installation's setting for this project." },
-    { path: "drafts.secrets", label: "Draft runs may read secrets", type: "tri", section: "What runs may do", unsetMeans: "Not set: the installation's setting",
-      help: "Overrides the installation's setting for this project." },
-    { path: "schedules.enabled", label: "Scheduled runs", type: "tri", section: "What runs may do", unsetMeans: "Not set: the installation's setting",
-      match: ["schedules"], help: "Overrides the installation's setting for this project." },
+    { path: "pull_requests.secrets", label: "Pull-request runs may read secrets", type: "tri", section: "What runs may do", unsetMeans: "Not set: the {installation}'s setting",
+      match: ["pull_requests"], help: "Overrides the {installation}'s setting for this project. Whoever opens a pull request can change what its steps do." },
+    { path: "drafts.allow", label: "Who may start draft runs", type: "select", section: "What runs may do", options: roleOpts("Not set: the {installation}'s setting"),
+      match: ["drafts"], help: "Overrides the {installation}'s setting for this project." },
+    { path: "drafts.secrets", label: "Draft runs may read secrets", type: "tri", section: "What runs may do", unsetMeans: "Not set: the {installation}'s setting",
+      help: "Overrides the {installation}'s setting for this project." },
+    { path: "schedules.enabled", label: "Scheduled runs", type: "tri", section: "What runs may do", unsetMeans: "Not set: the {installation}'s setting",
+      match: ["schedules"], help: "Overrides the {installation}'s setting for this project." },
     { path: "push.branch_prefix", label: "Editor saves to branches starting with", type: "text", placeholder: "launchway/", section: "Saving from the editor",
       match: ["push", "branch_prefix"], help: "With this set (or Direct branches), the pipeline editor commits to the repository with the server's credentials. Every save makes a new branch starting with this." },
     { path: "push.allow_direct", label: "Direct branches", type: "list", placeholder: "release/*", section: "Saving from the editor", match: ["allow_direct"],
@@ -287,7 +298,7 @@ export const RULES: Record<string, { scalar?: "duration"; templates?: true; fiel
   deployed_images: { example: { digest: true }, fields: [
     { key: "digest", label: "Pinned by digest", type: "bool" }, { key: "built_by_run", label: "Built by this run", type: "bool" },
     { key: "signed", label: "Signed", type: "bool" }, { key: "scanned", label: "Scanned", type: "bool" }] },
-  approvals: { example: { min: 1 }, fields: [{ key: "min", label: "Approvals from other people", type: "number", help: "1 to 20; the person who started the run does not count." }] },
+  approvals: { example: { min: 1 }, fields: [{ key: "min", label: "{Clearances} from other people", type: "number", help: "1 to 20; the person who started the run does not count." }] },
   refs: { example: { branches: ["main"] }, fields: [{ key: "branches", label: "Branches", type: "list" }, { key: "tags", label: "Tags", type: "list" }] },
   image_push: { example: { scan: "high", sbom: true }, fields: [
     { key: "scan", label: "Scan, failing on", type: "select", options: ["", "low", "medium", "high", "critical"] },
@@ -297,7 +308,11 @@ export const RULES: Record<string, { scalar?: "duration"; templates?: true; fiel
 };
 
 /** When a rule is judged, in words. */
-export const POINT: Record<string, string> = { run: "at run start", deploy: "before deploying", image: "before an image push" };
+export const POINT: Record<string, string> = {
+  run: "at run start",
+  get deploy() { return terms().say("before deploying ({preflight})"); },
+  image: "before an image push",
+};
 
 /** withLevelNames rewrites "project(s)" in the fields' words with what the
  * installation calls a project. */

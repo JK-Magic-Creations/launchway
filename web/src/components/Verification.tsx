@@ -6,6 +6,7 @@ import {
 import { clock, duration } from "../format";
 import { useNow } from "../live";
 import { ErrorBox, Link, Mono } from "./ui";
+import { terms } from "../terms";
 
 // A verify step's verification: how it stands, why, what it read, and the
 // way for a person to mark it passed or failed. The verdict comes from the
@@ -733,7 +734,7 @@ function VerifyForm({ run, step, v, onDone }: { run: RunDetail; step: StepView; 
       )}
       <div id={hintId} className="dctl-why">
         {both ? <p>{cap(why[0].reason)}</p> : why.map((w) => <p key={w.action}>{w.action === "mark-passed" ? "Mark passed" : "Mark failed"}: {w.reason}{/[.!?)]$/.test(w.reason) ? "" : "."}</p>)}
-        {empty && (pass?.available || fail?.available) && <p>Write a reason first: it is kept with the decision and in the audit trail.</p>}
+        {empty && (pass?.available || fail?.available) && <p>Write a reason first: it is kept with the decision and in the {terms().lower("logbook")}.</p>}
       </div>
     </form>
   );

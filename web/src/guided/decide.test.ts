@@ -6,8 +6,8 @@ describe("approvalRefusal", () => {
   const a = approval({ project: "shop-web", started_by: "sam" });
   it("says exactly why a starter cannot approve, and where an administrator changes it", () => {
     const r = approvalRefusal(a, me({ user: "sam", roles: { "shop-web": "operator" } }), { allow_self: false, sign_in: true });
-    expect(r?.text).toBe("You started this run. On this installation the person who starts a run cannot approve it, so someone else must. You may still reject it. An administrator can change this in Settings → Approvals.");
-    expect(r?.link).toEqual({ href: "/settings/approvals", label: "Settings → Approvals" });
+    expect(r?.text).toBe("You started this run. On this base the person who starts a run cannot give clearance for it, so someone else must. You may still say No-go. An administrator can change this in Settings → Clearances.");
+    expect(r?.link).toEqual({ href: "/settings/approvals", label: "Settings → Clearances" });
     expect(r?.mayReject).toBe(true);
   });
   it("lets the starter approve when the installation allows it", () => {

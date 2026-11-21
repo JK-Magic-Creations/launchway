@@ -19,6 +19,7 @@ import "./styles/reports.css";
 import "./styles/verification.css";
 import "./styles/guided.css";
 import "./styles/v2b.css";
+import "./styles/words.css";
 
 applyStoredTheme();
 createRoot(document.getElementById("root")!).render(

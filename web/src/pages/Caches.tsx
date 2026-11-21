@@ -7,6 +7,7 @@ import { useNow } from "../live";
 import { bytes } from "../components/Security";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import "../caches.css";
+import { terms } from "../terms";
 
 type Column = "name" | "scope" | "platform" | "bytes" | "last_used_at" | "hits" | "run_number";
 
@@ -103,7 +104,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
       {list && !list.policy.enabled && (
         <div className="callout callout-draft" role="status">
           <strong>Caching is turned off for this project.</strong> Every lookup misses and nothing is saved
-          ({list.policy.source === "project" ? "this project's own cache policy" : "the installation's cache policy"}); steps run as without
+          ({list.policy.source === "project" ? "this project's own cache policy" : `the ${terms().lower("installation")}'s cache policy`}); steps run as without
           a <Mono>cache</Mono> key. An administrator changes this with <Mono>launchway caches policy</Mono> or the API.
           {list.entries.length > 0 && " Entries kept before are not restored, and end after their idle days."}
         </div>
@@ -122,7 +123,7 @@ export function ProjectCachesPage({ name }: { name: string }) {
             <span className={share >= 0.8 ? "store-meter-fill store-meter-high" : "store-meter-fill"} style={{ width: `${Math.min(100, Math.max(share * 100, t.bytes > 0 ? 1 : 0))}%` }} />
           </div>
           <p className="faint small">
-            Quota {gib(list.policy.max_project_gib)} · set {list.policy.source === "project" ? "for this project" : list.policy.source === "installation" ? "for the installation" : "by default"}.
+            Quota {gib(list.policy.max_project_gib)} · set {list.policy.source === "project" ? "for this project" : list.policy.source === "installation" ? `for the ${terms().lower("installation")}` : "by default"}.
             When a save would pass it, the least recently used entries are ended to make room.
           </p>
         </section>

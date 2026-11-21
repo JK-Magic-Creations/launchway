@@ -5,6 +5,7 @@ import type { Project } from "../api";
 import type { IconName } from "../kit/Icon";
 import { WIZARDS } from "../components/ConfigNav";
 import { visibleSections, visibleTabs, type Ctx } from "../nav/model";
+import { terms } from "../terms";
 
 export interface DoItem { id: string; label: string; hint: string; href: string; icon: IconName; group: "Do" | "Go to" | "Projects" }
 
@@ -18,7 +19,7 @@ export function doItems(ctx: Ctx, projects: Project[]): DoItem[] {
       out.push({ id: "wizard-" + w.id, label: w.title, hint: "A short guided set-up", href: `/config/wizard/${w.id}`, icon: "plus", group: "Do" });
     }
   }
-  out.push({ id: "decide", label: "Decide what is waiting", hint: "Approvals that need a person", href: "/activity/approvals", icon: "gate", group: "Do" });
+  out.push({ id: "decide", label: "Decide what is waiting", hint: terms().say("{Clearances} that need a person (approvals)"), href: "/activity/approvals", icon: "gate", group: "Do" });
   out.push({ id: "try", label: "Try a pipeline without saving", hint: "A scratch run", href: "/playground", icon: "play", group: "Do" });
   for (const p of projects) {
     if (p.last_run?.status === "failed") {
@@ -30,7 +31,7 @@ export function doItems(ctx: Ctx, projects: Project[]): DoItem[] {
     out.push({ id: "area-" + s.id, label: s.label, hint: s.promise, href: s.href, icon: s.icon, group: "Go to" });
     for (const t of visibleTabs(s, ctx)) {
       if (t.href === s.href) continue;
-      out.push({ id: `page-${s.id}-${t.id}`, label: t.label + (t.soon ? " (soon)" : ""), hint: s.label, href: t.href, icon: t.icon ?? s.icon, group: "Go to" });
+      out.push({ id: `page-${s.id}-${t.id}`, label: t.label + (t.soon ? " (soon)" : ""), hint: t.aka ? `${s.label} · ${t.aka}` : s.label, href: t.href, icon: t.icon ?? s.icon, group: "Go to" });
     }
   }
   return out;

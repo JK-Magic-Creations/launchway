@@ -5,6 +5,7 @@ import { useNow } from "../live";
 import { Link, Mono } from "./ui";
 import { DeploymentControls } from "./DeploymentControls";
 import { Runway } from "./Runway";
+import { terms } from "../terms";
 
 // What a deploy step did and what deploy runners last observed of it. This
 // is read-only: it shows the deployment, it never changes it.
@@ -219,7 +220,7 @@ function rolloutAction(run: RunDetail, step: StepView): string {
 
 /** The panel's title for a rollout step or a linked approval. */
 function controlTitle(run: RunDetail, step: StepView, d: DeploymentView): string {
-  if (step.kind === "approval") return `The rollout this approval guards: ${d.service} in ${d.environment}`;
+  if (step.kind === "approval") return `The rollout this ${terms().lower("clearance")} guards: ${d.service} in ${d.environment}`;
   const where = `${d.service} in ${d.environment}`;
   switch (rolloutAction(run, step)) {
     case "promote": return `Promoting ${where}`;
