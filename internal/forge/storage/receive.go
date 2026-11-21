@@ -182,6 +182,7 @@ func (st *pushState) serve(ctx context.Context, c net.Conn) {
 
 func (st *pushState) handle(ctx context.Context, req hookRequest) hookReply {
 	fail := func(err error) hookReply { return hookReply{Message: err.Error()} }
+	req.Updates = realRefUpdates(req.Updates)
 	switch req.Hook {
 	case "pre-receive":
 		if err := st.faults.Hit(PtPreReceive); err != nil {
