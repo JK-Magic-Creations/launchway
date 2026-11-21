@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/deploy"
@@ -276,4 +277,58 @@ func (c *StepCause) Evidence() []string {
 		}
 	}
 	return out
+}
+
+// firstFailedStep is the first step, in pipeline order, that failed (and
+// was not allowed to) or was canceled; "" if none.
+func (st *RunState) firstFailedStep() string {
+	for _, id := range st.Order {
+		if s := st.Steps[id]; (s.Status == StepFailed && !s.Allowed) || s.Status == StepCanceledS {
+			return id
+		}
+	}
+	return ""
+}
+
+// ResumeAdvice says whether a failed or canceled run can be resumed. A run
+// that made a deployment cannot: a half-done deployment is never continued.
+// Re-running from the first step that failed is what works then (a new
+// deployment attempt of the same version, with every earlier step reused).
+type ResumeAdvice struct {
+	Allowed bool `json:"allowed"`
+	// Reason and RerunFrom say, when it is not allowed, why, and the step to
+	// re-run from instead.
+	Reason    string `json:"reason,omitempty"`
+	RerunFrom string `json:"rerun_from,omitempty"`
+	// FirstFailed is the first step that failed or was canceled.
+	FirstFailed string `json:"first_failed,omitempty"`
+}
+
+func (st *RunState) resumeAdvice() *ResumeAdvice {
+	if st.Status != RunFailed && st.Status != RunCanceled {
+		return nil
+	}
+	a := &ResumeAdvice{Allowed: true, FirstFailed: st.firstFailedStep()}
+	if id := st.openedDeployment(); id != "" {
+		a.Allowed, a.RerunFrom = false, st.rerunTarget(id)
+		a.Reason = fmt.Sprintf("%s made a deployment in this run, and a half-done deployment is never continued", id)
+	}
+	return a
+}
+
+// rerunTarget is the step to re-run from instead of resuming: the first
+// step that failed, or, when that step belongs to a deployment (it checks
+// or rolls one back), the deploy step that made it, since a deployment is
+// made again from its deploy step. fallback is used when nothing failed.
+func (st *RunState) rerunTarget(fallback string) string {
+	f := st.firstFailedStep()
+	if f == "" {
+		return fallback
+	}
+	for _, d := range st.Pipeline.Steps {
+		if d.IsDeploy() && d.ID != f && slices.Contains(st.Pipeline.DeploymentScope(d.ID), f) {
+			return d.ID
+		}
+	}
+	return f
 }

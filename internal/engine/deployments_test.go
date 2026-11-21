@@ -404,8 +404,12 @@ func TestRevertConflictNeedsAPerson(t *testing.T) {
 	}
 	// A deployment can never be resumed; a re-run from the deploy step can
 	// be made.
-	if err := e.Resume(id, "ann"); !errors.Is(err, ErrConflict) || !strings.Contains(err.Error(), "not resumed") {
-		t.Fatalf("resume: %v", err)
+	if err := e.Resume(id, "ann"); !errors.Is(err, ErrConflict) || !strings.Contains(err.Error(), "never continued") || !strings.Contains(err.Error(), `Re-run from deploy-prod`) {
+		t.Fatalf("resume must name the action that works: %v", err)
+	}
+	d, err := e.GetRun(id)
+	if err != nil || d.Resume == nil || d.Resume.Allowed || d.Resume.RerunFrom != "deploy-prod" {
+		t.Fatalf("the run says what to do instead: %+v %v", d.Resume, err)
 	}
 	if _, err := e.PlanRerun(id, "smoke"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("re-run from inside the deployment: %v", err)

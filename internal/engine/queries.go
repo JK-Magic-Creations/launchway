@@ -210,6 +210,9 @@ type RunDetail struct {
 	TriggerDetail *TriggerDetail `json:"trigger_detail,omitempty"`
 	// Deployments are the run's deployments, newest first (schema 11).
 	Deployments []DeploymentView `json:"deployments"`
+	// Resume says whether the run can be resumed, and if not, what to do
+	// instead; nil for a run that is not failed or canceled.
+	Resume *ResumeAdvice `json:"resume,omitempty"`
 	// RunnerHint says why a run that is waiting for a runner may wait a long
 	// time: it builds images, and no runner that can has been seen lately.
 	RunnerHint string `json:"runner_hint,omitempty"`
@@ -705,6 +708,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		}
 	}
 	d.Policy = policySummary(st)
+	d.Resume = st.resumeAdvice()
 	return d, nil
 }
 

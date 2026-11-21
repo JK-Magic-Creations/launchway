@@ -601,7 +601,14 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 			sum = append(sum, fmt.Sprintf("%d tests failed.", d.Tests.Failed+d.Tests.Errored))
 			actions = append(actions, "get_test_results run_id="+id)
 		}
-		actions = append(actions, "retry_run run_id="+id+" (resume: runs the failed steps again)")
+		if d.Resume != nil && !d.Resume.Allowed {
+			actions = append(actions, fmt.Sprintf("retry_run run_id=%s from_step=%s (a new run: same version, new deployment attempt, earlier steps reused; this run cannot be resumed)", id, d.Resume.RerunFrom))
+		} else {
+			actions = append(actions, "retry_run run_id="+id+" (resume: runs the failed steps again)")
+			if len(failed) > 0 {
+				actions = append(actions, fmt.Sprintf("retry_run run_id=%s from_step=%s (a new run that reuses the earlier steps)", id, failed[0]))
+			}
+		}
 	case engine.RunCanceled:
 		s := fmt.Sprintf("Run #%d was canceled", d.Number)
 		if d.SupersededByNumber > 0 {
