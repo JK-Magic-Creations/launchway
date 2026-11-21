@@ -16,9 +16,15 @@ const runTriggersUsage = `Usage:
   launchway run-triggers create PROJECT --name NAME --on UPSTREAM [--launch] [--when RESULT] [--pipeline NAME]
                                 [--filter EXPR] [--ref REF] [--map INPUT=EXPRESSION ...]
   launchway run-triggers delete PROJECT NAME
+  launchway run-triggers graph PROJECT [--create] [--json]   follow the software graph: what PROJECT depends on, and triggers for it
   launchway run-triggers allow UPSTREAM DOWNSTREAM [--share-outputs]   let DOWNSTREAM trigger on UPSTREAM's results
   launchway run-triggers allowed UPSTREAM [--json]       who may trigger on UPSTREAM
   launchway run-triggers revoke UPSTREAM DOWNSTREAM
+
+graph shows the projects the software graph says PROJECT's repository depends on, in build order, whether each has
+allowed PROJECT, and whether a trigger exists; with --create it makes a trigger (named graph-UPSTREAM, on a run that
+ended well) for each that allowed it. Each project's result starts the next level, so providers build before
+consumers. Nothing is made without --create.
 
 When a run (or, with --launch, a deployment) of UPSTREAM ends, a run of PROJECT starts, with inputs mapped from
 the result by expressions over run (id, number, project, pipeline, status, ref, branch, tag, sha, url), launch
@@ -46,6 +52,8 @@ func cmdRunTriggers(args []string) error {
 			return cl.triggersCreate(args[1:])
 		case "delete":
 			return cl.triggersDelete(args[1:])
+		case "graph":
+			return cl.triggersGraph(args[1:])
 		case "allow":
 			return cl.triggersAllow(args[1:])
 		case "allowed":
@@ -199,4 +207,51 @@ func (cl *client) triggersRevoke(args []string) error {
 	}
 	fmt.Fprintf(cl.out, "%s may no longer trigger on the results of %s.\n", pos[1], pos[0])
 	return nil
+}
+
+func (cl *client) triggersGraph(args []string) error {
+	fs := flag.NewFlagSet("run-triggers graph", flag.ContinueOnError)
+	create := fs.Bool("create", false, "make the triggers (without it, only show what would be made)")
+	asJSON := fs.Bool("json", false, "print JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil || len(pos) != 1 {
+		if err == nil {
+			err = usageErr("say which project: launchway run-triggers graph PROJECT [--create]")
+		}
+		return err
+	}
+	method := "GET"
+	var body any
+	if *create {
+		method, body = "POST", map[string]any{}
+	}
+	var plan struct {
+		Project    string   `json:"project"`
+		Repository string   `json:"repository"`
+		Note       string   `json:"note"`
+		Cycles     []string `json:"cycles"`
+		Items      []struct {
+			Upstream string `json:"upstream_project"`
+			Repo     string `json:"upstream_repository"`
+			Level    int    `json:"level"`
+			Allowed  bool   `json:"allowed"`
+			Trigger  string `json:"trigger"`
+			Created  bool   `json:"created"`
+			Note     string `json:"note"`
+		} `json:"items"`
+	}
+	if err := cl.call(method, "/api/v1/projects/"+url.PathEscape(pos[0])+"/run-triggers/graph", body, &plan); err != nil {
+		return err
+	}
+	return cl.print(plan, *asJSON, func() {
+		if plan.Note != "" {
+			fmt.Fprintln(cl.out, plan.Note)
+		}
+		for _, it := range plan.Items {
+			fmt.Fprintf(cl.out, "level %d  %s (%s): %s\n", it.Level, it.Upstream, it.Repo, it.Note)
+		}
+		for _, c := range plan.Cycles {
+			fmt.Fprintf(cl.out, "cycle: %s\n", c)
+		}
+	})
 }

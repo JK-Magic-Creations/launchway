@@ -2329,6 +2329,461 @@ paths:
                 - events
             x-launchway-access: signed-in
             x-launchway-audit: event.replay
+    /api/v1/graph:
+        get:
+            description: 'What the caller may read of the graph: nodes by kind, edges, and when each source last read.'
+            operationId: get_api_v1_graph
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What the caller may read of the graph: nodes by kind, edges, and when each source last read.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/contents:
+        get:
+            description: '?ref=: what is in a deployment, image or component: images, base_images, packages (with resolved versions on the edges), commits, repositories.'
+            operationId: get_api_v1_graph_contents
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref=: what is in a deployment, image or component: images, base_images, packages (with resolved versions on the edges), commits, repositories.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/impact:
+        get:
+            description: '?ref=: what is affected if it changes: total, by_kind, by_owner (each item with its path, the why), the affected repositories, and deployments that run affected digests with their Airfield, digest and version.'
+            operationId: get_api_v1_graph_impact
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref=: what is affected if it changes: total, by_kind, by_owner (each item with its path, the why), the affected repositories, and deployments that run affected digests with their Airfield, digest and version.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/needs:
+        get:
+            description: '?ref= a component or a repository: what each component needs, each fact with its source (declared in .launchway/requirements.yaml or inferred, with the evidence) and advice where an inferred fact differs from a declared one.'
+            operationId: get_api_v1_graph_needs
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref= a component or a repository: what each component needs, each fact with its source (declared in .launchway/requirements.yaml or inferred, with the evidence) and advice where an inferred fact differs from a declared one.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/neighbours:
+        get:
+            description: '?ref=&direction= (downstream or upstream) &depth=: what is reached, each with its depth and the path to it.'
+            operationId: get_api_v1_graph_neighbours
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref=&direction= (downstream or upstream) &depth=: what is reached, each with its depth and the path to it.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/node:
+        get:
+            description: '?ref=: the node and the edges directly around it (edges, more_edges), each edge with its constraint, resolved version, source, commit and confidence. 404 for a node that does not exist or that the caller may not read: the two look the same.'
+            operationId: get_api_v1_graph_node
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref=: the node and the edges directly around it (edges, more_edges), each edge with its constraint, resolved version, source, commit and confidence.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/order:
+        get:
+            description: '?repository= (repeat; none means every repository with a dependency), upstream=true: the build order, parallel levels, the edges (each with the packages and images that make it so, and any override), cycles (each with its closing path and a suggestion) and the overrides in force.'
+            operationId: get_api_v1_graph_order
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?repository= (repeat; none means every repository with a dependency), upstream=true: the build order, parallel levels, the edges (each with the packages and images that make it so, and any override), cycles (each with its closing path and a suggestion) and the overrides in force.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/overrides:
+        get:
+            description: The corrections to the build order the caller may see.
+            operationId: get_api_v1_graph_overrides
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The corrections to the build order the caller may see.
+            tags:
+                - graph
+            x-launchway-access: signed-in
+        post:
+            description: '{"kind", "from", "to", "value", "reason"} where kind is before, ignore or pin, with repositories as owner/name. A reason is required; the caller needs the operator role on both repositories.'
+            operationId: post_api_v1_graph_overrides
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"kind", "from", "to", "value", "reason"} where kind is before, ignore or pin, with repositories as owner/name.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+            x-launchway-audit: graph.override.add
+    /api/v1/graph/overrides/{id}:
+        delete:
+            description: Withdraws an override (the row is kept, marked removed); needs the operator role on both repositories.
+            operationId: delete_api_v1_graph_overrides_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Withdraws an override (the row is kept, marked removed); needs the operator role on both repositories.
+            tags:
+                - graph
+            x-launchway-access: signed-in
+            x-launchway-audit: graph.override.remove
+    /api/v1/graph/path:
+        get:
+            description: '?from=&to=: the shortest way between two nodes, going with a change (affects) or against it (affected-by); found false when there is none the caller may see.'
+            operationId: get_api_v1_graph_path
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?from=&to=: the shortest way between two nodes, going with a change (affects) or against it (affected-by); found false when there is none the caller may see.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/placement:
+        get:
+            description: '?ref=: the machines and platforms that satisfy each component (fits), near misses with what is missing, and gaps.'
+            operationId: get_api_v1_graph_placement
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref=: the machines and platforms that satisfy each component (fits), near misses with what is missing, and gaps.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/reach:
+        get:
+            description: '?ref= a package: the versions in use that have known advisories, what uses each, and the deployments that run them. Needs vulnerability data on the server; note says when there is none.'
+            operationId: get_api_v1_graph_reach
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref= a package: the versions in use that have known advisories, what uses each, and the deployments that run them.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/rebuild:
+        post:
+            description: Clears the graph and reads everything again; the result equals what incremental updates built. Overrides are kept.
+            operationId: post_api_v1_graph_rebuild
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Clears the graph and reads everything again; the result equals what incremental updates built.
+            tags:
+                - graph
+            x-launchway-access: admin
+            x-launchway-audit: graph.rebuild
+    /api/v1/graph/rebuild-set:
+        get:
+            description: '?repository=: what must be built again after a push to it, in order, each with the way it depends on it; dependencies a person pinned or ignored are listed as skipped.'
+            operationId: get_api_v1_graph_rebuild_set
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?repository=: what must be built again after a push to it, in order, each with the way it depends on it; dependencies a person pinned or ignored are listed as skipped.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/rescan:
+        post:
+            description: Reads every repository, project and the installation again.
+            operationId: post_api_v1_graph_rescan
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Reads every repository, project and the installation again.
+            tags:
+                - graph
+            x-launchway-access: admin
+            x-launchway-audit: graph.rescan
+    /api/v1/graph/search:
+        get:
+            description: '?q= a part of a name or key, optionally kind= (repeat), limit=: {"items", "more"}.'
+            operationId: get_api_v1_graph_search
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?q= a part of a name or key, optionally kind= (repeat), limit=: {"items", "more"}.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/specification:
+        get:
+            description: '?ref= (repeat for components that run on one machine), headroom= percent (default 25), format=yaml: a neutral machine specification with totals, headroom, provenance and conflicts. An export; nothing is provisioned.'
+            operationId: get_api_v1_graph_specification
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref= (repeat for components that run on one machine), headroom= percent (default 25), format=yaml: a neutral machine specification with totals, headroom, provenance and conflicts.'
+            tags:
+                - graph
+            x-launchway-access: signed-in
+    /api/v1/graph/where:
+        get:
+            description: '?ref=: the deployments a repository, package, commit or image reaches, with airfields; each says whether the digest itself contains the thing (exact).'
+            operationId: get_api_v1_graph_where
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?ref=: the deployments a repository, package, commit or image reaches, with airfields; each says whether the digest itself contains the thing (exact).'
+            tags:
+                - graph
+            x-launchway-access: signed-in
     /api/v1/health-sources:
         get:
             description: The health sources the caller's projects may use, by name, type and projects; never where they are or how they are reached.
@@ -5234,6 +5689,69 @@ paths:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: run_trigger.delete
+    /api/v1/projects/{name}/run-triggers/graph:
+        get:
+            description: 'What the software graph says this project depends on, for starting it after them: the projects that build the repositories its repository depends on, in build order (level 0 first), each with whether it has allowed this project to trigger on its results (allowed), the trigger that already exists (trigger) and a plain note. Nothing is made. 404 when the graph is off. See [Triggers from the software graph](../guide/software-graph.md#start-dependents-after-a-push).'
+            operationId: get_api_v1_projects_name_run_triggers_graph
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What the software graph says this project depends on, for starting it after them: the projects that build the repositories its repository depends on, in build order (level 0 first), each with whether it has allowed this project to trigger on its results (allowed), the trigger that already exists (trigger) and a plain note.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        post:
+            description: 'Makes the result triggers the plan shows, for the projects that have allowed this one: a trigger named graph-<upstream> that starts a run of this project when a run of the upstream ends well. Answers the plan with created set on each trigger made. A project that has not allowed it is left out, with the reason. Nothing is made until this is called.'
+            operationId: post_api_v1_projects_name_run_triggers_graph
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes the result triggers the plan shows, for the projects that have allowed this one: a trigger named graph-<upstream> that starts a run of this project when a run of the upstream ends well.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: run_trigger.from_graph
     /api/v1/projects/{name}/runs:
         post:
             description: Starts a Sortie. Answers 201 with the Sortie.
@@ -8384,6 +8902,44 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: repository.file_write
+    /api/v1/repositories/{owner}/{name}/graph/refresh:
+        post:
+            description: Reads the repository again now (pushes do this by themselves).
+            operationId: post_api_v1_repositories_owner_name_graph_refresh
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Reads the repository again now (pushes do this by themselves).
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: graph.refresh
     /api/v1/repositories/{owner}/{name}/hooks:
         get:
             description: '{"items": [{"id", "scope", "repository", "name", "url", "events", "active", "has_secret", "failures", "disabled_reason", "created_at"}], "events": [...]}.'
@@ -10276,6 +10832,44 @@ paths:
             tags:
                 - repositories
             x-launchway-access: repo-viewer
+    /api/v1/repositories/{owner}/{name}/requirements/proposal:
+        post:
+            description: '{"content", "title"}: opens a pull request that makes .launchway/requirements.yaml what content says; the file is checked first (422 with what is wrong), and nothing lands until a person merges it. 404 feature_off without Git hosting.'
+            operationId: post_api_v1_repositories_owner_name_requirements_proposal
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"content", "title"}: opens a pull request that makes .launchway/requirements.yaml what content says; the file is checked first (422 with what is wrong), and nothing lands until a person merges it.'
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: graph.requirements.propose
     /api/v1/repositories/{owner}/{name}/search:
         get:
             description: 'Search the files at ?ref= for ?q= (literal; regex=1 for a POSIX extended expression; case=1 to match case; in=content, path or both; dir= a directory; ext=go,ts; limit= at most 500). {"files": [{"path", "matches": [{"line", "text", "ranges"}]}], "matches", "partial", "reason", "millis"}. It stops after 10 seconds or 4 MiB of matches and says so in partial and reason: the answer is never silently short. Limited to 30 a minute per person.'

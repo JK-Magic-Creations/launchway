@@ -119,9 +119,18 @@ depend on another: it depends on a package the other publishes, or its Container
 other's pipeline builds. A **cycle** is reported with the path that closes it and a suggestion; the rest is still
 ordered.
 
-After a push, `rebuild-set` lists what must be built again, in order, and why. The API and the command line
-return it so a pipeline can start the downstream builds in order. Starting them automatically is the next step; today
-the list is something a pipeline step reads.
+After a push, `rebuild-set` lists what must be built again, in order, and why.
+
+#### Start dependents after a push
+
+A push to a library repository runs the library's pipeline. The projects that build the repositories depending on it can start when that run ends well, each one after the projects it depends on, because each result starts the next level: providers build before consumers. This uses the same [triggers on results](result-triggers.md) as any other project's start, so the same two decisions apply: the project that depends on another makes the trigger, and the project depended on must allow it. **It is off until you ask for it.** Nothing is made by looking.
+
+```
+launchway run-triggers graph team-app            # what the graph says team-app depends on, in order, and what stands in the way
+launchway run-triggers graph team-app --create   # make a trigger for each project that has allowed it
+```
+
+The first command lists the projects that build the repositories `team-app`'s repository depends on, lowest level first, and for each whether it has allowed `team-app` to trigger on its results and whether a trigger exists. The second makes a trigger named `graph-<project>` for each that allowed it (it starts a run of `team-app` when a run of that project ends well), and says plainly why it left out any that did not. A dependency you marked `ignore` or `pin` is not followed, and a cycle is shown, not followed. The projects are the ones the caller may read. Nothing crosses between projects but the result by reference. In the API it is `GET` and `POST /api/v1/projects/{name}/run-triggers/graph`, and the MCP tools are `get_graph_run_triggers` and `follow_graph_with_run_triggers`.
 
 **You can always correct it.** An override says one repository is built before another (`before`), does not really
 depend on another (`ignore`) or stays at a version of another, so a push to it does not rebuild it (`pin`). Every

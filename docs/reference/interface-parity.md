@@ -202,6 +202,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/projects/{name}/run-trigger-allows/{downstream}` | `revoke_run_triggers` | `run-triggers revoke` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/run-triggers` | `list_run_triggers` | `run-triggers list` | `not needed by terraform` | equal |
 | `POST /api/v1/projects/{name}/run-triggers` | `create_run_trigger` | `run-triggers create` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/run-triggers/graph` | `get_graph_run_triggers` | `run-triggers graph` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/run-triggers/graph` | `follow_graph_with_run_triggers` | `run-triggers graph` | `not needed by terraform` | equal |
 | `DELETE /api/v1/projects/{name}/run-triggers/{trigger}` | `delete_run_trigger` | `run-triggers delete` | `not needed by terraform` | equal |
 | `POST /api/v1/projects/{name}/runs` | `start_run` | `runs start` | — | equal |
 | `GET /api/v1/projects/{name}/schedules` | `get_project` | `projects get` | — | equal |
@@ -346,8 +348,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/viewed` | `mark_pull_files_viewed` | `pr viewed` | — | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/pulls/{number}/viewed` | `mark_pull_files_viewed` | `pr viewed` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/raw` | `read_repository_file` | `repos cat` | — | equal |
-| `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/requirements/proposal` | `propose_requirements_file` | `graph propose-requirements` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |

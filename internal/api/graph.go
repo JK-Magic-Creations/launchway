@@ -33,6 +33,8 @@ type GraphService struct {
 	// Watch reads repositories again after pushes and notices runs and
 	// deployments (nil: only the routes that ask for it read anything).
 	Watch *graph.Watcher
+	// ProjectRepos maps a project to the hosted repository it builds (nil: no project is tied to a repository).
+	ProjectRepos func(ctx context.Context) (map[string]string, error)
 }
 
 // graphViewer says what the caller may read, by asking the same access policy

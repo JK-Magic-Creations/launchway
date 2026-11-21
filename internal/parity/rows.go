@@ -230,6 +230,8 @@ var rows = []Row{
 	{Route: "POST /api/v1/projects/{name}/sources/{source}", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the address other systems call, signed with the source's secret: not an operation for people or agents (the console tests it with launchway event-sources test)"},
 	{Route: "GET /api/v1/projects/{name}/run-triggers", MCP: "list_run_triggers", CLI: "run-triggers list", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/projects/{name}/run-triggers", MCP: "create_run_trigger", CLI: "run-triggers create", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/projects/{name}/run-triggers/graph", MCP: "get_graph_run_triggers", CLI: "run-triggers graph", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/projects/{name}/run-triggers/graph", MCP: "follow_graph_with_run_triggers", CLI: "run-triggers graph", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "DELETE /api/v1/projects/{name}/run-triggers/{trigger}", MCP: "delete_run_trigger", CLI: "run-triggers delete", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/projects/{name}/run-trigger-allows", MCP: "list_run_trigger_allows", CLI: "run-triggers allowed", Terraform: "not needed by terraform", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/projects/{name}/run-trigger-allows", MCP: "allow_run_triggers", CLI: "run-triggers allow", Terraform: "not needed by terraform", Status: Equal, Reason: ""},

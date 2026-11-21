@@ -906,12 +906,13 @@ Start a run of one project when another project's run or launch ends. See [Trigg
 launchway run-triggers list PROJECT [--json]
 launchway run-triggers create PROJECT --name NAME --on UPSTREAM [--launch] [--when RESULT] [--pipeline NAME] [--filter EXPR] [--ref REF] [--map INPUT=EXPRESSION ...]
 launchway run-triggers delete PROJECT NAME
+launchway run-triggers graph PROJECT [--create] [--json]
 launchway run-triggers allow UPSTREAM DOWNSTREAM [--share-outputs]
 launchway run-triggers allowed UPSTREAM [--json]
 launchway run-triggers revoke UPSTREAM DOWNSTREAM
 ```
 
-`allow`, `allowed` and `revoke` are the upstream project's (its operators decide who may trigger on it); `create`, `list` and `delete` are the downstream project's. The same are the `run-triggers` and `run-trigger-allows` routes of the [HTTP API](http-api.md) and the MCP tools `list_run_triggers`, `create_run_trigger`, `delete_run_trigger`, `list_run_trigger_allows`, `allow_run_triggers` and `revoke_run_triggers`.
+`graph` shows the projects the [software graph](../guide/software-graph.md#start-dependents-after-a-push) says PROJECT depends on, in build order, whether each has allowed it and whether a trigger exists; with `--create` it makes a trigger named `graph-UPSTREAM` for each that has allowed it. `allow`, `allowed` and `revoke` are the upstream project's (its operators decide who may trigger on it); `create`, `list` and `delete` are the downstream project's. The same are the `run-triggers` and `run-trigger-allows` routes of the [HTTP API](http-api.md) and the MCP tools `list_run_triggers`, `create_run_trigger`, `delete_run_trigger`, `list_run_trigger_allows`, `allow_run_triggers` and `revoke_run_triggers`.
 
 ## launchway event-sources
 
