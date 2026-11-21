@@ -159,6 +159,7 @@ var explained = []struct{ column, why string }{
 	{"repo_mirrors.cred_env", "the name of an environment variable"},
 	{"repo_mirrors.cred_file", "a file path"},
 	{"runner_identities.public_key", "a public key; the private half stays on the runner"},
+	{"fleet_hosts.host_key", "a host's public key, pinned so a changed key is refused; the Station's private key is a secret reference"},
 	{"runner_identities.join_token", "the join token's id, not the token (whose hash is runner_join_tokens.hash)"},
 	{"findings.secret", "a flag saying a finding is a secret that was found; the secret itself is never stored"},
 
