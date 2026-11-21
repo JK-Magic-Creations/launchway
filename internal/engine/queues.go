@@ -558,8 +558,12 @@ type heldCandidate struct{ id, pipe, class, author string }
 // heldCandidates are a project's held runs that limits may let go, most
 // urgent first.
 func (c *cmd) heldCandidates(project string) ([]heldCandidate, error) {
-	rows, err := c.tx.Query(`SELECT run_id, pipeline, class, author_class FROM run_queue WHERE project = ? AND state = 'held' AND manual = 0
-		ORDER BY bumped DESC, priority DESC, since, run_id`, project)
+	// Runs that arrive in the same millisecond have the same "since": the run
+	// number, which counts arrivals, keeps them in the order they came (the
+	// run id is random and would let a later one go first).
+	rows, err := c.tx.Query(`SELECT q.run_id, q.pipeline, q.class, q.author_class FROM run_queue q JOIN runs r ON r.id = q.run_id
+		WHERE q.project = ? AND q.state = 'held' AND q.manual = 0
+		ORDER BY q.bumped DESC, q.priority DESC, q.since, r.number`, project)
 	if err != nil {
 		return nil, err
 	}
