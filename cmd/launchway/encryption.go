@@ -25,6 +25,7 @@ const encryptionUsage = `Usage:
   launchway encryption status [--json]                       a server's encryption at rest (administrators)
   launchway encryption rotate [--data] [--config launchway.yaml]   new key-encryption key; --data also re-seals every value
   launchway encryption rewrap [--config launchway.yaml]             replace the root key (old and new given together)
+  launchway encryption recover [--confirm-discard] [--config F]     discard an empty key-encryption key the configured root key cannot open
 
 Encryption at rest keeps every secret the server stores sealed under a root key that is held outside the
 database, so a copy of the database alone reveals none of them. init, rotate and rewrap run where the root
@@ -53,6 +54,8 @@ func encryptionCommand(args []string) error {
 		return encryptionRotate(args[1:])
 	case "rewrap":
 		return encryptionRewrap(args[1:])
+	case "recover":
+		return encryptionRecover(args[1:])
 	case "status":
 		c, err := loadCredentials()
 		if err != nil {
@@ -287,4 +290,53 @@ func encryptionRewrap(args []string) error {
 func promptPassphraseNoLabel() ([]byte, error) {
 	p, err := promptPassphraseQuiet()
 	return []byte(strings.TrimRight(string(p), "\r\n")), err
+}
+
+// encryptionRecover is for a database whose key-encryption key the configured
+// root key cannot open (a key made by a start that had no root key). It shows
+// what it found; with --confirm-discard, and only when nothing at all is sealed,
+// it removes that key so the next start makes a proper one.
+func encryptionRecover(args []string) error {
+	fs := flag.NewFlagSet("encryption recover", flag.ContinueOnError)
+	cfgPath := fs.String("config", "launchway.yaml", "the server's bootstrap file")
+	confirm := fs.Bool("confirm-discard", false, "discard the key-encryption key(s) found, when nothing is sealed under them")
+	asJSON := fs.Bool("json", false, "print as JSON")
+	if err := fs.Parse(args); err != nil {
+		return usageErr("%v", err)
+	}
+	l, err := openLocalTool(context.Background(), *cfgPath)
+	if err != nil {
+		return err
+	}
+	defer l.close()
+	if l.keys.kind == "" {
+		return keyring.ErrNoRootKey
+	}
+	if err := l.openEngine(); err != nil { //nolint:contextcheck // the engine opens its own connection with its own timeouts
+		return err
+	}
+	rep, err := sealing.Recover(context.Background(), sealing.Options{DB: l.eng.Database(), Holder: l.keys.primary, Previous: l.keys.previous,
+		Audit: auditEncryption(l.eng), Instance: instanceName() + "-cli"}, *confirm)
+	if err != nil {
+		return err
+	}
+	if *asJSON {
+		return json.NewEncoder(os.Stdout).Encode(rep)
+	}
+	for _, o := range rep.Orphans {
+		fmt.Printf("Key-encryption key %d (wrapped by a %s root key, made %s) cannot be opened by the configured root key; %d data keys are wrapped by it.\n",
+			o.Version, o.Holder, time.UnixMilli(o.CreatedAt).UTC().Format(time.RFC3339), o.DataKeys)
+	}
+	fmt.Printf("Sealed secrets in the database: %d\n", rep.Sealed)
+	for c, n := range rep.ByColumn {
+		fmt.Printf("  %s: %d\n", c, n)
+	}
+	fmt.Println(rep.Message)
+	if rep.Discardable && !rep.Discarded {
+		fmt.Println("To discard it, run this again with --confirm-discard.")
+	}
+	if len(rep.Orphans) > 0 && !rep.Discardable {
+		return exitErr(1)
+	}
+	return nil
 }
