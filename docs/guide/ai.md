@@ -83,7 +83,7 @@ A verify step with `model: local` sends the model what the statistics computed a
 clusters, and shows its explanation and suggested cause next to the verdict. The decision stays
 with the statistics. With `decide: model-assisted` the model may turn a pass into inconclusive or
 a fail, never a fail into a pass, and its reasoning is recorded with the verdict. On the run page,
-**Explain** on a failed step asks a configured model to summarise the step's log tail, failed tests
+**Explain** on a failed step asks a configured model to summarize the step's log tail, failed tests
 and findings (`POST /api/v1/runs/{run}/steps/{step}/explain`); the button is not there when no
 model is configured.
 

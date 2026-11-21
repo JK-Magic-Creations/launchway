@@ -398,9 +398,9 @@ rollout.
 ![The deployment panel of the deploy step while the run waits for approval: staging on target kind, application shop, version 1.1.0, commit 24966d99 to gitops on main, holding staging's lock; observed now, the rollout is paused at step 2 of 3; Argo CD synced, health Suspended; the rollout's steps weight 50%, pause (current) and weight 100%; Promote, Promote full and Abort buttons; and the observations step by step from waiting for Argo CD to the pause](../images/tutorials/deploy-panel-paused.png)
 
 The deployment holds `staging`'s lock: another run of the shop waits until this one is done.
-You could press **Promote** here; instead, decide the approval. Open **Approvals** and click the
-question (or press **Decide** on the run). The approval step shows what it guards, with an
-optional comment; press **Approve**.
+You could press **Promote** here; instead, decide the approval. Open **Waiting for a decision** and click the
+question (or press **Decide** on the run). The clearance step shows what it guards, with an
+optional comment; press **Go** (labeled **Approve** in the plain set).
 
 The `promote` step promotes the rollout and waits until it is healthy; `rollback` is skipped
 (*every step it needs succeeded*). The run succeeds, and the panel of `promote` shows the command

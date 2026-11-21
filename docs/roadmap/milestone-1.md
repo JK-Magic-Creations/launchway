@@ -227,7 +227,7 @@ Fork a repository to propose changes from your own copy, and start new repositor
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Limits on repository size, large-file storage and per-organisation usage, shared with artifact and log quotas. One quota model for everything that takes space, with warnings before a limit is reached.
+Limits on repository size, large-file storage and per-organization usage, shared with artifact and log quotas. One quota model for everything that takes space, with warnings before a limit is reached.
 
 **Depends on:** Built-in Git hosting.
 
@@ -482,9 +482,9 @@ Releases with tags, notes, attachments and drafts, with notes grouped by work it
 
 ### People and access on the host {#g-people-and-access-on-the-host}
 
-Accounts, organisations, tokens and administration for the built-in host.
+Accounts, organizations, tokens and administration for the built-in host.
 
-#### Organisations, teams and collaborators {#organisations-teams-and-collaborators}
+#### Organizations, teams and collaborators {#organizations-teams-and-collaborators}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
@@ -699,7 +699,7 @@ Everything by clicking, with every page saying what it is for and what to do nex
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A single line that shows one change travelling from idea to running software, with each station opening its evidence. Choose a station and its review, tests, image, place or decision opens underneath. This is the page that answers where is my change and is it all right.
+A single line that shows one change traveling from idea to running software, with each station opening its evidence. Choose a station and its review, tests, image, place or decision opens underneath. This is the page that answers where is my change and is it all right.
 
 **Depends on:** The guided interface.
 
@@ -775,7 +775,7 @@ A pipeline appears as stations on tracks, with parallel steps splitting and join
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-The same interface in light and dark and on a phone, with an accessibility check as a build gate. Charts say where they came from and never rely on colour alone.
+The same interface in light and dark and on a phone, with an accessibility check as a build gate. Charts say where they came from and never rely on color alone.
 
 **Depends on:** The guided interface.
 

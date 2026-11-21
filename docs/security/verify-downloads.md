@@ -91,7 +91,7 @@ cosign is installed. Without cosign it says that only the checksum was checked;
 The installer itself is a plain file in the release. To check it before running it, download it
 with `SHA256SUMS` and its signature, and run the commands under [Check the files](#check-the-files).
 
-## Releases built inside your organisation
+## Releases built inside your organization
 
 Releases rebuilt from source with `make release-local` (for example inside a network with no
 internet access) are signed with a key instead of a keyless certificate, and hold the public key `cosign.pub`

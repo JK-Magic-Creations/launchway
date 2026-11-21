@@ -325,7 +325,7 @@ steps:
 
 A step with `uses:` is replaced by a template's steps; it is not a kind, but it takes its own set of
 keys ([A step that uses a template](#a-step-that-uses-a-template)). The kinds `release`, `promote`,
-`input` and `analysis` are recognised and refused as not available yet.
+`input` and `analysis` are recognized and refused as not available yet.
 
 ### Step keys common to all kinds
 

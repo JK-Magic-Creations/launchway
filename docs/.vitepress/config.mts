@@ -193,6 +193,7 @@ export default defineConfig({
           { text: 'AI models', link: '/guide/ai' },
           { text: 'Secrets', link: '/guide/secrets' },
           { text: 'Configuration and levels', link: '/guide/configuration' },
+          { text: 'The words Launchway uses', link: '/guide/words' },
           { text: 'Sign-in and access', link: '/guide/access' },
           { text: 'Runners on other machines', link: '/guide/runner-identity' },
           { text: 'Agents (MCP)', link: '/guide/agents' },

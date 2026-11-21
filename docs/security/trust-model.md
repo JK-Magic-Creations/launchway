@@ -115,8 +115,8 @@ flowchart TB
 - **People with direct access** to the cluster, the GitOps repository or the registry can change
   what runs without Launchway.
 - **Any signed-in viewer** can list the runners.
-- **There is no organisation (tenant) separation** inside one installation. Run one installation
-  per organisation that must not see another's work.
+- **There is no organization (tenant) separation** inside one installation. Run one installation
+  per organization that must not see another's work.
 
 ## What next
 

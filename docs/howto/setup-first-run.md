@@ -7,11 +7,15 @@ none`, anyone).
 
 ## What it asks
 
-1. **What do you call things?** Launchway has four levels: installation, organisation, unit and
-   project. Say what your organisation is called, and whether you want units (a group of projects with
-   shared settings, such as a team or a department). If you say no, units stay out of every screen; you
-   can turn them on later. You can also rename the levels, for example "Service" for project.
-2. **How do people sign in?**
+1. **The words Launchway uses.** Choose the aviation words (Base, Wing, Squadron, Project; Wingman,
+   Preflight, Clearance, Logbook) or the plain business words (Installation, Organization, Team,
+   Project; Guide, Checks, Approval, Audit trail), watch the preview change, and rename any single word.
+   They are labels only. See [the words Launchway uses](../guide/words.md).
+2. **Your wing and its squadrons.** Say what your organization is called, and whether you want
+   squadrons (a group of projects with shared settings, such as a team or a department). If you say
+   no, squadrons stay out of every screen; you can turn them on later. The questions use the words you
+   chose in the first step.
+3. **How do people sign in?**
    - *No sign-in* is for trying Launchway on your own machine: everyone is an administrator. The
      wizard says so plainly and warns against it on a server others can reach.
    - *My company's identity provider* (OpenID Connect): the wizard asks where the provider is, the
@@ -24,14 +28,14 @@ none`, anyone).
      (the bootstrap file's, which is also the way back in if sign-in breaks), and the wizard says so.
      If your provider is on your own network, the server refuses to contact it until an administrator
      allows its host; the wizard offers to add it to the allowed hosts.
-3. **Your first project.** The same steps as [Connect a repository](connect-repository.md).
+4. **Your first project.** The same steps as [Connect a repository](connect-repository.md).
 
 ## What it creates
 
-A summary lists exactly what will be created: the level names in the installation settings, and the
+A summary lists exactly what will be created: the words in the installation settings, and the
 project. Nothing is created until you confirm, and the wizard creates it all in one step or not at all;
 cancelling at any step leaves nothing behind.
 
 The same thing from the command line: `launchway config check-signin ...` checks the answers and
 `launchway config set sign-in sign-in -f signin.yaml` saves them;
-`launchway config set installation installation -f levels.yaml` names the levels.
+`launchway config set installation installation -f terms.yaml` chooses the words (a `terms:` entry, see [the words](../guide/words.md)).

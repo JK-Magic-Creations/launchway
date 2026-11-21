@@ -56,7 +56,7 @@ Add these steps to `.launchway/pipeline.yaml`, beside `test`:
 
 - `reports.findings` names SARIF 2.1.0 files. Launchway reads them whether the step passed or
   failed; a file that is not SARIF is reported as such and never fails the step.
-- `reports.sbom` names a CycloneDX JSON file. It is kept as the step's `sbom` artifact and summarised.
+- `reports.sbom` names a CycloneDX JSON file. It is kept as the step's `sbom` artifact and summarized.
 - `--exit-code 0` keeps the step green while you look at the results. To fail the pipeline on a
   finding, let the scanner fail, or use a [policy](policy-gates.md).
 

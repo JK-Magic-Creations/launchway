@@ -342,8 +342,8 @@ Schema 23 brings configuration in the database (see `internal/engine/configstore
 unit, spec, version, who manages it, soft-delete marks), `config_changes` (the history, appended in
 the transaction of every change and never rewritten, with the object before and after), `config_imports`
 (one row per import, the first start's among them) and `config_revisions` (one counter that every change
-raises, which is what servers watch). Every table has an `org` column, `''` for the one organisation
-there is, and `org` is the first column of the keys and indexes: adding organisations later is a new
+raises, which is what servers watch). Every table has an `org` column, `''` for the one organization
+there is, and `org` is the first column of the keys and indexes: adding organizations later is a new
 value in that column, with no table rewritten. It is additive: nothing older code reads is added, no
 event type is added, and no run carries `requires: 23`.
 

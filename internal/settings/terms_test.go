@@ -90,3 +90,16 @@ func TestComposeReportsTheTermsAndTheLevelsTheyGive(t *testing.T) {
 		t.Fatalf("defaults: %+v %+v", lay.Terms, lay.Levels)
 	}
 }
+
+// The page of the words lists every term an installation may rename, and the keys it gives are accepted.
+func TestTheWordsPageListsEveryTerm(t *testing.T) {
+	b, err := os.ReadFile("../../docs/guide/words.md")
+	if err != nil {
+		t.Skip("docs not present")
+	}
+	for _, k := range TermKeys {
+		if !strings.Contains(string(b), "`"+k+"`") {
+			t.Errorf("docs/guide/words.md does not list the term key %q", k)
+		}
+	}
+}

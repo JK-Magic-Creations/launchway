@@ -52,7 +52,7 @@ steps:
 | `tags` | Names to push under: a registry as the runner's configuration names it, a repository in it, and a tag (a value, as above) |
 | `push` | Default true. Pull-request and draft runs never push, whatever it says |
 | `cache` | A repository the build cache is read from and, on runs that push and may push there, written to |
-| `sbom` | Make a CycloneDX SBOM of each platform's image: kept as the step's `sbom` artifact and summarised, as for `reports.sbom`, and searchable under *Components* |
+| `sbom` | Make a CycloneDX SBOM of each platform's image: kept as the step's `sbom` artifact and summarized, as for `reports.sbom`, and searchable under *Components* |
 | `provenance` | Record where the image came from (see *Provenance*); kept as the step's `provenance` artifact |
 | `sign` | Sign the image, its platforms' images, the provenance and the SBOMs, in the form cosign verifies |
 | `scan` | Look for known vulnerabilities in each platform's image. `mode: report` (the default) records them; `mode: enforce` fails the step, before anything is pushed, when one is at `fail_on` or worse. They are findings like any scanner's: the run's Security tab, the project's Security page |

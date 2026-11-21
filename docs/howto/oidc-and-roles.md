@@ -1,6 +1,6 @@
 # Sign-in with OpenID Connect and roles
 
-This guide turns on sign-in through your organisation's OpenID Connect provider, grants roles per
+This guide turns on sign-in through your organization's OpenID Connect provider, grants roles per
 project with access bindings, and covers API tokens, sessions and the audit trail. It is for the
 operator of a Launchway server.
 
@@ -303,7 +303,7 @@ when and from which address each token was last used. Admins of every project se
 tokens there and may revoke any (`GET /api/v1/admin/tokens`, `DELETE /api/v1/admin/tokens/{id}`).
 A revoked token gets `401` at once.
 
-Launchway cannot see that someone left your organisation: their tokens keep the groups of their
+Launchway cannot see that someone left your organization: their tokens keep the groups of their
 last sign-in until they expire. Revoke their tokens when they leave, on the page or in the
 database with `DELETE FROM api_tokens WHERE username = '...'`.
 

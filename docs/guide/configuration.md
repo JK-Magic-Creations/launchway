@@ -2,7 +2,7 @@
 
 Launchway keeps everything an administrator manages in its database, not in a file. This page
 explains what that means, why, how it fits teams that want configuration in Git, and how the
-levels (installation, organisation, unit, project) work. For the settings themselves, see
+levels (installation, organization, unit, project) work. For the settings themselves, see
 [Configuration objects](../reference/config-objects.md).
 
 ## Why the database
@@ -92,29 +92,30 @@ before you edit one by hand.
 
 ## Levels
 
-Launchway has four levels, from the whole installation down to one repository:
+Launchway has four levels, from the whole installation down to one repository. The table uses the default words; the plain business set calls them Installation, Organization, Team and Project ([the words Launchway uses](words.md)).
 
 | Level | What it is | Shown |
 |---|---|---|
-| **Installation** | Everything on this installation: limits, retention, what the levels are called | always, as settings |
-| **Organisation** | The one that owns the projects. There is one today | only where it helps |
-| **Unit** | An optional group of projects with shared settings: a team, a product line, a department. One level, never nested | only after the first unit is created |
+| **Base** | Everything on this installation: limits, retention, the words used | always, as settings |
+| **Wing** | The one that owns the projects. There is one today | only where it helps |
+| **Squadron** | An optional group of projects with shared settings: a team, a product line, a department. One level, never nested | only after the first squadron is created |
 | **Project** | One repository and its pipeline | always |
 
 Objects that can be defined at a level apply to the projects below it. A **role binding**, a
 **library**, a **policy**, an **environment**, a **runner pool**, a **health source**, an **AI model**
-or a **secret store** defined at a unit applies to the unit's projects; defined at the organisation it
+or a **secret store** defined at a squadron applies to the squadron's projects; defined at the wing it
 applies to every project. A project can add to what it inherits, or, where a setting allows it,
 change it. The project page shows where each effective value comes from (`launchway config effective
 PROJECT` prints the same).
 
-The **names** of the levels are yours to choose: call the organisation "Company", the unit
-"Department" or "Squad", the project "Service" or "Repository". Names are changed in the installation
-settings and used everywhere in the UI. Levels nobody uses stay hidden: with no unit there is no
-unit column, picker or page.
+The **words** for the levels are yours to choose: pick the plain business set, or rename the wing
+"Company", the squadron "Department" or "Squad", the project "Service" or "Repository". Words are
+changed on **Settings → Words** (see [the words Launchway uses](words.md)) and are labels only: the
+configuration kinds keep their names (`organisation`, `unit`), so files and scripts do not change.
+Levels nobody uses stay hidden: with no squadron there is no squadron column, picker or page.
 
-There is exactly one organisation today. The tables carry an `org` column in their keys, so
-several organisations (tenants) can be added later without rewriting them; nothing isolates
+There is exactly one wing today. The tables carry an `org` column in their keys, so
+several wings (tenants) can be added later without rewriting them; nothing isolates
 tenants from each other yet, and this release does not claim to.
 
 ## Upgrading and rolling back

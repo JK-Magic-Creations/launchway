@@ -1,6 +1,6 @@
 # Writing the docs
 
-How the documentation is organised, built and checked, for anyone changing it.
+How the documentation is organized, built and checked, for anyone changing it.
 
 ## Where things are
 
