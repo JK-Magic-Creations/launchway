@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 0 in progress · 14 planned · 15 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 0 in progress · 25 planned · 26 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -41,7 +41,7 @@ flowchart TD
 
 **Builds on:** [Milestone 3: Delivery depth](milestone-3.md), [Milestone 4: Registry](milestone-4.md). **Leads to:** [Beyond: Beyond](beyond.md).
 
-**Go deeper:** [Software graph and automated patching](software-graph.md).
+**Go deeper:** [Software graph and automated patching](software-graph.md) · [Dependency order and releases](dependency-order.md).
 
 ## The capabilities
 
@@ -49,6 +49,7 @@ flowchart TD
 |---|---|---|---|---|
 | [Know what you run](#g-know-what-you-run) | 10 | 1 | 0 | 9 |
 | [Fix it safely](#g-fix-it-safely) | 5 | 0 | 0 | 5 |
+| [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 0 | 0 | 11 |
 
 ### Know what you run {#g-know-what-you-run}
 
@@ -203,6 +204,98 @@ Track how long each vulnerability has been open and produce evidence of patching
 **Depends on:** Automated patching.
 
 [Area page](software-graph.md)
+
+### Build and release in dependency order {#g-build-and-release-in-dependency-order}
+
+Launchway works the order out from what your code says and shows how it knew; you can always correct it.
+
+#### One dependency graph, with where each link came from {#one-dependency-graph-with-where-each-link-came-from}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every link says where it was found, how sure Launchway is and offers the fix right there: add a link, ignore a wrong one with a reason. Built on the software graph, not a second graph.
+
+[Area page](dependency-order.md)
+
+#### Libraries first, then what uses them {#libraries-first-then-what-uses-them}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+When a library changes it is built and published first, and each application that uses it is built after, once, in order. Go, npm, Maven, Gradle, Python and base images first.
+
+[Area page](dependency-order.md)
+
+#### Dependents checked before a change merges {#dependents-checked-before-a-change-merges}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A library’s pull request builds the applications that use it against the new version and reports the result. The result appears on the library’s pull request as a check.
+
+[Area page](dependency-order.md)
+
+#### Limits on build storms {#limits-on-build-storms}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Batching and caps keep one library change from starting a flood of dependent builds. A person can pause or reorder.
+
+[Area page](dependency-order.md)
+
+#### Order you can override {#order-you-can-override}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Set build and release order by hand, pin a version, and mark an edge wrong; the system works out the order and a person can always override. Overrides are kept in the repository or in settings.
+
+[Area page](dependency-order.md)
+
+#### Formations: things that go together {#formations-things-that-go-together}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A Formation is a release unit of applications, databases and configuration that are delivered together in the right order. No new kind of object: a Formation is a plan with members.
+
+[Area page](dependency-order.md)
+
+#### One go or no-go, one watch, one way back {#one-go-or-no-go-one-watch-one-way-back}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A Formation has one decision, one timeline and one watch, and returns to the stable state in reverse order. If part of a Formation fails, the others return to the stable state.
+
+[Area page](dependency-order.md)
+
+#### Database first, then the application {#database-first-then-the-application}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A Formation expands the database first, deploys services in dependency order and finishes the contract step later. Builds on database change delivery.
+
+[Area page](dependency-order.md)
+
+#### Linked changes across repositories {#linked-changes-across-repositories}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+One change that spans several repositories is tracked, tested and merged together. Second phase.
+
+[Area page](dependency-order.md)
+
+#### Branching patterns as flight plans {#branching-patterns-as-flight-plans}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a flight plan. Each says what it implies for branches, triggers, versions, environments and fixes.
+
+[Area page](dependency-order.md)
+
+#### A recommender for the branching pattern {#a-recommender-for-the-branching-pattern}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+When a repository is created or imported, six plain questions lead to the simplest pattern that fits, with the reason and the trade-offs, set up in one step. Help, never enforcement.
+
+[Area page](dependency-order.md)
 
 ## What done means
 
