@@ -59,7 +59,8 @@ func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
 	// The schemas from 16 to the last are numbered in a row (one line each is a merge conflict, so this is a list):
 	// a new migration adds its constant at the end.
 	order := []int{schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, schemaConfig, schemaFlow, schemaCache, schemaForge, schemaParity2, schemaStandIn28, schemaVariables, schemaMirror, schemaSSH, schemaRollback, schemaPulls, schemaEncryption, schemaCacheTrust, schemaAccounts, schemaQueues, schemaDelivery, schemaArchive, schemaRegistry, schemaToggles,
-		schemaEvents}
+		schemaEvents,
+		schemaReview}
 	for i := 1; i < len(order); i++ {
 		if order[i] != order[i-1]+1 {
 			t.Fatalf("schemas are not in a row: the %dth is %d after %d", i+1, order[i], order[i-1])

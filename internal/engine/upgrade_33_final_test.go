@@ -25,12 +25,12 @@ import (
 // was in the clear waits while an older server is seen and then completes without losing a value. On
 // SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 // schemaLast is the schema of the build under test: the last migration (a merge that adds one changes it here).
-const schemaLast = schemaEvents
+const schemaLast = schemaReview
 
 func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if len(migrations) != schemaLast || schemaLast != 42 {
-		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 42", schemaLast, len(migrations))
+	if len(migrations) != schemaLast || schemaLast != 43 {
+		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 43", schemaLast, len(migrations))
 	}
 	for i := schemaEncryption; i <= schemaLast; i++ {
 		if strings.TrimSpace(migrations[i-1].sql) == "" {
@@ -103,7 +103,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 		`SELECT count(*) FROM repo_webhooks`: 1, `SELECT count(*) FROM ssh_host_keys`: 1, `SELECT count(*) FROM caches WHERE status = 'kept'`: 3,
 		// The tables the migrations brought are there and empty.
 		`SELECT count(*) FROM encryption_keks`: 0, `SELECT count(*) FROM local_accounts`: 0, `SELECT count(*) FROM run_queue`: 0,
-		`SELECT count(*) FROM step_waits`: 0, `SELECT count(*) FROM imported_issues`: 0, `SELECT count(*) FROM imported_comments`: 0, `SELECT count(*) FROM branch_writers`: 0, `SELECT count(*) FROM notifications`: 0,
+		`SELECT count(*) FROM step_waits`: 0, `SELECT count(*) FROM imported_issues`: 0, `SELECT count(*) FROM imported_comments`: 0, `SELECT count(*) FROM branch_writers`: 0, `SELECT count(*) FROM notifications`: 0, `SELECT count(*) FROM pull_viewed`: 0, `SELECT count(*) FROM pull_queue`: 0,
 	} {
 		if got := count(q); got != want {
 			t.Errorf("%s: %d, want %d", q, got, want)
