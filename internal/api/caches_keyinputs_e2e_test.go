@@ -31,7 +31,7 @@ func TestCacheKeyIncludesVersionInputsAndSaysSo(t *testing.T) {
 	}
 	// Same inputs: a hit.
 	d, log = ce.runWith(t, "demo", withVersion("echo jdk-17"), pushMain(sha))
-	if r := cachesOf(t, d)[0]; r.Result != "hit" || r.Key != first.Key {
+	if r := cachesOf(t, d)[0]; r.Restored != "hit" || r.Key != first.Key {
 		t.Fatalf("%+v\n%s", r, log)
 	}
 	// The tool changed under the same lock file: not the same entry.
@@ -63,7 +63,52 @@ func TestCacheIsSavedUnderTheKeyOfTheFilesTheStepLeft(t *testing.T) {
 	// A checkout whose file is what the step left is the entry's key.
 	sha2 := ce.commit(t, "requirements.txt", "requests==1\npinned==2\n")
 	d, log = ce.runWith(t, "demo", cachePipelineText("deps", "none", "success", ""), pushMain(sha2))
-	if r := cachesOf(t, d)[0]; r.Result != "hit" || r.Key != saved.Key || !strings.Contains(log, "found n=1") {
+	if r := cachesOf(t, d)[0]; r.Restored != "hit" || r.Key != saved.Key || !strings.Contains(log, "found n=1") {
+		t.Fatalf("%+v\n%s", r, log)
+	}
+}
+
+// A step that leaves the restored paths as they were has nothing to save, and
+// the result says which entry it used; one that changes them saves the next
+// generation of the same key.
+func TestAnExactHitSavesANewGenerationOnlyIfThePathsChanged(t *testing.T) {
+	ce := newCacheEnv(t)
+	still := strings.Replace(cachePipelineText("deps", "none", "success", ""), "echo $(( $(cat .cache/deps/n) + 1 )) > .cache/deps/n\n", "", 1)
+	sha := ce.head(t)
+	d, log := ce.runWith(t, "demo", still, pushMain(sha))
+	if d.Status != "succeeded" || !strings.Contains(log, "Cache deps: saved ") {
+		t.Fatalf("%s\n%s", d.Status, log)
+	}
+	key := cachesOf(t, d)[0].Key
+	d, log = ce.runWith(t, "demo", still, pushMain(sha))
+	r := cachesOf(t, d)[0]
+	if r.Result != "hit" || r.EntryKey != key || r.Generation != 1 || r.MaxAgeSeconds != 7*24*3600 || strings.Contains(log, "Cache deps: saved") ||
+		!strings.Contains(log, "nothing to save") {
+		t.Fatalf("%+v\n%s", r, log)
+	}
+	// The same paths with a step that changes what it restored: generation 2.
+	d, log = ce.runWith(t, "demo", cachePipelineText("deps", "none", "success", ""), pushMain(sha))
+	if r := cachesOf(t, d)[0]; r.Result != "saved" || r.Restored != "hit" || r.SavedGeneration != 2 || r.Generation != 1 || !strings.Contains(log, "as generation 2") {
+		t.Fatalf("%+v\n%s", r, log)
+	}
+	// Generation 2 is what a later run restores.
+	d, log = ce.runWith(t, "demo", still, pushMain(sha))
+	if r := cachesOf(t, d)[0]; r.Result != "hit" || r.Generation != 2 || !strings.Contains(log, "found n=1") {
+		t.Fatalf("%+v\n%s", r, log)
+	}
+}
+
+// A fallback restore records the entry it restored (its own key, generation
+// and age), not the step's key.
+func TestAFallbackRestoreRecordsTheEntrysOwnKey(t *testing.T) {
+	ce := newCacheEnv(t)
+	text := cachePipelineText("deps", "latest", "success", "")
+	d, _ := ce.runWith(t, "demo", text, pushMain(ce.head(t)))
+	older := cachesOf(t, d)[0].Key
+	sha2 := ce.commit(t, "requirements.txt", "requests==2\n")
+	d, log := ce.runWith(t, "demo", text, pushMain(sha2))
+	r := cachesOf(t, d)[0]
+	if r.Restored != "fallback" || r.Key == older || r.EntryKey != older || r.Generation != 1 || !strings.Contains(log, "fallback: the step's key is") {
 		t.Fatalf("%+v\n%s", r, log)
 	}
 }

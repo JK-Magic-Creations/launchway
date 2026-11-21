@@ -783,12 +783,12 @@ func TestCacheQuotaLoweredTrims(t *testing.T) {
 // go; an entry that was restored stays.
 func TestIdleCachesAreEnded(t *testing.T) {
 	r := newCacheRig(t)
-	setPolicy(t, r.e, "", CachePolicy{Enabled: true, MaxProjectGiB: 1, MaxEntryGiB: 1, IdleDays: 7})
+	setPolicy(t, r.e, "", CachePolicy{Enabled: true, MaxProjectGiB: 1, MaxEntryGiB: 1, IdleDays: 7, MaxAgeDays: 90})
 	j := r.start("demo", cacheOnMain)
 	r.mustSave(j, "pip", cacheKey("old"), []byte("old"))
 	r.mustSave(j, "models", cacheKey("busy"), []byte("busy"))
 	r.mustSave(r.start("shop", cacheOnMain), "pip", cacheKey("shop"), []byte("shop"))
-	setPolicy(t, r.e, "shop", CachePolicy{Enabled: true, MaxProjectGiB: 1, MaxEntryGiB: 1, IdleDays: 30})
+	setPolicy(t, r.e, "shop", CachePolicy{Enabled: true, MaxProjectGiB: 1, MaxEntryGiB: 1, IdleDays: 30, MaxAgeDays: 90})
 	r.advance(6 * 24 * time.Hour)
 	if en := r.lookup(j, "models", cacheKey("busy"), ""); en == nil {
 		t.Fatal("busy is gone")

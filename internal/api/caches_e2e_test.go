@@ -145,13 +145,16 @@ func TestCacheRestoreAndSaveEndToEnd(t *testing.T) {
 	}
 	key1 := c[0].Key
 
-	// Second run, same lock file: restored whole, and nothing is saved.
+	// Second run, same lock file: restored whole. This step changes what it
+	// restored (it counts the runs), so the key is saved again as generation 2,
+	// which replaces generation 1.
 	d, log = ce.runWith(t, "demo", text, pushMain(sha1))
 	if d.Status != "succeeded" || !strings.Contains(log, "found n=1") || !strings.Contains(log, "now n=2") ||
-		!strings.Contains(log, "Cache deps: restored key "+key1[:4]+"… (exact, ") || strings.Contains(log, "Cache deps: saved") {
+		!strings.Contains(log, "Cache deps: restored key "+key1[:4]+"… (exact, generation 1") || !strings.Contains(log, "as generation 2 of key") {
 		t.Fatalf("%s\n%s", d.Status, log)
 	}
-	if c := cachesOf(t, d); len(c) != 1 || c[0].Result != engine.CacheHit || c[0].Key != key1 || c[0].Bytes < 9_000_000 {
+	if c := cachesOf(t, d); len(c) != 1 || c[0].Result != engine.CacheSaved || c[0].Restored != engine.CacheHit || c[0].Key != key1 || c[0].EntryKey != key1 ||
+		c[0].Generation != 1 || c[0].SavedGeneration != 2 || c[0].Bytes < 9_000_000 {
 		t.Fatalf("%+v", c)
 	}
 
@@ -159,7 +162,7 @@ func TestCacheRestoreAndSaveEndToEnd(t *testing.T) {
 	// is restored, and the result saved under the new key.
 	sha2 := ce.commit(t, "requirements.txt", "requests==2\n")
 	d, log = ce.runWith(t, "demo", text, pushMain(sha2))
-	if d.Status != "succeeded" || !strings.Contains(log, "found n=1") || !strings.Contains(log, "restored key "+key1[:4]+"… (fallback") ||
+	if d.Status != "succeeded" || !strings.Contains(log, "found n=2") || !strings.Contains(log, "restored key "+key1[:4]+"… (fallback") ||
 		!strings.Contains(log, "Cache deps: saved ") {
 		t.Fatalf("%s\n%s", d.Status, log)
 	}

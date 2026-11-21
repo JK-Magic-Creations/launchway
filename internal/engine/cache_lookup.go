@@ -37,6 +37,12 @@ type CacheEntry struct {
 	SHA256   string `json:"sha256"`
 	// Exact says the key is the one asked for; false for a fallback.
 	Exact bool `json:"exact"`
+	// Generation is which entry of its key this is, AgeSeconds how long ago
+	// its contents were started from scratch, and Content a digest of what
+	// it holds (see executor.ContentDigest).
+	Generation int    `json:"generation"`
+	AgeSeconds int64  `json:"age_seconds"`
+	Content    string `json:"content,omitempty"`
 }
 
 // CacheLookupResult is the answer to a lookup: an entry, or nothing and,
@@ -46,6 +52,13 @@ type CacheLookupResult struct {
 	// Reason says why there is no entry although one might: caching is
 	// turned off, the server keeps no store.
 	Reason string `json:"reason,omitempty"`
+	// Expired is the entry with the key that was found too old to restore
+	// (and nothing newer was restored in its place): the step rebuilds the
+	// cache and saves it as the next generation.
+	Expired *CacheEntry `json:"expired,omitempty"`
+	// MaxAgeSeconds is the longest an entry may be, from when its contents
+	// were started from scratch, for this cache.
+	MaxAgeSeconds int64 `json:"max_age_seconds,omitempty"`
 }
 
 func checkCacheKey(key, platform string) error {
@@ -84,45 +97,74 @@ func (e *Engine) LookupCache(leaseID string, in CacheLookup) (*CacheLookupResult
 	project := cc.st.Project
 	d := cc.declared(in.Name)
 	ns := cc.namespace(in.Name)
-	find := func(exact bool) (*CacheEntry, error) {
+	now := e.now().UnixMilli()
+	maxAge := cc.maxAge(in.Name)
+	cutoff := now - maxAge.Milliseconds()
+	// find looks the newest entry up in the scopes the run reads, in order:
+	// of the key (the newest generation) or, not exact, of the name (the
+	// newest made); fresh leaves out entries older than the maximum age.
+	find := func(exact, fresh bool) (*CacheEntry, error) {
 		for _, scope := range cc.scopes.readFor(d != nil && d.Sensitive) {
-			q := `SELECT id, key, scope, platform, bytes, files, sha256 FROM caches
+			q := `SELECT id, key, scope, platform, bytes, files, sha256, generation, born_at, content FROM caches
 				WHERE project = ? AND scope = ? AND pipeline = ? AND (sensitive = 0 OR scope = ?) AND name = ? AND platform = ? AND status = ? AND store = ?`
 			args := []any{project, scope, ns, cc.scopes.write, in.Name, in.Platform, cacheKept, store.Name()}
 			if exact {
 				q += ` AND key = ?`
 				args = append(args, in.Key)
 			}
-			q += ` ORDER BY created_at DESC, id DESC LIMIT 1`
+			if fresh {
+				q += ` AND born_at >= ?`
+				args = append(args, cutoff)
+			}
+			if exact {
+				q += ` ORDER BY generation DESC, created_at DESC, id DESC LIMIT 1`
+			} else {
+				q += ` ORDER BY created_at DESC, generation DESC, id DESC LIMIT 1`
+			}
 			en := &CacheEntry{Exact: exact}
-			err := e.db.QueryRow(q, args...).Scan(&en.ID, &en.Key, &en.Scope, &en.Platform, &en.Bytes, &en.Files, &en.SHA256)
+			var born int64
+			err := e.db.QueryRow(q, args...).Scan(&en.ID, &en.Key, &en.Scope, &en.Platform, &en.Bytes, &en.Files, &en.SHA256, &en.Generation, &born, &en.Content)
 			if errors.Is(err, sql.ErrNoRows) {
 				continue
 			}
 			if err != nil {
 				return nil, err
 			}
+			en.AgeSeconds = max((now-born)/1000, 0)
 			return en, nil
 		}
 		return nil, nil
 	}
-	en, err := find(true)
-	if err == nil && en == nil && in.Fallback == pipeline.CacheFallbackLatest {
-		en, err = find(false)
+	res := &CacheLookupResult{MaxAgeSeconds: int64(maxAge / time.Second)}
+	en, err := find(true, true)
+	if err == nil && en == nil {
+		// An entry with the key may be there and too old: it is not
+		// restored, and the step is told, so that it is saved again.
+		res.Expired, err = find(true, false)
+		if err == nil && in.Fallback == pipeline.CacheFallbackLatest {
+			en, err = find(false, true)
+		}
 	}
 	if err != nil || en == nil {
-		return &CacheLookupResult{}, err
+		return res, err
 	}
-	// The hit counts only if the entry is still kept: another server may
-	// have evicted it since it was read.
+	// The use counts only if the entry is still kept: another server may
+	// have evicted it since it was read. Only an exact hit keeps the entry
+	// from falling idle: a fallback is a starting point to be replaced, and
+	// restoring it every run must not keep it alive.
 	used := false
 	err = e.artifactTx(func(tx *txx, now int64) error {
 		used = false
-		res, err := tx.Exec(`UPDATE caches SET last_used_at = ?, hits = hits + 1 WHERE id = ? AND status = ?`, now, en.ID, cacheKept)
+		q := `UPDATE caches SET hits = hits + 1, last_used_at = ? WHERE id = ? AND status = ?`
+		args := []any{now, en.ID, cacheKept}
+		if !en.Exact {
+			q, args = `UPDATE caches SET hits = hits + 1 WHERE id = ? AND status = ?`, []any{en.ID, cacheKept}
+		}
+		r, err := tx.Exec(q, args...)
 		if err != nil {
 			return err
 		}
-		n, _ := res.RowsAffected()
+		n, _ := r.RowsAffected()
 		used = n == 1
 		return nil
 	})
@@ -130,9 +172,10 @@ func (e *Engine) LookupCache(leaseID string, in CacheLookup) (*CacheLookupResult
 		return nil, err
 	}
 	if !used {
-		return &CacheLookupResult{}, nil
+		return &CacheLookupResult{MaxAgeSeconds: res.MaxAgeSeconds}, nil
 	}
-	return &CacheLookupResult{Entry: en}, nil
+	res.Entry, res.Expired = en, nil
+	return res, nil
 }
 
 // OpenCache opens an entry's bytes for the step attempt a lease holds, from

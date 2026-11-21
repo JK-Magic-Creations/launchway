@@ -759,7 +759,7 @@ Shows a project's build caches (the `cache:` key of a step), deletes entries, an
 launchway caches list PROJECT [--json]
 launchway caches delete PROJECT --name N | --id ID [--json]
 launchway caches policy get [PROJECT] [--json]
-launchway caches policy set [PROJECT] [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N] [--json]
+launchway caches policy set [PROJECT] [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N] [--max-age-days N] [--json]
 launchway caches policy clear PROJECT [--json]
 ```
 
@@ -768,7 +768,7 @@ launchway caches policy clear PROJECT [--json]
 | `list` | Prints each entry (its ID, name, the start of its key, scope, platform, size, how often and when it was last restored, and the run that wrote it) and the total against the project's quota |
 | `delete` | Ends one entry by `--id`, or every entry of a cache by `--name` (all scopes and keys). The next run that wanted it starts without it and saves it again |
 | `policy get` | Prints the installation's policy, or the one that applies to a project |
-| `policy set` | Changes `enabled`, `max_project_gib` (default 10), `max_entry_gib` (default 2) and `idle_days` (default 7); a flag you leave out keeps its value. With a project, it sets that project's own policy |
+| `policy set` | Changes `enabled`, `max_project_gib` (default 10), `max_entry_gib` (default 2), `idle_days` (default 7) and `max_age_days` (default 7: how old an entry may be before a restore treats it as missing); a flag you leave out keeps its value. With a project, it sets that project's own policy |
 | `policy clear` | Removes a project's own policy, so the installation's applies again |
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.

@@ -198,6 +198,9 @@ type cacheTask struct {
 	// was worked out from (its files' contents as they were before the step).
 	keyParts []executor.KeyPart
 	keyIn    executor.CacheKeyInput
+	// base is the entry the restore used, or found too old: what a save
+	// starts from.
+	base *engine.CacheEntry
 	// restored is what the restore found: hit, fallback or miss.
 	restored string
 	res      engine.CacheResult
@@ -258,6 +261,19 @@ func cacheSize(n int64) string {
 	return sizeText(n)
 }
 
+// ageText is a duration of seconds as days, hours or minutes.
+func ageText(s int64) string {
+	switch d := time.Duration(s) * time.Second; {
+	case d >= 48*time.Hour:
+		return strconv.Itoa(int(d.Hours()/24)) + " days"
+	case d >= 2*time.Hour:
+		return strconv.Itoa(int(d.Hours())) + " hours"
+	case d >= 2*time.Minute:
+		return strconv.Itoa(int(d.Minutes())) + " minutes"
+	}
+	return "under 2 minutes"
+}
+
 func seconds(d time.Duration) float64 { return d.Round(100 * time.Millisecond).Seconds() }
 
 func secondsText(d time.Duration) string {
@@ -309,6 +325,16 @@ func (cr *cacheRun) restoreOne(ctx context.Context, t *cacheTask, out executor.S
 		cr.sys("Cache %s: no entry (%s); the step runs without it", name, t.res.Reason)
 		return
 	}
+	t.res.MaxAgeSeconds = found.MaxAgeSeconds
+	if found.Entry == nil && found.Expired != nil {
+		ex := found.Expired
+		t.restored, t.base = engine.CacheExpired, ex
+		t.res.Result, t.res.EntryKey, t.res.Generation, t.res.AgeSeconds = engine.CacheExpired, ex.Key, ex.Generation, ex.AgeSeconds
+		t.res.Reason = fmt.Sprintf("the entry is %s old, more than the %s this cache may be", ageText(ex.AgeSeconds), ageText(found.MaxAgeSeconds))
+		cr.sys("Cache %s: the entry with this key (generation %d) is %s old, more than the %s this cache may be; it is not restored and the step rebuilds it",
+			name, ex.Generation, ageText(ex.AgeSeconds), ageText(found.MaxAgeSeconds))
+		return
+	}
 	if found.Entry == nil {
 		t.restored = engine.CacheMiss
 		t.res.Reason = found.Reason
@@ -336,14 +362,17 @@ func (cr *cacheRun) restoreOne(ctx context.Context, t *cacheTask, out executor.S
 	}
 	took := time.Since(start)
 	t.res.Bytes, t.res.Scope, t.res.Seconds = en.Bytes, en.Scope, seconds(took)
+	// The entry restored is recorded as it is: its own key (which on a
+	// fallback is not the step's), generation and age.
+	t.base = en
+	t.res.EntryKey, t.res.Generation, t.res.AgeSeconds = en.Key, en.Generation, en.AgeSeconds
 	if en.Exact {
 		t.restored, t.res.Result = engine.CacheHit, engine.CacheHit
-		cr.sys("Cache %s: restored key %s (exact, %s, %s)", name, shortKey(en.Key), cacheSize(en.Bytes), secondsText(took))
+		cr.sys("Cache %s: restored key %s (exact, generation %d, %s old, %s, %s)", name, shortKey(en.Key), en.Generation, ageText(en.AgeSeconds), cacheSize(en.Bytes), secondsText(took))
 		return
 	}
 	t.restored, t.res.Result = engine.CacheFallback, engine.CacheFallback
-	t.res.Key = t.key // the key worked out; the entry restored had another
-	cr.sys("Cache %s: restored key %s (fallback: the step's key is %s; %s, %s)", name, shortKey(en.Key), shortKey(t.key), cacheSize(en.Bytes), secondsText(took))
+	cr.sys("Cache %s: restored key %s (fallback: the step's key is %s; generation %d, %s old, %s, %s)", name, shortKey(en.Key), shortKey(t.key), en.Generation, ageText(en.AgeSeconds), cacheSize(en.Bytes), secondsText(took))
 }
 
 // workOutKey stages the key's files and hashes them with everything else the
@@ -496,9 +525,6 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 		cr.notSaved(t, why)
 		return
 	}
-	if t.restored == engine.CacheHit && !changed {
-		return // the entry with this key is the one the step started from, and entries are never changed
-	}
 	dir := filepath.Join(cr.dir, "save-"+name)
 	defer os.RemoveAll(dir)
 	maxEntry := cr.job.Cache.MaxEntryBytes
@@ -524,6 +550,19 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 		cr.notSaved(t, why)
 		return
 	}
+	// A step that started from an entry with this key and left the paths as
+	// they were restored has nothing to add; one that changed them (an
+	// install that fetched something newer) saves the next generation of the
+	// key, and the entry it replaces ends.
+	content := executor.ContentDigest(staged.Files)
+	if t.restored == engine.CacheHit && !changed && t.base != nil && t.base.Content == content {
+		cr.sys("Cache %s: the step left the cached paths as they were restored; nothing to save", name)
+		return
+	}
+	base := ""
+	if !changed && t.base != nil {
+		base = t.base.ID
+	}
 	archive, err := executor.PackCache(staged.Files, filepath.Join(dir, "archive"))
 	if err != nil {
 		cr.notSaved(t, "packing the files failed: "+err.Error())
@@ -538,7 +577,7 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	err = retry(ctx, func() error {
 		var err error
 		begun, err = cr.r.Client.CacheBegin(ctx, cr.job.LeaseID, engine.BeginCache{Name: name, Key: t.key, Platform: cr.platform,
-			Bytes: archive.Bytes, Files: archive.Files, SHA256: archive.SHA256})
+			Bytes: archive.Bytes, Files: archive.Files, SHA256: archive.SHA256, Base: base, Content: content})
 		return err
 	})
 	if err != nil {
@@ -572,7 +611,11 @@ func (cr *cacheRun) saveOne(ctx context.Context, t *cacheTask) {
 	}
 	t.res.Restored, t.res.Result, t.res.Reason = t.restored, engine.CacheSaved, ""
 	t.res.Bytes, t.res.Scope, t.res.Seconds = archive.Bytes, begun.Scope, seconds(time.Since(start))
-	t.res.Key = t.key
+	t.res.Key, t.res.SavedGeneration = t.key, begun.Generation
+	if begun.Generation > 1 {
+		cr.sys("Cache %s: saved %s as generation %d of key %s (the step changed what was restored)", name, cacheSize(archive.Bytes), begun.Generation, shortKey(t.key))
+		return
+	}
 	cr.sys("Cache %s: saved %s as key %s", name, cacheSize(archive.Bytes), shortKey(t.key))
 }
 

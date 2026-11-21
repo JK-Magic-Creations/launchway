@@ -27,6 +27,15 @@ type BeginCache struct {
 	Bytes    int64  `json:"bytes"`  // of the archive
 	Files    int    `json:"files"`  // in it
 	SHA256   string `json:"sha256"` // of the archive
+	// Base is the entry this one was started from: the one restored,
+	// exactly or as a fallback, or the one found too old. A key that already
+	// has an entry is saved again as a newer generation only by a step that
+	// started from that entry; the contents' age (born_at) carries over from
+	// the base while it is within the maximum age, so that a chain of
+	// refreshes ends and the cache is rebuilt from scratch.
+	Base string `json:"base,omitempty"`
+	// Content is a digest of what the archive holds (see executor.ContentDigest).
+	Content string `json:"content,omitempty"`
 }
 
 // BegunCache says what to send. Exists says the entry is already kept (or
@@ -36,6 +45,8 @@ type BegunCache struct {
 	Exists bool   `json:"exists,omitempty"`
 	Reason string `json:"reason,omitempty"`
 	Scope  string `json:"scope,omitempty"`
+	// Generation is the entry's generation: 1, or more for a key saved again.
+	Generation int `json:"generation,omitempty"`
 	// Evicted is how many of the project's other entries were ended to make
 	// room for the bytes this entry reserves.
 	Evicted    int   `json:"evicted,omitempty"`
@@ -92,16 +103,30 @@ func (e *Engine) BeginCache(ctx context.Context, leaseID string, in BeginCache) 
 	// Entries are immutable: one that exists is not replaced.
 	existing := func(q querier) (*cacheRowT, error) {
 		r, err := scanCache(q.QueryRow(`SELECT `+cacheCols+` FROM caches WHERE project = ? AND scope = ? AND pipeline = ? AND name = ? AND key = ? AND platform = ?
-			AND status IN (?, ?)`, project, scope, ns, in.Name, in.Key, in.Platform, cacheUploading, cacheKept))
+			AND status IN (?, ?) ORDER BY generation DESC LIMIT 1`, project, scope, ns, in.Name, in.Key, in.Platform, cacheUploading, cacheKept))
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return r, err
 	}
+	// What an entry of this key already there means: carry on with this
+	// attempt's own upload, save the next generation (the step started from
+	// the newest entry), or find that it exists.
+	decide := func(r *cacheRowT) (gen int, answer *BegunCache) {
+		switch {
+		case r == nil:
+			return 1, nil
+		case r.Status == cacheUploading && same(r):
+			return 0, &BegunCache{ID: r.ID, Scope: scope, Received: r.Received, ChunkBytes: ArtifactChunkBytes, Generation: r.Generation}
+		case r.Status == cacheKept && in.Base == r.ID:
+			return r.Generation + 1, nil
+		}
+		return 0, existsAnswer(r, scope)
+	}
 	if r, err := existing(e.db); err != nil {
 		return nil, err
-	} else if r != nil && (r.Status != cacheUploading || !same(r)) {
-		return existsAnswer(r, scope), nil
+	} else if _, answer := decide(r); answer != nil && answer.ID == "" {
+		return answer, nil
 	}
 	id := ids.New("cch")
 	blobKey := "caches/" + strings.ReplaceAll(id, "_", "-")
@@ -120,14 +145,14 @@ func (e *Engine) BeginCache(ctx context.Context, leaseID string, in BeginCache) 
 		if err != nil {
 			return err
 		}
-		if r != nil {
-			if r.Status == cacheUploading && same(r) {
-				// This attempt asked before and carries on.
-				out = &BegunCache{ID: r.ID, Scope: scope, Received: r.Received, ChunkBytes: ArtifactChunkBytes}
-				return nil
-			}
-			out = existsAnswer(r, scope)
+		gen, answer := decide(r)
+		if answer != nil {
+			out = answer // exists, or this attempt asked before and carries on
 			return nil
+		}
+		born := now
+		if base := e.cacheBase(tx, cc, in.Base); base != nil && base.BornAt >= now-cc.maxAge(in.Name).Milliseconds() {
+			born = base.BornAt
 		}
 		// The bytes are charged to the project's quota from here, until the
 		// entry ends: what is being uploaded takes room as much as what is
@@ -141,15 +166,23 @@ func (e *Engine) BeginCache(ctx context.Context, leaseID string, in BeginCache) 
 			return errCacheFull
 		}
 		if _, err := tx.Exec(`INSERT INTO caches(id, project, scope, name, key, platform, blob_key, store, sha256, bytes, files, created_run, created_step,
-			created_attempt, created_at, last_used_at, status, upload_id, pipeline, sensitive, generation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
+			created_attempt, created_at, last_used_at, status, upload_id, pipeline, sensitive, generation, content, born_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 			id, project, scope, in.Name, in.Key, in.Platform, blobKey, store.Name(), in.SHA256, in.Bytes, in.Files, cc.l.runID, cc.l.stepID,
-			cc.l.attempt, now, now, cacheUploading, uploadID, ns, sensitive); err != nil {
+			cc.l.attempt, now, now, cacheUploading, uploadID, ns, sensitive, gen, in.Content, born); err != nil {
 			return err
 		}
 		won = true
-		out = &BegunCache{ID: id, Scope: scope, Evicted: evicted, ChunkBytes: ArtifactChunkBytes}
+		out = &BegunCache{ID: id, Scope: scope, Evicted: evicted, ChunkBytes: ArtifactChunkBytes, Generation: gen}
 		return nil
 	})
+	if isConflict(err) {
+		// Another run saved the same generation of the key at the same moment.
+		_ = store.AbortUpload(context.WithoutCancel(ctx), blobKey, uploadID)
+		if r, qerr := existing(e.db); qerr == nil && r != nil {
+			return existsAnswer(r, scope), nil
+		}
+		return nil, err
+	}
 	if err != nil || !won {
 		_ = store.AbortUpload(context.WithoutCancel(ctx), blobKey, uploadID) // even if the caller has gone
 	}
@@ -172,6 +205,8 @@ func checkBeginCache(in BeginCache) error {
 		return fmt.Errorf("%w: an entry holds at most %d files", ErrInvalid, MaxCacheFiles)
 	case !validSHA256(in.SHA256):
 		return fmt.Errorf("%w: the SHA-256 must be 64 lower-case hex digits", ErrInvalid)
+	case in.Content != "" && !validSHA256(in.Content):
+		return fmt.Errorf("%w: the content digest must be 64 lower-case hex digits", ErrInvalid)
 	}
 	return nil
 }
@@ -370,6 +405,9 @@ func (e *Engine) CommitCache(ctx context.Context, leaseID, id string) (*Committe
 		if err := leaseHeld(tx, leaseID); err != nil {
 			return err
 		}
+		if err := lockCacheUsage(tx, r.Project); err != nil {
+			return err
+		}
 		// The entry's bytes were charged to the project when it began (see
 		// BeginCache), so committing only makes it kept.
 		res, err := tx.Exec(`UPDATE caches SET status = ?, last_used_at = ?, hash_state = '', parts = '[]' WHERE id = ? AND status = ?`,
@@ -382,7 +420,7 @@ func (e *Engine) CommitCache(ctx context.Context, leaseID, id string) (*Committe
 			return errCacheMoved
 		}
 		out = &CommittedCache{ID: r.ID, Bytes: r.Bytes}
-		return nil
+		return endOlderGenerations(tx, r, now)
 	})
 	if err != nil {
 		if errors.Is(err, errCacheMoved) || isConflict(err) {

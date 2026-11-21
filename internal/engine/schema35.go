@@ -25,7 +25,11 @@ func init() {
 //	changing any entry (the unique index now covers the generation; a
 //	restore takes the newest). content is a digest of what the entry holds
 //	(paths, modes, sizes and file hashes, not times), so a later step can tell
-//	whether anything changed. cache_policy.max_age_days is how old an entry
+//	whether anything changed. born_at is when the entry's contents were
+//	started from scratch: an entry saved after a restore (a refreshed
+//	generation, or a fallback's superset) keeps the born_at of the one it
+//	started from, so a chain of refreshes ends after max age and the cache
+//	is rebuilt, not kept going for ever. cache_policy.max_age_days is how old an entry
 //	may be, since it was made, before a restore treats it as missing; 0 is the
 //	built-in 7 days.
 //	Entries written before this have pipeline '' and no run reads them: their
@@ -42,6 +46,7 @@ ALTER TABLE caches ADD COLUMN pipeline TEXT NOT NULL DEFAULT '';
 ALTER TABLE caches ADD COLUMN sensitive INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE caches ADD COLUMN generation INTEGER NOT NULL DEFAULT 1;
 ALTER TABLE caches ADD COLUMN content TEXT NOT NULL DEFAULT '';
+ALTER TABLE caches ADD COLUMN born_at {{BIG}} NOT NULL DEFAULT 0;
 ALTER TABLE cache_policy ADD COLUMN max_age_days INTEGER NOT NULL DEFAULT 0;
 DROP INDEX caches_entry;
 CREATE UNIQUE INDEX caches_entry_generation ON caches(project, scope, pipeline, name, key, platform, generation) WHERE status IN ('uploading', 'kept');
@@ -49,5 +54,5 @@ CREATE UNIQUE INDEX caches_entry_generation ON caches(project, scope, pipeline, 
 
 var schemaMarkersCacheTrust = schemaMarker{
 	schema: schemaCacheTrust, feature: "cache scopes per pipeline, sensitive caches and generations",
-	columns: []string{"caches.pipeline", "caches.sensitive", "caches.generation", "caches.content", "cache_policy.max_age_days"},
+	columns: []string{"caches.pipeline", "caches.sensitive", "caches.generation", "caches.content", "caches.born_at", "cache_policy.max_age_days"},
 }

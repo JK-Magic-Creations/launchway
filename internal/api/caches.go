@@ -244,6 +244,7 @@ type cachePolicyIn struct {
 	MaxProjectGiB *float64 `json:"max_project_gib"`
 	MaxEntryGiB   *float64 `json:"max_entry_gib"`
 	IdleDays      *int     `json:"idle_days"`
+	MaxAgeDays    *int     `json:"max_age_days"`
 }
 
 func (in cachePolicyIn) over(cur engine.CachePolicy) engine.CachePolicy {
@@ -259,11 +260,14 @@ func (in cachePolicyIn) over(cur engine.CachePolicy) engine.CachePolicy {
 	if in.IdleDays != nil {
 		cur.IdleDays = *in.IdleDays
 	}
+	if in.MaxAgeDays != nil {
+		cur.MaxAgeDays = *in.MaxAgeDays
+	}
 	return cur
 }
 
 func policyText(v engine.CachePolicyView) string {
-	return fmt.Sprintf("enabled=%v max_project_gib=%g max_entry_gib=%g idle_days=%d (%s)", v.Enabled, v.MaxProjectGiB, v.MaxEntryGiB, v.IdleDays, v.Source)
+	return fmt.Sprintf("enabled=%v max_project_gib=%g max_entry_gib=%g idle_days=%d max_age_days=%d (%s)", v.Enabled, v.MaxProjectGiB, v.MaxEntryGiB, v.IdleDays, v.MaxAgeDays, v.Source)
 }
 
 func (s *Server) getCachePolicy(w http.ResponseWriter, r *http.Request) {

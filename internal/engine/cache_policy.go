@@ -22,11 +22,15 @@ type CachePolicy struct {
 	MaxEntryGiB   float64 `json:"max_entry_gib"`
 	// IdleDays is how long an entry nobody restored is kept.
 	IdleDays int `json:"idle_days"`
+	// MaxAgeDays is how old an entry may be, from when its contents were
+	// started from scratch, before a restore treats it as missing; a cache's
+	// own max_age may be shorter, never longer.
+	MaxAgeDays int `json:"max_age_days"`
 }
 
 // The policy as compiled in: what an installation has until an
 // administrator sets one.
-var defaultCachePolicy = CachePolicy{Enabled: true, MaxProjectGiB: 10, MaxEntryGiB: 2, IdleDays: 7}
+var defaultCachePolicy = CachePolicy{Enabled: true, MaxProjectGiB: 10, MaxEntryGiB: 2, IdleDays: 7, MaxAgeDays: 7}
 
 // CachePolicyView is a policy with where it comes from.
 type CachePolicyView struct {
@@ -46,6 +50,7 @@ type cacheLimits struct {
 	maxProject      int64
 	maxEntry        int64
 	idle            time.Duration
+	maxAge          time.Duration
 	source, project string
 	updatedAt       int64
 	updatedBy       string
@@ -55,13 +60,16 @@ const gib = float64(1 << 30)
 
 func (l cacheLimits) view() CachePolicyView {
 	return CachePolicyView{CachePolicy: CachePolicy{Enabled: l.enabled, MaxProjectGiB: float64(l.maxProject) / gib,
-		MaxEntryGiB: float64(l.maxEntry) / gib, IdleDays: int(l.idle / (24 * time.Hour))},
+		MaxEntryGiB: float64(l.maxEntry) / gib, IdleDays: int(l.idle / (24 * time.Hour)), MaxAgeDays: int(l.maxAge / (24 * time.Hour))},
 		Source: l.source, Project: l.project, UpdatedAt: l.updatedAt, UpdatedBy: l.updatedBy}
 }
 
 func limitsOf(p CachePolicy) cacheLimits {
+	if p.MaxAgeDays == 0 {
+		p.MaxAgeDays = defaultCachePolicy.MaxAgeDays
+	}
 	return cacheLimits{enabled: p.Enabled, maxProject: int64(math.Round(p.MaxProjectGiB * gib)),
-		maxEntry: int64(math.Round(p.MaxEntryGiB * gib)), idle: time.Duration(p.IdleDays) * 24 * time.Hour}
+		maxEntry: int64(math.Round(p.MaxEntryGiB * gib)), idle: time.Duration(p.IdleDays) * 24 * time.Hour, maxAge: time.Duration(p.MaxAgeDays) * 24 * time.Hour}
 }
 
 // CheckCachePolicy returns why a policy cannot be used, or nil.
@@ -75,6 +83,8 @@ func CheckCachePolicy(p CachePolicy) error {
 		return fmt.Errorf("%w: max_entry_gib (%g) is more than max_project_gib (%g): an entry could never be kept", ErrInvalid, p.MaxEntryGiB, p.MaxProjectGiB)
 	case p.IdleDays < 1 || p.IdleDays > 3650:
 		return fmt.Errorf("%w: idle_days is between 1 and 3650", ErrInvalid)
+	case p.MaxAgeDays < 0 || p.MaxAgeDays > 3650:
+		return fmt.Errorf("%w: max_age_days is between 1 and 3650 (0 is the built-in 7)", ErrInvalid)
 	}
 	return nil
 }
@@ -86,16 +96,19 @@ func (e *Engine) readCacheLimits(q querier, project string) (cacheLimits, error)
 		}
 		var l cacheLimits
 		var enabled int
-		var idleDays int
-		err := q.QueryRow(`SELECT enabled, max_project_bytes, max_entry_bytes, idle_days, updated_at, updated_by FROM cache_policy WHERE project = ?`,
-			row.project).Scan(&enabled, &l.maxProject, &l.maxEntry, &idleDays, &l.updatedAt, &l.updatedBy)
+		var idleDays, ageDays int
+		err := q.QueryRow(`SELECT enabled, max_project_bytes, max_entry_bytes, idle_days, max_age_days, updated_at, updated_by FROM cache_policy WHERE project = ?`,
+			row.project).Scan(&enabled, &l.maxProject, &l.maxEntry, &idleDays, &ageDays, &l.updatedAt, &l.updatedBy)
 		if errors.Is(err, sql.ErrNoRows) {
 			continue
 		}
 		if err != nil {
 			return l, err
 		}
-		l.enabled, l.idle, l.source = enabled != 0, time.Duration(idleDays)*24*time.Hour, row.source
+		if ageDays == 0 {
+			ageDays = defaultCachePolicy.MaxAgeDays // a policy written before max age existed
+		}
+		l.enabled, l.idle, l.maxAge, l.source = enabled != 0, time.Duration(idleDays)*24*time.Hour, time.Duration(ageDays)*24*time.Hour, row.source
 		if row.source == "project" {
 			l.project = project
 		}
@@ -142,10 +155,10 @@ func (e *Engine) SetCachePolicy(project string, p CachePolicy, actor string) (be
 		}
 		before = b.view()
 		now := e.now().UnixMilli()
-		if _, err := tx.Exec(`INSERT INTO cache_policy(project, enabled, max_project_bytes, max_entry_bytes, idle_days, updated_at, updated_by)
-			VALUES(?,?,?,?,?,?,?) ON CONFLICT(project) DO UPDATE SET enabled = excluded.enabled, max_project_bytes = excluded.max_project_bytes,
-			max_entry_bytes = excluded.max_entry_bytes, idle_days = excluded.idle_days, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
-			project, boolInt(l.enabled), l.maxProject, l.maxEntry, p.IdleDays, now, actor); err != nil {
+		if _, err := tx.Exec(`INSERT INTO cache_policy(project, enabled, max_project_bytes, max_entry_bytes, idle_days, max_age_days, updated_at, updated_by)
+			VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(project) DO UPDATE SET enabled = excluded.enabled, max_project_bytes = excluded.max_project_bytes,
+			max_entry_bytes = excluded.max_entry_bytes, idle_days = excluded.idle_days, max_age_days = excluded.max_age_days, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+			project, boolInt(l.enabled), l.maxProject, l.maxEntry, p.IdleDays, int(l.maxAge/(24*time.Hour)), now, actor); err != nil {
 			return err
 		}
 		a, err := e.readCacheLimits(tx, project)

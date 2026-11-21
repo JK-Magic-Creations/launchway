@@ -123,3 +123,29 @@ func shortLine(s string) string {
 	}
 	return s
 }
+
+// ContentDigest is a digest of what a cache's files hold: each path, whether
+// it is executable, its size and its SHA-256, in sorted order. Modification
+// times are left out on purpose: a step that touched files without changing
+// them has not changed the cache, and a restored file keeps the time it was
+// saved with. A step that started from an entry whose content is this digest
+// has nothing new to save.
+func ContentDigest(files []StagedFile) string {
+	sorted := slices.Clone(files)
+	slices.SortFunc(sorted, func(a, b StagedFile) int { return strings.Compare(a.Path, b.Path) })
+	h := sha256.New()
+	put := func(s string) {
+		var n [8]byte
+		binary.BigEndian.PutUint64(n[:], uint64(len(s)))
+		h.Write(n[:])
+		h.Write([]byte(s))
+	}
+	put("launchway-cache-content-v1")
+	for _, f := range sorted {
+		put(f.Path)
+		put(strconv.FormatUint(uint64(f.Mode&0o111), 8))
+		put(strconv.FormatInt(f.Size, 10))
+		put(f.SHA256)
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}

@@ -16,9 +16,17 @@ export interface CacheResult {
   key?: string;
   /** What the key was made of: image digest, platform, versions, key files. */
   key_parts?: { label: string; value: string }[];
-  result: "hit" | "fallback" | "miss" | "saved" | "not_saved";
+  /** The entry restored, or found too old: its own key (not the step's on a fallback), generation and age. */
+  entry_key?: string;
+  generation?: number;
+  age_seconds?: number;
+  /** The longest the cache may be before a restore treats it as missing. */
+  max_age_seconds?: number;
+  /** The generation this attempt saved. */
+  saved_generation?: number;
+  result: "hit" | "fallback" | "miss" | "expired" | "saved" | "not_saved";
   /** When saved or not saved: what the restore found. */
-  restored?: "hit" | "fallback" | "miss";
+  restored?: "hit" | "fallback" | "miss" | "expired";
   bytes?: number;
   scope?: string;
   /** Why there was no entry, or why nothing was saved. */
@@ -32,6 +40,7 @@ export interface CachePolicy {
   max_project_gib: number;
   max_entry_gib: number;
   idle_days: number;
+  max_age_days: number;
   /** Whose policy it is: the project's own, the installation's, or what is built in. */
   source: "project" | "installation" | "default";
 }

@@ -67,6 +67,12 @@ type runView struct {
 			Scope    string `json:"scope"`
 			Reason   string `json:"reason"`
 			Key      string `json:"key"`
+			// EntryKey, Generation and AgeSeconds are the entry restored.
+			EntryKey        string `json:"entry_key"`
+			Generation      int    `json:"generation"`
+			AgeSeconds      int64  `json:"age_seconds"`
+			MaxAgeSeconds   int64  `json:"max_age_seconds"`
+			SavedGeneration int    `json:"saved_generation"`
 			KeyParts []struct {
 				Label string `json:"label"`
 				Value string `json:"value"`

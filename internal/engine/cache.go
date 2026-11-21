@@ -114,17 +114,18 @@ type cacheRowT struct {
 	Sensitive  bool
 	Generation int
 	Content    string
+	BornAt     int64
 }
 
 const cacheCols = `id, project, scope, name, key, platform, blob_key, store, sha256, bytes, files, created_run, created_step, created_attempt,
-	created_at, last_used_at, hits, status, ended_at, upload_id, received, hash_state, parts, pipeline, sensitive, generation, content`
+	created_at, last_used_at, hits, status, ended_at, upload_id, received, hash_state, parts, pipeline, sensitive, generation, content, born_at`
 
 func scanCache(r interface{ Scan(...any) error }) (*cacheRowT, error) {
 	c := &cacheRowT{}
 	var parts string
 	var sens int
 	err := r.Scan(&c.ID, &c.Project, &c.Scope, &c.Name, &c.Key, &c.Platform, &c.BlobKey, &c.Store, &c.SHA256, &c.Bytes, &c.Files, &c.CreatedRun,
-		&c.CreatedStep, &c.CreatedAttempt, &c.CreatedAt, &c.LastUsedAt, &c.Hits, &c.Status, &c.EndedAt, &c.UploadID, &c.Received, &c.HashState, &parts, &c.Pipeline, &sens, &c.Generation, &c.Content)
+		&c.CreatedStep, &c.CreatedAttempt, &c.CreatedAt, &c.LastUsedAt, &c.Hits, &c.Status, &c.EndedAt, &c.UploadID, &c.Received, &c.HashState, &parts, &c.Pipeline, &sens, &c.Generation, &c.Content, &c.BornAt)
 	if err != nil {
 		return nil, err
 	}

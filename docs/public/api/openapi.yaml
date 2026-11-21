@@ -1022,7 +1022,7 @@ paths:
             x-launchway-access: admin
     /api/v1/cache-policy:
         get:
-            description: 'The installation''s policy: enabled, max_project_gib, max_entry_gib, idle_days, and source (default until an administrator sets one).'
+            description: 'The installation''s policy: enabled, max_project_gib, max_entry_gib, idle_days, max_age_days, and source (default until an administrator sets one).'
             operationId: get_api_v1_cache_policy
             responses:
                 "200":
@@ -1039,7 +1039,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The installation''s policy: enabled, max_project_gib, max_entry_gib, idle_days, and source (default until an administrator sets one).'
+            summary: 'The installation''s policy: enabled, max_project_gib, max_entry_gib, idle_days, max_age_days, and source (default until an administrator sets one).'
             tags:
                 - cache-policy
             x-launchway-access: signed-in
@@ -2419,7 +2419,7 @@ paths:
             x-launchway-access: project-operator
             x-launchway-audit: cache.delete
         get:
-            description: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, and run_id and run_number of the run that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
+            description: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the run that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
             operationId: get_api_v1_projects_name_caches
             parameters:
                 - in: path
@@ -2444,7 +2444,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, and run_id and run_number of the run that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
+            summary: 'The project''s entries, most recently used first: id, name, key, scope, platform, bytes, files, status (kept or uploading), created_at, last_used_at, hits, pipeline, generation, sensitive, and run_id and run_number of the run that wrote it; totals (entries, bytes, quota_bytes, max_entry_bytes, idle_days) and the policy that applies.'
             tags:
                 - projects
             x-launchway-access: project-viewer

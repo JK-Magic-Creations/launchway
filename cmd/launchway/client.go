@@ -666,6 +666,16 @@ func (cl *client) show(args []string) error {
 				what += ": " + c.Reason
 			}
 			fmt.Fprintf(cl.out, "             cache %s: %s\n", c.Name, what)
+			if c.EntryKey != "" {
+				used := "entry restored"
+				if c.Result == "expired" {
+					used = "entry found too old"
+				}
+				fmt.Fprintf(cl.out, "               %s: key %s, generation %d, %s old (a cache may be %s)\n", used, c.EntryKey, c.Generation, durationText(c.AgeSeconds), durationText(c.MaxAgeSeconds))
+			}
+			if c.SavedGeneration > 0 {
+				fmt.Fprintf(cl.out, "               saved generation %d\n", c.SavedGeneration)
+			}
 			if c.Key != "" {
 				fmt.Fprintf(cl.out, "               key %s, made of:\n", c.Key)
 				for _, p := range c.KeyParts {
@@ -939,4 +949,18 @@ func (cl *client) rerun(args []string) error {
 		})
 	}
 	return cl.followRun(run.ID, true, *timeout, *asJSON, "Started a re-run, run %s.\n")
+}
+
+// durationText is a count of seconds as days, hours or minutes.
+func durationText(s int64) string {
+	d := time.Duration(s) * time.Second
+	switch {
+	case d >= 48*time.Hour:
+		return fmt.Sprintf("%d days", int(d.Hours()/24))
+	case d >= 2*time.Hour:
+		return fmt.Sprintf("%d hours", int(d.Hours()))
+	case d >= 2*time.Minute:
+		return fmt.Sprintf("%d minutes", int(d.Minutes()))
+	}
+	return "under 2 minutes"
 }

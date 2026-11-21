@@ -15,7 +15,7 @@ const cachesUsage = `Usage:
   launchway caches delete PROJECT --name N | --id ID  end one cache entry, or every entry of a cache
   launchway caches policy get [PROJECT] [--json]      whether caches are kept, and how much
   launchway caches policy set [PROJECT]               change the policy (administrators)
-                     [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N]
+                     [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N] [--max-age-days N]
   launchway caches policy clear PROJECT               drop a project's own policy (administrators)
 
 Listing needs the rights to read the project, deleting those to operate it, and the
@@ -156,8 +156,8 @@ func printPolicy(cl *client, v engine.CachePolicyView) {
 	} else {
 		fmt.Fprintf(cl.out, "Caching is on (%s). ", v.Source)
 	}
-	fmt.Fprintf(cl.out, "A project keeps at most %g GiB, an entry at most %g GiB, and an entry nobody restores is ended after %d days.\n",
-		v.MaxProjectGiB, v.MaxEntryGiB, v.IdleDays)
+	fmt.Fprintf(cl.out, "A project keeps at most %g GiB, an entry at most %g GiB, and an entry nobody restores is ended after %d days; a restore of one older than %d days counts as a miss and the step rebuilds it.\n",
+		v.MaxProjectGiB, v.MaxEntryGiB, v.IdleDays, v.MaxAgeDays)
 }
 
 func (cl *client) cachesPolicyGet(args []string) error {
@@ -187,14 +187,15 @@ func (cl *client) cachesPolicySet(args []string) error {
 	maxProject := fs.Float64("max-project-gib", 0, "how much one project's entries may add up to, in GiB")
 	maxEntry := fs.Float64("max-entry-gib", 0, "the most one entry may hold, in GiB")
 	idle := fs.Int("idle-days", 0, "how long an entry nobody restored is kept")
+	maxAge := fs.Int("max-age-days", 0, "how old an entry may be before a restore treats it as missing and the step rebuilds it")
 	asJSON := fs.Bool("json", false, "print as JSON")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	given := visited(fs)
-	if len(pos) > 1 || (!given["enabled"] && !given["max-project-gib"] && !given["max-entry-gib"] && !given["idle-days"]) {
-		return usageErr("launchway caches policy set [PROJECT] [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N]")
+	if len(pos) > 1 || (!given["enabled"] && !given["max-project-gib"] && !given["max-entry-gib"] && !given["idle-days"] && !given["max-age-days"]) {
+		return usageErr("launchway caches policy set [PROJECT] [--enabled=false] [--max-project-gib N] [--max-entry-gib N] [--idle-days N] [--max-age-days N]")
 	}
 	body := map[string]any{}
 	if given["enabled"] {
@@ -208,6 +209,9 @@ func (cl *client) cachesPolicySet(args []string) error {
 	}
 	if given["idle-days"] {
 		body["idle_days"] = *idle
+	}
+	if given["max-age-days"] {
+		body["max_age_days"] = *maxAge
 	}
 	project := ""
 	if len(pos) == 1 {
