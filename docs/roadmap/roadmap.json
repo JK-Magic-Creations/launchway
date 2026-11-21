@@ -2898,24 +2898,24 @@
           "blurb": "One connected picture of code, dependencies, images and deployments.",
           "items": [
             {
-              "status": "available",
+              "status": "in-progress",
               "title": "What software needs, and what can run it",
               "value": "Write what a component needs in one small file, or let Launchway infer it and say so; see which machines satisfy it and what is missing.",
-              "detail": "Launchway can write a neutral machine specification for components that run together. Nothing is provisioned from it yet.",
+              "detail": "Launchway can write a neutral machine specification for components that run together. Nothing is provisioned from it yet. Built and tested, in final integration; not yet on the main branch.",
               "link": "reference/requirements-file"
             },
             {
-              "status": "available",
+              "status": "in-progress",
               "title": "Build order across repositories",
               "value": "Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason.",
-              "detail": "The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned.",
+              "detail": "The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned. Built and tested, in final integration; not yet on the main branch.",
               "link": "guide/software-graph"
             },
             {
-              "status": "available",
+              "status": "in-progress",
               "title": "One graph from code to where it runs",
               "value": "See what depends on what, what is built from what, what is affected by a change and where it runs, as a table or a picture.",
-              "detail": "Built from manifests, Containerfiles, pipelines, the results of Sorties and Launches, in the database Launchway already has. Every answer holds only what you may read, and says when it is not the whole answer.",
+              "detail": "Built from manifests, Containerfiles, pipelines, the results of Sorties and Launches, in the database Launchway already has. Every answer holds only what you may read, and says when it is not the whole answer. Built and tested, in final integration; not yet on the main branch.",
               "link": "guide/software-graph"
             },
             {

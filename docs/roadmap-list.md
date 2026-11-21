@@ -581,9 +581,9 @@ One connected picture of code, dependencies, images and deployments, so you alwa
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [What software needs, and what can run it](roadmap/milestone-5.md#what-software-needs-and-what-can-run-it) | Available | Write what a component needs in one small file, or let Launchway infer it and say so; see which machines satisfy it and what is missing. ([docs](reference/requirements-file.md)) |
-| [Build order across repositories](roadmap/milestone-5.md#build-order-across-repositories) | Available | Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. ([docs](guide/software-graph.md)) |
-| [One graph from code to where it runs](roadmap/milestone-5.md#one-graph-from-code-to-where-it-runs) | Available | See what depends on what, what is built from what, what is affected by a change and where it runs, as a table or a picture. ([docs](guide/software-graph.md)) |
+| [What software needs, and what can run it](roadmap/milestone-5.md#what-software-needs-and-what-can-run-it) | In progress | Write what a component needs in one small file, or let Launchway infer it and say so; see which machines satisfy it and what is missing. ([docs](reference/requirements-file.md)) |
+| [Build order across repositories](roadmap/milestone-5.md#build-order-across-repositories) | In progress | Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. ([docs](guide/software-graph.md)) |
+| [One graph from code to where it runs](roadmap/milestone-5.md#one-graph-from-code-to-where-it-runs) | In progress | See what depends on what, what is built from what, what is affected by a change and where it runs, as a table or a picture. ([docs](guide/software-graph.md)) |
 | [Findings and SBOMs per run](roadmap/milestone-5.md#findings-and-sboms-per-run) | Available | The starting point already works: findings and components recorded for every Sortie. ([docs](guide/security-findings.md)) |
 | [What is deployed where](roadmap/milestone-5.md#what-is-deployed-where) | In progress | Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes. ([docs](guide/software-graph.md)) |
 | [A continuous observer of what runs](roadmap/milestone-5.md#a-continuous-observer-of-what-runs) | Planned | Watch clusters and hosts for what is actually running, not only what was deployed. |

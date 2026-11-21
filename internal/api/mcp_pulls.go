@@ -54,7 +54,7 @@ func addPullTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Merge a pull request by merge commit, squash or rebase, made on the server so a push that arrives meanwhile is never lost. If the rules are not met the answer says in one sentence what is missing (needs 1 more approval; `test` has not passed). An administrator may merge past the rules with a bypass_reason, which is recorded. Audited."},
 		mcpCallTimeout, mergePullRequest)
 	addTool(srv, c, &mcp.Tool{Name: "queue_pull_request", Annotations: changes("Add a pull request to the merge queue, or take it out", false, false),
-		Description: "Action queue (default) adds a ready pull request to its branch's merge queue (method merge, squash or rebase); action dequeue takes it out. The Holding pattern brings the branch up to date, waits for the required checks of that head and merges in order; a pull request that fails or changes is taken out with the reason. Needs the operator role to add; the author or an operator may take it out. Audited."},
+		Description: "Action queue (default) adds a ready pull request to its branch's merge queue (method merge, squash or rebase); action dequeue takes it out. The queue brings the branch up to date, waits for the required checks of that head and merges in order; a pull request that fails or changes is taken out with the reason. Needs the operator role to add; the author or an operator may take it out. Audited."},
 		mcpCallTimeout, queuePullRequest)
 	addTool(srv, c, &mcp.Tool{Name: "update_pull_branch", Annotations: changes("Bring a pull request's branch up to date", false, false),
 		Description: "Merge the target branch into the pull request's source branch (or rebase it, which rewrites the branch). A push like any other: the branch's rules apply and its checks run on the new head. Needs the operator role. Audited."},
@@ -790,7 +790,7 @@ func queuePullRequest(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, i
 		err := c.apiJSON(ctx, "queue_pull_request", http.MethodPost, p, map[string]any{"method": in.Method, "priority": in.Priority}, &out)
 		return out, err
 	case "dequeue":
-		return queueEntryOut{PullNumber: in.Number, State: "removed", Reason: "taken out of the Holding pattern"}, c.apiJSON(ctx, "queue_pull_request", http.MethodDelete, p, nil, nil)
+		return queueEntryOut{PullNumber: in.Number, State: "removed", Reason: "taken out of the queue"}, c.apiJSON(ctx, "queue_pull_request", http.MethodDelete, p, nil, nil)
 	}
 	return queueEntryOut{}, errors.New("action is queue or dequeue")
 }

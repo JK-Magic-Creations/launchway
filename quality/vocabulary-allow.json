@@ -425,6 +425,111 @@
       "rule": "word:queue/3",
       "contains": "message queues",
       "why": "Message queues of other systems, not Launchway's Holding pattern."
+    },
+    {
+      "path": "cmd/launchway/pr.go",
+      "rule": "word:queue/3",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "cmd/launchway/pr.go",
+      "rule": "word:queue/1",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "cmd/launchway/pr.go",
+      "rule": "word:queue/2",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "cmd/launchway/pr_review.go",
+      "rule": "word:queue/3",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "cmd/launchway/pr_review.go",
+      "rule": "word:queue/1",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "cmd/launchway/pr_review.go",
+      "rule": "word:queue/2",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/forge_pulls.go",
+      "rule": "word:queue/3",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/forge_pulls.go",
+      "rule": "word:queue/1",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/forge_pulls.go",
+      "rule": "word:queue/2",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/forge_pulls_queue.go",
+      "rule": "word:queue/3",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/forge_pulls_queue.go",
+      "rule": "word:queue/1",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/forge_pulls_queue.go",
+      "rule": "word:queue/2",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/mcp_pulls.go",
+      "rule": "word:queue/3",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/mcp_pulls.go",
+      "rule": "word:queue/1",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "internal/api/mcp_pulls.go",
+      "rule": "word:queue/2",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "web/src/pages/PullRequest.tsx",
+      "rule": "word:queue/3",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "web/src/pages/PullRequest.tsx",
+      "rule": "word:queue/1",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "web/src/pages/PullRequest.tsx",
+      "rule": "word:queue/2",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "web/src/guided/pullNeeds.ts",
+      "rule": "word:queue/3",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "web/src/guided/pullNeeds.ts",
+      "rule": "word:queue/1",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
+    },
+    {
+      "path": "web/src/guided/pullNeeds.ts",
+      "rule": "word:queue/2",
+      "why": "The queue in a pull request's file is the merge queue (the line of pull requests waiting to merge into one branch), not the Holding pattern of Sorties."
     }
   ]
 }

@@ -82,7 +82,7 @@ func (cl *client) prQueue(args []string) error {
 	f := newPRFlags("queue")
 	method := f.fs.String("method", "", "merge, squash or rebase (default: the repository's)")
 	priority := f.fs.Int("priority", 0, "a higher number goes first (administrators)")
-	cancel := f.fs.Bool("cancel", false, "take it out of the Holding pattern")
+	cancel := f.fs.Bool("cancel", false, "take it out of the queue")
 	if err := f.parse(args); err != nil {
 		return err
 	}

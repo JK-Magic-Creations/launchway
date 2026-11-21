@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 5 available · 2 in progress · 25 planned · 32 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 5 in progress · 25 planned · 32 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -47,7 +47,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Know what you run](#g-know-what-you-run) | 15 | 4 | 1 | 10 |
+| [Know what you run](#g-know-what-you-run) | 15 | 1 | 4 | 10 |
 | [Fix it safely](#g-fix-it-safely) | 6 | 1 | 1 | 4 |
 | [Build and release in dependency order](#g-build-and-release-in-dependency-order) | 11 | 0 | 0 | 11 |
 
@@ -57,25 +57,25 @@ One connected picture of code, dependencies, images and deployments.
 
 #### What software needs, and what can run it {#what-software-needs-and-what-can-run-it}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Write what a component needs in one small file, or let Launchway infer it and say so; see which machines satisfy it and what is missing. Launchway can write a neutral machine specification for components that run together. Nothing is provisioned from it yet.
+Write what a component needs in one small file, or let Launchway infer it and say so; see which machines satisfy it and what is missing. Launchway can write a neutral machine specification for components that run together. Nothing is provisioned from it yet. Built and tested, in final integration; not yet on the main branch.
 
 [Read the documentation](../reference/requirements-file.md)
 
 #### Build order across repositories {#build-order-across-repositories}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned.
+Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason. The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned. Built and tested, in final integration; not yet on the main branch.
 
 [Read the documentation](../guide/software-graph.md)
 
 #### One graph from code to where it runs {#one-graph-from-code-to-where-it-runs}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-See what depends on what, what is built from what, what is affected by a change and where it runs, as a table or a picture. Built from manifests, Containerfiles, pipelines, the results of Sorties and Launches, in the database Launchway already has. Every answer holds only what you may read, and says when it is not the whole answer.
+See what depends on what, what is built from what, what is affected by a change and where it runs, as a table or a picture. Built from manifests, Containerfiles, pipelines, the results of Sorties and Launches, in the database Launchway already has. Every answer holds only what you may read, and says when it is not the whole answer. Built and tested, in final integration; not yet on the main branch.
 
 [Read the documentation](../guide/software-graph.md)
 

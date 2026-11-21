@@ -51,7 +51,7 @@ func (s *Server) pullEnqueue(w http.ResponseWriter, r *http.Request) {
 	}
 	id := identityFrom(r)
 	if in.Priority != 0 && !s.authorize(id, auth.AdministerProject, repo.Path) {
-		writeErr(w, http.StatusForbidden, "only an administrator of the repository can give a pull request priority in the Holding pattern")
+		writeErr(w, http.StatusForbidden, "only an administrator of the repository can give a pull request priority in the queue")
 		return
 	}
 	e, err := s.Forge.Pulls.Enqueue(r.Context(), repo.ID, repo.Path, p, in.Method, id.User, s.pullRole(id, repo.Path), in.Priority)
@@ -71,14 +71,14 @@ func (s *Server) pullDequeue(w http.ResponseWriter, r *http.Request) {
 	}
 	id := identityFrom(r)
 	if p.Author != id.User && !s.authorize(id, auth.Operate, repo.Path) {
-		writeErr(w, http.StatusForbidden, "only the author of the pull request or an operator can take it out of the Holding pattern")
+		writeErr(w, http.StatusForbidden, "only the author of the pull request or an operator can take it out of the queue")
 		return
 	}
 	if err := s.Forge.Pulls.Dequeue(r.Context(), repo.ID, p, id.User); err != nil {
 		s.failPull(w, err)
 		return
 	}
-	setAudit(r, repo.Path, fmt.Sprintf("#%d taken out of the Holding pattern", p.Number))
+	setAudit(r, repo.Path, fmt.Sprintf("#%d taken out of the queue", p.Number))
 	w.WriteHeader(http.StatusNoContent)
 }
 
