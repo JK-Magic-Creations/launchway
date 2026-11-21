@@ -387,9 +387,10 @@ func (s *Store) connected(ctx context.Context, cache string, current map[string]
 	if n == 0 {
 		return nil
 	}
-	in.WriteString("--not\n")
+	// What the repository already has is excluded with a ^ before each tip: the git that Launchway
+	// supports at the least (2.38) does not read "--not" from its standard input.
 	for _, t := range current {
-		in.WriteString(t + "\n")
+		in.WriteString("^" + t + "\n")
 	}
 	if _, err := s.git(ctx, cache, in.String(), "rev-list", "--objects", "--quiet", "--stdin"); err != nil {
 		return fmt.Errorf("the objects of the new refs are not all there: %w", err)
