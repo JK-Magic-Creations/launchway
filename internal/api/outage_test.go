@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -145,9 +146,26 @@ func TestRestartedRunnerDeliversTheSpool(t *testing.T) {
 	e := setupGated(t)
 	first := e.newSpoolRunner("r1")
 	cancel, done := e.startRunner(t, first)
-	id := e.start(t, outagePipeline)
+	// The step ends when the test says so, not after a fixed time: on a loaded
+	// machine the test can be slow to switch the server off, and a step that
+	// had already finished and delivered would leave no spool to find.
+	release := e.dir + "/release"
+	id := e.start(t, `
+pipeline: demo
+steps:
+  work:
+    image: none
+    run: |
+      echo one
+      while [ ! -e `+release+` ]; do sleep 0.05; done
+      echo two
+      echo three
+`)
 	waitFor(t, "the first line", 20*time.Second, func() bool { return strings.Contains(e.logText(id, "work"), "one") })
 	e.g.down.Store(1)
+	if err := os.WriteFile(release, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	// The step ends while the server is gone; its result is on disk.
 	waitFor(t, "the result on disk", 20*time.Second, func() bool {
 		return spoolHasResult(e.dir + "/runner-data/spool")
