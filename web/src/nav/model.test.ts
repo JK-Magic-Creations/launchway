@@ -29,8 +29,8 @@ describe("sections", () => {
   });
   it("hides what a person may not use", () => {
     const tabs = (m: ReturnType<typeof me>) => visibleTabs(section("settings"), { me: m, facts: facts() }).map((t) => t.id);
-    expect(tabs(me({ admin: false, runners: false }))).toEqual(["overview", "access", "approvals"]);
-    expect(tabs(me())).toEqual(["overview", "runners", "access", "approvals", "rules", "words", "audit", "config"]);
+    expect(tabs(me({ admin: false, runners: false }))).toEqual(["overview", "access", "approvals", "variables"]);
+    expect(tabs(me())).toEqual(["overview", "runners", "access", "approvals", "rules", "variables", "words", "audit", "config"]);
   });
   it("never lists a tab twice or without an address", () => {
     for (const s of SECTIONS) {

@@ -117,23 +117,27 @@ func (m *Manager) bindOptions() pipeline.BindOptions {
 // input values and completes them with defaults, binds the pipeline to
 // them and expands its templates. Problems with the values are
 // pipeline.InputErrors; with the pipeline, pipeline.Problems.
-func (m *Manager) prepare(ctx context.Context, pl *pipeline.Pipeline, given, overrides map[string]string) (*pipeline.Pipeline, []engine.LibrarySource, map[string]string, error) {
-	vals, err := pipeline.ResolveInputs(pl, given)
+func (m *Manager) prepare(ctx context.Context, project string, pl *pipeline.Pipeline, given, overrides map[string]string) (*pipeline.Pipeline, []engine.LibrarySource, map[string]string, *varRecord, error) {
+	vars, env, err := m.bindVariables(ctx, project, pl, given)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
+	}
+	vals, used, err := pipeline.ResolveInputsWith(pl, given, vars)
+	if err != nil {
+		return nil, nil, nil, nil, err
 	}
 	b, err := pipeline.Bind(pl, vals, m.bindOptions())
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
-	x, libs, err := m.Expand(ctx, b, overrides)
+	x, libs, used2, err := m.expandVars(ctx, b, overrides, 0, vars)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	if len(vals) == 0 {
 		vals = nil
 	}
-	return x, libs, vals, nil
+	return x, libs, vals, &varRecord{env: env, used: mergeUsed(used, used2)}, nil
 }
 
 // preview binds a pipeline for showing it: with the defaults, loops whose
@@ -175,14 +179,14 @@ func (m *Manager) StartRunWith(ctx context.Context, rq StartRequest) (*engine.Ru
 	if err != nil {
 		return nil, startProblem(r, err)
 	}
-	pl, libs, vals, err := m.prepare(ctx, pl, rq.Inputs, rq.Libraries)
+	pl, libs, vals, rec, err := m.prepare(ctx, rq.Project, pl, rq.Inputs, rq.Libraries)
 	if err != nil {
 		return nil, startProblem(r, err)
 	}
 	t := trigger(r, pipeline.EventManual, rq.Actor)
 	t.Inputs = vals
-	return m.eng.CreateRun(engine.NewRun{Project: rq.Project, Pipeline: pl, Trigger: t,
-		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}})
+	return m.createRun(ctx, engine.NewRun{Project: rq.Project, Pipeline: pl, Trigger: t,
+		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}}, rec)
 }
 
 // startProblem passes on problems a caller can fix, and words others.
@@ -414,14 +418,14 @@ func (m *Manager) fire(ctx context.Context, p *project, s *pipeline.Schedule, f 
 	if err != nil {
 		return startProblem(r, err)
 	}
-	pl, libs, vals, err := m.prepare(ctx, pl, s.Inputs, nil)
+	pl, libs, vals, rec, err := m.prepare(ctx, p.Name, pl, s.Inputs, nil)
 	if err != nil {
 		return startProblem(r, err)
 	}
 	t := trigger(r, pipeline.EventSchedule, "schedule")
 	t.Inputs, t.Schedule, t.ScheduledFor = vals, describeSchedule(s), f.At
-	run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t, Fire: &f,
-		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}})
+	run, err := m.createRun(ctx, engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t, Fire: &f,
+		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}}, rec)
 	switch {
 	case errors.Is(err, engine.ErrAlreadyClaimed):
 		return nil
@@ -603,7 +607,7 @@ func (m *Manager) StartWebhook(ctx context.Context, rq WebhookRequest) (run *eng
 			return nil, false, startProblem(r, err)
 		}
 	}
-	pl, libs, vals, err := m.prepare(ctx, pl, given, nil)
+	pl, libs, vals, rec, err := m.prepare(ctx, rq.Project, pl, given, nil)
 	if err != nil {
 		return nil, false, startProblem(r, err)
 	}
@@ -613,7 +617,7 @@ func (m *Manager) StartWebhook(ctx context.Context, rq WebhookRequest) (run *eng
 	if rq.Key != "" {
 		nr.Delivery = &engine.Delivery{Hook: rq.Name, Key: rq.Key, BodyHash: rq.BodyHash}
 	}
-	run, err = m.eng.CreateRun(nr)
+	run, err = m.createRun(ctx, nr, rec)
 	if errors.Is(err, engine.ErrAlreadyClaimed) {
 		// Another call with the key got there first, a moment ago.
 		run, err = m.repeated(rq)

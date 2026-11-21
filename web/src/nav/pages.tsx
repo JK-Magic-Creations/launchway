@@ -18,6 +18,8 @@ const EditPipelinePage = lz(() => import("../pages/EditPipeline"), "EditPipeline
 const ProjectTestsPage = lz(() => import("../pages/ProjectTests"), "ProjectTestsPage");
 const ProjectSecurityPage = lz(() => import("../pages/ProjectSecurity"), "ProjectSecurityPage");
 const ProjectCachesPage = lz(() => import("../pages/Caches"), "ProjectCachesPage");
+const ProjectVariablesPage = lz(() => import("../pages/Variables"), "ProjectVariablesPage");
+const SettingsVariablesPage = lz(() => import("../pages/Variables"), "SettingsVariablesPage");
 const PlaygroundPage = lz(() => import("../pages/Playground"), "PlaygroundPage");
 const RunsPage = lz(() => import("../pages/Activity"), "ActivityPage");
 const RunPage = lz(() => import("../pages/Run"), "RunPage");
@@ -66,6 +68,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/tests": return <ProjectTestsPage key={p.name} name={p.name} />;
     case "/projects/:name/security": return <ProjectSecurityPage key={p.name} name={p.name} />;
     case "/projects/:name/caches": return <ProjectCachesPage key={p.name} name={p.name} />;
+    case "/projects/:name/variables": return <ProjectVariablesPage key={p.name} name={p.name} />;
     case "/playground": return <PlaygroundPage />;
     case "/activity": return <RunsPage />;
     case "/activity/approvals": return <ApprovalsPage approvals={approvals} />;
@@ -95,6 +98,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/settings/approvals": return <SettingsApprovalsPage />;
     case "/settings/rules": return <PolicyPage />;
     case "/settings/audit": return <AuditPage />;
+    case "/settings/variables": return <SettingsVariablesPage />;
     case "/settings/words": return <SettingsWordsPage />;
     case "/config": return <ConfigHomePage />;
     case "/config/wizard/:id": return <WizardPage key={p.id} id={p.id} />;

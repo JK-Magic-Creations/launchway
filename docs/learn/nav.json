@@ -69,6 +69,7 @@
         "guide/approvals-and-reruns",
         "guide/test-reports",
         "guide/artifacts",
+        "guide/variables",
         "guide/build-caches",
         "artifacts",
         "guide/security-findings",

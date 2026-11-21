@@ -24,10 +24,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -103,73 +101,6 @@ func EnvName(s string) string {
 			return '_'
 		}
 	}, s)
-}
-
-// Param is one parameter a template declares.
-type Param struct {
-	Name        string   `json:"name"`
-	Type        string   `json:"type"` // string, number or boolean
-	Default     *string  `json:"default,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Options     []string `json:"options,omitempty"`
-	// SecretReference says a step takes its secret reference's store, key or
-	// field from the parameter; set when templates are described.
-	SecretReference bool `json:"secret_reference,omitempty"`
-	Line            int  `json:"-"`
-}
-
-// check returns why v is not a value of the parameter, or "".
-func (p *Param) check(v string) string {
-	switch p.Type {
-	case paramTypeNumber:
-		f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
-		if err != nil || math.IsInf(f, 0) || math.IsNaN(f) {
-			return fmt.Sprintf("%s is a number; %q is not one", p.Name, v)
-		}
-	case paramTypeBoolean:
-		if v != "true" && v != "false" {
-			return fmt.Sprintf("%s is true or false; %q is neither", p.Name, v)
-		}
-	case paramTypeList:
-		if _, msg := ParseList(v); msg != "" {
-			return fmt.Sprintf("%s is a list: %s", p.Name, msg)
-		}
-	default:
-		switch {
-		case len(v) > MaxParamValueLen:
-			return fmt.Sprintf("the value of %s is longer than %d bytes", p.Name, MaxParamValueLen)
-		case !utf8.ValidString(v) || strings.ContainsRune(v, 0):
-			return fmt.Sprintf("the value of %s is not text", p.Name)
-		}
-	}
-	if len(p.Options) > 0 {
-		for _, o := range p.Options {
-			if sameValue(p.Type, o, v) {
-				return ""
-			}
-		}
-		return fmt.Sprintf("%s must be one of %s; %q is not", p.Name, strings.Join(quoteAll(p.Options), ", "), v)
-	}
-	return ""
-}
-
-// sameValue compares two values of a parameter type: numbers by value,
-// everything else as written.
-func sameValue(typ, a, b string) bool {
-	if typ == paramTypeNumber {
-		x, err1 := strconv.ParseFloat(strings.TrimSpace(a), 64)
-		y, err2 := strconv.ParseFloat(strings.TrimSpace(b), 64)
-		return err1 == nil && err2 == nil && x == y
-	}
-	return a == b
-}
-
-func quoteAll(list []string) []string {
-	out := make([]string, len(list))
-	for i, s := range list {
-		out[i] = strconv.Quote(s)
-	}
-	return out
 }
 
 // paramScope is what a template being read knows about its parameters.
@@ -467,7 +398,7 @@ var templateKeys = []string{"template", "description", "params", "containers", "
 // use passes are reported through withProblem, in the file that has the
 // use; problems in the template itself are returned.
 func readTemplate(data []byte, name string, with map[string]string, withLines map[string]*yamlPos, usesLine int,
-	withProblem func(line, col int, path, msg string), loopLimit int, prefix string) (*Template, Problems) {
+	withProblem func(line, col int, path, msg string), loopLimit int, prefix string, vb *varBinding) (*Template, Problems) {
 	if len(data) > MaxFileBytes {
 		return nil, Problems{{Message: fmt.Sprintf("the template is larger than %d KiB", MaxFileBytes>>10)}}
 	}
@@ -528,7 +459,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 			withProblem(pos.Line, pos.Column, "with."+k, msg)
 			continue
 		}
-		if msg := p.check(with[k]); msg != "" {
+		if msg := vb.checkWith(p, with[k]); msg != "" {
 			withOK = false
 			withProblem(pos.Line, pos.Column, "with."+k, msg)
 			continue
@@ -538,18 +469,8 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 			scope.values[k] = canonList(with[k])
 		}
 	}
-	for _, p := range t.Params {
-		if _, ok := scope.values[p.Name]; ok {
-			continue
-		}
-		if p.Default == nil {
-			if _, given := with[p.Name]; !given {
-				withOK = false
-				withProblem(usesLine, 0, "with."+p.Name, fmt.Sprintf("the template %s needs a value for %s, which has no default: add it under with:", name, p.Name))
-			}
-			continue
-		}
-		scope.values[p.Name] = *p.Default
+	if !fillParams(t.Params, scope.values, with, name, usesLine, withProblem, vb) {
+		withOK = false
 	}
 	t.Values = scope.values
 	if !withOK || len(ps.problems) > 0 {
@@ -630,7 +551,7 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 		}
 		p := &Param{Name: k.Value, Type: paramTypeString, Line: k.Line}
 		var defNode, optNode *yaml.Node
-		ps.eachKey(v, at, []string{"type", "default", "description", "options"}, func(k2, v2 *yaml.Node) {
+		ps.eachKey(v, at, []string{"type", "default", "description", "options", "from"}, func(k2, v2 *yaml.Node) {
 			where := at + "." + k2.Value
 			switch k2.Value {
 			case "type":
@@ -652,6 +573,8 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 				if strings.ContainsAny(p.Description, "\r\n") || utf8.RuneCountInString(p.Description) > MaxDescriptionLen {
 					ps.add(v2, where, "a description is one line of at most %d characters", MaxDescriptionLen)
 				}
+			case "from":
+				p.From = ps.variableName(v2, where)
 			case "options":
 				p.Options, optNode = ps.strList(v2, where), v2
 			}
@@ -741,10 +664,15 @@ type TemplateLoader func(lib *Library, name string) ([]byte, error)
 // the template that does not set its own. The template's containers are
 // added under new names, <uses-step>-<name> where that is free and valid.
 func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
+	out, _, err := ExpandWith(p, load, nil)
+	return out, err
+}
+
+func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, error) {
 	if p.Expanded() && len(p.Libraries) == 0 {
 		return p, nil
 	}
-	x := &expander{load: load, used: map[string]bool{}, containerNames: map[string]bool{}, loopLimit: p.maxLoop}
+	x := &expander{load: load, vb: vb, used: map[string]bool{}, containerNames: map[string]bool{}, loopLimit: p.maxLoop}
 	if x.loopLimit <= 0 {
 		x.loopLimit = DefaultMaxLoopMembers
 	}
@@ -812,6 +740,7 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 }
 
 type expander struct {
+	vb             *varBinding
 	load           TemplateLoader
 	out            *Pipeline
 	problems       Problems
@@ -899,7 +828,7 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 		before := len(x.problems)
 		t, tps := readTemplate(data, name, s.With, s.withLines, s.usesLine, func(line, col int, path, msg string) {
 			x.problem(sc, line, col, at+"."+path, "%s", msg)
-		}, x.loopLimit, sc.prefix+s.ID+"/")
+		}, x.loopLimit, sc.prefix+s.ID+"/", x.vb)
 		if len(tps) > 0 {
 			for _, tp := range tps {
 				tp.File, tp.Library = TemplatePath(name), lib.Name

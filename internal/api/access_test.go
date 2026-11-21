@@ -172,10 +172,21 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/runner/v1/caches/discard":  {"POST", "/api/runner/v1/caches/discard", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"GET /api/v1/projects/{name}/caches":  {"GET", "/api/v1/projects/pay-api/caches", "", [6]int{401, 404, 200, 200, 404, 200}},
 	// Nothing is cached, so deleting is a 404 after the permission check.
-	"DELETE /api/v1/projects/{name}/caches/{id}":  {"DELETE", "/api/v1/projects/pay-api/caches/cch_nope", "", [6]int{401, 404, 403, 404, 404, 404}},
-	"DELETE /api/v1/projects/{name}/caches":       {"DELETE", "/api/v1/projects/pay-api/caches?name=pip", "", [6]int{401, 404, 403, 404, 404, 404}},
-	"GET /api/v1/cache-policy":                    {"GET", "/api/v1/cache-policy", "", [6]int{401, 200, 200, 200, 200, 200}},
-	"PUT /api/v1/cache-policy":                    {"PUT", "/api/v1/cache-policy", `{"idle_days":9}`, [6]int{401, 403, 403, 403, 403, 200}},
+	"DELETE /api/v1/projects/{name}/caches/{id}": {"DELETE", "/api/v1/projects/pay-api/caches/cch_nope", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"DELETE /api/v1/projects/{name}/caches":      {"DELETE", "/api/v1/projects/pay-api/caches?name=pip", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/cache-policy":                   {"GET", "/api/v1/cache-policy", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"PUT /api/v1/cache-policy":                   {"PUT", "/api/v1/cache-policy", `{"idle_days":9}`, [6]int{401, 403, 403, 403, 403, 200}},
+	// Variables at levels. Anyone with access to something reads a level; setting
+	// at a project needs the operator role, locking the admin role; the wider
+	// levels need an admin of every project. A name that does not exist is a
+	// 404 after the permission check, which is why the delete rows end so.
+	"GET /api/v1/variables":                       {"GET", "/api/v1/variables?level=installation", "", [6]int{401, 403, 200, 200, 200, 200}},
+	"PUT /api/v1/variables/{name}":                {"PUT", "/api/v1/variables/x", `{"level":"project","scope":"pay-api","type":"string","value":"v"}`, [6]int{401, 404, 403, 200, 404, 200}},
+	"DELETE /api/v1/variables/{name}":             {"DELETE", "/api/v1/variables/gone?level=project&scope=pay-api", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"PUT /api/v1/variables/{name}/lock":           {"PUT", "/api/v1/variables/x/lock", `{"level":"project","scope":"pay-api","reason":"fixed"}`, [6]int{401, 404, 403, 403, 404, 200}},
+	"DELETE /api/v1/variables/{name}/lock":        {"DELETE", "/api/v1/variables/x/lock?level=project&scope=pay-api", "", [6]int{401, 404, 403, 403, 404, 200}},
+	"GET /api/v1/projects/{name}/variables":       {"GET", "/api/v1/projects/pay-api/variables", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/variables":             {"GET", "/api/v1/runs/{pay}/variables", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/projects/{name}/cache-policy":    {"GET", "/api/v1/projects/pay-api/cache-policy", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"PUT /api/v1/projects/{name}/cache-policy":    {"PUT", "/api/v1/projects/pay-api/cache-policy", `{"idle_days":3}`, [6]int{401, 403, 403, 403, 403, 200}},
 	"DELETE /api/v1/projects/{name}/cache-policy": {"DELETE", "/api/v1/projects/pay-api/cache-policy", "", [6]int{401, 403, 403, 403, 403, 200}},

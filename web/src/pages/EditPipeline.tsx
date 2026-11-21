@@ -8,6 +8,7 @@ import { useValidation } from "../validation";
 import { PipelineEditor, type PipelineEditorHandle } from "../components/PipelineEditor";
 import { PipelinePreview, ProblemList } from "../components/PipelinePreview";
 import { RefPicker } from "../components/RefPicker";
+import { VariablesPanel } from "../components/Variables";
 import { OverridesEditor } from "../components/Libraries";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono } from "../components/ui";
 
@@ -257,6 +258,11 @@ export function EditPipelinePage({ name }: { name: string }) {
         <PipelinePreview res={res} error={checkErr} onJump={(l) => editor.current?.goToLine(l)}
           notes={<DraftNote project={project} />} />
       </div>
+      <aside className="vr-aside" aria-label="Variables in effect for this pipeline">
+        <h3>Variables in effect</h3>
+        <p className="sub">What a template input or a <code>from:</code> binding in this pipeline would get, and from where. A lock above beats anything you write here.</p>
+        <VariablesPanel level="project" scope={name} compact />
+      </aside>
 
       {picking && (
         <Dialog title={`Edit the pipeline on another branch of ${name}`} onClose={() => setPicking(false)}>

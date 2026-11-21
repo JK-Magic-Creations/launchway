@@ -256,16 +256,23 @@ func (m *Manager) Expand(ctx context.Context, pl *pipeline.Pipeline, overrides m
 
 // expand is Expand that reuses a fetch of a library made within fresh.
 func (m *Manager) expand(ctx context.Context, pl *pipeline.Pipeline, overrides map[string]string, fresh time.Duration) (*pipeline.Pipeline, []engine.LibrarySource, error) {
+	out, libs, _, err := m.expandVars(ctx, pl, overrides, fresh, nil)
+	return out, libs, err
+}
+
+// expandVars is expand with the variables in effect for the project, which
+// template parameters may take; it also returns the ones taken.
+func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrides map[string]string, fresh time.Duration, vars pipeline.Variables) (*pipeline.Pipeline, []engine.LibrarySource, []pipeline.BoundVariable, error) {
 	if err := CheckOverrides(overrides); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	for name := range overrides {
 		if pl.Library(name) == nil {
-			return nil, nil, fmt.Errorf("%w: the pipeline uses no library called %s, so it cannot be overridden", engine.ErrInvalid, name)
+			return nil, nil, nil, fmt.Errorf("%w: the pipeline uses no library called %s, so it cannot be overridden", engine.ErrInvalid, name)
 		}
 	}
 	if len(pl.Libraries) == 0 {
-		return pl, nil, nil
+		return pl, nil, nil, nil
 	}
 	var problems pipeline.Problems
 	mirrors := map[string]*project{}
@@ -297,19 +304,19 @@ func (m *Manager) expand(ctx context.Context, pl *pipeline.Pipeline, overrides m
 		mirrors[l.Name] = lib
 	}
 	if len(problems) > 0 {
-		return nil, nil, problems
+		return nil, nil, nil, problems
 	}
-	out, err := pipeline.Expand(pl, func(l *pipeline.Library, name string) ([]byte, error) {
+	out, used, err := pipeline.ExpandWith(pl, func(l *pipeline.Library, name string) ([]byte, error) {
 		return mirrors[l.Name].templateAt(ctx, l.Commit, name)
-	})
+	}, vars)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var libs []engine.LibrarySource
 	for _, l := range out.Libraries {
 		libs = append(libs, engine.LibrarySource{Name: l.Name, URL: mirrors[l.Name].URL, Commit: l.Commit})
 	}
-	return out, libs, nil
+	return out, libs, used, nil
 }
 
 // Check reads pipeline text as a run would: it parses it and, if it uses

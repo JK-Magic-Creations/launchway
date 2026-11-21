@@ -114,7 +114,7 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 	}
 	var p *pipeline.Pipeline
 	if expand {
-		p, err = s.Projects.Check(r.Context(), string(body), nil)
+		p, err = s.Projects.CheckFor(r.Context(), project, string(body), nil)
 	} else {
 		p, err = pipeline.Parse(body)
 	}

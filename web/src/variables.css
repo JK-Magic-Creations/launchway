@@ -1,0 +1,36 @@
+/* Variables at levels: the hierarchy panel, beside the editor, in the run-start form and on the run. */
+.vr { display: flex; flex-direction: column; gap: 12px; }
+.vr-rule { font-size: 14px; color: var(--text-2); }
+.vr-rule summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.vr-rule p { margin: 8px 0 0; max-width: 72ch; }
+.vr-first { padding: 16px 18px; border: 1px dashed var(--line-2); border-radius: var(--r2); background: var(--surface-2); }
+.vr-first p { margin: 6px 0 0; color: var(--text-2); max-width: 70ch; }
+.vr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.vr-item { padding: 12px 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
+.vr-item:first-child { border-top: 0; }
+.vr-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.vr-name { font-family: var(--mono); font-size: 14px; }
+.vr-type, .vr-from, .vr-who { font-size: 12.5px; color: var(--text-3); }
+.vr-val { display: inline-flex; gap: 6px; align-items: baseline; overflow-wrap: anywhere; }
+.vr-ref { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); }
+.vr-lock { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.vr-why { font-size: 13px; color: var(--text-2); }
+.vr-desc { font-size: 13.5px; color: var(--text-2); }
+.vr-chain { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--border); display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.vr-chain li { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; color: var(--text-3); }
+.vr-chain s { color: var(--text-3); }
+.vr-ignored { color: var(--warn-ink); font-size: 12.5px; }
+.vr-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vr-blocked { font-size: 13px; color: var(--warn-ink); }
+.vr-reason { font-size: 12.5px; color: var(--text-3); }
+.vr-said { color: var(--ok-ink); font-size: 14px; margin: 0; }
+.vr-add { margin-top: 4px; }
+.vr-form { display: flex; flex-direction: column; gap: 10px; min-width: min(460px, 86vw); }
+.vr-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; font-weight: 600; }
+.vr-form input, .vr-form select { font: inherit; padding: 7px 9px; border: 1px solid var(--line-2); border-radius: var(--r1); background: var(--sheet); color: var(--ink); font-weight: 400; }
+.vr-compact .vr-item { padding: 8px 0; }
+.vr-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; align-items: center; }
+.vr-tabs a, .vr-tabs select { font: inherit; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--sheet); color: var(--ink); text-decoration: none; }
+.vr-tabs a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.vr-aside { border: 1px solid var(--line); border-radius: var(--r2); background: var(--sheet); padding: 14px 16px; }
+.vr-aside h3 { margin: 0 0 8px; font-size: 15px; }

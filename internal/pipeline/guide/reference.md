@@ -177,6 +177,7 @@ inputs:
 | `pattern` | An RE2 regular expression a string must match (write `^` and `$`) |
 | `min`, `max` | A number's bounds |
 | `description` | One line |
+| `from` | The name of a variable set at a level (see below): the input takes its value when a run is given none, before `default` |
 | `options_from` | Recognised but not supported yet |
 
 Runs started by a push, pull request or draft use the defaults, so a pipeline started by pushes
@@ -280,10 +281,21 @@ A step that uses a template takes only `uses`, `with`, `description`, `needs`, `
 List a library's templates and their parameters before writing a `uses` step.
 
 A template file (`templates/<name>.yaml` in the library) has `template`, `description`, `params`
-(`name: { type: string|number|boolean|list, default, description, options }`), `containers`,
+(`name: { type: string|number|boolean|list, default, description, options, from }`), `containers`,
 `steps` and `outputs` (`key: { from: step.key }`). In a template, `{ param: name }` (with `format:`
 for text around it) stands for a parameter's value, and `if: { param: name }` or
 `if: { param: name, equals: value }` on a step leaves the step out when false. The `store`, `key` and `field` of a step's secret reference may be `{ param: name }` of a string parameter, and an `ai` step may be in a template (its `model`, `instructions` and `prompt` may be parameters).
+
+## Variables set at a level
+
+`from: name` on an input or a template parameter takes the variable `name`, set at the installation, the
+organization, a unit or the project. The nearest setting wins: what is given when a run starts, then the
+pipeline file's own `with:`, then the project, the unit, the organization, the installation, then the
+template's own default; at the same level a variable set for the environment being deployed to beats the
+general one; and a lock set at a level beats everything below it. Lists replace, never merge. A variable
+that is locked refuses a different value under `with:` or given at the start, naming the level that
+locked it. A secret or a map variable cannot be an input; a pipeline names a secret with `secrets:`.
+Nothing reaches a step just because a variable has its name: the binding is `from:`.
 
 ## A runner for one step
 

@@ -83,6 +83,7 @@ Usage:
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+  launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway doctor   [database]                 would this installation survive losing its database?
   launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
   launchway version
@@ -144,6 +145,8 @@ func main() {
 		err = cmdRunLimits(args)
 	case "caches":
 		err = cmdCaches(args)
+	case "variables":
+		err = cmdVariables(args)
 	case "doctor":
 		err = cmdDoctor(args)
 	case "repos":
@@ -219,6 +222,11 @@ func cmdServer(args []string) error {
 	if store.Available() {
 		srv.Settings = store
 	}
+	// Variables set at levels (schema 29): the manager binds pipelines to
+	// them, the server serves and changes them.
+	vars := store.Variables()
+	mgr.SetVariables(vars)
+	srv.Variables = vars
 	applyLive := func(c *config.Config) error {
 		l, err := serverLive(c, token, authOpts)
 		if err != nil {

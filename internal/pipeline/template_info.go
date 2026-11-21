@@ -66,7 +66,7 @@ func DescribeTemplate(data []byte, name string) TemplateInfo {
 				with[p.Name] = sampleValue(p)
 			}
 		}
-		_, info.Problems = readTemplate(data, name, with, nil, 0, func(int, int, string, string) {}, DefaultMaxLoopMembers, "")
+		_, info.Problems = readTemplate(data, name, with, nil, 0, func(int, int, string, string) {}, DefaultMaxLoopMembers, "", nil)
 	}
 	return info
 }

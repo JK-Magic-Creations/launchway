@@ -186,7 +186,7 @@ steps:
   d:
     kind: deploy
     environment: prod
-`), "t", nil, nil, 0, nil, DefaultMaxLoopMembers, "")
+`), "t", nil, nil, 0, nil, DefaultMaxLoopMembers, "", nil)
 	if err == nil || !strings.Contains(err.Error(), "cannot be in a template yet") {
 		t.Fatalf("got %v", err)
 	}

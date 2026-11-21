@@ -472,6 +472,20 @@ database, as the installation's default with an override for a project.
 | `PUT /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.set_project` | Overrides the policy for one project; a field left out keeps the value that applies to it now. |
 | `DELETE /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.clear_project` | Removes the override: the installation's policy applies again. |
 
+## Variables
+
+A variable is a name with a type, a value, an optional environment and an optional lock, set at a level: `installation`, `organization`, `unit` or `project`. A level and its scope (the unit's or the project's name) are given as `?level=&scope=` or in the body. The rule, the same sentence everywhere: **The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it.** Lists replace, never merge. Variables and locks never cross organizations. See the [guide](../guide/variables.md).
+
+| Route | Who | Audit action | What it does |
+|---|---|---|---|
+| `GET /api/v1/variables` | `signed-in` | — | The variables at a level (`?level=&scope=&environment=&names=`) with what each inherits from above and whether this level may override it. `400` without a level; `404` for a project the caller cannot see |
+| `PUT /api/v1/variables/{name}` | `signed-in` | `variable.set` | Sets a variable: `{level, scope, environment, type, of, value, description}`. Types: `string`, `number`, `boolean`, `list`, `map`, `secret` (a reference `{store, key, field}`, never text) and `connection` (a name, with `of`). A name keeps one type everywhere. Who: an operator of the project, or an admin of the unit's projects, or of every project for the organization and the installation. `409` when a lock above forbids it, naming the level and who can change it |
+| `DELETE /api/v1/variables/{name}` | `signed-in` | `variable.delete` | Deletes a variable at a level (`?level=&scope=&environment=`); what it overrode applies again |
+| `PUT /api/v1/variables/{name}/lock` | `signed-in` | `variable.lock` | Locks it: `{level, scope, environment, reason}`; a reason is required. Needs an admin at that level (of the project, at a project). Answers the variable and the nearer settings now ignored |
+| `DELETE /api/v1/variables/{name}/lock` | `signed-in` | `variable.unlock` | Removes the lock |
+| `GET /api/v1/projects/{name}/variables` | `project-viewer` | — | Every variable in effect for a project, optionally `?environment=`, each with its whole chain: the winning value, its level, each overridden value in order, the lock and why |
+| `GET /api/v1/runs/{id}/variables` | `run-viewer` | — | The variables the run used, as recorded when it was created; a re-run shows the original's |
+
 ## Repositories (Git hosting)
 
 Only with the installation setting `forge.hosting` on (Configuration, Installation settings; a change applies when each server next restarts); otherwise every route answers `404` with `{"error": "feature_off: ...", "code": "feature_off"}` and the repositories are kept. A repository is `<owner>/<name>`; a bindings' project patterns match that path (`jkhunter/*`).

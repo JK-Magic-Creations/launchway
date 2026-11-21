@@ -95,6 +95,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/security` | `get_security_findings` | — | — | gap: launchway has no findings command yet |
 | `GET /api/v1/projects/{name}/tests` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/projects/{name}/tests/history` | `get_test_results` | `runs tests` | — | equal |
+| `GET /api/v1/projects/{name}/variables` | `get_effective_variables` | `variables effective` | `planned: data source launchway_effective_variables` | equal |
 | `POST /api/v1/projects/{name}/waivers` | — | `waivers grant` | — | gap: no MCP tool grants waivers yet |
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | — | `waivers revoke` | — | gap: no MCP tool revokes waivers yet |
 | `POST /api/v1/projects/{name}/webhooks/{trigger}` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
@@ -152,6 +153,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/tests/cases/{case}` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/runs/{id}/tests/compare` | `get_test_results` | `runs tests` | — | equal |
+| `GET /api/v1/runs/{id}/variables` | `get_run_variables` | `variables run` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
 | `GET /api/v1/settings/approvals` | — | — | — | exempt: a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator |
 | `GET /api/v1/step-resources` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
@@ -167,6 +169,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/user` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/user/repos` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/validate` | `validate_pipeline` | `validate` | — | equal |
+| `GET /api/v1/variables` | `list_variables` | `variables list` | `planned: data source launchway_variables` | equal |
+| `DELETE /api/v1/variables/{name}` | `delete_variable` | `variables delete` | `planned: resource launchway_variable` | equal |
+| `PUT /api/v1/variables/{name}` | `set_variable` | `variables set` | `planned: resource launchway_variable` | equal |
+| `DELETE /api/v1/variables/{name}/lock` | `unlock_variable` | `variables unlock` | `planned: resource launchway_variable (lock block)` | equal |
+| `PUT /api/v1/variables/{name}/lock` | `lock_variable` | `variables lock` | `planned: resource launchway_variable (lock block)` | equal |
 | `GET /api/v1/verifications` | `get_verification` | `verifications list` | — | equal |
 | `GET /api/v1/waivers` | — | `waivers list` | — | gap: no MCP tool lists waivers yet |
 | `GET /auth/callback` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |

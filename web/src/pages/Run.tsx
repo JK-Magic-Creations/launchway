@@ -20,6 +20,7 @@ import { openInEditor } from "./EditPipeline";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
 import { RunTrigger } from "../components/RunTrigger";
+import { RunVariables } from "../components/Variables";
 import { progressText, whoMayDecide, type ApprovalProgress } from "../api/approvals";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 import { ArtifactsTab } from "./RunArtifacts";
@@ -297,6 +298,7 @@ export function RunPage({ id }: { id: string }) {
       )}
 
       <RunTrigger run={run} />
+      <RunVariables runId={run.id} />
 
       {waitingStep && selected !== waitingStep.id && (
         <div className="callout callout-wait">

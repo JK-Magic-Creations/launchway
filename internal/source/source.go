@@ -157,6 +157,8 @@ type Manager struct {
 	// trig is what schedules and webhooks keep (see triggers.go).
 	trig     *triggerState
 	trigOnce sync.Once
+	// vars is where variables set at levels come from (see variables.go).
+	vars atomic.Pointer[varHolder]
 
 	// Watching: started once by Start; Reconfigure starts and stops the
 	// watchers of the projects it adds, changes and removes.
@@ -465,8 +467,9 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 		pl, from, err := p.parsedAt(ctx, r.SHA)
 		var libs []engine.LibrarySource
 		var vals map[string]string
+		var rec *varRecord
 		if err == nil && pl.On.MatchPush(branchOf(r), tagOf(r)) {
-			pl, libs, vals, err = m.prepare(ctx, pl, nil, nil)
+			pl, libs, vals, rec, err = m.prepare(ctx, p.Name, pl, nil, nil)
 		}
 		switch {
 		case errors.Is(err, ErrNoPipeline):
@@ -485,8 +488,8 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 			// in one transaction.
 			t := trigger(r, "push", r.Author)
 			t.Inputs = vals
-			run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
-				Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: p.note(from)})
+			run, err := m.createRun(ctx, engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
+				Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: p.note(from)}, rec)
 			switch {
 			case errors.Is(err, engine.ErrAlreadyClaimed):
 				continue // another server handled it
@@ -566,8 +569,9 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 		} else {
 			var libs []engine.LibrarySource
 			var vals map[string]string
+			var rec *varRecord
 			if asks {
-				pl, libs, vals, err = m.prepare(ctx, pl, nil, nil)
+				pl, libs, vals, rec, err = m.prepare(ctx, p.Name, pl, nil, nil)
 			}
 			switch {
 			case errors.Is(err, ErrNoPipeline):
@@ -608,9 +612,9 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 					note = strings.TrimSpace("into " + into.Target + "; " + into.Note + " " + note)
 					note = strings.ReplaceAll(note, "; ;", ";")
 				}
-				run, err := m.eng.CreateRun(engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
+				run, err := m.createRun(ctx, engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
 					Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: note,
-					PullRequestSecrets: p.PullRequestSecrets})
+					PullRequestSecrets: p.PullRequestSecrets}, rec)
 				switch {
 				case errors.Is(err, engine.ErrAlreadyClaimed):
 					continue // another server handled it

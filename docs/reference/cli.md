@@ -25,6 +25,7 @@ launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
 launchway doctor   [database]                 would this installation survive losing its database?
 launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
 launchway version
@@ -751,6 +752,22 @@ launchway caches policy clear PROJECT [--json]
 | `policy clear` | Removes a project's own policy, so the installation's applies again |
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
+
+## launchway variables
+
+Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the squadron (unit), the wing (organization), the base (installation), then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the unit, organization or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
+
+```text
+launchway variables list --installation|--organization|--unit U|--project P [--environment E] [--json]
+launchway variables effective PROJECT [--environment E] [--json]
+launchway variables run RUN [--json]
+launchway variables set NAME LEVEL --type T --value V [--of KIND] [--environment E] [--description D] [--json-value J]
+launchway variables delete NAME LEVEL [--environment E]
+launchway variables lock NAME LEVEL --reason R [--environment E]
+launchway variables unlock NAME LEVEL [--environment E]
+```
+
+The same operations are the routes under [Variables](http-api.md#variables) in the HTTP API, and the MCP tools `list_variables`, `get_effective_variables`, `get_run_variables`, `set_variable`, `delete_variable`, `lock_variable` and `unlock_variable`.
 
 ## launchway doctor
 

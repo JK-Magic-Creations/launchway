@@ -7,6 +7,7 @@ import { ErrorBox, Mono } from "./ui";
 import { RefPicker } from "./RefPicker";
 import { OverridesEditor } from "./Libraries";
 import { StartInputs, useStartInputs } from "./StartInputs";
+import { VariablesPanel } from "./Variables";
 
 // StartDialog asks which branch or tag to run, and the pipeline's inputs, then starts the run.
 export function StartDialog({ project, onClose }: { project: Project; onClose: () => void }) {
@@ -46,6 +47,10 @@ export function StartDialog({ project, onClose }: { project: Project; onClose: (
           </div>
         )}
         <StartInputs state={inputs} />
+        <details className="advanced">
+          <summary>Variables in effect</summary>
+          <VariablesPanel level="project" scope={project.name} compact />
+        </details>
         <details className="advanced">
           <summary>Advanced{Object.keys(overrides).length > 0 && `: ${Object.keys(overrides).length} library override${Object.keys(overrides).length > 1 ? "s" : ""}`}</summary>
           <OverridesEditor value={overrides} onChange={setOverrides} names={project.pipeline ? [project.pipeline.library] : undefined} />
