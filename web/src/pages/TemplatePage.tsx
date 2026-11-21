@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useUrlState } from "../urlState";
 import { configApi, type LibraryTemplates, type TemplateInfo } from "../configApi";
 import { EntityLink } from "../components/EntityLink";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
@@ -15,7 +16,7 @@ const TABS = [
 
 /** One template: what it does, the inputs and outputs it promises, the versions that exist, and who uses it. */
 export function TemplatePage({ library, name }: { library: string; name: string }) {
-  const [version, setVersion] = useState("");
+  const [version, setVersion] = useUrlState("version", "");
   const [data, setData] = useState<LibraryTemplates | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [tab, setTab] = useTab(TABS.map((t) => t.id), "overview");

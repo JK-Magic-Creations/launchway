@@ -13,6 +13,8 @@ import { useCrumbLabel } from "../nav/crumbs";
 import { useNow } from "../live";
 import { useValidation } from "../validation";
 import { RunRow } from "./Activity";
+import { setUrl, useViewTitle } from "../urlState";
+import { CopyLink } from "../components/CopyLink";
 import { ProjectHead } from "./PipelineChrome";
 
 type View = "live" | "text" | "draw" | "history";
@@ -48,24 +50,21 @@ export function PipelineViewPage({ name }: { name: string }) {
   const { res, error: checkError } = useValidation(file ? file.text : null, { project: name });
   const enc = encodeURIComponent(name);
   const editHref = `/projects/${enc}/pipeline/edit?ref=${encodeURIComponent(file?.ref ?? loaded.data?.p.default_branch ?? "")}`;
-  const setView = (v: string) => {
-    const n = new URLSearchParams(location.search);
-    n.set("view", v);
-    history.replaceState(null, "", `${location.pathname}?${n}`);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
+  // The view is in the address (?view=history), a history entry each, so Back returns to the one before.
+  const setView = (v: string) => { setUrl({ view: v === "live" ? null : v }, "push"); window.dispatchEvent(new PopStateEvent("popstate")); };
+  useViewTitle(view === "live" ? name : `${view[0].toUpperCase()}${view.slice(1)} · ${name}`);
 
   const sentence = view === "history" ? `Every run of ${name}, newest first.`
     : "The steps a run does, read from the file in the repository. Nothing here is a copy: the editor saves a change as a Git commit.";
   return (
     <div className="page">
       <ProjectHead name={name} on={view === "history" ? "history" : "pipeline"} title={view === "history" ? <>Runs of {name}</> : <>Pipeline of {name}</>} sentence={sentence}
-        actions={<><LinkButton href={editHref} kind="pri" icon="edit">Edit the pipeline</LinkButton><LinkButton href="/playground" icon="play">Try it without saving</LinkButton></>} />
+        actions={<><CopyLink /><LinkButton href={editHref} kind="pri" icon="edit">Edit the pipeline</LinkButton><LinkButton href="/playground" icon="play">Try it without saving</LinkButton></>} />
       <ErrorBox error={loaded.error} />
       {view !== "history" && (
         <>
           <Tabs label="Ways to look at the pipeline" on={view} onChange={setView}
-            tabs={[{ id: "live", label: "Live" }, { id: "text", label: "Text" }, { id: "draw", label: "Draw", soon: true }]} />
+            tabs={[{ id: "live", label: "Live" }, { id: "text", label: "Text" }, { id: "history", label: "History" }, { id: "draw", label: "Draw", soon: true }]} />
           {!file && !loaded.error && <div className="loading">Loading…</div>}
           {file && <FileFacts file={file} />}
           <div role="tabpanel" aria-labelledby={`tab-${view}`} className="stack">

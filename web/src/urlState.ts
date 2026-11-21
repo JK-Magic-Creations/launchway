@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 // Every view has an address. A tab, a filter, the text in a search box, a sort, a grouping, a cards/table switch,
 // a selected item: whatever changes what a page shows lives in the query string, so a link or a bookmark opens the
@@ -55,4 +55,18 @@ export function useUrlState<T>(key: string, def: T, codec: Codec<T> = str as unk
     setUrl({ [key]: v === def || codec.format(v) === codec.format(def) ? null : codec.format(v) }, mode);
   }, [key, def, codec]);
   return [value, set];
+}
+
+// ---- the title of the view ----
+// A page names its view ("Tests", "History") so a bookmark and a history entry read well; the shell puts it before the page's own title.
+let viewTitle = "";
+const titleListeners = new Set<() => void>();
+export function currentViewTitle(): string { return viewTitle; }
+export function onViewTitle(l: () => void): () => void { titleListeners.add(l); return () => { titleListeners.delete(l); }; }
+/** Names the view the page is showing; "" (or leaving the page) goes back to the page's own title. */
+export function useViewTitle(title: string): void {
+  useEffect(() => {
+    viewTitle = title; titleListeners.forEach((l) => l());
+    return () => { viewTitle = ""; titleListeners.forEach((l) => l()); };
+  }, [title]);
 }

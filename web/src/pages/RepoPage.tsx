@@ -13,6 +13,7 @@ import { useLoad } from "../guided/useLoad";
 import { Chip, Status, StateChip, stateOf } from "../kit/Status";
 import { Button, EmptyState, LinkButton, PageHead, Sheet } from "../kit/layout";
 import { Tabs } from "../kit/Tabs";
+import { useTab } from "../components/PageTabs";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useCrumbLabel } from "../nav/crumbs";
 import { useNow } from "../live";
@@ -23,7 +24,7 @@ export function RepoPage({ name }: { name: string }) {
   const me = useMe();
   const inst = useInstallation();
   const now = useNow(5000);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useTab(["overview", "files", "reviews"], "overview");
   const [starting, setStarting] = useState(false);
   useCrumbLabel(name);
   const pFn = useCallback((bg: boolean) => (bg ? api.project(name) : api.project(name)), [name]);

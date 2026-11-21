@@ -22,6 +22,7 @@ import { useFocusableScrollers } from "./scrollers";
 import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
 import { terms, useTerms } from "../terms";
+import { currentViewTitle, onViewTitle } from "../urlState";
 
 const GUIDE_KEY = "lw-guide";
 
@@ -76,7 +77,11 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
     const to = redirectFor(path, location.search);
     if (to) replace(to);
   }, [path]);
-  useEffect(() => { document.title = pageTitle(path); }, [path]);
+  useEffect(() => {
+    const set = () => { const v = currentViewTitle(); document.title = (v ? v + " · " : "") + pageTitle(path); };
+    set();
+    return onViewTitle(set);
+  }, [path]);
   // A page change in a single-page app is silent: say where we are, and put the reading position at the top of the page.
   const first = useRef(true);
   useEffect(() => {

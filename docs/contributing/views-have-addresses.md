@@ -15,7 +15,23 @@ const [q, setQ] = useUrlState("q", "");
 - Names are plain words: `?tab=tests&status=failed&step=unit-tests`.
 - Personal layout choices (which sections are hidden, a remembered cards or table choice) are saved preferences, not part of the address.
 
-Already on this rule: the explorers (pipelines and repositories), and the Sorties list (`project`, `status`, `lane`, `show`). The tests in `web/src/urlState.test.tsx` and `web/src/explorer/Explorer.test.tsx` show how to test a page: change a view, read the address, mount again from it, and expect the same view.
+Already on this rule:
+
+| Page | In the address |
+|---|---|
+| Every page with `PageTabs` or `Tabs` (`useTab`) | `tab`, a history entry for each choice |
+| A Sortie | `tab`, `step`, `tests_step`, `report`, `case`, and the tests tab's `result`, `find`, `tag`, `suite`, `variant`, `order`, `group`; a log line or range as `#L120` or `#L120-L140` (choose a line number; Shift extends) |
+| A pipeline | `view` (`text`, `history`), `ref` |
+| A pull request | `tab`, `mode`, `since` |
+| Dependencies | `eco`, `status`, `q`, `direct`, `vulnerable` |
+| Applications | `show`, `q` |
+| Templates | `tab`, `version` |
+| The explorers (pipelines, repositories) | `q`, `node`, `view`, `status`, `label`, `kind`, `sort`, `group`, `fav`, `mine` |
+| The Sorties list | `project`, `status`, `lane`, `show` |
+
+A page names its view for bookmarks and history with `useViewTitle("Tests · run 3f2a1b")`; the shell puts it before the page's title.
+Two tests keep the rule: `src/urlState.rules.test.ts` fails when a page shows tabs without `useTab` or `useUrlState`, or writes the address by hand, and `src/urlState.routes.test.tsx` walks pages (address to view, view to address, remount).
+Not yet converted: the audit filters, some settings sections, and scroll restoration on Back. The tests in `web/src/urlState.test.tsx` and `web/src/explorer/Explorer.test.tsx` show how to test a page: change a view, read the address, mount again from it, and expect the same view.
 
 ## Adding a page to the organizing system
 

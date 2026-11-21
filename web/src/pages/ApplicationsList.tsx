@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { oneOf, useUrlState } from "../urlState";
 import { EntityLink } from "../components/EntityLink";
 import { ago } from "../format";
 import { diagnose } from "../guided/diagnose";
@@ -15,8 +16,8 @@ const STATE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok:
 export function ApplicationsListPage() {
   const inst = useInstallation();
   const now = useNow(5000);
-  const [filter, setFilter] = useState<"all" | "look">("all");
-  const [q, setQ] = useState("");
+  const [filter, setFilter] = useUrlState("show", "all", oneOf<"all" | "look">("all", "look"));
+  const [q, setQ] = useUrlState("q", "");
   const units = useMemo(() => new Map(inst.environments.flatMap((e) => e.services.map((u) => [u.last?.application ?? "", u] as const))), [inst.environments]);
   const shown = useMemo(() => inst.applications.filter((a) => (filter === "all" || needsLook(a)) && (!q || a.name.toLowerCase().includes(q.toLowerCase()))), [inst.applications, filter, q]);
   const look = inst.applications.filter(needsLook).length;

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { useTab } from "../components/PageTabs";
+import { int, oneOf, useUrlState } from "../urlState";
 import { ago } from "../format";
 import { navigate } from "../router";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
@@ -162,9 +164,13 @@ export function PullRequestPage({ path, number }: { path: string; number: number
   const [conv, setConv] = useState<Conversation | null>(null);
   const [files, setFiles] = useState<FileChange[] | null>(null);
   const [commits, setCommits] = useState<{ sha: string; author: string; subject: string }[] | null>(null);
-  const [tab, setTab] = useState("conversation");
-  const [mode, setMode] = useState<"unified" | "split">("unified");
-  const [since, setSince] = useState<number | undefined>(undefined);
+  // The tab, the diff layout and the revision compared against are in the address, so a review can be linked: ?tab=files&mode=split&since=2
+  const [tab, setTab] = useTab(["conversation", "commits", "files"], "conversation");
+  const [mode, setModeU] = useUrlState("mode", "unified", oneOf<"unified" | "split">("unified", "split"));
+  const setMode = (m: "unified" | "split") => setModeU(m);
+  const [sinceN, setSinceN] = useUrlState("since", 0, int(1, 100000));
+  const since = sinceN || undefined;
+  const setSince = (n: number | undefined) => setSinceN(n ?? 0);
   const [error, setError] = useState<unknown>(null);
   const [text, setText] = useState("");
   const [verdict, setVerdict] = useState("comment");

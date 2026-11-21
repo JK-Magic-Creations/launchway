@@ -7,6 +7,7 @@ import { RerunButton, RerunFailedButton, RerunPicker } from "../components/Rerun
 import { StepCauseView } from "../components/StepCause";
 import { RunFlowBanners } from "../components/RunFlow";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { setUrl, useViewTitle } from "../urlState";
 import { api, call, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from "../format";
 import { Icon } from "../kit/Icon";
@@ -59,14 +60,10 @@ function tabFromURL(): Tab {
   return t === "tests" || t === "coverage" || t === "reports" || t === "images" || t === "verification" || t === "artifacts" || t === "security" || t === "policy" || t === "events" || t === "definition" ? t : "graph";
 }
 
-// setQuery changes the address's query without a new history entry.
-function setQuery(changes: Record<string, string>) {
-  const q = new URLSearchParams(location.search);
-  for (const [k, v] of Object.entries(changes)) {
-    if (v) q.set(k, v); else q.delete(k);
-  }
-  const qs = q.toString();
-  history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
+// setQuery changes the address's query. Choosing a tab or a step is a history entry (Back returns to the one before);
+// the tests step is a refinement that replaces the entry.
+function setQuery(changes: Record<string, string>, mode: "push" | "replace" = "push") {
+  setUrl(Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, v || null])), mode);
 }
 
 export function RunPage({ id }: { id: string }) {
@@ -76,7 +73,14 @@ export function RunPage({ id }: { id: string }) {
   const [tab, setTabState] = useState<Tab>(tabFromURL);
   const [testStep, setTestStepState] = useState(() => new URLSearchParams(location.search).get("tests_step") ?? "");
   const setTab = useCallback((t: Tab) => { setTabState(t); setQuery({ tab: t === "graph" ? "" : t }); }, []);
-  const setTestStep = useCallback((s: string) => { setTestStepState(s); setQuery({ tests_step: s }); }, []);
+  // Back and Forward move between the tabs and steps that were chosen.
+  useEffect(() => {
+    const on = () => { setSelected(stepFromURL()); setTabState(tabFromURL()); };
+    window.addEventListener("popstate", on);
+    return () => window.removeEventListener("popstate", on);
+  }, []);
+  useViewTitle(tab === "graph" ? `Run ${id.slice(-6)}` : `${tab[0].toUpperCase()}${tab.slice(1)} · run ${id.slice(-6)}`);
+  const setTestStep = useCallback((s: string) => { setTestStepState(s); setQuery({ tests_step: s }, "replace"); }, []);
   const [density, setDensity] = useState<Density>(storedDensity);
   const changeDensity = useCallback((d: Density) => { setDensity(d); saveDensity(d); }, []);
   const [busy, setBusy] = useState(false);

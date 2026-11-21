@@ -1,19 +1,15 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
+import { useUrlState, useViewTitle } from "../urlState";
 
 export interface PageTab { id: string; label: string }
 
-/** The tab a page is on, kept in the address (?tab=) so it can be linked and survives a reload. */
+/** The tab a page is on, kept in the address (?tab=): choosing one makes a history entry, so Back returns to the one before, and the
+ * link or a reload opens the same tab. An unknown tab in the address falls back to the first. */
 export function useTab(ids: string[], first: string): [string, (id: string) => void] {
-  const read = () => { const t = new URLSearchParams(location.search).get("tab"); return t && ids.includes(t) ? t : first; };
-  const [tab, setTabState] = useState(read);
-  const setTab = useCallback((id: string) => {
-    setTabState(id);
-    const q = new URLSearchParams(location.search);
-    if (id === first) q.delete("tab"); else q.set("tab", id);
-    const s = q.toString();
-    history.replaceState(null, "", location.pathname + (s ? "?" + s : "") + location.hash);
-  }, [first]);
-  return [tab, setTab];
+  const codec = { parse: (s: string) => (ids.includes(s) ? s : undefined), format: (v: string) => v };
+  const [tab, setTab] = useUrlState("tab", first, codec);
+  useViewTitle(tab === first ? "" : (ids.includes(tab) ? tab.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase()) : ""));
+  return [tab, useCallback((id: string) => setTab(id, "push"), [setTab])];
 }
 
 /** PageTabs switch between views of one thing, without leaving its page. Only the chosen tab is in the Tab order; the
