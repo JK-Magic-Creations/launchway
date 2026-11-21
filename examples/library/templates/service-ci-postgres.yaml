@@ -1,0 +1,57 @@
+# service-ci for a service whose tests need PostgreSQL. A database starts
+# beside the steps for the whole run, at localhost:5432, and the tests are given
+# its address as DATABASE_URL and TEST_DATABASE_URL. Everything else is
+# service-ci: the same parameters, the same reports.
+#
+#   ci:
+#     uses: platform/service-ci-postgres
+#     with: { database: app_test, install_command: "pip install -e .[dev]", coverage_minimum: 80 }
+#
+# The database holds only what the tests put in it and goes away with the run;
+# its password is a fixed test value and is not a secret.
+template: service-ci-postgres
+description: service-ci with a PostgreSQL service beside the tests
+params:
+  database:          { type: string, default: app_test, description: "The database the tests use" }
+  postgres_image:    { type: string, default: "docker.io/library/postgres:16-alpine" }
+  language:          { type: string, default: python, options: [python, node] }
+  working_directory: { type: string, default: "." }
+  install_command:   { type: string, default: "" }
+  lint_command:      { type: string, default: "" }
+  test_command:      { type: string, default: "" }
+  coverage_minimum:  { type: number, default: "0" }
+  secret_scan:       { type: boolean, default: true }
+  code_scan:         { type: boolean, default: true }
+  scan_mode:         { type: string, default: enforce, options: [enforce, report] }
+  scan_paths:        { type: string, default: "." }
+  python_image:      { type: string, default: "docker.io/library/python:3.13-slim" }
+  node_image:        { type: string, default: "docker.io/library/node:22-slim" }
+containers:
+  db:
+    image: { param: postgres_image }
+    service: true
+    env: { POSTGRES_PASSWORD: test, POSTGRES_DB: { param: database } }
+  tools: { image: { param: python_image } }
+steps:
+  database-ready:
+    description: Wait until the database accepts connections
+    container: tools
+    run: "$LAUNCHWAY_LIB/scripts/service/wait-for-port.sh"
+  checks:
+    description: The service's checks, with the database's address
+    needs: database-ready
+    uses: service-ci
+    with:
+      language: { param: language }
+      working_directory: { param: working_directory }
+      install_command: { param: install_command }
+      lint_command: { param: lint_command }
+      test_command: { param: test_command }
+      coverage_minimum: { param: coverage_minimum }
+      database_url: { param: database, format: "postgres://postgres:test@localhost:5432/%s" }
+      secret_scan: { param: secret_scan }
+      code_scan: { param: code_scan }
+      scan_mode: { param: scan_mode }
+      scan_paths: { param: scan_paths }
+      python_image: { param: python_image }
+      node_image: { param: node_image }

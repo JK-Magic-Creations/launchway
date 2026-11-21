@@ -1,0 +1,31 @@
+# A repository with a Python backend and a Node front end in directories of
+# their own: the checks template is used once for each, in parallel, and the
+# backend is delivered.
+pipeline: portal
+on:
+  push: { branches: [main] }
+  pull_request: {}
+supersede: true
+libraries:
+  platform: { repo: platform, version: v1 }
+steps:
+  backend:
+    uses: platform/service-ci
+    with: { working_directory: backend, coverage_minimum: 75 }
+  frontend:
+    uses: platform/service-ci
+    with: { language: node, working_directory: frontend, secret_scan: false }
+  deliver:
+    uses: platform/service-cd
+    needs: [backend, frontend]
+    when: { branch: main }
+    with:
+      environment: prod
+      application: portal
+      image_repository: team/portal-backend
+      context: backend
+      dockerfile: backend/Dockerfile
+      manifest: apps/portal/deployment.yaml
+      workload: portal-backend
+      namespace: portal
+      health_query: 'min(probe_success{instance="http://portal-backend.portal.svc:8000/health"})'

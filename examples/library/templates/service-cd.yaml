@@ -1,0 +1,111 @@
+# Delivers one service to one environment by GitOps: builds, scans and pushes
+# the image, optionally asks a person, commits the new image to the GitOps
+# repository, waits for Argo CD to make it healthy, watches the metrics for a
+# while, and puts the old version back if anything after the deploy fails.
+#
+# One use delivers to one environment, so a service that has a dev and a
+# production environment uses it twice, each with a `when` on its branch.
+# Every step is an ordinary step once expanded. A template authorises nothing:
+# the environment's `projects` list in the server's configuration, the deploy
+# runner's repositories and the policies decide whether this project may
+# deploy here, exactly as if the pipeline had written the steps.
+#
+#   dev:
+#     uses: platform/service-cd
+#     needs: ci
+#     when: { branch: develop }
+#     with:
+#       environment: dev
+#       application: shop-dev
+#       image_repository: team/shop
+#       manifest: apps/shop-dev/deployment.yaml
+#       workload: shop
+#       namespace: shop-dev
+#       health_query: 'min(probe_success{instance="http://shop.shop-dev.svc:8080/health"})'
+#
+# Outputs: tag (the image tag), digest, and image (repository@digest).
+template: service-cd
+description: Build and push the image, deploy it to one environment with GitOps, verify it and roll back on failure
+params:
+  environment:      { type: environment, description: "The environment to deploy to, one of the server's environments" }
+  application:      { type: application, description: "The Argo CD application that runs the service there" }
+  image_repository: { type: string, description: "The image's repository in the registry, without the host, such as team/shop" }
+  manifest:         { type: string, description: "The file in the GitOps repository whose references to the image change, such as apps/shop/deployment.yaml" }
+  workload:         { type: string, description: "The name of the workload Argo CD syncs and Launchway watches" }
+  namespace:        { type: string, description: "The workload's namespace" }
+  health_query:     { type: string, description: "A query of the health source that is 1 while the service is healthy, such as a probe_success query" }
+  workload_kind:    { type: string, default: Deployment, options: [Deployment, StatefulSet, DaemonSet], description: "What kind the workload is" }
+  registry:         { type: string, default: registry, description: "A registry named in the runner's configuration" }
+  dockerfile:       { type: string, default: Dockerfile }
+  context:          { type: string, default: ".", description: "The build context, relative to the repository" }
+  cache_registry:   { type: string, default: "", description: "A registry that keeps the build cache; empty: no cache" }
+  cache_repository: { type: string, default: "buildcache", description: "The cache's repository in that registry" }
+  scan_mode:        { type: string, default: report, options: [report, enforce], description: "report records vulnerabilities; enforce fails the build, before the push, on one at scan_fail_on or worse" }
+  scan_fail_on:     { type: string, default: high, options: [critical, high, medium, low] }
+  sbom:             { type: boolean, default: true, description: "Keep a software bill of materials of the image" }
+  sign:             { type: boolean, default: false, description: "Sign the image with the runner's key" }
+  approve:          { type: boolean, default: false, description: "Ask a person before deploying, for a protected environment" }
+  gitops_repo:      { type: string, default: gitops, description: "The write-back repository, as the deploy runner's configuration names it" }
+  gitops_branch:    { type: string, default: main }
+  health_source:    { type: string, default: prometheus, description: "A health source of the server's verification settings" }
+  verify_for:       { type: string, default: 2m, description: "How long to watch after the deploy; a whole number of verify_every" }
+  verify_every:     { type: string, default: 30s }
+  tools_image:      { type: string, default: "docker.io/library/alpine:3.22" }
+steps:
+  tag:
+    description: The image tag, from the commit's time and id, so the same commit always gets the same tag
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/service/tag.sh"
+  image:
+    kind: image
+    description: Build, scan and push the image
+    needs: tag
+    context: { param: context }
+    file: { param: dockerfile }
+    tags:
+      - { registry: { param: registry }, repository: { param: image_repository }, tag: { output: tag.tag } }
+    cache: { registry: { param: cache_registry }, repository: { param: cache_repository } }
+    sbom: { param: sbom }
+    sign: { param: sign }
+    scan: { mode: { param: scan_mode }, fail_on: { param: scan_fail_on } }
+  approve:
+    kind: approval
+    if: { param: approve }
+    description: A person decides before anything changes
+    needs: image
+    message: { param: environment, format: "Deploy this build to %s?" }
+  deploy:
+    kind: deploy
+    description: Commit the image to the GitOps repository and wait for Argo CD
+    needs: [image, approve]
+    environment: { param: environment }
+    version: { output: tag.tag }
+    argocd:
+      application: { param: application }
+      write_back:
+        repo: { param: gitops_repo }
+        branch: { param: gitops_branch }
+        changes:
+          - { file: { param: manifest }, image: { param: image_repository }, digest: { output: image.digest } }
+      sync:
+        request: always
+        resources:
+          - { kind: { param: workload_kind }, name: { param: workload }, namespace: { param: namespace } }
+  verify:
+    kind: verify
+    description: Watch the health of the new version
+    needs: deploy
+    deployment: deploy
+    duration: { param: verify_for }
+    interval: { param: verify_every }
+    metrics:
+      - { name: healthy, source: { param: health_source }, query: { param: health_query }, min: 1, direction: lower-is-worse }
+  rollback:
+    kind: rollback
+    description: Put the previous version back if the verification fails
+    needs: verify
+    deployment: deploy
+outputs:
+  tag:    { from: tag.tag }
+  digest: { from: image.digest }
+  image:  { from: image.image }

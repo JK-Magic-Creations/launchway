@@ -1,0 +1,107 @@
+# Checks a Python or Node service: installs its dependencies (cached between
+# runs), lints it, runs its tests with the results and the coverage declared as
+# reports, and scans it for known insecure code and for secrets. Every
+# repository that uses it gets the same report tabs (Tests, Coverage, Security)
+# without writing a `reports:` key of its own.
+#
+#   ci:
+#     uses: platform/service-ci
+#     with: { language: python, coverage_minimum: 70 }
+#
+# A repository whose code is in a directory (a monorepo) uses it once for each:
+#   backend: { uses: platform/service-ci, with: { working_directory: backend } }
+#   app:     { uses: platform/service-ci, with: { working_directory: app, language: node } }
+#
+# The scripts run in the working directory. The default commands write their
+# reports under reports/ there; a test_command of your own should do the same
+# (JUnit XML in reports/unit, a coverage file in reports/coverage).
+#
+# Outputs: none; steps that need the step wait for every check in it.
+template: service-ci
+description: Install, lint, test and scan a Python or Node service, with its reports declared once
+params:
+  language:          { type: string, default: python, options: [python, node], description: "Which toolchain the repository uses" }
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; one use for each directory of a monorepo" }
+  install_command:   { type: string, default: "", description: "How to install dependencies; empty: pip install -r requirements.txt pytest pytest-cov, or npm ci" }
+  lint_command:      { type: string, default: "", description: "The lint command; empty: no lint" }
+  test_command:      { type: string, default: "", description: "The test command; empty: pytest with JUnit and coverage reports, or npm test" }
+  coverage_minimum:  { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
+  database_url:      { type: string, default: "", description: "Given to the tests as DATABASE_URL and TEST_DATABASE_URL, for repositories whose tests need a database (see service-ci-postgres)" }
+  secret_scan:       { type: boolean, default: true, description: "Look for secrets committed to the repository" }
+  code_scan:         { type: boolean, default: true, description: "Python only: scan for insecure code with bandit" }
+  scan_mode:         { type: string, default: enforce, options: [enforce, report], description: "enforce fails on a high-severity finding; report records it and passes" }
+  scan_paths:        { type: string, default: ".", description: "Paths the code scan reads, separated by spaces" }
+  python_image:      { type: string, default: "docker.io/library/python:3.13-slim" }
+  node_image:        { type: string, default: "docker.io/library/node:22-slim" }
+containers:
+  python: { image: { param: python_image } }
+  node:   { image: { param: node_image } }
+steps:
+  python-deps:
+    description: Install the Python dependencies
+    if: { param: language, equals: python }
+    container: python
+    cache:
+      - name: pip
+        paths: [.cache/pip]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/poetry.lock"], text: v1 }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/service/python-deps.sh"
+  python-lint:
+    description: Lint the code, if the repository has a lint command
+    if: { param: language, equals: python }
+    needs: python-deps
+    container: python
+    run: "$LAUNCHWAY_LIB/scripts/service/lint.sh"
+  python-test:
+    description: Run the tests; their results and coverage are shown in the run
+    if: { param: language, equals: python }
+    needs: python-deps
+    container: python
+    env:
+      DATABASE_URL: { param: database_url }
+      TEST_DATABASE_URL: { param: database_url }
+    run: "$LAUNCHWAY_LIB/scripts/service/python-test.sh"
+    reports:
+      tests: ["**/reports/unit/*.xml"]
+      coverage: { paths: ["**/reports/coverage/*.xml"], fail_under: { param: coverage_minimum } }
+  python-code-scan:
+    description: Scan the code for insecure patterns with bandit
+    if: { param: code_scan }
+    needs: python-deps
+    container: python
+    run: "$LAUNCHWAY_LIB/scripts/service/bandit.sh"
+    reports: { findings: ["**/reports/security/*.sarif"] }
+  node-deps:
+    description: Install the Node dependencies
+    if: { param: language, equals: node }
+    container: node
+    cache:
+      - name: npm
+        paths: [.cache/npm]
+        key: { files: ["**/package-lock.json"], text: v1 }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/service/node-deps.sh"
+  node-lint:
+    description: Lint the code, if the repository has a lint command
+    if: { param: language, equals: node }
+    needs: node-deps
+    container: node
+    run: "$LAUNCHWAY_LIB/scripts/service/lint.sh"
+  node-test:
+    description: Run the tests; their results and coverage are shown in the run
+    if: { param: language, equals: node }
+    needs: node-deps
+    container: node
+    env:
+      DATABASE_URL: { param: database_url }
+      TEST_DATABASE_URL: { param: database_url }
+    run: "$LAUNCHWAY_LIB/scripts/service/node-test.sh"
+    reports:
+      tests: ["**/reports/unit/*.xml"]
+      coverage: { paths: ["**/reports/coverage/*.info", "**/reports/coverage/*.xml"], fail_under: { param: coverage_minimum } }
+  secrets:
+    description: Look for secrets in the files of the commit
+    if: { param: secret_scan }
+    container: python
+    run: "$LAUNCHWAY_LIB/scripts/service/secrets.sh"

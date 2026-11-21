@@ -1,6 +1,8 @@
 package pipeline
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -249,5 +251,211 @@ steps:
 	if _, err := expand(t, "pipeline: p\nlibraries:\n  l: { repo: l, version: v1 }\nsteps:\n  ci: { uses: l/py, with: { minimum: 150 } }\n", map[string]string{"py": tmpl}); err == nil ||
 		!strings.Contains(err.Error(), "percentage") {
 		t.Fatalf("got %v", err)
+	}
+}
+
+func exampleLibrary(t *testing.T) map[string]string {
+	t.Helper()
+	dir := filepath.Join("..", "..", "examples", "library", "templates")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := map[string]string{}
+	for _, e := range entries {
+		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out[strings.TrimSuffix(e.Name(), ".yaml")] = string(b)
+	}
+	return out
+}
+
+func TestServiceCDExample(t *testing.T) {
+	src := `pipeline: shop
+libraries:
+  platform: { repo: platform, version: v1 }
+steps:
+  dev:
+    uses: platform/service-cd
+    when: { branch: develop }
+    with:
+      environment: dev
+      application: shop-dev
+      image_repository: team/shop
+      manifest: apps/shop-dev/deployment.yaml
+      workload: shop
+      namespace: shop-dev
+      health_query: 'min(probe_success{instance="http://shop.shop-dev.svc:8080/health"})'
+  prod:
+    uses: platform/service-cd
+    needs: dev
+    when: { branch: main }
+    with:
+      environment: prod
+      application: shop
+      image_repository: team/shop
+      manifest: apps/shop/deployment.yaml
+      workload: shop
+      namespace: shop
+      approve: true
+      scan_mode: enforce
+      sign: true
+      cache_registry: registry
+      health_query: 'min(probe_success{instance="http://shop.shop.svc:8080/health"})'
+`
+	p := mustExpand(t, src, exampleLibrary(t))
+	for _, env := range []string{"dev", "prod"} {
+		d := p.Step(env + "/deploy")
+		if d == nil || d.Environment != env {
+			t.Fatalf("%s: %v", env, ids(p))
+		}
+		if r := p.RollbackOf(d.ID); r == nil {
+			t.Fatalf("%s has no rollback", env)
+		}
+		if c := d.ArgoCD.WriteBack.Changes[0]; c.Digest == nil || c.Digest.Output.Step != env+"/image" {
+			t.Fatalf("%s change: %+v", env, c)
+		}
+	}
+	if p.Step("dev/approve") != nil || p.Step("prod/approve") == nil {
+		t.Fatal("only prod asks")
+	}
+	img := p.Step("prod/image").ImageBuild
+	if img.Scan.Mode != "enforce" || !img.Sign.Runner || img.Cache == nil || img.Cache.Registry != "registry" {
+		t.Fatalf("prod image: %+v %+v %+v", img.Scan, img.Sign, img.Cache)
+	}
+	if p.Step("dev/image").ImageBuild.Cache != nil || p.Step("dev/image").ImageBuild.Sign != nil {
+		t.Fatal("dev image should have neither cache nor signature")
+	}
+	if m := p.Step("prod/verify").Verify.Metrics[0]; m.Min == nil || *m.Min != 1 || !strings.Contains(m.Query, "shop.shop.svc") || m.Source != "prometheus" {
+		t.Fatalf("metric: %+v", m)
+	}
+	if g := p.Group("prod"); g.Outputs["digest"].Step != "prod/image" {
+		t.Fatalf("outputs %v", g.Outputs)
+	}
+}
+
+func TestServiceCDRolloutExample(t *testing.T) {
+	src := `pipeline: shop
+libraries:
+  platform: { repo: platform, version: v1 }
+steps:
+  prod:
+    uses: platform/service-cd-rollout
+    with:
+      environment: prod
+      application: shop
+      image_repository: team/shop
+      manifest: apps/shop/rollout.yaml
+      workload: shop
+      namespace: shop
+      pauses: promote
+      health_query: 'min(probe_success{instance="http://shop.shop.svc:8080/health"})'
+`
+	p := mustExpand(t, src, exampleLibrary(t))
+	d := p.Step("prod/deploy")
+	if d.Rollout == nil || d.Rollout.Name != "shop" || d.Rollout.Namespace != "shop" || d.Rollout.Pauses != "promote" {
+		t.Fatalf("rollout: %+v", d.Rollout)
+	}
+	if r := d.ArgoCD.Sync.Resources[0]; r.Kind != "Rollout" || r.Group != "argoproj.io" {
+		t.Fatalf("resource: %+v", r)
+	}
+	if p.Requires < SchemaControl {
+		t.Fatalf("requires %d", p.Requires)
+	}
+}
+
+func TestServiceCIExample(t *testing.T) {
+	src := `pipeline: shop
+libraries:
+  platform: { repo: platform, version: v1 }
+steps:
+  backend:
+    uses: platform/service-ci-postgres
+    with: { database: shop_test, working_directory: backend, coverage_minimum: 80, install_command: "pip install -e .[dev]" }
+  app:
+    uses: platform/service-ci
+    with: { language: node, working_directory: app }
+  lib:
+    uses: platform/service-ci
+    with: { code_scan: false, scan_mode: report }
+`
+	p := mustExpand(t, src, exampleLibrary(t))
+	test := p.Step("backend/checks/python-test")
+	if test == nil {
+		t.Fatalf("steps %v", ids(p))
+	}
+	if test.Env["DATABASE_URL"] != "postgres://postgres:test@localhost:5432/shop_test" || test.Env["PARAM_WORKING_DIRECTORY"] != "backend" {
+		t.Fatalf("env %v", test.Env)
+	}
+	if test.Reports == nil || test.Reports.CoverageFailUnder == nil || test.Reports.CoverageFailUnder.Lines != 80 || len(test.Reports.Tests) != 1 {
+		t.Fatalf("reports %+v", test.Reports)
+	}
+	if !contains(test.Needs, "backend/checks/python-deps") {
+		t.Fatalf("needs %v", test.Needs)
+	}
+	deps := p.Step("backend/checks/python-deps")
+	if !contains(deps.Needs, "backend/database-ready") {
+		t.Fatalf("the checks must wait for the database: %v", deps.Needs)
+	}
+	if len(deps.Cache) != 1 || deps.Cache[0].Name != "pip" {
+		t.Fatalf("cache %+v", deps.Cache)
+	}
+	if p.Step("app/node-test") == nil || p.Step("app/python-test") != nil {
+		t.Fatalf("language: node should keep only the node steps: %v", ids(p))
+	}
+	if p.Step("lib/python-code-scan") != nil {
+		t.Fatal("code_scan: false should leave the scan out")
+	}
+	if p.Step("lib/python-test").Reports.CoverageFailUnder != nil {
+		t.Fatal("no threshold by default")
+	}
+	var db *Container
+	for _, c := range p.Containers {
+		if c.Service {
+			db = c
+		}
+	}
+	if db == nil || db.Env["POSTGRES_DB"] != "shop_test" {
+		t.Fatalf("service %+v", db)
+	}
+}
+
+// The thin pipeline files of the example library expand against its
+// templates and come out as complete graphs.
+func TestExamplePipelines(t *testing.T) {
+	dir := filepath.Join("..", "..", "examples", "library", "pipelines")
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) == 0 {
+		t.Fatalf("%v %d", err, len(entries))
+	}
+	lib := exampleLibrary(t)
+	wantDeploys := map[string][]string{
+		"small-service":   {"dev/deploy", "prod/deploy"},
+		"rollout-service": {"prod/deploy"},
+		"monorepo":        {"deliver/deploy"},
+	}
+	for _, e := range entries {
+		name := strings.TrimSuffix(e.Name(), ".yaml")
+		t.Run(name, func(t *testing.T) {
+			b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			p := mustExpand(t, string(b), lib)
+			for _, id := range wantDeploys[name] {
+				if d := p.Step(id); d == nil || !d.IsDeploy() || p.RollbackOf(id) == nil {
+					t.Errorf("%s: no deploy with a rollback in %v", id, ids(p))
+				}
+			}
+			if len(p.Steps) < 5 || len(p.Steps) > 30 {
+				t.Errorf("%d steps", len(p.Steps))
+			}
+			// The pipeline file stays short: that is what the library is for.
+			if lines := strings.Count(string(b), "\n"); lines > 60 {
+				t.Errorf("the file is %d lines", lines)
+			}
+		})
 	}
 }

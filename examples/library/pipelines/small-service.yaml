@@ -1,0 +1,41 @@
+# .launchway/pipeline.yaml of a small service that has a dev and a production
+# environment: checks on every push and pull request, delivery to dev from
+# `develop` and to production from `main`. The whole delivery is one shared
+# template used twice; this file only says what is particular to the service.
+pipeline: shop
+on:
+  push: { branches: [main, develop] }
+  pull_request: {}
+supersede: true
+libraries:
+  platform: { repo: platform, version: v1 }   # pinned: moving to v2 is a change in this file
+steps:
+  ci:
+    uses: platform/service-ci
+    with: { coverage_minimum: 70 }
+  dev:
+    uses: platform/service-cd
+    needs: ci
+    when: { branch: develop }
+    with:
+      environment: dev
+      application: shop-dev
+      image_repository: team/shop
+      manifest: apps/shop-dev/deployment.yaml
+      workload: shop
+      namespace: shop-dev
+      health_query: 'min(probe_success{instance="http://shop.shop-dev.svc:8080/health"})'
+  prod:
+    uses: platform/service-cd
+    needs: ci
+    when: { branch: main }
+    with:
+      environment: prod
+      application: shop
+      image_repository: team/shop
+      manifest: apps/shop/deployment.yaml
+      workload: shop
+      namespace: shop
+      approve: true
+      scan_mode: enforce
+      health_query: 'min(probe_success{instance="http://shop.shop.svc:8080/health"})'
