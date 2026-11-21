@@ -270,12 +270,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}` | `review_pull_request` | `pr review` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews` | `review_pull_request` | `pr review` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss` | `review_pull_request` | `pr review` | — | equal |
-| `GET /api/v1/repositories/{owner}/{name}/raw` | `read_repository_file` | `repos cat` | — | equal |
-| `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/suggestions/apply` | `update_pull_comment` | `pr apply` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/update-branch` | `update_pull_branch` | `pr update-branch` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/viewed` | `mark_pull_files_viewed` | `pr viewed` | — | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/pulls/{number}/viewed` | `mark_pull_files_viewed` | `pr viewed` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/raw` | `read_repository_file` | `repos cat` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |
