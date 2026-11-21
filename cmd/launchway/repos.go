@@ -49,6 +49,8 @@ func cmdRepos(args []string) error {
 			return cl.reposDelete(args[1:])
 		case "deploy-keys":
 			return cl.deployKeys(args[1:])
+		case "hooks":
+			return cl.hooks(args[1:])
 		case "protected-branches":
 			return cl.protectedBranches(args[1:])
 		}

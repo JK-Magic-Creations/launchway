@@ -70,6 +70,24 @@ var mcpPermissionTable = map[string]mcpRow{
 	"update_repository": {map[string]any{"owner": "o", "name": "x", "visibility": "public"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"delete_repository": {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"create_repository": {map[string]any{"name": "x"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	// Git over SSH, deploy keys, protected branches and webhooks, with hosting off: the SSH status says so plainly; every other call that
+	// is offered answers feature_off. Operators are offered the tools that change a repository's keys, branches and hooks.
+	"get_ssh_info":            {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"list_ssh_keys":           {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"add_ssh_key":             {map[string]any{"public_key": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"delete_ssh_key":          {map[string]any{"id": "k"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"list_deploy_keys":        {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"add_deploy_key":          {map[string]any{"owner": "o", "name": "x", "public_key": "x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"delete_deploy_key":       {map[string]any{"owner": "o", "name": "x", "id": "k"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"get_protected_branches":  {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"set_protected_branches":  {map[string]any{"owner": "o", "name": "x", "patterns": []string{"main"}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"list_webhooks":           {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"list_webhook_deliveries": {map[string]any{"owner": "o", "name": "x", "id": "h"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"add_webhook":             {map[string]any{"owner": "o", "name": "x", "url": "https://x.example/", "events": []string{"push"}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"update_webhook":          {map[string]any{"owner": "o", "name": "x", "id": "h", "active": false}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"delete_webhook":          {map[string]any{"owner": "o", "name": "x", "id": "h"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"test_webhook":            {map[string]any{"owner": "o", "name": "x", "id": "h"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"redeliver_webhook":       {map[string]any{"owner": "o", "name": "x", "id": "h", "delivery": "d"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	// Build caches: viewers list, operators delete, only an administrator is
 	// offered the tool that changes the policy.
 	// Variables at levels: viewers read; operators set at a project they operate;

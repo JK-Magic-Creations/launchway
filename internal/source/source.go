@@ -483,6 +483,8 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 			d.Outcome, d.Detail = "error", what+":\n"+redact.URLs(err.Error())
 		case !pl.On.MatchPush(branchOf(r), tagOf(r)):
 			d.Outcome, d.Detail = "ignored", strings.TrimSpace("the pipeline's push trigger does not match "+r.FullRef()+" "+p.note(from))
+		case skipMarker(r.Subject) != "":
+			d.Outcome, d.Detail = "ignored", "the commit message says "+skipMarker(r.Subject)+": no run for this commit (start one by hand if you want it)"
 		default:
 			// Claims the change, creates the run and records the decision
 			// in one transaction.

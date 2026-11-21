@@ -33,7 +33,7 @@ func TestMCPConnectsAndDescribesItself(t *testing.T) {
 		if tool.Description == "" || tool.Annotations == nil || tool.InputSchema == nil {
 			t.Errorf("%s: description, annotations and input schema are needed: %+v", tool.Name, tool)
 		}
-		mutating := slices.Contains([]string{"start_run", "cancel_run", "retry_run", "decide_approval", "control_rollout", "mark_verification", "set_step_resource_limits", "set_step_resource_default", "delete_cache", "set_cache_policy", "update_repository", "delete_repository", "create_repository", "set_variable", "delete_variable", "lock_variable", "unlock_variable"}, tool.Name)
+		mutating := slices.Contains([]string{"start_run", "cancel_run", "retry_run", "decide_approval", "control_rollout", "mark_verification", "set_step_resource_limits", "set_step_resource_default", "delete_cache", "set_cache_policy", "update_repository", "delete_repository", "create_repository", "set_variable", "delete_variable", "lock_variable", "unlock_variable", "add_ssh_key", "delete_ssh_key", "add_deploy_key", "delete_deploy_key", "set_protected_branches", "add_webhook", "update_webhook", "delete_webhook", "test_webhook", "redeliver_webhook"}, tool.Name)
 		if tool.Annotations.ReadOnlyHint == mutating {
 			t.Errorf("%s: readOnlyHint %v", tool.Name, tool.Annotations.ReadOnlyHint)
 		}

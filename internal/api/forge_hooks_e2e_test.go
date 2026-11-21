@@ -84,7 +84,7 @@ func whUntil(t *testing.T, h *hosting.Hosting, what string, cond func() bool) {
 	t.Fatalf("timed out waiting for %s", what)
 }
 
-func addWebhook(t *testing.T, b *browser, base, body string) (hook map[string]any, secret string) {
+func whAdd(t *testing.T, b *browser, base, body string) (hook map[string]any, secret string) {
 	t.Helper()
 	r := b.do("POST", base, body)
 	if r.status != 201 {
@@ -105,7 +105,7 @@ func TestWebhookPushIsSignedAndComplete(t *testing.T) {
 	ada := e.signIn(t, "ada")
 	rcv, ownerRcv := newWhReceiver(t), newWhReceiver(t)
 	base := e.srv.URL + "/api/v1/repositories/acme/shop/hooks"
-	hook, secret := addWebhook(t, ada, base, `{"name":"ci","url":"`+rcv.srv.URL+`","events":["push","create"],"secret":"s3cret"}`)
+	hook, secret := whAdd(t, ada, base, `{"name":"ci","url":"`+rcv.srv.URL+`","events":["push","create"],"secret":"s3cret"}`)
 	if secret != "" {
 		t.Errorf("a secret the caller chose came back: %q", secret)
 	}
@@ -113,7 +113,7 @@ func TestWebhookPushIsSignedAndComplete(t *testing.T) {
 		t.Errorf("hook: %+v", hook)
 	}
 	// An owner's hook covers every repository of the owner.
-	_, gen := addWebhook(t, ada, e.srv.URL+"/api/v1/owners/acme/hooks", `{"url":"`+ownerRcv.srv.URL+`","events":["push"]}`)
+	_, gen := whAdd(t, ada, e.srv.URL+"/api/v1/owners/acme/hooks", `{"url":"`+ownerRcv.srv.URL+`","events":["push"]}`)
 	if len(gen) < 32 {
 		t.Errorf("a generated secret is shown once, at creation: %q", gen)
 	}
@@ -196,7 +196,7 @@ func TestWebhookRetriesTestAndRedelivery(t *testing.T) {
 		return 200
 	}
 	base := e.srv.URL + "/api/v1/repositories/acme/shop/hooks"
-	hook, _ := addWebhook(t, ada, base, `{"url":"`+rcv.srv.URL+`","events":["push"]}`)
+	hook, _ := whAdd(t, ada, base, `{"url":"`+rcv.srv.URL+`","events":["push"]}`)
 	id := hook["id"].(string)
 	tok := e.tokenFor(t, "ada", "t")
 	mustGit(t, work(t), "push", "-q", withToken(e.srv.URL, "/git/acme/shop.git", tok), "HEAD:refs/heads/main")
@@ -252,7 +252,7 @@ func TestWebhookTurnsOffAfterSustainedFailureWithANotice(t *testing.T) {
 	rcv := newWhReceiver(t)
 	rcv.code = func(int) int { return 500 }
 	base := e.srv.URL + "/api/v1/repositories/acme/shop/hooks"
-	hook, _ := addWebhook(t, ada, base, `{"url":"`+rcv.srv.URL+`","events":["push"]}`)
+	hook, _ := whAdd(t, ada, base, `{"url":"`+rcv.srv.URL+`","events":["push"]}`)
 	id := hook["id"].(string)
 	tok := e.tokenFor(t, "ada", "t")
 	src := work(t)
@@ -304,7 +304,7 @@ func TestWebhookEgressGuard(t *testing.T) {
 	ada := e.signIn(t, "ada")
 	rcv := newWhReceiver(t)
 	base := e.srv.URL + "/api/v1/repositories/acme/shop/hooks"
-	hook, _ := addWebhook(t, ada, base, `{"url":"`+rcv.srv.URL+`","events":["push"]}`)
+	hook, _ := whAdd(t, ada, base, `{"url":"`+rcv.srv.URL+`","events":["push"]}`)
 	var d struct {
 		State, Error string
 	}
@@ -326,7 +326,7 @@ func TestWebhookRepositoryEvents(t *testing.T) {
 	if r := ada.do("POST", e.srv.URL+"/api/v1/repositories", `{"owner":"acme","name":"shop"}`); r.status != 201 {
 		t.Fatal(r.status, r.body)
 	}
-	addWebhook(t, ada, e.srv.URL+"/api/v1/owners/acme/hooks", `{"url":"`+rcv.srv.URL+`","events":["repository"]}`)
+	whAdd(t, ada, e.srv.URL+"/api/v1/owners/acme/hooks", `{"url":"`+rcv.srv.URL+`","events":["repository"]}`)
 	ada.do("POST", e.srv.URL+"/api/v1/repositories", `{"owner":"acme","name":"two"}`)
 	ada.do("PATCH", e.srv.URL+"/api/v1/repositories/acme/two", `{"name":"three"}`)
 	ada.do("DELETE", e.srv.URL+"/api/v1/repositories/acme/three", "")

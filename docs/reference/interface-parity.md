@@ -73,6 +73,13 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/libraries` | `list_config (kind libraries)` | `libraries list` | `launchway_library` | equal |
 | `GET /api/v1/libraries/{library}/templates` | `list_templates` | — | — | gap: launchway has no templates command yet |
 | `GET /api/v1/me` | — | — | — | exempt: the caller's own identity: the token is the credential for MCP and the CLI |
+| `GET /api/v1/owners/{owner}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
+| `POST /api/v1/owners/{owner}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
+| `DELETE /api/v1/owners/{owner}/hooks/{id}` | `delete_webhook` | `repos hooks delete` | `planned: launchway_webhook` | equal |
+| `PATCH /api/v1/owners/{owner}/hooks/{id}` | `update_webhook` | `repos hooks update` | `planned: launchway_webhook` | equal |
+| `GET /api/v1/owners/{owner}/hooks/{id}/deliveries` | `list_webhook_deliveries` | `repos hooks deliveries` | `planned: launchway_webhook` | equal |
+| `POST /api/v1/owners/{owner}/hooks/{id}/deliveries/{delivery}/redeliver` | `redeliver_webhook` | `repos hooks redeliver` | `planned: launchway_webhook` | equal |
+| `POST /api/v1/owners/{owner}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
 | `GET /api/v1/policies` | `list_config (kind policies)` | `policy list` | `launchway_policy` | equal |
 | `GET /api/v1/projects` | `list_projects` | `projects list` | — | equal |
 | `GET /api/v1/projects/{name}` | `get_project` | `projects get` | — | equal |
@@ -111,6 +118,13 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `list_deploy_keys` | `repos deploy-keys list` | `planned: launchway_deploy_key` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `add_deploy_key` | `repos deploy-keys add` | `planned: launchway_deploy_key` | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` | `delete_deploy_key` | `repos deploy-keys delete` | `planned: launchway_deploy_key` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
+| `POST /api/v1/repositories/{owner}/{name}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/hooks/{id}` | `delete_webhook` | `repos hooks delete` | `planned: launchway_webhook` | equal |
+| `PATCH /api/v1/repositories/{owner}/{name}/hooks/{id}` | `update_webhook` | `repos hooks update` | `planned: launchway_webhook` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries` | `list_webhook_deliveries` | `repos hooks deliveries` | `planned: launchway_webhook` | equal |
+| `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries/{delivery}/redeliver` | `redeliver_webhook` | `repos hooks redeliver` | `planned: launchway_webhook` | equal |
+| `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/test` | `test_webhook` | `repos hooks test` | `planned: launchway_webhook` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/protected-branches` | `get_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/protected-branches` | `set_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
