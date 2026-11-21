@@ -675,6 +675,9 @@ func (s *Server) createFormation(w http.ResponseWriter, r *http.Request) {
 		Name     string   `json:"name"`
 		Note     string   `json:"note"`
 		Releases []string `json:"releases"` // "project@version", in the order they are promoted
+		// Order is "explicit" (default: the order of releases) or "dependencies": the releases are put in the software
+		// graph's dependency order, providers first, whatever order they are written in.
+		Order string `json:"order"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -699,7 +702,21 @@ func (s *Server) createFormation(w http.ResponseWriter, r *http.Request) {
 		}
 		ids = append(ids, rel.ID)
 	}
-	f, err := s.Engine.CreateFormation(in.Name, in.Note, ids, id.User)
+	source := engine.OrderExplicit
+	switch in.Order {
+	case "", engine.OrderExplicit:
+	case engine.OrderDependencies:
+		ordered, err := s.formationByDependencies(r.Context(), id, ids)
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		ids, source = ordered, engine.OrderDependencies
+	default:
+		writeErr(w, http.StatusBadRequest, `order is "explicit" or "dependencies"`)
+		return
+	}
+	f, err := s.Engine.CreateFormationOrdered(in.Name, in.Note, ids, id.User, source)
 	if err != nil {
 		s.fail(w, err)
 		return

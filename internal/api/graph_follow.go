@@ -71,7 +71,7 @@ func (s *Server) followPlan(ctx context.Context, id *identity, project string) (
 		return plan, nil
 	}
 	plan.Repository = repo
-	view := graphViewer{s, id}
+	view := s.projectRepoViewer(id, repos)
 	order, err := s.Graph.Store.Order(ctx, view, graph.OrderQuery{Repositories: []string{repo}, Upstream: true})
 	if err != nil {
 		return plan, err

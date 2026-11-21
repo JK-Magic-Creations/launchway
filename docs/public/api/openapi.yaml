@@ -7567,7 +7567,7 @@ paths:
                 - release-formations
             x-launchway-access: signed-in
         post:
-            description: 'Makes a formation: {"name", "note", "releases": ["project@version", ...]}, in promotion order. Needs the operator role on every project in it.'
+            description: 'Makes a formation: {"name", "note", "releases": ["project@version", ...], "order"}, in promotion order; with "order": "dependencies" the [software graph](../guide/software-graph.md) puts the releases in dependency order instead (409 with the reason when it cannot). Needs the operator role on every project in it.'
             operationId: post_api_v1_release_formations
             parameters:
                 - $ref: '#/components/parameters/Csrf'
@@ -7586,7 +7586,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'Makes a formation: {"name", "note", "releases": ["project@version", ...]}, in promotion order.'
+            summary: 'Makes a formation: {"name", "note", "releases": ["project@version", ...], "order"}, in promotion order; with "order": "dependencies" the [software graph](../guide/software-graph.md) puts the releases in dependency order instead (409 with the reason when it cannot).'
             tags:
                 - release-formations
             x-launchway-access: signed-in

@@ -121,7 +121,7 @@ export const releasesApi = {
   reportUrl: (o: { project?: string; from?: string; to?: string; format?: string }) => `/api/v1/release-report${q(o)}`,
   formations: (b?: boolean) => call<Formation[]>("GET", "/api/v1/release-formations", undefined, bg(b)),
   formation: (name: string, b?: boolean) => call<Formation>("GET", `/api/v1/release-formations/${encodeURIComponent(name)}`, undefined, bg(b)),
-  createFormation: (name: string, note: string, releases: string[]) => call<Formation>("POST", "/api/v1/release-formations", { name, note, releases }),
+  createFormation: (name: string, note: string, releases: string[], order?: "dependencies") => call<Formation>("POST", "/api/v1/release-formations", { name, note, releases, order }),
   promoteFormation: (name: string, airfield: string, override?: string) => call<Formation>("POST", `/api/v1/release-formations/${encodeURIComponent(name)}/promote`, { airfield, override }),
   settings: (project: string) => call<{ settings: ReleaseSettings; installation_allows_public: boolean; writable: boolean; schemes: string[] }>("GET", `${p(project)}/release-settings`),
 };

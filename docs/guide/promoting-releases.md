@@ -67,6 +67,10 @@ launchway release formation promote autumn-launch --airfield prod
 - **One after another, in order.** The first member is promoted; the next starts when the one before has launched. The server moves a promoting formation on every few seconds, and when it is read.
 - **A report that says what happened.** If one member fails, the members after it are not started, and the formation is *partial* (some launched, then one failed) or *failed*. Each member shows launched, failed or not started. Nothing is undone automatically: return the launched members to base if they should go back.
 
-The order is the one you give (`order_source` is `explicit`). When the projects' dependency graph exists (see the roadmap, "dependency order"), it will propose the order and the explicit one stays an override.
+The order is the one you give (`order_source` is `explicit`). Or let the [software graph](software-graph.md) order it: add `--order dependencies` (the box "Order by dependencies" on the Formations page, `"order": "dependencies"` in the API), and the releases are put in the graph's dependency order, what others depend on first, whatever order you wrote them in (`order_source` is `dependencies`). It needs the graph to know which repository each project builds, and refuses, saying which, when it does not; and it refuses when the releases depend on each other in a cycle, because then the order is yours to write.
+
+```
+launchway release formation create autumn-launch web@5.1.0 api@2.0.0 --order dependencies
+```
 
 You need the operator role on every project in a formation.

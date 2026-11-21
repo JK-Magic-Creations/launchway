@@ -161,21 +161,22 @@ export function ReleaseFormationsPage() {
   const mx = useLoad(useCallback((b: boolean) => releasesApi.matrix(b), []), 0);
   const [name, setName] = useState("");
   const [members, setMembers] = useState("");
+  const [byDeps, setByDeps] = useState(false);
   const [airfield, setAirfield] = useState<Record<string, string>>({});
   const [error, setError] = useState<unknown>(null);
   const any = Object.values(me?.roles ?? {}).some((r) => r === "operator" || r === "admin");
   const make = async () => {
     setError(null);
-    try { await releasesApi.createFormation(name.trim(), "", members.split(/[\s,]+/).filter(Boolean)); setName(""); setMembers(""); data.reload(); } catch (e) { setError(e); }
+    try { await releasesApi.createFormation(name.trim(), "", members.split(/[\s,]+/).filter(Boolean), byDeps ? "dependencies" : undefined); setName(""); setMembers(""); data.reload(); } catch (e) { setError(e); }
   };
   return (
     <div className="page">
       <PageHead eyebrow="Deployments · Releases" title="Formations"
-        sentence="A Formation groups releases of several projects that go out together, in an order you write. Nothing starts unless every release passes the Airfield's checklist; then they are launched one after another, and the report says which launched, which failed and which were not started." />
+        sentence="A Formation groups releases of several projects that go out together, in an order you write, or the order of their dependencies. Nothing starts unless every release passes the Airfield's checklist; then they are launched one after another, and the report says which launched, which failed and which were not started." />
       <ReleasesNav path="/deployments/releases/formations" />
       <ErrorBox error={data.error} />
       {data.loading && !data.data && <div className="loading">Loading…</div>}
-      {data.data && data.data.length === 0 && <Sheet><EmptyState title="No formations yet">Write one below: the releases, in the order they should go out. Until the projects' dependency graph exists, the order is yours; it will then propose one.</EmptyState></Sheet>}
+      {data.data && data.data.length === 0 && <Sheet><EmptyState title="No formations yet">Write one below: the releases, in the order they should go out. The order is yours, or tick "Order by dependencies" and the software graph puts what the others depend on first.</EmptyState></Sheet>}
       {(data.data ?? []).map((f) => (
         <Sheet key={f.id} title={<>{f.name} <Chip tone={f.state === "done" ? "ok" : f.state === "partial" || f.state === "failed" ? "bad" : f.state === "promoting" ? "run" : undefined}>{f.state}</Chip></>}>
           <ol className="rowlist" style={{ listStyle: "decimal inside" }} aria-label={`Members of ${f.name}, in order`}>
@@ -183,6 +184,7 @@ export function ReleaseFormationsPage() {
               <li key={m.release_id}><div className="main rel-member"><a href={relHref(m.project, m.version)} onClick={onLink}>{m.project} {m.version}</a><Chip tone={MEMBER[m.state]?.tone}>{MEMBER[m.state]?.word ?? m.state}</Chip>{m.detail && <span className="faint">{m.detail}</span>}</div></li>
             ))}
           </ol>
+          {f.order_source === "dependencies" && <p className="faint small">Ordered by dependencies: the software graph put what the others depend on first.</p>}
           {f.state === "planned" && any && (
             <div className="rel-inline">
               <label>Promote to<select value={airfield[f.id] ?? ""} onChange={(e) => setAirfield({ ...airfield, [f.id]: e.target.value })}><option value="">Choose an Airfield</option>{(mx.data?.airfields ?? []).map((a) => <option key={a}>{a}</option>)}</select></label>
@@ -196,6 +198,7 @@ export function ReleaseFormationsPage() {
           <form className="rel-inline" onSubmit={(e) => { e.preventDefault(); if (name.trim() && members.trim()) make(); }}>
             <label>Name<input type="text" value={name} onChange={(e) => setName(e.target.value)} required maxLength={64} /></label>
             <label>Releases, in order, as project@version<input type="text" value={members} onChange={(e) => setMembers(e.target.value)} required placeholder="api@2.0.0 web@5.1.0" style={{ minWidth: 280 }} /></label>
+            <label><input type="checkbox" checked={byDeps} onChange={(e) => setByDeps(e.target.checked)} /> Order by dependencies (the software graph puts what others depend on first)</label>
             <Button kind="pri" type="submit" disabled={!name.trim() || !members.trim()}>Make the formation</Button>
           </form>
           <ErrorBox error={error} />

@@ -11,9 +11,9 @@ import (
 )
 
 // A Formation groups releases of several projects that are promoted together,
-// in an explicit order (the position of each member). Today the order is
-// written by the person who makes the formation; when the dependency graph of
-// the projects exists it will propose it. A formation reports all or nothing:
+// in an explicit order (the position of each member). The order is written by
+// the person who makes the formation, or, when they ask for "order by
+// dependencies", taken from the software graph and recorded as such. A formation reports all or nothing:
 // no member is started unless every member's checklist passes for the
 // Airfield, and when one member's Sortie fails the rest are not started and
 // the report says which launched, which failed and which were not started.
@@ -61,12 +61,23 @@ type Formation struct {
 	CreatedAt int64             `json:"created_at"`
 	ClosedAt  int64             `json:"closed_at,omitempty"`
 	Members   []FormationMember `json:"members"`
-	// OrderSource says where the order came from: "explicit" today.
+	// OrderSource says where the order came from: "explicit" (written by a person) or "dependencies" (the software graph's order).
 	OrderSource string `json:"order_source"`
 }
 
+// Where a formation's order came from.
+const (
+	OrderExplicit     = "explicit"     // written by the person who made it
+	OrderDependencies = "dependencies" // taken from the software graph's dependency order
+)
+
 // CreateFormation groups releases, in the order given.
 func (e *Engine) CreateFormation(name, note string, releaseIDs []string, actor string) (*Formation, error) {
+	return e.CreateFormationOrdered(name, note, releaseIDs, actor, OrderExplicit)
+}
+
+// CreateFormationOrdered groups releases in the order given and records where that order came from.
+func (e *Engine) CreateFormationOrdered(name, note string, releaseIDs []string, actor, orderSource string) (*Formation, error) {
 	if err := e.needReleases(); err != nil {
 		return nil, err
 	}
@@ -76,7 +87,7 @@ func (e *Engine) CreateFormation(name, note string, releaseIDs []string, actor s
 	if len(releaseIDs) < 2 || len(releaseIDs) > 50 {
 		return nil, fmt.Errorf("%w: a formation groups 2 to 50 releases", ErrInvalid)
 	}
-	f := &Formation{ID: ids.New("frm"), Name: name, Note: clipText(note, 500), State: FormationPlanned, CreatedBy: actor, CreatedAt: e.now().UnixMilli(), OrderSource: "explicit"}
+	f := &Formation{ID: ids.New("frm"), Name: name, Note: clipText(note, 500), State: FormationPlanned, CreatedBy: actor, CreatedAt: e.now().UnixMilli(), OrderSource: orderSource}
 	seen := map[string]bool{}
 	for i, id := range releaseIDs {
 		r, err := e.GetRelease(id)
@@ -100,7 +111,7 @@ func (e *Engine) CreateFormation(name, note string, releaseIDs []string, actor s
 			return err
 		}
 		defer func() { _ = tx.Rollback() }()
-		if _, err := tx.Exec(`INSERT INTO release_formations(id, name, note, state, created_by, created_at) VALUES(?,?,?,?,?,?)`, f.ID, f.Name, f.Note, f.State, actor, f.CreatedAt); err != nil {
+		if _, err := tx.Exec(`INSERT INTO release_formations(id, name, note, state, created_by, created_at, order_source) VALUES(?,?,?,?,?,?,?)`, f.ID, f.Name, f.Note, f.State, actor, f.CreatedAt, f.OrderSource); err != nil {
 			return err
 		}
 		for _, m := range f.Members {
@@ -125,8 +136,8 @@ func (e *Engine) GetFormation(id string) (*Formation, error) {
 		return nil, err
 	}
 	f := &Formation{OrderSource: "explicit"}
-	err := e.db.QueryRow(`SELECT id, name, note, state, airfield, created_by, created_at, closed_at FROM release_formations WHERE id = ? OR name = ?`, id, id).
-		Scan(&f.ID, &f.Name, &f.Note, &f.State, &f.Airfield, &f.CreatedBy, &f.CreatedAt, &f.ClosedAt)
+	err := e.db.QueryRow(`SELECT id, name, note, state, airfield, created_by, created_at, closed_at, order_source FROM release_formations WHERE id = ? OR name = ?`, id, id).
+		Scan(&f.ID, &f.Name, &f.Note, &f.State, &f.Airfield, &f.CreatedBy, &f.CreatedAt, &f.ClosedAt, &f.OrderSource)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: formation %s", ErrNotFound, id)
 	}

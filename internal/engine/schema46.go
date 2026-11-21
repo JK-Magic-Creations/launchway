@@ -164,7 +164,8 @@ CREATE TABLE release_formations (
   airfield   TEXT    NOT NULL DEFAULT '',
   created_by TEXT    NOT NULL DEFAULT '',
   created_at {{BIG}} NOT NULL,
-  closed_at  {{BIG}} NOT NULL DEFAULT 0
+  closed_at  {{BIG}} NOT NULL DEFAULT 0,
+  order_source TEXT  NOT NULL DEFAULT 'explicit'
 );
 
 CREATE TABLE release_formation_members (

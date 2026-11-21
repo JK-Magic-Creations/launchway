@@ -57,7 +57,7 @@ const releaseUsage = `Usage:
   launchway release freeze cancel ID
   launchway release formation list
   launchway release formation show NAME
-  launchway release formation create NAME PROJECT@VERSION PROJECT@VERSION ... [--note TEXT]   in promotion order
+  launchway release formation create NAME PROJECT@VERSION PROJECT@VERSION ... [--note TEXT] [--order dependencies]   in promotion order, or by the software graph's dependencies
   launchway release formation promote NAME --airfield A [--override REASON]
   launchway release formation advance NAME
 
@@ -857,6 +857,7 @@ func (cl *client) releaseFormation(args []string) error {
 	case "create":
 		fs := flag.NewFlagSet("release formation create", flag.ContinueOnError)
 		note := fs.String("note", "", "a note")
+		order := fs.String("order", "", `"dependencies": put the releases in the software graph's dependency order, providers first`)
 		pos, err := parseArgs(fs, args[1:])
 		if err != nil {
 			return err
@@ -864,7 +865,7 @@ func (cl *client) releaseFormation(args []string) error {
 		if len(pos) < 3 {
 			return usageErr("launchway release formation create NAME PROJECT@VERSION PROJECT@VERSION ...")
 		}
-		if err := cl.call("POST", "/api/v1/release-formations", map[string]any{"name": pos[0], "note": *note, "releases": pos[1:]}, &out); err != nil {
+		if err := cl.call("POST", "/api/v1/release-formations", map[string]any{"name": pos[0], "note": *note, "releases": pos[1:], "order": *order}, &out); err != nil {
 			return err
 		}
 	case "promote":
