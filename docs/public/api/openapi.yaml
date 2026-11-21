@@ -1949,6 +1949,32 @@ paths:
                 - connections
             x-launchway-access: admin
             x-launchway-audit: connection.delete
+    /api/v1/connections/token:
+        post:
+            description: '{"name", "kind", "base_url", "token"}. The setup guide''s way to give the token of another Git server once: it is written to a file only the server''s account can read and the connection reads it as a file reference; it is never returned or audited. 409 when this server has no disk of its own (a Kubernetes pod) or no data folder: give an environment variable instead. Otherwise as POST /api/v1/connections.'
+            operationId: post_api_v1_connections_token
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"name", "kind", "base_url", "token"}.'
+            tags:
+                - connections
+            x-launchway-access: admin
+            x-launchway-audit: connection.create
     /api/v1/deployments:
         get:
             description: 'Deployments, newest first: ?environment=, ?project=, ?service=, ?limit=.'
@@ -1972,6 +1998,54 @@ paths:
             tags:
                 - deployments
             x-launchway-access: signed-in
+    /api/v1/encryption/root-key-copy:
+        get:
+            description: Whether a recovery copy of the root key was taken (taken, taken_at) and whether this person can take one now (can_take, and the reason if not). Never the key.
+            operationId: get_api_v1_encryption_root_key_copy
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Whether a recovery copy of the root key was taken (taken, taken_at) and whether this person can take one now (can_take, and the reason if not).
+            tags:
+                - encryption
+            x-launchway-access: admin
+        post:
+            description: '{"current_password", "code", "passphrase", "passphrase_again"}. Re-checks the password and second factor, then answers the root key wrapped with the passphrase (scrypt, AES-256-GCM) as a file. 409 when no root key is configured or the account cannot prove itself; 422 for a passphrase under 12 characters or two that differ. Only the fact and time of the copy are recorded.'
+            operationId: post_api_v1_encryption_root_key_copy
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '{"current_password", "code", "passphrase", "passphrase_again"}.'
+            tags:
+                - encryption
+            x-launchway-access: admin
+            x-launchway-audit: encryption.root_key_copy
     /api/v1/environments:
         get:
             description: The configured environments that list a project the caller may see, with what is deployed in each.
@@ -6987,6 +7061,29 @@ paths:
             tags:
                 - setup
             x-launchway-access: public
+    /api/v1/setup-guide:
+        get:
+            description: The steps of the guide (sign-in, encryption, runner, git-hosting, import, pipeline), each with state (done, todo, unavailable), a summary and its actions; and the plain security checklist.
+            operationId: get_api_v1_setup_guide
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The steps of the guide (sign-in, encryption, runner, git-hosting, import, pipeline), each with state (done, todo, unavailable), a summary and its actions; and the plain security checklist.
+            tags:
+                - setup-guide
+            x-launchway-access: admin
     /api/v1/setup/begin:
         post:
             description: 'First-run step one: the one-time setup code, the administrator''s name and password. Answers a second-factor secret (an otpauth address) and a sealed pending value. Needs the [CSRF header](#csrf-header).'
@@ -7027,6 +7124,54 @@ paths:
             tags:
                 - setup
             x-launchway-access: public
+    /api/v1/signin/test:
+        get:
+            description: 'How the last test ended: tested, ok, at and a detail naming who the provider said signed in.'
+            operationId: get_api_v1_signin_test
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'How the last test ended: tested, ok, at and a detail naming who the provider said signed in.'
+            tags:
+                - signin
+            x-launchway-access: admin
+        post:
+            description: The sign-in answers of a provider (issuer, client_id, client_secret_env, optional claims). Answers the address to open in a second window. Changes nothing about how people sign in. 400 lists what is wrong with the answers, 409 when the secret's environment variable is not set on this server.
+            operationId: post_api_v1_signin_test
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The sign-in answers of a provider (issuer, client_id, client_secret_env, optional claims).
+            tags:
+                - signin
+            x-launchway-access: admin
+            x-launchway-audit: signin.test_begin
     /api/v1/ssh:
         get:
             description: '{"enabled", "host", "port", "certificates", "host_keys": [{"algorithm", "type", "fingerprint", "public_key", "created_at"}]}: whether Git over SSH is on, the address clone addresses name, and the server''s host keys to verify.'
@@ -7901,6 +8046,26 @@ paths:
                     $ref: '#/components/responses/Error'
             security: []
             summary: Ends the session on every server.
+            tags:
+                - auth
+            x-launchway-access: public
+    /auth/signin-test:
+        get:
+            description: Where the provider sends the second window back. It checks the test this browser started, shows a page saying whether it worked, and records the result in the audit trail as signin.test_result.
+            operationId: get_auth_signin_test
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: Where the provider sends the second window back.
             tags:
                 - auth
             x-launchway-access: public

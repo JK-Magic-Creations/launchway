@@ -7,6 +7,7 @@ func (s *Server) routes() []route {
 		s.approvalSettingsRoutes(), s.forgeRoutes(), s.rollbackRoutes(), s.localRoutes()} {
 		all = append(all, part...)
 	}
+	all = append(all, s.guideRoutes()...) // the first-run guide (guide_routes.go)
 	return all
 }
 

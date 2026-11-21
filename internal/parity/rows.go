@@ -267,4 +267,11 @@ var rows = []Row{
 	{Route: "DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}", MCP: "change_mirror", CLI: "repos mirror remove", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync", MCP: "sync_mirror", CLI: "repos mirror sync", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/stop-mirroring", MCP: "stop_mirroring", CLI: "repos mirror stop", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/setup-guide", MCP: "", CLI: "doctor security", Terraform: "", Status: Exempt, Reason: "the first-run guide is a walk-through in the browser; its facts are the same ones the other interfaces already read (runners, hosting, connections, projects) and the security checklist is launchway doctor security"},
+	{Route: "POST /api/v1/signin/test", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "testing an identity provider means a person completing the provider's own sign-in page in a second browser window; an API token or agent cannot and must not do that"},
+	{Route: "GET /api/v1/signin/test", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the result of a provider test a person is doing in the browser; the same record is in the audit trail, which every interface reads"},
+	{Route: "GET /auth/signin-test", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the address the identity provider sends the test window back to; it is part of sign-in, not an operation"},
+	{Route: "GET /api/v1/encryption/root-key-copy", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "whether a recovery copy of the root key was taken is shown in the browser guide; the audit trail records it for every interface"},
+	{Route: "POST /api/v1/encryption/root-key-copy", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "taking a copy of the root key asks a person to type their password and a code again; a token or agent must never be able to export the key (the server's own console has launchway encryption)"},
+	{Route: "POST /api/v1/connections/token", MCP: "", CLI: "repos connection add", Terraform: "", Status: Exempt, Reason: "pasting a token into a browser form is a human convenience; scripts and agents give a credential reference (an environment variable or file) with the same connection add"},
 }
