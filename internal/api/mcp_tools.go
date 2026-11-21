@@ -490,6 +490,7 @@ type stepBrief struct {
 	// Why says in words why the step is in this state, when that is not
 	// plain from the status.
 	Why            string            `json:"why,omitempty"`
+	CauseKind      string            `json:"cause_kind,omitempty" jsonschema:"what kind of failure: analysis_failed, rollout_failed, sync_failed, timeout, script_exit, refused, runner_lost, command_failed or other"`
 	FailureCause   string            `json:"failure_cause,omitempty" jsonschema:"why the last failed attempt failed: exit, timeout or infrastructure"`
 	NotBefore      string            `json:"retry_not_before,omitempty" jsonschema:"a step queued to be retried after a wait: when a runner may be given it"`
 	AllowedFailure bool              `json:"allowed_failure,omitempty" jsonschema:"the step failed for good and its pipeline allows that (on_failure: continue): the run goes on as if it had succeeded"`
@@ -504,6 +505,16 @@ type stepText struct {
 	Error   string `json:"error,omitempty" jsonschema:"how the step failed, as reported"`
 	Output  string `json:"last_output,omitempty" jsonschema:"the last lines the failed attempt wrote, secrets masked"`
 	Message string `json:"approval_question,omitempty"`
+	// Reason, Evidence and Next are why a failed step failed, in words, the
+	// evidence behind it (an analysis's metrics, a job's log) and what
+	// happened next. They carry text from the cluster.
+	Reason   string   `json:"reason,omitempty"`
+	Evidence []string `json:"evidence,omitempty"`
+	Next     string   `json:"next,omitempty"`
+}
+
+func (t *stepText) empty() bool {
+	return t.Error == "" && t.Output == "" && t.Message == "" && t.Reason == "" && len(t.Evidence) == 0 && t.Next == ""
 }
 
 type runOut struct {
@@ -566,7 +577,7 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 		if s.ReusedFrom != "" {
 			sb.Why = strings.TrimPrefix(sb.Why+fmt.Sprintf("; reused from run #%d", s.ReusedFromNumber), "; ")
 		}
-		if *text != (stepText{}) {
+		if !text.empty() {
 			sb.Untrusted = text
 		}
 		if i < maxListedSteps {

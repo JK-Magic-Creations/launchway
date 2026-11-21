@@ -29,6 +29,15 @@ func (l *stepLists) note(s *engine.StepView, sb *stepBrief, text *stepText) {
 			l.failed = append(l.failed, s.ID)
 		}
 		text.Error, text.Output = untrusted(s.Error, 500), untrusted(s.Excerpt, maxExcerptBytes)
+		if c := s.Cause; c != nil {
+			sb.CauseKind, text.Reason = c.Kind, untrusted(c.Summary, 600)
+			for _, e := range c.Evidence() {
+				text.Evidence = append(text.Evidence, untrusted(e, 300))
+			}
+			if c.Next != nil {
+				text.Next = untrusted(c.Next.Summary, 300)
+			}
+		}
 	case engine.StepWaitingS:
 		l.waiting = append(l.waiting, s.ID)
 		switch {

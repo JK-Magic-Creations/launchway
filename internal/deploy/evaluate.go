@@ -227,29 +227,45 @@ func rolloutProgress(s Snapshot) Verdict {
 // failedAnalysis names the failed analysis run of the current pod template
 // and its failing metrics, or "".
 func failedAnalysis(runs []AnalysisRun, hash string) string {
-	for _, a := range runs {
+	if a := FailedAnalysisRun(runs, hash); a != nil {
+		return describeFailedAnalysis(*a)
+	}
+	return ""
+}
+
+// FailedAnalysisRun is the failed analysis run of the pod template hash
+// (any, when hash is empty), newest first; nil if none failed.
+func FailedAnalysisRun(runs []AnalysisRun, hash string) *AnalysisRun {
+	for i, a := range runs {
 		if hash != "" && a.PodHash != "" && a.PodHash != hash {
 			continue
 		}
-		if a.Phase != "Failed" && a.Phase != "Error" && a.Phase != "Inconclusive" {
-			continue
+		if a.Phase == "Failed" || a.Phase == "Error" || a.Phase == "Inconclusive" {
+			return &runs[i]
 		}
-		var bad []string
-		for _, m := range a.Metrics {
-			if m.Phase == "Failed" || m.Phase == "Error" || m.Phase == "Inconclusive" {
-				bad = append(bad, fmt.Sprintf("metric %s %s (%d failed, %d errors, %d inconclusive of %d)",
-					m.Name, strings.ToLower(m.Phase), m.Failed, m.Error, m.Inconclusive, m.Count))
-			}
-		}
-		msg := fmt.Sprintf("analysis %s %s", a.Name, strings.ToLower(a.Phase))
-		if len(bad) > 0 {
-			msg += ": " + strings.Join(bad, ", ")
-		} else if a.Message != "" {
-			msg += ": " + a.Message
-		}
-		return msg
 	}
-	return ""
+	return nil
+}
+
+func describeFailedAnalysis(a AnalysisRun) string {
+	var bad []string
+	for _, m := range a.Metrics {
+		if m.Phase == "Failed" || m.Phase == "Error" || m.Phase == "Inconclusive" {
+			one := fmt.Sprintf("metric %s %s (%d failed, %d errors, %d inconclusive of %d)",
+				m.Name, strings.ToLower(m.Phase), m.Failed, m.Error, m.Inconclusive, m.Count)
+			if msg := FailingMessage(m); msg != "" {
+				one += ": " + msg
+			}
+			bad = append(bad, one)
+		}
+	}
+	msg := fmt.Sprintf("analysis %s %s", a.Name, strings.ToLower(a.Phase))
+	if len(bad) > 0 {
+		msg += ": " + strings.Join(bad, ", ")
+	} else if a.Message != "" {
+		msg += ": " + a.Message
+	}
+	return msg
 }
 
 // runningAnalysis names the analysis runs still running for the current pod
@@ -322,4 +338,19 @@ func nonEmpty(s, fallback string) string {
 		return fallback
 	}
 	return s
+}
+
+// FailingMessage is the message of the latest measurement of a metric that
+// did not pass, shortened; "" if there is none.
+func FailingMessage(m Metric) string {
+	for i := len(m.Measurements) - 1; i >= 0; i-- {
+		x := m.Measurements[i]
+		if x.Phase != "Successful" && x.Phase != "Running" && x.Phase != "Pending" && x.Message != "" {
+			if len(x.Message) > 300 {
+				return x.Message[:300] + "..."
+			}
+			return x.Message
+		}
+	}
+	return ""
 }

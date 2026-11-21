@@ -855,6 +855,9 @@
             "readDeployments": {
               "type": "boolean"
             },
+            "readPods": {
+              "type": "boolean"
+            },
             "controlRollouts": {
               "type": [
                 "object",

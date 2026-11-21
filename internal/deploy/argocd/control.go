@@ -53,7 +53,7 @@ func (a *Agent) applyCommand(ctx context.Context, cl *Cluster, ns, name, action 
 		case errors.Is(err, errConflict) && tries < 5:
 			continue // the rollout changed: decide again
 		case errors.Is(err, ErrNoStatusRight):
-			return deploy.CommandFailed, err.Error() + " (grant patch on rollouts/status for this rollout)", nil
+			return deploy.CommandFailed, ControlWhy(ns, name), nil
 		case errors.Is(err, errConflict):
 			return "", "", fmt.Errorf("%w: rollout %s/%s kept changing", ErrUnavailable, ns, name)
 		default:

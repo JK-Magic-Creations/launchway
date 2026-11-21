@@ -225,7 +225,12 @@ func ReduceAnalysisRuns(items []map[string]any, rolloutUID string) []AnalysisRun
 		status := mapAt(obj, "status")
 		a := AnalysisRun{Name: str(meta, "name"), Phase: str(status, "phase"), Message: str(status, "message"),
 			Kind: str(labels, "rollout-type"), PodHash: str(labels, "rollouts-pod-template-hash"),
-			Revision: str(mapAt(meta, "annotations"), revisionAnnotation), CreatedAt: parseTime(str(meta, "creationTimestamp"))}
+			Revision: str(mapAt(meta, "annotations"), revisionAnnotation), CreatedAt: parseTime(str(meta, "creationTimestamp")),
+			Namespace: str(meta, "namespace")}
+		specs := map[string]map[string]any{}
+		for _, m := range list(mapAt(obj, "spec"), "metrics") {
+			specs[str(asMap(m), "name")] = asMap(m)
+		}
 		if a.Phase == "" {
 			a.Phase = "Pending"
 		}
@@ -236,9 +241,12 @@ func ReduceAnalysisRuns(items []map[string]any, rolloutUID string) []AnalysisRun
 		}
 		for _, m := range list(status, "metricResults") {
 			mm := asMap(m)
-			a.Metrics = append(a.Metrics, Metric{Name: str(mm, "name"), Phase: str(mm, "phase"), Message: str(mm, "message"),
+			m := Metric{Name: str(mm, "name"), Phase: str(mm, "phase"), Message: str(mm, "message"),
 				Count: int(integer(mm["count"])), Successful: int(integer(mm["successful"])), Failed: int(integer(mm["failed"])),
-				Inconclusive: int(integer(mm["inconclusive"])), Error: int(integer(mm["error"]))})
+				Inconclusive: int(integer(mm["inconclusive"])), Error: int(integer(mm["error"]))}
+			reduceMetricSpec(&m, specs[m.Name])
+			reduceMeasurements(&m, list(mm, "measurements"), a.Namespace)
+			a.Metrics = append(a.Metrics, m)
 		}
 		out = append(out, dated{a, str(meta, "creationTimestamp")})
 	}
@@ -411,4 +419,42 @@ func parseTime(s string) int64 {
 		return 0
 	}
 	return t.UnixMilli()
+}
+
+// maxMeasurements bounds the measurements a snapshot keeps per metric.
+const maxMeasurements = 12
+
+// reduceMetricSpec reads what a metric checks from the analysis run's spec.
+func reduceMetricSpec(m *Metric, spec map[string]any) {
+	if spec == nil {
+		return
+	}
+	m.SuccessCondition, m.FailureCondition = str(spec, "successCondition"), str(spec, "failureCondition")
+	m.Interval, m.FailureLimit = str(spec, "interval"), int(integer(spec["failureLimit"]))
+	for k := range mapAt(spec, "provider") {
+		m.Provider = k
+		break
+	}
+}
+
+// reduceMeasurements keeps the latest measurements of a metric, and names
+// the Job a job metric ran.
+func reduceMeasurements(m *Metric, items []any, ns string) {
+	for _, it := range items {
+		mm := asMap(it)
+		at := parseTime(str(mm, "finishedAt"))
+		if at == 0 {
+			at = parseTime(str(mm, "startedAt"))
+		}
+		m.Measurements = append(m.Measurements, Measurement{Phase: str(mm, "phase"), Message: str(mm, "message"), Value: str(mm, "value"), At: at})
+		if job := str(mapAt(mm, "metadata"), "job-name"); job != "" {
+			m.Job = &JobRef{Name: job, Namespace: ns}
+			if m.Provider == "" {
+				m.Provider = "job"
+			}
+		}
+	}
+	if len(m.Measurements) > maxMeasurements {
+		m.Measurements = m.Measurements[len(m.Measurements)-maxMeasurements:]
+	}
 }

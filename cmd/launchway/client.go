@@ -627,10 +627,20 @@ func (cl *client) show(args []string) error {
 		if s.WaitingFor != "" {
 			line += " (" + s.WaitingFor + ")"
 		}
-		if s.Error != "" {
+		if s.Reason != "" {
+			line += ": " + s.Reason
+		} else if s.Error != "" {
 			line += ": " + s.Error
 		}
 		fmt.Fprintln(cl.out, line)
+		if s.Cause != nil {
+			for _, e := range s.Cause.Evidence() {
+				fmt.Fprintf(cl.out, "             %s\n", e)
+			}
+			if n := s.Cause.Next; n != nil {
+				fmt.Fprintf(cl.out, "             then: %s\n", n.Summary)
+			}
+		}
 		for _, c := range s.Caches {
 			what := strings.ReplaceAll(c.Result, "_", " ")
 			if c.Result == "saved" && c.Restored != "" {

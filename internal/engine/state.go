@@ -161,6 +161,8 @@ type StepState struct {
 	LeaseID    string
 	Outputs    map[string]string
 	Excerpt    string // a failed attempt: the last lines of its output, masked by the runner
+	// Why is the structured cause a failed deploy step was finished with.
+	Why *StepCause
 	// Allowed says a failed step has on_failure: continue (schema 24): it
 	// failed for good, and the run goes on as if it had succeeded.
 	Allowed bool
@@ -606,6 +608,7 @@ func (st *RunState) applyQueued(ev Event, s *StepState) {
 	s.ExitCode, s.Error, s.Runner, s.LeaseID = nil, "", "", ""
 	s.Outputs = nil
 	s.Excerpt = ""
+	s.Why = nil
 	s.Evidence = nil
 	s.Allowed = false
 	s.NotBefore = p.NotBefore
@@ -644,6 +647,7 @@ func (st *RunState) applyReset(ev Event, s *StepState) {
 	s.Status = StepPending
 	s.Failures, s.Lost = 0, 0
 	s.Error, s.SkipKind, s.Excerpt = "", "", ""
+	s.Why = nil
 	s.Allowed = false
 	s.NotBefore, s.FailCause = 0, ""
 	s.ExitCode = nil

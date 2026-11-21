@@ -20,6 +20,22 @@ type Snapshot struct {
 	App      *App          `json:"app,omitempty"`
 	Rollout  *Rollout      `json:"rollout,omitempty"`
 	Analysis []AnalysisRun `json:"analysis,omitempty"`
+	// Rights is what the runner found out it may do to the rollout (a
+	// self-check against the cluster's authorizer); nil when it did not ask.
+	Rights *Rights `json:"rights,omitempty"`
+}
+
+// Rights is what a deploy runner may do to a watched rollout, as the
+// cluster's authorizer says. A false right comes with Why, the words that
+// tell an administrator what to enable. Nil pointers: not checked.
+type Rights struct {
+	// Control: patch the rollout's status (promote, promote full, abort,
+	// retry).
+	Control    *bool  `json:"control,omitempty"`
+	ControlWhy string `json:"control_why,omitempty"`
+	// Logs: read the pods and logs of analysis jobs.
+	Logs    *bool  `json:"logs,omitempty"`
+	LogsWhy string `json:"logs_why,omitempty"`
 }
 
 // App is an Argo CD application, reduced.
@@ -141,6 +157,7 @@ type AnalysisRun struct {
 	// CreatedAt when it was made (Unix ms).
 	Revision  string   `json:"revision,omitempty"`
 	CreatedAt int64    `json:"created_at,omitempty"`
+	Namespace string   `json:"namespace,omitempty"`
 	Metrics   []Metric `json:"metrics,omitempty"`
 }
 
@@ -154,6 +171,41 @@ type Metric struct {
 	Failed       int    `json:"failed"`
 	Inconclusive int    `json:"inconclusive"`
 	Error        int    `json:"error"`
+	// What the metric checks, from the analysis template: the provider
+	// (job, prometheus, web, ...), the conditions as written, how often it
+	// is measured and how many failures it tolerates.
+	Provider         string `json:"provider,omitempty"`
+	SuccessCondition string `json:"success_condition,omitempty"`
+	FailureCondition string `json:"failure_condition,omitempty"`
+	Interval         string `json:"interval,omitempty"`
+	FailureLimit     int    `json:"failure_limit"`
+	// Measurements are the latest measurements, oldest first.
+	Measurements []Measurement `json:"measurements,omitempty"`
+	// Job is the Kubernetes Job a job metric ran; JobLog the tail of its
+	// log when the metric failed and the runner could get it.
+	Job    *JobRef `json:"job,omitempty"`
+	JobLog *JobLog `json:"job_log,omitempty"`
+}
+
+// Measurement is one measurement of a metric.
+type Measurement struct {
+	Phase   string `json:"phase"`
+	Message string `json:"message,omitempty"`
+	Value   string `json:"value,omitempty"`
+	At      int64  `json:"at,omitempty"` // when it finished (Unix ms), else started
+}
+
+// JobRef names the Job a job metric ran.
+type JobRef struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+}
+
+// JobLog is the end of a failed analysis job's log, or why there is none.
+type JobLog struct {
+	Lines []string `json:"lines,omitempty"`
+	// Note says why Lines is empty, or where they came from.
+	Note string `json:"note,omitempty"`
 }
 
 // Spec is what a deployment is watched for: it comes from the deploy step

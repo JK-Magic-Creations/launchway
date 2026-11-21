@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/jk-magic-creations/launchway/internal/engine"
 )
 
 type runView struct {
@@ -39,11 +41,13 @@ type runView struct {
 		Reason string `json:"reason"`
 	} `json:"lane"`
 	StepList []struct {
-		ID       string `json:"id"`
-		Status   string `json:"status"`
-		Attempt  int    `json:"attempt"`
-		Error    string `json:"error"`
-		ExitCode *int   `json:"exit_code"`
+		ID       string            `json:"id"`
+		Status   string            `json:"status"`
+		Attempt  int               `json:"attempt"`
+		Error    string            `json:"error"`
+		Reason   string            `json:"reason"`
+		Cause    *engine.StepCause `json:"cause"`
+		ExitCode *int              `json:"exit_code"`
 		// AllowedFailure: failed, and its pipeline allows that.
 		AllowedFailure bool `json:"allowed_failure"`
 		// NotBefore is when a retry that waits is handed to a runner;

@@ -1,0 +1,279 @@
+package engine
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/jk-magic-creations/launchway/internal/deploy"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
+)
+
+// Why a step failed, in a form people and programs can read. The reason of
+// a failed step is a plain sentence; the cause is a small structured
+// object behind it: what kind of failure it was, the evidence (for an
+// analysis, its metrics with their counts and the failing measurement), and
+// what Launchway did next. A deploy step's cause is written when the
+// observation that failed it arrives (the analysis it saw is the evidence,
+// and the cluster may have rolled it back since); every other cause is
+// worked out from the step's state when it is read.
+
+// Kinds of failure.
+const (
+	CauseAnalysisFailed = "analysis_failed" // a rollout's analysis run failed
+	CauseRolloutFailed  = "rollout_failed"  // the rollout was aborted or degraded, without a failed analysis
+	CauseSyncFailed     = "sync_failed"     // Argo CD could not sync, or the application is not healthy
+	CauseTimeout        = "timeout"         // the step ran out of time
+	CauseScriptExit     = "script_exit"     // a command exited with an error
+	CauseRefused        = "refused"         // policy, a gate or a rule did not allow the step
+	CauseRunnerLost     = "runner_lost"     // the runner stopped responding
+	CauseCommand        = "command_failed"  // a command given to the rollout was not applied
+	CauseOther          = "other"
+)
+
+// StepCause is why a step failed.
+type StepCause struct {
+	Kind    string `json:"kind"`
+	Summary string `json:"summary"` // one plain sentence
+	// Environment and Phase are for a deploy: where it went and what it
+	// had reached.
+	Environment string `json:"environment,omitempty"`
+	Phase       string `json:"phase,omitempty"`
+	// Analysis is the analysis run that failed, with every metric, its
+	// counts and its measurements, and for a job metric the job and the end
+	// of its log (or why there is none).
+	Analysis *deploy.AnalysisRun `json:"analysis,omitempty"`
+	ExitCode *int                `json:"exit_code,omitempty"`
+	// Next is what Launchway did about it, once it has.
+	Next *CauseNext `json:"next,omitempty"`
+}
+
+// CauseNext is what happened after a deploy step failed.
+type CauseNext struct {
+	Kind    string `json:"kind"` // rolled_back, rolling_back, rollback_failed, no_rollback
+	Step    string `json:"step,omitempty"`
+	Version string `json:"version,omitempty"`
+	Summary string `json:"summary"`
+}
+
+func stepNoun(def *pipeline.Step) string {
+	switch {
+	case def == nil:
+		return "step"
+	case def.IsRollback():
+		return "rollback"
+	case def.IsRolloutStep():
+		return "rollout"
+	case def.IsDeploy():
+		return "deploy"
+	}
+	return "step"
+}
+
+// deployCause explains a deploy, rollout or rollback step that a
+// verdict failed, from the snapshot it was judged on.
+func deployCause(def *pipeline.Step, env string, v deploy.Verdict, snap deploy.Snapshot) *StepCause {
+	c := &StepCause{Kind: CauseOther, Environment: env, Phase: v.Phase}
+	what := strings.TrimSpace(env + " " + stepNoun(def))
+	hash := ""
+	if snap.Rollout != nil {
+		hash = snap.Rollout.CurrentPodHash
+	}
+	switch {
+	case v.Phase == deploy.PhaseSyncFailed || v.Phase == deploy.PhaseSourceBad || v.Phase == deploy.PhaseBlocked:
+		c.Kind = CauseSyncFailed
+		c.Summary = fmt.Sprintf("The %s was stopped: %s.", what, strings.TrimSuffix(v.Detail, "."))
+	case v.Phase == deploy.PhaseAborted || v.Phase == deploy.PhaseDegraded || v.Phase == deploy.PhasePaused || v.Phase == deploy.PhaseRollout:
+		run := deploy.FailedAnalysisRun(snap.Analysis, hash)
+		if run != nil {
+			c.Kind, c.Analysis = CauseAnalysisFailed, run
+			c.Summary = fmt.Sprintf("The %s was stopped by its %s: %s.", what, analysisWords(run), failingWords(run))
+		} else {
+			c.Kind = CauseRolloutFailed
+			if v.Phase == deploy.PhaseDegraded && snap.Rollout == nil {
+				c.Kind = CauseSyncFailed
+			}
+			c.Summary = fmt.Sprintf("The %s was stopped: %s.", what, strings.TrimSuffix(v.Detail, "."))
+		}
+	default:
+		c.Summary = fmt.Sprintf("The %s failed: %s.", what, strings.TrimSuffix(v.Detail, "."))
+	}
+	return c
+}
+
+// analysisWords names a failed analysis run's failing metrics, such as
+// `"smoke" analysis`.
+func analysisWords(a *deploy.AnalysisRun) string {
+	var names []string
+	for _, m := range a.Metrics {
+		if metricBad(m) {
+			names = append(names, `"`+m.Name+`"`)
+		}
+	}
+	if len(names) == 0 {
+		return "analysis"
+	}
+	return strings.Join(names, " and ") + " analysis"
+}
+
+func metricBad(m deploy.Metric) bool {
+	return m.Phase == "Failed" || m.Phase == "Error" || m.Phase == "Inconclusive"
+}
+
+// failingWords says in a sentence how the failing metrics failed.
+func failingWords(a *deploy.AnalysisRun) string {
+	var parts []string
+	for _, m := range a.Metrics {
+		if !metricBad(m) {
+			continue
+		}
+		p := fmt.Sprintf("%s failed %d of %d measurements, and it allows %d", m.Name, m.Failed+m.Error, m.Count, m.FailureLimit)
+		if m.Phase == "Inconclusive" {
+			p = fmt.Sprintf("%s was inconclusive in %d of %d measurements", m.Name, m.Inconclusive, m.Count)
+		}
+		if msg := deploy.FailingMessage(m); msg != "" {
+			p += " (" + strings.TrimSuffix(msg, ".") + ")"
+		}
+		parts = append(parts, p)
+	}
+	if len(parts) == 0 {
+		return nonEmpty(a.Message, "it did not pass")
+	}
+	return strings.Join(parts, "; ")
+}
+
+// causeOf is why a failed step failed: the cause its event recorded, or
+// one worked out from the step's state. It is nil for a step that did not
+// fail.
+func (st *RunState) causeOf(id string) *StepCause {
+	s := st.Steps[id]
+	if s == nil || s.Status != StepFailed {
+		return nil
+	}
+	def := st.Pipeline.Step(id)
+	var c *StepCause
+	if s.Why != nil {
+		w := *s.Why
+		c = &w
+	} else {
+		c = st.deriveCause(s, def)
+	}
+	if def != nil && def.IsDeploy() {
+		c.Next = st.nextAfter(id, s)
+		if c.Next != nil && c.Next.Kind == "rolled_back" && !strings.Contains(c.Summary, "rolled back") {
+			// The summary stays about the failure; Next says the rest.
+			_ = c
+		}
+	}
+	return c
+}
+
+func (st *RunState) deriveCause(s *StepState, def *pipeline.Step) *StepCause {
+	c := &StepCause{Kind: CauseOther, ExitCode: s.ExitCode}
+	name := s.ID
+	if def != nil && def.IsDeployKind() && s.Dep != nil {
+		c.Environment = s.Dep.Environment
+		name = strings.TrimSpace(s.Dep.Environment + " " + stepNoun(def))
+	}
+	e := strings.TrimSpace(s.Error)
+	switch {
+	case strings.HasPrefix(e, policyBlockedPrefix) || strings.HasPrefix(e, runRefusedPrefix) || strings.Contains(e, "do not run in") || strings.HasPrefix(e, "deploy steps"):
+		c.Kind, c.Summary = CauseRefused, sentence(e)
+	case s.FailCause == pipeline.CauseInfrastructure || strings.Contains(e, "runner stopped") || strings.Contains(e, "stopped responding"):
+		c.Kind, c.Summary = CauseRunnerLost, fmt.Sprintf("The runner of %s stopped responding%s", s.ID, tail(e))
+	case s.FailCause == pipeline.CauseTimeout || strings.Contains(e, "timed out") || (def != nil && def.IsDeployKind() && strings.HasPrefix(e, "not ") && strings.Contains(e, " within ")):
+		c.Kind, c.Summary = CauseTimeout, fmt.Sprintf("The %s ran out of time: %s", name, sentence(nonEmpty(e, "it did not finish in time")))
+	case strings.HasPrefix(e, "the ") && strings.Contains(e, " was not applied"):
+		c.Kind, c.Summary = CauseCommand, sentence(e)
+	case def != nil && def.IsDeployKind():
+		c.Summary = fmt.Sprintf("The %s failed: %s", name, sentence(nonEmpty(e, "no reason was recorded")))
+		if strings.Contains(e, "sync") || strings.Contains(e, "Argo CD") {
+			c.Kind = CauseSyncFailed
+		} else if strings.Contains(e, "rollout") {
+			c.Kind = CauseRolloutFailed
+		}
+	case s.ExitCode != nil && *s.ExitCode != 0:
+		c.Kind, c.Summary = CauseScriptExit, fmt.Sprintf("Step %s ended with exit code %d%s", s.ID, *s.ExitCode, tail(e))
+	default:
+		c.Summary = fmt.Sprintf("Step %s failed: %s", s.ID, sentence(nonEmpty(e, "no reason was recorded")))
+	}
+	return c
+}
+
+func sentence(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	s = strings.ToUpper(s[:1]) + s[1:]
+	if !strings.HasSuffix(s, ".") && !strings.HasSuffix(s, "!") && !strings.HasSuffix(s, "?") {
+		s += "."
+	}
+	return s
+}
+
+func tail(e string) string {
+	if e == "" {
+		return "."
+	}
+	return ": " + e
+}
+
+// nextAfter says what the run did after a deploy step failed: a rollback
+// step that reverted it, is reverting it, or failed.
+func (st *RunState) nextAfter(deployID string, s *StepState) *CauseNext {
+	for _, id := range st.Order {
+		def := st.Pipeline.Step(id)
+		if !def.IsRollback() || def.Deployment != deployID {
+			continue
+		}
+		rs := st.Steps[id]
+		version := ""
+		if s.Dep != nil && s.Dep.Previous != nil {
+			version = s.Dep.Previous.Version
+		}
+		to := "the previous version"
+		if version != "" {
+			to = version
+		}
+		switch rs.Status {
+		case StepSucceeded:
+			return &CauseNext{Kind: "rolled_back", Step: id, Version: version, Summary: fmt.Sprintf("Rolled back to %s by %s.", to, id)}
+		case StepFailed:
+			return &CauseNext{Kind: "rollback_failed", Step: id, Version: version, Summary: fmt.Sprintf("Rolling back to %s by %s failed: %s", to, id, sentence(rs.Error))}
+		case StepRunning, StepQueuedS, StepWaitingS:
+			return &CauseNext{Kind: "rolling_back", Step: id, Version: version, Summary: fmt.Sprintf("Rolling back to %s by %s.", to, id)}
+		}
+	}
+	return &CauseNext{Kind: "no_rollback", Summary: "No rollback step ran for this deploy."}
+}
+
+// Evidence lists, one line each, what backs a cause up: for an analysis,
+// each metric with its counts, the failing measurement's message, the job
+// it ran, and the end of its log (or why there is none). For the command
+// line and agents.
+func (c *StepCause) Evidence() []string {
+	if c == nil || c.Analysis == nil {
+		return nil
+	}
+	a := c.Analysis
+	out := []string{fmt.Sprintf("analysis run %s: %s", a.Name, strings.ToLower(a.Phase))}
+	for _, m := range a.Metrics {
+		line := fmt.Sprintf("metric %s: %s, %d of %d measurements failed (limit %d)", m.Name, strings.ToLower(m.Phase), m.Failed+m.Error, m.Count, m.FailureLimit)
+		if msg := deploy.FailingMessage(m); msg != "" {
+			line += "; " + msg
+		}
+		out = append(out, line)
+		if m.Job != nil {
+			out = append(out, fmt.Sprintf("  job %s/%s", m.Job.Namespace, m.Job.Name))
+		}
+		if m.JobLog != nil {
+			if m.JobLog.Note != "" {
+				out = append(out, "  "+m.JobLog.Note)
+			}
+			for _, l := range m.JobLog.Lines {
+				out = append(out, "  | "+l)
+			}
+		}
+	}
+	return out
+}

@@ -44,6 +44,7 @@ func (s *StepState) applyFinished(ev Event, p Payload) {
 	s.ExitCode = p.ExitCode
 	s.Error = p.Reason
 	s.Excerpt = p.Excerpt
+	s.Why = p.Why
 	s.Outputs = p.Outputs
 	s.FinishedAt = ev.At
 	s.LeaseID = ""
