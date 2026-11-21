@@ -488,6 +488,7 @@ per installation, project or repository (`launchway registry policy set`).
 |---|---|---|---|
 | `registry.enabled` | boolean | `true` | Turn the Depot off with `false`. Nothing is deleted |
 | `registry.public_url` | URL | `forge.public_url`, then the address a request came in on | The address clients push and pull at, without a path (`https://registry.example.com`); also the address pipelines' image steps use when they name no Depot |
+| `registry.fallback` | text | none | The registry (a name your Stations' configuration lists, such as `harbor`) that the starter Flight plans push to when the Depot cannot serve here, which is when sign-in is off. Without it they do not push by default in that case, and the Sortie says why. A registry named by the variable `registry` is used first |
 | `registry.allow_insecure_http` | boolean | `false` | Accept a password or token over plain HTTP from any address; otherwise only a loopback listener does |
 | `registry.max_blob_mib` | whole number | `10240` | The largest layer or blob accepted, in MiB |
 | `registry.max_manifest_kib` | whole number | `4096` | The largest manifest accepted, in KiB |

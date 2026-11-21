@@ -288,3 +288,9 @@ func registryRepoName(project, repo string) string {
 	}
 	return project + "/" + repo
 }
+
+// BuiltinRegistryUsable says whether this server's own registry can serve: it is on, and sign-in is (there is
+// no anonymous registry). The starters' image steps use it to choose where an image goes.
+func (s *Server) BuiltinRegistryUsable() bool {
+	return s.Registry != nil && s.Registry.Svc != nil && s.Auth != nil
+}

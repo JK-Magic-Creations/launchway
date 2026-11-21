@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -43,7 +44,13 @@ type RegistryConfig struct {
 	MaintainEvery string `yaml:"maintain_every"`
 	// UploadTTL is how long an unfinished upload may sit idle (default 24h).
 	UploadTTL string `yaml:"upload_ttl"`
+	// Fallback is the registry (a name the Stations' configuration lists) the starter Flight plans push to when
+	// this server's own registry cannot serve, which is when sign-in is off. Without it, they do not push by
+	// default in that case, and say so.
+	Fallback string `yaml:"fallback"`
 }
+
+var registryNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,62}$`)
 
 // On reports whether the registry is switched on.
 func (c RegistryConfig) On() bool { return c.Enabled == nil || *c.Enabled }
@@ -66,6 +73,9 @@ func (c RegistryConfig) Check() error {
 		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || strings.Trim(u.Path, "/") != "" {
 			return fmt.Errorf("registry.public_url must be an address such as https://registry.example.com, without a path")
 		}
+	}
+	if c.Fallback != "" && (!registryNameRe.MatchString(c.Fallback) || c.Fallback == "launchway") {
+		return fmt.Errorf("registry.fallback names a registry in the Stations' configuration (lower-case letters, digits, dots, dashes), not %q", c.Fallback)
 	}
 	for name, v := range map[string]int{"max_blob_mib": c.MaxBlobMiB, "max_manifest_kib": c.MaxManifestKiB,
 		"max_repositories_per_project": c.MaxRepositoriesPerProject, "max_tags_per_repository": c.MaxTagsPerRepository} {

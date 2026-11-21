@@ -223,6 +223,15 @@ type ProjectFacts struct {
 	Project      string   // the project's name
 	Environments []string // where it may deploy, in delivery order
 	Protected    []string // those of them that are protected
+	// Registry says whether this server's own registry can serve (it needs sign-in) and which registry to use
+	// when it cannot. Nil: not told (a check made off the server): the built-in registry is taken to serve.
+	Registry *RegistryFacts
+}
+
+// RegistryFacts are what starters need to know to choose where an image goes.
+type RegistryFacts struct {
+	Usable   bool   // the built-in registry can serve here
+	Fallback string // the configured registry to use when it cannot (registry.fallback)
 }
 
 // The names of the variables the facts become.
@@ -230,6 +239,11 @@ const (
 	VarProject      = "launchway_project"
 	VarEnvironments = "launchway_environments"
 	VarProtected    = "launchway_protected"
+	// VarRegistry is the registry a starter pushes to unless the variable registry says another: launchway, the
+	// built-in one, unless it cannot serve here. VarPushing is the environments to push for: the project's own
+	// when an image can go to a registry, none when it cannot, with the reason as its display.
+	VarRegistry = "launchway_registry"
+	VarPushing  = "launchway_pushing"
 )
 
 // WithProjectFacts returns vars with the facts added. A variable that is
@@ -258,5 +272,35 @@ func WithProjectFacts(vars Variables, f ProjectFacts) Variables {
 	put(VarEnvironments, "list", t, d)
 	t, d = list(f.Protected)
 	put(VarProtected, "list", t, d)
+	{
+		// Not told (nil): the built-in registry is taken to serve.
+		reg, pushing, note := "launchway", f.Environments, ""
+		if f.Registry != nil && !f.Registry.Usable {
+			_, chosen := out["registry"]
+			switch {
+			case chosen:
+				reg = "" // a person's registry variable decides; the default is not used
+			case f.Registry.Fallback != "":
+				reg = f.Registry.Fallback
+				note = "the built-in registry needs sign-in, which this server does not have, so images go to " + reg + " (registry.fallback)"
+			default:
+				pushing = nil
+				note = "images are not pushed by default: the built-in registry needs sign-in, which this server does not have. Name a registry your Stations' configuration lists with the variable registry or registry.fallback, or turn sign-in on"
+			}
+		}
+		if reg == "" {
+			reg = "launchway"
+		}
+		put(VarRegistry, "string", reg, firstNonEmptyText(note, reg))
+		t, d = list(pushing)
+		put(VarPushing, "list", t, firstNonEmptyText(note, d))
+	}
 	return out
+}
+
+func firstNonEmptyText(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }

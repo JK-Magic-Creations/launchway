@@ -90,3 +90,59 @@ func TestDeliveryOverridesAndMethods(t *testing.T) {
 		t.Fatalf("rollout with helm values: %+v", dep)
 	}
 }
+
+// With sign-in off the built-in registry refuses to serve, so a starter must not default to pushing there. It
+// falls back to the registry the server names (registry.fallback), or to a registry a person chose with the
+// variable registry; with neither it does not push, and the Sortie records why.
+func TestStartersDoNotPushToTheBuiltInRegistryThatCannotServe(t *testing.T) {
+	envs := []string{"dev"}
+	image := func(p *pipeline.Pipeline) *pipeline.ImageBuild {
+		for _, s := range p.Steps {
+			if s.ImageBuild != nil {
+				return s.ImageBuild
+			}
+		}
+		t.Fatal("no image step")
+		return nil
+	}
+	for _, plan := range []string{"python-service", "node-app", "go-service", "container-image", "static-site"} {
+		t.Run(plan, func(t *testing.T) {
+			expand := func(facts pipeline.ProjectFacts, vars pipeline.Variables) *pipeline.ImageBuild {
+				p, err := expandWithFacts(t, "uses: launchway/"+plan+"\n", facts, vars)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return image(p)
+			}
+			// It serves: pushes to it, as before.
+			b := expand(pipeline.ProjectFacts{Project: "shop", Environments: envs, Registry: &pipeline.RegistryFacts{Usable: true}}, nil)
+			if !b.Pushes() || b.Tags[0].Registry != "launchway" {
+				t.Fatalf("usable: %+v", b.Tags)
+			}
+			// Not told (a check made off the server): as if it served.
+			if b := expand(pipeline.ProjectFacts{Project: "shop", Environments: envs}, nil); !b.Pushes() || b.Tags[0].Registry != "launchway" {
+				t.Fatalf("not told: %+v", b.Tags)
+			}
+			// It cannot serve and nothing else is named: no push, and the facts say why.
+			facts := pipeline.ProjectFacts{Project: "shop", Environments: envs, Registry: &pipeline.RegistryFacts{}}
+			if b := expand(facts, nil); b.Pushes() {
+				t.Fatalf("pushed to a registry that cannot serve: %+v", b.Tags)
+			}
+			v := pipeline.WithProjectFacts(nil, facts)[pipeline.VarPushing]
+			if !strings.Contains(v.Display, "needs sign-in") || !strings.Contains(v.Display, "registry.fallback") || v.Text != "[]" {
+				t.Fatalf("the reason: %+v", v)
+			}
+			// It cannot serve and the server names a registry: pushes there.
+			facts.Registry = &pipeline.RegistryFacts{Fallback: "harbor"}
+			if b := expand(facts, nil); !b.Pushes() || b.Tags[0].Registry != "harbor" {
+				t.Fatalf("fallback: pushes %v to %+v", b.Pushes(), b.Tags)
+			}
+			// It cannot serve and a person set the variable registry: theirs wins, and it pushes.
+			facts.Registry = &pipeline.RegistryFacts{}
+			vars := pipeline.Variables{"registry": pipeline.BoundVariable{Name: "registry", Type: "string", Text: "quay", Display: "quay"}}
+			if b := expand(facts, vars); !b.Pushes() || b.Tags[0].Registry != "quay" {
+				t.Fatalf("variable: pushes %v to %+v", b.Pushes(), b.Tags)
+			}
+		})
+	}
+}

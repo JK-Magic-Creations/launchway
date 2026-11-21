@@ -277,6 +277,10 @@ func cmdServer(args []string) error {
 	stds := &standardsservice.Service{Eng: eng, Layout: store.LayoutOrFile}
 	mgr.SetInspector(stds)
 	srv.Standards = stds
+	// Where starters push images: this server's own registry, unless it cannot serve (no sign-in).
+	mgr.RegistryFacts = func() pipeline.RegistryFacts {
+		return pipeline.RegistryFacts{Usable: srv.BuiltinRegistryUsable(), Fallback: eff.Registry.Fallback}
+	}
 	applyLive := func(c *config.Config) error {
 		l, err := serverLive(c, token, authOpts)
 		if err != nil {

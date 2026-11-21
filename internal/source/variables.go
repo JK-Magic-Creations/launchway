@@ -103,7 +103,12 @@ func (m *Manager) withProjectFacts(project string, vars pipeline.Variables) pipe
 			protected = append(protected, e.Name)
 		}
 	}
-	return pipeline.WithProjectFacts(vars, pipeline.ProjectFacts{Project: project, Environments: names, Protected: protected})
+	facts := pipeline.ProjectFacts{Project: project, Environments: names, Protected: protected}
+	if m.RegistryFacts != nil {
+		rf := m.RegistryFacts()
+		facts.Registry = &rf
+	}
+	return pipeline.WithProjectFacts(vars, facts)
 }
 
 // record keeps what a run used; a failure is logged, never the run's.

@@ -138,7 +138,7 @@ dependency cache under a key made of the lock file and the tool version, check, 
 
 Flight plans with a `Dockerfile` build the image on the branch named by `image_branch` (default `main`), scan it, write its
 software bill of materials and sign it, **and push it only when `push: true`**. The Depot (registry) is `registry` (default `launchway`, the [built-in Depot](registry.md) of this server, which names an
-image under the project; or a name your Stations' configuration lists) and the repository `image_repository`:
+image under the project; or a name your Stations' configuration lists). The built-in Depot needs sign-in, so on a server with sign-in off the Flight plans do not default to it: they push to the registry the server names in `registry.fallback`, or to the one the variable `registry` names, and with neither they do not push, and the Sortie's variables say why (`launchway_pushing`) and the repository `image_repository`:
 
 ```yaml
 steps:

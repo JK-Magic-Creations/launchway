@@ -7,9 +7,11 @@ template: container-image
 description: "Flight plan: an image from a Dockerfile alone: build, scan, bill of materials, sign, push"
 params:
   secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
-  push: { type: boolean, default: { nonempty: deliver }, description: "Push the image to the registry: on when the project has environments to deliver to, off otherwise" }
+  push: { type: boolean, default: { nonempty: push_when }, description: "Push the image: on when the project has environments to deliver to and there is a registry to push to, off otherwise" }
+  push_when: { type: list, from: launchway_pushing, default: [], description: "The environments an image is pushed for: the project's own, or none when this server has no registry to push to" }
   image_repository: { type: string, default: { text: "{image_namespace}/{service}" }, description: "The image's repository in the registry, without the host: team/app; by default the namespace and the project's name" }
-  registry: { type: string, from: registry, default: "launchway", description: "The registry to push to: launchway is the registry built into this server, or a name the runner's configuration lists" }
+  registry: { type: string, from: registry, default: { param: default_registry }, description: "The registry to push to: launchway (built into this server), or a name the Stations' configuration lists" }
+  default_registry: { type: string, from: launchway_registry, default: "launchway", description: "What Launchway says the registry is when nothing else does: launchway, or registry.fallback when the built-in registry cannot serve here" }
   dockerfile: { type: string, default: "Dockerfile", description: "The Dockerfile, relative to the repository" }
   context: { type: string, default: ".", description: "The build context, relative to the repository" }
   image_branch: { type: string, default: "main", description: "The branch whose commits are built into an image" }

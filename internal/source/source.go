@@ -167,6 +167,9 @@ type Manager struct {
 	vars atomic.Pointer[varHolder]
 	// inspector adds the Inspection of Standing orders to runs (see standings.go).
 	inspector atomic.Pointer[inspectorHolder]
+	// RegistryFacts says whether this server's own registry can serve and which registry to use when it cannot,
+	// for the starters' image steps (nil: not said). It is called when a run is made.
+	RegistryFacts func() pipeline.RegistryFacts
 
 	// Watching: started once by Start; Reconfigure starts and stops the
 	// watchers of the projects it adds, changes and removes.
