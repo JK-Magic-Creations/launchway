@@ -911,7 +911,7 @@ bootstrap:
   tolerations: []
 
 # ---------------------------------------------------------------------------------------------
-# Delivery: launch and Return to base steps (pipelines with kind: launch). Off unless set. A launch
+# Delivery: launch and Return to base steps (pipelines with kind: deploy). Off unless set. A launch
 # step commits a version to a GitOps repository, asks Argo CD to sync if it must, and waits
 # until the application (and its Argo Rollouts rollout) is healthy. The launch Station below
 # does that work with its own Kubernetes identity; the servers hold no cluster credentials.
@@ -919,7 +919,7 @@ bootstrap:
 # out again before returning to base to one that does not.
 # ---------------------------------------------------------------------------------------------
 delivery:
-  # -- Airfields launch steps may deploy to, written into the servers' configuration only
+  # -- Airfields launch steps may target, written into the servers' configuration only
   # when set. Default: none, and deploy steps are refused. Example:
   #   - name: prod
   #     target: homelab          # the cluster: deployRunner.target serves it

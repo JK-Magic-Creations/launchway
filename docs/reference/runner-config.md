@@ -362,7 +362,7 @@ get `pull_credentials` only when they may read secrets.
 | `images.signing.key_file` | path | required with `signing` | The Station's own cosign key, for steps that say `sign: true`. Steps never see it |
 | `images.signing.password_file` | path | none | The key's password, if it is encrypted |
 
-## Launch
+## Launch {#deploy}
 
 A `deploy` section makes the Station a launch Station: it does the work of
 [launch, Return to base (rollback) and rollout steps](pipeline.md#kind-deploy) for the targets listed, through the

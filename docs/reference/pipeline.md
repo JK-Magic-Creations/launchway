@@ -705,7 +705,7 @@ steps:
     scan: { fail_on: high, mode: enforce }
 ```
 
-### Kind launch
+### Kind `deploy`
 
 A deploy step commits a version to a GitOps repository, asks Argo CD to sync if it must, and waits
 until the application (and its Argo Rollouts rollout, if one is named) is healthy on that version.

@@ -103,7 +103,6 @@
     "word:deploy/4|cmd/launchway/queue.go": 1,
     "word:deploy/4|deploy/README.md": 4,
     "word:deploy/4|deploy/helm/launchway-runner/values.yaml": 18,
-    "word:deploy/4|deploy/helm/launchway/values.yaml": 1,
     "word:deploy/4|docs/contributing/codebase.md": 2,
     "word:deploy/4|docs/demo.md": 2,
     "word:deploy/4|docs/development/migrations.md": 16,

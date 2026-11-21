@@ -335,6 +335,12 @@
       "rule": "word:queue/3",
       "contains": "Queue the",
       "why": "'Queue' is the verb for holding an action behind a lock (the button says what it does), not the Holding pattern of runs."
+    },
+    {
+      "path": "deploy/helm/launchway/values.yaml",
+      "rule": "word:deploy/4",
+      "contains": "kind: deploy",
+      "why": "The step kind written in a pipeline file: an identifier that never changes with the words."
     }
   ]
 }
