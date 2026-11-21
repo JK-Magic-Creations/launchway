@@ -16,6 +16,7 @@ import (
 	"net/netip"
 	"net/url"
 	"strings"
+	"syscall"
 )
 
 // Guard decides which addresses may be contacted.
@@ -160,4 +161,23 @@ func redactURL(s string) string {
 		return "…" + s[i:]
 	}
 	return s
+}
+
+// Control is for net.Dialer.Control: it refuses, at the moment of connecting,
+// an internal address that is not allowed, so a name that resolves to a public
+// address when checked and to an internal one when used (DNS rebinding) is
+// refused too. Use it for connections Launchway makes itself.
+func (g *Guard) Control(network, address string, _ syscall.RawConn) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return err
+	}
+	a, err := netip.ParseAddr(host)
+	if err != nil {
+		return fmt.Errorf("%w: %s is not an address", ErrRefused, host)
+	}
+	if Internal(a) && !g.addrAllowed(a) {
+		return refusal(host, a.Unmap())
+	}
+	return nil
 }

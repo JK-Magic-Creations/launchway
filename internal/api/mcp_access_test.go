@@ -71,10 +71,13 @@ var mcpPermissionTable = map[string]mcpRow{
 	// Mirrors of hosted repositories. The matrix server has Git hosting off, so
 	// every call that is let through is answered feature_off, which is a not-found (the API's own
 	// answer, passed on); a role on the repository decides the rest.
-	"list_mirrors":   {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
-	"set_mirror":     {map[string]any{"repository": "acme/x", "url": "https://git.example.com/x.git"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
-	"sync_mirror":    {map[string]any{"repository": "acme/x", "mirror_id": "mir_x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
-	"stop_mirroring": {map[string]any{"repository": "acme/x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"list_mirrors":        {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"set_mirror":          {map[string]any{"repository": "acme/x", "url": "https://git.example.com/x.git"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"sync_mirror":         {map[string]any{"repository": "acme/x", "mirror_id": "mir_x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"stop_mirroring":      {map[string]any{"repository": "acme/x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"list_connections":    {nil, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"add_connection":      {map[string]any{"name": "old", "kind": "gitea", "base_url": "https://git.example.com"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"import_repositories": {map[string]any{"connection": "old", "dry_run": true}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 }
 
 func outcome(errText string) string {

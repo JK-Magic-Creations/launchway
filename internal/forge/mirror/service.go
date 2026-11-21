@@ -30,6 +30,14 @@ type Storage interface {
 	Refs(ctx context.Context, repo string) (map[string]string, error)
 }
 
+// Creator makes hosted repositories (the internal provider's Repositories).
+type Creator interface {
+	Create(ctx context.Context, r forge.NewRepository) (forge.Repository, error)
+}
+
+// SetCreator says how an import makes repositories.
+func (s *Service) SetCreator(c Creator) { s.o.Creator = c }
+
 // Options configure a Service.
 type Options struct {
 	// Server names this server (the holder of leases).
@@ -46,6 +54,8 @@ type Options struct {
 	BehindAfter time.Duration
 	// Tick is how often due mirrors are looked for (default 10s).
 	Tick time.Duration
+	// Creator makes the repositories an import brings in.
+	Creator Creator
 	// Limits is the memory, CPU and file-size ceiling of every git process.
 	Limits gitexec.Limits
 	Now    func() time.Time

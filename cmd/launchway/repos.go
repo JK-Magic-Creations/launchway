@@ -11,6 +11,15 @@ import (
 )
 
 const reposUsage = `Usage:
+  launchway repos connection add NAME --kind gitea|forgejo|plain [--base-url URL]
+                     [--credential-env NAME | --credential-file PATH]
+  launchway repos connection list|remove NAME
+                                    the servers repositories are imported from
+  launchway repos import --connection NAME [--owner O] [--repo O/N] [--target-owner T] [--url ADDRESS ...]
+                     [--dry-run] [--once] [--interval 1h] [--username U] [--json]
+                                    bring repositories in: same names and visibility, every ref copied and
+                                    checked, left as pull mirrors (--once: ordinary repositories after the
+                                    copy). Run it again to resume. --dry-run lists what would be created.
   launchway repos mirror status [OWNER/NAME] [--behind] [--json]
                                     the pull and push mirrors, their last sync, last error and lag
   launchway repos mirror add OWNER/NAME --url URL [--direction pull|push] [--username U]
@@ -68,6 +77,10 @@ func cmdRepos(args []string) error {
 		switch args[0] {
 		case "mirror":
 			return cl.reposMirror(args[1:])
+		case "connection":
+			return cl.reposConnection(args[1:])
+		case "import":
+			return cl.reposImport(args[1:])
 		}
 		return usageErr("unknown command repos %s\n\n%s", args[0], reposUsage)
 	})

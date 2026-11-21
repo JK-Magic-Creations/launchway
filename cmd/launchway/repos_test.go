@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/cgi"
 	"net/http/httptest"
 	"os"
 	"os/exec"
@@ -53,8 +55,10 @@ func newHostedCLI(t *testing.T) *hostedCLI {
 	if err != nil {
 		t.Fatal(err)
 	}
+	guard, _ := egress.New([]string{"127.0.0.1"})
+	guard.AllowFiles = true
 	h, err := hosting.New(t.Context(), hosting.Options{Engine: eng, Blobs: blobs, Data: t.TempDir(), Server: "cli-test", Log: quiet,
-		Guard: &egress.Guard{AllowFiles: true}})
+		Guard: guard})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,5 +155,66 @@ func TestCLIReposMirror(t *testing.T) {
 	}
 	if err := ada.reposMirror([]string{"add", "nonsense", "--url", "https://git.example.com/x"}); err == nil || !strings.Contains(err.Error(), "OWNER/NAME") {
 		t.Fatalf("a bad repository name: %v", err)
+	}
+}
+
+// otherServer serves the bare repositories under root with git's http-backend.
+func otherServer(t *testing.T, root string) *httptest.Server {
+	t.Helper()
+	gp, err := exec.Command("git", "--exec-path").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := &cgi.Handler{Path: filepath.Join(strings.TrimSpace(string(gp)), "git-http-backend"),
+		Env: []string{"GIT_PROJECT_ROOT=" + root, "GIT_HTTP_EXPORT_ALL=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1"}}
+	srv := httptest.NewServer(http.HandlerFunc(h.ServeHTTP))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// import --dry-run lists and changes nothing; import copies each repository
+// and says so; verify proves equality and exits 1 when it cannot.
+func TestCLIReposImportAndVerify(t *testing.T) {
+	hc := newHostedCLI(t)
+	root := t.TempDir()
+	for _, n := range []string{"shop", "blog"} {
+		bare, _ := bareWith(t)
+		if err := os.MkdirAll(filepath.Join(root, "old"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(bare, filepath.Join(root, "old", n+".git")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other := otherServer(t, root)
+	var oo, ao bytes.Buffer
+	otto, ada := hc.client("otto", "ops", &oo), hc.client("ada", "root", &ao)
+	urls := []string{"--url", other.URL + "/old/shop.git", "--url", other.URL + "/old/blog.git"}
+	if err := otto.reposImport(append([]string{"--dry-run"}, urls...)); err == nil {
+		t.Fatal("an operator imported")
+	}
+	if err := ada.reposImport(append([]string{"--dry-run"}, urls...)); err != nil || !strings.Contains(ao.String(), "old/blog") || !strings.Contains(ao.String(), "Nothing was changed") {
+		t.Fatalf("dry run: %v %q", err, ao.String())
+	}
+	if page, _ := hc.h.Provider.Repositories().List(t.Context(), ""); len(page.Items) != 0 {
+		t.Fatal("a dry run made repositories")
+	}
+	ao.Reset()
+	if err := ada.reposImport(urls); err != nil || !strings.Contains(ao.String(), "verified  old/shop: 2 refs equal") || !strings.Contains(ao.String(), "2 verified") {
+		t.Fatalf("import: %v %q", err, ao.String())
+	}
+	ao.Reset()
+	if err := ada.reposImport(urls); err != nil || !strings.Contains(ao.String(), "2 verified") {
+		t.Fatalf("import again: %v %q", err, ao.String())
+	}
+	if err := ada.reposConnection([]string{"add", "old", "--kind", "gitea", "--base-url", other.URL, "--credential-env", "OLD_TOKEN"}); err != nil {
+		t.Fatal(err)
+	}
+	ao.Reset()
+	if err := ada.reposConnection([]string{"list"}); err != nil || !strings.Contains(ao.String(), "env:OLD_TOKEN") {
+		t.Fatalf("%v %q", err, ao.String())
+	}
+	if err := ada.reposConnection([]string{"add", "bad", "--kind", "gitea", "--credential-env", "ghp_abc123"}); err == nil {
+		t.Fatal("a token as the credential was accepted")
 	}
 }

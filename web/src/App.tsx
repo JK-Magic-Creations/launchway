@@ -24,6 +24,7 @@ const ComponentsPage = lazy(() => import("./pages/Components").then((m) => ({ de
 const ImagesPage = lazy(() => import("./pages/Images").then((m) => ({ default: m.ImagesPage })));
 const PolicyPage = lazy(() => import("./pages/Policy").then((m) => ({ default: m.PolicyPage })));
 const RepositoryPage = lazy(() => import("./pages/Repository").then((m) => ({ default: m.RepositoryPage })));
+const ImportRepositoriesPage = lazy(() => import("./pages/ImportRepositories").then((m) => ({ default: m.ImportRepositoriesPage })));
 const AgentsPage = lazy(() => import("./pages/Agents").then((m) => ({ default: m.AgentsPage })));
 
 interface NavItem { href: string; label: string; active: (p: string) => boolean; show?: (me: Me) => boolean }
@@ -36,6 +37,7 @@ const NAV: NavItem[] = [
   { href: "/runners", label: "Runners", active: (p) => p.startsWith("/runners"), show: (me) => me.runners },
   { href: "/playground", label: "Playground", active: (p) => p.startsWith("/playground"), show: (me) => me.runners },
   { href: "/tokens", label: "API tokens", active: (p) => p.startsWith("/tokens"), show: (me) => me.auth_mode === "oidc" },
+  { href: "/repositories/import", label: "Import repositories", active: (p) => p.startsWith("/repositories/import"), show: (me) => me.admin },
   { href: "/agents", label: "Connect an agent", active: (p) => p.startsWith("/agents"), show: (me) => me.mcp?.enabled !== false },
   { href: "/audit", label: "Audit trail", active: (p) => p.startsWith("/audit"), show: (me) => me.admin },
   { href: "/components", label: "Components", active: (p) => p.startsWith("/components") },
@@ -95,6 +97,7 @@ function Shell({ me }: { me: Me }) {
   else if (path === "/projects") page = <ProjectsPage />;
   else if ((m = match("/projects/:name/pipeline", path))) page = <EditPipelinePage key={m.name} name={m.name} />;
   else if ((m = match("/projects/:name/tests", path))) page = <ProjectTestsPage key={m.name} name={m.name} />;
+  else if (path === "/repositories/import") page = <ImportRepositoriesPage />;
   else if ((m = match("/repositories/:owner/:name", path))) page = <RepositoryPage key={m.owner + "/" + m.name} path={m.owner + "/" + m.name} tab="overview" />;
   else if ((m = match("/repositories/:owner/:name/mirrors", path))) page = <RepositoryPage key={m.owner + "/" + m.name} path={m.owner + "/" + m.name} tab="mirrors" />;
   else if (path === "/runners") page = <RunnersPage />;

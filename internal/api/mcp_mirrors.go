@@ -24,6 +24,7 @@ import (
 const mirrorSyncTimeout = 15 * time.Minute
 
 func addMirrorTools(srv *mcp.Server, c *mcpCall) {
+	addImportTools(srv, c)
 	addTool(srv, c, &mcp.Tool{Name: "list_mirrors", Annotations: readOnly("List mirrors"),
 		Description: "The pull and push mirrors of hosted repositories the caller may read, each with its status: state (pending, ok, error), last_success, last_error (credentials removed), failures, next_run, lag_seconds and behind. With behind true, only the mirrors that have fallen behind."},
 		mcpCallTimeout, listMirrors)

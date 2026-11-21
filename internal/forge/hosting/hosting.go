@@ -141,7 +141,9 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	mo := o.Mirror
 	mo.Guard, mo.Server, mo.Limits, mo.Log = guard, o.Server, o.Limits, o.Log
 	ms := mirror.New(o.Engine.Database(), fs, sto, conn, mo)
-	return &Hosting{Store: sto, Forge: fs, Provider: launchway.New(conn, fs, sto, po), Connection: conn, Mirrors: ms, RunTokens: rt, o: o, log: o.Log}, nil
+	prov := launchway.New(conn, fs, sto, po)
+	ms.SetCreator(prov.Repositories())
+	return &Hosting{Store: sto, Forge: fs, Provider: prov, Connection: conn, Mirrors: ms, RunTokens: rt, o: o, log: o.Log}, nil
 }
 
 // Resolve finds a live repository by its owner and name.

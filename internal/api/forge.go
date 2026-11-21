@@ -58,7 +58,7 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), []route{
+	return append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},

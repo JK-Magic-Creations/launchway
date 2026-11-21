@@ -58,3 +58,23 @@ export const mirrorsApi = {
   remove: (path: string, id: string) => call<void>("DELETE", `${base(path)}/mirrors/${encodeURIComponent(id)}`),
   stop: (path: string, finalSync: boolean) => call<Repository>("POST", base(path) + "/stop-mirroring", { final_sync: finalSync }),
 };
+
+// ---- import ----
+
+export interface Connection { name: string; kind: string; base_url?: string; credential?: string; enabled: boolean }
+
+export interface SourceRequest { connection?: string; urls?: string[]; owner?: string; repository?: string; target_owner?: string; username?: string }
+
+export interface ImportItem {
+  source: string; repository: string; url: string; visibility: string;
+  action: "create" | "resume" | "skip"; state: "planned" | "queued" | "verified" | "skipped" | "failed";
+  reason?: string; error?: string; source_refs?: number; hosted_refs?: number; verified?: boolean; differences?: string[];
+}
+export interface ImportResult { dry_run: boolean; items: ImportItem[]; summary: Record<string, number> }
+
+export const importApi = {
+  connections: () => call<{ items: Connection[] }>("GET", "/api/v1/connections").then((p) => p.items),
+  addConnection: (c: { name: string; kind: string; base_url?: string; credential?: { env?: string; file?: string } }) => call<Connection>("POST", "/api/v1/connections", c),
+  plan: (s: SourceRequest, mirror: boolean) => call<ImportResult>("POST", "/api/v1/imports", { ...s, mirror, dry_run: true }),
+  one: (s: SourceRequest, repository: string, mirror: boolean) => call<ImportResult>("POST", "/api/v1/imports", { ...s, repository, mirror, wait: true }),
+};
