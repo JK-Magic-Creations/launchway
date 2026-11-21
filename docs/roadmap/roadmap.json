@@ -239,6 +239,23 @@
       "title": "Security scans as gates",
       "value": "Vulnerability, secret, dependency, image, chart and manifest scanning, fuzzing, an SBOM and security headers run on every change, backed by a security policy and a threat model.",
       "link": "security/how-launchway-is-scanned"
+    },
+    {
+      "theme": "Git hosting",
+      "title": "Pull requests and code review",
+      "value": "Open, review, comment on lines, suggest changes and merge inside Launchway, with merge rules that block until required checks pass.",
+      "link": "guide/pull-requests"
+    },
+    {
+      "theme": "Pipelines",
+      "title": "Pipelines drawn the way they run",
+      "value": "Steps that run together appear side by side on the run page, drawn from their dependencies."
+    },
+    {
+      "theme": "Delivery",
+      "title": "Rollback after a successful deployment",
+      "value": "Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry.",
+      "link": "guide/rollback-after-success"
     }
   ],
   "milestones": [
@@ -287,6 +304,10 @@
         {
           "title": "The guided interface",
           "area": "guided-interface"
+        },
+        {
+          "title": "Installing Launchway",
+          "area": "installing"
         }
       ],
       "groups": [
@@ -539,7 +560,7 @@
               "status": "planned",
               "title": "Pull-request status everywhere",
               "value": "Report each run back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one.",
-              "detail": "A connected host that has no status feature gets the same result as a comment and an approval, so the rule is the same everywhere.",
+              "detail": "Each run is reported back to the pull request as a status that can block a merge, on built-in and connected hosts. Built-in pull requests already show the latest run and the required checks.",
               "needs": "Every Git host, equally."
             }
           ]
@@ -782,7 +803,7 @@
               "status": "available",
               "title": "Warm builds with caches",
               "value": "Keep dependencies between runs so builds start warm, with rules for who may read and write them.",
-              "detail": "A pull request can write an entry the default branch never reads, which removes the cache-poisoning risk.",
+              "detail": "A pull request can write an entry the default branch never reads, which removes the cache-poisoning risk. Cache correctness is being tightened in Build tools and caches.",
               "link": "guide/build-caches",
               "area": "pipelines"
             },
@@ -819,6 +840,41 @@
               "title": "Per-step runner and workspace",
               "value": "Each step can choose its own image, runner and working area.",
               "detail": "A step that needs a large machine or special hardware asks for it without moving the whole pipeline.",
+              "area": "pipelines"
+            },
+            {
+              "status": "available",
+              "title": "Parallel steps drawn as parallel",
+              "value": "Steps that run together are drawn side by side on the run page, so the shape of a pipeline is the shape you see.",
+              "detail": "Steps are drawn from their dependencies, so a run reads like the pipeline you wrote.",
+              "area": "pipelines"
+            },
+            {
+              "status": "available",
+              "title": "A step's user has an account entry",
+              "value": "The user a step runs as is known to the system inside the step, so tools that look up a user, such as secure shell, work.",
+              "detail": "Applies to steps on runners and on Kubernetes.",
+              "area": "pipelines"
+            },
+            {
+              "status": "in-progress",
+              "title": "Runs wait for room instead of failing",
+              "value": "A step with no room in its namespace or on any node waits in line with a plain reason, instead of failing.",
+              "detail": "Being built: the run page, API and command line say what the step waits for and where it stands in line.",
+              "area": "pipelines"
+            },
+            {
+              "status": "in-progress",
+              "title": "Run priority and limits",
+              "value": "Set which runs go first and how many may run at once, per installation or project.",
+              "detail": "Being built, together with waiting for room.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Path filters",
+              "value": "Start a pipeline only when the files that changed match, or do not match, paths you name.",
+              "detail": "Next in line after queueing.",
               "area": "pipelines"
             }
           ]
@@ -885,7 +941,7 @@
               "status": "planned",
               "title": "Pipelines drawn as living lines",
               "value": "A pipeline appears as stations on tracks, with parallel steps splitting and joining, live while it runs.",
-              "detail": "Selecting a station shows its facts, and the log sits under the line.",
+              "detail": "Parallel steps are already drawn side by side on the run page. The rest, stations on tracks with live motion, is still to come.",
               "needs": "The guided interface.",
               "area": "guided-interface"
             },
@@ -954,6 +1010,102 @@
               "value": "Reproducible release builds with SBOMs, deb and rpm packages, an install script for runners and a runner-only Helm chart, with signing and provenance in the release workflow.",
               "detail": "All of it has been exercised on a machine of its own. The release workflow has not yet run for real, so no release is published; until then, build from source.",
               "link": "security/verify-downloads"
+            },
+            {
+              "status": "available",
+              "title": "Test like the pipeline",
+              "value": "Run Launchway's own checks locally in the same containers the pipeline uses, so a change that passes locally passes there.",
+              "detail": "The local run gives each step the same user and files as the server run."
+            }
+          ]
+        },
+        {
+          "name": "Install Launchway in minutes",
+          "blurb": "One command and a few plain questions on a laptop, a server or Kubernetes, then a guided first sign-in in the browser. Nothing else is assumed to be installed.",
+          "items": [
+            {
+              "status": "in-progress",
+              "title": "A few values and nothing else",
+              "value": "The chart starts a secure working installation from about ten lines or fewer: the address, the database choice and high availability on or off.",
+              "detail": "Being built. Everything else is a secure default or is set in the product after first sign-in.",
+              "area": "installing"
+            },
+            {
+              "status": "in-progress",
+              "title": "Secrets made once and kept",
+              "value": "The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades.",
+              "detail": "Being built. It also holds when a GitOps controller renders the chart.",
+              "area": "installing"
+            },
+            {
+              "status": "in-progress",
+              "title": "Secure by default in the chart",
+              "value": "Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed.",
+              "detail": "Being built.",
+              "area": "installing"
+            },
+            {
+              "status": "in-progress",
+              "title": "One-time setup code and built-in accounts",
+              "value": "A new installation requires sign-in from the first moment and offers a built-in first administrator with a second step.",
+              "detail": "Being built: a one-time setup code is printed once, and the rest happens in the browser.",
+              "area": "installing"
+            },
+            {
+              "status": "in-progress",
+              "title": "One command, three targets",
+              "value": "launchway install asks the same few plain questions for a laptop, a single server or Kubernetes, and ends by printing the address and the one-time step.",
+              "detail": "Being built. It is safe to run again and never regenerates keys.",
+              "area": "installing"
+            },
+            {
+              "status": "in-progress",
+              "title": "Asks before it touches a cluster",
+              "value": "On Kubernetes the installer shows the cluster it will change and asks by name, then writes a small values file and runs Helm, or writes files to commit where a GitOps controller manages the cluster.",
+              "detail": "Being built.",
+              "area": "installing"
+            },
+            {
+              "status": "in-progress",
+              "title": "A first-run wizard",
+              "value": "After first sign-in a wizard names your organization, sets sign-in, shows encryption status, backs up the root key, adds a runner and Git hosting, imports repositories and starts a first pipeline.",
+              "detail": "Being built: the remaining steps. A new sign-in provider is tested before sign-in is switched to it.",
+              "area": "installing"
+            },
+            {
+              "status": "in-progress",
+              "title": "A security checklist at the end",
+              "value": "The installer finishes with a plain checklist of what is protected and what to do next, and the doctor repeats it later.",
+              "detail": "Being built.",
+              "area": "installing"
+            },
+            {
+              "status": "in-progress",
+              "title": "Nothing else to install",
+              "value": "The installer carries the chart, the exact image references of its own release and what it needs to talk to a cluster, so no other tool is required.",
+              "detail": "Being built. A release image already carries the chart.",
+              "area": "installing"
+            },
+            {
+              "status": "planned",
+              "title": "A small Kubernetes on a server with none",
+              "value": "On a server with no cluster the installer offers to run Launchway by itself or to set up a small bundled Kubernetes.",
+              "detail": "Next in line after the three targets.",
+              "area": "installing"
+            },
+            {
+              "status": "planned",
+              "title": "Every cluster feature checked",
+              "value": "On an existing cluster the installer checks storage, a way in, certificates, a name, policy enforcement and rights, and offers a fix or a labeled trial option for each one missing.",
+              "detail": "Never a dead end; anything not yet built is shown as coming.",
+              "area": "installing"
+            },
+            {
+              "status": "planned",
+              "title": "An offline bundle",
+              "value": "One file with everything Launchway needs, for networks with no internet.",
+              "detail": "The same walk-through, ending in the browser.",
+              "area": "installing"
             }
           ]
         }
@@ -996,6 +1148,14 @@
         {
           "title": "Pipelines and flow control",
           "area": "pipelines"
+        },
+        {
+          "title": "Build tools and caches",
+          "area": "build-tools-caches"
+        },
+        {
+          "title": "The developer experience and the golden path",
+          "area": "developer-experience"
         }
       ],
       "groups": [
@@ -1251,6 +1411,193 @@
               "area": "pipelines"
             }
           ]
+        },
+        {
+          "name": "Every popular build tool, with a cache that is never stale",
+          "blurb": "A cache may only make a build faster, never change its result. Build tools become ready-made recipes that work out the cache for you.",
+          "items": [
+            {
+              "status": "in-progress",
+              "title": "The cache rule",
+              "value": "A build never silently uses an older copy of something it asked for the latest of, and a cache never changes what a build produces.",
+              "detail": "Being built: the rule, the cache key and how it is checked. Where Launchway cannot promise it for a path, the run says so and names the path.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "in-progress",
+              "title": "Fixed things reused, moving things looked up again",
+              "value": "Released versions, pinned images and locked dependencies are reused; snapshots, ranges and latest are re-checked on every build.",
+              "detail": "Being built. A re-check is a cheap lookup, not a download.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "in-progress",
+              "title": "Every restore is a head start, never the answer",
+              "value": "What a cache restores seeds the build and the tool still checks it, so a stale folder cannot decide the result.",
+              "detail": "Being built, with generations and a maximum age.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "in-progress",
+              "title": "Warnings for unsafe cache patterns",
+              "value": "Validation and the pipeline editor flag cache settings that could serve stale or secret data, and propose a fix.",
+              "detail": "Being built.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "in-progress",
+              "title": "Caches by trust scope",
+              "value": "What a pull request writes only that pull request reads; what a trusted branch writes the project reads; forks are isolated; image caches follow the same scopes.",
+              "detail": "Being built.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "planned",
+              "title": "What the run restored, and how old",
+              "value": "Every run shows what it restored, how old it was, what it re-checked, and either “this build used no stale inputs” or the exact list it could not verify.",
+              "detail": "Resolved versions are recorded, for example “resolved a snapshot to the build published four minutes ago”.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "planned",
+              "title": "Build twice and compare",
+              "value": "Run a build with and without cache and compare the results, or run without cache, or refresh the cache, with one choice.",
+              "detail": "Also the self-test that deleting every cache never changes what a build produces.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "planned",
+              "title": "Recipes for the popular tools",
+              "value": "Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready flight plan, a correct cache and test reports.",
+              "detail": "No hand-written cache keys. First phase of the recipes.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "planned",
+              "title": "Shared build caches Launchway hosts",
+              "value": "Where a tool has a build cache that verifies its inputs, such as Gradle, Bazel and container layers, Launchway serves it itself instead of copying folders around.",
+              "detail": "Output folders that depend on file times are not restored across commits unless you opt in.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "planned",
+              "title": "More build tools",
+              "value": "Bazel, sbt, .NET, Rust, C and C++, Ruby, PHP, Helm and Terraform follow the first recipes.",
+              "detail": "Later phases.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "planned",
+              "title": "Android builds",
+              "value": "Android projects build with Gradle recipes, signing keys kept on your side, and results on the launch line.",
+              "detail": "Follows the Gradle recipe.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "planned",
+              "title": "iOS and macOS builds",
+              "value": "Apple projects build on macOS runners you provide, with signing kept on your side.",
+              "detail": "The honest constraint: Apple builds need Apple hardware.",
+              "area": "build-tools-caches"
+            },
+            {
+              "status": "planned",
+              "title": "Cross-platform mobile frameworks",
+              "value": "Each cross-platform framework says which runner it needs, so a build lands on the right machine.",
+              "detail": "Follows Android and iOS.",
+              "area": "build-tools-caches"
+            }
+          ]
+        },
+        {
+          "name": "The developer comes first",
+          "blurb": "Whatever Launchway can do to help a developer ship the next feature quickly and safely, it does, in the editor, the terminal, the assistant and the pull request.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "An editor extension",
+              "value": "A VS Code extension shows your work, the launch line, run details and logs, and findings as problems in the file, with sign-in from the editor.",
+              "detail": "Built on one editor-neutral core, so other editors can follow.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "A language server and a schema for pipeline files",
+              "value": "Pipeline files get completion and inline checks in any editor that speaks the language-server standard.",
+              "detail": "Generated from the same parser the server uses, so they cannot disagree.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Assistant tools shaped by jobs",
+              "value": "AI coding assistants get tools for jobs such as explaining a failure, checking a pull request and opening one, instead of one tool per API call.",
+              "detail": "Each assistant is exactly as powerful as its user and no more.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Instruction files kept current",
+              "value": "Starter files that tell AI coding assistants your conventions are generated and kept up to date, and every one can be overridden.",
+              "detail": "Language starters carry good practice and naming standards.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Run it locally, the same way",
+              "value": "launchway run uses the same step images, recipes and cache rules as the server, with a local cache that follows the same freshness rules.",
+              "detail": "The command line already runs a pipeline on one machine; local caches come next.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Reproduce a failed step",
+              "value": "Copy one command that reruns a failed step with the same image and inputs, or open a time-limited, recorded debug session in a fresh copy of its environment.",
+              "detail": "Never with production secrets.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Flaky tests quarantined, with an owner",
+              "value": "A flaky test still runs and reports but stops blocking, with an owner and an expiry, and a failure says whether it is new or known.",
+              "detail": "Retry only the failed tests, using each tool’s own option.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "A preview environment for every pull request",
+              "value": "An environment that expires by itself and has a cost cap, with its link posted on the pull request.",
+              "detail": "A mobile equivalent is an install link per pull request.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "in-progress",
+              "title": "Why is my run waiting",
+              "value": "One answer to why something is not moving: no runner with the capability, a run ahead, a lock, an approval, a quota.",
+              "detail": "Being built with waiting for room; the rest follows.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "First signal fast",
+              "value": "A time budget for the first result on a pull request, with fast checks first and deep checks later.",
+              "detail": "Default: two minutes to the first result.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "A first green build in ten minutes",
+              "value": "Detect the tool, apply the recipe and its flight plan, and get a green build, with the clock as a test.",
+              "detail": "Includes mobile templates.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Team metrics, never people rankings",
+              "value": "Lead time, failure rate, time to restore, queue time and flaky rate for teams; an individual sees only their own numbers.",
+              "detail": "No per-person ranking anywhere.",
+              "area": "developer-experience"
+            }
+          ]
         }
       ]
     },
@@ -1296,6 +1643,18 @@
         {
           "title": "Live traffic, protection and reliability",
           "area": "traffic"
+        },
+        {
+          "title": "The golden path",
+          "area": "developer-experience"
+        },
+        {
+          "title": "Built-in platform services",
+          "area": "platform-services"
+        },
+        {
+          "title": "Configuration as code",
+          "area": "config-as-code"
         }
       ],
       "groups": [
@@ -1392,6 +1751,20 @@
               "detail": "Plain threshold checks remain the default, and AI can decide only where you allow it.",
               "needs": "A built-in model gateway.",
               "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "An HTTP health proof for verifying deployments",
+              "value": "Verify a deployment by calling an address you name and checking the answer, with no metrics store needed.",
+              "detail": "Next in line.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "GitOps write-back to a hosted repository",
+              "value": "After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, on the hosted Git service of your choice.",
+              "detail": "Next in line.",
+              "area": "delivery"
             }
           ]
         },
@@ -1551,29 +1924,29 @@
               "title": "Terraform and OpenTofu",
               "value": "Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection.",
               "detail": "Users never wonder where state goes, and Launchway guides them to good practice by default.",
-              "area": "delivery"
+              "area": "config-as-code"
             },
             {
               "status": "planned",
               "title": "State and locking built in",
-              "value": "State is stored, versioned and locked inside Launchway with access rules.",
-              "detail": "Nothing external is needed, and the state remains exportable.",
+              "value": "Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules.",
+              "detail": "It speaks the standard HTTP backend, so a pipeline step needs no backend setup and existing state can be imported.",
               "needs": "Terraform and OpenTofu.",
-              "area": "delivery"
+              "area": "platform-services"
             },
             {
               "status": "planned",
               "title": "Ansible",
               "value": "Typed steps with per-host results and a check mode before apply.",
               "detail": "Results show per host, with the check result shown before anything is changed.",
-              "area": "delivery"
+              "area": "config-as-code"
             },
             {
               "status": "planned",
               "title": "Chef",
               "value": "A real step with per-node results where Chef reports them, check mode before apply, and templates.",
-              "detail": "It has the same standing as Ansible, using the free build by default.",
-              "area": "delivery"
+              "detail": "Later and by choice: a real step with per-node results where Chef reports them, a check before apply, and tests as checks.",
+              "area": "config-as-code"
             },
             {
               "status": "planned",
@@ -1591,9 +1964,9 @@
             {
               "status": "planned",
               "title": "Feature toggles",
-              "value": "A built-in toggle service that applications and agents read, per environment, with percentage and client-type rollouts.",
+              "value": "A built-in toggle service that applications and agents read through the OpenFeature standard, per environment, with percentages and rules.",
               "detail": "It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.",
-              "area": "traffic"
+              "area": "platform-services"
             },
             {
               "status": "planned",
@@ -1804,6 +2177,242 @@
               "detail": "Close the gaps that gate adoption."
             }
           ]
+        },
+        {
+          "name": "The golden path",
+          "blurb": "A developer describes what an application is in a short file, or in nothing at all; the platform team says how things are delivered once; Launchway does the rest and records the evidence.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "A small workload description",
+              "value": "A short file in the repository says what an application is: how it listens, its health check, its backing services and the names of its secrets.",
+              "detail": "Detection can fill it in. Launchway derives the pipeline, checks and rollout plan from it.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Import from and export to Score",
+              "value": "The workload description reads and writes the open Score specification, so you are never locked in.",
+              "detail": "First landing: Kubernetes with Argo CD.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Landings chosen per environment",
+              "value": "The platform team chooses where each environment lands, and the same description is delivered there.",
+              "detail": "Kubernetes first.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Virtual machine and bootable-container landings",
+              "value": "The same description can land as a package or machine image on virtual machines, or on a fleet of bootable-container hosts.",
+              "detail": "Second phase.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Serverless and managed container landings",
+              "value": "The same description can land as a function or a managed container service.",
+              "detail": "Later phase.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Show what was generated, and eject",
+              "value": "Everything Launchway generates can be shown, and a team can take ownership of the generated files for one landing.",
+              "detail": "Never a black box and never a silent rewrite of your repository.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Automatic change records",
+              "value": "Every delivery becomes a change record with its evidence, without anyone filling in a form.",
+              "detail": "Facts come from the pipeline, the proofs and the approvals.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Standard, normal and emergency changes",
+              "value": "A repeatable low-risk change is approved by a rule; a normal change goes to the right people with the evidence; an emergency change acts first and is reviewed after.",
+              "detail": "Risk is computed from facts and shown with its reasoning.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Separation of duties",
+              "value": "The author of a change is never its only approver, and nobody approves a rule that applies to them.",
+              "detail": "An unavailable action says why.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Freezes and a release calendar",
+              "value": "A hold blocks approval and the production step for a time, while work continues up to it, and a calendar shows windows and scheduled changes.",
+              "detail": "Emergency changes use their own path.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "An external change system, optional",
+              "value": "Change records can be sent to and approved in an external change management system through an adapter.",
+              "detail": "The built-in changes area works with no adapter.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "A security review only when the facts warrant it",
+              "value": "A lightweight review is triggered by facts such as a new public route or a new kind of data, not on every change.",
+              "detail": "Continuous checks run on every change regardless.",
+              "area": "developer-experience"
+            },
+            {
+              "status": "planned",
+              "title": "Golden path health for the platform team",
+              "value": "See how many deliveries follow the path, where developers leave it and which standard stops the most.",
+              "detail": "A view for the platform owner.",
+              "area": "developer-experience"
+            }
+          ]
+        },
+        {
+          "name": "Built-in platform services",
+          "blurb": "Four things that sit next to your pipelines are built in and optional: object storage, Terraform and OpenTofu state, a managed cache and feature toggles. Each can be swapped for the product you already run.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "S3-compatible object storage",
+              "value": "A small S3-compatible front door on the storage Launchway already has, speaking the part of S3 that Terraform, registries, backup tools and build caches use.",
+              "detail": "Promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket, or bundle a managed server.",
+              "area": "platform-services"
+            },
+            {
+              "status": "planned",
+              "title": "Short-lived storage credentials",
+              "value": "A step proves its identity and gets a temporary key, so a pipeline never holds a stored storage key.",
+              "detail": "Part of the first phase.",
+              "area": "platform-services"
+            },
+            {
+              "status": "planned",
+              "title": "Versioning, lifecycle and events for storage",
+              "value": "Keep versions, expire objects by rule and send events when objects change.",
+              "detail": "Second phase.",
+              "area": "platform-services"
+            },
+            {
+              "status": "planned",
+              "title": "State you can read safely",
+              "value": "Terraform and OpenTofu state is shown as a difference with secrets masked and never as raw text, with history and rollback.",
+              "detail": "Second phase, after state and locking.",
+              "needs": "State and locking built in.",
+              "area": "platform-services"
+            },
+            {
+              "status": "planned",
+              "title": "A managed cache as a backing service",
+              "value": "Give an application a cache in an environment: a managed Valkey, installed through GitOps, with its credentials in the vault.",
+              "detail": "Launchway is not a database vendor, and says so. PostgreSQL covers Launchway’s own needs.",
+              "area": "platform-services"
+            },
+            {
+              "status": "planned",
+              "title": "Give this app a backing service",
+              "value": "The same pattern provisions a cache, a database, a queue or object storage for an application and wires it in as a connection.",
+              "detail": "Third phase.",
+              "area": "platform-services"
+            },
+            {
+              "status": "planned",
+              "title": "Toggle providers for the main languages",
+              "value": "Thin OpenFeature providers for Go, Java, JavaScript and TypeScript, Python and .NET read toggles from Launchway.",
+              "detail": "Rules evaluate inside the application, so personal data never leaves it.",
+              "area": "platform-services"
+            },
+            {
+              "status": "planned",
+              "title": "Toggles keep working when Launchway is down",
+              "value": "Providers keep the last known values and verify signed rules, so an outage never flips a feature.",
+              "detail": "Also evaluation counts for hygiene.",
+              "area": "platform-services"
+            },
+            {
+              "status": "planned",
+              "title": "Bring your own backend",
+              "value": "Each platform service has a built-in default and a popular backend you can use instead, without losing data.",
+              "detail": "What you install: Launchway, and PostgreSQL for production.",
+              "area": "platform-services"
+            }
+          ]
+        },
+        {
+          "name": "Configuration as code and the automation control center",
+          "blurb": "Everything that configures a system is code in Git, reviewed like code, applied from a plan, and watched for drift.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "A configuration change is a plan",
+              "value": "A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version.",
+              "detail": "Ansible cannot apply a saved plan the way Terraform can, so a guard enforces it and the page says so.",
+              "area": "config-as-code"
+            },
+            {
+              "status": "planned",
+              "title": "Inventories",
+              "value": "Hosts come from a static list first, then from clusters, clouds and other sources, with search over what is known about each.",
+              "detail": "Inventory stays on your side on the hosted service.",
+              "area": "config-as-code"
+            },
+            {
+              "status": "planned",
+              "title": "Flight plans as job templates, with a form",
+              "value": "A stack or playbook becomes a flight plan with a form for its inputs, a schedule, credentials and role-based access.",
+              "detail": "A wizard writes the pipeline for a repository it finds.",
+              "area": "config-as-code"
+            },
+            {
+              "status": "planned",
+              "title": "Results for every host",
+              "value": "See per host and per task what changed, with the tool’s own output kept alongside.",
+              "detail": "Launchway keeps the tool’s own output beside a readable summary.",
+              "area": "config-as-code"
+            },
+            {
+              "status": "planned",
+              "title": "Drift and converge now",
+              "value": "See which hosts and resources differ from their code and why, and press converge with the same clearance as any change.",
+              "detail": "Drift is checked on a schedule and shown per host.",
+              "area": "config-as-code"
+            },
+            {
+              "status": "planned",
+              "title": "Short-lived access to hosts",
+              "value": "Runs use workload identity or per-run secure shell certificates, never a stored cloud key.",
+              "detail": "Least privilege for hosts and secrets.",
+              "area": "config-as-code"
+            },
+            {
+              "status": "planned",
+              "title": "Launchway’s own settings as code, both ways",
+              "value": "Change settings on screen or in Git; each way produces a visible, reviewable change in the other.",
+              "detail": "Built on the Terraform provider.",
+              "area": "config-as-code"
+            },
+            {
+              "status": "planned",
+              "title": "Event-driven fixes",
+              "value": "An alert or a drift report can start a reviewed fix, with limits so it cannot run away.",
+              "detail": "Second phase.",
+              "area": "config-as-code"
+            },
+            {
+              "status": "planned",
+              "title": "Other configuration tools later",
+              "value": "Agent-based tools and other infrastructure tools join through one common interface.",
+              "detail": "Third phase.",
+              "area": "config-as-code"
+            }
+          ]
         }
       ]
     },
@@ -1900,7 +2509,7 @@
             {
               "status": "planned",
               "title": "Pull-through cache",
-              "value": "Cache public images so builds are faster and unaffected by rate limits.",
+              "value": "Cache public images and packages so builds are faster, work offline, and never serve an out-of-date copy of something that can change.",
               "detail": "Cached images are scanned and counted against quotas like any other.",
               "needs": "A built-in OCI registry.",
               "area": "registry"
@@ -1952,6 +2561,27 @@
               "detail": "Choose per project and move later.",
               "link": "guide/images",
               "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Pipelines that build, test and publish only",
+              "value": "Not everything deploys: a pipeline for a library, command-line tool, image or chart ends at published and available.",
+              "detail": "The run page says what was published and who uses it.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Native endpoints for package clients",
+              "value": "Go and npm clients talk to Launchway directly, and Python, Maven, NuGet, Cargo and RubyGems follow.",
+              "detail": "Short-lived credentials are wired in, so no stored token is needed.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Who uses which version",
+              "value": "A library page shows which projects fetched which version and which are behind.",
+              "detail": "Comes from publish and fetch records.",
+              "area": "dependency-order"
             }
           ]
         }
@@ -1991,6 +2621,10 @@
         {
           "title": "Software graph and automated patching",
           "area": "software-graph"
+        },
+        {
+          "title": "Dependency order and releases",
+          "area": "dependency-order"
         }
       ],
       "groups": [
@@ -2121,6 +2755,89 @@
               "detail": "The question is every production host patched in time answered with a query.",
               "needs": "Automated patching.",
               "area": "software-graph"
+            }
+          ]
+        },
+        {
+          "name": "Build and release in dependency order",
+          "blurb": "Launchway works the order out from what your code says and shows how it knew; you can always correct it.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "One dependency graph, with where each link came from",
+              "value": "Every link says where it was found, how sure Launchway is and offers the fix right there: add a link, ignore a wrong one with a reason.",
+              "detail": "Built on the software graph, not a second graph.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Libraries first, then what uses them",
+              "value": "When a library changes it is built and published first, and each application that uses it is built after, once, in order.",
+              "detail": "Go, npm, Maven, Gradle, Python and base images first.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Dependents checked before a change merges",
+              "value": "A library’s pull request builds the applications that use it against the new version and reports the result.",
+              "detail": "The result appears on the library’s pull request as a check.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Limits on build storms",
+              "value": "Batching and caps keep one library change from starting a flood of dependent builds.",
+              "detail": "A person can pause or reorder.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Order you can override",
+              "value": "Set build and release order by hand, pin a version, and mark an edge wrong; the system works out the order and a person can always override.",
+              "detail": "Overrides are kept in the repository or in settings.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Formations: things that go together",
+              "value": "A Formation is a release unit of applications, databases and configuration that are delivered together in the right order.",
+              "detail": "No new kind of object: a Formation is a plan with members.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "One go or no-go, one watch, one way back",
+              "value": "A Formation has one decision, one timeline and one watch, and returns to the stable state in reverse order.",
+              "detail": "If part of a Formation fails, the others return to the stable state.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Database first, then the application",
+              "value": "A Formation expands the database first, deploys services in dependency order and finishes the contract step later.",
+              "detail": "Builds on database change delivery.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Linked changes across repositories",
+              "value": "One change that spans several repositories is tracked, tested and merged together.",
+              "detail": "Second phase.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "Branching patterns as flight plans",
+              "value": "Trunk-based, short-lived branches with pull requests, the long-lived develop-and-release flow, release branches, tag-based library releases, forks, pull-request promotion and monorepos each come as a flight plan.",
+              "detail": "Each says what it implies for branches, triggers, versions, environments and fixes.",
+              "area": "dependency-order"
+            },
+            {
+              "status": "planned",
+              "title": "A recommender for the branching pattern",
+              "value": "When a repository is created or imported, six plain questions lead to the simplest pattern that fits, with the reason and the trade-offs, set up in one step.",
+              "detail": "Help, never enforcement.",
+              "area": "dependency-order"
             }
           ]
         }
@@ -2409,7 +3126,7 @@
               "status": "planned",
               "title": "The Detachment",
               "value": "One small program on your side starts your runners, looks things up in your secret store and reads your clusters, metrics, logs and DNS.",
-              "detail": "It only calls out. Nothing is opened into your network.",
+              "detail": "It only calls out; nothing is opened into your network. It holds your secrets, reaches your systems and sees your traffic, so the hosted side never does.",
               "needs": "Runners on your machines.",
               "area": "hosted-service"
             },
@@ -2530,10 +3247,11 @@
           "blurb": "The controls enterprises and regulated teams ask for.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Built-in accounts with MFA",
               "value": "Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys.",
-              "detail": "Recovery codes and session management are included."
+              "detail": "Being built: sign-in with a second step, a one-time setup code for the first administrator, invitations and resets. Recovery codes and session management are included.",
+              "area": "installing"
             },
             {
               "status": "planned",
@@ -2572,6 +3290,96 @@
               "title": "Zero trust throughout",
               "value": "Every service, runner and person proves identity on every call.",
               "detail": "No shared secrets between components."
+            }
+          ]
+        },
+        {
+          "name": "Your own Base, and what the service sees",
+          "blurb": "On the hosted product every customer has its own complete Base. The service operator sees the service, never your work, and you choose what to send when you need help.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Every customer has its own Base",
+              "value": "A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name.",
+              "detail": "Inside it the usual levels apply.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "The operator’s own Base is walled off",
+              "value": "The service operator’s own organization is a separate Base that no customer or demonstration visitor can see, list, search or guess.",
+              "detail": "Nothing flows down from it: shared starters and libraries are published by the product, public by nature.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Nothing crosses between Bases",
+              "value": "No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”.",
+              "detail": "Identifiers cannot be listed or guessed.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Proven by tests that gate every release",
+              "value": "A suite tries every list, search, lookup, count, error, export and agent tool from one Base against another’s data.",
+              "detail": "No outside customer is admitted until it passes.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "A vendor console, separate from any Base",
+              "value": "The service operator sees how many Bases exist, plans, usage trends, resource use and the health of the hosted side, and never repositories, run logs, secrets, findings or traffic.",
+              "detail": "It can suspend a Base, change a plan or publish a service notice.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "A separate sign-in for the vendor",
+              "value": "Vendor access is a different identity entered on purpose, with strong authentication, a stated reason and a session that ends by itself.",
+              "detail": "An everyday account can never hold a vendor role.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Everything the vendor does shows in your Logbook",
+              "value": "Every vendor action that touches your Base appears in your Base’s own Logbook, with who, why and when.",
+              "detail": "You can see what was done to your Base without asking.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Support tickets from inside your Base",
+              "value": "Open a ticket with a category and severity from your Base, or by email if the product is unreachable.",
+              "detail": "The service operator lists tickets across Bases with their status and response clocks.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Support bundles you choose and preview",
+              "value": "You pick from a checklist what goes in, secrets are removed, and you see a preview of exactly what will be sent before sending.",
+              "detail": "Encrypted to the support team, kept for a stated time, and you can withdraw it.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "A break-glass session you approve",
+              "value": "If a bundle is not enough, you can grant a time-limited, read-only-by-default session for one problem, watch it live and end it at any moment.",
+              "detail": "Every session is recorded where you can see it.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "The same bundle for self-hosted installations",
+              "value": "Self-hosted installations use the same command and send the file by their own channel, and an air-gapped customer can read it first.",
+              "detail": "The same checklist, redaction and preview apply.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Proven in development, then production",
+              "value": "Every release runs in a development installation first, and only builds that passed are promoted to the production one, which is also the hosted product.",
+              "detail": "Production has encryption at rest, tested backups and at least two server replicas.",
+              "area": "hosted-service"
             }
           ]
         }
@@ -2744,12 +3552,13 @@
           "blurb": "First phase. The release is not finished when the last step is; the watch carries on and can return.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Roll back after a successful deployment",
               "value": "An emergency button that returns to the last stable state even after a rollout has succeeded.",
-              "detail": "Today this is being built, with the same consequence text and Logbook entry as every other control.",
+              "detail": "Available now: the control returns to the last stable state after a rollout has succeeded, with the same consequence text and Logbook entry as every other control.",
               "needs": "The stable state.",
-              "area": "zero-downtime"
+              "area": "zero-downtime",
+              "link": "guide/rollback-after-success"
             },
             {
               "status": "planned",
@@ -3837,6 +4646,10 @@
         {
           "title": "Security and trust",
           "area": "security-trust"
+        },
+        {
+          "title": "The same standards for every repository",
+          "area": "repository-standards"
         }
       ],
       "groups": [
@@ -3860,10 +4673,10 @@
               "area": "security-trust"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Encrypt stored secrets and tokens",
               "value": "Move the keys that sit in plaintext in the database today into encryption under the hierarchy.",
-              "detail": "Reads work with both old and new forms during the move.",
+              "detail": "Being built: a check over every kind of stored data, an upgrade path that keeps old data readable, and sealed webhook addresses. Reads work with both old and new forms during the move.",
               "needs": "An installation key and a key hierarchy.",
               "area": "security-trust"
             },
@@ -4040,6 +4853,103 @@
               "link": "security/controls-and-compliance"
             }
           ]
+        },
+        {
+          "name": "The same standards for every repository",
+          "blurb": "The scans Launchway holds itself to are offered to every repository it hosts or builds, built in, with nothing to install and every check a switch.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "A profile for each repository",
+              "value": "Launchway looks at what a repository holds, such as Go, a Dockerfile or Helm charts, and attaches the checks that fit, each with the reason it was recommended.",
+              "detail": "Checks are on from the first push.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Every check on, advice or block",
+              "value": "Each check is off, advice or a block, at any level and per repository, and a level above can require a minimum.",
+              "detail": "The team in charge of a repository keeps the choice unless a level above locks it.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Vulnerability, secret, dependency and license checks",
+              "value": "Vulnerability and secret scans, dependency and license checks, and best practices for each language run for every repository, not only Launchway’s own.",
+              "detail": "Checks are visible steps, never hidden magic.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Language profiles",
+              "value": "Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kotlin, C#, Rust, Ruby, PHP, C and C++, shell, Terraform and Ansible follow.",
+              "detail": "Each profile brings starter files the team may change.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Findings in one list",
+              "value": "Every check reports into one findings list with what it is, where, how serious, how sure the tool is, how to fix it and when it was first seen.",
+              "detail": "Findings show on the pull request and in the repository, team and organization views.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Fix proposals as pull requests",
+              "value": "Launchway opens a pull request for a dependency bump, a base image update, a formatter run, a pinned digest or a hardened setting, and never edits silently.",
+              "detail": "Limits keep teams from being flooded, and automatic merging is off by default.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Safe defaults and a break-glass path",
+              "value": "A new critical or high vulnerability with a fix, or a secret, blocks a merge to a protected branch; everything else is advice; every block has a reasoned, expiring way through.",
+              "detail": "Only new findings block, so an old backlog does not stop work.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Exceptions with an owner and an expiry",
+              "value": "Waive a finding with a reason, an owner and an end date, and optionally say why it cannot be exploited, in a format you can publish.",
+              "detail": "When an exception expires the finding counts again.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Stored parts lists rechecked against new advisories",
+              "value": "When a new advisory is published, Launchway says which repositories and running versions are affected without anyone pushing a commit.",
+              "detail": "Stored software bills of materials are matched again each time an advisory appears.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Patch everything affected by an advisory",
+              "value": "Start a campaign that opens one fix per affected repository and tracks it until the new version is seen running.",
+              "detail": "A page shows each repository’s state, owner and deadline.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "A standards home and a posture view",
+              "value": "See a score with what moves it, the top risks, repositories without a profile and trends, per organization, team and repository.",
+              "detail": "The score is a view, never a gate by itself.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Evidence for auditors",
+              "value": "A report for a period shows which checks were on, evidence that they ran, findings and fixes, and exceptions.",
+              "detail": "Evidence support only; not a certification.",
+              "area": "repository-standards"
+            },
+            {
+              "status": "planned",
+              "title": "Checks that run on your side",
+              "value": "On the hosted service checks run on your runners, so source code and finding detail stay with you.",
+              "detail": "Only counts and summaries cross to the hosted side.",
+              "area": "repository-standards"
+            }
+          ]
         }
       ]
     },
@@ -4186,15 +5096,33 @@
     {
       "title": "Accessible to everyone",
       "value": "Automated checks hold every screen, and the API, agent endpoint and command line, to a top-tier standard for keyboard, screen reader and contrast."
+    },
+    {
+      "title": "Simple to install, nothing assumed",
+      "value": "A handful of values, no secrets manager or identity provider required, and a guided first sign-in that is the same for everyone."
+    },
+    {
+      "title": "Every customer’s Base is walled off, and proven",
+      "value": "Isolation between customers is not a promise: tests try every route from one Base into another and gate every release."
+    },
+    {
+      "title": "A cache only makes a build faster",
+      "value": "It may never change a build’s result: what can change is looked up again, and a run says when it cannot be sure."
+    },
+    {
+      "title": "The system works out the order; a person can always override",
+      "value": "Build order, release order and branching patterns are worked out from your code, shown with their reasons, and open to correction."
     }
   ],
   "whatChanged": {
     "date": "21 November 2026",
     "items": [
-      "Statuses now reflect what has been built: hosting over HTTPS and SSH, mirrors and import, webhooks, protected branches (a first version), variables at levels, failures that say why, the Learn area and the accessibility and security gates.",
-      "Five new milestones: zero-downtime delivery with Argo CD (8), network and traffic (9), databases (10), Kubernetes and virtual machines (11), and security and trust (12).",
-      "The hosted service milestone now describes a service that never holds your network or secrets, and a protected demonstration.",
-      "A new section, How we build, states the principles every item is held to, and a page shows the order of the build."
+      "Six new areas: standards and scanning for every repository, build tools and caches that are never stale, dependency order and releases, built-in platform services, configuration as code, and the developer’s golden path.",
+      "A new area on installing Launchway: one guided installer for a laptop, a server or Kubernetes, a chart with a handful of values, and built-in accounts with a one-time setup code.",
+      "The hosted service now describes your own Base for every customer, a vendor console and separate vendor sign-in that see the service and never your work, and support bundles you choose and preview.",
+      "Now available: pull requests with code review and merge rules, parallel steps drawn as parallel, a step user with an account entry, testing like the pipeline, and rollback after a successful deployment.",
+      "In progress: encryption of stored secrets under a root key, the cache correctness fixes, built-in accounts, the installer, and waiting for room instead of failing.",
+      "How we build has four new principles: simple to install, walled-off Bases proven by tests, a cache that never changes a result, and an order the system works out and a person can override."
     ]
   }
 }

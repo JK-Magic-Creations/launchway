@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 8 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 2 in progress · 46 planned · 48 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 1 available · 1 in progress · 46 planned · 48 capabilities</p>
 
 Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.
 
@@ -50,7 +50,7 @@ flowchart TD
 |---|---|---|---|---|
 | [One model for every deployment](#g-one-model-for-every-deployment) | 8 | 0 | 1 | 7 |
 | [Rollouts: every strategy, with an assistant](#g-rollouts-every-strategy-with-an-assistant) | 5 | 0 | 0 | 5 |
-| [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 5 | 0 | 1 | 4 |
+| [Guarded after the deploy, and back to stable by itself](#g-guarded-after-the-deploy-and-back-to-stable-by-itself) | 5 | 1 | 0 | 4 |
 | [Levers: toggles, configuration and secrets](#g-levers-toggles-configuration-and-secrets) | 6 | 0 | 0 | 6 |
 | [Hosts, serverless and other workloads](#g-hosts-serverless-and-other-workloads) | 8 | 0 | 0 | 8 |
 | [Argo CD, first class](#g-argo-cd-first-class) | 9 | 0 | 0 | 9 |
@@ -198,13 +198,13 @@ First phase. The release is not finished when the last step is; the watch carrie
 
 #### Roll back after a successful deployment {#roll-back-after-a-successful-deployment}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-An emergency button that returns to the last stable state even after a rollout has succeeded. Today this is being built, with the same consequence text and Logbook entry as every other control.
+An emergency button that returns to the last stable state even after a rollout has succeeded. Available now: the control returns to the last stable state after a rollout has succeeded, with the same consequence text and Logbook entry as every other control.
 
 **Depends on:** The stable state.
 
-[Area page](zero-downtime.md)
+[Read the documentation](../guide/rollback-after-success.md) · [Area page](zero-downtime.md)
 
 #### The watch {#the-watch}
 

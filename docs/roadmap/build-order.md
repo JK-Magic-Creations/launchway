@@ -8,8 +8,8 @@ The order follows what has to be true before what, and then what is most valuabl
 
 ```mermaid
 flowchart TD
-  Now["Built now<br/>hosting, interface, variables,<br/>failures say why, scans"]
-  Building["Being built<br/>pull requests, rollback after success,<br/>encryption at rest, guarded queries"]
+  Now["Built now<br/>hosting, pull requests and review,<br/>interface, failures say why, scans,<br/>rollback after success"]
+  Building["Being built<br/>installer and built-in accounts,<br/>encryption at rest, cache correctness,<br/>waiting for room"]
   First["First<br/>zero-downtime on Kubernetes,<br/>Argo CD views, network path,<br/>database failover"]
   Second["Second<br/>toggles and settings as rollouts,<br/>DNS and Istio, database changes,<br/>clusters and workloads"]
   Third["Third<br/>hosts, serverless, chaos and<br/>performance, autoscaling, built-in vault"]
@@ -35,6 +35,10 @@ In nearly every area the order is the same: first see what is there, then explai
 | Host your code, run your pipelines | [1](milestone-1.md) | Now |
 | Share and reuse across projects | [2](milestone-2.md) | Next |
 | Zero-downtime delivery and Argo CD | [8](milestone-8.md) | Next |
+| Installing Launchway | [1](milestone-1.md) | Now |
+| Build tools and caches, the developer experience | [2](milestone-2.md) | Next |
+| Configuration as code, platform services, the golden path | [3](milestone-3.md) | Next |
+| Dependency order and releases | [5](milestone-5.md) | Later |
 | Network and traffic | [9](milestone-9.md) | Next |
 | Databases | [10](milestone-10.md) | Next |
 | Kubernetes and virtual machines | [11](milestone-11.md) | Next |

@@ -120,6 +120,13 @@ const AREAS = [
   ['databases', 'Databases', 'Keeping Launchway\u2019s own database up, and delivering changes to yours.'],
   ['kubernetes-vms', 'Kubernetes and virtual machines', 'Clusters, workloads, autoscaling, serverless and virtual machines, starting from the change.'],
   ['security-trust', 'Security and trust', 'Encryption at rest, the built-in vault, scans as gates and an honest path to certification.'],
+  ['repository-standards', 'Standards and scanning for every repository', 'One profile per repository, checks you switch on, advise or block, findings in one list and fixes as pull requests.'],
+  ['build-tools-caches', 'Build tools and caches', 'A cache that makes a build faster and never different, recipes for the popular tools and mobile builds.'],
+  ['dependency-order', 'Dependency order and releases', 'Libraries before what uses them, release units that go together, publish-only pipelines and branching patterns.'],
+  ['platform-services', 'Platform services', 'Object storage, Terraform and OpenTofu state, a managed cache and feature toggles, each built in and swappable.'],
+  ['config-as-code', 'Configuration as code', 'Plans, inventories, per-host results and drift for Terraform, OpenTofu and Ansible.'],
+  ['developer-experience', 'Developer experience and the golden path', 'A small workload description, landings per environment, change records and editor and assistant tools.'],
+  ['installing', 'Installing Launchway', 'One guided installer for a laptop, a server or Kubernetes, and a first sign-in that walks you through the rest.'],
 ]
 
 // The big picture: one change travelling from idea to running software, with what surrounds it.

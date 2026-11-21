@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 2 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 0 in progress · 28 planned · 30 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 6 in progress · 47 planned · 55 capabilities</p>
 
 Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.
 
@@ -40,7 +40,7 @@ flowchart TD
 
 **Builds on:** [Milestone 1: Host and run](milestone-1.md). 
 
-**Go deeper:** [Pipelines and flow control](pipelines.md).
+**Go deeper:** [Pipelines and flow control](pipelines.md) · [Build tools and caches](build-tools-caches.md) · [The developer experience and the golden path](developer-experience.md).
 
 ## The capabilities
 
@@ -50,6 +50,8 @@ flowchart TD
 | [Design visually](#g-design-visually) | 4 | 0 | 0 | 4 |
 | [Move off a self-hosted automation server](#g-move-off-a-self-hosted-automation-server) | 4 | 0 | 0 | 4 |
 | [Share and reuse across projects](#g-share-and-reuse-across-projects) | 7 | 2 | 0 | 5 |
+| [Every popular build tool, with a cache that is never stale](#g-every-popular-build-tool-with-a-cache-that-is-never-stale) | 13 | 0 | 5 | 8 |
+| [The developer comes first](#g-the-developer-comes-first) | 12 | 0 | 1 | 11 |
 
 ### Write pipelines your way {#g-write-pipelines-your-way}
 
@@ -344,6 +346,214 @@ For any template, library or connection, a list of every project that uses it an
 **Depends on:** Templates and flight plans by level.
 
 [Area page](pipelines.md)
+
+### Every popular build tool, with a cache that is never stale {#g-every-popular-build-tool-with-a-cache-that-is-never-stale}
+
+A cache may only make a build faster, never change its result. Build tools become ready-made recipes that work out the cache for you.
+
+#### The cache rule {#the-cache-rule}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+A build never silently uses an older copy of something it asked for the latest of, and a cache never changes what a build produces. Being built: the rule, the cache key and how it is checked. Where Launchway cannot promise it for a path, the run says so and names the path.
+
+[Area page](build-tools-caches.md)
+
+#### Fixed things reused, moving things looked up again {#fixed-things-reused-moving-things-looked-up-again}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Released versions, pinned images and locked dependencies are reused; snapshots, ranges and latest are re-checked on every build. Being built. A re-check is a cheap lookup, not a download.
+
+[Area page](build-tools-caches.md)
+
+#### Every restore is a head start, never the answer {#every-restore-is-a-head-start-never-the-answer}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+What a cache restores seeds the build and the tool still checks it, so a stale folder cannot decide the result. Being built, with generations and a maximum age.
+
+[Area page](build-tools-caches.md)
+
+#### Warnings for unsafe cache patterns {#warnings-for-unsafe-cache-patterns}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Validation and the pipeline editor flag cache settings that could serve stale or secret data, and propose a fix. Being built.
+
+[Area page](build-tools-caches.md)
+
+#### Caches by trust scope {#caches-by-trust-scope}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+What a pull request writes only that pull request reads; what a trusted branch writes the project reads; forks are isolated; image caches follow the same scopes. Being built.
+
+[Area page](build-tools-caches.md)
+
+#### What the run restored, and how old {#what-the-run-restored-and-how-old}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every run shows what it restored, how old it was, what it re-checked, and either “this build used no stale inputs” or the exact list it could not verify. Resolved versions are recorded, for example “resolved a snapshot to the build published four minutes ago”.
+
+[Area page](build-tools-caches.md)
+
+#### Build twice and compare {#build-twice-and-compare}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Run a build with and without cache and compare the results, or run without cache, or refresh the cache, with one choice. Also the self-test that deleting every cache never changes what a build produces.
+
+[Area page](build-tools-caches.md)
+
+#### Recipes for the popular tools {#recipes-for-the-popular-tools}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Maven, Gradle, npm, pnpm, yarn, Go, Python (pip, uv and Poetry) and container images are detected, get a ready flight plan, a correct cache and test reports. No hand-written cache keys. First phase of the recipes.
+
+[Area page](build-tools-caches.md)
+
+#### Shared build caches Launchway hosts {#shared-build-caches-launchway-hosts}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Where a tool has a build cache that verifies its inputs, such as Gradle, Bazel and container layers, Launchway serves it itself instead of copying folders around. Output folders that depend on file times are not restored across commits unless you opt in.
+
+[Area page](build-tools-caches.md)
+
+#### More build tools {#more-build-tools}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Bazel, sbt, .NET, Rust, C and C++, Ruby, PHP, Helm and Terraform follow the first recipes. Later phases.
+
+[Area page](build-tools-caches.md)
+
+#### Android builds {#android-builds}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Android projects build with Gradle recipes, signing keys kept on your side, and results on the launch line. Follows the Gradle recipe.
+
+[Area page](build-tools-caches.md)
+
+#### iOS and macOS builds {#ios-and-macos-builds}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Apple projects build on macOS runners you provide, with signing kept on your side. The honest constraint: Apple builds need Apple hardware.
+
+[Area page](build-tools-caches.md)
+
+#### Cross-platform mobile frameworks {#cross-platform-mobile-frameworks}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each cross-platform framework says which runner it needs, so a build lands on the right machine. Follows Android and iOS.
+
+[Area page](build-tools-caches.md)
+
+### The developer comes first {#g-the-developer-comes-first}
+
+Whatever Launchway can do to help a developer ship the next feature quickly and safely, it does, in the editor, the terminal, the assistant and the pull request.
+
+#### An editor extension {#an-editor-extension}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A VS Code extension shows your work, the launch line, run details and logs, and findings as problems in the file, with sign-in from the editor. Built on one editor-neutral core, so other editors can follow.
+
+[Area page](developer-experience.md)
+
+#### A language server and a schema for pipeline files {#a-language-server-and-a-schema-for-pipeline-files}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Pipeline files get completion and inline checks in any editor that speaks the language-server standard. Generated from the same parser the server uses, so they cannot disagree.
+
+[Area page](developer-experience.md)
+
+#### Assistant tools shaped by jobs {#assistant-tools-shaped-by-jobs}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+AI coding assistants get tools for jobs such as explaining a failure, checking a pull request and opening one, instead of one tool per API call. Each assistant is exactly as powerful as its user and no more.
+
+[Area page](developer-experience.md)
+
+#### Instruction files kept current {#instruction-files-kept-current}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Starter files that tell AI coding assistants your conventions are generated and kept up to date, and every one can be overridden. Language starters carry good practice and naming standards.
+
+[Area page](developer-experience.md)
+
+#### Run it locally, the same way {#run-it-locally-the-same-way}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+launchway run uses the same step images, recipes and cache rules as the server, with a local cache that follows the same freshness rules. The command line already runs a pipeline on one machine; local caches come next.
+
+[Area page](developer-experience.md)
+
+#### Reproduce a failed step {#reproduce-a-failed-step}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Copy one command that reruns a failed step with the same image and inputs, or open a time-limited, recorded debug session in a fresh copy of its environment. Never with production secrets.
+
+[Area page](developer-experience.md)
+
+#### Flaky tests quarantined, with an owner {#flaky-tests-quarantined-with-an-owner}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A flaky test still runs and reports but stops blocking, with an owner and an expiry, and a failure says whether it is new or known. Retry only the failed tests, using each tool’s own option.
+
+[Area page](developer-experience.md)
+
+#### A preview environment for every pull request {#a-preview-environment-for-every-pull-request}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An environment that expires by itself and has a cost cap, with its link posted on the pull request. A mobile equivalent is an install link per pull request.
+
+[Area page](developer-experience.md)
+
+#### Why is my run waiting {#why-is-my-run-waiting}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+One answer to why something is not moving: no runner with the capability, a run ahead, a lock, an approval, a quota. Being built with waiting for room; the rest follows.
+
+[Area page](developer-experience.md)
+
+#### First signal fast {#first-signal-fast}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A time budget for the first result on a pull request, with fast checks first and deep checks later. Default: two minutes to the first result.
+
+[Area page](developer-experience.md)
+
+#### A first green build in ten minutes {#a-first-green-build-in-ten-minutes}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Detect the tool, apply the recipe and its flight plan, and get a green build, with the clock as a test. Includes mobile templates.
+
+[Area page](developer-experience.md)
+
+#### Team metrics, never people rankings {#team-metrics-never-people-rankings}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Lead time, failure rate, time to restore, queue time and flaky rate for teams; an individual sees only their own numbers. No per-person ranking anywhere.
+
+[Area page](developer-experience.md)
 
 ## What done means
 

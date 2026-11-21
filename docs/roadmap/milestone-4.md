@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 4 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 0 in progress · 12 planned · 13 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 0 in progress · 15 planned · 16 capabilities</p>
 
 Images, Helm charts and other OCI artifacts stored beside the code, under the same permissions and policies.
 
@@ -46,7 +46,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [The registry](#g-the-registry) | 13 | 1 | 0 | 12 |
+| [The registry](#g-the-registry) | 16 | 1 | 0 | 15 |
 
 ### The registry {#g-the-registry}
 
@@ -116,7 +116,7 @@ The same policy engine checks an image when it is pushed to the built-in registr
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Cache public images so builds are faster and unaffected by rate limits. Cached images are scanned and counted against quotas like any other.
+Cache public images and packages so builds are faster, work offline, and never serve an out-of-date copy of something that can change. Cached images are scanned and counted against quotas like any other.
 
 **Depends on:** A built-in OCI registry.
 
@@ -179,6 +179,30 @@ Language and system packages, such as for common programming languages, with cle
 Pushing to any OCI registry works today and stays first class beside the built-in one. Choose per project and move later.
 
 [Read the documentation](../guide/images.md) · [Area page](registry.md)
+
+#### Pipelines that build, test and publish only {#pipelines-that-build-test-and-publish-only}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Not everything deploys: a pipeline for a library, command-line tool, image or chart ends at published and available. The run page says what was published and who uses it.
+
+[Area page](dependency-order.md)
+
+#### Native endpoints for package clients {#native-endpoints-for-package-clients}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Go and npm clients talk to Launchway directly, and Python, Maven, NuGet, Cargo and RubyGems follow. Short-lived credentials are wired in, so no stored token is needed.
+
+[Area page](registry.md)
+
+#### Who uses which version {#who-uses-which-version}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A library page shows which projects fetched which version and which are behind. Comes from publish and fetch records.
+
+[Area page](dependency-order.md)
 
 ## What done means
 
