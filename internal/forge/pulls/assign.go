@@ -46,59 +46,7 @@ func (s *Service) AutoAssign(ctx context.Context, repoID string, p PullRequest, 
 	for _, r := range p.Reviewers {
 		done[r] = true
 	}
-	var people, groups []string
-	picked := map[string]bool{}
-	load := map[string]int{}
-	for _, f := range view.Files {
-		var cands []string
-		covered := false
-		for _, o := range f.Owners {
-			if g, ok := strings.CutPrefix(o, groupPrefix); ok {
-				if !slices.Contains(p.ReviewerGroups, g) && !slices.Contains(groups, g) {
-					groups = append(groups, g)
-				}
-				covered = true
-				continue
-			}
-			if picked[o] || (done[o] && o != p.Author) {
-				covered = true // one of this file's owners is already involved
-				continue
-			}
-			if o == p.Author {
-				continue
-			}
-			cands = append(cands, o)
-		}
-		if covered && set.AssignReviewers != AssignOwners {
-			continue
-		}
-		switch set.AssignReviewers {
-		case AssignOwners:
-			for _, c := range cands {
-				picked[c] = true
-				people = append(people, c)
-			}
-		case AssignRoundRobin, AssignLeastLoaded:
-			if len(cands) == 0 {
-				continue
-			}
-			pick := cands[p.Number%len(cands)]
-			if set.AssignReviewers == AssignLeastLoaded {
-				best := -1
-				for _, c := range cands {
-					if _, ok := load[c]; !ok {
-						load[c] = s.Store.openRequests(ctx, repoID, c)
-					}
-					if best < 0 || load[c] < best {
-						best, pick = load[c], c
-					}
-				}
-			}
-			picked[pick] = true
-			load[pick]++
-			people = append(people, pick)
-		}
-	}
+	people, groups := s.pickReviewers(ctx, repoID, p, set.AssignReviewers, view.Files, done)
 	if len(people) > 0 {
 		if err := s.RequestReview(ctx, repoID, p, by, people); err != nil {
 			people = nil
@@ -114,4 +62,55 @@ func (s *Service) AutoAssign(ctx context.Context, repoID string, p PullRequest, 
 		out = append(out, groupPrefix+g)
 	}
 	return out
+}
+
+// pickReviewers chooses who to ask from the owners of the changed files.
+func (s *Service) pickReviewers(ctx context.Context, repoID string, p PullRequest, mode string, files []FileOwners, done map[string]bool) (people, groups []string) {
+	picked := map[string]bool{}
+	load := map[string]int{}
+	for _, f := range files {
+		var cands []string
+		covered := false
+		for _, o := range f.Owners {
+			if g, ok := strings.CutPrefix(o, groupPrefix); ok {
+				if !slices.Contains(p.ReviewerGroups, g) && !slices.Contains(groups, g) {
+					groups = append(groups, g)
+				}
+				covered = true
+				continue
+			}
+			switch {
+			case picked[o] || (done[o] && o != p.Author):
+				covered = true // one of this file's owners is already involved
+			case o != p.Author:
+				cands = append(cands, o)
+			}
+		}
+		if covered && mode != AssignOwners || len(cands) == 0 {
+			continue
+		}
+		if mode == AssignOwners {
+			for _, c := range cands {
+				picked[c] = true
+				people = append(people, c)
+			}
+			continue
+		}
+		pick := cands[p.Number%len(cands)]
+		if mode == AssignLeastLoaded {
+			best := -1
+			for _, c := range cands {
+				if _, ok := load[c]; !ok {
+					load[c] = s.Store.openRequests(ctx, repoID, c)
+				}
+				if best < 0 || load[c] < best {
+					best, pick = load[c], c
+				}
+			}
+		}
+		picked[pick] = true
+		load[pick]++
+		people = append(people, pick)
+	}
+	return people, groups
 }

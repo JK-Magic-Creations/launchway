@@ -196,13 +196,7 @@ func (s *Server) pullActions(id *identity, repo forge.Repository, p pulls.PullRe
 	add("edit", canEdit && p.State != pulls.Merged, "author or operator", map[bool]string{true: "a merged pull request cannot be edited", false: "only the author or an operator may edit"}[canEdit])
 	add("close", open && canEdit, "author or operator", map[bool]string{true: notOpen, false: "only the author or an operator may close"}[open])
 	add("reopen", p.State == pulls.Closed && canEdit, "author or operator", map[string]string{"merged": "a merged pull request cannot be reopened; revert it instead", "open": "this pull request is already open"}[string(p.State)])
-	if rd.Queue {
-		in := queued != nil && queued.State != pulls.QueueRemoved
-		hard := pulls.QueueBlockers(rd)
-		add("queue", open && op && !in && len(hard) == 0, "operator", map[bool]string{true: "it is already in the merge queue", false: strings.Join(hard, "; ")}[in])
-		add("dequeue", in && canEdit, "author or operator", "it is not in the merge queue")
-	}
-	add("update_branch", open && canEdit && p.Mergeability.Behind > 0, "author or operator", "the branch is already up to date")
+	acts = append(acts, queueActions(p, rd, queued, open, op, canEdit)...)
 	add("mark_ready", open && p.Draft && canEdit, "author or operator", "only a draft can be marked ready")
 	add("mark_draft", open && !p.Draft && canEdit, "author or operator", "this pull request is already a draft")
 	add("review", s.authorize(id, auth.Read, repo.Path), "viewer", "you cannot read this repository")
@@ -503,4 +497,24 @@ func (s *Server) pullEvent(ctx context.Context, e pulls.Event) {
 func pullPayload(p pulls.PullRequest) map[string]any {
 	return map[string]any{"number": p.Number, "title": p.Title, "state": p.State, "draft": p.Draft, "author": p.Author, "source_branch": p.SourceBranch,
 		"target_branch": p.TargetBranch, "head_sha": p.HeadSHA, "base_sha": p.BaseSHA, "merge_commit": p.MergeCommit, "merged": p.State == pulls.Merged, "labels": p.Labels}
+}
+
+// queueActions are the actions of the merge queue and of updating the branch.
+func queueActions(p pulls.PullRequest, rd pulls.Readiness, queued *pulls.QueueEntry, open, op, canEdit bool) []engine.Action {
+	var acts []engine.Action
+	add := func(name string, ok bool, who, reason string) {
+		a := engine.Action{Name: name, Available: ok, Who: who}
+		if !ok {
+			a.Reason = reason
+		}
+		acts = append(acts, a)
+	}
+	if rd.Queue {
+		in := queued != nil && queued.State != pulls.QueueRemoved
+		hard := pulls.QueueBlockers(rd)
+		add("queue", open && op && !in && len(hard) == 0, "operator", map[bool]string{true: "it is already in the merge queue", false: strings.Join(hard, "; ")}[in])
+		add("dequeue", in && canEdit, "author or operator", "it is not in the merge queue")
+	}
+	add("update_branch", open && canEdit && p.Mergeability.Behind > 0, "author or operator", "the branch is already up to date")
+	return acts
 }

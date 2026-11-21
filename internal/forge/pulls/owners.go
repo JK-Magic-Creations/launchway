@@ -119,7 +119,7 @@ func validOwner(tok string) error {
 	case name == "" || len(name) > 100:
 		return fmt.Errorf("%q has no name after the @", tok)
 	case strings.ContainsAny(name, " \t,;:/\\<>\"'`\x00"):
-		return fmt.Errorf("%q is not a valid name: use letters, digits, - _ and .", tok)
+		return fmt.Errorf("%q is not a valid name: use letters, digits, dashes, underscores and dots", tok)
 	}
 	return nil
 }

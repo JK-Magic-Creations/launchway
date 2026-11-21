@@ -484,38 +484,9 @@ func (s *Service) ApplySuggestions(ctx context.Context, repoID string, p PullReq
 	if p.SourceRepo != "" {
 		return "", conflict("suggestions cannot be applied to a branch of another repository")
 	}
-	var cs []Comment
-	seen := map[string]bool{}
-	for _, id := range commentIDs {
-		if seen[id] {
-			continue
-		}
-		seen[id] = true
-		c, err := s.Store.Comment(ctx, p.ID, id)
-		switch {
-		case err != nil:
-			return "", err
-		case !c.HasSuggestion || c.Deleted:
-			return "", invalid("the comment on %s line %d holds no suggestion", c.Path, c.Line)
-		case c.AppliedSHA != "":
-			return "", conflict("the suggestion on %s line %d was already applied in %s", c.Path, c.Line, c.AppliedSHA[:10])
-		case c.Outdated || c.CommitSHA != p.HeadSHA:
-			return "", conflict("the code under the suggestion on %s line %d has changed since it was written; ask for it again on the current code", c.Path, c.Line)
-		}
-		if c.StartLine == 0 {
-			c.StartLine = c.Line
-		}
-		cs = append(cs, c)
-	}
-	byFile := map[string][]Comment{}
-	for _, c := range cs {
-		for _, o := range byFile[c.Path] {
-			if c.StartLine <= o.Line && o.StartLine <= c.Line {
-				return "", conflict("the suggestions by @%s and @%s on %s both change lines %d to %d; apply one, then ask for the other again",
-					o.Author, c.Author, c.Path, max(c.StartLine, o.StartLine), min(c.Line, o.Line))
-			}
-		}
-		byFile[c.Path] = append(byFile[c.Path], c)
+	cs, byFile, err := s.suggestionsToApply(ctx, p, commentIDs)
+	if err != nil {
+		return "", err
 	}
 	paths := make([]string, 0, len(byFile))
 	for path := range byFile {
@@ -524,7 +495,7 @@ func (s *Service) ApplySuggestions(ctx context.Context, repoID string, p PullReq
 	sort.Strings(paths)
 	ref := branchRef(p.SourceBranch)
 	var made string
-	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
+	_, err = s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
 		tip := refs[ref]
 		if tip != p.HeadSHA {
 			return nil, conflict("the branch %s moved since the pull request last looked; refresh and try again", p.SourceBranch)
@@ -596,6 +567,45 @@ func (s *Service) ApplySuggestions(ctx context.Context, repoID string, p PullReq
 	}
 	s.Pushed(ctx, repoID, by, []RefUpdate{{Name: ref, Old: p.HeadSHA, New: made}})
 	return made, nil
+}
+
+// suggestionsToApply reads and checks the suggestions named: each must still hold, and no two may
+// change the same lines of a file. It returns them, and by file.
+func (s *Service) suggestionsToApply(ctx context.Context, p PullRequest, commentIDs []string) ([]Comment, map[string][]Comment, error) {
+	var cs []Comment
+	seen := map[string]bool{}
+	for _, id := range commentIDs {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		c, err := s.Store.Comment(ctx, p.ID, id)
+		switch {
+		case err != nil:
+			return nil, nil, err
+		case !c.HasSuggestion || c.Deleted:
+			return nil, nil, invalid("the comment on %s line %d holds no suggestion", c.Path, c.Line)
+		case c.AppliedSHA != "":
+			return nil, nil, conflict("the suggestion on %s line %d was already applied in %s", c.Path, c.Line, c.AppliedSHA[:10])
+		case c.Outdated || c.CommitSHA != p.HeadSHA:
+			return nil, nil, conflict("the code under the suggestion on %s line %d has changed since it was written; ask for it again on the current code", c.Path, c.Line)
+		}
+		if c.StartLine == 0 {
+			c.StartLine = c.Line
+		}
+		cs = append(cs, c)
+	}
+	byFile := map[string][]Comment{}
+	for _, c := range cs {
+		for _, o := range byFile[c.Path] {
+			if c.StartLine <= o.Line && o.StartLine <= c.Line {
+				return nil, nil, conflict("the suggestions by @%s and @%s on %s both change lines %d to %d; apply one, then ask for the other again",
+					o.Author, c.Author, c.Path, max(c.StartLine, o.StartLine), min(c.Line, o.Line))
+			}
+		}
+		byFile[c.Path] = append(byFile[c.Path], c)
+	}
+	return cs, byFile, nil
 }
 
 // replaceLines replaces lines start..end (1-based, inclusive) of content with

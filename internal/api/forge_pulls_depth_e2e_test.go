@@ -167,11 +167,11 @@ func TestReviewDepthThroughTheAPI(t *testing.T) {
 			Why        string `json:"why"`
 		} `json:"items"`
 	}
-	ada.get(e.srv.URL + "/api/v1/pulls/inbox").json(t, &inbox)
+	ada.get(e.srv.URL+"/api/v1/pulls/inbox").json(t, &inbox)
 	if len(inbox.Items) != 1 || inbox.Items[0].Repository != "acme/shop" || inbox.Items[0].Kind != "review_requested" || !strings.Contains(inbox.Items[0].Why, "asked you") {
 		t.Fatalf("%+v", inbox)
 	}
-	vic.get(e.srv.URL + "/api/v1/pulls/inbox").json(t, &inbox)
+	vic.get(e.srv.URL+"/api/v1/pulls/inbox").json(t, &inbox)
 	if len(inbox.Items) != 0 {
 		t.Fatalf("someone else's inbox: %+v", inbox)
 	}
@@ -179,7 +179,7 @@ func TestReviewDepthThroughTheAPI(t *testing.T) {
 	if r := ada.do("POST", prURL+"/reviews", `{"verdict":"request_changes","body":"please"}`); r.status != 201 {
 		t.Fatalf("%d", r.status)
 	}
-	otto.get(e.srv.URL + "/api/v1/pulls/inbox").json(t, &inbox)
+	otto.get(e.srv.URL+"/api/v1/pulls/inbox").json(t, &inbox)
 	if len(inbox.Items) != 1 || inbox.Items[0].Kind != "changes_requested" {
 		t.Fatalf("%+v", inbox)
 	}

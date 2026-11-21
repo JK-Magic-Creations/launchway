@@ -71,25 +71,41 @@ func (s *Store) Inbox(ctx context.Context, user string, groups []string) ([]Inbo
 		[]any{user}, InboxQueueFailed, func(reason string) string { return "the merge queue took it out: " + reason }); err != nil {
 		return nil, err
 	}
-	// Changes asked of my own pull requests: the last verdict of someone is a request for changes.
-	rows, err := s.db.Query(ctx, `SELECT id, repo_id, number, title FROM pull_requests WHERE author = ? AND state = 'open' ORDER BY updated_at DESC LIMIT 200`, user)
+	changes, err := s.inboxChanges(ctx, user)
 	if err != nil {
 		return nil, err
 	}
+	out = append(out, changes...)
+	sort.SliceStable(out, func(i, j int) bool { return out[i].At.After(out[j].At) })
+	return out, nil
+}
+
+// inboxChanges lists a person's own open pull requests on which someone's last verdict is a request for changes.
+func (s *Store) inboxChanges(ctx context.Context, user string) ([]InboxItem, error) {
 	type mine struct {
 		id, repo, title string
 		number          int
 	}
-	var own []mine
-	for rows.Next() {
-		var m mine
-		if err := rows.Scan(&m.id, &m.repo, &m.number, &m.title); err != nil {
-			rows.Close()
+	own, err := func() ([]mine, error) {
+		rows, err := s.db.Query(ctx, `SELECT id, repo_id, number, title FROM pull_requests WHERE author = ? AND state = 'open' ORDER BY updated_at DESC LIMIT 200`, user)
+		if err != nil {
 			return nil, err
 		}
-		own = append(own, m)
+		defer rows.Close()
+		var own []mine
+		for rows.Next() {
+			var m mine
+			if err := rows.Scan(&m.id, &m.repo, &m.number, &m.title); err != nil {
+				return nil, err
+			}
+			own = append(own, m)
+		}
+		return own, rows.Err()
+	}()
+	if err != nil {
+		return nil, err
 	}
-	rows.Close()
+	var out []InboxItem
 	for _, m := range own {
 		rs, err := s.Reviews(ctx, m.id)
 		if err != nil {
@@ -107,6 +123,5 @@ func (s *Store) Inbox(ctx context.Context, user string, groups []string) ([]Inbo
 			}
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].At.After(out[j].At) })
 	return out, nil
 }
