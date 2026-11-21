@@ -197,6 +197,16 @@ var mcpPermissionTable = map[string]mcpRow{
 	"delete_toggle_segment":       {map[string]any{"project": "pay-api", "name": "gone", "reason": "x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"set_toggle_safeguards":       {map[string]any{"project": "pay-api", "settings": map[string]any{"require_reason": true}}, false, [5]string{mUnlisted, mUnlisted, mRefused, mNotFound, mOK}},
 	"revoke_toggle_key":           {map[string]any{"project": "pay-api", "key": "nope"}, false, [5]string{mUnlisted, mUnlisted, mRefused, mNotFound, mNotFound}},
+	"list_config_reports":     {map[string]any{"run": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"get_config_report":       {map[string]any{"run": "{pay}", "step": "nope"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_configuration":       {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"list_state":              {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"show_state":              {map[string]any{"project": "pay-api", "workspace": "nope"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"list_state_versions":     {map[string]any{"project": "pay-api", "workspace": "nope"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"rerun_failed_hosts":      {map[string]any{"run": "{pay}", "step": "nope"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"rollback_state":          {map[string]any{"project": "pay-api", "workspace": "nope", "version": 1, "reason": "test"}, false, [5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
+	"lock_state":              {map[string]any{"project": "pay-api", "workspace": "nope", "reason": "test"}, false, [5]string{mUnlisted, mUnlisted, mOK, mNotFound, mAllowed}},
+	"unlock_state":            {map[string]any{"project": "pay-api", "workspace": "nope", "reason": "test"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	// Step resources: anyone reads; only an administrator is offered the
 	// tools that change them, as the API refuses everyone else.
 	// Standing orders: the test server has none (404 after the permission check); tools that change are listed to operators.

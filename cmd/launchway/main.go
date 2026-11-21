@@ -92,6 +92,8 @@ Usage:
   launchway run-triggers list|create|delete|allow|allowed|revoke   start a run when another project's run or launch ends
   launchway standards show|set|explain|coverage|profile  the Standing orders every repository has: checks, gates, settings by level
   launchway findings list|show|accept|reopen|export|inspect  what the checks found: the backlog, decisions, a run's verdict
+  launchway state    list|show|versions|lock|unlock|pull|push|rollback   built-in Terraform/OpenTofu state
+  launchway configuration overview|report|rerun-failed   Ansible and plan reports, drift, hosts to run again
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
@@ -134,6 +136,8 @@ var commands = map[string]func([]string) error{
 	"run-triggers":   cmdRunTriggers,
 	"standards":      cmdStandards,
 	"findings":       cmdFindings,
+	"state":          cmdState,
+	"configuration":  cmdConfiguration,
 	"variables":      cmdVariables,
 	"toggles":        cmdToggles,
 	"doctor":         cmdDoctor,

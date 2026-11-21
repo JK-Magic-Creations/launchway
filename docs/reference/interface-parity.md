@@ -21,6 +21,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/runner/v1/caches/discard` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/caches/download` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/caches/lookup` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/config/state-credential` | — | — | — | exempt: the runner protocol: only runners call it, under a lease, to give a step its state credential |
 | `POST /api/runner/v1/deploy/command-done` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/commands` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/lease` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
@@ -44,6 +45,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/sdk/v1/ruleset` | — | — | — | exempt: the application protocol: SDKs call it with an SDK key, which only reads toggles; it is not an operation for people, agents or Terraform |
 | `GET /api/sdk/v1/stream` | — | — | — | exempt: the application protocol: SDKs call it with an SDK key, which only reads toggles; it is not an operation for people, agents or Terraform |
 | `POST /api/sdk/v1/telemetry` | — | — | — | exempt: the application protocol: SDKs call it with an SDK key, which only reads toggles; it is not an operation for people, agents or Terraform |
+| `DELETE /api/state/v1/{project}/{workspace}` | — | — | — | exempt: the Terraform and OpenTofu http backend protocol: only those tools speak it |
+| `GET /api/state/v1/{project}/{workspace}` | — | — | — | exempt: the Terraform and OpenTofu http backend protocol: only those tools speak it, with a run's state credential or a person's API token |
+| `POST /api/state/v1/{project}/{workspace}` | — | — | — | exempt: the Terraform and OpenTofu http backend protocol: only those tools speak it |
+| `PUT /api/state/v1/{project}/{workspace}` | — | — | — | exempt: the Terraform and OpenTofu http backend protocol: only those tools speak it |
+| `LOCK /api/state/v1/{project}/{workspace}/lock` | — | — | — | exempt: the Terraform and OpenTofu http backend protocol: only those tools speak it (people lock with state lock) |
+| `UNLOCK /api/state/v1/{project}/{workspace}/lock` | — | — | — | exempt: the Terraform and OpenTofu http backend protocol: only those tools speak it (people unlock with state unlock) |
 | `GET /api/v1/account` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/password` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `POST /api/v1/account/recovery-codes` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
@@ -141,6 +148,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/projects/{name}/caches` | `delete_cache` | `caches delete` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/caches` | `list_caches` | `caches list` | `not needed by terraform` | equal |
 | `DELETE /api/v1/projects/{name}/caches/{id}` | `delete_cache` | `caches delete` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/configuration` | `get_configuration` | `configuration overview` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/coverage` | — | `runs coverage` | — | gap: no MCP tool reads coverage yet |
 | `POST /api/v1/projects/{name}/draft-runs` | `start_run (pipeline_text)` | — | — | gap: launchway runs start has no flag for a draft run yet |
 | `GET /api/v1/projects/{name}/event-sources` | `list_event_sources` | `event-sources list` | `not needed by terraform` | equal |
@@ -211,6 +219,14 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/projects/{name}/sources/{source}` | — | — | — | exempt: the address other systems call, signed with the source's secret: not an operation for people or agents (the console tests it with launchway event-sources test) |
 | `GET /api/v1/projects/{name}/standards` | `get_standards` | `standards show`, `standards explain` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/standards/file` | `get_standards` | `standards show` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/state` | `list_state` | `state list` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/state/{workspace}` | `show_state` | `state show` | `not needed by terraform` | equal |
+| `DELETE /api/v1/projects/{name}/state/{workspace}/lock` | `unlock_state` | `state unlock` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/state/{workspace}/lock` | `lock_state` | `state lock` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/state/{workspace}/pull` | — | `state pull` | `not needed by terraform` | exempt: raw state holds secrets in clear text by design of its format: it leaves only through the API and the command line, with a reason and an audit record, and the MCP server never returns it |
+| `PUT /api/v1/projects/{name}/state/{workspace}/push` | — | `state push` | `not needed by terraform` | exempt: raw state goes in only through the API and the command line (an import or a repair); an agent has no business writing a document that holds secrets |
+| `POST /api/v1/projects/{name}/state/{workspace}/rollback` | `rollback_state` | `state rollback` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/state/{workspace}/versions` | `list_state_versions` | `state versions` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/tests` | `get_test_results` | `runs tests` | — | equal |
 | `GET /api/v1/projects/{name}/tests/flaky` | `list_flaky_tests` | `tests flaky` | — | equal |
 | `GET /api/v1/projects/{name}/tests/history` | `get_test_results` | `runs tests` | — | equal |
@@ -370,6 +386,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/artifacts/{artifact}/archive` | — | — | — | gap: archive download is a browser download; no MCP tool or CLI yet |
 | `GET /api/v1/runs/{id}/artifacts/{artifact}/file` | `list_artifacts`, `read_artifact_file` | — | — | gap: launchway has no artifacts command yet |
 | `POST /api/v1/runs/{id}/cancel` | `cancel_run` | `runs cancel` | — | equal |
+| `GET /api/v1/runs/{id}/config-reports` | `list_config_reports` | `configuration report` | `not needed by terraform` | equal |
+| `GET /api/v1/runs/{id}/config-reports/{step}` | `get_config_report` | `configuration report` | `not needed by terraform` | equal |
+| `POST /api/v1/runs/{id}/config-reports/{step}/rerun-failed` | `rerun_failed_hosts` | `configuration rerun-failed` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/coverage` | — | `runs coverage` | — | gap: no MCP tool reads coverage yet |
 | `GET /api/v1/runs/{id}/coverage/files` | — | `runs coverage` | — | gap: no MCP tool reads coverage yet |
 | `GET /api/v1/runs/{id}/debrief` | `get_debrief` | `debrief show` | — | equal |

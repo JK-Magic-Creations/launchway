@@ -18,6 +18,8 @@ import (
 func addStepResourceTools(srv *mcp.Server, c *mcpCall) {
 	addCacheTools(srv, c) // build caches (schema 25) join the same group
 	addRegistryTools(srv, c)
+	addCacheTools(srv, c)      // build caches (schema 25) join the same group
+	addConfigCodeTools(srv, c) // configuration as code (schema 51)
 	addRepositoryTools(srv, c)
 	addVariableTools(srv, c)   // variables at levels (schema 29)
 	addToggleTools(srv, c)     // feature toggles (schema 41)

@@ -1063,6 +1063,32 @@ In outline, a Station long-polls for work (`lease`), says the step started (`sta
 
 The request and response bodies of these routes are internal to Launchway and may change between releases; Stations and servers of mismatched versions are handled by the schema checks described in [Backup, restore and upgrade](../howto/backup-restore-upgrade.md).
 
+## Configuration as code
+
+Reports of Ansible and plan steps, the project's Configuration page, and the built-in Terraform/OpenTofu state. The tools run in step containers; these routes keep and serve what they produced. A step keeps its report files as the artifact `launchway-config`; the server reads them once, redacts them again, and stores the parsed report with the run. State holds secrets in clear text by design of its format: it is sealed in the database, a server with no root key refuses it (`503` on the protocol, `409` elsewhere), and only `pull` returns it, with a reason.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/runs/{id}/config-reports` | `run-viewer` | — | The run's reports: `step`, `kind` (`ansible` or `plan`), `status`, `recap` (for Ansible `12 hosts: 9 changed, 3 ok, 0 failed`; in check mode `would change`), `check`, `environment`, `commit`. |
+| `GET /api/v1/runs/{id}/config-reports/{step}` | `run-viewer` | — | One report with its `summary` (failure, hosts to run again, drift) and `document` (plays, tasks and hosts; or the plan's resources with attribute differences and risk). `?kind=` picks one when a step has both. No secret value is ever in it: `no_log` results, sensitive plan values and credential-like text are removed before it is stored. |
+| `POST /api/v1/runs/{id}/config-reports/{step}/rerun-failed` | `run-operator` | `config.rerun_failed` | Starts a run of the same project and branch with the input `limit` set to the hosts that failed or were unreachable. `409` if none did. |
+| `GET /api/v1/projects/{name}/configuration` | `project-viewer` | — | The Configuration page: per Airfield the last apply, the last check-mode run (drift), the last plan, and the state workspaces. |
+| `GET /api/v1/projects/{name}/state` | `project-viewer` | — | The state workspaces: `name`, `serial`, `version`, `lock`; and whether this server can seal state (`sealed`). |
+| `GET /api/v1/projects/{name}/state/{workspace}` | `project-viewer` | — | Resources (address, provider, instances) and output names (with `sensitive`) of the newest version, or of `?version=`. Never a value. |
+| `GET /api/v1/projects/{name}/state/{workspace}/versions` | `project-viewer` | — | Every kept version (50 by default): serial, size, resource count, `source` (`write`, `push`, `rollback`), who, which run, when. |
+| `GET /api/v1/projects/{name}/state/{workspace}/pull` | `project-operator` | `state.pull` | The raw state document. `?reason=` is required and goes to the audit trail with the caller; `?version=` picks a version. |
+| `PUT /api/v1/projects/{name}/state/{workspace}/push` | `project-operator` | `state.push` | Stores a state document as the next version (an import or a repair). `409` for another lineage unless `?adopt=true`, or a serial older than the stored one. |
+| `POST /api/v1/projects/{name}/state/{workspace}/lock` | `project-operator` | `state.lock` | Locks the workspace by hand: `{"reason"}`. `423` if it is locked. |
+| `DELETE /api/v1/projects/{name}/state/{workspace}/lock` | `project-operator` | `state.unlock` | Releases a lock whoever holds it; `?reason=` is required. `409` while the run that holds it is still going. |
+| `POST /api/v1/projects/{name}/state/{workspace}/rollback` | `project-operator` | `state.rollback` | `{"version", "reason"}`: stores that version as the newest, with a higher serial. Changes the stored state only; no real resource changes. `423` while locked. |
+| `GET /api/state/v1/{project}/{workspace}` | `public` | — | The Terraform/OpenTofu `http` backend: the current state, `404` if none. HTTP basic credentials: the password is a run's state credential (`lwst_...`, one workspace of one project, until the run ends) or an API token with the viewer role. |
+| `POST /api/state/v1/{project}/{workspace}` | `public` | — | Stores the state (`?ID=` the lock id). `409` for an older serial, another lineage or the same serial with other content; `423` under another's lock; operator role or a read-write run credential. |
+| `PUT /api/state/v1/{project}/{workspace}` | `public` | — | The same as `POST`. |
+| `DELETE /api/state/v1/{project}/{workspace}` | `public` | `state.delete` | Removes the workspace and its versions; refused while locked. |
+| `LOCK /api/state/v1/{project}/{workspace}/lock` | `public` | `state.lock` | Takes the lock with the client's lock document (an `ID`). `423` answers with the holder's document. A lock whose run has ended is released first. |
+| `UNLOCK /api/state/v1/{project}/{workspace}/lock` | `public` | `state.unlock` | Releases the lock the client holds under its `ID`. |
+| `POST /api/runner/v1/config/state-credential` | `runner` | — | A runner, under a lease, asks for the credential of one workspace of the lease's project: valid for that run only, read-only for pull request and draft runs. |
+
 ## What next
 
 - [Roles and permissions](roles.md): who may call what.
