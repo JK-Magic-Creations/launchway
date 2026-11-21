@@ -34,6 +34,13 @@ export function SettingsHomePage() {
       <PageHead eyebrow="Settings" title="Set up once, then rarely" sentence="Nothing here is needed to run a pipeline day to day. Each row is a place you may change things." />
       <Sheet>
         <ul className="rowlist">
+          {me.admin && (
+            <li>
+              <Icon name="info" />
+              <div className="main"><div className="nm"><a href="/setup/guide" onClick={onLink}>Setup guide</a></div><div className="sb">The first-run walk-through: sign-in, the root key, a runner, Git hosting, importing repositories and a first pipeline. Skip any step and come back.</div></div>
+              <div className="cell" />
+            </li>
+          )}
           {tabs.map((t) => (
             <li key={t.id}>
               <Icon name={t.icon ?? "settings"} />

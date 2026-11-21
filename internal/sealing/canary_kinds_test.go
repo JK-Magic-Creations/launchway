@@ -26,6 +26,7 @@ const (
 	cInlineCred = "CANARY-inline-credential-in-an-address-2d7b9e40"
 	cHookEcho   = "CANARY-echoed-bearer-token-2f7b9d4e6a1c8035"
 	cVarValue   = "CANARY-text-given-as-a-secret-variable-8c4e1a97"
+	cConnToken  = "CANARY-token-pasted-for-an-import-connection-4b9d0e72"
 )
 
 // syncLog is a log buffer that goroutines may write to.
@@ -137,6 +138,15 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 		t.Fatal("an address with a credential in it was accepted")
 	}
 
+	// A token pasted into the setup guide for an import connection is kept sealed, and the
+	// connection holds only the name of it.
+	if err := s.PutConnectionToken(ctx, "oldgit", cConnToken); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fs.CreateConnection(ctx, forge.Connection{Name: "oldgit", Kind: forge.KindPlain, Credential: forge.Sealed("oldgit"), Enabled: true}, "ada"); err != nil {
+		t.Fatal(err)
+	}
+
 	// A secret variable is a reference; the secret itself, given as text, is refused.
 	vs := settings.NewVariableService(settings.NewVariableStore(e), nil)
 	key := settings.VarKey{Level: settings.LevelInstallation, Name: "deploy_token"}
@@ -152,7 +162,7 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 	dump := dumpAll(t, e, addr)
 	for what, v := range map[string]string{"the shared runner token": cRunner, "the login state key": cLogin, "the report link key": cReport, "the Git run token key": cRunTok,
 		"a webhook secret": cWebhook, "the mirror's credential, read from the environment": cMirrorEnv, "a credential written into a mirror address": cInlineCred,
-		"a secret variable given as text": cVarValue, "the token in a webhook address": cHookPath, "a token the receiver echoed back": cHookEcho} {
+		"a secret variable given as text": cVarValue, "the token in a webhook address": cHookPath, "a token the receiver echoed back": cHookEcho, "a token pasted for an import connection": cConnToken} {
 		mustNotAppear(t, dump, what, []byte(v))
 	}
 	// Nothing logged at debug level, the most talkative, holds a secret either.
@@ -165,7 +175,7 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 		t.Errorf("the stored response holds a token: %q", d.Response)
 	}
 	// What was stored is there (the test saw the records it made).
-	for _, want := range []string{"Fix rounding", "bad release", "198.51.100.7", "CANARY_MIRROR_TOKEN", "apps/shop"} {
+	for _, want := range []string{"Fix rounding", "bad release", "198.51.100.7", "CANARY_MIRROR_TOKEN", "apps/shop", "sealed:oldgit"} {
 		if !bytes.Contains(dump, []byte(want)) {
 			t.Errorf("%q is not in the dump: the test did not create every kind of record", want)
 		}

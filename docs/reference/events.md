@@ -282,6 +282,9 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `mirror.sync` | `POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync`: a mirror run on demand; a failed run is recorded with its redacted error |
 | `mirror.promote` | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` (also `launchway repos mirror stop`): the repository stopped being a mirror and takes pushes; the detail says whether a final sync ran first |
 | `connection.create` | `POST /api/v1/connections` (also `launchway repos connection add`): a server to import from; the detail says its kind, address and where the credential is read from, never the credential |
+| `signin.test_begin` | `POST /api/v1/signin/test` (the setup guide): an administrator started a test sign-in with an identity provider; the target is the provider's address. Nothing about how people sign in changes |
+| `signin.test_result` | the second window's return from the provider (`GET /auth/signin-test`): the detail says whether the test sign-in worked, who the provider said signed in and which groups it sent; recorded for the administrator who started it |
+| `encryption.root_key_copy` | `POST /api/v1/encryption/root-key-copy` (the setup guide): an administrator, after typing their password and a code again, took a recovery copy of the root key wrapped with a passphrase. The copy itself is never kept; this entry is how Launchway knows that one was taken, and when |
 | `connection.delete` | `DELETE /api/v1/connections/{name}` |
 | `repository.import` | `POST /api/v1/imports` (also `launchway repos import`); the target is the connection, the detail lists the repositories made or resumed and how each ended |
 | `repository.verify` | `POST /api/v1/imports/verify` (also `launchway repos verify`); the detail says whether every ref was equal |

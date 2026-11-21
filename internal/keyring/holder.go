@@ -72,6 +72,19 @@ type localHolder struct {
 
 func (h *localHolder) Kind() string { return h.kind }
 
+// ExportKey returns a copy of the root key, for the guarded recovery copy of the setup guide (the
+// caller zeroes it). Only a holder that has the key in this process can give it; a service that
+// keeps the key (transit) cannot, and nothing here pretends otherwise.
+func (h *localHolder) ExportKey() ([]byte, error) {
+	if len(h.key) != 32 {
+		return nil, errors.New("this root key cannot be copied")
+	}
+	return append([]byte(nil), h.key...), nil
+}
+
+// Exporter is a Holder that can give its root key to the guarded recovery copy.
+type Exporter interface{ ExportKey() ([]byte, error) }
+
 func (h *localHolder) Wrap(_ context.Context, key, aad []byte) ([]byte, error) {
 	g, err := newGCM(h.key)
 	if err != nil {

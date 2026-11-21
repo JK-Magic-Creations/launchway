@@ -888,6 +888,26 @@ launchway repos mirror stop OWNER/NAME [--final-sync]
 
 A credential is a **reference**: `--credential-env` names an environment variable of the server and `--credential-file` a file on the server; the token itself is never given to the command, stored in the repository's record, shown or logged. An address is `https` or `http`, without a user name or password in it; an internal address (loopback, private, link-local, cloud metadata) is refused unless the server's `forge.mirror_allow` lists it. The same operations are the routes under `/api/v1/repositories/{owner}/{name}/mirrors` in the [HTTP API](http-api.md#mirrors-git-hosting), and the MCP tools `list_mirrors`, `set_mirror`, `sync_mirror` and `stop_mirroring`.
 
+## launchway install
+
+The guided installer. It asks where Launchway should run, a few plain questions with defaults, shows what it
+is about to do, and does it. See [Install Launchway in ten minutes](../howto/install-in-ten-minutes.md).
+
+```text
+launchway install [--answers FILE] [--set KEY=VALUE ...] [--target this-machine|kubernetes]
+                  [--dry-run] [--yes] [--non-interactive] [--transcript FILE] [--no-browser]
+                  [--kubeconfig FILE] [--context NAME] [--namespace NAME] [--image REF]
+launchway install --uninstall [...]
+launchway install bundle --output FILE        (not built yet)
+launchway doctor security [--url ADDRESS] [--config launchway.yaml]
+```
+
+`--answers` is a YAML file of `key: value`; every question prints its key in the transcript. `--dry-run` shows the
+summary and changes nothing. `--yes` skips the last "go ahead?". `--uninstall` states what it removes and what it
+keeps: the root key and your data are kept unless you answer, in so many words, to delete the data. The transcript
+(`launchway-install.log` by default) records the questions and answers and never a secret. `launchway doctor
+security` prints the plain security checklist the installer ends with.
+
 ## launchway repos import, verify and connection
 
 Getting existing repositories into Launchway before anything is switched over. Everything here needs the admin role and is recorded in the audit trail.
@@ -898,12 +918,15 @@ launchway repos connection list
 launchway repos connection remove NAME
 launchway repos import --connection NAME [--owner O] [--repo O/N] [--target-owner T] [--url ADDRESS ...]
                   [--dry-run] [--once] [--interval 1h] [--username U] [--json]
+launchway repos import-all --connection NAME [--owner O] [--target-owner T] [--mirror] [--retries N] [--dry-run] [--json]
 launchway repos verify --against NAME [--owner O] [--repo O/N] [--target-owner T] [--url ADDRESS ...] [--json]
 ```
 
 A **connection** is a server the repositories are on: its kind (`gitea` or `forgejo`, whose REST API lists them; `plain` for addresses you give with `--url`), its address and a credential **reference** (the name of an environment variable of the server, or a file on the server; never the token). Launchway sends the credential only to the connection's own host, refuses internal addresses unless `forge.mirror_allow` lists them, and does not follow redirects.
 
 `import` makes every repository the connection lists (or those of `--owner`, or the one `--repo`) with the same owner, name and visibility, copies every branch, tag and note, checks the copy ref by ref and prints the result for each. By default each is left a **pull mirror** of its source, so the source stays the primary until you decide. `--once` makes ordinary repositories instead, once each copy is checked. `--dry-run` lists what would be created, what would be left alone and why (including an address Launchway may not contact), and changes nothing. It copies one repository at a time, so a failure of one stops nothing; it exits `4` when any did not finish, and running the same command again resumes: a repository already made as a mirror of the same address is synced and checked again, one that exists in any other state is never touched.
+
+`import-all` is `import` for a bulk move, with the choices a bulk move always makes plain: every repository the connection can see (or those of `--owner`) is copied and checked ref by ref, each becomes an ordinary repository (add `--mirror` to keep each a pull mirror of its source instead), and the repositories that did not finish are tried again `--retries` times (default 2) before the command exits `4` and names them. The setup guide's import step does the same from the browser, with progress for each repository and a retry for the ones that failed.
 
 `verify` proves that every repository of the source exists here with exactly the branches, tags and notes at exactly the commits the source has, and names each ref that differs. It exits `0` when everything is equal and `1` when not. Run it before a cut-over. The same operations are `POST /api/v1/imports` and `POST /api/v1/imports/verify` in the [HTTP API](http-api.md#importing-repositories-git-hosting), and the MCP tools `list_connections`, `add_connection`, `import_repositories` and `verify_repositories`.
 

@@ -79,9 +79,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/config/{kind}/{obj}/restore` | `restore_config` | `config restore` | `not needed by terraform` | equal |
 | `GET /api/v1/connections` | `list_connections` | `repos connection list` | — | equal |
 | `POST /api/v1/connections` | `add_connection` | `repos connection add` | — | equal |
+| `POST /api/v1/connections/token` | — | `repos connection add` | — | exempt: pasting a token into a browser form is a human convenience; scripts and agents give a credential reference (an environment variable or file) with the same connection add |
 | `DELETE /api/v1/connections/{name}` | `remove_connection` | `repos connection remove` | — | equal |
 | `GET /api/v1/deployments` | `get_deployments` | — | — | gap: launchway has no deployments command yet |
 | `GET /api/v1/encryption` | `get_encryption_status` | `encryption status` | — | exempt: a read-only report of the root key and sealing progress; nothing to configure, since the root key is a bootstrap setting held outside the database |
+| `GET /api/v1/encryption/root-key-copy` | — | — | — | exempt: whether a recovery copy of the root key was taken is shown in the browser guide; the audit trail records it for every interface |
+| `POST /api/v1/encryption/root-key-copy` | — | — | — | exempt: taking a copy of the root key asks a person to type their password and a code again; a token or agent must never be able to export the key (the server's own console has launchway encryption) |
 | `GET /api/v1/environments` | `list_config (kind environments)` | `environments list` | `launchway_environment` | equal |
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
@@ -229,8 +232,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
 | `GET /api/v1/settings/approvals` | — | — | — | exempt: a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator |
 | `GET /api/v1/setup` | — | `users setup-code` | — | exempt: the first-run page asks it before anyone can sign in; the console command issues the code |
+| `GET /api/v1/setup-guide` | — | `doctor security` | — | exempt: the first-run guide is a walk-through in the browser; its facts are the same ones the other interfaces already read (runners, hosting, connections, projects) and the security checklist is launchway doctor security |
 | `POST /api/v1/setup/begin` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
 | `POST /api/v1/setup/complete` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
+| `GET /api/v1/signin/test` | — | — | — | exempt: the result of a provider test a person is doing in the browser; the same record is in the audit trail, which every interface reads |
+| `POST /api/v1/signin/test` | — | — | — | exempt: testing an identity provider means a person completing the provider's own sign-in page in a second browser window; an API token or agent cannot and must not do that |
 | `GET /api/v1/ssh` | `get_ssh_info` | `keys host` | — | equal |
 | `GET /api/v1/step-resources` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
 | `GET /api/v1/step-resources/defaults/{kind}` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
@@ -264,6 +270,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /auth/callback` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /auth/login` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /auth/logout` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /auth/signin-test` | — | — | — | exempt: the address the identity provider sends the test window back to; it is part of sign-in, not an operation |
 | `POST /git/{owner}/{name}/git-receive-pack` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |
 | `POST /git/{owner}/{name}/git-upload-pack` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |
 | `GET /git/{owner}/{name}/info/refs` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |

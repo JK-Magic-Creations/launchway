@@ -148,6 +148,7 @@ func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*s
 	if err != nil {
 		return nil, err
 	}
+	su.rootHolder = rk.primary
 	if !svc.Encrypted() {
 		log.Warn("NOT ENCRYPTED AT REST: no root key is configured, so the signing keys and the shared runner token are stored in the clear in the database, and a copy of the database reveals them. Git over SSH and webhook secrets stay off until a root key exists. " + keyring.HowToCreateARootKey)
 	} else if rk.kind != "" {
@@ -246,4 +247,18 @@ func keyBesideDataNotes(ctx context.Context, cfg *config.Config, rk *rootKeys) [
 		return nil
 	}
 	return []string{"The root key and the dump are stored together: the key file " + where + " is inside the data directory " + cfg.Data + ", which holds the database (SQLite) and is what a file backup or volume snapshot copies, so a copy of this directory or volume reveals every secret. Keep the key off this volume and out of the backups of the database: set encryption.key_file to a file elsewhere (a mounted secret), or use the transit holder."}
+}
+
+// guideRootKey is the root key as the setup guide's guarded recovery copy reads it: from the holder
+// this server unlocked, never from a second place. A holder that keeps the key in a service
+// (transit) cannot give it, and the copy says so.
+type guideRootKey struct{ h keyring.Holder }
+
+func (g guideRootKey) Available() bool { return g.h != nil }
+
+func (g guideRootKey) Key() ([]byte, error) {
+	if e, ok := g.h.(keyring.Exporter); ok {
+		return e.ExportKey()
+	}
+	return nil, errors.New("the root key is held by a service outside this server and cannot be copied from here; keep the recovery copy where that service keeps it")
 }

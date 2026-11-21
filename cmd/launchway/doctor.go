@@ -18,6 +18,7 @@ const doctorUsage = `Usage:
   launchway doctor [database|git] [--config launchway.yaml] [--json]
   launchway doctor ssh [--address HOST:PORT] [--config launchway.yaml]
   launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
+  launchway doctor security [--url ADDRESS] [--config launchway.yaml]
 
 Checks an installation and says what it finds in plain words. With no section
 it runs both.
@@ -28,6 +29,7 @@ it runs both.
   encryption whether stored secrets are encrypted at rest: the root key holder, key versions, how many
              secrets are sealed, and whether a copy of the database alone could reveal one. Exit 1 when it could.
              --restore-drill opens every sealed secret to prove the key and the database belong together
+  security   the plain security checklist: sign-in, encryption in transit and at rest, exposure
 `
 
 // exitOn ends the program for an error from a command.
@@ -82,6 +84,9 @@ func cmdDoctor(args []string) error {
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
 		fmt.Print(doctorUsage)
 		return nil
+	}
+	if len(args) > 0 && args[0] == "security" {
+		return doctorSecurity(args[1:])
 	}
 	if len(args) > 0 && args[0] == "ssh" {
 		return doctorSSH(args[1:])

@@ -66,9 +66,25 @@ func (s *Server) deleteConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, r.PathValue("name"), "")
+	// A pasted token is kept sealed under the connection's name; it goes with the connection.
+	var sealedName string
+	if cs, err := ms.Connections(r.Context()); err == nil {
+		for _, c := range cs {
+			if c.Name == r.PathValue("name") && strings.HasPrefix(c.Credential, "sealed:") {
+				sealedName = strings.TrimPrefix(c.Credential, "sealed:")
+			}
+		}
+	}
 	if err := ms.RemoveConnection(r.Context(), r.PathValue("name")); err != nil {
 		s.failMirror(w, err)
 		return
+	}
+	if sealedName != "" {
+		if svc, err := s.secretStore(); err == nil {
+			if err := svc.DeleteConnectionToken(r.Context(), sealedName); err != nil {
+				s.Log.Warn("the sealed token of a removed connection could not be deleted", "connection", sealedName, "error", err)
+			}
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

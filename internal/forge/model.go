@@ -21,6 +21,18 @@ type SecretRef struct {
 	File string `json:"file,omitempty"`
 }
 
+// SealedPrefix at the start of File says the secret is kept sealed by the server (a token pasted
+// into the setup guide); the rest names it. Nothing is read from disk.
+const SealedPrefix = "sealed:"
+
+// Sealed makes the reference to a token kept sealed under name.
+func Sealed(name string) SecretRef { return SecretRef{File: SealedPrefix + name} }
+
+// SealedName returns the name of the sealed token the reference names, and whether it names one.
+func (s SecretRef) SealedName() (string, bool) {
+	return strings.CutPrefix(s.File, SealedPrefix)
+}
+
 // IsZero reports whether no reference is given.
 func (s SecretRef) IsZero() bool { return s.Env == "" && s.File == "" }
 
@@ -33,6 +45,9 @@ func (s SecretRef) Validate() error {
 	}
 	if s.Env != "" && !envName.MatchString(s.Env) {
 		return fmt.Errorf("credential.env must be the name of an environment variable (upper case, digits and _), not a secret value (%d characters given)", len(s.Env))
+	}
+	if _, ok := s.SealedName(); ok {
+		return nil
 	}
 	if s.File != "" && (!filepath.IsAbs(s.File) || strings.ContainsRune(s.File, 0)) {
 		return errors.New("credential.file must be an absolute path")

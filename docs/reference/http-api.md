@@ -552,9 +552,23 @@ Getting existing repositories into Launchway, safely, before anything is switche
 |---|---|---|---|
 | `GET /api/v1/connections` | `admin` | — | The connections to import from: `name`, `kind`, `base_url`, `credential` (where it is read from) and `enabled`. |
 | `POST /api/v1/connections` | `admin` | `connection.create` | `{"name", "kind", "base_url", "credential"}`. `400` for another kind, an address that is internal and not allowed, or a credential that is a value. |
+| `POST /api/v1/connections/token` | `admin` | `connection.create` | `{"name", "kind", "base_url", "token"}`. The setup guide's way to give the token of another Git server once: it is written to a file only the server's account can read and the connection reads it as a file reference; it is never returned or audited. `409` when this server has no disk of its own (a Kubernetes pod) or no data folder: give an environment variable instead. Otherwise as `POST /api/v1/connections`. |
 | `DELETE /api/v1/connections/{name}` | `admin` | `connection.delete` | Removes a connection that no repository uses; Launchway's own is refused. |
 | `POST /api/v1/imports` | `admin` | `repository.import` | `{"connection", "urls", "owner", "repository", "target_owner", "mirror" (default true), "interval_seconds", "username", "dry_run", "wait"}`. `owner` limits the listing to one user or organization of the source, `repository` (`owner/name`) to one; without them it brings in everything the credential can see. `dry_run` lists what would be created and changes nothing. `wait` copies and checks each repository before answering; without it the repositories are made and their mirrors left to run in the background. `mirror: false` makes each an ordinary repository once copied and checked (needs `wait`). Answers `{"dry_run", "items", "summary"}`; each item has `source`, `repository`, `url`, `visibility`, `action` (`create`, `resume`, `skip`), `state` (`planned`, `queued`, `verified`, `skipped`, `failed`), `reason`, `error` (credentials removed), `source_refs`, `hosted_refs`, `verified`, `differences` and `mirror_id`. One repository failing does not stop the others. |
 | `POST /api/v1/imports/verify` | `admin` | `repository.verify` | `{"connection", "urls", "owner", "repository", "target_owner"}`. Proves, or fails to prove, that every repository of the source exists here with exactly the branches, tags and notes at exactly the commits the source has: `{"equal", "items", "summary"}`, each item `equal`, `different` (with the refs that differ), `missing` or `error`. It reads only. |
+
+### The first-run guide
+
+The browser's walk-through after the first administrator. It asks the server what can be done now (each step lists its `actions`, each `available` or not with a plain `reason`), so nothing is offered that cannot work. All need the admin role.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/setup-guide` | `admin` | — | The steps of the guide (`sign-in`, `encryption`, `runner`, `git-hosting`, `import`, `pipeline`), each with `state` (`done`, `todo`, `unavailable`), a `summary` and its `actions`; and the plain security `checklist`. |
+| `POST /api/v1/signin/test` | `admin` | `signin.test_begin` | The sign-in answers of a provider (`issuer`, `client_id`, `client_secret_env`, optional claims). Answers the address to open in a second window. Changes nothing about how people sign in. `400` lists what is wrong with the answers, `409` when the secret's environment variable is not set on this server. |
+| `GET /api/v1/signin/test` | `admin` | — | How the last test ended: `tested`, `ok`, `at` and a `detail` naming who the provider said signed in. |
+| `GET /auth/signin-test` | `public` | — | Where the provider sends the second window back. It checks the test this browser started, shows a page saying whether it worked, and records the result in the audit trail as `signin.test_result`. |
+| `GET /api/v1/encryption/root-key-copy` | `admin` | — | Whether a recovery copy of the root key was taken (`taken`, `taken_at`) and whether this person can take one now (`can_take`, and the `reason` if not). Never the key. |
+| `POST /api/v1/encryption/root-key-copy` | `admin` | `encryption.root_key_copy` | `{"current_password", "code", "passphrase", "passphrase_again"}`. Re-checks the password and second factor, then answers the root key wrapped with the passphrase (scrypt, AES-256-GCM) as a file. `409` when no root key is configured or the account cannot prove itself; `422` for a passphrase under 12 characters or two that differ. Only the fact and time of the copy are recorded. |
 
 ### SSH keys, deploy keys and protected branches
 

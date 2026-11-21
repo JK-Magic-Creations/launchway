@@ -44,3 +44,44 @@ func TestCLIReposVerify(t *testing.T) {
 	}
 	_ = strings.Contains
 }
+
+// import-all brings in everything a connection lists, as ordinary repositories unless --mirror, checks each ref by ref,
+// and is safe to run again.
+func TestCLIReposImportAll(t *testing.T) {
+	hc := newHostedCLI(t)
+	root := t.TempDir()
+	for _, n := range []string{"shop", "blog"} {
+		bare, _ := bareWith(t)
+		if err := os.MkdirAll(filepath.Join(root, "old"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(bare, filepath.Join(root, "old", n+".git")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other := otherServer(t, root)
+	var ao bytes.Buffer
+	ada := hc.client("ada", "root", &ao)
+	if err := ada.reposConnection([]string{"add", "oldgit", "--kind", "plain"}); err != nil {
+		t.Fatal(err)
+	}
+	urls := []string{"--connection", "oldgit", "--url", other.URL + "/old/shop.git", "--url", other.URL + "/old/blog.git"}
+	ao.Reset()
+	if err := ada.reposImportAll(append([]string{"--dry-run"}, urls...)); err != nil || !strings.Contains(ao.String(), "Nothing was changed") {
+		t.Fatalf("dry run: %v %q", err, ao.String())
+	}
+	ao.Reset()
+	if err := ada.reposImportAll(urls); err != nil || !strings.Contains(ao.String(), "2 verified") {
+		t.Fatalf("import-all: %v %q", err, ao.String())
+	}
+	ao.Reset()
+	if err := ada.reposImportAll(urls); err != nil {
+		t.Fatalf("again: %v %q", err, ao.String())
+	}
+	if err := ada.reposImportAll([]string{}); err == nil {
+		t.Fatal("a connection is required")
+	}
+	if err := hc.client("otto", "ops", &bytes.Buffer{}).reposImportAll(urls); err == nil {
+		t.Fatal("an operator imported everything")
+	}
+}

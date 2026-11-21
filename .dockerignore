@@ -5,6 +5,7 @@
 !cmd/
 !internal/
 !web/
+!deploy/helm/
 !docs/
 !scripts/docs/
 docs/node_modules/

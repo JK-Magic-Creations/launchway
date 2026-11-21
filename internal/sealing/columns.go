@@ -56,8 +56,8 @@ func legacySealer(ctx context.Context, s *Service, name, purpose string) (*auth.
 var (
 	metaColumn = Column{
 		Table: "meta", Column: "value", Key: "key", Where: "key LIKE 'shared:%'", Purpose: keyring.PurposeTokens,
-		Writers: []string{"internal/sealing/service.go"},
-		Why:     "the signing and sealing keys every server shares (login state, report links, Git run tokens) and the shared runner token",
+		Writers: []string{"internal/sealing/service.go", "internal/sealing/conn_tokens.go"},
+		Why:     "the signing and sealing keys every server shares (login state, report links, Git run tokens), the shared runner token, and the tokens pasted into the setup guide for connections to other Git servers",
 	}
 	hostKeysColumn = Column{
 		Table: "ssh_host_keys", Column: "sealed", Key: "algo", Purpose: keyring.PurposeSecrets,
@@ -141,7 +141,7 @@ var explained = []struct{ column, why string }{
 
 	// References to where a secret lives, and public keys: never the secret.
 	{"forge_connections.cred_env", "the name of an environment variable"},
-	{"forge_connections.cred_file", "a file path"},
+	{"forge_connections.cred_file", "a file path, or sealed:NAME, the name of a token kept sealed in meta"},
 	{"repo_mirrors.cred_env", "the name of an environment variable"},
 	{"repo_mirrors.cred_file", "a file path"},
 	{"runner_identities.public_key", "a public key; the private half stays on the runner"},

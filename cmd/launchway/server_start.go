@@ -17,6 +17,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/keyring"
 	"github.com/jk-magic-creations/launchway/internal/runner"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/settings"
@@ -39,6 +40,7 @@ type serverSetup struct {
 	reportsOrigin string
 	live          engine.LiveOptions
 	fromDatabase  func([]byte) (engine.ArtifactOptions, error)
+	rootHolder    keyring.Holder // the unlocked root key holder, for the guide's guarded recovery copy
 }
 
 // readServerSetup reads the flags and the bootstrap file and checks them.
