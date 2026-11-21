@@ -56,7 +56,7 @@ func TestPushPrintsTheAddressToOpenAPullRequest(t *testing.T) {
 		} `json:"items"`
 	}
 	hostedWait(t, "the pull request the push asked for", func() bool {
-		ada.get(e.srv.URL + "/api/v1/repositories/acme/shop/pulls").json(t, &list)
+		ada.get(e.srv.URL+"/api/v1/repositories/acme/shop/pulls").json(t, &list)
 		return len(list.Items) == 1
 	})
 	if p := list.Items[0]; p.Title != "Round prices" || p.Source != "other" || p.Author != "ada" {
