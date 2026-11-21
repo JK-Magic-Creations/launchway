@@ -10,8 +10,8 @@ const EVENT_HELP: Record<string, string> = {
   create: "a branch or tag was created",
   delete: "a branch or tag was deleted",
   repository: "the repository was created, renamed or deleted",
-  pull_request: "reserved for pull requests",
-  pull_request_review: "reserved for pull-request reviews",
+  pull_request: "a pull request was opened, changed, merged or closed",
+  pull_request_review: "a review was submitted or dismissed",
 };
 
 function stateTone(d: Delivery): "ok" | "bad" | "warn" {

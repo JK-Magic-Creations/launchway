@@ -1,0 +1,62 @@
+/* Pull requests: the list, the page, the merge box and the diff. Colors come from the tokens, so both themes work. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.pr-row { display: flex; justify-content: space-between; gap: 16px; padding: 12px 18px; border-top: 1px solid var(--line); align-items: flex-start; }
+.pr-row:first-of-type { border-top: 0; }
+.pr-row-side { text-align: right; }
+.pr-title { font-weight: 600; }
+.pr-label-filter input { width: 140px; }
+.seg .btn-on { background: var(--signal-wash); border-color: var(--signal); color: var(--signal-ink); }
+.pr-preview { border: 1px solid var(--line); border-radius: var(--r1); padding: 8px 12px; background: var(--sheet-2); margin: 6px 0; }
+.md > :first-child { margin-top: 0; } .md > :last-child { margin-bottom: 0; }
+.md pre { background: var(--sheet-3); padding: 10px 12px; border-radius: var(--r1); overflow-x: auto; font-family: var(--mono); font-size: var(--fs-small); }
+.md code { font-family: var(--mono); font-size: .92em; background: var(--sheet-3); padding: 1px 4px; border-radius: 4px; }
+.md pre code { background: none; padding: 0; }
+.md blockquote { margin: 8px 0; padding: 2px 12px; border-left: 3px solid var(--line-2); color: var(--ink-2); }
+.md-suggestion { border: 1px solid var(--ok); border-radius: var(--r1); margin: 8px 0; }
+.md-suggestion-head { background: var(--ok-wash); color: var(--ok-ink); padding: 4px 10px; font-size: var(--fs-small); font-weight: 600; }
+.md-suggestion pre { margin: 0; border-radius: 0 0 var(--r1) var(--r1); }
+.pr-head-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 12px; }
+.pr-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .pr-grid { grid-template-columns: minmax(0, 1fr); } }
+.pr-mergebox { border: 1px solid var(--line-2); border-radius: var(--r2); background: var(--sheet); padding: 14px 16px; margin-bottom: 16px; }
+.pr-mergebox.ready { border-color: var(--ok); }
+.pr-mergebox.blocked { border-color: var(--warn); }
+.pr-mergebox h2 { margin: 0 0 4px; font-size: var(--fs-lead); }
+.pr-mergebox .why { margin: 4px 0 10px; color: var(--ink-2); }
+.pr-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pr-checks { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.pr-comment { border: 1px solid var(--line); border-radius: var(--r2); margin: 10px 0; background: var(--sheet); }
+.pr-comment > header { padding: 6px 12px; background: var(--sheet-2); border-bottom: 1px solid var(--line); font-size: var(--fs-small); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pr-comment > div { padding: 8px 12px; }
+.pr-file { border: 1px solid var(--line); border-radius: var(--r2); margin: 12px 0; background: var(--sheet); overflow: hidden; }
+.pr-file > header { padding: 8px 12px; background: var(--sheet-2); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.pr-file > header h3 { margin: 0; font: 600 var(--fs-body) var(--mono); overflow-wrap: anywhere; }
+.pr-file > header h3:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.pr-add { color: var(--ok-ink); } .pr-del { color: var(--bad-ink); }
+.diff { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: var(--fs-small); table-layout: fixed; }
+.diff td { padding: 0 8px; vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; }
+.diff td.num { width: 48px; text-align: right; color: var(--ink-3); user-select: none; padding-right: 8px; }
+.diff td.sign { width: 18px; }
+.diff tr.add td { background: var(--ok-wash); } .diff tr.del td { background: var(--bad-wash); }
+.diff tr.hunk td { background: var(--signal-wash); color: var(--signal-ink); }
+.diff tr.add td.num, .diff tr.del td.num { color: var(--ink-2); }
+.diff .cbtn { opacity: .0; margin-left: 6px; } .diff tr:hover .cbtn, .diff .cbtn:focus-visible { opacity: 1; }
+.diff-split td.half { width: 50%; }
+.thread-row td { padding: 0; white-space: normal; font-family: var(--font); background: var(--sheet); }
+.thread-row .pr-comment { margin: 8px 12px; }
+.thread-resolved { opacity: .75; }
+.pr-note { padding: 10px 14px; }
+.pr-reviewbox textarea { width: 100%; }
+.pr-side h3 { font-size: var(--fs-small); text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); margin: 0 0 4px; }
+.pr-side > div { margin-bottom: 14px; }
+.diff td:last-child { position: relative; padding-right: 96px; }
+.diff .cbtn { position: absolute; right: 6px; top: 0; margin: 0; }
+.pr-reviewbox fieldset.events { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.pr-reviewbox fieldset.events legend { float: none; }
+.diff-split td:last-child { padding-right: 8px; }
+.pr-people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.pr-people li { display: inline-flex; align-items: center; gap: 6px; }
+.pr-people-add { display: flex; gap: 6px; margin-top: 6px; }
+.pr-people-add input { min-width: 0; flex: 1; }
+.pr-runline { margin: 8px 0 14px; }
+.pr-runline-head { font-size: var(--fs-small); margin-bottom: 4px; }

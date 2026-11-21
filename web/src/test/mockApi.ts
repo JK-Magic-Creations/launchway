@@ -42,6 +42,7 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/config/history": { changes: [] },
     ...forgeFixtures(),
     ...rollbackFixtures(detail),
+    ...pullFixtures(),
     ...overrides,
   };
   class FakeSource { onopen = null; onerror = null; addEventListener() {} removeEventListener() {} close() {} }
@@ -104,5 +105,39 @@ export function rollbackFixtures(base: RunDetail): Record<string, unknown> {
     "/api/v1/runs/run_rb": rbRun,
     "/api/v1/runs/run_rb/steps/test/logs": { lines: [] },
     "/api/v1/runs/run_rb/variables": { run_id: "run_rb", variables: [] },
+  };
+}
+
+/** Pull requests of acme/shop: one open pull request with a thread, a review, a failing required check and a file with a patch. */
+export function pullFixtures(): Record<string, unknown> {
+  const base = "/api/v1/repositories/acme/shop";
+  const pull = {
+    id: "pul_1", number: 1, repository: "acme/shop", title: "Round prices to the cent", body: "Fixes the **rounding** bug.\n\n- one\n- two\n\n<script>alert(1)</script>", author: "ada",
+    source_branch: "fix-rounding", target_branch: "main", state: "open", draft: false, labels: ["bug"], assignees: [], requested_reviewers: ["grace"],
+    head_sha: "a".repeat(40), base_sha: "b".repeat(40), merge_base: "b".repeat(40), linked_runs: ["run_7"], created_at: "2026-11-20T10:00:00Z", updated_at: "2026-11-20T11:00:00Z", revisions: 2,
+    mergeability: { state: "clean", behind: 1, ahead: 1 }, fetch_ref: "refs/pull/1/head", your_role: "admin",
+    readiness: { can_merge: false, why: "needs 1 more approval; `test` has not passed", approvals: 0, changes_requested_by: [], open_threads: 1, methods: ["merge", "squash", "rebase"], default_method: "merge",
+      blockers: [{ code: "approvals", why: "needs 1 more approval" }, { code: "check", why: "`test` has not passed" }],
+      checks: [{ name: "ci", status: "running", required: false, run_id: "run_7", run_number: 7 }, { name: "ci/test", status: "failed", required: true, run_id: "run_7", run_number: 7 }] },
+    actions: [{ name: "merge", available: false, reason: "needs 1 more approval", who: "operator" }, { name: "edit", available: true }, { name: "close", available: true }, { name: "review", available: true }, { name: "mark_draft", available: true }, { name: "auto_merge", available: true }],
+  };
+  const patch = "diff --git a/price.go b/price.go\n--- a/price.go\n+++ b/price.go\n@@ -1,3 +1,4 @@\n func Round(x float64) float64 {\n-\treturn x\n+\treturn math.Round(x*100) / 100\n }\n+// done\n";
+  const thread = { id: "pcm_1", path: "price.go", line: 3, side: "new", outdated: false, resolved: false, comments: [{ id: "pcm_1", thread_id: "pcm_1", author: "grace", body: "Why not `math.Floor`?", path: "price.go", line: 3, side: "new", created_at: "2026-11-20T10:30:00Z" }] };
+  return {
+    [`${base}/merge-rules`]: { rules: [{ pattern: "main", required_approvals: 1, approval_role: "operator", required_checks: ["ci/test"], require_up_to_date: true, require_resolved_threads: false, no_self_approval: true, require_signed_commits: false, allow_admin_bypass: false }],
+      actions: [{ name: "edit_rules", available: true }, { name: "edit_settings", available: true }, { name: "require_signed_commits", available: false, reason: "signed commits are not checked yet, so a rule that asks for them is refused" }] },
+    [`${base}/pull-settings`]: { allow_merge: true, allow_squash: true, allow_rebase: false, default_method: "merge", delete_branch_after_merge: false, dismiss_stale_approvals: true, merge_message_template: "", squash_message_template: "" },
+    "/api/v1/launch-lines": [{ run: "run_7", number: 7, project: "shop-api", message: "Round prices", actor: "ada", ref: "fix-rounding", sha: "a".repeat(40), status: "running", created_at: 1_700_000_000_000, finished_at: 0,
+      stations: [{ key: "commit", label: "Commit", state: "done", detail: "a1b2c3d" }, { key: "checks", label: "Checks", state: "running", detail: "lint" }, { key: "tests", label: "Tests", state: "idle", detail: "" }], tone: "run", now: "Checks: running" }],
+    [`${base}/pulls`]: { items: [pull], total: 1 },
+    [`${base}/pulls/1`]: pull,
+    [`${base}/pulls/1/conversation`]: { comments: [{ id: "pcm_2", author: "ada", body: "Ready when you are.", created_at: "2026-11-20T10:10:00Z" }], threads: [thread],
+      reviews: [{ id: "prv_1", author: "grace", verdict: "request_changes", body: "Two things.", commit_sha: "c".repeat(40), state: "submitted", created_at: "2026-11-20T10:40:00Z", stale: true }],
+      revisions: [{ seq: 1, head_sha: "c".repeat(40), base_sha: "b".repeat(40), forced: false, created_at: "2026-11-20T10:00:00Z" }, { seq: 2, head_sha: "a".repeat(40), base_sha: "b".repeat(40), forced: false, actor: "ada", created_at: "2026-11-20T11:00:00Z" }] },
+    [`${base}/pulls/1/files`]: { files: [{ path: "price.go", status: "modified", additions: 2, deletions: 1, binary: false }, { path: "logo.png", status: "added", additions: 0, deletions: 0, binary: true }], total: 2, additions: 2, deletions: 1 },
+    [`${base}/pulls/1/patch`]: { path: "price.go", diff: patch, bytes: patch.length },
+    [`${base}/pulls/1/commits`]: { items: [{ sha: "a".repeat(40), author: "Ada", authored_at: "2026-11-20T10:00:00Z", subject: "Round prices" }] },
+    [`${base}/compare`]: { base: "main", head: "fix-rounding", ahead: 1, behind: 0, commits: [{ sha: "a".repeat(40), author: "Ada", authored_at: "2026-11-20T10:00:00Z", subject: "Round prices" }],
+      changes: { files: [], total: 1, additions: 2, deletions: 1 }, mergeability: { state: "clean", behind: 0, ahead: 1 } },
   };
 }

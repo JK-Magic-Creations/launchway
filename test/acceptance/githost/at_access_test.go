@@ -72,6 +72,31 @@ func (c *Config) readOnlyToken(t *testing.T, r *Result, own string) {
 	r.Saw(t, "read-only token refused on a repository it was not given")
 }
 
+// pullRoutes says how pull requests are opened, merged and listed on the host
+// under test. Launchway's own routes are the default for flavor launchway;
+// LW_ACCEPT_PR_API=gitea asks for the Gitea shape (/repos/OWNER/NAME/pulls with
+// head and base, merge with "Do"), which tools written for the host being
+// replaced use and which Launchway does not serve yet.
+type pullRoutes struct {
+	base   string
+	native bool
+	rebase map[string]any
+	open   func(head, base, title string) map[string]any
+}
+
+func (c *Config) pullRoutes(name string) pullRoutes {
+	if c.Launchway() && os.Getenv("LW_ACCEPT_PR_API") != "gitea" {
+		return pullRoutes{base: "/repositories/" + c.User + "/" + name + "/pulls", native: true, rebase: map[string]any{"method": "rebase"},
+			open: func(head, base, title string) map[string]any {
+				return map[string]any{"source_branch": head, "target_branch": base, "title": title}
+			}}
+	}
+	return pullRoutes{base: c.repoPath(name) + "/pulls", rebase: map[string]any{"Do": "rebase"},
+		open: func(head, base, title string) map[string]any {
+			return map[string]any{"head": head, "base": base, "title": title}
+		}}
+}
+
 func TestAT_HG_09_PullRequests(t *testing.T) {
 	c := host(t)
 	r := begin(t, "AT-HG-09")
@@ -84,9 +109,10 @@ func TestAT_HG_09_PullRequests(t *testing.T) {
 		c.waitBranch(t, name, b)
 	}
 	var num [2]int
+	pulls := c.pullRoutes(name)
 	for i, b := range []string{"pr-a", "pr-b"} {
 		var pr struct{ Number int }
-		c.api(t, "POST", c.repoPath(name)+"/pulls", map[string]any{"head": b, "base": "main", "title": "Title " + b}, &pr, 201)
+		c.api(t, "POST", pulls.base, pulls.open(b, "main", "Title "+b), &pr, 201)
 		num[i] = pr.Number
 	}
 	merges := func() string {
@@ -95,20 +121,33 @@ func TestAT_HG_09_PullRequests(t *testing.T) {
 	}
 	before := merges()
 	_, ok := eventually(30*time.Second, func() bool {
-		st, _, _ := c.do("POST", fmt.Sprintf("/api/v1%s/pulls/%d/merge", c.repoPath(name), num[0]), map[string]any{"Do": "rebase"}, false)
+		st, _, _ := c.do("POST", fmt.Sprintf("/api/v1%s/%d/merge", pulls.base, num[0]), pulls.rebase, false)
 		return st == 200
 	})
 	if !ok {
 		t.Fatal("pull request could not be merged by replaying its commits (rebase)")
 	}
-	var list []struct {
+	type pullItem struct {
 		Number       int
 		Title, State string
 		Merged       bool
 		Created      string `json:"created_at"`
 		Updated      string `json:"updated_at"`
 	}
-	c.api(t, "GET", c.repoPath(name)+"/pulls?state=all", nil, &list, 200)
+	var list []pullItem
+	if pulls.native { // Launchway's own list is {"items": [...]}, and says "merged" as a state
+		var page struct{ Items []pullItem }
+		c.api(t, "GET", pulls.base+"?state=all", nil, &page, 200)
+		list = page.Items
+		for i := range list {
+			if list[i].State == "merged" {
+				list[i].Merged, list[i].State = true, "closed"
+			}
+		}
+	} else {
+		c.api(t, "GET", pulls.base+"?state=all", nil, &list, 200)
+	}
+	r.Saw(t, "pull request calls made in the %s shape", map[bool]string{true: "Launchway (/repositories/OWNER/NAME/pulls)", false: "Gitea (/repos/OWNER/NAME/pulls)"}[pulls.native])
 	states := map[string]string{}
 	for _, p := range list {
 		if p.Created == "" || p.Title == "" {

@@ -10,6 +10,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/mirror"
+	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
 	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
@@ -46,6 +47,11 @@ type ForgeHosting struct {
 	SSH   SSHInfo
 	// Hooks sends webhooks (nil: none).
 	Hooks *webhooks.Service
+	// Pulls is pull requests and code review (nil: not available); RepoByID
+	// finds a repository from its ID, which the pull request service names
+	// repositories by.
+	Pulls    *pulls.Service
+	RepoByID func(ctx context.Context, id string) (forge.Repository, error)
 }
 
 // The access classes of repositories. A repository's roles come from the
@@ -68,7 +74,7 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return append(append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), s.keyRoutes()...), append(s.hookRoutes(), []route{
+	return append(append(append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), s.keyRoutes()...), s.pullRoutes()...), append(s.hookRoutes(), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},

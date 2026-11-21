@@ -88,6 +88,7 @@ Usage:
   launchway doctor   [database|ssh]             would this installation survive losing its database? is Git over SSH reachable?
   launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
   launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
+  launchway pr       list|view|create|checkout|diff|comment|review|merge|close|reopen|edit|revert|apply|settings|rules   pull requests and code review on hosted repositories
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
   launchway version
 
@@ -149,7 +150,7 @@ func main() {
 		err = cmdBlobs(args)
 	case "projects", "libraries", "environments", "policies", "runner-pools", "role-bindings", "policy-sources", "units", "secret-stores":
 		err = cmdKindAlias(os.Args[1])(args)
-	case "repos", "keys":
+	case "repos", "keys", "pr":
 		err = cmdHosting(os.Args[1], args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)

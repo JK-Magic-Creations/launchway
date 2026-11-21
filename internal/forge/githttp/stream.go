@@ -11,6 +11,9 @@ import (
 // RefUpdate is one ref a push moves; Policy functions are given them.
 type RefUpdate = storage.RefUpdate
 
+// ReceiveResult is what a push came to (storage.ReceiveResult): its refs and push options.
+type ReceiveResult = storage.ReceiveResult
+
 // UploadArchive is the third service, served over SSH only.
 const UploadArchive = "git-upload-archive"
 
@@ -54,7 +57,7 @@ func (h *Handler) Stream(ctx context.Context, q StreamRequest) Result {
 	}
 	in := &capReader{r: q.In, left: limit} // the same ceiling as an HTTP push; a pack is streamed, never held in memory
 	track := &trackReader{r: in}
-	rpc := storage.RPC{Stream: true, In: track, Out: q.Out, GitProtocol: protocolHeader(q.Protocol), Policy: q.Policy}
+	rpc := storage.RPC{Stream: true, In: track, Out: q.Out, GitProtocol: protocolHeader(q.Protocol), Policy: q.Policy, Notice: q.Notice}
 	var res Result
 	var err error
 	switch q.Service {

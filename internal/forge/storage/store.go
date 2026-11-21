@@ -167,6 +167,12 @@ type RPC struct {
 	// pre-receive hook, and an error refuses the whole push with its text.
 	// It is the one place a rule about refs is enforced, for every transport.
 	Policy func(ctx context.Context, updates []RefUpdate) error
+	// Notice, when set, is called once from the post-receive hook of a push that
+	// committed, with its refs and its push options, and the text it returns is
+	// printed to the pusher (git shows it as "remote: ..."). It reads state and
+	// never holds a push back; whatever it needs from the repository's files it
+	// must not ask for here (the push still holds the cache).
+	Notice func(ctx context.Context, updates []RefUpdate, options []string) string
 }
 
 func (r RPC) env() []string {

@@ -29,6 +29,7 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | 
       </header>
       <nav className="tabs" aria-label="Repository">
         <a href={`/repositories/${path}`} className={"tab" + (tab === "overview" ? " tab-on" : "")} aria-current={tab === "overview" ? "page" : undefined}>Overview</a>
+        <a href={`/repositories/${path}/pulls`} className="tab">Pull requests</a>
         <a href={`/repositories/${path}/mirrors`} className={"tab" + (tab === "mirrors" ? " tab-on" : "")} aria-current={tab === "mirrors" ? "page" : undefined}>Mirrors</a>
       </nav>
       <ErrorBox error={error} />

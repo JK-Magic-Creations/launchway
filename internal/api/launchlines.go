@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -72,6 +73,18 @@ func (s *Server) listLaunchLines(w http.ResponseWriter, r *http.Request) {
 	only, err := s.visibleProjects(identityFrom(r))
 	if err != nil {
 		s.fail(w, err)
+		return
+	}
+	if id := q.Get("run"); id != "" { // the line of one run, as the pull request page asks for its latest
+		d, err := s.Engine.GetRun(id)
+		if err == nil && only != nil && !slices.Contains(only, d.Project) {
+			err = engine.ErrNotFound
+		}
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, []LaunchLine{launchLineOf(d)})
 		return
 	}
 	runs, err := s.Engine.ListRuns(engine.RunFilter{Project: q.Get("project"), Limit: limit, OnlyProjects: only})

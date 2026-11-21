@@ -910,6 +910,30 @@ launchway repos hooks redeliver TARGET ID DELIVERY [--json]
 
 A deploy key opens one repository over SSH, read-only unless `--write` ([Git over SSH](../guide/git-over-ssh.md)). `protected-branches` shows the patterns, or replaces them with `--set` (an empty value removes the protection). For `hooks`, TARGET is `OWNER/NAME` for one repository or `OWNER` for every repository of an owner ([Webhooks and events](../guide/webhooks.md)); the secret is read from a file, never from the command line, and a secret Launchway makes is printed once. The same operations are the MCP tools `list_deploy_keys`, `add_deploy_key`, `delete_deploy_key`, `get_protected_branches`, `set_protected_branches`, `list_webhooks`, `add_webhook`, `update_webhook`, `delete_webhook`, `test_webhook`, `list_webhook_deliveries` and `redeliver_webhook`.
 
+## launchway pr
+
+Pull requests and code review on hosted repositories ([Pull requests and code review](../guide/pull-requests.md)). `N` is a pull request number; `-R OWNER/NAME` names the repository, and without it the repository is the one `origin` points to.
+
+```text
+launchway pr list [-R OWNER/NAME] [--state open|closed|merged|all] [--mine] [--review-requested] [--author U] [--label L] [--json]
+launchway pr view N [--files] [--commits] [--comments] [--json]
+launchway pr create --title T [--body B | --body-file F] [--head BRANCH] [--base BRANCH] [--draft] [--label L] [--reviewer U]
+launchway pr checkout N
+launchway pr diff N [--name-only] [--file PATH] [--since REVISION] [--full]
+launchway pr comment N --body TEXT [--path P --line L [--start-line S]] [--reply-to ID] [--edit ID] [--resolve ID] [--reopen ID] [--delete ID]
+launchway pr review N (--approve | --request-changes | --comment) [--body TEXT] [--dismiss ID --reason TEXT] [--request USER,USER | --unrequest USER,USER]
+launchway pr merge N [--merge | --squash | --rebase] [--delete-branch] [--message M] [--auto] [--bypass-reason TEXT]
+launchway pr close N
+launchway pr reopen N
+launchway pr edit N [--title T] [--body B] [--ready] [--draft] [--label L,L] [--assignee U,U] [--base BRANCH]
+launchway pr revert N
+launchway pr apply N COMMENT-ID
+launchway pr settings [--allow-merge=B] [--allow-squash=B] [--allow-rebase=B] [--default-method M] [--delete-branch=B] [--dismiss-stale=B]
+launchway pr rules [--branch PATTERN --approvals N --approval-role operator|admin --check NAME,NAME --up-to-date --resolved --no-self-approval=B --admin-bypass]
+```
+
+`view` prints what blocks the merge in one sentence and the actions you may take; a merge that the rules refuse prints the same sentence and exits non-zero. `checkout` fetches `refs/pull/N/head` and checks it out as the branch `pr/N`. `settings` and `rules` show the repository's merge settings and the merge rules of its protected branches, or set them (repository administrators). The same operations are the MCP tools `list_pull_requests`, `get_pull_request`, `compare_branches`, `create_pull_request`, `update_pull_request`, `merge_pull_request`, `revert_pull_request`, `comment_on_pull_request`, `update_pull_comment`, `review_pull_request`, `get_pull_settings` and `set_pull_settings`.
+
 ## launchway keys
 
 Your SSH keys for Git over SSH, and the server's host key fingerprints. Git hosting must be on; the SSH connection itself needs `forge.ssh.listen`.

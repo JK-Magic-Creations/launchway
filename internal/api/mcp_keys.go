@@ -17,6 +17,7 @@ import (
 
 func addKeyTools(srv *mcp.Server, c *mcpCall) {
 	addHookTools(srv, c)
+	addPullTools(srv, c)
 	addTool(srv, c, &mcp.Tool{Name: "get_ssh_info", Annotations: readOnly("Get the SSH settings of Git hosting"),
 		Description: "Whether Git over SSH is on, the host and port clone addresses use, and the server's host key fingerprints (SHA256), which people compare the first time they connect."},
 		mcpCallTimeout, getSSHInfo)

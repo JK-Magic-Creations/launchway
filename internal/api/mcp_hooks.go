@@ -23,7 +23,7 @@ func addHookTools(srv *mcp.Server, c *mcpCall) {
 		mcpCallTimeout, listWebhookDeliveries)
 	if c.mayOperate {
 		addTool(srv, c, &mcp.Tool{Name: "add_webhook", Annotations: changes("Add a webhook", false, false),
-			Description: "Send events (push, create, delete, repository; pull_request and pull_request_review are reserved) of one repository, or of every repository of an owner (name left out), to an address. Each delivery is signed with HMAC-SHA256 in X-Launchway-Signature-256 under the secret you give or one Launchway makes and shows once. Internal addresses need the installation's egress allow-list. Audited."},
+			Description: "Send events (push, create, delete, repository, pull_request, pull_request_review) of one repository, or of every repository of an owner (name left out), to an address. Each delivery is signed with HMAC-SHA256 in X-Launchway-Signature-256 under the secret you give or one Launchway makes and shows once. Internal addresses need the installation's egress allow-list. Audited."},
 			mcpCallTimeout, addWebhook)
 		addTool(srv, c, &mcp.Tool{Name: "update_webhook", Annotations: changes("Change a webhook", false, true),
 			Description: "Change a webhook's name, address, events or secret, or turn it on (clears the failure count and the notice) or off. A field left out keeps its value. Audited."},
@@ -162,7 +162,7 @@ type addWebhookIn struct {
 	Name   string   `json:"name,omitempty" jsonschema:"the repository's name; leave out for an owner's hook"`
 	Label  string   `json:"label,omitempty" jsonschema:"a name for the hook (default: its address)"`
 	URL    string   `json:"url" jsonschema:"the address that receives the deliveries, https:// recommended"`
-	Events []string `json:"events" jsonschema:"push, create, delete, repository (pull_request and pull_request_review are reserved)"`
+	Events []string `json:"events" jsonschema:"push, create, delete, repository, pull_request, pull_request_review"`
 	Secret string   `json:"secret,omitempty" jsonschema:"the secret that signs each delivery; left out, Launchway makes one and shows it once"`
 }
 

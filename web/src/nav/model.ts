@@ -192,6 +192,12 @@ export const PAGES: PageInfo[] = [
   page("/repositories/:owner/:name", "projects", undefined, (p) => p.owner + "/" + p.name, (p) => [{ label: p.owner + "/" + p.name }]),
   page("/repositories/:owner/:name/mirrors", "projects", undefined, (p) => `Mirrors of ${p.owner}/${p.name}`,
     (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Mirrors" }]),
+  page("/repositories/:owner/:name/pulls", "projects", undefined, (p) => `Pull requests of ${p.owner}/${p.name}`,
+    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Pull requests" }]),
+  page("/repositories/:owner/:name/pulls/new", "projects", undefined, (p) => `New pull request in ${p.owner}/${p.name}`,
+    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Pull requests", href: `/repositories/${enc(p.owner)}/${enc(p.name)}/pulls` }, { label: "New" }]),
+  page("/repositories/:owner/:name/pulls/:number", "projects", undefined, (p) => `Pull request #${p.number} in ${p.owner}/${p.name}`,
+    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Pull requests", href: `/repositories/${enc(p.owner)}/${enc(p.name)}/pulls` }, { label: `#${p.number}` }]),
   page("/playground", "projects", undefined, () => "Try a pipeline", () => [{ label: "Try a pipeline without saving" }]),
 
   page("/deployments", "deployments", "overview", () => "Deployments", () => []),

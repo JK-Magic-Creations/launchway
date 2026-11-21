@@ -96,11 +96,11 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Pull requests on the built-in host](roadmap/milestone-1.md#pull-requests-on-the-built-in-host) | In progress | Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass. |
-| [Review with inline comments and suggestions](roadmap/milestone-1.md#review-with-inline-comments-and-suggestions) | In progress | Comment on lines and ranges, suggest a change the author can apply in one click, and mark files as viewed. |
+| [Pull requests on the built-in host](roadmap/milestone-1.md#pull-requests-on-the-built-in-host) | Available | Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass. |
+| [Review with inline comments and suggestions](roadmap/milestone-1.md#review-with-inline-comments-and-suggestions) | Available | Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads. |
 | [Branch rules and protected tags](roadmap/milestone-1.md#branch-rules-and-protected-tags) | In progress | Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move. |
 | [Code owners](roadmap/milestone-1.md#code-owners) | Planned | Name who must review changes to which paths, using people or groups. |
-| [Merge styles and auto-merge](roadmap/milestone-1.md#merge-styles-and-auto-merge) | Planned | Merge, squash, rebase and fast-forward, and merge automatically when the checks pass. |
+| [Merge styles and auto-merge](roadmap/milestone-1.md#merge-styles-and-auto-merge) | Available | Merge commit, squash and rebase, chosen per repository, and merge automatically when the rules pass. |
 | [Merge queue](roadmap/milestone-1.md#merge-queue) | Planned | Queue approved changes and test the real merged result with the real pipeline before it lands. |
 | [Resolve conflicts in the browser](roadmap/milestone-1.md#resolve-conflicts-in-the-browser) | Planned | See the conflict, choose a side or edit, and finish the merge on the page. |
 | [Findings and failures on the diff](roadmap/milestone-1.md#findings-and-failures-on-the-diff) | Planned | Security findings and test failures appear as notes on the lines they concern. |

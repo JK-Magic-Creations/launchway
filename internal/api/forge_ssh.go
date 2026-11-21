@@ -22,6 +22,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/gitssh"
+	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
 )
@@ -102,6 +103,11 @@ func (s *Server) pushPolicy(c gitCaller, repo forge.Repository) func(context.Con
 		return nil
 	}
 	return func(ctx context.Context, ups []githttp.RefUpdate) error {
+		for _, u := range ups {
+			if pulls.ReservedRef(u.Name) {
+				return fmt.Errorf("%s belongs to a pull request: the server keeps refs/pull/ itself, so nothing can be pushed there", u.Name)
+			}
+		}
 		pats, err := s.Forge.Rules.Patterns(ctx, repo.ID)
 		if err != nil {
 			return errors.New("the repository's branch rules could not be read; nothing was changed")
@@ -196,7 +202,7 @@ func (h sshHandler) Serve(ctx context.Context, sess gitssh.Session, cmd gitssh.C
 		return 1
 	}
 	res := s.Forge.Git.Stream(ctx, githttp.StreamRequest{
-		Request:  githttp.Request{Repo: dec.repo, Service: cmd.Service, User: c.user},
+		Request:  githttp.Request{Repo: dec.repo, Service: cmd.Service, User: c.user, Notice: s.pushNotice(c, dec.repo, nil)},
 		Protocol: cmd.Protocol, In: sess.In, Out: sess.Out, Policy: s.pushPolicy(c, dec.repo)})
 	if cmd.Service == githttp.ReceivePack {
 		s.gitPushed(ctx, sess.Remote, c, dec.repo, res)

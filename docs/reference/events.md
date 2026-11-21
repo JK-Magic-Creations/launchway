@@ -290,6 +290,21 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deploy_key.add` | `POST /api/v1/repositories/{owner}/{name}/deploy-keys`; the detail is the key's name, fingerprint and whether it may push |
 | `deploy_key.delete` | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` |
 | `repository.protect` | `PUT /api/v1/repositories/{owner}/{name}/protected-branches`; the detail lists the patterns |
+| `pull.create` | `POST /api/v1/repositories/{owner}/{name}/pulls`; the detail: pull request #N from a branch into another |
+| `pull.update` | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}`; the detail: pull request #N and what changed |
+| `pull.merge` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/merge`; the detail: pull request #N, the method, the new commit |
+| `pull.revert` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/revert`; the detail: pull request #N and the pull request that reverts it |
+| `pull.comment` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments`; the detail: pull request #N |
+| `pull.comment_update` | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}`; the detail: pull request #N and the comment |
+| `pull.comment_delete` | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}`; the detail: pull request #N and the comment |
+| `pull.suggestion_apply` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}/apply`; the detail: pull request #N and the new commit |
+| `pull.review` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews`; the detail: pull request #N and the verdict |
+| `pull.review_dismiss` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss`; the detail: pull request #N, the review and the reason |
+| `pull.review_request` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests`; the detail: pull request #N and the people asked |
+| `pull.review_unrequest` | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}`; the detail: pull request #N and the person taken off the list |
+| `repository.pull_settings` | `PUT /api/v1/repositories/{owner}/{name}/pull-settings`; the detail: the allowed methods and the default |
+| `repository.merge_rules` | `PUT /api/v1/repositories/{owner}/{name}/merge-rules`; the detail: the patterns and what they require |
+| `pull.auto_merge` | A pull request merged by auto-merge once its rules passed; made by the server, for the person who turned it on |
 | `webhook.add` | A webhook added to a repository or an owner; the detail is its name, the address's host and the events, never the secret |
 | `webhook.update` | A webhook changed, turned on or off, or its secret replaced (the detail says which, never the secret) |
 | `webhook.delete` | A webhook deleted |
