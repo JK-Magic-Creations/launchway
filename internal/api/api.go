@@ -85,8 +85,9 @@ type Server struct {
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
 	checks   checkLimiter
-	live     atomic.Pointer[Live] // see Reconfigure
-	draining atomic.Bool          // see Drain
+	live     atomic.Pointer[Live]                                // see Reconfigure
+	draining atomic.Bool                                         // see Drain
+	dbState  func(context.Context) (engine.DatabaseState, error) // tests replace it; see readyDatabase
 	stopMu   sync.Mutex
 	stopped  chan struct{} // closed by Stop; see longLived
 }
@@ -143,14 +144,14 @@ func (s *Server) mainRoutes() []route {
 		{"POST /api/runner/v1/start", runnerOnly, "", s.start},
 		{"POST /api/runner/v1/heartbeat", runnerOnly, "", s.heartbeat},
 		{"POST /api/runner/v1/logs", runnerOnly, "", s.logs},
-		{"POST /api/runner/v1/finish", runnerOnly, "", s.finish},
+		{"POST /api/runner/v1/finish", runnerOnly, "", s.once(s.finish)},
 		{"POST /api/runner/v1/runs", runnerOnly, "", s.runInfos},
 		{"POST /api/runner/v1/leave", runnerOnly, "", s.leave},
 		{"POST /api/runner/v1/deploy/lease", runnerOnly, "", s.deployLease},
 		{"POST /api/runner/v1/deploy/watch", runnerOnly, "", s.deployWatch},
 		{"POST /api/runner/v1/deploy/observe", runnerOnly, "", s.deployObserve},
 		{"POST /api/runner/v1/deploy/commands", runnerOnly, "", s.deployCommands},
-		{"POST /api/runner/v1/deploy/command-done", runnerOnly, "", s.deployCommandDone},
+		{"POST /api/runner/v1/deploy/command-done", runnerOnly, "", s.once(s.deployCommandDone)},
 		// Enrolment (schema 20): a join token, or an assertion signed by the
 		// runner's key, in the body; the handlers check and audit them.
 		{"POST /api/runner/v2/join", public, "", s.runnerJoin},
@@ -225,9 +226,9 @@ func (s *Server) mainRoutes() []route {
 		{"POST /api/v1/projects/{name}/webhooks/{trigger}", public, "", s.webhookTrigger},
 
 		// Artifacts, findings and SBOMs (schema 12).
-		{"POST /api/runner/v1/artifacts/begin", runnerOnly, "", s.beginArtifact},
+		{"POST /api/runner/v1/artifacts/begin", runnerOnly, "", s.once(s.beginArtifact)},
 		{"PUT /api/runner/v1/artifacts/chunk", runnerOnly, "", s.artifactChunk},
-		{"POST /api/runner/v1/artifacts/commit", runnerOnly, "", s.commitArtifact},
+		{"POST /api/runner/v1/artifacts/commit", runnerOnly, "", s.once(s.commitArtifact)},
 		{"POST /api/runner/v1/artifacts/download", runnerOnly, "", s.fetchArtifact},
 		{"GET /api/v1/artifact-store", readAny, "", s.artifactStore},
 		{"GET /api/v1/runs/{id}/artifacts", runRead, "", s.runArtifacts},
@@ -339,8 +340,8 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "invalid: "))
 	case errors.Is(err, engine.ErrNeedsNewer):
 		writeErr(w, http.StatusConflict, err.Error())
-	case errors.Is(err, engine.ErrClosed):
-		writeErr(w, http.StatusServiceUnavailable, err.Error())
+	case errors.Is(err, engine.ErrClosed), engine.IsTransientDBError(err):
+		s.failUnavailable(w, err)
 	case errors.As(err, new(pipeline.InputErrors)):
 		var ie pipeline.InputErrors
 		errors.As(err, &ie)
@@ -392,21 +393,7 @@ func (s *Server) readyz(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "stopping", "error": "the server is shutting down"})
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	defer cancel()
-	// Reading the schema checks that the database answers, and catches a
-	// newer server having applied a breaking migration since this one
-	// started.
-	schema, err := s.Engine.Schema(ctx)
-	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable", "error": "the database did not answer: " + err.Error()})
-		return
-	}
-	if msg := schema.Refusal(); msg != "" {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "incompatible", "error": msg, "schema": schema})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "schema": schema})
+	s.readyDatabase(w, r)
 }
 
 // ---- runner API ----
@@ -449,6 +436,7 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 type leaseReq struct {
 	LeaseID string           `json:"lease_id"`
 	Lines   []engine.LogLine `json:"lines"`
+	Offset  *int             `json:"offset"` // lines of the step attempt sent before these (logs)
 	Result  engine.Result    `json:"result"`
 }
 
@@ -483,11 +471,7 @@ func (s *Server) logs(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) || !s.leaseAllowed(w, r, in.LeaseID) {
 		return
 	}
-	if err := s.Engine.AppendLogs(in.LeaseID, in.Lines); err != nil {
-		s.fail(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	s.appendLogs(w, in)
 }
 
 // finish records how a step attempt ended. Its body may carry the step's
@@ -519,7 +503,7 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "the request body is not valid JSON: "+err.Error())
 		return
 	}
-	if !s.leaseAllowed(w, r, in.LeaseID) {
+	if s.finishHandled(w, r, in.LeaseID) {
 		return
 	}
 	var refused *engine.AuditEntry

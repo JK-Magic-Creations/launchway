@@ -23,9 +23,9 @@ import (
 func (s *Server) cacheRoutes() []route {
 	return []route{
 		{"POST /api/runner/v1/caches/lookup", runnerOnly, "", s.cacheLookup},
-		{"POST /api/runner/v1/caches/begin", runnerOnly, "", s.cacheBegin},
+		{"POST /api/runner/v1/caches/begin", runnerOnly, "", s.once(s.cacheBegin)},
 		{"PUT /api/runner/v1/caches/chunk", runnerOnly, "", s.cacheChunk},
-		{"POST /api/runner/v1/caches/commit", runnerOnly, "", s.cacheCommit},
+		{"POST /api/runner/v1/caches/commit", runnerOnly, "", s.once(s.cacheCommit)},
 		{"POST /api/runner/v1/caches/download", runnerOnly, "", s.cacheDownload},
 		{"POST /api/runner/v1/caches/discard", runnerOnly, "", s.cacheDiscard},
 		{"GET /api/v1/projects/{name}/caches", projectRead, "", s.listCaches},

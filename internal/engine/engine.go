@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand/v2"
 	"sort"
 	"strconv"
 	"strings"
@@ -379,9 +378,8 @@ func Open(o Options) (*Engine, error) {
 	if o.RunnerTimeout == 0 {
 		o.RunnerTimeout = 3 * o.LeaseTTL
 	}
-	if o.Now == nil {
-		o.Now = time.Now
-	}
+	clk := newDBClock()
+	o.Now = clk.wrap(o.Now)
 	if o.Logger == nil {
 		o.Logger = slog.Default()
 	}
@@ -407,6 +405,7 @@ func Open(o Options) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.clk = clk
 	e := &Engine{
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
 		schema:     known,
@@ -507,8 +506,8 @@ type ctxQuerier struct {
 	ctx context.Context
 }
 
-func (q ctxQuerier) QueryRow(s string, a ...any) *sql.Row {
-	return q.d.QueryRowContext(q.ctx, rebind(q.d.pg, s), a...)
+func (q ctxQuerier) QueryRow(s string, a ...any) *rowx {
+	return &rowx{row: q.d.QueryRowContext(q.ctx, rebind(q.d.pg, s), a...)}
 }
 
 // knows reports whether this build knows schema v, and so its tables,
@@ -1173,7 +1172,7 @@ func (e *Engine) Heartbeat(leaseID string) (cancel bool, err error) {
 func (e *Engine) Finish(leaseID string, res Result) error {
 	l, err := e.findLease(leaseID)
 	if err != nil {
-		return err
+		return e.finishRepeat(leaseID, err)
 	}
 	var tests *parsedTests
 	if res.Tests != nil && e.knows(schemaTests) && (res.Outcome == "succeeded" || res.Outcome == "failed" || res.Outcome == "canceled") {
@@ -1186,7 +1185,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		if s == nil || s.LeaseID != leaseID || !s.Status.Active() {
 			return ErrLeaseLost
 		}
-		if err := c.endLease(leaseID); err != nil {
+		if err := c.endFinishedLease(leaseID); err != nil {
 			return err
 		}
 		if def := c.st.Pipeline.Step(l.stepID); def != nil && def.IsDeployKind() {
@@ -1326,76 +1325,6 @@ const (
 	MaxLogBatch     = 2000
 )
 
-// AppendLogs stores output lines for the step held by leaseID. Sending logs
-// also renews the lease, and records that its runner was seen.
-func (e *Engine) AppendLogs(leaseID string, lines []LogLine) error {
-	if len(lines) == 0 {
-		return nil
-	}
-	if len(lines) > MaxLogBatch {
-		return fmt.Errorf("%w: at most %d lines per call", ErrConflict, MaxLogBatch)
-	}
-	unlock := e.writeLock()
-	defer unlock()
-	tx, err := e.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	// Taking the sequence numbers locks the lease row, so concurrent calls
-	// for the same lease (on any server) get separate ranges.
-	var l leaseRef
-	var last int
-	var runnerID string
-	now := e.now()
-	err = tx.QueryRow(`UPDATE leases SET log_seq = log_seq + ?, expires_at = ? WHERE id = ?
-		RETURNING run_id, step_id, attempt, log_seq, runner`, len(lines), now.Add(e.ttl).UnixMilli(), leaseID).
-		Scan(&l.runID, &l.stepID, &l.attempt, &last, &runnerID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrLeaseLost
-	}
-	if err != nil {
-		return err
-	}
-	if err := sawRunner(tx, runnerID, now); err != nil {
-		return err
-	}
-	first := last - len(lines) + 1
-	out := make([]LogLine, len(lines))
-	for i, ln := range lines {
-		if len(ln.Text) > MaxLogLineBytes {
-			ln.Text = ln.Text[:MaxLogLineBytes] + " …[line truncated]"
-		}
-		if ln.At == 0 {
-			ln.At = e.now().UnixMilli()
-		}
-		if ln.Stream == "" {
-			ln.Stream = "stdout"
-		}
-		ln.Seq = first + i
-		out[i] = ln
-		if _, err := tx.Exec(`INSERT INTO logs(run_id, step_id, attempt, seq, at, stream, text) VALUES(?,?,?,?,?,?,?)`,
-			l.runID, l.stepID, l.attempt, ln.Seq, ln.At, ln.Stream, ln.Text); err != nil {
-			return err
-		}
-	}
-	if err := e.notifyOthers(tx, note{Kind: noteLog, Run: l.runID, Step: l.stepID, Attempt: l.attempt, FromSeq: first, ToSeq: last}); err != nil {
-		return err
-	}
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	e.hub.Publish(hub.Message{Type: "log", RunID: l.runID, Data: LogBatch{Step: l.stepID, Attempt: l.attempt, Lines: out}})
-	return nil
-}
-
-// LogBatch is the live update sent when log lines arrive.
-type LogBatch struct {
-	Step    string    `json:"step"`
-	Attempt int       `json:"attempt"`
-	Lines   []LogLine `json:"lines"`
-}
-
 // ---- lease expiry ----
 
 // reaper runs on every server. Each tick it records that a server is alive,
@@ -1432,14 +1361,6 @@ func (e *Engine) reaper(ctx context.Context) {
 				e.PruneTriggers(now.Add(-7 * 24 * time.Hour).UnixMilli())
 			}
 		}
-	}
-}
-
-func (e *Engine) markAlive() {
-	unlock := e.writeLock()
-	defer unlock()
-	if err := setAlive(e.db, e.now()); err != nil {
-		e.log.Error("recording that this server is alive", "err", err)
 	}
 }
 
@@ -1614,6 +1535,7 @@ func (e *Engine) withRun(runID string, fn func(c *cmd) error) error {
 // runTx is withRun that, if create is set, also accepts a run that does not
 // exist yet.
 func (e *Engine) runTx(runID string, create bool, fn func(c *cmd) error) error {
+	rt := e.db.retrier(maxAttempts, true)
 	for attempt := 1; ; attempt++ {
 		c, err := e.attemptTx(runID, create, fn)
 		if err == nil {
@@ -1630,14 +1552,12 @@ func (e *Engine) runTx(runID string, create bool, fn func(c *cmd) error) error {
 			}
 			return nil
 		}
-		if !isConflict(err) {
+		if err = rt.next(err); err != nil {
+			if isConflict(err) {
+				return fmt.Errorf("run %s kept changing underneath this command (%d attempts): %w", runID, attempt, err)
+			}
 			return err
 		}
-		if attempt == maxAttempts {
-			return fmt.Errorf("run %s kept changing underneath this command (%d attempts): %w", runID, attempt, err)
-		}
-		// Back off a little, at random, so competing servers spread out.
-		time.Sleep(time.Duration(rand.Int64N(int64(attempt)*int64(2*time.Millisecond))) + time.Millisecond)
 	}
 }
 

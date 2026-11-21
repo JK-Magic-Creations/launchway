@@ -32,6 +32,7 @@ type serverSetup struct {
 	secretStores  *secrets.Resolver
 	drain         time.Duration
 	dbWait        time.Duration
+	stall         time.Duration
 	authOpts      *api.Auth
 	log           *slog.Logger
 	reportLimits  executor.CollectLimits
@@ -69,6 +70,9 @@ func readServerSetup(args []string) (*serverSetup, error) {
 		return nil, err
 	}
 	if su.dbWait, su.drain, err = cfg.Timings(); err != nil {
+		return nil, fmt.Errorf("%s: %w", *cfgPath, err)
+	}
+	if su.stall, err = cfg.StallBudget(); err != nil {
 		return nil, fmt.Errorf("%s: %w", *cfgPath, err)
 	}
 	if su.authOpts, err = serverAuth(cfg); err != nil {
@@ -113,6 +117,14 @@ func readServerSetup(args []string) (*serverSetup, error) {
 
 // openEngine opens the database with the file's settings.
 func (su *serverSetup) openEngine() (*engine.Engine, error) {
+	e, err := su.openEngineRaw()
+	if err == nil {
+		e.SetStallBudget(su.stall)
+	}
+	return e, err
+}
+
+func (su *serverSetup) openEngineRaw() (*engine.Engine, error) {
 	live := su.live
 	return engine.Open(engine.Options{Database: su.cfg.DatabaseAddr(), Logger: su.log, AllowSelfApproval: live.AllowSelfApproval, ConnectWait: su.dbWait,
 		ArtifactsFromDatabase: su.fromDatabase, Tests: live.Tests, Environments: live.Environments, Artifacts: live.Artifacts, Findings: live.Findings,
@@ -252,6 +264,7 @@ func startBuiltinRunner(runnerCtx, ctx context.Context, cfg *config.Config, ln n
 		Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
 		DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
 		Secrets: secretStores, Reports: reportLimits, Images: cfg.Runner.Images,
+		SpoolMaxBytes: cfg.Runner.Spool.Bytes(), SpoolMaxAge: cfg.Runner.Spool.Age(),
 	}
 	if cfg.Runner.AIEnabled() {
 		r.AI = &ai.Client{}

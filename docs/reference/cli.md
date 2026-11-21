@@ -25,6 +25,7 @@ launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+launchway doctor   [database]                 would this installation survive losing its database?
 launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
 launchway version
 ```
@@ -750,6 +751,28 @@ launchway caches policy clear PROJECT [--json]
 | `policy clear` | Removes a project's own policy, so the installation's applies again |
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
+
+## launchway doctor
+
+Checks an installation and says what it finds in plain words. It reads the same `--config` as the server (and `LAUNCHWAY_DATABASE`) and opens the database directly, not through a server.
+
+### launchway doctor database
+
+```text
+launchway doctor [database] [--config launchway.yaml] [--json]
+```
+
+Says whether this installation would survive the loss of its database, and what would be lost. The first line is the verdict: `highly available` (a writable PostgreSQL primary with a synchronous standby streaming), `at risk` (standbys but none synchronous, or the database is a standby or read-only), `not highly available` (one database), or `unknown` (PostgreSQL whose replication the database user may not see; it needs the `pg_monitor` or `pg_read_all_stats` role). For one database it says so:
+
+```text
+Database availability: not highly available
+  Database: SQLite file /var/lib/launchway/launchway.db.
+  Not highly available: a failure of this machine or its disk stops Launchway until the file is restored.
+  If the file is lost, everything since the last backup is lost; Launchway cannot see backups of the file, so the last backup is not known to it.
+  Riding through an outage: a request waits up to 2m0s for the database (resilience.stall_budget), then is answered 503 with Retry-After; runners keep running steps and keep their logs and results on disk.
+```
+
+On PostgreSQL it also says whether WAL archiving is on and when the last segment was archived. `--json` prints the state and the assessment.
 
 ## launchway repos
 

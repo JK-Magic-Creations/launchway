@@ -77,6 +77,9 @@ func (c *Client) do(ctx context.Context, method, url, contentType string, body [
 		}
 		req.Header.Set("Content-Type", contentType)
 		req.Header.Set("Authorization", "Bearer "+tok)
+		if k := idemKey(url, body); k != "" {
+			req.Header.Set("Idempotency-Key", k)
+		}
 		resp, err := c.HTTP.Do(req)
 		if err != nil {
 			return nil, err
@@ -119,7 +122,10 @@ func (c *Client) call(ctx context.Context, path string, in, out any) (int, error
 		if e.Error == "" {
 			e.Error = strings.TrimSpace(string(data))
 		}
-		return resp.StatusCode, fmt.Errorf("%s: %s (HTTP %d)", path, e.Error, resp.StatusCode)
+		if out != nil && resp.StatusCode == http.StatusConflict {
+			_ = json.Unmarshal(data, out) // a conflict may say where to carry on
+		}
+		return resp.StatusCode, &httpError{code: resp.StatusCode, msg: fmt.Sprintf("%s: %s (HTTP %d)", path, e.Error, resp.StatusCode)}
 	}
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {
@@ -159,6 +165,27 @@ func (c *Client) Logs(ctx context.Context, lease string, lines []engine.LogLine)
 	_, err := c.call(ctx, "logs", map[string]any{"lease_id": lease, "lines": lines}, nil)
 	return err
 }
+
+// LogsAt sends lines that follow the first offset lines of the step
+// attempt. The server keeps what it already has, so a batch may be sent
+// again after a lost answer; a server that answers 409 has fewer lines than
+// offset (see LogGap).
+func (c *Client) LogsAt(ctx context.Context, lease string, offset int, lines []engine.LogLine) error {
+	var gap struct {
+		Received int `json:"received"`
+	}
+	code, err := c.call(ctx, "logs", map[string]any{"lease_id": lease, "offset": offset, "lines": lines}, &gap)
+	if code == http.StatusConflict {
+		return &LogGap{Have: gap.Received}
+	}
+	return err
+}
+
+// LogGap means the server has only Have lines of a step attempt, fewer
+// than the runner's batch follows.
+type LogGap struct{ Have int }
+
+func (g *LogGap) Error() string { return fmt.Sprintf("the server has %d lines of this step", g.Have) }
 
 // RunInfos asks the server about runs, for tidying up resources held for them.
 func (c *Client) RunInfos(ctx context.Context, ids []string) (map[string]executor.RunInfo, error) {

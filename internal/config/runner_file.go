@@ -72,7 +72,7 @@ func LoadRunner(path string) (*RunnerFile, error) {
 	if c.CAFile != "" && !filepath.IsAbs(c.CAFile) {
 		c.CAFile = filepath.Join(base, c.CAFile)
 	}
-	if err := c.Accept.Check(); err != nil {
+	if err := errors.Join(c.Accept.Check(), c.Spool.Check()); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if c.Deploy != nil {

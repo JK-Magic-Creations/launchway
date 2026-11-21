@@ -236,7 +236,7 @@ func (e *Engine) RunLimits() (RunLimits, error) {
 }
 
 func readRunLimits(q interface {
-	QueryRow(string, ...any) *sql.Row
+	QueryRow(string, ...any) *rowx
 }) (RunLimits, error) {
 	var l RunLimits
 	var limit int64
@@ -302,7 +302,7 @@ func (e *Engine) CheckRunLimits(p *pipeline.Pipeline) pipeline.Problems {
 // checkRunLimits is CheckRunLimits reading the limits through q, which may
 // be the transaction of a command.
 func (e *Engine) checkRunLimits(q interface {
-	QueryRow(string, ...any) *sql.Row
+	QueryRow(string, ...any) *rowx
 }, p *pipeline.Pipeline) pipeline.Problems {
 	if !e.knows(schemaFlow) || p == nil || p.Timeout <= 0 {
 		return nil

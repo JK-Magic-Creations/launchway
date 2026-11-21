@@ -153,7 +153,7 @@ type sourceRow struct {
 }
 
 func readSourceRow(q interface {
-	QueryRow(string, ...any) *sql.Row
+	QueryRow(string, ...any) *rowx
 }, name string) (sourceRow, error) {
 	var r sourceRow
 	err := q.QueryRow(`SELECT ref, version, policies, error, loaded_at, checked_at, fetch_error, fetch_error_at FROM policy_sources WHERE name = ?`, name).
@@ -163,7 +163,7 @@ func readSourceRow(q interface {
 
 // policySet is the policies in force, as every server sees them at now.
 func (e *Engine) policySet(q interface {
-	QueryRow(string, ...any) *sql.Row
+	QueryRow(string, ...any) *rowx
 }, now int64) policy.Set {
 	var set policy.Set
 	if len(e.live().pol.Inline) > 0 {

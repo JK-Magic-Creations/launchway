@@ -3,12 +3,12 @@
   "max_file_lines": 1000,
   "max_func_lines": 150,
   "files": {
-    "internal/api/api.go": 1066,
+    "internal/api/api.go": 1050,
     "internal/api/mcp_tools.go": 1373,
-    "internal/engine/artifacts.go": 1217,
+    "internal/engine/artifacts.go": 1211,
     "internal/engine/control.go": 1067,
-    "internal/engine/db.go": 1571,
-    "internal/engine/engine.go": 2253,
+    "internal/engine/db.go": 1560,
+    "internal/engine/engine.go": 2176,
     "internal/engine/testqueries.go": 1226,
     "internal/engine/verify.go": 1442,
     "internal/pipeline/template.go": 1180,
@@ -24,7 +24,7 @@
     "internal/pipeline/verify.go:parser.parseVerifyStep": 216,
     "internal/policy/evaluate.go:judge": 227,
     "internal/policy/parse.go:parser.rule": 188,
-    "internal/runner/runner.go:Runner.execute": 152,
+    "internal/runner/runner.go:Runner.execute": 151,
     "internal/verify/source/source.go:openOne": 207
   }
 }

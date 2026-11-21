@@ -76,7 +76,7 @@ type resourcePolicy struct {
 // rowQuerier is what *dbx and *txx have in common.
 type rowQuerier interface {
 	Query(q string, a ...any) (*sql.Rows, error)
-	QueryRow(q string, a ...any) *sql.Row
+	QueryRow(q string, a ...any) *rowx
 }
 
 func (e *Engine) readStepResources(q rowQuerier) (StepResourcesConfig, error) {

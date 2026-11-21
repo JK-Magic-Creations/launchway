@@ -83,6 +83,7 @@ Usage:
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+  launchway doctor   [database]                 would this installation survive losing its database?
   launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
   launchway version
 
@@ -143,6 +144,8 @@ func main() {
 		err = cmdRunLimits(args)
 	case "caches":
 		err = cmdCaches(args)
+	case "doctor":
+		err = cmdDoctor(args)
 	case "repos":
 		err = cmdRepos(args)
 	case "version", "--version", "-v":
@@ -150,16 +153,10 @@ func main() {
 	case "help", "--help", "-h":
 		fmt.Print(usage)
 	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", os.Args[1], usage)
-		os.Exit(2)
+		os.Exit(unknownCommand(os.Args[1]))
 	}
 	if err != nil {
-		var ex exitErr
-		if errors.As(err, &ex) {
-			os.Exit(int(ex))
-		}
-		fmt.Fprintln(os.Stderr, "launchway:", err)
-		os.Exit(1)
+		exitOn(err)
 	}
 }
 
@@ -519,7 +516,7 @@ func cmdRunner(args []string) error {
 		Info: engine.RunnerInfo{ID: id, Name: o.Name, Executor: ex.Name(), Version: version, Labels: o.Labels,
 			OS: runtime.GOOS, Arch: runtime.GOARCH},
 		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores, Reports: reportLimits, Images: o.Images,
-		Accept: o.Accept, Remote: true}
+		Accept: o.Accept, Remote: true, SpoolMaxBytes: o.Spool.Bytes(), SpoolMaxAge: o.Spool.Age()}
 	if o.HealthListen != "" {
 		ln, err := net.Listen("tcp", o.HealthListen)
 		if err != nil {

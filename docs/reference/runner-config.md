@@ -110,6 +110,8 @@ reports:
 | `concurrency` | whole number | `2` | Steps it runs at once. All of a run's steps go to the runner that took its first step, so a run's parallel steps share this |
 | `ai` | boolean | `false` | Whether this runner may call the AI models the server lists, for `ai` steps (and, on a deploy runner, to explain verifications). Keys come from the runner's own secret stores and never enter a step's container. See [AI models](../guide/ai.md) |
 | `executor` | text | `auto` | Where steps run: `auto` (Podman or Docker if found, else the host), `container` (Podman or Docker), `podman`, `docker`, `host` (directly on the machine: only for trusted pipelines) or `kubernetes` (one pod per run) |
+| `spool.max_mib` | whole number | `256` | While the server cannot be reached (no answer, or `503`), the runner keeps executing the step and keeps its log lines and its result on its own disk, under `<data>/spool`, and delivers them in order when the server answers. This is how many MiB of log lines it keeps per step; when it is full the oldest lines are dropped and one line in the log says how many. The result is never dropped. Nothing is written to disk until the first failure |
+| `spool.max_age` | duration | `15m` | How old a kept log line may be before it is dropped, with the same marker. A runner that restarts during an outage delivers what it finds. The step's log shows a line such as "The server could not be reached from 14:02:10 to 14:03:40; nothing was lost." |
 
 ## Identity, labels and the network
 

@@ -36,9 +36,9 @@ type Config struct {
 	// share. The environment variable LAUNCHWAY_DATABASE overrides it; the
 	// default is launchway.db in the data directory.
 	Database string `yaml:"database"`
-	// DatabaseWait is how long a starting server keeps trying a database
-	// that does not answer before it gives up; default 60s.
-	DatabaseWait string `yaml:"database_wait"`
+	// DatabaseWait: how long a starting server tries an unanswering database; default 60s.
+	DatabaseWait string           `yaml:"database_wait"`
+	Resilience   ResilienceConfig `yaml:"resilience"` // riding through a brief database outage
 	// User is who every action is recorded as when sign-in is off
 	// (auth.mode: none).
 	User     string          `yaml:"user"`
@@ -652,8 +652,8 @@ type RunnerSettings struct {
 	Executor    string                     `yaml:"executor"` // auto, container, podman, docker, host or kubernetes
 	Kubernetes  executor.KubernetesOptions `yaml:"kubernetes"`
 	Secrets     secrets.Config             `yaml:"secrets"` // secret stores, by name
-	// Reports limits the report files collected after each step.
-	Reports ReportsConfig `yaml:"reports"`
+	Reports     ReportsConfig              `yaml:"reports"` // limits the report files collected after each step
+	Spool       SpoolConfig                `yaml:"spool"`   // what the runner keeps on disk while the server cannot be reached
 	// Images lets the runner take image steps: the builders it sends builds
 	// to, and the registries it pushes to (see internal/imagebuild). Unset,
 	// the runner takes no image steps.
@@ -720,8 +720,8 @@ func (c *Config) Validate(path string) error {
 	if _, err := c.TestLimits(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
-	if _, err := c.Runner.Reports.Limits(); err != nil {
-		return fmt.Errorf("%s: runner.%w", path, err)
+	if err := c.Runner.CheckLimits(); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.Runner.Images.Check(); err != nil {
 		return fmt.Errorf("%s: runner.%w", path, err)
