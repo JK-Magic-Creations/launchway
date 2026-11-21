@@ -476,6 +476,27 @@ the step's image digest), so none could have been restored anyway, and they end 
 A server of an older schema ignores the columns and, writing entries without them, writes entries a
 server of schema 35 never reads. The startup check covers the columns (`schemaMarkersCacheTrust`).
 
+Schema 37 brings queues and limits, after 36 (built-in accounts), and is additive: two tables.
+`run_queue` has one row for each run that counts against a limit, from its creation until it ends
+(held, or active); `step_waits` has one row for a queued step that waits for room, with the stable
+code, the sentence and how often it tried again. A run held in the queue carries the schema in its
+minimum, so a server of an older schema leaves it alone. The startup check covers the tables
+(`schemaMarkersQueues`).
+
+Schema 38 brings delivery, additive: `branch_writers` (a pipeline identity that may write to a protected
+branch of a hosted repository, the GitOps write-back), `notifications` (the log of what was sent where,
+never the address or key of a channel) and `notify_state` (how far the events were read). An older
+server ignores the tables and then admits no pipeline identity, which is the safe way to fail. The
+startup check covers them (`schemaMarkersDelivery`).
+
+The numbers 34 to 38 were assigned in the order the branches were put together, before any of them
+shipped: 34 encryption at rest, 35 build cache correctness, 36 built-in accounts, 37 queues, 38 delivery.
+`TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything` upgrades a database of schema 33 (what was
+deployed before) to 38 in one start, with a pull request and its review, a webhook secret, an SSH host key,
+cache entries and a rollback, on SQLite and PostgreSQL, and checks that a build of schema 33 still starts
+against the result. Schema 28 is the one remaining empty number: it was recorded by databases that already
+exist, so it stays.
+
 Schema 26 brings forges (`internal/forge`), additive: four new tables and nothing else.
 `forge_connections` and `forge_repositories` hold a connection (a link to a Git host; the kind `plain`
 is today's watcher of a Git address) and its repositories, and every watched project becomes a
