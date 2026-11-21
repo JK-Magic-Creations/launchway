@@ -82,7 +82,7 @@ func (e *Engine) notifyOnce(ctx context.Context, n *Notifier) {
 	}
 	cfg := e.live().notify
 	if len(cfg.Rules) > 0 {
-		for i, f := range []func(context.Context, *Notifier) ([]notify.Event, error){e.eventsFromLog, e.eventsWaiting, e.eventsRollbackReviews} {
+		for i, f := range []func(context.Context, *Notifier) ([]notify.Event, error){e.eventsFromLog, e.eventsWaiting, e.eventsRollbackReviews, e.eventsFreezes} {
 			evs, err := f(ctx, n)
 			if err != nil {
 				n.Log.Warn("could not read what to notify", "err", err, "step", i)

@@ -35,10 +35,15 @@ const (
 	DeploymentRolledBk = "deployment.rolled_back"
 	RollbackNeedsView  = "rollback.needs_review"
 	StepWaitingLong    = "step.waiting_long"
+	// Release management: a release was published, promoted to an Airfield or returned to base, or a freeze began.
+	ReleasePublished = "release.published"
+	ReleasePromoted  = "release.promoted"
+	ReleaseReturned  = "release.returned"
+	FreezeStarted    = "freeze.started"
 )
 
 // Events lists every event a rule may name.
-var Events = []string{ApprovalRequested, RunFailed, DeploymentSucceed, DeploymentFailed, DeploymentRolledBk, RollbackNeedsView, StepWaitingLong}
+var Events = []string{ApprovalRequested, RunFailed, DeploymentSucceed, DeploymentFailed, DeploymentRolledBk, RollbackNeedsView, StepWaitingLong, ReleasePublished, ReleasePromoted, ReleaseReturned, FreezeStarted}
 
 // Channel kinds.
 const (

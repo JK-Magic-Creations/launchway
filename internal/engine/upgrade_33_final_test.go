@@ -26,7 +26,7 @@ import (
 // SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if len(migrations) != schemaArchive || schemaArchive != 39 {
+	if len(migrations) != schemaReleases || schemaArchive != 39 || schemaReleases != 57 {
 		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 39", schemaArchive, len(migrations))
 	}
 	for i := schemaEncryption; i <= schemaArchive; i++ {
@@ -79,12 +79,12 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	if n := strings.Count(log.String(), "applied a database migration"); n != schemaArchive-schemaPulls {
-		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaArchive-schemaPulls, log.String())
+	if n := strings.Count(log.String(), "applied a database migration"); n != schemaReleases-schemaPulls {
+		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaReleases-schemaPulls, log.String())
 	}
-	checkMarkers(t, cur, schemaArchive)
+	checkMarkers(t, cur, schemaReleases)
 	info, err := cur.Schema(ctx)
-	if err != nil || info.Database != schemaArchive || info.Code != schemaArchive || !info.Compatible() {
+	if err != nil || info.Database != schemaReleases || info.Code != schemaReleases || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	count := func(q string) (n int) {
@@ -114,7 +114,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	// A build of schema 33 (a server of the release in use during a rolling update, or after a rollback)
 	// still starts against the upgraded database and reads the old data.
 	older := mustOpenAs(t, addr, clk, schemaPulls, &syncBuffer{})
-	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaArchive || oi.Code != schemaPulls || !oi.Compatible() {
+	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaReleases || oi.Code != schemaPulls || !oi.Compatible() {
 		t.Fatalf("the build of schema 33 against the final schema: %+v %v", oi, err)
 	}
 	var title, whSecret string
