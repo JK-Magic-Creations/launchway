@@ -68,6 +68,7 @@ type pushState struct {
 	mu     sync.Mutex
 	packID string
 	result ReceiveResult
+	policy func(ctx context.Context, updates []RefUpdate) error
 }
 
 // Receive serves one request of git's stateless receive-pack: the ref
@@ -95,18 +96,20 @@ func (s *Store) Receive(ctx context.Context, repo string, rpc RPC) (ReceiveResul
 		}
 	}
 	args := []string{"receive-pack", "--stateless-rpc"}
-	if rpc.Advertise {
+	if rpc.Stream {
+		args = []string{"receive-pack"}
+	} else if rpc.Advertise {
 		args = append(args, "--advertise-refs")
 	}
 	args = append(args, ".")
 	spec := gitexec.Spec{GitDir: s.cacheDir(repo), Args: args, Env: rpc.env(), Stdin: rpc.In, Stdout: rpc.Out,
 		HooksPath: s.hooksDir(repo), IdleTimeout: 5 * time.Minute, Limits: s.o.Limits}
-	if rpc.Advertise {
+	if rpc.Advertise && !rpc.Stream {
 		spec.HooksPath = ""
 		_, err := gitexec.Run(ctx, spec)
 		return res, err
 	}
-	st := &pushState{store: s, repo: repo, faults: orNone(faultsFrom(ctx)), token: randomID()}
+	st := &pushState{store: s, repo: repo, faults: orNone(faultsFrom(ctx)), token: randomID(), policy: rpc.Policy}
 	sock, stop, err := st.listen(ctx)
 	if err != nil {
 		return res, err
@@ -186,6 +189,11 @@ func (st *pushState) handle(ctx context.Context, req hookRequest) hookReply {
 	case "pre-receive":
 		if err := st.faults.Hit(PtPreReceive); err != nil {
 			return fail(err)
+		}
+		if st.policy != nil {
+			if err := st.policy(ctx, req.Updates); err != nil {
+				return fail(err)
+			}
 		}
 		if err := st.preReceive(ctx, req); err != nil {
 			return fail(err)
@@ -294,7 +302,9 @@ func (s *Store) Upload(ctx context.Context, repo string, rpc RPC) error {
 		return err
 	}
 	args := []string{"upload-pack", "--stateless-rpc"}
-	if rpc.Advertise {
+	if rpc.Stream {
+		args = []string{"upload-pack"}
+	} else if rpc.Advertise {
 		args = append(args, "--advertise-refs")
 	}
 	args = append(args, ".")

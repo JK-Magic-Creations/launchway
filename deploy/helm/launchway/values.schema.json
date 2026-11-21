@@ -322,6 +322,23 @@
         "serviceAccount": { "$ref": "#/definitions/serviceAccount" }
       }
     },
+    "ssh": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "service": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": { "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "annotations": { "$ref": "#/definitions/stringMap" }
+          }
+        }
+      }
+    },
     "service": {
       "type": "object",
       "additionalProperties": false,

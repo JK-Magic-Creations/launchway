@@ -98,6 +98,9 @@ type Request struct {
 	Advertise bool
 	// User names who is calling, for the per-person cap.
 	User string
+	// Policy decides, before any ref moves, whether a push may do what it asks
+	// (see storage.RPC.Policy). The same function serves every transport.
+	Policy func(ctx context.Context, updates []RefUpdate) error
 }
 
 // Result says what came of a request.
@@ -200,7 +203,7 @@ func (h *Handler) Serve(w http.ResponseWriter, r *http.Request, q Request) Resul
 		in = &capReader{r: gz, left: limit} // a small body that inflates enormously is refused too
 	}
 	track := &trackReader{r: in}
-	rpc := storage.RPC{Advertise: q.Advertise, In: track, Out: out, GitProtocol: r.Header.Get("Git-Protocol")}
+	rpc := storage.RPC{Advertise: q.Advertise, In: track, Out: out, GitProtocol: r.Header.Get("Git-Protocol"), Policy: q.Policy}
 	h2 := w.Header()
 	h2.Set("Cache-Control", "no-cache, max-age=0, must-revalidate")
 	h2.Set("Pragma", "no-cache")

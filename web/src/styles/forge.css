@@ -1,0 +1,16 @@
+/* Hosted repositories: webhooks, deploy keys, clone addresses. */
+.hook-row { padding: 14px 18px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.hook-row:first-of-type { border-top: 0; }
+.hook-head > * + * { margin-top: 2px; }
+.hook-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.hook-row .table { margin: 8px -18px -14px; width: calc(100% + 36px); }
+.sheet .sub.pad { padding: 10px 18px 12px; margin: 0; }
+.sheet.pad > .sub:first-child { padding: 0; margin: 0 0 12px; }
+fieldset.field { border: 0; padding: 0; margin: 4px 0; min-width: 0; }
+fieldset.field legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
+.sheet .check, .inputs-form .check { display: flex; flex-direction: row; align-items: center; gap: 8px; margin: 0; padding: 3px 0; font-weight: 400; }
+.sheet .check input, .inputs-form .check input { flex: none; width: auto; margin: 0; }
+.seg { margin-bottom: 10px; display: flex; gap: 6px; }
+fieldset.events { border: 0; padding: 0; margin: 6px 0 12px; min-width: 0; display: grid; gap: 0; }
+fieldset.events legend { font-weight: 600; padding: 0; margin-bottom: 4px; }
+fieldset.events .check { margin: 0; padding: 2px 0; }

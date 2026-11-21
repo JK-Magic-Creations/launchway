@@ -37,6 +37,7 @@ var schemaMarkers = []schemaMarker{
 	schemaMarkersParity2,
 	schemaMarkersVariables,
 	schemaMarkersMirror,
+	schemaMarkersSSH,
 }
 
 type schemaMarker struct {

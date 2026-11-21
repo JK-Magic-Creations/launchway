@@ -49,6 +49,14 @@ cosign verify-attestation --key cosign.pub --insecure-ignore-tlog --type slsapro
   keyless Sigstore signing for Launchway's own releases; local and air-gapped release builds use a
   key file, as image steps do.
 
+## Libraries of Git over SSH
+
+The built-in SSH server for Git ([Git over SSH](../guide/git-over-ssh.md)) uses one library,
+`golang.org/x/crypto/ssh`, from the Go project's `x/crypto` module (BSD 3-Clause license), linked into
+the `launchway` binary. There is no separate SSH server in the image or the chart, and no shell: the
+server runs only `git-upload-pack`, `git-receive-pack` and `git-upload-archive`. The module is already
+a dependency of Launchway; it is pinned in `go.mod` and checked by `govulncheck` with the others.
+
 ## In progress and planned
 
 More supply-chain controls are on the [roadmap](../roadmap-list.md), each with its status.

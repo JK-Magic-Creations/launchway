@@ -26,9 +26,10 @@ launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
 launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
-launchway doctor   [database]                 would this installation survive losing its database?
-launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
+launchway doctor   [database|ssh]             would this installation survive losing its database? is Git over SSH reachable?
+launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
 launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
+launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
 launchway version
 ```
 
@@ -774,6 +775,14 @@ The same operations are the routes under [Variables](http-api.md#variables) in t
 
 Checks an installation and says what it finds in plain words. It reads the same `--config` as the server (and `LAUNCHWAY_DATABASE`) and opens the database directly, not through a server.
 
+### launchway doctor ssh
+
+```text
+launchway doctor ssh [--address HOST:PORT] [--config launchway.yaml]
+```
+
+Connects to the Git over SSH address (without signing in) and prints the host keys it presents, as SHA256 fingerprints, for ed25519, ECDSA and RSA. With no `--address` it reads `forge.ssh.public_host` and the port from the configuration file's forge section; it reports "off" when `forge.ssh.listen` is not set there. It exits with status 1 when nothing answers as an SSH server (check the Service or load balancer, a firewall, and that servers were restarted after `forge.ssh.listen` was set) or when some host key cannot be read.
+
 ### launchway doctor database
 
 ```text
@@ -856,6 +865,37 @@ launchway repos mirror stop acme/shop --final-sync            # per repository, 
 launchway repos mirror add acme/shop --direction push --url https://git.corp.example/acme/shop.git --credential-env OLDGIT_TOKEN
                                                               # optional: keep the old server an exact copy while people move
 ```
+
+### Deploy keys, protected branches and webhooks
+
+```text
+launchway repos deploy-keys list OWNER/NAME [--json]
+launchway repos deploy-keys add OWNER/NAME --file KEY.pub [--name N] [--write] [--expires T] [--json]
+launchway repos deploy-keys delete OWNER/NAME ID
+launchway repos protected-branches OWNER/NAME [--set main,release/*] [--json]
+launchway repos hooks list TARGET [--json]
+launchway repos hooks add TARGET --url URL --events push,create,delete,repository [--name N] [--secret-file F] [--json]
+launchway repos hooks update TARGET ID [--url U] [--events E] [--name N] [--active=false] [--secret-file F] [--json]
+launchway repos hooks delete TARGET ID
+launchway repos hooks test TARGET ID [--json]
+launchway repos hooks deliveries TARGET ID [--json]
+launchway repos hooks redeliver TARGET ID DELIVERY [--json]
+```
+
+A deploy key opens one repository over SSH, read-only unless `--write` ([Git over SSH](../guide/git-over-ssh.md)). `protected-branches` shows the patterns, or replaces them with `--set` (an empty value removes the protection). For `hooks`, TARGET is `OWNER/NAME` for one repository or `OWNER` for every repository of an owner ([Webhooks and events](../guide/webhooks.md)); the secret is read from a file, never from the command line, and a secret Launchway makes is printed once. The same operations are the MCP tools `list_deploy_keys`, `add_deploy_key`, `delete_deploy_key`, `get_protected_branches`, `set_protected_branches`, `list_webhooks`, `add_webhook`, `update_webhook`, `delete_webhook`, `test_webhook`, `list_webhook_deliveries` and `redeliver_webhook`.
+
+## launchway keys
+
+Your SSH keys for Git over SSH, and the server's host key fingerprints. Git hosting must be on; the SSH connection itself needs `forge.ssh.listen`.
+
+```text
+launchway keys list [--json]
+launchway keys add --file KEY.pub [--name N] [--expires 2027-06-30T00:00:00Z] [--json]
+launchway keys delete ID
+launchway keys host [--json]
+```
+
+`add` takes ed25519, ECDSA and RSA keys of at least 3072 bits, and says why when it refuses one. `host` prints the address and the fingerprints to compare with what `ssh` shows the first time you connect. The same operations are the MCP tools `list_ssh_keys`, `add_ssh_key`, `delete_ssh_key` and `get_ssh_info`, and the routes `/api/v1/user/ssh-keys` and `/api/v1/ssh`.
 
 ## launchway version
 

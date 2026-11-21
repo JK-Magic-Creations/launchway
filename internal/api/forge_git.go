@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
+	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
 )
 
 // Git over smart HTTP. The same handler answers /git/<owner>/<name>.git/...
@@ -99,9 +101,11 @@ type gitReq struct {
 // gitCaller is who a Git request is from: a person (an API token), a run
 // (a run token), or nobody (anonymous).
 type gitCaller struct {
-	id   *identity
-	run  *githttp.RunClaim
-	user string
+	id     *identity
+	run    *githttp.RunClaim
+	deploy *sshkeys.Key // a repository's deploy key (SSH only)
+	sshKey string       // the fingerprint of the key an SSH caller used
+	user   string
 }
 
 // gitHTTP authenticates, authorises and serves one Git request, in that
@@ -123,9 +127,9 @@ func (s *Server) gitHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user})
+	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo)})
 	if q.svc == githttp.ReceivePack && !q.advertise {
-		s.gitPushed(r, c.id, c.run, repo, res)
+		s.gitPushed(r.Context(), s.clientAddr(r), c, repo, res)
 	}
 }
 
@@ -199,43 +203,65 @@ func (s *Server) gitAuthenticate(w http.ResponseWriter, r *http.Request, q gitRe
 	return c, true
 }
 
-// gitAuthorise finds the repository and decides whether this caller may do
-// this to it. Everything that cannot be told apart is answered alike.
-func (s *Server) gitAuthorise(w http.ResponseWriter, r *http.Request, q gitReq, c gitCaller) (forge.Repository, bool) {
-	repo, err := s.Forge.Provider.Repositories().Get(r.Context(), q.path)
+// gitDecision is what may be done with a repository: the repository when
+// code is 0, otherwise the status and the sentence the client is told.
+type gitDecision struct {
+	repo forge.Repository
+	code int
+	msg  string
+	// unauth says to answer as an unauthenticated request (HTTP 401); audit
+	// says the refusal is recorded (a refused push).
+	unauth, audit bool
+	// failed is a fault of the server, not a decision.
+	failed error
+}
+
+// gitDecide finds the repository and decides whether this caller may do this
+// to it. It is the one place the decision is made, for every transport: smart
+// HTTP asks it for a request, SSH for a command. Everything that cannot be
+// told apart is answered alike.
+func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecision {
+	repo, err := s.Forge.Provider.Repositories().Get(ctx, q.path)
 	found := err == nil
 	if err != nil && !errors.Is(err, forge.ErrNotFound) {
-		s.fail(w, err)
-		return repo, false
+		return gitDecision{failed: err}
 	}
-	deny := func(code int, msg string) (forge.Repository, bool) {
-		s.gitDenied(r, c.id, c.run, q.path, q.svc, msg)
-		http.Error(w, msg, code)
-		return repo, false
+	d := gitDecision{repo: repo}
+	deny := func(code int, msg string) gitDecision {
+		d.code, d.msg, d.audit = code, msg, true
+		return d
+	}
+	notFound := func() gitDecision {
+		d.code, d.msg = http.StatusNotFound, "repository not found"
+		return d
 	}
 	switch {
-	case c.id == nil && c.run == nil:
+	case c.id == nil && c.run == nil && c.deploy == nil:
 		// Anonymous: only a repository whose access class is public, and only to read.
 		if !found || repo.Visibility != forge.Public || q.class != repoRead {
-			unauthorised(w) // the same answer for a private repository and one that does not exist
-			return repo, false
+			d.code, d.unauth = http.StatusUnauthorized, true // the same answer for a private repository and one that does not exist
+			return d
 		}
 	case c.run != nil:
 		if !found || c.run.Repo != repo.ID {
-			http.Error(w, "repository not found", http.StatusNotFound)
-			return repo, false
+			return notFound()
 		}
 		if q.class != repoRead {
 			return deny(http.StatusForbidden, "a run's credential can read a repository, not push to it")
 		}
+	case c.deploy != nil:
+		if !found || c.deploy.RepoID != repo.ID {
+			return notFound()
+		}
+		if q.class != repoRead && !c.deploy.CanWrite {
+			return deny(http.StatusForbidden, "this deploy key is read-only: it can clone and fetch, not push; add a deploy key that may write")
+		}
 	default:
 		if !found {
-			http.Error(w, "repository not found", http.StatusNotFound)
-			return repo, false
+			return notFound()
 		}
 		if code, msg := s.checkRepo(c.id, q.class, q.path); code == http.StatusNotFound {
-			http.Error(w, "repository not found", code)
-			return repo, false
+			return notFound()
 		} else if code != 0 {
 			return deny(code, msg)
 		}
@@ -243,7 +269,27 @@ func (s *Server) gitAuthorise(w http.ResponseWriter, r *http.Request, q gitReq, 
 	if q.class == repoWrite && (repo.Archived || repo.Mirror) {
 		return deny(http.StatusForbidden, "this repository is "+map[bool]string{true: "archived", false: "a mirror"}[repo.Archived]+" and takes no pushes")
 	}
-	return repo, true
+	return d
+}
+
+// gitAuthorise answers an HTTP request with the decision, and says whether
+// the request may go on.
+func (s *Server) gitAuthorise(w http.ResponseWriter, r *http.Request, q gitReq, c gitCaller) (forge.Repository, bool) {
+	d := s.gitDecide(r.Context(), q, c)
+	switch {
+	case d.failed != nil:
+		s.fail(w, d.failed)
+	case d.unauth:
+		unauthorised(w)
+	case d.code != 0:
+		if d.audit {
+			s.gitDenied(s.clientAddr(r), c, q.path, q.svc, d.msg)
+		}
+		http.Error(w, d.msg, d.code)
+	default:
+		return d.repo, true
+	}
+	return d.repo, false
 }
 
 func (s *Server) gitUser(id *identity, run *githttp.RunClaim, r *http.Request) string {
@@ -256,23 +302,36 @@ func (s *Server) gitUser(id *identity, run *githttp.RunClaim, r *http.Request) s
 	return "anonymous " + s.clientAddr(r)
 }
 
+// credentialNote says how a caller proved itself, for the audit trail.
+func (c gitCaller) credentialNote() string {
+	switch {
+	case c.sshKey != "":
+		return "ssh key " + c.sshKey
+	case c.id != nil && c.id.Via == viaToken:
+		return "token " + c.id.tokenTag
+	}
+	return ""
+}
+
 // gitDenied records a refused push (and only pushes: reads that are refused
 // are counted by the limiter, not recorded one by one).
-func (s *Server) gitDenied(r *http.Request, id *identity, run *githttp.RunClaim, path, svc, why string) {
+func (s *Server) gitDenied(source string, c gitCaller, path, svc, why string) {
 	if svc != githttp.ReceivePack {
 		return
 	}
-	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: s.gitUser(id, run, r), Source: s.clientAddr(r), Action: "git.push", Target: path,
-		Outcome: "denied", Detail: why})
+	detail := why
+	if n := c.credentialNote(); n != "" {
+		detail = n + "; " + why
+	}
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: c.user, Source: source, Action: "git.push", Target: path,
+		Outcome: "denied", Detail: detail})
 }
 
-// gitPushed records a push: who, to which repository, which refs moved, and
-// whether it committed.
-func (s *Server) gitPushed(r *http.Request, id *identity, run *githttp.RunClaim, repo forge.Repository, res githttp.Result) {
-	e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: s.gitUser(id, run, r), Source: s.clientAddr(r), Action: "git.push", Target: repo.Path, Outcome: "ok"}
-	if id != nil && id.Via == viaToken {
-		e.Detail = "token " + id.tokenTag
-	}
+// gitPushed records a push, whichever transport carried it: who, to which
+// repository, which refs moved, and whether it committed; then tells the
+// rest of the system (events, webhooks, pipelines).
+func (s *Server) gitPushed(ctx context.Context, source string, c gitCaller, repo forge.Repository, res githttp.Result) {
+	e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: c.user, Source: source, Action: "git.push", Target: repo.Path, Outcome: "ok", Detail: c.credentialNote()}
 	var refs []string
 	if rr := res.Receive; rr != nil {
 		for _, u := range rr.Updates {
@@ -293,7 +352,10 @@ func (s *Server) gitPushed(r *http.Request, id *identity, run *githttp.RunClaim,
 	s.record(e)
 	// An accepted push is copied to the repository's push mirrors.
 	if rr := res.Receive; rr != nil && rr.Committed && s.Forge != nil && s.Forge.Mirrors != nil {
-		s.Forge.Mirrors.Pushed(r.Context(), repo.ID)
+		s.Forge.Mirrors.Pushed(ctx, repo.ID)
+	}
+	if res.Receive != nil && res.Receive.Committed {
+		s.afterPush(ctx, c, repo, res.Receive.Updates)
 	}
 }
 

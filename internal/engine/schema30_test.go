@@ -34,12 +34,12 @@ func TestUpgradeFromSchema27ToMirrors(t *testing.T) {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	for _, v := range []int{schemaStandIn28, schemaVariables, schemaMirror} {
+	for _, v := range []int{schemaStandIn28, schemaVariables, schemaMirror, schemaSSH} {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaMirror)
+	checkMarkers(t, cur, schemaSSH)
 	if j := take(t, cur); j.RunID != half {
 		t.Fatalf("the half-done run did not carry on: %+v", j)
 	}
@@ -50,7 +50,7 @@ func TestUpgradeFromSchema27ToMirrors(t *testing.T) {
 }
 
 // A database that already ran 28 (the stand-in) and 29, as a build of schema
-// 29 leaves it, gets only 30: nothing is applied twice, what was written to
+// 29 leaves it, gets 30 and 31: nothing is applied twice, what was written to
 // the variables table stays.
 func TestUpgradeFromSchema29ToMirrorsKeepsWhatIsThere(t *testing.T) {
 	t.Setenv(schemaCheckSkipEnv, "")
@@ -73,15 +73,17 @@ func TestUpgradeFromSchema29ToMirrorsKeepsWhatIsThere(t *testing.T) {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, schemaMirror)) {
-		t.Errorf("migration 30 was not applied:\n%s", log.String())
+	for _, v := range []int{schemaMirror, schemaSSH} {
+		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
+			t.Errorf("migration %d was not applied:\n%s", v, log.String())
+		}
 	}
 	for _, v := range []int{schemaStandIn28, schemaVariables} {
 		if strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d, already applied, was applied again", v)
 		}
 	}
-	checkMarkers(t, cur, schemaMirror)
+	checkMarkers(t, cur, schemaSSH)
 	var val string
 	if err := cur.db.QueryRow(`SELECT value FROM variables WHERE name = 'replicas'`).Scan(&val); err != nil || val != "3" {
 		t.Fatalf("variable after the upgrade: %q %v", val, err)

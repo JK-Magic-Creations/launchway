@@ -282,7 +282,18 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `connection.delete` | `DELETE /api/v1/connections/{name}` |
 | `repository.import` | `POST /api/v1/imports` (also `launchway repos import`); the target is the connection, the detail lists the repositories made or resumed and how each ended |
 | `repository.verify` | `POST /api/v1/imports/verify` (also `launchway repos verify`); the detail says whether every ref was equal |
-| `git.push` | A push over HTTP, to `/git/{owner}/{name}.git` or `/{owner}/{name}.git`; the user is the person (or `run <id>`), the detail the token's name and each ref with its old and new commit, the outcome `ok`, `failed` (it lost a race or did not commit) or `denied` (no push rights, or the repository is archived) |
+| `ssh_key.add` | `POST /api/v1/user/ssh-keys`; the target is the person, the detail the key's name and fingerprint |
+| `ssh_key.delete` | `DELETE /api/v1/user/ssh-keys/{id}` |
+| `deploy_key.add` | `POST /api/v1/repositories/{owner}/{name}/deploy-keys`; the detail is the key's name, fingerprint and whether it may push |
+| `deploy_key.delete` | `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` |
+| `repository.protect` | `PUT /api/v1/repositories/{owner}/{name}/protected-branches`; the detail lists the patterns |
+| `webhook.add` | A webhook added to a repository or an owner; the detail is its name, the address's host and the events, never the secret |
+| `webhook.update` | A webhook changed, turned on or off, or its secret replaced (the detail says which, never the secret) |
+| `webhook.delete` | A webhook deleted |
+| `webhook.test` | A test delivery sent; the detail is the outcome |
+| `webhook.redeliver` | A delivery sent again; the detail is the event and the outcome |
+| `webhook.disable` | A webhook turned off automatically after its deliveries kept failing; the user is `system` and the detail carries the notice shown on the hook |
+| `git.push` | A push over HTTP, to `/git/{owner}/{name}.git` or `/{owner}/{name}.git`, or over SSH; the user is the person (or `run <id>`, or `deploy key <name>`), the detail the token's name or `ssh key SHA256:...` and each ref with its old and new commit, the outcome `ok`, `failed` (it lost a race or did not commit) or `denied` (no push rights, or the repository is archived) |
 | `policy.waive` | `POST /api/v1/projects/{name}/waivers`: granting a waiver (also `launchway waivers grant`) |
 | `policy.revoke_waiver` | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` |
 | `webhook.git` | `POST /api/v1/projects/{name}/git-hook`: a Git host's call that made the project poll (`ok`) or could not prove itself (`denied`); ignored events and repeated deliveries are not recorded |

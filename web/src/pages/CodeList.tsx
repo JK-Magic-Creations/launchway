@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { useHosting } from "./SshKeys";
 import { api, type RunSummary } from "../api";
 import { useMe } from "../auth";
 import { EntityLink } from "../components/EntityLink";
@@ -19,6 +20,7 @@ export function CodeListPage() {
   const inst = useInstallation();
   const me = useMe();
   const now = useNow(15000);
+  const hosting = useHosting();
   const runsFn = useCallback((bg: boolean) => api.runs({ limit: 100 }, bg), []);
   const all = useLoad(runsFn, 15000).data;
   const by = useMemo(() => {
@@ -33,7 +35,7 @@ export function CodeListPage() {
     <div className="page">
       <PageHead eyebrow="Code" title="Repositories"
         sentence={rows.length === 0 ? "Your code lives in Git repositories. None is connected yet." : unreachable > 0 ? <><b>{unreachable} {unreachable === 1 ? "repository cannot" : "repositories cannot"} be reached.</b> The others are read normally.</> : `${rows.length} ${rows.length === 1 ? "repository" : "repositories"} connected, all reachable.`}
-        actions={rows.length > 0 && me?.admin ? <WizardButton wizard="connect-repository" label="Add a project" /> : undefined} />
+        actions={<>{hosting === "on" && <LinkButton href="/repositories" sm>Hosted by Launchway</LinkButton>}{rows.length > 0 && me?.admin ? <WizardButton wizard="connect-repository" label="Add a project" /> : null}</>} />
       {rows.length > 0 && (
         <Band cells={[
           { key: "n", label: "Repositories", value: rows.length, foot: "connected from Git" },

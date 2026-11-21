@@ -220,6 +220,8 @@ export default defineConfig({
           { text: 'Policies', link: '/guide/policies' },
           { text: 'Verifying a deployment', link: '/guide/verification' },
           { text: 'AI models', link: '/guide/ai' },
+          { text: 'Git over SSH', link: '/guide/git-over-ssh' },
+          { text: 'Webhooks and events', link: '/guide/webhooks' },
           { text: 'Secrets', link: '/guide/secrets' },
           { text: 'Configuration and levels', link: '/guide/configuration' },
           { text: 'The words Launchway uses', link: '/guide/words' },

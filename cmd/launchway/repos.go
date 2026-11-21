@@ -19,6 +19,7 @@ const reposUsage = `Usage:
                          [--branch B] [--archived=false] [--rename-to OWNER/NAME]
   launchway repos delete OWNER/NAME                      move a repository to the trash
 
+` + reposKeysUsage + `
 Git hosting must be turned on (the installation setting forge.hosting); otherwise every
 command answers feature_off and nothing is lost. A repository is OWNER/NAME; its roles
 come from the same role bindings as a project's, matched on that path. Changes are
@@ -56,6 +57,12 @@ func cmdRepos(args []string) error {
 			return cl.reposUpdate(args[1:])
 		case "delete":
 			return cl.reposDelete(args[1:])
+		case "deploy-keys":
+			return cl.deployKeys(args[1:])
+		case "hooks":
+			return cl.hooks(args[1:])
+		case "protected-branches":
+			return cl.protectedBranches(args[1:])
 		}
 		return usageErr("unknown command repos %s\n\n%s", args[0], reposUsage)
 	})

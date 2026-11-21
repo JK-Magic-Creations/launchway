@@ -234,6 +234,55 @@ number can run against the same database.
 | `httpRoute.parentRefs` | list | `[]` | The Gateways to attach to: `[{ name, namespace, sectionName }]` |
 | `httpRoute.hostnames` | list | `[]` | |
 
+## Git over SSH
+
+The servers serve Git over SSH themselves ([Git over SSH](../guide/git-over-ssh.md)). The chart opens the port and makes a Service for it; the address the servers listen on is the installation setting `forge.ssh.listen`, which must be `:<ssh.port>`.
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `ssh.enabled` | boolean | `false` | Open the SSH port on the servers and make the Service `<release>-launchway-ssh` |
+| `ssh.port` | integer | `2222` | The port the servers listen on inside the pod |
+| `ssh.service.type` | string | `ClusterIP` | `ClusterIP`, `NodePort` or `LoadBalancer` |
+| `ssh.service.port` | integer | `22` | The port the Service offers. With 22, clone addresses are `git@host:owner/name.git` (set `forge.ssh.public_port` to match) |
+| `ssh.service.annotations` | map | `{}` | For a cloud load balancer |
+
+### Publishing the SSH port
+
+SSH is plain TCP, so an HTTP Ingress cannot carry it. Two ways that work:
+
+A LoadBalancer Service, with its own address and a DNS name such as `git.example.com`:
+
+```yaml
+ssh:
+  enabled: true
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+```
+
+A Gateway with a TCP listener (Gateway API `TCPRoute`, where your Gateway supports it):
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: launchway-ssh
+spec:
+  parentRefs:
+    - name: public
+      sectionName: ssh      # a listener with protocol TCP on port 22
+  rules:
+    - backendRefs:
+        - name: launchway-launchway-ssh
+          port: 22
+```
+
+Several servers sit behind one address: they present the same host keys, because the keys are kept in the
+database. Set the installation setting `forge.ssh.listen` to `:2222` (or your `ssh.port`) and, when the
+Service port is not 22, `forge.ssh.public_port` to the port people use.
+
 ## Runners
 
 Runners are `launchway runner` with the Kubernetes executor. Each run gets one pod in the step
