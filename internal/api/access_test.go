@@ -139,6 +139,25 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/run-limits":                     {"GET", "/api/v1/run-limits", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"PUT /api/v1/run-limits":                     {"PUT", "/api/v1/run-limits", `{"max_run_timeout":"48h"}`, [6]int{401, 403, 403, 403, 403, 200}},
 
+	// Build caches. Runners work under a lease (the runner routes need a
+	// runner token); a project's entries are read by its viewers and
+	// deleted by its operators; an administrator changes the policy.
+	"POST /api/runner/v1/caches/lookup":   {"POST", "/api/runner/v1/caches/lookup", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/begin":    {"POST", "/api/runner/v1/caches/begin", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"PUT /api/runner/v1/caches/chunk":     {"PUT", "/api/runner/v1/caches/chunk", "x", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/commit":   {"POST", "/api/runner/v1/caches/commit", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/download": {"POST", "/api/runner/v1/caches/download", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/caches/discard":  {"POST", "/api/runner/v1/caches/discard", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"GET /api/v1/projects/{name}/caches":  {"GET", "/api/v1/projects/pay-api/caches", "", [6]int{401, 404, 200, 200, 404, 200}},
+	// Nothing is cached, so deleting is a 404 after the permission check.
+	"DELETE /api/v1/projects/{name}/caches/{id}":  {"DELETE", "/api/v1/projects/pay-api/caches/cch_nope", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"DELETE /api/v1/projects/{name}/caches":       {"DELETE", "/api/v1/projects/pay-api/caches?name=pip", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/cache-policy":                    {"GET", "/api/v1/cache-policy", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"PUT /api/v1/cache-policy":                    {"PUT", "/api/v1/cache-policy", `{"idle_days":9}`, [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/projects/{name}/cache-policy":    {"GET", "/api/v1/projects/pay-api/cache-policy", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"PUT /api/v1/projects/{name}/cache-policy":    {"PUT", "/api/v1/projects/pay-api/cache-policy", `{"idle_days":3}`, [6]int{401, 403, 403, 403, 403, 200}},
+	"DELETE /api/v1/projects/{name}/cache-policy": {"DELETE", "/api/v1/projects/pay-api/cache-policy", "", [6]int{401, 403, 403, 403, 403, 200}},
+
 	// Artifacts, findings and SBOMs. {pay} keeps no artifact: 404 after the
 	// permission check (see TestArtifactAccess).
 	"POST /api/runner/v1/artifacts/begin":    {"POST", "/api/runner/v1/artifacts/begin", "{}", [6]int{401, 401, 401, 401, 401, 401}},

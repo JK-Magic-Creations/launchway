@@ -1,0 +1,20 @@
+# Keeps the Go module and build caches, one cache each, so that a change that
+# only touches code reuses the modules. A text part of the key starts over by
+# hand: change v1 to v2.
+pipeline: go-with-cache
+steps:
+  test:
+    image: docker.io/library/golang:1.27
+    cache:
+      - name: go-mod
+        paths: [.cache/go-mod]
+        key: { files: [go.sum], text: v1 }
+        fallback: latest
+      - name: go-build
+        paths: [.cache/go-build]
+        key: { files: [go.sum], text: v1 }
+        fallback: latest
+    env:
+      GOMODCACHE: .cache/go-mod
+      GOCACHE: .cache/go-build
+    run: go test ./...

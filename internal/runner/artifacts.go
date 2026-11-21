@@ -459,6 +459,7 @@ func fileSHA256(name string) (string, error) {
 // with its result. Artifacts are uploaded on their own.
 type collected struct {
 	tests, findings, coverage *engine.CollectedReports
+	caches                    []engine.CacheResult
 }
 
 // coverageCollector returns what collects a step's coverage reports, or

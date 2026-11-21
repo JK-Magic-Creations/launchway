@@ -20,6 +20,7 @@ const AuditPage = lazy(() => import("./pages/Audit").then((m) => ({ default: m.A
 const EditPipelinePage = lazy(() => import("./pages/EditPipeline").then((m) => ({ default: m.EditPipelinePage })));
 const ProjectTestsPage = lazy(() => import("./pages/ProjectTests").then((m) => ({ default: m.ProjectTestsPage })));
 const ProjectSecurityPage = lazy(() => import("./pages/ProjectSecurity").then((m) => ({ default: m.ProjectSecurityPage })));
+const ProjectCachesPage = lazy(() => import("./pages/Caches").then((m) => ({ default: m.ProjectCachesPage })));
 const ComponentsPage = lazy(() => import("./pages/Components").then((m) => ({ default: m.ComponentsPage })));
 const ImagesPage = lazy(() => import("./pages/Images").then((m) => ({ default: m.ImagesPage })));
 const PolicyPage = lazy(() => import("./pages/Policy").then((m) => ({ default: m.PolicyPage })));
@@ -105,6 +106,7 @@ function Shell({ me }: { me: Me }) {
   else if (path === "/agents") page = <AgentsPage />;
   else if (path === "/audit") page = <AuditPage />;
   else if ((m = match("/projects/:name/security", path))) page = <ProjectSecurityPage key={m.name} name={m.name} />;
+  else if ((m = match("/projects/:name/caches", path))) page = <ProjectCachesPage key={m.name} name={m.name} />;
   else if (path === "/components") page = <ComponentsPage />;
   else if (path === "/images") page = <ImagesPage />;
   else if (path === "/policy") page = <PolicyPage />;

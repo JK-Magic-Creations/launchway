@@ -11,6 +11,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -80,6 +81,7 @@ Usage:
   launchway projects|libraries|environments|policies|runner-pools|role-bindings|policy-sources|units|secret-stores ...
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
+  launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -132,6 +134,8 @@ func main() {
 		err = cmdKindAlias(os.Args[1])(args)
 	case "run-limits":
 		err = cmdRunLimits(args)
+	case "caches":
+		err = cmdCaches(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -569,8 +573,17 @@ func pipelineFile(args []string) string {
 }
 
 func load(path string) (*pipeline.Pipeline, error) {
-	data, err := os.ReadFile(path)
+	// Read as a file of its directory: the path is the user's own, from the command line.
+	dir, base := filepath.Split(filepath.Clean(path))
+	if dir == "" {
+		dir = "."
+	}
+	data, err := fs.ReadFile(os.DirFS(dir), base)
 	if err != nil {
+		var pe *fs.PathError
+		if errors.As(err, &pe) {
+			pe.Path = path // name the file as the user wrote it
+		}
 		return nil, err
 	}
 	p, err := pipeline.Parse(data)
@@ -860,34 +873,6 @@ func k8sFlags(fs *flag.FlagSet) *executor.KubernetesOptions {
 // settings, the same as runner.secrets in the server's configuration.
 func secretsFlag(fs *flag.FlagSet) *string {
 	return fs.String("secrets-config", "", "YAML file of secret stores")
-}
-
-// localSecrets is openSecrets for 'launchway run' on your own machine, where
-// your environment is yours to use: it adds the env store. A server or
-// shared runner must never do this, or any pipeline could read the runner's
-// environment.
-func localSecrets(file string) (*secrets.Resolver, error) {
-	r, err := openSecrets(file)
-	if err != nil {
-		return nil, err
-	}
-	return r.AddLocalEnv(), nil
-}
-
-// openSecrets reads and checks the secret stores in file, if one is given.
-func openSecrets(file string) (*secrets.Resolver, error) {
-	if file == "" {
-		return secrets.NewResolver(), nil
-	}
-	c, err := secrets.LoadConfig(file)
-	if err != nil {
-		return nil, err
-	}
-	r, err := secrets.Open(c)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", file, err)
-	}
-	return r, nil
 }
 
 // checkExecutor lets executors that can verify their setup do so at start-up.

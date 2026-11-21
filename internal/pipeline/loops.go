@@ -438,7 +438,13 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 				break
 			}
 			envNames[env] = id
-			out = append(out, member(s, id, combo))
+			m := member(s, id, combo)
+			for _, ca := range m.Cache {
+				for _, msg := range CacheProblems(ca) {
+					problems = append(problems, Problem{Line: ca.Line, Path: "steps." + s.ID + ".cache", Message: "for " + id + ": " + msg})
+				}
+			}
+			out = append(out, m)
 			ids = append(ids, id)
 			loop.Members = append(loop.Members, LoopMember{ID: prefix + id, Each: combo})
 		}
@@ -492,6 +498,7 @@ func member(s *Step, id string, each map[string]string) *Step {
 	c.Env = cloneMap(s.Env)
 	c.With = cloneMap(s.With)
 	c.Needs = slices.Clone(s.Needs)
+	c.Cache = cloneCaches(s.Cache)
 	for _, r := range s.eachRefs {
 		v := each[r.key]
 		if r.format != "" {
@@ -504,6 +511,8 @@ func member(s *Step, id string, each map[string]string) *Step {
 			c.Env[r.name] = v
 		case "with":
 			c.With[r.name] = v
+		case cacheKeyDeferred:
+			setCacheValue(c.Cache, r.name, v)
 		}
 	}
 	c.eachRefs = nil

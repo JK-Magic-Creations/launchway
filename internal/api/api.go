@@ -129,7 +129,7 @@ type route struct {
 }
 
 func (s *Server) routes() []route {
-	return append(append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...), s.flowRoutes()...)
+	return append(append(append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...), s.flowRoutes()...), s.cacheRoutes()...)
 }
 
 func (s *Server) mainRoutes() []route {

@@ -1,0 +1,16 @@
+# Keeps pip's download cache between runs, under a key made from the lock files.
+# Copy it to .launchway/pipeline.yaml. A changed requirements file is a new key;
+# fallback: latest starts from the newest entry, so pip only fetches what changed.
+pipeline: python-with-cache
+steps:
+  test:
+    image: docker.io/library/python:3.13-slim
+    cache:
+      - name: pip
+        paths: [.cache/pip]
+        key: { files: [requirements.txt, requirements-dev.txt], text: v1 }
+        fallback: latest
+    env: { PIP_CACHE_DIR: .cache/pip }
+    run: |
+      pip install -r requirements.txt -r requirements-dev.txt
+      pytest -q

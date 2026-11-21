@@ -227,6 +227,8 @@ steps:
     run: "true"
     fetch:
       - { from: build, name: bin }
+    cache:
+      - { name: deps, paths: [.cache/deps], key: { files: [go.sum], text: v1 } }
   matrix:
     needs: build
     for_each:
@@ -371,6 +373,8 @@ var probes = []probe{
 	{table: "verify-log", path: []any{"steps", "verify", "logs", 0}},
 	{table: "artifacts", path: []any{"steps", "build", "artifacts", 0}},
 	{table: "fetch", path: []any{"steps", "test", "fetch", 0}},
+	{table: "cache", path: []any{"steps", "test", "cache", 0}},
+	{table: "cache-key", path: []any{"steps", "test", "cache", 0, "key"}},
 	{table: "value", path: []any{"steps", "deploy", "version"}},
 	{table: "value", path: []any{"steps", "image", "tags", 0, "tag"}},
 	{table: "value-environment", path: []any{"steps", "deploy", "environment"}},

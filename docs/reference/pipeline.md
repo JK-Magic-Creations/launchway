@@ -361,6 +361,7 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `resources` | mapping | the installation's default for the kind | The CPU and memory the step asks for; see [Resources](#resources) |
 | `artifacts` | list | none | Files the step keeps once it has run; see [Artifacts](#artifacts) |
 | `fetch` | list | none | Artifacts of earlier steps to put in the workspace first; see [Fetch](#fetch) |
+| `cache` | list | none | Directories to restore before the script and save after it, so that a dependency install does not start from nothing every run; see [Cache](#cache) |
 | `for_each` | mapping | none | Repeat the step once for each combination of values; see [For each](#for-each) |
 | `exclude` | list | none | With `for_each`: combinations to leave out |
 | `max_parallel` | whole number | no bound | With `for_each`: how many members may be queued or running at once, 1 to 500 |
@@ -1405,6 +1406,73 @@ steps:
     run: ./out/bin/app --version
 ```
 
+## Cache
+
+`cache` is a list of directories a step keeps between runs. Before the script, after `fetch`, the
+runner works out each cache's key and restores the entry that has it; after the script, it saves the
+paths under that key if there was none. At most 10 per step. A cache is an optimisation: when one
+cannot be restored or saved the step runs on, the reason is in the step's log, and its outcome never
+changes. Only a step that runs a script has `cache`; an image step's own `cache` key, a registry
+that keeps build layers, is a different thing with a different shape.
+
+<!-- keys: cache -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | text | required | `^[a-z0-9][a-z0-9._-]{0,63}$`, unique in the step. It groups the entries of one cache across keys. In a template it may be a [parameter](#parameter-values), in a looped step an [`{ each: key }`](#value-forms) |
+| `paths` | glob, one value or a list | required | Directories or files to keep, relative to the workspace, as for [artifacts](#artifacts): a directory keeps everything below it. At most 20. Only regular files are kept; symbolic links are left out and the log says how many |
+| `key` | mapping | required | What the entry's key is made of: the keys below |
+| `fallback` | text | `none` | `latest`: when no entry has the exact key, start from the newest entry of the same name and platform that the run may read |
+| `save` | text | `success` | After which outcomes the paths are saved: `success`, `always` (the step succeeded or failed) or `never` |
+
+<!-- keys: cache-key -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `files` | glob, one value or a list | none | Files whose paths and contents are hashed, in sorted order, such as a lock file. At most 20 globs. If the globs match no file the cache is not used and the log says so |
+| `text` | text | none | Mixed into the key literally, so that a team can start over by hand by changing it. At most 256 characters |
+
+A key needs `files`, `text` or both. The runner's operating system and architecture are always part
+of the key and of the entry's platform: an entry saved on `linux/amd64` is never restored on
+`linux/arm64`.
+
+An entry is never changed once saved: a key that has an entry is not saved again, and a changed lock
+file is a new key, so a new entry. What a run may read and write depends on how it started, and the
+server decides it, not the runner:
+
+| Run | Reads | Writes |
+|---|---|---|
+| A push, schedule, webhook or manual run on the project's default branch | `default` | `default` |
+| Another branch or a tag | its own scope (`ref:` and the full ref), then `default` | its own scope |
+| A pull request | `pull:<number>`, then `default` | `pull:<number>` |
+| A draft run | `default` | nothing |
+
+So a pull request, which runs code from anyone who can open one, starts from what the default
+branch built but can never put anything where the default branch will read it. Nothing is shared
+between projects. How much a project keeps (10 GiB), how large one entry may be (2 GiB) and how long
+an entry nobody restored is kept (7 days) are the [cache policy](http-api.md#build-caches), set by an
+administrator in the database; when a save would pass the quota the project's least recently used
+entries are evicted (those of pull requests and branches before the default branch's), and with caching switched off for a project every lookup misses and nothing is
+saved, while the pipeline still validates. The step's log says what happened to each cache
+(`Cache pip: restored key 3f9c… (exact, 118 MB, 4 s)`, `Cache pip: no entry; the step runs without
+it`, `Cache pip: saved 120 MB as key 3f9c…`, `Cache pip: not saved: …`), and the same is in the run
+page, `launchway runs show` and the MCP tool `get_run`. Runners that know caches say so, and a step
+with `cache` is only given to them.
+
+<!-- validate -->
+```yaml
+pipeline: cache-example
+steps:
+  test:
+    image: docker.io/library/python:3.13-slim
+    cache:
+      - name: pip
+        paths: [.cache/pip]
+        key: { files: [requirements.txt, requirements-dev.txt], text: v1 }
+        fallback: latest
+        save: success
+    env: { PIP_CACHE_DIR: .cache/pip }
+    run: pip install -r requirements.txt && pytest
+```
+
 ## Template files
 
 A shared library is a Git repository with templates in `templates/<name>.yaml` and any other files
@@ -1524,6 +1592,7 @@ steps:
 | Approval `message` | one line, 500 characters |
 | Report globs | 20 per kind, 256 bytes each |
 | Artifacts, fetches per step | 10, 20 |
+| Caches per step, paths per cache, key files per cache | 10, 20, 20 |
 | Loop keys, combinations | 5; 64 by default, at most 500 |
 | Steps in a run once expanded | 500 |
 | Template parameters, `with` values | 50, 4096 bytes each |
@@ -1548,6 +1617,7 @@ older server. Use them only once every server and runner is upgraded; see
 | 15 | image steps, a change's `digest` |
 | 22 | a step's `resources` |
 | 24 | `when.output`, `on_failure`, `retry` with `wait`, `backoff` or `on`, the pipeline's `timeout`, `lane`, `on.pull_request.into` |
+| 25 | a step's `cache` |
 
 ## What next
 

@@ -141,6 +141,7 @@ type Engine struct {
 	// changed (see OnConfigChange).
 	cfgMu       sync.Mutex
 	cfgWatchers []func()
+	caches      cacheState // build caches (schema 25): see cache.go
 
 	// deployKick wakes the reaper to hand free locks to waiting deploy steps
 	// at once (see kickDeploys).
@@ -263,6 +264,7 @@ type Job struct {
 	// what it puts in the workspace before (schema 12).
 	Artifacts *JobArtifacts `json:"artifacts,omitempty"`
 	Fetch     []JobFetch    `json:"fetch,omitempty"`
+	Cache     *JobCache     `json:"cache,omitempty"` // the caches to restore and save (schema 25)
 	// Deploy, for a deploy or rollback step, is the action a deploy runner
 	// does. Only deploy runners lease such steps.
 	Deploy *DeployJob `json:"deploy,omitempty"`
@@ -329,6 +331,7 @@ type Result struct {
 	// (schema 19); AI, for an ai step, what the call used.
 	Verify *VerifyResult `json:"verify,omitempty"`
 	AI     *AIRecord     `json:"ai,omitempty"`
+	Caches []CacheResult `json:"caches,omitempty"` // what each cache did (schema 25)
 }
 
 // CollectedReports are the report files a runner found after a step, and
@@ -1236,6 +1239,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 		if err := c.finish12(l, res, &p, prep12); err != nil {
 			return err
 		}
+		p.Caches = c.keepCacheResults(c.st.Pipeline.Step(l.stepID), res.Caches)
 		coverageFail, err := c.finish18(l, res, &p, prep18)
 		if err != nil {
 			return err
@@ -2057,21 +2061,8 @@ func (c *cmd) job(stepID, leaseID string) *Job {
 		// a runner is never asked to look a secret up for one.
 		StepID: stepID, Attempt: s.Attempt, Image: def.Image, Script: def.Run, Env: env, Secrets: c.stepSecrets(def),
 		Timeout: def.Timeout, Source: st.Source, SHA: st.Trigger.SHA, Event: st.Trigger.Event, Workspace: st.Workspace, Library: def.Library,
-		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def),
+		Reports: c.jobReports(def), ImageBuild: c.imageJobFor(def), Cache: c.jobCache(def),
 	}
-}
-
-// imageJobFor is an image step's job, or nil for other steps. advance
-// checked that its values can be worked out before queueing it.
-func (c *cmd) imageJobFor(def *pipeline.Step) *ImageJob {
-	if !def.IsImage() || !c.e.knows(schemaImages) {
-		return nil
-	}
-	j, err := c.imageJob(def)
-	if err != nil {
-		return nil
-	}
-	return j
 }
 
 // localID is how a step refers to another: by the ID it has within the

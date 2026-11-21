@@ -192,6 +192,10 @@ type Payload struct {
 	Findings  *FindingsSummary  `json:"findings,omitempty"`
 	SBOM      *SBOMSummary      `json:"sbom,omitempty"`
 	Artifacts []ArtifactSummary `json:"artifacts,omitempty"`
+	// step.finished and step.canceled (schema 25): what each of the step's
+	// caches did. Older servers ignore it, which is harmless: it only
+	// records.
+	Caches []CacheResult `json:"caches,omitempty"`
 	// step.finished and step.canceled of an image step (schema 15): what it
 	// built, pushed and signed. Older servers never read it: runs with image
 	// steps have min_schema 15.

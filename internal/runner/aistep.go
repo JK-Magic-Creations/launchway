@@ -70,7 +70,7 @@ func (r *Runner) runAI(ctx context.Context, job *engine.Job, sys func(string, ..
 	spec := executor.Spec{RunID: job.RunID, Name: "launchway-" + job.LeaseID, Workspace: inDir, MetaDir: filepath.Join(work, "meta"), Mask: mask}
 	collectSpec := spec
 	collectSpec.Workspace = outDir
-	inner := r.collector(job, collectSpec, sys)
+	inner := r.collector(job, collectSpec, sys, nil)
 	collect := func(outcome string) collected {
 		defer os.RemoveAll(work)
 		if inner == nil {

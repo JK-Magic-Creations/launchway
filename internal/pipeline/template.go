@@ -800,10 +800,8 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	out.Libraries = kept
 	// A template's step may ask for resources, which the pipeline file itself
 	// did not show.
-	if out.UsesSchemaResources() {
-		out.Requires = max(out.Requires, SchemaResources)
-	}
-	out.requireFlow() // likewise for the flow control keys a template's step uses
+	out.Requires = out.requiresNewer(out.Requires) // step resources, build caches
+	out.requireFlow()                              // likewise for the flow control keys a template's step uses
 	return out, nil
 }
 

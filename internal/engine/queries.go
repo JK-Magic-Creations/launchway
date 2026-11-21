@@ -168,6 +168,10 @@ type StepView struct {
 	// Tests are the step's test results, from the attempt that counts (see
 	// RunTests); nil when it has none.
 	Tests *TestTotals `json:"tests,omitempty"`
+	// Caches is what the step's caches did in its latest attempt (schema
+	// 25): restored, missed, saved or not saved, with sizes and the reason
+	// for a refusal.
+	Caches []CacheResult `json:"caches,omitempty"`
 }
 
 // RunDetail is everything about one run.
@@ -578,7 +582,39 @@ func (e *Engine) stepView(runID, stepID string) (*StepView, error) {
 		return nil, err
 	}
 	v.Tests = steps[0].Tests
+	if v.Status == StepSucceeded || v.Status == StepFailed || v.Status == StepCanceledS {
+		if v.Caches, err = e.stepCaches(runID, stepID); err != nil {
+			return nil, err
+		}
+	}
 	return v, nil
+}
+
+// stepCaches is what a finished step's latest attempt's caches did, from the
+// event that ended it.
+func (e *Engine) stepCaches(runID, stepID string) ([]CacheResult, error) {
+	if !e.knows(schemaCache) {
+		return nil, nil
+	}
+	rows, err := e.db.Query(`SELECT data FROM events WHERE run_id = ? AND type IN (?, ?) ORDER BY seq DESC`, runID, StepFinished, StepCanceled)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var data string
+		if err := rows.Scan(&data); err != nil {
+			return nil, err
+		}
+		var p Payload
+		if err := json.Unmarshal([]byte(data), &p); err != nil {
+			continue
+		}
+		if p.Step == stepID {
+			return p.Caches, nil
+		}
+	}
+	return nil, rows.Err()
 }
 
 // GetRun returns a run with its graph and every step.
@@ -642,6 +678,9 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		}
 		if in := inputs[v.ID]; in != nil {
 			v.Inputs = in
+		}
+		if s := st.Steps[v.ID]; s != nil && s.Evidence != nil && len(s.Evidence.Caches) > 0 {
+			v.Caches = s.Evidence.Caches
 		}
 		d.StepList = append(d.StepList, *v)
 	}

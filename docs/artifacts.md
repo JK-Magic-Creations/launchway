@@ -44,7 +44,8 @@ Content is kept in four tables (schema 17): `blob_uploads`, `blob_parts`, `blob_
   per transaction). Uploads that have had no part for 48 hours (a server that died before it
   recorded them), and the content of aborted uploads, are removed the same way by every server's
   pruner, every minute. Objects under `artifacts/` that no artifact refers to (left when a copy
-  crossed a removal) are removed after six hours. Retention is unchanged: artifacts expire and are
+  crossed a removal), and objects under `caches/` that no build cache entry refers to, are removed
+  after six hours. Retention is unchanged: artifacts expire and are
   deleted exactly as with the other stores.
 - **Limits.** `artifacts.database.max_total_gib` (default 100) bounds everything the store holds,
   uploads in progress included; `artifacts.database.max_blob_mib` (default 2048) bounds one file.

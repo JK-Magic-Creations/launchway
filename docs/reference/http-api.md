@@ -442,6 +442,27 @@ in the message.
 |---|---|---|---|
 | `GET /api/v1/run-limits` | `signed-in` | — | `{"max_run_timeout", "updated_at", "updated_by"}`. An empty `max_run_timeout` is not set: pipelines may ask for up to `720h`. |
 | `PUT /api/v1/run-limits` | `admin` | `run_limits.set` | Replaces the limits: `{"max_run_timeout": "48h"}`; empty or left out removes the limit. `400` for a duration that does not read or is outside `1m` to `720h`. |
+## Build caches
+
+A step's `cache:` key (see [the pipeline reference](pipeline.md#cache)) keeps directories between runs.
+Runners look entries up, send them in chunks and restore them under a lease, with the routes in the
+runner API below. The request never says which scope an entry is in: the server works the scope out
+from the run the lease belongs to (`default` for the default branch, `ref:<ref>` for another branch or
+tag, `pull:<n>` for a pull request), so a runner cannot read or write an entry its run's scopes do not
+reach. People and agents see a project's entries with the rights they have on the project and delete them
+as an operator; the policy (whether caches are kept, and how much) is an administrator's, in the
+database, as the installation's default with an override for a project.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/projects/{name}/caches` | `project-viewer` | — | The project's entries, most recently used first: `id`, `name`, `key`, `scope`, `platform`, `bytes`, `files`, `status` (`kept` or `uploading`), `created_at`, `last_used_at`, `hits`, and `run_id` and `run_number` of the run that wrote it; `totals` (`entries`, `bytes`, `quota_bytes`, `max_entry_bytes`, `idle_days`) and the `policy` that applies. |
+| `DELETE /api/v1/projects/{name}/caches/{id}` | `project-operator` | `cache.delete` | Ends one entry; the next run that wanted it starts without it. Answers `{"ended", "bytes"}`; `404` for an entry that does not exist or is another project's. |
+| `DELETE /api/v1/projects/{name}/caches` | `project-operator` | `cache.delete` | Ends every entry of the cache named by `?name=pip`, in every scope, key and platform. `404` if there is none. |
+| `GET /api/v1/cache-policy` | `signed-in` | — | The installation's policy: `enabled`, `max_project_gib`, `max_entry_gib`, `idle_days`, and `source` (`default` until an administrator sets one). |
+| `PUT /api/v1/cache-policy` | `admin` | `cache_policy.set` | Changes the installation's policy; a field left out keeps its value. `400` for a value out of range (an entry limit above the project's quota, idle days outside 1 to 3650). Audited with the policy before and after. |
+| `GET /api/v1/projects/{name}/cache-policy` | `project-viewer` | — | The policy that applies to the project, with `source` `project` (its own override), `installation` or `default`. |
+| `PUT /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.set_project` | Overrides the policy for one project; a field left out keeps the value that applies to it now. |
+| `DELETE /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.clear_project` | Removes the override: the installation's policy applies again. |
 
 ## API tokens
 
@@ -584,6 +605,12 @@ In outline, a runner long-polls for work (`lease`), says the step started (`star
 | `PUT /api/runner/v1/artifacts/chunk` | `runner` | — | Uploads one chunk of a file. |
 | `POST /api/runner/v1/artifacts/commit` | `runner` | — | Finishes an artifact upload. |
 | `POST /api/runner/v1/artifacts/download` | `runner` | — | Fetches a file of an artifact for a step's `fetch:`. |
+| `POST /api/runner/v1/caches/lookup` | `runner` | — | Asks for the entry a step with a `cache:` should restore: the exact key in the run's own scope and then the default scope, or with `fallback: latest` the newest entry of the name and platform. Answers `{"entry"}` or nothing, with a `reason` when caching is off. |
+| `POST /api/runner/v1/caches/begin` | `runner` | — | Declares an entry to save (name, key, platform, size, SHA-256). `{"exists": true}` when an entry with that key is kept already (entries are never changed) or being saved by another run; `403` when the policy or the run's scope forbids saving, `413` when the entry is over the limits or does not fit the project's quota. The entry's bytes count against the quota from here, ending the project's least recently used entries to make room (those of pull requests and branches first) and reported as `evicted`. |
+| `PUT /api/runner/v1/caches/chunk` | `runner` | — | Uploads one chunk of an entry. It is its own route, not the artifacts', because an entry is one archive with rows and limits of its own. |
+| `POST /api/runner/v1/caches/commit` | `runner` | — | Keeps an entry whose bytes have all arrived. |
+| `POST /api/runner/v1/caches/download` | `runner` | — | Restores an entry the step's lookup may return, from an offset. |
+| `POST /api/runner/v1/caches/discard` | `runner` | — | Ends an entry the runner proved damaged (its bytes are not what they were saved as, or not an archive Launchway made), so that the next run saves a good one. Entries are never changed, so without it a damaged one would fail every restore until it fell idle. Only an entry the step's own lookup may return. |
 | `POST /api/runner/v1/deploy/lease` | `runner` | — | A deploy runner waits for deploy or rollback work for its targets. |
 | `POST /api/runner/v1/deploy/watch` | `runner` | — | A deploy runner learns which deployments to watch. |
 | `POST /api/runner/v1/deploy/observe` | `runner` | — | A deploy runner reports what it observes of them. |

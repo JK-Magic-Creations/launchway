@@ -204,6 +204,7 @@ type StepEvidence struct {
 	Findings *FindingsSummary
 	SBOM     *SBOMSummary
 	Image    *ImageRecord
+	Caches   []CacheResult // what the attempt's build caches did (schema 25)
 }
 
 // What a waiting deploy or rollback step waits for.
@@ -713,8 +714,8 @@ func (st *RunState) deadline() int64 {
 // evidenceOf is what an event that ends a step attempt says it reported,
 // or nil.
 func evidenceOf(p Payload) *StepEvidence {
-	if p.Tests == nil && p.Findings == nil && p.SBOM == nil && p.Image == nil {
+	if p.Tests == nil && p.Findings == nil && p.SBOM == nil && p.Image == nil && len(p.Caches) == 0 {
 		return nil
 	}
-	return &StepEvidence{Tests: p.Tests, Findings: p.Findings, SBOM: p.SBOM, Image: p.Image}
+	return &StepEvidence{Tests: p.Tests, Findings: p.Findings, SBOM: p.SBOM, Image: p.Image, Caches: p.Caches}
 }

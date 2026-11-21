@@ -433,6 +433,14 @@ type runView struct {
 		NotBefore    int64  `json:"not_before"`
 		FailureCause string `json:"failure_cause"`
 		Retry        int    `json:"retry"`
+		Caches       []struct {
+			Name     string `json:"name"`
+			Result   string `json:"result"`
+			Restored string `json:"restored"`
+			Bytes    int64  `json:"bytes"`
+			Scope    string `json:"scope"`
+			Reason   string `json:"reason"`
+		} `json:"caches"`
 	} `json:"step_list"`
 	TriggerDetail *struct {
 		Inputs   map[string]string `json:"inputs"`
@@ -610,6 +618,37 @@ func (cl *client) list(args []string) error {
 	})
 }
 
+// showTriggerAndLane prints what started a run apart from its commit, and where
+// it stands in its lane.
+func (cl *client) showTriggerAndLane(r *runView) {
+	if d := r.TriggerDetail; d != nil {
+		if d.Schedule != "" {
+			fmt.Fprintf(cl.out, "  schedule %s\n", d.Schedule)
+		}
+		if d.Webhook != "" {
+			fmt.Fprintf(cl.out, "  webhook %s\n", d.Webhook)
+		}
+		names := make([]string, 0, len(d.Inputs))
+		for n := range d.Inputs {
+			names = append(names, n)
+		}
+		sort.Strings(names)
+		for _, n := range names {
+			fmt.Fprintf(cl.out, "  input %s = %s\n", n, d.Inputs[n])
+		}
+	}
+	if l := r.Lane; l != nil {
+		switch {
+		case l.State == "waiting" && l.Behind != nil:
+			fmt.Fprintf(cl.out, "  lane %s: waiting, number %d in line, behind run #%d\n", l.Label, l.Position, l.Behind.Number)
+		case l.Behind != nil:
+			fmt.Fprintf(cl.out, "  lane %s: %s (run #%d)\n", l.Label, l.State, l.Behind.Number)
+		default:
+			fmt.Fprintf(cl.out, "  lane %s: %s\n", l.Label, l.State)
+		}
+	}
+}
+
 func (cl *client) show(args []string) error {
 	fs := flag.NewFlagSet("runs show", flag.ContinueOnError)
 	asJSON := fs.Bool("json", false, "print the whole run as JSON")
@@ -640,32 +679,7 @@ func (cl *client) show(args []string) error {
 		fmt.Fprintf(cl.out, "  %s\n", note)
 	}
 	fmt.Fprintf(cl.out, "  %s at %.10s, %s by %s, %s\n", ref, r.SHA, r.Event, r.Actor, time.UnixMilli(r.CreatedAt).Format(time.DateTime))
-	if d := r.TriggerDetail; d != nil {
-		if d.Schedule != "" {
-			fmt.Fprintf(cl.out, "  schedule %s\n", d.Schedule)
-		}
-		if d.Webhook != "" {
-			fmt.Fprintf(cl.out, "  webhook %s\n", d.Webhook)
-		}
-		names := make([]string, 0, len(d.Inputs))
-		for n := range d.Inputs {
-			names = append(names, n)
-		}
-		sort.Strings(names)
-		for _, n := range names {
-			fmt.Fprintf(cl.out, "  input %s = %s\n", n, d.Inputs[n])
-		}
-	}
-	if l := r.Lane; l != nil {
-		switch {
-		case l.State == "waiting" && l.Behind != nil:
-			fmt.Fprintf(cl.out, "  lane %s: waiting, number %d in line, behind run #%d\n", l.Label, l.Position, l.Behind.Number)
-		case l.Behind != nil:
-			fmt.Fprintf(cl.out, "  lane %s: %s (run #%d)\n", l.Label, l.State, l.Behind.Number)
-		default:
-			fmt.Fprintf(cl.out, "  lane %s: %s\n", l.Label, l.State)
-		}
-	}
+	cl.showTriggerAndLane(&r)
 	if r.CancelReason != "" {
 		fmt.Fprintf(cl.out, "  canceled: %s\n", r.CancelReason)
 	}
@@ -689,6 +703,22 @@ func (cl *client) show(args []string) error {
 			line += ": " + s.Error
 		}
 		fmt.Fprintln(cl.out, line)
+		for _, c := range s.Caches {
+			what := strings.ReplaceAll(c.Result, "_", " ")
+			if c.Result == "saved" && c.Restored != "" {
+				what = "saved (restored: " + c.Restored + ")"
+			}
+			if c.Bytes > 0 {
+				what += ", " + byteText(c.Bytes)
+			}
+			if c.Scope != "" {
+				what += ", scope " + c.Scope
+			}
+			if c.Reason != "" {
+				what += ": " + c.Reason
+			}
+			fmt.Fprintf(cl.out, "             cache %s: %s\n", c.Name, what)
+		}
 	}
 	return nil
 }

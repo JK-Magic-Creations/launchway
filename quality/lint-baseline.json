@@ -1,18 +1,12 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 487,
+  "total": 486,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
       "linter": "errcheck",
       "text": "Error return value of `fs.Parse` is not checked",
       "count": 2
-    },
-    {
-      "file": "cmd/launchway/client.go",
-      "linter": "gosec",
-      "text": "G704: SSRF via taint analysis",
-      "count": 1
     },
     {
       "file": "cmd/launchway/client.go",
@@ -1487,13 +1481,13 @@
     {
       "file": "internal/runner/artifacts.go",
       "linter": "dupl",
-      "text": "466-508 lines are duplicate of `internal/runner/artifacts.go:520-562`",
+      "text": "467-509 lines are duplicate of `internal/runner/artifacts.go:521-563`",
       "count": 1
     },
     {
       "file": "internal/runner/artifacts.go",
       "linter": "dupl",
-      "text": "520-562 lines are duplicate of `internal/runner/artifacts.go:466-508`",
+      "text": "521-563 lines are duplicate of `internal/runner/artifacts.go:467-509`",
       "count": 1
     },
     {

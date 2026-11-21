@@ -138,11 +138,12 @@ const pruneBatchArtifacts = 200
 //   - A blob marked deleting whose server stopped before finishing is
 //     finished by any server later: deleting an object twice is harmless.
 func (e *Engine) pruneArtifacts() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	defer e.pruneCaches(ctx) // build caches (schema 25) are pruned at the same time
 	if !e.knows(schemaArtifacts) {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
 	now := e.now().UnixMilli()
 	if err := e.expireArtifacts(now); err != nil {
 		e.log.Warn("ending expired artifacts; trying again later", "err", err)

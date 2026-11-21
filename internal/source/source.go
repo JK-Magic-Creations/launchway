@@ -174,6 +174,7 @@ func NewManagerWithLibraries(eng *engine.Engine, dataDir string, projects []Proj
 		log = slog.Default()
 	}
 	m := &Manager{eng: eng, log: log, dataDir: dataDir, watching: map[string]context.CancelFunc{}}
+	eng.SetDefaultBranch(m.defaultBranchOf) // which entries of the build caches are the default scope
 	cat, err := m.build(projects, libraries, nil)
 	if err != nil {
 		return nil, err
