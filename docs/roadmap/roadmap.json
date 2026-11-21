@@ -63,7 +63,7 @@
     {
       "theme": "Platform",
       "title": "A guided interface",
-      "value": "Six sections (Home, Projects, Deployments, Activity, Library, Settings), a Home page that says what to do next, and sections that appear only when there is something to show.",
+      "value": "A Home page that says what to do next with a setup checklist, navigation whose sections and tabs appear only when there is something to show, and a run page that says why each wait is happening.",
       "link": "demo"
     },
     {
@@ -77,18 +77,6 @@
       "title": "High availability",
       "value": "Several servers on one PostgreSQL database with no leader; a run survives a server or a runner dying. SQLite for a single server.",
       "link": "guide/high-availability"
-    },
-    {
-      "theme": "Platform",
-      "title": "Signed releases and installers",
-      "value": "Reproducible, signed release builds with SBOMs and provenance, deb and rpm packages and an install script for runners, and a runner-only Helm chart. The first published release is still to come.",
-      "link": "security/verify-downloads"
-    },
-    {
-      "theme": "Platform",
-      "title": "Self-deploy",
-      "value": "Launchway builds, tests and deploys itself through its own pipeline, with a way back in when it is down.",
-      "link": "howto/self-deploy"
     },
     {
       "theme": "Platform",
@@ -153,7 +141,7 @@
     {
       "theme": "Security",
       "title": "Secure step execution",
-      "value": "Non-root step pods under strict pod security; container and host executors; runners only connect outbound.",
+      "value": "Non-root step pods under strict pod security, a step pod removed when its run ends and leaked ones reaped, container and host executors, and runners that only connect outward.",
       "link": "security/trust-model"
     },
     {
@@ -341,7 +329,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Mirrors in and out",
               "value": "Pull a repository from another host on a schedule, or push every change to another host as a safety copy.",
               "detail": "Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace.",
@@ -630,7 +618,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Compatible addresses and tools",
               "value": "Clone addresses, push events and read interfaces shaped like the common ones, so existing remotes, bots and editors keep working.",
               "detail": "This makes moving over a matter of changing a setting, not rewriting scripts.",
@@ -652,7 +640,7 @@
           "blurb": "A tested path from another Git host, so switching is a step and not a leap.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Move your repositories in",
               "value": "Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch.",
               "detail": "Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time.",
@@ -765,7 +753,7 @@
             {
               "status": "planned",
               "title": "Re-run only what failed",
-              "value": "Re-run just the failed steps of a run, with earlier results reused.",
+              "value": "Re-run just the failed steps of a run, with earlier results reused. Re-running from a chosen step already works.",
               "detail": "Combined with caches, a flaky test costs minutes instead of a full run.",
               "area": "pipelines"
             },
@@ -800,7 +788,7 @@
             {
               "status": "in-progress",
               "title": "Six plainly named sections",
-              "value": "Home, Projects, Deployments, Activity, Library and Settings replace a long flat menu.",
+              "value": "A short, plainly named set of sections, with the ones that have nothing to show kept out of sight, replaces a long flat menu.",
               "detail": "Anything switched off is not shown, so a new installation is small and grows as you turn things on.",
               "area": "guided-interface"
             },
@@ -894,13 +882,21 @@
               "status": "in-progress",
               "title": "Launchway builds and deploys itself",
               "value": "Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks.",
-              "detail": "Runners on virtual machines and customer machines update themselves too (see the runner update item)."
+              "detail": "Runners on virtual machines and customer machines update themselves too (see the runner update item). The pipeline and the runbook are written and checked; a first real run, with its rollback, is still to come.",
+              "link": "howto/self-deploy"
             },
             {
               "status": "planned",
               "title": "Fewer concepts to learn",
               "value": "No pile of connectors, services and environments to define before anything works.",
               "detail": "Six words cover everyday use: project, pipeline, step, run, environment and runner."
+            },
+            {
+              "status": "in-progress",
+              "title": "Signed releases and installers",
+              "value": "Reproducible release builds with SBOMs, deb and rpm packages, an install script for runners and a runner-only Helm chart, with signing and provenance in the release workflow.",
+              "detail": "All of it has been exercised on a machine of its own. The release workflow has not yet run for real, so no release is published; until then, build from source.",
+              "link": "security/verify-downloads"
             }
           ]
         }
@@ -977,7 +973,7 @@
             {
               "status": "planned",
               "title": "Share and pin steps and templates",
-              "value": "Publish a step or template from a repository and pin users to a tag, branch or commit.",
+              "value": "Publish a custom step, not only a template, from a repository and pin users to a tag, branch or commit. Pinning templates this way already works.",
               "detail": "Releases are plain Git tags, so versions, history and review use the tools you already have.",
               "needs": "Shared libraries.",
               "area": "pipelines"
@@ -1057,7 +1053,7 @@
             {
               "status": "planned",
               "title": "Pipeline history and flaky tests",
-              "value": "Duration charts, pass rate, the slowest steps, and a list of tests that pass and fail without changes.",
+              "value": "Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the run page.",
               "detail": "Flaky tests are marked on the run and on the pull request, so they are quarantined instead of argued over.",
               "needs": "Test, coverage and HTML reports.",
               "area": "pipelines"
@@ -1134,7 +1130,7 @@
             {
               "status": "planned",
               "title": "Agents anywhere",
-              "value": "Runners on any machine, in any network, connected outward, with pools and labels.",
+              "value": "Guidance and checks that show runners on any machine, in any network, replace the build agents teams rely on. Runners that connect outward, with pools and labels, already work.",
               "detail": "Equivalent to the build agents teams rely on, with identity and audit on every connection.",
               "needs": "Runner identity and pools."
             }
@@ -1514,7 +1510,7 @@
             {
               "status": "planned",
               "title": "Secrets with an external store",
-              "value": "Use an existing secret store beside the built-in one.",
+              "value": "Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the environment already work.",
               "detail": "The store stays authoritative and values never reach the control plane.",
               "needs": "Secrets that stay with runners.",
               "area": "traffic"
@@ -1659,7 +1655,7 @@
             {
               "status": "planned",
               "title": "Portfolio bill of materials",
-              "value": "A bill of materials across every project and image, searchable by component.",
+              "value": "A bill of materials across every image as well as every project, with export. Searching components across projects already works.",
               "detail": "Pairs with the software graph.",
               "needs": "Findings and SBOMs per run.",
               "area": "delivery"
@@ -1785,7 +1781,7 @@
             {
               "status": "planned",
               "title": "Policy on push and deploy",
-              "value": "The same policy engine checks an image when it is pushed and when it is deployed.",
+              "value": "The same policy engine checks an image when it is pushed to the built-in registry, as it already does for a push from a pipeline and for a deploy.",
               "detail": "Unsigned, unscanned or vulnerable images can be refused at either point.",
               "needs": "Policy gates.",
               "area": "registry"
@@ -2170,7 +2166,7 @@
             {
               "status": "planned",
               "title": "AI help with failures",
-              "value": "Explain why a run or deploy failed, with the evidence it used.",
+              "value": "Explain why a deploy failed as well as a step, with the evidence used. Explaining a failed step already works.",
               "detail": "Always shows the facts first.",
               "needs": "Why did it fail to deploy.",
               "area": "ai"

@@ -88,7 +88,7 @@ Custom steps run in an isolated container with only the secrets and network they
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Publish a step or template from a repository and pin users to a tag, branch or commit. Releases are plain Git tags, so versions, history and review use the tools you already have.
+Publish a custom step, not only a template, from a repository and pin users to a tag, branch or commit. Pinning templates this way already works. Releases are plain Git tags, so versions, history and review use the tools you already have.
 
 **Depends on:** Shared libraries.
 
@@ -184,7 +184,7 @@ Runners on VMs and on customers' machines update under your policy, so the fleet
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Duration charts, pass rate, the slowest steps, and a list of tests that pass and fail without changes. Flaky tests are marked on the run and on the pull request, so they are quarantined instead of argued over.
+Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the run page. Flaky tests are marked on the run and on the pull request, so they are quarantined instead of argued over.
 
 **Depends on:** Test, coverage and HTML reports.
 
@@ -271,7 +271,7 @@ A step catalogue and typed custom steps instead of plug-ins that run inside the 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Runners on any machine, in any network, connected outward, with pools and labels. Equivalent to the build agents teams rely on, with identity and audit on every connection.
+Guidance and checks that show runners on any machine, in any network, replace the build agents teams rely on. Runners that connect outward, with pools and labels, already work. Equivalent to the build agents teams rely on, with identity and audit on every connection.
 
 **Depends on:** Runner identity and pools.
 

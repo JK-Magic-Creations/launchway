@@ -24,11 +24,9 @@ compliance items provide controls and evidence.
 | Configuration in the database | Projects, runner pools, environments, policies, models and more are objects in the database with history, audit and safe concurrent edits, never a file to hand-edit. ([more](guide/configuration.md)) |
 | Four levels | Installation, organisation, unit and project, with names you choose and levels nobody uses kept out of sight. ([more](guide/configuration.md#levels)) |
 | Guided setup wizards | First-run setup, connecting a repository, adding a runner, an environment, a policy or a verification step: plain questions, explained options, answers checked as you go. ([more](howto/setup-first-run.md)) |
-| A guided interface | Six sections (Home, Projects, Deployments, Activity, Library, Settings), a Home page that says what to do next, and sections that appear only when there is something to show. ([more](demo.md)) |
+| A guided interface | A Home page that says what to do next with a setup checklist, navigation whose sections and tabs appear only when there is something to show, and a run page that says why each wait is happening. ([more](demo.md)) |
 | One capability, every interface | What the web UI does, the HTTP API, the command line and the agent endpoint do too, with a table in the build that fails when one falls behind. ([more](reference/interface-parity.md)) |
 | High availability | Several servers on one PostgreSQL database with no leader; a run survives a server or a runner dying. SQLite for a single server. ([more](guide/high-availability.md)) |
-| Signed releases and installers | Reproducible, signed release builds with SBOMs and provenance, deb and rpm packages and an install script for runners, and a runner-only Helm chart. The first published release is still to come. ([more](security/verify-downloads.md)) |
-| Self-deploy | Launchway builds, tests and deploys itself through its own pipeline, with a way back in when it is down. ([more](howto/self-deploy.md)) |
 | Quality gates | Lint, size, architecture, test and originality checks fail the build, so the code stays easy to change. ([more](development/quality-gates.md)) |
 | GitOps with Argo CD | Deploy by Git commit, watch sync and health, control Argo Rollouts (promote, abort, retry), roll back, lock environments. ([more](guide/deployments.md)) |
 | Applications view | The Argo CD applications a deploy runner has seen, shown with their status next to your environments. ([more](guide/deployments.md)) |
@@ -39,7 +37,7 @@ compliance items provide controls and evidence.
 | Sign-in and access | OpenID Connect sign-in with groups, roles per project and environment, scoped API tokens and an audit trail. ([more](guide/access.md)) |
 | Secrets that stay with runners | Pipelines hold references; runners read values from Vault, OpenBao, files or the environment, and mask them. ([more](guide/secrets.md)) |
 | Security findings and SBOMs | Secret, code, dependency, licence and image findings (SARIF), new and fixed across runs, and a component search. ([more](guide/security-findings.md)) |
-| Secure step execution | Non-root step pods under strict pod security; container and host executors; runners only connect outbound. ([more](security/trust-model.md)) |
+| Secure step execution | Non-root step pods under strict pod security, a step pod removed when its run ends and leaked ones reaped, container and host executors, and runners that only connect outward. ([more](security/trust-model.md)) |
 | Runner identity and pools | Join tokens, a key per runner, pools scoped to projects, and allow-lists on the runner itself. ([more](guide/runner-identity.md)) |
 | Test, coverage and HTML reports | Thirteen test formats, coverage with thresholds, flaky-test detection, history, and the tools' own HTML reports in a sandbox. ([more](guide/test-reports.md)) |
 | Built-in artifact storage | Artifacts and hosted reports live in the database by default, so several servers need nothing else; S3 or a shared folder are optional. ([more](artifacts.md)) |
@@ -67,7 +65,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Verified commits and tags](roadmap/milestone-1.md#verified-commits-and-tags) | Planned | Verify signatures on commits and tags, manage signing keys, and let a rule require signed commits. |
 | [Repository maintenance and health](roadmap/milestone-1.md#repository-maintenance-and-health) | Planned | Scheduled housekeeping, an integrity check, a size report and a health note on the home page. |
 | [Repository trash](roadmap/milestone-1.md#repository-trash) | Planned | A deleted repository goes to a trash and can come back within a set time. |
-| [Mirrors in and out](roadmap/milestone-1.md#mirrors-in-and-out) | Planned | Pull a repository from another host on a schedule, or push every change to another host as a safety copy. |
+| [Mirrors in and out](roadmap/milestone-1.md#mirrors-in-and-out) | In progress | Pull a repository from another host on a schedule, or push every change to another host as a safety copy. |
 | [Repository settings screens](roadmap/milestone-1.md#repository-settings-screens) | Planned | Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. |
 | [Branch and tag manager](roadmap/milestone-1.md#branch-and-tag-manager) | Planned | List, rename, delete and restore branches, set the default, and delete merged branches automatically. |
 | [Large files](roadmap/milestone-1.md#large-files) | Planned | Store large binary files outside the normal history, with locks and quotas. |
@@ -116,14 +114,14 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Tokens and scoped access](roadmap/milestone-1.md#tokens-and-scoped-access) | Planned | Personal and service tokens limited to chosen repositories and actions. |
 | [Launchway as a sign-in provider](roadmap/milestone-1.md#launchway-as-a-sign-in-provider) | Planned | Let other tools sign in with accounts that live in Launchway. |
 | [Host administration screens](roadmap/milestone-1.md#host-administration-screens) | Planned | Users, repositories, queues, background tasks, a banner and a maintenance mode. |
-| [Compatible addresses and tools](roadmap/milestone-1.md#compatible-addresses-and-tools) | Planned | Clone addresses, push events and read interfaces shaped like the common ones, so existing remotes, bots and editors keep working. |
+| [Compatible addresses and tools](roadmap/milestone-1.md#compatible-addresses-and-tools) | In progress | Clone addresses, push events and read interfaces shaped like the common ones, so existing remotes, bots and editors keep working. |
 | [Languages and themes](roadmap/milestone-1.md#languages-and-themes) | Planned | A translated interface, light and dark, and custom themes. |
 
 ### Move your repositories in
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Move your repositories in](roadmap/milestone-1.md#move-your-repositories-in) | Planned | Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch. |
+| [Move your repositories in](roadmap/milestone-1.md#move-your-repositories-in) | In progress | Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch. |
 | [An acceptance suite for hosting](roadmap/milestone-1.md#an-acceptance-suite-for-hosting) | In progress | A written end-to-end suite that hosting must pass before it is called ready, so that switching is a tested step, not a leap. |
 | [A complete Git forge](roadmap/milestone-1.md#a-complete-git-forge) | Planned | Discussions, snippets, notifications, activity feeds and the rest of a hosted Git service, in order of value, with an interface that is better integrated than a stand-alone one. |
 | [Replacing a self-hosted Git server](roadmap/milestone-1.md#replacing-a-self-hosted-git-server) | Planned | A guide and a checklist for retiring a self-hosted Git server in favour of Launchway. |
@@ -147,7 +145,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Flow control, part two](roadmap/milestone-1.md#flow-control-part-two) | In progress | Services with readiness checks and logs, a runner and workspace of their own per step, approval quorums, and loops that tolerate chosen members. |
 | [Platform matrices](roadmap/milestone-1.md#platform-matrices) | Planned | Run the same steps across operating systems and architectures from one definition. |
 | [Cloud sign-in per step](roadmap/milestone-1.md#cloud-sign-in-per-step) | Planned | Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored. |
-| [Re-run only what failed](roadmap/milestone-1.md#re-run-only-what-failed) | Planned | Re-run just the failed steps of a run, with earlier results reused. |
+| [Re-run only what failed](roadmap/milestone-1.md#re-run-only-what-failed) | Planned | Re-run just the failed steps of a run, with earlier results reused. Re-running from a chosen step already works. |
 | [Per-step runner and workspace](roadmap/milestone-1.md#per-step-runner-and-workspace) | Planned | Each step can choose its own image, runner and working area. |
 
 ### A guided interface a complete beginner can use
@@ -156,7 +154,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 |---|---|---|
 | [Follow a change on its launch line](roadmap/milestone-1.md#follow-a-change-on-its-launch-line) | In progress | A single line that shows one change travelling from idea to running software, with each station opening its evidence. |
 | [A Home that tells you what to do next](roadmap/milestone-1.md#a-home-that-tells-you-what-to-do-next) | In progress | One sentence about what needs you, rows with one recommended action each, and a checklist that disappears as you finish it. |
-| [Six plainly named sections](roadmap/milestone-1.md#six-plainly-named-sections) | In progress | Home, Projects, Deployments, Activity, Library and Settings replace a long flat menu. |
+| [Six plainly named sections](roadmap/milestone-1.md#six-plainly-named-sections) | In progress | A short, plainly named set of sections, with the ones that have nothing to show kept out of sight, replaces a long flat menu. |
 | [Overview, then focus, then detail](roadmap/milestone-1.md#overview-then-focus-then-detail) | Planned | Every topic follows one pattern: a picture of what is going on, one thing in focus, then everything about it for engineers. |
 | [Nothing lost for a nicer look](roadmap/milestone-1.md#nothing-lost-for-a-nicer-look) | Planned | Every detail the current interface shows is kept, and the new one adds to it. |
 | [A do bar for every task](roadmap/milestone-1.md#a-do-bar-for-every-task) | Planned | A search box that finds pages and starts guided actions such as turn a toggle off or why did this fail. |
@@ -177,8 +175,9 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 |---|---|---|
 | [Terraform provider](roadmap/milestone-1.md#terraform-provider) | Planned | Every kind of setting managed as code, each new kind shipping with its resource, so nothing is reachable only by clicking. ([docs](reference/config-objects.md#terraform)) |
 | [Database failover and no lost push](roadmap/milestone-1.md#database-failover-and-no-lost-push) | Planned | High availability that covers the database and repository storage as well as the servers. |
-| [Launchway builds and deploys itself](roadmap/milestone-1.md#launchway-builds-and-deploys-itself) | In progress | Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks. |
+| [Launchway builds and deploys itself](roadmap/milestone-1.md#launchway-builds-and-deploys-itself) | In progress | Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks. ([docs](howto/self-deploy.md)) |
 | [Fewer concepts to learn](roadmap/milestone-1.md#fewer-concepts-to-learn) | Planned | No pile of connectors, services and environments to define before anything works. |
+| [Signed releases and installers](roadmap/milestone-1.md#signed-releases-and-installers) | In progress | Reproducible release builds with SBOMs, deb and rpm packages, an install script for runners and a runner-only Helm chart, with signing and provenance in the release workflow. ([docs](security/verify-downloads.md)) |
 
 ## Milestone 2: Deeper pipeline power, and a way off self-hosted automation servers (Next)
 
@@ -191,7 +190,7 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 | [Custom steps in your own language](roadmap/milestone-2.md#custom-steps-in-your-own-language) | Planned | A step is a program in your repository with typed inputs, outputs and secrets, runnable and testable on its own, so pipeline logic is ordinary tested code. |
 | [A step contract and starter kits](roadmap/milestone-2.md#a-step-contract-and-starter-kits) | Planned | A published contract for what a step receives and returns, with starter kits for common languages. |
 | [Steps run in a sandbox](roadmap/milestone-2.md#steps-run-in-a-sandbox) | Planned | Custom steps run in an isolated container with only the secrets and network they declared. |
-| [Share and pin steps and templates](roadmap/milestone-2.md#share-and-pin-steps-and-templates) | Planned | Publish a step or template from a repository and pin users to a tag, branch or commit. |
+| [Share and pin steps and templates](roadmap/milestone-2.md#share-and-pin-steps-and-templates) | Planned | Publish a custom step, not only a template, from a repository and pin users to a tag, branch or commit. Pinning templates this way already works. |
 | [Generated pipelines](roadmap/milestone-2.md#generated-pipelines) | Planned | A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the run. |
 | [Expressions for conditions](roadmap/milestone-2.md#expressions-for-conditions) | Planned | A small typed expression language with no loops and no side effects, checked before the run; today's conditions keep working. ([docs](reference/pipeline.md#when)) |
 | [Typed outputs between steps](roadmap/milestone-2.md#typed-outputs-between-steps) | Planned | A step declares what it passes on, and a reference to an output that does not exist fails before the run, not in the middle of it. |
@@ -201,7 +200,7 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 | [Event sources from queues and buses](roadmap/milestone-2.md#event-sources-from-queues-and-buses) | Planned | Start pipelines from message queues and event buses, with filters, and replies back. |
 | [Steps as a graph of containers](roadmap/milestone-2.md#steps-as-a-graph-of-containers) | Planned | Lay steps out as a graph of containers with fan-out and join, for work that is not a straight line. |
 | [Runners that keep themselves updated](roadmap/milestone-2.md#runners-that-keep-themselves-updated) | Planned | Runners on VMs and on customers' machines update under your policy, so the fleet never drifts. |
-| [Pipeline history and flaky tests](roadmap/milestone-2.md#pipeline-history-and-flaky-tests) | Planned | Duration charts, pass rate, the slowest steps, and a list of tests that pass and fail without changes. |
+| [Pipeline history and flaky tests](roadmap/milestone-2.md#pipeline-history-and-flaky-tests) | Planned | Duration charts, pass rate and the slowest steps across runs, and flaky tests flagged on the pull request. Flaky detection and test history already work on the run page. |
 | [Step pages](roadmap/milestone-2.md#step-pages) | Planned | Each step has a page: where its code lives, its inputs and types, and which pipelines use it. |
 
 ### Design visually
@@ -220,7 +219,7 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 | [A verified gap analysis](roadmap/milestone-2.md#a-verified-gap-analysis) | Planned | A tested list of what teams rely on automation servers for (dynamic pipelines, extensions, agents anywhere) with a plan for each gap. |
 | [Import of existing jobs](roadmap/milestone-2.md#import-of-existing-jobs) | Planned | Convert job definitions and shared libraries, with a report of what needs a person, and none of the file-first configuration or fragile plug-ins. |
 | [Extensions without fragility](roadmap/milestone-2.md#extensions-without-fragility) | Planned | A step catalogue and typed custom steps instead of plug-ins that run inside the server. |
-| [Agents anywhere](roadmap/milestone-2.md#agents-anywhere) | Planned | Runners on any machine, in any network, connected outward, with pools and labels. |
+| [Agents anywhere](roadmap/milestone-2.md#agents-anywhere) | Planned | Guidance and checks that show runners on any machine, in any network, replace the build agents teams rely on. Runners that connect outward, with pools and labels, already work. |
 
 ## Milestone 3: Delivery and GitOps depth (Next)
 
@@ -288,7 +287,7 @@ See and control everything you run, whether it is an application in a cluster, a
 | [Configuration, keys and toggles per zone](roadmap/milestone-3.md#configuration-keys-and-toggles-per-zone) | Planned | Manage settings and secrets together per zone and environment, for virtual machines and Kubernetes alike. |
 | [Routing by client attributes](roadmap/milestone-3.md#routing-by-client-attributes) | Planned | Decide which version a request gets from who sent it, such as a share of mobile clients, inside the application or at the network. |
 | [A guided change for every lever](roadmap/milestone-3.md#a-guided-change-for-every-lever) | Planned | Preview, policy check, approval where required, applied and audited, with an undo, for toggles, weights and limits. |
-| [Secrets with an external store](roadmap/milestone-3.md#secrets-with-an-external-store) | Planned | Use an existing secret store beside the built-in one. |
+| [Secrets with an external store](roadmap/milestone-3.md#secrets-with-an-external-store) | Planned | Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the environment already work. |
 | [Service mesh support including VMs](roadmap/milestone-3.md#service-mesh-support-including-vms) | Planned | Traffic, identity and policy for services on a mesh, and for virtual machines that join it. |
 
 ### Watch and protect
@@ -315,7 +314,7 @@ See and control everything you run, whether it is an application in a cluster, a
 | [Delivery metrics and executive dashboards](roadmap/milestone-3.md#delivery-metrics-and-executive-dashboards) | Planned | Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the runs behind each number. |
 | [Test intelligence and flow insights](roadmap/milestone-3.md#test-intelligence-and-flow-insights) | Planned | Find slow and flaky tests, bottlenecks in review and idle time in delivery. |
 | [Policy rules in an open language](roadmap/milestone-3.md#policy-rules-in-an-open-language) | Planned | Write extra policy rules in an open policy language alongside the built-in rules. |
-| [Portfolio bill of materials](roadmap/milestone-3.md#portfolio-bill-of-materials) | Planned | A bill of materials across every project and image, searchable by component. |
+| [Portfolio bill of materials](roadmap/milestone-3.md#portfolio-bill-of-materials) | Planned | A bill of materials across every image as well as every project, with export. Searching components across projects already works. |
 | [Experiments with toggles](roadmap/milestone-3.md#experiments-with-toggles) | Planned | Compare outcomes between users with a toggle on and off. |
 
 ### Moving over from other delivery platforms
@@ -339,7 +338,7 @@ Images, Helm charts and other OCI artifacts stored beside the code, under the sa
 | [An image page that tells the whole story](roadmap/milestone-4.md#an-image-page-that-tells-the-whole-story) | Planned | Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the run and commit that built it. |
 | [Promotion by digest](roadmap/milestone-4.md#promotion-by-digest) | Planned | Move an image from one environment to the next without copying or rebuilding it. |
 | [Retention that protects what runs](roadmap/milestone-4.md#retention-that-protects-what-runs) | Planned | Clean up old images without ever deleting one that is deployed. |
-| [Policy on push and deploy](roadmap/milestone-4.md#policy-on-push-and-deploy) | Planned | The same policy engine checks an image when it is pushed and when it is deployed. |
+| [Policy on push and deploy](roadmap/milestone-4.md#policy-on-push-and-deploy) | Planned | The same policy engine checks an image when it is pushed to the built-in registry, as it already does for a push from a pipeline and for a deploy. |
 | [Pull-through cache](roadmap/milestone-4.md#pull-through-cache) | Planned | Cache public images so builds are faster and unaffected by rate limits. |
 | [Image guard for sandboxed builds](roadmap/milestone-4.md#image-guard-for-sandboxed-builds) | Planned | Keep unchecked images away from sandboxed builds, and fetch every image through a checking proxy. |
 | [Replication with other registries](roadmap/milestone-4.md#replication-with-other-registries) | Planned | Copy images to and from other registries on a rule. |
@@ -403,7 +402,7 @@ AI wherever it saves effort, always optional, always off until an administrator 
 | [Models that know Launchway](roadmap/milestone-6.md#models-that-know-launchway) | Planned | Optional models tuned on Launchway itself, runnable locally and never trained on customer data. |
 | [From a picture to a pipeline](roadmap/milestone-6.md#from-a-picture-to-a-pipeline) | Planned | Design a delivery visually and have AI help translate it into a pipeline you can read and edit. |
 | [AI summaries and review of changes](roadmap/milestone-6.md#ai-summaries-and-review-of-changes) | Planned | Optional summaries and review comments on pull requests, labelled as AI. |
-| [AI help with failures](roadmap/milestone-6.md#ai-help-with-failures) | Planned | Explain why a run or deploy failed, with the evidence it used. |
+| [AI help with failures](roadmap/milestone-6.md#ai-help-with-failures) | Planned | Explain why a deploy failed as well as a step, with the evidence used. Explaining a failed step already works. |
 | [Agent guidance and an agent catalogue](roadmap/milestone-6.md#agent-guidance-and-an-agent-catalogue) | Planned | Ready-made instructions so agents know how to use Launchway, and a list of agents with their permissions. |
 
 ## Milestone 7: The hosted service, the public demo and enterprise controls (Later)

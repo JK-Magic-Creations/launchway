@@ -445,7 +445,7 @@ Preview, policy check, approval where required, applied and audited, with an und
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Use an existing secret store beside the built-in one. The store stays authoritative and values never reach the control plane.
+Read secrets from more external stores, such as the cloud providers’ own secret services. Vault, OpenBao, files and the environment already work. The store stays authoritative and values never reach the control plane.
 
 **Depends on:** Secrets that stay with runners.
 
@@ -617,7 +617,7 @@ Write extra policy rules in an open policy language alongside the built-in rules
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A bill of materials across every project and image, searchable by component. Pairs with the software graph.
+A bill of materials across every image as well as every project, with export. Searching components across projects already works. Pairs with the software graph.
 
 **Depends on:** Findings and SBOMs per run.
 
