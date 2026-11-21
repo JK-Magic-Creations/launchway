@@ -37,6 +37,12 @@ type Agent struct {
 	// back by pull request; PullEvery is how often it asks (default 5s).
 	Pulls     Pulls
 	PullEvery time.Duration
+	// PairTimeout is how long a deployment that changes an application's own
+	// manifest and its values waits for the cluster to show the new manifest
+	// before it writes the values (default 3m); PairSettle is the pause it
+	// makes instead when the cluster cannot be read (default 90s); PairEvery
+	// is how often it looks (default 2s). See pairing.go.
+	PairTimeout, PairSettle, PairEvery time.Duration
 
 	mu       sync.Mutex
 	clusters map[string]*Cluster
@@ -170,10 +176,13 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 	if err != nil {
 		return nil, err
 	}
-	cs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message}
-	for _, c := range d.Changes {
-		c := c
-		cs.Files = append(cs.Files, gitops.FileEdit{Path: c.File, Edit: func(path string, data []byte) ([]byte, error) {
+	pl, err := classify(ctx, repo, d)
+	unlock()
+	if err != nil {
+		return nil, err
+	}
+	editFor := func(c engine.DeployChange) gitops.FileEdit {
+		return gitops.FileEdit{Path: c.File, Edit: func(path string, data []byte) ([]byte, error) {
 			if data == nil {
 				return nil, fmt.Errorf("%s does not exist on branch %s", path, d.Branch)
 			}
@@ -203,10 +212,32 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 				log("%s: %s set to %s", path, c.Set, c.Value)
 			}
 			return out, err
-		}})
+		}}
 	}
-	res, err := repo.Apply(ctx, cs)
-	unlock()
+	cs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message}
+	for _, c := range d.Changes {
+		cs.Files = append(cs.Files, editFor(c))
+	}
+	var res gitops.ApplyResult
+	var pins []pinned
+	if len(pl.manifest) > 0 && len(pl.values) > 0 {
+		mcs := gitops.ChangeSet{Deployment: d.Deployment + "-pin", Message: d.Message + "\n\n(first of two commits: the application's own manifest; the values follow once the cluster shows it)"}
+		vcs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message}
+		for _, c := range pl.manifest {
+			mcs.Files = append(mcs.Files, editFor(c))
+		}
+		for _, c := range pl.values {
+			vcs.Files = append(vcs.Files, editFor(c))
+		}
+		res, pins, err = a.applySequenced(ctx, job, pl, mcs, vcs, log)
+	} else {
+		repo, unlock, err = a.repoWrite(ctx, job, log)
+		if err != nil {
+			return nil, err
+		}
+		res, err = repo.Apply(ctx, cs)
+		unlock()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -226,6 +257,12 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 		log("Nothing to commit: %s already holds version %s at %s; it is synced and verified all the same", d.Branch, d.Version, short(res.Commit))
 	}
 	facts.Sync, err = a.requestSync(ctx, job, res.Commit, log)
+	if err == nil && len(pins) > 0 {
+		var note string
+		if note, err = a.verifyPair(ctx, job, pins, res.Commit, log); err == nil {
+			facts.Sync += note
+		}
+	}
 	return facts, err
 }
 

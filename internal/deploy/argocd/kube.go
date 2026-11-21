@@ -153,6 +153,13 @@ func (c *Cluster) Refresh(ctx context.Context, app string) error {
 	return c.patchApp(ctx, app, patch)
 }
 
+// RefreshHard asks Argo CD to compare an application with its repository
+// again at once, ignoring its cache, so a parent application sees a new commit.
+func (c *Cluster) RefreshHard(ctx context.Context, app string) error {
+	patch := map[string]any{"metadata": map[string]any{"annotations": map[string]any{RefreshAnnotation: "hard"}}}
+	return c.patchApp(ctx, app, patch)
+}
+
 // Sync sets the application's operation to a sync, if its resourceVersion
 // is still resourceVersion: a change since it was read makes it fail with a
 // conflict, and the caller reads it again.
