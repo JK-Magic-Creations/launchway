@@ -2002,7 +2002,7 @@ paths:
             x-launchway-audit: connection.delete
     /api/v1/connections/token:
         post:
-            description: '{"name", "kind", "base_url", "token"}. The setup guide''s way to give the token of another Git server once: it is written to a file only the server''s account can read and the connection reads it as a file reference; it is never returned or audited. 409 when this server has no disk of its own (a Kubernetes pod) or no data folder: give an environment variable instead. Otherwise as POST /api/v1/connections.'
+            description: '{"name", "kind", "base_url", "token"}. The setup guide''s way to give the token of another Git server once: it is kept sealed under the root key (a meta row, covered by the encryption registry), the connection refers to it as sealed:NAME, and removing the connection removes it; it is never returned or audited. 409 (unavailable) when this server has no root key: create one, or give an environment variable instead. Otherwise as POST /api/v1/connections.'
             operationId: post_api_v1_connections_token
             parameters:
                 - $ref: '#/components/parameters/Csrf'
