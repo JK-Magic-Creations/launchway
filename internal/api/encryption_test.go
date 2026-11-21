@@ -68,3 +68,39 @@ func TestNoRootKeyStatusAndWebhooksRefuse(t *testing.T) {
 		t.Fatalf("a webhook with no root key: %d %s", r.status, r.body)
 	}
 }
+
+// Rotating keys is online: while it runs (a new key-encryption key, new data
+// keys, every stored value re-sealed), /readyz keeps answering ready and the
+// shared values keep opening.
+func TestReadyzIsNotBlockedByRotation(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	if _, err := e.api.sharedSecret(t.Context(), "login_state_key"); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		for i := 0; i < 5; i++ {
+			if _, err := e.api.Secrets.Rotate(t.Context(), i%2 == 1); err != nil {
+				done <- err
+				return
+			}
+		}
+		done <- nil
+	}()
+	for rotating := true; rotating; {
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatal(err)
+			}
+			rotating = false
+		default:
+		}
+		if r := newBrowser(t).do("GET", e.srv.URL+"/readyz", ""); r.status != 200 {
+			t.Fatalf("/readyz during rotation: %d %s", r.status, r.body)
+		}
+		if _, err := e.api.sharedSecret(t.Context(), "login_state_key"); err != nil {
+			t.Fatalf("a shared value during rotation: %v", err)
+		}
+	}
+}
