@@ -417,3 +417,41 @@ func TestEventsAreEmittedForEveryStateChange(t *testing.T) {
 		t.Fatalf("events %v, want %v", got, want)
 	}
 }
+
+// A required check that a path rule kept from running (a step skipped by
+// changed, or a pull request that started no run because of paths_ignore)
+// is satisfied: nothing needed to run. A plainly skipped step is not.
+func TestPathSkippedChecksSatisfyRequiredChecks(t *testing.T) {
+	w, _ := mergeWorld(t)
+	runs := &fakeRuns{}
+	w.svc.Runs = runs
+	if err := w.svc.Store.SetRule(w.ctx, repoID, Rule{Pattern: "main", RequiredChecks: []string{"build/image", "build/test"}}, "ada"); err != nil {
+		t.Fatal(err)
+	}
+	head := w.get(1).HeadSHA
+	blockers := func() string {
+		r, err := w.svc.Readiness(w.ctx, repoID, "ada/demo", w.get(1), RoleOperator)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r.Why
+	}
+	runs.runs = []RunInfo{{ID: "r1", Pipeline: "build", Status: "succeeded", SHA: head, Steps: []StepInfo{
+		{Name: "test", Status: "succeeded"}, {Name: "image", Status: "skipped", SkipKind: "paths"}}}}
+	if why := blockers(); strings.Contains(why, "`build/image`") || strings.Contains(why, "`build/test`") {
+		t.Fatalf("a step skipped by a path rule blocks: %q", why)
+	}
+	runs.runs[0].Steps[1].SkipKind = "condition"
+	if why := blockers(); !strings.Contains(why, "`build/image` was skipped") {
+		t.Fatalf("a step skipped by its condition must still block: %q", why)
+	}
+	// No run at all, because a path filter kept it from starting.
+	runs.runs = []RunInfo{{SHA: head, PathSkipped: true}}
+	if why := blockers(); strings.Contains(why, "`build/") {
+		t.Fatalf("a pull request kept from running by paths blocks: %q", why)
+	}
+	runs.runs = nil
+	if why := blockers(); !strings.Contains(why, "`build/image` has not passed") {
+		t.Fatalf("with no run and no path rule it must block: %q", why)
+	}
+}

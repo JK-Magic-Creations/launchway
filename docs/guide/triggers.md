@@ -2,6 +2,31 @@
 
 What starts a run besides a person: pushes and pull requests found by polling, schedules, and webhooks.
 
+## Path filters
+
+A documentation-only push does not need an image build and a deploy approval. Say which files
+matter, in the trigger or per step:
+
+```yaml
+on:
+  push: { branches: [main], paths: ["**", "!docs/**", "!*.md"] }
+  pull_request: { paths_ignore: ["docs/**"] }
+steps:
+  test: { image: golang:1.25, run: go test ./... }
+  image:
+    image: gcr.example/builder
+    run: ./build-image.sh
+    needs: test
+    when: { changed: [cmd/**, internal/**, go.mod, Dockerfile] }
+```
+
+With `paths` or `paths_ignore` a push or pull request that touches no matching file starts no run,
+and *Recent pushes* says why in words. With `when: { changed }` the run starts, the steps that need
+not run are shown as **skipped by path rule**, and the run still ends green. A skipped step counts
+as passed for a required check, and so does a pull request that started no run for this reason. The
+exact rules (`**`, `!`, case, renames, what is compared, and when it always runs because the change
+cannot be told) are in the [reference](../reference/pipeline.md#path-filters).
+
 ## Pull requests
 
 `on: { pull_request: {} }` runs the pipeline for pull requests. Launchway finds them by polling,

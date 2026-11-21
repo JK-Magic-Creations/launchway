@@ -276,7 +276,7 @@ export type StepKind = "approval" | "deploy" | "rollback" | "rollout" | "image" 
 /** What a waiting deploy step waits for: its environment's lock, or what deploy runners observe; a verify step: a person (verify). */
 export type WaitKind = "lock" | "observe" | "verify";
 /** Why a step was skipped: condition, upstream, not_needed (a rollback with nothing to roll back) or superseded. */
-export type SkipKind = "" | "condition" | "upstream" | "not_needed" | "superseded";
+export type SkipKind = "" | "condition" | "upstream" | "not_needed" | "superseded" | "paths";
 
 // ---- deployments ----
 
@@ -449,7 +449,7 @@ export interface StepView {
   exit_code: number | null;
   error: string;
   skip_kind: string;
-  runner: string;
+  runner: string; waiting_for?: string; waiting_code?: string; // a queued step waits for this (a sentence, a stable code)
   outputs: Record<string, string>;
   /** A failed attempt's last lines of output, masked like the log. */
   excerpt: string;

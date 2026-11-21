@@ -66,6 +66,13 @@ const (
 	// the policies, the facts and the waivers it was judged from.
 	PolicyEvaluated EventType = "policy.evaluated"
 
+	// Queues (schema 37; see queues.go). Run events, with no step.
+	RunHeld     EventType = "run.held"     // a limit, or an operator, holds the run back: none of its steps is queued
+	RunAdmitted EventType = "run.admitted" // the run may go: its steps are queued
+	RunBumped   EventType = "run.bumped"   // an operator moved the run to the front of the queue
+	// RunTrusted is a maintainer approving a restricted run (schema 37): actor and comment.
+	RunTrusted EventType = "run.trusted"
+
 	// Lanes (schema 24; see lanes.go). Run events, with no step.
 	RunLaneWaiting  EventType = "run.lane_waiting"  // the lane is held by another run: this one waits its turn
 	RunLaneStarted  EventType = "run.lane_started"  // this run took the lane and goes
@@ -95,7 +102,8 @@ var eventSince = map[EventType]int{
 	DeployCommand: 14, DeployCommandWithdrawn: 14, DeployCommandTaken: 14, DeployCommandDone: 14,
 	PolicyEvaluated: 16,
 	VerifyStarted:   19, VerifyInterval: 19, VerifyVerdict: 19, VerifyOverride: 19,
-	RunReviewed:    schemaRollback,
+	RunReviewed: schemaRollback,
+	RunHeld:     schemaQueues, RunAdmitted: schemaQueues, RunBumped: schemaQueues, RunTrusted: schemaQueues,
 	RunLaneWaiting: schemaFlow, RunLaneStarted: schemaFlow, RunLaneReplaced: schemaFlow, RunLaneSkipped: schemaFlow,
 }
 
@@ -148,9 +156,19 @@ type Payload struct {
 	// is given the step (Unix ms).
 	Cause     string `json:"cause,omitempty"`
 	NotBefore int64  `json:"not_before,omitempty"`
+	// WaitCode, on a step.queued of a step that waits for room (schema 37),
+	// is the stable code of the reason (see capacity_wait.go) and Reason the
+	// sentence; on the step.finished that gives up waiting it is the code of
+	// what the step was waiting for.
+	WaitCode string `json:"wait_code,omitempty"`
 
 	// run.lane_* (schema 24): the lane, and the run on the other side of it.
 	Lane *LaneEvent `json:"lane,omitempty"`
+	// run.created, run.held, run.admitted (schema 37): the run's kind for
+	// limits and order, and for a held run the stable code and the sentence.
+	Queue *QueueEvent `json:"queue,omitempty"`
+	// run.created (schema 37): the run is restricted, and why.
+	Restricted *RestrictedEvent `json:"restricted,omitempty"`
 
 	// shared
 	Reason string `json:"reason,omitempty"`
@@ -240,6 +258,19 @@ type Payload struct {
 	// answered and what it cost. Older servers never read it: runs with ai
 	// steps have min_schema 19.
 	AI *AIRecord `json:"ai,omitempty"`
+}
+
+// QueueEvent carries what the queue events say about a run: its Class (push_protected,
+// push, pull_request, schedule or manual), whether automation started it, its
+// Priority (higher goes first), and, on run.held, the Code and Reason, and
+// Manual for a hold an operator put on.
+type QueueEvent struct {
+	Class      string `json:"class,omitempty"`
+	Automation bool   `json:"automation,omitempty"`
+	Priority   int    `json:"priority,omitempty"`
+	Code       string `json:"code,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+	Manual     bool   `json:"manual,omitempty"`
 }
 
 // LaneEvent carries the details of the run.lane_* events: the lane a run is
@@ -402,6 +433,10 @@ type Trigger struct {
 	ScheduledFor int64  `json:"scheduled_for,omitempty"`
 	// Webhook, for event webhook, is the webhook trigger's name.
 	Webhook string `json:"webhook,omitempty"`
+	// Changed is the files the push or pull request changed, when they could
+	// be told; nil, or Known false, when not. Steps with when: { changed }
+	// and the triggers' path filters judge by it.
+	Changed *pipeline.ChangeSet `json:"changed,omitempty"`
 }
 
 // CommitTimeAt formats a Unix time in the form of Trigger.CommitTime. Zero
@@ -425,7 +460,7 @@ func (t Trigger) SourceDateEpoch() string {
 
 // Context returns what step conditions are tested against.
 func (t Trigger) Context() pipeline.Context {
-	return pipeline.Context{Event: t.Event, Branch: t.Branch, Tag: t.Tag, Inputs: t.Inputs}
+	return pipeline.Context{Event: t.Event, Branch: t.Branch, Tag: t.Tag, Inputs: t.Inputs, Changed: t.Changed}
 }
 
 // Source says where a runner gets the files a run works on.

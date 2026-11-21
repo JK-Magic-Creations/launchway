@@ -36,6 +36,12 @@ func (c *cmd) whenSkip(def *pipeline.Step, ctx pipeline.Context) string {
 	if why := def.When.OutputWhy(ctx); why != "" {
 		return why
 	}
+	if why := c.st.restrictedSkip(def); why != "" {
+		return why
+	}
+	if why := def.When.ChangedWhy(ctx); why != "" {
+		return why
+	}
 	if !def.When.Match(ctx) {
 		return "its when condition did not match"
 	}

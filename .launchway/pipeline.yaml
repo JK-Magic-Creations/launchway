@@ -21,10 +21,23 @@ on:
 supersede: true
 
 steps:
+  # A push that changes only documentation (docs/ or Markdown files) builds the docs and nothing else: every
+  # step below is skipped by its path rule ("no file ... changed"), so no image is built and nobody is asked
+  # to approve a deploy. The docs are published by .github/workflows/docs-pages.yml from the same push.
+  docs:
+    description: Build the documentation site
+    image: docker.io/library/node:24-alpine
+    run: |
+      cd docs
+      npm ci --no-audit --no-fund
+      npx vitepress build .
+    resources: { cpu: 1, memory: 2Gi }
+
   check-code:
     description: Look for common mistakes with go vet
     image: docker.io/library/golang:1.27
     run: go vet ./...
+    when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 1, memory: 2Gi }
 
   test:
@@ -45,6 +58,7 @@ steps:
     reports:
       tests: reports/go-test.json
     # An earlier run of this step on the shared runners was killed for memory: ask for it.
+    when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 2, cpu_limit: 4, memory: 4Gi, memory_limit: 6Gi }
     timeout: 20m
 
@@ -58,6 +72,7 @@ steps:
     run: |
       go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...
       FUZZTIME=20s scripts/security/fuzz.sh
+    when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 2, memory: 3Gi }
     timeout: 20m
 
@@ -68,6 +83,7 @@ steps:
     run: |
       (cd web && npm audit --package-lock-only --audit-level=high)
       (cd docs && npm audit --package-lock-only --audit-level=high)
+    when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 500m, memory: 512Mi }
 
   build-ui:
@@ -78,6 +94,7 @@ steps:
       cd web
       npm ci --no-audit --no-fund
       npm run build
+    when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 1, memory: 2Gi }
 
   build-binary:
@@ -89,6 +106,7 @@ steps:
       CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X main.version=$version" -o bin/launchway ./cmd/launchway
       ls -lh bin/launchway
       echo "size=$(du -h bin/launchway | cut -f1)" >> "$LAUNCHWAY_OUTPUTS"
+    when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 2, memory: 3Gi }
 
   # The new binary checks the pipeline files that ship with it. (The design also asks the RUNNING
@@ -99,6 +117,7 @@ steps:
     image: docker.io/library/golang:1.27
     needs: build-binary
     run: bin/launchway validate .launchway/pipeline.yaml
+    when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
     resources: { cpu: 500m, memory: 512Mi }
 
   # ---- the image ---------------------------------------------------------------------------
@@ -120,7 +139,7 @@ steps:
     provenance: true
     sign: true                  # the runner's own key; step pods never see it
     scan: { fail_on: high, mode: enforce }   # nothing is pushed if this fails
-    when: { branch: main }      # pull requests build and scan in their own run, never push
+    when: { branch: main, changed: [ "**", "!docs/**", "!**/*.md" ] }      # pull requests build and scan in their own run, never push
     retry: 2                    # a first connection to a registry is sometimes refused while the
                                 # cluster's DNS-based egress rules catch up; a scan finding is not retried away
     timeout: 45m
@@ -129,7 +148,7 @@ steps:
   approve-sandbox:
     kind: approval
     needs: image
-    when: { branch: main }
+    when: { branch: main, changed: [ "**", "!docs/**", "!**/*.md" ] }
     message: >-
       Deploy this commit to the Launchway SANDBOX? The image step shows the digest, signature, SBOM and
       scan counts. This changes helm-values/launchway-sandbox.yaml and the chart pin of the sandbox
@@ -140,7 +159,7 @@ steps:
   deploy-sandbox:
     kind: deploy
     needs: [image, approve-sandbox]
-    when: { branch: main }
+    when: { branch: main, changed: [ "**", "!docs/**", "!**/*.md" ] }
     environment: launchway-sandbox
     service: launchway
     version: { run: short_sha }
@@ -163,7 +182,7 @@ steps:
   verify-sandbox:
     kind: verify
     needs: deploy-sandbox
-    when: { branch: main }
+    when: { branch: main, changed: [ "**", "!docs/**", "!**/*.md" ] }
     deployment: deploy-sandbox
     delay: 1m
     duration: 10m
@@ -197,7 +216,7 @@ steps:
   approve-dev:
     kind: approval
     needs: verify-sandbox
-    when: { branch: main }
+    when: { branch: main, changed: [ "**", "!docs/**", "!**/*.md" ] }
     message: >-
       The sandbox ran this digest and the verification passed. Deploy THE SAME DIGEST to launchway-dev, the
       instance that runs this pipeline? A person other than the one who pushed must approve. The commit
@@ -209,7 +228,7 @@ steps:
   deploy-dev:
     kind: deploy
     needs: [image, approve-dev]
-    when: { branch: main }
+    when: { branch: main, changed: [ "**", "!docs/**", "!**/*.md" ] }
     environment: launchway-dev
     service: launchway
     version: { run: short_sha }
@@ -231,7 +250,7 @@ steps:
   verify-dev:
     kind: verify
     needs: deploy-dev
-    when: { branch: main }
+    when: { branch: main, changed: [ "**", "!docs/**", "!**/*.md" ] }
     deployment: deploy-dev
     delay: 1m
     duration: 15m

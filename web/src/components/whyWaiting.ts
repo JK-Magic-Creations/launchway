@@ -16,6 +16,7 @@ const done = (s: StepView | undefined) => !s || s.status === "succeeded" || s.st
 export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | null {
   switch (step.status) {
     case "pending": {
+      if (run.queue?.held) return { kind: "step", short: "Waiting in the queue", text: `${run.queue.reason ?? "Waiting for room"}.` };
       if (run.lane?.state === "waiting") return { kind: "step", short: "Waiting for its lane", text: run.lane.reason || `The whole run waits its turn in the lane ${run.lane.label}.` };
       const open = (step.needs ?? []).filter((n) => !done(run.step_list.find((s) => s.id === n)));
       if (open.length > 0) return { kind: "step", short: `After ${open.join(" and ")}`, text: `Waiting for ${open.join(" and ")} to finish first.` };
@@ -26,6 +27,8 @@ export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | n
         const cause = step.failure_cause && step.failure_cause !== "exit" ? ` after ${step.failure_cause}` : step.failure_cause === "exit" ? " after a failed exit" : "";
         return { kind: "timer", short: `Retrying in ${duration(step.not_before! - now)}`, text: `Trying again in ${duration(step.not_before! - now)} (attempt ${step.attempt} of ${step.retry + 1})${cause}. The wait is the step's own retry delay.` };
       }
+      // The server says what a queued step waits for (room in the step namespace, a free runner, ...).
+      if (step.waiting_for) return { kind: "runner", short: step.waiting_code === "no_runner" || step.waiting_code === "runners_busy" ? "Waiting for a runner" : "Waiting for room", text: `${step.waiting_for}.` };
       const hint = run.pool_hint || run.runner_hint;
       const for_ = step.queued_at > 0 ? ` It has waited ${duration(Math.max(0, now - step.queued_at))}.` : "";
       return { kind: "runner", short: "Waiting for a runner", text: hint ? `${hint}${for_}` : `Waiting for a runner to take it.${for_}` };

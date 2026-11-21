@@ -71,9 +71,12 @@ func (p pullRuns) RunsOf(_ context.Context, _, repoPath string, number int) ([]p
 			}
 			ri := pulls.RunInfo{ID: r.ID, Project: r.Project, Number: r.Number, Pipeline: r.Pipeline, Status: string(r.Status), SHA: r.SHA, Created: r.CreatedAt}
 			for _, st := range r.Steps {
-				ri.Steps = append(ri.Steps, pulls.StepInfo{Name: st.ID, Status: string(st.Status), Allowed: st.Allowed})
+				ri.Steps = append(ri.Steps, pulls.StepInfo{Name: st.ID, Status: string(st.Status), Allowed: st.Allowed, SkipKind: st.SkipKind})
 			}
 			out = append(out, ri)
+		}
+		for _, sha := range s.Engine.PathSkippedHeads(pr.Name, fmt.Sprintf("refs/pull/%d/head", number)) {
+			out = append(out, pulls.RunInfo{Project: pr.Name, SHA: sha, PathSkipped: true})
 		}
 	}
 	return out, nil

@@ -50,6 +50,8 @@ const clientUsage = `Usage:
   launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same run goes on, running its failed steps again
   launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
                                                           a new run from those steps (or the failed ones), reusing the rest
+  launchway runs queue [project] [--json]          runs held back by limits, in order, with why; next|hold|release <run-id> moves one
+  launchway runs trust <run-id> [--comment text]   approve a restricted run (a pull request from an automation account): Run with secrets
   launchway runs lanes <project> [--json]          each lane: the run that holds it, and the runs waiting
   launchway runs tests <run-id> [--all | --status S] [--tag T] [--json]   failures first, with messages
   launchway runs coverage <run-id> [--files] [--json]
@@ -363,6 +365,10 @@ func cmdRuns(args []string) error {
 			return cl.cancel(args[1:])
 		case "lanes":
 			return cl.lanes(args[1:])
+		case "queue":
+			return cl.queue(args[1:])
+		case "trust":
+			return cl.trust(args[1:])
 		case "resume":
 			return cl.resume(args[1:])
 		case "rerun":

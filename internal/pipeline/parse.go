@@ -135,6 +135,7 @@ func Parse(data []byte) (*Pipeline, error) {
 			p.Name = ps.str(v, "pipeline")
 		case "supersede":
 			p.Supersede = ps.bool(v, "supersede")
+			p.SupersedeOff = !p.Supersede
 		case "on":
 			ps.parseOn(v, p)
 		case "libraries":
@@ -259,8 +260,18 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 			return
 		}
 		t := &PushTrigger{}
-		ps.eachKey(v, "on.push", []string{"branches", "tags"}, func(k2, v2 *yaml.Node) {
+		ps.eachKey(v, "on.push", []string{"branches", "tags", "paths", "paths_ignore"}, func(k2, v2 *yaml.Node) {
 			list := ps.strList(v2, "on.push."+k2.Value)
+			switch k2.Value {
+			case "paths", "paths_ignore":
+				ps.checkGlobs(v2, "on.push."+k2.Value, list)
+				if k2.Value == "paths" {
+					t.Paths = list
+				} else {
+					t.PathsIgnore = list
+				}
+				return
+			}
 			for _, pat := range list {
 				ps.checkPattern(v2, "on.push."+k2.Value, pat)
 			}
@@ -270,6 +281,9 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 				t.Tags = list
 			}
 		})
+		if len(t.Paths) > 0 && len(t.PathsIgnore) > 0 {
+			ps.add(v, "on.push", "use paths or paths_ignore, not both: to leave files out of paths, write them with a leading !, for example paths: [\"src/**\", \"!src/gen/**\"]")
+		}
 		if len(t.Branches) == 0 && len(t.Tags) == 0 {
 			ps.add(v, "on.push", "list branches or tags, for example: push: { branches: [main] }")
 		}
@@ -298,7 +312,18 @@ func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
 			}
 			rest.Content = append(rest.Content, v.Content[i], v.Content[i+1])
 		}
-		ps.eachKey(rest, "on.pull_request", []string{"into"}, func(k, x *yaml.Node) {
+		ps.eachKey(rest, "on.pull_request", []string{"into", "paths", "paths_ignore"}, func(k, x *yaml.Node) {
+			switch k.Value {
+			case "paths", "paths_ignore":
+				list := ps.strList(x, "on.pull_request."+k.Value)
+				ps.checkGlobs(x, "on.pull_request."+k.Value, list)
+				if k.Value == "paths" {
+					t.Paths = list
+				} else {
+					t.PathsIgnore = list
+				}
+				return
+			}
 			t.Into = ps.strList(x, "on.pull_request.into")
 			for _, pat := range t.Into {
 				ps.checkPattern(x, "on.pull_request.into", pat)
@@ -309,6 +334,9 @@ func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
 		})
 	default:
 		ps.add(v, "on.pull_request", "write pull_request: {}, or pull_request: { into: [main] }")
+	}
+	if len(t.Paths) > 0 && len(t.PathsIgnore) > 0 {
+		ps.add(v, "on.pull_request", "use paths or paths_ignore, not both: to leave files out of paths, write them with a leading !")
 	}
 	return t
 }
@@ -611,7 +639,12 @@ func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys, vals map
 
 func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 	c := &Condition{}
-	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "output", "equals", "upstream"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "output", "equals", "upstream", "changed"}, func(k, v *yaml.Node) {
+		if k.Value == "changed" {
+			c.Changed = ps.valueList(v, at+".changed")
+			ps.checkGlobs(v, at+".changed", c.Changed)
+			return
+		}
 		if k.Value == "upstream" {
 			c.Upstream = ps.str(v, at+".upstream")
 			if !slices.Contains(Upstreams, c.Upstream) {
@@ -933,4 +966,16 @@ func contains(list []string, v string) bool {
 		}
 	}
 	return false
+}
+
+// checkGlobs reports the patterns of a path list that cannot work.
+func (ps *parser) checkGlobs(n *yaml.Node, at string, list []string) {
+	if len(list) == 0 {
+		ps.add(n, at, "list at least one path pattern, for example: [src/**, go.mod]")
+	}
+	for _, g := range list {
+		if why := CheckGlob(g); why != "" {
+			ps.add(n, at, "%s", why)
+		}
+	}
 }

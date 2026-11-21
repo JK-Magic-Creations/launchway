@@ -131,7 +131,7 @@ func (su *serverSetup) openEngineRaw() (*engine.Engine, error) {
 	live := su.live
 	return engine.Open(engine.Options{Database: su.cfg.DatabaseAddr(), Logger: su.log, AllowSelfApproval: live.AllowSelfApproval, ConnectWait: su.dbWait,
 		ArtifactsFromDatabase: su.fromDatabase, Tests: live.Tests, Environments: live.Environments, Artifacts: live.Artifacts, Findings: live.Findings,
-		Policy: live.Policy, Reports: live.Reports, HealthSources: live.HealthSources, Models: live.Models, RunnerPools: live.RunnerPools})
+		Policy: live.Policy, Reports: live.Reports, HealthSources: live.HealthSources, Models: live.Models, RunnerPools: live.RunnerPools, Queues: live.Queues})
 }
 
 // startSettings imports the file's settings into the database the first time

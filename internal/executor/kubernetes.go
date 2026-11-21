@@ -662,6 +662,9 @@ func (k *Kubernetes) waitRunning(ctx context.Context, name string, specs []Conta
 			lastNote = note
 		}
 		if time.Now().After(deadline) {
+			if unschedulable(pod) {
+				return &CapacityError{Code: WaitClusterFull, Reason: "waiting for room in the cluster: no node has room for the step's pod yet (" + podProblem(pod) + ")"}
+			}
 			return cannotStart("the pod did not start within %s: %s", k.startWait, podProblem(pod))
 		}
 		select {
@@ -977,4 +980,14 @@ func (l *limitedWriter) Write(b []byte) (int, error) {
 		return n, io.ErrShortWrite
 	}
 	return n, err
+}
+
+// unschedulable says the scheduler has found no node with room for the pod.
+func unschedulable(p *corev1.Pod) bool {
+	for _, c := range p.Status.Conditions {
+		if c.Type == corev1.PodScheduled && c.Status == corev1.ConditionFalse && c.Reason == corev1.PodReasonUnschedulable {
+			return true
+		}
+	}
+	return false
 }

@@ -95,7 +95,7 @@ lists every variable a step receives.
 |---|---|---|---|
 | `pipeline` | name | required | The pipeline's name. `^[a-z0-9][a-z0-9-]{0,62}$` |
 | `on` | mapping | none | The events that start a run; see [Triggers](#triggers). Without it, runs start only by hand |
-| `supersede` | boolean | `false` | A new run started by a push or a pull request cancels the older runs of the same ref still going, if they too were started by a push or a pull request. Runs started by hand, draft runs and re-runs never supersede and are never superseded. A run holding an open [deployment](../glossary.md#deployment) is never cancelled |
+| `supersede` | boolean | `false` for pushes, `true` for pull requests | `supersede: true`: a new run started by a push or a pull request cancels the older runs of the same ref still going, if they too were started by a push or a pull request. Runs started by hand, draft runs and re-runs never supersede and are never superseded. A run holding an open [deployment](../glossary.md#deployment) is never cancelled. Pull-request runs supersede by default (the installation's `queues.supersede_pull_requests`); `supersede: false` keeps every run of this pipeline's pull requests |
 | `inputs` | mapping | none | The [run inputs](#inputs): values a run is started with. At most 50 |
 | `libraries` | mapping | none | The [shared libraries](#libraries) whose templates steps use. At most 10 |
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
@@ -132,8 +132,11 @@ when the Git host calls the project's Git webhook.
 |---|---|---|---|
 | `branches` | pattern, one value or a list | none | Branch names that start a run, such as `main` or `release/*` |
 | `tags` | pattern, one value or a list | none | Tag names that start a run, such as `v*` |
+| `paths` | [path patterns](#path-filters) | none | A push to a branch starts a run only if a changed file matches one |
+| `paths_ignore` | [path patterns](#path-filters) | none | A push to a branch starts a run unless every changed file matches one. Not together with `paths` |
 
-At least one of `branches` or `tags` is required.
+At least one of `branches` or `tags` is required. `paths` and `paths_ignore` filter branch pushes
+only; a tag push always runs.
 
 ### Pull request
 
@@ -147,6 +150,8 @@ cannot turn pull-request runs on for itself. A pull request has no branch or tag
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `into` | pattern, one value or a list | any branch | Run only for pull requests that target a branch matching one of the patterns, written as the `branches` of [`push`](#push). The step environment gets `LAUNCHWAY_PULL_REQUEST_INTO`. Needs schema 24 |
+| `paths` | [path patterns](#path-filters) | none | Run only if a file the pull request changed (since it left the target branch) matches one |
+| `paths_ignore` | [path patterns](#path-filters) | none | Run unless every file the pull request changed matches one. Not together with `paths` |
 
 The server sees only each pull request's head, so it learns the target from the project's **forge
 connection**, and does so when it first sees each head, reading the pipeline on the default branch
@@ -226,6 +231,36 @@ steps:
     image: alpine:3.22
     run: echo "$LAUNCHWAY_EVENT $LAUNCHWAY_INPUT_ENVIRONMENT $LAUNCHWAY_INPUT_VERSION"
 ```
+
+## Path filters
+
+`on.push.paths`, `on.push.paths_ignore`, the same two keys of `on.pull_request`, and a step's
+`when: { changed: [...] }` take a list of path patterns, which mean the same everywhere:
+
+- A path is relative to the repository root and written with `/`. A leading `/` in a pattern is
+  ignored.
+- `*` matches any characters but `/`, `?` one character but `/`, `[abc]` one of them. A whole
+  segment `**` matches any number of directories, none included: `src/**` is everything under
+  `src`, `**/*.md` every Markdown file at any depth. A pattern ending in `/` means everything under
+  that directory.
+- **Case matters**: `README.md` is not `readme.md`.
+- A pattern starting with `!` takes back what the patterns before it matched, and the last pattern
+  that matches a file decides: `[docs/**, "!docs/api/**"]`. A list that starts with a `!` pattern
+  begins with every file selected, so `paths: ["!vendor/**"]` means everything but `vendor`.
+- A **renamed** file counts under both its old and its new path, and a deleted file under the path
+  it had.
+
+What is compared: a **push** is compared with the branch's previous head (every file between the
+two, so a merge commit counts what it brings in); a **pull request** with the merge base of its
+target branch and its head. A run starts when the filter says so, and when it cannot tell: the
+first push of a branch, a force-push that left the previous head out of the new history, more than
+1000 changed files, a tag push, or a git error all **run**. A run that does not start leaves a
+decision in the project's recent pushes (outcome `skipped_paths`) that says why, for example *no
+changed file matches paths (src/**, go.mod); changed: README.md, docs/a.md*. A pull request whose
+head was kept from running this way satisfies the required checks of its target branch's merge
+rules: nothing needed to run. A step skipped by `changed` is shown as skipped (skip kind `paths`)
+with *skipped by path rule: no file under src/ changed*, and also counts as passed for a required
+check. `launchway validate` prints what each filter in the file means.
 
 ## Inputs
 
@@ -1211,6 +1246,7 @@ any listed value may match. It is a closed set of tests, not an expression langu
 | `input` | input name | none | The step runs only if this [input](#inputs)'s value is one of `equals`. A `boolean` input alone means `equals: true`. A `list` input cannot be tested. Not in a template |
 | `output` | `step.key` | none | The step runs only if this output of a step it needs (directly or through others) is one of `equals`. The step must be in `needs`, may not repeat (`for_each`) and may not be a step that uses a template. An output that was never written never matches, and the skip says which output was missing and what the step wrote instead: `the output "changed" of step scan was not set: scan did not write it (it wrote: other)`. Needs schema 24 |
 | `equals` | one value or a list | `true` for a boolean `input` | The values `input` or `output` is compared with, as text: a boolean is written `true` or `false`. A condition tests an input or an output, not both |
+| `changed` | [path patterns](#path-filters) | none | The step runs only if a file the run's change touched matches one. When the change is not known (the first push of a branch, a force-push, a run started by hand, by a schedule or by a webhook, a draft, more than 1000 files) the step runs. A step skipped by this is shown as skipped with the reason, and counts as passed for a pull request's required checks |
 | `upstream` | text | `succeeded` | How the steps it needs must have ended: `succeeded` (all of them), `failed` (at least one failed, was cancelled, or was not run because of a failure) or `always` (whatever happened). The step then waits until every step it needs has ended |
 
 In a [draft run](../glossary.md#draft-run) a step with a `when` runs only if its `event` names

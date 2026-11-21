@@ -141,7 +141,7 @@ func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
 		return
 	}
-	out := map[string]any{"ok": true, "graph": p, "levels": p.Levels(), "expanded": expand}
+	out := map[string]any{"ok": true, "graph": p, "levels": p.Levels(), "expanded": expand, "notes": p.PathNotes()}
 	// What is valid but will not work as written for this project: a
 	// pipeline that filters pull requests by the branch they target needs
 	// the project's forge to say which that is.

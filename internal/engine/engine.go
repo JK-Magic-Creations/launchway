@@ -104,6 +104,7 @@ type Options struct {
 	// default build pool exists whether or not it is listed. Every server
 	// sharing a database must be given the same ones.
 	RunnerPools []RunnerPool
+	Queues      QueueSettings // queues and limits (schema 37)
 
 	// schema, for tests, makes the engine behave as a build that knows only
 	// the first schema migrations and their events; 0 means every one (or
@@ -311,7 +312,8 @@ type Result struct {
 	// Excerpt is, for a failed step, the last few lines it wrote: on stderr
 	// if it wrote any, else on stdout. The runner masks secrets in it as in
 	// the log; the server keeps at most MaxExcerptBytes of it.
-	Excerpt string `json:"excerpt,omitempty"`
+	Excerpt  string `json:"excerpt,omitempty"`
+	WaitCode string `json:"wait_code,omitempty"` // for the outcome waiting: why (quota_full, cluster_full); Error is the sentence
 	// Tests, for a step that declares test reports, is what the runner
 	// collected once the step ended, whether it passed or failed: nil if it
 	// collected nothing (a runner that does not know reports, or one that is
@@ -597,6 +599,10 @@ type NewRun struct {
 	// says whether its steps may read secrets. Such runs come from code
 	// anyone who can open a pull request may have written.
 	PullRequestSecrets bool
+	// Protected: a push to a protected branch, never held by a limit. Automation: an automation account
+	// started it. Restricted: a pull request from an automation account or a fork (see restricted.go).
+	Protected, Automation bool
+	Restricted            *RestrictedEvent
 	// Fire, for a run of event schedule, is the firing it is for, claimed
 	// with the run like Push; Delivery, for a run of event webhook, is the
 	// caller's idempotency key, if it sent one. CreateRun returns
@@ -634,7 +640,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	trig, src := nr.Trigger, nr.Source
 	// Superseding: a new run started by a push or a pull request cancels
 	// the older ones of the same ref, in the transaction that creates it.
-	supersede := nr.Pipeline.Supersede && draft == nil && e.knows(schemaPullRequests) &&
+	supersede := e.supersedes(&nr, draft) && draft == nil && e.knows(schemaPullRequests) &&
 		(trig.Event == pipeline.EventPush || trig.Event == pipeline.EventPullRequest) && trig.Ref != ""
 	err = e.runTx(runID, true, func(c *cmd) error {
 		if nr.Push != nil {
@@ -659,8 +665,8 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 			return err
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: c.e.withStoreRequires(nr.Pipeline), Trigger: &trig, Source: &src, Draft: draft,
-			PullRequestSecrets: prSecrets, SelfApproval: c.e.selfApprovalNow(), Requires: poolRequires})
-		goes, laneNote, err := c.takeLane(&nr, draft != nil, trig, number)
+			PullRequestSecrets: prSecrets, SelfApproval: c.e.selfApprovalNow(), Requires: poolRequires, Queue: c.e.queueOf(&nr, trig), Restricted: nr.restrictedFor(c.e)})
+		goes, laneNote, err := c.admitOrLane(&nr, draft != nil, trig, number)
 		if err != nil {
 			return err
 		}
@@ -740,7 +746,7 @@ func (c *cmd) supersede(project, ref string, number int) ([]int, error) {
 				st.Trigger.Ref != ref || (st.Trigger.Event != pipeline.EventPush && st.Trigger.Event != pipeline.EventPullRequest) {
 				return nil
 			}
-			o.emit(RunCancelRequested, Payload{Reason: fmt.Sprintf("superseded by run #%d", number),
+			o.emit(RunCancelRequested, Payload{Reason: supersededWords(c.st.Trigger.Event, number),
 				SupersededBy: &Superseder{Run: c.runID, Number: number}})
 			o.advance()
 			done = append(done, st.Number)
@@ -1195,12 +1201,9 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Outputs, p.Tests = nil, nil
 			p.Reason = "the runner refused the step: " + nonEmpty(res.Error, "its accept: section does not allow it")
-			def := c.st.Pipeline.Step(l.stepID)
-			retry, wait := c.retryDue(def, s, pipeline.CauseInfrastructure, true)
-			c.emitFailure(&p, res, retry)
-			if retry {
-				c.queueRetry(l.stepID, s, wait)
-			}
+			c.failAttempt(l.stepID, s, &p, res, pipeline.CauseInfrastructure, true)
+		case OutcomeWaiting:
+			c.waitForRoom(l, s, res)
 		case "lost":
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
@@ -1226,12 +1229,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Reason = nonEmpty(res.Error, "the step failed")
 			p.Excerpt = CleanExcerpt(res.Excerpt)
-			def := c.st.Pipeline.Step(l.stepID)
-			retry, wait := c.retryDue(def, s, failureCause(res), false)
-			c.emitFailure(&p, res, retry)
-			if retry {
-				c.queueRetry(l.stepID, s, wait)
-			}
+			c.failAttempt(l.stepID, s, &p, res, failureCause(res), false)
 		}
 		c.advance()
 		return nil
@@ -1294,6 +1292,7 @@ func (e *Engine) reaper(ctx context.Context) {
 			e.expireWaits()
 			e.expireRunTimeouts()
 			e.recoverLanes()
+			e.recoverQueues()
 			e.dispatchLocks()
 			if now := e.now(); now.Sub(pruned) >= time.Minute {
 				pruned = now
@@ -1688,6 +1687,7 @@ func (c *cmd) persist() error {
 		{schemaReruns, c.persistSchema8},
 		{schemaFlow, func() error { return c.persistFlow(changed) }},
 		{schemaFlow, c.persistLanes},
+		{schemaQueues, func() error { return c.persistQueueTables(changed) }},
 		{schemaParity2, c.persistStepRunners},
 		{schemaParity2, func() error { return c.persistParity2(changed) }},
 		{schemaPullRequests, c.persistSchema9},
@@ -1789,8 +1789,8 @@ func (c *cmd) advance() {
 	if st.Status.Terminal() {
 		return
 	}
-	if st.laneWaiting() && !st.CancelRequested {
-		return // the run waits for its lane; none of its steps is queued
+	if st.holdsBack() && !st.CancelRequested {
+		return // the run waits in the queue or for its lane; none of its steps is queued
 	}
 	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.policyDue() {
 		c.policyChecked = true
@@ -1833,7 +1833,7 @@ func (c *cmd) advance() {
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: condSkip})
 				changed = true
 			case c.whenSkip(def, ctx) != "":
-				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: c.whenSkip(def, ctx)})
+				c.emit(StepSkipped, Payload{Step: id, SkipKind: skipKindOf(c.whenSkip(def, ctx)), Reason: c.whenSkip(def, ctx)})
 				changed = true
 			case c.loopHolds(id):
 				// Its loop has max_parallel members going; it waits its turn.
@@ -1883,7 +1883,7 @@ func (c *cmd) advance() {
 				// for text that nobody reviewed.
 				reason := draftSecretsRefused(st.Project, def)
 				if st.Draft == nil {
-					reason = pullRequestSecretsRefused(st.Project, def)
+					reason = pullRequestSecretsRefused(st, def)
 				}
 				c.emit(StepFinished, Payload{Step: id, Outcome: string(StepFailed), Reason: reason})
 				changed = true

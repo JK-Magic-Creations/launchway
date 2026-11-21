@@ -277,6 +277,8 @@ func applyInstallation(c *config.Config, s *Installation) {
 	c.PullRequests = s.PullRequests
 	c.Schedules = s.Schedules
 	c.Loops = s.Loops
+	c.Queues = s.Queues
+	c.Automation = s.Automation
 	c.Tests = s.Tests
 	c.Findings = s.Findings
 	origin := c.Reports.Origin
@@ -310,6 +312,8 @@ func Bootstrap(boot *config.Config) *config.Config {
 	c.Approvals = config.ApprovalsConfig{}
 	c.Drafts = config.DraftsConfig{}
 	c.PullRequests = config.PullRequestsConfig{}
+	c.Queues = config.QueuesConfig{}
+	c.Automation = config.AutomationConfig{}
 	c.Tests = config.TestsConfig{}
 	c.Findings = config.FindingsConfig{}
 	c.Reports = config.ServerReportsConfig{Origin: boot.Reports.Origin}
@@ -463,7 +467,7 @@ func shortHash(s string) string {
 
 func installationOf(c *config.Config) Installation {
 	s := Installation{Approvals: c.Approvals, Drafts: c.Drafts, PullRequests: c.PullRequests, Schedules: c.Schedules, Loops: c.Loops,
-		Tests: c.Tests, Findings: c.Findings, Reports: c.Reports, RunnerAdmin: c.RunnerAdmin, Tokens: c.Auth.Tokens,
+		Queues: c.Queues, Automation: c.Automation, Tests: c.Tests, Findings: c.Findings, Reports: c.Reports, RunnerAdmin: c.RunnerAdmin, Tokens: c.Auth.Tokens,
 		Artifacts: ArtifactLimits{MaxFileMiB: c.Artifacts.MaxFileMiB, MaxRunMiB: c.Artifacts.MaxRunMiB, MaxProjectGiB: c.Artifacts.MaxProjectGiB,
 			Retain: c.Artifacts.Retain, MaxRetain: c.Artifacts.MaxRetain,
 			Store: c.Artifacts.Store, Database: c.Artifacts.Database, Dir: c.Artifacts.Dir, S3: c.Artifacts.S3},
@@ -489,6 +493,8 @@ func movedKeys(c *config.Config) []string {
 	set(c.Approvals != (config.ApprovalsConfig{}), "approvals")
 	set(c.Drafts != (config.DraftsConfig{}), "drafts")
 	set(c.PullRequests != (config.PullRequestsConfig{}), "pull_requests")
+	set(c.Queues != (config.QueuesConfig{}), "queues")
+	set(c.Automation.Accounts != nil, "automation")
 	set(c.Tests != (config.TestsConfig{}), "tests")
 	set(c.Findings != (config.FindingsConfig{}), "findings")
 	r := c.Reports

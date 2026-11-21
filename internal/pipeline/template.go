@@ -409,7 +409,7 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 	if x.loopLimit <= 0 {
 		x.loopLimit = DefaultMaxLoopMembers
 	}
-	out := &Pipeline{Name: p.Name, On: p.On, Origin: p.Origin, Supersede: p.Supersede, Inputs: p.Inputs, Loops: p.Loops, maxLoop: p.maxLoop,
+	out := &Pipeline{Name: p.Name, On: p.On, Origin: p.Origin, Supersede: p.Supersede, SupersedeOff: p.SupersedeOff, Inputs: p.Inputs, Loops: p.Loops, maxLoop: p.maxLoop,
 		Runner: p.Runner, Requires: p.Requires, Timeout: p.Timeout, TimeoutLine: p.TimeoutLine, Lane: p.Lane}
 	if !p.Bound() {
 		return nil, Problems{{Message: "the pipeline has loops or input references that have not been bound to a run's values"}}

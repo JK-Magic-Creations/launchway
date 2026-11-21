@@ -25,6 +25,9 @@ func cmdValidate(args []string) error {
 	for _, w := range append(pipeline.OutputWarnings(p), pipeline.CacheWarnings(p)...) {
 		fmt.Fprintf(os.Stderr, "%s:%d: warning: %s: %s\n", path, w.Line, w.Path, w.Message)
 	}
+	for _, n := range p.PathNotes() {
+		fmt.Printf("  %s\n", n)
+	}
 	if *project != "" {
 		return validateOnServer(path, *project)
 	}

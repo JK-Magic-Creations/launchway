@@ -252,13 +252,16 @@ type TriggerDetail struct {
 	Webhook      string            `json:"webhook,omitempty"`
 	// PullRequestInto is the branch a pull request targets (schema 24).
 	PullRequestInto string `json:"pull_request_into,omitempty"`
+	// Changed is what the push or pull request changed, or why that is not
+	// known (see pipeline.ChangeSet).
+	Changed *pipeline.ChangeSet `json:"changed,omitempty"`
 }
 
 func triggerDetail(t Trigger) *TriggerDetail {
-	if len(t.Inputs) == 0 && t.Schedule == "" && t.Webhook == "" && t.PullRequestInto == "" {
+	if len(t.Inputs) == 0 && t.Schedule == "" && t.Webhook == "" && t.PullRequestInto == "" && t.Changed == nil {
 		return nil
 	}
-	return &TriggerDetail{Inputs: t.Inputs, Schedule: t.Schedule, ScheduledFor: t.ScheduledFor, Webhook: t.Webhook, PullRequestInto: t.PullRequestInto}
+	return &TriggerDetail{Inputs: t.Inputs, Schedule: t.Schedule, ScheduledFor: t.ScheduledFor, Webhook: t.Webhook, PullRequestInto: t.PullRequestInto, Changed: t.Changed}
 }
 
 // RunTrigger returns what a finished or running run was started with: its

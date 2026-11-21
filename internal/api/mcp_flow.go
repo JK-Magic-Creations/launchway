@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -57,6 +58,9 @@ func (l *stepLists) note(s *engine.StepView, sb *stepBrief, text *stepText) {
 	case engine.StepQueuedS:
 		l.queued = append(l.queued, s.ID)
 		sb.Why = "waiting for a runner to take it"
+		if s.WaitingFor != "" {
+			sb.Why, sb.WaitingCode = untrusted(s.WaitingFor, 400), s.WaitingCode
+		}
 		if s.NotBefore > time.Now().UnixMilli() {
 			sb.NotBefore = ts(s.NotBefore)
 			sb.Why = fmt.Sprintf("waiting to be retried (attempt %d of %d): a runner is given it from %s", s.Attempt, s.Retry+1, sb.NotBefore)
@@ -72,6 +76,8 @@ func (l *stepLists) note(s *engine.StepView, sb *stepBrief, text *stepText) {
 			sb.Why = "skipped: its when condition did not hold"
 		case "upstream":
 			sb.Why = "skipped: a step it needs did not succeed"
+		case engine.SkipPaths:
+			sb.Why = "skipped by a path rule (it counts as passed for required checks): " + untrusted(strings.TrimPrefix(s.Error, pipeline.PathSkipPrefix), 300)
 		case engine.SkipNotNeeded:
 			sb.Why = "skipped: not needed"
 		case engine.SkipSuperseded:

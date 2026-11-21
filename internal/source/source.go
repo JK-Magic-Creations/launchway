@@ -51,6 +51,12 @@ type Project struct {
 	// Off by default: a pull request's code may come from anyone who can
 	// open one.
 	PullRequestSecrets bool
+	// UntrustedAllowed turns the restricted mode of pull requests from
+	// automation accounts off (pull_requests.untrusted: allow).
+	UntrustedAllowed bool
+	// AutomationAccounts name the accounts whose runs are automation (see
+	// config.AutomationConfig).
+	AutomationAccounts []string
 	// SchedulesOff turns the project's schedules off: their firings are
 	// recorded as skipped (see fireDue).
 	SchedulesOff bool
@@ -471,6 +477,7 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 		if err == nil && pl.On.MatchPush(branchOf(r), tagOf(r)) {
 			pl, libs, vals, rec, err = m.prepare(ctx, p.Name, pl, nil, nil)
 		}
+		cs, pathSkip := p.pushPathRule(ctx, pl, err, r, old)
 		switch {
 		case errors.Is(err, ErrNoPipeline):
 			d.Outcome, d.Detail = "ignored", "no .launchway/pipeline.yaml at this commit"
@@ -483,13 +490,15 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 			d.Outcome, d.Detail = "error", what+":\n"+redact.URLs(err.Error())
 		case !pl.On.MatchPush(branchOf(r), tagOf(r)):
 			d.Outcome, d.Detail = "ignored", strings.TrimSpace("the pipeline's push trigger does not match "+r.FullRef()+" "+p.note(from))
+		case pathSkip != "":
+			d.Outcome, d.Detail = PathRule, pipeline.PathSkipPrefix+pathSkip
 		case skipMarker(r.Subject) != "":
 			d.Outcome, d.Detail = "ignored", "the commit message says "+skipMarker(r.Subject)+": no run for this commit (start one by hand if you want it)"
 		default:
 			// Claims the change, creates the run and records the decision
 			// in one transaction.
 			t := trigger(r, "push", r.Author)
-			t.Inputs = vals
+			t.Inputs, t.Changed = vals, cs
 			run, err := m.createRun(ctx, engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
 				Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: p.note(from)}, rec)
 			switch {
@@ -556,7 +565,8 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 		}
 		change := engine.RefChange{Ref: r.FullRef(), Old: old, New: r.SHA, SeenAt: seenAt}
 		d := Decision{Ref: r.FullRef(), SHA: r.SHA}
-		pl, from, err := p.parsedAt(ctx, r.SHA)
+		pipelineAt, restr := p.trustedPipelineSHA(refs, r)
+		pl, from, err := p.parsedAt(ctx, pipelineAt)
 		asks := err == nil && pl.On.MatchPullRequest()
 		if !gateOn {
 			if !asks {
@@ -605,7 +615,13 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 					d.Outcome, d.Detail = "ignored", into.Reject
 					break
 				}
+				cs := p.pullChange(ctx, into.Target, r.SHA)
+				if why := pathRule(pl.On.PullRequestPaths(), cs); why != "" {
+					d.Outcome, d.Detail = PathRule, pipeline.PathSkipPrefix+why
+					break
+				}
 				t := trigger(r, pipeline.EventPullRequest, r.Author)
+				t.Changed = cs
 				t.PullRequest = n
 				t.PullRequestInto = into.Target
 				t.Inputs = vals
@@ -616,7 +632,7 @@ func (m *Manager) pollPullRequests(ctx context.Context, p *project, refs, pulls 
 				}
 				run, err := m.createRun(ctx, engine.NewRun{Project: p.Name, Pipeline: pl, Trigger: t,
 					Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}, Push: &change, Note: note,
-					PullRequestSecrets: p.PullRequestSecrets}, rec)
+					PullRequestSecrets: p.PullRequestSecrets, Restricted: restr}, rec)
 				switch {
 				case errors.Is(err, engine.ErrAlreadyClaimed):
 					continue // another server handled it

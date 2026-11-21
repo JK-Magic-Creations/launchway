@@ -54,6 +54,7 @@ func (s *StepState) applyFinished(ev Event, p Payload) {
 		s.FailCause = p.Cause
 	}
 	s.NotBefore = 0
+	s.WaitCode, s.WaitReason, s.WaitSince, s.WaitTries = "", "", 0, 0
 	s.Evidence = evidenceOf(p)
 	if p.AI != nil {
 		s.AI = p.AI

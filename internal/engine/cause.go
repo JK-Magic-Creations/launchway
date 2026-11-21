@@ -415,6 +415,10 @@ func (st *RunState) runActions() []Action {
 	}
 	add(resume)
 	add(rerun)
+	if st.Queue != nil && st.Queue.Held {
+		acts = append(acts, st.queueActions()...)
+	}
+	acts = append(acts, st.trustAction()...)
 	return acts
 }
 

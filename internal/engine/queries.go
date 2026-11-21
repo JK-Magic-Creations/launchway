@@ -73,6 +73,9 @@ type RunSummary struct {
 	// Lane is the run's place in its lane (schema 24); nil when its pipeline
 	// has no lane.
 	Lane *LaneInfo `json:"lane,omitempty"`
+	// Queue says where the run is in its project's queue (schema 37): its
+	// class, and for a held run why it waits.
+	Queue *QueueInfo `json:"queue,omitempty"`
 	// Tests adds up the run's test results (see RunTests); nil when no step
 	// has reported any.
 	Tests *TestTotals `json:"tests,omitempty"`
@@ -92,6 +95,11 @@ type StepBrief struct {
 	Allowed bool `json:"allowed,omitempty"`
 	// Reason is why a failed step failed, in a plain sentence.
 	Reason string `json:"reason,omitempty"`
+	// Needs are the steps this one waits for (the graph's edges).
+	Needs []string `json:"needs,omitempty"`
+	// SkipKind, for a skipped step, says why: condition, upstream, paths (a
+	// path rule), not_needed or superseded.
+	SkipKind string `json:"skip_kind,omitempty"`
 }
 
 // StepView is a step with its definition and current state.
@@ -146,6 +154,9 @@ type StepView struct {
 	Workspace      string                   `json:"workspace,omitempty"`
 	RunnerSelector *pipeline.RunnerSelector `json:"runner_selector,omitempty"`
 	WaitingFor     string                   `json:"waiting_for,omitempty"`
+	// WaitingCode is the stable code beside WaitingFor (quota_full,
+	// cluster_full, no_runner, runners_busy; see capacity_wait.go).
+	WaitingCode string `json:"waiting_code,omitempty"`
 	// WaitKind, for a waiting deploy or rollback step, is what it waits
 	// for: lock or observe. Empty for an approval.
 	WaitKind string `json:"wait_kind,omitempty"`
@@ -230,6 +241,9 @@ type RunDetail struct {
 	// Policy sums up the run's policy decisions (schema 16); nil if no
 	// policy judged it.
 	Policy *RunPolicySummary `json:"policy,omitempty"`
+	// Restriction says the run is restricted (a pull request from an
+	// automation account or a fork), and whether a maintainer approved it.
+	Restriction *Restriction `json:"restriction,omitempty"`
 }
 
 // RunPolicySummary sums up a run's policy decisions.
@@ -465,7 +479,7 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 	if e.knows(schemaFlow) {
 		allowed = `allowed`
 	}
-	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+`, `+allowed+`, error FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
+	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+`, `+allowed+`, error, skip_kind FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
 		ORDER BY run_id, position`, args...)
 	if err != nil {
 		return err
@@ -476,7 +490,7 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		var b StepBrief
 		var allowed int
 		var reason string
-		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind, &allowed, &reason); err != nil {
+		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind, &allowed, &reason, &b.SkipKind); err != nil {
 			return err
 		}
 		if b.Status == StepFailed {
@@ -497,6 +511,8 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		return err
 	}
 	rows.Close()
+	e.attachNeeds(runs)
+	e.attachQueue(runs)
 	if err := e.attachLanePositions(runs); err != nil {
 		return err
 	}
@@ -668,6 +684,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
 			v.Group, v.Approvers = def.Group, def.Approvers
 			e.decorateOwnRunner(v, st, def)
+			e.decorateWait(v, st, def)
 			v.Environment, v.Deployment = def.Environment, def.Deployment
 			if dd := st.Pipeline.Step(def.Deployment); def.IsRollback() && dd != nil {
 				v.Environment = dd.Environment
@@ -709,6 +726,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		return nil, err
 	}
 	d.Policy = policySummary(st)
+	d.Restriction = st.restrictionView()
 	d.Resume = st.resumeAdvice()
 	d.Actions = st.runActions()
 	d.Rollback = st.rollbackView()

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { api, type Project, type RunSummary } from "../api";
 import { launchApi, type LaunchLineView } from "../api/launch";
 import { EntityLink } from "../components/EntityLink";
@@ -12,6 +12,8 @@ import { Status, stateOf, type State } from "../kit/Status";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useNow, useStream } from "../live";
 import { onLink } from "../router";
+
+const QueuePanel = lazy(() => import("./QueuePanel"));
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "", label: "All" }, { key: "running", label: "Running" }, { key: "failed", label: "Failed" }, { key: "succeeded", label: "Passed" },
@@ -100,6 +102,7 @@ export function ActivityPage() {
         </Sheet>
       )}
 
+      <Suspense fallback={null}><QueuePanel project={project} /></Suspense>
       <ErrorBox error={runs.error} />
       {list === null && !runs.error && <div className="loading">Loading…</div>}
       {list && list.length === 0 && (

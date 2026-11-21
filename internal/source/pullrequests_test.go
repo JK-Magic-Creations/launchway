@@ -132,7 +132,7 @@ func TestPullRequestsStartRuns(t *testing.T) {
 		t.Fatalf("runs %+v", runs)
 	}
 	old, _ := eng.Summary(first.ID)
-	if old.Status != engine.RunCanceled || old.CancelReason != "superseded by run #2" || old.SupersededBy != runs[0].ID {
+	if old.Status != engine.RunCanceled || old.CancelReason != "superseded by run #2: a newer commit was pushed to the same pull request" || old.SupersededBy != runs[0].ID {
 		t.Fatalf("first run %+v", old)
 	}
 	if s, _ := m.Get("app"); !strings.Contains(s.Decisions[0].Detail, "started run #2, superseding #1") {

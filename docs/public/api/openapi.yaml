@@ -3492,6 +3492,29 @@ paths:
             tags:
                 - projects
             x-launchway-access: public
+    /api/v1/queue:
+        get:
+            description: 'The runs held back by a limit on concurrent runs, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions. See [Queues and limits](../guide/queues.md).'
+            operationId: get_api_v1_queue
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The runs held back by a limit on concurrent runs, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions.'
+            tags:
+                - queue
+            x-launchway-access: signed-in
     /api/v1/repos/{owner}/{name}:
         delete:
             description: Moves the repository to the trash.
@@ -6415,6 +6438,39 @@ paths:
             tags:
                 - runs
             x-launchway-access: run-viewer
+    /api/v1/runs/{id}/queue:
+        post:
+            description: 'Moves a run that waits in a queue: {"action": "run_next"} puts it at the front, hold keeps it waiting, release lets the limits decide again. Refused with a reason for a run that already goes. A run that is held lists these in its actions.'
+            operationId: post_api_v1_runs_id_queue
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Moves a run that waits in a queue: {"action": "run_next"} puts it at the front, hold keeps it waiting, release lets the limits decide again.'
+            tags:
+                - runs
+            x-launchway-access: run-operator
+            x-launchway-audit: run.queue
     /api/v1/runs/{id}/reports:
         get:
             description: A run's hosted HTML reports, each with a fresh signed link.
@@ -7005,6 +7061,39 @@ paths:
             tags:
                 - runs
             x-launchway-access: run-viewer
+    /api/v1/runs/{id}/trust:
+        post:
+            description: 'A maintainer''s *Run with secrets* on a restricted run ({"comment": "..."}): the steps that have not started may read secrets and deploy. Recorded in the run''s events and the audit trail. Refused for a run that is not restricted, or is over. The run''s restriction block says whether it is restricted and why, and its actions list run_with_secrets. See [Pull-request trust](../guide/pull-request-trust.md)'
+            operationId: post_api_v1_runs_id_trust
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A maintainer''s *Run with secrets* on a restricted run ({"comment": "..."}): the steps that have not started may read secrets and deploy.'
+            tags:
+                - runs
+            x-launchway-access: run-operator
+            x-launchway-audit: run.trust
     /api/v1/runs/{id}/variables:
         get:
             description: The variables the run used, as recorded when it was created; a re-run shows the original's

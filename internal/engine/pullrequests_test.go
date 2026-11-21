@@ -293,7 +293,7 @@ func TestSupersedePullRequests(t *testing.T) {
 	appendRaw(t, e, strange, "step.teleported", `{"step":"a"}`)
 	third := createPR(t, e, prSupersede, 5, "a4", false)
 
-	if sum, _ := e.Summary(second); sum.CancelReason != fmt.Sprintf("superseded by run #%d", runNumber(t, e, third)) {
+	if sum, _ := e.Summary(second); sum.CancelReason != fmt.Sprintf("superseded by run #%d: a newer commit was pushed to the same pull request", runNumber(t, e, strange)) {
 		t.Fatalf("second: %+v", sum)
 	}
 	for _, id := range []string{re.ID, strange, other, third} {

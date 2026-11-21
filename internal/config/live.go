@@ -40,5 +40,8 @@ func (c *Config) EngineLive() (engine.LiveOptions, error) {
 	o.Environments = c.EngineEnvironments()
 	o.HealthSources = c.EngineHealthSources()
 	o.RunnerPools = EnginePools(pools)
+	if o.Queues, err = c.EngineQueues(); err != nil {
+		return o, err
+	}
 	return o, nil
 }

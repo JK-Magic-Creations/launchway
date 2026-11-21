@@ -59,6 +59,11 @@ type Config struct {
 	// PullRequests controls runs of pull requests, whose code may come from
 	// anyone who can open one. Each project may override it.
 	PullRequests PullRequestsConfig `yaml:"pull_requests"`
+	// Queues says how long steps wait for room, how many runs go at once and
+	// in what order the others wait. Each project may override it.
+	Queues QueuesConfig `yaml:"queues"`
+	// Automation names the automation accounts (dependency bots).
+	Automation AutomationConfig `yaml:"automation"`
 	// Tests limits what the server keeps of the test reports steps declare.
 	Tests TestsConfig `yaml:"tests"`
 	// Artifacts: where step files are kept; Findings: what is kept of findings; Forge: Git hosting.
@@ -497,14 +502,6 @@ func (r ReportsConfig) Limits() (executor.CollectLimits, error) {
 		MaxBytes: int64(r.MaxTotalMiB) << 20}.WithDefaults(), nil
 }
 
-// PullRequestsConfig says whether the steps of pull-request runs may read
-// secrets.
-type PullRequestsConfig struct {
-	// Secrets lets steps of pull-request runs read secrets; default false.
-	// In a project's pull_requests, unset means the server's setting.
-	Secrets *bool `yaml:"secrets"`
-}
-
 // DraftsConfig says who may start draft runs and whether their steps may
 // read secrets.
 type DraftsConfig struct {
@@ -632,6 +629,8 @@ type ProjectConfig struct {
 	// PullRequests overrides the server's pull_requests setting for this
 	// project.
 	PullRequests *PullRequestsConfig `yaml:"pull_requests"`
+	// Queues overrides the server's queues setting for this project.
+	Queues *QueuesConfig `yaml:"queues"`
 	// Push lets the pipeline editor commit to this repository. Without it,
 	// edited pipelines can be copied or downloaded, not saved.
 	Push *PushConfig `yaml:"push"`
@@ -781,6 +780,9 @@ func (c *Config) Validate(path string) error {
 	if err := c.checkTriggers(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
+	if err := c.checkQueuesAndTrust(); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	if err := c.MCP.Check(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
@@ -914,7 +916,7 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 			}
 			poll = d
 		}
-		sp := source.Project{Name: p.Name, URL: p.Repo, DefaultBranch: p.Branch, Poll: poll, PullRequestSecrets: c.pullRequestSecrets(p)}
+		sp := source.Project{Name: p.Name, URL: p.Repo, DefaultBranch: p.Branch, Poll: poll, PullRequestSecrets: c.pullRequestSecrets(p), UntrustedAllowed: c.untrustedAllowed(p), AutomationAccounts: c.AutomationAccounts()}
 		if p.Push != nil {
 			sp.Push = &source.PushSettings{BranchPrefix: p.Push.BranchPrefix, AllowDirect: p.Push.AllowDirect}
 		}
@@ -926,15 +928,6 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 		out = append(out, sp)
 	}
 	return out, nil
-}
-
-// pullRequestSecrets says whether the steps of a project's pull-request runs
-// may read secrets: the project's setting, else the server's, else no.
-func (c *Config) pullRequestSecrets(p ProjectConfig) bool {
-	if p.PullRequests != nil && p.PullRequests.Secrets != nil {
-		return *p.PullRequests.Secrets
-	}
-	return c.PullRequests.Secrets != nil && *c.PullRequests.Secrets
 }
 
 // SourceLibraries converts the library list for the source package.

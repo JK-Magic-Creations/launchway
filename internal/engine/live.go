@@ -31,13 +31,14 @@ type LiveOptions struct {
 	HealthSources []HealthSource
 	Models        *ai.Registry
 	RunnerPools   []RunnerPool
+	Queues        QueueSettings
 }
 
 // Live returns the options' live part.
 func (o Options) Live() LiveOptions {
 	return LiveOptions{AllowSelfApproval: o.AllowSelfApproval, EmergencyRollback: o.EmergencyRollback, Tests: o.Tests, Findings: o.Findings, Reports: o.Reports,
 		Artifacts: o.Artifacts, Environments: o.Environments, Policy: o.Policy, HealthSources: o.HealthSources,
-		Models: o.Models, RunnerPools: o.RunnerPools}
+		Models: o.Models, RunnerPools: o.RunnerPools, Queues: o.Queues}
 }
 
 // liveConfig is LiveOptions checked and with its defaults: what the engine
@@ -55,6 +56,7 @@ type liveConfig struct {
 	sources   map[string]HealthSource
 	models    *ai.Registry
 	pools     map[string]RunnerPool
+	queues    QueueSettings
 }
 
 // live returns the configuration in force.
@@ -115,7 +117,7 @@ func buildLive(o LiveOptions, known int) (*liveConfig, error) {
 	return &liveConfig{
 		selfOK: o.AllowSelfApproval == nil || *o.AllowSelfApproval, emergency: o.EmergencyRollback,
 		tests: tests, finds: finds, reps: reps, arts: arts,
-		envs: envs, pol: pol, polHash: policy.Hash(pol.Inline), sources: sources, models: o.Models, pools: pools,
+		envs: envs, pol: pol, polHash: policy.Hash(pol.Inline), sources: sources, models: o.Models, pools: pools, queues: o.Queues,
 	}, nil
 }
 
