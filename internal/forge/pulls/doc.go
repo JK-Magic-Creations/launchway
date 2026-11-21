@@ -1,5 +1,5 @@
 // Package pulls is pull requests and code review for hosted repositories: a
-// change travelling from a source branch to a target branch, with its
+// change traveling from a source branch to a target branch, with its
 // conversation, its reviews, its checks and the rules that say when it may
 // land.
 //
@@ -10,7 +10,7 @@
 //     update of the head or the base is recorded as a revision.
 //   - Whether a pull request can merge is judged by git (merge-tree
 //     --write-tree) in a scratch repository, in the background: a request never
-//     waits for it, and a judgement is kept with the head and base it was made
+//     waits for it, and a judgment is kept with the head and base it was made
 //     for, so a stale one is recognised and redone.
 //   - A merge is a server-side write through the ledger's compare-and-swap
 //     (storage.Mutate): when a push lands on the target while the merge is

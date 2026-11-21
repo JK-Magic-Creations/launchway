@@ -19,8 +19,8 @@ func init() {
 //
 //	pull_requests holds one row per pull request, numbered per repository
 //	(pull_counters hands the numbers out inside a transaction). The columns
-//	merge_* are the server's last judgement of whether it can merge, with
-//	the head and base it judged, so a stale judgement is recognisable.
+//	merge_* are the server's last judgment of whether it can merge, with
+//	the head and base it judged, so a stale judgment is recognizable.
 //	source_repo_id is reserved for pull requests from a fork (empty: the
 //	same repository). pull_people lists assignees and requested reviewers.
 //	pull_revisions records the head and base at every update, so history

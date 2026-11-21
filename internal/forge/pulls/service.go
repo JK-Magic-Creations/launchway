@@ -28,7 +28,7 @@ type Event struct {
 	Detail map[string]string
 }
 
-// Service is the behaviour of pull requests.
+// Service is the behavior of pull requests.
 type Service struct {
 	Store *Store
 	Git   *storage.Store
@@ -49,7 +49,7 @@ type Service struct {
 	wg           sync.WaitGroup
 	mu           sync.Mutex
 	jobs         map[string]*job
-	// background is cancelled by Close.
+	// background is canceled by Stop.
 	background context.Context
 	cancel     context.CancelFunc
 }
@@ -71,7 +71,7 @@ func (s *Service) Stop() {
 	s.wg.Wait()
 }
 
-// Settle waits until no judgement of mergeability is running or waiting. A
+// Settle waits until no judgment of mergeability is running or waiting. A
 // request never calls it; tests and shutdown do.
 func (s *Service) Settle() { s.wg.Wait() }
 
@@ -185,7 +185,7 @@ func zero(sha string) bool { return strings.Trim(sha, "0") == "" }
 // Pushed is called after refs of the repository moved (a push, a merge, a
 // mirror): every open pull request whose source or target moved is brought up
 // to date: its head and base are recorded as a new revision, its pull ref is
-// moved, a merge by other means is noticed, and the judgement of
+// moved, a merge by other means is noticed, and the judgment of
 // mergeability is redone in the background.
 func (s *Service) Pushed(ctx context.Context, repoID, actor string, ups []RefUpdate) {
 	for _, u := range ups {
@@ -288,7 +288,7 @@ func (s *Service) afterNewCommits(ctx context.Context, repoID string, p PullRequ
 	s.dismissStale(ctx, repoID, p, head)
 }
 
-// schedule asks for the judgement of a pull request to be (re)made in the
+// schedule asks for the judgment of a pull request to be (re)made in the
 // background: at most four run at once, and a request for one already
 // running makes it run once more when it finishes. The work outlives the
 // request that asked (only its values are kept) and ends when the service stops.
@@ -313,7 +313,7 @@ func (s *Service) schedule(ctx context.Context, repoID, id string) {
 				return
 			}
 			jctx, cancel := context.WithTimeout(base, 2*time.Minute)
-			stop := context.AfterFunc(s.background, cancel) //nolint:contextcheck // the judgement outlives the request that asked for it; it ends with its own timeout or when the service stops
+			stop := context.AfterFunc(s.background, cancel) //nolint:contextcheck // the judgment outlives the request that asked for it; it ends with its own timeout or when the service stops
 			s.judge(jctx, repoID, id)
 			stop()
 			cancel()
@@ -338,10 +338,10 @@ func (s *Service) finish(id string, force bool) bool {
 	return true
 }
 
-// Judge makes the judgement of a pull request now, for callers that must
+// Judge makes the judgment of a pull request now, for callers that must
 // have it (a merge about to be made). Requests use schedule instead.
 func (s *Service) Judge(ctx context.Context, repoID string, p PullRequest) (Mergeability, error) {
-	return s.judgement(ctx, repoID, p)
+	return s.judgment(ctx, repoID, p)
 }
 
 func (s *Service) judge(ctx context.Context, repoID, id string) {
@@ -349,20 +349,20 @@ func (s *Service) judge(ctx context.Context, repoID, id string) {
 	if err != nil || p.State != Open {
 		return
 	}
-	m, err := s.judgement(ctx, repoID, p)
+	m, err := s.judgment(ctx, repoID, p)
 	if err != nil {
 		m = Mergeability{State: MergeUnknown, Reason: err.Error()}
 		s.Log.Warn("judging whether a pull request can merge", "pull", p.Number, "err", err)
 	}
 	if err := s.Store.SetMergeability(ctx, p.ID, p.HeadSHA, p.BaseSHA, m); err != nil {
-		s.Log.Warn("storing the judgement of a pull request", "pull", p.Number, "err", err)
+		s.Log.Warn("storing the judgment of a pull request", "pull", p.Number, "err", err)
 		return
 	}
 	s.autoMerge(ctx, repoID, p.ID)
 }
 
-// judgement asks git whether the head can be merged into the base.
-func (s *Service) judgement(ctx context.Context, repoID string, p PullRequest) (Mergeability, error) {
+// judgment asks git whether the head can be merged into the base.
+func (s *Service) judgment(ctx context.Context, repoID string, p PullRequest) (Mergeability, error) {
 	m := Mergeability{State: MergeUnknown}
 	err := s.Git.Scratch(ctx, repoID, func(ctx context.Context, _ map[string]string, scratch string) error {
 		g := s.runner(scratch, true)
@@ -393,6 +393,6 @@ func (s *Service) afterReview(ctx context.Context, repoID string, p PullRequest)
 	s.autoMerge(ctx, repoID, p.ID)
 }
 
-// Schedule asks for a pull request's judgement of mergeability to be made in
+// Schedule asks for a pull request's judgment of mergeability to be made in
 // the background (a request that finds it missing or stale calls it).
 func (s *Service) Schedule(ctx context.Context, repoID, id string) { s.schedule(ctx, repoID, id) }

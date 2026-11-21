@@ -37,11 +37,11 @@ func (v prView) action(name string) (avail bool, reason string) {
 	return false, "no such action"
 }
 
-// waitMergeable polls the pull request until its judgement is made.
+// waitMergeable polls the pull request until its judgment is made.
 func waitMergeable(t *testing.T, b *browser, url string, want pulls.MergeState) prView {
 	t.Helper()
 	var v prView
-	hostedWait(t, "the judgement of mergeability to be "+string(want), func() bool {
+	hostedWait(t, "the judgment of mergeability to be "+string(want), func() bool {
 		b.get(url).json(t, &v)
 		return v.Mergeability.State == want
 	})

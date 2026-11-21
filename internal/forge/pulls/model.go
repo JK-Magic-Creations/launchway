@@ -17,10 +17,10 @@ const (
 	Closed State = "closed"
 )
 
-// MergeState is the server's judgement of whether the branches can be merged.
+// MergeState is the server's judgment of whether the branches can be merged.
 type MergeState string
 
-// The merge states. Checking means a judgement is being made (or the last one
+// The merge states. Checking means a judgment is being made (or the last one
 // was made for another head or base); it is never a refusal.
 const (
 	MergeUnknown   MergeState = "unknown"
@@ -29,7 +29,7 @@ const (
 	MergeConflicts MergeState = "conflicts"
 )
 
-// Mergeability is the judgement, with what it was made for.
+// Mergeability is the judgment, with what it was made for.
 type Mergeability struct {
 	State MergeState `json:"state"`
 	// Files are the conflicted files when State is conflicts.
@@ -40,7 +40,7 @@ type Mergeability struct {
 	// Ahead is how many commits the head has that the target lacks.
 	Ahead     int       `json:"ahead"`
 	CheckedAt time.Time `json:"checked_at,omitzero"`
-	// Reason says, for State unknown, why no judgement could be made.
+	// Reason says, for State unknown, why no judgment could be made.
 	Reason string `json:"reason,omitempty"`
 }
 

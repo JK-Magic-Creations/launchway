@@ -17,7 +17,7 @@ import (
 )
 
 // Pull requests of hosted repositories (internal/forge/pulls). A pull request
-// is a change travelling from one branch to another with its conversation,
+// is a change traveling from one branch to another with its conversation,
 // reviews, checks and merge rules. What a person may do with one is computed
 // here, once, as the `actions` list of the answer: the web interface, MCP and
 // the command line show exactly that list, so none of them offers a button
@@ -223,7 +223,7 @@ func (s *Server) getPull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p.State == pulls.Open && (p.Mergeability.State == pulls.MergeChecking || p.Mergeability.State == pulls.MergeUnknown) {
-		s.Forge.Pulls.Schedule(r.Context(), repo.ID, p.ID) // the judgement is made in the background; this answer says "checking"
+		s.Forge.Pulls.Schedule(r.Context(), repo.ID, p.ID) // the judgment is made in the background; this answer says "checking"
 	}
 	writeJSON(w, http.StatusOK, v)
 }

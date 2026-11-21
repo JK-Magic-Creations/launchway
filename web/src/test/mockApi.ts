@@ -38,6 +38,7 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/waivers": { waivers: [], waive_projects: [], rules: {} },
     "/api/v1/config/history": { changes: [] },
     ...forgeFixtures(),
+    ...pullFixtures(),
     ...overrides,
   };
   class FakeSource { onopen = null; onerror = null; addEventListener() {} removeEventListener() {} close() {} }
@@ -71,5 +72,34 @@ export function forgeFixtures(): Record<string, unknown> {
     "/api/v1/repositories/acme/shop/hooks": hooks,
     "/api/v1/repositories/acme/shop/hooks/hook_1/deliveries": deliveries,
     "/api/v1/owners/acme/hooks": { items: [{ ...hook, scope: "owner", owner: "acme", repository: undefined }], events: hooks.events },
+  };
+}
+
+/** Pull requests of acme/shop: one open pull request with a thread, a review, a failing required check and a file with a patch. */
+export function pullFixtures(): Record<string, unknown> {
+  const base = "/api/v1/repositories/acme/shop";
+  const pull = {
+    id: "pul_1", number: 1, repository: "acme/shop", title: "Round prices to the cent", body: "Fixes the **rounding** bug.\n\n- one\n- two\n\n<script>alert(1)</script>", author: "ada",
+    source_branch: "fix-rounding", target_branch: "main", state: "open", draft: false, labels: ["bug"], assignees: [], requested_reviewers: ["grace"],
+    head_sha: "a".repeat(40), base_sha: "b".repeat(40), merge_base: "b".repeat(40), linked_runs: ["run_7"], created_at: "2026-11-20T10:00:00Z", updated_at: "2026-11-20T11:00:00Z", revisions: 2,
+    mergeability: { state: "clean", behind: 1, ahead: 1 }, fetch_ref: "refs/pull/1/head", your_role: "admin",
+    readiness: { can_merge: false, why: "needs 1 more approval; `test` has not passed", approvals: 0, changes_requested_by: [], open_threads: 1, methods: ["merge", "squash", "rebase"], default_method: "merge",
+      blockers: [{ code: "approvals", why: "needs 1 more approval" }, { code: "check", why: "`test` has not passed" }],
+      checks: [{ name: "ci", status: "running", required: false, run_id: "run_7", run_number: 7 }, { name: "ci/test", status: "failed", required: true, run_id: "run_7", run_number: 7 }] },
+    actions: [{ name: "merge", available: false, reason: "needs 1 more approval", who: "operator" }, { name: "edit", available: true }, { name: "close", available: true }, { name: "review", available: true }, { name: "mark_draft", available: true }, { name: "auto_merge", available: true }],
+  };
+  const patch = "diff --git a/price.go b/price.go\n--- a/price.go\n+++ b/price.go\n@@ -1,3 +1,4 @@\n func Round(x float64) float64 {\n-\treturn x\n+\treturn math.Round(x*100) / 100\n }\n+// done\n";
+  const thread = { id: "pcm_1", path: "price.go", line: 3, side: "new", outdated: false, resolved: false, comments: [{ id: "pcm_1", thread_id: "pcm_1", author: "grace", body: "Why not `math.Floor`?", path: "price.go", line: 3, side: "new", created_at: "2026-11-20T10:30:00Z" }] };
+  return {
+    [`${base}/pulls`]: { items: [pull], total: 1 },
+    [`${base}/pulls/1`]: pull,
+    [`${base}/pulls/1/conversation`]: { comments: [{ id: "pcm_2", author: "ada", body: "Ready when you are.", created_at: "2026-11-20T10:10:00Z" }], threads: [thread],
+      reviews: [{ id: "prv_1", author: "grace", verdict: "request_changes", body: "Two things.", commit_sha: "c".repeat(40), state: "submitted", created_at: "2026-11-20T10:40:00Z", stale: true }],
+      revisions: [{ seq: 1, head_sha: "c".repeat(40), base_sha: "b".repeat(40), forced: false, created_at: "2026-11-20T10:00:00Z" }, { seq: 2, head_sha: "a".repeat(40), base_sha: "b".repeat(40), forced: false, actor: "ada", created_at: "2026-11-20T11:00:00Z" }] },
+    [`${base}/pulls/1/files`]: { files: [{ path: "price.go", status: "modified", additions: 2, deletions: 1, binary: false }, { path: "logo.png", status: "added", additions: 0, deletions: 0, binary: true }], total: 2, additions: 2, deletions: 1 },
+    [`${base}/pulls/1/patch`]: { path: "price.go", diff: patch, bytes: patch.length },
+    [`${base}/pulls/1/commits`]: { items: [{ sha: "a".repeat(40), author: "Ada", authored_at: "2026-11-20T10:00:00Z", subject: "Round prices" }] },
+    [`${base}/compare`]: { base: "main", head: "fix-rounding", ahead: 1, behind: 0, commits: [{ sha: "a".repeat(40), author: "Ada", authored_at: "2026-11-20T10:00:00Z", subject: "Round prices" }],
+      changes: { files: [], total: 1, additions: 2, deletions: 1 }, mergeability: { state: "clean", behind: 0, ahead: 1 } },
   };
 }

@@ -206,10 +206,10 @@ func (s *Service) CompareBranches(ctx context.Context, repoID, base, head string
 	if err != nil {
 		return bc, err
 	}
-	// The judgement is bounded: a page that asks for it never waits long for a slow merge.
+	// The judgment is bounded: a page that asks for it never waits long for a slow merge.
 	jctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	m, err := s.judgement(jctx, repoID, PullRequest{BaseSHA: bc.BaseSHA, HeadSHA: bc.HeadSHA})
+	m, err := s.judgment(jctx, repoID, PullRequest{BaseSHA: bc.BaseSHA, HeadSHA: bc.HeadSHA})
 	if err != nil {
 		m = Mergeability{State: MergeUnknown, Reason: err.Error()}
 	}

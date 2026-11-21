@@ -98,7 +98,7 @@ type gate struct {
 }
 
 // mergeGate decides whether a merge may be made at all: the pull request is
-// open and is the one the person saw, the method is allowed, a fresh judgement
+// open and is the one the person saw, the method is allowed, a fresh judgment
 // says it merges, and the rules are met or an administrator waives them.
 func (s *Service) mergeGate(ctx context.Context, repoID string, p PullRequest, in MergeInput) (gate, error) {
 	var g gate
@@ -119,7 +119,7 @@ func (s *Service) mergeGate(ctx context.Context, repoID string, p PullRequest, i
 	if !set.allows(g.method) {
 		return g, invalid("this repository does not allow merging by %s; it allows %s", g.method, strings.Join(set.Allowed(), ", "))
 	}
-	// A judgement made for these very tips, now, not the stored one: the one
+	// A judgment made for these very tips, now, not the stored one: the one
 	// thing that must never be stale is "it merges cleanly".
 	m, err := s.Judge(ctx, repoID, p)
 	if err != nil {
@@ -591,7 +591,7 @@ func (s *Service) SetAutoMerge(ctx context.Context, repoID string, p PullRequest
 }
 
 // autoMerge merges a pull request that asked for it once nothing blocks it.
-// It runs after a judgement, a review or a draft change, and from Sweep for
+// It runs after a judgment, a review or a draft change, and from Sweep for
 // what only a run's end can change (checks).
 func (s *Service) autoMerge(ctx context.Context, repoID, id string) {
 	p, err := s.Store.ByID(ctx, id)
@@ -607,7 +607,7 @@ func (s *Service) autoMerge(ctx context.Context, repoID, id string) {
 		return
 	}
 	// Merging is its own request's work: it must not run under the caller's
-	// deadline, nor hold up the judgement that triggered it.
+	// deadline, nor hold up the judgment that triggered it.
 	mctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
 	defer cancel()
 	if _, err := s.Merge(mctx, repoID, p, MergeInput{Method: p.AutoMerge, ExpectHead: p.HeadSHA, Actor: p.AutoMergeBy, RepoPath: path}); err != nil {

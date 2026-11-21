@@ -52,7 +52,7 @@ const pullCols = `id, repo_id, number, title, body, author, source_repo_id, sour
  head_sha, base_sha, merge_base, merge_state, merge_files, merge_behind, merge_ahead, merge_checked_head, merge_checked_base, merge_checked_at, merge_reason,
  merge_commit, merge_method, merged_by, reverts, auto_merge, auto_merge_by, created_at, updated_at, merged_at, closed_at, closed_by`
 
-// pulled is a row with what the merge judgement was made for.
+// pulled is a row with what the merge judgment was made for.
 type pulled struct {
 	PullRequest
 	checkedHead, checkedBase string
@@ -77,7 +77,7 @@ func scanPull(sc interface{ Scan(...any) error }) (pulled, error) {
 	p.Mergeability.State = MergeState(mstate)
 	p.Mergeability.CheckedAt = fromMS(checked)
 	p.CreatedAt, p.UpdatedAt, p.MergedAt, p.ClosedAt = fromMS(created), fromMS(updated), fromMS(merged), fromMS(closed)
-	// A judgement made for another head or base is not a judgement of this one.
+	// A judgment made for another head or base is not a judgment of this one.
 	if p.State == Open && (p.checkedHead != p.HeadSHA || p.checkedBase != p.BaseSHA) && p.Mergeability.State != MergeUnknown {
 		p.Mergeability.State = MergeChecking
 	}
@@ -391,14 +391,14 @@ func (s *Store) Revisions(ctx context.Context, pullID string) ([]Revision, error
 }
 
 // MoveTips records the tips a pull request now has (after a push to either
-// branch); the judgement of mergeability becomes stale by itself because it
+// branch); the judgment of mergeability becomes stale by itself because it
 // remembers what it was made for.
 func (s *Store) MoveTips(ctx context.Context, id, head, base, mergeBase string) error {
 	_, err := s.db.Exec(ctx, `UPDATE pull_requests SET head_sha = ?, base_sha = ?, merge_base = ?, updated_at = ? WHERE id = ?`, head, base, mergeBase, ms(s.now()), id)
 	return err
 }
 
-// SetMergeability stores a judgement with the tips it was made for. It is
+// SetMergeability stores a judgment with the tips it was made for. It is
 // kept only if the pull request is still at those tips.
 func (s *Store) SetMergeability(ctx context.Context, id, head, base string, m Mergeability) error {
 	files, _ := json.Marshal(m.Files)

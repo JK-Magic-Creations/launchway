@@ -1,6 +1,6 @@
 # Pull requests and code review
 
-A **pull request** is a change travelling from one branch of a hosted repository to another. It has a
+A **pull request** is a change traveling from one branch of a hosted repository to another. It has a
 number in its repository, a title, a description in Markdown, a conversation, reviews, the results of the
 pipelines that ran on it, and rules that say when it may land. Everything below works the same in the web
 interface, over the HTTP API, with the MCP tools and with the `launchway pr` command.
@@ -107,7 +107,7 @@ the branch are one transaction that only succeeds if the target is still where t
 push reaches the target in the meantime, the merge is made again on the new tip (up to five times, then it
 fails cleanly and says so). A push is never lost and a merge never half-lands.
 
-Other things you can do: **auto-merge** (merge when the rules pass), **close** and **reopen**, **retarget**,
+Other things you can do: **auto-merge** (merge when the rules pass), **close** and **reopen**, change the **target branch**,
 mark as **draft** or **ready**, and **revert** a merged pull request, which opens a new pull request that
 undoes it.
 

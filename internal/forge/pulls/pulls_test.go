@@ -53,9 +53,9 @@ func TestOpenRecordsTheHeadInTheLedgerAndNumbersPerRepository(t *testing.T) {
 func TestMergeabilityIsJudgedInTheBackgroundAndRedoneWhenABranchMoves(t *testing.T) {
 	w, base, _ := featureWorld(t)
 	p := w.open("ada", New{Title: "Add b", SourceBranch: "feature", TargetBranch: "main"})
-	// Right after opening, the judgement may not exist yet: never a refusal.
+	// Right after opening, the judgment may not exist yet: never a refusal.
 	if p.Mergeability.State == MergeConflicts {
-		t.Fatalf("a judgement before git ran: %+v", p.Mergeability)
+		t.Fatalf("a judgment before git ran: %+v", p.Mergeability)
 	}
 	p = w.get(1)
 	if p.Mergeability.State != MergeClean || p.Mergeability.Behind != 0 || p.Mergeability.Ahead != 1 {
@@ -77,13 +77,13 @@ func TestMergeabilityIsJudgedInTheBackgroundAndRedoneWhenABranchMoves(t *testing
 	if p.Mergeability.State != MergeConflicts || !slices.Equal(p.Mergeability.Files, []string{"a.txt"}) {
 		t.Fatalf("conflicts: %+v", p.Mergeability)
 	}
-	// A judgement made for another head is not served as this head's.
+	// A judgment made for another head is not served as this head's.
 	if err := w.svc.Store.MoveTips(w.ctx, p.ID, p.HeadSHA, base, p.MergeBase); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := w.svc.Store.Get(w.ctx, repoID, 1)
 	if got.Mergeability.State != MergeChecking {
-		t.Fatalf("a stale judgement is shown as %q", got.Mergeability.State)
+		t.Fatalf("a stale judgment is shown as %q", got.Mergeability.State)
 	}
 }
 

@@ -450,7 +450,7 @@ func (r *Readiness) block(code, why string) {
 	r.Blockers = append(r.Blockers, Blocker{Code: code, Why: why})
 }
 
-// stateBlockers: a draft, conflicts, a judgement that is not made yet.
+// stateBlockers: a draft, conflicts, a judgment that is not made yet.
 func (r *Readiness) stateBlockers(p PullRequest) {
 	if p.Draft {
 		r.block("draft", "it is a draft; mark it ready for review")
