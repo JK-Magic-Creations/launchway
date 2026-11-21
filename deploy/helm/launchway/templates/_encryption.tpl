@@ -27,6 +27,8 @@
   value: {{ . | quote }}
 {{- end }}
 {{- $h := include "launchway.encryptionHolder" . -}}
+{{- /* An image from before encryption at rest reads no key: nothing more is passed to it. */ -}}
+{{- if eq (include "launchway.imageHasBootstrap" .) "true" }}
 {{- if eq $h "none" }}
 - name: LAUNCHWAY_ENCRYPTION_HOLDER
   value: ""
@@ -91,13 +93,15 @@
 - name: LAUNCHWAY_ROOT_KEY_PREVIOUS_FILE
   value: /etc/launchway-keys/previous.key
 {{- end }}
+{{- end }}
 {{- end -}}
 
 {{/* The sources of the projected volume holding the key files (empty: no volume is needed). */}}
 {{- define "launchway.encryptionSources" -}}
 {{- $e := .Values.encryption -}}
 {{- $h := include "launchway.encryptionHolder" . -}}
-{{- if eq $h "keyFile" }}
+{{- if ne (include "launchway.imageHasBootstrap" .) "true" }}
+{{- else if eq $h "keyFile" }}
 - secret:
     name: {{ include "launchway.rootKeySecretName" . }}
     items:

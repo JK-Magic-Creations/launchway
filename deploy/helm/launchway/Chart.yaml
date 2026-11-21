@@ -4,8 +4,8 @@ description: >-
   Launchway, a build and delivery platform: highly available servers sharing one PostgreSQL
   database, and runners that execute steps in Kubernetes pods.
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.2.0
+appVersion: "0.2.0"
 kubeVersion: ">=1.30.0-0"
 home: https://github.com/jk-magic-creations/launchway
 sources:
@@ -16,10 +16,16 @@ keywords:
   - pipelines
 annotations:
   licenses: AGPL-3.0-only
-annotations:
   # The level of what this chart gives the server (the mounted root key, its
   # environment, network policies). The server prints it at start and warns
   # when it is older than the level the binary expects. Raise it, and
   # config.ChartRevision with it, whenever the server starts to rely on
   # something new in the chart.
   launchway.io/chart-revision: "2"
+  # The first app version whose binary has `launchway bootstrap-secrets` and reads the mounted
+  # root key. An image older than this is rendered without the hook Job, the key mount and the
+  # encryption environment (the image has no shell, so the chart decides, not the Job).
+  launchway.io/bootstrap-since: "0.2.0"
+  # The app versions this chart renders correctly: the release before (no bootstrap, rendered in
+  # compatibility mode) and this one. A tag outside it fails the render with a sentence.
+  launchway.io/supported-app-versions: ">=0.1.0 <0.3.0"

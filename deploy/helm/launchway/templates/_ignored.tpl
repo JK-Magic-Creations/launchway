@@ -34,3 +34,34 @@
 {{- fail (printf "\n\nstrictValues is true and this chart (%s, app %s) does not know these values: %s\nA typo, or a setting for a newer chart. Fix the name, or set strictValues: false to ignore them (they are then listed in the NOTES and reported by the server and `launchway doctor`).\n" .Chart.Version .Chart.AppVersion (replace "," ", " $ign)) -}}
 {{- end -}}
 {{- end -}}
+
+{{/* THE IMAGE AND THE CHART MAY ARRIVE SEPARATELY (a GitOps controller, a rollback). The chart declares
+     the range of app versions it supports (annotation launchway.io/supported-app-versions) and the
+     first version whose binary has `launchway bootstrap-secrets` and reads the mounted root key
+     (launchway.io/bootstrap-since). The version is read from image.tag (the chart's appVersion when
+     empty). The image has no shell, so the Job cannot probe the binary: the chart decides here.
+     A tag that is not a version (a commit, "latest", a digest alone) is taken to be current; set
+     image.bootstrap to "true" or "false" to say so. */}}
+{{- define "launchway.imageVersion" -}}
+{{- $tag := .Values.image.tag | default .Chart.AppVersion | toString | trimPrefix "v" -}}
+{{- regexFind "^[0-9]+\\.[0-9]+\\.[0-9]+" $tag -}}
+{{- end -}}
+
+{{/* "true" or "false": does the image know the secrets bootstrap and the mounted root key? */}}
+{{- define "launchway.imageHasBootstrap" -}}
+{{- $v := include "launchway.imageVersion" . -}}
+{{- $since := index .Chart.Annotations "launchway.io/bootstrap-since" -}}
+{{- if eq (toString .Values.image.bootstrap) "true" -}}true
+{{- else if eq (toString .Values.image.bootstrap) "false" -}}false
+{{- else if and $v (semverCompare (printf "< %s" $since) $v) -}}false
+{{- else -}}true
+{{- end -}}
+{{- end -}}
+
+{{- define "launchway.validateImageVersion" -}}
+{{- $v := include "launchway.imageVersion" . -}}
+{{- $range := index .Chart.Annotations "launchway.io/supported-app-versions" -}}
+{{- if and $v (not (semverCompare $range $v)) -}}
+{{- fail (printf "\n\nThis chart (%s) supports Launchway images %s, and image.tag is %s.\nDeploy a chart that belongs to that image, or set image.tag to a version this chart supports (see the upgrade guide, \"The compatibility rule\").\n" .Chart.Version $range .Values.image.tag) -}}
+{{- end -}}
+{{- end -}}

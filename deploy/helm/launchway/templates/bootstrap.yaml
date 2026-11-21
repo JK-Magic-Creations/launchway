@@ -5,7 +5,8 @@
        and policy are hooks: they are not part of the release, so `helm uninstall` leaves them (and
        the Secrets it made) behind. */ -}}
 {{- $lines := include "launchway.bootstrapSecrets" . | splitList "\n" | compact -}}
-{{- if $lines }}
+{{- /* An image from before the secrets bootstrap has no such command (and no shell to probe with): no Job. */ -}}
+{{- if and $lines (eq (include "launchway.imageHasBootstrap" .) "true") }}
 {{- $fullname := include "launchway.fullname" . -}}
 {{- $name := printf "%s-bootstrap" $fullname -}}
 {{- $names := list -}}

@@ -91,7 +91,7 @@ externalURL: https://launchway.example.com
 database:
   existingSecret: launchway-database
 image:
-  tag: "1.0.0"
+  tag: "0.2.0"
 config:
   projects:
     - name: payments
@@ -138,6 +138,7 @@ runner:
 | `commonLabels` | map | `{}` | Labels added to every resource the chart creates |
 | `image.repository` | string | `ghcr.io/jk-magic-creations/launchway` | The Launchway image; servers and runners use the same one |
 | `image.tag` | string | the chart's `appVersion` | The image tag |
+| `image.bootstrap` | string | `""` | `"true"`: the image has `launchway bootstrap-secrets` and reads the mounted root key; `"false"`: it predates them, so the chart renders no hook Job, no key mount and no encryption environment. Empty: decided from `image.tag` against the chart's `launchway.io/bootstrap-since` (a tag that is not a version, such as a commit, counts as current) |
 | `image.digest` | string | `""` | An image digest, `sha256:...`; used instead of the tag when set |
 | `image.pullPolicy` | string | `IfNotPresent` | `Always`, `IfNotPresent` or `Never` |
 | `imagePullSecrets` | list | `[]` | Secrets for pulling the Launchway (and development PostgreSQL) image, by name |

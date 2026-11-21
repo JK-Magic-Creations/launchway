@@ -64,3 +64,33 @@ func TestChartDefaultsAndExamplesIgnoreNothing(t *testing.T) {
 		}
 	}
 }
+
+// The image and the chart can arrive separately. An image from before the secrets bootstrap gets no
+// hook Job, no key mount and no encryption environment (it has no such command and no shell to
+// probe with); the current one gets them; a tag outside the supported range fails with a sentence.
+func TestChartToleratesAnOlderImage(t *testing.T) {
+	old, err := helmRender(t, "--set", "image.tag=0.1.0")
+	if err != nil {
+		t.Fatalf("the release before must render: %v\n%s", err, old)
+	}
+	for _, bad := range []string{"bootstrap-secrets", "root-key", "LAUNCHWAY_ENCRYPTION_REQUIRE", "LAUNCHWAY_ROOT_KEY_FILE", "launchway-keys"} {
+		if strings.Contains(old, bad) {
+			t.Errorf("an image older than the bootstrap must not get %q", bad)
+		}
+	}
+	cur, err := helmRender(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"bootstrap-secrets", "LAUNCHWAY_ENCRYPTION_REQUIRE", "launchway-keys"} {
+		if !strings.Contains(cur, want) {
+			t.Errorf("the current image must get %q", want)
+		}
+	}
+	if out, err := helmRender(t, "--set", "image.tag=0.0.5"); err == nil || !strings.Contains(out, "supports Launchway images >=0.1.0 <0.3.0, and image.tag is 0.0.5") {
+		t.Fatalf("an unsupported tag must fail with a sentence: %v\n%s", err, out)
+	}
+	if out, err := helmRender(t, "--set", "image.tag=sha-1234", "--set", "image.bootstrap=false"); err != nil || strings.Contains(out, "bootstrap-secrets") {
+		t.Fatalf("image.bootstrap=false must skip the hook: %v", err)
+	}
+}

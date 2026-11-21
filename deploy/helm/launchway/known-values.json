@@ -203,6 +203,7 @@
     "parentRefs": true
   },
   "image": {
+    "bootstrap": true,
     "digest": true,
     "pullPolicy": true,
     "repository": true,

@@ -131,6 +131,10 @@ image:
   tag: ""
   # -- An image digest (sha256:...). When set it is used instead of the tag.
   digest: ""
+  # -- Does this image have `launchway bootstrap-secrets` and read the mounted root key (true), or
+  # predate them (false)? Empty: decided from the tag (a version below the chart's
+  # launchway.io/bootstrap-since is "false"; any other tag, such as a commit, is "true").
+  bootstrap: ""
   pullPolicy: IfNotPresent
 
 # -- Secrets for pulling the Launchway (and development PostgreSQL) image, by name.
