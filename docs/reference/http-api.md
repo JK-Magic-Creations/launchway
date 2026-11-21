@@ -111,7 +111,7 @@ Some carry more:
 | `429` | too many failed authentications | `Retry-After` header |
 | `500` | something went wrong on the server; the details are only in the server's log | — |
 | `502` | the sign-in provider, or the Git server a save pushes to, could not be reached | — |
-| `503` | the server is shutting down, or the database did not answer | — |
+| `503` | the server is shutting down, or the database did not answer within the stall budget (`resilience.stall_budget`); nothing was lost and the request may be repeated | `Retry-After` header |
 
 ## Pagination
 
@@ -599,11 +599,11 @@ In outline, a runner long-polls for work (`lease`), says the step started (`star
 | `POST /api/runner/v1/lease` | `runner` | — | Waits up to 50 seconds for a step to run; `204` if none. |
 | `POST /api/runner/v1/start` | `runner` | — | The leased step has started. |
 | `POST /api/runner/v1/heartbeat` | `runner` | — | The step is still running; answers whether it was canceled. A lost lease answers `410`. |
-| `POST /api/runner/v1/logs` | `runner` | — | Appends log lines. |
-| `POST /api/runner/v1/finish` | `runner` | — | How the step ended, with its outputs and report files (`413` if larger than the server accepts). |
+| `POST /api/runner/v1/logs` | `runner` | — | Appends log lines. With `offset` (how many lines of the step attempt came before the batch) it is safe to repeat: lines the server has are skipped, and a batch that starts beyond what the server has is answered `409` with `received`, the count it has. |
+| `POST /api/runner/v1/finish` | `runner` | — | How the step ended, with its outputs and report files (`413` if larger than the server accepts). Safe to repeat: a result sent again for a lease that already finished answers success and records nothing more. |
 | `POST /api/runner/v1/runs` | `runner` | — | The state of runs the runner holds work for (at most 5000 per call). |
 | `POST /api/runner/v1/leave` | `runner` | — | The runner is shutting down. |
-| `POST /api/runner/v1/artifacts/begin` | `runner` | — | Starts uploading an artifact. |
+| `POST /api/runner/v1/artifacts/begin` | `runner` | — | Starts uploading an artifact. A call carrying an `Idempotency-Key` header (as do the begin and commit calls of artifacts and caches, the finish call and `deploy/command-done`) that is made again with the same key gets the first answer, marked `Idempotent-Replayed: true`, and nothing is done twice; the answer is kept for seven days. |
 | `PUT /api/runner/v1/artifacts/chunk` | `runner` | — | Uploads one chunk of a file. |
 | `POST /api/runner/v1/artifacts/commit` | `runner` | — | Finishes an artifact upload. |
 | `POST /api/runner/v1/artifacts/download` | `runner` | — | Fetches a file of an artifact for a step's `fetch:`. |

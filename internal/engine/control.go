@@ -575,8 +575,8 @@ func (e *Engine) FinishCommand(r RunnerInfo, targets []string, res CommandResult
 	}
 	return e.withRun(runID, func(c *cmd) error {
 		cs := c.st.command(cmdID)
-		if cs == nil || cs.State != CommandTaken || cs.Take != res.Take {
-			return ErrLeaseLost
+		if ok, err := commandReport(cs, res); !ok {
+			return err
 		}
 		if res.Result == CommandReleased {
 			c.emit(DeployCommandTaken, Payload{Step: cs.Step, Deploy: &DeployEvent{ID: cs.Deployment,
