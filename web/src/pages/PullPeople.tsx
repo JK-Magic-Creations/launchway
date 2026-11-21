@@ -14,7 +14,7 @@ export function PullRunLine({ runId, head }: { runId: string | undefined; head: 
   const [failed, setFailed] = useState(false);
   const finished = line ? ["succeeded", "failed", "canceled", "cancelled"].includes(line.status) : false;
   useEffect(() => {
-    if (!runId) { setLine(null); return; }
+    if (!runId) return;
     let alive = true;
     const load = () => launchApi.line(runId).then((l) => { if (alive) { setLine(l); setFailed(false); } }).catch(() => { if (alive) setFailed(true); });
     load();
