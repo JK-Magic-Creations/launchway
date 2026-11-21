@@ -1289,7 +1289,7 @@
     {
       "file": "internal/pipeline/verify.go",
       "linter": "funlen",
-      "text": "Function 'parseVerifyStep' is too long (207 \u003e 150)",
+      "text": "Function 'parseVerifyStep' is too long (191 \u003e 150)",
       "count": 1
     },
     {
@@ -1301,7 +1301,7 @@
     {
       "file": "internal/pipeline/verify.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 79 of func `(*parser).parseVerifyStep` is high (\u003e 30)",
+      "text": "cyclomatic complexity 76 of func `(*parser).parseVerifyStep` is high (\u003e 30)",
       "count": 1
     },
     {

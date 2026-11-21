@@ -210,6 +210,7 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 			key := v.Content[i]
 			switch {
 			case contains(verifyKeys, key.Value):
+			case key.Value == "if" && ps.tmpl != nil: // a template's step may be left out by a parameter
 			case contains(loopKeys, key.Value):
 				ps.add(key, at+"."+key.Value, "a verify step cannot be repeated by for_each; write one verify step for each environment")
 			case contains(runOnly, key.Value) || key.Value == "uses" || key.Value == "with":
@@ -229,11 +230,13 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 		}
 		return d, true
 	}
-	ps.eachKey(v, at, append(append([]string{}, verifyKeys...), loopKeys...), func(key, n *yaml.Node) {
+	ps.eachKey(v, at, ps.verifyKnown(), func(key, n *yaml.Node) {
 		where := at + "." + key.Value
 		vf.lines[key.Value] = n.Line
 		switch key.Value {
 		case "kind":
+		case "if":
+			s.ifTest = ps.parseIf(n, where)
 		case "description":
 			s.Description = strings.TrimSpace(ps.scalar(n, where))
 			switch {
@@ -309,27 +312,9 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 		case "params":
 			ps.parseVerifyParams(n, where, vf)
 		case "metrics":
-			if n.Kind != yaml.SequenceNode {
-				ps.add(n, where, "metrics is a list, for example: - { name: error-rate, source: prometheus, query: '...', max: 0.01 }")
-				return
-			}
-			if len(n.Content) > MaxVerifyMetrics {
-				ps.add(n, where, "at most %d metrics", MaxVerifyMetrics)
-			}
-			for i, m := range n.Content {
-				vf.Metrics = append(vf.Metrics, ps.parseVerifyMetric(m, fmt.Sprintf("%s[%d]", where, i)))
-			}
+			ps.parseVerifyMetrics(n, where, vf)
 		case "logs":
-			if n.Kind != yaml.SequenceNode {
-				ps.add(n, where, "logs is a list, for example: - { name: app, source: loki, query: '{namespace=\"shop\"}' }")
-				return
-			}
-			if len(n.Content) > MaxVerifyLogs {
-				ps.add(n, where, "at most %d log queries", MaxVerifyLogs)
-			}
-			for i, m := range n.Content {
-				vf.Logs = append(vf.Logs, ps.parseVerifyLog(m, fmt.Sprintf("%s[%d]", where, i)))
-			}
+			ps.parseVerifyLogs(n, where, vf)
 		case "model":
 			vf.Model = ps.scalar(n, where)
 			if !modelNameRe.MatchString(vf.Model) {
@@ -411,6 +396,47 @@ func (ps *parser) parseVerifyStep(k, v *yaml.Node, at string) *Step {
 		}
 	}
 	return s
+}
+
+// parseVerifyMetrics reads a verify step's metrics list.
+func (ps *parser) parseVerifyMetrics(n *yaml.Node, where string, vf *Verify) {
+	if n.Kind != yaml.SequenceNode {
+		ps.add(n, where, "metrics is a list, for example: - { name: error-rate, source: prometheus, query: '...', max: 0.01 }")
+		return
+	}
+	if len(n.Content) > MaxVerifyMetrics {
+		ps.add(n, where, "at most %d metrics", MaxVerifyMetrics)
+	}
+	for i, m := range n.Content {
+		if m, keep := ps.entry(m, fmt.Sprintf("%s[%d]", where, i)); keep {
+			vf.Metrics = append(vf.Metrics, ps.parseVerifyMetric(m, fmt.Sprintf("%s[%d]", where, i)))
+		}
+	}
+}
+
+// parseVerifyLogs reads a verify step's log queries.
+func (ps *parser) parseVerifyLogs(n *yaml.Node, where string, vf *Verify) {
+	if n.Kind != yaml.SequenceNode {
+		ps.add(n, where, "logs is a list, for example: - { name: app, source: loki, query: '{namespace=\"shop\"}' }")
+		return
+	}
+	if len(n.Content) > MaxVerifyLogs {
+		ps.add(n, where, "at most %d log queries", MaxVerifyLogs)
+	}
+	for i, m := range n.Content {
+		if m, keep := ps.entry(m, fmt.Sprintf("%s[%d]", where, i)); keep {
+			vf.Logs = append(vf.Logs, ps.parseVerifyLog(m, fmt.Sprintf("%s[%d]", where, i)))
+		}
+	}
+}
+
+// verifyKnown are the keys of a verify step; a template's may carry if.
+func (ps *parser) verifyKnown() []string {
+	known := append(append([]string{}, verifyKeys...), loopKeys...)
+	if ps.tmpl != nil {
+		known = append(known, "if") // a step of a template may be left out by a parameter
+	}
+	return known
 }
 
 func (ps *parser) parseVerifyParams(n *yaml.Node, at string, vf *Verify) {

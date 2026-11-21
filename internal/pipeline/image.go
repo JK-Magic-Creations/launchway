@@ -437,6 +437,10 @@ func (ps *parser) parseImageTags(n *yaml.Node, at string, b *ImageBuild) []Image
 	var out []ImageTag
 	for i, item := range n.Content {
 		where := fmt.Sprintf("%s[%d]", at, i)
+		item, keep := ps.entry(item, where)
+		if !keep {
+			continue
+		}
 		var t ImageTag
 		ps.eachKey(item, where, imageTagKeys, func(k, v *yaml.Node) {
 			switch k.Value {

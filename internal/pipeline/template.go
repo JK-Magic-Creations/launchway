@@ -266,6 +266,8 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 		return nil
 	}
 	var out []*Param
+	nodes := map[string]*yaml.Node{}
+	defer func() { ps.checkDerivedDefaults(out, nodes) }()
 	seen, vars := map[string]bool{}, map[string]string{}
 	for i := 0; i+1 < len(n.Content); i += 2 {
 		k, v := n.Content[i], n.Content[i+1]
@@ -283,6 +285,7 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 			vars[EnvName(k.Value)] = k.Value
 		}
 		p := &Param{Name: k.Value, Type: paramTypeString, Line: k.Line}
+		nodes[k.Value] = k
 		var defNode, optNode *yaml.Node
 		ps.eachKey(v, at, []string{"type", "default", "description", "options", "from"}, func(k2, v2 *yaml.Node) {
 			where := at + "." + k2.Value
@@ -294,6 +297,10 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 					p.Type = paramTypeString
 				}
 			case "default":
+				if v2.Kind == yaml.MappingNode {
+					p.DefaultFrom = ps.parseDerivedDefault(v2, where)
+					return
+				}
 				var d string
 				if v2.Kind == yaml.SequenceNode {
 					d, _ = ps.inputLiteral(v2, where, InputList)

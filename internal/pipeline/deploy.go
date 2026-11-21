@@ -370,6 +370,7 @@ func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step
 			key := v.Content[i]
 			switch {
 			case contains(known, key.Value):
+			case key.Value == "if" && ps.tmpl != nil: // a template's step may be left out by a parameter
 			case deployNotYet[key.Value] != "":
 				ps.add(key, at+"."+key.Value, "%q is not supported yet (%s)", key.Value, deployNotYet[key.Value])
 			case contains(loopKeys, key.Value):
@@ -572,7 +573,10 @@ func (ps *parser) parseWriteBack(n *yaml.Node, at string) *WriteBack {
 				ps.add(v, where, "at most %d changes", MaxChanges)
 			}
 			for i, c := range v.Content {
-				w.Changes = append(w.Changes, ps.parseChange(c, fmt.Sprintf("%s[%d]", where, i)))
+				c, keep := ps.entry(c, fmt.Sprintf("%s[%d]", where, i))
+				if keep {
+					w.Changes = append(w.Changes, ps.parseChange(c, fmt.Sprintf("%s[%d]", where, i)))
+				}
 			}
 		}
 	})

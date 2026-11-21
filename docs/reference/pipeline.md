@@ -1661,7 +1661,7 @@ Each entry of `params` maps a name (`^[a-z][a-z0-9_-]{0,39}$`) to its settings.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment` or `application`. The last two are strings that mean something: an environment's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the deploy runs. Both take `options` and `format` as a string does |
-| `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list |
+| `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list. A string parameter's default may be taken from another string parameter: `default: { param: name, format: "apps/%s/base.yaml" }`, where `%s` (once or more) stands for the other parameter's value (without `format`, the value itself). A value given under `with` still wins, and a default that does not fit (an option not in `options`) is refused where the template is used, saying so |
 | `description` | text | none | One line of at most 200 characters |
 | `options` | one value or a list | none | The values allowed. For `string` and `number` only |
 | `from` | variable name | none | The [variable](../guide/variables.md) (set at a level) the parameter takes when `with` gives no value: it stands before `default`. A locked variable refuses a different value written under `with`, with the level that locked it and who can change it. Not for secrets or maps |
@@ -1700,7 +1700,7 @@ same library by name alone; and they take one more key:
 <!-- keys: template-step-extra -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `if` | mapping | none | Leave the step out unless the test holds; what needed it then needs what it needed. Steps of kind `step`, `approval` and `image`, and steps that use a template |
+| `if` | mapping | none | Leave the step out unless the test holds; what needed it then needs what it needed. Steps of every kind (`step`, `approval`, `image`, `deploy`, `rollback`, `rollout`, `verify`) and steps that use a template. A list entry may carry `if` too, and is left out unless it holds: an image step's `tags`, a deploy step's `write_back.changes`, a verify step's `metrics` and `logs` |
 
 <!-- keys: template-if -->
 | Key | Type | Default | Description |
