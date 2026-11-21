@@ -63,10 +63,10 @@ type Config struct {
 	PullRequests PullRequestsConfig `yaml:"pull_requests"`
 	// Tests limits what the server keeps of the test reports steps declare.
 	Tests TestsConfig `yaml:"tests"`
-	// Artifacts says where the files steps keep are stored, and limits
-	// them; Findings limits what is kept of security findings and SBOMs.
+	// Artifacts: where step files are kept; Findings: what is kept of findings; Forge: Git hosting.
 	Artifacts ArtifactsConfig `yaml:"artifacts"`
 	Findings  FindingsConfig  `yaml:"findings"`
+	Forge     ForgeConfig     `yaml:"forge"`
 	// Reports bounds test attachments, coverage and HTML reports, and says
 	// where hosted HTML reports are served from.
 	Reports ServerReportsConfig `yaml:"reports"`

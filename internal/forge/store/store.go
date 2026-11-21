@@ -27,8 +27,8 @@ type DB interface {
 
 // Errors of the store; test with errors.Is.
 var (
-	ErrNotFound = errors.New("not found")
-	ErrExists   = errors.New("already exists")
+	ErrNotFound = forge.ErrNotFound
+	ErrExists   = forge.ErrExists
 )
 
 // Store is the forge's tables.

@@ -35,6 +35,9 @@ var docAccessNames = map[access]string{
 	runRead:        "run-viewer",
 	runOperate:     "run-operator",
 	administer:     "admin",
+	repoRead:       "repo-viewer",
+	repoWrite:      "repo-operator",
+	repoAdmin:      "repo-admin",
 }
 
 type docRoute struct {

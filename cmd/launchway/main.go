@@ -214,8 +214,7 @@ func cmdServer(args []string) error {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
 	}
 	runnersRole, _ := cfg.RunnerAdminRole() // checked when the file was read
-	// The pools' tokens are read and checked against the shared token
-	// below; here only what the engine needs.
+	// Pool tokens are read below; here only what the engine needs.
 	poolShapes, err := cfg.Pools("")
 	if err != nil {
 		return fmt.Errorf("%s: %w", *cfgPath, err)
@@ -233,13 +232,11 @@ func cmdServer(args []string) error {
 		return err
 	}
 	mgr, err := source.NewManagerWithLibraries(eng, cfg.Data, projects, cfg.SourceLibraries(), log)
-	if err == nil {
-		loopLimit, _ := cfg.LoopLimit() // checked when the file was read
-		mgr.SetLoopLimit(loopLimit)
-	}
 	if err != nil {
 		return err
 	}
+	loopLimit, _ := cfg.LoopLimit() // checked when the file was read
+	mgr.SetLoopLimit(loopLimit)
 	token, err := config.RunnerToken(cfg.Data, eng)
 	if err != nil {
 		return err
@@ -255,6 +252,10 @@ func cmdServer(args []string) error {
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, WaiveRole: &waiveRole, ReportsOrigin: reportsOrigin, RunnersRole: &runnersRole}
 	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
+	hosted, err := newHosting(cfg, eng, log, srv)
+	if err != nil {
+		return fmt.Errorf("%s: forge: %w", *cfgPath, err)
+	}
 	if m := cfg.MCP; m.On() {
 		srv.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
 		if o := m.OAuth; o != nil {
@@ -265,8 +266,7 @@ func cmdServer(args []string) error {
 		}
 	}
 	if models != nil {
-		// The server calls models only to explain a failed step, with keys
-		// from its own stores (ai.secrets), if it has any.
+		// Models are called only to explain a failed step, with keys from ai.secrets.
 		srv.AI = &ai.Client{}
 		if len(cfg.AI.Secrets) > 0 {
 			if srv.AISecrets, err = secrets.Open(cfg.AI.Secrets); err != nil {
@@ -280,8 +280,7 @@ func cmdServer(args []string) error {
 		}
 	}
 	if authOpts != nil {
-		// Find the provider now, so a mistake shows at once; sign-in tries
-		// again later if it is unreachable.
+		// Find the provider now so a mistake shows; sign-in retries if it is unreachable.
 		dctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		if _, err := authOpts.OIDC.Discover(dctx); err != nil {
 			log.Warn("the sign-in provider cannot be reached yet; sign-in will keep trying", "err", err)
@@ -303,6 +302,7 @@ func cmdServer(args []string) error {
 		}
 	}()
 	mgr.Start(ctx)
+	hosted.Start(ctx)
 	mgr.WatchPolicySources(ctx)
 
 	url := "http://" + loopback(ln.Addr().String())

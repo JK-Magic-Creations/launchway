@@ -83,6 +83,9 @@ Every route belongs to one access class. The server checks it before the handler
 | `project-draft` | Whoever `drafts.allow` allows to start draft runs of the project in `{name}` (operator by default). | `404` if not a viewer, else `403` |
 | `run-viewer` | A viewer of the project of the run in `{id}`. | `404` |
 | `run-operator` | An operator of the project of the run in `{id}`. | `404` if not a viewer, else `403` |
+| `repo-viewer` | A viewer of the repository `<owner>/<name>` (bindings name it by that path). | `404` (also when Git hosting is off, with `code: feature_off`) |
+| `repo-operator` | An operator of the repository. | `404` if not a viewer, else `403` |
+| `repo-admin` | An admin of the repository. | `404` if not a viewer, else `403` |
 | `admin` | An admin of every project (from an `access` entry without `projects`). | `403` |
 
 Some handlers check more after the class: deployment commands and approvals that name a deployment need the role on the environment, waivers need the role `policy.waivers.allow` names, saving with `force` needs admin on the project, and protected environments refuse the run's starter. Those refusals are `403`.
@@ -395,6 +398,18 @@ needs an administrator, and every change is audited with the values before and a
 | `PUT /api/v1/step-resources/limits` | `admin` | `step_resources.set_limits` | Replaces the limits: `{"max_cpu", "max_memory", "memory_per_thread"}`. A value left out is not set. `400` for a quantity that does not read, a `memory_per_thread` under 64Mi, or a maximum below a default (lower the default first). |
 | `GET /api/v1/step-resources/defaults/{kind}` | `signed-in` | — | One kind's default. `404` for a kind that has none. |
 | `PUT /api/v1/step-resources/defaults/{kind}` | `admin` | `step_resources.set_default` | Replaces a kind's default: `{"cpu", "cpu_limit", "memory", "memory_limit"}`. A value left out is not set. `400` for a quantity that does not read, a limit below what is promised, or a value above the installation's limits. |
+
+### Repositories (Git hosting)
+
+Only with `forge.hosting` on; otherwise every route answers `404` with `{"error": "feature_off: ...", "code": "feature_off"}` and the repositories are kept. A repository is `<owner>/<name>`; a bindings' project patterns match that path (`jkhunter/*`).
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/repositories` | `signed-in` | — | The repositories the caller may read: `{"items": [...]}`, each with `id`, `path`, `home`, `name`, `default_branch`, `visibility`, `archived` and `clone.https`. |
+| `POST /api/v1/repositories` | `admin` | `repository.create` | Creates one: `{"owner", "name", "default_branch", "visibility"}`. The owner defaults to `forge.default_owner`, the branch to `main`, the visibility to `private`. `400` for a name that is not a plain name (traversal, `.git`, control characters, reserved words, more than 100 characters), `409` for a name in use or an owner at its limit, `429` when repositories are made too fast. |
+| `GET /api/v1/repositories/{owner}/{name}` | `repo-viewer` | — | One repository. |
+| `PATCH /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.update` | Changes `visibility`, `default_branch`, `archived`, or renames with `owner` and `name`. The old address stops working. |
+| `DELETE /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.delete` | Moves the repository to the trash: it is no longer served or listed, its data is kept, and its name can be used again. |
 
 ## API tokens
 

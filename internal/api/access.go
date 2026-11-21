@@ -238,6 +238,12 @@ func (s *Server) guard(rt route) http.Handler {
 		switch rt.access {
 		case projectRead, projectOperate, projectDraft:
 			project = r.PathValue("name")
+		case repoRead, repoWrite, repoAdmin:
+			if s.Forge == nil {
+				deny(http.StatusNotFound, featureOff)
+				return
+			}
+			project = repoSubject(r.PathValue("owner"), r.PathValue("name"))
 		case runRead, runOperate:
 			if project, err = s.Engine.RunProject(r.PathValue("id")); err != nil {
 				if errors.Is(err, engine.ErrNotFound) {
@@ -288,6 +294,9 @@ func (s *Server) check(id *identity, a access, project string, r *http.Request) 
 			return http.StatusNotFound, fmt.Errorf("%w: run %s", engine.ErrNotFound, r.PathValue("id")).Error()
 		}
 		return http.StatusNotFound, fmt.Errorf("%w: project %s", engine.ErrNotFound, project).Error()
+	}
+	if a == repoRead || a == repoWrite || a == repoAdmin {
+		return s.checkRepo(id, a, project)
 	}
 	switch a {
 	case signedIn:

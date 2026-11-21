@@ -77,7 +77,8 @@ type Server struct {
 	reportKey []byte       // signs links to HTML reports
 
 	// MCP turns on the Model Context Protocol endpoint, /mcp; nil is off.
-	MCP *MCPOptions
+	MCP   *MCPOptions
+	Forge *ForgeHosting // Git hosting; nil is off
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
 	draining atomic.Bool    // see Drain
@@ -123,7 +124,7 @@ type route struct {
 }
 
 func (s *Server) routes() []route {
-	return []route{
+	return append(s.forgeRoutes(), []route{
 		// Health checks for load balancers and orchestrators.
 		{"GET /healthz", public, "", s.healthz},
 		{"GET /readyz", public, "", s.readyz},
@@ -271,14 +272,13 @@ func (s *Server) routes() []route {
 		{"GET /api/v1/runs/{id}/steps/{step}/explanations", runRead, "", s.stepExplanations},
 		{"POST /api/v1/runs/{id}/steps/{step}/explain", runOperate, "step.explain", s.explainStep},
 
-		// Step resources (schema 22): anyone signed in reads the defaults
-		// and limits; an administrator changes them.
+		// Step resources (schema 22): signed-in people read, admins change.
 		{"GET /api/v1/step-resources", signedIn, "", s.getStepResources},
 		{"GET /api/v1/step-resources/limits", signedIn, "", s.getStepResourceLimits},
 		{"PUT /api/v1/step-resources/limits", administer, "step_resources.set_limits", s.setStepResourceLimits},
 		{"GET /api/v1/step-resources/defaults/{kind}", signedIn, "", s.getStepResourceDefault},
 		{"PUT /api/v1/step-resources/defaults/{kind}", administer, "step_resources.set_default", s.setStepResourceDefault},
-	}
+	}...)
 }
 
 // Handler returns the full HTTP handler.

@@ -319,6 +319,28 @@ share: the database (the default on PostgreSQL), `s3`, or a directory on a share
 S3 credentials come from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (or the `_FILE` variants),
 never from the file.
 
+## Forge
+
+Launchway's own Git hosting: it keeps repositories in the database and the artifact store and serves them
+over HTTPS (see [Hosted repository storage](../development/forge-storage.md)). It needs `git` 2.28 or newer on
+the server and a blob store shared by every server. Turning it off stops the Git endpoints and keeps the
+data. Until the configuration is kept in the database, this is set in the file.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `forge.hosting` | boolean | `false` | Turn Git hosting on. The first time, the connection named `launchway` is made |
+| `forge.public_url` | URL | none | The address clients clone from, used in the clone address of each repository |
+| `forge.default_owner` | text | `launchway` | The owner of a repository made without one |
+| `forge.allow_insecure_http` | boolean | `false` | Accept Basic credentials over plain HTTP from any address; otherwise only a loopback listener does |
+| `forge.max_repo_mib` | whole number | no limit | The most one repository's packs may total, in MiB |
+| `forge.max_push_mib` | whole number | `2048` | The largest push (request body and pack), in MiB |
+| `forge.max_per_owner` | whole number | no limit | The most repositories one owner may have |
+| `forge.creates_per_minute` | whole number | `60` | How fast repositories may be created, in all |
+| `forge.max_concurrent` | whole number | `32` | The most `git` processes serving Git requests at once; more requests wait, then are refused |
+| `forge.cache_gib` | whole number | no limit | How much the repository caches on this server may take, in GiB; the least recently used are removed |
+| `forge.maintain_every` | text | `15m` | How often packs are consolidated, collected and checked. At least `1m` |
+
 ## Findings
 
 Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` means the default.

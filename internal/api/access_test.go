@@ -130,8 +130,14 @@ var permissionTable = map[string]matrixRow{
 	"DELETE /api/v1/tokens/{id}":                  {"DELETE", "/api/v1/tokens/tok_nope", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/audit":                           {"GET", "/api/v1/audit", "", [6]int{401, 403, 403, 403, 403, 200}},
 	// Step resources: anyone signed in reads, an admin changes.
-	"GET /api/v1/step-resources":                 {"GET", "/api/v1/step-resources", "", [6]int{401, 200, 200, 200, 200, 200}},
-	"GET /api/v1/step-resources/limits":          {"GET", "/api/v1/step-resources/limits", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/step-resources":        {"GET", "/api/v1/step-resources", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/step-resources/limits": {"GET", "/api/v1/step-resources/limits", "", [6]int{401, 200, 200, 200, 200, 200}},
+	// Git hosting is off in this server, so what passes the check answers 404 feature_off.
+	"GET /api/v1/repositories":                   {"GET", "/api/v1/repositories", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/repositories":                  {"POST", "/api/v1/repositories", `{"name":"x"}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"GET /api/v1/repositories/{owner}/{name}":    {"GET", "/api/v1/repositories/o/x", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PATCH /api/v1/repositories/{owner}/{name}":  {"PATCH", "/api/v1/repositories/o/x", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"DELETE /api/v1/repositories/{owner}/{name}": {"DELETE", "/api/v1/repositories/o/x", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"PUT /api/v1/step-resources/limits":          {"PUT", "/api/v1/step-resources/limits", `{"memory_per_thread":"1Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
 	"GET /api/v1/step-resources/defaults/{kind}": {"GET", "/api/v1/step-resources/defaults/step", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"PUT /api/v1/step-resources/defaults/{kind}": {"PUT", "/api/v1/step-resources/defaults/step", `{"cpu":"1","memory":"2Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
