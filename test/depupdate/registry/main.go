@@ -59,7 +59,8 @@ func main() {
 	mux.HandleFunc("/npm/", s.npm)
 	mux.HandleFunc("/v2/", s.oci)
 	log.Printf("fake registry on %s", *listen)
-	log.Fatal(http.ListenAndServe(*listen, mux))
+	srv := &http.Server{Addr: *listen, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	log.Fatal(srv.ListenAndServe())
 }
 
 func name2(r *http.Request) string { return r.URL.Query().Get("name") }
@@ -67,14 +68,14 @@ func name2(r *http.Request) string { return r.URL.Query().Get("name") }
 func n2(kind, name, v string) string { return kind + "|" + name + "|" + v }
 
 func writeOSV(dir string) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 	adv := `{"id":"GHSA-test-lib-0001","summary":"Path traversal in example.com/lib","aliases":["CVE-2026-0001"],
  "severity":[{"type":"CVSS_V3","score":"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}],
  "affected":[{"package":{"ecosystem":"Go","name":"example.com/lib"},"ranges":[{"type":"SEMVER","events":[{"introduced":"0"},{"fixed":"1.4.2"}]}]}],
  "references":[{"type":"ADVISORY","url":"https://example.invalid/advisory/GHSA-test-lib-0001"}]}`
-	return os.WriteFile(filepath.Join(dir, "GHSA-test-lib-0001.json"), []byte(adv), 0o644)
+	return os.WriteFile(filepath.Join(dir, "GHSA-test-lib-0001.json"), []byte(adv), 0o600)
 }
 
 func (s *server) release(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +84,7 @@ func (s *server) release(w http.ResponseWriter, r *http.Request) {
 	n, v := r.URL.Query().Get("name"), r.URL.Query().Get("version")
 	if d := r.URL.Query().Get("age_days"); d != "" {
 		var n int
-		fmt.Sscan(d, &n)
+		_, _ = fmt.Sscan(d, &n)
 		s.age[n2(r.URL.Query().Get("kind"), name2(r), v)] = time.Duration(n) * 24 * time.Hour
 	}
 	switch r.URL.Query().Get("kind") {
@@ -127,9 +128,9 @@ func (s *server) goproxy(w http.ResponseWriter, r *http.Request) {
 		if len(vs) > 0 && v == vs[len(vs)-1] {
 			age = 5 * 24 * time.Hour
 		}
-		fmt.Fprintf(w, `{"Version":%q,"Time":%q}`, v, time.Now().Add(-age).UTC().Format(time.RFC3339))
+		fmt.Fprintf(w, `{"Version":%q,"Time":%q}`, v, time.Now().Add(-age).UTC().Format(time.RFC3339)) //nolint:gosec // %q quotes it; a test fake
 	case strings.HasSuffix(file, ".mod"):
-		fmt.Fprintf(w, "module %s\n\ngo 1.21\n", module)
+		fmt.Fprintf(w, "module %s\n\ngo 1.21\n", module) //nolint:gosec // the module is one the fake knows (checked above); a test fake
 	case strings.HasSuffix(file, ".zip"):
 		v := strings.TrimSuffix(file, ".zip")
 		var buf bytes.Buffer
@@ -139,7 +140,7 @@ func (s *server) goproxy(w http.ResponseWriter, r *http.Request) {
 		f, _ = zw.Create(module + "@" + v + "/lib.go")
 		fmt.Fprintf(f, "package lib\n\nconst Version = %q\n", v)
 		zw.Close()
-		w.Write(buf.Bytes())
+		_, _ = w.Write(buf.Bytes())
 	default:
 		http.NotFound(w, r)
 	}
@@ -152,10 +153,10 @@ func tarball(name, v string) ([]byte, string, string) {
 	gz := gzip.NewWriter(&tb)
 	tw := tar.NewWriter(gz)
 	body := fmt.Sprintf(`{"name":%q,"version":%q}`, name, v)
-	tw.WriteHeader(&tar.Header{Name: "package/package.json", Mode: 0o644, Size: int64(len(body))})
-	tw.Write([]byte(body))
-	tw.Close()
-	gz.Close()
+	_ = tw.WriteHeader(&tar.Header{Name: "package/package.json", Mode: 0o644, Size: int64(len(body))})
+	_, _ = tw.Write([]byte(body))
+	_ = tw.Close()
+	_ = gz.Close()
 	sum := sha512.Sum512(tb.Bytes())
 	return tb.Bytes(), "sha512-" + base64.StdEncoding.EncodeToString(sum[:]), hex.EncodeToString(sum[:20])
 }
@@ -169,7 +170,7 @@ func (s *server) npm(w http.ResponseWriter, r *http.Request) {
 		file := p[strings.Index(p, "/-/")+3:]
 		v := strings.TrimSuffix(strings.TrimPrefix(file, name+"-"), ".tgz")
 		b, _, _ := tarball(name, v)
-		w.Write(b)
+		_, _ = w.Write(b)
 		return
 	}
 	vs, ok := s.npmV[p]
@@ -190,7 +191,7 @@ func (s *server) npm(w http.ResponseWriter, r *http.Request) {
 	}
 	sorted := append([]string(nil), vs...)
 	sort.Strings(sorted)
-	json.NewEncoder(w).Encode(map[string]any{"name": p, "versions": versions, "time": times, "dist-tags": map[string]string{"latest": vs[len(vs)-1]}})
+	_ = json.NewEncoder(w).Encode(map[string]any{"name": p, "versions": versions, "time": times, "dist-tags": map[string]string{"latest": vs[len(vs)-1]}})
 }
 
 // ---- OCI registry ----
@@ -207,7 +208,7 @@ func (s *server) oci(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]any{"name": repo, "tags": tags})
+		_ = json.NewEncoder(w).Encode(map[string]any{"name": repo, "tags": tags})
 	case strings.Contains(p, "/manifests/"):
 		i := strings.Index(p, "/manifests/")
 		repo, ref := p[:i], p[i+11:]

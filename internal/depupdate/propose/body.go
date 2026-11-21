@@ -31,15 +31,15 @@ func Body(pr plan.Proposal, work Work, now time.Time, policy plan.Policy) string
 	}
 	b.WriteString("## What changes\n\n| Dependency | From | To | Kind | File |\n|---|---|---|---|---|\n")
 	for _, u := range pr.Updates {
-		b.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s` | %s | `%s` |\n", u.Dep.Name, nz(u.Dep.Current, u.Dep.Constraint), u.Target, kindWord(u), u.Dep.File))
+		fmt.Fprintf(&b, "| `%s` | `%s` | `%s` | %s | `%s` |\n", u.Dep.Name, nz(u.Dep.Current, u.Dep.Constraint), u.Target, kindWord(u), u.Dep.File)
 	}
 	b.WriteString("\n## Why\n\n")
-	any := false
+	found := false
 	for _, u := range pr.Updates {
 		if len(u.Advisories) == 0 {
 			continue
 		}
-		any = true
+		found = true
 		for _, a := range u.Advisories {
 			line := fmt.Sprintf("- `%s %s` is affected by **%s** (%s severity)", u.Dep.Name, u.Dep.Current, a.ID, a.Severity)
 			if a.Summary != "" {
@@ -54,7 +54,7 @@ func Body(pr plan.Proposal, work Work, now time.Time, policy plan.Policy) string
 			b.WriteString(line + "\n")
 		}
 	}
-	if any {
+	if found {
 		b.WriteString("\nThis update is opened at once, outside the schedule, and is not held back by the wait for new releases.\n")
 	} else {
 		fmt.Fprintf(&b, "A routine update. Versions are proposed only after they have been public for %d days, so that a release that is withdrawn or found to be tampered with is not picked up at once.\n", policy.CooldownDays)
@@ -81,7 +81,7 @@ func Body(pr plan.Proposal, work Work, now time.Time, policy plan.Policy) string
 			b.WriteString("\nThe lock files were written by the ecosystem's own tool, not edited by hand (this run used the host executor of a runner, which does not isolate the tool):\n")
 		}
 		for _, s := range work.Steps {
-			b.WriteString(fmt.Sprintf("- `%s` in `%s`: %s\n", strings.Join(flat(s.Commands), " && "), s.Image, s.Why))
+			fmt.Fprintf(&b, "- `%s` in `%s`: %s\n", strings.Join(flat(s.Commands), " && "), s.Image, s.Why)
 		}
 	}
 	if len(work.Notes) > 0 {
@@ -201,7 +201,7 @@ func CommitMessage(pr plan.Proposal) string {
 	var b strings.Builder
 	b.WriteString(pr.Title + "\n\n")
 	for _, u := range pr.Updates {
-		b.WriteString(fmt.Sprintf("- %s: %s -> %s\n", u.Dep.Name, nz(u.Dep.Current, u.Dep.Constraint), u.Target))
+		fmt.Fprintf(&b, "- %s: %s -> %s\n", u.Dep.Name, nz(u.Dep.Current, u.Dep.Constraint), u.Target)
 	}
 	b.WriteString("\nOpened by Launchway's dependency updater.\n")
 	return b.String()

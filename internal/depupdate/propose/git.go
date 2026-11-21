@@ -76,7 +76,7 @@ func (w *Workspace) Clone(ctx context.Context) (string, error) {
 	if err := os.RemoveAll(w.Dir); err != nil {
 		return "", err
 	}
-	if err := os.MkdirAll(filepath.Dir(w.Dir), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(w.Dir), 0o750); err != nil {
 		return "", err
 	}
 	if _, err := w.git(ctx, "", "clone", "--quiet", "--depth", "1", "--branch", w.Base, "--no-tags", "--", w.URL, w.Dir); err != nil {
@@ -112,10 +112,10 @@ func (w *Workspace) Commit(ctx context.Context, branch, message string, files ma
 		if data == nil {
 			_ = os.Remove(full)
 		} else {
-			if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
 				return "", err
 			}
-			if err := os.WriteFile(full, data, 0o644); err != nil {
+			if err := os.WriteFile(full, data, 0o644); err != nil { //nolint:gosec // repository files keep their ordinary mode
 				return "", err
 			}
 		}

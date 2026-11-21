@@ -64,18 +64,19 @@ func ParsePEP440(s string) (PEP440, bool) {
 		for k < len(rest) && rest[k] >= '0' && rest[k] <= '9' {
 			k++
 		}
-		num := int64(0)
+		num, unum := int64(0), uint64(0)
 		if k > 0 {
 			num, _ = strconv.ParseInt(rest[:k], 10, 64)
+			unum, _ = strconv.ParseUint(rest[:k], 10, 64)
 		}
 		rest = strings.TrimLeft(rest[k:], ".-_")
 		switch word {
 		case "a", "alpha":
-			v.PreKind, v.PreNum = "a", uint64(num)
+			v.PreKind, v.PreNum = "a", unum
 		case "b", "beta":
-			v.PreKind, v.PreNum = "b", uint64(num)
+			v.PreKind, v.PreNum = "b", unum
 		case "rc", "c", "pre", "preview":
-			v.PreKind, v.PreNum = "rc", uint64(num)
+			v.PreKind, v.PreNum = "rc", unum
 		case "post", "rev", "r":
 			v.Post = num
 		case "dev":

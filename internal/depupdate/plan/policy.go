@@ -214,65 +214,14 @@ func Merge(layers ...Layer) (Policy, error) {
 		}
 	}
 	p := Policy{Locked: locked, Ignored: ignored}
-	if acc.Enabled != nil {
-		p.Enabled = *acc.Enabled
-	}
-	if acc.Security != nil {
-		p.Security = *acc.Security
-	}
-	if acc.Routine != nil {
-		p.Routine = *acc.Routine
-	}
-	if acc.Ecosystems != nil {
-		p.Ecosystems = *acc.Ecosystems
-	}
-	if acc.Schedule != nil {
-		p.Schedule = *acc.Schedule
-	}
-	if acc.CooldownDays != nil {
-		p.CooldownDays = *acc.CooldownDays
-	}
-	if acc.Groups != nil {
-		p.Groups = *acc.Groups
-	}
-	if acc.Limits != nil {
-		p.Limits = *acc.Limits
-	}
-	if acc.Allow != nil {
-		p.Allow = *acc.Allow
-	}
-	if acc.Ignore != nil {
-		p.Ignore = *acc.Ignore
-	}
-	if acc.Constraints != nil {
-		p.Constraints = *acc.Constraints
-	}
-	if acc.AutoMerge != nil {
-		p.AutoMerge = *acc.AutoMerge
-	}
-	if acc.Commit != nil {
-		p.Commit = *acc.Commit
-	}
-	if acc.Labels != nil {
-		p.Labels = *acc.Labels
-	}
-	if acc.Reviewers != nil {
-		p.Reviewers = *acc.Reviewers
-	}
-	if acc.Assignees != nil {
-		p.Assignees = *acc.Assignees
-	}
-	if acc.Prereleases != nil {
-		p.Prereleases = *acc.Prereleases
-	}
-	if acc.ImageFiles != nil {
-		p.ImageFiles = *acc.ImageFiles
-	}
-	if acc.Exclude != nil {
-		p.Exclude = *acc.Exclude
-	}
-	if acc.Toolchains != nil {
-		p.Toolchains = *acc.Toolchains
+	// Every key of Partial has a field of the same name in Policy, not a pointer.
+	pv, av := reflect.ValueOf(&p).Elem(), reflect.ValueOf(acc)
+	for i := 0; i < av.NumField(); i++ {
+		name := av.Type().Field(i).Name
+		if name == "Lock" || av.Field(i).IsNil() {
+			continue
+		}
+		pv.FieldByName(name).Set(av.Field(i).Elem())
 	}
 	return p, p.Validate()
 }

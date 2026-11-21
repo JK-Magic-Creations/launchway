@@ -306,9 +306,9 @@ func TestBuildPerEcosystem(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", d.Key, err)
 		}
-		k := d.Proposal.Ecosystem
-		if d.Proposal.Directory != "" {
-			k += ":" + d.Proposal.Directory
+		k := d.Ecosystem
+		if d.Directory != "" {
+			k += ":" + d.Directory
 		}
 		got[k] = w
 	}

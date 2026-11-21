@@ -144,7 +144,6 @@ func TestDiscover(t *testing.T) {
 	if len(res.Errors) != 0 {
 		t.Fatalf("errors: %+v", res.Errors)
 	}
-	type row struct{ eco, name, cur, constraint string }
 	got := map[string]depupdate.Dep{}
 	for _, d := range res.Deps {
 		got[d.Ecosystem+"|"+d.File+"|"+d.Name] = d

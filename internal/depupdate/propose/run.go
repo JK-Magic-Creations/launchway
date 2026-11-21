@@ -103,7 +103,7 @@ func copyTree(src, dst string) error {
 		}
 		rel, _ := filepath.Rel(src, p)
 		if rel == "." {
-			return os.MkdirAll(dst, 0o755)
+			return os.MkdirAll(dst, 0o755) //nolint:gosec // a private scratch copy that a container user must be able to enter
 		}
 		if rel == ".git" {
 			return fs.SkipDir
@@ -111,13 +111,13 @@ func copyTree(src, dst string) error {
 		t := filepath.Join(dst, rel)
 		switch {
 		case d.IsDir():
-			return os.MkdirAll(t, 0o755)
+			return os.MkdirAll(t, 0o755) //nolint:gosec // a private scratch copy that a container user must be able to enter
 		case d.Type().IsRegular():
-			b, err := os.ReadFile(p)
+			b, err := os.ReadFile(p) //nolint:gosec // p comes from walking our own scratch tree
 			if err != nil {
 				return err
 			}
-			return os.WriteFile(t, b, 0o644)
+			return os.WriteFile(t, b, 0o644) //nolint:gosec // a private scratch copy that a container user must be able to read
 		}
 		return nil // links and special files are not copied
 	})
@@ -135,11 +135,11 @@ func diffTrees(before, after string) (map[string][]byte, error) {
 		rel, _ := filepath.Rel(after, p)
 		rel = filepath.ToSlash(rel)
 		seen[rel] = true
-		nb, err := os.ReadFile(p)
+		nb, err := os.ReadFile(p) //nolint:gosec // p comes from walking our own scratch tree
 		if err != nil {
 			return err
 		}
-		ob, oerr := os.ReadFile(filepath.Join(before, rel))
+		ob, oerr := os.ReadFile(filepath.Join(before, rel)) //nolint:gosec // rel comes from walking our own scratch tree
 		if oerr != nil || !bytes.Equal(ob, nb) {
 			out[rel] = nb
 		}

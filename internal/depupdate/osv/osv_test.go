@@ -123,8 +123,8 @@ func TestSeverityScores(t *testing.T) {
 
 func TestAPIIndex(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/v1/query":
+		switch r.URL.Path {
+		case "/v1/query":
 			var q struct {
 				Version string
 				Package struct{ Name, Ecosystem string }
@@ -135,7 +135,7 @@ func TestAPIIndex(t *testing.T) {
 				return
 			}
 			w.Write([]byte(`{}`))
-		case r.URL.Path == "/v1/vulns/GHSA-xxxx-1111-aaaa":
+		case "/v1/vulns/GHSA-xxxx-1111-aaaa":
 			w.Write([]byte(goAdvisory))
 		default:
 			http.NotFound(w, r)

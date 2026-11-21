@@ -72,7 +72,7 @@ func cvss3(vec string) (float64, bool) {
 	c, ok5 := wCIA[m["C"]]
 	i, ok6 := wCIA[m["I"]]
 	a, ok7 := wCIA[m["A"]]
-	if !(ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && ok7) || (m["S"] != "C" && m["S"] != "U") {
+	if (!ok1 || !ok2 || !ok3 || !ok4 || !ok5 || !ok6 || !ok7) || (m["S"] != "C" && m["S"] != "U") {
 		return 0, false
 	}
 	iss := 1 - (1-c)*(1-i)*(1-a)

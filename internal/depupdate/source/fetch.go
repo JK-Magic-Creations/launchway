@@ -149,16 +149,16 @@ func (f *Fetcher) request(ctx context.Context, method, url string, header http.H
 		return reply{}, err
 	}
 	defer resp.Body.Close()
-	max := f.MaxBytes
-	if max == 0 {
-		max = 32 << 20
+	limit := f.MaxBytes
+	if limit == 0 {
+		limit = 32 << 20
 	}
-	b, err := io.ReadAll(io.LimitReader(resp.Body, max+1))
+	b, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return reply{}, err
 	}
-	if int64(len(b)) > max {
-		return reply{}, fmt.Errorf("%s: the answer is larger than %d bytes", url, max)
+	if int64(len(b)) > limit {
+		return reply{}, fmt.Errorf("%s: the answer is larger than %d bytes", url, limit)
 	}
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized && bearer == "":

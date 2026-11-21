@@ -37,7 +37,7 @@ func Apply(ctx context.Context, ws *Workspace, pr plan.Proposal, work Work, runn
 	}
 	for p, text := range work.Edits {
 		full := filepath.Join(tree, filepath.FromSlash(p))
-		if err := os.WriteFile(full, []byte(text), 0o644); err != nil {
+		if err := os.WriteFile(full, []byte(text), 0o644); err != nil { //nolint:gosec // a copy of the repository for a container to read; another user in it must be able to
 			return a, err
 		}
 	}

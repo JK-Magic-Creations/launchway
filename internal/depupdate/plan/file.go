@@ -32,7 +32,7 @@ func ParseFile(data []byte) (Layer, error) {
 	if d.Version != FileVersion {
 		return Layer{}, fmt.Errorf("%s must start with \"version: 1\"", FilePath)
 	}
-	if len(d.Partial.Lock) > 0 {
+	if len(d.Lock) > 0 {
 		return Layer{}, fmt.Errorf("%s cannot lock settings: only an administrator level can", FilePath)
 	}
 	return Layer{Level: "file", Partial: d.Partial}, nil

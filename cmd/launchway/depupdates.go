@@ -342,7 +342,7 @@ func depsIgnore(args []string) error {
 	data, err := os.ReadFile(*file) //nolint:gosec // the person's own file
 	switch {
 	case err != nil && os.IsNotExist(err):
-		if err := os.MkdirAll(filepath.Dir(*file), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(*file), 0o750); err != nil {
 			return err
 		}
 		data = []byte("version: 1\n")
@@ -400,10 +400,9 @@ type restRepo struct {
 }
 
 type restHost struct {
-	cl     *client
-	base   string
-	repo   restRepo
-	branch string
+	cl   *client
+	base string
+	repo restRepo
 }
 
 func (h *restHost) DefaultBranch(context.Context) (string, error) { return h.repo.DefaultBranch, nil }
