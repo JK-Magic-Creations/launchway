@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 31 in progress · 57 planned · 111 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 32 in progress · 56 planned · 111 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -48,7 +48,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Host your code](#g-host-your-code) | 20 | 4 | 3 | 13 |
+| [Host your code](#g-host-your-code) | 20 | 4 | 4 | 12 |
 | [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 1 | 6 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
@@ -107,7 +107,7 @@ The everyday repository lifecycle: create, rename with redirects, transfer, arch
 
 #### Browse and search your code {#browse-and-search-your-code}
 
-<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 The files of a repository at any branch, tag or commit, with the last commit of each, a README, history, blame, comparing two branches, and permanent links with line ranges. A go-to-file finder (press t), a branch and tag switcher, syntax colors, a file's history that follows renames, raw downloads that can never run in the page, and branches and tags pages. Not yet: archives, and the newest commit drawn on its journey above the file tree.
 
@@ -177,7 +177,7 @@ A deleted repository goes to a trash and can come back within a set time. Delete
 
 #### Mirrors in and out {#mirrors-in-and-out}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
 Pull a repository from another host on a schedule, or push every change to another host as a safety copy. Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace. Today both directions work, and a stale mirror is flagged.
 
@@ -187,7 +187,7 @@ Pull a repository from another host on a schedule, or push every change to anoth
 
 #### Repository settings screens {#repository-settings-screens}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen. Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.
 

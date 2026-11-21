@@ -368,7 +368,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "available",
+              "status": "in-progress",
               "title": "Browse and search your code",
               "value": "The files of a repository at any branch, tag or commit, with the last commit of each, a README, history, blame, comparing two branches, and permanent links with line ranges.",
               "detail": "A go-to-file finder (press t), a branch and tag switcher, syntax colors, a file's history that follows renames, raw downloads that can never run in the page, and branches and tags pages. Not yet: archives, and the newest commit drawn on its journey above the file tree.",
@@ -424,7 +424,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Mirrors in and out",
               "value": "Pull a repository from another host on a schedule, or push every change to another host as a safety copy.",
               "detail": "Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace. Today both directions work, and a stale mirror is flagged.",
@@ -432,7 +432,7 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Repository settings screens",
               "value": "Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen.",
               "detail": "Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.",
