@@ -160,6 +160,9 @@ func TestLogLinesOfAStepThatWaitedFollowTheEarlierOnes(t *testing.T) {
 		}
 		seqs = append(seqs, n)
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 	if len(seqs) != 5 || seqs[0] != 1 || seqs[4] != 5 {
 		t.Fatalf("the lines of the attempt are numbered %v, want 1 to 5", seqs)
 	}
