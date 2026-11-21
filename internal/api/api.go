@@ -1022,11 +1022,13 @@ func (s *Server) decide(approve bool) http.HandlerFunc {
 				return
 			}
 		}
-		if err := s.Engine.Decide(r.PathValue("id"), r.PathValue("step"), approve, identityFrom(r).User, in.Comment); err != nil {
+		id := identityFrom(r)
+		d, err := s.Engine.DecideAs(r.PathValue("id"), r.PathValue("step"), approve, engine.Decider{Actor: id.User, Groups: id.Groups}, in.Comment)
+		if err != nil {
 			s.fail(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+		writeJSON(w, http.StatusOK, decisionOut{OK: true, Decision: d})
 	}
 }
 

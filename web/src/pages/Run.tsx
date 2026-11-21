@@ -15,6 +15,7 @@ import { openInEditor } from "./EditPipeline";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
 import { RunTrigger } from "../components/RunTrigger";
+import { progressText, whoMayDecide, type ApprovalProgress } from "../api/approvals";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
 import { ArtifactsTab } from "./RunArtifacts";
 import { CoverageTab } from "./RunCoverage";
@@ -675,6 +676,12 @@ function ApprovalPanel({ run, step, now, mayDecide, rerun }: { run: RunDetail; s
             {guarded
               ? <>This approval guards the deployment of {guarded.service} to {guarded.environment}: it is rejected by itself if the rollout is aborted.</>
               : <>This approval guards the deployment made by {step.deployment}: it is rejected by itself if the rollout is aborted.</>}
+          </p>
+        )}
+        {(progressText(step as ApprovalProgress) || whoMayDecide(step as ApprovalProgress)) && (
+          <p className="sub approval-progress">
+            {progressText(step as ApprovalProgress)}
+            {whoMayDecide(step as ApprovalProgress) && <> Only {whoMayDecide(step as ApprovalProgress)} may decide.</>}
           </p>
         )}
         <div className="run-meta">

@@ -151,6 +151,7 @@ type Step struct {
 	Description string               `json:"description,omitempty"` // one line saying what the step is for
 	Kind        string               `json:"kind,omitempty"`        // empty for a plain step, or KindApproval
 	Message     string               `json:"message,omitempty"`     // approvals: the question to decide
+	Approvers   *Approvers           `json:"approvers,omitempty"`   // approvals: who may decide and how many must approve (schema 27)
 	Container   string               `json:"container,omitempty"`   // a named container; Image is then filled from it
 	Image       string               `json:"image"`
 	Run         string               `json:"run"`

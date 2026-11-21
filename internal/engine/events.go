@@ -30,6 +30,10 @@ const (
 	StepWaiting  EventType = "step.waiting"  // an approval is waiting for a person to decide
 	StepApproved EventType = "step.approved" // a person approved it; it succeeds
 	StepRejected EventType = "step.rejected" // a person rejected it, or nobody decided in time; it fails
+	// StepApprovalRecorded is one approval of several an approval step asks
+	// for (approvers.count above 1, schema 27); the step goes on waiting
+	// until the last one, which is a step.approved.
+	StepApprovalRecorded EventType = "step.approval_recorded"
 
 	// StepReused records, in a re-run, a step that is not run again: its
 	// outcome and outputs are those it had in an earlier run.
@@ -80,8 +84,9 @@ var eventSince = map[EventType]int{
 	StepQueued: 1, StepSkipped: 1, StepLeased: 1, StepStarted: 1, StepFinished: 1,
 	StepLost: 1, StepCanceled: 1, StepReset: 1,
 	StepWaiting: 4, StepApproved: 4, StepRejected: 4,
-	StepReused:        8,
-	DeployWaitingLock: 11, DeployOpened: 11, DeployActionDone: 11, DeployObserving: 11, DeployPhase: 11, DeployClosed: 11,
+	StepReused:           8,
+	StepApprovalRecorded: schemaParity2,
+	DeployWaitingLock:    11, DeployOpened: 11, DeployActionDone: 11, DeployObserving: 11, DeployPhase: 11, DeployClosed: 11,
 	DeployCommand: 14, DeployCommandWithdrawn: 14, DeployCommandTaken: 14, DeployCommandDone: 14,
 	PolicyEvaluated: 16,
 	VerifyStarted:   19, VerifyInterval: 19, VerifyVerdict: 19, VerifyOverride: 19,
@@ -165,6 +170,14 @@ type Payload struct {
 	// step.reused: where the outcome and outputs come from. Outcome is
 	// succeeded or skipped; Actor and Comment are an approval's decision.
 	Reused *Reused `json:"reused,omitempty"`
+
+	// step.waiting of an approval that asks for several approvals (schema
+	// 27): how many distinct people must approve, and where the number comes
+	// from (the step's approvers, or its environment's min_approvals).
+	// step.reused: the people whose approvals the reused decision had.
+	Needed     int              `json:"needed,omitempty"`
+	NeededFrom string           `json:"needed_from,omitempty"`
+	Approvals  []ApprovalRecord `json:"approvals,omitempty"`
 
 	// run.created of a pull-request run (schema 9): whether its steps may
 	// read secrets, as the project's configuration said when it was

@@ -1244,9 +1244,10 @@ type serviceOut struct {
 }
 
 type environmentOut struct {
-	Name      string       `json:"name"`
-	Protected bool         `json:"protected,omitempty"`
-	Services  []serviceOut `json:"services"`
+	Name         string       `json:"name"`
+	Protected    bool         `json:"protected,omitempty"`
+	MinApprovals int          `json:"min_approvals,omitempty" jsonschema:"the fewest distinct approvals an approval that guards a deployment here needs, whatever its pipeline asks for"`
+	Services     []serviceOut `json:"services"`
 }
 
 type deploymentOut struct {
@@ -1287,7 +1288,7 @@ func getDeployments(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 		if in.Environment != "" && e.Name != in.Environment {
 			continue
 		}
-		eo := environmentOut{Name: e.Name, Protected: e.Protected, Services: []serviceOut{}}
+		eo := environmentOut{Name: e.Name, Protected: e.Protected, MinApprovals: e.MinApprovals, Services: []serviceOut{}}
 		for _, u := range e.Services {
 			if (in.Project != "" && u.Project != in.Project) || (in.Service != "" && u.Service != in.Service) {
 				continue
@@ -1340,15 +1341,18 @@ func getDeployments(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 // ---- approvals ----
 
 type approvalOut struct {
-	RunID        string `json:"run_id"`
-	RunNumber    int    `json:"run_number"`
-	Project      string `json:"project"`
-	Step         string `json:"step"`
-	StartedBy    string `json:"started_by"`
-	Ref          string `json:"ref,omitempty"`
-	Commit       string `json:"commit,omitempty"`
-	WaitingSince string `json:"waiting_since"`
-	Deadline     string `json:"deadline,omitempty" jsonschema:"rejected by itself then, if nobody decides"`
+	RunID        string   `json:"run_id"`
+	RunNumber    int      `json:"run_number"`
+	Project      string   `json:"project"`
+	Step         string   `json:"step"`
+	StartedBy    string   `json:"started_by"`
+	Ref          string   `json:"ref,omitempty"`
+	Commit       string   `json:"commit,omitempty"`
+	WaitingSince string   `json:"waiting_since"`
+	Deadline     string   `json:"deadline,omitempty" jsonschema:"rejected by itself then, if nobody decides"`
+	Progress     string   `json:"progress,omitempty" jsonschema:"how many distinct people must approve and who has, such as 1 of 2 approved (ann)"`
+	Approved     []string `json:"approved_by,omitempty"`
+	Needed       int      `json:"approvals_needed"`
 	Untrusted    struct {
 		Question      string `json:"question,omitempty"`
 		CommitMessage string `json:"commit_message,omitempty"`
@@ -1374,6 +1378,8 @@ func listApprovals(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, _ li
 		if a.PullRequest > 0 {
 			ao.Ref = fmt.Sprintf("pull request #%d", a.PullRequest)
 		}
+		ao.Needed, ao.Approved = a.ApprovalsNeeded, approvalNames(a.Approvals)
+		ao.Progress = progressText(&engine.Decision{Approvals: a.Approvals, Needed: a.ApprovalsNeeded, NeededFrom: a.ApprovalsNeededFrom})
 		ao.Untrusted.Question, ao.Untrusted.CommitMessage = untrusted(a.Message, 500), untrusted(a.CommitSubject, 200)
 		out.Approvals = append(out.Approvals, ao)
 	}

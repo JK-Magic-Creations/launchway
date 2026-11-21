@@ -383,6 +383,7 @@ by `for_each`. See [Deploy with an approval](../tutorials/deploy-with-approval.m
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `message` | text | required | The question to decide, one line of at most 500 characters |
+| `approvers` | mapping | anyone with the operator role, one approval | Who may decide and how many distinct people must approve; see [Approvers](#approvers) |
 | `deployment` | step name | none | A deploy step this approval guards: the approval then shows the live rollout, is rejected by itself if the rollout is aborted, and needs the operator role on that environment. The approval must need the deploy step, directly or not, and takes no `when.upstream`. Not allowed in a template |
 
 <!-- validate -->
@@ -403,6 +404,33 @@ steps:
     needs: approve-prod
     run: ./deploy.sh
 ```
+
+#### Approvers
+
+`approvers` narrows who may decide an approval and asks for more than one approval:
+
+<!-- keys: approvers -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `groups` | list of names | none | Groups, as the sign-in provider gives them and bindings name them. A member of any may decide |
+| `users` | list of names | none | Users, as written in bindings. Any of them may decide |
+| `count` | whole number | `1` | How many distinct people must approve, 1 to 5. With `users` only, not more than the users listed |
+
+The caller must still have the operator role on the project (and on the environment, for an
+approval that names a deployment): `approvers` only narrows, never widens. It is judged by the
+server's engine for the web, the API, MCP and the command line alike, by name and groups at the
+time of the decision. Each approval is recorded (`step.approval_recorded`, with who, when and the
+comment) and the step goes on waiting until `count` different people have approved; the same
+person twice is refused, and the person who started the run does not count unless the server
+allows approving one's own runs. A rejection by anyone allowed ends the step at once; an expiry
+rejects it, whatever has been approved. A re-run reuses the decision with its people.
+
+An environment with `protected: true` can set `min_approvals` (1 to 5) in the server's
+configuration: for an approval that names a deployment there, the number needed is the larger of
+`count` and the environment's `min_approvals`, so editing a pipeline cannot weaken production. The
+approval shows the number and where it comes from. The run page, the approvals page, the API
+(`approvals`, `approvals_needed`), MCP (`list_approvals`, `decide_approval`) and
+`launchway approvals list` show "1 of 2 approved" with names.
 
 ### A step that uses a template
 

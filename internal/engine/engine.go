@@ -1867,6 +1867,11 @@ func (c *cmd) persist() error {
 			return err
 		}
 	}
+	if c.e.knows(schemaParity2) {
+		if err := c.persistParity2(changed); err != nil {
+			return err
+		}
+	}
 	if c.e.knows(schemaPullRequests) {
 		if err := c.persistSchema9(); err != nil {
 			return err
@@ -2076,7 +2081,7 @@ func (c *cmd) advance() {
 				}
 				changed = len(c.events) > before
 			case def.IsApproval():
-				c.emit(StepWaiting, Payload{Step: id, Attempt: s.Attempt + 1, Deadline: c.now + def.Timeout.D().Milliseconds()})
+				c.emit(StepWaiting, c.approvalWait(id, def, s.Attempt+1))
 				changed = true
 			case def.IsImage() && (c.imageRefused(id, def) || c.gateImage(id, def)):
 				if c.err != nil {

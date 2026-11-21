@@ -171,6 +171,13 @@ type StepState struct {
 	DecidedBy string // who approved or rejected it; empty if it expired
 	DecidedAt int64
 	Comment   string
+	// Approvals are the people who have approved a waiting approval so far,
+	// or all who did once it succeeded; Needed is how many distinct approvals
+	// it asks for and NeededFrom where that number comes from (schema 27;
+	// zero Needed is one approval, as before).
+	Approvals  []ApprovalRecord
+	Needed     int
+	NeededFrom string
 	// A step reused by a re-run: the run (and its number) where it actually
 	// ran, and the attempt there. Empty for a step that ran in this run.
 	ReusedFrom    string
@@ -276,6 +283,7 @@ func (st *RunState) stoppedBecause() string {
 func (s *StepState) clearDecision() {
 	s.Deadline, s.DecidedAt = 0, 0
 	s.DecidedBy, s.Comment = "", ""
+	s.Approvals, s.Needed, s.NeededFrom = nil, 0, ""
 }
 
 // Fold rebuilds a run's state from its events, in order, understanding
@@ -606,24 +614,14 @@ func (st *RunState) apply(ev Event) {
 		s.QueuedAt, s.StartedAt, s.FinishedAt = ev.At, ev.At, 0
 		s.Error = ""
 		s.clearDecision()
-		s.Deadline = p.Deadline
+		s.Deadline, s.Needed, s.NeededFrom = p.Deadline, p.Needed, p.NeededFrom
 		if st.Status == RunQueued {
 			st.Status = RunRunning
 			st.StartedAt = ev.At
 		}
 
-	case StepApproved, StepRejected:
-		st.endApprovalWait(s, ev.At)
-		if ev.Type == StepApproved {
-			s.Status = StepSucceeded
-			s.Error = ""
-		} else {
-			s.Status = StepFailed
-			s.Failures++
-			s.Error = p.Reason
-		}
-		s.FinishedAt = ev.At
-		s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, ev.At, p.Comment
+	case StepApproved, StepRejected, StepApprovalRecorded:
+		st.applyApproval(s, ev)
 
 	case StepReused:
 		s.applyReused(p, ev)

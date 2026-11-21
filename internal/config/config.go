@@ -277,6 +277,10 @@ type EnvironmentConfig struct {
 	// own runs); anyone with the operator role here may abort it. Off by
 	// default.
 	Protected bool `yaml:"protected"`
+	// MinApprovals is the fewest distinct approvals an approval step that
+	// guards a deployment here needs, whatever its pipeline asks for; at
+	// most 5, and only with protected: true.
+	MinApprovals int `yaml:"min_approvals"`
 }
 
 // RunnerPoolConfig is one runner pool. A deploy pool (the default kind)
@@ -305,7 +309,7 @@ type RunnerPoolConfig struct {
 func (c *Config) EngineEnvironments() []engine.Environment {
 	out := make([]engine.Environment, 0, len(c.Environments))
 	for _, e := range c.Environments {
-		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue, Protected: e.Protected})
+		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue, Protected: e.Protected, MinApprovals: e.MinApprovals})
 	}
 	return out
 }

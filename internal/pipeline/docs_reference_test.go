@@ -274,6 +274,7 @@ steps:
     needs: smoke
     deployment: deploy
     message: Promote?
+    approvers: { groups: [release-managers], count: 2 }
   promote:
     kind: rollout
     needs: approve
@@ -370,6 +371,7 @@ var probes = []probe{
 	{table: "verify-metric", path: []any{"steps", "verify", "metrics", 0}},
 	{table: "verify-log", path: []any{"steps", "verify", "logs", 0}},
 	{table: "artifacts", path: []any{"steps", "build", "artifacts", 0}},
+	{table: "approvers", path: []any{"steps", "approve", "approvers"}},
 	{table: "fetch", path: []any{"steps", "test", "fetch", 0}},
 	{table: "value", path: []any{"steps", "deploy", "version"}},
 	{table: "value", path: []any{"steps", "image", "tags", 0, "tag"}},

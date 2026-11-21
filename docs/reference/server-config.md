@@ -364,6 +364,7 @@ steps are refused. Checked when the server starts.
 | `environments[].projects` | list of patterns | required | The projects that may deploy here, such as `web-*` |
 | `environments[].queue` | text | `newest` | `newest`: a run waiting for the lock is skipped when a newer run of the same service starts waiting. `all`: they deploy in turn |
 | `environments[].protected` | boolean | `false` | The person who started a run may not promote or retry its deployment here, nor waive its deploy gate, unless `approvals.allow_self` lets them approve their own runs |
+| `environments[].min_approvals` | whole number | `0` | With `protected: true`: the fewest distinct approvals an approval step that guards a deployment here needs, 1 to 5, whatever its pipeline's `approvers.count` says |
 
 ## Runner pools
 

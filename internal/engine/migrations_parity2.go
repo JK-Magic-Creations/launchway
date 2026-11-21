@@ -34,7 +34,10 @@ var migration26Stand = migration{additive, ``}
 //	selector is kept on the step's row so that every server's leasing
 //	can match it in SQL (runner_pool, runner_labels: the labels joined
 //	by commas, in order), and own_workspace says that the step has a
-//	workspace of its own and does not take over the run's runner. The
+//	workspace of its own and does not take over the run's runner. An
+//	approval that asks for several approvals keeps how many it needs
+//	and who approved so far as JSON in approvals, for the views and
+//	the list of waiting approvals; the events are the record. The
 //	pipeline keys of the stories of this schema (fetch from a loop, a
 //	step's runner, approvers, service readiness, secret references in
 //	templates) carry "requires": 27 and the events that use new fields
@@ -44,6 +47,7 @@ var migrationParity2 = migration{additive, `
 ALTER TABLE steps ADD COLUMN own_workspace INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE steps ADD COLUMN runner_pool TEXT NOT NULL DEFAULT '';
 ALTER TABLE steps ADD COLUMN runner_labels TEXT NOT NULL DEFAULT '';
+ALTER TABLE steps ADD COLUMN approvals TEXT NOT NULL DEFAULT '';
 `}
 
 func init() {

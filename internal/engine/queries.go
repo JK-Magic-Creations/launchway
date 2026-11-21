@@ -127,6 +127,14 @@ type StepView struct {
 	DecidedBy   string `json:"decided_by"`
 	DecidedAt   int64  `json:"decided_at"`
 	Comment     string `json:"comment"`
+	// Approvals are the people who approved so far (all of them once it
+	// succeeded), ApprovalsNeeded how many distinct approvals it asks for
+	// and ApprovalsNeededFrom why that many (schema 27); Approvers is the
+	// step's rule for who may decide, from its definition.
+	Approvals           []ApprovalRecord    `json:"approvals,omitempty"`
+	ApprovalsNeeded     int                 `json:"approvals_needed,omitempty"`
+	ApprovalsNeededFrom string              `json:"approvals_needed_from,omitempty"`
+	Approvers           *pipeline.Approvers `json:"approvers,omitempty"`
 	// WaitKind, for a waiting deploy or rollback step, is what it waits
 	// for: lock or observe. Empty for an approval.
 	WaitKind string `json:"wait_kind,omitempty"`
@@ -526,6 +534,9 @@ func (e *Engine) stepCols() string {
 	if e.knows(schemaFlow) {
 		cols += `, allowed, not_before, fail_cause`
 	}
+	if e.knows(schemaParity2) {
+		cols += `, approvals`
+	}
 	return cols
 }
 
@@ -545,9 +556,14 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 	if e.knows(schemaFlow) {
 		dst = append(dst, &allowed, &v.NotBefore, &v.FailureCause)
 	}
+	var approvals string
+	if e.knows(schemaParity2) {
+		dst = append(dst, &approvals)
+	}
 	if err := sc.Scan(dst...); err != nil {
 		return nil, err
 	}
+	v.setApprovals(approvals)
 	if exit.Valid {
 		x := int(exit.Int64)
 		v.ExitCode = &x
@@ -628,7 +644,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Secrets = def.Secrets
 			v.Container = st.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
-			v.Group = def.Group
+			v.Group, v.Approvers = def.Group, def.Approvers
 			v.Environment, v.Deployment = def.Environment, def.Deployment
 			if dd := st.Pipeline.Step(def.Deployment); def.IsRollback() && dd != nil {
 				v.Environment = dd.Environment

@@ -128,7 +128,7 @@ run from unsaved text.
     timeout: 24h
 ```
 
-An approval takes only `needs`, `when`, `message`, `timeout` and `description`. When its needs have
+An approval takes only `needs`, `when`, `message`, `timeout`, `description`, `deployment` and `approvers`. `approvers: { groups: [release-managers], users: [zoe], count: 2 }` limits who may decide (it only narrows the operator role) and asks for `count` (1 to 5) distinct approvals; a protected environment's `min_approvals` is a floor the pipeline cannot lower; anyone allowed may reject. When its needs have
 succeeded it waits for a person: approving lets the steps after it run; rejecting, or nobody
 deciding before the timeout, fails it. With sign-in on, the person who started a run may not
 approve it themselves (unless the server allows it).

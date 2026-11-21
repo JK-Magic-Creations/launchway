@@ -4,6 +4,6 @@ package engine
 // 25 and 26 are other branches' and stand in as empty migrations until they
 // merge).
 var schemaMarkersParity2 = schemaMarker{
-	schema: schemaParity2, feature: "a runner and a workspace for a single step",
-	columns: []string{"steps.own_workspace", "steps.runner_pool", "steps.runner_labels"},
+	schema: schemaParity2, feature: "a runner for a single step and approvals by several people",
+	columns: []string{"steps.own_workspace", "steps.runner_pool", "steps.runner_labels", "steps.approvals"},
 }

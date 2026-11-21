@@ -314,3 +314,46 @@ steps:
 		t.Fatalf("%v", err)
 	}
 }
+
+const approverSrc = `
+pipeline: a
+steps:
+  build: {image: x, run: b}
+  approve:
+    kind: approval
+    needs: build
+    message: Go?
+    APPROVERS
+`
+
+func TestApprovers(t *testing.T) {
+	p, err := Parse([]byte(strings.Replace(approverSrc, "APPROVERS", "approvers: { groups: [release-managers], users: [zoe], count: 2 }", 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := p.Step("approve").Approvers
+	if a == nil || a.Count != 2 || a.Groups[0] != "release-managers" || p.Requires != SchemaParity2 {
+		t.Fatalf("%+v requires %d", a, p.Requires)
+	}
+	if !a.Allows("zoe", nil) || !a.Allows("x", []string{"release-managers"}) || a.Allows("x", []string{"devs"}) {
+		t.Fatal("Allows")
+	}
+	if p2, _ := Parse([]byte(strings.Replace(approverSrc, "    APPROVERS\n", "", 1))); p2.Requires != 0 || p2.Step("approve").Approvers != nil {
+		t.Fatal("plain approvals are unchanged")
+	}
+	for in, want := range map[string]string{
+		"approvers: { count: 6 }":             "count is between 1 and 5",
+		"approvers: { count: 0 }":             "count is between 1 and 5",
+		"approvers: { users: [a], count: 2 }": "could never be approved",
+		"approvers: { team: [a] }":            "team",
+		"approvers: [a]":                      "approvers is a mapping",
+		"approvers: { groups: [a, a] }":       "listed twice",
+	} {
+		if _, err := Parse([]byte(strings.Replace(approverSrc, "APPROVERS", in, 1))); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: want %q, got %v", in, want, err)
+		}
+	}
+	if _, err := Parse([]byte("pipeline: a\nsteps:\n  s:\n    image: x\n    run: y\n    approvers: { count: 2 }\n")); err == nil || !strings.Contains(err.Error(), "only for approval") {
+		t.Errorf("approvers on a script step: %v", err)
+	}
+}

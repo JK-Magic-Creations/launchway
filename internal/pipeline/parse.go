@@ -317,13 +317,13 @@ func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
 
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
-		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "artifacts", "fetch", "deployment", "resources", "on_failure"}
+		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "artifacts", "fetch", "deployment", "resources", "on_failure", "approvers"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
 	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
-	approvalOnly = []string{"message"}
+	approvalOnly = []string{"message", "approvers"}
 	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources", "on_failure"}
 	// Kinds from the design that are recognised but not implemented yet.
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
@@ -524,7 +524,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			s.Kind = "" // the default is not written into the graph
 			ps.parseRunStep(k, at, s, p, keys, secretsNode)
 		case s.Kind == KindApproval:
-			ps.parseApproval(k, at, s, keys)
+			ps.parseApproval(k, at, s, keys, vals)
 		case s.Kind == "analysis":
 			ps.add(kindNode, at+".kind", "write kind: verify: Launchway judges the metrics and logs itself (see verify steps)")
 		case kindsNotYet[s.Kind]:
@@ -587,7 +587,10 @@ func (ps *parser) parseRunStep(k *yaml.Node, at string, s *Step, p *Pipeline, ke
 }
 
 // parseApproval checks a step that waits for a person to decide.
-func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[string]*yaml.Node) {
+func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys, vals map[string]*yaml.Node) {
+	if n := vals["approvers"]; n != nil {
+		s.Approvers = ps.parseApprovers(n, at+".approvers")
+	}
 	if n := keys["deployment"]; n != nil && ps.tmpl != nil {
 		ps.add(n, at+".deployment", "an approval in a template cannot name a deployment; write it in the pipeline that uses the template")
 	}

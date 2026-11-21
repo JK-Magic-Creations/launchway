@@ -790,6 +790,8 @@ type EnvironmentView struct {
 	Services []UnitView `json:"services"`
 	// Protected: see Environment.Protected.
 	Protected bool `json:"protected,omitempty"`
+	// MinApprovals: see Environment.MinApprovals.
+	MinApprovals int `json:"min_approvals,omitempty"`
 	// Observers says which runner observes the environment's target, and
 	// until when (Unix ms); empty when none does.
 	Observer        string `json:"observer,omitempty"`
@@ -949,7 +951,7 @@ func (e *Engine) EnvironmentStates(visible func(project string) bool) ([]Environ
 		rows.Close()
 	}
 	for _, env := range e.Environments() {
-		v := EnvironmentView{Name: env.Name, Target: env.Target, Queue: env.Queue, Projects: env.Projects, Services: []UnitView{}, Protected: env.Protected}
+		v := EnvironmentView{Name: env.Name, Target: env.Target, Queue: env.Queue, Projects: env.Projects, Services: []UnitView{}, Protected: env.Protected, MinApprovals: env.MinApprovals}
 		if o, ok := observers[env.Target]; ok && o[1].(int64) >= e.now().UnixMilli() {
 			v.Observer, v.ObserverExpires = o[0].(string), o[1].(int64)
 		}
