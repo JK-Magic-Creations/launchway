@@ -56,6 +56,7 @@ oldest schema whose servers understand it.
 | `run.cancel_requested` | 1 | someone asks to cancel the run, or a newer run supersedes it | `actor`; or `reason` (such as `superseded by run #12`) and `superseded_by` (`run`, `number`) |
 | `run.resumed` | 1 | someone resumes a failed or cancelled run | `actor`; `draft_secrets` for a draft run (whether its steps may read secrets from now on) |
 | `run.finished` | 1 | every step has ended | `status`: `succeeded`, `failed` or `canceled` |
+| `run.reviewed` | 32 | an approver acknowledges an emergency rollback that needed review (see [rollback after success](../guide/rollback-after-success.md)) | `actor`, `comment` |
 | `run.lane_waiting` | 24 | a run of a pipeline with a [lane](pipeline.md#lane) arrives while another run holds the lane and waits its turn: no step is queued | `lane` (`name`, `key`, `label`, and `run`, `number` of the run it waits behind) |
 | `run.lane_started` | 24 | the run took a free lane, or the lane was handed to it when the run before it ended (in the same transaction), or it took the lane again on a resume | `lane` (`name`, `key`, `label`) |
 | `run.lane_replaced` | 24 | a newer run took this run's place: a waiting run under `queue: newest`, or the holder and waiting runs under `when_busy: cancel`; followed by `run.cancel_requested` | `lane` (…, and `run`, `number` of the newer run) |
@@ -246,6 +247,8 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deployment.abort` | `POST /api/v1/runs/{id}/deployments/{dep}/abort` |
 | `deployment.retry` | `POST /api/v1/runs/{id}/deployments/{dep}/retry` |
 | `deployment.command_outcome` | what a deploy runner did with a command it took (promote, promote full, abort, retry), written when it reports, apart from the entry for the request: `ok` for a command that got to the rollout, `failed` for one that did not, with the reason; the user is the runner |
+| `deployment.rollback` | `POST /api/v1/projects/{name}/rollbacks`: the request, with the reason, and then the run it made |
+| `rollback.review` | `POST /api/v1/runs/{id}/review`: an approver acknowledging an emergency rollback, with the comment |
 | `deployment.withdraw` | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` |
 | `artifact.delete` | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` |
 | `token.create` | `POST /api/v1/tokens` |

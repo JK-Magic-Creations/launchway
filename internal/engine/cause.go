@@ -309,6 +309,10 @@ func (st *RunState) resumeAdvice() *ResumeAdvice {
 		return nil
 	}
 	a := &ResumeAdvice{Allowed: true, FirstFailed: st.firstFailedStep()}
+	if st.isRollbackRun() {
+		a.Allowed, a.Reason = false, st.rollbackRunRefusal()
+		return a
+	}
 	if id := st.openedDeployment(); id != "" {
 		a.Allowed, a.RerunFrom = false, st.rerunTarget(id)
 		a.Reason = fmt.Sprintf("%s made a deployment in this run, and a half-done deployment is never continued", id)
@@ -362,6 +366,17 @@ type Action struct {
 	// consider first; the action is not blocked by them.
 	Risk       string `json:"risk,omitempty"`
 	Suggestion string `json:"suggestion,omitempty"`
+	// Targets, for a rollback, are the earlier deployments it can restore,
+	// the previous successful one first. Queueable says the action is not
+	// available only because another deployment holds the environment's
+	// lock, and asking to queue behind it will work. Emergency says it is
+	// an emergency action on a protected environment (reviewed afterwards),
+	// RequiresApproval that an installation or environment setting asks for
+	// an approval first even then.
+	Targets          []RollbackTarget `json:"targets,omitempty"`
+	Queueable        bool             `json:"queueable,omitempty"`
+	Emergency        bool             `json:"emergency,omitempty"`
+	RequiresApproval bool             `json:"requires_approval,omitempty"`
 }
 
 // runActions computes the actions of a run from its state alone (the
@@ -382,6 +397,14 @@ func (st *RunState) runActions() []Action {
 	failedOrCanceled := st.Status == RunFailed || st.Status == RunCanceled
 	resume := Action{Name: "resume", Available: failedOrCanceled}
 	rerun := Action{Name: "rerun", Available: over}
+	if st.isRollbackRun() {
+		why := st.rollbackRunRefusal()
+		resume.Available, resume.Reason = false, why
+		rerun.Available, rerun.Reason = false, why
+		add(resume)
+		add(rerun)
+		return acts
+	}
 	if !failedOrCanceled {
 		resume.Reason = "only a failed or canceled run can be resumed"
 	} else if id := st.openedDeployment(); id != "" {

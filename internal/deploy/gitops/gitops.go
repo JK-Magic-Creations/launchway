@@ -92,7 +92,13 @@ type RevertResult struct {
 // ConflictError means the revert does not apply to the branch's tip (later
 // commits changed the same lines). The clone is reset; the branch on the
 // server is untouched.
-type ConflictError struct{ Files []string }
+type ConflictError struct {
+	Files []string
+	// Deployment and Commit, for a series, name the item whose revert does
+	// not apply.
+	Deployment string
+	Commit     string
+}
 
 func (e *ConflictError) Error() string {
 	if len(e.Files) == 0 {
@@ -204,100 +210,6 @@ func (r *Repo) Find(ctx context.Context, deployment string) (string, error) {
 		return "", err
 	}
 	return r.find(ctx, deploymentKey+deployment, true)
-}
-
-// Revert reverts commit on the fresh tip of the branch, unless the branch's
-// recent history already has a commit with the trailer
-// "Launchway-Revert: <deployment>". The revert commit carries both
-// "Launchway-Deployment: <deployment>" and "Launchway-Revert: <deployment>"
-// trailers and the given message (subject and body; git's usual
-// "This reverts commit <sha>." line is added to the body). A rejected push
-// retries on the new tip like Apply. Commit must be an ancestor of the
-// branch tip; otherwise it is an error saying so (never revert something
-// that is not on the branch).
-func (r *Repo) Revert(ctx context.Context, deployment, commit, message string) (RevertResult, error) {
-	if err := r.check(); err != nil {
-		return RevertResult{}, err
-	}
-	if err := checkName("deployment", deployment); err != nil {
-		return RevertResult{}, err
-	}
-	if err := checkRevision(commit); err != nil {
-		return RevertResult{}, err
-	}
-	if err := r.checkAuthor(); err != nil {
-		return RevertResult{}, err
-	}
-	tries := r.tries()
-	for try := 1; ; try++ {
-		tip, err := r.refresh(ctx)
-		if err != nil {
-			return RevertResult{}, err
-		}
-		found, err := r.find(ctx, revertKey+deployment, false)
-		if err != nil {
-			return RevertResult{}, err
-		}
-		if found != "" {
-			r.logf("Deployment %s is already reverted in %s by %s; nothing to push", deployment, r.Branch, short(found))
-			return RevertResult{Commit: found, Existing: true}, nil
-		}
-		full, ok, err := r.resolve(ctx, commit)
-		if err != nil {
-			return RevertResult{}, err
-		}
-		if !ok {
-			return RevertResult{}, fmt.Errorf("commit %s is not on %s (the repository does not have it)", commit, r.Branch)
-		}
-		on, err := r.isAncestor(ctx, full, tip)
-		if err != nil {
-			return RevertResult{}, err
-		}
-		if !on {
-			return RevertResult{}, fmt.Errorf("commit %s is not on %s; refusing to revert it", short(full), r.Branch)
-		}
-		if _, err := r.git(ctx, nil, "revert", "--no-edit", "--no-commit", full); err != nil {
-			conflicted, _ := r.git(ctx, nil, "diff", "--name-only", "--diff-filter=U", "-z")
-			r.git(ctx, nil, "revert", "--abort")
-			r.discard(ctx)
-			if files := splitNUL(conflicted); len(files) > 0 {
-				r.logf("Reverting %s conflicts with later changes in %s", short(full), r.Branch)
-				return RevertResult{}, &ConflictError{Files: files}
-			}
-			return RevertResult{}, err
-		}
-		// A change that later commits already undid reverts to nothing; the
-		// revert is still recorded, as an empty commit, so that it is found
-		// again when retried.
-		staged, err := r.hasStaged(ctx)
-		if err != nil {
-			r.discard(ctx)
-			return RevertResult{}, err
-		}
-		msg := buildMessage(message, "This reverts commit "+full+".", deploymentKey+deployment+"\n"+revertKey+deployment)
-		made, err := r.commit(ctx, msg, !staged)
-		if err != nil {
-			r.discard(ctx)
-			return RevertResult{}, err
-		}
-		err = r.push(ctx)
-		if errors.Is(err, errMoved) && try < tries {
-			r.logf("%s moved on the server; fetching and reverting again (try %d of %d)", r.Branch, try+1, tries)
-			continue
-		}
-		if errors.Is(err, errMoved) {
-			return RevertResult{}, fmt.Errorf("%s kept moving on the server; gave up after %d tries to push", r.Branch, tries)
-		}
-		if err != nil {
-			return RevertResult{}, err
-		}
-		if staged {
-			r.logf("Committed %s to %s: %s", short(made), r.Branch, subject(message))
-		} else {
-			r.logf("Committed %s to %s: %s (later commits had already undone the change; nothing in the files changed)", short(made), r.Branch, subject(message))
-		}
-		return RevertResult{Commit: made}, nil
-	}
 }
 
 // Contains reports whether revision includes commit (commit is revision or

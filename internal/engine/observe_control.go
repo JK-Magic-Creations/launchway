@@ -216,6 +216,12 @@ func (e *Engine) specFromRun(runID, depID string) (deploy.Spec, error) {
 	}
 	id, _ := st.deploymentStep(depID)
 	if id == "" {
+		// A rollback run's deployment is watched like any other.
+		for _, rid := range st.Order {
+			if rs := st.Steps[rid]; rs.Dep.Opened() && rs.Dep.ID == depID && st.Pipeline.Step(rid).IsRestore() {
+				return deploy.SpecFor(pipeline.KindDeploy, st.Pipeline.Step(rid), ""), nil
+			}
+		}
 		return deploy.Spec{}, nil
 	}
 	return deploy.SpecFor(pipeline.KindDeploy, st.Pipeline.Step(id), ""), nil

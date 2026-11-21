@@ -207,18 +207,6 @@ func addTool[In, Out any](srv *mcp.Server, c *mcpCall, t *mcp.Tool, timeout time
 	})
 }
 
-func readOnly(title string) *mcp.ToolAnnotations {
-	no := false
-	return &mcp.ToolAnnotations{Title: title, ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: &no}
-}
-
-// changes marks a tool that changes something. Runs and rollouts reach
-// systems outside Launchway, so their world is open.
-func changes(title string, destructive, idempotent bool) *mcp.ToolAnnotations {
-	yes := true
-	return &mcp.ToolAnnotations{Title: title, DestructiveHint: &destructive, IdempotentHint: idempotent, OpenWorldHint: &yes}
-}
-
 // mcpServerFor makes the MCP server for one request: the tools this caller
 // may use, the resources and the prompts. Making one per request is cheap
 // (the schemas are cached), and lets the tools close over the caller.
@@ -239,8 +227,10 @@ func (s *Server) mcpServerFor(c *mcpCall) *mcp.Server {
 	addStepResourceTools(srv, c)
 	addRunLimitTools(srv, c)
 	addLaneTools(srv, c)
+	addRollbackReadTools(srv, c)
 	if c.mayOperate {
 		addChangeTools(srv, c)
+		addRollbackChangeTools(srv, c)
 		addVerifyChangeTools(srv, c)
 	}
 	addDocs(srv, c)

@@ -1,3 +1,4 @@
+import { DeploymentRollback } from "./Rollback";
 import { useEffect, useState } from "react";
 import { api, type DeployApp, type DeployPhase, type DeploySnapshot, type DeploymentView, type RunDetail, type RunEvent, type StepView, type Verdict } from "../api";
 import { ago, clock, duration, shortSha } from "../format";
@@ -201,7 +202,7 @@ export function FreshnessLine({ d, now, compact }: { d: DeploymentView; now: num
 /** The deployment a deploy, rollback or rollout step (or a linked approval) works on, if it has one. */
 export function deploymentOf(run: RunDetail, step: StepView): DeploymentView | undefined {
   const list = run.deployments ?? [];
-  if (step.kind === "rollback") return list.find((d) => d.rollback_step === step.id) ?? list.find((d) => d.step === step.deployment);
+  if (step.kind === "rollback") return list.find((d) => d.rollback_step === step.id) ?? list.find((d) => d.step === (step.deployment || step.id));
   if (step.kind === "rollout" || step.kind === "approval") return step.deployment ? list.find((d) => d.step === step.deployment) : undefined;
   return list.find((d) => d.step === step.id);
 }
@@ -261,7 +262,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
       {step.kind === "rollback" && step.status === "pending" && (
         <p className="sub">Runs only if a step guarding this deployment fails: it then reverts the commit below.</p>
       )}
-      {d.verdict && (
+      {d.verdict && d.mode !== "rollback" && (
         <div className={`callout dep-verdict callout-${d.verdict === "deployed" ? "ok" : d.verdict === "rolled_back" ? "draft" : d.verdict === "abandoned" ? "info" : "bad"}`}>
           <strong>{verdictLabel(d.verdict)}.</strong> {VERDICT_TEXT[d.verdict] ?? ""}
           {d.closed_at ? <span className="faint-in"> {clock(d.closed_at)}.</span> : null}
@@ -294,6 +295,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
       </dl>
       <Observed d={d} now={now} />
       <DeploymentControls run={run} d={d} now={now} />
+      <DeploymentRollback d={d} />
       {d.timeline && d.timeline.length > 0 && <Timeline d={d} />}
     </section>
   );

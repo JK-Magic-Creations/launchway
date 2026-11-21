@@ -66,6 +66,7 @@ Usage:
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs
                                                 (launchway runs, for more)
   launchway approvals list|approve|reject       approvals waiting for a decision, and deciding them
+  launchway deployments options|rollback|review  roll a service back after a deployment succeeded; review emergency rollbacks
   launchway templates list [library]            the shared libraries' templates and their parameters
   launchway policy   list|run                   the policies in force; a run's decisions
   launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
@@ -123,6 +124,8 @@ func main() {
 		err = cmdRuns(args)
 	case "approvals":
 		err = cmdApprovals(args)
+	case "deployments":
+		err = cmdDeployments(args)
 	case "templates":
 		err = cmdTemplates(args)
 	case "policy":

@@ -290,6 +290,7 @@ a separate runner's: see the [runner configuration reference](runner-config.md),
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
+| `approvals.emergency_rollback` | `allow` or `require_approval` | `allow` | What happens when someone rolls back a protected environment after a successful deployment: `allow` goes ahead without an approval first and an approver reviews it afterwards; `require_approval` puts an approval step first. An environment's own `emergency_rollback` overrides it. See [rollback after success](../guide/rollback-after-success.md) |
 | `approvals.allow_self` | boolean | `true` with `auth.mode: none`, else `false` | Lets the person who started a run approve it, and promote or waive on a protected environment |
 
 ## Drafts and pull requests
@@ -438,6 +439,9 @@ steps are refused. Checked when the server starts.
 | `environments[].projects` | list of patterns | required | The projects that may deploy here, such as `web-*` |
 | `environments[].queue` | text | `newest` | `newest`: a run waiting for the lock is skipped when a newer run of the same service starts waiting. `all`: they deploy in turn |
 | `environments[].protected` | boolean | `false` | The person who started a run may not promote or retry its deployment here, nor waive its deploy gate, unless `approvals.allow_self` lets them approve their own runs |
+| `environments[].reviewers.users` | list of names | none | With `reviewers.groups`: who may acknowledge an emergency rollback of this environment; when neither is given, any operator of the project other than the person who asked for it (unless `approvals.allow_self` lets them) |
+| `environments[].reviewers.groups` | list of names | none | Groups whose members may acknowledge an emergency rollback of this environment |
+| `environments[].emergency_rollback` | `allow` or `require_approval` | the installation's | Overrides `approvals.emergency_rollback` for this environment |
 | `environments[].min_approvals` | whole number | `0` | With `protected: true`: the fewest distinct approvals an approval step that guards a deployment here needs, 1 to 5, whatever its pipeline's `approvers.count` says |
 
 ## Runner pools

@@ -374,6 +374,9 @@ func watchItemOf(st *RunState, id string) (WatchItem, bool) {
 	kind := pipeline.KindDeploy
 	if def.IsRollback() {
 		deployDef = st.Pipeline.Step(def.Deployment)
+		if def.IsRestore() {
+			deployDef = def // it carries how its service is deployed
+		}
 		kind = pipeline.KindRollback
 	}
 	if def.IsRolloutStep() {
@@ -530,7 +533,7 @@ func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveRes
 				}
 			} else if def.IsRollback() {
 				outputs["revert"] = s.Dep.Commit
-				if s.Dep.Previous != nil {
+				if s.Dep.Previous != nil && !def.IsRestore() {
 					outputs["version"] = s.Dep.Previous.Version
 				}
 			}
@@ -630,7 +633,7 @@ func (e *Engine) dispatchLocks() {
 	if !e.knows(schemaDeploy) {
 		return
 	}
-	rows, err := e.db.Query(`SELECT q.run_id, q.step_id, q.environment, q.project, q.service, q.run_number FROM deploy_queue q
+	rows, err := e.db.Query(`SELECT q.run_id, q.step_id, q.environment, q.project, q.service, q.run_number, r.event FROM deploy_queue q
 		LEFT JOIN deploy_locks l ON l.environment = q.environment AND l.project = q.project AND l.service = q.service
 		JOIN runs r ON r.id = q.run_id
 		WHERE l.environment IS NULL AND r.min_schema <= ?
@@ -643,22 +646,28 @@ func (e *Engine) dispatchLocks() {
 		run, step string
 		u         unit
 		number    int
+		rollback  bool // a rollback run's step: it goes first
 	}
 	first := map[unit]waiter{}
 	var order []unit
 	for rows.Next() {
 		var w waiter
-		if err := rows.Scan(&w.run, &w.step, &w.u.env, &w.u.project, &w.u.service, &w.number); err != nil {
+		var event string
+		if err := rows.Scan(&w.run, &w.step, &w.u.env, &w.u.project, &w.u.service, &w.number, &event); err != nil {
 			rows.Close()
 			e.log.Error("looking for deploy steps waiting for a free lock", "err", err)
 			return
 		}
+		w.rollback = event == pipeline.EventRollback
 		cur, seen := first[w.u]
 		newest := e.live().envs[w.u.env].Queue != "all"
 		switch {
 		case !seen:
 			order = append(order, w.u)
 			first[w.u] = w
+		case w.rollback && !cur.rollback:
+			first[w.u] = w
+		case cur.rollback && !w.rollback:
 		case newest && w.number > cur.number:
 			first[w.u] = w
 		}
@@ -669,10 +678,14 @@ func (e *Engine) dispatchLocks() {
 		err := e.withRun(w.run, func(c *cmd) error {
 			s := c.st.Steps[w.step]
 			def := c.st.Pipeline.Step(w.step)
-			if s == nil || def == nil || !def.IsDeploy() || s.Status != StepWaitingS || s.WaitKind != WaitLock || c.st.CancelRequested {
+			if s == nil || def == nil || !(def.IsDeploy() || def.IsRestore()) || s.Status != StepWaitingS || s.WaitKind != WaitLock || c.st.CancelRequested {
 				return nil
 			}
-			c.startDeploy(w.step, def)
+			if def.IsRestore() {
+				c.startRestore(w.step, def)
+			} else {
+				c.startDeploy(w.step, def)
+			}
 			c.advance()
 			return nil
 		})
@@ -722,6 +735,9 @@ func (e *Engine) deployments(where string, args []any, limit int, timeline bool)
 		return nil, err
 	}
 	if err := e.addControl(out); err != nil {
+		return nil, err
+	}
+	if err := e.addRollbackInfo(out); err != nil {
 		return nil, err
 	}
 	if timeline {
@@ -780,49 +796,6 @@ func (e *Engine) Deployments(f DeploymentFilter) ([]DeploymentView, error) {
 		}
 	}
 	return e.deployments(strings.Join(where, " AND "), args, f.Limit, false)
-}
-
-// EnvironmentView is an environment with what Launchway knows runs there.
-type EnvironmentView struct {
-	Name     string     `json:"name"`
-	Target   string     `json:"target"`
-	Queue    string     `json:"queue"`
-	Projects []string   `json:"projects"`
-	Services []UnitView `json:"services"`
-	// Protected: see Environment.Protected.
-	Protected bool `json:"protected,omitempty"`
-	// MinApprovals: see Environment.MinApprovals.
-	MinApprovals int `json:"min_approvals,omitempty"`
-	// Observers says which runner observes the environment's target, and
-	// until when (Unix ms); empty when none does.
-	Observer        string `json:"observer,omitempty"`
-	ObserverExpires int64  `json:"observer_expires,omitempty"`
-}
-
-// UnitView is one service of a project in an environment.
-type UnitView struct {
-	Project string `json:"project"`
-	Service string `json:"service"`
-	// Current is what Launchway last deployed there and left running.
-	Current *CurrentView `json:"current,omitempty"`
-	// Lock is the deployment holding the lock, if any.
-	Lock *DeployRef `json:"lock,omitempty"`
-	// Waiting are the runs waiting for the lock.
-	Waiting []DeployRef `json:"waiting"`
-	// Last is the newest deployment, with what was last observed.
-	Last *DeploymentView `json:"last,omitempty"`
-	// Live is what deploy runners last saw of the service while nothing
-	// was deploying it, and whether it differs from Current (schema 14).
-	Live *LiveView `json:"live,omitempty"`
-}
-
-// CurrentView is what an environment runs, as far as Launchway knows.
-type CurrentView struct {
-	Deployment string `json:"deployment"`
-	Version    string `json:"version"`
-	Run        string `json:"run"`
-	RunNumber  int    `json:"run_number"`
-	Since      int64  `json:"since"`
 }
 
 // EnvironmentStates returns every configured environment with its services.
@@ -957,6 +930,12 @@ func (e *Engine) EnvironmentStates(visible func(project string) bool) ([]Environ
 			v.Observer, v.ObserverExpires = o[0].(string), o[1].(int64)
 		}
 		for _, u := range units[env.Name] {
+			if u.Last != nil && e.knows(schemaRollback) {
+				if plan, err := e.RollbackPlan(u.Project, env.Name, u.Service); err == nil {
+					a := plan.Action
+					u.Rollback = &a
+				}
+			}
 			v.Services = append(v.Services, *u)
 		}
 		sort.Slice(v.Services, func(i, j int) bool {

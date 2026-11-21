@@ -197,6 +197,7 @@ func (s *Server) recordCommandOutcome(r *http.Request, runner engine.RunnerInfo,
 // operator role none is available, and each says why and what would help.
 func (s *Server) presentRun(id *identity, d *engine.RunDetail) {
 	d.Source = redactSource(d.Source)
+	s.presentDeployments(id, d.Deployments)
 	if s.authorize(id, auth.Operate, d.Project) {
 		return
 	}

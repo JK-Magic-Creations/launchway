@@ -166,6 +166,18 @@ func (s *Server) listEnvironments(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if visible {
+			id := identityFrom(r)
+			for i := range env.Services {
+				u := &env.Services[i]
+				if u.Rollback != nil {
+					s.roleAction(id, u.Project, env.Name, u.Rollback)
+				}
+				if u.Last != nil {
+					for j := range u.Last.Actions {
+						s.roleAction(id, u.Project, env.Name, &u.Last.Actions[j])
+					}
+				}
+			}
 			out = append(out, env)
 		}
 	}
@@ -191,5 +203,6 @@ func (s *Server) listDeployments(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	s.presentDeployments(identityFrom(r), list)
 	writeJSON(w, http.StatusOK, list)
 }

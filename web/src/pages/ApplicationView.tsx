@@ -1,3 +1,5 @@
+import { RollbackControl } from "../components/Rollback";
+import { HistoryNote } from "../components/RollbackRun";
 import { useCallback, useMemo, useState } from "react";
 import { api, type DeploymentControls, type DeploymentView, type RolloutAction, type RunDetail, type UnitView } from "../api";
 import { EntityLink } from "../components/EntityLink";
@@ -71,6 +73,12 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
 
       <Diagnose dg={dg} d={d} run={run.data} app={app.name} />
 
+      {unit.rollback && (
+        <Sheet title="Roll back" actions={<span className="faint small">after a deployment succeeded</span>}>
+          <div className="sh-b"><RollbackControl action={unit.rollback} unit={{ project: unit.project, service: unit.service, environment: app.environment }} /></div>
+        </Sheet>
+      )}
+
       <Sheet>
         <div className="engine-strip">
           <Icon name="deploy" />
@@ -124,7 +132,7 @@ function Loaded({ app, unit, now }: { app: AppRow; unit: UnitView; now: number }
             {hist.data.map((x) => (
               <li key={x.id}>
                 <div className="main"><div className="nm mono">{x.version}</div>
-                  <div className="sb"><EntityLink kind="run" name={`run #${x.run_number}`} id={x.run_id} />{x.commit ? ` · ${shortSha(x.commit)}` : ""} · {x.environment}{x.detail ? ` · ${x.detail}` : ""}</div></div>
+                  <div className="sb"><EntityLink kind="run" name={`run #${x.run_number}`} id={x.run_id} />{x.commit ? ` · ${shortSha(x.commit)}` : ""} · {x.environment}{x.detail ? ` · ${x.detail}` : ""}</div><HistoryNote d={x} /></div>
                 <DeployStatePill d={x} now={now} />
                 <span className="faint small" title={clock(x.opened_at)}>{ago(x.opened_at, now)}</span>
               </li>

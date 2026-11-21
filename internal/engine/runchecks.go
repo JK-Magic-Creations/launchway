@@ -1,6 +1,11 @@
 package engine
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
+)
 
 // checkSchemas refuses a run whose pipeline uses what this server, or a build
 // limited to an older schema, does not know, and what the installation's
@@ -62,6 +67,41 @@ func (e *Engine) checkSchemas(nr *NewRun) error {
 	}
 	if ps := e.CheckRunLimits(nr.Pipeline); len(ps) > 0 {
 		return ps
+	}
+	return nil
+}
+
+// checkPullRequest checks the trigger of a pull-request run.
+func checkPullRequest(t Trigger) error {
+	if t.PullRequest <= 0 || t.Ref != PullRequestRef(t.PullRequest) || t.Branch != "" || t.Tag != "" {
+		return fmt.Errorf("%w: a pull-request run needs the pull request's number and its ref, refs/pull/<number>/head", ErrConflict)
+	}
+	return nil
+}
+
+// PullRequestRef is the ref a Git host keeps a pull request's head at.
+func PullRequestRef(number int) string { return "refs/pull/" + strconv.Itoa(number) + "/head" }
+
+// checkLibraries checks that a pipeline is ready to run and that the source
+// says where to fetch every library it was expanded from, at the same commit.
+func checkLibraries(p *pipeline.Pipeline, src Source) error {
+	if !p.Expanded() {
+		return fmt.Errorf("%w: the pipeline uses templates that have not been expanded; "+
+			"templates come from libraries the server knows, so run it on a server", ErrConflict)
+	}
+	for _, l := range p.Libraries {
+		found := false
+		for _, ls := range src.Libraries {
+			if ls.Name == l.Name {
+				found = ls.Commit == l.Commit && pipeline.IsCommitID(ls.Commit) && ls.URL != ""
+			}
+		}
+		if !found {
+			return fmt.Errorf("%w: the source does not say where to fetch library %s at %s", ErrConflict, l.Name, l.Commit)
+		}
+	}
+	if len(src.Libraries) > 0 && src.Kind != "git" {
+		return fmt.Errorf("%w: libraries are only for runs from a Git repository", ErrConflict)
 	}
 	return nil
 }

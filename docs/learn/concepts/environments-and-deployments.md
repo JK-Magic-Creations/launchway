@@ -59,8 +59,18 @@ The full list of keys is in the [pipeline reference](../../reference/pipeline.md
 ## Next
 
 - [Deployments](../../guide/deployments.md), the full guide
+- [Rollback after success](../../guide/rollback-after-success.md)
 - [Deploy with approval and rollback](../../tutorials/deploy-with-approval.md), a tutorial
 - [Approvals](approvals.md)
+
+## Rolling back after it succeeded
+
+A deployment can pass its checks and still turn out wrong. You can then roll the service back to an earlier
+successful version: it is a run of its own that reverts the later changes in Git, takes the environment's
+lock like any deployment, and records a new deployment of the restored version. The button is on the
+application page, the environment page and the deployment's panel, and appears only where it will work. On a
+protected environment it is an emergency action: no approval first, and an approver reviews it afterwards.
+A rollback never restores a database. See [Rollback after success](../../guide/rollback-after-success.md).
 
 ## When a deployment fails
 

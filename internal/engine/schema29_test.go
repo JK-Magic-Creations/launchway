@@ -10,7 +10,7 @@ import (
 )
 
 // A database of schema 27 (before variables at levels; 28 is held for another
-// branch) is migrated to 30 (29, variables, then 30, mirrors) with the startup guard on: its runs carry on, the
+// branch) is migrated to 29 with the startup guard on: its runs carry on, the
 // three tables are there and empty, and what is written to them stays. Going
 // back, a build of schema 27 starts against the database of 29 (the migration
 // is additive: new tables only), says so once, and leaves the tables alone.
@@ -33,12 +33,12 @@ func TestUpgradeFromSchema27ToVariablesAndBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
-	for _, v := range []int{schemaStandIn28, schemaVariables, schemaMirror, schemaSSH} {
+	for _, v := range []int{schemaStandIn28, schemaVariables, schemaMirror, schemaSSH, schemaRollback} {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaSSH)
+	checkMarkers(t, cur, schemaRollback)
 	if j := take(t, cur); j.RunID != half {
 		t.Fatalf("the half-done run did not carry on: %+v", j)
 	}
@@ -54,7 +54,7 @@ func TestUpgradeFromSchema27ToVariablesAndBack(t *testing.T) {
 		t.Fatalf("a build of schema 27 on a database of 29: %v\n%s", err, olderLog.String())
 	}
 	defer older.Close()
-	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaSSH || info.Code != schemaParity2 || !info.Compatible() {
+	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaRollback || info.Code != schemaParity2 || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	var n int

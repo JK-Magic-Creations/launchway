@@ -20,6 +20,7 @@ launchway policy   list|run                   the policies in force; a run's dec
 launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
 launchway blobs    status|copy                see and move where artifacts are kept
 launchway mcp      [--server URL]             the server's MCP tools for agents, on stdin and stdout
+launchway deployments options|rollback|review  roll a service back after a deployment succeeded; review emergency rollbacks
 launchway verifications list|show|mark        verifications on a server
 launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
@@ -630,6 +631,21 @@ launchway verifications mark RUN_ID STEP passed|failed --reason TEXT
 ```
 
 `list` shows recent verifications (default `--limit 20`). `show` prints a run's verifications interval by interval: the verdict, each metric and log query's outcome and reason, the top log clusters, and a model's explanation (marked as untrusted text) if one was asked. `mark` marks a running or paused verification passed or failed; `--reason` is required and is kept in the audit trail (`verification.override`). On a protected environment the person who started the run may not mark it passed.
+
+## launchway deployments
+
+Rolls a service back after its deployment succeeded, and reviews emergency rollbacks. It uses the stored credentials, like `runs`. The server decides what is possible and who may, and its sentences are printed as they are. See [rollback after success](../guide/rollback-after-success.md).
+
+```text
+launchway deployments options  --env E [--project P] [--service S] [--json]
+launchway deployments rollback --env E [--project P] [--service S] [--to DEPLOYMENT|VERSION] --reason TEXT [--queue] [--dry-run]
+launchway deployments review list [--json]
+launchway deployments review RUN_ID --comment TEXT
+```
+
+`options` says what the service can be rolled back to: the earlier successful deployments, newest first, each with what it would revert and the consequence, or why nothing can be done and what would help. `rollback` prints the same, then asks for the rollback; the previous successful deployment is the default, and `--to` takes a deployment ID or a version. `--reason` is required and recorded. `--queue` waits behind a deployment that holds the environment's lock; without it the command is refused, naming that run. `--dry-run` only prints what it would do. `--project` may be left out when one service is deployed to the environment. `review list` shows emergency rollbacks of protected environments that no approver has acknowledged, and whether you may; `review RUN_ID --comment TEXT` acknowledges one (`--comment` is required).
+
+The same operations are the MCP tools `get_rollback_options`, `rollback_deployment`, `list_rollback_reviews` and `review_rollback`, and the routes in the [HTTP API](http-api.md).
 
 ## launchway health-sources and launchway models
 

@@ -1,3 +1,6 @@
+import { rollbackApi, type ReviewItem } from "../apiRollback";
+import { RollbackControl } from "../components/Rollback";
+import { HistoryNote, NeedsReview } from "../components/RollbackRun";
 import { useCallback } from "react";
 import { api, type DeploymentView } from "../api";
 import { useMe } from "../auth";
@@ -23,6 +26,8 @@ export function EnvironmentViewPage({ name }: { name: string }) {
   useCrumbLabel(name);
   const histFn = useCallback((bg: boolean) => api.deployments({ environment: name, limit: 20 }, bg), [name]);
   const hist = useLoad<DeploymentView[]>(histFn, 10000);
+  const reviewFn = useCallback((bg: boolean) => rollbackApi.reviews(bg), []);
+  const reviews = useLoad<ReviewItem[]>(reviewFn, 15000);
   const env = inst.environments.find((e) => e.name === name);
   if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
   if (!env) return <div className="page"><PageHead eyebrow="Deployments · Environments" title={name} /><Sheet><EmptyState title={`There is no environment called ${name}`} action={<LinkButton href="/deployments/environments" icon="arrow">See the environments</LinkButton>}>It may have been removed, or you may not be allowed to see it.</EmptyState></Sheet></div>;
@@ -34,6 +39,7 @@ export function EnvironmentViewPage({ name }: { name: string }) {
       <PageHead eyebrow="Deployments · Environments" title={env.name}
         sentence={rows.length === 0 ? "Nothing has been deployed here yet." : trouble > 0 ? <><b>{trouble} of {rows.length} {rows.length === 1 ? "service needs" : "services need"} a look.</b></> : "Everything deployed here is running as expected."}
         actions={<>{me?.admin && <LinkButton href={`/config/environments/${encodeURIComponent(env.name)}`} icon="edit">Change it</LinkButton>}<LinkButton href="/deployments/environments" icon="list">The matrix of all environments</LinkButton></>} />
+      <NeedsReview items={reviews.data} environment={env.name} onChanged={reviews.reload} />
       <Sheet title="What runs here">
         {rows.length === 0 ? <EmptyState title="Nothing deployed yet">A run deploys here when it reaches a deploy step for this environment.</EmptyState> : (
           <ul className="rowlist">
@@ -45,6 +51,7 @@ export function EnvironmentViewPage({ name }: { name: string }) {
                 </div>
                 <div className="cell"><Status state={STATE[dg.tone]} /><span className="mono">{u.current?.version ?? "not yet"}</span></div>
                 <div className="cell faint">{u.current ? <><EntityLink kind="run" name={`#${u.current.run_number}`} id={u.current.run} /> {ago(u.current.since, now)}</> : ""}</div>
+                {u.rollback && <div className="cell"><RollbackControl action={u.rollback} unit={{ project: u.project, service: u.service, environment: env.name }} compact /></div>}
                 {(u.lock || u.waiting.length > 0) && <div className="cell small">{u.lock && <>lock held by <EntityLink kind="run" name={`#${u.lock.number}`} id={u.lock.run} /></>}{u.waiting.length > 0 && <>, {u.waiting.length} waiting</>}</div>}
               </li>
             ))}
@@ -67,7 +74,7 @@ export function EnvironmentViewPage({ name }: { name: string }) {
             {hist.data.map((d) => (
               <li key={d.id}>
                 <div className="main"><div className="nm">{d.application ? <EntityLink kind="application" name={d.application}>{d.service}</EntityLink> : d.service} <span className="mono">{d.version}</span></div>
-                  <div className="sb"><EntityLink kind="run" name={`run #${d.run_number}`} id={d.run_id} /> of <EntityLink kind="project" name={d.project} />{d.detail ? ` · ${d.detail}` : ""}</div></div>
+                  <div className="sb"><EntityLink kind="run" name={`run #${d.run_number}`} id={d.run_id} /> of <EntityLink kind="project" name={d.project} />{d.detail ? ` · ${d.detail}` : ""}</div><HistoryNote d={d} /></div>
                 <DeployStatePill d={d} now={now} />
                 <span className="faint small" title={clock(d.opened_at)}>{ago(d.opened_at, now)}</span>
               </li>

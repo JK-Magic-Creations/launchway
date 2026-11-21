@@ -103,6 +103,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/pipeline` | `get_project` | `config get projects` | — | equal |
 | `POST /api/v1/projects/{name}/pipeline` | — | — | — | gap: the pipeline editor commits to Git; agents and the CLI edit the file in the repository and check it with validate_pipeline and launchway validate |
 | `GET /api/v1/projects/{name}/refs` | — | — | — | exempt: branch and tag picker of the UI; start_run and runs start take the ref as text |
+| `GET /api/v1/projects/{name}/rollback` | `get_rollback_options` | `deployments options` | — | equal |
+| `POST /api/v1/projects/{name}/rollbacks` | `rollback_deployment` | `deployments rollback` | — | equal |
 | `POST /api/v1/projects/{name}/runs` | `start_run` | `runs start` | — | equal |
 | `GET /api/v1/projects/{name}/schedules` | `get_project` | `projects get` | — | equal |
 | `GET /api/v1/projects/{name}/security` | `get_security_findings` | — | — | gap: launchway has no findings command yet |
@@ -139,6 +141,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/protected-branches` | `get_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/protected-branches` | `set_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
+| `GET /api/v1/rollbacks/review` | `list_rollback_reviews` | `deployments review list` | — | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `PUT /api/v1/run-limits` | `set_run_limits` | `run-limits set` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `GET /api/v1/runner-join-tokens` | — | — | — | gap: join tokens are made from the UI wizard or the CLI; no MCP tool and no CLI list yet |
@@ -172,6 +175,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/rerun` | `retry_run` | — | — | gap: launchway has no runs retry command yet |
 | `POST /api/v1/runs/{id}/rerun` | `retry_run` | — | — | gap: launchway has no runs retry command yet |
 | `POST /api/v1/runs/{id}/resume` | `retry_run` | — | — | gap: launchway has no runs retry command yet |
+| `POST /api/v1/runs/{id}/review` | `review_rollback` | `deployments review` | — | equal |
 | `POST /api/v1/runs/{id}/steps/{step}/approve` | `decide_approval` | — | — | gap: launchway has no approvals command yet |
 | `POST /api/v1/runs/{id}/steps/{step}/explain` | — | — | — | gap: AI explanations of a step are asked in the UI; no MCP tool or CLI yet |
 | `GET /api/v1/runs/{id}/steps/{step}/explanations` | — | — | — | gap: AI explanations of a step are read in the UI; no MCP tool or CLI yet |
