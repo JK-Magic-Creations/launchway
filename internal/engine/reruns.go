@@ -257,6 +257,9 @@ func (e *Engine) finishedRun(runID string) (*RunState, error) {
 	if !orig.Status.Terminal() {
 		return nil, fmt.Errorf("%w: run #%d is %s; only a finished run can be re-run", ErrConflict, orig.Number, orig.Status)
 	}
+	if orig.isRollbackRun() {
+		return nil, fmt.Errorf("%w: %s", ErrConflict, orig.rollbackRunRefusal())
+	}
 	return orig, nil
 }
 

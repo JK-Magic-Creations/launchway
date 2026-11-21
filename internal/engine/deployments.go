@@ -83,6 +83,14 @@ type Environment struct {
 	// guards a deployment here needs (schema 27), whatever its pipeline's
 	// approvers.count says. It needs Protected; 0 and 1 mean no floor.
 	MinApprovals int
+	// Reviewers are who may acknowledge an emergency rollback here (schema
+	// 32); nil: any operator of the project other than the person who asked
+	// for it (unless approvals.allow_self lets them).
+	Reviewers *pipeline.Approvers
+	// EmergencyRollback overrides the installation's setting for an
+	// emergency rollback of a protected environment: allow (no approval
+	// first; an approver reviews it afterwards) or require_approval.
+	EmergencyRollback string
 }
 
 // Allows reports whether a project may deploy to the environment.
@@ -122,6 +130,9 @@ func checkEnvironments(envs []Environment) (map[string]Environment, error) {
 			return nil, fmt.Errorf("environment %s: queue %q: write newest or all", env.Name, env.Queue)
 		}
 		if err := checkMinApprovals(env); err != nil {
+			return nil, err
+		}
+		if err := checkEmergency(env.EmergencyRollback, "environment "+env.Name+": emergency_rollback"); err != nil {
 			return nil, err
 		}
 		out[env.Name] = env
@@ -398,8 +409,10 @@ func (c *cmd) waitForLock(id string, def *pipeline.Step, env Environment, u unit
 	st := c.st
 	s := st.Steps[id]
 	if env.Queue != "all" {
-		rows, err := c.tx.Query(`SELECT run_id, step_id, run_number FROM deploy_queue
-			WHERE environment = ? AND project = ? AND service = ? AND run_id <> ?`, u.env, u.project, u.service, st.ID)
+		// A waiting rollback is never superseded, and supersedes nothing.
+		rows, err := c.tx.Query(`SELECT q.run_id, q.step_id, q.run_number FROM deploy_queue q JOIN runs r ON r.id = q.run_id
+			WHERE q.environment = ? AND q.project = ? AND q.service = ? AND q.run_id <> ? AND r.event <> ?`,
+			u.env, u.project, u.service, st.ID, pipeline.EventRollback)
 		if err != nil {
 			c.dbFail(err)
 			return
@@ -479,6 +492,19 @@ func (c *cmd) closeDeployments() {
 	for _, id := range st.Order {
 		s := st.Steps[id]
 		def := st.Pipeline.Step(id)
+		if def.IsRestore() && s.Dep.Opened() && !s.Dep.Closed && s.Status.Terminal() {
+			// A rollback run's deployment ends with its one step.
+			verdict := VerdictDeployed
+			switch s.Status {
+			case StepFailed:
+				verdict = VerdictRollbackFailed
+			case StepCanceledS:
+				verdict = VerdictAbandoned
+			}
+			c.emit(DeployClosed, Payload{Step: id, Deploy: &DeployEvent{ID: s.Dep.ID, Verdict: verdict}})
+			c.after(c.e.kickDeploys)
+			continue
+		}
 		if !def.IsDeploy() || !s.Dep.Opened() || s.Dep.Closed {
 			continue
 		}
@@ -648,6 +674,10 @@ func (c *cmd) persistSchema11() error {
 			if f := d.Facts; f != nil && s != nil && s.Dep != nil {
 				if s.Dep.Action == ActionRevert {
 					_, err = c.tx.Exec(`UPDATE deployments SET revert_sha = ? WHERE id = ?`, f.Revert, s.Dep.ID)
+					if def := st.Pipeline.Step(ev.Data.Step); err == nil && def != nil && def.IsRestore() && f.Revert != "" {
+						// What the rollback left in Git is what the service runs now.
+						_, err = c.tx.Exec(`UPDATE deployments SET repo = ?, branch = ?, commit_sha = ? WHERE id = ?`, f.Repo, f.Branch, f.Revert, s.Dep.ID)
+					}
 				} else {
 					_, err = c.tx.Exec(`UPDATE deployments SET repo = ?, branch = ?, commit_sha = ?, changed = ? WHERE id = ?`,
 						f.Repo, f.Branch, f.Commit, boolInt(f.Changed), s.Dep.ID)
@@ -687,6 +717,20 @@ func (c *cmd) deployFinished(ev Event, s *StepState) error {
 		return nil
 	}
 	if def.IsDeploy() || def.IsRolloutStep() {
+		if _, err := c.tx.Exec(`UPDATE deployments SET deployed_at = ? WHERE id = ?`, ev.At, dep.ID); err != nil {
+			return err
+		}
+		_, err := c.tx.Exec(`INSERT INTO environment_state(environment, project, service, current_deployment, current_version,
+				current_run, current_run_number, since) VALUES(?,?,?,?,?,?,?,?)
+			ON CONFLICT(environment, project, service) DO UPDATE SET current_deployment = excluded.current_deployment,
+				current_version = excluded.current_version, current_run = excluded.current_run,
+				current_run_number = excluded.current_run_number, since = excluded.since`,
+			dep.Environment, st.Project, dep.Service, dep.ID, dep.Version, st.ID, st.Number, ev.At)
+		return err
+	}
+	if def.IsRestore() {
+		// The service runs the restored version, whether or not any commit
+		// was needed (the deployments undone may have changed nothing in Git).
 		if _, err := c.tx.Exec(`UPDATE deployments SET deployed_at = ? WHERE id = ?`, ev.At, dep.ID); err != nil {
 			return err
 		}
@@ -808,6 +852,10 @@ type DeployJob struct {
 	AbortFirst bool                 `json:"abort_first,omitempty"`
 	Rollout    *pipeline.RolloutRef `json:"rollout,omitempty"`
 	PodHash    string               `json:"pod_hash,omitempty"`
+	// Reverts, for the revert of a rollback run, are the deployments to
+	// undo, newest first, each with its own commit message. The runner
+	// reverts them all or none (one push); Commit is then unused.
+	Reverts []DeployRevert `json:"reverts,omitempty"`
 }
 
 // deployJob builds a deploy runner's job for a leased deploy or rollback step.
@@ -816,6 +864,12 @@ func (c *cmd) deployJob(stepID, leaseID string) (*Job, error) {
 	def := st.Pipeline.Step(stepID)
 	s := st.Steps[stepID]
 	deployDef := def
+	if def.IsRestore() {
+		trig := st.Trigger
+		return &Job{LeaseID: leaseID, LeaseTTL: pipeline.Duration(c.e.ttl), RunID: st.ID, Project: st.Project, RunNumber: st.Number,
+			Pipeline: st.Pipeline.Name, StepID: stepID, Attempt: s.Attempt, SHA: trig.SHA, Timeout: def.Timeout, Source: st.Source,
+			Deploy: c.restoreJob(def, s)}, nil
+	}
 	if def.IsRollback() {
 		deployDef = st.Pipeline.Step(def.Deployment)
 	}
@@ -962,6 +1016,13 @@ type DeploymentView struct {
 	Commands        []CommandView `json:"commands,omitempty"`
 	Observer        string        `json:"observer,omitempty"`
 	ObserverExpires int64         `json:"observer_expires,omitempty"`
+	// Rollback (schema 32), for a deployment made by a rollback run, says
+	// what it restored and who asked; RolledBackBy lists the rollback runs
+	// that undid this deployment; Actions say what a person may do with it:
+	// roll back to what ran before it, or why not.
+	Rollback     *DeploymentRollback `json:"rollback,omitempty"`
+	RolledBackBy []RunRef            `json:"rolled_back_by,omitempty"`
+	Actions      []Action            `json:"actions,omitempty"`
 }
 
 // TimelineEntry is one change in what was observed of a deployment.

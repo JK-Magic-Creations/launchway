@@ -213,6 +213,11 @@ type RunDetail struct {
 	// Actions are what a person may do with the run now, computed once by
 	// the server: cancel, resume, rerun.
 	Actions []Action `json:"actions"`
+	// Rollback says what a rollback run is (nil for any other run);
+	// RolledBackBy lists the rollback runs that undid a deployment of this
+	// run, which is the link "rolled back later by run #N" (schema 32).
+	Rollback     *RollbackRunView `json:"rollback,omitempty"`
+	RolledBackBy []RunRef         `json:"rolled_back_by,omitempty"`
 	// Resume says whether the run can be resumed, and if not, what to do
 	// instead; nil for a run that is not failed or canceled.
 	Resume *ResumeAdvice `json:"resume,omitempty"`
@@ -711,6 +716,10 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	d.Policy = policySummary(st)
 	d.Resume = st.resumeAdvice()
 	d.Actions = st.runActions()
+	d.Rollback = st.rollbackView()
+	if d.RolledBackBy, err = e.rolledBackBy(id); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 

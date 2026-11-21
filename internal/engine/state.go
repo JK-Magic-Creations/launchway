@@ -103,6 +103,9 @@ type RunState struct {
 	RunGate *policy.Evaluation
 	// Policy lists every policy decision on the run, in order.
 	Policy []*policy.Evaluation
+	// Review is the acknowledgment of an emergency rollback that needed
+	// review (schema 32); nil until an approver gives it.
+	Review *ReviewState
 
 	// Schema is the oldest schema whose servers understand every event of
 	// the run (runs.min_schema).
@@ -374,7 +377,7 @@ func (st *RunState) check(ev Event) bool {
 		st.notUnderstood("step %s, which is not in the pipeline", p.Step)
 		return false
 	}
-	if p.Step == "" && ev.Type != RunCancelRequested && ev.Type != RunResumed && ev.Type != RunFinished && ev.Type != PolicyEvaluated && !ev.Type.isLane() {
+	if p.Step == "" && ev.Type != RunCancelRequested && ev.Type != RunResumed && ev.Type != RunFinished && ev.Type != RunReviewed && ev.Type != PolicyEvaluated && !ev.Type.isLane() {
 		st.notUnderstood("a %s event without a step", ev.Type)
 		return false
 	}
@@ -431,6 +434,7 @@ func (st *RunState) checkCreated(p Payload) bool {
 		{p.Pipeline.UsesSchema18(), schemaReports, "test attachments, coverage or HTML reports (schema %d)"},
 		{p.Pipeline.UsesSchemaVerify(), schemaVerify, "verify or ai steps (schema %d)"},
 		{p.Pipeline.UsesSchemaFlow(), schemaFlow, "a pipeline key of schema %d (flow control: when.output, on_failure, retry waits, timeout, lane or into)"},
+		{p.Pipeline.UsesRestore(), schemaRollback, "a rollback run (schema %d: the rollback step's restore key)"},
 		{p.Pipeline.UsesSchemaParity2(), schemaParity2, "a pipeline key of schema %d (fetch from a loop, a step's own runner, approvers, service readiness)"},
 	} {
 		if !k.uses {
@@ -486,6 +490,9 @@ func (st *RunState) apply(ev Event) {
 	case RunFinished:
 		st.Status = RunStatus(p.Status)
 		st.FinishedAt = ev.At
+
+	case RunReviewed:
+		st.Review = &ReviewState{By: p.Actor, At: ev.At, Comment: p.Comment}
 
 	case StepQueued:
 		st.applyQueued(ev, s)
@@ -716,4 +723,11 @@ func evidenceOf(p Payload) *StepEvidence {
 		return nil
 	}
 	return &StepEvidence{Tests: p.Tests, Findings: p.Findings, SBOM: p.SBOM, Image: p.Image, Caches: p.Caches}
+}
+
+// ReviewState is an approver's acknowledgment of an emergency rollback.
+type ReviewState struct {
+	By      string
+	At      int64
+	Comment string
 }

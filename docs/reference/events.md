@@ -56,6 +56,7 @@ oldest schema whose servers understand it.
 | `run.cancel_requested` | 1 | someone asks to cancel the run, or a newer run supersedes it | `actor`; or `reason` (such as `superseded by run #12`) and `superseded_by` (`run`, `number`) |
 | `run.resumed` | 1 | someone resumes a failed or cancelled run | `actor`; `draft_secrets` for a draft run (whether its steps may read secrets from now on) |
 | `run.finished` | 1 | every step has ended | `status`: `succeeded`, `failed` or `canceled` |
+| `run.reviewed` | 32 | an approver acknowledges an emergency rollback that needed review (see [rollback after success](../guide/rollback-after-success.md)) | `actor`, `comment` |
 | `run.lane_waiting` | 24 | a run of a pipeline with a [lane](pipeline.md#lane) arrives while another run holds the lane and waits its turn: no step is queued | `lane` (`name`, `key`, `label`, and `run`, `number` of the run it waits behind) |
 | `run.lane_started` | 24 | the run took a free lane, or the lane was handed to it when the run before it ended (in the same transaction), or it took the lane again on a resume | `lane` (`name`, `key`, `label`) |
 | `run.lane_replaced` | 24 | a newer run took this run's place: a waiting run under `queue: newest`, or the holder and waiting runs under `when_busy: cancel`; followed by `run.cancel_requested` | `lane` (…, and `run`, `number` of the newer run) |

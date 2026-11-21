@@ -76,6 +76,8 @@ type Options struct {
 	// approve its approval steps. Nil means yes, because until there is
 	// sign-in everyone acts as the same configured user.
 	AllowSelfApproval *bool
+	// EmergencyRollback: see LiveOptions.
+	EmergencyRollback string
 	// Tests limits what is kept of test reports; zero fields take the
 	// defaults (see TestLimits).
 	Tests TestLimits
@@ -661,6 +663,13 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
 		return nil, err
 	}
+	if nr.Trigger.Event == pipeline.EventRollback {
+		// A rollback run is read, and acted on, only by servers that know
+		// rollbacks (the restore key of its step and the review event).
+		if !e.knows(schemaRollback) {
+			return nil, fmt.Errorf("%w: this server does not know rollback runs (schema %d)", ErrConflict, schemaRollback)
+		}
+	}
 	var draft *Draft
 	switch {
 	case nr.Draft != nil:
@@ -882,6 +891,9 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 		}
 		if draftSecrets != nil && c.st.Draft == nil {
 			return fmt.Errorf("%w: run %s is not a draft run", ErrConflict, runID)
+		}
+		if c.st.isRollbackRun() {
+			return fmt.Errorf("%w: %s", ErrConflict, c.st.rollbackRunRefusal())
 		}
 		if id := c.st.openedDeployment(); id != "" {
 			return fmt.Errorf("%w: %s", ErrConflict, c.st.resumeRefusal(id))
@@ -1754,6 +1766,7 @@ func (c *cmd) persist() error {
 		{schemaReports, c.persistSchema18},
 		{schemaVerify, c.persistVerify},
 		{schemaPools, c.persistPools},
+		{schemaRollback, c.persistRollback},
 	} {
 		if !c.e.knows(w.schema) {
 			continue
@@ -1845,7 +1858,7 @@ func (c *cmd) advance() {
 	if st.laneWaiting() && !st.CancelRequested {
 		return // the run waits for its lane; none of its steps is queued
 	}
-	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.startedOrResumed() {
+	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.startedOrResumed() && st.Trigger.Event != pipeline.EventRollback {
 		c.policyChecked = true
 		c.gateRun()
 		if c.err != nil {
@@ -1866,6 +1879,25 @@ func (c *cmd) advance() {
 				continue
 			}
 			def := st.Pipeline.Step(id)
+			if def.IsRestore() {
+				// The rollback step of a rollback run: asked for by a person,
+				// it runs when the steps it needs (an approval, if one is
+				// required) have succeeded.
+				ready, blocked := c.needsState(def)
+				switch {
+				case blocked != "":
+					c.emit(StepSkipped, Payload{Step: id, SkipKind: "upstream", Reason: "not run because " + blocked})
+					changed = true
+				case ready:
+					before := len(c.events)
+					c.startRestore(id, def)
+					if c.err != nil {
+						return
+					}
+					changed = len(c.events) > before
+				}
+				continue
+			}
 			if def.IsRollback() {
 				// The rollback rule replaces the usual one: it runs because
 				// a step it needs did not succeed.

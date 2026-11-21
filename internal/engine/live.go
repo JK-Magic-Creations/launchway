@@ -15,6 +15,10 @@ import (
 // seconds and needs no restart.
 type LiveOptions struct {
 	AllowSelfApproval *bool
+	// EmergencyRollback is the installation's setting for an emergency
+	// rollback of a protected environment: allow (the default) or
+	// require_approval.
+	EmergencyRollback string
 	Tests             TestLimits
 	Findings          FindingLimits
 	Reports           ReportOptions
@@ -31,7 +35,7 @@ type LiveOptions struct {
 
 // Live returns the options' live part.
 func (o Options) Live() LiveOptions {
-	return LiveOptions{AllowSelfApproval: o.AllowSelfApproval, Tests: o.Tests, Findings: o.Findings, Reports: o.Reports,
+	return LiveOptions{AllowSelfApproval: o.AllowSelfApproval, EmergencyRollback: o.EmergencyRollback, Tests: o.Tests, Findings: o.Findings, Reports: o.Reports,
 		Artifacts: o.Artifacts, Environments: o.Environments, Policy: o.Policy, HealthSources: o.HealthSources,
 		Models: o.Models, RunnerPools: o.RunnerPools}
 }
@@ -39,17 +43,18 @@ func (o Options) Live() LiveOptions {
 // liveConfig is LiveOptions checked and with its defaults: what the engine
 // reads. It is never changed once stored; Reconfigure stores a new one.
 type liveConfig struct {
-	selfOK  bool
-	tests   TestLimits
-	finds   FindingLimits
-	reps    ReportOptions
-	arts    ArtifactOptions // limits and retention only
-	envs    map[string]Environment
-	pol     PolicyOptions
-	polHash string // names the configuration's own policies
-	sources map[string]HealthSource
-	models  *ai.Registry
-	pools   map[string]RunnerPool
+	selfOK    bool
+	emergency string
+	tests     TestLimits
+	finds     FindingLimits
+	reps      ReportOptions
+	arts      ArtifactOptions // limits and retention only
+	envs      map[string]Environment
+	pol       PolicyOptions
+	polHash   string // names the configuration's own policies
+	sources   map[string]HealthSource
+	models    *ai.Registry
+	pools     map[string]RunnerPool
 }
 
 // live returns the configuration in force.
@@ -104,9 +109,12 @@ func buildLive(o LiveOptions, known int) (*liveConfig, error) {
 			return nil, fmt.Errorf("build runner pools need schema %d; this build knows %d", schemaPools, known)
 		}
 	}
+	if err := checkEmergency(o.EmergencyRollback, "approvals.emergency_rollback"); err != nil {
+		return nil, err
+	}
 	return &liveConfig{
-		selfOK: o.AllowSelfApproval == nil || *o.AllowSelfApproval,
-		tests:  tests, finds: finds, reps: reps, arts: arts,
+		selfOK: o.AllowSelfApproval == nil || *o.AllowSelfApproval, emergency: o.EmergencyRollback,
+		tests: tests, finds: finds, reps: reps, arts: arts,
 		envs: envs, pol: pol, polHash: policy.Hash(pol.Inline), sources: sources, models: o.Models, pools: pools,
 	}, nil
 }
