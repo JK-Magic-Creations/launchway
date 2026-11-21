@@ -43,7 +43,7 @@ func TestDismissingIsPersonal(t *testing.T) {
 	for i := 0; i < 50 && len(a.Needs) == 0; i++ {
 		otto.get(e.srv.URL+"/api/v1/attention").json(t, &a)
 		if len(a.Needs) == 0 {
-			e.api.homeCache.drop("otto")
+			e.api.hc().drop("otto")
 		}
 	}
 	_ = run

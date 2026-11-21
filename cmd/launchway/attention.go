@@ -33,6 +33,7 @@ func cmdAttention(args []string) error {
 		fs := flag.NewFlagSet("attention", flag.ContinueOnError)
 		dismissed := fs.Bool("dismissed", false, "also list what you set aside")
 		asJSON := fs.Bool("json", false, "print JSON")
+		fs.Usage = func() { fmt.Fprint(os.Stderr, attentionUsage) }
 		if _, err := parseArgs(fs, args); err != nil {
 			return err
 		}

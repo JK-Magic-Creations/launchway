@@ -1225,7 +1225,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/attention/dismiss:
         post:
-            description: 'Sets one entry aside for the caller only: {"key", "snooze_hours"}; without snooze it returns when something newer replaces it. A personal preference, recorded in the audit trail as such.'
+            description: 'Sets one entry aside for the caller only: {"key", "snooze_hours"}; without snooze it returns when something newer replaces it. A personal preference, recorded in the Logbook as such.'
             operationId: post_api_v1_attention_dismiss
             parameters:
                 - $ref: '#/components/parameters/Csrf'

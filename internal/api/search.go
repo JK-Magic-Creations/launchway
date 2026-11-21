@@ -132,6 +132,79 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 			hits = append(hits, SearchHit{Kind: kind, Name: name, Detail: detail, Path: path, Href: href, Score: best})
 		}
 	}
+	s.searchNames(r, id, add)
+	s.searchFolders(r, add)
+	hits = append(hits, s.searchRuns(id, q)...)
+	rankHits(hits)
+	if len(hits) > limit {
+		hits = hits[:limit]
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"q": q, "hits": hits})
+}
+
+func authRead() auth.Action { return auth.Read }
+
+// searchFolders offers the folders that hold something the caller can see to add, which scores them.
+func (s *Server) searchFolders(r *http.Request, add func(kind, name, detail, path, href string, extra ...string)) {
+	vis, err := s.visibleItems(r, "pipelines")
+	if err != nil {
+		return
+	}
+	fs, err := s.Engine.Folders("pipelines")
+	if err != nil {
+		return
+	}
+	of, _ := s.Engine.FolderOf("pipelines")
+	by := map[string]engine.OrgFolder{}
+	for _, f := range fs {
+		by[f.ID] = f
+	}
+	has := map[string]bool{}
+	for it, f := range of {
+		if _, ok := vis[it]; !ok {
+			continue
+		}
+		for n := 0; f != "" && n < 64; n++ {
+			has[f] = true
+			f = by[f].Parent
+		}
+	}
+	paths := engine.FolderPaths(fs)
+	for _, f := range fs {
+		if has[f.ID] {
+			add("folder", f.Name, f.Description, paths[f.ID], "/pipelines?folder="+f.ID)
+		}
+	}
+}
+
+// searchRuns finds Sorties by number ("#123" or "123"), the start of a commit or a branch, in the database.
+func (s *Server) searchRuns(id *identity, q string) []SearchHit {
+	only, err := s.visibleProjects(id)
+	if err != nil {
+		return nil
+	}
+	runs, err := s.Engine.SearchRuns(only, q, 12)
+	if err != nil {
+		return nil
+	}
+	var hits []SearchHit
+	for _, ru := range runs {
+		detail := ru.Branch
+		if ru.PullRequest > 0 {
+			detail = "pull request #" + strconv.Itoa(ru.PullRequest)
+		}
+		sc := 60
+		if strings.TrimPrefix(q, "#") == strconv.Itoa(ru.Number) {
+			sc = 90
+		}
+		hits = append(hits, SearchHit{Kind: "run", Name: ru.Project + " #" + strconv.Itoa(ru.Number), Detail: strings.TrimSpace(detail + " " + shortSHA(ru.SHA) + " " + string(ru.Status)),
+			Href: "/runs/" + ru.ID, Score: sc})
+	}
+	return hits
+}
+
+// searchNames offers the projects and repositories the caller may read to add, which scores them.
+func (s *Server) searchNames(r *http.Request, id *identity, add func(kind, name, detail, path, href string, extra ...string)) {
 	unit, display := s.unitOf()
 	labels, _ := s.Engine.LabelsOf("pipelines")
 	for _, p := range s.projects() {
@@ -153,49 +226,10 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	// Folders, only those that hold something the caller can see.
-	if vis, err := s.visibleItems(r, "pipelines"); err == nil {
-		if fs, err := s.Engine.Folders("pipelines"); err == nil {
-			of, _ := s.Engine.FolderOf("pipelines")
-			by := map[string]engine.OrgFolder{}
-			for _, f := range fs {
-				by[f.ID] = f
-			}
-			has := map[string]bool{}
-			for it, f := range of {
-				if _, ok := vis[it]; ok {
-					for n := 0; f != "" && n < 64; n++ {
-						has[f] = true
-						f = by[f].Parent
-					}
-				}
-			}
-			paths := engine.FolderPaths(fs)
-			for _, f := range fs {
-				if has[f.ID] {
-					add("folder", f.Name, f.Description, paths[f.ID], "/pipelines?folder="+f.ID)
-				}
-			}
-		}
-	}
-	// Sorties: "#123", "123", a commit prefix or a branch, in the database.
-	if only, err := s.visibleProjects(id); err == nil {
-		runs, err := s.Engine.SearchRuns(only, q, 12)
-		if err == nil {
-			for _, ru := range runs {
-				detail := ru.Branch
-				if ru.PullRequest > 0 {
-					detail = "pull request #" + strconv.Itoa(ru.PullRequest)
-				}
-				sc := 60
-				if strings.TrimPrefix(q, "#") == strconv.Itoa(ru.Number) {
-					sc = 90
-				}
-				hits = append(hits, SearchHit{Kind: "run", Name: ru.Project + " #" + strconv.Itoa(ru.Number), Detail: strings.TrimSpace(detail + " " + shortSHA(ru.SHA) + " " + string(ru.Status)),
-					Href: "/runs/" + ru.ID, Score: sc})
-			}
-		}
-	}
+}
+
+// rankHits orders hits by score, then kind, then name.
+func rankHits(hits []SearchHit) {
 	sort.SliceStable(hits, func(i, j int) bool {
 		if hits[i].Score != hits[j].Score {
 			return hits[i].Score > hits[j].Score
@@ -205,10 +239,4 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 		}
 		return hits[i].Name < hits[j].Name
 	})
-	if len(hits) > limit {
-		hits = hits[:limit]
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"q": q, "hits": hits})
 }
-
-func authRead() auth.Action { return auth.Read }

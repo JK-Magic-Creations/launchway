@@ -167,33 +167,7 @@ func ComputeAttention(in AttentionInput) AttentionResult {
 	for _, a := range in.Approvals {
 		waiting[a.RunID] = true
 	}
-	// Newest first, so a group's list reads from the latest back.
-	runs := append([]AttentionRun(nil), in.Runs...)
-	sort.SliceStable(runs, func(i, j int) bool {
-		if runs[i].CreatedAt != runs[j].CreatedAt {
-			return runs[i].CreatedAt > runs[j].CreatedAt
-		}
-		if runs[i].Project == runs[j].Project {
-			return runs[i].Number > runs[j].Number
-		}
-		return runs[i].ID > runs[j].ID
-	})
-	groups := map[string][]AttentionRun{}
-	var order []string
-	typical := map[string][]int64{} // project → durations of recent successes
-	for _, r := range runs {
-		if r.Event == "draft" {
-			continue // pipeline text that is not in Git is nobody's to fix
-		}
-		g := r.group()
-		if _, ok := groups[g]; !ok {
-			order = append(order, g)
-		}
-		groups[g] = append(groups[g], r)
-		if r.Status == RunSucceeded && r.FinishedAt > r.StartedAt && r.StartedAt > 0 {
-			typical[r.Project] = append(typical[r.Project], r.FinishedAt-r.StartedAt)
-		}
-	}
+	groups, order, typical := groupRuns(in.Runs)
 	var res AttentionResult
 	res.Needs = []AttentionItem{}
 	res.Retrying = []Retry{}
@@ -246,42 +220,8 @@ func ComputeAttention(in AttentionInput) AttentionResult {
 			}
 		}
 	}
-	// Deployments: the latest ended one for each service in each environment.
-	latest := map[string]AttentionDeployment{}
-	for _, d := range in.Deployments {
-		k := d.Project + "\x00" + d.Environment + "\x00" + d.Service
-		if o, ok := latest[k]; !ok || d.ClosedAt > o.ClosedAt {
-			latest[k] = d
-		}
-	}
-	for _, d := range latest {
-		if d.Verdict != VerdictFailed && d.Verdict != VerdictRollbackFailed {
-			continue
-		}
-		it := AttentionItem{Key: "deployment:" + d.ID, Kind: AttnDeploy, Tone: "bad", Project: d.Project, RunID: d.RunID, RunNumber: d.RunNumber,
-			Since: d.ClosedAt, Href: "/runs/" + d.RunID, rank: 1}
-		if d.Verdict == VerdictRollbackFailed {
-			it.rank = 0
-			it.Title = fmt.Sprintf("The rollback of %s in %s failed", nameOr(d.Service, d.Project), d.Environment)
-			it.Why = "The deployment failed and the rollback that should have put the last good version back failed too. Nothing since has deployed."
-			it.Do = "Look at the environment: it may be running a broken version."
-		} else {
-			it.Title = fmt.Sprintf("The deployment of %s to %s failed", nameOr(d.Service, d.Project), d.Environment)
-			it.Why = "It is the latest deployment of this service there and no later one has succeeded or returned it to the last good version."
-			it.Do = "See what failed, then run it again or return to the last good version."
-		}
-		res.Needs = append(res.Needs, it)
-	}
-	for _, a := range in.Approvals {
-		what := a.Message
-		if what == "" {
-			what = a.StepID
-		}
-		res.Needs = append(res.Needs, AttentionItem{Key: "decision:" + a.RunID + "/" + a.StepID, Kind: AttnDecision, Tone: "warn", Project: a.Project,
-			Branch: a.Branch, PullRequest: a.PullRequest, RunID: a.RunID, RunNumber: a.RunNumber, Step: a.StepID,
-			Title: "Waiting for a decision: " + what, Why: fmt.Sprintf("Sortie #%d of %s is paused until someone says Go or No-go.", a.RunNumber, a.Project),
-			Do: "Review it and decide.", Since: a.WaitingSince, Href: "/runs/" + a.RunID + "?step=" + a.StepID, rank: 3})
-	}
+	res.Needs = append(res.Needs, deploymentNeeds(in.Deployments)...)
+	res.Needs = append(res.Needs, decisionNeeds(in.Approvals)...)
 	sort.SliceStable(res.Needs, func(i, j int) bool {
 		if res.Needs[i].rank != res.Needs[j].rank {
 			return res.Needs[i].rank < res.Needs[j].rank
@@ -371,7 +311,7 @@ func nz(a, b int64) int64 {
 	return b
 }
 
-func stuckItem(in AttentionInput, r AttentionRun, queued, min time.Duration, mult float64, durations []int64) (AttentionItem, bool) {
+func stuckItem(in AttentionInput, r AttentionRun, queued, floor time.Duration, mult float64, durations []int64) (AttentionItem, bool) {
 	if r.Status == RunQueued {
 		age := time.Duration(in.Now-r.CreatedAt) * time.Millisecond
 		if age < queued {
@@ -386,7 +326,7 @@ func stuckItem(in AttentionInput, r AttentionRun, queued, min time.Duration, mul
 		return AttentionItem{}, false
 	}
 	age := time.Duration(in.Now-r.StartedAt) * time.Millisecond
-	limit := min
+	limit := floor
 	usual := time.Duration(0)
 	if len(durations) >= 5 {
 		d := append([]int64(nil), durations...)
@@ -422,4 +362,84 @@ func human(d time.Duration) string {
 		}
 		return fmt.Sprintf("%d hours %d minutes", h, m)
 	}
+}
+
+// deploymentNeeds: the latest ended deployment of each service in each environment, when it failed.
+func deploymentNeeds(deployments []AttentionDeployment) []AttentionItem {
+	var out []AttentionItem
+	latest := map[string]AttentionDeployment{}
+	for _, d := range deployments {
+		k := d.Project + "\x00" + d.Environment + "\x00" + d.Service
+		if o, ok := latest[k]; !ok || d.ClosedAt > o.ClosedAt {
+			latest[k] = d
+		}
+	}
+	for _, d := range latest {
+		if d.Verdict != VerdictFailed && d.Verdict != VerdictRollbackFailed {
+			continue
+		}
+		it := AttentionItem{Key: "deployment:" + d.ID, Kind: AttnDeploy, Tone: "bad", Project: d.Project, RunID: d.RunID, RunNumber: d.RunNumber,
+			Since: d.ClosedAt, Href: "/runs/" + d.RunID, rank: 1}
+		if d.Verdict == VerdictRollbackFailed {
+			it.rank = 0
+			it.Title = fmt.Sprintf("The rollback of %s in %s failed", nameOr(d.Service, d.Project), d.Environment)
+			it.Why = "The deployment failed and the rollback that should have put the last good version back failed too. Nothing since has deployed."
+			it.Do = "Look at the environment: it may be running a broken version."
+		} else {
+			it.Title = fmt.Sprintf("The deployment of %s to %s failed", nameOr(d.Service, d.Project), d.Environment)
+			it.Why = "It is the latest deployment of this service there and no later one has succeeded or returned it to the last good version."
+			it.Do = "See what failed, then run it again or return to the last good version."
+		}
+		out = append(out, it)
+	}
+	return out
+}
+
+// decisionNeeds: a decision that waits is listed.
+func decisionNeeds(approvals []Approval) []AttentionItem {
+	var out []AttentionItem
+	for _, a := range approvals {
+		what := a.Message
+		if what == "" {
+			what = a.StepID
+		}
+		out = append(out, AttentionItem{Key: "decision:" + a.RunID + "/" + a.StepID, Kind: AttnDecision, Tone: "warn", Project: a.Project,
+			Branch: a.Branch, PullRequest: a.PullRequest, RunID: a.RunID, RunNumber: a.RunNumber, Step: a.StepID,
+			Title: "Waiting for a decision: " + what, Why: fmt.Sprintf("Sortie #%d of %s is paused until someone says Go or No-go.", a.RunNumber, a.Project),
+			Do: "Review it and decide.", Since: a.WaitingSince, Href: "/runs/" + a.RunID + "?step=" + a.StepID, rank: 3})
+	}
+	return out
+}
+
+// groupRuns puts the runs into groups (a pipeline's pull request or branch), each newest first, and collects how
+// long each pipeline's successful runs took.
+func groupRuns(runsIn []AttentionRun) (map[string][]AttentionRun, []string, map[string][]int64) {
+	// Newest first, so a group's list reads from the latest back.
+	runs := append([]AttentionRun(nil), runsIn...)
+	sort.SliceStable(runs, func(i, j int) bool {
+		if runs[i].CreatedAt != runs[j].CreatedAt {
+			return runs[i].CreatedAt > runs[j].CreatedAt
+		}
+		if runs[i].Project == runs[j].Project {
+			return runs[i].Number > runs[j].Number
+		}
+		return runs[i].ID > runs[j].ID
+	})
+	groups := map[string][]AttentionRun{}
+	var order []string
+	typical := map[string][]int64{} // project → durations of recent successes
+	for _, r := range runs {
+		if r.Event == "draft" {
+			continue // pipeline text that is not in Git is nobody's to fix
+		}
+		g := r.group()
+		if _, ok := groups[g]; !ok {
+			order = append(order, g)
+		}
+		groups[g] = append(groups[g], r)
+		if r.Status == RunSucceeded && r.FinishedAt > r.StartedAt && r.StartedAt > 0 {
+			typical[r.Project] = append(typical[r.Project], r.FinishedAt-r.StartedAt)
+		}
+	}
+	return groups, order, typical
 }

@@ -51,8 +51,31 @@ func (s *Server) prefsOf(user string) userPrefs {
 
 func (s *Server) savePrefs(user string, p userPrefs) error {
 	b, _ := json.Marshal(p)
-	s.homeCache.drop(user)
+	s.hc().drop(user)
 	return s.Engine.SetUserLayout(user, "prefs", string(b))
+}
+
+// homeCaches holds each server's cache of Home answers (see homeCache), so the Server struct is unchanged.
+var homeCaches sync.Map // *Server → *homeCache
+
+func (s *Server) hc() *homeCache {
+	v, _ := homeCaches.LoadOrStore(s, &homeCache{})
+	return v.(*homeCache)
+}
+
+// listRunsOrAttention is GET /api/v1/runs: the list of runs, or with ?attention=needs|running the Sorties the
+// attention rule names.
+func (s *Server) listRunsOrAttention(w http.ResponseWriter, r *http.Request) {
+	if a := r.URL.Query().Get("attention"); a == "needs" || a == "running" {
+		only, err := s.visibleProjects(identityFrom(r))
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		s.listRunsByAttention(w, r, a, only)
+		return
+	}
+	s.listRuns(w, r)
 }
 
 // homeCache keeps each person's answer for a few seconds, so a busy page and
@@ -301,6 +324,186 @@ func (s *Server) unitOf() (map[string]string, map[string]string) {
 	return unit, display
 }
 
+// projectAgg is what the newest runs say about one project.
+type projectAgg struct {
+	last    *engine.AttentionRun // the newest default-branch result
+	running int
+	history []string // newest first
+	mine    bool
+}
+
+// aggregateRuns summarizes the runs (newest first) per project.
+func aggregateRuns(runs []engine.AttentionRun, defaults map[string]string, user string) map[string]*projectAgg {
+	by := map[string]*projectAgg{}
+	for i := range runs {
+		r := &runs[i]
+		a := by[r.Project]
+		if a == nil {
+			a = &projectAgg{}
+			by[r.Project] = a
+		}
+		if r.Actor == user && user != "" {
+			a.mine = true
+		}
+		if r.Status == engine.RunQueued || r.Status == engine.RunRunning {
+			a.running++
+		}
+		if r.Branch != defaults[r.Project] || r.Event == "pull_request" || r.Event == "draft" {
+			continue
+		}
+		if a.last == nil {
+			a.last = r
+		}
+		if len(a.history) < 10 && r.Status != engine.RunQueued && r.Status != engine.RunRunning && r.Status != engine.RunCanceled {
+			a.history = append(a.history, string(r.Status))
+		}
+	}
+	return by
+}
+
+// homeInputs is what Home is worked out from, after permissions.
+type homeInputs struct {
+	names    []string
+	defaults map[string]string
+	by       map[string]*projectAgg
+	needsBy  map[string]int
+	fav      map[string]bool
+	unit     map[string]string
+	display  map[string]string
+	view     string
+}
+
+func (in homeInputs) shown(p string) bool {
+	return in.view != "mine" || in.fav[p] || (in.by[p] != nil && in.by[p].mine)
+}
+
+// categories groups the projects by Squadron, those with something to look at first.
+func (in homeInputs) categories() ([]homeCategory, []homeProject) {
+	cats := map[string]*homeCategory{}
+	var order []string
+	var favorites []homeProject
+	for _, n := range in.names {
+		if !in.shown(n) {
+			continue
+		}
+		hp := homeProject{Name: n, Favorite: in.fav[n], Needs: in.needsBy[n], History: []string{}}
+		if a := in.by[n]; a != nil {
+			hp.Running = a.running
+			hp.History = append(hp.History, a.history...)
+			if a.last != nil {
+				hp.Last, hp.LastID, hp.LastNo, hp.LastAt = string(a.last.Status), a.last.ID, a.last.Number, nz64(a.last.FinishedAt, a.last.CreatedAt)
+			}
+		}
+		cid, label, kind := "none", "Not in a Squadron", "none"
+		if u := in.unit[n]; u != "" {
+			cid, label, kind = "unit:"+u, nzs(in.display[u], u), "unit"
+		}
+		c := cats[cid]
+		if c == nil {
+			c = &homeCategory{ID: cid, Kind: kind, Label: label, Projects: []homeProject{}}
+			cats[cid] = c
+			order = append(order, cid)
+		}
+		c.Projects = append(c.Projects, hp)
+		c.Needs += hp.Needs
+		c.Running += hp.Running
+		if hp.Last == "failed" {
+			c.Failing++
+		}
+		if hp.Favorite {
+			favorites = append(favorites, hp)
+		}
+	}
+	sort.SliceStable(order, func(i, j int) bool {
+		a, b := cats[order[i]], cats[order[j]]
+		if (a.Kind == "none") != (b.Kind == "none") {
+			return b.Kind == "none"
+		}
+		if (a.Needs > 0) != (b.Needs > 0) {
+			return a.Needs > 0
+		}
+		return a.Label < b.Label
+	})
+	out := make([]homeCategory, 0, len(order))
+	for _, c := range order {
+		out = append(out, *cats[c])
+	}
+	return out, favorites
+}
+
+// runningCards are the Sorties in progress as cards: the person's own first, then their Squadron's, then the rest.
+func (s *Server) runningCards(id *identity, runs []engine.AttentionRun, in homeInputs, retryOf map[string]int) ([]homeRunning, error) {
+	var progress []string
+	for _, r := range runs {
+		if (r.Status == engine.RunQueued || r.Status == engine.RunRunning) && in.shown(r.Project) {
+			progress = append(progress, r.ID)
+			if len(progress) >= 60 {
+				break
+			}
+		}
+	}
+	waiting := map[string]bool{}
+	if aps, err := s.Engine.Approvals(); err == nil {
+		for _, a := range aps {
+			waiting[a.RunID] = true
+		}
+	}
+	sums, err := s.Engine.RunsByID(progress)
+	if err != nil {
+		return nil, err
+	}
+	myUnits := map[string]bool{}
+	for p, a := range in.by {
+		if a.mine && in.unit[p] != "" {
+			myUnits[in.unit[p]] = true
+		}
+	}
+	out := []homeRunning{}
+	for _, r := range sums {
+		hr := homeRunning{ID: r.ID, Project: r.Project, Number: r.Number, Branch: r.Branch, PR: r.PullRequest, Status: string(r.Status), StartedAt: r.StartedAt,
+			CreatedAt: r.CreatedAt, Actor: r.Actor, Message: r.Message, Mine: r.Actor == id.User && id.User != "", Squadron: in.unit[r.Project], RetryOf: retryOf[r.ID], Waiting: waiting[r.ID]}
+		for _, st := range r.Steps {
+			if st.Status == engine.StepRunning {
+				hr.Step = st.ID
+				break
+			}
+		}
+		out = append(out, hr)
+	}
+	rank := func(h homeRunning) int {
+		switch {
+		case h.Mine:
+			return 0
+		case h.Squadron != "" && myUnits[h.Squadron]:
+			return 1
+		}
+		return 2
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if ri, rj := rank(out[i]), rank(out[j]); ri != rj {
+			return ri < rj
+		}
+		return out[i].CreatedAt > out[j].CreatedAt
+	})
+	return out, nil
+}
+
+// recentFinished is the small strip of what finished lately, passed and failed alike.
+func recentFinished(runs []engine.AttentionRun, in homeInputs) []homeRecent {
+	out := []homeRecent{}
+	for _, r := range runs {
+		if len(out) >= 8 {
+			break
+		}
+		if (r.Status == engine.RunSucceeded || r.Status == engine.RunFailed) && r.FinishedAt > 0 && in.shown(r.Project) {
+			out = append(out, homeRecent{ID: r.ID, Project: r.Project, Number: r.Number, Branch: r.Branch, Status: string(r.Status), FinishedAt: r.FinishedAt})
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].FinishedAt > out[j].FinishedAt })
+	return out
+}
+
+// homeView answers GET /api/v1/home.
 func (s *Server) homeView(w http.ResponseWriter, r *http.Request) {
 	id := identityFrom(r)
 	lay := s.layoutOf(id, "home", "base")
@@ -316,7 +519,7 @@ func (s *Server) homeView(w http.ResponseWriter, r *http.Request) {
 		view = "all"
 	}
 	key := id.User + "\x00" + view
-	if v, ok := s.homeCache.get(key, s.Now(), 3*time.Second); ok {
+	if v, ok := s.hc().get(key, s.Now(), 3*time.Second); ok {
 		writeJSON(w, http.StatusOK, v)
 		return
 	}
@@ -333,187 +536,40 @@ func (s *Server) homeView(w http.ResponseWriter, r *http.Request) {
 	prefs := s.prefsOf(id.User)
 	now := s.Now().UnixMilli()
 	open, set := dismissedSplit(res.Needs, prefs, now)
-	fav := map[string]bool{}
+	in := homeInputs{defaults: map[string]string{}, needsBy: map[string]int{}, fav: map[string]bool{}, view: view}
 	for _, f := range prefs.Favorites {
 		if n, ok := strings.CutPrefix(f, "project:"); ok {
-			fav[n] = true
+			in.fav[n] = true
 		}
 	}
-	unit, display := s.unitOf()
-	defaults := map[string]string{}
-	var names []string
+	in.unit, in.display = s.unitOf()
 	for _, p := range s.projects() {
-		if only != nil && !contains(only, p.Name) {
-			continue
-		}
-		defaults[p.Name] = p.DefaultBranch
-		names = append(names, p.Name)
-	}
-	sort.Strings(names)
-	// What the newest runs say, per project: the default-branch result, what runs, a short history.
-	type agg struct {
-		last    *engine.AttentionRun
-		running int
-		history []string
-		mine    bool
-	}
-	by := map[string]*agg{}
-	for i := range runs { // newest first
-		r := &runs[i]
-		a := by[r.Project]
-		if a == nil {
-			a = &agg{}
-			by[r.Project] = a
-		}
-		if r.Actor == id.User && id.User != "" {
-			a.mine = true
-		}
-		if r.Status == engine.RunQueued || r.Status == engine.RunRunning {
-			a.running++
-		}
-		if r.Branch == defaults[r.Project] && r.Event != "pull_request" && r.Event != "draft" {
-			if a.last == nil {
-				a.last = r
-			}
-			if len(a.history) < 10 && r.Status != engine.RunQueued && r.Status != engine.RunRunning && r.Status != engine.RunCanceled {
-				a.history = append(a.history, string(r.Status))
-			}
+		if only == nil || contains(only, p.Name) {
+			in.defaults[p.Name] = p.DefaultBranch
+			in.names = append(in.names, p.Name)
 		}
 	}
-	needsBy := map[string]int{}
+	sort.Strings(in.names)
+	in.by = aggregateRuns(runs, in.defaults, id.User)
 	for _, n := range open {
-		needsBy[n.Project]++
+		in.needsBy[n.Project]++
 	}
 	retryOf := map[string]int{}
 	for _, rt := range res.Retrying {
 		retryOf[rt.NowID] = rt.FailedNo
 	}
-	mineView := func(p string) bool {
-		if view != "mine" {
-			return true
-		}
-		return fav[p] || (by[p] != nil && by[p].mine)
-	}
-	cats := map[string]*homeCategory{}
-	var catOrder []string
-	var favorites []homeProject
-	for _, n := range names {
-		if !mineView(n) {
-			continue
-		}
-		hp := homeProject{Name: n, Favorite: fav[n], Needs: needsBy[n], History: []string{}}
-		if a := by[n]; a != nil {
-			hp.Running = a.running
-			hp.History = append(hp.History, a.history...)
-			if a.last != nil {
-				hp.Last, hp.LastID, hp.LastNo, hp.LastAt = string(a.last.Status), a.last.ID, a.last.Number, nz64(a.last.FinishedAt, a.last.CreatedAt)
-			}
-		}
-		cid, label, kind := "none", "Not in a Squadron", "none"
-		if u := unit[n]; u != "" {
-			cid, label, kind = "unit:"+u, display[u], "unit"
-			if label == "" {
-				label = u
-			}
-		}
-		c := cats[cid]
-		if c == nil {
-			c = &homeCategory{ID: cid, Kind: kind, Label: label, Projects: []homeProject{}}
-			cats[cid] = c
-			catOrder = append(catOrder, cid)
-		}
-		c.Projects = append(c.Projects, hp)
-		c.Needs += hp.Needs
-		c.Running += hp.Running
-		if hp.Last == "failed" {
-			c.Failing++
-		}
-		if hp.Favorite {
-			favorites = append(favorites, hp)
-		}
-	}
-	sort.SliceStable(catOrder, func(i, j int) bool {
-		a, b := cats[catOrder[i]], cats[catOrder[j]]
-		if (a.Kind == "none") != (b.Kind == "none") {
-			return b.Kind == "none"
-		}
-		if (a.Needs > 0) != (b.Needs > 0) {
-			return a.Needs > 0
-		}
-		return a.Label < b.Label
-	})
-	out := homeAnswer{View: view, At: now, Needs: filterNeeds(open, mineView), Dismissed: filterNeeds(set, mineView), Categories: []homeCategory{}, Favorites: favorites,
-		Running: []homeRunning{}, Recent: []homeRecent{}, Counts: map[string]int{}, Layout: lay}
+	out := homeAnswer{View: view, At: now, Needs: filterNeeds(open, in.shown), Dismissed: filterNeeds(set, in.shown), Layout: lay}
+	out.Categories, out.Favorites = in.categories()
 	if out.Favorites == nil {
 		out.Favorites = []homeProject{}
 	}
-	for _, c := range catOrder {
-		out.Categories = append(out.Categories, *cats[c])
-	}
-	// Running now: in progress, mine first, then my Squadron's, then the rest.
-	var progress []string
-	for _, r := range runs {
-		if (r.Status == engine.RunQueued || r.Status == engine.RunRunning) && mineView(r.Project) {
-			progress = append(progress, r.ID)
-			if len(progress) >= 60 {
-				break
-			}
-		}
-	}
-	waiting := map[string]bool{}
-	if aps, err := s.Engine.Approvals(); err == nil {
-		for _, a := range aps {
-			waiting[a.RunID] = true
-		}
-	}
-	sums, err := s.Engine.RunsByID(progress)
-	if err != nil {
+	if out.Running, err = s.runningCards(id, runs, in, retryOf); err != nil {
 		s.fail(w, err)
 		return
 	}
-	myUnits := map[string]bool{}
-	for p, a := range by {
-		if a.mine && unit[p] != "" {
-			myUnits[unit[p]] = true
-		}
-	}
-	for _, r := range sums {
-		hr := homeRunning{ID: r.ID, Project: r.Project, Number: r.Number, Branch: r.Branch, PR: r.PullRequest, Status: string(r.Status), StartedAt: r.StartedAt,
-			CreatedAt: r.CreatedAt, Actor: r.Actor, Message: r.Message, Mine: r.Actor == id.User && id.User != "", Squadron: unit[r.Project], RetryOf: retryOf[r.ID], Waiting: waiting[r.ID]}
-		for _, st := range r.Steps {
-			if st.Status == engine.StepRunning {
-				hr.Step = st.ID
-				break
-			}
-		}
-		out.Running = append(out.Running, hr)
-	}
-	rank := func(h homeRunning) int {
-		switch {
-		case h.Mine:
-			return 0
-		case myUnits[h.Squadron] && h.Squadron != "":
-			return 1
-		}
-		return 2
-	}
-	sort.SliceStable(out.Running, func(i, j int) bool {
-		if ri, rj := rank(out.Running[i]), rank(out.Running[j]); ri != rj {
-			return ri < rj
-		}
-		return out.Running[i].CreatedAt > out.Running[j].CreatedAt
-	})
-	for _, r := range runs {
-		if len(out.Recent) >= 8 {
-			break
-		}
-		if (r.Status == engine.RunSucceeded || r.Status == engine.RunFailed) && r.FinishedAt > 0 && mineView(r.Project) {
-			out.Recent = append(out.Recent, homeRecent{ID: r.ID, Project: r.Project, Number: r.Number, Branch: r.Branch, Status: string(r.Status), FinishedAt: r.FinishedAt})
-		}
-	}
-	sort.SliceStable(out.Recent, func(i, j int) bool { return out.Recent[i].FinishedAt > out.Recent[j].FinishedAt })
-	out.Counts = map[string]int{"needs": len(out.Needs), "running": len(out.Running), "retrying": len(res.Retrying), "projects": len(names), "dismissed": len(out.Dismissed)}
-	s.homeCache.put(key, s.Now(), out)
+	out.Recent = recentFinished(runs, in)
+	out.Counts = map[string]int{"needs": len(out.Needs), "running": len(out.Running), "retrying": len(res.Retrying), "projects": len(in.names), "dismissed": len(out.Dismissed)}
+	s.hc().put(key, s.Now(), out)
 	writeJSON(w, http.StatusOK, out)
 }
 
