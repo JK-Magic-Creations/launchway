@@ -134,6 +134,8 @@ type runOut struct {
 // actionsOf is what the caller may do with the run, the role applied as on
 // the HTTP API.
 func (c *mcpCall) actionsOf(d *engine.RunDetail) []engine.Action {
-	c.s.presentRun(c.id, d)
+	if c.s != nil {
+		c.s.presentRun(c.id, d)
+	}
 	return d.Actions
 }
