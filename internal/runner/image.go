@@ -160,6 +160,9 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 	}
 	if b.Cache != nil {
 		req.Cache = &imagebuild.Repo{Registry: b.Cache.Registry, Repository: b.Cache.Repository}
+		// Whose cache this run writes is the server's decision: a job
+		// without it (an older server) writes none.
+		req.CacheScope, req.CacheWrite, req.CacheNoProtected = b.CacheScope, b.CacheWrite, b.CacheNoProtected
 	}
 	if b.Sign != nil {
 		req.Sign = &imagebuild.Sign{Runner: b.Sign.Runner, Key: b.Sign.Key, Password: b.Sign.Password}

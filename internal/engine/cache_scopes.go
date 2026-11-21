@@ -1,9 +1,12 @@
 package engine
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
@@ -179,4 +182,30 @@ func (e *Engine) cacheFor(leaseID, name string) (*cacheContext, error) {
 		return nil, err
 	}
 	return &cacheContext{l: l, st: st, def: def, scopes: e.scopesOf(st), limits: limits}, nil
+}
+
+// imageCacheScope says whose registry cache an image step of the run writes
+// (see imagebuild's cache references): "" for the protected cache, written by
+// a default-branch run; else a tag-safe name made from the scope the run's
+// build caches would use (pull-<n>, or ref-<hash> of the ref). write says
+// the run may write at all: never a draft, and a pull request only when it
+// may read secrets (it then has registry credentials to push with; one that
+// may not has none, and only reads). noProtected is a fork's pull request,
+// which reads no cache of the project's.
+func (e *Engine) imageCacheScope(st *RunState) (scope string, write, noProtected bool) {
+	s := e.scopesOf(st)
+	switch {
+	case s.write == "":
+		return "", false, false
+	case s.write == cacheScopeDefault:
+		return "", true, false
+	}
+	untrusted := st.Trigger.Event == pipeline.EventPullRequest
+	if after, ok := strings.CutPrefix(s.write, cacheScopePull); ok {
+		scope = "pull-" + after
+	} else {
+		sum := sha256.Sum256([]byte(s.write))
+		scope = "ref-" + hex.EncodeToString(sum[:])[:12]
+	}
+	return scope, !untrusted || st.secretsAllowed(), st.Trigger.Fork
 }
