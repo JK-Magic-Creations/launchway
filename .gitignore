@@ -16,3 +16,6 @@
 /docs/.vitepress/cache/
 /.tools/
 server.pid
+
+# A stray build of the command in its own directory
+/cmd/launchway/launchway
