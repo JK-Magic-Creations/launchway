@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,7 +19,7 @@ func startDetached(name string, args []string, env []string, dir, logFile string
 		return 0, err
 	}
 	defer lf.Close()
-	cmd := exec.Command(name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...) //nolint:gosec // G204: the installer starts this program with the arguments it wrote itself
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), env...)
 	cmd.Stdout, cmd.Stderr = lf, lf
@@ -34,7 +35,7 @@ func startDetached(name string, args []string, env []string, dir, logFile string
 func openBrowser(url string) error {
 	for _, c := range []string{"xdg-open", "open"} {
 		if p, err := exec.LookPath(c); err == nil {
-			return exec.Command(p, url).Start()
+			return exec.CommandContext(context.Background(), p, url).Start() //nolint:gosec // G204: opens the address the installer printed, with the system's own opener
 		}
 	}
 	return fmt.Errorf("no way to open a browser from here")

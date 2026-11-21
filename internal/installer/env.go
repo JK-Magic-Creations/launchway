@@ -53,11 +53,11 @@ func Default(in io.Reader, out io.Writer, version, image string) Env {
 	e := Env{In: in, Out: out, GOOS: goos(), UID: os.Getuid(), Home: home, Getenv: os.Getenv, LookPath: exec.LookPath,
 		Now: time.Now, Version: version, Image: image, Binary: bin}
 	e.Run = func(ctx context.Context, name string, args ...string) ([]byte, error) {
-		return exec.CommandContext(ctx, name, args...).CombinedOutput()
+		return exec.CommandContext(ctx, name, args...).CombinedOutput() //nolint:gosec // G204: the installer runs the programs it names itself (systemctl, useradd, chown, id) with paths it built
 	}
 	e.Start = startDetached
 	e.Reachable = func(addr string) bool {
-		c, err := net.DialTimeout("tcp", addr, 800*time.Millisecond)
+		c, err := (&net.Dialer{Timeout: 800 * time.Millisecond}).DialContext(context.Background(), "tcp", addr)
 		if err != nil {
 			return false
 		}

@@ -59,7 +59,7 @@ type KubeInstaller interface {
 // Run is `launchway install`.
 func Run(ctx context.Context, env Env, o Options) (res Result, err error) {
 	start := env.Now()
-	var tw io.Writer = o.TranscriptTo
+	tw := o.TranscriptTo
 	var closer io.Closer
 	if tw == nil && o.TranscriptPath != "" {
 		f, ferr := createPrivate(o.TranscriptPath)

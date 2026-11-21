@@ -69,7 +69,7 @@ func (in *Installer) Run(ctx context.Context, e *installer.Env, a *installer.Ask
 	res := installer.Result{}
 	cl, err := in.connect()
 	if err != nil {
-		return res, fmt.Errorf("%w\n\nNo cluster was changed. Make sure `kubectl get nodes` would work from this machine (a kubeconfig, and the right context), then run this again.", err)
+		return res, fmt.Errorf("%w; no cluster was changed: make sure `kubectl get nodes` would work from this machine (a kubeconfig and the right context), then run this again", err)
 	}
 	e.Printf("\nThis is the cluster I would change:\n  context  %s\n  address  %s\n", cl.Name(), cl.Address())
 	typed, err := a.Ask(installer.Question{Key: "kubernetes.confirm", Prompt: "Type the name of that cluster context to confirm it is the right one", Required: true,
@@ -180,7 +180,7 @@ func (in *Installer) askAll(ctx context.Context, e *installer.Env, a *installer.
 		return fmt.Errorf("this cluster runs Kubernetes %s and Launchway needs %s or newer. Nothing was changed. Upgrade the cluster, or choose \"on this machine by itself\" at the first question", f.ServerVersion, MinKubeVersion)
 	}
 	// Rights: cluster-wide or one namespace.
-	if !f.CanCreateNamespace && !(f.NamespaceExists[ns] && f.CanInstallInNS[ns]) {
+	if !f.CanCreateNamespace && (!f.NamespaceExists[ns] || !f.CanInstallInNS[ns]) {
 		e.Printf("\nYou do not have the right to create a namespace here. Launchway needs only one namespace; ask the cluster's owner to make one for you and give you rights in it.\n")
 		var err error
 		ns, err = a.Ask(installer.Question{Key: "kubernetes.existing_namespace", Prompt: "The name of an existing namespace you may install into", Required: true})
@@ -430,7 +430,7 @@ func (in *Installer) execute(ctx context.Context, e *installer.Env, a *installer
 		"anything else in cluster " + cl.Name() + ": only objects in namespace " + s.Namespace + " are created or changed",
 		"the secrets (root key, database password, setup code) are made once in the cluster and kept; running this again never regenerates them"}}
 	plan.Steps = append(plan.Steps, installer.Step{Title: "Write the values file " + valuesPath + " (" + strconv.Itoa(strings.Count(string(vb), "\n")) + " lines, no secrets)",
-		Do: func(context.Context) error { return os.WriteFile(valuesPath, vb, 0o644) }})
+		Do: func(context.Context) error { return os.WriteFile(valuesPath, vb, 0o600) }})
 	if st.write {
 		gf, err := WriteGitOps(s, st.gitops, "main")
 		if err != nil {
@@ -438,7 +438,7 @@ func (in *Installer) execute(ctx context.Context, e *installer.Env, a *installer
 		}
 		dir := filepath.Dir(valuesPath)
 		plan.Steps = append(plan.Steps, installer.Step{Title: "Write " + gf.Name + " for " + st.gitops + " (nothing is applied to the cluster)", Do: func(context.Context) error {
-			return os.WriteFile(filepath.Join(dir, gf.Name), []byte(gf.Manifest), 0o644)
+			return os.WriteFile(filepath.Join(dir, gf.Name), []byte(gf.Manifest), 0o600)
 		}})
 		plan.Summarize(e, "Here is what I am about to do:")
 		res.Steps = len(plan.Steps)
@@ -637,7 +637,7 @@ func trialStorage(r *Rendered) {
 // freeLocalPort is the first port from start that nothing on this machine is listening on.
 func freeLocalPort(start int) int {
 	for p := start; p < start+200; p++ {
-		l, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(p))
+		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:"+strconv.Itoa(p))
 		if err == nil {
 			_ = l.Close()
 			return p

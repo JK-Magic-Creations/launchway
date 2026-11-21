@@ -129,7 +129,7 @@ func TestProviderTestBeforeSwitch(t *testing.T) {
 		t.Fatalf("redirect %q", begun.RedirectURL)
 	}
 	var st signinTestResult
-	b.get(e.srv.URL + "/api/v1/signin/test").json(t, &st)
+	b.get(e.srv.URL+"/api/v1/signin/test").json(t, &st)
 	if st.Tested {
 		t.Fatal("nothing was tested yet")
 	}
@@ -139,7 +139,7 @@ func TestProviderTestBeforeSwitch(t *testing.T) {
 	if page.status != 200 || !strings.Contains(string(page.body), "The test sign-in worked") {
 		t.Fatalf("callback: %d %s", page.status, page.body)
 	}
-	b.get(e.srv.URL + "/api/v1/signin/test").json(t, &st)
+	b.get(e.srv.URL+"/api/v1/signin/test").json(t, &st)
 	if !st.Tested || !st.OK || !strings.Contains(st.Detail, "someone-at-the-provider") {
 		t.Fatalf("result: %+v", st)
 	}

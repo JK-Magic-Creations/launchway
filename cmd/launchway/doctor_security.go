@@ -55,12 +55,10 @@ func factsFromInstall(ctx context.Context, in installer.DoctorInput) securityche
 		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimSuffix(in.URL, "/")+"/api/v1/projects", nil)
 		if r, err := (&http.Client{Timeout: 5 * time.Second}).Do(req); err == nil {
 			r.Body.Close()
-			switch {
-			case r.StatusCode == http.StatusUnauthorized || r.StatusCode == http.StatusForbidden:
-				if f.SignIn != securitycheck.Yes {
-					f.SignIn = securitycheck.Yes
-				}
-			case r.StatusCode == http.StatusOK:
+			switch r.StatusCode {
+			case http.StatusUnauthorized, http.StatusForbidden:
+				f.SignIn = securitycheck.Yes
+			case http.StatusOK:
 				f.SignIn = securitycheck.No
 			}
 		}

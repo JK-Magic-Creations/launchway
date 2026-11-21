@@ -225,7 +225,7 @@ func TestNoClusterSaysSoAndWhatToDo(t *testing.T) {
 	in := &Installer{}
 	in.Connect = func(string, string) (Cluster, error) { return nil, errors.New("no cluster is selected") }
 	_, err := installerRun(h, in, baseAnswers())
-	if err == nil || !strings.Contains(err.Error(), "No cluster was changed") {
+	if err == nil || !strings.Contains(err.Error(), "no cluster was changed") {
 		t.Fatalf("got %v", err)
 	}
 }

@@ -61,6 +61,17 @@ from a network: Inter, Montserrat and JetBrains Mono. All three are licensed und
 Font License 1.1, which allows bundling and redistribution with software. Their copyright notices
 and the licence text are in [web/src/assets/fonts/LICENSES.txt](web/src/assets/fonts/LICENSES.txt).
 
+## What the guided installer carries
+
+`launchway install` installs Launchway on a Kubernetes cluster without Helm or kubectl on the machine, so the
+program carries the parts of them it needs: Helm's chart reader and template engine (`helm.sh/helm/v3`, Apache
+License 2.0, with its small dependencies, which are MIT, BSD or Apache-2.0: Masterminds sprig, semver and goutils,
+BurntSushi toml, gobwas glob, mergo, spf13 cast, huandu xstrings, mitchellh copystructure and reflectwalk,
+shopspring decimal, santhosh-tekuri jsonschema) and the Kubernetes client (`k8s.io/client-go` and its siblings,
+Apache License 2.0). `make license-check` checks every module compiled into the binary against the allow-list.
+The QR code of the authenticator step is drawn by an encoder written for Launchway (no library); it is checked
+against an independent QR decoder, which is a test tool and not part of the program.
+
 ## Tools used only to build and test
 
 The accessibility checks use two npm packages that are development dependencies of the web

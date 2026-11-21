@@ -65,7 +65,7 @@ func (envRootKey) Available() bool {
 func (envRootKey) Key() ([]byte, error) {
 	v := strings.TrimSpace(os.Getenv("LAUNCHWAY_ROOT_KEY"))
 	if f := os.Getenv("LAUNCHWAY_ROOT_KEY_FILE"); f != "" {
-		b, err := os.ReadFile(f)
+		b, err := os.ReadFile(f) //nolint:gosec // G703: the operator's own configured root key file (the same setting the server reads it from)
 		if err != nil {
 			return nil, errors.New("the root key file cannot be read by the server")
 		}

@@ -193,22 +193,7 @@ func planServer(ctx context.Context, e *Env, a *Asker, o Options, t *Transcript,
 		}
 		return e.chown(ctx, l, l.data)
 	})
-	add("Make the root key once, in "+l.rootKey()+" (mode 0600; if it exists it is NOT touched)", "head -c 32 /dev/urandom | base64 > "+l.rootKey()+" && chmod 600 "+l.rootKey(), func(ctx context.Context) error {
-		k, err := randomKey()
-		if err != nil {
-			return err
-		}
-		wrote, err := writeIfAbsent(l.rootKey(), []byte(k+"\n"), 0o600)
-		if err != nil {
-			return err
-		}
-		if wrote {
-			e.Printf("      A new root key was made. Keep a copy of %s somewhere safe and apart from the database: without it stored secrets cannot be read.\n", l.rootKey())
-		} else {
-			e.Printf("      The root key already exists and was left untouched.\n")
-		}
-		return e.chown(ctx, l, l.rootKey())
-	})
+	add("Make the root key once, in "+l.rootKey()+" (mode 0600; if it exists it is NOT touched)", "head -c 32 /dev/urandom | base64 > "+l.rootKey()+" && chmod 600 "+l.rootKey(), makeRootKey(e, l))
 	if sa.db == "bundled" {
 		add("Make the database password once, in "+l.dbPassword()+" (kept if it exists)", "", func(context.Context) error {
 			p, err := randomToken(24)
@@ -220,30 +205,8 @@ func planServer(ctx context.Context, e *Env, a *Asker, o Options, t *Transcript,
 		})
 	}
 	var code string
-	add("Make a one-time setup code for the first administrator in "+l.setupCode()+" (kept if it exists)", "", func(ctx context.Context) error {
-		c := localauth.NewSetupCode()
-		wrote, err := writeIfAbsent(l.setupCode(), []byte(c+"\n"), 0o600)
-		if err != nil {
-			return err
-		}
-		if wrote {
-			code = c
-		}
-		return e.chown(ctx, l, l.setupCode())
-	})
-	add("Write the settings "+l.configFile()+" and "+l.envFile(), "", func(ctx context.Context) error {
-		if err := writeFile(l.configFile(), []byte(serverConfig(l, sa)), 0o640); err != nil {
-			return err
-		}
-		env, err := serverEnv(l, sa)
-		if err != nil {
-			return err
-		}
-		if err := writeFile(l.envFile(), []byte(env), 0o600); err != nil {
-			return err
-		}
-		return e.chown(ctx, l, l.configFile(), l.envFile())
-	})
+	add("Make a one-time setup code for the first administrator in "+l.setupCode()+" (kept if it exists)", "", makeSetupCode(e, l, &code))
+	add("Write the settings "+l.configFile()+" and "+l.envFile(), "", writeSettings(e, l, sa))
 	if sa.db == "bundled" {
 		add("Write the database service "+filepath.Join(l.unitDir, "launchway-postgres.service"), "", func(context.Context) error {
 			return writeFile(filepath.Join(l.unitDir, "launchway-postgres.service"), []byte(postgresUnit(e, l)), 0o644)
@@ -256,17 +219,7 @@ func planServer(ctx context.Context, e *Env, a *Asker, o Options, t *Transcript,
 	if sa.db == "bundled" {
 		enable = "launchway-postgres.service launchway.service"
 	}
-	add("Start it and have it start again by itself", ctl+" daemon-reload && "+ctl+" enable --now "+enable, func(ctx context.Context) error {
-		if out, err := e.run(ctx, l.ctl[0], append(append([]string{}, l.ctl[1:]...), "daemon-reload")...); err != nil {
-			return fmt.Errorf("systemctl daemon-reload: %v %s", err, out)
-		}
-		for _, u := range strings.Fields(enable) {
-			if out, err := e.run(ctx, l.ctl[0], append(append([]string{}, l.ctl[1:]...), "enable", "--now", u)...); err != nil {
-				return fmt.Errorf("systemctl enable --now %s: %v %s", u, err, out)
-			}
-		}
-		return nil
-	})
+	add("Start it and have it start again by itself", ctl+" daemon-reload && "+ctl+" enable --now "+enable, enableUnits(e, l, enable))
 	plan.Summarize(e, "Here is what I am about to do:")
 	if sa.tls == "http" {
 		e.Printf("\nWARNING: plain http. Passwords and sessions cross the network unprotected. Use this only on a private network you trust, and put TLS in front of it before anyone else uses it.\n")
@@ -346,7 +299,7 @@ func serverEnv(l serverLayout, s serverAnswers) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		fmt.Fprintf(&b, "LAUNCHWAY_DATABASE=postgres://launchway:%s@127.0.0.1:5432/launchway?sslmode=disable\n", strings.TrimSpace(string(p)))
+		fmt.Fprintf(&b, "LAUNCHWAY_DATABASE=postgres://launchway:%s@127.0.0.1:5432/launchway?sslmode=disable\n", strings.TrimSpace(string(p))) //nolint:gosec // G101: the password is the one the installer made, written to a file only the service reads
 	}
 	return b.String(), nil
 }
@@ -396,4 +349,71 @@ WantedBy=multi-user.target
 func caddySnippet(s serverAnswers) string {
 	host := strings.TrimPrefix(strings.TrimPrefix(s.external, "https://"), "http://")
 	return fmt.Sprintf("%s {\n\ttls %s %s\n\treverse_proxy %s {\n\t\tflush_interval -1\n\t}\n}\n", host, s.certFile, s.keyFile, s.listen)
+}
+
+// makeRootKey makes the root key once: if the file exists it is left exactly as it is.
+func makeRootKey(e *Env, l serverLayout) func(context.Context) error {
+	return func(ctx context.Context) error {
+		k, err := randomKey()
+		if err != nil {
+			return err
+		}
+		wrote, err := writeIfAbsent(l.rootKey(), []byte(k+"\n"), 0o600)
+		if err != nil {
+			return err
+		}
+		if wrote {
+			e.Printf("      A new root key was made. Keep a copy of %s somewhere safe and apart from the database: without it stored secrets cannot be read.\n", l.rootKey())
+		} else {
+			e.Printf("      The root key already exists and was left untouched.\n")
+		}
+		return e.chown(ctx, l, l.rootKey())
+	}
+}
+
+// makeSetupCode makes the one-time setup code for the first administrator, only if none exists.
+func makeSetupCode(e *Env, l serverLayout, code *string) func(context.Context) error {
+	return func(ctx context.Context) error {
+		c := localauth.NewSetupCode()
+		wrote, err := writeIfAbsent(l.setupCode(), []byte(c+"\n"), 0o600)
+		if err != nil {
+			return err
+		}
+		if wrote {
+			*code = c
+		}
+		return e.chown(ctx, l, l.setupCode())
+	}
+}
+
+// writeSettings writes the service's settings and its connection settings.
+func writeSettings(e *Env, l serverLayout, sa serverAnswers) func(context.Context) error {
+	return func(ctx context.Context) error {
+		if err := writeFile(l.configFile(), []byte(serverConfig(l, sa)), 0o640); err != nil {
+			return err
+		}
+		env, err := serverEnv(l, sa)
+		if err != nil {
+			return err
+		}
+		if err := writeFile(l.envFile(), []byte(env), 0o600); err != nil {
+			return err
+		}
+		return e.chown(ctx, l, l.configFile(), l.envFile())
+	}
+}
+
+// enableUnits starts the services and has them start again by themselves.
+func enableUnits(e *Env, l serverLayout, enable string) func(context.Context) error {
+	return func(ctx context.Context) error {
+		if out, err := e.run(ctx, l.ctl[0], append(append([]string{}, l.ctl[1:]...), "daemon-reload")...); err != nil {
+			return fmt.Errorf("systemctl daemon-reload: %v %s", err, out)
+		}
+		for _, u := range strings.Fields(enable) {
+			if out, err := e.run(ctx, l.ctl[0], append(append([]string{}, l.ctl[1:]...), "enable", "--now", u)...); err != nil {
+				return fmt.Errorf("systemctl enable --now %s: %v %s", u, err, out)
+			}
+		}
+		return nil
+	}
 }

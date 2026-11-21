@@ -21,7 +21,7 @@ func createPrivate(path string) (*os.File, error) {
 // writeIfAbsent writes a file with this mode, only when it does not exist. It reports whether it
 // wrote. Used for everything that must never be regenerated (keys, passwords, the setup code).
 func writeIfAbsent(path string, data []byte, mode fs.FileMode) (bool, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return false, err
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
@@ -41,7 +41,7 @@ func writeIfAbsent(path string, data []byte, mode fs.FileMode) (bool, error) {
 
 // writeFile writes atomically (temp file, then rename) so an interrupted run leaves no half file.
 func writeFile(path string, data []byte, mode fs.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".install-*")
