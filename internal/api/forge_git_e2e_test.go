@@ -441,3 +441,43 @@ func TestGitGzipRequestAndLargeCloneAndDeepPaths(t *testing.T) {
 	}
 	_ = repo
 }
+
+func TestGiteaStyleAddressRedirectsABrowserToTheRepository(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	hostedRepo(t, e, "acme/shop")
+	hostedRepo(t, e, "other/secret")
+	vic := e.signIn(t, "vic")
+	html := []string{"Accept", "text/html"}
+	if r := vic.get(e.srv.URL+"/acme/shop", html...); r.status != 302 || r.location() != "/repositories/acme/shop" {
+		t.Errorf("a reader: %d %q", r.status, r.location())
+	}
+	// A stranger, and a reader of another repository, are not told which repositories exist.
+	for _, path := range []string{"/other/secret", "/acme/nothing"} {
+		if r := vic.get(e.srv.URL+path, html...); r.status == 302 {
+			t.Errorf("%s redirected for someone who may not read it", path)
+		}
+	}
+	if r := newBrowser(t).get(e.srv.URL+"/acme/shop", html...); r.status == 302 {
+		t.Error("an anonymous browser was redirected")
+	}
+	// The web UI's own two-segment paths are untouched.
+	if r := vic.get(e.srv.URL+"/projects/pay-api", html...); r.status == 302 {
+		t.Error("a UI path was redirected")
+	}
+}
+
+func TestDoctorWarnsAboutAnOwnerThatCollidesWithAReservedPath(t *testing.T) {
+	e, h := hostedEnv(t, envOpts{})
+	hostedRepo(t, e, "acme/shop")
+	if w, err := h.Check(t.Context()); err != nil || len(w) != 0 {
+		t.Fatalf("%v %v", w, err)
+	}
+	// Data that came in another way (an import): a repository under a reserved owner.
+	if _, err := h.Forge.CreateRepository(t.Context(), forge.Repository{Connection: h.Connection.ID, Home: "api", Name: "x", Path: "api/x", Visibility: forge.Private}); err != nil {
+		t.Fatal(err)
+	}
+	w, err := h.Check(t.Context())
+	if err != nil || len(w) != 1 || !strings.Contains(w[0], "api/x") {
+		t.Errorf("%v %v", w, err)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
@@ -287,6 +288,9 @@ func (s *Server) gitAlias(next http.Handler) http.Handler {
 		case len(segs) == 3 && (segs[2] == githttp.UploadPack || segs[2] == githttp.ReceivePack):
 			ok = r.Method == http.MethodPost
 		}
+		if len(segs) == 2 && r.Method == http.MethodGet && s.Forge != nil && s.redirectToRepository(w, r, segs[0], segs[1]) {
+			return
+		}
 		if !ok || segs[0] == "" || segs[1] == "" || notOwners[segs[0]] {
 			next.ServeHTTP(w, r)
 			return
@@ -295,4 +299,25 @@ func (s *Server) gitAlias(next http.Handler) http.Handler {
 		r.SetPathValue("name", segs[1])
 		s.gitHTTP(w, r)
 	})
+}
+
+// redirectToRepository sends a browser that opens /<owner>/<name>, the
+// address of a repository on other Git hosts, to the repository's screen.
+// Only a repository that exists is redirected: anything else is the web UI's.
+func (s *Server) redirectToRepository(w http.ResponseWriter, r *http.Request, owner, name string) bool {
+	if owner == "" || notOwners[owner] || !strings.Contains(r.Header.Get("Accept"), "text/html") {
+		return false
+	}
+	name = strings.TrimSuffix(name, ".git")
+	// Only for someone who may read it: a stranger gets the web UI's own answer, so the
+	// redirect does not say which repositories exist.
+	id, err := s.identify(r, false)
+	if err != nil || id == nil || !s.authorize(id, auth.Read, repoSubject(owner, name)) {
+		return false
+	}
+	if _, err := s.Forge.Provider.Repositories().Get(r.Context(), repoSubject(owner, name)); err != nil {
+		return false
+	}
+	http.Redirect(w, r, "/repositories/"+owner+"/"+name, http.StatusFound)
+	return true
 }

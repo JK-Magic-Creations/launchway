@@ -182,3 +182,21 @@ func (h *Hosting) Maintain(ctx context.Context, verify bool) {
 		}
 	}
 }
+
+// Check lists what an operator should know: repositories whose owner is a
+// name Launchway keeps for its own paths, so that the address other Git hosts
+// use (/<owner>/<name>.git) cannot reach them. Names are checked when a
+// repository is made, so this finds only data that came in another way.
+func (h *Hosting) Check(ctx context.Context) ([]string, error) {
+	page, err := h.Provider.Repositories().List(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, r := range page.Items {
+		if launchway.ReservedOwner(r.Home) {
+			out = append(out, fmt.Sprintf("the owner of %s is %q, a path Launchway uses itself: the repository is reachable at /git/%s.git only; rename the owner", r.Path, r.Home, r.Path))
+		}
+	}
+	return out, nil
+}

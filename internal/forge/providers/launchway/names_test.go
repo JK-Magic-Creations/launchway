@@ -11,7 +11,7 @@ import (
 func TestHostileNamesAreRefused(t *testing.T) {
 	bad := []string{"", ".", "..", "../x", "a/../b", "a/b", "/abs", "x.git", "X.GIT", "x.lock", "x.", ".hidden", "-lead", "a..b",
 		"na\x00me", "tab\tname", "new\nline", "sp ace", "back\\slash", "ünï", "а-cyrillic", "name‮exe", "emoji😀", "a:b", "a*b",
-		strings.Repeat("a", 5000), strings.Repeat("a", MaxNameLength+1), "con", "NUL", "API", "git", "Admin", "refs"}
+		strings.Repeat("a", 5000), strings.Repeat("a", MaxNameLength+1), "con", "NUL", "API", "git", "Admin", "refs", "projects", "Runs", "tokens"}
 	for _, n := range bad {
 		if err := ValidSegment(n); !errors.Is(err, forge.ErrInvalid) {
 			t.Errorf("%q was accepted (%v)", n, err)

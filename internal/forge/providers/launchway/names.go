@@ -20,8 +20,15 @@ var reserved = map[string]bool{
 	"api": true, "git": true, "auth": true, "hosted": true, "healthz": true, "readyz": true, "mcp": true, "metrics": true,
 	"assets": true, "static": true, "user": true, "admin": true, "login": true, "logout": true, "settings": true,
 	"repos": true, "repositories": true, "projects": true, "runs": true, "explore": true, "org": true, "orgs": true,
+	"components": true, "runners": true, "images": true, "tokens": true, "policy": true, "environments": true, "agents": true,
+	"approvals": true, "deployments": true, "audit": true, "libraries": true, "waivers": true, "findings": true,
 	"con": true, "prn": true, "aux": true, "nul": true, "head": true, "refs": true, "objects": true,
 }
+
+// ReservedOwner reports whether an owner name is one Launchway keeps for its
+// own paths (a repository under it would be unreachable at the address other
+// Git hosts use).
+func ReservedOwner(owner string) bool { return reserved[strings.ToLower(owner)] }
 
 // MaxNameLength is the longest owner or repository name.
 const MaxNameLength = 100
