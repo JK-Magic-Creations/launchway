@@ -8022,7 +8022,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/standards/settings:
         get:
-            description: 'The settings one level has: ?level= installation, organization, unit or project and &scope=NAME, with version (0 when none are stored).'
+            description: 'The settings one level has: ?level= (installation, organization, unit or project: a Base, a Wing, a Squadron or a Project) and &scope=NAME, with version (0 when none are stored).'
             operationId: get_api_v1_standards_settings
             responses:
                 "200":
@@ -8039,7 +8039,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: 'The settings one level has: ?level= installation, organization, unit or project and &scope=NAME, with version (0 when none are stored).'
+            summary: 'The settings one level has: ?level= (installation, organization, unit or project: a Base, a Wing, a Squadron or a Project) and &scope=NAME, with version (0 when none are stored).'
             tags:
                 - standards
             x-launchway-access: signed-in
