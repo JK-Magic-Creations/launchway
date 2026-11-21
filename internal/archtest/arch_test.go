@@ -24,7 +24,7 @@ const modulePath = "github.com/jk-magic-creations/launchway/"
 // (TestTableHasNoStaleEdges makes the table shrink as the code is cleaned up).
 // Edges the audit calls harmful may not be added at all: see forbidden below.
 var allowedImports = map[string][]string{
-	"cmd/launchway":                      {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/gitexec", "internal/imagebuild", "internal/pipeline", "internal/runner", "internal/secrets", "internal/settings", "internal/source", "internal/verify/source"},
+	"cmd/launchway":                      {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/pipeline", "internal/runner", "internal/secrets", "internal/settings", "internal/source", "internal/verify/source"},
 	"internal/accept":                    {},
 	"internal/ai":                        {"internal/pipeline"},
 	"internal/ai/aitest":                 {},

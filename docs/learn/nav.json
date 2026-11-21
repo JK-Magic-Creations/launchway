@@ -78,6 +78,8 @@
         "guide/policies",
         "guide/verification",
         "guide/ai",
+        "guide/git-over-ssh",
+        "guide/webhooks",
         "guide/secrets",
         "guide/configuration",
         "guide/access",

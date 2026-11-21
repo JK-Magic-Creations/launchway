@@ -353,6 +353,21 @@ service:
   port: 8080
   annotations: {}
 
+# Git over SSH, served by the servers themselves (installation setting forge.ssh.listen, which must be
+# ":<port>" with the port below). Off by default. This opens the port and makes a Service for it; to
+# publish it, make the Service a LoadBalancer or route TCP to it from a Gateway (docs/reference/helm-values.md).
+ssh:
+  # -- Open the SSH port on the servers and make a Service for it.
+  enabled: false
+  # -- The port the servers listen on inside the pod; forge.ssh.listen must be ":<this port>".
+  port: 2222
+  service:
+    # -- ClusterIP, NodePort or LoadBalancer.
+    type: ClusterIP
+    # -- The port the Service offers (22 makes clone addresses git@host:owner/name.git).
+    port: 22
+    annotations: {}
+
 ingress:
   # -- Expose the UI and API through an Ingress. There is no sign-in unless you configure it:
   # do not expose Launchway to an untrusted network.

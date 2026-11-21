@@ -115,6 +115,11 @@ spec:
             - name: http
               containerPort: {{ include "launchway.port" . }}
               protocol: TCP
+            {{- if .Values.ssh.enabled }}
+            - name: ssh
+              containerPort: {{ .Values.ssh.port }}
+              protocol: TCP
+            {{- end }}
           {{- with .Values.server.startupProbe }}
           startupProbe:
             {{- toYaml . | nindent 12 }}
@@ -184,6 +189,30 @@ spec:
       port: {{ .Values.service.port }}
       targetPort: http
       protocol: TCP
+{{- if .Values.ssh.enabled }}
+---
+# Git over SSH: its own Service, so it can be published on its own address (a LoadBalancer, or a TCP route).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-ssh
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
+  {{- with .Values.ssh.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.ssh.service.type }}
+  selector:
+    {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 4 }}
+  ports:
+    - name: ssh
+      port: {{ .Values.ssh.service.port }}
+      targetPort: ssh
+      protocol: TCP
+{{- end }}
 {{- if .Values.server.podDisruptionBudget.enabled }}
 ---
 apiVersion: policy/v1

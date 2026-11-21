@@ -20,6 +20,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/hosting"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
 	_ "github.com/jk-magic-creations/launchway/internal/forge/storage"
+	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 )
 
@@ -73,6 +74,7 @@ func startHosting(ctx context.Context, cfg *config.Config, eng *engine.Engine, l
 		MaxRepoBytes: int64(f.MaxRepoMiB) << 20, MaxPackBytes: int64(f.MaxPushMiB) << 20,
 		Provider: launchway.Options{DefaultHome: f.DefaultOwner, MaxPerHome: f.MaxPerOwner, CreatesPerMinute: f.CreatesPerMinute, SSHPrefix: sshPrefix},
 		Every:    f.MaintainInterval(), CacheBytes: int64(f.CacheGiB) << 30,
+		Hooks: webhooks.Options{OnDisabled: srv.WebhookDisabled},
 	})
 	if err != nil {
 		return fmt.Errorf("forge.hosting: %w", err)

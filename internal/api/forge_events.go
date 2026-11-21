@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
@@ -97,4 +98,16 @@ func addressIsRepo(addr, repoPath string) bool {
 	}
 	path = "/" + strings.Trim(strings.TrimSuffix(strings.TrimSuffix(path, "/"), ".git"), "/")
 	return path == "/"+repoPath || strings.HasSuffix(path, "/git/"+repoPath) || strings.HasSuffix(path, "/"+repoPath)
+}
+
+// WebhookDisabled records in the audit trail that a webhook was turned off
+// because its deliveries kept failing (hosting passes it to the delivery
+// service as its OnDisabled).
+func (s *Server) WebhookDisabled(h webhooks.Hook, reason string) {
+	target := h.Repository
+	if target == "" {
+		target = h.Owner
+	}
+	s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "system", Action: "webhook.disable", Target: target, Outcome: "ok",
+		Detail: "webhook " + h.Name + ": " + reason})
 }

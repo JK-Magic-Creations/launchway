@@ -364,7 +364,7 @@ never from the file.
 ## Forge
 
 Launchway's own Git hosting: it keeps repositories in the database and the artifact store and serves them
-over HTTPS (see [Hosted repository storage](../development/forge-storage.md)). It needs `git` 2.28 or newer on
+over HTTPS and, when `forge.ssh.listen` is set, SSH (see [Hosted repository storage](../development/forge-storage.md)). It needs `git` 2.28 or newer on
 the server and a blob store shared by every server. Turning it off stops the Git endpoints and keeps the
 data. These are installation settings, kept in the database: an administrator sets them under
 Configuration, Installation settings, with `launchway config` or through the API (a file's `forge:` section
@@ -385,6 +385,14 @@ takes effect when each server next restarts.
 | `forge.max_concurrent` | whole number | `32` | The most `git` processes serving Git requests at once; more requests wait, then are refused |
 | `forge.cache_gib` | whole number | no limit | How much the repository caches on this server may take, in GiB; the least recently used are removed |
 | `forge.maintain_every` | text | `15m` | How often packs are consolidated, collected and checked. At least `1m` |
+| `forge.ssh.listen` | text | none | Turn on Git over SSH: the address to listen on, such as `:2222`. Empty is off. See [Git over SSH](../guide/git-over-ssh.md) |
+| `forge.ssh.public_host` | text | host of `forge.public_url` | The host SSH clone addresses name |
+| `forge.ssh.public_port` | whole number | the port of `listen` | The port SSH clone addresses name; 22 makes them `git@host:owner/name.git` |
+| `forge.ssh.user_ca` | text | none | Public keys (OpenSSH format, one per line) of the authorities whose user certificates are accepted; the first principal of a certificate is the person's name. Empty: certificates are not accepted |
+| `forge.ssh.max_connections` | whole number | `256` | SSH connections in all |
+| `forge.ssh.max_per_address` | whole number | `20` | SSH connections from one address |
+| `forge.ssh.idle_timeout` | text | `10m` | An SSH connection that moves no bytes is closed. At least `1m` |
+| `forge.ssh.max_duration` | text | `6h` | The longest any SSH connection lasts. At least `1m` |
 
 ## Findings
 

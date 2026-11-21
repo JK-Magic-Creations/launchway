@@ -154,19 +154,6 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 		}
 		hk.Client = g.HTTPClient(10 * time.Second)
 	}
-	if hk.OnDisabled == nil {
-		eng := o.Engine
-		hk.OnDisabled = func(h webhooks.Hook, reason string) {
-			target := h.Repository
-			if target == "" {
-				target = h.Owner
-			}
-			if err := eng.Audit(engine.AuditEntry{At: time.Now().UnixMilli(), User: "system", Action: "webhook.disable", Target: target, Outcome: "ok",
-				Detail: "webhook " + h.Name + ": " + reason}); err != nil {
-				o.Log.Error("writing the audit trail", "action", "webhook.disable", "err", err)
-			}
-		}
-	}
 	return &Hosting{Store: sto, Forge: fs, Provider: launchway.New(conn, fs, sto, po), Connection: conn, RunTokens: rt,
 		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), o: o, log: o.Log}, nil
 }

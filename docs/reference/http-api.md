@@ -499,6 +499,43 @@ Only with the installation setting `forge.hosting` on (Configuration, Installati
 | `DELETE /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.delete` | Moves the repository to the trash: it is no longer served or listed, its data is kept, and its name can be used again. |
 
 
+### SSH keys, deploy keys and protected branches
+
+[Git over SSH](../guide/git-over-ssh.md). A person's keys are theirs: another person's key answers `404` as if it did not exist. A key is ed25519, ECDSA or RSA of at least 3072 bits, one line in the OpenSSH format with no options; the answer to a refused key says why. Every key shows its `fingerprint` (SHA256), `last_used_at` and `last_used_from`. A key belongs to one owner: adding one that is registered already, as anyone's, answers `409`. With Git hosting off these answer `404 feature_off` (except `GET /api/v1/ssh`, which says SSH is off).
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/ssh` | `signed-in` | — | `{"enabled", "host", "port", "certificates", "host_keys": [{"algorithm", "type", "fingerprint", "public_key", "created_at"}]}`: whether Git over SSH is on, the address clone addresses name, and the server's host keys to verify. |
+| `GET /api/v1/user/ssh-keys` | `signed-in` | — | The caller's keys: `{"items": [...]}`. |
+| `POST /api/v1/user/ssh-keys` | `signed-in` | `ssh_key.add` | Adds one: `{"name", "public_key", "expires_at"}`; the expiry is RFC 3339 and optional, the name defaults to the key's comment. `400` says why a key is refused (DSA, RSA under 3072 bits, a private key, options, a certificate, an expiry in the past), `409` for a key in use. |
+| `DELETE /api/v1/user/ssh-keys/{id}` | `signed-in` | `ssh_key.delete` | Deletes the caller's key; it stops working at once. |
+| `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `repo-admin` | — | The repository's deploy keys: `{"items": [...]}`. |
+| `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `repo-admin` | `deploy_key.add` | Adds one: `{"name", "public_key", "write", "expires_at"}`. Read-only unless `write` is true. |
+| `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` | `repo-admin` | `deploy_key.delete` | Deletes a deploy key. |
+| `GET /api/v1/repositories/{owner}/{name}/protected-branches` | `repo-viewer` | — | `{"patterns": [...]}`: the branches that take a direct push only from the repository's administrators and cannot be deleted. |
+| `PUT /api/v1/repositories/{owner}/{name}/protected-branches` | `repo-admin` | `repository.protect` | Replaces the patterns: `{"patterns": ["main", "release/*"]}`; `*` matches anything but a slash; an empty list removes the protection. |
+
+### Webhooks
+
+[Webhooks and events](../guide/webhooks.md) of one repository (`repositories/{owner}/{name}/hooks`, its administrators) or of an owner (`owners/{owner}/hooks`, an administrator): the same seven routes under each base. The secret is write-only: it is never in an answer, except one Launchway made because none was given, which the answer that creates the hook carries once as `secret`. A hook of another repository or owner answers `404`.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/repositories/{owner}/{name}/hooks` | `repo-admin` | — | `{"items": [{"id", "scope", "repository", "name", "url", "events", "active", "has_secret", "failures", "disabled_reason", "created_at"}], "events": [...]}`. |
+| `POST /api/v1/repositories/{owner}/{name}/hooks` | `repo-admin` | `webhook.add` | Adds one: `{"name", "url", "events", "active", "secret"}`; `events` are `push`, `create`, `delete`, `repository` (`pull_request` and `pull_request_review` are reserved). `201` with `{"hook", "secret", "secret_note"}`; `400` for an address that is not `http(s)://`, carries a password, or an unknown event. |
+| `PATCH /api/v1/repositories/{owner}/{name}/hooks/{id}` | `repo-admin` | `webhook.update` | Changes any of `name`, `url`, `events`, `active`, `secret`; turning a hook on clears its failure count and notice. |
+| `DELETE /api/v1/repositories/{owner}/{name}/hooks/{id}` | `repo-admin` | `webhook.delete` | Deletes the hook and its log. |
+| `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/test` | `repo-admin` | `webhook.test` | Sends a `ping` now, once, and answers with the delivery (state, status, error in words). |
+| `GET /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries` | `repo-admin` | — | The newest 50 deliveries: `event`, `state`, `attempts`, `status`, `duration_ms`, `error`, `response` (the start of the answer) and `payload` (the request). |
+| `POST /api/v1/repositories/{owner}/{name}/hooks/{id}/deliveries/{delivery}/redeliver` | `repo-admin` | `webhook.redeliver` | Sends that delivery's request again, now, once, as a new delivery. |
+| `GET /api/v1/owners/{owner}/hooks` | `admin` | — | As for a repository, for every repository of the owner. |
+| `POST /api/v1/owners/{owner}/hooks` | `admin` | `webhook.add` | |
+| `PATCH /api/v1/owners/{owner}/hooks/{id}` | `admin` | `webhook.update` | |
+| `DELETE /api/v1/owners/{owner}/hooks/{id}` | `admin` | `webhook.delete` | |
+| `POST /api/v1/owners/{owner}/hooks/{id}/test` | `admin` | `webhook.test` | |
+| `GET /api/v1/owners/{owner}/hooks/{id}/deliveries` | `admin` | — | |
+| `POST /api/v1/owners/{owner}/hooks/{id}/deliveries/{delivery}/redeliver` | `admin` | `webhook.redeliver` | |
+
 ### Gitea-style repository calls
 
 The few calls tools that create and inspect repositories send to a Gitea server, so they work unchanged against Launchway. This is the start of the compatibility layer, not all of it: there are no issues, pull requests or webhooks here. Answers carry `name`, `full_name`, `owner.login`, `private`, `archived`, `empty`, `default_branch` and `clone_url`.
