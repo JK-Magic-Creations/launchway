@@ -188,6 +188,8 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss":         {"POST", "/api/v1/repositories/o/x/pulls/1/reviews/r/dismiss", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests":              {"POST", "/api/v1/repositories/o/x/pulls/1/review-requests", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}": {"DELETE", "/api/v1/repositories/o/x/pulls/1/review-requests/grace", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repositories/{owner}/{name}/dependencies":                                 {"GET", "/api/v1/repositories/o/x/dependencies", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repositories/{owner}/{name}/updates/preview":                              {"GET", "/api/v1/repositories/o/x/updates/preview", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/repositories/{owner}/{name}/compare":                                      {"GET", "/api/v1/repositories/o/x/compare", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/repositories/{owner}/{name}/pull-settings":                                {"GET", "/api/v1/repositories/o/x/pull-settings", "", [6]int{401, 404, 404, 404, 404, 404}},
 	"PUT /api/v1/repositories/{owner}/{name}/pull-settings":                                {"PUT", "/api/v1/repositories/o/x/pull-settings", `{}`, [6]int{401, 404, 404, 404, 404, 404}},

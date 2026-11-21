@@ -76,7 +76,7 @@ func (p *Proposer) Execute(ctx context.Context, decisions []plan.Decision) []Out
 		case plan.ActionClose:
 			o.Event.Action = "closed"
 			if !p.DryRun {
-				o.Err = p.Host.Close(ctx, d.Number, "Closed by Launchway's dependency updater: "+d.Why)
+				o.Err = p.Host.Close(ctx, d.Number, UpdaterClosing+": "+d.Why)
 			}
 		case plan.ActionOpen, plan.ActionUpdate:
 			o.Event.Action = map[string]string{plan.ActionOpen: "opened", plan.ActionUpdate: "updated"}[d.Action]

@@ -38,6 +38,10 @@ type Host interface {
 	Close(ctx context.Context, number int, comment string) error
 }
 
+// UpdaterClosing starts the comment the updater leaves when it closes its own
+// pull request, so that closing is never read as a person asking to ignore.
+const UpdaterClosing = "Closed by Launchway's dependency updater"
+
 // IgnoreKeys turns what people closed into the keys the resolver honors:
 // "this version" (the default), "this major", "this dependency".
 func IgnoreKeys(closed []PR, ecosystemOf func(branchKey string) string) map[string]bool {

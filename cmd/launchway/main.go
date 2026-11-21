@@ -89,6 +89,8 @@ Usage:
   launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
   launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
   launchway pr       list|view|create|checkout|diff|comment|review|merge|close|reopen|edit|revert|apply|settings|rules   pull requests and code review on hosted repositories
+  launchway deps     list|check|update|ignore   what a repository depends on, what is newer or vulnerable
+  launchway updates  preview|run|settings   Launchway's own dependency updates, proposed as pull requests
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
   launchway version
 
@@ -152,6 +154,10 @@ func main() {
 		err = cmdKindAlias(os.Args[1])(args)
 	case "repos", "keys", "pr":
 		err = cmdHosting(os.Args[1], args)
+	case "deps":
+		err = cmdDeps(args)
+	case "updates":
+		err = cmdUpdates(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":

@@ -24,16 +24,17 @@ const modulePath = "github.com/jk-magic-creations/launchway/"
 // (TestTableHasNoStaleEdges makes the table shrink as the code is cleaned up).
 // Edges the audit calls harmful may not be added at all: see forbidden below.
 var allowedImports = map[string][]string{
-	"cmd/launchway":                      {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/pipeline", "internal/runner", "internal/secrets", "internal/settings", "internal/source", "internal/verify/source"},
+	"cmd/launchway":                      {"internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/preview", "internal/depupdate/propose", "internal/depupdate/service", "internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/pipeline", "internal/runner", "internal/secrets", "internal/settings", "internal/source", "internal/verify/source"},
 	"internal/accept":                    {},
 	"internal/ai":                        {"internal/pipeline"},
 	"internal/ai/aitest":                 {},
-	"internal/api":                       {"internal/ai", "internal/auth", "internal/engine", "internal/forge", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/gitssh", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/webhooks", "internal/hub", "internal/ids", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/secrets", "internal/settings", "internal/source", "internal/verify"},
+	"internal/api":                       {"internal/depupdate", "internal/depupdate/preview", "internal/ai", "internal/auth", "internal/engine", "internal/forge", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/gitssh", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/webhooks", "internal/hub", "internal/ids", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/secrets", "internal/settings", "internal/source", "internal/verify"},
 	"internal/auth":                      {},
 	"internal/blobstore":                 {},
 	"internal/config":                    {"internal/accept", "internal/ai", "internal/auth", "internal/blobstore", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/forge/egress", "internal/imagebuild", "internal/pipeline", "internal/policy", "internal/secrets", "internal/source", "internal/verify/source"},
 	"internal/coverage":                  {},
 	"internal/depupdate":                 {},
+	"internal/depupdate/gitfs":           {"internal/gitexec"},
 	"internal/depupdate/container":       {"internal/depupdate"},
 	"internal/depupdate/ecosystems":      {"internal/depupdate", "internal/depupdate/container", "internal/depupdate/gomod", "internal/depupdate/npm", "internal/depupdate/python", "internal/depupdate/workflow"},
 	"internal/depupdate/gomod":           {"internal/depupdate"},
@@ -43,6 +44,7 @@ var allowedImports = map[string][]string{
 	"internal/depupdate/preview":         {"internal/depupdate", "internal/depupdate/ecosystems", "internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/source"},
 	"internal/depupdate/propose":         {"internal/depupdate", "internal/depupdate/container", "internal/depupdate/gomod", "internal/depupdate/npm", "internal/depupdate/plan", "internal/depupdate/python", "internal/depupdate/version", "internal/depupdate/workflow", "internal/executor", "internal/forge", "internal/gitexec", "internal/redact"},
 	"internal/depupdate/python":          {"internal/depupdate"},
+	"internal/depupdate/service":         {"internal/depupdate/gitfs", "internal/depupdate/osv", "internal/depupdate/plan", "internal/depupdate/preview", "internal/depupdate/propose", "internal/depupdate/source", "internal/forge/pulls"},
 	"internal/depupdate/source":          {"internal/depupdate/version"},
 	"internal/depupdate/version":         {},
 	"internal/depupdate/workflow":        {"internal/depupdate"},

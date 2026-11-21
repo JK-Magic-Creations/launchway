@@ -151,6 +151,8 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	mo := o.Mirror
 	mo.Guard, mo.Server, mo.Limits, mo.Log = guard, o.Server, o.Limits, o.Log
 	ms := mirror.New(o.Engine.Database(), fs, sto, conn, mo)
+	pullSvc := pulls.NewService(pulls.NewStore(o.Engine.Database()), sto, o.Log)
+	po.Pulls = pullSvc // the provider answers for proposals with the pull-request service
 	prov := launchway.New(conn, fs, sto, po)
 	ms.SetCreator(prov.Repositories())
 	db := o.Engine.Database()
@@ -173,7 +175,7 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 		hk.Client = g.HTTPClient(10 * time.Second)
 	}
 	return &Hosting{Store: sto, Forge: fs, Provider: prov, Connection: conn, Mirrors: ms, RunTokens: rt,
-		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), Pulls: pulls.NewService(pulls.NewStore(db), sto, o.Log), o: o, log: o.Log}, nil
+		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), Pulls: pullSvc, o: o, log: o.Log}, nil
 }
 
 // Resolve finds a live repository by its owner and name.
