@@ -363,6 +363,7 @@ metadata:
     {{- include "launchway.componentLabels" (list $root .component) | nindent 4 }}
 spec:
   maxUnavailable: {{ $r.podDisruptionBudget.maxUnavailable }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
   selector:
     matchLabels:
       {{- include "launchway.componentSelectorLabels" (list $root .component) | nindent 6 }}

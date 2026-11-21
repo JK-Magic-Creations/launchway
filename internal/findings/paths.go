@@ -49,7 +49,8 @@ func filePath(uri, baseID string, bases map[string]string, max int) string {
 	if u != "" {
 		u = path.Clean(u)
 	}
-	return jsonscan.Cut(u, max)
+	// A path is shown in a table: space at either end would only mislead (found by the fuzz test).
+	return strings.TrimSpace(jsonscan.Cut(u, max))
 }
 
 // underBase strips the longest originalUriBaseIds file:// uri that u

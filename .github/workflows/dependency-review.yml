@@ -1,0 +1,21 @@
+# On a pull request: dependencies the change adds or updates are checked for known vulnerabilities
+# and for licenses. Blocks high and critical vulnerabilities and licenses the product cannot ship
+# (the allow-list matches ALLOWED_LICENSES in the Makefile, plus the SPDX spellings npm uses).
+name: Dependency review
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: high
+          allow-licenses: Apache-2.0, BSD-2-Clause, BSD-3-Clause, MIT, ISC, MPL-2.0, Unlicense, 0BSD, CC0-1.0, BlueOak-1.0.0, Python-2.0, CC-BY-4.0

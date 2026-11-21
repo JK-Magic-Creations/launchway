@@ -16,6 +16,7 @@
     "/sha256:[0-9a-f…]+/g"
   ],
   "words": [
+    "bestpractices", "COEP", "errcheck", "golangci", "gosec", "HSTS", "keylessly", "kubeconform", "shellcheck", "Subresource", "Syft",
     "applicationsets",
     "Authentik",
     "autovacuum",

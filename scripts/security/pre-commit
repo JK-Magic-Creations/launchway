@@ -1,0 +1,9 @@
+#!/bin/sh
+# Optional Git hook: scans what is staged for secrets before a commit is made.
+#   ln -s ../../scripts/security/pre-commit .git/hooks/pre-commit
+# Uses the same pinned gitleaks image as make security.
+set -eu
+. "$(dirname "$(readlink -f "$0")")/lib.sh"
+cd "$(git rev-parse --show-toplevel)"
+exec $CONTAINER run --rm --security-opt label=disable -v "$PWD:/repo" -v "$PWD/quality/gitleaks.toml:/gitleaks.toml:ro" \
+  "$GITLEAKS_IMAGE" git /repo --pre-commit --staged --redact --no-banner --config /gitleaks.toml

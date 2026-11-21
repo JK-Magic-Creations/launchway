@@ -1,0 +1,128 @@
+[
+  {
+    "Fingerprint": "f6df21870525882b38cce253a2f8aa70cacb48d9:internal/archtest/arch_test.go:generic-api-key:40",
+    "RuleID": "generic-api-key",
+    "File": "internal/archtest/arch_test.go",
+    "StartLine": 40,
+    "Commit": "f6df21870525882b38cce253a2f8aa70cacb48d9"
+  },
+  {
+    "Fingerprint": "bc400d53298563c836c7533d34882b7abf5b2597:internal/archtest/arch_test.go:generic-api-key:40",
+    "RuleID": "generic-api-key",
+    "File": "internal/archtest/arch_test.go",
+    "StartLine": 40,
+    "Commit": "bc400d53298563c836c7533d34882b7abf5b2597"
+  },
+  {
+    "Fingerprint": "3bff57af1e78307b0064afd817a059556e31d881:docs/tutorials/security-scans.md:slack-webhook-url:25",
+    "RuleID": "slack-webhook-url",
+    "File": "docs/tutorials/security-scans.md",
+    "StartLine": 25,
+    "Commit": "3bff57af1e78307b0064afd817a059556e31d881"
+  },
+  {
+    "Fingerprint": "4690bda195caf758d9be573fe5788367fa429395:docs/tutorials/build-and-sign-image.md:curl-auth-user:162",
+    "RuleID": "curl-auth-user",
+    "File": "docs/tutorials/build-and-sign-image.md",
+    "StartLine": 162,
+    "Commit": "4690bda195caf758d9be573fe5788367fa429395"
+  },
+  {
+    "Fingerprint": "3bff57af1e78307b0064afd817a059556e31d881:docs/tutorials/build-and-sign-image.md:curl-auth-user:162",
+    "RuleID": "curl-auth-user",
+    "File": "docs/tutorials/build-and-sign-image.md",
+    "StartLine": 162,
+    "Commit": "3bff57af1e78307b0064afd817a059556e31d881"
+  },
+  {
+    "Fingerprint": "77b85dd99a3bc42879bbc9371d09693bd2adbf98:deploy/helm/launchway-runner/examples/deploy-runner.yaml:generic-api-key:19",
+    "RuleID": "generic-api-key",
+    "File": "deploy/helm/launchway-runner/examples/deploy-runner.yaml",
+    "StartLine": 19,
+    "Commit": "77b85dd99a3bc42879bbc9371d09693bd2adbf98"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/testdata/trufflehog.sarif:generic-api-key:26",
+    "RuleID": "generic-api-key",
+    "File": "internal/findings/testdata/trufflehog.sarif",
+    "StartLine": 26,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/testdata/trufflehog.sarif:github-pat:31",
+    "RuleID": "github-pat",
+    "File": "internal/findings/testdata/trufflehog.sarif",
+    "StartLine": 31,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/testdata/trufflehog.sarif:github-pat:33",
+    "RuleID": "github-pat",
+    "File": "internal/findings/testdata/trufflehog.sarif",
+    "StartLine": 33,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/testdata/trufflehog.sarif:private-key:39",
+    "RuleID": "private-key",
+    "File": "internal/findings/testdata/trufflehog.sarif",
+    "StartLine": 39,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/samples_test.go:github-pat:541",
+    "RuleID": "github-pat",
+    "File": "internal/findings/samples_test.go",
+    "StartLine": 541,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/samples_test.go:github-pat:570",
+    "RuleID": "github-pat",
+    "File": "internal/findings/samples_test.go",
+    "StartLine": 570,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/secrets_test.go:aws-access-token:15",
+    "RuleID": "aws-access-token",
+    "File": "internal/findings/secrets_test.go",
+    "StartLine": 15,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/secrets_test.go:github-oauth:19",
+    "RuleID": "github-oauth",
+    "File": "internal/findings/secrets_test.go",
+    "StartLine": 19,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/secrets_test.go:private-key:29",
+    "RuleID": "private-key",
+    "File": "internal/findings/secrets_test.go",
+    "StartLine": 29,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/secrets_test.go:jwt:27",
+    "RuleID": "jwt",
+    "File": "internal/findings/secrets_test.go",
+    "StartLine": 27,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "30dbed6e031c434caddc38644ed5329cf7d3e84d:internal/findings/secrets_test.go:github-pat:18",
+    "RuleID": "github-pat",
+    "File": "internal/findings/secrets_test.go",
+    "StartLine": 18,
+    "Commit": "30dbed6e031c434caddc38644ed5329cf7d3e84d"
+  },
+  {
+    "Fingerprint": "6137dd3b0302d825f2e081e9596ed29eca4e41f1:internal/api/secrets_e2e_test.go:generic-api-key:26",
+    "RuleID": "generic-api-key",
+    "File": "internal/api/secrets_e2e_test.go",
+    "StartLine": 26,
+    "Commit": "6137dd3b0302d825f2e081e9596ed29eca4e41f1"
+  }
+]

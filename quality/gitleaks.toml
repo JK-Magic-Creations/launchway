@@ -1,0 +1,14 @@
+# gitleaks configuration: the default rules, plus a few paths that hold deliberate fake secrets.
+# Everything else is a finding. Known old findings are in quality/gitleaks-baseline.json, which may
+# only shrink.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "files that are not source: dependency lock files and compiled output"
+paths = [
+  '''web/package-lock\.json''',
+  '''docs/package-lock\.json''',
+  '''go\.sum''',
+  '''web/dist/''',
+]

@@ -285,6 +285,8 @@ export default defineConfig({
           { text: 'Overview', link: '/security/' },
           { text: 'Trust model and threats', link: '/security/trust-model' },
           { text: 'Hardening checklist', link: '/security/hardening' },
+          { text: 'How Launchway is scanned', link: '/security/how-launchway-is-scanned' },
+          { text: 'Threat model', link: '/security/threat-model' },
           { text: 'Supply chain', link: '/security/supply-chain' },
           { text: 'Verifying downloads', link: '/security/verify-downloads' },
           { text: 'Controls and compliance', link: '/security/controls-and-compliance' },

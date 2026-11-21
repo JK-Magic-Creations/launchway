@@ -224,6 +224,7 @@ metadata:
     {{- include "launchway.componentLabels" (list . "server") | nindent 4 }}
 spec:
   maxUnavailable: {{ .Values.server.podDisruptionBudget.maxUnavailable }}
+  unhealthyPodEvictionPolicy: AlwaysAllow
   selector:
     matchLabels:
       {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 6 }}

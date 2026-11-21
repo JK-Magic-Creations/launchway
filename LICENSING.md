@@ -41,6 +41,13 @@ To ask about a commercial licence, write to
 [jkhunter@jk-magic-creations.com](mailto:jkhunter@jk-magic-creations.com). Terms are agreed case by
 case; nothing on this page is an offer or a promise of any price or term.
 
+The security scans (govulncheck, osv-scanner, gitleaks, Trivy, kubeconform, kube-linter, hadolint,
+OWASP ZAP, OpenSSF Scorecard and Syft) run only in development and in the build pipeline, from
+containers or `go run` at pinned versions. They are not linked into, bundled with or shipped in
+Launchway. Their licenses are listed in
+[docs/security/how-launchway-is-scanned.md](docs/security/how-launchway-is-scanned.md); hadolint is
+GPL-3.0 and is only ever run as a separate program.
+
 ## Contributing
 
 JK Magic Creations can offer a commercial licence because contributors license their contributions

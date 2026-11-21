@@ -1,0 +1,78 @@
+# Security gates (docs/security/how-launchway-is-scanned.md): the same make targets a developer
+# runs locally. Every scanner runs from a pinned container or `go run` at a pinned version
+# (scripts/security/lib.sh). Read-only token; nothing here publishes anything.
+name: Security
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 5 * * 1" # weekly: new advisories appear without a code change
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Go vulnerabilities (govulncheck; reachable ones fail)
+        run: make govulncheck
+      - name: All locked dependencies (osv-scanner) and npm audit
+        run: make osv
+
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the whole history is scanned
+      - name: Secrets in the history (gitleaks, shrink-only baseline)
+        run: make secrets
+
+  infrastructure:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - name: Helm charts and Dockerfile (kubeconform, kube-linter, Trivy config, hadolint)
+        run: make iac
+      - name: Pod Security "restricted" for the rendered charts
+        run: make chart-pss
+
+  fuzz:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+      - name: Short fuzz run of every parser
+        run: make fuzz FUZZTIME=30s
+
+  image:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build the image
+        run: make image IMAGE=launchway:scan
+      - name: Scan the image (Trivy; fixable HIGH and CRITICAL fail)
+        run: make image-scan IMAGE=launchway:scan
