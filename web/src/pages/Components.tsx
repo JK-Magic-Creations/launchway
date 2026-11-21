@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useEffect, useState } from "react";
 import { api, type ComponentSearch } from "../api";
 import { ago, clock } from "../format";
@@ -48,12 +49,7 @@ export function ComponentsPage() {
 
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>Components</h1>
-          <p className="sub">Find the runs whose software bill of materials lists a component: which projects use it, at which version, on which branch.</p>
-        </div>
-      </header>
+      <PageHead eyebrow="Images" title="Components" sentence="Find the runs whose software bill of materials lists a component: which projects use it, at which version, on which branch." />
 
       <form className="card compform" role="search" onSubmit={submit}>
         <label className="field">

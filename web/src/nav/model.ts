@@ -184,6 +184,7 @@ export const PAGES: PageInfo[] = [
 
   page("/images", "images", undefined, () => "Images", () => []),
   page("/images/components", "images", undefined, () => "Components", () => [{ label: "Components" }]),
+  page("/images/digest/:digest", "images", undefined, (p) => `Image ${p.digest.slice(0, 19)}`, (p) => [{ label: "Image " + p.digest.slice(0, 19) }]),
   page("/images/:page", "images", undefined, (p) => comingTitle("/images/" + p.page), (p) => [{ label: comingTitle("/images/" + p.page) }]),
 
   page("/traffic", "traffic", "map", () => "Traffic map", () => []),

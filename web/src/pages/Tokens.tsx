@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useState } from "react";
 import type { Role } from "../api";
 import { ago, clock } from "../format";
@@ -40,7 +41,7 @@ export function TokensPage() {
   if (me?.auth_mode !== "oidc") {
     return (
       <div className="page">
-        <header className="page-head"><div><h1>API tokens</h1></div></header>
+        <PageHead eyebrow="Settings" title={<>API tokens</>} />
         <Empty title="API tokens need sign-in">This server has no sign-in, so there is nobody to make a token for.</Empty>
       </div>
     );
@@ -73,14 +74,9 @@ export function TokensPage() {
   const roles = ROLES.slice(0, limits?.your_role ? ROLES.indexOf(limits.your_role) + 1 : 0);
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>API tokens</h1>
-          <p className="sub">For scripts, the <Mono>launchway</Mono> command line and AI agents (see <Link href="/settings/access/agents">Connect an agent</Link>).
+      <PageHead eyebrow="Settings" title={<>API tokens</>} sentence={<>For scripts, the <Mono>launchway</Mono> command line and AI agents (see <Link href="/settings/access/agents">Connect an agent</Link>).
             A token acts as you, with the rights you have when it is used, never more than the role and projects it is limited to, until it
-            expires or is revoked.</p>
-        </div>
-      </header>
+            expires or is revoked.</>} />
 
       <section className="card">
         <form onSubmit={create} className="inputs-form" aria-label="Make a token">

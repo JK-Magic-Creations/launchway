@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { ApiError, api, type RuleInfo } from "../api";
 import { configApi, kindLabel, kindOf, levelOf, loadOverview, useOverview, type ChangeRequest, type ConfigChange, type ConfigKind,
@@ -147,22 +148,15 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
   return (
     <div className="page cf-page">
       <ConfigNav overview={overview} path={path} />
-      <header className="page-head">
-        <div>
-          <div className="crumbs"><Link href="/config">Configuration</Link><span aria-hidden="true">/</span>
-            {!k.singleton && <><Link href={`/config/${k.path}`}>{kindLabel(overview, k)}</Link><span aria-hidden="true">/</span></>}</div>
-          <h1 className={isNew || k.singleton ? "" : "mono cf-h1-mono"}>{title}</h1>
-          <p className="sub">{levelWords(k.doc, overview.levels)}</p>
-        </div>
-        {obj && (
-          <dl className="cf-meta">
-            <div><dt>Version</dt><dd>{obj.version}</dd></div>
-            {obj.updated_at > 0 && <div><dt>Changed</dt><dd title={clock(obj.updated_at)}>{ago(obj.updated_at)}{obj.updated_by ? ` by ${obj.updated_by}` : ""}</dd></div>}
-            <div><dt>Managed by</dt><dd>{obj.version === 0 ? "nobody yet: the built-in defaults" : managerLabel(obj.managed_by)}</dd></div>
-            {k.levels && overview.units_in_use && <div><dt>Defined at</dt><dd>{levelOf(overview, obj.unit)}</dd></div>}
-          </dl>
-        )}
-      </header>
+      <PageHead eyebrow="Settings · Configuration" title={<span className={isNew || k.singleton ? "" : "mono cf-h1-mono"}>{title}</span>} sentence={levelWords(k.doc, overview.levels)} />
+      {obj && (
+        <dl className="cf-meta">
+          <div><dt>Version</dt><dd>{obj.version}</dd></div>
+          {obj.updated_at > 0 && <div><dt>Changed</dt><dd title={clock(obj.updated_at)}>{ago(obj.updated_at)}{obj.updated_by ? ` by ${obj.updated_by}` : ""}</dd></div>}
+          <div><dt>Managed by</dt><dd>{obj.version === 0 ? "nobody yet: the built-in defaults" : managerLabel(obj.managed_by)}</dd></div>
+          {k.levels && overview.units_in_use && <div><dt>Defined at</dt><dd>{levelOf(overview, obj.unit)}</dd></div>}
+        </dl>
+      )}
 
       {wiz && <div className="callout callout-info">Not sure what to put? <Link href={`/config/wizard/${wiz.id}`}>{wiz.title}</Link> asks a few questions instead.</div>}
       {obj?.managed_by === "terraform" && (

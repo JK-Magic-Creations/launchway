@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useState } from "react";
 import { api, type AuditEntry, type AuditQuery } from "../api";
 import { clock } from "../format";
@@ -48,12 +49,7 @@ export function AuditPage() {
 
   return (
     <div className="page page-wide">
-      <header className="page-head">
-        <div>
-          <h1>Audit trail</h1>
-          <p className="sub">Every change made through the API, and every sign-in and sign-out, newest first. Entries are never changed or removed by Launchway.</p>
-        </div>
-      </header>
+      <PageHead eyebrow="Settings" title={<>Audit trail</>} sentence={<>Every change made through the API, and every sign-in and sign-out, newest first. Entries are never changed or removed by Launchway.</>} />
       <form className="card auditfilters" onSubmit={(e) => { e.preventDefault(); setFilters(draft); }}>
         <label className="field"><span>User</span><input value={draft.user} onChange={set("user")} /></label>
         <label className="field"><span>Project</span><input value={draft.project} onChange={set("project")} /></label>

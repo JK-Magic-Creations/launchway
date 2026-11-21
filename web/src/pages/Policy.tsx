@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, type PolicyDef, type PolicyOverview, type PolicyVerdictRow, type Waiver } from "../api";
 import { ago, clock } from "../format";
@@ -36,14 +37,8 @@ export function PolicyPage() {
   const failing = o.sources.filter((s) => s.error);
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>Policy</h1>
-          <p className="sub">Rules every pipeline is held to, set on the server or in a reviewed Git repository. Each decision is recorded in the run
-            it judged, with the evidence; <strong>enforce</strong> stops a run or a step, <strong>report</strong> only records.</p>
-        </div>
-        {o.sources.length > 0 && <WizardButton wizard="add-policy" label="Add a policy" />}
-      </header>
+      <PageHead eyebrow="Settings" title={<>Policy</>} sentence={<>Rules every pipeline is held to, set on the server or in a reviewed Git repository. Each decision is recorded in the run
+            it judged, with the evidence; <strong>enforce</strong> stops a run or a step, <strong>report</strong> only records.</>} actions={<>{o.sources.length > 0 && <WizardButton wizard="add-policy" label="Add a policy" />}</>} />
       <ErrorBox error={error} />
 
       {failing.map((s) => (

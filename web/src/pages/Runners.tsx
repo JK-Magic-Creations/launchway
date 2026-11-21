@@ -1,3 +1,4 @@
+import { PageHead } from "../kit/layout";
 import { useCallback, useEffect, useState } from "react";
 import { api, type ArtifactStore, type JoinToken, type Runner, type RunnerAccept, type RunnerPool, type RunnerPools } from "../api";
 import { ago, clock } from "../format";
@@ -75,14 +76,8 @@ export function RunnersPage() {
   const legacy = (runners ?? []).filter((r) => r.online && (r.auth === "shared" || r.auth === "pool"));
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>Runners</h1>
-          <p className="sub">Machines that run steps. A runner only ever connects out to the server, so it can sit in any network.
-            Each belongs to a pool, which decides which projects' work it may take.</p>
-        </div>
-        <WizardButton wizard="add-runner" label="Add a runner" />
-      </header>
+      <PageHead eyebrow="Settings" title={<>Runners</>} sentence={<>Machines that run steps. A runner only ever connects out to the server, so it can sit in any network.
+            Each belongs to a pool, which decides which projects' work it may take.</>} actions={<><WizardButton wizard="add-runner" label="Add a runner" /></>} />
       <ErrorBox error={error} />
 
       {legacy.length > 0 && (
