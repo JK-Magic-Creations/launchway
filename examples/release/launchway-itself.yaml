@@ -1,0 +1,24 @@
+# Launchway's own release as a Launchway release pipeline: a pushed version tag runs the same script
+# the hosted workflow runs (packaging/release/release.sh), keeps what it made as Cargo, and makes
+# the release with notes from the merged pull requests, the files attached with their checksums,
+# and the tag adopted. The existing workflow (.github/workflows/release.yml) is not replaced by this
+# file: run both for one release and compare the SHA256SUMS before moving over.
+pipeline: launchway-release
+on:
+  push: { tags: ["v*"] }
+libraries:
+  platform: { repo: platform, version: v1 }
+steps:
+  build:
+    description: Binaries, packages, charts, SBOMs, SHA256SUMS and signatures
+    image: golang:1.26
+    run: packaging/release/release.sh "$LAUNCHWAY_TAG" dist
+    artifacts: [{ name: dist, paths: ["dist/**/*"] }]
+  release:
+    uses: platform/release-publish
+    needs: build
+    with:
+      image: registry.example.internal/tools/launchway:latest
+      server: https://launchway.example.internal
+      files: "dist:dist/SHA256SUMS dist:dist/SHA256SUMS.sig"
+      publish: "true"

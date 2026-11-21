@@ -1,0 +1,48 @@
+# Makes a release of the commit the run is for: a draft with notes written from the changes since
+# the last release and the Sortie's Cargo and image digests attached, then, as the steps are
+# arranged, a candidate, a clearance and publication. The steps run the launchway command, so the
+# image must have it, and the token (a Launchway API token that may operate the project) comes
+# from a secret store. A step that uses it:
+#
+#   release:
+#     uses: platform/release-publish
+#     with: { image: ..., server: ..., publish: "true" }
+#
+# "Tag, build, attach, publish" runs it from on.push.tags; "merge, draft a candidate, approve,
+# publish" runs it twice with publish false and then true (see the example pipelines).
+template: release-publish
+description: Make a release of this commit, with its notes and what the Sortie built
+params:
+  image:   { type: string, description: An image that has the launchway command }
+  server:  { type: string, description: The address of the Launchway server }
+  version: { type: string, default: "", description: The version to release; empty takes the tag the run is for }
+  files:   { type: string, default: "", description: "Cargo files to attach, as artifact:path pairs separated by spaces" }
+  token_store: { type: string, default: vault, description: The secret store that holds a Launchway API token that may operate the project }
+  token_key:   { type: string, default: ci/launchway, description: The token's key in the store }
+  token_field: { type: string, default: token, description: The token's field }
+  publish: { type: string, default: "false", options: ["true", "false"], description: Publish at once; false stops at a candidate }
+containers:
+  cli: { image: { param: image } }
+steps:
+  draft:
+    description: Draft the release with its notes, and attach what this run built
+    container: cli
+    env:
+      RELEASE_SERVER: { param: server }
+      RELEASE_VERSION: { param: version }
+      RELEASE_FILES: { param: files }
+    secrets:
+      RELEASE_TOKEN: { store: { param: token_store }, key: { param: token_key }, field: { param: token_field } }
+    run: "$LAUNCHWAY_LIB/scripts/release-draft.sh"
+  publish:
+    description: Make it a candidate, or publish it
+    container: cli
+    needs: draft
+    env:
+      RELEASE_SERVER: { param: server }
+      RELEASE_PUBLISH: { param: publish }
+    secrets:
+      RELEASE_TOKEN: { store: { param: token_store }, key: { param: token_key }, field: { param: token_field } }
+    run: "$LAUNCHWAY_LIB/scripts/release-publish.sh"
+outputs:
+  version: { from: draft.version }

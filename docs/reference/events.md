@@ -264,6 +264,28 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deployment.retry` | `POST /api/v1/runs/{id}/deployments/{dep}/retry` |
 | `deployment.command_outcome` | what a deploy Station did with a command it took (promote, promote full, abort, retry), written when it reports, apart from the entry for the request: `ok` for a command that got to the rollout, `failed` for one that did not, with the reason; the user is the Station |
 | `deployment.rollback` | `POST /api/v1/projects/{name}/rollbacks`: the request, with the reason, and then the run it made |
+| `release.settings` | `PUT /api/v1/projects/{name}/release-settings`: scheme, tag prefix, changelog file and public setting |
+| `release.create` | `POST /api/v1/projects/{name}/releases`: a draft, from which commit or tag |
+| `release.edit` | `PATCH /api/v1/projects/{name}/releases/{version}`: the notes or title of a draft |
+| `release.notes` | `POST /api/v1/projects/{name}/releases/{version}/notes`: the notes written again, with where they came from |
+| `release.delete` | `DELETE /api/v1/projects/{name}/releases/{version}`: a draft deleted |
+| `release.asset.add` | `PUT` or `POST` on a release's assets: a file uploaded or what a Sortie made attached |
+| `release.asset.remove` | `DELETE /api/v1/projects/{name}/releases/{version}/assets/{asset}` |
+| `release.candidate` | `POST /api/v1/projects/{name}/releases/{version}/candidate` |
+| `release.publish` | `POST /api/v1/projects/{name}/releases/{version}/publish`: the release and the tag it was published under |
+| `release.yank` | `POST /api/v1/projects/{name}/releases/{version}/yank`: a release withdrawn, with the reason |
+| `release.changelog` | `POST /api/v1/projects/{name}/releases/{version}/changelog`: the changelog branch proposed |
+| `release.installation` | `PUT /api/v1/release-installation`: public downloads allowed or forbidden for the installation |
+| `release.gate` | `PUT /api/v1/projects/{name}/release-gates/{airfield}`: what a release must pass to reach an Airfield |
+| `release.clearance` | `POST /api/v1/projects/{name}/releases/{version}/clearances`: who gave clearance for which Airfield, with the comment |
+| `release.promote` | `POST /api/v1/projects/{name}/releases/{version}/promote`: the promotion with its run and image digests; a refusal or an override with its reason is recorded too |
+| `release.plan` | `POST /api/v1/projects/{name}/releases/{version}/plan`: a promotion written on the calendar |
+| `release.return` | `POST /api/v1/projects/{name}/release-returns`: an Airfield returned to base, with the reason |
+| `release.freeze` | `POST /api/v1/release-freezes`: a freeze, for which project and Airfield, with the reason |
+| `release.freeze.cancel` | `POST /api/v1/release-freezes/{id}/cancel` |
+| `release.formation.create` | `POST /api/v1/release-formations`: the releases of a formation, in order |
+| `release.formation.promote` | `POST /api/v1/release-formations/{id}/promote`: a formation promoted to an Airfield |
+| `release.formation.advance` | `POST /api/v1/release-formations/{id}/advance` |
 | `rollback.review` | `POST /api/v1/runs/{id}/review`: an approver acknowledging an Abort, with the comment |
 | `deployment.withdraw` | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` |
 | `artifact.delete` | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` |

@@ -21,4 +21,5 @@ func startNotifications(ctx context.Context, eng *engine.Engine, srv *api.Server
 		n.Secrets = srv.AISecrets
 	}
 	go eng.RunNotifications(ctx, n)
+	go srv.RunReleaseWork(ctx)
 }

@@ -4034,6 +4034,940 @@ paths:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: registry.tag_delete
+    /api/v1/projects/{name}/release-gates:
+        get:
+            description: The checklists of the project, one per Airfield.
+            operationId: get_api_v1_projects_name_release_gates
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The checklists of the project, one per Airfield.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/release-gates/{airfield}:
+        put:
+            description: 'Sets what a release must pass to reach an Airfield: require_checks, require_notes, require_no_blocking_findings, soak_minutes, clearances, clearance_roles, previous_airfield, window (days, from, to, zone). Admin on the project.'
+            operationId: put_api_v1_projects_name_release_gates_airfield
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: airfield
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Sets what a release must pass to reach an Airfield: require_checks, require_notes, require_no_blocking_findings, soak_minutes, clearances, clearance_roles, previous_airfield, window (days, from, to, zone).'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.gate
+    /api/v1/projects/{name}/release-returns:
+        post:
+            description: 'Returns an Airfield to base: {"airfield", "to", "reason", "queue"}, by the existing rollback. Answers 201 with the rollback run.'
+            operationId: post_api_v1_projects_name_release_returns
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Returns an Airfield to base: {"airfield", "to", "reason", "queue"}, by the existing rollback.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.return
+    /api/v1/projects/{name}/release-settings:
+        get:
+            description: 'How the project''s versions are written and ordered (scheme: semver, calver, natural or created), its tag_prefix, changelog file and public setting, whether the installation allows public downloads, and whether Launchway may write to its repository.'
+            operationId: get_api_v1_projects_name_release_settings
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'How the project''s versions are written and ordered (scheme: semver, calver, natural or created), its tag_prefix, changelog file and public setting, whether the installation allows public downloads, and whether Launchway may write to its repository.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: 'Sets them: {"scheme", "tag_prefix", "changelog", "public"}. Needs the admin role on the project. The scheme cannot change once a release is a candidate, published or withdrawn. public is refused unless the installation allows public downloads.'
+            operationId: put_api_v1_projects_name_release_settings
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Sets them: {"scheme", "tag_prefix", "changelog", "public"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.settings
+    /api/v1/projects/{name}/releases:
+        get:
+            description: 'The project''s releases, newest first, without their notes: ?state= draft, candidate, published or yanked. Drafts are shown only to operators.'
+            operationId: get_api_v1_projects_name_releases
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The project''s releases, newest first, without their notes: ?state= draft, candidate, published or yanked.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        post:
+            description: 'Makes a draft: {"version", "from", "adopt", "title", "notes", "generate_notes", "run_id", "allow_lower"}. from is a branch, tag or commit (default the default branch); adopt names an existing annotated tag to release instead. generate_notes writes the notes from the merged pull requests and commits since the previous release; run_id is the Sortie that built it, whose image digests are recorded. A version not higher than the highest so far is refused unless allow_lower. Answers 201.'
+            operationId: post_api_v1_projects_name_releases
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes a draft: {"version", "from", "adopt", "title", "notes", "generate_notes", "run_id", "allow_lower"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.create
+    /api/v1/projects/{name}/releases/{version}:
+        delete:
+            description: Deletes a draft and its files. Anything else is refused with 409.
+            operationId: delete_api_v1_projects_name_releases_version
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes a draft and its files.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.delete
+        get:
+            description: One release with its notes, assets (SHA-256 and provenance), promotions, clearances and what the caller may do. {version} is a version, a tag or the release's id.
+            operationId: get_api_v1_projects_name_releases_version
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: One release with its notes, assets (SHA-256 and provenance), promotions, clearances and what the caller may do.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        patch:
+            description: 'Changes the title or notes of a draft or candidate: {"title", "notes"}. A published release is refused with 409.'
+            operationId: patch_api_v1_projects_name_releases_version
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Changes the title or notes of a draft or candidate: {"title", "notes"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.edit
+    /api/v1/projects/{name}/releases/{version}/assets:
+        post:
+            description: 'Attaches what a Sortie made: {"run_id", "files": [{"artifact", "path", "name"}], "images"}. The files are copied from the Sortie''s Cargo (checked against their checksums) and kept with the release; images records its image digests, SBOM and scan summaries. The Sortie must have run at the release''s commit.'
+            operationId: post_api_v1_projects_name_releases_version_assets
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Attaches what a Sortie made: {"run_id", "files": [{"artifact", "path", "name"}], "images"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.asset.add
+    /api/v1/projects/{name}/releases/{version}/assets/{asset}:
+        delete:
+            description: Removes an asset from a draft or candidate.
+            operationId: delete_api_v1_projects_name_releases_version_assets_asset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: asset
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes an asset from a draft or candidate.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.asset.remove
+        get:
+            description: Downloads a file of the release, signed in, with its checksum in X-Launchway-SHA256.
+            operationId: get_api_v1_projects_name_releases_version_assets_asset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: asset
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Downloads a file of the release, signed in, with its checksum in X-Launchway-SHA256.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: 'Uploads a file: the request body is the file (up to 2 GiB). X-Launchway-SHA256 may carry the checksum it must have. An asset is never replaced: a second file of the name is refused with 409.'
+            operationId: put_api_v1_projects_name_releases_version_assets_asset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: asset
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Uploads a file: the request body is the file (up to 2 GiB).'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.asset.add
+    /api/v1/projects/{name}/releases/{version}/candidate:
+        post:
+            description: Moves a draft to candidate.
+            operationId: post_api_v1_projects_name_releases_version_candidate
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Moves a draft to candidate.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.candidate
+    /api/v1/projects/{name}/releases/{version}/changelog:
+        post:
+            description: 'Commits the notes at the top of the changelog file on a new branch and opens a pull request into the release''s branch, never pushing to the branch itself: {"base"}.'
+            operationId: post_api_v1_projects_name_releases_version_changelog
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Commits the notes at the top of the changelog file on a new branch and opens a pull request into the release''s branch, never pushing to the branch itself: {"base"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.changelog
+    /api/v1/projects/{name}/releases/{version}/checklist:
+        get:
+            description: 'A release judged for an Airfield now: ?airfield=. Each line passes, fails or waits, and whether an administrator may override what stops it.'
+            operationId: get_api_v1_projects_name_releases_version_checklist
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'A release judged for an Airfield now: ?airfield=.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/releases/{version}/clearances:
+        post:
+            description: 'Gives clearance for an Airfield: {"airfield", "comment"}. The person who published the release may not.'
+            operationId: post_api_v1_projects_name_releases_version_clearances
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Gives clearance for an Airfield: {"airfield", "comment"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.clearance
+    /api/v1/projects/{name}/releases/{version}/notes:
+        post:
+            description: Writes the notes again from the changes since the previous release (a draft or candidate).
+            operationId: post_api_v1_projects_name_releases_version_notes
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Writes the notes again from the changes since the previous release (a draft or candidate).
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.notes
+    /api/v1/projects/{name}/releases/{version}/plan:
+        post:
+            description: 'Writes a promotion on the calendar: {"airfield", "at", "note"}. A reminder; Launchway does not start it.'
+            operationId: post_api_v1_projects_name_releases_version_plan
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Writes a promotion on the calendar: {"airfield", "at", "note"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.plan
+    /api/v1/projects/{name}/releases/{version}/promote:
+        post:
+            description: 'Promotes to an Airfield: {"airfield", "override"}. Starts the project''s pipeline at the release''s tag with the inputs release, version, airfield, sha and digest/digests it declares. override (a reason) is for administrators and only for lines that may be overridden. Answers 201 with the promotion and the run, or 409 with the checklist.'
+            operationId: post_api_v1_projects_name_releases_version_promote
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Promotes to an Airfield: {"airfield", "override"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.promote
+    /api/v1/projects/{name}/releases/{version}/publish:
+        post:
+            description: 'Publishes a draft or candidate: makes the annotated tag (or adopts the one at the release''s commit) and fixes the release. {"public"} asks for public downloads (admin, and only where the installation and project allow). Refused with 409 if the tag is at another commit or Launchway cannot write to the repository.'
+            operationId: post_api_v1_projects_name_releases_version_publish
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Publishes a draft or candidate: makes the annotated tag (or adopts the one at the release''s commit) and fixes the release.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.publish
+    /api/v1/projects/{name}/releases/{version}/yank:
+        post:
+            description: 'Withdraws a candidate or published release: {"reason"} (required).'
+            operationId: post_api_v1_projects_name_releases_version_yank
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Withdraws a candidate or published release: {"reason"} (required).'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.yank
+    /api/v1/projects/{name}/releases/compare:
+        get:
+            description: 'What differs between two releases: ?a=, ?b=. The changes, the files and the deployment configuration changed, and the image digests of each.'
+            operationId: get_api_v1_projects_name_releases_compare
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What differs between two releases: ?a=, ?b=.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/releases/next:
+        get:
+            description: 'The next version proposed from the changes since the last release, with the reason for each change: ?from= (branch, tag or commit), ?pre= (a pre-release label such as rc). Nothing is made.'
+            operationId: get_api_v1_projects_name_releases_next
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The next version proposed from the changes since the last release, with the reason for each change: ?from= (branch, tag or commit), ?pre= (a pre-release label such as rc).'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/releases/notes:
+        get:
+            description: 'Release notes generated for a version, not saved: ?to=, ?version=.'
+            operationId: get_api_v1_projects_name_releases_notes
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Release notes generated for a version, not saved: ?to=, ?version=.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
     /api/v1/projects/{name}/rollback:
         get:
             description: 'What a service can be returned to base to in an Airfield after its deployment succeeded: ?environment= (required), ?service=. Answers the plan: what runs now (current), the lock holder if any (holder), and the rollback action as the server reports it (available, or reason, instead and would_help; targets, the earlier successful deployments, each with the deployments it reverts, its consequence and suggestions; queueable, emergency, requires_approval). Without the operator role on the project (and the Airfield) the action says so and offers no targets. See [Return to base (rollback) after success](../guide/rollback-after-success.md).'
@@ -6068,6 +7002,372 @@ paths:
                 - registry
             x-launchway-access: admin
             x-launchway-audit: registry.policy
+    /api/v1/release-calendar:
+        get:
+            description: Planned, in-progress and done promotions and the freezes between ?from= and ?to=.
+            operationId: get_api_v1_release_calendar
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Planned, in-progress and done promotions and the freezes between ?from= and ?to=.
+            tags:
+                - release-calendar
+            x-launchway-access: signed-in
+    /api/v1/release-formations:
+        get:
+            description: Formations the caller may see.
+            operationId: get_api_v1_release_formations
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Formations the caller may see.
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+        post:
+            description: 'Makes a formation: {"name", "note", "releases": ["project@version", ...]}, in promotion order. Needs the operator role on every project in it.'
+            operationId: post_api_v1_release_formations
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes a formation: {"name", "note", "releases": ["project@version", ...]}, in promotion order.'
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+            x-launchway-audit: release.formation.create
+    /api/v1/release-formations/{id}:
+        get:
+            description: A formation (by id or name) with the state of each member. A promoting formation moves on when it is read.
+            operationId: get_api_v1_release_formations_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: A formation (by id or name) with the state of each member.
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+    /api/v1/release-formations/{id}/advance:
+        post:
+            description: Records which members launched or failed and starts the next.
+            operationId: post_api_v1_release_formations_id_advance
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Records which members launched or failed and starts the next.
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+            x-launchway-audit: release.formation.advance
+    /api/v1/release-formations/{id}/promote:
+        post:
+            description: 'Promotes it to an Airfield: {"airfield", "override"}. Nothing starts unless every member passes the checklist; then one member after another.'
+            operationId: post_api_v1_release_formations_id_promote
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Promotes it to an Airfield: {"airfield", "override"}.'
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+            x-launchway-audit: release.formation.promote
+    /api/v1/release-freezes:
+        get:
+            description: Freezes in force, coming, and over in the last 30 days.
+            operationId: get_api_v1_release_freezes
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Freezes in force, coming, and over in the last 30 days.
+            tags:
+                - release-freezes
+            x-launchway-access: signed-in
+        post:
+            description: 'Makes a freeze: {"project", "airfield", "from", "to", "reason"}. Without project it freezes every project and needs the admin role everywhere; with one it needs the admin role on that project.'
+            operationId: post_api_v1_release_freezes
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes a freeze: {"project", "airfield", "from", "to", "reason"}.'
+            tags:
+                - release-freezes
+            x-launchway-access: signed-in
+            x-launchway-audit: release.freeze
+    /api/v1/release-freezes/{id}/cancel:
+        post:
+            description: Ends a freeze early, with the same rights as making it.
+            operationId: post_api_v1_release_freezes_id_cancel
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Ends a freeze early, with the same rights as making it.
+            tags:
+                - release-freezes
+            x-launchway-access: signed-in
+            x-launchway-audit: release.freeze.cancel
+    /api/v1/release-installation:
+        get:
+            description: Whether this installation allows public downloads of releases.
+            operationId: get_api_v1_release_installation
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Whether this installation allows public downloads of releases.
+            tags:
+                - release-installation
+            x-launchway-access: signed-in
+        put:
+            description: 'Allows or forbids them: {"public_downloads"}. Administrators of every project.'
+            operationId: put_api_v1_release_installation
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Allows or forbids them: {"public_downloads"}.'
+            tags:
+                - release-installation
+            x-launchway-access: admin
+            x-launchway-audit: release.installation
+    /api/v1/release-matrix:
+        get:
+            description: 'Which release runs in which Airfield: for each project and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote.'
+            operationId: get_api_v1_release_matrix
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Which release runs in which Airfield: for each project and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote.'
+            tags:
+                - release-matrix
+            x-launchway-access: signed-in
+    /api/v1/release-report:
+        get:
+            description: 'What shipped and the four delivery measures over a period: ?project=, ?from=, ?to= (default 90 days), ?format=html for a self-contained page.'
+            operationId: get_api_v1_release_report
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What shipped and the four delivery measures over a period: ?project=, ?from=, ?to= (default 90 days), ?format=html for a self-contained page.'
+            tags:
+                - release-report
+            x-launchway-access: signed-in
+    /api/v1/releases:
+        get:
+            description: 'Releases of every project the caller may see: ?project=, ?state=.'
+            operationId: get_api_v1_releases
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Releases of every project the caller may see: ?project=, ?state=.'
+            tags:
+                - releases
+            x-launchway-access: signed-in
     /api/v1/repos/{owner}/{name}:
         delete:
             description: Moves the repository to the trash.
@@ -12265,6 +13565,44 @@ paths:
             summary: The [MCP](../guide/agents.md) endpoint (Streamable HTTP, stateless).
             tags:
                 - mcp
+            x-launchway-access: public
+    /public/releases/{name}/{version}/{asset}:
+        get:
+            description: A file of a release with no sign-in. Answers 404 unless the installation allows public downloads, the project asks for them, and the release is published and was made public.
+            operationId: get_public_releases_name_version_asset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: asset
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: A file of a release with no sign-in.
+            tags:
+                - public
             x-launchway-access: public
     /readyz:
         get:

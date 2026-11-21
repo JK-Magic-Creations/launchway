@@ -44,7 +44,7 @@ describe("the phone's bottom bar", () => {
 describe("the left column", () => {
   it("shows an area's pages with the current one marked", () => {
     render(<SideNav ctx={ctx({ applications: 1 })} area="deployments" path="/deployments/applications/x" />);
-    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["Overview", "Airfields", "Applications", "Hostssoon", "Machine imagessoon"]);
+    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(["Overview", "Airfields", "Releases", "Applications", "Hostssoon", "Machine imagessoon"]);
     expect(screen.getByRole("link", { name: "Applications" })).toHaveAttribute("aria-current", "page");
   });
   it("shows the pages that are not built yet as soon, not hidden", () => {

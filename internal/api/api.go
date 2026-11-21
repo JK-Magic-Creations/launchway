@@ -71,11 +71,11 @@ type Server struct {
 	// its own stores. Nil: the explain button says it is off.
 	AI        *ai.Client
 	AISecrets *secrets.Resolver
-	// RunnersRole is the role needed on every project to manage runners:
-	// make join tokens, revoke and rotate runners (runner_admin); nil means admin, NoRole nobody.
+	// RunnersRole is the role needed on every project to manage runners (join tokens, revoke, rotate: runner_admin); nil means admin, NoRole nobody.
 	RunnersRole *auth.Role
 	Settings    *settings.Service         // the configuration kept in the database (schema 23), under /api/v1/config; nil if none
 	Variables   *settings.VariableService // variables set at levels (schema 29)
+	Releases    ReleaseOptions            // see releases.go
 	Toggles     *togglestore.Service      // feature toggles (schema 41); nil: off
 	Secrets     *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
 	sealerMu    sync.Mutex

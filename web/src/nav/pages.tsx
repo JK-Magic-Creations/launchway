@@ -36,6 +36,7 @@ const SettingsApprovalsPage = lz(() => import("../pages/SettingsApprovals"), "Se
 const DeploymentsPage = lz(() => import("../pages/DeploymentsOverview"), "DeploymentsOverviewPage");
 const EnvironmentsPage = lz(() => import("../pages/Environments"), "EnvironmentsPage");
 const EnvironmentPage = lz(() => import("../pages/EnvironmentView"), "EnvironmentViewPage");
+const ReleasesRoot = lz(() => import("../pages/ReleasesRoot"), "ReleasesRoot");
 const ApplicationsPage = lz(() => import("../pages/ApplicationsList"), "ApplicationsListPage");
 const ApplicationPage = lz(() => import("../pages/ApplicationView"), "ApplicationViewPage");
 const LibraryPage = lz(() => import("../pages/Library"), "LibraryPage");
@@ -113,6 +114,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/deployments": return <DeploymentsPage />;
     case "/deployments/environments": return <EnvironmentsPage />;
     case "/deployments/environments/:name": return <EnvironmentPage key={p.name} name={p.name} />;
+    case "/deployments/releases": case "/deployments/releases/:a": case "/deployments/releases/:a/:b": return <ReleasesRoot key={path} a={p.a} b={p.b} />;
     case "/deployments/applications": return <ApplicationsPage />;
     case "/deployments/applications/:name": return <ApplicationPage key={p.name} name={p.name} />;
     case "/library": return <LibraryPage />;

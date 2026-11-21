@@ -21,6 +21,7 @@ launchway waivers  list|grant|revoke          waive a policy's rule for a while,
 launchway blobs    status|copy                see and move where artifacts are kept
 launchway mcp      [--server URL]             the server's MCP tools for agents, on stdin and stdout
 launchway deployments options|rollback|review  roll a service back after a deployment succeeded; review emergency rollbacks
+launchway release list|show|next|create|publish|promote|...  releases: version, notes, assets, promotion across Airfields, freezes, the report
 launchway verifications list|show|mark        verifications on a server
 launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
@@ -708,6 +709,44 @@ launchway deployments review RUN_ID --comment TEXT
 `options` says what the service can be returned to base to: the earlier successful deployments, newest first, each with what it would revert and the consequence, or why nothing can be done and what would help. `rollback` prints the same, then asks for the Return to base; the previous successful deployment is the default, and `--to` takes a deployment ID or a version. `--reason` is required and recorded. `--queue` waits behind a deployment that holds the Airfield's lock; without it the command is refused, naming that run. `--dry-run` only prints what it would do. `--project` may be left out when one service is deployed to the Airfield. `review list` shows Aborts of protected Airfields that no approver has acknowledged, and whether you may; `review RUN_ID --comment TEXT` acknowledges one (`--comment` is required).
 
 The same operations are the MCP tools `get_rollback_options`, `rollback_deployment`, `list_rollback_reviews` and `review_rollback`, and the routes in the [HTTP API](http-api.md).
+
+## launchway release
+
+Releases and release management: making a release, its notes and files, publishing, promoting it through the Airfields, returning to base, checklists, freezes, formations and the report. It uses the stored credentials, like `runs`. The server decides what is possible and who may, and its sentences are printed as they are. See [Making a release](../guide/releases.md), [Promoting a release](../guide/promoting-releases.md), [Release checklists, windows and freezes](../guide/release-checklists.md) and [Measuring delivery](../guide/measuring-delivery.md).
+
+```text
+launchway release list [--project P] [--state draft|candidate|published|yanked] [--json]
+launchway release show PROJECT VERSION [--json]
+launchway release next --project P [--from REF] [--pre rc] [--json]
+launchway release notes --project P [--to REF] [--version V]
+launchway release create --project P --version V [--from REF | --adopt TAG] [--notes-file F | --generate-notes] [--title T] [--run RUN] [--allow-lower]
+launchway release edit PROJECT VERSION [--notes-file F] [--title T] [--regenerate-notes]
+launchway release assets add PROJECT VERSION --file PATH [--name N] | --run RUN [--artifact ID --path P] [--images]
+launchway release assets remove PROJECT VERSION NAME
+launchway release assets get PROJECT VERSION NAME [-o FILE]
+launchway release candidate PROJECT VERSION
+launchway release publish PROJECT VERSION [--public]
+launchway release yank PROJECT VERSION --reason TEXT
+launchway release delete PROJECT VERSION
+launchway release changelog PROJECT VERSION [--base BRANCH]
+launchway release compare PROJECT VERSION-A VERSION-B
+launchway release checklist PROJECT VERSION --airfield A [--json]
+launchway release clearance PROJECT VERSION --airfield A [--comment TEXT]
+launchway release promote PROJECT VERSION --airfield A [--override REASON]
+launchway release plan PROJECT VERSION --airfield A --at TIME [--note TEXT]
+launchway release return --project P --airfield A --reason TEXT [--to DEPLOYMENT|VERSION] [--queue]
+launchway release matrix [--json]
+launchway release calendar [--from T] [--to T] [--json]
+launchway release report [--project P] [--from T] [--to T] [--html FILE] [--json]
+launchway release settings PROJECT [--scheme S] [--tag-prefix P] [--changelog F] [--public=bool]
+launchway release installation [--public-downloads=bool]
+launchway release gate list PROJECT
+launchway release gate set PROJECT --airfield A [--checks] [--notes] [--no-findings] [--soak MINUTES] [--clearances N] [--clearance-role R] [--previous A] [--window-days D] [--window-from HH:MM] [--window-to HH:MM] [--window-zone Z]
+launchway release freeze list | create --to TIME --reason TEXT [--from TIME] [--project P] [--airfield A] | cancel ID
+launchway release formation list | show NAME | create NAME PROJECT@VERSION ... [--note T] | promote NAME --airfield A [--override R] | advance NAME
+```
+
+A published release never changes; `yank` withdraws one with a recorded reason. `--override` is for administrators and only for a window, a soak time or a freeze. The same operations are MCP tools (`list_releases`, `get_release`, `propose_next_release_version`, `create_release`, `publish_release`, `promote_release`, `return_to_base`, `get_release_matrix` and the rest: see the [interface parity](interface-parity.md) table) and routes of the [HTTP API](http-api.md#releases).
 
 ## launchway health-sources and launchway models
 

@@ -742,7 +742,7 @@ Who is told when an approval waits or something went wrong, and where. See [Noti
 | `notifications.channels[].secret.store` | name | none | `webhook` only: the store that holds the key the body is signed with (`X-Launchway-Signature-256`, as repository webhooks are) |
 | `notifications.channels[].secret.key` | text | | The key in the store |
 | `notifications.channels[].secret.field` | text | | The field of the key |
-| `notifications.rules[].on` | list | required | The events: `approval.requested`, `run.failed`, `deployment.succeeded`, `deployment.failed`, `deployment.rolled_back`, `rollback.needs_review`, `step.waiting_long` |
+| `notifications.rules[].on` | list | required | The events: `approval.requested`, `run.failed`, `deployment.succeeded`, `deployment.failed`, `deployment.rolled_back`, `rollback.needs_review`, `step.waiting_long`, `release.published`, `release.promoted`, `release.returned`, `freeze.started` |
 | `notifications.rules[].to` | list | required | The names of the channels that get them |
 | `notifications.rules[].projects` | list of patterns | all | Only events of these projects |
 | `notifications.rules[].environments` | list of patterns | all | Only events of these Airfields (deployments and Returns to base) |

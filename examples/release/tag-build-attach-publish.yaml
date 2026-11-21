@@ -1,0 +1,22 @@
+# Tag, build, attach, publish: pushing a version tag builds the service, then makes and publishes
+# its release with notes written from the pull requests merged since the last release. The tag is
+# the one that was pushed, so Launchway adopts it (an annotated tag; git tag -a v1.4.0).
+pipeline: shop-release
+on:
+  push: { tags: ["v*"] }
+libraries:
+  platform: { repo: platform, version: v1 }
+steps:
+  build:
+    description: Build the service
+    image: golang:1.26
+    run: go build -o dist/shop ./cmd/shop
+    artifacts: [{ name: dist, paths: [dist/shop] }]
+  release:
+    uses: platform/release-publish
+    needs: build
+    with:
+      image: registry.example.internal/tools/launchway:latest
+      server: https://launchway.example.internal
+      files: "dist:dist/shop"
+      publish: "true"

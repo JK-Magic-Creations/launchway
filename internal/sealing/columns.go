@@ -164,6 +164,7 @@ var explained = []struct{ column, why string }{
 	// Names, identifiers and keys of rows, not secrets.
 	{"blob_objects.key", "the object's name in the blob store"},
 	{"artifact_blobs.store_key", "the object's name in the blob store"},
+	{"release_assets.store_key", "the object's name in the blob store"},
 	{"blob_uploads.key", "the object's name in the blob store"},
 	{"caches.blob_key", "the object's name in the blob store"},
 	{"registry_blobs.store_key", "the object's name in the blob store"},

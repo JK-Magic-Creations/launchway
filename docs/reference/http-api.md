@@ -425,6 +425,54 @@ The command routes take an optional `{"comment": "..."}` and answer `201` with t
 
 `…/controls` answers `{"environment", "protected", "controls": [{…, "available", "forbidden", "reason"}], "withdraw", "withdraw_reason"}`. See [Launch with approval](../tutorials/deploy-with-approval.md).
 
+## Releases
+
+Releases and release management (see [Making a release](../guide/releases.md)). Who may do what: a viewer reads published and withdrawn releases; an operator makes drafts, publishes, promotes and withdraws; an administrator of the project sets its release settings and checklists, freezes it and overrides what a checklist allows; an administrator of every project freezes every project and allows public downloads.
+
+| Route | Access | Audit action | What it does |
+|---|---|---|---|
+| `GET /api/v1/projects/{name}/release-settings` | `project-viewer` | — | How the project's versions are written and ordered (`scheme`: `semver`, `calver`, `natural` or `created`), its `tag_prefix`, `changelog` file and `public` setting, whether the installation allows public downloads, and whether Launchway may write to its repository. |
+| `PUT /api/v1/projects/{name}/release-settings` | `project-operator` | `release.settings` | Sets them: `{"scheme", "tag_prefix", "changelog", "public"}`. Needs the admin role on the project. The scheme cannot change once a release is a candidate, published or withdrawn. `public` is refused unless the installation allows public downloads. |
+| `GET /api/v1/projects/{name}/releases` | `project-viewer` | — | The project's releases, newest first, without their notes: `?state=` draft, candidate, published or yanked. Drafts are shown only to operators. |
+| `POST /api/v1/projects/{name}/releases` | `project-operator` | `release.create` | Makes a draft: `{"version", "from", "adopt", "title", "notes", "generate_notes", "run_id", "allow_lower"}`. `from` is a branch, tag or commit (default the default branch); `adopt` names an existing annotated tag to release instead. `generate_notes` writes the notes from the merged pull requests and commits since the previous release; `run_id` is the Sortie that built it, whose image digests are recorded. A version not higher than the highest so far is refused unless `allow_lower`. Answers `201`. |
+| `GET /api/v1/projects/{name}/releases/next` | `project-viewer` | — | The next version proposed from the changes since the last release, with the reason for each change: `?from=` (branch, tag or commit), `?pre=` (a pre-release label such as `rc`). Nothing is made. |
+| `GET /api/v1/projects/{name}/releases/notes` | `project-viewer` | — | Release notes generated for a version, not saved: `?to=`, `?version=`. |
+| `GET /api/v1/projects/{name}/releases/compare` | `project-viewer` | — | What differs between two releases: `?a=`, `?b=`. The changes, the files and the deployment configuration changed, and the image digests of each. |
+| `GET /api/v1/projects/{name}/releases/{version}` | `project-viewer` | — | One release with its notes, assets (SHA-256 and provenance), promotions, clearances and what the caller may do. `{version}` is a version, a tag or the release's id. |
+| `PATCH /api/v1/projects/{name}/releases/{version}` | `project-operator` | `release.edit` | Changes the title or notes of a draft or candidate: `{"title", "notes"}`. A published release is refused with `409`. |
+| `DELETE /api/v1/projects/{name}/releases/{version}` | `project-operator` | `release.delete` | Deletes a draft and its files. Anything else is refused with `409`. |
+| `POST /api/v1/projects/{name}/releases/{version}/notes` | `project-operator` | `release.notes` | Writes the notes again from the changes since the previous release (a draft or candidate). |
+| `PUT /api/v1/projects/{name}/releases/{version}/assets/{asset}` | `project-operator` | `release.asset.add` | Uploads a file: the request body is the file (up to 2 GiB). `X-Launchway-SHA256` may carry the checksum it must have. An asset is never replaced: a second file of the name is refused with `409`. |
+| `POST /api/v1/projects/{name}/releases/{version}/assets` | `project-operator` | `release.asset.add` | Attaches what a Sortie made: `{"run_id", "files": [{"artifact", "path", "name"}], "images"}`. The files are copied from the Sortie's Cargo (checked against their checksums) and kept with the release; `images` records its image digests, SBOM and scan summaries. The Sortie must have run at the release's commit. |
+| `DELETE /api/v1/projects/{name}/releases/{version}/assets/{asset}` | `project-operator` | `release.asset.remove` | Removes an asset from a draft or candidate. |
+| `GET /api/v1/projects/{name}/releases/{version}/assets/{asset}` | `project-viewer` | — | Downloads a file of the release, signed in, with its checksum in `X-Launchway-SHA256`. |
+| `POST /api/v1/projects/{name}/releases/{version}/candidate` | `project-operator` | `release.candidate` | Moves a draft to candidate. |
+| `POST /api/v1/projects/{name}/releases/{version}/publish` | `project-operator` | `release.publish` | Publishes a draft or candidate: makes the annotated tag (or adopts the one at the release's commit) and fixes the release. `{"public"}` asks for public downloads (admin, and only where the installation and project allow). Refused with `409` if the tag is at another commit or Launchway cannot write to the repository. |
+| `POST /api/v1/projects/{name}/releases/{version}/yank` | `project-operator` | `release.yank` | Withdraws a candidate or published release: `{"reason"}` (required). |
+| `POST /api/v1/projects/{name}/releases/{version}/changelog` | `project-operator` | `release.changelog` | Commits the notes at the top of the changelog file on a new branch and opens a pull request into the release's branch, never pushing to the branch itself: `{"base"}`. |
+| `GET /public/releases/{name}/{version}/{asset}` | `public` | — | A file of a release with no sign-in. Answers `404` unless the installation allows public downloads, the project asks for them, and the release is published and was made public. |
+| `GET /api/v1/releases` | `signed-in` | — | Releases of every project the caller may see: `?project=`, `?state=`. |
+| `GET /api/v1/release-matrix` | `signed-in` | — | Which release runs in which Airfield: for each project and Airfield the version, since when, who started it, its health and any launch in progress, and what the caller may promote. |
+| `GET /api/v1/release-calendar` | `signed-in` | — | Planned, in-progress and done promotions and the freezes between `?from=` and `?to=`. |
+| `GET /api/v1/release-report` | `signed-in` | — | What shipped and the four delivery measures over a period: `?project=`, `?from=`, `?to=` (default 90 days), `?format=html` for a self-contained page. |
+| `GET /api/v1/release-installation` | `signed-in` | — | Whether this installation allows public downloads of releases. |
+| `PUT /api/v1/release-installation` | `admin` | `release.installation` | Allows or forbids them: `{"public_downloads"}`. Administrators of every project. |
+| `GET /api/v1/release-freezes` | `signed-in` | — | Freezes in force, coming, and over in the last 30 days. |
+| `POST /api/v1/release-freezes` | `signed-in` | `release.freeze` | Makes a freeze: `{"project", "airfield", "from", "to", "reason"}`. Without `project` it freezes every project and needs the admin role everywhere; with one it needs the admin role on that project. |
+| `POST /api/v1/release-freezes/{id}/cancel` | `signed-in` | `release.freeze.cancel` | Ends a freeze early, with the same rights as making it. |
+| `GET /api/v1/projects/{name}/release-gates` | `project-viewer` | — | The checklists of the project, one per Airfield. |
+| `PUT /api/v1/projects/{name}/release-gates/{airfield}` | `project-operator` | `release.gate` | Sets what a release must pass to reach an Airfield: `require_checks`, `require_notes`, `require_no_blocking_findings`, `soak_minutes`, `clearances`, `clearance_roles`, `previous_airfield`, `window` (`days`, `from`, `to`, `zone`). Admin on the project. |
+| `GET /api/v1/projects/{name}/releases/{version}/checklist` | `project-viewer` | — | A release judged for an Airfield now: `?airfield=`. Each line passes, fails or waits, and whether an administrator may override what stops it. |
+| `POST /api/v1/projects/{name}/releases/{version}/clearances` | `project-operator` | `release.clearance` | Gives clearance for an Airfield: `{"airfield", "comment"}`. The person who published the release may not. |
+| `POST /api/v1/projects/{name}/releases/{version}/promote` | `project-operator` | `release.promote` | Promotes to an Airfield: `{"airfield", "override"}`. Starts the project's pipeline at the release's tag with the inputs `release`, `version`, `airfield`, `sha` and `digest`/`digests` it declares. `override` (a reason) is for administrators and only for lines that may be overridden. Answers `201` with the promotion and the run, or `409` with the checklist. |
+| `POST /api/v1/projects/{name}/releases/{version}/plan` | `project-operator` | `release.plan` | Writes a promotion on the calendar: `{"airfield", "at", "note"}`. A reminder; Launchway does not start it. |
+| `POST /api/v1/projects/{name}/release-returns` | `project-operator` | `release.return` | Returns an Airfield to base: `{"airfield", "to", "reason", "queue"}`, by the existing rollback. Answers `201` with the rollback run. |
+| `GET /api/v1/release-formations` | `signed-in` | — | Formations the caller may see. |
+| `POST /api/v1/release-formations` | `signed-in` | `release.formation.create` | Makes a formation: `{"name", "note", "releases": ["project@version", ...]}`, in promotion order. Needs the operator role on every project in it. |
+| `GET /api/v1/release-formations/{id}` | `signed-in` | — | A formation (by id or name) with the state of each member. A promoting formation moves on when it is read. |
+| `POST /api/v1/release-formations/{id}/promote` | `signed-in` | `release.formation.promote` | Promotes it to an Airfield: `{"airfield", "override"}`. Nothing starts unless every member passes the checklist; then one member after another. |
+| `POST /api/v1/release-formations/{id}/advance` | `signed-in` | `release.formation.advance` | Records which members launched or failed and starts the next. |
+
 ## Policies and waivers
 
 | Route | Access | Audit | What it does |

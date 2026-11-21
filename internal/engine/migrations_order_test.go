@@ -62,7 +62,8 @@ func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
 		schemaEvents,
 		schemaReview,
 		schemaDebrief,
-		schemaStandings}
+		schemaStandings,
+		schemaReleases}
 	for i := 1; i < len(order); i++ {
 		if order[i] != order[i-1]+1 {
 			t.Fatalf("schemas are not in a row: the %dth is %d after %d", i+1, order[i], order[i-1])
@@ -99,7 +100,7 @@ func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
 	}
 	// No number after 16 is a placeholder, whatever it brings.
 	for i := schemaPolicy; i < len(migrations); i++ {
-		if strings.TrimSpace(migrations[i].sql) == "" && i+1 != schemaStandIn28 { // 28 is held for an unmerged branch (schema28.go)
+		if strings.TrimSpace(migrations[i].sql) == "" && i+1 != schemaStandIn28 { // 28 and 40 to 56 are held for unmerged branches (schema28.go, schema40_56.go)
 			t.Errorf("migration %d is empty", i+1)
 		}
 	}

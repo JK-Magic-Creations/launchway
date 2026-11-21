@@ -25,6 +25,10 @@ key and setting see the [reference](../reference/index.md).
 | [Deployments](deployments.md) | GitOps with Argo CD, rollouts, promote, abort, retry, Return to base (rollback) |
 | [Policies](policies.md) | Rules, modes, waivers, policies from Git |
 | [GitOps write-back](gitops-write-back.md) | Several pipelines writing one repository, a tag with its digest, and writing to a repository Launchway hosts: direct or by pull request |
+| [Making a release](releases.md) | Versions, notes, Cargo and image digests, publishing and tags, immutability, public downloads, release branches, pipelines |
+| [Promoting a release](promoting-releases.md) | The matrix, promotion with the exact digest, Return to base, Formations |
+| [Release checklists, windows and freezes](release-checklists.md) | What a release must pass for an Airfield, overrides, change windows, freezes, the calendar, who may do what |
+| [Measuring delivery](measuring-delivery.md) | The release report: frequency, lead time, change failure rate, time to restore |
 | [Verifying a deployment](verification.md) | Metrics and logs after a deploy, health sources, how the verdict is decided |
 | [Notifications](notifications.md) | Telling people an approval waits or something went wrong: channels, rules, the delivery log |
 | [AI models](ai.md) | Optional models for steps, verdict explanations and failed steps |

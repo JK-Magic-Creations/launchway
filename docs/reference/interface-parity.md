@@ -150,6 +150,32 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/registry/retention` | `preview_registry_retention` | `registry retention` | `not needed by terraform` | equal |
 | `POST /api/v1/projects/{name}/registry/retention` | `run_registry_retention` | `registry retention` | `not needed by terraform` | equal |
 | `DELETE /api/v1/projects/{name}/registry/tag` | `delete_registry_image` | `registry delete` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/release-gates` | `get_release_settings` | `release gate` | — | equal |
+| `PUT /api/v1/projects/{name}/release-gates/{airfield}` | `set_release_checklist` | `release gate` | — | equal |
+| `POST /api/v1/projects/{name}/release-returns` | `return_to_base` | `release return` | — | equal |
+| `GET /api/v1/projects/{name}/release-settings` | `get_release_settings` | `release settings` | — | equal |
+| `PUT /api/v1/projects/{name}/release-settings` | `set_release_settings` | `release settings` | — | equal |
+| `GET /api/v1/projects/{name}/releases` | `list_releases` | `release list` | — | equal |
+| `POST /api/v1/projects/{name}/releases` | `create_release` | `release create` | — | equal |
+| `GET /api/v1/projects/{name}/releases/compare` | `compare_releases` | `release compare` | — | equal |
+| `GET /api/v1/projects/{name}/releases/next` | `propose_next_release_version` | `release next` | — | equal |
+| `GET /api/v1/projects/{name}/releases/notes` | `preview_release_notes` | `release notes` | — | equal |
+| `DELETE /api/v1/projects/{name}/releases/{version}` | `delete_draft_release` | `release delete` | — | equal |
+| `GET /api/v1/projects/{name}/releases/{version}` | `get_release` | `release show` | — | equal |
+| `PATCH /api/v1/projects/{name}/releases/{version}` | `edit_release` | `release edit` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/assets` | `attach_release_assets` | `release assets` | — | equal |
+| `DELETE /api/v1/projects/{name}/releases/{version}/assets/{asset}` | `remove_release_asset` | `release assets` | — | equal |
+| `GET /api/v1/projects/{name}/releases/{version}/assets/{asset}` | — | `release assets` | — | exempt: a file download is a byte stream, not a tool result; get_release gives each asset's size, SHA-256 and provenance |
+| `PUT /api/v1/projects/{name}/releases/{version}/assets/{asset}` | `upload_release_file` | `release assets` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/candidate` | `make_release_candidate` | `release candidate` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/changelog` | `propose_release_changelog` | `release changelog` | — | equal |
+| `GET /api/v1/projects/{name}/releases/{version}/checklist` | `get_release_checklist` | `release checklist` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/clearances` | `give_release_clearance` | `release clearance` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/notes` | `edit_release` | `release edit` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/plan` | `plan_release_promotion` | `release plan` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/promote` | `promote_release` | `release promote` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/publish` | `publish_release` | `release publish` | — | equal |
+| `POST /api/v1/projects/{name}/releases/{version}/yank` | `withdraw_release` | `release yank` | — | equal |
 | `GET /api/v1/projects/{name}/rollback` | `get_rollback_options` | `deployments options` | — | equal |
 | `POST /api/v1/projects/{name}/rollbacks` | `rollback_deployment` | `deployments rollback` | — | equal |
 | `GET /api/v1/projects/{name}/run-trigger-allows` | `list_run_trigger_allows` | `run-triggers allowed` | `not needed by terraform` | equal |
@@ -212,6 +238,20 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/registry/gc` | `registry_gc` | `registry gc` | `not needed by terraform` | equal |
 | `GET /api/v1/registry/policy` | `get_registry_policy` | `registry policy get` | `not needed by terraform` | equal |
 | `PUT /api/v1/registry/policy` | `set_registry_policy` | `registry policy set` | — | exempt: MCP and CLI manage the registry policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
+| `GET /api/v1/release-calendar` | `get_release_calendar` | `release calendar` | — | equal |
+| `GET /api/v1/release-formations` | `get_release_formation` | `release formation` | — | equal |
+| `POST /api/v1/release-formations` | `create_release_formation` | `release formation` | — | equal |
+| `GET /api/v1/release-formations/{id}` | `get_release_formation` | `release formation` | — | equal |
+| `POST /api/v1/release-formations/{id}/advance` | `advance_release_formation` | `release formation` | — | equal |
+| `POST /api/v1/release-formations/{id}/promote` | `promote_release_formation` | `release formation` | — | equal |
+| `GET /api/v1/release-freezes` | `list_release_freezes` | `release freeze` | — | equal |
+| `POST /api/v1/release-freezes` | `create_release_freeze` | `release freeze` | — | equal |
+| `POST /api/v1/release-freezes/{id}/cancel` | `cancel_release_freeze` | `release freeze` | — | equal |
+| `GET /api/v1/release-installation` | `get_release_settings` | `release installation` | — | equal |
+| `PUT /api/v1/release-installation` | `set_release_installation` | `release installation` | — | equal |
+| `GET /api/v1/release-matrix` | `get_release_matrix` | `release matrix` | — | equal |
+| `GET /api/v1/release-report` | `get_release_report` | `release report` | — | equal |
+| `GET /api/v1/releases` | `list_releases` | `release list` | — | equal |
 | `DELETE /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `GET /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `PATCH /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
@@ -398,6 +438,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /public/releases/{name}/{version}/{asset}` | — | — | — | exempt: the public download of a release file, for installations that allow public content: unauthenticated by design; everything else is a not found |
 | `GET /readyz` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /schema/pipeline.json` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /{owner}/{name}/git-receive-pack` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |

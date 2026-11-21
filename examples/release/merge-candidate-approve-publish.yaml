@@ -1,0 +1,40 @@
+# Merge, draft a candidate, approve, publish: every merge to main drafts the next release as a
+# candidate, with notes, and waits for a person with the operator role to approve; the approved
+# candidate is published (the annotated tag is made then). The version comes from the input, which
+# `launchway release next` proposes.
+pipeline: shop-candidate
+on:
+  push: { branches: [main] }
+libraries:
+  platform: { repo: platform, version: v1 }
+inputs:
+  release: { type: boolean, default: false, description: Draft a release candidate from this run }
+  version: { type: string, default: "", description: The version to release }
+steps:
+  build:
+    description: Build the service
+    image: golang:1.26
+    run: go build -o dist/shop ./cmd/shop
+  candidate:
+    uses: platform/release-publish
+    needs: build
+    when: { input: release, equals: true }
+    with:
+      image: registry.example.internal/tools/launchway:latest
+      server: https://launchway.example.internal
+      version: { input: version }
+      publish: "false"
+  approve:
+    kind: approval
+    needs: candidate
+    message: Publish this release? Read its notes first.
+    approvers: { count: 1 }
+  publish:
+    image: registry.example.internal/tools/launchway:latest
+    needs: approve
+    secrets:
+      RELEASE_TOKEN: { store: vault, key: ci/launchway, field: token }
+    env: { RELEASE_SERVER: "https://launchway.example.internal" }
+    run: |
+      export LAUNCHWAY_SERVER=$RELEASE_SERVER LAUNCHWAY_TOKEN=$RELEASE_TOKEN
+      launchway release publish "$LAUNCHWAY_PROJECT" "$LAUNCHWAY_INPUT_VERSION"

@@ -69,6 +69,7 @@ export const SECTIONS: Section[] = [
     tabs: [
       { id: "overview", label: "Overview", href: "/deployments", icon: "deploy" },
       { id: "environments", get label() { return say("{Environments}"); }, href: "/deployments/environments", icon: "list", aka: "Environments" },
+      { id: "releases", label: "Releases", href: "/deployments/releases", icon: "package" },
       // Appears when a deploy runner has seen an Argo CD application.
       { id: "applications", label: "Applications", href: "/deployments/applications", icon: "graph", show: ({ facts }) => has(facts.applications) },
       { id: "hosts", label: "Hosts", href: "/deployments/hosts", icon: "server", soon: true },
@@ -230,6 +231,8 @@ export const PAGES: PageInfo[] = [
   page("/deployments/environments", "deployments", "environments", () => terms().say("{Environments}"), () => [{ label: terms().say("{Environments}") }]),
   page("/deployments/environments/:name", "deployments", "environments", (p) => terms().say(`{Environment} ${p.name}`),
     (p) => [{ label: terms().say("{Environments}"), href: "/deployments/environments" }, { label: p.name }]),
+  ...["", "/:a", "/:a/:b"].map((x) => page("/deployments/releases" + x, "deployments", "releases", (p) => (p.b ? `Release ${p.a} ${p.b}` : p.a ? `Releases: ${p.a}` : "Releases"),
+    (p) => [{ label: "Releases", href: p.a ? "/deployments/releases" : undefined }, ...(p.a ? [{ label: p.b ? `${p.a} ${p.b}` : p.a }] : [])])),
   page("/deployments/hosts", "deployments", "hosts", () => "Hosts", () => [{ label: "Hosts" }]),
   page("/deployments/machine-images", "deployments", "machine-images", () => "Machine images", () => [{ label: "Machine images" }]),
   page("/deployments/applications", "deployments", "applications", () => "Applications", () => [{ label: "Applications" }]),
