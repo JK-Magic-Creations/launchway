@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand/v2"
 	"sort"
 	"strconv"
 	"strings"
@@ -507,8 +506,8 @@ type ctxQuerier struct {
 	ctx context.Context
 }
 
-func (q ctxQuerier) QueryRow(s string, a ...any) *sql.Row {
-	return q.d.QueryRowContext(q.ctx, rebind(q.d.pg, s), a...)
+func (q ctxQuerier) QueryRow(s string, a ...any) *rowx {
+	return &rowx{row: q.d.QueryRowContext(q.ctx, rebind(q.d.pg, s), a...)}
 }
 
 // knows reports whether this build knows schema v, and so its tables,
@@ -1627,6 +1626,7 @@ func (e *Engine) withRun(runID string, fn func(c *cmd) error) error {
 // runTx is withRun that, if create is set, also accepts a run that does not
 // exist yet.
 func (e *Engine) runTx(runID string, create bool, fn func(c *cmd) error) error {
+	rt := e.db.retrier(maxAttempts, true)
 	for attempt := 1; ; attempt++ {
 		c, err := e.attemptTx(runID, create, fn)
 		if err == nil {
@@ -1643,14 +1643,12 @@ func (e *Engine) runTx(runID string, create bool, fn func(c *cmd) error) error {
 			}
 			return nil
 		}
-		if !isConflict(err) {
+		if err = rt.next(err); err != nil {
+			if isConflict(err) {
+				return fmt.Errorf("run %s kept changing underneath this command (%d attempts): %w", runID, attempt, err)
+			}
 			return err
 		}
-		if attempt == maxAttempts {
-			return fmt.Errorf("run %s kept changing underneath this command (%d attempts): %w", runID, attempt, err)
-		}
-		// Back off a little, at random, so competing servers spread out.
-		time.Sleep(time.Duration(rand.Int64N(int64(attempt)*int64(2*time.Millisecond))) + time.Millisecond)
 	}
 }
 

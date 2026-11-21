@@ -39,9 +39,9 @@ type Config struct {
 	// share. The environment variable LAUNCHWAY_DATABASE overrides it; the
 	// default is launchway.db in the data directory.
 	Database string `yaml:"database"`
-	// DatabaseWait is how long a starting server keeps trying a database
-	// that does not answer before it gives up; default 60s.
-	DatabaseWait string `yaml:"database_wait"`
+	// DatabaseWait: how long a starting server tries an unanswering database; default 60s.
+	DatabaseWait string           `yaml:"database_wait"`
+	Resilience   ResilienceConfig `yaml:"resilience"` // riding through a brief database outage
 	// User is who every action is recorded as when sign-in is off
 	// (auth.mode: none).
 	User     string          `yaml:"user"`

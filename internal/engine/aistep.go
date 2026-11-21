@@ -159,7 +159,7 @@ func day(ms int64) string { return time.UnixMilli(ms).UTC().Format("2006-01-02")
 
 // tokensUsed returns the tokens a project used with a model today.
 func tokensUsed(q interface {
-	QueryRow(string, ...any) *sql.Row
+	QueryRow(string, ...any) *rowx
 }, project, model string, now int64) (int64, error) {
 	var in, out int64
 	err := q.QueryRow(`SELECT input_tokens, output_tokens FROM ai_usage WHERE project = ? AND model = ? AND day = ?`,

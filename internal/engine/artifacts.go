@@ -407,7 +407,7 @@ func (a *artifactRow) statusText() string {
 }
 
 type querier interface {
-	QueryRow(string, ...any) *sql.Row
+	QueryRow(string, ...any) *rowx
 	Query(string, ...any) (*sql.Rows, error)
 }
 
@@ -786,25 +786,19 @@ func leaseHeld(tx *txx, leaseID string) error {
 // artifactTx runs fn in a transaction, retrying on conflicts between
 // servers.
 func (e *Engine) artifactTx(fn func(tx *txx, now int64) error) error {
-	for attempt := 1; ; attempt++ {
-		err := func() error {
-			unlock := e.writeLock()
-			defer unlock()
-			tx, err := e.db.Begin()
-			if err != nil {
-				return err
-			}
-			defer tx.Rollback()
-			if err := fn(tx, e.now().UnixMilli()); err != nil {
-				return err
-			}
-			return tx.Commit()
-		}()
-		if err == nil || !isConflict(err) || attempt == maxAttempts {
+	return e.db.retryTx(maxAttempts, false, func() error {
+		unlock := e.writeLock()
+		defer unlock()
+		tx, err := e.db.Begin()
+		if err != nil {
 			return err
 		}
-		time.Sleep(time.Duration(attempt) * 3 * time.Millisecond)
-	}
+		defer tx.Rollback()
+		if err := fn(tx, e.now().UnixMilli()); err != nil {
+			return err
+		}
+		return tx.Commit()
+	})
 }
 
 // uploadingFile is a file of an artifact being uploaded, checked against the

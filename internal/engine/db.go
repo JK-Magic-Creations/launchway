@@ -21,8 +21,9 @@ import (
 // on either SQLite or PostgreSQL.
 type dbx struct {
 	*sql.DB
-	pg  bool
-	dsn string
+	pg        bool
+	dsn       string
+	retryConf // the stall budget (dbretry.go)
 }
 
 type txx struct {
@@ -46,18 +47,6 @@ func rebind(pg bool, q string) string {
 	}
 	return b.String()
 }
-
-func (d *dbx) Exec(q string, a ...any) (sql.Result, error) { return d.DB.Exec(rebind(d.pg, q), a...) }
-func (d *dbx) Query(q string, a ...any) (*sql.Rows, error) { return d.DB.Query(rebind(d.pg, q), a...) }
-func (d *dbx) QueryRow(q string, a ...any) *sql.Row        { return d.DB.QueryRow(rebind(d.pg, q), a...) }
-func (d *dbx) Begin() (*txx, error) {
-	tx, err := d.DB.Begin()
-	return &txx{Tx: tx, pg: d.pg}, err
-}
-
-func (t *txx) Exec(q string, a ...any) (sql.Result, error) { return t.Tx.Exec(rebind(t.pg, q), a...) }
-func (t *txx) Query(q string, a ...any) (*sql.Rows, error) { return t.Tx.Query(rebind(t.pg, q), a...) }
-func (t *txx) QueryRow(q string, a ...any) *sql.Row        { return t.Tx.QueryRow(rebind(t.pg, q), a...) }
 
 // isPostgres reports whether a database address is a PostgreSQL URL.
 func isPostgres(addr string) bool {
@@ -1436,7 +1425,7 @@ func minimumFor(v int) int {
 // readSchema reads the database's schema version and minimum. A database
 // last migrated before schema 8 has no minimum stored; it is worked out.
 func readSchema(q interface {
-	QueryRow(string, ...any) *sql.Row
+	QueryRow(string, ...any) *rowx
 }) (SchemaInfo, error) {
 	var info SchemaInfo
 	for key, dst := range map[string]*int{"schema_version": &info.Database, "schema_min": &info.Minimum} {

@@ -29,7 +29,7 @@ the database, and nothing an administrator manages day to day.
 
 | Stays in the file | Why |
 |---|---|
-| `listen`, `data`, `database`, `database_wait`, `user` | Where the server runs and how it reaches the database |
+| `listen`, `data`, `database`, `database_wait`, `resilience.stall_budget`, `user` | Where the server runs and how it reaches the database |
 | `server.trust_proxy`, `server.drain_delay` | How it sits behind a proxy or load balancer |
 | `auth.mode`, `auth.oidc`, `auth.idle_timeout`, `auth.session_lifetime`, `auth.allow_anonymous` | Sign-in must work before anyone can change anything |
 | `auth.admins` | The first administrators, and the way back in if the role bindings lock everyone out |
@@ -141,6 +141,7 @@ runner_pools:
 | `data` | directory | `launchway-data` | Holds the repository mirrors, the built-in runner's workspaces, the default SQLite database and the default artifact store. Made absolute |
 | `database` | path or URL | `<data>/launchway.db` | A SQLite file for one server, or a `postgres://` URL that several servers share. `LAUNCHWAY_DATABASE` overrides it |
 | `database_wait` | duration | `60s` | How long a starting server keeps trying a database that does not answer. Checked when the server starts |
+| `resilience.stall_budget` | duration | `120s` | How long a request waits for a database that is briefly gone (a failover, a restart) before it is answered `503` with `Retry-After`. Transient errors (connection refused or reset, a failover in progress, a read-only standby, serialization failures, deadlocks, too many connections) are retried inside this budget in the store layer; constraint, syntax and not-found errors never are. A statement cut off in the middle is repeated only if it is a read or its whole transaction was rolled back; a cut-off commit is reported, never repeated blindly |
 | `user` | text | the operating system user, else `local` | Who every action is recorded as when sign-in is off (`auth.mode: none`) |
 
 ## Server
