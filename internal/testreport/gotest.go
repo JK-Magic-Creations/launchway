@@ -44,6 +44,11 @@ type goTest struct {
 	out   tailBuf
 	facts lineFacts
 	done  bool
+	// loose is what the package printed, with no test named, while this test ran:
+	// the output of a subprocess or a goroutine that outlived its test, which go test
+	// cannot tie to a test. It is shown for a failed test that printed nothing itself.
+	loose      tailBuf
+	looseFacts lineFacts
 }
 
 type goPkg struct {
@@ -55,11 +60,23 @@ type goPkg struct {
 	panicLine   string
 	panicRest   headBuf
 	inPanic     bool
-	buildText   bool // the output says [build failed] or [setup failed]
-	badTests    bool // a test failed or did not finish
+	active      []*goTest         // tests that started and have not finished
+	kids        map[string]*goKid // failed subtests, by the name of the test that ran them
+	buildText   bool              // the output says [build failed] or [setup failed]
+	badTests    bool              // a test failed or did not finish
 	finished    bool
 	finishedBad bool
 }
+
+// goKid is what a parent test says about its failed subtests.
+type goKid struct {
+	n     int
+	lines []string
+}
+
+// maxLooseTests is how many tests may run at once for package output to be
+// shown with them: with more, it cannot be said which one printed it.
+const maxLooseTests = 4
 
 type goBuild struct {
 	out    tailBuf
@@ -252,6 +269,7 @@ func (g *goParser) pkg(name string) *goPkg {
 	p := &goPkg{
 		name:      name,
 		tests:     map[string]*goTest{},
+		kids:      map[string]*goKid{},
 		out:       tailBuf{max: 4 * g.lim.MaxOutputBytes},
 		facts:     lineFacts{limit: 4 * g.lim.MaxMessageBytes},
 		panicRest: headBuf{max: 4 * g.lim.MaxDetailsBytes},
@@ -264,9 +282,11 @@ func (g *goParser) pkg(name string) *goPkg {
 
 func (g *goParser) newTest(name string) *goTest {
 	return &goTest{
-		name:  name,
-		out:   tailBuf{max: 4 * g.lim.MaxOutputBytes},
-		facts: lineFacts{limit: 4 * g.lim.MaxMessageBytes},
+		name:       name,
+		out:        tailBuf{max: 4 * g.lim.MaxOutputBytes},
+		facts:      lineFacts{limit: 4 * g.lim.MaxMessageBytes},
+		loose:      tailBuf{max: g.lim.MaxOutputBytes},
+		looseFacts: lineFacts{limit: 4 * g.lim.MaxMessageBytes},
 	}
 }
 
@@ -280,6 +300,7 @@ func (g *goParser) test(p *goPkg, name string) *goTest {
 	t := g.newTest(name)
 	p.tests[name] = t
 	p.order = append(p.order, t)
+	p.active = append(p.active, t)
 	g.live++
 	return t
 }
@@ -369,6 +390,35 @@ func (p *goPkg) addOutput(out string) {
 			p.facts.see(t)
 		}
 	})
+	p.attributeLoose(out)
+}
+
+// attributeLoose gives package-level output to the tests running just now, when
+// there are few enough for that to mean something.
+func (p *goPkg) attributeLoose(out string) {
+	if len(p.active) == 0 || len(p.active) > maxLooseTests {
+		return
+	}
+	forLines(out, func(line string) {
+		t := strings.TrimSpace(line)
+		if t == "" || isPackageNoise(t) {
+			return
+		}
+		for _, at := range p.active {
+			at.looseFacts.see(t)
+			at.loose.writeString(line)
+		}
+	})
+}
+
+// dropActive forgets a test that finished.
+func (p *goPkg) dropActive(t *goTest) {
+	for i, a := range p.active {
+		if a == t {
+			p.active = append(p.active[:i], p.active[i+1:]...)
+			return
+		}
+	}
 }
 
 // isPackageNoise says whether a package-level output line is just the
@@ -404,6 +454,36 @@ func (g *goParser) finishTest(p *goPkg, name, action string, ms int64) {
 	default:
 		st = Skipped
 	}
+	p.dropActive(t)
+	var msg, outText string
+	var outCut bool
+	if st != Passed {
+		msg = t.facts.fileLine
+		if msg == "" {
+			msg = t.facts.first
+		}
+	}
+	if st == Failed {
+		outText, outCut = t.out.text()
+		if strings.TrimSpace(outText) == "" {
+			// It printed nothing itself: what the package printed meanwhile, a
+			// subprocess's output for instance, is the best there is to show.
+			if outText, outCut = t.loose.text(); strings.TrimSpace(outText) != "" && msg == "" {
+				if msg = t.looseFacts.fileLine; msg == "" {
+					msg = t.looseFacts.first
+				}
+			}
+		}
+		if kids := p.kids[name]; kids != nil {
+			// A parent test fails because a subtest did; say which ones, and why.
+			head := fmt.Sprintf("%d subtest%s failed", kids.n, plural(kids.n))
+			if msg == "" {
+				msg = head + ": " + kids.lines[0]
+			}
+			outText = head + ":\n" + strings.Join(kids.lines, "\n") + "\n" + outText
+		}
+		p.noteKid(name, msg)
+	}
 	g.col.add(st, false, func() Case {
 		cs := Case{
 			Suite:      cleanName(p.name, g.lim.MaxNameBytes),
@@ -411,19 +491,56 @@ func (g *goParser) finishTest(p *goPkg, name, action string, ms int64) {
 			DurationMs: ms,
 		}
 		if st != Passed {
-			msg := t.facts.fileLine
-			if msg == "" {
-				msg = t.facts.first
-			}
 			cs.Message = cleanMessage(msg, g.lim.MaxMessageBytes, false)
 		}
 		if st == Failed {
-			out, cut := t.out.text()
-			cs.Output = cleanTail(out, g.lim.MaxOutputBytes, cut)
+			cs.Output = cleanTail(outText, g.lim.MaxOutputBytes, outCut)
 		}
 		return cs
 	})
+	delete(p.kids, name)
+	t.loose = tailBuf{}
 	t.out = tailBuf{}
+}
+
+func plural(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
+}
+
+// maxKidLines is how many failed subtests a parent test names.
+const maxKidLines = 10
+
+// maxKidParents bounds the parents remembered at once.
+const maxKidParents = 1000
+
+// noteKid records a failed test with each test above it in the name (go test
+// reports "A/b/c" without an event for "A/b" when b only groups c).
+func (p *goPkg) noteKid(name, msg string) {
+	for i := 0; i < len(name); i++ {
+		if name[i] != '/' {
+			continue
+		}
+		parent := name[:i]
+		k := p.kids[parent]
+		if k == nil {
+			if len(p.kids) >= maxKidParents {
+				continue
+			}
+			k = &goKid{}
+			p.kids[parent] = k
+		}
+		k.n++
+		if len(k.lines) < maxKidLines {
+			line := name[i+1:]
+			if msg != "" {
+				line += ": " + firstLine(msg)
+			}
+			k.lines = append(k.lines, line)
+		}
+	}
 }
 
 const notFinished = "the test did not finish: the test binary stopped (a panic, a timeout or a crash)"
@@ -466,6 +583,9 @@ func (g *goParser) closePkg(p *goPkg, failed bool, failedBuild string) {
 				cs.Details = cleanBlock(string(p.panicRest.b), g.lim.MaxDetailsBytes, p.panicRest.over)
 			}
 			out, cut := t.out.text()
+			if strings.TrimSpace(out) == "" {
+				out, cut = t.loose.text()
+			}
 			cs.Output = cleanTail(out, g.lim.MaxOutputBytes, cut)
 			return cs
 		})

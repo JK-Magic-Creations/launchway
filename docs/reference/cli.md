@@ -26,7 +26,7 @@ launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
 launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
-launchway doctor   [database]                 would this installation survive losing its database?
+launchway doctor   [database|git]             would this installation survive losing its database? is git new enough?
 launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
 launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
 launchway version
@@ -772,7 +772,15 @@ The same operations are the routes under [Variables](http-api.md#variables) in t
 
 ## launchway doctor
 
-Checks an installation and says what it finds in plain words. It reads the same `--config` as the server (and `LAUNCHWAY_DATABASE`) and opens the database directly, not through a server.
+Checks an installation and says what it finds in plain words. With no section it runs both, git first. It reads the same `--config` as the server (and `LAUNCHWAY_DATABASE`) and opens the database directly, not through a server.
+
+### launchway doctor git
+
+```text
+launchway doctor git [--json]
+```
+
+Names the git installed on this machine and says whether Git hosting can be turned on with it: `Git: 2.47.3; Git hosting can be turned on (it needs 2.38 or newer)`. With an older git, or none, it says what is needed instead; turning on `forge.hosting` is refused with the same words, and everything else keeps working. `--json` prints `version`, `hosting_minimum` and `hosting` (`ok`, `too old` or `no git`).
 
 ### launchway doctor database
 

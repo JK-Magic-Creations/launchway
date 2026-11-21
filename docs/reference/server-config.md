@@ -366,8 +366,8 @@ never from the file.
 ## Forge
 
 Launchway's own Git hosting: it keeps repositories in the database and the artifact store and serves them
-over HTTPS (see [Hosted repository storage](../development/forge-storage.md)). It needs `git` 2.28 or newer on
-the server and a blob store shared by every server. Turning it off stops the Git endpoints and keeps the
+over HTTPS (see [Hosted repository storage](../development/forge-storage.md)). It needs `git` 2.38 or newer on
+the server (older git: hosting refuses to turn on and says so; `launchway doctor git` shows the version) and a blob store shared by every server. Turning it off stops the Git endpoints and keeps the
 data. These are installation settings, kept in the database: an administrator sets them under
 Configuration, Installation settings, with `launchway config` or through the API (a file's `forge:` section
 is imported once, like the other settings that moved). Hosting is off until it is switched on, and a change

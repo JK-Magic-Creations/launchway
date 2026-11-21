@@ -1,0 +1,64 @@
+{"ImportPath":"example.com/demo/broken [example.com/demo/broken.test]","Action":"build-output","Output":"# example.com/demo/broken [example.com/demo/broken.test]\n"}
+{"ImportPath":"example.com/demo/broken [example.com/demo/broken.test]","Action":"build-output","Output":"broken/b.go:3:23: undefined: undefinedName\n"}
+{"ImportPath":"example.com/demo/broken [example.com/demo/broken.test]","Action":"build-fail"}
+{"Time":"2026-11-21T08:40:00Z","Action":"start","Package":"example.com/demo/boom"}
+{"Time":"2026-11-21T08:40:00Z","Action":"start","Package":"example.com/demo/broken"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/broken","Output":"FAIL\texample.com/demo/broken [build failed]\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/broken","Elapsed":0,"FailedBuild":"example.com/demo/broken [example.com/demo/broken.test]"}
+{"Time":"2026-11-21T08:40:00Z","Action":"start","Package":"example.com/demo/mainfail"}
+{"Time":"2026-11-21T08:40:00Z","Action":"start","Package":"example.com/demo/subproc"}
+{"Time":"2026-11-21T08:40:00Z","Action":"run","Package":"example.com/demo/subproc","Test":"TestChildSaysWhy"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestChildSaysWhy","Output":"=== RUN   TestChildSaysWhy\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"run","Package":"example.com/demo/boom","Test":"TestFine"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestFine","Output":"=== RUN   TestFine\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestFine","Output":"--- PASS: TestFine (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"pass","Package":"example.com/demo/boom","Test":"TestFine","Elapsed":0}
+{"Time":"2026-11-21T08:40:00Z","Action":"run","Package":"example.com/demo/boom","Test":"TestBoom"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"=== RUN   TestBoom\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"    boom_test.go:9: about to write\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/mainfail","Output":"setup: cannot reach the database at 127.0.0.1:1\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"--- FAIL: TestBoom (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/mainfail","Output":"FAIL\texample.com/demo/mainfail\t0.002s\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/mainfail","Elapsed":0.002}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestChildSaysWhy","Output":"child: fatal: the reason is here\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestChildSaysWhy","Output":"--- FAIL: TestChildSaysWhy (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/subproc","Test":"TestChildSaysWhy","Elapsed":0}
+{"Time":"2026-11-21T08:40:00Z","Action":"run","Package":"example.com/demo/subproc","Test":"TestParent"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent","Output":"=== RUN   TestParent\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"run","Package":"example.com/demo/subproc","Test":"TestParent/one"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent/one","Output":"=== RUN   TestParent/one\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent/one","Output":"    s_test.go:19: one broke: 1\n","OutputType":"error"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent/one","Output":"--- FAIL: TestParent/one (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/subproc","Test":"TestParent/one","Elapsed":0}
+{"Time":"2026-11-21T08:40:00Z","Action":"run","Package":"example.com/demo/subproc","Test":"TestParent/two"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent/two","Output":"=== RUN   TestParent/two\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent/two","Output":"--- PASS: TestParent/two (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"pass","Package":"example.com/demo/subproc","Test":"TestParent/two","Elapsed":0}
+{"Time":"2026-11-21T08:40:00Z","Action":"run","Package":"example.com/demo/subproc","Test":"TestParent/three"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent/three","Output":"=== RUN   TestParent/three\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent/three","Output":"    s_test.go:21: three broke\n","OutputType":"error"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent/three","Output":"--- FAIL: TestParent/three (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/subproc","Test":"TestParent/three","Elapsed":0}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Test":"TestParent","Output":"--- FAIL: TestParent (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/subproc","Test":"TestParent","Elapsed":0}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Output":"FAIL\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/subproc","Output":"FAIL\texample.com/demo/subproc\t0.002s\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/subproc","Elapsed":0.003}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"panic: assignment to entry in nil map [recovered, repanicked]\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"goroutine 8 [running]:\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"testing.tRunner.func1.2({0x6b83a0, 0x6eff10})\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"\t/usr/local/go/src/testing/testing.go:2125 +0x232\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"testing.tRunner.func1()\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"\t/usr/local/go/src/testing/testing.go:2128 +0x329\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"panic({0x6b83a0?, 0x6eff10?})\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"\t/usr/local/go/src/runtime/panic.go:859 +0x125\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"example.com/demo/boom.TestBoom(0x267889242488?)\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"\t/src/boom/boom_test.go:10 +0x53\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"testing.tRunner(0x267889242488, 0x6d5e38)\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"\t/usr/local/go/src/testing/testing.go:2195 +0xea\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"created by testing.(*T).Run in goroutine 1\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Test":"TestBoom","Output":"\t/usr/local/go/src/testing/testing.go:2260 +0x4d4\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/boom","Test":"TestBoom","Elapsed":0}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"example.com/demo/boom","Output":"FAIL\texample.com/demo/boom\t0.004s\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"example.com/demo/boom","Elapsed":0.004}

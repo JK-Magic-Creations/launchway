@@ -11,12 +11,15 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/forge/hosting"
 )
 
 const doctorUsage = `Usage:
-  launchway doctor [database] [--config launchway.yaml] [--json]
+  launchway doctor [database|git] [--config launchway.yaml] [--json]
 
-Checks an installation and says what it finds in plain words.
+Checks an installation and says what it finds in plain words. With no section
+it runs both.
+  git        the installed git, and whether it is new enough for Git hosting
   database   whether this installation would survive the loss of its database,
              and what would be lost
 `
@@ -37,21 +40,61 @@ func unknownCommand(name string) int {
 	return 2
 }
 
-// cmdDoctor runs the doctor's sections; today there is one, database. It
-// reads the same configuration as the server (and LAUNCHWAY_DATABASE) and
+// gitReport describes the installed git for the doctor.
+type gitReport struct {
+	Version string `json:"version,omitempty"`
+	Minimum string `json:"hosting_minimum"`
+	Hosting string `json:"hosting"` // "ok", "too old" or "no git"
+	Message string `json:"message,omitempty"`
+}
+
+func checkGit(ctx context.Context) gitReport {
+	v, err := hosting.CheckGit(ctx)
+	r := gitReport{Version: v.String(), Minimum: hosting.MinGitText(), Hosting: "ok"}
+	if err != nil {
+		r.Message = err.Error()
+		r.Hosting = "too old"
+		if v.Raw == "" {
+			r.Hosting = "no git"
+		}
+	}
+	return r
+}
+
+func (r gitReport) lines() []string {
+	switch r.Hosting {
+	case "ok":
+		return []string{fmt.Sprintf("Git: %s; Git hosting can be turned on (it needs %s or newer)", r.Version, r.Minimum)}
+	default:
+		return []string{"Git: " + r.Message}
+	}
+}
+
+// cmdDoctor runs the doctor's sections, git and database. It reads the same configuration as the server (and LAUNCHWAY_DATABASE) and
 // opens the database directly, not through a server.
 func cmdDoctor(args []string) error {
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
 		fmt.Print(doctorUsage)
 		return nil
 	}
-	if len(args) > 0 && args[0] == "database" {
-		args = args[1:]
+	section := ""
+	if len(args) > 0 && (args[0] == "database" || args[0] == "git") {
+		section, args = args[0], args[1:]
 	}
 	fs := flag.NewFlagSet("doctor", flag.ExitOnError)
 	cfgPath := fs.String("config", "launchway.yaml", "configuration file")
 	asJSON := fs.Bool("json", false, "print JSON")
 	_ = fs.Parse(args)
+	if section == "git" {
+		r := checkGit(context.Background())
+		if *asJSON {
+			return json.NewEncoder(os.Stdout).Encode(map[string]any{"git": r})
+		}
+		for _, l := range r.lines() {
+			fmt.Println(l)
+		}
+		return nil
+	}
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
 		return err
@@ -71,8 +114,22 @@ func cmdDoctor(args []string) error {
 		return fmt.Errorf("the database cannot be reached, so nothing can be said about its availability: %w", err)
 	}
 	as := st.Assess()
+	var gr *gitReport
+	if section == "" {
+		r := checkGit(ctx)
+		gr = &r
+	}
 	if *asJSON {
-		return json.NewEncoder(os.Stdout).Encode(map[string]any{"database": st, "assessment": as, "stall_budget": budget.String()})
+		out := map[string]any{"database": st, "assessment": as, "stall_budget": budget.String()}
+		if gr != nil {
+			out["git"] = gr
+		}
+		return json.NewEncoder(os.Stdout).Encode(out)
+	}
+	if gr != nil {
+		for _, l := range gr.lines() {
+			fmt.Println(l)
+		}
 	}
 	fmt.Printf("Database availability: %s\n", as.Level)
 	for _, l := range as.Lines {

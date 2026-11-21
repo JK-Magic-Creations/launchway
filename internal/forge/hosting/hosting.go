@@ -30,10 +30,6 @@ import (
 // hosting is first turned on.
 const ConnectionName = "launchway"
 
-// MinGit is the oldest git that can host (the reference-transaction hook is
-// the push's commit point).
-var MinGit = [2]int{2, 28}
-
 // Options configure Hosting.
 type Options struct {
 	Engine *engine.Engine
@@ -89,12 +85,9 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	if o.Log == nil {
 		o.Log = slog.Default()
 	}
-	v, err := gitexec.Installed(ctx)
+	v, err := CheckGit(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("forge.hosting needs git on this server: %w", err)
-	}
-	if !v.AtLeast(MinGit[0], MinGit[1]) {
-		return nil, fmt.Errorf("forge.hosting needs git %d.%d or newer; this server has %s", MinGit[0], MinGit[1], v)
+		return nil, err
 	}
 	for _, m := range v.Missing() {
 		o.Log.Warn("git is too old for part of hosting", "git", v.String(), "missing", m)

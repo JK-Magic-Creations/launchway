@@ -77,9 +77,33 @@ capacity; past that, use the S3 or filesystem store.
 
 ## Git version
 
-`reference-transaction` needs git 2.28. The sequence of hooks and the one-pack-per-push behavior were
-checked on git 2.28.0 and 2.56.1. The server logs the installed version at start-up and warns about what
-it is too old for.
+Git hosting needs **git 2.38 or newer**. `merge-tree --write-tree`, which lands a change without a
+working tree, arrived in git 2.38, and `reference-transaction` (the push's commit point) in 2.28.
+The oldest version the tests were run on is not a guess: the storage and spike packages were run
+whole, with the real binary, on these versions (2026-11-21).
+
+| git | Where it comes from | Result |
+|---|---|---|
+| 2.28.0 | built from source | storage tests fail (12), no `merge-tree --write-tree` |
+| 2.38.0 | built from source (`make test-git-compat`) | pass |
+| 2.39.5 | Debian 12 (bookworm) | pass |
+| 2.43.0 | Ubuntu 24.04 | pass |
+| 2.47.3 | `golang:1.27`, the image the pipeline tests in | pass |
+| 2.52.1 | Alpine 3.23, the base of the product image | pass |
+| 2.56.1 | the development machine | pass |
+
+Two things differ between versions that the code must not depend on, and now does not. Before
+about 2.50, a push to the branch `HEAD` points at puts a `HEAD` line in the transaction that the
+`reference-transaction` hook reads, besides the branch's own line (git 2.47 does, 2.56 does not). The
+server takes only names under `refs/`, once each, from the hook (`realRefUpdates`); recording `HEAD`
+as a ref made the cache fail to follow the ledger on 2.47. The product image installs git from
+Alpine, so it carries a git well above the minimum.
+
+The server refuses to turn Git hosting on with an older git, naming the minimum
+(`launchway doctor git` reports the installed version and the verdict), logs the version at
+start-up, and warns about what it is too old for. Everything but hosting works on any git.
+`make test-git-compat` runs both packages on the minimum so that this cannot regress unseen
+([quality gates](quality-gates.md#the-oldest-supported-git)).
 
 ## Fetching an object by its ID
 
