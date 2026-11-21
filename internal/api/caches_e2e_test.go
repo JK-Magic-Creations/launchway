@@ -348,7 +348,7 @@ func TestHostileCacheEntriesNeverReachOutsideTheWorkspace(t *testing.T) {
 	p, _ := pipeline.Parse([]byte(keyed))
 	for name, data := range cases {
 		sha := ce.commit(t, "requirements.txt", "requests=="+name+"\n")
-		key := executor.CacheKey(platform, "deps", "v1", stagedKey(t, ce, "requirements.txt"))
+		key, _ := executor.CacheKey(executor.CacheKeyInput{Platform: platform, Name: "deps", Text: "v1", Image: executor.ImageIdentity{Ref: "none"}, Files: stagedKey(t, ce, "requirements.txt")})
 		if err := plant(t, ce.env, p, key, platform, data); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}

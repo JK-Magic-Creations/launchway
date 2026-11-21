@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"context"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -47,7 +46,7 @@ import (
 // CacheFormat is mixed into every key, so that a change of how entries are
 // made starts every cache over instead of restoring what a newer runner
 // cannot read.
-const CacheFormat = "launchway-cache-v1"
+const CacheFormat = "launchway-cache-v2"
 
 // ErrCacheArchive says an archive cannot be restored: it is damaged, or not
 // what a run of this project would have made, or too large.
@@ -55,32 +54,6 @@ var ErrCacheArchive = errors.New("the cache entry cannot be restored")
 
 func badArchive(format string, a ...any) error {
 	return fmt.Errorf("%w: %s", ErrCacheArchive, fmt.Sprintf(format, a...))
-}
-
-// CacheKey works out the key of a cache: the platform (operating system and
-// architecture of the runner), the cache's name, the literal text, and the
-// path and SHA-256 of each key file, in sorted order. The files must be
-// those Stage returns for the key's globs.
-func CacheKey(platform, name, text string, files []StagedFile) string {
-	h := sha256.New()
-	put := func(s string) {
-		var n [8]byte
-		binary.BigEndian.PutUint64(n[:], uint64(len(s)))
-		h.Write(n[:])
-		h.Write([]byte(s))
-	}
-	put(CacheFormat)
-	put(platform)
-	put(name)
-	put(text)
-	sorted := slices.Clone(files)
-	slices.SortFunc(sorted, func(a, b StagedFile) int { return strings.Compare(a.Path, b.Path) })
-	put(strconv.Itoa(len(sorted)))
-	for _, f := range sorted {
-		put(f.Path)
-		put(f.SHA256)
-	}
-	return hex.EncodeToString(h.Sum(nil))
 }
 
 // CacheArchive is a packed entry, in a file.

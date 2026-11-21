@@ -32,9 +32,11 @@ const SchemaCache = 25
 //
 // The key is made from the contents of the files key.files names (their
 // paths and SHA-256, in sorted order), the text of key.text mixed in
-// literally, and the runner's operating system and architecture, which are
-// always part of it. An entry is never changed once saved: a new key is a
-// new entry.
+// literally, the values of key.versions (commands run in the step's image,
+// files), and, always, the runner's operating system and architecture and
+// the step's image resolved to its digest: a cache made in one JDK, Node or
+// base image is never restored into another. An entry is never changed once
+// saved: a new key is a new entry.
 type Cache struct {
 	// Name tells the caches of a step apart and groups the entries of one
 	// cache across keys; it is a name as for artifacts.
@@ -59,7 +61,26 @@ type CacheKey struct {
 	Files []string `json:"files,omitempty"`
 	// Text is mixed in literally, so that a team can start over by hand.
 	Text string `json:"text,omitempty"`
+	// Versions name things whose value the cache depends on and the
+	// product cannot know: the output of a command run in the step's image
+	// (java -version) or the contents of a file (.nvmrc). A change of any of
+	// them is a different key.
+	Versions []CacheVersion `json:"versions,omitempty"`
 }
+
+// CacheVersion is one version input of a cache key: a command run in the
+// step's image, whose output is the value, or a file, whose SHA-256 is.
+// Exactly one is set.
+type CacheVersion struct {
+	Run  string `json:"run,omitempty"`
+	File string `json:"file,omitempty"`
+}
+
+// Limits of version inputs.
+const (
+	MaxCacheVersions   = 10
+	MaxCacheVersionRun = 200
+)
 
 // Values of Cache.Fallback and Cache.Save.
 const (
@@ -141,6 +162,21 @@ func CacheProblems(c *Cache) []string {
 	for _, g := range c.Key.Files {
 		if _, msg := checkGlob(g, "key files"); msg != "" {
 			out = append(out, msg)
+		}
+	}
+	if len(c.Key.Versions) > MaxCacheVersions {
+		out = append(out, "key.versions has at most "+strconv.Itoa(MaxCacheVersions)+" entries")
+	}
+	for _, v := range c.Key.Versions {
+		switch {
+		case (v.Run == "") == (v.File == ""):
+			out = append(out, "a version is a command (java -version) or { file: .nvmrc }, not both and not neither")
+		case v.Run != "" && (utf8.RuneCountInString(v.Run) > MaxCacheVersionRun || strings.ContainsFunc(v.Run, func(r rune) bool { return unicode.IsControl(r) })):
+			out = append(out, "a version command is at most "+strconv.Itoa(MaxCacheVersionRun)+" characters on one line")
+		case v.File != "":
+			if _, msg := checkGlob(v.File, "version files"); msg != "" {
+				out = append(out, msg)
+			}
 		}
 	}
 	if utf8.RuneCountInString(c.Key.Text) > MaxCacheKeyText || !utf8.ValidString(c.Key.Text) || strings.ContainsFunc(c.Key.Text, unicode.IsControl) {

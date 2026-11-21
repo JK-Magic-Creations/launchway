@@ -148,7 +148,7 @@ func (ps *parser) cacheKey(v *yaml.Node, where, idx string, scalar func(*yaml.No
 		ps.add(v, where, "key is a mapping: key: { files: [requirements.txt], text: v1 }")
 		return k
 	}
-	ps.eachKey(v, where, []string{"files", "text"}, func(kk, vv *yaml.Node) {
+	ps.eachKey(v, where, []string{"files", "text", "versions"}, func(kk, vv *yaml.Node) {
 		w := where + "." + kk.Value
 		switch kk.Value {
 		case "files":
@@ -177,9 +177,44 @@ func (ps *parser) cacheKey(v *yaml.Node, where, idx string, scalar func(*yaml.No
 			}
 		case "text":
 			k.Text = scalar(vv, w, "text")
+		case "versions":
+			k.Versions = ps.cacheVersions(vv, w)
 		}
 	})
 	return k
+}
+
+// cacheVersions reads key.versions: a list of commands (a plain string) or
+// { run: command } or { file: path }.
+func (ps *parser) cacheVersions(v *yaml.Node, where string) []CacheVersion {
+	if v.Kind != yaml.SequenceNode || len(v.Content) == 0 {
+		ps.add(v, where, "versions is a list of commands or files, such as versions: [java -version, { file: .nvmrc }]")
+		return nil
+	}
+	var out []CacheVersion
+	for i, item := range v.Content {
+		if i >= MaxCacheVersions {
+			ps.add(v, where, "at most %d versions", MaxCacheVersions)
+			break
+		}
+		switch item.Kind {
+		case yaml.ScalarNode:
+			out = append(out, CacheVersion{Run: item.Value})
+		case yaml.MappingNode:
+			var cv CacheVersion
+			ps.eachKey(item, where, []string{"run", "file"}, func(kk, vv *yaml.Node) {
+				if kk.Value == "run" {
+					cv.Run = ps.str(vv, where+".run")
+				} else {
+					cv.File = ps.str(vv, where+".file")
+				}
+			})
+			out = append(out, cv)
+		default:
+			ps.add(item, where, "a version is a command or { file: path }")
+		}
+	}
+	return out
 }
 
 // cloneCaches copies caches so that a loop's members can each take their
@@ -193,6 +228,7 @@ func cloneCaches(in []*Cache) []*Cache {
 		cc := *c
 		cc.Paths = append([]string(nil), c.Paths...)
 		cc.Key.Files = append([]string(nil), c.Key.Files...)
+		cc.Key.Versions = append([]CacheVersion(nil), c.Key.Versions...)
 		out[i] = &cc
 	}
 	return out

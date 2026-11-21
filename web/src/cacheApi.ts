@@ -14,6 +14,8 @@ export interface CacheResult {
   name: string;
   /** The key worked out for the step (64 hex digits). */
   key?: string;
+  /** What the key was made of: image digest, platform, versions, key files. */
+  key_parts?: { label: string; value: string }[];
   result: "hit" | "fallback" | "miss" | "saved" | "not_saved";
   /** When saved or not saved: what the restore found. */
   restored?: "hit" | "fallback" | "miss";

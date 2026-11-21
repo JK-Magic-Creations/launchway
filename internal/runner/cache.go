@@ -182,6 +182,10 @@ type cacheRun struct {
 	platform string
 	dir      string
 	tasks    []*cacheTask
+
+	// image is what the step's image resolved to, once imageDone.
+	image     executor.ImageIdentity
+	imageDone bool
 }
 
 type cacheTask struct {
@@ -190,6 +194,8 @@ type cacheTask struct {
 	// which case skip says why and the cache is neither restored nor saved.
 	key  string
 	skip string
+	// keyParts is what the key is made of, in words.
+	keyParts []executor.KeyPart
 	// restored is what the restore found: hit, fallback or miss.
 	restored string
 	res      engine.CacheResult
@@ -282,13 +288,13 @@ func (cr *cacheRun) restore(parent context.Context, out executor.Sink) {
 func (cr *cacheRun) restoreOne(ctx context.Context, t *cacheTask, out executor.Sink) {
 	name := t.entry.Name
 	start := time.Now()
-	t.key, t.skip = cr.workOutKey(ctx, t)
+	t.key, t.keyParts, t.skip = cr.workOutKey(ctx, t)
 	if t.skip != "" {
 		t.res.Reason = t.skip
 		cr.sys("Cache %s: not used: %s", name, cr.mask(t.skip))
 		return
 	}
-	t.res.Key = t.key
+	t.res.Key, t.res.KeyParts = t.key, keyParts(t.keyParts)
 	var found *engine.CacheLookupResult
 	err := retry(ctx, func() error {
 		var err error
@@ -338,10 +344,11 @@ func (cr *cacheRun) restoreOne(ctx context.Context, t *cacheTask, out executor.S
 	cr.sys("Cache %s: restored key %s (fallback: the step's key is %s; %s, %s)", name, shortKey(en.Key), shortKey(t.key), cacheSize(en.Bytes), secondsText(took))
 }
 
-// workOutKey stages the key's files and hashes them. It returns the key, or
-// why there is none.
-func (cr *cacheRun) workOutKey(ctx context.Context, t *cacheTask) (string, string) {
-	var files []executor.StagedFile
+// workOutKey stages the key's files and hashes them with everything else the
+// key is made of. It returns the key and what it is made of, or why there is
+// none.
+func (cr *cacheRun) workOutKey(ctx context.Context, t *cacheTask) (string, []executor.KeyPart, string) {
+	in := executor.CacheKeyInput{Platform: cr.platform, Name: t.entry.Name, Text: t.entry.KeyText, Image: cr.imageIdentity(ctx)}
 	if len(t.entry.KeyFiles) > 0 {
 		dir := filepath.Join(cr.dir, "key-"+t.entry.Name)
 		staged, err := executor.StageWorkspace(ctx, cr.r.execFor(cr.job), cr.spec, t.entry.KeyFiles, cacheKeyLimits, dir)
@@ -349,15 +356,29 @@ func (cr *cacheRun) workOutKey(ctx context.Context, t *cacheTask) (string, strin
 		if err != nil {
 			if errors.Is(err, executor.ErrNotKept) {
 				if staged != nil && len(staged.Files) == 0 {
-					return "", "key.files matched no file, so there is nothing to tell this cache's key from another's"
+					return "", nil, "key.files matched no file, so there is nothing to tell this cache's key from another's"
 				}
-				return "", "the key's files cannot be read: " + strings.TrimPrefix(err.Error(), executor.ErrNotKept.Error()+": ")
+				return "", nil, "the key's files cannot be read: " + strings.TrimPrefix(err.Error(), executor.ErrNotKept.Error()+": ")
 			}
-			return "", "the key's files cannot be read: " + err.Error()
+			return "", nil, "the key's files cannot be read: " + err.Error()
 		}
-		files = staged.Files
+		in.Files = staged.Files
 	}
-	return executor.CacheKey(cr.platform, t.entry.Name, t.entry.KeyText, files), ""
+	vs, why := cr.versionValues(ctx, t)
+	if why != "" {
+		return "", nil, why
+	}
+	in.Versions = vs
+	key, parts := executor.CacheKey(in)
+	return key, parts, ""
+}
+
+func keyParts(in []executor.KeyPart) []engine.CacheKeyPart {
+	out := make([]engine.CacheKeyPart, len(in))
+	for i, p := range in {
+		out[i] = engine.CacheKeyPart{Label: p.Label, Value: p.Value}
+	}
+	return out
 }
 
 // fetchEntry downloads an entry, checks it, unpacks it safely and puts it in

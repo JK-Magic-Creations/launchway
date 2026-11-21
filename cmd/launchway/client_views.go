@@ -66,6 +66,11 @@ type runView struct {
 			Bytes    int64  `json:"bytes"`
 			Scope    string `json:"scope"`
 			Reason   string `json:"reason"`
+			Key      string `json:"key"`
+			KeyParts []struct {
+				Label string `json:"label"`
+				Value string `json:"value"`
+			} `json:"key_parts"`
 		} `json:"caches"`
 		// Runner is the runner that took the step; Workspace is set for a
 		// step with a workspace of its own; WaitingFor says what a queued

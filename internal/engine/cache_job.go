@@ -31,8 +31,10 @@ type JobCacheEntry struct {
 	Paths    []string `json:"paths"`
 	KeyFiles []string `json:"key_files,omitempty"`
 	KeyText  string   `json:"key_text,omitempty"`
-	Fallback string   `json:"fallback,omitempty"`
-	Save     string   `json:"save,omitempty"`
+	// KeyVersions are the author's version inputs (key.versions).
+	KeyVersions []pipeline.CacheVersion `json:"key_versions,omitempty"`
+	Fallback    string                  `json:"fallback,omitempty"`
+	Save        string                  `json:"save,omitempty"`
 }
 
 // Outcomes of a cache in a step, in CacheResult.Result.
@@ -54,6 +56,9 @@ type CacheResult struct {
 	// Key is the key worked out for the step, 64 hex digits, or empty if it
 	// could not be worked out.
 	Key string `json:"key,omitempty"`
+	// KeyParts is what the key was made of, in words: the image resolved to
+	// its digest, the platform, the author's versions, the key files.
+	KeyParts []CacheKeyPart `json:"key_parts,omitempty"`
 	// Result is hit, fallback or miss for a restore, and saved or not_saved
 	// for a save that was tried.
 	Result string `json:"result"`
@@ -72,6 +77,12 @@ type CacheResult struct {
 	Seconds float64 `json:"seconds,omitempty"`
 }
 
+// CacheKeyPart is one input of a cache key, as shown on the run page.
+type CacheKeyPart struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
 var cacheResults = []string{CacheHit, CacheFallback, CacheMiss, CacheSaved, CacheNotSaved}
 
 // needsCache reports whether a step needs a runner that knows caches.
@@ -86,7 +97,7 @@ func (c *cmd) jobCache(def *pipeline.Step) *JobCache {
 	jc := &JobCache{ChunkBytes: ArtifactChunkBytes}
 	for _, ca := range def.Cache {
 		jc.Caches = append(jc.Caches, JobCacheEntry{Name: ca.Name, Paths: slices.Clone(ca.Paths), KeyFiles: slices.Clone(ca.Key.Files),
-			KeyText: ca.Key.Text, Fallback: ca.Fallback, Save: ca.Save})
+			KeyText: ca.Key.Text, KeyVersions: slices.Clone(ca.Key.Versions), Fallback: ca.Fallback, Save: ca.Save})
 	}
 	if lim, err := c.e.readCacheLimits(c.tx, c.st.Project); err == nil {
 		jc.MaxEntryBytes = lim.maxEntry
@@ -117,6 +128,7 @@ func (c *cmd) keepCacheResults(def *pipeline.Step, in []CacheResult) []CacheResu
 		}
 		seen[r.Name] = true
 		r.Key = cleanKey(r.Key)
+		r.KeyParts = cleanKeyParts(r.KeyParts)
 		if r.Restored != "" && !slices.Contains(cacheResults[:3], r.Restored) {
 			r.Restored = ""
 		}
@@ -134,4 +146,16 @@ func cleanKey(k string) string {
 		return k
 	}
 	return ""
+}
+
+// cleanKeyParts keeps a bounded number of short lines of text.
+func cleanKeyParts(in []CacheKeyPart) []CacheKeyPart {
+	var out []CacheKeyPart
+	for _, p := range in {
+		if len(out) == 40 {
+			break
+		}
+		out = append(out, CacheKeyPart{Label: cleanText(p.Label, 200), Value: cleanText(p.Value, 300)})
+	}
+	return out
 }

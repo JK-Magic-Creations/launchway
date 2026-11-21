@@ -34,6 +34,16 @@ export function CacheResults({ project, caches }: { project: string; caches: Cac
             <span className={`cc-result cc-${c.result}`}>{WORDS[c.result] ?? c.result}</span>
             <span>{sentence(c)}</span>
             {c.key && <span className="faint mono small" title={c.key}>key {c.key.slice(0, 8)}…</span>}
+            {c.key_parts && c.key_parts.length > 0 && (
+              <details className="cc-key">
+                <summary>What the key is made of</summary>
+                <dl>
+                  {c.key_parts.map((p, i) => (
+                    <div key={i}><dt className="mono small">{p.label}</dt><dd className="mono small">{p.value}</dd></div>
+                  ))}
+                </dl>
+              </details>
+            )}
             {c.reason && <span className="cc-reason">{c.result === "not_saved" ? "Why: " : ""}{c.reason}</span>}
           </li>
         ))}

@@ -25,3 +25,9 @@
 .cc-miss { background: var(--idle-soft); color: var(--idle-ink); border-color: transparent; }
 .cc-not_saved { background: var(--warn-soft); color: var(--warn-ink); border-color: transparent; }
 .cc-reason { color: var(--text-2); font-size: 13.5px; overflow-wrap: anywhere; }
+
+.cc-key { margin: 0.25rem 0; }
+.cc-key dl { margin: 0.25rem 0 0 1rem; }
+.cc-key dl > div { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.cc-key dt { font-weight: 600; }
+.cc-key dd { margin: 0; overflow-wrap: anywhere; }

@@ -1562,10 +1562,24 @@ that keeps build layers, is a different thing with a different shape.
 |---|---|---|---|
 | `files` | glob, one value or a list | none | Files whose paths and contents are hashed, in sorted order, such as a lock file. At most 20 globs. If the globs match no file the cache is not used and the log says so |
 | `text` | text | none | Mixed into the key literally, so that a team can start over by hand by changing it. At most 256 characters |
+| `versions` | list | none | Things the cache depends on that Launchway cannot know: a command run in the step's image, whose output is part of the key (`java -version`, `node --version`), or `{ file: .nvmrc }`, whose contents are. A plain string is a command; `{ run: ... }` says so. At most 10, each command at most 200 characters |
 
-A key needs `files`, `text` or both. The runner's operating system and architecture are always part
-of the key and of the entry's platform: an entry saved on `linux/amd64` is never restored on
-`linux/arm64`.
+<!-- keys: cache-version -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `run` | text | none | A command run in the step's image before the script; its output is part of the key. A command that fails counts as its output and exit status |
+| `file` | glob | none | A file whose SHA-256 is part of the key. Exactly one of `run` and `file` |
+
+A key needs `files`, `text` or both. Always part of the key, whatever the author wrote: the format of
+the entry, the runner's operating system and architecture (an entry saved on `linux/amd64` is never
+restored on `linux/arm64`), the cache's name, and **the step's image resolved to its digest**, so a
+tag that moves to another JDK, Node or Python is a different key, not an incompatible restore. A
+reference that carries a digest is used as it is; for others a container engine reports its own copy
+of the image and the Kubernetes executor asks the image's registry. If neither can say, the key uses
+the reference as written and the step's log says so: pin the image by digest, or name the tool's
+version under `versions`. The run page and `launchway runs show` list everything a key was made of.
+Entries made before this was added have keys of the old shape and are never restored again; they
+age out under the cache policy.
 
 An entry is never changed once saved: a key that has an entry is not saved again, and a changed lock
 file is a new key, so a new entry. What a run may read and write depends on how it started, and the

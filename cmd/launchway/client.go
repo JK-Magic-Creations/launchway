@@ -666,6 +666,12 @@ func (cl *client) show(args []string) error {
 				what += ": " + c.Reason
 			}
 			fmt.Fprintf(cl.out, "             cache %s: %s\n", c.Name, what)
+			if c.Key != "" {
+				fmt.Fprintf(cl.out, "               key %s, made of:\n", c.Key)
+				for _, p := range c.KeyParts {
+					fmt.Fprintf(cl.out, "                 %s: %s\n", p.Label, p.Value)
+				}
+			}
 		}
 	}
 	return nil
