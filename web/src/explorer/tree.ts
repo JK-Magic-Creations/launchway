@@ -12,6 +12,8 @@ export interface XItem {
   description?: string;
   /** Where it lives, outermost first (not including the item). */
   path: Seg[];
+  /** Other places it also shows in without living there: the person's own collections. */
+  also?: Seg[][];
   labels: string[];
   /** The group the item belongs to for "kind" filters: language, repository kind... */
   kind?: string;
@@ -66,11 +68,17 @@ export function buildTree(items: XItem[], emptyFolders: { path: Seg[] }[] = []):
   };
   for (const f of emptyFolders) ensure(f.path);
   for (const it of items) {
-    ensure(it.path);
-    for (let i = 0; i <= it.path.length; i++) {
-      const n = nodes.get(nodeKey(it.path.slice(0, i)))!;
-      n.count++;
-      n.tones[it.tone]++;
+    const seen = new Set<string>();
+    for (const path of [it.path, ...(it.also ?? [])]) {
+      ensure(path);
+      for (let i = 0; i <= path.length; i++) {
+        const k = nodeKey(path.slice(0, i));
+        if (seen.has(k)) continue; // an item counts once in a place, however it got there
+        seen.add(k);
+        const n = nodes.get(k)!;
+        n.count++;
+        n.tones[it.tone]++;
+      }
     }
   }
   for (const n of nodes.values()) n.children.sort((a, b) => nodes.get(a)!.label.localeCompare(nodes.get(b)!.label, undefined, { numeric: true }));

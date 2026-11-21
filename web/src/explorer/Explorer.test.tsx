@@ -186,3 +186,38 @@ describe.each(["light", "dark"])("the Explorer is accessible, %s theme", (theme)
     void container;
   });
 });
+
+describe("my collections: arranging for me", () => {
+  it("adds an item to a collection from its menu without moving it for anyone, and shows it there", async () => {
+    const onCollections = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(<Explorer {...props()} onCollections={onCollections} collections={[{ id: "c1", name: "Watching", items: [] }]} />);
+    expect(screen.queryByRole("button", { name: "Arrange for everyone" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Arrange for me" }));
+    expect(screen.getByRole("note")).toHaveTextContent(/yours alone/);
+    await userEvent.click(screen.getByRole("button", { name: "Add web-shop to a collection" }));
+    const dialog = screen.getByRole("dialog", { name: "Add web-shop to a collection" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(onCollections).toHaveBeenCalledWith([{ id: "c1", name: "Watching", items: ["web-shop"] }]));
+    rerender(<Explorer {...props()} onCollections={onCollections} collections={[{ id: "c1", name: "Watching", items: ["web-shop"] }]} />);
+    const tree = screen.getByRole("tree");
+    expect(within(tree).getByRole("treeitem", { name: /My collections, 1 item/ })).toBeInTheDocument();
+    // It also still lives where it was.
+    expect(within(tree).getByRole("treeitem", { name: /Storefront, 1 item/ })).toBeInTheDocument();
+  });
+  it("dropping a card on a collection adds it, and Remove takes it out of the collection only", async () => {
+    const onCollections = vi.fn().mockResolvedValue(undefined);
+    history.replaceState(null, "", "/pipelines?node=mine/c:c1");
+    render(<Explorer {...props()} onCollections={onCollections} collections={[{ id: "c1", name: "Watching", items: ["docs"] }]} />);
+    await userEvent.click(screen.getByRole("button", { name: "Arrange for me" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove docs from this collection" }));
+    await waitFor(() => expect(onCollections).toHaveBeenCalledWith([{ id: "c1", name: "Watching", items: [] }]));
+  });
+  it("makes a new collection", async () => {
+    const onCollections = vi.fn().mockResolvedValue(undefined);
+    render(<Explorer {...props()} onCollections={onCollections} collections={[]} />);
+    await userEvent.click(screen.getByRole("button", { name: "New collection" }));
+    await userEvent.type(screen.getByLabelText("Name"), "On call");
+    await userEvent.click(screen.getByRole("button", { name: "Make collection" }));
+    await waitFor(() => expect(onCollections).toHaveBeenCalledWith([expect.objectContaining({ name: "On call", items: [] })]));
+  });
+});

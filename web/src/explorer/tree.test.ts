@@ -52,3 +52,14 @@ describe("matching", () => {
     expect(highlight("abc", "")).toEqual([["abc", false]]);
   });
 });
+
+describe("collections", () => {
+  it("show an item in another place without moving it, and count it once in a place", () => {
+    const a: XItem = { ...item("api", ["Payments"]), also: [[{ key: "mine", label: "My collections" }, { key: "c:1", label: "Watching" }]] };
+    const t = buildTree([a, item("web", ["Payments"])]);
+    expect(t.get("Payments")!.count).toBe(2);
+    expect(t.get("mine/c:1")!.count).toBe(1);
+    expect(t.get("mine")!.count).toBe(1);
+    expect(t.get("")!.count).toBe(2);
+  });
+});

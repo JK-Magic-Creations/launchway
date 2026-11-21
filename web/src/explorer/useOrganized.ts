@@ -3,6 +3,7 @@ import { organizeApi, type Area, type FolderView, type OrganizeAnswer } from "..
 import { useOverview } from "../configApi";
 import { terms } from "../terms";
 import { derivePath, type Seg } from "./tree";
+import type { Collection } from "./Explorer";
 
 /** The organization of a list: the folders people made, which item is in which, labels, favorites, and the
  * levels above (Wing, Squadron). Folders that people made win; a path-like name ("payments/api/build") is
@@ -55,6 +56,16 @@ export function useOrganized(area: Area) {
     load();
   }, [area, load]);
   const favorite = useCallback(async (kind: "project" | "repository", name: string, on: boolean) => { await organizeApi.favorite(`${kind}:${name}`, on); load(); }, [load]);
+  // The person's own collections of this list: kept in their own layout of the page, so they follow the person and move nothing for others.
+  const collections = useMemo(() => {
+    const raw = (data?.layout.personal as { collections?: unknown } | undefined)?.collections;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((c): c is Collection => !!c && typeof c.id === "string" && typeof c.name === "string" && Array.isArray(c.items)).slice(0, 50);
+  }, [data]);
+  const saveCollections = useCallback(async (next: Collection[]) => {
+    await organizeApi.setMyLayout(area, { ...((data?.layout.personal ?? {}) as Record<string, unknown>), collections: next });
+    load();
+  }, [area, data, load]);
   const rootLabel = terms().label("installation");
-  return { data, failed, place, emptyFolders, folders, mayArrange, favorites, move, createFolder, favorite, reload: load, rootLabel };
+  return { data, failed, collections, saveCollections, place, emptyFolders, folders, mayArrange, favorites, move, createFolder, favorite, reload: load, rootLabel };
 }

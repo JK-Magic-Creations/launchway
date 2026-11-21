@@ -21,7 +21,7 @@ export default function RepositoriesExplorer({ repos, now }: { repos: HostedRepo
   const kinds = useMemo(() => [...new Set(repos.map((r) => r.visibility))].sort(), [repos]);
   return (
     <Explorer noun={{ singular: "repository", plural: "repositories" }} items={items} now={now} kinds={kinds} initialView="table" results={false}
-      emptyFolders={org.emptyFolders} folders={org.folders}
+      emptyFolders={org.emptyFolders} folders={org.folders} collections={org.collections} onCollections={org.saveCollections}
       onMove={org.mayArrange ? async (it, folder) => { await org.move(it.id, folder); } : undefined}
       onCreateFolder={org.mayArrange ? org.createFolder : undefined}
       onFavorite={(it, on) => { void org.favorite("repository", it.id, on); announce(`${it.name} ${on ? "added to" : "removed from"} favorites.`); }}

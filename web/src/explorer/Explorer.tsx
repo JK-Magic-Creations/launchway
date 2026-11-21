@@ -16,12 +16,18 @@ import "./explorer.css";
 // search box that filters both as you type, filters, sort and grouping, all kept in the address so a link opens
 // the same view. See docs/guide/organizing.md and docs/contributing/explorer.md.
 
+export interface Collection { id: string; name: string; items: string[] }
+const MINE: Seg = { key: "mine", label: "My collections" };
+
 export interface ExplorerProps {
   /** What is listed, for the heading and the empty states: "pipelines", "repositories". */
   noun: { singular: string; plural: string };
   items: XItem[];
   /** Folders with nothing in them yet (so they show in the tree and can be filed into). */
   emptyFolders?: { path: Seg[]; id: string }[];
+  /** The person's own collections: groups that reference items without moving them for anyone else. */
+  collections?: Collection[];
+  onCollections?: (next: Collection[]) => Promise<void> | void;
   /** The text of the last result's status for the filter. */
   kinds?: string[];
   /** Filing an item in a folder; absent when the person may not arrange anything. */
@@ -64,10 +70,18 @@ export function Explorer(p: ExplorerProps) {
   const [mineOnly, setMineOnly] = useUrlState("mine", false, bool);
   // The first level of places (the Wing, or the Squadrons) starts open, so the tree shows something to choose.
   const [open, setOpen] = useState<Set<string>>(() => new Set([...buildTree(p.items).values()].filter((n) => n.depth === 1 && n.children.length > 0).map((n) => n.key)));
-  const [arranging, setArranging] = useState(false);
+  // "everyone" files items in shared folders (needs the right); "me" groups them in the person's own collections, which move nothing for anyone else.
+  const [arrangeMode, setArrangeMode] = useState<"off" | "everyone" | "me">("off");
+  const arranging = arrangeMode !== "off";
+  const meMode = arrangeMode === "me";
+  const collections = useMemo(() => p.collections ?? [], [p.collections]);
+  const itemsAll = useMemo(() => (collections.length === 0 ? p.items : p.items.map((it) => {
+    const cs = collections.filter((c) => c.items.includes(it.id));
+    return cs.length === 0 ? it : { ...it, also: cs.map((c) => [MINE, { key: "c:" + c.id, label: c.name }]) };
+  })), [p.items, collections]);
   const [moving, setMoving] = useState<XItem | null>(null);
   const [last, setLast] = useState<{ item: XItem; from: string } | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<false | "folder" | "collection">(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const hasResults = p.results !== false;
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -81,13 +95,13 @@ export function Explorer(p: ExplorerProps) {
     return () => window.removeEventListener("keydown", on);
   }, []);
 
-  const tree = useMemo(() => buildTree(p.items, (p.emptyFolders ?? []).map((f) => ({ path: f.path }))), [p.items, p.emptyFolders]);
+  const tree = useMemo(() => buildTree(itemsAll, [...(p.emptyFolders ?? []).map((f) => ({ path: f.path })), ...collections.map((c) => ({ path: [MINE, { key: "c:" + c.id, label: c.name }] }))]), [itemsAll, p.emptyFolders, collections]);
   const labels = useMemo(() => [...new Set(p.items.flatMap((i) => i.labels))].sort(), [p.items]);
 
   // Items that pass the filters (not yet narrowed to the selected place, so the tree can show matching counts).
   const scored = useMemo(() => {
     const out: { it: XItem; s: number }[] = [];
-    for (const it of p.items) {
+    for (const it of itemsAll) {
       if (status !== "all" && it.tone !== status) continue;
       if (label && !it.labels.includes(label)) continue;
       if (kind && it.kind !== kind) continue;
@@ -97,7 +111,7 @@ export function Explorer(p: ExplorerProps) {
       if (s > 0) out.push({ it, s });
     }
     return out;
-  }, [p.items, q, status, label, kind, favOnly, mineOnly]);
+  }, [itemsAll, q, status, label, kind, favOnly, mineOnly]);
   const filtering = q.trim() !== "" || status !== "all" || label !== "" || kind !== "" || favOnly || mineOnly;
 
   // The tree counts what matches while filtering, and hides branches with nothing in them.
@@ -105,7 +119,7 @@ export function Explorer(p: ExplorerProps) {
   const nodeKnown = shownTree.has(node);
   const selected = nodeKnown ? node : ROOT;
 
-  const inNode = useMemo(() => scored.filter((x) => { const k = nodeKey(x.it.path); return selected === ROOT || k === selected || k.startsWith(selected + "/"); }), [scored, selected]);
+  const inNode = useMemo(() => scored.filter((x) => [x.it.path, ...(x.it.also ?? [])].some((path) => { const k = nodeKey(path); return selected === ROOT || k === selected || k.startsWith(selected + "/"); })), [scored, selected]);
   const list = useMemo(() => {
     const r = [...inNode];
     const rank: Record<Tone, number> = { bad: 0, wait: 1, run: 2, none: 3, ok: 4 };
@@ -143,13 +157,33 @@ export function Explorer(p: ExplorerProps) {
     setMoving(null);
   };
 
+  // Adding an item to a collection, or taking it out: nothing moves for anyone else.
+  const collect = async (it: XItem, id: string, name?: string) => {
+    if (!p.onCollections) return;
+    let next = collections;
+    let to = id;
+    if (!id) { to = "c" + Math.random().toString(36).slice(2, 8); next = [...next, { id: to, name: (name ?? "").trim() || "Collection", items: [] }]; }
+    next = next.map((c) => (c.id === to && !c.items.includes(it.id) ? { ...c, items: [...c.items, it.id] } : c));
+    await p.onCollections(next);
+    announce(`${it.name} added to ${next.find((c) => c.id === to)?.name}. Nothing changed for anyone else.`);
+    setMoving(null);
+  };
+  const uncollect = async (it: XItem) => {
+    const cid = selected.startsWith("mine/c:") ? selected.slice("mine/c:".length) : "";
+    if (!cid || !p.onCollections) return;
+    await p.onCollections(collections.map((c) => (c.id === cid ? { ...c, items: c.items.filter((x) => x !== it.id) } : c)));
+    announce(`${it.name} removed from the collection.`);
+  };
+  const newCollection = async (name: string) => { await p.onCollections?.([...collections, { id: "c" + Math.random().toString(36).slice(2, 8), name: name.trim() || "Collection", items: [] }]); };
   if (p.items.length === 0) return <div className="xp-empty">{p.empty}</div>;
 
   const dropFolder = (n: XNode) => (e: React.DragEvent) => {
     e.preventDefault();
     const id = e.dataTransfer.getData("text/plain");
     const it = p.items.find((i) => i.id === id);
-    if (it && n.folderId) void move(it, n.folderId);
+    if (!it) return;
+    if (meMode && n.key.startsWith("mine/c:")) void collect(it, n.key.slice("mine/c:".length));
+    else if (!meMode && n.folderId) void move(it, n.folderId);
   };
 
   return (
@@ -196,7 +230,8 @@ export function Explorer(p: ExplorerProps) {
             <button type="button" className="btn btn-sm" onClick={() => openAll(false)}>Collapse all</button>
           </div>
           <Tree nodes={shownTree} open={effectiveOpen} selected={selected} rootLabel={rootLabel} onSelect={choose} onToggle={toggle} q={q} onDrop={arranging ? dropFolder : undefined} />
-          {p.onCreateFolder && <div className="xp-side-f"><button type="button" className="btn btn-sm" onClick={() => setCreating(true)}>New folder</button></div>}
+          {p.onCollections && <div className="xp-side-f"><button type="button" className="btn btn-sm" onClick={() => setCreating("collection")}>New collection</button></div>}
+          {p.onCreateFolder && <div className="xp-side-f"><button type="button" className="btn btn-sm" onClick={() => setCreating("folder")}>New folder</button></div>}
           {p.emptyHint && <p className="faint small xp-hint">{p.emptyHint}</p>}
         </nav>
 
@@ -212,9 +247,11 @@ export function Explorer(p: ExplorerProps) {
             <span className="xp-grow" />
             <button type="button" className="btn btn-sm" onClick={() => { void navigator.clipboard?.writeText(location.href); announce("Link to this view copied."); }}>Copy link to this view</button>
             <button type="button" className="btn btn-sm" onClick={() => { const t = `${p.noun.plural[0].toUpperCase()}${p.noun.plural.slice(1)}${filtering ? ": " + (q.trim() || [status !== "all" && status, label, kind, favOnly && "favorites", mineOnly && "mine"].filter(Boolean).join(", ")) : ""}`; pinToHome(t, location.pathname + location.search).then(() => announce("Pinned to your Home."), () => announce("Could not pin this view.", "assertive")); }}>Pin to Home</button>
-            {p.onMove && <button type="button" className="btn btn-sm" aria-pressed={arranging} onClick={() => { setArranging(!arranging); announce(arranging ? "Arranging is off." : "Arranging for everyone is on: drag an item onto a folder, or use Move to."); }}>{arranging ? "Done arranging" : "Arrange for everyone"}</button>}
+            {p.onMove && <button type="button" className="btn btn-sm" aria-pressed={arrangeMode === "everyone"} onClick={() => { const on = arrangeMode !== "everyone"; setArrangeMode(on ? "everyone" : "off"); announce(on ? "Arranging for everyone is on: drag an item onto a folder, or use Move to." : "Arranging is off."); }}>{arrangeMode === "everyone" ? "Done arranging" : "Arrange for everyone"}</button>}
+            {p.onCollections && <button type="button" className="btn btn-sm" aria-pressed={meMode} onClick={() => { const on = !meMode; setArrangeMode(on ? "me" : "off"); announce(on ? "Arranging for you is on: drag an item onto a collection, or use Add to collection. Nothing changes for anyone else." : "Arranging is off."); }}>{meMode ? "Done arranging" : "Arrange for me"}</button>}
           </div>
-          {arranging && <p className="callout" role="note">Arranging for everyone: what you move here changes the folders for everyone who can see these {p.noun.plural}. Drag an item onto a folder, or use <b>Move to…</b> on it.</p>}
+          {meMode && <p className="callout" role="note">Arranging for you: collections are yours alone. An item shows in a collection without moving for anyone else; drag it onto a collection, or use <b>Add to collection…</b> on it.</p>}
+          {arrangeMode === "everyone" && <p className="callout" role="note">Arranging for everyone: what you move here changes the folders for everyone who can see these {p.noun.plural}. Drag an item onto a folder, or use <b>Move to…</b> on it.</p>}
           {last && <p role="status" className="xp-undo"><b>{last.item.name}</b> was moved. <button type="button" className="btn btn-sm" onClick={() => { void p.onMove?.(last.item, last.from); announce("Move undone."); setLast(null); }}>Undo</button></p>}
 
           {list.length === 0 ? (
@@ -224,17 +261,27 @@ export function Explorer(p: ExplorerProps) {
               {filtering && <button type="button" className="btn btn-sm" onClick={() => setUrl({ q: null, result: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</button>}
             </div>
           ) : (
-            <Results results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging && !!p.onMove} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
+            <Results results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging} meMode={meMode} inCollection={selected.startsWith("mine/c:")} onRemove={uncollect} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
           )}
         </div>
       </div>
 
-      {moving && (
+      {moving && meMode && (
+        <Dialog label={`Add ${moving.name} to a collection`} onClose={() => setMoving(null)}>
+          <CollectForm item={moving} collections={collections} onAdd={collect} onClose={() => setMoving(null)} />
+        </Dialog>
+      )}
+      {moving && !meMode && (
         <Dialog label={`Move ${moving.name}`} onClose={() => setMoving(null)}>
           <MoveForm item={moving} folders={p.folders ?? []} onMove={move} onClose={() => setMoving(null)} />
         </Dialog>
       )}
-      {creating && (
+      {creating === "collection" && (
+        <Dialog label="New collection" onClose={() => setCreating(false)}>
+          <NewFolder what="collection" where="your collections" onCreate={async (name) => { await newCollection(name); setCreating(false); }} onClose={() => setCreating(false)} />
+        </Dialog>
+      )}
+      {creating === "folder" && (
         <Dialog label="New folder" onClose={() => setCreating(false)}>
           <NewFolder where={crumbs.map((c) => c.label).join(" / ") || rootLabel} onCreate={async (name) => { await p.onCreateFolder?.(selected === ROOT ? null : selected.split("/").map((k) => ({ key: k, label: shownTree.get(nodeKeyUpTo(selected, k))?.label ?? k, folderId: shownTree.get(nodeKeyUpTo(selected, k))?.folderId })), name); setCreating(false); }} onClose={() => setCreating(false)} />
         </Dialog>
@@ -301,7 +348,7 @@ function Tree({ nodes, open, selected, rootLabel, onSelect, onToggle, q, onDrop 
           aria-label={`${label(n)}, ${n.count} ${n.count === 1 ? "item" : "items"}${worst(n.tones) !== "none" && worst(n.tones) !== "ok" ? `, ${n.tones[worst(n.tones)]} ${TONE_WORD[worst(n.tones)]}` : ""}`}
           data-key={n.key} tabIndex={activeKey === n.key ? 0 : -1} className={"xp-node" + (selected === n.key ? " sel" : "")} style={{ paddingLeft: 8 + n.depth * 14 }}
           onClick={() => { setActive(n.key); onSelect(n.key); }} onFocus={() => setActive(n.key)}
-          onDragOver={onDrop && n.folderId ? (e) => e.preventDefault() : undefined} onDrop={onDrop && n.folderId ? onDrop(n) : undefined}>
+          onDragOver={onDrop && (n.folderId || n.key.startsWith("mine/c:")) ? (e) => e.preventDefault() : undefined} onDrop={onDrop && (n.folderId || n.key.startsWith("mine/c:")) ? onDrop(n) : undefined}>
           {kids.length > 0 && n.key !== ROOT ? (
             <button type="button" tabIndex={-1} className="xp-tw" aria-hidden="true" onClick={(e) => { e.stopPropagation(); onToggle(n.key); }}>{isOpen ? "▾" : "▸"}</button>
           ) : <span className="xp-tw" aria-hidden="true" />}
@@ -324,8 +371,8 @@ export function Hl({ text, q }: { text: string; q: string }) {
 
 interface Row { kind: "head" | "items"; title?: string; count?: number; items?: XItem[] }
 
-function Results({ results, list, view, group, q, now, arranging, onMove, onFavorite }: {
-  results: boolean; list: XItem[]; view: "cards" | "table"; group: (typeof GROUPS)[number]; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void;
+function Results({ results, list, view, group, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: {
+  meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; list: XItem[]; view: "cards" | "table"; group: (typeof GROUPS)[number]; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [geom, setGeom] = useState({ w: 0, h: 0, top: 0 });
@@ -372,7 +419,7 @@ function Results({ results, list, view, group, q, now, arranging, onMove, onFavo
             <li key={"h" + first + i} className="xp-group" style={{ height: virtual ? rowH : undefined }}><h2>{r.title} <span className="faint">({r.count})</span></h2></li>
           ) : (
             <li key={"r" + first + i} className="xp-row" style={{ height: virtual ? rowH : undefined, gridTemplateColumns: view === "cards" ? `repeat(${cols}, 1fr)` : undefined }}>
-              {r.items!.map((it) => view === "cards" ? <Card key={it.id} results={results} it={it} q={q} now={now} arranging={arranging} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} results={results} it={it} q={q} now={now} arranging={arranging} onMove={onMove} onFavorite={onFavorite} />)}
+              {r.items!.map((it) => view === "cards" ? <Card key={it.id} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} />)}
             </li>
           ))}
         </ul>
@@ -381,7 +428,7 @@ function Results({ results, list, view, group, q, now, arranging, onMove, onFavo
   );
 }
 
-interface ItemProps { results: boolean; it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
+interface ItemProps { meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
 
 function Strip({ history, name }: { history: Tone[]; name: string }) {
   if (history.length === 0) return <span className="faint small">no results yet</span>;
@@ -392,7 +439,7 @@ function Strip({ history, name }: { history: Tone[]; name: string }) {
 
 function Place({ it }: { it: XItem }) { return <span className="faint small xp-place">{it.path.length ? it.path.map((p) => p.label).join(" / ") : "Top level"}</span>; }
 
-function Card({ results, it, q, now, arranging, onMove, onFavorite }: ItemProps) {
+function Card({ results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
   return (
     <article className={"xp-card " + it.tone} draggable={arranging} onDragStart={(e) => e.dataTransfer.setData("text/plain", it.id)} aria-label={it.name}>
       <header>
@@ -407,13 +454,14 @@ function Card({ results, it, q, now, arranging, onMove, onFavorite }: ItemProps)
         {it.labels.length > 0 && <span className="xp-labels">{it.labels.slice(0, 3).map((l) => <span key={l} className="vchip"><Hl text={l} q={q} /></span>)}</span>}
         <span className="xp-grow" />
         {(it.actions ?? []).slice(0, 2).map((a) => <a key={a.label} className="btn btn-sm" href={a.href} onClick={onLink}>{a.label}</a>)}
-        {arranging && <button type="button" className="btn btn-sm" onClick={() => onMove(it)} aria-label={`Move ${it.name} to…`}>Move to…</button>}
+        {arranging && <button type="button" className="btn btn-sm" onClick={() => onMove(it)} aria-label={meMode ? `Add ${it.name} to a collection` : `Move ${it.name} to…`}>{meMode ? "Add to collection…" : "Move to…"}</button>}
+        {meMode && inCollection && <button type="button" className="btn btn-sm" onClick={() => onRemove(it)} aria-label={`Remove ${it.name} from this collection`}>Remove</button>}
       </div>
     </article>
   );
 }
 
-function TableRow({ results, it, q, now, arranging, onMove, onFavorite }: ItemProps) {
+function TableRow({ results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
   return (
     <div className={"xp-trow " + it.tone} role="group" aria-label={it.name} draggable={arranging} onDragStart={(e) => e.dataTransfer.setData("text/plain", it.id)}>
       <span className="xp-tname">{results && <Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />}
@@ -423,7 +471,8 @@ function TableRow({ results, it, q, now, arranging, onMove, onFavorite }: ItemPr
       {results ? <span className="small">{it.last ? <>{it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <b> · {it.running} running</b>}</span> : <span className="small faint">{it.description}</span>}
       {results ? <Strip history={it.history} name={it.name} /> : <span />}
       <span className="xp-acts">{(it.actions ?? []).slice(0, 1).map((a) => <a key={a.label} className="btn btn-sm" href={a.href} onClick={onLink}>{a.label}</a>)}
-        {arranging && <button type="button" className="btn btn-sm" onClick={() => onMove(it)} aria-label={`Move ${it.name} to…`}>Move to…</button>}</span>
+        {arranging && <button type="button" className="btn btn-sm" onClick={() => onMove(it)} aria-label={meMode ? `Add ${it.name} to a collection` : `Move ${it.name} to…`}>{meMode ? "Add to collection…" : "Move to…"}</button>}
+        {meMode && inCollection && <button type="button" className="btn btn-sm" onClick={() => onRemove(it)} aria-label={`Remove ${it.name} from this collection`}>Remove</button>}</span>
     </div>
   );
 }
@@ -445,15 +494,34 @@ function MoveForm({ item, folders, onMove, onClose }: { item: XItem; folders: { 
   );
 }
 
-function NewFolder({ where, onCreate, onClose }: { where: string; onCreate: (name: string) => Promise<void>; onClose: () => void }) {
+function NewFolder({ where, onCreate, onClose, what = "folder" }: { where: string; onCreate: (name: string) => Promise<void>; onClose: () => void; what?: "folder" | "collection" }) {
   const [name, setName] = useState("");
   const [err, setErr] = useState("");
   return (
     <form onSubmit={async (e) => { e.preventDefault(); try { await onCreate(name); } catch (x) { setErr(x instanceof Error ? x.message : "Could not make the folder"); } }} className="xp-dialog">
-      <h2 className="h-sm">New folder in {where}</h2>
+      <h2 className="h-sm">New {what} in {where}</h2>
       <label>Name<input data-autofocus value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required /></label>
       {err && <p role="alert" className="err">{err}</p>}
-      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary">Make folder</button></div>
+      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary">Make {what}</button></div>
+    </form>
+  );
+}
+
+function CollectForm({ item, collections, onAdd, onClose }: { item: XItem; collections: Collection[]; onAdd: (it: XItem, id: string, name?: string) => void; onClose: () => void }) {
+  const [to, setTo] = useState(collections[0]?.id ?? "");
+  const [name, setName] = useState("");
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onAdd(item, to, name); }} className="xp-dialog">
+      <h2 className="h-sm">Add {item.name} to a collection</h2>
+      <p className="faint small">A collection is yours alone. {item.name} stays where it is for everyone else.</p>
+      <label>Collection
+        <select data-autofocus value={to} onChange={(e) => setTo(e.target.value)}>
+          {collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          <option value="">A new collection…</option>
+        </select>
+      </label>
+      {to === "" && <label>Name<input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} required /></label>}
+      <div className="xp-dialog-f"><button type="button" className="btn" onClick={onClose}>Cancel</button><button type="submit" className="btn btn-primary">Add</button></div>
     </form>
   );
 }

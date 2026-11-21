@@ -53,7 +53,7 @@ export default function PipelinesExplorer({ projects, runs, now, me, as = "pipel
   const t = terms();
   return (
     <Explorer noun={repos ? { singular: "repository", plural: "repositories" } : { singular: "pipeline", plural: "pipelines" }} kinds={repos ? [...new Set(projects.map((p) => hostName(p.url) || "local"))].sort() : undefined} items={items} now={now}
-      emptyFolders={org.emptyFolders} folders={org.folders}
+      emptyFolders={org.emptyFolders} folders={org.folders} collections={org.collections} onCollections={org.saveCollections}
       onMove={org.mayArrange ? async (it, folder) => { await org.move(it.id, folder); } : undefined}
       onCreateFolder={org.mayArrange ? org.createFolder : undefined}
       onFavorite={(it, on) => { void org.favorite("project", it.id, on); announce(`${it.name} ${on ? "added to" : "removed from"} favorites.`); }}
