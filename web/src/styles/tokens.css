@@ -1,71 +1,92 @@
-
+/* Launchway design tokens (docs 42, section 3). Roles, not hues: neutral surfaces, one blue accent
+   for things you can act on, green only for healthy. Light by default; dark follows the system, and
+   data-theme on the root forces either. The older names (--surface, --border, --text, --accent and
+   so on) are aliases of these, so every existing page is drawn in the same palette. */
 :root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --surface-2: #f1f3f6;
-  --border: #e3e6eb;
-  --border-strong: #cfd5dd;
-  --text: #111827;
-  --text-2: #4b5563;
-  --text-3: #6b7280;
-  --accent: #2563eb;
-  --accent-ink: #1d4ed8;
-  --accent-soft: #eff4ff;
-  --ok: #0f766e;  --ok-soft: #d9f2ee;  --ok-ink: #0b5f58;
-  --bad: #b91c1c; --bad-soft: #fbdada; --bad-ink: #991b1b;
-  --run: #2563eb; --run-soft: #dbe7fe; --run-ink: #1d4ed8;
-  --warn: #b45309; --warn-soft: #fdecc8; --warn-ink: #8a4b08;
-  --idle: #9ca3af; --idle-soft: #e9ecf1; --idle-ink: #374151;
-  --nav: #0f172a; --nav-2: #1e293b; --nav-text: #cbd5e1; --nav-dim: #64748b;
-  --log-bg: #0f172a; --log-text: #e2e8f0; --log-dim: #94a3b8; --log-err: #fca5a5; --log-num: #475569;
-  --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 1px 3px rgba(15, 23, 42, .04);
-  --radius: 12px;
-  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --bg: #f3f4f6; --sheet: #ffffff; --sheet-2: #f7f8fa; --sheet-3: #eceef2;
+  --line: #e0e3e8; --line-2: #c9ced6;
+  --ink: #171a21; --ink-2: #434a57; --ink-3: #5a6270;
+  --signal: #3e5bd1; --signal-ink: #2c43a6; --signal-wash: #e8ecfa; --on-signal: #ffffff;
+  --done: #5a6270;
+  --ok: #23804a; --ok-wash: #e3f1e8; --ok-ink: #17612f;
+  --bad: #c0302a; --bad-wash: #fce6e3; --bad-ink: #99231e;
+  --warn: #a15f08; --warn-wash: #fbecd1; --warn-ink: #7d4806;
+  --idle: #7d8593; --idle-wash: #e8eaee;
+  --log: #14171c; --log-ink: #d4e4e6; --log-dim: #7f979c; --log-bad: #ff9d94; --log-ok: #7fd9a3;
+  --glow: 0 0 0 3px color-mix(in srgb, var(--signal) 28%, transparent);
+  --lift: 0 10px 30px -8px rgba(20, 24, 34, .22), 0 2px 6px rgba(20, 24, 34, .08);
   color-scheme: light;
 }
-
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b1120;
-    --surface: #111a2e;
-    --surface-2: #17223a;
-    --border: #22304a;
-    --border-strong: #2f3f5c;
-    --text: #e6eaf2;
-    --text-2: #a8b3c7;
-    --text-3: #8592a8;
-    --accent: #4f8bff;
-    --accent-ink: #8fb4ff;
-    --accent-soft: #15254a;
-    --ok: #2dd4bf;  --ok-soft: #0f2f2c;  --ok-ink: #5eead4;
-    --bad: #f87171; --bad-soft: #3a1618; --bad-ink: #fca5a5;
-    --run: #60a5fa; --run-soft: #142a4d; --run-ink: #93c5fd;
-    --warn: #fbbf24; --warn-soft: #3a2a0c; --warn-ink: #fcd34d;
-    --idle: #64748b; --idle-soft: #1c2840; --idle-ink: #a8b3c7;
-    --nav: #070d1a; --nav-2: #16213a;
-    --log-bg: #060b16;
-    --shadow: none;
+  :root:not([data-theme="light"]) {
+    --bg: #0f1115; --sheet: #171a20; --sheet-2: #1c2027; --sheet-3: #242932;
+    --line: #2a2f38; --line-2: #3a414d;
+    --ink: #e8eaee; --ink-2: #b0b6c1; --ink-3: #8f97a5;
+    --signal: #8ba2ff; --signal-ink: #aebcff; --signal-wash: #1f2745; --on-signal: #0d1430;
+    --done: #939bab;
+    --ok: #52c883; --ok-wash: #14301f; --ok-ink: #86dca8;
+    --bad: #ff7d73; --bad-wash: #3a1816; --bad-ink: #ffaba4;
+    --warn: #f0b64e; --warn-wash: #35260a; --warn-ink: #f6cf86;
+    --idle: #707887; --idle-wash: #20242c;
+    --log: #0b0d11; --lift: 0 14px 36px -10px rgba(0, 0, 0, .7), 0 0 0 1px rgba(255, 255, 255, .04);
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --sheet: #171a20; --sheet-2: #1c2027; --sheet-3: #242932;
+  --line: #2a2f38; --line-2: #3a414d;
+  --ink: #e8eaee; --ink-2: #b0b6c1; --ink-3: #8f97a5;
+  --signal: #8ba2ff; --signal-ink: #aebcff; --signal-wash: #1f2745; --on-signal: #0d1430;
+  --done: #939bab;
+  --ok: #52c883; --ok-wash: #14301f; --ok-ink: #86dca8;
+  --bad: #ff7d73; --bad-wash: #3a1816; --bad-ink: #ffaba4;
+  --warn: #f0b64e; --warn-wash: #35260a; --warn-ink: #f6cf86;
+  --idle: #707887; --idle-wash: #20242c;
+  --log: #0b0d11; --lift: 0 14px 36px -10px rgba(0, 0, 0, .7), 0 0 0 1px rgba(255, 255, 255, .04);
+  color-scheme: dark;
+}
+
+/* Type, space, shape, motion. A 4 px base; flat by default, --lift only for what floats. */
+:root {
+  --font: Inter, "Noto Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Launchway Display", Inter, "Noto Sans", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, monospace;
+  --fs-label: 11px; --fs-small: 12.5px; --fs-body: 14px; --fs-lead: 16px; --fs-section: 17px; --fs-title: 30px; --fs-title-phone: 25px; --fs-display: 36px;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+  --gutter: 28px;
+  --r1: 6px; --r2: 10px; --r3: 16px;
+  --t-fast: 120ms; --t-med: 200ms; --t-slow: 280ms;
+
+  /* Names the older pages use. */
+  --surface: var(--sheet); --surface-2: var(--sheet-2);
+  --border: var(--line); --border-strong: var(--line-2);
+  --text: var(--ink); --text-2: var(--ink-2); --text-3: var(--ink-3);
+  --accent: var(--signal); --accent-ink: var(--signal-ink); --accent-soft: var(--signal-wash);
+  --ok-soft: var(--ok-wash); --bad-soft: var(--bad-wash); --warn-soft: var(--warn-wash); --idle-soft: var(--idle-wash); --idle-ink: var(--ink-2);
+  --run: var(--signal); --run-soft: var(--signal-wash); --run-ink: var(--signal-ink);
+  --log-bg: var(--log); --log-text: var(--log-ink); --log-err: var(--log-bad); --log-num: var(--log-dim);
+  --shadow: none;
+  --radius: var(--r2);
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
-  background: var(--bg);
-  color: var(--text);
-  font: 14px/1.45 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-  -webkit-font-smoothing: antialiased;
+  background: var(--bg); color: var(--ink);
+  font: var(--fs-body) / 1.5 var(--font); -webkit-font-smoothing: antialiased; min-height: 100vh;
 }
-a { color: var(--accent-ink); text-decoration: none; }
+a { color: var(--signal-ink); text-decoration: none; }
 a:hover { text-decoration: underline; }
-h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
-h2 { margin: 0; font-size: 17px; font-weight: 600; }
-.h-sm { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+button { font: inherit; color: inherit; }
+h1 { margin: 0; font: 650 28px / 1.15 var(--display); letter-spacing: -.025em; }
+h2 { margin: 0; font: 650 var(--fs-section) / 1.25 var(--display); letter-spacing: -.02em; }
+.h-sm { font: 650 15px var(--font); letter-spacing: -.005em; margin: 0 0 8px; }
 .h-sm.ok { color: var(--ok-ink); } .h-sm.bad { color: var(--bad-ink); }
 .mono { font-family: var(--mono); font-size: .92em; }
-.faint { color: var(--text-3); }
-.small { font-size: 12px; }
-.sub { margin: 4px 0 0; color: var(--text-2); }
+.faint { color: var(--ink-3); }
+.small { font-size: var(--fs-small); }
+.sub { margin: 4px 0 0; color: var(--ink-2); }
+.num { font-variant-numeric: tabular-nums; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; border-radius: var(--r1); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; } }

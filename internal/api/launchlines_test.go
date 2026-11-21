@@ -127,3 +127,26 @@ steps:
 		t.Errorf("tone %q now %q stations %+v", l.Tone, l.Now, l.Stations)
 	}
 }
+
+func TestLaunchLineStepsAfterAnApprovalAreTheRelease(t *testing.T) {
+	gate := stepOf("gate", "approval", engine.StepWaitingS, 2)
+	pub := stepOf("publish", "", engine.StepPending, 3)
+	pub.Needs = []string{"gate"}
+	pkg := stepOf("package", "", engine.StepPending, 4)
+	fail := stepOf("unit-tests", "", engine.StepFailed, 1)
+	fail.Error = "exit code 1"
+	d := &engine.RunDetail{StepList: []engine.StepView{stepOf("lint", "", engine.StepSucceeded, 0), fail, gate, pub, pkg}}
+	l := launchLineOf(d)
+	if s := stationByKey(l, "checks"); s == nil || s.State != stationDone {
+		t.Errorf("checks %+v: the step after the approval is not a check", s)
+	}
+	if s := stationByKey(l, "release"); s == nil || s.State != stationIdle {
+		t.Errorf("release %+v", s)
+	}
+	if s := stationByKey(l, "package"); s == nil || s.State != stationIdle {
+		t.Errorf("package %+v", s)
+	}
+	if s := stationByKey(l, "tests"); s.Detail != "unit-tests ended with exit code 1" {
+		t.Errorf("tests detail %q", s.Detail)
+	}
+}

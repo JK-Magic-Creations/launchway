@@ -122,6 +122,7 @@ func launchLineOf(d *engine.RunDetail) LaunchLine {
 		}
 		return ""
 	}
+	after := stepsAfterGates(d.StepList)
 	for _, st := range d.StepList {
 		switch st.Kind {
 		case "deploy", "rollout", "rollback", "approval":
@@ -137,9 +138,15 @@ func launchLineOf(d *engine.RunDetail) LaunchLine {
 		case "verify":
 			add("verified", "Verified", 1000, st)
 		default:
-			if st.Tests != nil || strings.Contains(strings.ToLower(st.ID), "test") {
+			id := strings.ToLower(st.ID)
+			switch {
+			case st.Tests != nil || strings.Contains(id, "test"):
 				add("tests", "Tests", 10, st)
-			} else {
+			case strings.Contains(id, "package") || strings.Contains(id, "build") || strings.Contains(id, "image"):
+				add("package", "Package", 20, st)
+			case after[st.ID]:
+				add("release", "Release", 90+st.Position, st)
+			default:
 				add("checks", "Checks", 5, st)
 			}
 		}
@@ -164,6 +171,36 @@ func launchLineOf(d *engine.RunDetail) LaunchLine {
 	}
 	line.Tone, line.Now = whereItIs(d, line.Stations)
 	return line
+}
+
+// stepsAfterGates finds the plain steps that come after an approval or a deploy: they belong to the release,
+// not to the checks before it.
+func stepsAfterGates(steps []engine.StepView) map[string]bool {
+	byID := map[string]engine.StepView{}
+	for _, st := range steps {
+		byID[st.ID] = st
+	}
+	var gated func(id string, seen map[string]bool) bool
+	gated = func(id string, seen map[string]bool) bool {
+		if seen[id] {
+			return false
+		}
+		seen[id] = true
+		for _, n := range byID[id].Needs {
+			up := byID[n]
+			if up.Kind == "approval" || up.Kind == "deploy" || up.Kind == "rollout" || gated(n, seen) {
+				return true
+			}
+		}
+		return false
+	}
+	out := map[string]bool{}
+	for _, st := range steps {
+		if gated(st.ID, map[string]bool{}) {
+			out[st.ID] = true
+		}
+	}
+	return out
 }
 
 func hasEnv(ss []Station) bool {
@@ -212,7 +249,7 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 	switch {
 	case failed > 0:
 		b.State, b.Step = stationFailed, failedStep.ID
-		b.Detail = stationLine(failedStep.Error, failedStep.ID+" failed")
+		b.Detail = failureDetail(failedStep)
 	case waiting > 0:
 		b.State, b.Step = stationWaiting, waitStep.ID
 		b.Detail = waitReason(waitStep, deps, d)
@@ -227,8 +264,8 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 		b.State, b.Detail = stationSkipped, "Skipped"
 	default:
 		b.State, b.Detail = stationIdle, "Not started"
-		if done > 0 {
-			b.State, b.Detail = stationRunning, "Under way"
+		if done > 0 && d.Status == engine.RunRunning {
+			b.State, b.Detail = stationRunning, strconv.Itoa(done)+" of "+strconv.Itoa(len(b.steps))+" steps done"
 		}
 	}
 	// A deploy that succeeded as a step may still be rolling out.
@@ -239,6 +276,18 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 			}
 		}
 	}
+}
+
+// failureDetail says what failed in one line: the server's own words, with the step named.
+func failureDetail(st *engine.StepView) string {
+	e := stationLine(st.Error, "")
+	switch {
+	case e == "":
+		return st.ID + " failed"
+	case strings.HasPrefix(e, "exit code"):
+		return st.ID + " ended with " + e
+	}
+	return e
 }
 
 func doneDetail(b *stationBuild, deps map[string]engine.DeploymentView) string {

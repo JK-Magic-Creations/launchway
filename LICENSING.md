@@ -46,3 +46,10 @@ case; nothing on this page is an offer or a promise of any price or term.
 JK Magic Creations can offer a commercial licence because contributors license their contributions
 to it under the [contributor licence agreement](CLA.md). Contributors keep their copyright. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Fonts in the web interface
+
+The web interface bundles three fonts, so it looks the same everywhere and never fetches a font
+from a network: Inter, Montserrat and JetBrains Mono. All three are licensed under the SIL Open
+Font License 1.1, which allows bundling and redistribution with software. Their copyright notices
+and the licence text are in [web/src/assets/fonts/LICENSES.txt](web/src/assets/fonts/LICENSES.txt).
