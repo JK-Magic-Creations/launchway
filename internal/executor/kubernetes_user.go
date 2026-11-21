@@ -1,6 +1,7 @@
 package executor
 
 import (
+	_ "embed"
 	"fmt"
 	"strconv"
 
@@ -37,38 +38,12 @@ func (o KubernetesOptions) userEntry() bool {
 // database says (HOME is already stepHome).
 var userEnv = []corev1.EnvVar{{Name: "USER", Value: stepUserName}, {Name: "LOGNAME", Value: stepUserName}}
 
-// userScript builds /launchway-user/<container>/passwd and group. Arguments: directory, uid, gid, name, home. It uses
-// only the shell's own commands, so it works in an image with nothing else in it. PASSWD_IN and GROUP_IN name the files
-// to start from (the image's own, by default); the tests set them.
-const userScript = `dir=$1 uid=$2 gid=$3 name=$4 home=$5
-in_passwd=${PASSWD_IN:-/etc/passwd} in_group=${GROUP_IN:-/etc/group}
-: > "$dir/passwd" || exit 1
-: > "$dir/group" || exit 1
-seen_root=0
-if [ -r "$in_passwd" ]; then
-  while IFS= read -r line || [ -n "$line" ]; do
-    n=${line%%:*}; rest=${line#*:*:}; u=${rest%%:*}
-    [ "$u" = "$uid" ] && continue
-    [ "$n" = "$name" ] && continue
-    [ "$u" = 0 ] && seen_root=1
-    printf '%s\n' "$line" >> "$dir/passwd"
-  done < "$in_passwd"
-fi
-[ "$seen_root" = 1 ] || printf 'root:x:0:0:root:/root:/sbin/nologin\n' >> "$dir/passwd"
-printf '%s:x:%s:%s:Launchway step user:%s:/sbin/nologin\n' "$name" "$uid" "$gid" "$home" >> "$dir/passwd"
-seen_root=0
-if [ -r "$in_group" ]; then
-  while IFS= read -r line || [ -n "$line" ]; do
-    n=${line%%:*}; rest=${line#*:*:}; g=${rest%%:*}
-    [ "$g" = "$gid" ] && continue
-    [ "$n" = "$name" ] && continue
-    [ "$g" = 0 ] && seen_root=1
-    printf '%s\n' "$line" >> "$dir/group"
-  done < "$in_group"
-fi
-[ "$seen_root" = 1 ] || printf 'root:x:0:\n' >> "$dir/group"
-printf '%s:x:%s:\n' "$name" "$gid" >> "$dir/group"
-`
+// userScript builds <dir>/passwd and <dir>/group; see user_entry.sh. It uses only the shell's own commands, so it works
+// in an image with nothing else in it. PASSWD_IN and GROUP_IN name the files to start from (the image's own, by
+// default); the tests set them. scripts/ci/test-like-ci.sh runs the same file.
+//
+//go:embed user_entry.sh
+var userScript string
 
 // userInit is the init container that makes the passwd and group files for one step container.
 func (k *Kubernetes) userInit(sp ContainerSpec) corev1.Container {

@@ -154,7 +154,10 @@ so the two cannot drift, and runs them in a container (Podman or Docker; `CONTAI
 that differs from a normal local run in exactly the ways that bit us:
 
 - the user is `1000:1000` with no entry in `/etc/passwd` (`podman --passwd=false`), and `HOME` is a
-  temporary directory;
+  temporary directory; then the user is given an account entry exactly as the runner's step pods give
+  one (`internal/executor/user_entry.sh`, the same script, in the same image), so the ssh tests run as
+  they do in the pipeline once the runner has that fix (`TEST_LIKE_CI_USER_ENTRY=0` leaves it out, to see
+  what a step without it sees);
 - the tree is `git archive HEAD`, a copy of what is committed, so a file that is uncommitted, or
   generated and never committed, is missing exactly as it is in the pipeline (the copy is a throwaway
   and writable, because the step writes `reports/`; your working tree is never touched);
