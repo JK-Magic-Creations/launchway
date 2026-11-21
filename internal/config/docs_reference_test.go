@@ -392,7 +392,7 @@ func TestReferenceConfigExamples(t *testing.T) {
 				if err := os.WriteFile(vf, []byte(ex.text), 0o644); err != nil {
 					t.Fatal(err)
 				}
-				out, err := exec.Command("helm", "template", "t", chartDir, "-f", vf).CombinedOutput()
+				out, err := exec.Command("helm", "template", "t", chartDir, "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
 				if err != nil {
 					t.Errorf("%s: helm template fails with the example on line %d: %v\n%s", file, ex.line, err, out)
 					continue

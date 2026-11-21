@@ -88,30 +88,46 @@ func OpenKeyFile(path string) (Holder, error) {
 }
 
 // WriteKeyFile creates a new key file with a fresh random key, mode 0600,
-// refusing to replace an existing file. It returns the key's text so that a
-// caller can offer it for backup; never log it.
+// refusing to replace an existing file. The file appears whole or not at all:
+// it is written to a private temporary name and linked into place, which
+// fails if the name exists, so servers starting at once never read a
+// half-written key and only one of them creates it (the others get an error
+// satisfying errors.Is(err, os.ErrExist) and read the winner's file). Never
+// log the key.
 func WriteKeyFile(path string) error {
 	key, err := NewRandomKey()
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	f, err := os.CreateTemp(dir, ".root.key.*")
 	if err != nil {
-		if errors.Is(err, os.ErrExist) {
-			return fmt.Errorf("%s already exists; Launchway never overwrites a root key", path)
-		}
+		return err
+	}
+	tmp := f.Name()
+	defer os.Remove(tmp)
+	if err := f.Chmod(0o600); err != nil {
+		f.Close()
 		return err
 	}
 	_, werr := f.WriteString(base64.StdEncoding.EncodeToString(key) + "\n")
+	if serr := f.Sync(); werr == nil {
+		werr = serr
+	}
 	if cerr := f.Close(); werr == nil {
 		werr = cerr
 	}
 	if werr != nil {
-		_ = os.Remove(path)
 		return werr
+	}
+	if err := os.Link(tmp, path); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return fmt.Errorf("%s already exists; Launchway never overwrites a root key: %w", path, os.ErrExist)
+		}
+		return err
 	}
 	return nil
 }

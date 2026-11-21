@@ -19,7 +19,7 @@ func helmOut(t *testing.T, values string) (out string, failed bool) {
 	if err := os.WriteFile(vf, []byte("postgresql: { enabled: true }\n"+values), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	b, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", vf).CombinedOutput()
+	b, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
 	return string(b), err != nil
 }
 
@@ -86,5 +86,45 @@ func TestChartHoldersAndRefusals(t *testing.T) {
 				t.Error("holder none still requires a key or makes one")
 			}
 		})
+	}
+}
+
+// Rendered without a cluster (helm template, which is what Argo CD runs), the
+// chart cannot know whether the root key Secret exists, and a key generated
+// there would differ at every render and replace the real one at the next
+// sync. So it refuses, in plain words, unless the Secret is named or the
+// render is explicitly marked as not for applying; two renders that are
+// allowed differ, which is exactly why.
+func TestChartRefusesToGenerateARootKeyWithoutAViewOfTheCluster(t *testing.T) {
+	if _, err := exec.LookPath("helm"); err != nil {
+		t.Skip("needs helm")
+	}
+	render := func(values string, set ...string) (string, bool) {
+		vf := filepath.Join(t.TempDir(), "values.yaml")
+		if err := os.WriteFile(vf, []byte("postgresql: { enabled: true }\n"+values), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		args := append([]string{"template", "t", "../../deploy/helm/launchway", "-f", vf}, set...)
+		b, err := exec.Command("helm", args...).CombinedOutput()
+		return string(b), err != nil
+	}
+	out, failed := render("")
+	if !failed || !strings.Contains(out, "without a view of the cluster") || !strings.Contains(out, "encryption.keyFile.existingSecret=t-launchway-root-key") || !strings.Contains(out, "kubectl -n default create secret generic t-launchway-root-key") {
+		t.Fatalf("the default offline render must refuse, saying how to go on:\n%s", out)
+	}
+	// A named Secret renders, and the chart makes no key of its own.
+	out, failed = render("encryption: { keyFile: { existingSecret: my-key } }")
+	if failed || strings.Contains(out, "kind: Secret\nmetadata:\n  name: t-launchway-root-key") || !strings.Contains(out, "name: my-key") {
+		t.Fatalf("an existing Secret must render, with no key generated:\n%s", out)
+	}
+	// Marked for lint and tests: renders, but two renders make two keys, which is why it must never be applied.
+	a, failed := render("", "--set", "encryption.keyFile.allowOfflineGeneration=true")
+	b, _ := render("", "--set", "encryption.keyFile.allowOfflineGeneration=true")
+	if failed || a == b {
+		t.Fatalf("the marked render should work (failed=%v) and differ between renders", failed)
+	}
+	// Other holders need no key Secret and render offline as they are.
+	if out, failed := render("encryption: { holder: none }"); failed {
+		t.Fatalf("holder none renders offline:\n%s", out)
 	}
 }

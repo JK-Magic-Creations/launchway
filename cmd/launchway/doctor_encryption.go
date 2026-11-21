@@ -44,7 +44,7 @@ func doctorEncryption(args []string) error {
 		return fmt.Errorf("the database cannot be reached, so nothing can be said about encryption: %w", err)
 	}
 	defer db.Close()
-	svc, err := sealing.Inspect(ctx, sealing.Options{DB: db, Holder: rk.primary, Previous: rk.previous})
+	svc, err := sealing.Inspect(ctx, sealing.Options{DB: db, Holder: rk.primary, Previous: rk.previous, Notes: keyBesideDataNotes(ctx, cfg, rk)})
 	if err != nil {
 		if errors.Is(err, sealing.ErrDatabaseEncrypted) {
 			fmt.Println("Encryption at rest: this database is encrypted, but no root key is configured here.")
@@ -96,7 +96,7 @@ func encryptionBrief(ctx context.Context, cfg *config.Config, wait time.Duration
 		return []string{"Encryption at rest: not checked, the database cannot be reached"}
 	}
 	defer db.Close()
-	svc, err := sealing.Inspect(ctx, sealing.Options{DB: db, Holder: rk.primary, Previous: rk.previous})
+	svc, err := sealing.Inspect(ctx, sealing.Options{DB: db, Holder: rk.primary, Previous: rk.previous, Notes: keyBesideDataNotes(ctx, cfg, rk)})
 	if err != nil {
 		return []string{"Encryption at rest: " + err.Error()}
 	}

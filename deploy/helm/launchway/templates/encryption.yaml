@@ -8,10 +8,19 @@
 {{- end }}
 {{- $name := include "launchway.rootKeySecretName" . }}
 {{- $existing := lookup "v1" "Secret" .Release.Namespace $name }}
+{{- /* lookup answers nothing at all when the chart is rendered without a cluster (helm template, Argo CD,
+       a client-side dry run): then "the Secret is not there" and "this render cannot see" look the same,
+       and a key generated here would be a different one on every render, replacing the real key at the
+       next sync and locking the installation out of everything sealed with it. Every namespace has the
+       kube-root-ca.crt ConfigMap, so finding it proves the lookup is live. */ -}}
+{{- $live := lookup "v1" "ConfigMap" .Release.Namespace "kube-root-ca.crt" }}
 {{- $key := "" }}
 {{- if and $existing $existing.data (index $existing.data "root.key") }}
 {{- $key = index $existing.data "root.key" }}
 {{- else }}
+{{- if and (not $live) (not .Values.encryption.keyFile.allowOfflineGeneration) }}
+{{- fail (printf "the chart is being rendered without a view of the cluster (helm template, Argo CD or a dry run), so it cannot tell whether the root key Secret %q exists, and a key generated here would be replaced by a different one at every render and lock the installation out of its own secrets. Create the Secret once and name it: `openssl rand -base64 32 > root.key; chmod 600 root.key; kubectl -n %s create secret generic %s --from-file=root.key`, then set encryption.keyFile.existingSecret=%s (keep a copy of root.key outside the cluster). A real `helm install` or `helm upgrade` generates and keeps the Secret by itself. To render anyway (CI, linting), set encryption.keyFile.allowOfflineGeneration=true, and never apply that output." $name .Release.Namespace $name $name) }}
+{{- end }}
 {{- /* randBytes: 32 random bytes as base64, which is the key file's text; Secret data is base64 of that. */ -}}
 {{- $key = randBytes 32 | b64enc }}
 {{- end }}

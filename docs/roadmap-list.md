@@ -714,12 +714,12 @@ Everything Launchway holds is encrypted at rest with a key kept outside the data
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [An installation key and a key hierarchy](roadmap/milestone-12.md#an-installation-key-and-a-key-hierarchy) | In progress | A root key held outside the database protects a small hierarchy of keys that protect every secret and every stored file. |
-| [Key sources you choose](roadmap/milestone-12.md#key-sources-you-choose) | Planned | Take the installation key from a mounted secret, a passphrase, a cloud key service, a vault’s transit service, a hardware module or a platform chip. |
-| [Encrypt stored secrets and tokens](roadmap/milestone-12.md#encrypt-stored-secrets-and-tokens) | Planned | Move the keys that sit in plaintext in the database today into encryption under the hierarchy. |
+| [An installation key and a key hierarchy](roadmap/milestone-12.md#an-installation-key-and-a-key-hierarchy) | Available | A root key held outside the database protects a small hierarchy of keys that protect every stored secret. |
+| [Key sources you choose](roadmap/milestone-12.md#key-sources-you-choose) | In progress | Take the installation key from a mounted secret, a passphrase, a cloud key service, a vault’s transit service, a hardware module or a platform chip. |
+| [Encrypt stored secrets and tokens](roadmap/milestone-12.md#encrypt-stored-secrets-and-tokens) | Available | The keys that sat in plaintext in the database are sealed under the hierarchy, in place, on the first start with a key. |
 | [Encrypt stored files, logs and caches](roadmap/milestone-12.md#encrypt-stored-files-logs-and-caches) | Planned | Artifacts, caches, repository data and logs are encrypted as streams, re-encrypted lazily. |
-| [Rotation without downtime](roadmap/milestone-12.md#rotation-without-downtime) | Planned | Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving. |
-| [The doctor reports encryption plainly](roadmap/milestone-12.md#the-doctor-reports-encryption-plainly) | Planned | A plain report of what is encrypted, what is not, and the one step to fix each gap. |
+| [Rotation without downtime](roadmap/milestone-12.md#rotation-without-downtime) | In progress | Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving. |
+| [The doctor reports encryption plainly](roadmap/milestone-12.md#the-doctor-reports-encryption-plainly) | Available | A plain report of what is encrypted, what is not, and the one step to fix each gap. |
 | [Tamper-evident audit trail](roadmap/milestone-12.md#tamper-evident-audit-trail) | Planned | The audit trail forms a chain so a deletion or an edit shows. |
 | [Transport and sign-in hardening](roadmap/milestone-12.md#transport-and-sign-in-hardening) | Planned | Built-in transport encryption, refusal of unencrypted database connections, and sign-in rate limits with lockout. |
 | [Customer-held keys and deletion by key destruction](roadmap/milestone-12.md#customer-held-keys-and-deletion-by-key-destruction) | Planned | For the hosted service, keep logs and artifacts under a key you hold, and prove deletion by destroying it. |

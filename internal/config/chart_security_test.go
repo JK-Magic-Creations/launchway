@@ -34,6 +34,9 @@ func renderDocs(t *testing.T, c chartCase) []map[string]any {
 		t.Skip("needs helm")
 	}
 	args := []string{"template", "t", "../../deploy/helm/" + c.chart}
+	if c.chart == "launchway" {
+		args = append(args, "--set", "encryption.keyFile.allowOfflineGeneration=true")
+	}
 	for _, v := range c.values {
 		args = append(args, "-f", "../../deploy/helm/"+v)
 	}

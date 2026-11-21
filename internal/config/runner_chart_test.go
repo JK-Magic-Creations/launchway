@@ -28,7 +28,11 @@ func helmTemplate(t *testing.T, chart, namespace, values string) []map[string]an
 	if _, err := exec.LookPath("helm"); err != nil {
 		t.Skip("needs helm")
 	}
-	out, err := exec.Command("helm", "template", "t", chart, "-n", namespace, "-f", writeTemp(t, values)).CombinedOutput()
+	args := []string{"template", "t", chart, "-n", namespace, "-f", writeTemp(t, values)}
+	if chart == mainChart {
+		args = append(args, "--set", "encryption.keyFile.allowOfflineGeneration=true")
+	}
+	out, err := exec.Command("helm", args...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("helm template %s: %v\n%s", chart, err, out)
 	}

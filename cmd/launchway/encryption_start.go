@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -137,6 +138,10 @@ func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*s
 		}
 	}
 	o.Holder, o.Previous = rk.primary, rk.previous
+	o.Notes = keyBesideDataNotes(ctx, cfg, rk)
+	for _, n := range o.Notes {
+		log.Warn(n)
+	}
 	svc, err := sealing.Start(ctx, o)
 	if err != nil {
 		return nil, err
@@ -172,13 +177,17 @@ func defaultKeyFile(ctx context.Context, cfg *config.Config, eng *engine.Engine,
 		if err != nil {
 			return nil, err
 		}
-		if !fresh {
+		if !fresh && !config.FileExists(path) { // a server starting at the same moment may have made the key and the first keys since the check above
 			return none, nil
 		}
-		if err := keyring.WriteKeyFile(path); err != nil {
+		if err := keyring.WriteKeyFile(path); errors.Is(err, os.ErrExist) {
+			// Another server starting at the same moment made it first: use its key.
+			log.Info("another server made the root key file first; using it", "key_file", path)
+		} else if err != nil {
 			return nil, fmt.Errorf("making a root key for this new installation: %w", err)
+		} else {
+			log.Warn("a root key was generated for this new installation, because none was configured. Keep a copy of it somewhere other than the database's backups: without it a restore cannot read any secret. For production, move it off this volume and set encryption.key_file", "key_file", path)
 		}
-		log.Warn("a root key was generated for this new installation, because none was configured. Keep a copy of it somewhere other than the database's backups: without it a restore cannot read any secret. For production, move it off this volume and set encryption.key_file", "key_file", path)
 	} else {
 		log.Info("using the root key file in the data directory; for production, keep the key off this volume and set encryption.key_file", "key_file", path)
 	}
@@ -198,4 +207,28 @@ func (su *serverSetup) secretsAndToken(eng *engine.Engine) (*sealing.Service, st
 	}
 	token, err := config.RunnerToken(su.cfg.Data, svc)
 	return svc, token, err
+}
+
+// keyBesideDataNotes warns when the root key file lies inside the data
+// directory: that directory holds the SQLite database, and is what a file-level
+// backup or a volume snapshot copies, usually together with any dump kept
+// there, so the key and the data would be stored together and the key would
+// protect nothing from whoever gets that copy.
+func keyBesideDataNotes(ctx context.Context, cfg *config.Config, rk *rootKeys) []string {
+	if rk == nil || rk.primary == nil || rk.kind != "key_file" || cfg.Data == "" {
+		return nil
+	}
+	where := rk.primary.Status(ctx).Where
+	if where == "" {
+		return nil
+	}
+	data, err1 := filepath.Abs(cfg.Data)
+	key, err2 := filepath.Abs(where)
+	if err1 != nil || err2 != nil {
+		return nil
+	}
+	if rel, err := filepath.Rel(data, key); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return nil
+	}
+	return []string{"The root key and the dump are stored together: the key file " + where + " is inside the data directory " + cfg.Data + ", which holds the database (SQLite) and is what a file backup or volume snapshot copies, so a copy of this directory or volume reveals every secret. Keep the key off this volume and out of the backups of the database: set encryption.key_file to a file elsewhere (a mounted secret), or use the transit holder."}
 }

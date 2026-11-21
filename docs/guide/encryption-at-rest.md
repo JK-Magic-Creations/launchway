@@ -117,6 +117,22 @@ not change, so the release before can still read it. In production, make the Sec
 in `encryption.keyFile.existingSecret`, or use `encryption.holder: transit`. `encryption.holder: none`
 runs not encrypted, with the warning: only as a first upgrade step.
 
+**Under GitOps the chart cannot generate the key.** Generating and keeping the Secret needs the chart to
+see the cluster (`lookup`), which a live `helm install` or `helm upgrade` can and `helm template` (what
+Argo CD runs) cannot: rendered without a cluster, a generated key would be a different one at every
+render, and the next sync would replace the real key and lock the installation out of every sealed secret.
+So rendered without a cluster the chart **refuses** to generate a key and says what to do. Make the Secret
+once, outside the chart, and name it:
+
+```sh
+openssl rand -base64 32 > root.key; chmod 600 root.key
+kubectl -n launchway create secret generic launchway-root-key --from-file=root.key
+# keep a copy of root.key outside the cluster, then set encryption.keyFile.existingSecret: launchway-root-key
+```
+
+(or sync it from your secret manager, or use the `transit` holder). `encryption.keyFile.allowOfflineGeneration`
+exists only so that linting and tests can render the chart; never apply output rendered that way.
+
 ## When the key is missing or wrong
 
 - **No key, new installation:** a key file is generated (above).
@@ -139,6 +155,14 @@ every sealed secret is gone, and neither you nor anyone else can recover it.**
 - Keep a copy of the root key (or the keystore **and** its passphrase) somewhere other than the
   database's backups: a password manager, or a sealed printout in a safe, ideally held by more than one
   person. Never in the same place as the dump.
+- **Do not let the key and the dump be stored together.** The generated key file (`<data>/root.key`) lies
+  in the data directory, which holds the SQLite database and is what a file-level backup or a volume
+  snapshot copies, together with any dump kept there: such a copy holds the key and the data, and the key
+  protects nothing. When the key file is inside the data directory, the server says so at start, and
+  `launchway doctor`, `launchway doctor encryption` and Settings, Security warn *"the root key and the dump
+  are stored together"* until the key is moved: set `encryption.key_file` to a file elsewhere (a mounted
+  secret). With the Helm chart the key is a Kubernetes Secret, not in the database or in a dump taken
+  with `pg_dump`; keep it out of any backup tool that also copies the same Secrets as the database's volume.
 - Back it up again whenever you replace it.
 - A restore needs both: the dump and the key. A restore to a test environment needs the key too, which is
   also how a stolen production backup stays safe there.

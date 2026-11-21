@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
@@ -24,6 +26,19 @@ const (
 	cInlineCred = "CANARY-inline-credential-in-an-address-2d7b9e40"
 	cVarValue   = "CANARY-text-given-as-a-secret-variable-8c4e1a97"
 )
+
+// syncLog is a log buffer that goroutines may write to.
+type syncLog struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (l *syncLog) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.buf.Write(p)
+}
+func (l *syncLog) String() string { l.mu.Lock(); defer l.mu.Unlock(); return l.buf.String() }
 
 // noStorage is the repository storage of a mirror that is never synced here.
 type noStorage struct{ mirror.Storage }
@@ -43,7 +58,12 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 	t.Setenv("CANARY_MIRROR_TOKEN", cMirrorEnv)
 	addr := testdb.New(t)
 	e := openEngine(t, addr)
-	s := start(t, e, newHolder(t))
+	var logs syncLog
+	debug := slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	s, err := Start(ctx, Options{DB: e.Database(), Holder: newHolder(t), Log: debug, Instance: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	db := e.Database()
 	for key, val := range map[string]string{"runner_token": cRunner, "login_state_key": cLogin, "hosted_report_key": cReport, "git_run_token_key": cRunTok} {
 		if _, err := s.SharedValue(key, val); err != nil {
@@ -58,7 +78,7 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 		_, _ = w.Write([]byte("received " + sawSignature))
 	}))
 	defer recv.Close()
-	hooks := webhooks.New(webhooks.Options{DB: db, Sealer: s.Webhooks(), Log: quiet})
+	hooks := webhooks.New(webhooks.Options{DB: db, Sealer: s.Webhooks(), Log: debug})
 	hook, _, err := hooks.Create(ctx, webhooks.NewHook{RepoID: "repo1", Name: "ci", URL: recv.URL, Events: []string{"push", "pull_request"}, Secret: cWebhook, CreatedBy: "ada"})
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +126,7 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := mirror.New(db, fs, noStorage{}, conn, mirror.Options{Guard: guard, Log: quiet})
+	ms := mirror.New(db, fs, noStorage{}, conn, mirror.Options{Guard: guard, Log: debug})
 	if _, err := ms.SetPull(ctx, repo.Path, mirror.Spec{URL: "https://" + "198.51.100.7/acme/src.git", Username: "mirror", Credential: forge.SecretRef{Env: "CANARY_MIRROR_TOKEN"}}, "ada"); err != nil {
 		t.Fatal(err)
 	}
@@ -132,6 +152,10 @@ func TestCanaryEveryKindOfStoredDataHoldsNoSecret(t *testing.T) {
 		"a webhook secret": cWebhook, "the mirror's credential, read from the environment": cMirrorEnv, "a credential written into a mirror address": cInlineCred,
 		"a secret variable given as text": cVarValue} {
 		mustNotAppear(t, dump, what, []byte(v))
+	}
+	// Nothing logged at debug level, the most talkative, holds a secret either.
+	for what, v := range map[string]string{"the shared runner token": cRunner, "the login state key": cLogin, "a webhook secret": cWebhook, "the mirror's credential": cMirrorEnv} {
+		mustNotAppear(t, []byte(logs.String()), what+" in the debug log", []byte(v))
 	}
 	// The webhook's own signature, which the delivery record holds (the receiver echoed it), is not the secret.
 	if !bytes.Contains(dump, []byte(sawSignature)) {

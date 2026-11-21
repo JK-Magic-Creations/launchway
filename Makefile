@@ -39,8 +39,8 @@ image:
 
 # Checks the Helm charts in deploy/helm.
 chart-lint: charts-sync
-	helm lint deploy/helm/launchway --set postgresql.enabled=true
-	helm template t deploy/helm/launchway -f deploy/helm/launchway/examples/ha.yaml >/dev/null
+	helm lint deploy/helm/launchway --set postgresql.enabled=true --set encryption.keyFile.allowOfflineGeneration=true
+	helm template t deploy/helm/launchway -f deploy/helm/launchway/examples/ha.yaml --set encryption.keyFile.allowOfflineGeneration=true >/dev/null
 	helm lint deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml
 	helm template t deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/remote.yaml -f deploy/helm/launchway-runner/examples/networkpolicy.yaml >/dev/null
 	helm template t deploy/helm/launchway-runner -f deploy/helm/launchway-runner/examples/deploy-runner.yaml >/dev/null

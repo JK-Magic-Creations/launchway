@@ -270,7 +270,10 @@ database:
 #
 # SECURE BY DEFAULT: the servers refuse to start without a root key. The default holder is a key
 # file the chart generates in a Kubernetes Secret on first install and keeps on every upgrade
-# (the Secret is never deleted by helm uninstall: it carries helm.sh/resource-policy: keep).
+# (the Secret is never deleted by helm uninstall: it carries helm.sh/resource-policy: keep). That needs a
+# live `helm install` or `helm upgrade`: rendered without a cluster (helm template, Argo CD) the chart
+# refuses to generate one, because the key would change at every render; under GitOps create the Secret
+# once and set encryption.keyFile.existingSecret.
 # HONEST LIMIT: a Kubernetes Secret is only as protected as your cluster's own secret encryption
 # (etcd encryption at rest, who may read Secrets). It defeats a stolen database dump or backup,
 # not a cluster administrator. For more, use holder: transit (Vault or OpenBao).
@@ -290,6 +293,11 @@ encryption:
   keyFile:
     # -- Generate the key Secret on first install (and keep it on upgrade) when existingSecret is empty.
     generate: true
+    # -- Render a generated key even when the chart cannot see the cluster (helm template, Argo CD, a
+    # dry run). Only for linting and tests: such a render makes a different key every time, so
+    # applying it would replace the real key and lock the installation out of its sealed secrets.
+    # Under GitOps (Argo CD, Flux with helm template) set existingSecret instead.
+    allowOfflineGeneration: false
     # -- The name of an existing Secret holding the key (32 random bytes, base64, as `launchway
     # encryption init` writes). Prefer this in production: you made it, you hold the copy.
     existingSecret: ""

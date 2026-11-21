@@ -44,6 +44,9 @@ type Options struct {
 	Now   func() time.Time
 	// Instance names this server in the migration lease.
 	Instance string
+	// Notes are warnings the caller knows and the service cannot (for example
+	// that the key file lies in the data directory); the report shows them.
+	Notes []string
 	// Wait bounds how long a starting server waits for another to finish
 	// sealing what was stored in the clear (default 60 seconds).
 	Wait time.Duration
@@ -60,6 +63,7 @@ type Service struct {
 	instance string
 	wait     time.Duration
 	auditFn  func(context.Context, keyring.Event)
+	notes    []string
 	// Set by Inspect: a root key is configured but unused, or the database
 	// has not been upgraded to the schema with the key tables.
 	configured  string
@@ -81,7 +85,7 @@ var ErrDatabaseEncrypted = errors.New("this database is encrypted at rest (it ho
 // service in "not encrypted at rest" mode, unless the database is already
 // encrypted, which is refused.
 func Start(ctx context.Context, o Options) (*Service, error) {
-	s := &Service{db: o.DB, kdb: locked{o.DB}, log: o.Log, now: o.Now, instance: o.Instance, wait: o.Wait, auditFn: o.Audit}
+	s := &Service{db: o.DB, kdb: locked{o.DB}, log: o.Log, now: o.Now, instance: o.Instance, wait: o.Wait, auditFn: o.Audit, notes: o.Notes}
 	if s.log == nil {
 		s.log = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
@@ -121,7 +125,7 @@ func Start(ctx context.Context, o Options) (*Service, error) {
 // has not been used yet is reported as such; one that is in use is opened, so
 // a wrong key shows.
 func Inspect(ctx context.Context, o Options) (*Service, error) {
-	s := &Service{db: o.DB, kdb: locked{o.DB}, log: o.Log, now: o.Now, instance: o.Instance, wait: o.Wait, auditFn: o.Audit}
+	s := &Service{db: o.DB, kdb: locked{o.DB}, log: o.Log, now: o.Now, instance: o.Instance, wait: o.Wait, auditFn: o.Audit, notes: o.Notes}
 	if s.log == nil {
 		s.log = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}

@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 12 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 1 in progress · 20 planned · 23 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 5 available · 2 in progress · 16 planned · 23 capabilities</p>
 
 Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.
 
@@ -44,28 +44,28 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Encryption at rest](#g-encryption-at-rest) | 9 | 0 | 1 | 8 |
+| [Encryption at rest](#g-encryption-at-rest) | 9 | 3 | 2 | 4 |
 | [Launchway’s own vault](#g-launchway-s-own-vault) | 4 | 0 | 0 | 4 |
 | [The security program](#g-the-security-program) | 4 | 2 | 0 | 2 |
 | [Certification, in an honest order](#g-certification-in-an-honest-order) | 6 | 0 | 0 | 6 |
 
 ### Encryption at rest {#g-encryption-at-rest}
 
-First phase, in progress.
+Stored secrets are sealed today; stored files, logs and caches are next.
 
 #### An installation key and a key hierarchy {#an-installation-key-and-a-key-hierarchy}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A root key held outside the database protects a small hierarchy of keys that protect every secret and every stored file. Today the key library and the first adapter are being built; the default needs nothing installed (a key file or a passphrase-unsealed store).
+A root key held outside the database protects a small hierarchy of keys that protect every stored secret. Built and shipped for secrets: the default needs nothing installed (a key file generated on first start), and files, logs and caches will use the same hierarchy.
 
 [Area page](security-trust.md)
 
 #### Key sources you choose {#key-sources-you-choose}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Take the installation key from a mounted secret, a passphrase, a cloud key service, a vault’s transit service, a hardware module or a platform chip. Each is an adapter behind one interface.
+Take the installation key from a mounted secret, a passphrase, a cloud key service, a vault’s transit service, a hardware module or a platform chip. Available now: a key file, an environment variable, a passphrase-unsealed store, and the transit service of OpenBao or Vault. Cloud key services, hardware modules and platform chips are not built yet; each will be an adapter behind the same interface.
 
 **Depends on:** An installation key and a key hierarchy.
 
@@ -73,9 +73,9 @@ Take the installation key from a mounted secret, a passphrase, a cloud key servi
 
 #### Encrypt stored secrets and tokens {#encrypt-stored-secrets-and-tokens}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Move the keys that sit in plaintext in the database today into encryption under the hierarchy. Reads work with both old and new forms during the move.
+The keys that sat in plaintext in the database are sealed under the hierarchy, in place, on the first start with a key. Every stored secret goes through one helper and a registry that a test holds new code to; a test dumps the database and proves no secret appears in it. Reads work with both old and new forms during the move.
 
 **Depends on:** An installation key and a key hierarchy.
 
@@ -93,9 +93,9 @@ Artifacts, caches, repository data and logs are encrypted as streams, re-encrypt
 
 #### Rotation without downtime {#rotation-without-downtime}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving. Backups and restores keep working across rotations.
+Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving. Rotation and re-wrapping of the sealed secrets work while the server runs; re-encrypting stored files waits for file encryption.
 
 **Depends on:** Encrypt stored files, logs and caches.
 
@@ -103,7 +103,7 @@ Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving
 
 #### The doctor reports encryption plainly {#the-doctor-reports-encryption-plainly}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
 A plain report of what is encrypted, what is not, and the one step to fix each gap. It never says encrypted when it is not.
 

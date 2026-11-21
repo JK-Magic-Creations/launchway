@@ -183,6 +183,7 @@ func (s *Service) advise(r *Report) {
 		}
 		r.Advice = append(r.Advice, "Keep a copy of the root key somewhere other than the database's backups: without it a restore cannot read any secret, and nobody can recover it for you.")
 	}
+	r.Warnings = append(r.Warnings, s.notes...)
 	if r.CredentialAddress > 0 {
 		r.Warnings = append(r.Warnings, fmt.Sprintf("%d stored addresses (mirrors, webhooks, connections) carry a user name or password in the address; edit them and give the credential as a reference.", r.CredentialAddress))
 	}

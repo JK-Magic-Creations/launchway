@@ -283,6 +283,7 @@
           "additionalProperties": false,
           "properties": {
             "generate": { "type": "boolean" },
+            "allowOfflineGeneration": { "type": "boolean" },
             "existingSecret": { "type": "string" },
             "existingSecretKey": { "type": "string", "minLength": 1 }
           }

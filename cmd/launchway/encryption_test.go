@@ -358,3 +358,86 @@ func TestRootKeyReplacementThroughTheCommands(t *testing.T) {
 		t.Fatal("the old key still opens the database")
 	}
 }
+
+// Servers starting at once over one new installation (one data directory, one
+// database, no key anywhere yet) all end up with the same one key: exactly one
+// makes the file, the rest use it, none fails, and every secret opens from
+// each.
+func TestServersStartingTogetherOnANewInstallationShareOneGeneratedKey(t *testing.T) {
+	addr := testdb.New(t)
+	dir := t.TempDir()
+	const n = 6
+	svcs := make([]*sealing.Service, n)
+	errs := make([]error, n)
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := range n {
+		wg.Add(1)
+		e := engineAt(t, addr)
+		go func() {
+			defer wg.Done()
+			su := &serverSetup{cfg: &config.Config{Data: dir, Database: addr}, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+			<-start
+			svcs[i], errs[i] = su.startSecrets(context.Background(), e)
+		}()
+	}
+	close(start)
+	wg.Wait()
+	for i := range n {
+		if errs[i] != nil || !svcs[i].Encrypted() {
+			t.Fatalf("server %d: %v", i, errs[i])
+		}
+	}
+	if v, err := svcs[0].SharedValue("runner_token", "tok-canary"); err != nil || v != "tok-canary" {
+		t.Fatal(v, err)
+	}
+	for i := range n {
+		if v, err := svcs[i].SharedValue("runner_token", "other"); err != nil || v != "tok-canary" {
+			t.Fatalf("server %d reads %q: %v (it holds a different key)", i, v, err)
+		}
+	}
+	files, _ := os.ReadDir(dir)
+	for _, f := range files {
+		if strings.HasPrefix(f.Name(), ".root.key.") {
+			t.Errorf("a temporary key file was left: %s", f.Name())
+		}
+	}
+	if fi, err := os.Stat(config.DefaultKeyFile(dir)); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("%v %v", fi, err)
+	}
+}
+
+// A key file inside the data directory is stored with the database (SQLite
+// lives there, and file backups and volume snapshots copy the directory), and
+// the server, the report and the doctor say so in plain words; a key file
+// elsewhere draws no such warning.
+func TestKeyInTheDataDirectoryIsWarnedAbout(t *testing.T) {
+	addr := testdb.New(t)
+	su, lc := setupFor(t, addr, config.EncryptionConfig{})
+	svc, err := su.startSecrets(context.Background(), engineAt(t, addr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(lc.String(), "stored together") {
+		t.Fatalf("the log lacks the warning:\n%s", lc.String())
+	}
+	rep, err := svc.Report(context.Background())
+	if err != nil || !strings.Contains(strings.Join(rep.Warnings, "\n"), "stored together") {
+		t.Fatalf("the report lacks the warning: %v %v", rep.Warnings, err)
+	}
+
+	addr2 := testdb.New(t)
+	other := filepath.Join(t.TempDir(), "root.key")
+	if err := keyring.WriteKeyFile(other); err != nil {
+		t.Fatal(err)
+	}
+	su2, lc2 := setupFor(t, addr2, config.EncryptionConfig{KeyFile: other})
+	svc2, err := su2.startSecrets(context.Background(), engineAt(t, addr2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep2, _ := svc2.Report(context.Background())
+	if strings.Contains(lc2.String(), "stored together") || strings.Contains(strings.Join(rep2.Warnings, "\n"), "stored together") {
+		t.Fatal("a key outside the data directory was warned about")
+	}
+}

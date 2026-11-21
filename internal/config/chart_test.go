@@ -24,7 +24,7 @@ func renderChart(t *testing.T, values string) map[string]string {
 	}
 	vf := filepath.Join(t.TempDir(), "values.yaml")
 	os.WriteFile(vf, []byte(values), 0o644)
-	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", vf).CombinedOutput()
+	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
 	if err != nil {
 		t.Fatalf("helm template: %v\n%s", err, out)
 	}
@@ -151,7 +151,7 @@ func TestChartRolloutControl(t *testing.T) {
 	render := func(values string) string {
 		vf := filepath.Join(t.TempDir(), "values.yaml")
 		os.WriteFile(vf, []byte(values), 0o644)
-		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", vf).CombinedOutput()
+		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
 		if err != nil {
 			t.Fatalf("helm template: %v\n%s", err, out)
 		}
@@ -192,7 +192,7 @@ delivery:
 	}
 	vf := filepath.Join(t.TempDir(), "values.yaml")
 	os.WriteFile(vf, []byte(base+"    rbac: { controlRollouts: { other: [x] } }\n"), 0o644)
-	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", vf).CombinedOutput(); err == nil ||
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "not in delivery.deployRunner.rolloutNamespaces") {
 		t.Fatalf("a namespace outside rolloutNamespaces: %v %s", err, out)
 	}
@@ -239,7 +239,7 @@ runner:
 		im.Scanner.DBRepository != "harbor.example.com/mirror/trivy-db" || im.MaxImageMiB != 4096 {
 		t.Fatalf("images: %+v", im)
 	}
-	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", writeTemp(t, values)).CombinedOutput()
+	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", writeTemp(t, values)).CombinedOutput()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +249,7 @@ runner:
 		}
 	}
 	bad := strings.Replace(values, "    tlsSecret: buildkit-client\n", "", 1)
-	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", writeTemp(t, bad)).CombinedOutput(); err == nil ||
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", writeTemp(t, bad)).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "needs mutual TLS") {
 		t.Fatalf("a TCP builder without TLS: %v %s", err, out)
 	}
@@ -366,7 +366,7 @@ config:
 	if origin, err := c.ReportsOrigin(); err != nil || origin != "https://reports.ci.example.com" {
 		t.Fatalf("origin %q %v", origin, err)
 	}
-	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f",
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f",
 		writeTemp(t, "postgresql: { enabled: true }\nconfig: { extraConfig: { reports: { origin: x } } }\n")).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "use config.reports") {
 		t.Fatalf("reports in extraConfig: %v %s", err, out)
@@ -637,7 +637,7 @@ func TestChartVerificationAIRefused(t *testing.T) {
 		if values == chartVerificationAI {
 			t.Fatalf("%s: the values did not change", tc.name)
 		}
-		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", writeTemp(t, values)).CombinedOutput()
+		out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", writeTemp(t, values)).CombinedOutput()
 		if err == nil || !strings.Contains(string(out), tc.want) {
 			t.Errorf("%s: %v %s", tc.name, err, out)
 		}
@@ -645,7 +645,7 @@ func TestChartVerificationAIRefused(t *testing.T) {
 	noModels := `postgresql: { enabled: true }
 runner: { ai: true }
 `
-	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", writeTemp(t, noModels)).CombinedOutput(); err == nil ||
+	if out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", writeTemp(t, noModels)).CombinedOutput(); err == nil ||
 		!strings.Contains(string(out), "runner.ai is true, but ai.models is empty") {
 		t.Errorf("runner.ai without models: %v %s", err, out)
 	}
@@ -687,7 +687,7 @@ runner:
 	}
 	vf := filepath.Join(t.TempDir(), "values.yaml")
 	os.WriteFile(vf, []byte("postgresql: { enabled: true }\nrunner: { join: { existingSecret: lw-join } }\n"), 0o644)
-	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "-f", vf).CombinedOutput()
+	out, err := exec.Command("helm", "template", "t", "../../deploy/helm/launchway", "--set", "encryption.keyFile.allowOfflineGeneration=true", "-f", vf).CombinedOutput()
 	if err != nil || !strings.Contains(string(out), "LAUNCHWAY_JOIN") || strings.Contains(string(out), "name: LAUNCHWAY_RUNNER_TOKEN\n              valueFrom:\n                secretKeyRef:\n                  name: lw-join") {
 		t.Fatalf("join: %v", err)
 	}

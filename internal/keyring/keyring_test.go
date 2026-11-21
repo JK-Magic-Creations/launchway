@@ -3,7 +3,10 @@ package keyring
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -397,4 +400,56 @@ func FuzzOpen(f *testing.F) {
 			t.Fatalf("%q opened to %q", in, got)
 		}
 	})
+}
+
+// The audit entries of every key operation (creation, rotation of both kinds,
+// re-wrap, a failed unseal) name keys by version and never carry the root key,
+// a derived key, or a sealed plaintext, in any encoding the keys are written in.
+func TestAuditEntriesNeverHoldKeyMaterial(t *testing.T) {
+	db := newDB(t)
+	rootBytes := mustKey(t)
+	root, _ := FromKey("key_file", "test", rootBytes)
+	newBytes := mustKey(t)
+	next, _ := FromKey("key_file", "test", newBytes)
+	var all strings.Builder
+	rec := func(_ context.Context, e Event) {
+		fmt.Fprintf(&all, "%s|%s|%s|%s\n", e.Action, e.Target, e.Outcome, e.Detail)
+	}
+	k, err := Open(ctx, db, root, Options{Audit: rec})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const plain = "PLAINTEXT-canary-for-the-audit-test-9f3a"
+	if _, err := k.Seal(ctx, bind("r1"), []byte(plain)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := k.RotateKEK(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := k.RotateDataKeys(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Open(ctx, db, next, Options{Audit: rec}); err == nil { // wrong key: a failed unseal
+		t.Fatal("the new key opened before the re-wrap")
+	}
+	k2, err := Open(ctx, db, next, Options{Previous: []Holder{root}, Audit: rec})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := k2.Rewrap(ctx); err != nil {
+		t.Fatal(err)
+	}
+	text := all.String()
+	for _, action := range []string{"encryption.key_created", "encryption.kek_rotated", "encryption.dek_rotated", "encryption.unseal", "encryption.rewrap"} {
+		if !strings.Contains(text, action) {
+			t.Errorf("no audit entry %s:\n%s", action, text)
+		}
+	}
+	for what, secret := range map[string][]byte{"the first root key": rootBytes, "the second root key": newBytes, "a sealed plaintext": []byte(plain)} {
+		for name, enc := range map[string]string{"raw": string(secret), "base64": base64.StdEncoding.EncodeToString(secret), "base64url": base64.RawURLEncoding.EncodeToString(secret), "hex": hex.EncodeToString(secret)} {
+			if strings.Contains(text, enc) {
+				t.Errorf("%s is in an audit entry (%s)", what, name)
+			}
+		}
+	}
 }

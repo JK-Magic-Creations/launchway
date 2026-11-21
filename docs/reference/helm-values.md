@@ -189,7 +189,8 @@ See [Encryption at rest](../guide/encryption-at-rest.md). The chart passes the h
 | Value | Type | Default | Description |
 |---|---|---|---|
 | `encryption.holder` | `keyFile`, `env`, `passphrase`, `transit` or `none` | `keyFile` | Where the root key is held. `none` runs not encrypted at rest, with a warning at start, in `launchway doctor` and on the Settings page |
-| `encryption.keyFile.generate` | boolean | `true` | With no `existingSecret`, make a key Secret on first install and keep it on every upgrade. It is annotated `helm.sh/resource-policy: keep`, so `helm uninstall` leaves it. Only as strong as the cluster's own Secret encryption: it defeats a stolen database dump, not a cluster administrator |
+| `encryption.keyFile.generate` | boolean | `true` | With no `existingSecret`, make a key Secret on first install and keep it on every upgrade. It is annotated `helm.sh/resource-policy: keep`, so `helm uninstall` leaves it. Needs a live `helm install` or `helm upgrade`: rendered without a cluster (`helm template`, Argo CD) the chart refuses to generate a key, because it would differ at every render; under GitOps create the Secret once and set `existingSecret`. Only as strong as the cluster's own Secret encryption: it defeats a stolen database dump, not a cluster administrator |
+| `encryption.keyFile.allowOfflineGeneration` | boolean | `false` | Render a generated key even when the chart cannot see the cluster. Only for linting and tests: such a render makes a different key every time, so applying it would replace the real key and lock the installation out of its sealed secrets |
 | `encryption.keyFile.existingSecret` | string | `""` | An existing Secret holding the key file's text (32 random bytes, base64). Prefer this in production |
 | `encryption.keyFile.existingSecretKey` | string | `root.key` | The key in that Secret |
 | `encryption.env.existingSecret` | string | `""` | `holder: env`: a Secret whose key holds the root key itself |
