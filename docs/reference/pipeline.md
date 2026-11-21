@@ -719,7 +719,8 @@ default `30m`, from `1m` to `24h`. Deploy steps cannot be repeated by `for_each`
 | `environment` | name, or `{ input: name }` | required | One of the server's [Airfields](server-config.md#environments): it gives the lock and the record. `^[a-z0-9][a-z0-9-]{0,62}$`. `{ input: name }` takes it from a `choice` input whose options are all Airfield names |
 | `service` | name | the project's name | What is deployed there. `^[a-z0-9][a-z0-9-]{0,62}$` |
 | `version` | [value](#value-forms) | `{ run: short_sha }` | What the Airfield's "current version" shows |
-| `argocd` | mapping | required | How to launch with Argo CD; see [Argo CD](#argo-cd) |
+| `argocd` | mapping | one of `argocd` or `fleet` | How to launch with Argo CD; see [Argo CD](#argo-cd) |
+| `fleet` | mapping | one of `argocd` or `fleet` | How to deliver to a fleet of hosts over SSH; see [Fleet](#fleet) |
 | `rollout` | mapping | none | An Argo Rollouts rollout to wait for as well; see [Rollout](#rollout) |
 | `on_cancel` | text | `leave` | `leave`, or `abort`: when the run is cancelled by hand while the deployment is open, abort the rollout. `abort` needs `rollout` |
 
@@ -735,6 +736,47 @@ available yet. Two deploy steps of the same service and Airfield must be ordered
 | `write_back` | mapping | required | The commit to make; see [Write back](#write-back) |
 | `sync` | mapping | `request: auto`, `windows: wait` | Whether and how to ask Argo CD to sync; see [Sync](#sync) |
 | `health` | text | `application`, or `resources` when `sync.resources` is set | `application`: the application's sync and health decide. `resources`: only the resources under `sync.resources` decide |
+
+#### Fleet
+
+A `fleet` block delivers to hosts (virtual machines or bare metal) instead of through Argo CD. A Station reaches each
+host over SSH with a key from a secret store (never written in the file), takes the host out of the load balancer's
+rotation (drains it), changes it, health-checks it with `check`, and puts it back, in batches of `max_unavailable`. A
+failed check returns every touched host to its previous release and stops. The hosts, their pinned public keys and their
+load balancer names are the Airfield's inventory (schema 50), not part of the pipeline. A Station runs the step with
+`launchway fleet run`; the server does not schedule fleet steps yet and refuses a run that has one.
+
+<!-- keys: fleet -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `method` | text | `systemd` | `systemd`: a release artifact run by a systemd unit. `bootc`: an operating-system image, switched to by digest, staged, then booted |
+| `strategy` | text | `rolling` | `rolling`: in place, in batches. `pathfinder`: a second group of hosts takes 10, 50, then 100 percent of the traffic by weights, verified between steps (method `systemd` only) |
+| `service` | name | the step's `service` | The systemd unit (method `systemd`) |
+| `artifact` | path | required for `systemd` | The file to install, inside the workspace |
+| `image` | [value](#value-forms) | required for `bootc` | The image by digest, `name@sha256:...`; a tag is refused because it can move |
+| `max_unavailable` | number | `1` | How many hosts change at once, 1 to 100; with a load balancer it must leave one host serving |
+| `drain` | duration | `30s` | The longest to wait for in-flight requests before a host is changed |
+| `check` | [check](../guide/verification.md#the-built-in-health-proof) | required | The health check made on each host before it is admitted; its `url` is a path such as `/healthz` |
+| `traffic` | mapping | required unless `allow_no_traffic` | The load balancer; see below |
+| `ssh` | mapping | required | `{ key: { store, key, field } }`: the key the Station reaches hosts with, by reference |
+| `pathfinder` | mapping | none | For `strategy: pathfinder`; see below |
+| `allow_no_traffic` | yes or no | `false` | Accept that hosts are unavailable while they change because there is no load balancer |
+
+<!-- keys: fleet-traffic -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `provider` | text | required | `haproxy`: its runtime API drains hosts and sets weights without a reload |
+| `admin` | text | required | The admin socket: `unix:/path` or `tcp:host:port`. It controls the balancer, so it must never be open to a network |
+| `url` | text | none | The balancer's own address, `http://host:port`; required for a Pathfinder, which verifies each step by calling the `check` through it |
+
+<!-- keys: fleet-pathfinder -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `steps` | list of numbers | `[10, 50, 100]` | The new group's share of traffic in percent, rising, ending at most at 100 |
+| `bake` | duration | `30s` | How long each step is watched before it is judged |
+| `watch` | duration | none | Overwatch after 100 percent; the old group stays at weight 0 for the way back |
+| `stable_group` | name | `stable` | The inventory group serving now |
+| `new_group` | name | `new` | The inventory group that gets the release |
 
 #### Write back
 

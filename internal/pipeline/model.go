@@ -224,6 +224,7 @@ type Step struct {
 	Service     string      `json:"service,omitempty"`     // what is deployed there; empty means the project's name
 	Version     *Value      `json:"version,omitempty"`     // what "current version" shows
 	ArgoCD      *ArgoCD     `json:"argocd,omitempty"`
+	Fleet       *FleetSpec  `json:"fleet,omitempty"` // a fleet of hosts instead of Argo CD; see fleet.go
 	Rollout     *RolloutRef `json:"rollout,omitempty"`
 	OnCancel    string      `json:"on_cancel,omitempty"` // leave
 	// Deployment, for a rollback step, is the deploy step it rolls back;

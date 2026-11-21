@@ -273,6 +273,18 @@ steps:
         resources:
           - { kind: Rollout, name: shop, namespace: shop }
     rollout: { name: shop, namespace: shop }
+  fleet-deploy:
+    kind: deploy
+    needs: image
+    environment: staging
+    service: shop
+    fleet:
+      strategy: pathfinder
+      artifact: dist/shop
+      check: { url: /healthz }
+      traffic: { provider: haproxy, admin: "unix:/run/haproxy/admin.sock", url: "http://lb.example:8000" }
+      ssh: { key: { store: vault, key: fleet/staging, field: private_key } }
+      pathfinder: { steps: [10, 50, 100], bake: 30s }
   smoke:
     image: alpine:3.22
     needs: deploy
@@ -403,6 +415,9 @@ var probes = []probe{
 	{table: "change", path: []any{"steps", "deploy", "argocd", "write_back", "changes", 0}},
 	{table: "sync", path: []any{"steps", "deploy", "argocd", "sync"}},
 	{table: "sync-resource", path: []any{"steps", "deploy", "argocd", "sync", "resources", 0}},
+	{table: "fleet", path: []any{"steps", "fleet-deploy", "fleet"}},
+	{table: "fleet-traffic", path: []any{"steps", "fleet-deploy", "fleet", "traffic"}},
+	{table: "fleet-pathfinder", path: []any{"steps", "fleet-deploy", "fleet", "pathfinder"}},
 	{table: "rollout-ref", path: []any{"steps", "deploy", "rollout"}},
 	{table: "image-tag", path: []any{"steps", "image", "tags", 0}},
 	{table: "image-cache", path: []any{"steps", "image", "cache"}},

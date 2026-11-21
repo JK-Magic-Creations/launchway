@@ -17,8 +17,8 @@ type Checker interface {
 }
 
 // HTTPCheck is the pipeline's health check (check:) made against one
-// address. {service} in the check's URL stands for the host's service
-// address, so the same check is made against each host directly and against
+// address. the placeholder host (pipeline.FleetHostName) in the check's URL stands
+// for the host's service address, so the same check is made against each host directly and against
 // the balancer.
 type HTTPCheck struct {
 	Check  pipeline.HealthCheck
@@ -27,7 +27,7 @@ type HTTPCheck struct {
 
 // URLFor returns the check's URL for an address.
 func (c *HTTPCheck) URLFor(service string) string {
-	return strings.ReplaceAll(c.Check.URL, "{service}", service)
+	return strings.ReplaceAll(c.Check.URL, pipeline.FleetHostName, service)
 }
 
 // Healthy makes one call and says why it was not healthy.

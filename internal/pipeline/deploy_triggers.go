@@ -30,6 +30,9 @@ func deployValues(s *Step) []*Value {
 	if s.Version != nil {
 		out = append(out, s.Version)
 	}
+	if s.Fleet != nil && s.Fleet.Image != nil {
+		out = append(out, s.Fleet.Image)
+	}
 	if s.ArgoCD != nil && s.ArgoCD.WriteBack != nil {
 		for _, c := range s.ArgoCD.WriteBack.Changes {
 			if c.Tag != nil {

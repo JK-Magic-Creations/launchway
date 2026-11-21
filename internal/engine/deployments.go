@@ -177,6 +177,11 @@ func (e *Engine) CheckDeploys(project string, p *pipeline.Pipeline) pipeline.Pro
 			continue
 		}
 		line := s.EnvironmentLine()
+		if s.Fleet != nil {
+			out = append(out, pipeline.Problem{Line: line, Path: "steps." + s.ID + ".fleet",
+				Message: fmt.Sprintf("%s: this server does not schedule fleet deploy steps yet; a Station runs them with launchway fleet run", s.ID)})
+			continue
+		}
 		if s.Group != "" {
 			line = 0 // the step is in a library's template, not in the pipeline's file
 		}

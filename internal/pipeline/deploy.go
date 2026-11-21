@@ -272,7 +272,7 @@ func (p *Pipeline) RollbackOf(deployID string) *Step {
 // ---- parsing ----
 
 var (
-	deployKeys   = []string{"kind", "description", "needs", "when", "timeout", "environment", "service", "version", "argocd", "rollout", "on_cancel"}
+	deployKeys   = []string{"kind", "description", "needs", "when", "timeout", "environment", "service", "version", "argocd", "fleet", "rollout", "on_cancel"}
 	rollbackKeys = []string{"kind", "description", "needs", "timeout", "deployment", "abort_first"}
 	argocdKeys   = []string{"application", "write_back", "sync", "health"}
 	writeKeys    = []string{"repo", "branch", "changes"}
@@ -333,6 +333,8 @@ func (ps *parser) parseDeployKeys(v *yaml.Node, at string, s *Step) {
 			s.versionLine = n.Line
 		case "argocd":
 			s.ArgoCD = ps.parseArgoCD(n, where)
+		case "fleet":
+			s.Fleet = ps.parseFleet(n, where, s)
 		case "rollout":
 			s.Rollout = ps.parseRollout(n, where)
 		case "on_cancel":
@@ -415,8 +417,11 @@ func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step
 	if s.Version == nil {
 		s.Version = &Value{Run: "short_sha"}
 	}
-	if s.ArgoCD == nil {
-		ps.add(k, at+".argocd", "say how to deploy: argocd: { application: ..., write_back: ... }")
+	switch {
+	case s.ArgoCD != nil && s.Fleet != nil:
+		ps.add(k, at+".fleet", "a deploy step deploys one way: write argocd or fleet, not both")
+	case s.ArgoCD == nil && s.Fleet == nil:
+		ps.add(k, at+".argocd", "say how to deploy: argocd: { application: ..., write_back: ... } or, to a fleet of hosts, fleet: { ... }")
 	}
 	if s.OnCancel == "" {
 		s.OnCancel = "leave"

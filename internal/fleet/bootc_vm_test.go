@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 // TestBootcInAVirtualMachine runs the image rollout against a real virtual
@@ -40,7 +42,7 @@ func TestBootcInAVirtualMachine(t *testing.T) {
 	f3 := strings.Fields(string(scan))
 	h := Host{Name: "vm-a", Address: addr, User: "core", HostKey: f3[len(f3)-2] + " " + f3[len(f3)-1], Service: httpAddr}
 	chk := &HTTPCheck{}
-	chk.Check.URL = "http://{service}/healthz"
+	chk.Check.URL = "http://" + pipeline.FleetHostName + "/healthz"
 	var events []string
 	f := &Fleet{Remote: rem, Check: chk, AllowNoTraffic: true, Layout: Layout{}, CheckURL: func(h Host) string { return chk.URLFor(h.Service) },
 		Events: func(e Event) { events = append(events, e.Phase+": "+e.Message); t.Logf("%-8s %s", e.Phase, e.Message) }}

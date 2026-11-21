@@ -30,7 +30,7 @@ type Host struct {
 	HostKey string `json:"host_key" yaml:"host_key"`
 	Group   string `json:"group,omitempty" yaml:"group,omitempty"`
 	// Service is host:port where the service answers, as the Station sees it;
-	// the health check's {service} stands for it.
+	// the health check's placeholder host stands for it.
 	Service string `json:"service" yaml:"service"`
 	// Member is the load balancer's name for the host: backend/server.
 	Member string `json:"member,omitempty" yaml:"member,omitempty"`

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
@@ -61,6 +62,7 @@ func needVM(t *testing.T) {
 }
 
 type lab struct {
+	pem    []byte
 	hosts  []Host
 	remote *SSH
 	lb     *HAProxy
@@ -100,7 +102,8 @@ func newLab(t *testing.T, n int) *lab {
 	signer, _ := ssh.NewSignerFromKey(priv)
 	pub := string(ssh.MarshalAuthorizedKey(signer.PublicKey()))
 
-	l := &lab{remote: &SSH{Signer: signer}, apps: buildApps(t, t.TempDir())}
+	blk, _ := ssh.MarshalPrivateKey(priv, "")
+	l := &lab{pem: pem.EncodeToMemory(blk), remote: &SSH{Signer: signer}, apps: buildApps(t, t.TempDir())}
 	var servers []string
 	for i := 1; i <= n; i++ {
 		name := fmt.Sprintf("lw-vmtest-h%d", i)
@@ -136,7 +139,7 @@ func (l *lab) fleet(t *testing.T, audit *[]AuditEntry) *Fleet {
 	lay, _ := NewLayout("web")
 	var mu sync.Mutex
 	rem := &Audited{Remote: l.remote, RunID: "itest", Sink: func(e AuditEntry) { mu.Lock(); *audit = append(*audit, e); mu.Unlock() }}
-	chk := &HTTPCheck{Check: pipeline.HealthCheck{URL: "http://{service}/healthz"}}
+	chk := &HTTPCheck{Check: pipeline.HealthCheck{URL: "http://" + pipeline.FleetHostName + "/healthz"}}
 	f := &Fleet{Remote: rem, Traffic: l.lb, Check: chk, Layout: lay,
 		CheckURL: func(h Host) string { return chk.URLFor(h.Service) },
 		Events:   func(e Event) { t.Logf("%-6s %-10s %s", e.Host, e.Phase, e.Message) }}
@@ -384,5 +387,86 @@ func checkAudit(t *testing.T, a []AuditEntry) {
 	}
 	if start == 0 || start != done {
 		t.Fatalf("audit has %d starts and %d ends", start, done)
+	}
+}
+
+// The Station's own command, end to end: launchway fleet run reads the
+// pipeline's fleet: block and the inventory, takes the key from a secret
+// store by reference, and does the rolling update with the balancer, while
+// requests flow. A bad release returns every host and the command fails.
+func TestVMStationCommandEndToEnd(t *testing.T) {
+	l := newLab(t, 4)
+	var audit []AuditEntry
+	f := l.fleet(t, &audit)
+	l.bootstrap(t, f, "v1")
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "launchway")
+	build := exec.Command("go", "build", "-o", bin, "./cmd/launchway")
+	build.Dir = "../.."
+	build.Env = append(os.Environ(), "CGO_ENABLED=0")
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	var inv strings.Builder
+	inv.WriteString("hosts:\n")
+	for _, h := range l.hosts {
+		fmt.Fprintf(&inv, "  - { name: %s, address: %q, user: deploy, host_key: %q, service: %q, member: %s }\n", h.Name, h.Address, strings.TrimSpace(h.HostKey), h.Service, h.Member)
+	}
+	pl := fmt.Sprintf(`pipeline: web
+steps:
+  deploy-prod:
+    kind: deploy
+    environment: prod
+    service: web
+    fleet:
+      artifact: dist/web
+      max_unavailable: 1
+      drain: 20s
+      check: { url: /healthz }
+      traffic: { provider: haproxy, admin: "tcp:%s" }
+      ssh: { key: { store: env, key: LW_FLEET_KEY } }
+`, l.lb.Address)
+	for name, content := range map[string]string{"inventory.yaml": inv.String(), "pipeline.yaml": pl} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := func(rel string, art []byte) (string, error) {
+		_ = os.MkdirAll(filepath.Join(dir, "dist"), 0o755)
+		_ = os.WriteFile(filepath.Join(dir, "dist", "web"), art, 0o755)
+		cmd := exec.Command(bin, "fleet", "run", "--file", filepath.Join(dir, "pipeline.yaml"), "--step", "deploy-prod",
+			"--inventory", filepath.Join(dir, "inventory.yaml"), "--release", rel, "--workspace", dir,
+			"--audit", filepath.Join(dir, "audit-"+rel+".jsonl"), "--events", filepath.Join(dir, "events-"+rel+".jsonl"))
+		cmd.Env = append(os.Environ(), "LW_FLEET_KEY="+string(l.pem))
+		out, err := cmd.CombinedOutput()
+		return string(out), err
+	}
+	g := startLoad(l.lbURL, 8)
+	time.Sleep(300 * time.Millisecond)
+	out, err := run("v2", l.apps["v2"])
+	if err != nil {
+		t.Fatalf("good release: %v\n%s", err, out)
+	}
+	out4, err4 := run("v4", l.apps["v4"])
+	time.Sleep(300 * time.Millisecond)
+	sent, failed := g.finish()
+	t.Logf("MEASURED launchway fleet run, good v2 then bad v4 (returned): sent %d, failed %d, served %s", sent, failed, g.served())
+	if err4 == nil {
+		t.Fatal("the bad release succeeded")
+	}
+	if !strings.Contains(out4, "returned") && !strings.Contains(out4, "return") {
+		t.Fatalf("no return in the output:\n%s", out4)
+	}
+	if failed != 0 || sent < 500 {
+		t.Fatalf("%d of %d requests failed", failed, sent)
+	}
+	au, _ := os.ReadFile(filepath.Join(dir, "audit-v2.jsonl"))
+	if strings.Count(string(au), `"done":true`) < 20 || strings.Contains(string(au), "OPENSSH PRIVATE KEY") {
+		t.Fatalf("the audit file is wrong:\n%s", au)
+	}
+	for _, h := range l.hosts {
+		if cur, _ := f.currentRelease(context.Background(), h); cur != "v2" {
+			t.Fatalf("%s is on %s", h.Name, cur)
+		}
 	}
 }
