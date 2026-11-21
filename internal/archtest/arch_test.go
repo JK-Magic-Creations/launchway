@@ -44,6 +44,7 @@ var allowedImports = map[string][]string{
 	"internal/forge/forgetest":          {"internal/forge"},
 	"internal/forge/providers/plain":    {"internal/forge", "internal/forge/store", "internal/gitexec", "internal/source"},
 	"internal/forge/storage":            {"internal/blobstore", "internal/engine", "internal/gitexec"},
+	"internal/forge/storagespike":       {},
 	"internal/forge/store":              {"internal/forge", "internal/ids"},
 	"internal/gitexec":                  {"internal/redact"},
 	"internal/findings":                 {"internal/findings/jsonscan"},
