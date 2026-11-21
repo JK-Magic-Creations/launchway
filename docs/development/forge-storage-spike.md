@@ -181,3 +181,17 @@ marker). A repository over a few GiB, or a push over 2 GiB, is not for the datab
 | a pack in the blob store is damaged | refused on sync, the repository is flagged, maintenance will not repack it; found by `Verify` before anyone fetches |
 | git killed with -9, lock files left | removed by the next push (the guard) |
 | a client waits on a server that stopped answering | bounded by the client's deadlines (the tests assert it); see S34-12 |
+
+## Running the campaign
+
+The tests in `internal/forge/storagespike` run a smoke-sized injection campaign by default (24 rounds,
+4 under `-race`, where each of the test binary's many hook starts costs seconds), so the package
+finishes in about a minute on two cores and cannot hold up the hosted workflow. The real campaign is
+opt-in:
+
+```sh
+FORGE_SPIKE_ROUNDS=100 go test -count=1 -timeout 30m -run TestInjectionCampaign ./internal/forge/storagespike
+```
+
+`FORGE_SPIKE_SEED` changes the random sequence, `FORGE_SPIKE_CAMPAIGN_PG=1` adds PostgreSQL, and
+`FORGE_SPIKE_MEASURE=1` runs the measurements.

@@ -34,14 +34,27 @@ func faultPool(kind string) []Fault {
 	return pool
 }
 
+// campaignRounds is the number of rounds: FORGE_SPIKE_ROUNDS, or a smoke-sized default. Under the
+// race detector each push costs seconds (every hook is the test binary started again), which once ran
+// the hosted CI job past its hour; the default there is just enough to cross every kind of fault once.
+func campaignRounds() int {
+	def := 24
+	if raceBuild {
+		def = 4
+	}
+	return envInt("FORGE_SPIKE_ROUNDS", def)
+}
+
 // The campaign: many rounds of pushes, alternating between two servers, each
 // with a random failure injected into the real git processes of that push;
 // after a failed push the client retries, on either server; now and then a
 // server's local state is wiped or the repository is repacked. At the end,
 // and along the way, every property is checked from a cold server. The number
-// of rounds is FORGE_SPIKE_ROUNDS (default 100; the spike report ran 1,150).
+// of rounds is FORGE_SPIKE_ROUNDS (the spike report ran 1,150). The default is a smoke run that
+// finishes in seconds on two cores, with and without the race detector; set FORGE_SPIKE_ROUNDS=100 or
+// more for the real campaign (docs/development/forge-storage-spike.md).
 func TestInjectionCampaign(t *testing.T) {
-	rounds := envInt("FORGE_SPIKE_ROUNDS", 100)
+	rounds := campaignRounds()
 	for _, pg := range []bool{false, true} {
 		name := "sqlite"
 		if pg {
