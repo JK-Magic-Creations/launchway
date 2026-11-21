@@ -96,7 +96,7 @@ values for anything new, and seals the rest once no server of an older release h
 seconds (`LAUNCHWAY_SEAL_QUIET_SECONDS`; `0` seals at start). An older server is seen because it holds
 database connections that do not name themselves; this build names its own (`application_name=launchway`).
 No setting is needed for the rollout, and there is no window in which an older server meets a sealed value.
-`launchway doctor encryption` says "waiting for older servers" while it waits. Where a connection pooler
+`launchway doctor encryption` says "waiting for older servers" while it waits. Where a connection proxy
 hides the connection names the server says so and seals at start instead; then use
 `server.strategy.rollingUpdate.maxSurge: 0` with `maxUnavailable: "100%"` for that one rollout.
 Going back to the release before is clean until the sealing has finished, and needs the backup taken

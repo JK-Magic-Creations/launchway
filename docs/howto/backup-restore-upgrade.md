@@ -65,6 +65,8 @@ stopped instead, copy `launchway.db` together with `launchway.db-wal` if it exis
 
 ## Restore with encryption at rest
 
+Upgrading from the release before encryption at rest and built-in accounts has its own page, [Upgrading](../guide/upgrading.md): take a dump first, because going back after sealing needs it.
+
 A restore needs two things: the dump and the root key. Put the key where the configuration says (or
 mount the Secret), restore the dump, and run `launchway doctor encryption --restore-drill` before starting
 servers: it opens every sealed secret, reading only. A dump without the key refuses to start a server with

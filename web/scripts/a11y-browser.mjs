@@ -47,7 +47,7 @@ const settle = async (page) => {
 for (const [name, path, opt = {}] of PAGES) {
   for (const [vname, viewport] of VIEWS) {
     for (const theme of THEMES) {
-      const ctx = await browser.newContext({ viewport, colorScheme: theme, reducedMotion: "reduce" });
+      const ctx = await browser.newContext({ viewport, colorScheme: theme, reducedMotion: "reduce", bypassCSP: true });
       const page = await ctx.newPage();
       if (opt.signedOut) await page.route("**/api/v1/me", (r) => r.fulfill({ status: 401, contentType: "application/json", body: '{"error":"sign in"}' }));
       try {
@@ -95,7 +95,7 @@ for (const [name, path, opt = {}] of PAGES) {
 
 // Focus ring (2.4.7, 2.4.11, 1.4.11): tabbing onto each of the first controls draws a 2 px ring that differs from its surroundings.
 for (const theme of THEMES) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: theme });
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: theme, bypassCSP: true });
   const page = await ctx.newPage();
   await page.goto(url + "/");
   await settle(page);

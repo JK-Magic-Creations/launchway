@@ -18,7 +18,7 @@
   ],
   "words": [
     "bestpractices", "COEP", "errcheck", "golangci", "gosec", "HSTS", "keylessly", "kubeconform", "shellcheck", "Subresource", "Syft", "Tetrate", "Liquibase", "Virt", "bootable", "cutover",
-    "applicationsets",
+    "applicationsets", "blocklist",
     "Authentik",
     "autovacuum",
     "bandit",
