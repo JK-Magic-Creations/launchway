@@ -35,6 +35,10 @@ func NormalizeImage(name string) string {
 	return "docker.io/" + name
 }
 
+// ImageName is the name of an image reference with its tag and digest taken
+// off, written in full.
+func ImageName(ref string) string { return NormalizeImage(container.ParseRef(ref).Repo) }
+
 // Stage is one FROM of a Containerfile.
 type Stage struct {
 	Line   int

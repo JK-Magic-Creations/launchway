@@ -11,7 +11,7 @@ import (
 // Every command line the parity table names exists: its first word is a
 // command of main, and the rest appears in that command's usage text.
 func TestParityCLICommandsExist(t *testing.T) {
-	usages := usage + configUsage + clientUsage + verifyUsage + policyUsage + runnersUsage + blobsUsage + stepResourcesUsage + variablesUsage + keysUsage + reposUsage + hooksUsage + reposKeysUsage + deploymentsUsage + prUsage + encryptionUsage + depsUsage + registryUsage + togglesUsage + standardsUsage + releaseUsage
+	usages := usage + configUsage + clientUsage + verifyUsage + policyUsage + runnersUsage + blobsUsage + stepResourcesUsage + variablesUsage + keysUsage + reposUsage + hooksUsage + reposKeysUsage + deploymentsUsage + prUsage + encryptionUsage + depsUsage + registryUsage + togglesUsage + standardsUsage + releaseUsage + graphUsage
 	for _, r := range parity.Rows() {
 		for _, c := range r.Commands() {
 			words := strings.Fields(c)

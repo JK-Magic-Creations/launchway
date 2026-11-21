@@ -142,7 +142,7 @@ func (s RegistrySource) Assert(ctx context.Context, sc Scope) (Assertion, string
 		return a, "", err
 	}
 	for _, e := range es {
-		stream := NormalizeImage(e.Image)
+		stream := ImageName(e.Image)
 		a.Add(Node{Kind: KindImage, Key: stream, Name: stream, Attrs: map[string]any{"role": "stored"}})
 		bk := BuiltKey(stream, e.Digest)
 		attrs := map[string]any{"digest": e.Digest, "at": e.PushedAt, "in_registry": true}
@@ -152,7 +152,7 @@ func (s RegistrySource) Assert(ctx context.Context, sc Scope) (Assertion, string
 		a.Add(Node{Kind: KindBuilt, Key: bk, Name: shortDigestName(stream, e.Digest), Subject: SubjectInstall, Attrs: attrs, Confidence: Extracted})
 		a.Link(Edge{Kind: EdgeInstanceOf, From: NodeRef{KindBuilt, bk}, To: NodeRef{KindImage, stream}, Qualifier: e.Platform, Subject: SubjectInstall})
 		if e.Base != "" {
-			b := NormalizeImage(e.Base)
+			b := ImageName(e.Base)
 			a.Add(Node{Kind: KindImage, Key: b, Name: b, Attrs: map[string]any{"role": "base"}})
 			a.Link(Edge{Kind: EdgeBuiltFrom, From: NodeRef{KindBuilt, bk}, To: NodeRef{KindImage, b}, Qualifier: "registry", Subject: SubjectInstall})
 		}
@@ -254,7 +254,7 @@ func (s ClusterSource) Assert(ctx context.Context, sc Scope) (Assertion, string,
 			a.Link(Edge{Kind: EdgeRunsOn, From: NodeRef{KindDeployment, dk}, To: NodeRef{KindMachine, w.Node}, Qualifier: "node", Subject: SubjectInstall})
 		}
 		if w.Digest != "" {
-			stream := NormalizeImage(w.Image)
+			stream := ImageName(w.Image)
 			bk := BuiltKey(stream, w.Digest)
 			a.Link(Edge{Kind: EdgeDeliveredTo, From: NodeRef{KindBuilt, bk}, To: NodeRef{KindDeployment, dk}, Qualifier: w.Digest, Attrs: map[string]any{"digest": w.Digest, "cluster": w.Cluster}, Subject: SubjectInstall})
 		}

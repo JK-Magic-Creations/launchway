@@ -256,7 +256,7 @@ func (s *Store) Apply(ctx context.Context, origin, scope, ref string, a Assertio
 	}
 	for _, id := range stale {
 		var n int
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM graph_edges WHERE org = ? AND valid_to = 0 AND (src = ? OR dst = ?)`, s.Org, id, id).Scan(&n); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM graph_edges WHERE org = ? AND valid_to = 0 AND origin <> 'placement' AND (src = ? OR dst = ?)`, s.Org, id, id).Scan(&n); err != nil {
 			return res, err
 		}
 		if n == 0 {

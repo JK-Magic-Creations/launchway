@@ -214,7 +214,7 @@ type Gap struct {
 
 // Judge judges hosts against facts. Hosts are machines and platforms; data
 // facts are met by any host (a platform) that offers the service.
-func Judge(facts []Fact, hosts []Node) (cands []Candidate, gaps []Gap) {
+func Judge(facts []Fact, hosts, providers []Node) (cands []Candidate, gaps []Gap) {
 	var host, data []Fact
 	for _, f := range facts {
 		switch {
@@ -271,7 +271,7 @@ func Judge(facts []Fact, hosts []Node) (cands []Candidate, gaps []Gap) {
 	}
 	for _, f := range data {
 		met := false
-		for _, h := range hosts {
+		for _, h := range providers {
 			if ok, _ := HostFactsOf(h.Attrs).Satisfies(f); ok {
 				met = true
 				break

@@ -85,6 +85,7 @@ type Server struct {
 	MCP      *MCPOptions      // turns on the Model Context Protocol endpoint, /mcp; nil is off
 	Forge    *ForgeHosting    // Git hosting; nil is off
 	Registry *RegistryHosting // the built-in OCI registry under /v2/; nil is off
+	Graph    *GraphService    // the integrated software graph (internal/graph); nil is off
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
 	checks   checkLimiter

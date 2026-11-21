@@ -175,14 +175,14 @@ data:
 
 func TestParseRequirementsRefusesMistakes(t *testing.T) {
 	for in, want := range map[string]string{
-		"version: 2\n":                          "version must be 1",
-		"version: 1\nplatform: toaster\n":       "platform",
-		"version: 1\ncpu: many\n":               "cpu",
-		"version: 1\nports: [99999]\n":          "ports",
-		"version: 1\ndata: [jello]\n":           "data",
-		"version: 1\nbogus: 1\n":                "bogus",
-		"version: 1\narchitectures: [x86]\n":    "architectures",
-		"":                                      "empty",
+		"version: 2\n":                                 "version must be 1",
+		"version: 1\nplatform: toaster\n":              "platform",
+		"version: 1\ncpu: many\n":                      "cpu",
+		"version: 1\nports: [99999]\n":                 "ports",
+		"version: 1\ndata: [jello]\n":                  "data",
+		"version: 1\nbogus: 1\n":                       "bogus",
+		"version: 1\narchitectures: [x86]\n":           "architectures",
+		"":                                             "empty",
 		"version: 1\ncomponents:\n  a: {path: ../x}\n": "path",
 	} {
 		if _, err := ParseRequirements([]byte(in)); err == nil || !strings.Contains(err.Error(), want) {

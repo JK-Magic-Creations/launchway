@@ -84,6 +84,26 @@ func (s *Store) visibility(ctx context.Context, v Viewer) (visibility, error) {
 	}
 }
 
+// predicate is the viewer's condition as a function, for what is joined in memory.
+func (v visibility) predicate() func(subject string) bool {
+	if v.all {
+		return func(string) bool { return true }
+	}
+	set := make(map[string]bool, len(v.list))
+	for _, x := range v.list {
+		set[x.(string)] = true
+	}
+	return func(sub string) bool {
+		if sub == "" {
+			return true
+		}
+		if v.negate {
+			return !set[sub]
+		}
+		return set[sub]
+	}
+}
+
 // clause is the condition on a column and its arguments.
 func (v visibility) clause(col string) (string, []any) {
 	switch {
@@ -126,7 +146,10 @@ func (w When) node(alias string) (string, []any) {
 
 // AsOfCommit finds the time a repository's graph was last read at the
 // commit, so a query can be asked "as of that commit".
-func (s *Store) AsOfCommit(ctx context.Context, repoPath, commit string) (When, error) {
+func (s *Store) AsOfCommit(ctx context.Context, v Viewer, repoPath, commit string) (When, error) {
+	if _, err := s.find(ctx, v, NodeRef{KindRepository, repoPath}, When{}); err != nil {
+		return When{}, err
+	}
 	var at int64
 	err := s.DB.QueryRow(ctx, `SELECT max(at) FROM graph_runs WHERE org = ? AND scope = ? AND ref = ?`, s.Org, "repository:"+repoPath, commit).Scan(&at)
 	if err != nil || at == 0 {
@@ -230,16 +253,28 @@ func (s *Store) walk(ctx context.Context, v Viewer, starts []int64, dir Directio
 	nv, nvArgs := vis.clause("n.subject")
 	ew, ewArgs := when.edge("e")
 	nw, nwArgs := when.node("n")
-	rowCap := lim.Nodes*4 + 8
-	q := `WITH RECURSIVE walk(nid, parent, eid, depth) AS (
-  SELECT n.nid, CAST(0 AS BIGINT), CAST(0 AS BIGINT), 0 FROM graph_nodes n WHERE n.org = ? AND n.nid IN (` + marks(len(starts)) + `) AND ` + nv + `
+	rowCap := lim.Nodes*8 + 64
+	// SQLite's planner may start from the edges and scan the working set;
+	// CROSS JOIN fixes the order (the working set first), which is what
+	// every other database does anyway.
+	join := "JOIN"
+	if !s.DB.Postgres() {
+		join = "CROSS JOIN"
+	}
+	// The recursion keeps only a node and its depth, and the rows come out
+	// breadth first, so the first row of a node is its shallowest and a limit
+	// on rows stops the work early. The way each node was reached (its
+	// parent edge) is found afterwards, from the edges between the nodes
+	// reached.
+	q := `WITH RECURSIVE walk(nid, depth) AS (
+  SELECT n.nid, 0 FROM graph_nodes n WHERE n.org = ? AND n.nid IN (` + marks(len(starts)) + `) AND ` + nv + `
   UNION
-  SELECT e.` + to + `, w.nid, e.id, w.depth + 1 FROM walk w
-    JOIN graph_edges e ON e.` + from + ` = w.nid AND e.org = ? AND ` + ew + ` AND e.kind IN (` + marks(len(kinds)) + `) AND ` + ev + `
-    JOIN graph_nodes n ON n.nid = e.` + to + ` AND ` + nv + ` AND ` + nw + `
+  SELECT e.` + to + `, w.depth + 1 FROM walk w
+    ` + join + ` graph_edges e ON e.` + from + ` = w.nid AND e.org = ? AND ` + ew + ` AND e.kind IN (` + marks(len(kinds)) + `) AND ` + ev + `
+    ` + join + ` graph_nodes n ON n.nid = e.` + to + ` AND ` + nv + ` AND ` + nw + `
   WHERE w.depth < ?
 )
-SELECT nid, parent, eid, depth FROM walk ORDER BY depth LIMIT ?`
+SELECT nid, depth FROM walk LIMIT ?`
 	args := []any{s.Org}
 	for _, id := range starts {
 		args = append(args, id)
@@ -257,7 +292,7 @@ SELECT nid, parent, eid, depth FROM walk ORDER BY depth LIMIT ?`
 	defer cancel()
 	rows, err := s.DB.Query(cctx, q, args...)
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
+		if errors.Is(err, context.DeadlineExceeded) || cctx.Err() != nil {
 			res.trunc = Truncation{true, "time"}
 			return res, nil
 		}
@@ -265,10 +300,14 @@ SELECT nid, parent, eid, depth FROM walk ORDER BY depth LIMIT ?`
 	}
 	n := 0
 	for rows.Next() {
-		var nid, parent, eid int64
+		var nid int64
 		var depth int
-		if err := rows.Scan(&nid, &parent, &eid, &depth); err != nil {
+		if err := rows.Scan(&nid, &depth); err != nil {
 			rows.Close()
+			if cctx.Err() != nil {
+				res.trunc = Truncation{true, "time"}
+				break
+			}
 			return res, err
 		}
 		n++
@@ -276,25 +315,39 @@ SELECT nid, parent, eid, depth FROM walk ORDER BY depth LIMIT ?`
 			res.trunc = Truncation{true, "nodes"}
 			break
 		}
-		if _, ok := res.best[nid]; ok {
+		if old, ok := res.best[nid]; ok {
+			if depth < old.depth {
+				res.best[nid] = walkRow{depth: depth}
+			}
 			continue
 		}
 		if len(res.best) >= lim.Nodes {
 			res.trunc = Truncation{true, "nodes"}
 			continue
 		}
-		res.best[nid] = walkRow{parent, eid, depth}
+		res.best[nid] = walkRow{depth: depth}
 		res.order = append(res.order, nid)
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(cctx.Err(), context.DeadlineExceeded) {
+		if errors.Is(err, context.DeadlineExceeded) || cctx.Err() != nil {
+			res.trunc = Truncation{true, "time"}
+			if len(res.best) == 0 {
+				return res, nil
+			}
+		} else {
+			return res, err
+		}
+	}
+	if err := s.parents(cctx, &res, from, to, ev, evArgs, ew, ewArgs, kinds); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || cctx.Err() != nil {
 			res.trunc = Truncation{true, "time"}
 			return res, nil
 		}
 		return res, err
 	}
+	sort.SliceStable(res.order, func(i, j int) bool { return res.best[res.order[i]].depth < res.best[res.order[j]].depth })
 	if !res.trunc.Truncated {
 		// Is there more beyond the depth limit?
 		var edge []any
@@ -678,4 +731,44 @@ func (s *Store) Edges(ctx context.Context, v Viewer, ref NodeRef, when When, lim
 		out = append(out, m[id])
 	}
 	return out, more, nil
+}
+
+// parents finds, for each node reached, the edge it was reached by: an edge
+// from a node one step shallower. It reads the edges that leave the nodes
+// reached once each.
+func (s *Store) parents(ctx context.Context, res *walkResult, from, to, ev string, evArgs []any, ew string, ewArgs []any, kinds []any) error {
+	ids := make([]int64, 0, len(res.best))
+	for id := range res.best {
+		ids = append(ids, id)
+	}
+	for i := 0; i < len(ids); i += 400 {
+		j := min(i+400, len(ids))
+		a := []any{s.Org}
+		for _, id := range ids[i:j] {
+			a = append(a, id)
+		}
+		a = append(a, ewArgs...)
+		a = append(a, kinds...)
+		a = append(a, evArgs...)
+		rows, err := s.DB.Query(ctx, `SELECT e.id, e.`+from+`, e.`+to+` FROM graph_edges e WHERE e.org = ? AND e.`+from+` IN (`+marks(j-i)+`) AND `+ew+` AND e.kind IN (`+marks(len(kinds))+`) AND `+ev+` ORDER BY e.id`, a...)
+		if err != nil {
+			return err
+		}
+		for rows.Next() {
+			var eid, f, t int64
+			if err := rows.Scan(&eid, &f, &t); err != nil {
+				rows.Close()
+				return err
+			}
+			fr, ok1 := res.best[f]
+			to, ok2 := res.best[t]
+			if ok1 && ok2 && to.depth == fr.depth+1 && to.eid == 0 {
+				res.best[t] = walkRow{parent: f, eid: eid, depth: to.depth}
+			}
+		}
+		if err := rows.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

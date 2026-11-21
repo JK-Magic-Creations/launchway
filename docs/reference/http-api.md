@@ -872,6 +872,34 @@ These routes do not use cookies. They take HTTP Basic (the password is a Launchw
 | `POST /{owner}/{name}/git-upload-pack` | `repo-viewer` | — | The same. |
 | `POST /{owner}/{name}/git-receive-pack` | `repo-operator` | `git.push` | The same. |
 
+## The software graph
+
+One graph from code to what is built from it to what it needs and where it runs: repositories, packages, components, requirements, images and what was built, pipelines, Airfields, deployments, machines and platforms. It lives in the server's own database. Every answer is for the caller alone: a node, an edge or a count that the caller may not read in its own place is not in it, and a path that would run through something unreadable is not shown. A node is named `kind:key`, for example `repository:team/app`, `package:go:example.com/lib`, `image:registry.example/team/app` or `deployment:prod/shop/api`. Traversals take `depth` (default 8, at most 64), `nodes` (default 2000, at most 50000) and `timeout_ms` (default 5000, at most 60000), and say `truncated` with `truncated_reason` (`depth`, `nodes` or `time`) when they stopped short. `as_of` (RFC 3339) or `commit` with `repository` answers as the graph stood then. See [the guide](../guide/software-graph.md).
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/graph` | `signed-in` | — | What the caller may read of the graph: nodes by kind, edges, and when each source last read. |
+| `GET /api/v1/graph/search` | `signed-in` | — | `?q=` a part of a name or key, optionally `kind=` (repeat), `limit=`: `{"items", "more"}`. |
+| `GET /api/v1/graph/node` | `signed-in` | — | `?ref=`: the node and the edges directly around it (`edges`, `more_edges`), each edge with its constraint, resolved version, source, commit and confidence. `404` for a node that does not exist or that the caller may not read: the two look the same. |
+| `GET /api/v1/graph/neighbours` | `signed-in` | — | `?ref=&direction=` (`downstream` or `upstream`) `&depth=`: what is reached, each with its depth and the path to it. |
+| `GET /api/v1/graph/path` | `signed-in` | — | `?from=&to=`: the shortest way between two nodes, going with a change (`affects`) or against it (`affected-by`); `found` false when there is none the caller may see. |
+| `GET /api/v1/graph/impact` | `signed-in` | — | `?ref=`: what is affected if it changes: `total`, `by_kind`, `by_owner` (each item with its `path`, the why), the affected `repositories`, and `deployments` that run affected digests with their Airfield, digest and version. |
+| `GET /api/v1/graph/where` | `signed-in` | — | `?ref=`: the deployments a repository, package, commit or image reaches, with `airfields`; each says whether the digest itself contains the thing (`exact`). |
+| `GET /api/v1/graph/contents` | `signed-in` | — | `?ref=`: what is in a deployment, image or component: `images`, `base_images`, `packages` (with resolved versions on the edges), `commits`, `repositories`. |
+| `GET /api/v1/graph/order` | `signed-in` | — | `?repository=` (repeat; none means every repository with a dependency), `upstream=true`: the build `order`, parallel `levels`, the `edges` (each with the packages and images that make it so, and any override), `cycles` (each with its closing path and a suggestion) and the `overrides` in force. |
+| `GET /api/v1/graph/rebuild-set` | `signed-in` | — | `?repository=`: what must be built again after a push to it, in order, each with the way it depends on it; dependencies a person pinned or ignored are listed as `skipped`. |
+| `GET /api/v1/graph/overrides` | `signed-in` | — | The corrections to the build order the caller may see. |
+| `POST /api/v1/graph/overrides` | `signed-in` | `graph.override.add` | `{"kind", "from", "to", "value", "reason"}` where `kind` is `before`, `ignore` or `pin`, with repositories as `owner/name`. A reason is required; the caller needs the operator role on both repositories. |
+| `DELETE /api/v1/graph/overrides/{id}` | `signed-in` | `graph.override.remove` | Withdraws an override (the row is kept, marked removed); needs the operator role on both repositories. |
+| `GET /api/v1/graph/needs` | `signed-in` | — | `?ref=` a component or a repository: what each component needs, each fact with its `source` (`declared` in `.launchway/requirements.yaml` or `inferred`, with the `evidence`) and `advice` where an inferred fact differs from a declared one. |
+| `GET /api/v1/graph/placement` | `signed-in` | — | `?ref=`: the machines and platforms that satisfy each component (`fits`), near misses with what is missing, and `gaps`. |
+| `GET /api/v1/graph/specification` | `signed-in` | — | `?ref=` (repeat for components that run on one machine), `headroom=` percent (default 25), `format=yaml`: a neutral machine specification with totals, headroom, provenance and conflicts. An export; nothing is provisioned. |
+| `GET /api/v1/graph/reach` | `signed-in` | — | `?ref=` a package: the versions in use that have known advisories, what uses each, and the deployments that run them. Needs vulnerability data on the server; `note` says when there is none. |
+| `POST /api/v1/graph/rescan` | `admin` | `graph.rescan` | Reads every repository, project and the installation again. |
+| `POST /api/v1/graph/rebuild` | `admin` | `graph.rebuild` | Clears the graph and reads everything again; the result equals what incremental updates built. Overrides are kept. |
+| `POST /api/v1/repositories/{owner}/{name}/graph/refresh` | `repo-operator` | `graph.refresh` | Reads the repository again now (pushes do this by themselves). |
+| `POST /api/v1/repositories/{owner}/{name}/requirements/proposal` | `repo-operator` | `graph.requirements.propose` | `{"content", "title"}`: opens a pull request that makes `.launchway/requirements.yaml` what `content` says; the file is checked first (`422` with what is wrong), and nothing lands until a person merges it. `404 feature_off` without Git hosting. |
+
 ## API tokens
 
 These routes need sign-in on: with sign-in off they answer `404` with `API tokens need sign-in, which is off on this server (auth.mode: none)`.

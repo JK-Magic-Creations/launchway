@@ -95,6 +95,25 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/events` | `list_events` | `events list` | `not needed by terraform` | equal |
 | `GET /api/v1/events/{id}` | `get_event` | `events show` | `not needed by terraform` | equal |
 | `POST /api/v1/events/{id}/replay` | `replay_event` | `events replay` | `not needed by terraform` | equal |
+| `GET /api/v1/graph` | `graph_summary` | `graph summary` | — | equal |
+| `GET /api/v1/graph/contents` | `graph_contents` | `graph contents` | — | equal |
+| `GET /api/v1/graph/impact` | `graph_impact` | `graph impact` | — | equal |
+| `GET /api/v1/graph/needs` | `graph_requirements` | `graph needs` | — | equal |
+| `GET /api/v1/graph/neighbours` | `get_graph_node` | `graph show` | — | equal: the node's edges are in the same answer as the node; the UI's expansion calls neighbours with a depth |
+| `GET /api/v1/graph/node` | `get_graph_node` | `graph show` | — | equal |
+| `GET /api/v1/graph/order` | `graph_build_order` | `graph order` | — | equal |
+| `GET /api/v1/graph/overrides` | `list_graph_overrides` | `graph overrides` | — | equal |
+| `POST /api/v1/graph/overrides` | `add_graph_override` | `graph override add` | — | equal |
+| `DELETE /api/v1/graph/overrides/{id}` | `remove_graph_override` | `graph override remove` | — | equal |
+| `GET /api/v1/graph/path` | `graph_path` | `graph path` | — | equal |
+| `GET /api/v1/graph/placement` | `graph_placement` | `graph placement` | — | equal |
+| `GET /api/v1/graph/reach` | `graph_vulnerability_reach` | `graph reach` | — | equal |
+| `POST /api/v1/graph/rebuild` | `rebuild_graph` | `graph rebuild` | — | equal |
+| `GET /api/v1/graph/rebuild-set` | `graph_rebuild_set` | `graph rebuild-set` | — | equal |
+| `POST /api/v1/graph/rescan` | `rescan_graph` | `graph rescan` | — | equal |
+| `GET /api/v1/graph/search` | `search_graph` | `graph search` | — | equal |
+| `GET /api/v1/graph/specification` | `graph_machine_specification` | `graph spec` | — | equal |
+| `GET /api/v1/graph/where` | `graph_where_running` | `graph where` | — | equal |
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
@@ -280,6 +299,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}/files` | `delete_repository_file` | `repos delete-file` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/files` | `read_repository_file` | `repos files` | — | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/files` | `write_repository_file` | `repos put-file` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/graph/refresh` | `refresh_graph` | `graph refresh` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/hooks` | `list_webhooks` | `repos hooks list` | `planned: launchway_webhook` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/hooks` | `add_webhook` | `repos hooks add` | `planned: launchway_webhook` | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/hooks/{id}` | `delete_webhook` | `repos hooks delete` | `planned: launchway_webhook` | equal |
@@ -327,6 +347,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `PUT /api/v1/repositories/{owner}/{name}/pulls/{number}/viewed` | `mark_pull_files_viewed` | `pr viewed` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/raw` | `read_repository_file` | `repos cat` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/requirements/proposal` | `propose_requirements_file` | `graph propose-requirements` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |

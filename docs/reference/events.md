@@ -377,6 +377,12 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `pull.merge` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/merge`; the detail: pull request #N, the method, the new commit |
 | `pull.revert` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/revert`; the detail: pull request #N and the pull request that reverts it |
 | `pull.comment` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments`; the detail: pull request #N |
+| `graph.override.add` | `POST /api/v1/graph/overrides`; the target: the two repositories; the detail: the kind and the reason |
+| `graph.override.remove` | `DELETE /api/v1/graph/overrides/{id}`; the target: the override's number |
+| `graph.rescan` | `POST /api/v1/graph/rescan` |
+| `graph.rebuild` | `POST /api/v1/graph/rebuild` |
+| `graph.refresh` | `POST /api/v1/repositories/{owner}/{name}/graph/refresh`; the target: the repository |
+| `graph.requirements.propose` | `POST /api/v1/repositories/{owner}/{name}/requirements/proposal`; the detail: the pull request's number |
 | `pull.comment_update` | `PATCH /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}`; the detail: pull request #N and the comment |
 | `pull.comment_delete` | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}`; the detail: pull request #N and the comment |
 | `pull.suggestion_apply` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/comments/{id}/apply`; the detail: pull request #N and the new commit |

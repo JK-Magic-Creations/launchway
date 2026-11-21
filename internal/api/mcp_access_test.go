@@ -265,6 +265,29 @@ var mcpPermissionTable = map[string]mcpRow{
 	"add_connection":      {map[string]any{"name": "old", "kind": "gitea", "base_url": "https://git.example.com"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 	"import_repositories": {map[string]any{"connection": "old", "dry_run": true}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 	"verify_repositories": {map[string]any{"connection": "old"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+
+	// The software graph: the matrix server has none, so every question is feature_off, a not-found; the
+	// tools that change need the operator role to be listed.
+	"graph_summary":               {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"search_graph":                {map[string]any{"query": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_graph_node":              {map[string]any{"ref": "repository:acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_impact":                {map[string]any{"ref": "repository:acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_where_running":         {map[string]any{"ref": "repository:acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_contents":              {map[string]any{"ref": "repository:acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_path":                  {map[string]any{"from": "repository:acme/x", "to": "repository:acme/y"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_build_order":           {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_rebuild_set":           {map[string]any{"repository": "acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"list_graph_overrides":        {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_requirements":          {map[string]any{"ref": "repository:acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_placement":             {map[string]any{"ref": "repository:acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_machine_specification": {map[string]any{"ref": "repository:acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"graph_vulnerability_reach":   {map[string]any{"ref": "repository:acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"add_graph_override":          {map[string]any{"kind": "ignore", "from": "acme/x", "to": "acme/y", "reason": "r"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"remove_graph_override":       {map[string]any{"id": 1}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"propose_requirements_file":   {map[string]any{"repository": "acme/x", "content": "version: 1\n"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"refresh_graph":               {map[string]any{"repository": "acme/x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"rescan_graph":                {nil, false, [5]string{mUnlisted, mUnlisted, mRefused, mRefused, mNotFound}},
+	"rebuild_graph":               {nil, false, [5]string{mUnlisted, mUnlisted, mRefused, mRefused, mNotFound}},
 }
 
 func outcome(errText string) string {

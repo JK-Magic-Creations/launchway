@@ -57,7 +57,7 @@ Usage:
                      [-i name=value ...]
   launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that project too)
   launchway init     [--write] [--force]         propose the pipeline file for this repository from what it holds
-  launchway graph    [file]                     print a pipeline's graph as JSON
+  launchway graph    [file]                     print a pipeline's graph as JSON; or ask the software graph (launchway graph impact|order|where|needs|spec ...)
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run {runs}
                                                 (launchway runs, for more)
@@ -169,7 +169,11 @@ func main() {
 	case "init":
 		err = cmdInit(args)
 	case "graph":
-		err = cmdGraph(args)
+		if len(args) > 0 && graphSubcommands[args[0]] {
+			err = cmdSoftwareGraph(args)
+		} else {
+			err = cmdGraph(args)
+		}
 	case "login":
 		err = cmdLogin(args)
 	case "blobs":

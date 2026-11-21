@@ -127,10 +127,18 @@ func (s *Store) Placement(ctx context.Context, v Viewer, ref NodeRef, when When)
 	if err != nil {
 		return nil, err
 	}
+	// Data platforms (databases, queues) provide services but do not run
+	// workloads, so they are not candidates for where a component runs.
+	var runners []Node
+	for _, h := range hosts {
+		if k := strOf(h.Attrs["platform_kind"]); h.Kind == KindMachine || k == "cluster" || k == "serverless" || k == "" {
+			runners = append(runners, h)
+		}
+	}
 	var out []PlacementResult
 	for _, n := range needs {
-		cands, gaps := Judge(n.Facts, hosts)
-		r := PlacementResult{Component: n.Component, Facts: n.Facts, Gaps: gaps, Hosts: len(hosts)}
+		cands, gaps := Judge(n.Facts, runners, hosts)
+		r := PlacementResult{Component: n.Component, Facts: n.Facts, Gaps: gaps, Hosts: len(runners)}
 		for _, c := range cands {
 			switch {
 			case c.Fits:

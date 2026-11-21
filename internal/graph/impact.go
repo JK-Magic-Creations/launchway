@@ -99,11 +99,12 @@ type RunningDeployment struct {
 
 // ImpactResult answers "what is affected if this changes".
 type ImpactResult struct {
-	Start       Node                `json:"start"`
-	Total       int                 `json:"total"`
-	ByKind      map[string]int      `json:"by_kind"`
-	ByOwner     []OwnerGroup        `json:"by_owner"`
-	Deployments []RunningDeployment `json:"deployments"`
+	Start        Node                `json:"start"`
+	Total        int                 `json:"total"`
+	ByKind       map[string]int      `json:"by_kind"`
+	ByOwner      []OwnerGroup        `json:"by_owner"`
+	Repositories []string            `json:"repositories"` // the repositories the affected things live in
+	Deployments  []RunningDeployment `json:"deployments"`
 	Truncation
 }
 
@@ -122,6 +123,7 @@ func (s *Store) Impact(ctx context.Context, v Viewer, ref NodeRef, lim Limits, w
 		return out, err
 	}
 	groups := map[string]*OwnerGroup{}
+	repoSet := map[string]bool{}
 	for _, h := range r.Hits {
 		out.ByKind[string(h.Node.Kind)]++
 		o := ownerOf(h.Node, owners)
@@ -131,6 +133,9 @@ func (s *Store) Impact(ctx context.Context, v Viewer, ref NodeRef, lim Limits, w
 			groups[o] = g
 		}
 		g.Count++
+		if p, ok := strings.CutPrefix(h.Node.Subject, subRepo); ok && p != ref.Key {
+			repoSet[p] = true
+		}
 		g.Items = append(g.Items, Affected{Hit: h, Owner: o})
 		if h.Node.Kind == KindDeployment {
 			out.Deployments = append(out.Deployments, runningFrom(h, ref))
@@ -145,6 +150,7 @@ func (s *Store) Impact(ctx context.Context, v Viewer, ref NodeRef, lim Limits, w
 		}
 		return out.ByOwner[i].Owner < out.ByOwner[j].Owner
 	})
+	out.Repositories = sortedKeys(repoSet)
 	sort.SliceStable(out.Deployments, func(i, j int) bool { return out.Deployments[i].Deployment.Key < out.Deployments[j].Deployment.Key })
 	return out, nil
 }

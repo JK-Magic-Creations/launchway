@@ -47,116 +47,135 @@ const (
 	OverridePin    = "pin"    // from (the consumer) is pinned to a version of to: a push to to does not rebuild it
 )
 
-// repoGraph reads the repository-level dependencies the viewer may see.
+// repoGraph reads the repository-level dependencies the viewer may see. It
+// reads the handful of edge kinds that make them up (depends-on, contains,
+// built-from, builds, defined-in) and joins them in memory: the same answer
+// as a long join, in time that grows with the edges and not with the
+// product of them.
 func (s *Store) repoGraph(ctx context.Context, v Viewer, when When) (map[[2]string]*RepoEdge, bool, error) {
 	vis, err := s.visibility(ctx, v)
 	if err != nil {
 		return nil, false, err
 	}
-	out := map[[2]string]*RepoEdge{}
-	truncated := false
-	const rowCap = 400000
-	queries := []struct {
-		kind string
-		sql  string
-	}{
-		{"package", `SELECT cr.key, pr.key, pkg.key, d.constraint_text, d.resolved FROM graph_edges d
-  JOIN graph_nodes pkg ON pkg.nid = d.src
-  JOIN graph_nodes cc ON cc.nid = d.dst
-  JOIN graph_edges cx ON cx.dst = cc.nid AND cx.kind = 'contains' AND cx.org = ? AND %[1]s
-  JOIN graph_nodes cr ON cr.nid = cx.src AND cr.kind = 'repository'
-  JOIN graph_edges pe ON pe.dst = pkg.nid AND pe.kind = 'contains' AND pe.org = ? AND %[2]s
-  JOIN graph_nodes pc ON pc.nid = pe.src AND pc.kind = 'component'
-  JOIN graph_edges px ON px.dst = pc.nid AND px.kind = 'contains' AND px.org = ? AND %[3]s
-  JOIN graph_nodes pr ON pr.nid = px.src AND pr.kind = 'repository'
-  WHERE d.org = ? AND d.kind = 'depends-on' AND %[4]s AND cr.key <> pr.key AND %[5]s AND %[6]s AND %[7]s AND %[8]s LIMIT ?`},
-		{"image", `SELECT cr.key, pr.key, base.key, b.constraint_text, b.resolved FROM graph_edges b
-  JOIN graph_nodes base ON base.nid = b.src AND base.kind = 'image'
-  JOIN graph_nodes cc ON cc.nid = b.dst AND cc.kind = 'component'
-  JOIN graph_edges cx ON cx.dst = cc.nid AND cx.kind = 'contains' AND cx.org = ? AND %[1]s
-  JOIN graph_nodes cr ON cr.nid = cx.src AND cr.kind = 'repository'
-  JOIN graph_edges bl ON bl.dst = base.nid AND bl.kind = 'builds' AND bl.org = ? AND %[2]s
-  JOIN graph_edges df ON df.dst = bl.src AND df.kind = 'defined-in' AND df.org = ? AND %[3]s
-  JOIN graph_nodes pr ON pr.nid = df.src AND pr.kind = 'repository'
-  WHERE b.org = ? AND b.kind = 'built-from' AND %[4]s AND cr.key <> pr.key AND %[5]s AND %[6]s AND %[7]s AND %[8]s LIMIT ?`},
+	allows := vis.predicate()
+	type nrow struct{ kind, key string }
+	nodes := map[int64]nrow{}
+	nw, nwArgs := when.node("n")
+	rows, err := s.DB.Query(ctx, `SELECT n.nid, n.kind, n.key, n.subject FROM graph_nodes n WHERE n.org = ? AND `+nw+` AND n.kind IN ('repository','component','package','image','pipeline')`, append([]any{s.Org}, nwArgs...)...)
+	if err != nil {
+		return nil, false, err
 	}
-	for _, q := range queries {
-		var args []any
-		var text string
-		switch q.kind {
-		case "package":
-			text, args = buildRepoQuery(q.sql, s.Org, when, vis, "d", "cx", "pe", "px")
-		default:
-			text, args = buildRepoQuery(q.sql, s.Org, when, vis, "b", "cx", "bl", "df")
-		}
-		args = append(args, rowCap+1)
-		rows, err := s.DB.Query(ctx, text, args...)
-		if err != nil {
+	for rows.Next() {
+		var id int64
+		var r nrow
+		var sub string
+		if err := rows.Scan(&id, &r.kind, &r.key, &sub); err != nil {
+			rows.Close()
 			return nil, false, err
 		}
-		n := 0
-		for rows.Next() {
-			var consumer, provider, via, con, res string
-			if err := rows.Scan(&consumer, &provider, &via, &con, &res); err != nil {
-				rows.Close()
-				return nil, false, err
-			}
-			n++
-			if n > rowCap {
-				truncated = true
-				break
-			}
-			k := [2]string{consumer, provider}
-			e := out[k]
-			if e == nil {
-				e = &RepoEdge{Consumer: consumer, Provider: provider}
-				out[k] = e
-			}
-			e.Via = addUnique(e.Via, via)
-			e.Kinds = addUnique(e.Kinds, q.kind)
-			if res != "" {
-				e.Versions = addUnique(e.Versions, via+"@"+res)
-			} else if con != "" {
-				e.Versions = addUnique(e.Versions, via+"@"+con)
-			}
+		if allows(sub) {
+			nodes[id] = r
 		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
+	}
+	if err := rows.Close(); err != nil {
+		return nil, false, err
+	}
+	ew, ewArgs := when.edge("e")
+	const rowCap = 2000000
+	rows, err = s.DB.Query(ctx, `SELECT e.kind, e.src, e.dst, e.constraint_text, e.resolved, e.subject FROM graph_edges e WHERE e.org = ? AND `+ew+
+		` AND e.kind IN ('depends-on','contains','built-from','builds','defined-in') LIMIT ?`, append(append([]any{s.Org}, ewArgs...), rowCap+1)...)
+	if err != nil {
+		return nil, false, err
+	}
+	type dep struct {
+		src, dst      int64
+		constraint, r string
+	}
+	var depends, builtFrom []dep
+	repoOfComp := map[int64]int64{} // component -> repository (contains)
+	pubOfPkg := map[int64]int64{}   // package -> component that publishes it
+	builder := map[int64]int64{}    // image -> pipeline that builds it
+	pipeRepo := map[int64]int64{}   // pipeline -> repository it is defined in
+	n := 0
+	truncated := false
+	for rows.Next() {
+		var kind, con, res, sub string
+		var src, dst int64
+		if err := rows.Scan(&kind, &src, &dst, &con, &res, &sub); err != nil {
+			rows.Close()
 			return nil, false, err
 		}
+		if n++; n > rowCap {
+			truncated = true
+			break
+		}
+		if !allows(sub) {
+			continue
+		}
+		sn, dn := nodes[src], nodes[dst]
+		if sn.kind == "" || dn.kind == "" {
+			continue
+		}
+		switch kind {
+		case "depends-on": // stored: src = package, dst = component
+			if sn.kind == "package" && dn.kind == "component" {
+				depends = append(depends, dep{src, dst, con, res})
+			}
+		case "contains":
+			switch {
+			case sn.kind == "repository" && dn.kind == "component":
+				repoOfComp[dst] = src
+			case sn.kind == "component" && dn.kind == "package":
+				pubOfPkg[dst] = src
+			}
+		case "built-from": // stored: src = base image, dst = component
+			if sn.kind == "image" && dn.kind == "component" {
+				builtFrom = append(builtFrom, dep{src, dst, con, res})
+			}
+		case "builds": // pipeline -> image
+			if sn.kind == "pipeline" && dn.kind == "image" {
+				builder[dst] = src
+			}
+		case "defined-in": // stored: src = repository, dst = pipeline
+			if sn.kind == "repository" && dn.kind == "pipeline" {
+				pipeRepo[dst] = src
+			}
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return nil, false, err
+	}
+	out := map[[2]string]*RepoEdge{}
+	add := func(consumer, provider int64, via, kind, con, res string) {
+		if consumer == provider || consumer == 0 || provider == 0 {
+			return
+		}
+		c, p := nodes[consumer].key, nodes[provider].key
+		k := [2]string{c, p}
+		e := out[k]
+		if e == nil {
+			e = &RepoEdge{Consumer: c, Provider: p}
+			out[k] = e
+		}
+		e.Via = addUnique(e.Via, via)
+		e.Kinds = addUnique(e.Kinds, kind)
+		switch {
+		case res != "":
+			e.Versions = addUnique(e.Versions, via+"@"+res)
+		case con != "":
+			e.Versions = addUnique(e.Versions, via+"@"+con)
+		}
+	}
+	for _, d := range depends {
+		pub := pubOfPkg[d.src]
+		add(repoOfComp[d.dst], repoOfComp[pub], nodes[d.src].key, "package", d.constraint, d.r)
+	}
+	for _, b := range builtFrom {
+		add(repoOfComp[b.dst], pipeRepo[builder[b.src]], nodes[b.src].key, "image", b.constraint, b.r)
 	}
 	return out, truncated, nil
-}
-
-// buildRepoQuery fills the statement's placeholders for the edge conditions
-// and the viewer's condition, and returns its arguments in order.
-func buildRepoQuery(sqlText, org string, when When, vis visibility, a, b, c, d string) (string, []any) {
-	var args []any
-	// The arguments follow the order of the placeholders in the text: the
-	// three joined edges (org, when) each, then the WHERE (org, when), then
-	// the viewer's conditions.
-	w1, a1 := when.edge(b)
-	w2, a2 := when.edge(c)
-	w3, a3 := when.edge(d)
-	w4, a4 := when.edge(a)
-	args = append(args, org)
-	args = append(args, a1...)
-	args = append(args, org)
-	args = append(args, a2...)
-	args = append(args, org)
-	args = append(args, a3...)
-	args = append(args, org)
-	args = append(args, a4...)
-	v5, va5 := vis.clause("cr.subject")
-	v6, va6 := vis.clause("pr.subject")
-	v7, va7 := vis.clause(a + ".subject")
-	v8, va8 := vis.clause(b + ".subject")
-	args = append(args, va5...)
-	args = append(args, va6...)
-	args = append(args, va7...)
-	args = append(args, va8...)
-	return fmt.Sprintf(sqlText, w1, w2, w3, w4, v5, v6, v7, v8), args
 }
 
 func addUnique(l []string, s string) []string {
