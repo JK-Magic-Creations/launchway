@@ -605,41 +605,6 @@ type NewRun struct {
 	Delivery *Delivery
 }
 
-// checkPullRequest checks the trigger of a pull-request run.
-func checkPullRequest(t Trigger) error {
-	if t.PullRequest <= 0 || t.Ref != PullRequestRef(t.PullRequest) || t.Branch != "" || t.Tag != "" {
-		return fmt.Errorf("%w: a pull-request run needs the pull request's number and its ref, refs/pull/<number>/head", ErrConflict)
-	}
-	return nil
-}
-
-// PullRequestRef is the ref a Git host keeps a pull request's head at.
-func PullRequestRef(number int) string { return "refs/pull/" + strconv.Itoa(number) + "/head" }
-
-// checkLibraries checks that a pipeline is ready to run and that the source
-// says where to fetch every library it was expanded from, at the same commit.
-func checkLibraries(p *pipeline.Pipeline, src Source) error {
-	if !p.Expanded() {
-		return fmt.Errorf("%w: the pipeline uses templates that have not been expanded; "+
-			"templates come from libraries the server knows, so run it on a server", ErrConflict)
-	}
-	for _, l := range p.Libraries {
-		found := false
-		for _, ls := range src.Libraries {
-			if ls.Name == l.Name {
-				found = ls.Commit == l.Commit && pipeline.IsCommitID(ls.Commit) && ls.URL != ""
-			}
-		}
-		if !found {
-			return fmt.Errorf("%w: the source does not say where to fetch library %s at %s", ErrConflict, l.Name, l.Commit)
-		}
-	}
-	if len(src.Libraries) > 0 && src.Kind != "git" {
-		return fmt.Errorf("%w: libraries are only for runs from a Git repository", ErrConflict)
-	}
-	return nil
-}
-
 // CreateRun records a new run and queues the steps that can start.
 func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if nr.Project == "" || nr.Pipeline == nil || len(nr.Pipeline.Steps) == 0 {
@@ -663,12 +628,8 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
 		return nil, err
 	}
-	if nr.Trigger.Event == pipeline.EventRollback {
-		// A rollback run is read, and acted on, only by servers that know
-		// rollbacks (the restore key of its step and the review event).
-		if !e.knows(schemaRollback) {
-			return nil, fmt.Errorf("%w: this server does not know rollback runs (schema %d)", ErrConflict, schemaRollback)
-		}
+	if err := e.checkRollbackRun(&nr); err != nil {
+		return nil, err
 	}
 	var draft *Draft
 	switch {
@@ -1880,21 +1841,11 @@ func (c *cmd) advance() {
 			}
 			def := st.Pipeline.Step(id)
 			if def.IsRestore() {
-				// The rollback step of a rollback run: asked for by a person,
-				// it runs when the steps it needs (an approval, if one is
-				// required) have succeeded.
-				ready, blocked := c.needsState(def)
-				switch {
-				case blocked != "":
-					c.emit(StepSkipped, Payload{Step: id, SkipKind: "upstream", Reason: "not run because " + blocked})
+				if c.advanceRestore(id, def) {
 					changed = true
-				case ready:
-					before := len(c.events)
-					c.startRestore(id, def)
-					if c.err != nil {
-						return
-					}
-					changed = len(c.events) > before
+				}
+				if c.err != nil {
+					return
 				}
 				continue
 			}

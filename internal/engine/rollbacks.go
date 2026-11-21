@@ -656,3 +656,30 @@ func checkEmergency(v, where string) error {
 	}
 	return fmt.Errorf("%s: %q: write %s or %s", where, v, EmergencyAllow, EmergencyRequireApproval)
 }
+
+// advanceRestore moves the rollback step of a rollback run: asked for by a
+// person, it runs when the steps it needs (an approval, if one is required)
+// have succeeded. It reports whether it changed the step.
+func (c *cmd) advanceRestore(id string, def *pipeline.Step) bool {
+	ready, blocked := c.needsState(def)
+	switch {
+	case blocked != "":
+		c.emit(StepSkipped, Payload{Step: id, SkipKind: "upstream", Reason: "not run because " + blocked})
+		return true
+	case ready:
+		before := len(c.events)
+		c.startRestore(id, def)
+		return len(c.events) > before
+	}
+	return false
+}
+
+// checkRollbackRun refuses a rollback run on a server that does not know
+// them: they are read, and acted on, only by servers that know the restore
+// key of the step and the review event.
+func (e *Engine) checkRollbackRun(nr *NewRun) error {
+	if nr.Trigger.Event == pipeline.EventRollback && !e.knows(schemaRollback) {
+		return fmt.Errorf("%w: this server does not know rollback runs (schema %d)", ErrConflict, schemaRollback)
+	}
+	return nil
+}
