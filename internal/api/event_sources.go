@@ -126,14 +126,6 @@ func newSourceSecret() (string, error) {
 	return "lwes_" + base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-func (s *Server) sealSourceSecret(ctx context.Context, id, secret string) (string, error) {
-	svc, err := s.secretStore()
-	if err != nil {
-		return "", err
-	}
-	return svc.Webhooks().Seal(ctx, id, []byte(secret))
-}
-
 func (s *Server) createEventSource(w http.ResponseWriter, r *http.Request) {
 	var in eventSourceIn
 	if !decode(w, r, &in) {
@@ -145,7 +137,7 @@ func (s *Server) createEventSource(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if !svc.Webhooks().Enabled() {
+	if !svc.EventSources().Enabled() {
 		writeNoRootKey(w, "Event sources")
 		return
 	}
@@ -165,12 +157,7 @@ func (s *Server) createEventSource(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	sealed, err := s.sealSourceSecret(r.Context(), x.ID, secret)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	made, err := s.Engine.CreateEventSource(x, sealed)
+	made, err := s.Engine.CreateEventSource(r.Context(), x, secret, svc.EventSources())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -197,14 +184,15 @@ func (s *Server) changeEventSource(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	var secret, sealed string
+	var secret string
+	var seal engine.SecretSealer
 	if in.RotateSecret {
 		svc, err := s.secretStore()
 		if err != nil {
 			s.fail(w, err)
 			return
 		}
-		if !svc.Webhooks().Enabled() {
+		if !svc.EventSources().Enabled() {
 			writeNoRootKey(w, "Event sources")
 			return
 		}
@@ -212,12 +200,9 @@ func (s *Server) changeEventSource(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, err)
 			return
 		}
-		if sealed, err = s.sealSourceSecret(r.Context(), x.ID, secret); err != nil {
-			s.fail(w, err)
-			return
-		}
+		seal = svc.EventSources()
 	}
-	if err := s.Engine.ChangeEventSource(*x, sealed); err != nil {
+	if err := s.Engine.ChangeEventSource(r.Context(), *x, secret, seal); err != nil {
 		s.fail(w, err)
 		return
 	}
@@ -403,7 +388,7 @@ func (s *Server) checkSourceSignature(r *http.Request, src *engine.EventSource, 
 	if err != nil || sealed == "" {
 		return "", "the source has no secret the server can read"
 	}
-	secret, err := svc.Webhooks().Open(r.Context(), src.ID, sealed)
+	secret, err := svc.EventSources().Open(r.Context(), src.ID, sealed)
 	if err != nil {
 		s.Log.Error("opening an event source's secret", "project", src.Project, "source", src.Name, "err", err)
 		return "", "the server could not read the source's secret"

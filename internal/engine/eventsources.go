@@ -10,6 +10,7 @@ package engine
 // internal/source and internal/api).
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -95,9 +96,15 @@ func CheckEventSource(s *EventSource) error {
 	return nil
 }
 
-// CreateEventSource makes a source. secretSealed is the signing secret as the
-// API sealed it. It returns the source.
-func (e *Engine) CreateEventSource(s EventSource, secretSealed string) (*EventSource, error) {
+// SecretSealer seals a source's signing secret for its row (internal/sealing's
+// box of event source secrets).
+type SecretSealer interface {
+	Seal(ctx context.Context, row string, plain []byte) (string, error)
+}
+
+// CreateEventSource makes a source with the signing secret given, which is
+// sealed here and never kept in the clear. It returns the source.
+func (e *Engine) CreateEventSource(ctx context.Context, s EventSource, secret string, seal SecretSealer) (*EventSource, error) {
 	if !e.knows(schemaEvents) {
 		return nil, fmt.Errorf("%w: this server does not know event sources (schema %d)", ErrConflict, schemaEvents)
 	}
@@ -108,6 +115,14 @@ func (e *Engine) CreateEventSource(s EventSource, secretSealed string) (*EventSo
 		s.RatePerMinute = DefaultRatePerMinute
 	}
 	if err := CheckEventSource(&s); err != nil {
+		return nil, err
+	}
+	if s.ID == "" {
+		s.ID = ids.New("evs")
+	}
+	// Sealed before the write lock is taken: sealing may write too.
+	secretSealed, err := seal.Seal(ctx, s.ID, []byte(secret))
+	if err != nil {
 		return nil, err
 	}
 	unlock := e.writeLock()
@@ -124,12 +139,10 @@ func (e *Engine) CreateEventSource(s EventSource, secretSealed string) (*EventSo
 	if n >= MaxEventSourcesPerProject {
 		return nil, fmt.Errorf("%w: a project has at most %d event sources", ErrConflict, MaxEventSourcesPerProject)
 	}
-	if s.ID == "" {
-		s.ID = ids.New("evs")
-	}
 	s.CreatedAt = e.now().UnixMilli()
 	mapping, _ := json.Marshal(s.Mapping)
-	if _, err := tx.Exec(`INSERT INTO event_sources(`+eventSourceColumns+`) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+	if _, err := tx.Exec(`INSERT INTO event_sources(id, project, name, secret_sealed, schema_json, mapping, filter_expr, dedupe_expr, ref, debounce_secs, batch_secs, max_body, rate_per_min, enabled, created_at, created_by, last_received_at)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		s.ID, s.Project, s.Name, secretSealed, s.Schema, string(mapping), s.Filter, s.DedupeKey, s.Ref, s.DebounceSecs, s.BatchSecs, s.MaxBody, s.RatePerMinute,
 		1, s.CreatedAt, s.CreatedBy, 0); err != nil {
 		if isUnique(err) {
@@ -140,7 +153,7 @@ func (e *Engine) CreateEventSource(s EventSource, secretSealed string) (*EventSo
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	s.HasSecret, s.Enabled = secretSealed != "", true
+	s.HasSecret, s.Enabled = true, true
 	return &s, nil
 }
 
@@ -183,8 +196,8 @@ func (e *Engine) EventSourceNamed(project, name string) (*EventSource, string, e
 }
 
 // ChangeEventSource replaces a source's settings (not its name, project or
-// secret); a non-empty newSealed replaces the secret.
-func (e *Engine) ChangeEventSource(s EventSource, newSealed string) error {
+// secret); a non-empty newSecret replaces the secret, sealed here.
+func (e *Engine) ChangeEventSource(ctx context.Context, s EventSource, newSecret string, seal SecretSealer) error {
 	if err := CheckEventSource(&s); err != nil {
 		return err
 	}
@@ -193,22 +206,27 @@ func (e *Engine) ChangeEventSource(s EventSource, newSealed string) error {
 	if s.Enabled {
 		en = 1
 	}
+	sealed := ""
+	if newSecret != "" {
+		var err error
+		if sealed, err = seal.Seal(ctx, s.ID, []byte(newSecret)); err != nil {
+			return err
+		}
+	}
 	unlock := e.writeLock()
 	defer unlock()
-	q := `UPDATE event_sources SET schema_json = ?, mapping = ?, filter_expr = ?, dedupe_expr = ?, ref = ?, debounce_secs = ?, batch_secs = ?, max_body = ?, rate_per_min = ?, enabled = ?`
-	args := []any{s.Schema, string(mapping), s.Filter, s.DedupeKey, s.Ref, s.DebounceSecs, s.BatchSecs, s.MaxBody, s.RatePerMinute, en}
-	if newSealed != "" {
-		q += `, secret_sealed = ?`
-		args = append(args, newSealed)
-	}
-	res, err := e.db.Exec(q+` WHERE project = ? AND name = ?`, append(args, s.Project, s.Name)...)
+	res, err := e.db.Exec(`UPDATE event_sources SET schema_json = ?, mapping = ?, filter_expr = ?, dedupe_expr = ?, ref = ?, debounce_secs = ?, batch_secs = ?, max_body = ?, rate_per_min = ?, enabled = ? WHERE project = ? AND name = ?`,
+		s.Schema, string(mapping), s.Filter, s.DedupeKey, s.Ref, s.DebounceSecs, s.BatchSecs, s.MaxBody, s.RatePerMinute, en, s.Project, s.Name)
 	if err != nil {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return fmt.Errorf("%w: event source %s of %s", ErrNotFound, s.Name, s.Project)
 	}
-	return nil
+	if sealed != "" {
+		_, err = e.db.Exec(`UPDATE event_sources SET secret_sealed = ? WHERE id = ?`, sealed, s.ID)
+	}
+	return err
 }
 
 // DeleteEventSource removes a source and what it remembers.

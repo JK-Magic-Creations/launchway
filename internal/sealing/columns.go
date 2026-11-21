@@ -85,6 +85,11 @@ var (
 		Writers: []string{"internal/engine/accounts.go"},
 		Why:     "the authenticator (TOTP) secrets of built-in accounts: with one, a code can be made for that person",
 	}
+	eventSourcesColumn = Column{
+		Table: "event_sources", Column: "secret_sealed", Key: "id", Purpose: keyring.PurposeSecrets,
+		Writers: []string{"internal/engine/eventsources.go"},
+		Why:     "the secrets that sign calls to a project's event sources",
+	}
 	webhooksColumn = Column{
 		Table: "repo_webhooks", Column: "secret_sealed", Key: "id", Purpose: keyring.PurposeSecrets,
 		Writers: []string{"internal/forge/webhooks/store.go"},
@@ -111,7 +116,7 @@ var (
 // same change. TestSchemaSecretColumnsAreRegistered fails on a column whose
 // name looks like it holds a secret and that is neither here nor explained in
 // ExplainedColumns.
-var Registry = []Column{webhooksColumn, webhookURLColumn, totpColumn, hostKeysColumn, metaColumn}
+var Registry = []Column{webhooksColumn, webhookURLColumn, eventSourcesColumn, totpColumn, hostKeysColumn, metaColumn}
 
 // ExplainedColumns lists columns whose names look like they hold a secret, and why
 // they do not: a hash of a random value (a fast hash is right for 256 random
@@ -136,6 +141,7 @@ var explained = []struct{ column, why string }{
 	{"deployments.pod_hash", "a digest of a pod template, not a credential"},
 	{"runs.pipeline_hash", "a digest of the pipeline text"},
 	{"webhook_deliveries.body_hash", "a digest of a received body, kept to detect repeats"},
+	{"event_log.dedupe_key", "the value of a source's dedupe expression (a release id, an order number): an identifier chosen to tell events apart, never a credential; the events page says not to send secrets"},
 	{"artifact_blobs.hash_state", "the state of a running digest of public content"},
 	{"caches.hash_state", "the state of a running digest of cache content"},
 
@@ -226,6 +232,9 @@ func (b *HookBox) SealURL(ctx context.Context, row string, plain []byte) (string
 func (b *HookBox) OpenURL(ctx context.Context, row, stored string) ([]byte, error) {
 	return b.urls.Open(ctx, row, stored)
 }
+
+// EventSources is the box of event sources' signing secrets.
+func (s *Service) EventSources() *Box { return &Box{s, eventSourcesColumn} }
 
 // Enabled says whether new values can be sealed.
 func (b *Box) Enabled() bool { return b.s.Encrypted() }
