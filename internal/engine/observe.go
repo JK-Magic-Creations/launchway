@@ -601,6 +601,7 @@ func (e *Engine) storeObservation(depID, stepID string, r RunnerInfo, snap []byt
 			}
 		}
 		changed = true
+		e.logPhase(tx, depID, stepID, now, v)
 	}
 	e.pubMu.Lock()
 	last := e.published[depID]

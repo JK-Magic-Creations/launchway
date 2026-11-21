@@ -130,7 +130,7 @@ func Start(ctx context.Context, o Options) (*Service, error) {
 	}
 	kr, err := keyring.Open(ctx, s.kdb, o.Holder, keyring.Options{Previous: o.Previous, Audit: o.Audit, Now: o.Now})
 	if err != nil {
-		return nil, err
+		return nil, s.wrongKeyHelp(ctx, o.Holder, o.Previous, err)
 	}
 	s.kr, s.keys = kr, kr
 	if deferred, err := s.deferSealing(ctx); err != nil {
@@ -176,7 +176,7 @@ func Inspect(ctx context.Context, o Options) (*Service, error) {
 	}
 	kr, err := keyring.Open(ctx, s.kdb, o.Holder, keyring.Options{Previous: o.Previous, Now: o.Now})
 	if err != nil {
-		return nil, err
+		return nil, s.wrongKeyHelp(ctx, o.Holder, o.Previous, err)
 	}
 	s.kr, s.keys = kr, kr
 	return s, nil

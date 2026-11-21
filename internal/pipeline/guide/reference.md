@@ -361,7 +361,7 @@ is healthy. It needs an `environment` configured on the server; the validator ch
 Deploy keys: `environment`, `service`, `version`, `fleet` (delivery to hosts over SSH: `method`, `strategy`, `artifact`, `image`, `max_unavailable`, `drain`, `check`, `traffic`, `ssh`, `pathfinder`) or `argocd` (`application`, `write_back` with
 `repo`, `branch` and `changes`, each `{ file, image, tag }`, `{ file, image, digest }` or
 `{ file, set, value }` (`set` is a YAML path, `value` what to write there);
-`sync` with `request`, `resources`, `prune`, `windows`; `health`), `rollout` (`name`, `namespace`,
+`sync` with `request`, `resources`, `prune`, `windows`, `leftovers` (fail or warn: security-relevant objects left by an earlier render when pruning is off); `health`), `rollout` (`name`, `namespace`,
 `until`, `pauses`), `on_cancel`, plus `needs`, `when`, `timeout`, `description`. A `rollback` step
 takes `deployment`, `needs`, `timeout`, `abort_first`, `description`; it runs only if its
 deployment was made and a step it needs did not succeed. A `rollout` step takes `deployment`,

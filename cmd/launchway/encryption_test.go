@@ -58,6 +58,9 @@ func seedLegacyShared(e *engine.Engine, key, value string) error {
 }
 
 func TestNewInstallationGetsAGeneratedKeyFile(t *testing.T) {
+	if testdb.Postgres() {
+		t.Skip("a key is generated for SQLite only")
+	}
 	addr := testdb.New(t)
 	e := engineAt(t, addr)
 	su, lc := setupFor(t, addr, config.EncryptionConfig{})
@@ -364,6 +367,9 @@ func TestRootKeyReplacementThroughTheCommands(t *testing.T) {
 // makes the file, the rest use it, none fails, and every secret opens from
 // each.
 func TestServersStartingTogetherOnANewInstallationShareOneGeneratedKey(t *testing.T) {
+	if testdb.Postgres() {
+		t.Skip("a key is generated for SQLite only")
+	}
 	addr := testdb.New(t)
 	dir := t.TempDir()
 	const n = 6
@@ -412,6 +418,9 @@ func TestServersStartingTogetherOnANewInstallationShareOneGeneratedKey(t *testin
 // the server, the report and the doctor say so in plain words; a key file
 // elsewhere draws no such warning.
 func TestKeyInTheDataDirectoryIsWarnedAbout(t *testing.T) {
+	if testdb.Postgres() {
+		t.Skip("a key is generated for SQLite only")
+	}
 	addr := testdb.New(t)
 	su, lc := setupFor(t, addr, config.EncryptionConfig{})
 	svc, err := su.startSecrets(context.Background(), engineAt(t, addr))
@@ -439,5 +448,101 @@ func TestKeyInTheDataDirectoryIsWarnedAbout(t *testing.T) {
 	rep2, _ := svc2.Report(context.Background())
 	if strings.Contains(lc2.String(), "stored together") || strings.Contains(strings.Join(rep2.Warnings, "\n"), "stored together") {
 		t.Fatal("a key outside the data directory was warned about")
+	}
+}
+
+func kekCount(t *testing.T, e *engine.Engine) int {
+	t.Helper()
+	var n int
+	if err := e.Database().QueryRow(context.Background(), `SELECT count(*) FROM encryption_keks`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// An image-only upgrade under an old chart (PostgreSQL, no root key mounted)
+// must not invent a root key or a key-encryption key: it serves, not
+// encrypted, and says how to set encryption up. A later start with a
+// configured key creates the first key-encryption key once.
+func TestPostgresWithNoRootKeyCreatesNoKeys(t *testing.T) {
+	if !testdb.Postgres() {
+		t.Skip("PostgreSQL only")
+	}
+	addr := testdb.New(t)
+	e := engineAt(t, addr)
+	su, lc := setupFor(t, addr, config.EncryptionConfig{})
+	svc, err := su.startSecrets(context.Background(), e)
+	if err != nil || svc.Encrypted() {
+		t.Fatalf("%v", err)
+	}
+	if kekCount(t, e) != 0 || config.FileExists(config.DefaultKeyFile(su.cfg.Data)) {
+		t.Fatal("a key was made for a PostgreSQL installation with no root key")
+	}
+	if !strings.Contains(lc.String(), "NOT ENCRYPTED") || strings.Contains(lc.String(), "root key was generated") {
+		t.Fatalf("log:\n%s", lc.String())
+	}
+	rep, err := svc.Report(context.Background())
+	if err != nil || !strings.Contains(strings.Join(rep.Warnings, "\n"), "encryption is not set up: no root key is configured") {
+		t.Fatalf("%v %v", rep.Warnings, err)
+	}
+	// Later, with a configured key: one key-encryption key, and sealing proceeds.
+	key := writeKey(t)
+	for range 2 {
+		su2, _ := setupFor(t, addr, config.EncryptionConfig{KeyFile: key})
+		s2, err := su2.startSecrets(context.Background(), engineAt(t, addr))
+		if err != nil || !s2.Encrypted() {
+			t.Fatalf("%v", err)
+		}
+	}
+	if n := kekCount(t, e); n != 1 {
+		t.Fatalf("%d key-encryption keys", n)
+	}
+}
+
+// A database that holds data from an earlier release, on SQLite, with no key
+// and no key file: nothing is generated. A key file already in the data
+// directory is still used.
+func TestUpgradedSQLiteWithDataGeneratesNoKey(t *testing.T) {
+	if testdb.Postgres() {
+		t.Skip("SQLite only")
+	}
+	addr := testdb.New(t)
+	e := engineAt(t, addr)
+	if _, err := e.Database().Exec(context.Background(), `INSERT INTO meta(key, value) VALUES('something_an_earlier_release_kept', '1')`); err != nil {
+		t.Fatal(err)
+	}
+	su, lc := setupFor(t, addr, config.EncryptionConfig{})
+	svc, err := su.startSecrets(context.Background(), e)
+	if err != nil || svc.Encrypted() || kekCount(t, e) != 0 || config.FileExists(config.DefaultKeyFile(su.cfg.Data)) {
+		t.Fatalf("generated for an upgrade: %v", err)
+	}
+	if !strings.Contains(lc.String(), "already holds data") {
+		t.Fatalf("log:\n%s", lc.String())
+	}
+	// An existing key file in the data directory is still used.
+	if err := keyring.WriteKeyFile(config.DefaultKeyFile(su.cfg.Data)); err != nil {
+		t.Fatal(err)
+	}
+	if s, err := su.startSecrets(context.Background(), e); err != nil || !s.Encrypted() {
+		t.Fatalf("existing key file not used: %v", err)
+	}
+}
+
+// A data directory that cannot be written gets no generated key.
+func TestUnwritableDataDirectoryGeneratesNoKey(t *testing.T) {
+	if testdb.Postgres() {
+		t.Skip("SQLite only")
+	}
+	addr := testdb.New(t)
+	e := engineAt(t, addr)
+	su, _ := setupFor(t, addr, config.EncryptionConfig{})
+	f := filepath.Join(t.TempDir(), "afile")
+	if err := os.WriteFile(f, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	su.cfg.Data = filepath.Join(f, "data") // a path below a file: cannot be made
+	svc, err := su.startSecrets(context.Background(), e)
+	if err != nil || svc.Encrypted() || kekCount(t, e) != 0 {
+		t.Fatalf("%v", err)
 	}
 }

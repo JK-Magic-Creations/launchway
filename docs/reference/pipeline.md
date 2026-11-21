@@ -812,6 +812,7 @@ scalar at a YAML path gets a value. Comments and layout are kept.
 | `resources` | list | the whole application | Sync, and judge, only these; at most 50; see [Sync resources](#sync-resources) |
 | `prune` | boolean | `false` | Prune resources Git no longer has |
 | `windows` | text | `wait` | While an Argo CD sync window does not allow the sync: `wait` (until the deadline) or `fail`. Windows are never overridden |
+| `leftovers` | text | `fail` | With pruning off, objects an earlier render made that the release no longer renders stay in the cluster. `fail`: the step fails when any is security-relevant (NetworkPolicy, Role, RoleBinding, ClusterRole, ClusterRoleBinding, ServiceAccount, Ingress and route kinds, Secret); `warn`: only say so. Other kinds only warn. Nothing is deleted |
 
 #### Sync resources
 

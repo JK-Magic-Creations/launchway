@@ -178,10 +178,16 @@ func instanceName() string {
 // defaultKeyFile is what happens when no root key holder is configured. The
 // key file in the data directory (<data>/root.key) is used if it is there: it
 // is the one a new installation generated at its first start. If it is not,
-// an installation that has never held a secret (a new database) generates it,
-// so that it is encrypted at rest from its first start, unless told not to.
-// An installation that already holds secrets is not touched: it runs not
-// encrypted until an operator creates a key on purpose.
+// a key is generated ONLY for a brand-new installation whose database is the
+// local SQLite file (the "just run it" case: one server, one durable data
+// directory), unless told not to. In every other case there is no key and no
+// key-encryption key is created: the server runs not encrypted at rest, as
+// releases before encryption did, and says so. Those cases are a PostgreSQL
+// database (shared by servers that may not share a disk, so a key made here
+// could be lost with an emptyDir or a pod, and would then lock the database
+// against every later server), a database that already holds data from an
+// earlier release (an upgrade, possibly under an older chart that mounts no
+// key), and a data directory that cannot be written.
 func defaultKeyFile(ctx context.Context, cfg *config.Config, eng *engine.Engine, log *slog.Logger) (*rootKeys, error) {
 	none := &rootKeys{}
 	path := config.DefaultKeyFile(cfg.Data)
@@ -189,18 +195,24 @@ func defaultKeyFile(ctx context.Context, cfg *config.Config, eng *engine.Engine,
 		if cfg.Encryption.NoGenerate {
 			return none, nil
 		}
-		fresh, err := sealing.IsFresh(ctx, eng.Database())
+		if eng.Database().Postgres() {
+			log.Warn("no root key is configured and the database is PostgreSQL, so none is generated: a key made on one server's disk could be lost with it and would lock every other server out. The server starts NOT encrypted at rest, as an installation before encryption did. " + keyring.HowToCreateARootKey)
+			return none, nil
+		}
+		fresh, err := sealing.IsBrandNew(ctx, eng.Database())
 		if err != nil {
 			return nil, err
 		}
 		if !fresh && !config.FileExists(path) { // a server starting at the same moment may have made the key and the first keys since the check above
+			log.Warn("no root key is configured and this database already holds data from an earlier release, so none is generated. The server starts NOT encrypted at rest. " + keyring.HowToCreateARootKey)
 			return none, nil
 		}
 		if err := keyring.WriteKeyFile(path); errors.Is(err, os.ErrExist) {
 			// Another server starting at the same moment made it first: use its key.
 			log.Info("another server made the root key file first; using it", "key_file", path)
 		} else if err != nil {
-			return nil, fmt.Errorf("making a root key for this new installation: %w", err)
+			log.Warn("no root key is configured and the data directory cannot hold one, so none is generated. The server starts NOT encrypted at rest. "+keyring.HowToCreateARootKey, "data", cfg.Data, "err", err)
+			return none, nil
 		} else {
 			log.Warn("a root key was generated for this new installation, because none was configured. Keep a copy of it somewhere other than the database's backups: without it a restore cannot read any secret. For production, move it off this volume and set encryption.key_file", "key_file", path)
 		}

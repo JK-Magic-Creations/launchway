@@ -23,6 +23,22 @@ type Snapshot struct {
 	// Rights is what the runner found out it may do to the rollout (a
 	// self-check against the cluster's authorizer); nil when it did not ask.
 	Rights *Rights `json:"rights,omitempty"`
+	// Evidence is what the runner saw of the application's pods while it was
+	// not healthy: which are crash-looping, with the last lines they logged.
+	Evidence []PodEvidence `json:"evidence,omitempty"`
+}
+
+// PodEvidence is one pod that is not running well.
+type PodEvidence struct {
+	Pod       string `json:"pod"`
+	Namespace string `json:"namespace,omitempty"`
+	// Reason is the container's state reason (CrashLoopBackOff, ImagePullBackOff, Error...).
+	Reason   string `json:"reason"`
+	Message  string `json:"message,omitempty"`
+	Restarts int    `json:"restarts,omitempty"`
+	// Crash says the pod is crash-looping: it keeps starting and exiting.
+	Crash   bool     `json:"crash,omitempty"`
+	LogTail []string `json:"log_tail,omitempty"`
 }
 
 // Rights is what a deploy runner may do to a watched rollout, as the
@@ -69,6 +85,14 @@ type App struct {
 	// them: those listed under sync.resources, else none (the application's
 	// own sync and health then decide).
 	Resources []Resource `json:"resources,omitempty"`
+	// Leftovers are objects an earlier render made that the release no
+	// longer renders and that are still in the cluster, because pruning is off
+	// (Argo CD reports them as requiring pruning). AutoPrune says the
+	// application prunes by itself; SyncedExceptLeftovers says they are the
+	// only thing keeping it OutOfSync.
+	Leftovers             []Leftover `json:"leftovers,omitempty"`
+	AutoPrune             bool       `json:"auto_prune,omitempty"`
+	SyncedExceptLeftovers bool       `json:"synced_except_leftovers,omitempty"`
 	// WindowBlocked, for an application that syncs by itself, says why its
 	// AppProject's sync windows do not let it sync now ("" if they do).
 	WindowBlocked string `json:"window_blocked,omitempty"`
@@ -77,6 +101,20 @@ type App struct {
 	Notes []string `json:"notes,omitempty"`
 	// Conditions are the application's error and warning conditions.
 	Conditions []string `json:"conditions,omitempty"`
+	// Controller is the controller's own account of what it is doing, for the
+	// step's log: sync and health, the operation's phase and message, the
+	// failing resource or hook with its message. ComparisonError is the
+	// text of a ComparisonError condition in full.
+	Controller      string `json:"controller,omitempty"`
+	ComparisonError string `json:"comparison_error,omitempty"`
+	// ComparisonPersistent says the runner saw the same ComparisonError on
+	// two looks a while apart, so it is not a passing hiccup.
+	ComparisonPersistent bool `json:"comparison_persistent,omitempty"`
+	// StaleOperation says the sync operation in progress or retrying was
+	// started with source revisions the application no longer points at.
+	// Cleared says what the deploy runner did about it.
+	StaleOperation string `json:"stale_operation,omitempty"`
+	Cleared        string `json:"cleared,omitempty"`
 }
 
 // Operation is an application's current or last sync operation.
@@ -233,4 +271,30 @@ type Spec struct {
 	Until    string `json:"until,omitempty"`
 	Pauses   string `json:"pauses,omitempty"`
 	PastStep *int   `json:"past_step,omitempty"`
+	// Leftovers is fail or warn (see pipeline.Sync); Prune says the step
+	// asks for pruning.
+	Leftovers string `json:"leftovers,omitempty"`
+	Prune     bool   `json:"prune,omitempty"`
 }
+
+// Leftover is an object from an earlier render that is still in the cluster.
+type Leftover struct {
+	Group     string `json:"group,omitempty"`
+	Kind      string `json:"kind"`
+	Namespace string `json:"namespace,omitempty"`
+	Name      string `json:"name"`
+	// Security says the kind widens access if it stays (network policies,
+	// roles and bindings, service accounts, ingress and route kinds, secrets).
+	Security bool `json:"security,omitempty"`
+}
+
+// securityKinds are the kinds whose leftover objects can widen access.
+var securityKinds = map[string]bool{
+	"NetworkPolicy": true, "CiliumNetworkPolicy": true, "CiliumClusterwideNetworkPolicy": true,
+	"Role": true, "RoleBinding": true, "ClusterRole": true, "ClusterRoleBinding": true,
+	"ServiceAccount": true, "Ingress": true, "HTTPRoute": true, "GRPCRoute": true, "TCPRoute": true,
+	"TLSRoute": true, "Gateway": true, "IngressRoute": true, "Secret": true,
+}
+
+// String words a leftover as Kind/name.
+func (l Leftover) String() string { return l.Kind + "/" + l.Name }

@@ -20,6 +20,8 @@
 {{/* The server pods' environment for the root key holder. */}}
 {{- define "launchway.encryptionEnv" -}}
 {{- $e := .Values.encryption -}}
+- name: LAUNCHWAY_CHART_REVISION
+  value: {{ index .Chart.Annotations "launchway.io/chart-revision" | quote }}
 {{- $h := include "launchway.encryptionHolder" . -}}
 {{- if eq $h "none" }}
 - name: LAUNCHWAY_ENCRYPTION_HOLDER

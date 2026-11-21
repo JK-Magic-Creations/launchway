@@ -395,7 +395,7 @@
     {
       "file": "internal/deploy/evaluate.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 49 of func `Evaluate` is high (\u003e 30)",
+      "text": "cyclomatic complexity 47 of func `Evaluate` is high (\u003e 30)",
       "count": 1
     },
     {

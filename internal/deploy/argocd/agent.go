@@ -37,8 +37,27 @@ type Agent struct {
 	// back by pull request; PullEvery is how often it asks (default 5s).
 	Pulls     Pulls
 	PullEvery time.Duration
+	// PairTimeout is how long a deployment that changes an application's own
+	// manifest and its values waits for the cluster to show the new manifest
+	// before it writes the values (default 3m); PairSettle is the pause it
+	// makes instead when the cluster cannot be read (default 90s); PairEvery
+	// is how often it looks (default 2s). See pairing.go.
+	PairTimeout, PairSettle, PairEvery time.Duration
+
+	// KeepStaleOperations stops the runner from ending a sync operation that
+	// was started with source revisions the application no longer points at
+	// (the controller retries it with the same stale revisions, for as long
+	// as it is left). Default: it ends it, for the application it is deploying
+	// only, and says so. It needs the right to patch the application, which the
+	// runner already has for refresh and sync.
+	KeepStaleOperations bool
+	// ComparisonGrace is how long a ComparisonError must last before the step
+	// fails on it (default 20s).
+	ComparisonGrace time.Duration
 
 	mu       sync.Mutex
+	seenCmp  map[string]time.Time
+	cleared  map[string]string
 	clusters map[string]*Cluster
 	repos    map[string]*sync.Mutex
 }
@@ -170,43 +189,36 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 	if err != nil {
 		return nil, err
 	}
+	pl, err := classify(ctx, repo, d)
+	unlock()
+	if err != nil {
+		return nil, err
+	}
+	editFor := func(c engine.DeployChange) gitops.FileEdit { return fileEdit(d, c, log) }
 	cs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message}
 	for _, c := range d.Changes {
-		c := c
-		cs.Files = append(cs.Files, gitops.FileEdit{Path: c.File, Edit: func(path string, data []byte) ([]byte, error) {
-			if data == nil {
-				return nil, fmt.Errorf("%s does not exist on branch %s", path, d.Branch)
-			}
-			if c.Image != "" && c.Digest != "" && c.Tag != "" {
-				out, n, err := edit.ImageTagDigest(data, c.Image, c.Tag, c.Digest)
-				if err == nil {
-					log("%s: %d reference(s) to %s set to %s and pinned to %s", path, n, c.Image, c.Tag, c.Digest)
-				}
-				return out, err
-			}
-			if c.Image != "" && c.Digest != "" {
-				out, n, err := edit.ImageDigest(data, c.Image, c.Digest)
-				if err == nil {
-					log("%s: %d reference(s) to %s pinned to %s", path, n, c.Image, c.Digest)
-				}
-				return out, err
-			}
-			if c.Image != "" {
-				out, n, err := edit.Image(data, c.Image, c.Tag)
-				if err == nil {
-					log("%s: %d reference(s) to %s set to %s", path, n, c.Image, c.Tag)
-				}
-				return out, err
-			}
-			out, err := edit.Set(data, c.Set, c.Value)
-			if err == nil {
-				log("%s: %s set to %s", path, c.Set, c.Value)
-			}
-			return out, err
-		}})
+		cs.Files = append(cs.Files, editFor(c))
 	}
-	res, err := repo.Apply(ctx, cs)
-	unlock()
+	var res gitops.ApplyResult
+	var pins []pinned
+	if len(pl.manifest) > 0 && len(pl.values) > 0 {
+		mcs := gitops.ChangeSet{Deployment: d.Deployment + "-pin", Message: d.Message + "\n\n(first of two commits: the application's own manifest; the values follow once the cluster shows it)"}
+		vcs := gitops.ChangeSet{Deployment: d.Deployment, Message: d.Message}
+		for _, c := range pl.manifest {
+			mcs.Files = append(mcs.Files, editFor(c))
+		}
+		for _, c := range pl.values {
+			vcs.Files = append(vcs.Files, editFor(c))
+		}
+		res, pins, err = a.applySequenced(ctx, job, pl, mcs, vcs, log)
+	} else {
+		repo, unlock, err = a.repoWrite(ctx, job, log)
+		if err != nil {
+			return nil, err
+		}
+		res, err = repo.Apply(ctx, cs)
+		unlock()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +238,47 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 		log("Nothing to commit: %s already holds version %s at %s; it is synced and verified all the same", d.Branch, d.Version, short(res.Commit))
 	}
 	facts.Sync, err = a.requestSync(ctx, job, res.Commit, log)
+	if err == nil && len(pins) > 0 {
+		var note string
+		if note, err = a.verifyPair(ctx, job, pins, res.Commit, log); err == nil {
+			facts.Sync += note
+		}
+	}
 	return facts, err
+}
+
+func fileEdit(d *engine.DeployJob, c engine.DeployChange, log func(string, ...any)) gitops.FileEdit {
+	return gitops.FileEdit{Path: c.File, Edit: func(path string, data []byte) ([]byte, error) {
+		if data == nil {
+			return nil, fmt.Errorf("%s does not exist on branch %s", path, d.Branch)
+		}
+		if c.Image != "" && c.Digest != "" && c.Tag != "" {
+			out, n, err := edit.ImageTagDigest(data, c.Image, c.Tag, c.Digest)
+			if err == nil {
+				log("%s: %d reference(s) to %s set to %s and pinned to %s", path, n, c.Image, c.Tag, c.Digest)
+			}
+			return out, err
+		}
+		if c.Image != "" && c.Digest != "" {
+			out, n, err := edit.ImageDigest(data, c.Image, c.Digest)
+			if err == nil {
+				log("%s: %d reference(s) to %s pinned to %s", path, n, c.Image, c.Digest)
+			}
+			return out, err
+		}
+		if c.Image != "" {
+			out, n, err := edit.Image(data, c.Image, c.Tag)
+			if err == nil {
+				log("%s: %d reference(s) to %s set to %s", path, n, c.Image, c.Tag)
+			}
+			return out, err
+		}
+		out, err := edit.Set(data, c.Set, c.Value)
+		if err == nil {
+			log("%s: %s set to %s", path, c.Set, c.Value)
+		}
+		return out, err
+	}}
 }
 
 // Revert reverts a deployment's commit (unless an earlier try did) and asks
@@ -289,6 +341,15 @@ func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ..
 		log("The revert %s is already on %s (an earlier try made it)", short(res.Commit), d.Branch)
 	} else {
 		log("Reverted %s with %s on %s", short(commit), short(res.Commit), d.Branch)
+	}
+	if d.WriteBack == nil || d.WriteBack.Mode != engine.WriteBackPullRequest {
+		pinRevert, perr := a.revertPin(ctx, job, log)
+		if perr != nil {
+			return facts, perr
+		}
+		if pinRevert != "" {
+			res.Commit, facts.Revert = pinRevert, pinRevert
+		}
 	}
 	facts.Sync, err = a.requestSync(ctx, job, res.Commit, log)
 	return facts, err
@@ -470,6 +531,9 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 	}
 	snap := deploy.Snapshot{App: deploy.ReduceApplication(app, it.Spec, rc.ArgoCDURL, contains)}
 	unlock()
+	if it.Kind != engine.WatchUnit {
+		a.watchController(ctx, cl, it, app, snap.App)
+	}
 	// An application that syncs by itself shows nothing in its status while
 	// a sync window holds it; say so from the windows themselves.
 	if app != nil && snap.App.Automated {
@@ -481,6 +545,11 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 	}
 	if containsErr != nil && snap.App.Contains == nil {
 		snap.App.Notes = append(snap.App.Notes, "could not compare revisions: "+containsErr.Error())
+	}
+	if app != nil && snap.App.Found && snap.App.Health != "Healthy" && snap.App.Contains != nil && *snap.App.Contains {
+		if ns, _ := mapOf(mapOf(app, "spec"), "destination")["namespace"].(string); ns != "" {
+			snap.Evidence = cl.PodEvidence(ctx, ns, it.Application)
+		}
 	}
 	if ro := it.Spec.Rollout; ro != nil {
 		if !t.RolloutAllowed(ro.Namespace) {
@@ -649,4 +718,98 @@ func (a *Agent) canWrite(project, name string) (bool, string) {
 		return false, fmt.Sprintf("this deploy runner has no credentials for repository %s (deploy.repos.%s.credentials), so it cannot push to it", name, name)
 	}
 	return true, ""
+}
+
+// watchController adds to the snapshot what a person needs to see why a
+// deployment waits: a ComparisonError that lasts, and a sync operation stuck
+// on stale source revisions, which it ends (and says so) unless told not to.
+func (a *Agent) watchController(ctx context.Context, cl *Cluster, it engine.WatchItem, obj map[string]any, app *deploy.App) {
+	if obj == nil || !app.Found {
+		return
+	}
+	a.mu.Lock()
+	if a.seenCmp == nil {
+		a.seenCmp, a.cleared = map[string]time.Time{}, map[string]string{}
+	}
+	key := it.Key
+	if app.ComparisonError == "" {
+		delete(a.seenCmp, key)
+	} else {
+		first, ok := a.seenCmp[key]
+		if !ok {
+			a.seenCmp[key] = time.Now()
+		} else {
+			grace := a.ComparisonGrace
+			if grace == 0 {
+				grace = 20 * time.Second
+			}
+			app.ComparisonPersistent = time.Since(first) >= grace
+		}
+	}
+	prev := a.cleared[key]
+	a.mu.Unlock()
+	if app.StaleOperation == "" {
+		a.mu.Lock()
+		delete(a.cleared, key)
+		a.mu.Unlock()
+		return
+	}
+	if prev != "" {
+		app.Cleared = prev
+		return
+	}
+	if a.KeepStaleOperations {
+		app.Cleared = "not ended: this runner keeps stale operations (keep_stale_operations)"
+		return
+	}
+	if err := cl.TerminateOperation(ctx, it.Application); err != nil {
+		app.Cleared = "ending it failed: " + err.Error()
+		return
+	}
+	app.Cleared = "the deploy runner ended that operation so that the application's own sync starts a fresh one at the intended revisions"
+	a.mu.Lock()
+	a.cleared[key] = app.Cleared
+	a.mu.Unlock()
+}
+
+// revertPin finishes the rollback of a deployment that was written as two
+// commits (see pairing.go): the values were reverted first (the previous image
+// under the new chart, which the chart's compatibility rule allows), and now
+// the application's own manifest is reverted in a commit of its own, and the
+// runner waits until the cluster shows the old pin. It returns that commit, or
+// "" when the deployment made no pin commit.
+func (a *Agent) revertPin(ctx context.Context, job *engine.Job, log func(string, ...any)) (string, error) {
+	d := job.Deploy
+	repo, unlock, err := a.repoWrite(ctx, job, log)
+	if err != nil {
+		return "", err
+	}
+	pinCommit, err := repo.Find(ctx, d.Deployment+"-pin")
+	if err != nil || pinCommit == "" {
+		unlock()
+		return "", err
+	}
+	files, err := repo.CommitFiles(ctx, pinCommit)
+	if err != nil {
+		unlock()
+		return "", err
+	}
+	res, err := repo.Revert(ctx, d.Deployment+"-pin", pinCommit, d.Message+"\n\n(the application's own manifest, after the values)")
+	var pins []pinned
+	if err == nil {
+		for _, f := range files {
+			if data, rerr := repo.ReadFile(f); rerr == nil && manifestKind(data, d.Application) == "application" {
+				pins = intendedPins(data, d.Application)
+			}
+		}
+	}
+	unlock()
+	if err != nil {
+		return "", fmt.Errorf("reverting the application's own manifest (%s): %w", short(pinCommit), err)
+	}
+	log("Rollback, step 2 of 2: reverted the application's own manifest %s with %s; waiting for the cluster to show the old chart pin before the sync is judged", short(pinCommit), short(res.Commit))
+	if err := a.waitForPin(ctx, job, pins, res.Commit, log); err != nil {
+		return "", err
+	}
+	return res.Commit, nil
 }

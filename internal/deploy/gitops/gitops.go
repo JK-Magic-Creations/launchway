@@ -299,6 +299,48 @@ func (r *Repo) Contains(ctx context.Context, commit, revision string) (bool, err
 	return r.isAncestor(ctx, c, rev)
 }
 
+// Read returns a file as the branch's tip holds it (nil when it does not
+// exist), after fetching. It changes nothing.
+func (r *Repo) Read(ctx context.Context, p string) ([]byte, error) {
+	if err := r.check(); err != nil {
+		return nil, err
+	}
+	if _, err := r.refresh(ctx); err != nil {
+		return nil, err
+	}
+	return r.ReadFile(p)
+}
+
+// ReadFile reads a file of the working tree as it is now (after Apply: as the
+// commit made holds it); nil when it does not exist.
+func (r *Repo) ReadFile(p string) ([]byte, error) {
+	cp, err := cleanPath(p)
+	if err != nil {
+		return nil, err
+	}
+	full, err := r.filePath(cp)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(full)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	return data, err
+}
+
+// CommitFiles lists the files a commit changed.
+func (r *Repo) CommitFiles(ctx context.Context, commit string) ([]string, error) {
+	if err := checkRevision(commit); err != nil {
+		return nil, err
+	}
+	out, err := r.git(ctx, nil, "diff-tree", "--no-commit-id", "--name-only", "-r", "-z", commit)
+	if err != nil {
+		return nil, err
+	}
+	return splitNUL(out), nil
+}
+
 // Tip fetches and returns the branch's current commit.
 func (r *Repo) Tip(ctx context.Context) (string, error) {
 	if err := r.check(); err != nil {

@@ -37,8 +37,11 @@ type Cluster struct {
 	dyn    dynamic.Interface
 	argoNS string
 	// logs reads the end of a pod's log; nil where it cannot (tests).
-	logs   func(ctx context.Context, ns, pod string, tail int) ([]string, error)
-	rights rightsCache
+	logs func(ctx context.Context, ns, pod string, tail int) ([]string, error)
+	// prevLogs reads the end of the log of the container's previous run (what
+	// a crash-looping container said before it exited); nil where it cannot.
+	prevLogs func(ctx context.Context, ns, pod string, tail int) ([]string, error)
+	rights   rightsCache
 	// jobLogs keeps the logs read of failed analysis jobs, by namespace/name.
 	jobLogs sync.Map
 }
@@ -67,7 +70,8 @@ func Connect(t Target) (*Cluster, error) {
 		return nil, err
 	}
 	c := NewCluster(dyn, t.ArgoCDNamespace)
-	c.logs = podLogReader(cfg)
+	c.logs = podLogReader(cfg, false)
+	c.prevLogs = podLogReader(cfg, true)
 	return c, nil
 }
 
@@ -151,6 +155,20 @@ var ErrNoPatchRight = errors.New("the deploy runner may not change the applicati
 func (c *Cluster) Refresh(ctx context.Context, app string) error {
 	patch := map[string]any{"metadata": map[string]any{"annotations": map[string]any{RefreshAnnotation: "normal"}}}
 	return c.patchApp(ctx, app, patch)
+}
+
+// RefreshHard asks Argo CD to compare an application with its repository
+// again at once, ignoring its cache, so a parent application sees a new commit.
+func (c *Cluster) RefreshHard(ctx context.Context, app string) error {
+	patch := map[string]any{"metadata": map[string]any{"annotations": map[string]any{RefreshAnnotation: "hard"}}}
+	return c.patchApp(ctx, app, patch)
+}
+
+// TerminateOperation removes the application's current operation (a sync the
+// controller is running or retrying), which is how a stuck operation is ended
+// from the API; the application's own sync policy then starts a new one.
+func (c *Cluster) TerminateOperation(ctx context.Context, app string) error {
+	return c.patchApp(ctx, app, map[string]any{"operation": nil})
 }
 
 // Sync sets the application's operation to a sync, if its resourceVersion

@@ -467,3 +467,24 @@ func TestIsFresh(t *testing.T) {
 }
 
 func timeNowPlus(minutes int) time.Time { return time.Now().Add(time.Duration(minutes) * time.Minute) }
+
+func TestIsBrandNew(t *testing.T) {
+	e := openEngine(t, testdb.New(t))
+	if f, err := IsBrandNew(ctx, e.Database()); err != nil || !f {
+		t.Fatalf("%v %v", f, err)
+	}
+	// Any trace of an earlier release's use makes the database an upgrade.
+	if _, err := e.Database().Exec(ctx, `INSERT INTO meta(key, value) VALUES('left_by_an_older_release', '1')`); err != nil {
+		t.Fatal(err)
+	}
+	if f, _ := IsBrandNew(ctx, e.Database()); f {
+		t.Fatal("a database with earlier data is brand new")
+	}
+	e2 := openEngine(t, testdb.New(t))
+	if err := e2.Audit(engine.AuditEntry{At: 1, User: "u", Source: "s", Action: "a", Outcome: "ok"}); err != nil {
+		t.Fatal(err)
+	}
+	if f, _ := IsBrandNew(ctx, e2.Database()); f {
+		t.Fatal("a database with an audit trail is brand new")
+	}
+}

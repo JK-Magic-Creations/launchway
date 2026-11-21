@@ -29,6 +29,9 @@ const (
 	PhasePaused     = "rollout_paused"
 	PhaseAborted    = "rollout_aborted"
 	PhaseHealthy    = "healthy"
+	PhaseComparison = "comparison_error" // the application cannot be rendered
+	PhaseCrashLoop  = "crash_looping"    // the application's new pods keep crashing
+	PhaseLeftovers  = "leftovers"        // objects of an earlier render are still there and pruning is off
 )
 
 // Verdict is the result of evaluating one snapshot.
@@ -78,8 +81,8 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 	// A sync of our commit that failed is final: Argo CD does not retry a
 	// failed operation by itself unless the application syncs on its own,
 	// and then it fails the same way.
-	if op := app.Operation; op != nil && isTrue(op.Contains) && (op.Phase == "Failed" || op.Phase == "Error") {
-		return fail(PhaseSyncFailed, "Argo CD could not sync %s: %s", short(op.Revision), nonEmpty(op.Message, "no reason given"))
+	if v := syncFailure(app); v != nil {
+		return *v
 	}
 	if blocked := windowBlock(app); blocked != "" {
 		if spec.Windows == "fail" {
@@ -88,7 +91,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		return cont(PhaseBlocked, "%s; waiting until a window allows it", blocked)
 	}
 	if app.Contains == nil {
-		return cont(PhaseSyncing, "waiting for Argo CD to see commit %s", short(spec.Commit))
+		return cont(PhaseSyncing, "waiting for Argo CD to see commit %s%s", short(spec.Commit), controllerWords(app))
 	}
 	if !*app.Contains {
 		what := "waiting for Argo CD to sync commit " + short(spec.Commit)
@@ -98,13 +101,19 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		if op := app.Operation; op != nil && op.Phase == "Running" {
 			what += "; a sync is running"
 		}
-		return cont(PhaseSyncing, "%s", what)
+		return cont(PhaseSyncing, "%s%s", what, controllerWords(app))
 	}
 
 	// The revision is ours. A rollback that aborted the rollout first waits
 	// for it to return to the previous version: the abort is its own doing.
 	if ro := s.Rollout; spec.Kind == "rollback" && ro != nil && ro.Found && ro.Aborted {
 		return cont(PhaseAborted, "the rollout is aborted; waiting for it to return to the previous version%s", colon(ro.Message))
+	}
+	// Pods that keep crashing will not become healthy by waiting; objects an
+	// earlier render made may still be there because pruning is off.
+	early, lfWarn := earlyVerdict(spec, s)
+	if early != nil {
+		return *early
 	}
 	// Now the judged resources, or the application.
 	if spec.Health == "resources" && len(spec.Resources) > 0 {
@@ -124,7 +133,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		}
 	} else {
 		switch {
-		case app.Sync != "Synced":
+		case !app.settled():
 			return cont(PhaseSyncing, "the application is %s at %s", nonEmpty(app.Sync, "not synced"), short(app.Revision))
 		case app.Health == "Degraded":
 			if v, ok := rolloutFailure(s); ok {
@@ -145,7 +154,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		}
 	}
 	if spec.Rollout == nil {
-		return Verdict{Outcome: Succeeded, Phase: PhaseHealthy, Detail: "synced at " + short(app.Revision) + " and healthy"}
+		return Verdict{Outcome: Succeeded, Phase: PhaseHealthy, Detail: "synced at " + short(app.Revision) + " and healthy" + lfWarn}
 	}
 	ro := s.Rollout
 	if ro == nil || !ro.Found {
@@ -162,7 +171,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		return cont(PhaseRollout, "waiting for the rollout controller to see the new version")
 	case ro.Phase == "Healthy" && ro.CurrentPodHash != "" && ro.StableRS == ro.CurrentPodHash:
 		return Verdict{Outcome: Succeeded, Phase: PhaseHealthy,
-			Detail: fmt.Sprintf("synced at %s; rollout healthy on %s (%d/%d ready)", short(app.Revision), ro.CurrentPodHash, ro.Ready, ro.Replicas)}
+			Detail: fmt.Sprintf("synced at %s; rollout healthy on %s (%d/%d ready)%s", short(app.Revision), ro.CurrentPodHash, ro.Ready, ro.Replicas, lfWarn)}
 	}
 	if v, ok := atPause(spec, s); ok {
 		return v
@@ -353,4 +362,112 @@ func FailingMessage(m Metric) string {
 		}
 	}
 	return ""
+}
+
+// leftoverVerdict judges the objects of an earlier render that are still in
+// the cluster. With pruning off they stay until someone removes them, and a
+// stale NetworkPolicy, role or route can widen access. A security-relevant
+// kind fails the deployment (unless the step says leftovers: warn); others
+// are only mentioned. Nothing is deleted. The second result is the sentence
+// for a deployment that passes with leftovers.
+func leftoverVerdict(spec Spec, app *App) (*Verdict, string) {
+	if len(app.Leftovers) == 0 || spec.Prune || app.AutoPrune {
+		return nil, ""
+	}
+	if op := app.Operation; op != nil && (op.Phase == "Running" || op.Phase == "Terminating") {
+		return nil, "" // a sync is still going; it may yet prune
+	}
+	var sec, other []string
+	for _, l := range app.Leftovers {
+		if l.Security {
+			sec = append(sec, l.String())
+		} else {
+			other = append(other, l.String())
+		}
+	}
+	words := func(n int, names []string) string {
+		return fmt.Sprintf("%d object(s) from an earlier render are still present and no longer part of the release: %s; pruning is off for this application, so they stay until removed",
+			n, strings.Join(names, ", "))
+	}
+	if len(sec) > 0 && spec.Leftovers != "warn" {
+		v := fail(PhaseLeftovers, "%s. Security-relevant leftovers can widen access. Remove them (kubectl delete), turn pruning on for the application, or set sync.leftovers: warn on the step to accept them", words(len(sec), sec))
+		return &v, ""
+	}
+	all := append(append([]string{}, sec...), other...)
+	return nil, "; warning: " + words(len(all), all)
+}
+
+// crashLoop fails a deployment whose pods are crash-looping, with the pod's
+// own last words: what it logged before it exited is the reason.
+func crashLoop(ev []PodEvidence) (Verdict, bool) {
+	for _, e := range ev {
+		if !e.Crash || e.Restarts < 2 {
+			continue
+		}
+		last := ""
+		for i := len(e.LogTail) - 1; i >= 0; i-- {
+			if strings.TrimSpace(e.LogTail[i]) != "" {
+				last = strings.TrimSpace(e.LogTail[i])
+				break
+			}
+		}
+		why := nonEmpty(last, nonEmpty(e.Message, e.Reason))
+		return fail(PhaseCrashLoop, "new pods are crash-looping: %q (pod %s, %s, restarted %d times)", why, e.Pod, e.Reason, e.Restarts), true
+	}
+	return Verdict{}, false
+}
+
+// earlyVerdict is what a snapshot already says about a deployment whose
+// revision is synced, before health is judged: crash-looping pods, and
+// leftovers of an earlier render. The second result is the warning for a
+// deployment that passes with leftovers.
+func earlyVerdict(spec Spec, s Snapshot) (*Verdict, string) {
+	if s.App.Health != "Healthy" {
+		if v, ok := crashLoop(s.Evidence); ok {
+			return &v, ""
+		}
+	}
+	return leftoverVerdict(spec, s.App)
+}
+
+// settled says the application is Synced, or OutOfSync only because of
+// leftovers (objects an earlier render made, which pruning would remove).
+func (a *App) settled() bool { return a.Sync == "Synced" || a.SyncedExceptLeftovers }
+
+// syncFailure is the verdict for a sync of the deployment's commit that failed.
+func syncFailure(app *App) *Verdict {
+	if v := controllerStuck(app); v != nil {
+		return v
+	}
+	if op := app.Operation; op != nil && isTrue(op.Contains) && (op.Phase == "Failed" || op.Phase == "Error") {
+		v := fail(PhaseSyncFailed, "Argo CD could not sync %s: %s", short(op.Revision), nonEmpty(op.Message, "no reason given"))
+		return &v
+	}
+	return nil
+}
+
+// controllerWords is what the controller reports, for a step that waits: a
+// bare "waiting" never tells a person why.
+func controllerWords(app *App) string {
+	out := ""
+	if app.Controller != "" {
+		out = ". The controller says: " + app.Controller
+	}
+	if app.StaleOperation != "" {
+		out += ". " + app.StaleOperation
+		if app.Cleared != "" {
+			out += "; " + app.Cleared
+		}
+	}
+	return out
+}
+
+// controllerStuck fails promptly on a render error the controller cannot get
+// past (a ComparisonError, which the runner reports only once it has lasted).
+func controllerStuck(app *App) *Verdict {
+	if app.ComparisonError != "" && app.ComparisonPersistent {
+		v := fail(PhaseComparison, "Argo CD cannot render the application, so nothing can sync: %s", app.ComparisonError)
+		return &v
+	}
+	return nil
 }

@@ -150,7 +150,7 @@ func (c *Cluster) JobLog(ctx context.Context, ns, job string) *deploy.JobLog {
 
 // podLogReader reads the last lines of a pod's log with the cluster's
 // credentials.
-func podLogReader(cfg *rest.Config) func(ctx context.Context, ns, pod string, tail int) ([]string, error) {
+func podLogReader(cfg *rest.Config, previous bool) func(ctx context.Context, ns, pod string, tail int) ([]string, error) {
 	return func(ctx context.Context, ns, pod string, tail int) ([]string, error) {
 		hc, err := rest.HTTPClientFor(cfg)
 		if err != nil {
@@ -158,6 +158,9 @@ func podLogReader(cfg *rest.Config) func(ctx context.Context, ns, pod string, ta
 		}
 		u := strings.TrimRight(cfg.Host, "/") + "/api/v1/namespaces/" + url.PathEscape(ns) + "/pods/" + url.PathEscape(pod) +
 			"/log?tailLines=" + fmt.Sprint(tail) + "&limitBytes=" + fmt.Sprint(maxLogBytes)
+		if previous {
+			u += "&previous=true"
+		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 		if err != nil {
 			return nil, err
@@ -204,4 +207,51 @@ func (c *Cluster) addJobLogs(ctx context.Context, runs []deploy.AnalysisRun) {
 			m.JobLog = l
 		}
 	}
+}
+
+// PodEvidence looks at the pods of an application (those labelled
+// app.kubernetes.io/instance=<app>) in a namespace and reports the ones that
+// are not running well, with the end of the log of the run that failed. It
+// never fails: what it may not read it leaves out.
+func (c *Cluster) PodEvidence(ctx context.Context, ns, app string) []deploy.PodEvidence {
+	list, err := c.dyn.Resource(pods).Namespace(ns).List(ctx, metav1.ListOptions{LabelSelector: "app.kubernetes.io/instance=" + app})
+	if err != nil {
+		return nil
+	}
+	var out []deploy.PodEvidence
+	for _, p := range list.Items {
+		statuses, _, _ := unstructured.NestedSlice(p.Object, "status", "containerStatuses")
+		for _, s := range statuses {
+			cs, _ := s.(map[string]any)
+			restarts, _, _ := unstructured.NestedInt64(cs, "restartCount")
+			reason, _, _ := unstructured.NestedString(cs, "state", "waiting", "reason")
+			msg, _, _ := unstructured.NestedString(cs, "state", "waiting", "message")
+			if reason == "" {
+				if code, found, _ := unstructured.NestedInt64(cs, "state", "terminated", "exitCode"); found && code != 0 {
+					reason, _, _ = unstructured.NestedString(cs, "state", "terminated", "reason")
+					msg, _, _ = unstructured.NestedString(cs, "state", "terminated", "message")
+				}
+			}
+			if reason == "" || reason == "ContainerCreating" || reason == "PodInitializing" {
+				continue
+			}
+			e := deploy.PodEvidence{Pod: p.GetName(), Namespace: ns, Reason: reason, Message: msg, Restarts: int(restarts),
+				Crash: reason == "CrashLoopBackOff" || reason == "Error" || reason == "RunContainerError"}
+			read := c.prevLogs
+			if read == nil || restarts == 0 {
+				read = c.logs
+			}
+			if read != nil {
+				if lines, err := read(ctx, ns, p.GetName(), 8); err == nil {
+					e.LogTail = lines
+				}
+			}
+			out = append(out, e)
+			break
+		}
+		if len(out) >= 3 {
+			break
+		}
+	}
+	return out
 }
