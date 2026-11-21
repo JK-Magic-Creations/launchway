@@ -714,6 +714,12 @@ func (p *project) fetch(ctx context.Context, fresh time.Duration) error {
 		_ = os.RemoveAll(p.dir)
 		if err = os.MkdirAll(filepath.Dir(p.dir), 0o755); err == nil {
 			_, err = gitRun(ctx, "", env, "", "clone", "--mirror", "--quiet", p.URL, p.dir)
+			if err != nil {
+				// A clone that was cut off (the time limit, a network that did not answer) leaves a
+				// directory that has a HEAD but no remote and no refs; the next fetch would take it for a
+				// mirror and never repair it. Take it away so that the next try clones again.
+				_ = os.RemoveAll(p.dir)
+			}
 		}
 	} else {
 		// The configured address may have changed since the mirror was made.
