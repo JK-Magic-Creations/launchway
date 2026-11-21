@@ -161,6 +161,7 @@
       "title": "Words and answers",
       "blurb": "The glossary and common questions.",
       "items": [
+        "guide/words",
         "glossary",
         "faq"
       ]

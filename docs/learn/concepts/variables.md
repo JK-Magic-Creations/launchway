@@ -36,8 +36,8 @@ runs. The value is not written to the pipeline, the database or the log. See [Se
 
 ## Coming: variables set at a level
 
-Today the places above are all inside one pipeline. Coming: variables you set once at the installation,
-the organization, a unit or a project, which flow down to everything below. The nearest level would win,
+Today the places above are all inside one pipeline. Coming: variables you set once at the Base,
+a Wing, a Squadron or a project, which flow down to everything below. The nearest level would win,
 and a level above could lock a variable so nothing below can change it. Until then, put shared values in a
 library template, or in a secret store.
 

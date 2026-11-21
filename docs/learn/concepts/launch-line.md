@@ -38,9 +38,9 @@ groups the steps into stations it can name:
 
 A pipeline without a deploy has no environment stations. The line only shows what applies.
 
-## Reading the colours
+## Reading the colors
 
-The colour of the track carries the state, so you can read a line at a glance:
+The color of the track carries the state, so you can read a line at a glance:
 
 - slate: passed
 - blue: moving, a step is running

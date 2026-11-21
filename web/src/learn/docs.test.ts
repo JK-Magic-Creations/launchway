@@ -40,6 +40,9 @@ function anchors(src: string): Set<string> {
     if (/^```/.test(line)) { fenced = !fenced; continue; }
     const m = !fenced && line.match(/^#{1,6}\s+(.*?)\s*#*\s*$/);
     if (!m) continue;
+    // An explicit id ("## Logbook {#audit-trail}") is the anchor, as the renderer makes it.
+    const explicit = m[1].match(/\{#([\w-]+)\}\s*$/);
+    if (explicit) { out.add(explicit[1]); continue; }
     const text = m[1].replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[`*_]/g, "");
     let slug = text.toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s/g, "-");
     const n = seen.get(slug) ?? 0;
