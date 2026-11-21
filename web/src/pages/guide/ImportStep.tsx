@@ -25,7 +25,7 @@ export function ImportStep({ step, onChange }: { step: GuideStep; onChange: () =
   const [done, setDone] = useState<Record<string, ImportItem>>({});
   const stop = useRef(false);
 
-  const load = () => importApi.connections().then((c) => { setConns(c); setConn((cur) => cur || c[0]?.name || ""); }).catch((e) => { setError(msg(e)); setConns([]); });
+  const load = () => importApi.connections().then((all) => { const c = all.filter((x) => x.kind === "gitea" || x.kind === "forgejo"); setConns(c); setConn((cur) => cur || c[0]?.name || ""); }).catch((e) => { setError(msg(e)); setConns([]); });
   useEffect(() => { if (add?.available) void load(); else setConns([]); }, [add?.available]);
 
   const src = (): SourceRequest => ({ connection: conn, owner: owner.trim() || undefined });

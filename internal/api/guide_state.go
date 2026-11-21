@@ -118,7 +118,11 @@ func (s *Server) setupGuide(w http.ResponseWriter, r *http.Request) {
 	conns := 0
 	if s.Forge != nil && s.Forge.Mirrors != nil {
 		if cs, err := s.Forge.Mirrors.Connections(r.Context()); err == nil {
-			conns = len(cs)
+			for _, c := range cs { // the built-in plain-git connection is not a server someone added
+				if c.Kind == "gitea" || c.Kind == "forgejo" {
+					conns++
+				}
+			}
 		}
 	}
 	switch {

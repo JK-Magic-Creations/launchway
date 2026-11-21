@@ -114,7 +114,7 @@ function Enroll({ begin, extra, complete, after = "/" }: { begin: string; extra:
       <form onSubmit={second} className="stack">
         <Err error={error} />
         <p>Scan this with an authenticator app (any app that makes six-digit codes), or choose to enter a setup key and type it in.</p>
-        <div className="qr-box"><QrCode text={step.totp_uri} label="QR code for your authenticator app. The same secret is written below as a setup key." /></div>
+        <div className="qr-box"><QrCode text={step.totp_uri} label="QR code to scan with your authenticator app" /></div>
         <p><code aria-label="Setup key">{step.totp_secret}</code></p>
         <p className="hint">On the device that has the app, you can also open <a href={step.totp_uri}>this address</a>.</p>
         <label className="field"><span>The six-digit code it shows now</span>
