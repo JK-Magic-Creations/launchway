@@ -76,7 +76,43 @@ you choose **Load anyway** (`--full`), and no answer is larger than 16 MiB.
 - A **review** has a verdict: comment, approve or request changes. New commits dismiss approvals when the
   repository's setting says so (on by default); a request for changes stays until it is dismissed with a
   reason or its author approves.
-- You can **ask people to review**; mentions with `@name` are carried in the events.
+- You can **ask people or groups to review** (`launchway pr review N --request grace`, `--request-group writers`);
+  a review by any member of an asked group answers the request. Mentions with `@name` are carried in the events.
+- **Several suggestions** can be applied as one commit (`launchway pr apply N COMMENT COMMENT`). All or none are
+  applied; two that change the same lines are refused, naming both reviewers, because only a person can say which wins.
+- A title that starts with `WIP:` or `Draft:` (or `[WIP]`) blocks a merge like a draft does, and no administrator
+  can bypass it. A **draft** cannot merge either; checks still run on it.
+- On the **Files changed** tab, tick **Viewed** on a file (key `v`) to fold it away. The mark is yours, is
+  remembered, and lapses when that file changes. Press `?` on the page for the list of keys.
+
+### Code owners
+
+A repository says who owns which files in `.launchway/owners`, a plain text file read from the **target branch**
+(never from the pull request's own branch, so a change cannot give itself an owner):
+
+```text
+# the last line that matches a file decides its owners
+*              @ada
+/docs/         @vic @group:writers
+*.go           @bob @group:backend
+/docs/private/             # no owners: unowned again
+```
+
+- A pattern with no `/` (apart from a trailing one) matches at any depth; one with a `/` is anchored at the root of
+  the repository; a trailing `/` means a folder and everything below it. `*` stays inside a name, `**` crosses
+  folders, `?` is one character. There are no negations and no character classes.
+- Owners are people (`@name`) and groups (`@group:name`, a group of your sign-in provider or a local one).
+  A group owner is satisfied by an approval from anyone who was in that group when they approved.
+- Mistakes are said plainly with their line, for example `line 4: "bob" is not an owner: write a person as @name
+  and a group as @group:name`. Check a file before you commit it with `launchway pr owners --check FILE`.
+  A file with a mistake blocks a rule that asks for owner approval until it is fixed, and cannot be bypassed.
+- `launchway pr owners N` (and the file list on the page) shows who owns each changed file.
+- A repository setting asks the owners to review by itself when a pull request is ready for review: **every owner**
+  of the changed files, or **one owner per file, by turns**, or **one owner per file with the fewest open requests**.
+  Groups are always asked as groups. A draft gets nobody until it is marked ready.
+
+Groups here are the groups the server already knows (the sign-in provider's, and the local ones); a Squadron holds
+projects, not people, so a Squadron cannot be asked to review yet.
 
 Descriptions and comments are stored exactly as written. Clients render them as Markdown without raw HTML,
 with the same sanitizer the rest of the product uses.
@@ -97,7 +133,15 @@ A **protected branch** can carry merge rules. They are set per branch or pattern
 | Up to date | The head must contain the target's tip |
 | Resolved threads | Every review thread is resolved |
 | No self-approval | The author's own approval does not count |
+| Owner approval | For every changed file that has owners, one of them (or a member of an owning group) must approve. The author's own approval never answers for them |
+| Latest push approved by someone else | The newest push needs an approval of its own commit from someone other than who pushed it |
+| Dismiss stale approvals | New commits dismiss earlier approvals on pull requests into this branch (also set repository-wide) |
+| Checks by path | A check that is required only when a changed file matches (`docs/,*.md=docs`). A pipeline that its own path filter kept from running never blocks |
+| Merge queue | Merges into the branch go through the queue (below) |
 | Administrator bypass | An administrator may merge past the rules, saying why; the reason and what was waived are recorded on the pull request and in the Logbook |
+
+Every rule is checked by the server when a pull request is merged or queued, whichever way it is asked for:
+the web page, the API, the CLI, MCP, auto-merge and the queue all get the same answer.
 
 Rules and the repository's other settings (which merge methods are allowed, deleting the source branch after a
 merge, dismissing approvals when new commits arrive) are set by a repository administrator in the repository's
@@ -117,6 +161,29 @@ sentence instead of a button that would not work:
 
 > it is 3 commits behind main and must be up to date; update the branch
 
+## The merge queue
+
+A branch whose rule says **merge queue** takes pull requests only through the queue, so what lands has been tested on
+the branch as it will be, not as it was when the pull request was last green.
+
+1. A ready pull request is added with **Add to the merge queue** (`launchway pr queue N`). It must meet every rule
+   except the checks that have not finished; a required check that already failed refuses it, with the sentence.
+2. The queue takes one entry at a time, in the order they arrived (an administrator can give one priority). For the
+   entry at the front it brings the branch up to date with the target (a merge commit, which is a push, so the
+   branch's own checks run on exactly what will land), waits for the required checks of that head, and merges it
+   with the method it asked for. The page shows its place and links the run testing it.
+3. An entry that fails a required check, conflicts with the branch after the ones ahead of it merged, loses a
+   required approval, or gets new commits (a force-push included) while it waits is **taken out with the reason**,
+   the person who queued it is told (Needs you, and the channels below), and the next entry goes on.
+4. Its author or an operator can take it out at any time (`launchway pr queue N --cancel`).
+
+A queue never updates a branch that is itself protected: the entry is taken out and says so. A direct merge into a
+branch with a queue is refused; an administrator can still merge past it, saying why, as with any rule. Auto-merge
+queues the pull request instead of merging it.
+
+Not built yet: testing several entries at once, each on top of the ones ahead, and splitting the batch to find
+the failing one. Today the queue is serial.
+
 ## Merging
 
 A repository allows any of three methods, and has a default:
@@ -135,8 +202,17 @@ push reaches the target in the meantime, the merge is made again on the new tip 
 fails cleanly and says so). A push is never lost and a merge never half-lands.
 
 Other things you can do: **auto-merge** (merge when the rules pass), **close** and **reopen**, change the **target branch**,
-mark as **draft** or **ready**, and **revert** a merged pull request, which opens a new pull request that
-undoes it.
+mark as **draft** or **ready**, **update the branch** (merge the target into it, or rebase it; `launchway pr
+update-branch N`), and **revert** a merged pull request, which opens a new pull request that undoes it.
+
+## Who is told
+
+Review requested, approved, changes requested, mentioned and taken out of the merge queue are
+**notification events** (`pull.review_requested`, `pull.approved`, `pull.changes_requested`, `pull.mentioned`,
+`pull.queue_failed`): name them in a notification rule to send them to a chat or webhook channel. A channel is
+shared by the installation, so each message names the people it is about. In the product, the pull requests that wait on
+you are in **Needs you** on Home, and `launchway pr inbox` lists them: a review asked of you or your groups,
+changes asked on your own pull request, your own taken out of a queue.
 
 ## Events
 
@@ -151,12 +227,15 @@ Plainly, these do not exist today:
 
 - **Forks.** A pull request's source is a branch of the same repository. There is no way to ask for a
   change from a copy of the repository.
-- **Code owners.** No file says who must review which paths, and no rule asks for it. A rule counts approvals,
-  not whose.
+- **Owners that are Squadrons.** Owners and reviewers are people and groups; a Squadron holds projects, not people.
+- **A pending review kept between visits**, comments on a whole file rather than a line, hiding whitespace in the diff,
+  a file tree for very large pull requests, and the changes since *your* last review (the changes since a chosen
+  revision are there).
+- **Pull-request templates, labels with colors, milestones, cherry-picking to another branch** and a summary comment from the checks.
+- **Batches in the merge queue.**
 - **Signed-commit rules.** Commits are not checked for signatures. A rule that asks for them is refused
   rather than ignored.
-- **Notifications beyond events and webhooks.** Launchway records every change as an event and sends the
-  webhooks you set up; it sends no email, chat message or inbox entry by itself, and has no per-person
-  "watching" settings. Whatever listens to the events decides who is told.
+- **Email, and per-person "watching" settings.** Chat and webhook channels and the Needs-you list tell people;
+  nothing is sent by email, and a channel is the installation's, not a person's.
 - **The compatibility pull request routes.** Tools written for another Git host's API (the routes the acceptance suite lists) cannot yet list or open pull
   requests here; they use Launchway's own routes above.

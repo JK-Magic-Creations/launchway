@@ -171,6 +171,7 @@ export default defineConfig({
           { text: 'Variables', link: '/learn/concepts/variables' },
           { text: 'Environments and deployments', link: '/learn/concepts/environments-and-deployments' },
           { text: 'Approvals', link: '/learn/concepts/approvals' },
+          { text: 'Review and the merge queue', link: '/learn/concepts/review-and-the-merge-queue' },
           { text: 'High availability', link: '/learn/concepts/high-availability' },
         ],
       },

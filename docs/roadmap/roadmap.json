@@ -520,7 +520,7 @@
               "status": "available",
               "title": "Review with inline comments and suggestions",
               "value": "Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads.",
-              "detail": "Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Marking files as viewed is not built.",
+              "detail": "Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back, to people and to groups. Built on the review-depth branch, not on main yet: several suggestions applied as one commit, files marked viewed (remembered for you and lapsing when the file changes), keyboard shortcuts, a work-in-progress title that blocks a merge, and the pull requests that wait on you in Needs you and in the notification channels. Not built: a pending review kept as a draft between visits, comments on a whole file, a diff that hides whitespace, and a file tree.",
               "needs": "Pull requests on the built-in host.",
               "area": "git-hosting"
             },
@@ -533,10 +533,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Code owners",
               "value": "Name who must review changes to which paths, using people or groups.",
-              "detail": "Owners can be the group that owns the deployment Airfield, so the people who run a service review the changes to it.",
+              "detail": "Built on the review-depth branch, not on main yet: a .launchway/owners file on the target branch maps path patterns to people and groups, is checked line by line with plain messages, shows who owns each changed file, asks the owners to review automatically (all of them, by turns, or whoever has the fewest open requests), and a branch rule can require an owner of every changed file to approve. Not built: owners that are a Squadron or the group that owns an environment, and the owners file checked when it is pushed.",
               "needs": "Review with inline comments and suggestions.",
               "area": "git-hosting"
             },
@@ -549,10 +549,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Merge queue",
               "value": "Queue approved changes and test the real merged result with the real pipeline before it lands.",
-              "detail": "The Holding pattern is visible on each change, so people see where they stand and why a change was held back.",
+              "detail": "Built on the review-depth branch, not on main yet: a branch rule can send merges through a serial queue. The entry at the front has its branch brought up to date with the target, is tested by the branch's own required checks on that head, and merges in order; one that fails, conflicts or changes is taken out with the reason and the person is told. The queue shows on each change. Not built: testing several entries on top of each other and splitting the batch when one fails.",
               "needs": "Merge styles and auto-merge.",
               "area": "git-hosting"
             },

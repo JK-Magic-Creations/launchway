@@ -1163,10 +1163,19 @@ launchway pr close N
 launchway pr reopen N
 launchway pr edit N [--title T] [--body B] [--ready] [--draft] [--label L,L] [--assignee U,U] [--base BRANCH]
 launchway pr revert N
-launchway pr apply N COMMENT-ID
-launchway pr settings [--allow-merge=B] [--allow-squash=B] [--allow-rebase=B] [--default-method M] [--delete-branch=B] [--dismiss-stale=B]
-launchway pr rules [--branch PATTERN --approvals N --approval-role operator|admin --check NAME,NAME --up-to-date --resolved --no-self-approval=B --admin-bypass]
+launchway pr apply N COMMENT-ID...
+launchway pr owners N [--json]
+launchway pr owners --check FILE
+launchway pr queue N [--method M] [--priority P] [--cancel]
+launchway pr update-branch N [--rebase]
+launchway pr viewed N [--mark PATH,PATH] [--unmark PATH,PATH]
+launchway pr inbox [--json]
+launchway pr review N --request-group G,G | --unrequest-group G,G
+launchway pr settings [--allow-merge=B] [--allow-squash=B] [--allow-rebase=B] [--default-method M] [--delete-branch=B] [--dismiss-stale=B] [--assign-reviewers owners|round_robin|least_loaded|off]
+launchway pr rules [--branch PATTERN --approvals N --approval-role operator|admin --check NAME,NAME --up-to-date --resolved --no-self-approval=B --admin-bypass --owner-approval --dismiss-stale --fresh-approval --queue --path-check PATHS=CHECK]
 ```
+
+`owners` shows who owns each file a pull request changes, from `.launchway/owners` on the target branch, or with `--check` says what is wrong with an owners file on your computer, by line. `apply` with several comment IDs applies the suggestions as one commit. `queue` shows a pull request's place in its branch's merge queue; with `--method` it adds it, with `--cancel` it takes it out. `update-branch` merges the target into the source branch (`--rebase` replays the branch instead and rewrites it). `viewed` lists or changes the files you marked viewed. `inbox` lists the pull requests that wait on you.
 
 `view` prints what blocks the merge in one sentence and the actions you may take; a merge that the rules refuse prints the same sentence and exits non-zero. `checkout` fetches `refs/pull/N/head` and checks it out as the branch `pr/N`. `settings` and `rules` show the repository's merge settings and the merge rules of its protected branches, or set them (repository administrators). The same operations are the MCP tools `list_pull_requests`, `get_pull_request`, `compare_branches`, `create_pull_request`, `update_pull_request`, `merge_pull_request`, `revert_pull_request`, `comment_on_pull_request`, `update_pull_comment`, `review_pull_request`, `get_pull_settings` and `set_pull_settings`.
 

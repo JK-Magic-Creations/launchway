@@ -13,6 +13,7 @@ a word in the product is unfamiliar. The [glossary](../../glossary.md) lists eve
 | [Switches (feature toggles)](feature-toggles.md) | How do I ship a feature turned off, roll it out to some users, and turn it off in seconds? |
 | [Airfields (environments) and deployments](environments-and-deployments.md) | What is a place my software runs, and how does a change get there safely? |
 | [Approvals](approvals.md) | How does a person say go or no-go? |
+| [Review and the merge queue](review-and-the-merge-queue.md) | How does a change get reviewed and tested before it joins a branch? |
 | [High availability](high-availability.md) | What happens when a server, a Station (runner) or the database fails? |
 
 ## The words Launchway uses

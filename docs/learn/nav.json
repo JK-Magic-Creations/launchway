@@ -33,6 +33,7 @@
         "concepts/feature-toggles",
         "concepts/environments-and-deployments",
         "concepts/approvals",
+        "concepts/review-and-the-merge-queue",
         "concepts/high-availability"
       ]
     },
@@ -213,6 +214,7 @@
         "concepts/pipelines-and-runs",
         "tutorials/first-pipeline",
         "concepts/approvals",
+        "concepts/review-and-the-merge-queue",
         "glossary"
       ]
     },
@@ -241,6 +243,7 @@
         "guide/gitops-write-back",
         "guide/rollback-after-success",
         "concepts/approvals",
+        "concepts/review-and-the-merge-queue",
         "tutorials/deploy-with-approval",
         "guide/verification",
         "guide/approvals-and-reruns",
