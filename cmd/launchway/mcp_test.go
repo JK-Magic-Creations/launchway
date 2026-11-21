@@ -90,11 +90,19 @@ func TestMCPOverStdio(t *testing.T) {
 	if err != nil || res.IsError || !strings.Contains(jsonOf(res.StructuredContent), `"status":"failed"`) {
 		t.Fatalf("wait_for_run: %v %s", err, jsonOf(res))
 	}
-	mu.Lock()
-	if len(progress) == 0 {
-		t.Error("no progress notifications came through")
+	// A notification and the result of the call travel separately: the notification may be read just after the result.
+	for deadline := time.Now().Add(3 * time.Second); ; time.Sleep(20 * time.Millisecond) {
+		mu.Lock()
+		n := len(progress)
+		mu.Unlock()
+		if n > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Error("no progress notifications came through")
+			break
+		}
 	}
-	mu.Unlock()
 	ref, err := cs.ReadResource(ctx, &mcp.ReadResourceParams{URI: "launchway://docs/agent-guide"})
 	if err != nil || !strings.Contains(ref.Contents[0].Text, "Diagnosing a failed run") {
 		t.Fatalf("the guide: %v", err)
