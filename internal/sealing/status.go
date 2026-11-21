@@ -164,7 +164,7 @@ func (s *Service) advise(r *Report) {
 	} else if !r.Encrypted {
 		r.Summary = "NOT ENCRYPTED AT REST: this server has no root key, so its signing keys, the shared runner token" +
 			" and (if used) SSH host keys and webhook secrets are stored in the clear in the database. A copy of the database reveals them."
-		r.Warnings = append(r.Warnings, r.Summary, keyring.HowToCreateARootKey)
+		r.Warnings = append(r.Warnings, r.Summary, "encryption is not set up: no root key is configured; configure one and restart: "+keyring.HowToCreateARootKey)
 		r.Advice = append(r.Advice, "Until a root key exists, protect the database, its backups and its volume as you would the secrets themselves.")
 	} else {
 		switch {
@@ -255,4 +255,40 @@ func IsFresh(ctx context.Context, db DB) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+// earlierDataTables are tables a running installation fills and a database
+// created a moment ago has empty. Any row in one of them means the database
+// is an earlier installation being upgraded, not a new one.
+var earlierDataTables = []string{"users", "local_accounts", "audit", "runs", "runners", "config_objects", "deployments",
+	"forge_connections", "sessions", "api_tokens", "events", "repo_refs", "run_queue", "variables"}
+
+// IsBrandNew says whether the database is one created for this very start:
+// it has never held a secret (IsFresh), no row in any table an installation in
+// use fills, and nothing in meta beyond the schema markers and the liveness
+// stamp. Only such a database may get a root key generated for it, and only
+// when it is a local SQLite file (see cmd/launchway startSecrets): a database
+// that holds earlier data is an upgrade, and a key invented for it would
+// surprise the installation.
+func IsBrandNew(ctx context.Context, db DB) (bool, error) {
+	if fresh, err := IsFresh(ctx, db); err != nil || !fresh {
+		return false, err
+	}
+	for _, t := range earlierDataTables {
+		var n int
+		if err := db.QueryRow(ctx, `SELECT count(*) FROM `+t).Scan(&n); err != nil {
+			if isMissingTable(err) {
+				continue
+			}
+			return false, err
+		}
+		if n > 0 {
+			return false, nil
+		}
+	}
+	var n int
+	if err := db.QueryRow(ctx, `SELECT count(*) FROM meta WHERE key NOT IN ('alive_at','schema_version','schema_min','artifact_store_marker')`).Scan(&n); err != nil {
+		return false, err
+	}
+	return n == 0, nil
 }
