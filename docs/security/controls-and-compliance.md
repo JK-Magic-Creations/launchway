@@ -52,7 +52,7 @@ data never reach Launchway:
 ## Current limits that matter for an assessment
 
 - Encryption at rest covers the server's own secrets, not yet artifacts, logs, build caches and Git packs: encrypt the database volume and the artifact store. With no root key configured, an existing installation stores its own secrets in the clear (and says so).
-- The database is the store of record. Anyone who can write to it can change the audit trail; the
+- The database is the store of record. Anyone who can write to it can change the Logbook; the
   trail is append-only by design, not protected cryptographically. Protect the database and copy
   the trail to a log archive you control.
 - There is no built-in retention control: runs, logs and audit records are kept until you remove

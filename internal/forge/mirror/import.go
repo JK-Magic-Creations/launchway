@@ -30,6 +30,9 @@ type SourceRequest struct {
 	TargetOwner string `json:"target_owner,omitempty"`
 	// Username goes with the connection's credential on the mirror it makes.
 	Username string `json:"username,omitempty"`
+	// Refs asks a verification for every ref with its hashes, not only the
+	// ones that differ.
+	Refs bool `json:"refs,omitempty"`
 }
 
 // ImportRequest is a request to bring repositories in.
@@ -287,6 +290,11 @@ func (s *Service) importOne(ctx context.Context, p planned, req ImportRequest, k
 // Comparison is a repository's refs against its source's.
 type Comparison struct {
 	SourceRefs, HostedRefs int
+	// Rows is every ref of both sides, one row each, by name.
+	Rows []RefRow
+	// NotImported counts the source's refs in namespaces that are not copied
+	// (such as refs/changes/), by namespace.
+	NotImported map[string]int
 	// Differences name the refs that are missing here, extra here or
 	// at another commit, at most 20.
 	Differences []string
@@ -298,32 +306,27 @@ func (c Comparison) Equal() bool { return len(c.Differences) == 0 && c.more == 0
 
 const maxDifferences = 20
 
-func (s *Service) lsRemote(ctx context.Context, url string, cred forge.SecretRef, user string) (map[string]string, error) {
+func (s *Service) lsRemote(ctx context.Context, url string, cred forge.SecretRef, user string) (map[string]string, map[string]int, error) {
 	if err := s.o.Guard.Check(ctx, url); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	r, err := s.remoteFor(Mirror{Credential: cred, Username: user})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	out, err := s.git(ctx, r, "", 5*time.Minute, "ls-remote", url)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	refs := map[string]string{}
-	for _, line := range strings.Split(out, "\n") {
-		sha, name, ok := strings.Cut(strings.TrimSpace(line), "\t")
-		if ok && hasManaged(name) && !strings.HasSuffix(name, "^{}") {
-			refs[name] = sha
-		}
-	}
-	return refs, nil
+	refs, skipped := parseSourceRefs(out)
+	return refs, skipped, nil
 }
 
-// compare reads the source's refs and this repository's refs of record.
+// compare reads the source's refs and this repository's refs of record, ref
+// by ref.
 func (s *Service) compare(ctx context.Context, repo forge.Repository, url string, cred forge.SecretRef, user string) (Comparison, error) {
 	var c Comparison
-	theirs, err := s.lsRemote(ctx, url, cred, user)
+	theirs, skipped, err := s.lsRemote(ctx, url, cred, user)
 	if err != nil {
 		return c, err
 	}
@@ -337,34 +340,16 @@ func (s *Service) compare(ctx context.Context, repo forge.Repository, url string
 			ours[n] = v
 		}
 	}
-	c.SourceRefs, c.HostedRefs = len(theirs), len(ours)
-	note := func(msg string) {
+	c.SourceRefs, c.HostedRefs, c.NotImported = len(theirs), len(ours), skipped
+	c.Rows = compareRefs(theirs, ours)
+	for _, r := range c.Rows {
+		if r.Status == RefEqual {
+			continue
+		}
 		if len(c.Differences) < maxDifferences {
-			c.Differences = append(c.Differences, msg)
+			c.Differences = append(c.Differences, r.describe())
 		} else {
 			c.more++
-		}
-	}
-	names := make([]string, 0, len(theirs)+len(ours))
-	for n := range theirs {
-		names = append(names, n)
-	}
-	for n := range ours {
-		if _, ok := theirs[n]; !ok {
-			names = append(names, n)
-		}
-	}
-	sort.Strings(names)
-	for _, n := range names {
-		a, inSource := theirs[n]
-		b, inHosted := ours[n]
-		switch {
-		case inSource && !inHosted:
-			note(n + ": missing here")
-		case !inSource:
-			note(n + ": not in the source")
-		case a != b:
-			note(fmt.Sprintf("%s: source %.8s, here %.8s", n, a, b))
 		}
 	}
 	return c, nil

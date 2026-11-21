@@ -26,7 +26,7 @@ func TestSchema38UpgradesFrom33KeepingBranchRules(t *testing.T) {
 	old.Close()
 
 	var log syncBuffer
-	cur, err := openAs(t, addr, clk, 0, &log)
+	cur, err := openAs(t, addr, clk, schemaDelivery, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}

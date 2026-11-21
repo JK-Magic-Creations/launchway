@@ -47,7 +47,7 @@ launchway users unlock ada
 launchway users setup-code     # only before the first administrator exists
 ```
 
-These need only the database address in the server's bootstrap file, and are recorded in the audit trail as `console`.
+These need only the database address in the server's bootstrap file, and are recorded in the Logbook as `console`.
 
 The last enabled administrator cannot be removed, demoted or turned off. When an identity provider is the sign-in, the
 last built-in administrator can be removed only after someone has signed in through the provider, and only with an

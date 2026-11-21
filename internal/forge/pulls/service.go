@@ -105,7 +105,12 @@ func branchRef(b string) string { return "refs/heads/" + b }
 func PullRef(number int) string { return fmt.Sprintf("refs/pull/%d/head", number) }
 
 // ReservedRef reports whether a ref is the server's own: nobody pushes to it.
-func ReservedRef(name string) bool { return strings.HasPrefix(name, "refs/pull/") }
+// refs/pull/ holds the pull requests opened here; refs/imported/ holds history
+// brought from another server (the source's pull request refs), which stays
+// as it was.
+func ReservedRef(name string) bool {
+	return strings.HasPrefix(name, "refs/pull/") || strings.HasPrefix(name, "refs/imported/")
+}
 
 // setRefs moves refs of the repository to existing commits through the
 // ledger, retrying when another change moved one of them meanwhile.

@@ -160,7 +160,7 @@ There are no path filters in the trigger language yet.
 ## Audit
 
 `webhook.add`, `webhook.update`, `webhook.delete`, `webhook.test`, `webhook.redeliver` (who, which hook,
-which address) and `webhook.disable` (by `system`) are in the audit trail. The secret is never written there.
+which address) and `webhook.disable` (by `system`) are in the Logbook. The secret is never written there.
 
 ## Telling Argo CD about a commit at once
 
@@ -171,7 +171,7 @@ pushing to the GitOps repository), add a webhook to the repository that sends **
 `https://<argocd>/api/webhook`, with the secret you set as `webhook.github.secret` in Argo CD's `argocd-secret`.
 Argo CD's receiver accepts the formats of several Git hosts, GitHub's among them; Launchway's push
 payload carries GitHub's names (`ref`, `before`, `after`, `repository.html_url`, `clone_url`, `ssh_url`) and
-header (`X-GitHub-Event: push`, `X-Hub-Signature-256`), so it is read as GitHub's. Argo CD matches the
-repository's address with the applications' `repoURL`: it must be the address Argo CD reads from. Argo CD
+headers (`X-GitHub-Event: push`, `X-Hub-Signature-256`, and `X-Hub-Signature`, the same signature as HMAC-SHA1, for receivers built on an older version of the library that read only that one), so it is read as GitHub's. Argo CD matches the
+repository's address (`repository.html_url`) with the applications' `repoURL`: it must be the same address, and it is the one `launchway repos get` shows as the clone address, with the `/git/` before the owner (`https://<launchway>/git/acme/gitops.git`; the `.git` and a trailing slash do not matter). An application whose `repoURL` is the short form without `/git/` still clones, but is not refreshed by the webhook. Argo CD
 refreshes the applications of that repository and branch within seconds. If the receiver does not accept it,
 polling and the deploy step's refresh remain the supported path.

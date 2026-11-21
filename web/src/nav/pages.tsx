@@ -90,6 +90,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/repositories/:owner/:name/mirrors": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="mirrors" />;
     case "/repositories/:owner/:name/dependencies": return <DependenciesPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/updates": return <UpdatesPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
+    case "/repositories/:owner/:name/history": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="history" />;
     case "/playground": return <PlaygroundPage />;
     case "/activity": return <RunsPage />;
     case "/activity/approvals": return <ApprovalsPage approvals={approvals} />;

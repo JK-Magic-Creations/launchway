@@ -36,7 +36,7 @@ API gives it as the run's `restriction` with a stable `code` (`automation_accoun
 A maintainer who has read the change chooses **Run with secrets** on the run (the run's action
 `run_with_secrets`, `launchway runs trust <run>`, the MCP tool `trust_run`, or
 `POST /api/v1/runs/{id}/trust`). It is the same kind of decision as a Go/No-go: recorded in the
-run's events (`run.trusted`) and the audit trail with the person's name and comment. From then on
+run's events (`run.trusted`) and the Logbook with the person's name and comment. From then on
 the steps of that run that have **not started** may read secrets and deploy. A step that was
 already skipped or failed because of the restriction is not started again by approving; re-run it
 from that step (a re-run of a restricted run is restricted again, until it is approved).

@@ -47,7 +47,7 @@ notifications:
   written in the configuration, the log, an error or a message. The same goes for the signing key.
 - **Rules apply at each level.** `projects`, `environments` and `branches` take patterns such as `mcp-*`;
   leave them out to cover everything. Several rules may match one event: a channel gets it once.
-- **The notifications section is installation configuration**, kept with the other installation settings
+- **The notifications section is installation configuration**, kept with the other Base settings
   (in the database since schema 23; `launchway config import` reads it from the file).
 - **The webhook** sends a JSON body with `event`, `project`, `environment`, `branch`, `run_id`, `run_number`,
   `step`, `title`, `detail`, `link`, `at` and `text` (the same words, ready to show), signed like a repository

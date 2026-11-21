@@ -19,17 +19,17 @@ import (
 // The upgrade that is deployed today: a database at schema 33 (the release in use) with representative
 // data (a pull request with a review and a comment, a webhook with a secret, an SSH host key, build
 // cache entries, a rollback, a runner token in the clear) is opened by THIS build in one start. Exactly
-// migrations 34 to 38 apply (encryption, cache, accounts, queues, delivery: contiguous, no stand-ins),
+// migrations 34 to 39 apply (encryption, cache, accounts, queues, delivery, the issue archive: contiguous, no stand-ins),
 // every row survives, the new tables exist and are empty, a build of schema 33 still starts against the
 // result and reads the old data (the product promises that for a rolling update), and sealing of what
 // was in the clear waits while an older server is seen and then completes without losing a value. On
 // SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if len(migrations) != schemaDelivery || schemaDelivery != 38 {
-		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 38", schemaDelivery, len(migrations))
+	if len(migrations) != schemaArchive || schemaArchive != 39 {
+		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 39", schemaArchive, len(migrations))
 	}
-	for i := schemaEncryption; i <= schemaDelivery; i++ {
+	for i := schemaEncryption; i <= schemaArchive; i++ {
 		if strings.TrimSpace(migrations[i-1].sql) == "" {
 			t.Fatalf("migration %d is an empty stand-in", i)
 		}
@@ -67,24 +67,24 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	}
 	old.Close()
 
-	// One start of this build: exactly 34 to 38.
+	// One start of this build: exactly 34 to 39.
 	var log syncBuffer
 	cur, err := openAs(t, addr, clk, 0, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	for v := schemaEncryption; v <= schemaDelivery; v++ {
+	for v := schemaEncryption; v <= schemaArchive; v++ {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	if n := strings.Count(log.String(), "applied a database migration"); n != schemaDelivery-schemaPulls {
-		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaDelivery-schemaPulls, log.String())
+	if n := strings.Count(log.String(), "applied a database migration"); n != schemaArchive-schemaPulls {
+		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaArchive-schemaPulls, log.String())
 	}
-	checkMarkers(t, cur, schemaDelivery)
+	checkMarkers(t, cur, schemaArchive)
 	info, err := cur.Schema(ctx)
-	if err != nil || info.Database != schemaDelivery || info.Code != schemaDelivery || !info.Compatible() {
+	if err != nil || info.Database != schemaArchive || info.Code != schemaArchive || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	count := func(q string) (n int) {
@@ -100,7 +100,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 		`SELECT count(*) FROM repo_webhooks`: 1, `SELECT count(*) FROM ssh_host_keys`: 1, `SELECT count(*) FROM caches WHERE status = 'kept'`: 3,
 		// The tables the migrations brought are there and empty.
 		`SELECT count(*) FROM encryption_keks`: 0, `SELECT count(*) FROM local_accounts`: 0, `SELECT count(*) FROM run_queue`: 0,
-		`SELECT count(*) FROM step_waits`: 0, `SELECT count(*) FROM branch_writers`: 0, `SELECT count(*) FROM notifications`: 0,
+		`SELECT count(*) FROM step_waits`: 0, `SELECT count(*) FROM imported_issues`: 0, `SELECT count(*) FROM imported_comments`: 0, `SELECT count(*) FROM branch_writers`: 0, `SELECT count(*) FROM notifications`: 0,
 	} {
 		if got := count(q); got != want {
 			t.Errorf("%s: %d, want %d", q, got, want)
@@ -114,7 +114,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	// A build of schema 33 (a server of the release in use during a rolling update, or after a rollback)
 	// still starts against the upgraded database and reads the old data.
 	older := mustOpenAs(t, addr, clk, schemaPulls, &syncBuffer{})
-	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaDelivery || oi.Code != schemaPulls || !oi.Compatible() {
+	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaArchive || oi.Code != schemaPulls || !oi.Compatible() {
 		t.Fatalf("the build of schema 33 against the final schema: %+v %v", oi, err)
 	}
 	var title, whSecret string

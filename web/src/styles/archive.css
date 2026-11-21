@@ -1,0 +1,5 @@
+/* The Imported history tab: read-only issues from another server. Loaded with its own chunk. */
+.archive-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.archive-title { text-align: left; padding-inline: 0; font: inherit; }
+.imported-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font-family: inherit; color: var(--text); }
+.archive-pages { align-items: center; margin-top: var(--gap, 12px); }

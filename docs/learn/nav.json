@@ -150,6 +150,7 @@
         "reference/config-objects",
         "reference/interface-parity",
         "reference/accessibility-conformance",
+        "reference/archive-format",
         "reference/events",
         "reference/roles",
         "reference/policy-rules",

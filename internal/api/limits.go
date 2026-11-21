@@ -187,6 +187,6 @@ func (s *Server) tokenDenied(r *http.Request, touch bool, user, name, why string
 	if l.blocked(addr, now) > 0 {
 		detail += fmt.Sprintf("; %d failures within %s, so this address is refused for the rest of it", maxFailuresPerWindow, failureWindow)
 	}
-	s.record(&engine.AuditEntry{At: now.UnixMilli(), User: user, Source: addr, Action: "token.use", Target: name, Outcome: "denied",
+	s.record(&engine.AuditEntry{At: now.UnixMilli(), User: user, Source: addr, RequestID: reqID(r), Action: "token.use", Target: name, Outcome: "denied",
 		Detail: r.Method + " " + r.URL.Path + ": " + detail})
 }

@@ -228,6 +228,9 @@ type AuditEntry struct {
 	Target  string `json:"target"`  // a run, run/step or token name
 	Outcome string `json:"outcome"` // ok, denied or failed
 	Detail  string `json:"detail"`
+	// RequestID is the request that caused the entry. It is not stored in the
+	// table and not in the API's view: only the audit stream carries it.
+	RequestID string `json:"-"`
 }
 
 // Audit appends an entry to the audit trail. Nothing changes or deletes
@@ -237,6 +240,9 @@ func (e *Engine) Audit(a AuditEntry) error {
 	defer unlock()
 	_, err := e.db.Exec(`INSERT INTO audit(at, username, source, action, project, target, outcome, detail) VALUES(?,?,?,?,?,?,?,?)`,
 		a.At, a.User, a.Source, a.Action, a.Project, a.Target, a.Outcome, a.Detail)
+	if err == nil {
+		e.emitAudit(a)
+	}
 	return err
 }
 

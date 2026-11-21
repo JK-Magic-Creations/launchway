@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha1" //nolint:gosec // HMAC-SHA1 for receivers of the older header only; the SHA-256 header is sent too
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -367,6 +368,15 @@ func Sign(secret string, body []byte) string {
 	return "sha256=" + hex.EncodeToString(m.Sum(nil))
 }
 
+// SignSHA1 is the HMAC-SHA1 signature of a body, as sent in X-Hub-Signature for
+// receivers that do not read the SHA-256 one. It is the same secret and the same
+// keyed construction; the stronger header is always sent beside it.
+func SignSHA1(secret string, body []byte) string {
+	m := hmac.New(sha1.New, []byte(secret))
+	m.Write(body)
+	return "sha1=" + hex.EncodeToString(m.Sum(nil))
+}
+
 func newDeliveryID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
@@ -493,6 +503,9 @@ func (s *Service) send(ctx context.Context, h Hook, d Delivery, secret string) (
 		sig := Sign(secret, d.Payload)
 		req.Header.Set("X-Launchway-Signature-256", sig)
 		req.Header.Set("X-Hub-Signature-256", sig)
+		// Receivers written for the older header (a GitOps controller built on an earlier
+		// version of the library that reads GitHub's events) read only the HMAC-SHA1 one.
+		req.Header.Set("X-Hub-Signature", SignSHA1(secret, d.Payload))
 	}
 	start := time.Now()
 	resp, err := s.o.Client.Do(req)

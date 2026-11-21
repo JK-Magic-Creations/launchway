@@ -41,7 +41,7 @@ See [Encryption at rest](../guide/encryption-at-rest.md).
   **replace the root key** (`rewrap`) after any exposure of it.
 - [ ] **Encrypt the database volume and the artifact store as well.** Artifacts, logs, build caches and Git
   packs are not yet encrypted by Launchway.
-- [ ] **Watch the audit trail** for `encryption.unseal` with outcome `failed`.
+- [ ] **Watch the Logbook** for `encryption.unseal` with outcome `failed`.
 ### With the Helm chart
 
 The chart ships these on by default; check that you have not switched one off.

@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { ago } from "../format";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { mirrorsApi, type Mirror, type Repository } from "../mirrors";
 import { RepositorySettings } from "./Repositories";
+
+// The imported history is a chunk of its own: it loads when its tab is opened.
+const ImportedHistory = lazy(() => import("./ImportedHistory"));
 
 function span(s: number): string {
   if (s <= 0) return "none";
@@ -14,7 +17,7 @@ function span(s: number): string {
 
 // RepositoryPage is a hosted repository: where to clone it from, and its
 // mirrors. The tab is part of the address, so a link opens the right one.
-export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | "mirrors" }) {
+export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | "mirrors" | "history" }) {
   const [repo, setRepo] = useState<Repository | null>(null);
   const [error, setError] = useState<unknown>(null);
   const load = useCallback(() => { mirrorsApi.repository(path).then((r) => { setRepo(r); setError(null); }).catch(setError); }, [path]);
@@ -32,10 +35,12 @@ export function RepositoryPage({ path, tab }: { path: string; tab: "overview" | 
         <a href={`/repositories/${path}/pulls`} className="tab">Pull requests</a>
         <a href={`/repositories/${path}/dependencies`} className="tab">Dependencies</a>
         <a href={`/repositories/${path}/mirrors`} className={"tab" + (tab === "mirrors" ? " tab-on" : "")} aria-current={tab === "mirrors" ? "page" : undefined}>Mirrors</a>
+        <a href={`/repositories/${path}/history`} className={"tab" + (tab === "history" ? " tab-on" : "")} aria-current={tab === "history" ? "page" : undefined}>Imported history</a>
       </nav>
       <ErrorBox error={error} />
       {repo && tab === "overview" && <RepositorySettings owner={path.split("/")[0]} name={path.split("/").slice(1).join("/")} />}
       {repo && tab === "mirrors" && <MirrorsTab repo={repo} reload={load} />}
+      {repo && tab === "history" && <Suspense fallback={<div className="loading">Loading…</div>}><ImportedHistory path={path} /></Suspense>}
     </div>
   );
 }

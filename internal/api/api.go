@@ -262,7 +262,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.Handle("/", s.ui())
 	s.mux = mux
-	return s.recoverer(s.hsts(securityHeaders(s.splitOrigin(s.gitAlias(mux)))))
+	return s.requestIDs(s.recoverer(s.hsts(securityHeaders(s.splitOrigin(s.gitAlias(mux))))))
 }
 
 // ---- shutting down ----
@@ -514,7 +514,7 @@ func (s *Server) finish(w http.ResponseWriter, r *http.Request) {
 		// Recorded before the lease ends, while it still says which run.
 		_, _, runID, _, _ := s.Engine.LeaseHolder(in.LeaseID)
 		project, _ := s.Engine.RunProject(runID)
-		refused = &engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r),
+		refused = &engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + nonEmpty(callerID(r), "shared"), Source: s.clientAddr(r), RequestID: reqID(r),
 			Action: "runner.refused", Project: project, Target: runID, Outcome: "ok", Detail: in.Result.Error}
 	}
 	if err := s.Engine.Finish(in.LeaseID, in.Result); err != nil {
@@ -546,7 +546,7 @@ func (s *Server) leave(w http.ResponseWriter, r *http.Request) {
 				s.fail(w, err)
 				return
 			}
-			s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), Action: "runner.revoke",
+			s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: "runner:" + id.ID, Source: s.clientAddr(r), RequestID: reqID(r), Action: "runner.revoke",
 				Target: id.ID, Outcome: "ok", Detail: "an ephemeral runner left"})
 			w.WriteHeader(http.StatusNoContent)
 			return

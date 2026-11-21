@@ -1,7 +1,7 @@
 # Dependency updates: settings and file
 
 How [dependency updates](../guide/dependency-updates.md) are configured. Settings come from layers, widest
-first: the built-in defaults, the installation, the organization, the project, the repository's settings, and the
+first: the built-in defaults, the Base, the Wing, the project, the repository's settings, and the
 repository's own file `.launchway/updates.yaml`, read from the **default branch only** (a branch cannot loosen
 the settings). A level can **lock** a key: no narrower level and not the file may change it, and the file's
 attempt is listed as "not applied". The file cannot lock anything; if it tries, it is refused.

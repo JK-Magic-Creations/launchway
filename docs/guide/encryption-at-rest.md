@@ -23,7 +23,7 @@ or replace it. It is for operators.
 | Logs and run records | The same |
 | Build caches | The same. The cached archives are not encrypted, and cache entries are not signed; see [build caches](build-caches.md#what-a-cache-entry-is-not-yet) |
 | Hosted Git repository packs | The same |
-| Run metadata, project names, states, counts, the audit trail | These are searched, so they stay readable; use database and volume encryption |
+| Run metadata, project names, states, counts, the Logbook | These are searched, so they stay readable; use database and volume encryption |
 
 The next slice adds per-object encryption of artifacts, logs, caches and Git packs under the same
 keys. Until then, **encrypt the database volume and the artifact store as well**: Launchway cannot see
@@ -53,8 +53,8 @@ are random; the few secrets sealed here are far below the count where that matte
 rotation starts a new count.
 
 Every sealed value is bound, by **authenticated data**, to the installation id, its purpose, its
-organization, and the table, column and row it is stored in. A value copied to another row, column,
-table or organization does not open; neither does one made for another installation. A test pins each.
+Wing, and the table, column and row it is stored in. A value copied to another row, column,
+table or Wing does not open; neither does one made for another installation. A test pins each.
 
 There is one place that seals and opens (`internal/sealing`), and a list of the columns that hold
 secrets. A test walks the database schema and fails on a column that looks like it holds a secret and
@@ -154,7 +154,7 @@ root key an administrator, who must have a second factor, cannot be created unti
   ones, and never silently re-keys.
 - An unusable key file (unreadable, wrong size, readable by every user) stops the start with the reason.
 
-Every failed unsealing is in the audit trail (`encryption.unseal`, outcome `failed`).
+Every failed unsealing is in the Logbook (`encryption.unseal`, outcome `failed`).
 
 ## Back up the key, separately
 
@@ -195,7 +195,7 @@ launchway encryption rotate --data    # also new data keys, and every stored val
 
 Both run online, from any machine that has the key: no server restarts, requests are not blocked, and
 `/readyz` is not affected. Old key versions stay readable until nothing needs them. Each rotation is in
-the audit trail (`encryption.kek_rotated`, `encryption.dek_rotated`). The doctor warns when the oldest key
+The Logbook (`encryption.kek_rotated`, `encryption.dek_rotated`). The doctor warns when the oldest key
 is over a year old.
 
 ## Replace the root key
@@ -250,6 +250,6 @@ and [environment variables](../reference/environment-variables.md). The checklis
 
 It does not protect against someone who controls a running server process, which holds working keys in
 memory; against a cluster administrator when the key is a Kubernetes Secret; or against someone who can
-write to the database and restart a server (the audit trail's tamper evidence is a separate piece of
+write to the database and restart a server (the Logbook's tamper evidence is a separate piece of
 work). It does not replace database and disk encryption, which stay recommended as defense in depth, and
 which are the interim protection for what is not yet encrypted above. It is not a compliance claim.
