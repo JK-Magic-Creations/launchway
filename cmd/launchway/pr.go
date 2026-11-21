@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 )
 
 const prUsage = `Usage:
@@ -128,10 +129,7 @@ func prRepo(flagValue string) (string, error) {
 }
 
 func gitOut(args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...) //nolint:gosec // git, with arguments this command builds itself
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-	b, err := cmd.Output()
-	return string(b), err
+	return gitexec.Output(context.Background(), gitexec.Spec{Args: args, Inherit: gitexec.Remote})
 }
 
 func prNumber(pos []string, verb string) (int, []string, error) {
