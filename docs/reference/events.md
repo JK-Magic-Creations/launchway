@@ -241,10 +241,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `run.rerun` | `POST /api/v1/runs/{id}/rerun`: re-running from a step |
 | `approval.approve` | `POST /api/v1/runs/{id}/steps/{step}/approve` |
 | `approval.reject` | `POST /api/v1/runs/{id}/steps/{step}/reject` |
-| `deployment.promote` | `POST /api/v1/runs/{id}/deployments/{dep}/promote` |
+| `deployment.promote` | `POST /api/v1/runs/{id}/deployments/{dep}/promote`: the request only; the outcome is `deployment.command_outcome` |
 | `deployment.promote_full` | `POST /api/v1/runs/{id}/deployments/{dep}/promote-full` |
 | `deployment.abort` | `POST /api/v1/runs/{id}/deployments/{dep}/abort` |
 | `deployment.retry` | `POST /api/v1/runs/{id}/deployments/{dep}/retry` |
+| `deployment.command_outcome` | what a deploy runner did with a command it took (promote, promote full, abort, retry), written when it reports, apart from the entry for the request: `ok` for a command that got to the rollout, `failed` for one that did not, with the reason; the user is the runner |
 | `deployment.withdraw` | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` |
 | `artifact.delete` | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` |
 | `token.create` | `POST /api/v1/tokens` |
