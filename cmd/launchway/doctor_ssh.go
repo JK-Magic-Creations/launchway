@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net"
@@ -15,7 +16,8 @@ import (
 // sshProbe connects to an SSH address and reads the host key it presents for
 // one algorithm, without signing in.
 func sshProbe(addr, algo string, timeout time.Duration) (ssh.PublicKey, error) {
-	conn, err := net.DialTimeout("tcp", addr, timeout)
+	d := net.Dialer{Timeout: timeout}
+	conn, err := d.DialContext(context.Background(), "tcp", addr)
 	if err != nil {
 		return nil, err
 	}

@@ -49,7 +49,6 @@ type Service struct {
 	o    Options
 	st   *store
 	wake chan struct{}
-	mu   sync.Mutex
 }
 
 // New makes a Service.

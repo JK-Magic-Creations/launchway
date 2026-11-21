@@ -171,11 +171,19 @@ func New(c Config) (*Server, error) {
 	return s, nil
 }
 
-// Serve accepts connections on ln until Close; it returns nil after Close.
-func (s *Server) Serve(ln net.Listener) error {
+// Serve accepts connections on ln until Close or until ctx ends; it returns
+// nil after either. Each connection's context is a child of ctx.
+func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	s.mu.Lock()
 	s.ln = ln
 	s.mu.Unlock()
+	go func() {
+		select {
+		case <-ctx.Done():
+			s.Close()
+		case <-s.done:
+		}
+	}()
 	for {
 		nc, err := ln.Accept()
 		if err != nil {
@@ -193,7 +201,7 @@ func (s *Server) Serve(ln net.Listener) error {
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
-			s.handle(nc)
+			s.handle(ctx, nc)
 		}()
 	}
 }
@@ -357,13 +365,13 @@ func (d *deadlineConn) arm() {
 	idle := d.idle
 	d.mu.Unlock()
 	if idle > 0 {
-		_ = d.Conn.SetDeadline(time.Now().Add(idle))
+		_ = d.SetDeadline(time.Now().Add(idle))
 	}
 }
 func (d *deadlineConn) Read(p []byte) (int, error)  { d.arm(); return d.Conn.Read(p) }
 func (d *deadlineConn) Write(p []byte) (int, error) { d.arm(); return d.Conn.Write(p) }
 
-func (s *Server) handle(nc net.Conn) {
+func (s *Server) handle(parent context.Context, nc net.Conn) {
 	addr := addrOf(nc.RemoteAddr())
 	release, why := s.admit(addr)
 	if release == nil {
@@ -393,7 +401,7 @@ func (s *Server) handle(nc net.Conn) {
 	life := time.AfterFunc(s.c.MaxDuration, func() { _ = sconn.Close() })
 	defer life.Stop()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 	go func() {
 		select {
@@ -430,7 +438,6 @@ type envPayload struct{ Name, Value string }
 func (s *Server) session(ctx context.Context, ch ssh.Channel, reqs <-chan *ssh.Request, id Identity, remote string) {
 	defer ch.Close()
 	proto := ""
-	started := false
 	for req := range reqs {
 		switch req.Type {
 		case "env":
@@ -443,11 +450,10 @@ func (s *Server) session(ctx context.Context, ch ssh.Channel, reqs <-chan *ssh.R
 			}
 		case "exec":
 			var e execPayload
-			if started || ssh.Unmarshal(req.Payload, &e) != nil {
+			if ssh.Unmarshal(req.Payload, &e) != nil {
 				_ = req.Reply(false, nil)
 				continue
 			}
-			started = true
 			_ = req.Reply(true, nil)
 			cmd, err := ParseCommand(e.Command)
 			if err != nil {
@@ -461,11 +467,6 @@ func (s *Server) session(ctx context.Context, ch ssh.Channel, reqs <-chan *ssh.R
 			exit(ch, status)
 			return
 		case "shell":
-			if started {
-				_ = req.Reply(false, nil)
-				continue
-			}
-			started = true
 			_ = req.Reply(true, nil)
 			_, _ = io.WriteString(ch, strings.ReplaceAll(s.c.Handler.Greeting(id), "\n", "\r\n")+"\r\n")
 			exit(ch, 0)
@@ -485,7 +486,8 @@ var protoOK = regexp.MustCompile(`^[0-9a-zA-Z]+=[0-9a-zA-Z]+(:[0-9a-zA-Z]+=[0-9a
 
 func exit(ch ssh.Channel, status int) {
 	b := make([]byte, 4)
-	binary.BigEndian.PutUint32(b, uint32(status))
+	status = max(0, min(status, 255))
+	binary.BigEndian.PutUint32(b, uint32(status)) //nolint:gosec // clamped to 0..255 above
 	_, _ = ch.SendRequest("exit-status", false, b)
 }
 

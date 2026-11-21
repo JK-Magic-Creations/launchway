@@ -129,7 +129,7 @@ func (s *Server) gitHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user, Policy: s.pushPolicy(c, repo)})
 	if q.svc == githttp.ReceivePack && !q.advertise {
-		s.gitPushed(s.clientAddr(r), c, repo, res)
+		s.gitPushed(r.Context(), s.clientAddr(r), c, repo, res)
 	}
 }
 
@@ -330,7 +330,7 @@ func (s *Server) gitDenied(source string, c gitCaller, path, svc, why string) {
 // gitPushed records a push, whichever transport carried it: who, to which
 // repository, which refs moved, and whether it committed; then tells the
 // rest of the system (events, webhooks, pipelines).
-func (s *Server) gitPushed(source string, c gitCaller, repo forge.Repository, res githttp.Result) {
+func (s *Server) gitPushed(ctx context.Context, source string, c gitCaller, repo forge.Repository, res githttp.Result) {
 	e := &engine.AuditEntry{At: s.Now().UnixMilli(), User: c.user, Source: source, Action: "git.push", Target: repo.Path, Outcome: "ok", Detail: c.credentialNote()}
 	var refs []string
 	if rr := res.Receive; rr != nil {
@@ -351,7 +351,7 @@ func (s *Server) gitPushed(source string, c gitCaller, repo forge.Repository, re
 	}
 	s.record(e)
 	if res.Receive != nil && res.Receive.Committed {
-		s.afterPush(c, repo, res.Receive.Updates)
+		s.afterPush(ctx, c, repo, res.Receive.Updates)
 	}
 }
 

@@ -46,6 +46,14 @@ func (k keyView) line() string {
 	return s
 }
 
+// cmdHosting runs the commands of Git hosting: repos and keys.
+func cmdHosting(name string, args []string) error {
+	if name == "keys" {
+		return cmdKeys(args)
+	}
+	return cmdRepos(args)
+}
+
 func cmdKeys(args []string) error {
 	return runClient(func() error {
 		if len(args) == 0 {
@@ -101,7 +109,7 @@ func readKeyFile(path string) (string, error) {
 	if path == "" {
 		return "", usageErr("say which public key: --file KEY.pub")
 	}
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) //nolint:gosec // the person named the file of their own public key
 	if err != nil {
 		return "", err
 	}

@@ -54,7 +54,7 @@ type SSHInfo struct {
 // shared through the database.
 func (s *Server) StartSSH(ctx context.Context, o SSHOptions) error {
 	if s.Forge == nil || s.Forge.Git == nil || s.Forge.Keys == nil {
-		return errors.New("Git over SSH needs Git hosting")
+		return errors.New("serving Git over SSH needs Git hosting")
 	}
 	seal, err := s.hostKeySealer()
 	if err != nil {
@@ -73,9 +73,8 @@ func (s *Server) StartSSH(ctx context.Context, o SSHOptions) error {
 	if err != nil {
 		return fmt.Errorf("listening for SSH on %s: %w", o.Listen, err)
 	}
-	go func() { <-ctx.Done(); srv.Close() }()
 	go func() {
-		if err := srv.Serve(ln); err != nil {
+		if err := srv.Serve(ctx, ln); err != nil {
 			s.Log.Error("the SSH server stopped", "err", err)
 		}
 	}()
@@ -200,7 +199,7 @@ func (h sshHandler) Serve(ctx context.Context, sess gitssh.Session, cmd gitssh.C
 		Request:  githttp.Request{Repo: dec.repo, Service: cmd.Service, User: c.user},
 		Protocol: cmd.Protocol, In: sess.In, Out: sess.Out, Policy: s.pushPolicy(c, dec.repo)})
 	if cmd.Service == githttp.ReceivePack {
-		s.gitPushed(sess.Remote, c, dec.repo, res)
+		s.gitPushed(ctx, sess.Remote, c, dec.repo, res)
 	}
 	var busy *githttp.ErrBusy
 	switch {

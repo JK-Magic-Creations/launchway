@@ -26,8 +26,9 @@ func (s *Server) hookRepo(r forge.Repository) webhooks.Repo {
 func zeroSHA(sha string) bool { return strings.Trim(sha, "0") == "" }
 
 // afterPush is called once a push has committed.
-func (s *Server) afterPush(c gitCaller, repo forge.Repository, updates []githttp.RefUpdate) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+func (s *Server) afterPush(ctx context.Context, c gitCaller, repo forge.Repository, updates []githttp.RefUpdate) {
+	// The push has committed: what follows is not undone when the client hangs up.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 	defer cancel()
 	if s.Forge != nil && s.Forge.Hooks != nil {
 		for _, u := range updates {

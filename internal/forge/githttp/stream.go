@@ -48,12 +48,11 @@ func (h *Handler) Stream(ctx context.Context, q StreamRequest) Result {
 	defer release()
 	ctx, cancel := context.WithTimeout(ctx, h.o.MaxDuration)
 	defer cancel()
-	var in io.Reader = q.In
 	limit := h.o.MaxFetchBytes
 	if q.Service == ReceivePack {
 		limit = h.o.MaxPushBytes
 	}
-	in = &capReader{r: in, left: limit} // the same ceiling as an HTTP push; a pack is streamed, never held in memory
+	in := &capReader{r: q.In, left: limit} // the same ceiling as an HTTP push; a pack is streamed, never held in memory
 	track := &trackReader{r: in}
 	rpc := storage.RPC{Stream: true, In: track, Out: q.Out, GitProtocol: protocolHeader(q.Protocol), Policy: q.Policy}
 	var res Result

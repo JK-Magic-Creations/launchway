@@ -60,6 +60,20 @@ func hooksBase(target string) (string, error) {
 	return "/api/v1/owners/" + url.PathEscape(target) + "/hooks", nil
 }
 
+// hookCall is one `repos hooks` command: its flags, its target and its arguments.
+type hookCall struct {
+	cl        *client
+	verb      string
+	base      string
+	pos       []string
+	given     map[string]bool
+	url, name string
+	evs       []string
+	secret    *string
+	active    bool
+	asJSON    bool
+}
+
 func (cl *client) hooks(args []string) error {
 	if len(args) == 0 {
 		return usageErr("launchway repos hooks list|add|update|delete|test|deliveries|redeliver TARGET ...%s", hooksUsage)
@@ -82,146 +96,168 @@ func (cl *client) hooks(args []string) error {
 	if err != nil {
 		return err
 	}
-	given := visited(fs)
-	var secret *string
-	if given["secret-file"] {
-		raw, err := os.ReadFile(*secretFile)
+	c := &hookCall{cl: cl, verb: args[0], base: base, pos: pos, given: visited(fs), url: *hookURL, name: *name, active: *active, asJSON: *asJSON}
+	if c.given["secret-file"] {
+		raw, err := os.ReadFile(*secretFile) //nolint:gosec // the person named the file of their own secret
 		if err != nil {
 			return err
 		}
 		v := strings.TrimSpace(string(raw))
-		secret = &v
+		c.secret = &v
 	}
-	evs := []string{}
+	c.evs = []string{}
 	for _, e := range strings.Split(*events, ",") {
 		if e = strings.TrimSpace(e); e != "" {
-			evs = append(evs, e)
+			c.evs = append(c.evs, e)
 		}
 	}
-	need := func(n int) error {
-		if len(pos) != n {
-			return usageErr("launchway repos hooks %s: wrong number of arguments%s", args[0], hooksUsage)
-		}
-		return nil
+	return c.run()
+}
+
+func (c *hookCall) need(n int) error {
+	if len(c.pos) != n {
+		return usageErr("launchway repos hooks %s: wrong number of arguments%s", c.verb, hooksUsage)
 	}
-	switch args[0] {
+	return nil
+}
+
+func (c *hookCall) item(i int) string { return c.base + "/" + url.PathEscape(c.pos[i]) }
+
+func (c *hookCall) run() error {
+	switch c.verb {
 	case "list":
-		var page struct {
-			Items []hookView `json:"items"`
-		}
-		if err := cl.call("GET", base, nil, &page); err != nil {
-			return err
-		}
-		return cl.print(page, *asJSON, func() {
-			if len(page.Items) == 0 {
-				fmt.Fprintln(cl.out, "No webhooks.")
-			}
-			for _, h := range page.Items {
-				state := "on"
-				if !h.Active {
-					state = "off"
-				}
-				fmt.Fprintf(cl.out, "%s  %s  %s  [%s]  %s\n", h.ID, h.Name, h.URL, strings.Join(h.Events, ","), state)
-				if h.DisabledReason != "" {
-					fmt.Fprintf(cl.out, "    %s\n", h.DisabledReason)
-				}
-			}
-		})
+		return c.list()
 	case "add":
-		if err := need(1); err != nil {
-			return err
-		}
-		body := map[string]any{"name": *name, "url": *hookURL, "events": evs}
-		if secret != nil {
-			body["secret"] = *secret
-		}
-		var out struct {
-			Hook   hookView `json:"hook"`
-			Secret string   `json:"secret"`
-			Note   string   `json:"secret_note"`
-		}
-		if err := cl.call("POST", base, body, &out); err != nil {
-			return err
-		}
-		return cl.print(out, *asJSON, func() {
-			fmt.Fprintf(cl.out, "Added %s  %s\n", out.Hook.ID, out.Hook.URL)
-			if out.Secret != "" {
-				fmt.Fprintf(cl.out, "Secret (shown once): %s\n%s\n", out.Secret, out.Note)
-			}
-		})
+		return c.add()
 	case "update":
-		if err := need(2); err != nil {
-			return err
-		}
-		body := map[string]any{}
-		if given["url"] {
-			body["url"] = *hookURL
-		}
-		if given["events"] {
-			body["events"] = evs
-		}
-		if given["name"] {
-			body["name"] = *name
-		}
-		if given["active"] {
-			body["active"] = *active
-		}
-		if secret != nil {
-			body["secret"] = *secret
-		}
-		if len(body) == 0 {
-			return usageErr("say what to change: --url, --events, --name, --active or --secret-file")
-		}
-		var h hookView
-		if err := cl.call("PATCH", base+"/"+url.PathEscape(pos[1]), body, &h); err != nil {
-			return err
-		}
-		return cl.print(h, *asJSON, func() { fmt.Fprintf(cl.out, "Updated %s  %s  active %v\n", h.ID, h.URL, h.Active) })
+		return c.update()
 	case "delete":
-		if err := need(2); err != nil {
+		if err := c.need(2); err != nil {
 			return err
 		}
-		if err := cl.call("DELETE", base+"/"+url.PathEscape(pos[1]), nil, nil); err != nil {
+		if err := c.cl.call("DELETE", c.item(1), nil, nil); err != nil {
 			return err
 		}
-		fmt.Fprintf(cl.out, "Deleted %s and its delivery log.\n", pos[1])
+		fmt.Fprintf(c.cl.out, "Deleted %s and its delivery log.\n", c.pos[1])
 		return nil
 	case "test":
-		if err := need(2); err != nil {
-			return err
-		}
-		var d deliveryView
-		if err := cl.call("POST", base+"/"+url.PathEscape(pos[1])+"/test", map[string]any{}, &d); err != nil {
-			return err
-		}
-		return cl.print(d, *asJSON, func() { fmt.Fprintln(cl.out, d.line()) })
-	case "deliveries":
-		if err := need(2); err != nil {
-			return err
-		}
-		var page struct {
-			Items []deliveryView `json:"items"`
-		}
-		if err := cl.call("GET", base+"/"+url.PathEscape(pos[1])+"/deliveries", nil, &page); err != nil {
-			return err
-		}
-		return cl.print(page, *asJSON, func() {
-			if len(page.Items) == 0 {
-				fmt.Fprintln(cl.out, "No deliveries yet.")
-			}
-			for _, d := range page.Items {
-				fmt.Fprintln(cl.out, d.line())
-			}
-		})
+		return c.delivery(2, "POST", c.item(1)+"/test")
 	case "redeliver":
-		if err := need(3); err != nil {
+		if err := c.need(3); err != nil {
 			return err
 		}
-		var d deliveryView
-		if err := cl.call("POST", base+"/"+url.PathEscape(pos[1])+"/deliveries/"+url.PathEscape(pos[2])+"/redeliver", map[string]any{}, &d); err != nil {
-			return err
-		}
-		return cl.print(d, *asJSON, func() { fmt.Fprintln(cl.out, d.line()) })
+		return c.delivery(3, "POST", c.item(1)+"/deliveries/"+url.PathEscape(c.pos[2])+"/redeliver")
+	case "deliveries":
+		return c.deliveries()
 	}
-	return usageErr("unknown command repos hooks %s", args[0])
+	return usageErr("unknown command repos hooks %s", c.verb)
+}
+
+func (c *hookCall) list() error {
+	var page struct {
+		Items []hookView `json:"items"`
+	}
+	if err := c.cl.call("GET", c.base, nil, &page); err != nil {
+		return err
+	}
+	return c.cl.print(page, c.asJSON, func() {
+		if len(page.Items) == 0 {
+			fmt.Fprintln(c.cl.out, "No webhooks.")
+		}
+		for _, h := range page.Items {
+			state := "on"
+			if !h.Active {
+				state = "off"
+			}
+			fmt.Fprintf(c.cl.out, "%s  %s  %s  [%s]  %s\n", h.ID, h.Name, h.URL, strings.Join(h.Events, ","), state)
+			if h.DisabledReason != "" {
+				fmt.Fprintf(c.cl.out, "    %s\n", h.DisabledReason)
+			}
+		}
+	})
+}
+
+func (c *hookCall) add() error {
+	if err := c.need(1); err != nil {
+		return err
+	}
+	body := map[string]any{"name": c.name, "url": c.url, "events": c.evs}
+	if c.secret != nil {
+		body["secret"] = *c.secret
+	}
+	var out struct {
+		Hook   hookView `json:"hook"`
+		Secret string   `json:"secret"`
+		Note   string   `json:"secret_note"`
+	}
+	if err := c.cl.call("POST", c.base, body, &out); err != nil {
+		return err
+	}
+	return c.cl.print(out, c.asJSON, func() {
+		fmt.Fprintf(c.cl.out, "Added %s  %s\n", out.Hook.ID, out.Hook.URL)
+		if out.Secret != "" {
+			fmt.Fprintf(c.cl.out, "Secret (shown once): %s\n%s\n", out.Secret, out.Note)
+		}
+	})
+}
+
+func (c *hookCall) update() error {
+	if err := c.need(2); err != nil {
+		return err
+	}
+	body := map[string]any{}
+	for flagName, key := range map[string]string{"url": "url", "name": "name"} {
+		if c.given[flagName] {
+			body[key] = map[string]string{"url": c.url, "name": c.name}[flagName]
+		}
+	}
+	if c.given["events"] {
+		body["events"] = c.evs
+	}
+	if c.given["active"] {
+		body["active"] = c.active
+	}
+	if c.secret != nil {
+		body["secret"] = *c.secret
+	}
+	if len(body) == 0 {
+		return usageErr("say what to change: --url, --events, --name, --active or --secret-file")
+	}
+	var h hookView
+	if err := c.cl.call("PATCH", c.item(1), body, &h); err != nil {
+		return err
+	}
+	return c.cl.print(h, c.asJSON, func() { fmt.Fprintf(c.cl.out, "Updated %s  %s  active %v\n", h.ID, h.URL, h.Active) })
+}
+
+// delivery makes a call that answers with one delivery (a test, a redelivery) and prints it.
+func (c *hookCall) delivery(args int, method, path string) error {
+	if err := c.need(args); err != nil {
+		return err
+	}
+	var d deliveryView
+	if err := c.cl.call(method, path, map[string]any{}, &d); err != nil {
+		return err
+	}
+	return c.cl.print(d, c.asJSON, func() { fmt.Fprintln(c.cl.out, d.line()) })
+}
+
+func (c *hookCall) deliveries() error {
+	if err := c.need(2); err != nil {
+		return err
+	}
+	var page struct {
+		Items []deliveryView `json:"items"`
+	}
+	if err := c.cl.call("GET", c.item(1)+"/deliveries", nil, &page); err != nil {
+		return err
+	}
+	return c.cl.print(page, c.asJSON, func() {
+		if len(page.Items) == 0 {
+			fmt.Fprintln(c.cl.out, "No deliveries yet.")
+		}
+		for _, d := range page.Items {
+			fmt.Fprintln(c.cl.out, d.line())
+		}
+	})
 }
