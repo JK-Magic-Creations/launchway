@@ -54,6 +54,9 @@ func (e *Engine) checkSchemas(nr *NewRun) error {
 	}
 	// Step resources above the installation's limits could never be given;
 	// say so now, naming the limit, instead of failing the step later.
+	if ps := e.CheckStepRunners(nr.Project, nr.Trigger.Event, nr.Pipeline); len(ps) > 0 {
+		return ps
+	}
 	if ps := e.CheckResources(nr.Pipeline); len(ps) > 0 {
 		return ps
 	}

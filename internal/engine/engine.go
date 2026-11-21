@@ -1027,6 +1027,10 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 			}
 			if def := c.st.Pipeline.Step(cd.step); def == nil || def.IsDeployKind() {
 				return nil // for deploy runners only
+			} else if def.HasOwnRunner() && c.e.knows(schemaParity2) {
+				var err error
+				job, err = c.leaseOwn(r, cd, s, def)
+				return err
 			}
 			prev := c.st.Runner
 			if !c.runnerCan(r, cd.step) {
@@ -1868,6 +1872,9 @@ func (c *cmd) persist() error {
 		}
 	}
 	if c.e.knows(schemaParity2) {
+		if err := c.persistStepRunners(); err != nil {
+			return err
+		}
 		if err := c.persistParity2(changed); err != nil {
 			return err
 		}

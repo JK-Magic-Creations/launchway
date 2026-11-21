@@ -12,7 +12,7 @@ const SchemaParity2 = 27
 // than schema 27 do not know.
 func (p *Pipeline) UsesSchemaParity2() bool {
 	for _, s := range p.Steps {
-		if s.Approvers != nil {
+		if s.Approvers != nil || s.Runner != nil {
 			return true
 		}
 		for _, f := range s.Fetch {

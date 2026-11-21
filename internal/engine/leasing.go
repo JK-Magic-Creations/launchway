@@ -26,6 +26,11 @@ func (e *Engine) leaseCandidates(r RunnerInfo, now time.Time, ownOnly bool, pool
 		// take it, whoever holds the run.
 		where = `(` + where + ` OR s.kind = 'ai')`
 	}
+	if e.knows(schemaParity2) {
+		// A step with a runner of its own goes to any runner that matches
+		// its selector (the pool filter below), whoever holds the run.
+		where = `(` + where + ` OR s.own_workspace = 1)`
+	}
 	if e.knows(schemaReruns) {
 		// Runs that need a newer server are left to one.
 		where += ` AND runs.min_schema <= ?`

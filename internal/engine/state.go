@@ -553,11 +553,12 @@ func (st *RunState) apply(ev Event) {
 		s.LeaseID = p.Lease
 		s.Runner = p.Runner
 		// A deploy runner's actions need no workspace: they do not move the
-		// run to that runner. Nor do verify and ai steps.
+		// run to that runner. Nor do verify and ai steps, or a step with a
+		// runner of its own (schema 27).
 		if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
 			break
 		}
-		if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI()) {
+		if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI() || def.HasOwnRunner()) {
 			if st.Status == RunQueued {
 				st.Status, st.StartedAt = RunRunning, ev.At
 			}

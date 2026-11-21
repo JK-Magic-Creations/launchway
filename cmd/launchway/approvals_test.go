@@ -127,3 +127,20 @@ func TestCLITemplatesList(t *testing.T) {
 		t.Fatalf("%v", got)
 	}
 }
+
+func TestCLIShowsAStepsOwnRunner(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"id":"run_1","project":"app","number":4,"status":"running","event":"manual","branch":"main","sha":"0123456789abcdef","actor":"ann","created_at":1,
+			"step_list":[{"id":"build[arch=arm64]","status":"running","attempt":1,"runner":"arm","workspace":"own-1"},{"id":"odd","status":"queued","attempt":1,"waiting_for":"waiting for a runner with labels riscv"}]}`)
+	}))
+	defer srv.Close()
+	var out bytes.Buffer
+	if err := newClient(credentials{Server: srv.URL, Token: "lw_x"}, &out).show([]string{"run_1"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"[own workspace own-1 on arm]", "(waiting for a runner with labels riscv)"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("missing %q in\n%s", want, out.String())
+		}
+	}
+}

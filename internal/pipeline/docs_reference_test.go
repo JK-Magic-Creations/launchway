@@ -213,6 +213,7 @@ steps:
     when: { branch: main }
     retry: { times: 2, wait: 10s }
     resources: { cpu: 2, memory: 4Gi }
+    runner: { pool: gpu, labels: [cuda] }
     secrets:
       TOKEN: { store: vault, key: ci/token, field: token }
     reports:
@@ -365,6 +366,7 @@ var probes = []probe{
 	{table: "reports-fail-under", path: []any{"steps", "build", "reports", "coverage", "fail_under"}},
 	{table: "reports-html", path: []any{"steps", "build", "reports", "html", 0}},
 	{table: "runner", path: []any{"runner"}},
+	{table: "step-runner", path: []any{"steps", "build", "runner"}},
 	{table: "lane", path: []any{"lane"}},
 	{table: "step-resources", path: []any{"steps", "build", "resources"}},
 	{table: "ai-input", path: []any{"steps", "notes", "inputs", 0}},

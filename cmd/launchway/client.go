@@ -434,6 +434,12 @@ type runView struct {
 		NotBefore    int64  `json:"not_before"`
 		FailureCause string `json:"failure_cause"`
 		Retry        int    `json:"retry"`
+		// Runner is the runner that took the step; Workspace is set for a
+		// step with a workspace of its own; WaitingFor says what a queued
+		// step waits for when no runner may take it.
+		Runner     string `json:"runner"`
+		Workspace  string `json:"workspace"`
+		WaitingFor string `json:"waiting_for"`
 	} `json:"step_list"`
 	TriggerDetail *struct {
 		Inputs   map[string]string `json:"inputs"`
@@ -685,6 +691,16 @@ func (cl *client) show(args []string) error {
 		}
 		if s.FailureCause != "" && s.FailureCause != "exit" {
 			line += " [cause: " + s.FailureCause + "]"
+		}
+		if s.Workspace != "" {
+			line += " [own workspace " + s.Workspace
+			if s.Runner != "" {
+				line += " on " + s.Runner
+			}
+			line += "]"
+		}
+		if s.WaitingFor != "" {
+			line += " (" + s.WaitingFor + ")"
 		}
 		if s.Error != "" {
 			line += ": " + s.Error

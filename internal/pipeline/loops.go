@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -453,7 +454,12 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 			}
 			envNames[env] = id
 			allowed := f.toleratesFailure(combo)
-			out = append(out, member(s, id, combo, allowed))
+			m := member(s, id, combo, allowed)
+			if msg := m.stepRunnerProblems(); msg != "" {
+				problems = append(problems, Problem{Line: s.Line, Path: "steps." + s.ID + ".runner", Message: id + ": " + msg})
+				break
+			}
+			out = append(out, m)
 			ids = append(ids, id)
 			loop.Members = append(loop.Members, LoopMember{ID: prefix + id, Each: combo,
 				Extra: len(f.Add) > 0 && f.isExtra(combo, lists), AllowedFailure: allowed})
@@ -520,6 +526,9 @@ func member(s *Step, id string, each map[string]string, allowed bool) *Step {
 			c.Env[r.name] = v
 		case "with":
 			c.With[r.name] = v
+		case "runner":
+			idx, _ := strconv.Atoi(r.name)
+			c.eachRunner(idx, v)
 		}
 	}
 	c.eachRefs = nil

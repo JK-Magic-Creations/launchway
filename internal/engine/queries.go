@@ -135,6 +135,12 @@ type StepView struct {
 	ApprovalsNeeded     int                 `json:"approvals_needed,omitempty"`
 	ApprovalsNeededFrom string              `json:"approvals_needed_from,omitempty"`
 	Approvers           *pipeline.Approvers `json:"approvers,omitempty"`
+	// Workspace and RunnerSelector are set for a step with a runner and a
+	// workspace of its own (schema 27); WaitingFor says what a queued one
+	// waits for when no runner seen lately may take it.
+	Workspace      string                   `json:"workspace,omitempty"`
+	RunnerSelector *pipeline.RunnerSelector `json:"runner_selector,omitempty"`
+	WaitingFor     string                   `json:"waiting_for,omitempty"`
 	// WaitKind, for a waiting deploy or rollback step, is what it waits
 	// for: lock or observe. Empty for an approval.
 	WaitKind string `json:"wait_kind,omitempty"`
@@ -645,6 +651,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Container = st.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
 			v.Group, v.Approvers = def.Group, def.Approvers
+			e.decorateOwnRunner(v, st, def)
 			v.Environment, v.Deployment = def.Environment, def.Deployment
 			if dd := st.Pipeline.Step(def.Deployment); def.IsRollback() && dd != nil {
 				v.Environment = dd.Environment

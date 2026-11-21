@@ -259,6 +259,15 @@ A template file (`templates/<name>.yaml` in the library) has `template`, `descri
 for text around it) stands for a parameter's value, and `if: { param: name }` or
 `if: { param: name, equals: value }` on a step leaves the step out when false. The `store`, `key` and `field` of a step's secret reference may be `{ param: name }` of a string parameter, and an `ai` step may be in a template (its `model`, `instructions` and `prompt` may be parameters).
 
+## A runner for one step
+
+`runner: { labels: [arm64] }` or `{ pool: gpu }` on a step that runs a script gives it a runner and
+a fresh workspace of its own (a checkout of the run's commit), shared with no other step; files
+travel between such steps only through `artifacts` and `fetch`. In a loop a label may be
+`{ each: arch }`; in a template the pool and labels may be parameters. Steps without it keep the
+run's workspace and the top-level `runner`. Not on image, deploy, rollout, approval, verify or ai
+steps.
+
 ## Container images: kind: image
 
 ```yaml

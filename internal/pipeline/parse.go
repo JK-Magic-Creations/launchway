@@ -317,14 +317,14 @@ func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
 
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
-		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "artifacts", "fetch", "deployment", "resources", "on_failure", "approvers"}
+		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "artifacts", "fetch", "deployment", "resources", "on_failure", "approvers", "runner"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
 	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message", "approvers"}
-	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources", "on_failure"}
+	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources", "on_failure", "runner"}
 	// Kinds from the design that are recognised but not implemented yet.
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
@@ -479,8 +479,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 					timeoutNode, timeout = v2, d
 					s.timeoutSet = true
 				}
-			case "on_failure":
-				ps.parseOnFailure(s, v2, where)
+			case "on_failure", "runner":
+				ps.parseRunStepFlow(s, k2.Value, v2, where)
 			case "reports":
 				s.Reports = ps.parseReports(v2, where)
 			case "resources":

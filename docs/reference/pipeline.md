@@ -359,6 +359,7 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `secrets` | mapping | none | Environment variables whose values a runner looks up: variable name to a [secret reference](#secret-references). A name may not also be under `env` |
 | `reports` | mapping | none | Files the step writes that Launchway reads once it ends, passed or failed; see [Reports](#reports) |
 | `resources` | mapping | the installation's default for the kind | The CPU and memory the step asks for; see [Resources](#resources) |
+| `runner` | mapping | the run's runner | A runner and a workspace of this step's own; see [A runner for one step](#a-runner-for-one-step) |
 | `artifacts` | list | none | Files the step keeps once it has run; see [Artifacts](#artifacts) |
 | `fetch` | list | none | Artifacts of earlier steps to put in the workspace first; see [Fetch](#fetch) |
 | `for_each` | mapping | none | Repeat the step once for each combination of values; see [For each](#for-each) |
@@ -945,6 +946,44 @@ steps:
   train:
     image: python:3.13
     run: python train.py
+```
+
+### A runner for one step
+
+`runner` on a step gives that step a runner and a workspace of its own, so one run can build or
+test on different platforms. The step gets a fresh checkout of the run's commit on any runner
+that has the pool and labels (and the features the step needs), shared with no other step; files
+travel between such steps only through [`artifacts` and `fetch`](#fetch). Steps without `runner`
+keep the run's shared workspace and the top-level [`runner`](#runner), exactly as before,
+and a step with its own runner neither takes over the run's runner nor waits for it. Not on image,
+deploy, rollback, rollout, approval, verify, ai or `uses` steps (an ai step already runs on any
+runner that calls models).
+
+<!-- keys: step-runner -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `pool` | name | any pool that serves the project | A build pool that serves the project and the event. In a template it may be `{ param: name }` |
+| `labels` | list | none | Labels a runner must all have. In a looped step an item may be `{ each: key }` (with `format`); in a template the list may be `{ param: name }` |
+
+A retry of the step reuses its workspace; a step whose labels no runner has waits ("waiting for a
+runner with labels arm64") and does not hold back steps that do not need it. A pool that does not
+exist or does not serve the project makes the pipeline invalid when the run is created.
+
+<!-- validate -->
+```yaml
+pipeline: two-platforms
+steps:
+  build:
+    for_each: { arch: [amd64, arm64] }
+    runner: { labels: [ { each: arch } ] }
+    image: golang:1.25
+    run: go build -o out/app .
+    artifacts: [ { name: binary, paths: [out/app] } ]
+  package:
+    needs: build
+    image: alpine:3.22
+    run: ls dist
+    fetch: [ { from: build, name: binary, into: dist } ]
 ```
 
 ## Resources

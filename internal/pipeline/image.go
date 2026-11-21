@@ -175,6 +175,8 @@ func (ps *parser) parseImageStep(k, v *yaml.Node, at string) *Step {
 			case key.Value == "if" && ps.tmpl != nil:
 			case key.Value == "for_each" || key.Value == "exclude" || key.Value == "max_parallel" || key.Value == "fail_fast":
 				ps.add(key, at+"."+key.Value, "an image step cannot be repeated by for_each yet; write one image step for each image")
+			case key.Value == "runner":
+				ps.add(key, at+".runner", "an image step builds in the run's workspace, on a runner that can build images, so it takes no runner of its own; put the build in a step that needs the one that chooses the runner")
 			case key.Value == "run" || key.Value == "image" || key.Value == "container" || key.Value == "env":
 				ps.add(key, at+"."+key.Value, "an image step runs no script: the runner builds the Dockerfile named by file (and context) "+
 					"with its builder; put commands in the Dockerfile, or in a step this one needs")

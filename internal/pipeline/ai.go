@@ -112,7 +112,7 @@ func (ps *parser) parseAIStep(k, v *yaml.Node, at string) *Step {
 			case contains(aiKeys, key.Value):
 			case contains(loopKeys, key.Value):
 				ps.add(key, at+"."+key.Value, "an ai step cannot be repeated by for_each yet")
-			case key.Value == "run" || key.Value == "image" || key.Value == "container" || key.Value == "env" || key.Value == "secrets":
+			case key.Value == "run" || key.Value == "image" || key.Value == "container" || key.Value == "env" || key.Value == "secrets" || key.Value == "runner":
 				ps.add(key, at+"."+key.Value, "an ai step runs no script: the runner asks the model, with a key the step never sees; "+
 					"put scripts in a step this one needs, and pass what they write as inputs")
 			case key.Value == "artifacts" || key.Value == "reports" || key.Value == "fetch":
