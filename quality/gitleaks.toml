@@ -5,10 +5,19 @@
 useDefault = true
 
 [allowlist]
-description = "files that are not source: dependency lock files and compiled output"
+description = "files that are not source (lock files, compiled output), the architecture test table, and test canaries"
 paths = [
   '''web/package-lock\.json''',
   '''docs/package-lock\.json''',
   '''go\.sum''',
   '''web/dist/''',
+  # The import table of the architecture test: package paths only. Its long lines trip the
+  # generic-api-key rule, and every commit that moves a line makes a new fingerprint, so a baseline
+  # entry per commit could never keep up. No value in it is a secret.
+  '''internal/archtest/arch_test\.go''',
+]
+# Test canaries are fake by construction: the tests plant a value that starts with CANARY- to prove
+# it appears nowhere in output. A real secret never starts that way.
+regexes = [
+  '''^CANARY-[A-Za-z0-9-]+$''',
 ]

@@ -5,6 +5,9 @@
 # examples. A finding beyond it fails; an entry that no longer matches anything also fails, so the
 # baseline can only shrink. History rewrites change commit ids: regenerate with
 #   scripts/security/gitleaks.sh --update   (refuses to add an entry; only BASELINE_INIT=1 does, once)
+# GITLEAKS_SCOPE=head scans only the history of the checked-out commit (what a push publishes, and what
+# the hosted checkout holds): findings on other local branches are not judged, and a baseline entry
+# whose commit is not an ancestor of HEAD is left alone. `make prepush` uses it.
 set -eu
 . "$(dirname "$0")/lib.sh"
 cd "$ROOT"
@@ -17,7 +20,9 @@ run() { # run <report> [extra gitleaks args]
     --no-banner --redact --config /gitleaks.toml --report-format json --report-path "/out/$report" --exit-code 0 >/dev/null 2>"$out/err" \
     || { cat "$out/err" >&2; exit 2; }
 }
-run all.json git /gitdir --log-opts=--all
+scope=--all
+[ "${GITLEAKS_SCOPE:-}" != head ] || scope="$(git rev-parse HEAD)"
+run all.json git /gitdir --log-opts="$scope"
 cp "$out/all.json" "$out/found.json"
 if [ "${1:-}" = "--update" ]; then
   jq -r '.[].Fingerprint' quality/gitleaks-baseline.json | sort -u > "$out/old"
@@ -37,6 +42,9 @@ if [ -n "$stale" ]; then
   keep=""
   for fp in $stale; do
     c="${fp%%:*}"
+    if [ "${GITLEAKS_SCOPE:-}" = head ]; then
+      git merge-base --is-ancestor "$c" HEAD 2>/dev/null || continue
+    fi
     if git cat-file -e "$c^{commit}" 2>/dev/null; then keep="$keep$fp
 "; fi
   done
