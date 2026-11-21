@@ -73,10 +73,10 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
       children={`Run #${a.run_number} of ${a.project} stopped at ${a.step_id} and waits for a person.`}
       actions={
         <div className="decide-form">
-          <dl className="then">
+          <div className="then">
             <div><b>If you say {t.label("go")}</b>{next.approve}</div>
             <div><b>If you say {t.label("no_go")}</b>{next.reject}</div>
-          </dl>
+          </div>
           <p className="small faint" style={{ margin: 0 }}>
             <EntityLink kind="project" name={a.project} /> · <EntityLink kind="run" name={`run #${a.run_number}`} id={a.run_id} />
             {refLabel(a) ? ` · ${refLabel(a)}` : ""}{a.short_sha ? ` · ${a.short_sha}` : ""}{a.commit_subject ? ` · ${a.commit_subject}` : ""}

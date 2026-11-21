@@ -1,6 +1,4 @@
 {
   "comment": "Accessibility findings that still exist, as \"<path>|<rule>\": the jsdom scan of every page ignores exactly these. The list may only shrink: a finding not listed fails the build, and so does a listed one that no longer occurs (delete its line). Fix the markup instead of adding a line.",
-  "pages": [
-    "/activity/approvals|definition-list"
-  ]
+  "pages": []
 }
