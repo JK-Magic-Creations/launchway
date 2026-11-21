@@ -88,7 +88,15 @@ func (e *Engine) appendLogs(leaseID string, offset int, lines []LogLine) error {
 	if err := sawRunner(tx, runnerID, now); err != nil {
 		return err
 	}
-	first := last - len(lines) + 1
+	// The lines of this step attempt are numbered after those already stored for it: a step that waited for room
+	// goes back to the queue with the same attempt number and is leased again, and the new lease's own count
+	// starts at zero. (The lease's count stays what the runner's offset is compared with.)
+	var stored int
+	if err := tx.QueryRow(`SELECT COALESCE(MAX(seq), 0) FROM logs WHERE run_id = ? AND step_id = ? AND attempt = ?`, l.runID, l.stepID, l.attempt).Scan(&stored); err != nil {
+		return err
+	}
+	first := stored + 1
+	last = stored + len(lines)
 	out := make([]LogLine, len(lines))
 	for i, ln := range lines {
 		if len(ln.Text) > MaxLogLineBytes {

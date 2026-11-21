@@ -471,7 +471,7 @@ namespace is affected.
 
 | Part | In | Out |
 |---|---|---|
-| Servers | runners, step pods, the deploy runner, and (with an Ingress or HTTPRoute) the proxy | DNS, the database, HTTPS to public addresses (`networkPolicy.server.publicHTTPS`), `networkPolicy.server.extraEgress`. Not the Kubernetes API, not private addresses |
+| Servers | the servers themselves, runners, step pods, the deploy runner, and (with an Ingress or HTTPRoute) the proxy | DNS, the servers themselves (a project that watches a repository this installation hosts), the database, HTTPS to public addresses (`networkPolicy.server.publicHTTPS`), `networkPolicy.server.extraEgress`. Not the Kubernetes API, not private addresses |
 | Runners | nothing | DNS, the servers, the Kubernetes API (to start step pods), `networkPolicy.runner.extraEgress` |
 | Step pods | nothing | DNS, the Launchway server, and HTTP/HTTPS to the internet except private, link-local (cloud metadata), carrier-grade NAT and `exceptCIDRs` ranges. Never the database, the Kubernetes API or the metadata service |
 | Bundled database | the servers | nothing |

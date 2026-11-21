@@ -12,7 +12,7 @@
 {{- $serverEgressPeer = false -}}
 {{- $serverPort = (regexFind "[0-9]+$" $su.host | default (ternary "443" "80" (eq $su.scheme "https"))) | int -}}
 {{- end -}}
-# SERVER: in, only runners, step pods, the deploy runner and the proxy; out, DNS, the database, HTTPS to
+# SERVER: in, only the servers themselves, runners, step pods, the deploy runner and the proxy; out, DNS, the servers themselves, the database, HTTPS to
 # public addresses (version sources and vulnerability data of the dependency updater, chat services of
 # notifications, other Git servers: networkPolicy.server.publicHTTPS, which the installation's own
 # egress allow-list narrows further) and networkPolicy.server.extraEgress. Not the Kubernetes API, and
@@ -31,6 +31,9 @@ spec:
   policyTypes: [Ingress, Egress]
   ingress:
     - from:
+        - podSelector:
+            matchLabels:
+              {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 14 }}
         {{- if .Values.runner.enabled }}
         - podSelector:
             matchLabels:
@@ -64,6 +67,14 @@ spec:
     {{- end }}
   egress:
     {{- include "launchway.dnsEgress" . | nindent 4 }}
+    # The servers themselves, on the server port: a project that watches a repository this installation
+    # hosts reads it through the Service, which is one of these pods.
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "launchway.componentSelectorLabels" (list . "server") | nindent 14 }}
+      ports:
+        - { protocol: TCP, port: {{ $port }} }
     {{- if include "launchway.bundledDB" . | trim }}
     - to:
         - podSelector:

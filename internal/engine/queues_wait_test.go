@@ -125,3 +125,42 @@ func TestNumberRanges(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+// The step that waited writes log lines on the lease it waited on and more on the next lease of the SAME
+// attempt: the second lease's lines follow the first's, and a runner that sends them is not refused (the
+// key of the log table is run, step, attempt and line number; a rehearsal on a cluster found the second
+// lease's lines colliding with the first's and the result never accepted).
+func TestLogLinesOfAStepThatWaitedFollowTheEarlierOnes(t *testing.T) {
+	e, clk := newEngine(t)
+	id := create(t, e, oneStepPipeline, Trigger{})
+	j := take(t, e)
+	if err := e.AppendLogsAt(j.LeaseID, 0, []LogLine{{Text: "Starting pod"}, {Text: "waiting for room"}}); err != nil {
+		t.Fatal(err)
+	}
+	waiting(t, e, j, "waiting for room in the step namespace: 3 pods of 3 pods already requested")
+	clk.Add(11 * time.Second)
+	j2 := take(t, e)
+	if err := e.AppendLogsAt(j2.LeaseID, 0, []LogLine{{Text: "Starting pod"}, {Text: "running"}}); err != nil {
+		t.Fatalf("the second lease's first lines were refused: %v", err)
+	}
+	if err := e.AppendLogsAt(j2.LeaseID, 2, []LogLine{{Text: "done"}}); err != nil {
+		t.Fatal(err)
+	}
+	ok(t, e, j2, nil)
+	var seqs []int
+	rows, err := e.db.Query(`SELECT seq FROM logs WHERE run_id = ? AND step_id = 'a' ORDER BY seq`, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var n int
+		if err := rows.Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		seqs = append(seqs, n)
+	}
+	if len(seqs) != 5 || seqs[0] != 1 || seqs[4] != 5 {
+		t.Fatalf("the lines of the attempt are numbered %v, want 1 to 5", seqs)
+	}
+}

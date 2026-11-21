@@ -155,7 +155,7 @@ host, so everything that applies to a push applies here:
 - A commit whose subject contains `[skip ci]` (also `[ci skip]`, `[no ci]`, `[skip pipeline]` or
   `[skip launchway]`, in any case) starts no run, and the decision says so. Start one by hand if you want it.
 
-There are no path filters in the trigger language yet.
+The trigger language has path filters (`paths` and `paths_ignore`) and a step can say `when: { changed }`; see [Queues, limits and path filters](queues.md).
 
 ## Audit
 

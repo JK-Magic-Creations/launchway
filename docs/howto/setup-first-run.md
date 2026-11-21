@@ -60,7 +60,7 @@ words) and a link into Learn.
 4. **Git hosting.** Turn it on (a restart is needed, because the server reads the setting only when it starts)
    and what Git over SSH needs.
 5. **Bring in your repositories.** A server to import from (its address and token; the token is pasted once and
-   kept in a file only the server can read, or you name an environment variable), the repositories found,
+   kept sealed under the root key, and a server with no root key refuses the paste; or you name an environment variable), the repositories found,
    all or some, then each copied and compared with its source ref by ref, with a retry for any that failed.
    The same for a whole server from a script: `launchway repos import-all --connection NAME`.
 6. **Your first pipeline**, from a starter, for one repository.
