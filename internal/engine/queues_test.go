@@ -95,22 +95,18 @@ func TestBurstOfAutomationPullRequestsIsHeldAndTheMainBuildGoes(t *testing.T) {
 // arrived, whatever their random ids sort like.
 func TestHeldRunsOfOneInstantGoInArrivalOrder(t *testing.T) {
 	e, _ := queueEngine(t, QueueSettings{})
-	var runs []*RunSummary
 	for i := 1; i <= 12; i++ {
-		runs = append(runs, prRun(t, e, i, true))
+		prRun(t, e, i, true)
 	}
 	for next := 3; next <= 12; next++ {
-		// Ending the oldest running run frees one place for exactly the oldest held one.
-		oldest := runs[next-3]
-		j := takeRun(t, e, oldest.ID)
-		ok(t, e, j, nil)
-		held := heldNumbers(t, e)
+		// Whichever of the running runs ends, exactly the oldest held one goes.
+		ok(t, e, take(t, e), nil)
 		var want []int
 		for n := next + 1; n <= 12; n++ {
 			want = append(want, n)
 		}
-		if fmt.Sprint(held) != fmt.Sprint(want) {
-			t.Fatalf("after run %d ended, held %v, want %v", next-2, held, want)
+		if held := heldNumbers(t, e); fmt.Sprint(held) != fmt.Sprint(want) {
+			t.Fatalf("after run %d went, held %v, want %v", next, held, want)
 		}
 	}
 }

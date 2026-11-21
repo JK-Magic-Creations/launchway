@@ -606,8 +606,15 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	outputs := maskOutputs(executor.ReadOutputs(meta), mask)
 	ec := code
 	if code != 0 {
+		why := fmt.Sprintf("exit code %d", code)
+		if x, ok := r.Exec.(executor.ExitExplainer); ok {
+			if note := x.ExplainExit(ctx, spec, code); note != "" {
+				why = note
+				sys("%s", note)
+			}
+		}
 		sys("Failed with exit code %d after %s", code, took)
-		return engine.Result{Outcome: "failed", Cause: pipeline.CauseExit, ExitCode: &ec, Error: fmt.Sprintf("exit code %d", code), Outputs: outputs,
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseExit, ExitCode: &ec, Error: why, Outputs: outputs,
 			Excerpt: tail.excerpt()}, collect
 	}
 	sys("Succeeded in %s", took)
