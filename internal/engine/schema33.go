@@ -137,6 +137,7 @@ CREATE TABLE pull_comments (
   line        {{BIG}} NOT NULL DEFAULT 0,
   orig_line   {{BIG}} NOT NULL DEFAULT 0,
   suggestion  TEXT    NOT NULL DEFAULT '',
+  has_suggestion INTEGER NOT NULL DEFAULT 0,
   applied_sha TEXT    NOT NULL DEFAULT '',
   outdated    INTEGER NOT NULL DEFAULT 0,
   resolved    INTEGER NOT NULL DEFAULT 0,

@@ -376,3 +376,8 @@ func (s *Service) judgement(ctx context.Context, repoID string, p PullRequest) (
 // RevisionRef is the ref that keeps the head a pull request had at one of its
 // revisions, so "changes since your last review" survives a force-push.
 func RevisionRef(number, seq int) string { return fmt.Sprintf("refs/pull/%d/rev/%d", number, seq) }
+
+// afterReview is where a review changes what auto-merge may do (see merge.go).
+func (s *Service) afterReview(ctx context.Context, repoID string, p PullRequest) {
+	s.autoMerge(ctx, repoID, p.ID)
+}
