@@ -16,6 +16,8 @@
     "/sha256:[0-9a-f…]+/g"
   ],
   "words": [
+    "zstd",
+    "laned",
     "Authentik",
     "autovacuum",
     "bandit",

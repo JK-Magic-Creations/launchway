@@ -49,14 +49,15 @@ Pull requests run all of these.
 
 ## Updating the roadmap
 
-The roadmap's data is `docs/roadmap/roadmap.json`: the items available today, and the items in
-progress and planned, each with a rank (by value), a theme and a one-line value statement.
-It holds only those fields: notes on progress and work that is not about the product stay out.
-Edit the data, or run `make docs-roadmap-sync ROADMAP_JSON=path/to/roadmap.json` to write it from
-a maintainer's roadmap file (the script keeps the public fields, drops the items that are not
-about the product, renumbers the ranks and refuses text on its deny list). Then run
-`make docs-roadmap` to regenerate `docs/public/roadmap.html` (the page, from
-`docs/roadmap/template.html`) and `docs/roadmap-list.md`. `make docs` fails if they are stale.
+The roadmap's data is `docs/roadmap/roadmap.json`: the three-sentence vision, the things available
+today, and the milestones (marked Now, Next or Later) with their groups and items. Each item has a
+status (available, in progress or planned), a title, one plain sentence of what it is and why it
+matters, and, when a page describes it, a link to that page. There are no dates and no internal
+identifiers: the script refuses text on its deny list, a link to a page that does not exist, and
+fields it does not know. An item moves to available only when it is on the main branch, tested and
+documented. Edit the data, then run `make docs-roadmap` to regenerate `docs/public/roadmap.html`
+(the page, from `docs/roadmap/template.html`) and `docs/roadmap-list.md`. `make docs` fails if they
+are stale. The wording follows the originality rule: no other product is named for comparison.
 
 ## Screenshots
 

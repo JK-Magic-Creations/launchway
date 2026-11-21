@@ -120,7 +120,6 @@ pretends otherwise:
 
 - **Image steps cannot ask for memory.** `resources` applies to script steps. The builder's own memory limit
   (set where the daemon is deployed) is what protects the image build from being killed.
-- **No commit-time value** for the image's `created` label (`{ run: commit_time }`); the label is empty rather than a wall-clock time.
 - **No pre-flight gates against the running server**: `launchway version --json`, `server --check-config`
   and a test of the previous image against the new schema do not exist. `gate-pipeline` checks only the new
   build against the new pipeline file.
