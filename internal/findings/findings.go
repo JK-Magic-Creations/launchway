@@ -127,6 +127,9 @@ type Finding struct {
 	StartColumn int      `json:"start_column,omitempty"`
 	Fingerprint string   `json:"fingerprint"`      // 32 hex characters, stable across runs
 	Secret      bool     `json:"secret,omitempty"` // judged to be a secret finding
+	// Fix is the description of the first fix the tool suggested, if it
+	// suggested one (SARIF "fixes"): words only, never the replacement text.
+	Fix string `json:"fix,omitempty"`
 }
 
 // Rule describes a rule some finding refers to.

@@ -1,0 +1,66 @@
+# The tool images Standing orders run, pinned by digest. This is the only place a tool image is
+# named; the code reads this file when the program is built (go:embed) and a test refuses a tool
+# without a digest.
+#
+# To update a tool: change `version` and `image` together (the digest of a multi-architecture image
+# is `skopeo inspect --format '{{.Digest}}' docker://IMAGE:TAG`), then run
+# `go test ./internal/standards`. The dependency updater reads the `image:` lines of this file like
+# those of any pipeline file (add this path to image_globs in .launchway/updates.yaml) and
+# proposes the new digest as a pull request, which is the same review as any other change.
+manifest: 1
+updated: 2026-11-21
+tools:
+  - name: gitleaks
+    version: v8.30.1
+    image: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb
+    license: MIT
+    home: https://github.com/gitleaks/gitleaks
+  - name: osv-scanner
+    version: v2.7.1
+    image: ghcr.io/google/osv-scanner:v2.7.1@sha256:a70ffffc2bfd33482953e5d6b64c6fcdb30239717a07b0f0d3ab2859ce3e4cde
+    license: Apache-2.0
+    home: https://github.com/google/osv-scanner
+  - name: govulncheck
+    version: v1.1.4
+    image: docker.io/library/golang:1.26@sha256:4165ee6bf3b7811fd7b40373290405c83d0167dcb87ee5f29c427cdcef45ff8f
+    license: BSD-3-Clause
+    home: https://go.dev/doc/security/vuln/
+    note: "the Go toolchain image runs govulncheck at the pinned module version; it needs the Go module proxy"
+  - name: gosec
+    version: 2.22.10
+    image: docker.io/securego/gosec:2.22.10@sha256:c8852d609f9af551387555a81808a3bca8d172629b124fab0d83c937cabc2f3d
+    license: Apache-2.0
+    home: https://github.com/securego/gosec
+  - name: ruff
+    version: 0.14.0
+    image: ghcr.io/astral-sh/ruff:0.14.0-alpine@sha256:99e93609f67fe51dd1322b0434150c0fa6b776f2512a938f5d2dcab76d6a7320
+    license: MIT
+    home: https://github.com/astral-sh/ruff
+  - name: trivy
+    version: 0.76.2
+    image: ghcr.io/aquasecurity/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb
+    license: Apache-2.0
+    home: https://github.com/aquasecurity/trivy
+  - name: hadolint
+    version: v2.15.1
+    image: ghcr.io/hadolint/hadolint:v2.15.1-alpine@sha256:a1d49ae1a4e83c1dbad26b8c1ad7588c8bd1e04f4866b34ad3cac50335198552
+    license: GPL-3.0-only
+    home: https://github.com/hadolint/hadolint
+    note: "run unmodified, as a separate program in its own container"
+  - name: kube-linter
+    version: v0.8.3
+    image: docker.io/stackrox/kube-linter:v0.8.3-alpine@sha256:b8311611c27032d4922bc67719225e373e4a0ab0c767bbdcf5f20a9306b1a3bb
+    license: Apache-2.0
+    home: https://github.com/stackrox/kube-linter
+  - name: shellcheck
+    version: v0.11.0
+    image: docker.io/koalaman/shellcheck-alpine:v0.11.0@sha256:9955be09ea7f0dbf7ae942ac1f2094355bb30d96fffba0ec09f5432207544002
+    license: GPL-3.0-only
+    home: https://github.com/koalaman/shellcheck
+    note: "run unmodified, as a separate program in its own container"
+  - name: launchway-pipeline-lint
+    version: alpine-3.22
+    image: docker.io/library/alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f
+    license: MIT
+    home: https://alpinelinux.org/
+    note: "Launchway's own rules, a script of this release that runs in a plain base image"

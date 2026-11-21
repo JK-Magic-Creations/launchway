@@ -147,6 +147,7 @@ type sarifResult struct {
 	PartialFingerprints partialFPs        `json:"partialFingerprints"`
 	Fingerprints        partialFPs        `json:"fingerprints"`
 	Properties          propBag           `json:"properties"`
+	Fixes               jsonscan.RawFirst `json:"fixes"`
 }
 
 type sarifLocation struct {
@@ -708,6 +709,7 @@ func (p *parser) result(rc *runCtx, v []byte) {
 
 	f := Finding{Tool: rc.tool, RuleID: ruleID, Severity: sev, Level: level, Secret: secret}
 	f.Message = p.message(&r, ri, ruleID, secret)
+	f.Fix = p.fixText(&r, secret)
 	p.location(rc, &loc, &f)
 	p.rep.Findings = append(p.rep.Findings, f)
 	p.kept = append(p.kept, kept{partial: ids})
@@ -900,4 +902,22 @@ func cutBytes(s string, n int) string {
 		return s
 	}
 	return s[:jsonscan.RuneStartAtOrBefore(s, n)]
+}
+
+// fixText is the description of the first fix a tool suggested for a result
+// ("Split imports"), cleaned and masked like a message. It is only the
+// words: the replacement text of a fix is never read. A secret finding has
+// none.
+func (p *parser) fixText(r *sarifResult, secret bool) string {
+	if secret || r.Fixes.V == nil || r.Fixes.V[0] != '{' {
+		return ""
+	}
+	var fx struct {
+		Description text `json:"description"`
+	}
+	if jsonscan.Decode(r.Fixes.V, &fx) != nil {
+		return ""
+	}
+	limit := min(p.lim.MaxMessageBytes, 300)
+	return jsonscan.Cut(Mask(jsonscan.Block(boundRaw(fx.Description.Text, 4*limit), noCut)), limit)
 }

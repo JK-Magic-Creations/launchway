@@ -1,0 +1,166 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:179493a8-2a9c-4788-bbae-98d6b2e1d788",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-11-21T20:46:06+00:00",
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "manufacturer": {
+            "name": "Aqua Security Software Ltd."
+          },
+          "group": "aquasecurity",
+          "name": "trivy",
+          "version": "0.76.2"
+        }
+      ]
+    },
+    "component": {
+      "bom-ref": "6e775507-2165-487e-9f49-fc96c3d7e85b",
+      "type": "application",
+      "name": ".",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:SchemaVersion",
+          "value": "2"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "c8a8f5eb-afd0-4616-8509-d0afdb7abeb1",
+      "type": "application",
+      "name": "py/requirements.txt",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "pip"
+        }
+      ]
+    },
+    {
+      "bom-ref": "e5e7a5e9-7c58-4c94-8b9d-6c6d88ce53b0",
+      "type": "application",
+      "name": "go/go.mod",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:Class",
+          "value": "lang-pkgs"
+        },
+        {
+          "name": "aquasecurity:trivy:Type",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/example.com/fx",
+      "type": "library",
+      "name": "example.com/fx",
+      "purl": "pkg:golang/example.com/fx",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "example.com/fx"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:golang/golang.org/x/net@v0.17.0",
+      "type": "library",
+      "name": "golang.org/x/net",
+      "version": "v0.17.0",
+      "purl": "pkg:golang/golang.org/x/net@v0.17.0",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgID",
+          "value": "golang.org/x/net@v0.17.0"
+        },
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "gomod"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/flask@0.12.2",
+      "type": "library",
+      "name": "flask",
+      "version": "0.12.2",
+      "purl": "pkg:pypi/flask@0.12.2",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "pip"
+        }
+      ]
+    },
+    {
+      "bom-ref": "pkg:pypi/pyyaml@5.3",
+      "type": "library",
+      "name": "pyyaml",
+      "version": "5.3",
+      "purl": "pkg:pypi/pyyaml@5.3",
+      "properties": [
+        {
+          "name": "aquasecurity:trivy:PkgType",
+          "value": "pip"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "6e775507-2165-487e-9f49-fc96c3d7e85b",
+      "dependsOn": [
+        "c8a8f5eb-afd0-4616-8509-d0afdb7abeb1",
+        "e5e7a5e9-7c58-4c94-8b9d-6c6d88ce53b0"
+      ]
+    },
+    {
+      "ref": "c8a8f5eb-afd0-4616-8509-d0afdb7abeb1",
+      "dependsOn": [
+        "pkg:pypi/flask@0.12.2",
+        "pkg:pypi/pyyaml@5.3"
+      ]
+    },
+    {
+      "ref": "e5e7a5e9-7c58-4c94-8b9d-6c6d88ce53b0",
+      "dependsOn": [
+        "pkg:golang/example.com/fx"
+      ]
+    },
+    {
+      "ref": "pkg:golang/example.com/fx",
+      "dependsOn": [
+        "pkg:golang/golang.org/x/net@v0.17.0"
+      ]
+    },
+    {
+      "ref": "pkg:golang/golang.org/x/net@v0.17.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/flask@0.12.2",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:pypi/pyyaml@5.3",
+      "dependsOn": []
+    }
+  ],
+  "vulnerabilities": []
+}
