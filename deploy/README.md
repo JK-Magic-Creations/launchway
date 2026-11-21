@@ -88,7 +88,7 @@ The chart renders the runners' settings into a file, `/etc/launchway-runner/runn
 with `launchway runner --config`. Step pods are configured under `runner.kubernetes`: the helper
 image, CPU and memory requests and the memory limit per container, a node selector, image pull
 secrets, the ServiceAccount step pods run as (default: none, and no token mounted), how long a
-failed run's pod is kept (`keepFailed`) and how long to wait for images (`startTimeout`).
+failed run's pod is kept (`keepFailed`, default none), how old any pod may get (`maxPodAge`) and how long to wait for images (`startTimeout`).
 `runner.extraArgs` adds flags, which override the file.
 
 `runner.secretStores` configures the secret stores runners read (Vault, OpenBao, mounted files),
@@ -330,7 +330,7 @@ removed after each save. Who may start draft runs, and whether drafts may read s
 | Artifacts, and the SBOMs and provenance kept as artifacts | PostgreSQL, unless `config.artifacts.store` says S3 ([docs/artifacts.md](../docs/artifacts.md): limits, backups, when to move to S3) | Their retention ends, or with the database |
 | Mirrors of project repositories | Each server's `emptyDir` (`server.dataVolume`) | The pod goes; rebuilt from the repository on start |
 | Checkouts for running steps | Each runner's `emptyDir` (`runner.dataVolume`) | The pod goes; steps then run again elsewhere |
-| A run's workspace | Its step pod in the step namespace | The run succeeds (at once) or fails (after `keepFailed`, 2 hours, to allow a resume); any runner removes it, including the pods of runners that were replaced |
+| A run's workspace | Its step pod in the step namespace | The run ends in any state (at once; `keepFailed` can add a grace period), or the pod is older than `maxPodAge` (24 hours) with no step executing; any runner removes it, including the pods of runners that were replaced |
 | The development database | A PersistentVolumeClaim | `helm uninstall` deletes it |
 
 Nothing else is persisted. Secrets values never reach the servers or the database.

@@ -60,8 +60,9 @@ type Runner struct {
 	// otherwise.
 	CachePlatform string
 
-	wsMu    sync.Mutex
-	wsLocks map[string]*sync.Mutex
+	wsMu     sync.Mutex
+	wsLocks  map[string]*sync.Mutex
+	reapKick chan struct{} // asks the reaper to look now (see reapSoon)
 	// One fetch at a time per library mirror; see libraryRepo.
 	libMu    sync.Mutex
 	libLocks map[string]*sync.Mutex
@@ -83,6 +84,7 @@ func (r *Runner) Run(ctx context.Context) error {
 		r.SecretWait = 30 * time.Second
 	}
 	r.wsLocks = map[string]*sync.Mutex{}
+	r.reapKick = make(chan struct{}, 1)
 	if r.Info.Accept == nil && !r.Accept.Empty() {
 		r.Info.Accept = r.Accept // the server leaves it out of work it refuses
 	}
@@ -360,7 +362,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 			continue
 		}
 		if err == nil || errors.Is(err, ErrLeaseLost) {
-			log.Info("step finished", "outcome", res.Outcome)
+			r.finished(log, res)
 			return
 		}
 		log.Warn("reporting the result failed; retrying", "err", err)
@@ -737,20 +739,7 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 // the executor release anything it holds for finished runs.
 func (r *Runner) collectGarbage(ctx context.Context) {
 	if cl, ok := r.Exec.(executor.Cleaner); ok {
-		go func() {
-			t := time.NewTicker(30 * time.Second)
-			defer t.Stop()
-			for {
-				if err := cl.Cleanup(ctx, r.Client.RunInfos); err != nil && ctx.Err() == nil {
-					r.Log.Warn("cleaning up after finished runs", "err", err)
-				}
-				select {
-				case <-ctx.Done():
-					return
-				case <-t.C:
-				}
-			}
-		}()
+		go r.reap(ctx, cl, r.reapKick, reapEvery)
 	}
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
@@ -768,6 +757,51 @@ func (r *Runner) collectGarbage(ctx context.Context) {
 			return
 		case <-t.C:
 		}
+	}
+}
+
+// reapEvery is how often the reaper asks the server which runs have ended.
+const reapEvery = 30 * time.Second
+
+// reap is the reaper: it has the executor release what it holds for runs
+// that ended (a Kubernetes run's pod, which holds namespace quota), every
+// interval, at once at the start (a crashed runner's pods are found by the
+// next one), and soon after any step reports its result, which may be the
+// run's last. The executor decides what to release (see executor.Cleaner).
+func (r *Runner) reap(ctx context.Context, cl executor.Cleaner, kick <-chan struct{}, every time.Duration) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		if err := cl.Cleanup(ctx, r.Client.RunInfos); err != nil && ctx.Err() == nil {
+			r.Log.Warn("cleaning up after finished runs", "err", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		case <-kick:
+			// Let the server settle the run's status first.
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(min(2*time.Second, every)):
+			}
+		}
+	}
+}
+
+// finished logs a step's result and has the reaper look, since it may have
+// been the run's last.
+func (r *Runner) finished(log *slog.Logger, res engine.Result) {
+	log.Info("step finished", "outcome", res.Outcome)
+	r.reapSoon()
+}
+
+// reapSoon asks the reaper to look now; it never waits.
+func (r *Runner) reapSoon() {
+	select {
+	case r.reapKick <- struct{}{}:
+	default:
 	}
 }
 

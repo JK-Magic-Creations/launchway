@@ -25,7 +25,7 @@ server configuration, plus the server URL and the data directory. */}}
 {{- define "launchway.shared.runnerConfig" -}}
 {{- $k := .r.kubernetes -}}
 {{- $kube := dict "namespace" .stepNamespace -}}
-{{- range $key, $value := dict "helper_image" $k.helperImage "service_account" $k.serviceAccount "node_selector" $k.nodeSelector "cpu" $k.cpu "memory" $k.memory "memory_limit" $k.memoryLimit "max_cpu" $k.maxCpu "max_memory" $k.maxMemory "image_pull_secrets" $k.imagePullSecrets "keep_failed" $k.keepFailed "start_timeout" $k.startTimeout -}}
+{{- range $key, $value := dict "helper_image" $k.helperImage "service_account" $k.serviceAccount "node_selector" $k.nodeSelector "cpu" $k.cpu "memory" $k.memory "memory_limit" $k.memoryLimit "max_cpu" $k.maxCpu "max_memory" $k.maxMemory "image_pull_secrets" $k.imagePullSecrets "keep_failed" $k.keepFailed "max_pod_age" $k.maxPodAge "start_timeout" $k.startTimeout -}}
 {{- if $value }}{{ $_ := set $kube $key $value }}{{ end -}}
 {{- end -}}
 {{- if eq (toString $k.restricted) "false" }}

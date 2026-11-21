@@ -113,7 +113,9 @@ type Cleaner interface {
 // removable decides whether to remove what a run's steps held (a pod), given
 // what the server says about the run. A run that is still active keeps it.
 // A run that succeeded does not need it; a failed or canceled run keeps it
-// for keep after it finished, so that a resume can use it. Any runner may
+// for keep after it finished (0: it goes at once). A resume does not need it
+// either: the runner keeps the run's checkout and a new pod is filled from
+// it. Any runner may
 // remove what belongs to such runs. A run the server does not know may be
 // another installation's, or a local `launchway run` sharing the namespace,
 // so only the runner that made it (mine) removes it.

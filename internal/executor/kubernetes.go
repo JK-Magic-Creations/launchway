@@ -47,7 +47,8 @@ type KubernetesOptions struct {
 	MaxCPU           string            `yaml:"max_cpu"`      // the most a container may ask for, checked before its pod is made
 	MaxMemory        string            `yaml:"max_memory"`   // likewise; see checkResources
 	ImagePullSecrets []string          `yaml:"image_pull_secrets"`
-	KeepFailed       string            `yaml:"keep_failed"`   // how long to keep a failed run's pod for a resume; default 2h
+	KeepFailed       string            `yaml:"keep_failed"`   // a grace period before a failed or canceled run's pod is removed; default 0 (see removable)
+	MaxPodAge        string            `yaml:"max_pod_age"`   // the longest any step pod may live, whatever the server says about its run; default 24h
 	StartTimeout     string            `yaml:"start_timeout"` // how long to wait for images to pull; default 10m
 
 	// Restricted, true unless set to false, makes step pods meet the Pod
@@ -92,11 +93,13 @@ type Kubernetes struct {
 	client     kubernetes.Interface
 	owner      string // identifies this runner's pods
 	keepFailed time.Duration
+	maxPodAge  time.Duration
 	startWait  time.Duration
 
 	mu    sync.Mutex
 	pods  map[string]*runPod
 	noted map[string]bool // what has been said once (see noteOnce)
+	busy  map[string]int  // run → steps executing in this process now
 }
 
 type runPod struct {
@@ -162,11 +165,11 @@ func NewKubernetes(o KubernetesOptions, runnerID string) (*Kubernetes, error) {
 	if err := o.setDefaults(); err != nil {
 		return nil, err
 	}
-	k := &Kubernetes{o: o, cfg: cfg, pods: map[string]*runPod{}, keepFailed: 2 * time.Hour, startWait: 10 * time.Minute}
+	k := &Kubernetes{o: o, cfg: cfg, pods: map[string]*runPod{}, keepFailed: 0, maxPodAge: 24 * time.Hour, startWait: 10 * time.Minute}
 	for _, v := range []struct {
 		s string
 		d *time.Duration
-	}{{o.KeepFailed, &k.keepFailed}, {o.StartTimeout, &k.startWait}} {
+	}{{o.KeepFailed, &k.keepFailed}, {o.MaxPodAge, &k.maxPodAge}, {o.StartTimeout, &k.startWait}} {
 		if v.s != "" {
 			d, err := time.ParseDuration(v.s)
 			if err != nil {
@@ -244,6 +247,7 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		return -1, errors.New("kubernetes: the step has no run")
 	}
 	s = withDefaultContainer(s).withParallelism()
+	defer k.holdRun(s.RunID)()
 	rp, err := k.ensurePod(ctx, s, out)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -429,7 +433,7 @@ func (k *Kubernetes) ensurePod(ctx context.Context, s Spec, out Sink) (*runPod, 
 			"(kubernetes.restricted)", *k.o.RunAsUser, *k.o.RunAsGroup, stepHome)
 	}
 	if _, err := pods.Create(ctx, pod, metav1.CreateOptions{}); err != nil {
-		return nil, cannotStart("creating pod %s: %v", rp.name, err)
+		return nil, createFailed(rp.name, err)
 	}
 	if err := k.waitRunning(ctx, rp.name, s.Containers, sys); err != nil {
 		_ = pods.Delete(context.Background(), rp.name, metav1.DeleteOptions{GracePeriodSeconds: ptr(int64(0))})
@@ -820,40 +824,6 @@ func writeTar(w io.Writer, root string) error {
 		return err
 	}
 	return tw.Close()
-}
-
-// Cleanup deletes the step pods in the namespace that no longer need to
-// exist (see removable), whichever runner made them: a runner that was
-// replaced, for example by a Deployment, leaves its pods to the others.
-func (k *Kubernetes) Cleanup(ctx context.Context, lookup RunLookup) error {
-	sel := fmt.Sprintf("%s=launchway,%s", labelManaged, labelRun)
-	list, err := k.client.CoreV1().Pods(k.o.Namespace).List(ctx, metav1.ListOptions{LabelSelector: sel})
-	if err != nil || len(list.Items) == 0 {
-		return err
-	}
-	ids := make([]string, 0, len(list.Items))
-	for _, p := range list.Items {
-		ids = append(ids, p.Labels[labelRun])
-	}
-	infos, err := lookup(ctx, ids)
-	if err != nil {
-		return err
-	}
-	for _, p := range list.Items {
-		id := p.Labels[labelRun]
-		info, known := infos[id]
-		mine := p.Labels[labelOwner] == k.owner
-		if !removable(info, known, mine, k.keepFailed) {
-			continue
-		}
-		if err := k.client.CoreV1().Pods(k.o.Namespace).Delete(ctx, p.Name, metav1.DeleteOptions{GracePeriodSeconds: ptr(int64(0))}); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-		if mine {
-			k.forget(id)
-		}
-	}
-	return nil
 }
 
 func podName(runID, owner string) string {
