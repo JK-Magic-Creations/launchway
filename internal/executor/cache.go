@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -94,7 +95,15 @@ type CacheArchive struct {
 
 // PackCache writes the staged files as a tar archive compressed with zstd
 // into dst. Only regular files, with their permissions reduced to 0644 or
-// 0755; directories are made again when the entry is restored.
+// 0755 and with their modification times (to the nanosecond); directories are
+// made again when the entry is restored.
+//
+// The times are kept because timestamp-driven tools (make, Maven's
+// incremental compilation, Cargo, bundlers, the resolvers' "checked less than
+// a day ago" files) decide what is up to date by comparing them. A restore
+// that stamped every file with the moment of the restore would make restored
+// outputs newer than the sources of a fresh checkout, and such a tool would
+// keep output built from other sources.
 func PackCache(files []StagedFile, dst string) (*CacheArchive, error) {
 	f, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
@@ -123,7 +132,11 @@ func PackCache(files []StagedFile, dst string) (*CacheArchive, error) {
 			enc.Close()
 			return nil, err
 		}
-		if err := tw.WriteHeader(&tar.Header{Typeflag: tar.TypeReg, Name: sf.Path, Mode: mode, Size: sf.Size, Format: tar.FormatPAX}); err != nil {
+		hdr := &tar.Header{Typeflag: tar.TypeReg, Name: sf.Path, Mode: mode, Size: sf.Size, Format: tar.FormatPAX}
+		if sf.ModTime > 0 {
+			hdr.ModTime = time.Unix(0, sf.ModTime)
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
 			src.Close()
 			enc.Close()
 			return nil, err
@@ -244,6 +257,7 @@ func UnpackCache(ctx context.Context, src, dir string, globs []string, lim Unpac
 	}
 	defer root.Close()
 	g := &expansionGuard{lim: lim, read: &cr.n}
+	now := time.Now()
 	tr := tar.NewReader(dec)
 	out := &Unpacked{}
 	seen := map[string]bool{}
@@ -320,9 +334,29 @@ func UnpackCache(ctx context.Context, src, dir string, globs []string, lim Unpac
 		if h.Mode&0o111 != 0 {
 			mode = 0o755
 		}
-		out.Files = append(out.Files, PlacedFile{Path: h.Name, Local: filepath.Join(dir, strconv.Itoa(n)), Mode: mode})
+		out.Files = append(out.Files, PlacedFile{Path: h.Name, Local: filepath.Join(dir, strconv.Itoa(n)), Mode: mode, ModTime: restoredModTime(h.ModTime, now)})
 		out.Bytes += h.Size
 	}
+}
+
+// restoredModTime is the modification time a restored file gets: the one it
+// was saved with, but never later than now, so that an archive cannot make a
+// file newer than the sources of the checkout it is restored into. 0 (leave
+// the time of the restore) when the archive carries none.
+//
+// What the times are relative to: the checkout is made before the restore, so
+// its files carry the time of the checkout, and everything restored carries
+// the time it had when it was last written in an earlier run, which is
+// earlier. A restored file is therefore older than every source of the
+// checkout, as a file left by a build in a cache is expected to be.
+func restoredModTime(t, now time.Time) int64 {
+	if t.IsZero() || t.UnixNano() <= 0 {
+		return 0
+	}
+	if t.After(now) {
+		t = now
+	}
+	return t.UnixNano()
 }
 
 // expansionGuard fails a copy that expands past the limits.
