@@ -201,6 +201,8 @@ export const PAGES: PageInfo[] = [
   projectSub("security", "Security", "Security"),
   projectSub("caches", "Caches", "Build caches"),
   projectSub("standards", "Standing orders", "Standing orders"),
+  page("/projects/:name/configuration", "pipelines", undefined, (p) => `Configuration of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Configuration" }]),
+  page("/runs/:id/configuration/:step", "pipelines", undefined, (p) => `Configuration report of ${p.step}`, (p) => [{ label: terms().say("{Runs}"), href: "/activity" }, { label: "Configuration report" }]),
   projectSub("variables", "Variables", "Variables"),
   page("/setup/guide", "settings", "guide", () => "Setup guide", () => [{ label: "Setup guide" }]),
   page("/projects/:name/toggles", "pipelines", undefined, (p) => `Toggles of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: terms().say("{Toggles}") }]),

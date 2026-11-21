@@ -8,7 +8,7 @@ import baseline from "./baseline.json";
 // Every routed page of the interface, drawn whole (shell and page) with fixtures, in both themes, and scanned
 // by axe-core. See docs/contributing/design-principles.md; the browser pass (make web-a11y) covers what jsdom cannot.
 const PAGES = [
-  "/", "/projects", "/projects/shop-api", "/projects/shop-api/pipeline", "/projects/shop-api/tests", "/projects/shop-api/variables",
+  "/", "/projects", "/projects/shop-api", "/projects/shop-api/pipeline", "/projects/shop-api/tests", "/projects/shop-api/variables", "/projects/shop-api/configuration", "/runs/run_7/configuration/configure",
   "/projects/shop-api/toggles", "/projects/shop-api/toggles/checkout-v2", "/projects/shop-api/toggle-settings",
   "/pipelines", "/activity", "/activity/approvals", "/activity/events", "/runs/run_7", "/deployments", "/deployments/environments", "/deployments/environments/prod", "/runs/run_rb",
   "/deployments/applications", "/images", "/images/components", "/images/registry", "/images/registry/shop-api", "/images/registry/shop-api?repository=shop-api/web", "/library", "/library/starters", "/library/templates", "/playground", "/kit",

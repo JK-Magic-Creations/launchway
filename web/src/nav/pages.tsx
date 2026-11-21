@@ -23,6 +23,8 @@ const ProjectSecurityPage = lz(() => import("../pages/ProjectSecurity"), "Projec
 const ProjectStandardsPage = lz(() => import("../pages/Standards"), "ProjectStandardsPage");
 const SettingsStandardsPage = lz(() => import("../pages/Standards"), "SettingsStandardsPage");
 const ProjectCachesPage = lz(() => import("../pages/Caches"), "ProjectCachesPage");
+const ProjectConfigurationPage = lz(() => import("../pages/Configuration"), "ProjectConfigurationPage");
+const ConfigReportPage = lz(() => import("../pages/ConfigReport"), "ConfigReportPage");
 const ProjectVariablesPage = lz(() => import("../pages/Variables"), "ProjectVariablesPage");
 const ProjectTogglesPage = lz(() => import("../pages/Toggles"), "ProjectTogglesPage");
 const ToggleDetailPage = lz(() => import("../pages/Toggles"), "ToggleDetailPage");
@@ -92,6 +94,8 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/security": return <ProjectSecurityPage key={p.name} name={p.name} />;
     case "/projects/:name/standards": return <ProjectStandardsPage key={p.name} name={p.name} />;
     case "/projects/:name/caches": return <ProjectCachesPage key={p.name} name={p.name} />;
+    case "/projects/:name/configuration": return <ProjectConfigurationPage key={p.name} name={p.name} />;
+    case "/runs/:id/configuration/:step": return <ConfigReportPage key={p.id + p.step} run={p.id} step={p.step} />;
     case "/projects/:name/variables": return <ProjectVariablesPage key={p.name} name={p.name} />;
     case "/setup/guide": return <SetupGuidePage />;
     case "/projects/:name/toggles": return <ProjectTogglesPage key={p.name} name={p.name} />;
