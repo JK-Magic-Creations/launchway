@@ -129,7 +129,7 @@ func askServerSettings(a *Asker, e *Env, l *serverLayout) (sa serverAnswers, err
 		return sa, fmt.Errorf("the bundled database is not available: %s", bundled.Unavailable)
 	}
 	if sa.db == "existing" {
-		if sa.dbURL, err = a.Ask(Question{Key: "server.database_url", Prompt: "The PostgreSQL address (postgres://USER:PASSWORD@HOST/DB)", Required: true, Secret: true}); err != nil {
+		if sa.dbURL, err = a.Ask(Question{Key: "server.database_url", Prompt: "The PostgreSQL address (postgres://USER:PASSWORD@HOST/DB)", Required: true, Secret: true}); err != nil { //nolint:gosec // G101: the text is a prompt showing the shape of an address, not a credential
 			return sa, err
 		}
 	}

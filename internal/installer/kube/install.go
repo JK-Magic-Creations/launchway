@@ -217,7 +217,7 @@ func (in *Installer) askAll(ctx context.Context, e *installer.Env, a *installer.
 	if err = in.askStorage(e, a, st); err != nil {
 		return err
 	}
-	if err = in.askWayIn(e, a, st); err != nil {
+	if err = in.askWayIn(ctx, e, a, st); err != nil {
 		return err
 	}
 	pull, err := a.Ask(installer.Question{Key: "kubernetes.pull_secret", Prompt: "Name of an image pull secret to use (empty: none needed)", Default: ""})
@@ -303,7 +303,7 @@ func (in *Installer) askStorage(e *installer.Env, a *installer.Asker, st *instal
 	return nil
 }
 
-func (in *Installer) askWayIn(e *installer.Env, a *installer.Asker, st *installed) error {
+func (in *Installer) askWayIn(ctx context.Context, e *installer.Env, a *installer.Asker, st *installed) error {
 	f := st.facts
 	var cs []installer.Choice
 	for _, c := range f.IngressClasses {
@@ -323,7 +323,7 @@ func (in *Installer) askWayIn(e *installer.Env, a *installer.Asker, st *installe
 	}
 	if way == "forward" {
 		st.portFwd = true
-		port := strconv.Itoa(freeLocalPort(18080))
+		port := strconv.Itoa(freeLocalPort(ctx, 18080))
 		p, err := a.Ask(installer.Question{Key: "kubernetes.local_port", Prompt: "Local port for the port-forward", Default: port})
 		if err != nil {
 			return err
@@ -635,9 +635,9 @@ func trialStorage(r *Rendered) {
 }
 
 // freeLocalPort is the first port from start that nothing on this machine is listening on.
-func freeLocalPort(start int) int {
+func freeLocalPort(ctx context.Context, start int) int {
 	for p := start; p < start+200; p++ {
-		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:"+strconv.Itoa(p))
+		l, err := (&net.ListenConfig{}).Listen(ctx, "tcp", "127.0.0.1:"+strconv.Itoa(p))
 		if err == nil {
 			_ = l.Close()
 			return p

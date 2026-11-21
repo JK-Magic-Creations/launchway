@@ -87,7 +87,7 @@ func (in *Installer) finish(ctx context.Context, e *installer.Env, a *installer.
 		st.portFwd = true
 		u, _ := url.Parse(addr)
 		_ = u
-		addr = "http://127.0.0.1:" + strconv.Itoa(freeLocalPort(18080))
+		addr = "http://127.0.0.1:" + strconv.Itoa(freeLocalPort(ctx, 18080))
 	}
 	if st.portFwd {
 		local := 18080
