@@ -18,3 +18,19 @@ func TestOnlyGrowthIsNew(t *testing.T) {
 		t.Errorf("an unlisted finding must be new, got %v", got)
 	}
 }
+
+func TestAShorterFunctionIsNotNew(t *testing.T) {
+	rec := map[string]int{key("a.go", "funlen", "Function 'f' is too long (211 > 150)"): 1,
+		key("a.go", "gocyclo", "cyclomatic complexity 80 of func `f` is high (> 30)"): 1}
+	where := map[string][]int{}
+	cur := map[string]int{key("a.go", "funlen", "Function 'f' is too long (207 > 150)"): 1,
+		key("a.go", "gocyclo", "cyclomatic complexity 79 of func `f` is high (> 30)"): 1}
+	if got := newFindings(cur, rec, where); len(got) != 0 {
+		t.Fatalf("shorter is not new: %v", got)
+	}
+	cur = map[string]int{key("a.go", "funlen", "Function 'f' is too long (212 > 150)"): 1,
+		key("b.go", "funlen", "Function 'f' is too long (100 > 50)"): 1}
+	if got := newFindings(cur, rec, where); len(got) != 2 {
+		t.Fatalf("longer, and another file, are new: %v", got)
+	}
+}

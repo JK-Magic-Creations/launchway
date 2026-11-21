@@ -6,6 +6,7 @@ import (
 	"maps"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -452,6 +453,15 @@ func (ps *parser) parseVerifyParams(n *yaml.Node, at string, vf *Verify) {
 
 func (ps *parser) verifyNumber(n *yaml.Node, at string) *float64 {
 	var f float64
+	if n.Kind == yaml.MappingNode && hasKey(n, "param") {
+		// A template's parameter, a number.
+		v, err := strconv.ParseFloat(strings.TrimSpace(ps.scalar(n, at)), 64)
+		if err != nil {
+			ps.add(n, at, "write a number, such as 0.01 or 250")
+			return nil
+		}
+		return &v
+	}
 	if n.Kind != yaml.ScalarNode || n.Decode(&f) != nil {
 		ps.add(n, at, "write a number, such as 0.01 or 250")
 		return nil
@@ -463,7 +473,7 @@ func (ps *parser) verifyNumber(n *yaml.Node, at string) *float64 {
 // mapping written as YAML, kept as JSON.
 func (ps *parser) verifyQuery(n *yaml.Node, at string) string {
 	var q string
-	if n.Kind == yaml.MappingNode {
+	if n.Kind == yaml.MappingNode && !hasKey(n, "param") {
 		var m any
 		if err := n.Decode(&m); err != nil {
 			ps.add(n, at, "the query cannot be read: %v", err)

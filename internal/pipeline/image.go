@@ -471,6 +471,10 @@ func (ps *parser) parseImageRepo(n *yaml.Node, at, example string) *ImageRepo {
 			r.Repository = ps.scalar(v, at+".repository")
 		}
 	})
+	if ps.tmpl != nil && r.Registry == "" {
+		// A template's registry parameter left empty: the cache is not used.
+		return r
+	}
 	ps.checkImageRepo(n, at, r.Registry, r.Repository)
 	return r
 }
@@ -495,7 +499,7 @@ func (ps *parser) checkImageRepo(n *yaml.Node, at, registry, repository string) 
 }
 
 func (ps *parser) parseImageSign(n *yaml.Node, at string) *ImageSign {
-	if n.Kind == yaml.ScalarNode {
+	if n.Kind == yaml.ScalarNode || isParamNode(n) {
 		if ps.bool(n, at) {
 			return &ImageSign{Runner: true}
 		}
@@ -540,7 +544,7 @@ func (ps *parser) parseImageSign(n *yaml.Node, at string) *ImageSign {
 }
 
 func (ps *parser) parseImageScan(n *yaml.Node, at string) *ImageScan {
-	if n.Kind == yaml.ScalarNode {
+	if n.Kind == yaml.ScalarNode || isParamNode(n) {
 		if ps.bool(n, at) {
 			return &ImageScan{Mode: "report"}
 		}
@@ -551,13 +555,13 @@ func (ps *parser) parseImageScan(n *yaml.Node, at string) *ImageScan {
 	ps.eachKey(n, at, imageScanKeys, func(k, v *yaml.Node) {
 		switch k.Value {
 		case "fail_on":
-			s.FailOn = ps.str(v, at+".fail_on")
+			s.FailOn = ps.scalar(v, at+".fail_on")
 			if !slices.Contains(severitiesFailOn, s.FailOn) {
 				ps.add(v, at+".fail_on", "write critical, high, medium or low")
 			}
 		case "mode":
 			modeNode = v
-			s.Mode = ps.str(v, at+".mode")
+			s.Mode = ps.scalar(v, at+".mode")
 			if s.Mode != "report" && s.Mode != "enforce" {
 				ps.add(v, at+".mode", "write report (record what is found) or enforce (fail the step, before pushing, on a finding at fail_on or worse)")
 			}

@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 486,
+  "total": 485,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -1371,12 +1371,6 @@
       "count": 1
     },
     {
-      "file": "internal/pipeline/template.go",
-      "linter": "staticcheck",
-      "text": "QF1002: could use tagged switch on n.Kind",
-      "count": 1
-    },
-    {
       "file": "internal/pipeline/triggers_test.go",
       "linter": "staticcheck",
       "text": "SA4000: identical expressions on the left and right side of the '!=' operator",
@@ -1385,7 +1379,7 @@
     {
       "file": "internal/pipeline/verify.go",
       "linter": "funlen",
-      "text": "Function 'parseVerifyStep' is too long (211 \u003e 150)",
+      "text": "Function 'parseVerifyStep' is too long (207 \u003e 150)",
       "count": 1
     },
     {
@@ -1403,7 +1397,7 @@
     {
       "file": "internal/pipeline/verify.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 80 of func `(*parser).parseVerifyStep` is high (\u003e 30)",
+      "text": "cyclomatic complexity 79 of func `(*parser).parseVerifyStep` is high (\u003e 30)",
       "count": 1
     },
     {

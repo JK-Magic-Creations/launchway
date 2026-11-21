@@ -13,7 +13,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -106,10 +108,52 @@ func main() {
 	}
 }
 
+// measured are the linters whose message carries a measure of the code (a
+// function's length, its complexity). Such a finding that is the same except
+// that every number in it is smaller than the recorded one is a function that
+// got shorter or simpler, not a new finding.
+var measured = map[string]bool{"funlen": true, "gocyclo": true, "gocognit": true, "cyclop": true, "nestif": true}
+
+var numberRe = regexp.MustCompile(`\d+`)
+
+// shrunk reports whether the finding is a recorded one of the same shape whose
+// measures are all no larger.
+func shrunk(k string, recorded map[string]int) bool {
+	p := strings.Split(k, "\x00")
+	if len(p) != 3 || !measured[p[1]] {
+		return false
+	}
+	shape := numberRe.ReplaceAllString(p[2], "#")
+	now := numberRe.FindAllString(p[2], -1)
+	for rk := range recorded {
+		q := strings.Split(rk, "\x00")
+		if len(q) != 3 || q[0] != p[0] || q[1] != p[1] || numberRe.ReplaceAllString(q[2], "#") != shape {
+			continue
+		}
+		was := numberRe.FindAllString(q[2], -1)
+		if len(was) != len(now) {
+			continue
+		}
+		ok := true
+		for i := range now {
+			a, _ := strconv.Atoi(now[i])
+			b, _ := strconv.Atoi(was[i])
+			// The limit in "(211 > 150)" is the same number in both; the measure may fall.
+			if a > b {
+				ok = false
+			}
+		}
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
 func newFindings(current, recorded map[string]int, where map[string][]int) []string {
 	var out []string
 	for k, n := range current {
-		if n > recorded[k] {
+		if n > recorded[k] && (recorded[k] > 0 || !shrunk(k, recorded)) {
 			p := strings.Split(k, "\x00")
 			out = append(out, fmt.Sprintf("%s [%s] %s (lines %v; %d, baseline %d)", p[0], p[1], p[2], where[k], n, recorded[k]))
 		}

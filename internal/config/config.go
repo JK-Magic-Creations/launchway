@@ -978,21 +978,9 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 			sp.Push = &source.PushSettings{BranchPrefix: p.Push.BranchPrefix, AllowDirect: p.Push.AllowDirect}
 		}
 		c.applyTriggers(p, &sp)
-		if pp := p.Pipeline; pp != nil {
-			sp.Pipeline = &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With,
-				Supersede: pp.Supersede}
-			sp.Pipeline.Lane = pp.Lane.source()
-			sp.Pipeline.Default = p.PipelineFrom
-			if t := pp.On.Push; t != nil {
-				sp.Pipeline.On.Push = &pipeline.PushTrigger{Branches: t.Branches, Tags: t.Tags}
-			}
-			prs, err := pp.On.pullRequests()
-			if err != nil {
-				return nil, fmt.Errorf("project %s: %w", p.Name, err)
-			}
-			if prs {
-				sp.Pipeline.On.PullRequest = &pipeline.PullRequestTrigger{}
-			}
+		var err error
+		if sp.Pipeline, err = p.sourcePipeline(); err != nil {
+			return nil, err
 		}
 		out = append(out, sp)
 	}

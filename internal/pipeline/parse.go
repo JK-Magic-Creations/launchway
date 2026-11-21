@@ -493,7 +493,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			case "if":
 				s.ifTest = ps.parseIf(v2, where)
 			case "message":
-				s.Message = strings.TrimSpace(ps.str(v2, where))
+				s.Message = strings.TrimSpace(ps.scalar(v2, where))
 			case "deployment":
 				s.Deployment = ps.str(v2, where)
 				s.deploymentLine = v2.Line
