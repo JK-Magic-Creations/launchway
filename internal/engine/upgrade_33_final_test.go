@@ -160,9 +160,12 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 		t.Fatalf("sealed while an older server was seen: %q", stillClear)
 	}
 	seen.Store(0)
+	// Done means the report says so: the last row is sealed a moment before the
+	// server folds the log, drops the old keys and lets go of the lease, and
+	// until then the state is "running", not "complete".
 	deadline := time.Now().Add(2 * time.Minute) // a small, shared build machine seals slowly
 	for time.Now().Before(deadline) {
-		if rep, err := s.Report(ctx); err == nil && rep.Remaining == 0 {
+		if rep, err := s.Report(ctx); err == nil && rep.Remaining == 0 && rep.Migration.State == "complete" {
 			break
 		}
 		time.Sleep(25 * time.Millisecond)
