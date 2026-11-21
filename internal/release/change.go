@@ -76,7 +76,7 @@ func Classify(c Change) (section, why string) {
 		return SecBreaking, "marked as breaking"
 	case hasLabel(c.Labels, "security") || typ == "security" || scope == "security":
 		return SecSecurity, "security"
-	case hasLabel(c.Labels, "dependencies", "deps", "dependency") || typ == "deps" || typ == "build" && strings.Contains(strings.ToLower(scope), "deps"):
+	case hasLabel(c.Labels, "dependencies", "deps", "dependency") || typ == "deps" || scope == "deps" || scope == "dependencies" || typ == "build" && strings.Contains(strings.ToLower(scope), "deps"):
 		return SecDeps, "a dependency change"
 	case hasLabel(c.Labels, "feature", "enhancement", "minor") || typ == "feat" || typ == "feature":
 		return SecFeature, "a feature"

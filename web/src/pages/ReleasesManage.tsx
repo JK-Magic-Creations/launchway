@@ -10,6 +10,7 @@ import { Chip, type Tone } from "../kit/Status";
 import { Button, EmptyState, PageHead, Sheet } from "../kit/layout";
 import { useNow } from "../live";
 import { onLink } from "../router";
+import { useCrumbLabel } from "../nav/crumbs";
 import { terms } from "../terms";
 import { releasesApi, type Cell, type Formation, type Measures, type Report } from "../releasesApi";
 import "../releases.css";
@@ -19,6 +20,7 @@ const HEALTH: Record<string, { tone?: Tone; word: string }> = { healthy: { tone:
 
 /** Release by Airfield: which version is where, since when, by whom and how it is, with what to promote next. */
 export function ReleaseMatrixPage() {
+  useCrumbLabel("Where each release is");
   const me = useMe();
   const now = useNow(15000);
   const data = useLoad(useCallback((b: boolean) => releasesApi.matrix(b), []), 10000);
@@ -85,6 +87,7 @@ const kindWord: Record<string, string> = { planned: "Planned", in_progress: "In 
 
 /** The calendar: what is planned, what is going on, what was done, and the freezes. */
 export function ReleaseCalendarPage() {
+  useCrumbLabel("Calendar");
   const me = useMe();
   const now = useNow(30000);
   const data = useLoad(useCallback((b: boolean) => releasesApi.calendar({}, b), []), 15000);
@@ -152,6 +155,7 @@ const MEMBER: Record<string, { tone?: Tone; word: string }> = { waiting: { word:
 
 /** Formations: releases of several projects promoted together in an explicit order. */
 export function ReleaseFormationsPage() {
+  useCrumbLabel("Formations");
   const me = useMe();
   const data = useLoad<Formation[]>(useCallback((b: boolean) => releasesApi.formations(b), []), 5000);
   const mx = useLoad(useCallback((b: boolean) => releasesApi.matrix(b), []), 0);
@@ -207,6 +211,7 @@ const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /** What shipped and how delivery went: the four measures, a chart of launches with its table, and each release's journey. */
 export function ReleaseReportPage() {
+  useCrumbLabel("Report");
   const [project, setProject] = useState("");
   const [days, setDays] = useState("90");
   const [t0] = useState(() => Date.now());

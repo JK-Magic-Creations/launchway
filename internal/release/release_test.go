@@ -138,6 +138,9 @@ func TestNotesAreGroupedAndLinked(t *testing.T) {
 	if strings.Contains(strings.Join(n.Contributors, ","), "dependabot") {
 		t.Error("a bot is not listed as a contributor")
 	}
+	if sec, _ := Classify(Change{Title: "chore(deps): bump x"}); sec != SecDeps {
+		t.Errorf("a conventional chore(deps) is a dependency change, not %s", sec)
+	}
 	if strings.Contains(link("x", "javascript:alert(1)"), "javascript") {
 		t.Error("only http(s) links")
 	}

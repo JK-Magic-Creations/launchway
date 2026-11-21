@@ -539,3 +539,57 @@ func runLaunch(t *testing.T, e *shipEnv, runID string) {
 		}
 	}
 }
+
+// Who may draft, publish, promote, override and freeze, for a project the people can read: a viewer reads and
+// does nothing else, an operator works with releases but cannot administer, an administrator can, and a person
+// with no right on the project is told it does not exist.
+func TestReleasePermissionsMatrix(t *testing.T) {
+	e := setupShip(t)
+	dana := e.signIn(t, "dana") // an operator of web only: pay-ship is another team's project
+	// A published release to act on, and a draft.
+	e.publishAs(t, "pay-ship", "7.0.0")
+	if r := e.otto.do("POST", e.url("/releases"), `{"version":"7.1.0","from":"main"}`); r.status != 201 {
+		t.Fatalf("draft: %d %s", r.status, r.body)
+	}
+	until := time.Now().Add(24 * time.Hour).UTC().Format(time.RFC3339)
+	type act struct{ name, method, path, body string }
+	acts := []act{
+		{"read a release", "GET", "/releases/7.0.0", ""},
+		{"read the matrix settings", "GET", "/release-settings", ""},
+		{"draft a release", "POST", "/releases", `{"version":"7.2.0","from":"main"}`},
+		{"edit a draft", "PATCH", "/releases/7.1.0", `{"title":"t"}`},
+		{"publish", "POST", "/releases/7.1.0/publish", `{}`},
+		{"promote", "POST", "/releases/7.0.0/promote", `{"airfield":"dev"}`},
+		{"withdraw", "POST", "/releases/7.0.0/yank", `{"reason":"r"}`},
+		{"change release settings", "PUT", "/release-settings", `{"scheme":"semver","tag_prefix":"v","changelog":"CHANGELOG.md"}`},
+		{"set a checklist", "PUT", "/release-gates/dev", `{}`},
+		{"freeze the project", "POST", "ROOT/api/v1/release-freezes", `{"project":"pay-ship","to":"` + until + `","reason":"x"}`},
+		{"freeze every project", "POST", "ROOT/api/v1/release-freezes", `{"to":"` + until + `","reason":"x"}`},
+	}
+	// Each person's expected answer: 0 means the permission check let it through (anything but 401, 403 and 404).
+	want := map[string][]int{
+		//            read  settings draft edit publish promote withdraw set   gate  freeze freeze-all
+		"vic":  {200, 200, 403, 403, 403, 403, 403, 403, 403, 403, 403},
+		"otto": {200, 200, 0, 0, 0, 0, 0, 403, 403, 403, 403},
+		"dana": {404, 404, 404, 404, 404, 404, 404, 404, 404, 403, 403},
+		"ada":  {200, 200, 0, 0, 0, 0, 0, 0, 0, 201, 201},
+	}
+	people := map[string]*browser{"vic": e.vic, "otto": e.otto, "dana": dana, "ada": e.ada}
+	for _, who := range []string{"vic", "otto", "dana", "ada"} {
+		for i, a := range acts {
+			url := e.url(a.path)
+			if strings.HasPrefix(a.path, "ROOT") {
+				url = e.srv.URL + strings.TrimPrefix(a.path, "ROOT")
+			}
+			got := people[who].do(a.method, url, a.body).status
+			w := want[who][i]
+			ok := got == w
+			if w == 0 {
+				ok = got != 401 && got != 403 && got != 404 && got < 500
+			}
+			if !ok {
+				t.Errorf("%s: %s gave %d, want %d (0: let through)", who, a.name, got, w)
+			}
+		}
+	}
+}

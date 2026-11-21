@@ -191,7 +191,11 @@ func (cl *client) releaseShow(args []string) error {
 		return cl.showJSON(view)
 	}
 	r, _ := view["release"].(map[string]any)
-	fmt.Fprintf(cl.out, "%s %s (%s)\n  commit %s  tag %s  built by run #%v\n", r["project"], r["version"], r["state"], str(r["sha"], 12), r["tag"], r["run_number"])
+	built := "no Sortie recorded"
+	if n := num(r["run_number"]); n > 0 {
+		built = fmt.Sprintf("Sortie #%.0f", n)
+	}
+	fmt.Fprintf(cl.out, "%s %s (%s)\n  commit %s  tag %s  built by %s\n", r["project"], r["version"], r["state"], str(r["sha"], 12), r["tag"], built)
 	if r["yank_reason"] != nil {
 		fmt.Fprintf(cl.out, "  withdrawn by %s: %s\n", r["yanked_by"], r["yank_reason"])
 	}
@@ -430,7 +434,7 @@ func (cl *client) upload(project, version, file, name string) error {
 	}
 	var a map[string]any
 	_ = json.Unmarshal(data, &a)
-	fmt.Fprintf(cl.out, "added %s (%v bytes, SHA-256 %s)\n", a["name"], a["size"], a["sha256"])
+	fmt.Fprintf(cl.out, "added %s (%.0f bytes, SHA-256 %s)\n", a["name"], num(a["size"]), a["sha256"])
 	return nil
 }
 
