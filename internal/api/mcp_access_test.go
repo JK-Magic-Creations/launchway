@@ -155,6 +155,8 @@ var mcpPermissionTable = map[string]mcpRow{
 	// Mirrors of hosted repositories. The matrix server has Git hosting off, so
 	// every call that is let through is answered feature_off, which is a not-found (the API's own
 	// answer, passed on); a role on the repository decides the rest.
+	"list_dependencies":   {map[string]any{"repository": "acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"preview_updates":     {map[string]any{"repository": "acme/x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"list_mirrors":        {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"set_mirror":          {map[string]any{"repository": "acme/x", "url": "https://git.example.com/x.git"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"sync_mirror":         {map[string]any{"repository": "acme/x", "mirror_id": "mir_x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
