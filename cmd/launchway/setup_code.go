@@ -10,6 +10,8 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/api"
 	"github.com/jk-magic-creations/launchway/internal/config"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
 // announceSetup makes sure a brand-new installation has its one-time setup
@@ -97,5 +99,13 @@ func signInFinding(cfg *config.Config) []string {
 	return []string{
 		"Sign-in: WARNING no sign-in. auth.mode is none on " + c.Listen + ", an address others can reach: anyone who can reach it can start pipelines (which run code on the runners) and approve deployments.",
 		"  Turn it on: open the page and choose \"Set up sign-in now\", or set auth.mode to local (built-in accounts, with a one-time setup code) or oidc. An upgrade never changes this by itself.",
+	}
+}
+
+// wireStarterRegistry tells the manager where the starters' image steps push: this server's own registry, unless
+// it cannot serve (no sign-in), then the registry the server names (registry.fallback), or none.
+func wireStarterRegistry(mgr *source.Manager, srv *api.Server, eff *config.Config) {
+	mgr.RegistryFacts = func() pipeline.RegistryFacts {
+		return pipeline.RegistryFacts{Usable: srv.BuiltinRegistryUsable(), Fallback: eff.Registry.Fallback}
 	}
 }
