@@ -87,8 +87,7 @@ steps:
     build_args:
       VERSION:  { run: short_sha }
       REVISION: { run: sha }    # org.opencontainers.image.revision = the commit, never "unknown"
-      # CREATED is left empty: there is no commit-time value yet, and a wall-clock time would make
-      # a rebuild a different image.
+      CREATED:  { run: commit_time }  # the commit's time, never the wall clock: a rebuild is the same image
     tags:
       # Immutable by registry rule; never latest. The tag is for people, the digest is what deploys.
       - { registry: harbor, repository: launchway/launchway, tag: { run: short_sha } }

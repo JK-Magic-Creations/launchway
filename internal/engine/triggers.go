@@ -69,6 +69,12 @@ func (e *Engine) checkNewRun(nr *NewRun) error {
 			return fmt.Errorf("%w: %v", ErrInvalid, err)
 		}
 	}
+	if nr.Trigger.CommitTime == "" {
+		if id, ok := p.UsesRunFact("commit_time"); ok {
+			return fmt.Errorf("%w: step %s uses { run: commit_time }, but this run has no commit to take the time from (it was started from %s)",
+				ErrInvalid, id, nonEmpty(nr.Trigger.Ref, "no ref"))
+		}
+	}
 	ev := nr.Trigger.Event
 	if (nr.Fire != nil) != (ev == pipeline.EventSchedule) {
 		return fmt.Errorf("%w: a run of event schedule is for one firing of a schedule, and only such a run is", ErrConflict)

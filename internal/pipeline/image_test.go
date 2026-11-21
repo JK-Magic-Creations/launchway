@@ -264,3 +264,23 @@ steps:
 		t.Fatalf("input in a template: %v", err)
 	}
 }
+
+func TestCommitTimeIsARunFact(t *testing.T) {
+	p, err := Parse([]byte(`pipeline: demo
+steps:
+  image:
+    kind: image
+    build_args: { CREATED: { run: commit_time } }
+    tags:
+      - { registry: harbor, repository: team/shop, tag: { run: short_sha } }
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id, ok := p.UsesRunFact("commit_time"); !ok || id != "image" {
+		t.Fatalf("UsesRunFact = %q, %v", id, ok)
+	}
+	if _, ok := p.UsesRunFact("tag"); ok {
+		t.Fatal("tag is not used")
+	}
+}

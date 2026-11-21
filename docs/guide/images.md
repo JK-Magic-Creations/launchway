@@ -18,7 +18,7 @@ steps:
     file: Dockerfile                  # default <context>/Dockerfile; relative to the workspace
     target: runtime                   # a stage of the Dockerfile; optional
     platforms: [linux/amd64, linux/arm64]   # optional; see below
-    build_args: { VERSION: { output: test.version }, COMMIT: { run: sha } }
+    build_args: { VERSION: { output: test.version }, COMMIT: { run: sha }, CREATED: { run: commit_time } }
     secrets:                          # RUN --mount=type=secret,id=npm_token in the Dockerfile
       - { id: npm_token, secret: { store: vault, key: ci/npm, field: token } }
     tags:
@@ -47,7 +47,7 @@ steps:
 |---|---|
 | `context`, `file`, `target` | What to build: a directory and a Dockerfile in the workspace, as earlier steps left it, and a stage. Neither may lead outside the workspace, through a symbolic link or otherwise |
 | `platforms` | `os/arch` values; default the builder's own. See *Several platforms* |
-| `build_args` | Values as for deploy steps: written in place, `{ output: step.key }`, `{ run: sha \| short_sha \| branch \| tag \| number }` or `{ input: name }`. They are recorded in the provenance: never put a secret in one |
+| `build_args` | Values as for deploy steps: written in place, `{ output: step.key }`, `{ run: sha \| short_sha \| branch \| tag \| number \| commit_time }` or `{ input: name }`. They are recorded in the provenance: never put a secret in one |
 | `secrets` | Build secrets by ID, read from the runner's secret stores like any step's secrets. They reach the build only as `RUN --mount=type=secret` mounts: never in a layer, the image's history, the provenance, the log (masked like any secret), an event or the database |
 | `tags` | Names to push under: a registry as the runner's configuration names it, a repository in it, and a tag (a value, as above) |
 | `push` | Default true. Pull-request and draft runs never push, whatever it says |

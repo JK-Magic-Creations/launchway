@@ -637,7 +637,8 @@ func (m *Manager) pullRequestsOn(ctx context.Context, p *project, refs []Ref) (b
 
 func trigger(r Ref, event, actor string) engine.Trigger {
 	return engine.Trigger{Event: event, Ref: r.FullRef(), Branch: branchOf(r), Tag: tagOf(r), SHA: r.SHA,
-		Actor: actor, Message: r.Subject, Author: r.Author}
+		CommitTime: engine.CommitTimeAt(r.CommittedAt / 1000),
+		Actor:      actor, Message: r.Subject, Author: r.Author}
 }
 
 func branchOf(r Ref) string {

@@ -52,7 +52,27 @@ type Value struct {
 }
 
 // RunFacts are the facts about a run a value may refer to.
-var RunFacts = []string{"sha", "short_sha", "branch", "tag", "number"}
+//
+// commit_time is the commit's committer time in UTC, as RFC 3339 with a Z and
+// whole seconds (2026-11-20T06:12:56Z). A run whose source gives no commit
+// has none, and a pipeline that uses it is refused when the run is created.
+var RunFacts = []string{"sha", "short_sha", "branch", "tag", "number", "commit_time"}
+
+// UsesRunFact returns the first step whose values refer to { run: fact }.
+func (p *Pipeline) UsesRunFact(fact string) (string, bool) {
+	for _, s := range p.Steps {
+		var vals []*Value
+		vals = append(vals, deployValues(s)...)
+		vals = append(vals, imageValues(s)...)
+		vals = append(vals, verifyValues(s)...)
+		for _, v := range vals {
+			if v != nil && v.Run == fact {
+				return s.ID, true
+			}
+		}
+	}
+	return "", false
+}
 
 // String writes the value as it was written.
 func (v *Value) String() string {

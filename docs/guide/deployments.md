@@ -57,7 +57,7 @@ steps:
 - **Pin by digest**: `digest: { output: image.digest }` in place of `tag:` writes
   `repository@sha256:…` (see [Container images](images.md)).
 - **Values** are written in place, or are `{ output: step.key }` (an output of a step this step
-  needs), `{ run: sha | short_sha | branch | tag | number }` or `{ input: name }` (a
+  needs), `{ run: sha | short_sha | branch | tag | number | commit_time }` or `{ input: name }` (a
   [run input](pipelines.md#run-inputs); `environment` may be `{ input: name }` too, of a choice input). There is
   no expression language.
 - **"Deployed" means**, in one observation: the revision Argo CD has synced, for the source from

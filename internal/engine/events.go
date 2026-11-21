@@ -3,6 +3,8 @@ package engine
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"strconv"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/policy"
@@ -349,14 +351,18 @@ func DraftHash(text string) string {
 
 // Trigger records why a run started.
 type Trigger struct {
-	Event   string `json:"event"`            // push, manual, draft or pull_request
-	Ref     string `json:"ref,omitempty"`    // refs/heads/main, or refs/pull/12/head
-	Branch  string `json:"branch,omitempty"` // main
-	Tag     string `json:"tag,omitempty"`
-	SHA     string `json:"sha,omitempty"`
-	Actor   string `json:"actor,omitempty"`
-	Message string `json:"message,omitempty"` // commit subject
-	Author  string `json:"author,omitempty"`
+	Event  string `json:"event"`            // push, manual, draft or pull_request
+	Ref    string `json:"ref,omitempty"`    // refs/heads/main, or refs/pull/12/head
+	Branch string `json:"branch,omitempty"` // main
+	Tag    string `json:"tag,omitempty"`
+	SHA    string `json:"sha,omitempty"`
+	// CommitTime is the commit's committer time, UTC, RFC 3339 with a Z and
+	// whole seconds. It is read when the run is created and kept in the run's
+	// creation event, so a re-run or a resume sees the same value.
+	CommitTime string `json:"commit_time,omitempty"`
+	Actor      string `json:"actor,omitempty"`
+	Message    string `json:"message,omitempty"` // commit subject
+	Author     string `json:"author,omitempty"`
 	// PullRequest is the pull request's number, for event pull_request.
 	PullRequest int `json:"pull_request,omitempty"`
 	// PullRequestInto is the branch the pull request targets, as the
@@ -372,6 +378,25 @@ type Trigger struct {
 	ScheduledFor int64  `json:"scheduled_for,omitempty"`
 	// Webhook, for event webhook, is the webhook trigger's name.
 	Webhook string `json:"webhook,omitempty"`
+}
+
+// CommitTimeAt formats a Unix time in the form of Trigger.CommitTime. Zero
+// (no time known) gives "".
+func CommitTimeAt(unix int64) string {
+	if unix <= 0 {
+		return ""
+	}
+	return time.Unix(unix, 0).UTC().Format(time.RFC3339)
+}
+
+// SourceDateEpoch is the commit time as Unix seconds, for reproducible
+// builds, or "" when the run has none.
+func (t Trigger) SourceDateEpoch() string {
+	ts, err := time.Parse(time.RFC3339, t.CommitTime)
+	if err != nil {
+		return ""
+	}
+	return strconv.FormatInt(ts.Unix(), 10)
 }
 
 // Context returns what step conditions are tested against.

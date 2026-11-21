@@ -510,7 +510,7 @@ steps:
     file: Dockerfile
     target: runtime
     platforms: [linux/amd64, linux/arm64]
-    build_args: { VERSION: { output: test.version }, COMMIT: { run: sha } }
+    build_args: { VERSION: { output: test.version }, COMMIT: { run: sha }, CREATED: { run: commit_time } }
     secrets:
       - { id: npm_token, secret: { store: vault, key: ci/npm, field: token } }
     tags:
@@ -1238,7 +1238,7 @@ Used by a deploy step's `version`, a change's `tag`, `digest` and `value`, an im
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `output` | `step.key` | | An output of a step this step needs (directly, for a deploy step), such as `{ output: build.tag }` |
-| `run` | text | | A fact about the run: `sha`, `short_sha`, `branch`, `tag` or `number` |
+| `run` | text | | A fact about the run: `sha`, `short_sha`, `branch`, `tag`, `number` or `commit_time` (the commit's committer time in UTC, such as `2026-11-20T06:12:56Z`; read when the run is created and kept for re-runs; a run with no commit has none, and a pipeline that uses it is refused) |
 | `input` | input name | | A run input of type `string`, `choice` or `number`. Not in a template |
 
 A deploy step's `environment` may be a mapping with one key:

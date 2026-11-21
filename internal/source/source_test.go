@@ -250,3 +250,13 @@ func gitHead(t *testing.T, repo string) string {
 	}
 	return string(out)
 }
+
+func TestTriggerCarriesTheCommitTime(t *testing.T) {
+	tr := trigger(Ref{Name: "main", Kind: "branch", SHA: "abc", CommittedAt: 1795155176000}, "push", "ann")
+	if tr.CommitTime != "2026-11-20T06:12:56Z" {
+		t.Fatalf("CommitTime = %q", tr.CommitTime)
+	}
+	if got := trigger(Ref{Name: "main", Kind: "branch", SHA: "abc"}, "push", "ann").CommitTime; got != "" {
+		t.Fatalf("no time known must stay empty, got %q", got)
+	}
+}

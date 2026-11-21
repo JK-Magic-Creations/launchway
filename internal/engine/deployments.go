@@ -548,6 +548,8 @@ func (c *cmd) resolve(def *pipeline.Step, v *pipeline.Value) (string, error) {
 			val = t.Tag
 		case "number":
 			val = strconv.Itoa(st.Number)
+		case "commit_time":
+			val = t.CommitTime
 		}
 		if val == "" {
 			return "", fmt.Errorf("the run has no %s (it was started from %s)", v.Run, nonEmpty(t.Ref, "no ref"))

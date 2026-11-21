@@ -130,6 +130,12 @@ func (c *cmd) stepEnv(stepID string) []InputVar {
 	} {
 		vars[k] = InputVar{Name: k, Value: v, From: FromLaunchway}
 	}
+	if t.CommitTime != "" {
+		vars["LAUNCHWAY_COMMIT_TIME"] = InputVar{Name: "LAUNCHWAY_COMMIT_TIME", Value: t.CommitTime, From: FromLaunchway}
+		if sde := t.SourceDateEpoch(); sde != "" {
+			vars["SOURCE_DATE_EPOCH"] = InputVar{Name: "SOURCE_DATE_EPOCH", Value: sde, From: FromLaunchway}
+		}
+	}
 	if t.Event == pipeline.EventPullRequest {
 		vars["LAUNCHWAY_PULL_REQUEST"] = InputVar{Name: "LAUNCHWAY_PULL_REQUEST", Value: strconv.Itoa(t.PullRequest), From: FromLaunchway}
 		if t.PullRequestInto != "" {
