@@ -504,7 +504,7 @@ func Build(ctx context.Context, cfg *Config, req Request) (*Result, error) {
 			if err != nil {
 				return res, err
 			}
-			refs, err := r.push(ctx, root, k.Repository, byRepo[k])
+			refs, err := r.push(ctx, root, k.Repository, byRepo[k], log)
 			if err != nil {
 				return res, err
 			}

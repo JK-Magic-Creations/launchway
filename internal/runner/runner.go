@@ -206,14 +206,45 @@ func (r *Runner) Health() http.Handler {
 // be ready.
 const readyWithin = 2 * time.Minute
 
-// logBuffer batches lines and sends them every few hundred milliseconds.
+// logBuffer batches lines for the next flush. Its size is bounded: when the
+// server cannot keep up with a step that prints very fast, the step waits a
+// little at the pipe (backpressure) instead of the runner holding without
+// limit what it has not delivered. The wait is short and then the line is
+// kept anyway, so a step is slowed, never stopped, and no line is lost.
 type logBuffer struct {
 	mu    sync.Mutex
+	cond  *sync.Cond
 	lines []engine.LogLine
+}
+
+const (
+	// logBufferMax is how many undelivered lines a step may hold before its
+	// output waits for a flush.
+	logBufferMax = 50_000
+	// logBufferWait is the longest such a wait lasts.
+	logBufferWait = 2 * time.Second
+	// logFlushEvery is how often a step's waiting lines are sent: a line
+	// reaches the server within about this time.
+	logFlushEvery = 150 * time.Millisecond
+)
+
+func newLogBuffer() *logBuffer {
+	b := &logBuffer{}
+	b.cond = sync.NewCond(&b.mu)
+	return b
 }
 
 func (b *logBuffer) add(stream, text string) {
 	b.mu.Lock()
+	if len(b.lines) >= logBufferMax {
+		// Wait for a flush, but not for long (and not forever if none runs).
+		t := time.AfterFunc(logBufferWait, func() { b.mu.Lock(); b.cond.Broadcast(); b.mu.Unlock() })
+		start := time.Now()
+		for len(b.lines) >= logBufferMax && time.Since(start) < logBufferWait {
+			b.cond.Wait()
+		}
+		t.Stop()
+	}
 	b.lines = append(b.lines, engine.LogLine{At: time.Now().UnixMilli(), Stream: stream, Text: text})
 	b.mu.Unlock()
 }
@@ -224,6 +255,10 @@ func (b *logBuffer) take(max int) []engine.LogLine {
 	n := min(len(b.lines), max)
 	out := append([]engine.LogLine(nil), b.lines[:n]...)
 	b.lines = b.lines[n:]
+	if len(b.lines) == 0 {
+		b.lines = nil
+	}
+	b.cond.Broadcast()
 	return out
 }
 
@@ -249,7 +284,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 		cancel()
 	}
 
-	logs := &logBuffer{}
+	logs := newLogBuffer()
 	sp := r.newSpool(job)
 	r.spoolActive.add(job.LeaseID)
 	defer r.spoolActive.done(job.LeaseID)
@@ -302,7 +337,7 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	go func() {
 		defer close(bgDone)
 		hb := time.NewTicker(max(job.LeaseTTL.D()/3, time.Second))
-		fl := time.NewTicker(300 * time.Millisecond)
+		fl := time.NewTicker(logFlushEvery)
 		defer hb.Stop()
 		defer fl.Stop()
 		for {
@@ -531,7 +566,11 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	for _, name := range short {
 		sys("%s has a value, or a line of one, shorter than %d characters; it is not masked in the output", name, secrets.MinMaskLen)
 	}
-	env := make(map[string]string, len(job.Env)+len(values))
+	env := make(map[string]string, len(job.Env)+len(values)+1)
+	// A step's output is not a terminal, so Python would hold it back in a
+	// block buffer and a person would see nothing for minutes. The step's
+	// own environment may set it back.
+	env["PYTHONUNBUFFERED"] = "1"
 	maps.Copy(env, job.Env)
 	maps.Copy(env, values)
 
@@ -555,7 +594,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	spec := executor.Spec{
 		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
 		Name: "launchway-" + job.LeaseID, Image: job.Image, Script: job.Script, Env: env,
-		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask, AsksResources: job.ResourcesAsked,
+		Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask, Hold: mask.Hold, AsksResources: job.ResourcesAsked,
 	}
 	caches := r.newCacheRun(job, spec, sys)
 	collect := r.collector(job, spec, sys, caches)

@@ -13,6 +13,7 @@ import { Band } from "../kit/layout";
 import { Icon } from "../kit/Icon";
 import { failing } from "./Tests";
 import { terms } from "../terms";
+import { RunEstimateLine } from "./Estimate";
 
 /** How much of a run's detail shows: the summary, or everything the page knows. Engineers set it once. */
 export type Density = "summary" | "everything";
@@ -70,6 +71,7 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
             <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
           </div>
           <p className="sentence" aria-live="polite">{runSentence(run, now)}{run.status === "failed" && <> <LearnLink to={EXPLAIN.stopped} /></>}</p>
+          <RunEstimateLine run={run} now={now} />
         </div>
         <div className="acts">
           <DensityToggle value={density} onChange={onDensity} />

@@ -7,9 +7,8 @@ import { shownStatus } from "./ui";
 import { whyWaiting } from "./whyWaiting";
 
 /** The state a step is drawn in on the line. A deploy step that waits for what runners observe is at work. */
-function lineState(s: StepView): State {
+export function lineState(s: StepView): State {
   if (s.status === "failed" && s.allowed_failure) return "skip";
-  if (s.status === "queued" || s.status === "leased") return "idle";
   return stateOf(shownStatus(s));
 }
 

@@ -112,7 +112,7 @@ func (d *DeployRunner) verify(parent context.Context, job *engine.Job) {
 		mu.Unlock()
 		cancel()
 	}
-	logs := &logBuffer{}
+	logs := newLogBuffer()
 	sys := func(format string, args ...any) { logs.add("system", fmt.Sprintf(format, args...)) }
 	flush := func() {
 		for {

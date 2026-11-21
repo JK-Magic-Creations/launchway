@@ -1,7 +1,6 @@
 package imagebuild
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -12,7 +11,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -20,7 +18,6 @@ import (
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/secrets/secretsprovider"
-	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/tonistiigi/fsutil"
 	"golang.org/x/sync/errgroup"
 )
@@ -214,58 +211,22 @@ func (b *builder) solve(ctx context.Context, req solveRequest) (*solveStats, err
 
 	ch := make(chan *client.SolveStatus)
 	stats := &solveStats{}
-	pr, pw := io.Pipe()
-	var lines sync.WaitGroup
 	var cacheFailed atomic.Bool
-	lines.Add(1)
-	go func() {
-		defer lines.Done()
-		sc := bufio.NewScanner(pr)
-		sc.Buffer(make([]byte, 64*1024), 1024*1024)
-		for sc.Scan() {
-			line := sc.Text()
-			req.log(line)
-			if cacheTrouble(line) {
-				cacheFailed.Store(true)
-			}
+	// Every line goes out as the builder reports it (see progressPrinter).
+	pp := newProgressPrinter(func(line string) {
+		if cacheTrouble(line) {
+			cacheFailed.Store(true)
 		}
-		_, _ = io.Copy(io.Discard, pr)
-	}()
-	display, err := progressui.NewDisplay(pw, progressui.PlainMode)
-	if err != nil {
-		return nil, err
-	}
+		req.log(line)
+	})
 	g, gctx := errgroup.WithContext(ctx)
 	var solveErr error
 	g.Go(func() error {
 		_, solveErr = b.c.Solve(gctx, nil, opt, ch)
 		return nil
 	})
-	g.Go(func() error {
-		counted := map[string]bool{}
-		mid := make(chan *client.SolveStatus)
-		go func() {
-			defer close(mid)
-			for s := range ch {
-				for _, v := range s.Vertexes {
-					if v.Completed != nil && !counted[v.Digest.String()] && !strings.HasPrefix(v.Name, "[internal]") &&
-						!strings.HasPrefix(v.Name, "[auth]") && strings.HasPrefix(v.Name, "[") {
-						counted[v.Digest.String()] = true
-						stats.steps++
-						if v.Cached {
-							stats.cached++
-						}
-					}
-				}
-				mid <- s
-			}
-		}()
-		_, err := display.UpdateFrom(context.Background(), mid)
-		pw.Close()
-		return err
-	})
+	g.Go(func() error { drainProgress(ch, pp, stats); return nil })
 	_ = g.Wait()
-	lines.Wait()
 	if cacheFailed.Load() {
 		req.log("Image cache: the build output above mentions a cache that could not be read or written. The build is not affected: a cache that cannot be read is skipped, and a failed export is ignored (ignore-error), so this run's layers may not be there for the next one.")
 	}
@@ -387,4 +348,34 @@ func containsAll(have, want []string) bool {
 // cleanDockerfile splits a Dockerfile path into its directory and name.
 func cleanDockerfile(path string) (dir, name string) {
 	return filepath.Dir(path), filepath.Base(path)
+}
+
+// drainProgress prints each progress event as it arrives, and counts the
+// build's steps and cache hits, until ch is closed.
+func drainProgress(ch <-chan *client.SolveStatus, pp *progressPrinter, stats *solveStats) {
+	counted := map[string]bool{}
+	tick := time.NewTicker(partialAfter / 2)
+	defer tick.Stop()
+	for {
+		select {
+		case s, ok := <-ch:
+			if !ok {
+				pp.Close()
+				return
+			}
+			for _, v := range s.Vertexes {
+				if v.Completed != nil && !counted[v.Digest.String()] && !strings.HasPrefix(v.Name, "[internal]") &&
+					!strings.HasPrefix(v.Name, "[auth]") && strings.HasPrefix(v.Name, "[") {
+					counted[v.Digest.String()] = true
+					stats.steps++
+					if v.Cached {
+						stats.cached++
+					}
+				}
+			}
+			pp.Update(s)
+		case <-tick.C:
+			pp.Tick(pp.now())
+		}
+	}
 }

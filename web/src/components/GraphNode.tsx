@@ -1,5 +1,6 @@
 import type { StepView } from "../api";
 import { elapsed } from "../format";
+import { approx } from "../estimate";
 import { groupStatus, nodeName, type RNode } from "../graph/model";
 import { terms } from "../terms";
 import { ImageIcon } from "./Images";
@@ -17,9 +18,13 @@ export function stepSub(s: StepView, now: number, phases?: Record<string, string
   switch (s.status) {
     case "skipped": return `Skipped: ${lowerFirst(stepLabel(s)).replace(/^skipped$/, "not needed")}`;
     case "pending": return "Not started";
-    case "queued": return terms().say("Waiting for a {runner}");
+    case "queued": return s.attempt > 1 && s.failure_cause === "infrastructure" ? terms().say(`Retrying on another {runner}, attempt ${s.attempt}`) : terms().say("Waiting for a {runner}");
     case "leased": return `Starting${t}`;
-    case "running": return `${statusLabel("running")}${t}`;
+    case "running": {
+      const e = s.estimate;
+      const of = e?.enough && e.typical_ms ? ` of about ${approx(e.typical_ms)}` : "";
+      return `${statusLabel("running")}${t}${of}`;
+    }
     case "succeeded":
       return s.kind === "approval" ? `${terms().say("{clearance}")} from ${s.decided_by}` : `Passed${t}`;
     case "failed":

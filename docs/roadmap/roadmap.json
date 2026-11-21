@@ -20,6 +20,12 @@
     },
     {
       "theme": "Pipelines",
+      "title": "Watching a run live, with time estimates",
+      "value": "Output reaches the page within about a second, image builds print each step as the builder reports it, and each step and run shows how long it usually takes from earlier runs of the same pipeline, with the time left along the longest path.",
+      "link": "guide/watching-runs"
+    },
+    {
+      "theme": "Pipelines",
       "title": "Build caches",
       "value": "Dependencies kept between runs in the database, with entries a pull request can write but the default branch never reads.",
       "link": "guide/build-caches"

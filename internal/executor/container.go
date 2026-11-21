@@ -114,8 +114,8 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	}
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go pipeLines(stdout, "stdout", s.Mask, out, &wg)
-	go pipeLines(stderr, "stderr", s.Mask, out, &wg)
+	go pipeLines(stdout, "stdout", s.Mask, s.Hold, out, &wg)
+	go pipeLines(stderr, "stderr", s.Mask, s.Hold, out, &wg)
 
 	done := make(chan error, 1)
 	go func() {

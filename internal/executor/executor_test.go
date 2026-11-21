@@ -2,6 +2,9 @@ package executor
 
 import (
 	"context"
+	"io"
+
+	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"os"
 	"os/exec"
 	"strings"
@@ -129,7 +132,7 @@ func TestMaskingSurvivesLineSplit(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	mask := func(s string) string { return strings.ReplaceAll(s, secret, "***") }
-	pipeLines(strings.NewReader(line+"\nafter "+secret+"\r\n"), "stdout", mask, c.sink, &wg)
+	pipeLines(strings.NewReader(line+"\nafter "+secret+"\r\n"), "stdout", mask, nil, c.sink, &wg)
 	wg.Wait()
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -201,5 +204,67 @@ func TestRemovable(t *testing.T) {
 		if got := removable(c.info, c.known, c.mine, 30*time.Minute); got != c.want {
 			t.Errorf("%+v known %v mine %v: got %v", c.info, c.known, c.mine, got)
 		}
+	}
+}
+
+// A pipe the test writes to at chosen moments.
+func TestPartialLineAppearsWithoutNewline(t *testing.T) {
+	pr, pw := io.Pipe()
+	var c capture
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go pipeLines(pr, "stdout", nil, nil, c.sink, &wg)
+	start := time.Now()
+	_, _ = pw.Write([]byte("downloading 45%"))
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		c.mu.Lock()
+		n := len(c.lines)
+		c.mu.Unlock()
+		if n == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("text without a newline did not appear")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if d := time.Since(start); d > 1500*time.Millisecond {
+		t.Fatalf("took %s", d)
+	}
+	_, _ = pw.Write([]byte("\nnext\n")) // the newline adds no empty line
+	pw.Close()
+	wg.Wait()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if strings.Join(c.lines, "|") != "stdout: downloading 45%|stdout: next" {
+		t.Fatalf("got %q", c.lines)
+	}
+}
+
+func TestPartialLineNeverCutsASecret(t *testing.T) {
+	const secret = "SECRET-VALUE"
+	m, _ := secrets.NewMasker(map[string]string{"S": secret})
+	pr, pw := io.Pipe()
+	var c capture
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go pipeLines(pr, "stdout", m.Mask, m.Hold, c.sink, &wg)
+	_, _ = pw.Write([]byte("token is SECRET-"))
+	time.Sleep(3 * partialIdle) // the start of the secret waits
+	c.mu.Lock()
+	for _, l := range c.lines {
+		if strings.Contains(l, "SECRET") {
+			t.Fatalf("the start of a secret was shown: %q", l)
+		}
+	}
+	c.mu.Unlock()
+	_, _ = pw.Write([]byte("VALUE here\n"))
+	pw.Close()
+	wg.Wait()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if got := strings.Join(c.lines, "|"); strings.Contains(got, "SECRET") || !strings.Contains(got, "***") {
+		t.Fatalf("got %q", got)
 	}
 }

@@ -58,6 +58,9 @@ type RunSummary struct {
 	CancelReason       string `json:"cancel_reason,omitempty"`
 	SupersededBy       string `json:"superseded_by,omitempty"`
 	SupersededByNumber int    `json:"superseded_by_number,omitempty"`
+	// Estimate is the time left of a running run in a list; the run's own
+	// page carries the full estimate.
+	Estimate *RunEstimate `json:"estimate,omitempty"`
 	// DeadlineAt is when the run's timeout will cancel it (Unix ms; schema
 	// 24); 0 when it has none, or it is paused (an approval waits) or over.
 	DeadlineAt int64 `json:"deadline_at,omitempty"`
@@ -160,6 +163,8 @@ type StepView struct {
 	// WaitKind, for a waiting deploy or rollback step, is what it waits
 	// for: lock or observe. Empty for an approval.
 	WaitKind string `json:"wait_kind,omitempty"`
+	// Estimate is what the step usually takes, from earlier runs.
+	Estimate *StepEstimate `json:"estimate,omitempty"`
 	// Environment and Deployment come from a deploy, rollback or verify
 	// step's definition (a verify step watching a deployment has its
 	// environment).
@@ -244,6 +249,8 @@ type RunDetail struct {
 	// Restriction says the run is restricted (a pull request from an
 	// automation account or a fork), and whether a maintainer approved it.
 	Restriction *Restriction `json:"restriction,omitempty"`
+	// Estimate is what the run is expected to take, or took.
+	Estimate *RunEstimate `json:"estimate,omitempty"`
 }
 
 // RunPolicySummary sums up a run's policy decisions.
@@ -451,6 +458,7 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 	if err := e.attachBriefs(out); err != nil {
 		return nil, err
 	}
+	e.listEstimates(out)
 	if out == nil {
 		out = []*RunSummary{}
 	}
@@ -730,6 +738,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	d.Resume = st.resumeAdvice()
 	d.Actions = st.runActions()
 	d.Rollback = st.rollbackView()
+	e.attachEstimates(d)
 	if d.RolledBackBy, err = e.rolledBackBy(id); err != nil {
 		return nil, err
 	}

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -167,9 +168,26 @@ type pushedRef struct {
 
 // pushIndex writes an index (or single image) to each tag, in order. The
 // blobs go once per repository.
-func (r *remoteRegistry) push(ctx context.Context, t remote.Taggable, repo string, tags []string) ([]pushedRef, error) {
+func (r *remoteRegistry) push(ctx context.Context, t remote.Taggable, repo string, tags []string, log func(string)) ([]pushedRef, error) {
 	var out []pushedRef
 	opts := r.options(ctx)
+	if log != nil {
+		// One summary line, at most once a second: not a line per update.
+		ch := make(chan v1.Update, 32)
+		opts = append(opts, remote.WithProgress(ch))
+		done := make(chan struct{})
+		defer func() { <-done }()
+		go func() {
+			defer close(done)
+			var last time.Time
+			for u := range ch {
+				if u.Total > 0 && u.Complete < u.Total && time.Since(last) >= statusEvery {
+					last = time.Now()
+					log(fmt.Sprintf("Pushing %s/%s: %s / %s", r.cfg.Host, repo, bytesText(u.Complete), bytesText(u.Total)))
+				}
+			}
+		}()
+	}
 	for i, tg := range tags {
 		ref, err := r.tag(repo, tg)
 		if err != nil {

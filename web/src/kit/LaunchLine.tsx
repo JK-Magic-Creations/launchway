@@ -6,7 +6,7 @@ export interface LineStation { key: string; label: string; state: State; detail?
 
 /** A station that stands for several steps: how many, how many can run at the same time, how each is doing. */
 export interface Parallel {
-  total: number; together: number; done: number; running: number; waiting: number; failed: number; skipped: number; idle: number;
+  total: number; together: number; done: number; running: number; holding?: number; waiting: number; failed: number; skipped: number; idle: number;
   steps: { id: string; state: string }[];
 }
 
@@ -17,7 +17,7 @@ export function toStations(list: { key: string; label: string; state: string; de
 
 /** "3 at once: 2 passed, 1 running": what a station made of several steps is doing, in words. */
 export function parallelText(p: Parallel): string {
-  const parts = ([[p.done, "passed"], [p.running, "running"], [p.waiting, "waiting for a person"], [p.failed, "failed"], [p.skipped, "skipped"], [p.idle, "not started"]] as const)
+  const parts = ([[p.done, "passed"], [p.running, "running"], [p.holding ?? 0, "holding for a runner"], [p.waiting, "waiting for a person"], [p.failed, "failed"], [p.skipped, "skipped"], [p.idle, "not started"]] as const)
     .filter(([n]) => n > 0).map(([n, w]) => `${n} ${w}`);
   const head = p.together >= p.total ? `${p.total} at once` : p.together > 1 ? `${p.total} steps, ${p.together} at once` : `${p.total} steps in a row`;
   return `${head}: ${parts.join(", ")}`;
@@ -48,7 +48,7 @@ export function LaunchLine({ stations, big, compact, selected, onSelect, label }
             <span className="visually-hidden">{`${s.label}: ${WORDS[s.state]}${s.detail ? ". " + s.detail : ""}${s.parallel ? ". " + parallelText(s.parallel) : ""}${i === at && s.state !== "idle" ? " (now)" : ""}`}</span>
           </>
         );
-        const c = `ls ${s.state}${i === stations.length - 1 && s.state === "ok" ? " last" : ""}`;
+        const c = `ls ${s.state === "hold" ? "idle hold" : s.state}${i === stations.length - 1 && s.state === "ok" ? " last" : ""}`;
         return onSelect
           ? <button key={s.key} type="button" className={c} aria-pressed={selected === s.key} onClick={() => onSelect(s.key)}>{inner}</button>
           : <div key={s.key} className={c} role="listitem">{inner}</div>;
@@ -57,13 +57,14 @@ export function LaunchLine({ stations, big, compact, selected, onSelect, label }
   );
 }
 
-const WORDS: Record<State, string> = { ok: "passed", bad: "failed", warn: "needs a look", wait: "waiting for a person", run: "running", idle: "not yet", skip: "skipped" };
+const WORDS: Record<State, string> = { ok: "passed", bad: "failed", warn: "needs a look", wait: "waiting for a person", run: "running", hold: "holding, waiting for a runner", idle: "not yet", skip: "skipped" };
 
 function pin(state: State) {
   switch (state) {
     case "ok": return <Icon name="check" />;
     case "bad": return <Icon name="x" />;
     case "wait": return <Icon name="pause" />;
+    case "hold": return <Icon name="clock" />;
     case "run": return <span className="st run spinner" aria-hidden="true" />;
     default: return null;
   }

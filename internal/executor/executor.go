@@ -3,7 +3,7 @@
 package executor
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
 // Spec is one step attempt to execute.
@@ -34,6 +35,9 @@ type Spec struct {
 	// Mask, if set, hides secret values in stdout and stderr. It is applied
 	// to whole lines, before long lines are split.
 	Mask func(string) string
+	// Hold, if set, says how many bytes at the end of text without a
+	// newline could be the start of a secret (see secrets.Masker.Hold).
+	Hold func(string) int
 	// AsksResources says that this step wrote resources of its own. An
 	// executor that cannot limit anything refuses such a step rather than
 	// ignore it; for a step that asks for nothing it only says that the
@@ -223,15 +227,24 @@ const (
 	maxMaskedLine = 1024 * 1024
 )
 
+// partialIdle is how long output without a newline waits before it is sent
+// on as it is: a progress bar or a prompt that never ends its line still
+// shows. The rest of such a line, when it comes, is sent as a line of its
+// own.
+var partialIdle = 250 * time.Millisecond
+
 // pipeLines copies r to out line by line, masking each line and splitting
 // lines longer than maxLine. A line is masked whole before it is split, so a
 // split never cuts a secret in two. A line longer than maxMaskedLine is
 // masked in pieces of that size, so a secret that straddles a piece boundary
 // in such a line is not masked; ordinary output never has lines that long.
-func pipeLines(r io.Reader, stream string, mask func(string) string, out Sink, wg *sync.WaitGroup) {
+//
+// Output is sent on as it is read, not when a buffer fills. Text without a
+// newline that stays idle for partialIdle is sent too, except for its end
+// when that could be the start of a secret (hold says how many bytes): those
+// wait for more text, so a secret is never cut in two.
+func pipeLines(r io.Reader, stream string, mask func(string) string, hold func(string) int, out Sink, wg *sync.WaitGroup) {
 	defer wg.Done()
-	br := bufio.NewReaderSize(r, maxLine)
-	var buf []byte
 	emit := func(s string) {
 		if mask != nil {
 			s = mask(s)
@@ -242,18 +255,75 @@ func pipeLines(r io.Reader, stream string, mask func(string) string, out Sink, w
 		}
 		out(stream, s)
 	}
-	for {
-		chunk, isPrefix, err := br.ReadLine()
-		buf = append(buf, chunk...)
-		if err == nil && (!isPrefix || len(buf) >= maxMaskedLine) {
-			emit(strings.TrimRight(string(buf), "\r"))
-			buf = buf[:0]
-		}
-		if err != nil {
-			if len(buf) > 0 {
-				emit(string(buf))
+	chunks := make(chan []byte, 16)
+	go func() {
+		defer close(chunks)
+		for {
+			b := make([]byte, 32*1024)
+			n, err := r.Read(b)
+			if n > 0 {
+				chunks <- b[:n]
 			}
-			return
+			if err != nil {
+				return
+			}
+		}
+	}()
+	var pending []byte
+	// whole: the text of the line so far was sent as it was (idle), so a
+	// newline that now ends it does not add an empty line.
+	whole := false
+	idle := time.NewTimer(time.Hour)
+	idle.Stop()
+	defer idle.Stop()
+	for {
+		select {
+		case c, ok := <-chunks:
+			if !ok {
+				if len(pending) > 0 {
+					emit(strings.TrimRight(string(pending), "\r"))
+				}
+				return
+			}
+			pending = append(pending, c...)
+			for {
+				i := bytes.IndexByte(pending, '\n')
+				if i < 0 {
+					if len(pending) >= maxMaskedLine {
+						emit(string(pending))
+						pending = pending[:0]
+					}
+					break
+				}
+				if line := strings.TrimRight(string(pending[:i]), "\r"); line != "" || !whole {
+					emit(line)
+				}
+				whole = false
+				pending = pending[i+1:]
+			}
+			if len(pending) == 0 {
+				pending = nil
+				idle.Stop()
+			} else {
+				idle.Reset(partialIdle)
+			}
+		case <-idle.C:
+			n := len(pending)
+			if hold != nil {
+				n -= hold(string(pending))
+			}
+			// Do not cut a multi-byte character.
+			for n > 0 && n < len(pending) && !utf8.RuneStart(pending[n]) {
+				n--
+			}
+			if n > 0 {
+				emit(string(pending[:n]))
+				whole = n == len(pending)
+				pending = append([]byte(nil), pending[n:]...)
+			}
+			if len(pending) > 0 {
+				idle.Reset(partialIdle)
+			}
 		}
 	}
 }

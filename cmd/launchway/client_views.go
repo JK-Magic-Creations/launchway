@@ -7,18 +7,19 @@ import (
 )
 
 type runView struct {
-	ID         string `json:"id"`
-	Project    string `json:"project"`
-	Number     int    `json:"number"`
-	Status     string `json:"status"`
-	Event      string `json:"event"`
-	Branch     string `json:"branch"`
-	Tag        string `json:"tag"`
-	SHA        string `json:"sha"`
-	Actor      string `json:"actor"`
-	Message    string `json:"message"`
-	CreatedAt  int64  `json:"created_at"`
-	FinishedAt int64  `json:"finished_at"`
+	Estimate   *engine.RunEstimate `json:"estimate"`
+	ID         string              `json:"id"`
+	Project    string              `json:"project"`
+	Number     int                 `json:"number"`
+	Status     string              `json:"status"`
+	Event      string              `json:"event"`
+	Branch     string              `json:"branch"`
+	Tag        string              `json:"tag"`
+	SHA        string              `json:"sha"`
+	Actor      string              `json:"actor"`
+	Message    string              `json:"message"`
+	CreatedAt  int64               `json:"created_at"`
+	FinishedAt int64               `json:"finished_at"`
 	// CancelReason says why a run was canceled when not by hand, such as
 	// "run timeout of 2h reached"; DeadlineAt is when its timeout cancels it.
 	CancelReason string `json:"cancel_reason"`
@@ -45,13 +46,14 @@ type runView struct {
 	// Levels are the stages: the step IDs grouped by dependency depth; the steps of one run together.
 	Levels   [][]string `json:"levels"`
 	StepList []struct {
-		ID       string            `json:"id"`
-		Status   string            `json:"status"`
-		Attempt  int               `json:"attempt"`
-		Error    string            `json:"error"`
-		Reason   string            `json:"reason"`
-		Cause    *engine.StepCause `json:"cause"`
-		ExitCode *int              `json:"exit_code"`
+		Estimate *engine.StepEstimate `json:"estimate"`
+		ID       string               `json:"id"`
+		Status   string               `json:"status"`
+		Attempt  int                  `json:"attempt"`
+		Error    string               `json:"error"`
+		Reason   string               `json:"reason"`
+		Cause    *engine.StepCause    `json:"cause"`
+		ExitCode *int                 `json:"exit_code"`
 		// AllowedFailure: failed, and its pipeline allows that.
 		AllowedFailure bool `json:"allowed_failure"`
 		// NotBefore is when a retry that waits is handed to a runner;
@@ -113,4 +115,17 @@ type cacheView struct {
 		Label string `json:"label"`
 		Value string `json:"value"`
 	} `json:"key_parts"`
+}
+
+// usualNote is what a step that has not finished usually takes, for runs show.
+func usualNote(e *engine.StepEstimate, runStatus, stepStatus string) string {
+	switch stepStatus {
+	case "running", "queued", "pending", "leased":
+	default:
+		return ""
+	}
+	if u := e.Usual(); u != "" && !terminal(runStatus) {
+		return " [" + u + "]"
+	}
+	return ""
 }

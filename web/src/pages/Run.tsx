@@ -14,6 +14,8 @@ import { useNow, useStream } from "../live";
 import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
+import { StepTimingLine } from "../components/Estimate";
+import { useStepLog } from "../useStepLog";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill, shownStatus, stepLabel } from "../components/ui";
 import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, phaseLabel, verdictLabel } from "../components/Deployment";
 import { TemplateFacts } from "../components/Libraries";
@@ -82,6 +84,8 @@ export function RunPage({ id }: { id: string }) {
   const changeDensity = useCallback((d: Density) => { setDensity(d); saveDensity(d); }, []);
   const [busy, setBusy] = useState(false);
   const [actionErr, setActionErr] = useState<unknown>(null);
+  const estimateTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(estimateTimer.current), []);
   const logSink = useRef<((step: string, attempt: number, lines: LogLine[]) => void) | null>(null);
   const [covBadge, setCovBadge] = useState<{ run: string; text: string; bad: boolean } | null>(null);
   const [htmlCount, setHtmlCount] = useState<{ run: string; n: number } | null>(null);
@@ -139,6 +143,9 @@ export function RunPage({ id }: { id: string }) {
     },
     step: (d) => {
       updated();
+      // What is left to do changes when a step starts or ends: ask for the estimate again, once for a burst.
+      window.clearTimeout(estimateTimer.current);
+      estimateTimer.current = window.setTimeout(() => load(true), 1200);
       const s = d as StepView;
       setRun((prev) => {
         if (!prev) return prev;
@@ -162,7 +169,7 @@ export function RunPage({ id }: { id: string }) {
       const b = d as { step: string; attempt: number; lines: LogLine[] };
       logSink.current?.(b.step, b.attempt, b.lines);
     },
-  }, () => load(true));
+  }, () => { load(true); logSink.current?.("", 0, []); });
 
   // What the Coverage and Reports tabs hold, for their badges: asked for
   // only when the pipeline declares them, again as steps end.
@@ -443,8 +450,6 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   showPolicy: () => void;
 }) {
   const [attempt, setAttempt] = useState(step.attempt);
-  const [lines, setLines] = useState<LogLine[]>([]);
-  const [loaded, setLoaded] = useState(false);
   const following = attempt === step.attempt;
   // The what-went-wrong panel above shows the last lines of the first failed step.
   const excerptInPanel = run.status === "failed" && run.step_list.find((x) => x.status === "failed")?.id === step.id;
@@ -452,36 +457,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   // Follow the newest attempt when a retry starts.
   useEffect(() => { setAttempt(step.attempt); }, [step.id, step.attempt]);
 
-  useEffect(() => {
-    let alive = true;
-    setLines([]); setLoaded(false);
-    if (attempt < 1) { setLoaded(true); return; }
-    (async () => {
-      let after = 0;
-      let all: LogLine[] = [];
-      for (;;) {
-        const r = await api.logs(run.id, step.id, attempt, after).catch(() => null);
-        if (!alive || !r) break;
-        all = all.concat(r.lines);
-        if (r.lines.length < 5000) break;
-        after = r.lines[r.lines.length - 1].seq;
-      }
-      if (alive) { setLines(all); setLoaded(true); }
-    })();
-    return () => { alive = false; };
-  }, [run.id, step.id, attempt]);
-
-  useEffect(() => {
-    sink.current = (s, a, incoming) => {
-      if (s !== step.id || a !== attempt) return;
-      setLines((prev) => {
-        const last = prev.length ? prev[prev.length - 1].seq : 0;
-        const fresh = incoming.filter((l) => l.seq > last);
-        return fresh.length ? prev.concat(fresh) : prev;
-      });
-    };
-    return () => { sink.current = null; };
-  }, [step.id, attempt, sink]);
+  const { lines, dropped, loaded } = useStepLog(run.id, step.id, attempt, sink);
 
   const why = whyWaiting(run, step, now);
   const isLive = following && (step.status === "running" || step.status === "leased");
@@ -550,6 +526,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {rerun && step.status !== "failed" && <RerunButton run={run} step={step} />}
         </div>
       </div>
+      <StepTimingLine run={run} step={step} now={now} />
       {why && <div className={"note why " + (why.kind === "person" ? "warn" : "")} role="status"><Icon name={why.kind === "person" ? "pause" : "clock"} size="s" /><span><b>Why it waits.</b> {why.text} <LearnLink to={why.kind === "environment" ? EXPLAIN.lock : why.kind === "person" ? EXPLAIN.clearance : EXPLAIN.waits} /></span></div>}
       {reused && <ReusedNote run={run} step={step} />}
       {deploys && <DeploymentPanel run={run} step={step} />}
@@ -586,7 +563,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
       )}
       {step.status === "failed" && following && !reused && <ExplainFailure run={run} step={step} />}
       {step.kind === "image" && <ImageResult run={run} step={step} showImages={showImages} />}
-      {!(deploys && step.attempt === 0) && step.kind !== "verify" && <LogView lines={lines} live={isLive} empty={empty} />}
+      {!(deploys && step.attempt === 0) && step.kind !== "verify" && <LogView lines={lines} live={isLive} empty={empty} dropped={dropped} />}
       <div className="stepinfo only-everything">
         {step.run && (
           <details>

@@ -173,7 +173,7 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 		log.Warn("could not start the action", "err", err)
 		return
 	}
-	logs := &logBuffer{}
+	logs := newLogBuffer()
 	sys := func(format string, args ...any) { logs.add("system", fmt.Sprintf(format, args...)) }
 	var lostMu sync.Mutex
 	lost := false
@@ -197,7 +197,7 @@ func (d *DeployRunner) act(parent context.Context, job *engine.Job) {
 	go func() {
 		defer close(bgDone)
 		hb := time.NewTicker(max(job.LeaseTTL.D()/3, time.Second))
-		fl := time.NewTicker(300 * time.Millisecond)
+		fl := time.NewTicker(logFlushEvery)
 		defer hb.Stop()
 		defer fl.Stop()
 		for {
