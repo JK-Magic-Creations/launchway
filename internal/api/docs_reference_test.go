@@ -45,7 +45,7 @@ type docRoute struct {
 	line                int
 }
 
-var routeRowRe = regexp.MustCompile("^`((?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) /[^`]*)`$")
+var routeRowRe = regexp.MustCompile("^`((?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|LOCK|UNLOCK) /[^`]*)`$")
 
 // docRoutes reads the route rows of http-api.md.
 func docRoutes(t *testing.T) map[string]docRoute {

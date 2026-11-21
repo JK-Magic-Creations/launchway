@@ -1084,9 +1084,9 @@ Reports of Ansible and plan steps, the project's Configuration page, and the bui
 | `GET /api/state/v1/{project}/{workspace}` | `public` | — | The Terraform/OpenTofu `http` backend: the current state, `404` if none. HTTP basic credentials: the password is a run's state credential (`lwst_...`, one workspace of one project, until the run ends) or an API token with the viewer role. |
 | `POST /api/state/v1/{project}/{workspace}` | `public` | — | Stores the state (`?ID=` the lock id). `409` for an older serial, another lineage or the same serial with other content; `423` under another's lock; operator role or a read-write run credential. |
 | `PUT /api/state/v1/{project}/{workspace}` | `public` | — | The same as `POST`. |
-| `DELETE /api/state/v1/{project}/{workspace}` | `public` | `state.delete` | Removes the workspace and its versions; refused while locked. |
-| `LOCK /api/state/v1/{project}/{workspace}/lock` | `public` | `state.lock` | Takes the lock with the client's lock document (an `ID`). `423` answers with the holder's document. A lock whose run has ended is released first. |
-| `UNLOCK /api/state/v1/{project}/{workspace}/lock` | `public` | `state.unlock` | Releases the lock the client holds under its `ID`. |
+| `DELETE /api/state/v1/{project}/{workspace}` | `public` | — | Removes the workspace and its versions; refused while locked. |
+| `LOCK /api/state/v1/{project}/{workspace}/lock` | `public` | — | Takes the lock with the client's lock document (an `ID`), audited as `state.lock`. `423` answers with the holder's document. A lock whose run has ended is released first. |
+| `UNLOCK /api/state/v1/{project}/{workspace}/lock` | `public` | — | Releases the lock the client holds under its `ID`, audited as `state.unlock`. |
 | `POST /api/runner/v1/config/state-credential` | `runner` | — | A runner, under a lease, asks for the credential of one workspace of the lease's project: valid for that run only, read-only for pull request and draft runs. |
 
 ## What next
