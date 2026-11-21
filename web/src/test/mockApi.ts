@@ -188,7 +188,7 @@ export function guideFixture() {
 export function homeFixture() {
   return {
     view: "all", at: 1, counts: { needs: 1, running: 1, projects: 2 }, favorites: [{ name: "shop-api", favorite: true, last: "failed", last_number: 7, last_at: 1000, running: 1, needs: 1, history: ["succeeded", "failed"] }],
-    needs: [{ key: "failed:run_7", kind: "failed", tone: "bad", project: "shop-api", title: "Sortie #7 of shop-api failed on main", why: "Nothing newer has run since, and it is the latest result on main, the default branch.", do: "See what went wrong, then fix it or run it again.", since: 1000, href: "/runs/run_7" }],
+    needs: [{ key: "failed:run_7", kind: "failed", tone: "bad", project: "shop-api", title: "Sortie #7 of shop-api failed on main", why: "It is the latest result on main, the default branch; nothing newer has run.", do: "See what went wrong, then fix it or run it again.", since: 1000, href: "/runs/run_7" }],
     dismissed: [],
     running: [{ id: "run_2", project: "shop-web", number: 118, branch: "main", status: "running", step: "test", started_at: 1000, created_at: 900, actor: "ana", mine: true, retry_of: 117 }],
     categories: [{ id: "unit:shop", kind: "unit", label: "Shop", needs: 1, running: 1, failing: 1, projects: [

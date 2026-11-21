@@ -23,7 +23,7 @@ type SectionId = "needs" | "running" | "favorites" | "categories" | "recent";
 const DEFAULT_ORDER: SectionId[] = ["needs", "running", "favorites", "categories", "recent"];
 const TITLES: Record<SectionId, string> = { needs: "Needs you", running: "Running now", favorites: "Favorites", categories: "By category", recent: "Recently finished" };
 
-interface Prefs { view?: "mine" | "all"; order?: SectionId[]; hidden?: SectionId[]; collapsed?: string[] }
+interface Prefs { view?: "mine" | "all"; order?: SectionId[]; hidden?: SectionId[]; open?: Record<string, boolean> }
 
 export default function HomeSections({ onCount, extra = [] }: { onCount?: (n: number) => void; extra?: Need[] }) {
   const [view, setView] = useState<"mine" | "all" | "">("");
@@ -41,7 +41,7 @@ export default function HomeSections({ onCount, extra = [] }: { onCount?: (n: nu
   if (!data) return <HomeSkeleton />;
   const order = [...new Set([...(prefs.order ?? []).filter((s) => DEFAULT_ORDER.includes(s)), ...DEFAULT_ORDER])];
   const hidden = new Set(prefs.hidden ?? []);
-  const collapsed = new Set(prefs.collapsed ?? []);
+  const openCats = prefs.open ?? {};
   const effView = view || data.view;
   const move = (id: SectionId, d: -1 | 1) => {
     const i = order.indexOf(id), j = i + d;
@@ -52,7 +52,7 @@ export default function HomeSections({ onCount, extra = [] }: { onCount?: (n: nu
     announce(`${TITLES[id]} moved ${d < 0 ? "up" : "down"}.`);
   };
   const toggleHide = (id: SectionId) => { const h = new Set(hidden); if (h.has(id)) h.delete(id); else h.add(id); void save({ hidden: [...h] as SectionId[] }); announce(`${TITLES[id]} ${h.has(id) ? "hidden" : "shown"}.`); };
-  const toggleCollapse = (key: string) => { const c = new Set(collapsed); if (c.has(key)) c.delete(key); else c.add(key); void save({ collapsed: [...c] }); };
+  const toggleCat = (key: string, nowOpen: boolean) => { void save({ open: { ...openCats, [key]: !nowOpen } }); };
   const brandNew = data.counts.projects === 0;
 
   return (
@@ -72,7 +72,7 @@ export default function HomeSections({ onCount, extra = [] }: { onCount?: (n: nu
           {id === "needs" && <Needs data={data} now={now} reload={reload} extra={extra} />}
           {id === "running" && <Running data={data} now={now} />}
           {id === "favorites" && data.favorites.length > 0 && <Favorites list={data.favorites} now={now} />}
-          {id === "categories" && <Categories cats={data.categories} collapsed={collapsed} onToggle={toggleCollapse} now={now} />}
+          {id === "categories" && <Categories cats={data.categories} openCats={openCats} onToggle={toggleCat} now={now} />}
           {id === "recent" && <Recent data={data} now={now} />}
         </section>
       ))}
@@ -110,6 +110,7 @@ const KIND_ICON: Record<AttentionItem["kind"], "x" | "gate" | "alert" | "server"
 
 function Needs({ data, now, reload, extra }: { data: HomeAnswer; now: number; reload: () => void; extra: Need[] }) {
   const [showSet, setShowSet] = useState(false);
+  const [more, setMore] = useState(false);
   const act = async (fn: () => Promise<unknown>, said: string) => { await fn(); announce(said); reload(); };
   const list = data.needs;
   const total = list.length + extra.length;
@@ -125,7 +126,8 @@ function Needs({ data, now, reload, extra }: { data: HomeAnswer; now: number; re
         </div>
       ))}
       {list.length === 0 && extra.length === 0 && <p className="sh-b faint">Nothing needs you. A failure that a newer Sortie is already retrying is not listed; it is under Running now.</p>}
-      {list.map((n) => <NeedRow key={n.key} n={n} now={now} onSet={(h) => act(() => organizeApi.dismiss(n.key, h), `Set aside${h ? ` for ${h} hours` : ""}.`)} />)}
+      {list.slice(0, more ? list.length : 5).map((n) => <NeedRow key={n.key} n={n} now={now} onSet={(h) => act(() => organizeApi.dismiss(n.key, h), `Set aside${h ? ` for ${h} hours` : ""}.`)} />)}
+      {list.length > 5 && <p className="sh-b"><button type="button" className="btn btn-sm" aria-expanded={more} onClick={() => setMore(!more)}>{more ? "Show fewer" : `Show ${list.length - 5} more`}</button></p>}
       {showSet && data.dismissed.map((n) => <NeedRow key={n.key} n={n} now={now} setAside onSet={() => act(() => organizeApi.restore(n.key), "Brought back.")} />)}
     </div>
   );
@@ -197,25 +199,28 @@ function Favorites({ list, now }: { list: HomeProject[]; now: number }) {
   return <div className="sheet"><div className="sh-h"><h2 id="hm-favorites">Favorites</h2></div><ul className="hm-cards">{list.map((p) => <ProjectCard key={p.name} p={p} now={now} />)}</ul></div>;
 }
 
-function Categories({ cats, collapsed, onToggle, now }: { cats: HomeCategory[]; collapsed: Set<string>; onToggle: (k: string) => void; now: number }) {
+function Categories({ cats, openCats, onToggle, now }: { cats: HomeCategory[]; openCats: Record<string, boolean>; onToggle: (k: string, nowOpen: boolean) => void; now: number }) {
   if (cats.length === 0) return <div className="sheet"><div className="sh-h"><h2 id="hm-categories">By category</h2></div><p className="sh-b faint">No project to show in this view.</p></div>;
   return (
     <div>
       <div className="sh-h hm-cat-h"><h2 id="hm-categories">By category</h2><a href="/pipelines" onClick={onLink} className="btn btn-sm">Show all in the explorer</a></div>
       {cats.map((c) => {
-        const shut = collapsed.has(c.id);
+        // A category with something to look at, or one of only a few, opens by itself; a person's own choice wins.
+        const isOpen = openCats[c.id] ?? (c.needs > 0 || c.running > 0 || cats.length <= 2);
+        const shut = !isOpen;
+        const sorted = [...c.projects].sort((a, b) => b.needs - a.needs || Number(b.last === "failed") - Number(a.last === "failed") || b.running - a.running || a.name.localeCompare(b.name));
         const label = c.kind === "unit" ? `${terms().label("unit")} ${c.label}` : c.label;
         return (
           <div key={c.id} className="hm-cat">
-            <h3><button type="button" className="hm-cat-b" aria-expanded={!shut} aria-controls={`cat-${c.id}`} onClick={() => onToggle(c.id)}>
+            <h3><button type="button" className="hm-cat-b" aria-expanded={!shut} aria-controls={`cat-${c.id}`} onClick={() => onToggle(c.id, isOpen)}>
               <span aria-hidden="true">{shut ? "▸" : "▾"}</span> {label}
               <span className="faint small"> · {c.projects.length} {c.projects.length === 1 ? "project" : "projects"}</span>
               {c.needs > 0 && <span className="vchip bad">{c.needs} need a look</span>}
               {c.running > 0 && <span className="vchip run">{c.running} running</span>}
               {c.needs === 0 && c.failing === 0 && c.running === 0 && <span className="vchip ok">all passing</span>}
             </button></h3>
-            {!shut && <ul id={`cat-${c.id}`} className="hm-cards">{c.projects.slice(0, 18).map((p) => <ProjectCard key={p.name} p={p} now={now} />)}
-              {c.projects.length > 18 && <li className="hm-more"><a href="/pipelines" onClick={onLink}>and {c.projects.length - 18} more</a></li>}</ul>}
+            {!shut && <ul id={`cat-${c.id}`} className="hm-cards">{sorted.slice(0, 8).map((p) => <ProjectCard key={p.name} p={p} now={now} />)}
+              {sorted.length > 8 && <li className="hm-more"><a href="/pipelines" onClick={onLink}>and {sorted.length - 8} more in the explorer</a></li>}</ul>}
           </div>
         );
       })}

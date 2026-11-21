@@ -351,10 +351,10 @@ func failedItem(in AttentionInput, r AttentionRun, older []AttentionRun) (Attent
 	it := AttentionItem{Key: "failed:" + r.ID, Kind: AttnFailed, Tone: "bad", Project: r.Project, Branch: r.Branch, PullRequest: r.PullRequest(),
 		RunID: r.ID, RunNumber: r.Number, Since: nz(r.FinishedAt, r.CreatedAt), Href: "/runs/" + r.ID, rank: 2,
 		Title: fmt.Sprintf("Sortie #%d of %s failed on %s", r.Number, r.Project, where), Do: "See what went wrong, then fix it or run it again."}
-	it.Why = "Nothing newer has run since, and " + why + "."
+	it.Why = strings.ToUpper(why[:1]) + why[1:] + "; nothing newer has run."
 	if row > 1 {
 		it.Title = fmt.Sprintf("%s has failed %d times in a row on %s", r.Project, row, where)
-		it.Why = fmt.Sprintf("The last %d Sorties failed and nothing newer is running, and %s.", row, why)
+		it.Why = fmt.Sprintf("The last %d Sorties failed and nothing newer is running; %s.", row, why)
 	}
 	if strings.Contains(why, "default branch") || strings.Contains(why, "protected") {
 		it.rank = 2

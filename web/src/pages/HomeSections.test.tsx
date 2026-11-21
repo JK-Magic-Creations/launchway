@@ -49,7 +49,7 @@ describe("Home sections", () => {
     expect(btn).toHaveTextContent("1 need a look");
     expect(screen.getByRole("link", { name: "Show all in the explorer" })).toHaveAttribute("href", "/pipelines");
     await userEvent.click(btn);
-    await waitFor(() => expect(calls.some((c) => c.method === "PUT" && (c.body as { collapsed?: string[] }).collapsed?.includes("unit:shop"))).toBe(true));
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT" && (c.body as { open?: Record<string, boolean> }).open?.["unit:shop"] === false)).toBe(true));
   });
   it("my arrangement: reorder, hide, say it is personal, reset to the default", async () => {
     render(<HomeSections />);

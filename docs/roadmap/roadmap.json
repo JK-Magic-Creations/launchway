@@ -262,6 +262,12 @@
       "title": "Queues, limits and path filters",
       "value": "Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted.",
       "link": "guide/queues"
+    },
+    {
+      "theme": "Interface",
+      "title": "Organizing at scale",
+      "value": "Pipelines and repositories in an explorer with folders (by hand or from names), labels, favorites and search; the home page arranged for everyone or just for you, listing a failure only when nothing newer has replaced it. Custom panels, a trail of what you worked on and folders for Sorties are not built yet.",
+      "link": "guide/organizing"
     }
   ],
   "milestones": [

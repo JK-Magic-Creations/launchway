@@ -20,7 +20,7 @@ export default function RepositoriesExplorer({ repos, now }: { repos: HostedRepo
   }), [repos, org]);
   const kinds = useMemo(() => [...new Set(repos.map((r) => r.visibility))].sort(), [repos]);
   return (
-    <Explorer noun={{ singular: "repository", plural: "repositories" }} items={items} now={now} kinds={kinds} initialView="table"
+    <Explorer noun={{ singular: "repository", plural: "repositories" }} items={items} now={now} kinds={kinds} initialView="table" results={false}
       emptyFolders={org.emptyFolders} folders={org.folders}
       onMove={org.mayArrange ? async (it, folder) => { await org.move(it.id, folder); } : undefined}
       onCreateFolder={org.mayArrange ? org.createFolder : undefined}

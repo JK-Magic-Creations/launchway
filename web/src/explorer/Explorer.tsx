@@ -34,6 +34,8 @@ export interface ExplorerProps {
   savePreference?: (key: string, value: string) => void;
   initialView?: "cards" | "table";
   now: number;
+  /** Whether items have run results (pipelines do, repositories do not): without them the status filter, the result columns and the status icon are left out. */
+  results?: boolean;
   /** Extra controls in the toolbar. */
   toolbar?: ReactNode;
   /** Shown above the tree: an explanation of what the folders are. */
@@ -59,12 +61,15 @@ export function Explorer(p: ExplorerProps) {
   const [group, setGroup] = useUrlState("group", "none", oneOf(...GROUPS));
   const [favOnly, setFavOnly] = useUrlState("fav", false, bool);
   const [mineOnly, setMineOnly] = useUrlState("mine", false, bool);
-  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  // The first level of places (the Wing, or the Squadrons) starts open, so the tree shows something to choose.
+  const [open, setOpen] = useState<Set<string>>(() => new Set([...buildTree(p.items).values()].filter((n) => n.depth === 1 && n.children.length > 0).map((n) => n.key)));
   const [arranging, setArranging] = useState(false);
   const [moving, setMoving] = useState<XItem | null>(null);
   const [last, setLast] = useState<{ item: XItem; from: string } | null>(null);
   const [creating, setCreating] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const hasResults = p.results !== false;
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     const on = (e: globalThis.KeyboardEvent) => {
@@ -115,7 +120,12 @@ export function Explorer(p: ExplorerProps) {
   const toggle = useCallback((k: string, on?: boolean) => setOpen((o) => { const n = new Set(o); if (on === undefined ? !n.has(k) : on) n.add(k); else n.delete(k); return n; }), []);
   const openAll = (on: boolean) => setOpen(on ? new Set([...shownTree.keys()].filter((k) => k !== ROOT && shownTree.get(k)!.children.length > 0)) : new Set());
   // While filtering every branch with a match is open, so a match is never hidden.
-  const effectiveOpen = useMemo(() => (filtering ? new Set([...shownTree.keys()]) : open), [filtering, shownTree, open]);
+  const effectiveOpen = useMemo(() => {
+    if (filtering) return new Set([...shownTree.keys()]);
+    const o = new Set(open);
+    for (let k = shownTree.get(selected)?.parent; k; k = shownTree.get(k)?.parent) o.add(k); // the way to the chosen place stays open
+    return o;
+  }, [filtering, shownTree, open, selected]);
 
   const choose = (k: string) => { setNode(k, "push"); };
   const rootLabel = terms().label("installation");
@@ -148,11 +158,13 @@ export function Explorer(p: ExplorerProps) {
           <Icon name="search" />
           <input ref={searchRef} type="search" role="searchbox" aria-label={`Filter ${p.noun.plural}`} placeholder={`Filter ${p.noun.plural}, press f to jump here`} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <label className="xp-sel">Status
+        <button type="button" className="btn btn-sm xp-ftoggle" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>{filtersOpen ? "Hide filters" : "Filters and sorting"}</button>
+        <div className={"xp-filters" + (filtersOpen ? " show" : "")}>
+        {hasResults && <label className="xp-sel">Status
           <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
             <option value="all">Any</option><option value="bad">Failed</option><option value="run">Running</option><option value="wait">Waiting for a person</option><option value="ok">Passed</option><option value="none">No result yet</option>
           </select>
-        </label>
+        </label>}
         {labels.length > 0 && <label className="xp-sel">Label
           <select value={label} onChange={(e) => setLabel(e.target.value)}><option value="">Any</option>{labels.map((l) => <option key={l}>{l}</option>)}</select>
         </label>}
@@ -160,7 +172,7 @@ export function Explorer(p: ExplorerProps) {
           <select value={kind} onChange={(e) => setKind(e.target.value)}><option value="">Any</option>{p.kinds!.map((l) => <option key={l}>{l}</option>)}</select>
         </label>}
         <label className="xp-sel">Sort
-          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}><option value="attention">Needs a look first</option><option value="name">Name</option><option value="recent">Latest result</option></select>
+          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>{hasResults && <option value="attention">Needs a look first</option>}<option value="name">Name</option>{hasResults && <option value="recent">Latest result</option>}</select>
         </label>
         <label className="xp-sel">Group by
           <select value={group} onChange={(e) => setGroup(e.target.value as typeof group)}><option value="none">Nothing</option><option value="folder">Folder</option><option value="label">Label</option><option value="status">Status</option></select>
@@ -173,6 +185,7 @@ export function Explorer(p: ExplorerProps) {
           ))}
         </div>
         {p.toolbar}
+        </div>
       </div>
 
       <div className="xp-body">
@@ -209,7 +222,7 @@ export function Explorer(p: ExplorerProps) {
               {filtering && <button type="button" className="btn btn-sm" onClick={() => setUrl({ q: null, status: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</button>}
             </div>
           ) : (
-            <Results list={list} view={view} group={group} q={q} now={p.now} arranging={arranging && !!p.onMove} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
+            <Results results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging && !!p.onMove} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
           )}
         </div>
       </div>
@@ -309,8 +322,8 @@ export function Hl({ text, q }: { text: string; q: string }) {
 
 interface Row { kind: "head" | "items"; title?: string; count?: number; items?: XItem[] }
 
-function Results({ list, view, group, q, now, arranging, onMove, onFavorite }: {
-  list: XItem[]; view: "cards" | "table"; group: (typeof GROUPS)[number]; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void;
+function Results({ results, list, view, group, q, now, arranging, onMove, onFavorite }: {
+  results: boolean; list: XItem[]; view: "cards" | "table"; group: (typeof GROUPS)[number]; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [geom, setGeom] = useState({ w: 0, h: 0, top: 0 });
@@ -350,14 +363,14 @@ function Results({ list, view, group, q, now, arranging, onMove, onFavorite }: {
   const head = first * rowH;
   return (
     <div className={"xp-results" + (virtual ? " virtual" : "")} ref={box} onScroll={(e) => virtual && setGeom((g) => ({ ...g, top: (e.target as HTMLElement).scrollTop }))} tabIndex={virtual ? 0 : undefined} role={virtual ? "region" : undefined} aria-label={virtual ? "Results, scrollable" : undefined}>
-      {view === "table" && <div className="xp-th" aria-hidden="true"><span>Name</span><span>Where</span><span>Last result</span><span>Recent</span><span /></div>}
+      {view === "table" && <div className="xp-th" aria-hidden="true"><span>Name</span><span>Where</span><span>{results ? "Last result" : "About"}</span><span>{results ? "Recent" : ""}</span><span /></div>}
       <div style={virtual ? { height: total * rowH, position: "relative" } : undefined}>
         <ul className={"xp-list " + view} style={virtual ? { position: "absolute", top: head, left: 0, right: 0 } : undefined}>
           {rows.slice(first, last).map((r, i) => r.kind === "head" ? (
             <li key={"h" + first + i} className="xp-group" style={{ height: virtual ? rowH : undefined }}><h2>{r.title} <span className="faint">({r.count})</span></h2></li>
           ) : (
             <li key={"r" + first + i} className="xp-row" style={{ height: virtual ? rowH : undefined, gridTemplateColumns: view === "cards" ? `repeat(${cols}, 1fr)` : undefined }}>
-              {r.items!.map((it) => view === "cards" ? <Card key={it.id} it={it} q={q} now={now} arranging={arranging} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} it={it} q={q} now={now} arranging={arranging} onMove={onMove} onFavorite={onFavorite} />)}
+              {r.items!.map((it) => view === "cards" ? <Card key={it.id} results={results} it={it} q={q} now={now} arranging={arranging} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} results={results} it={it} q={q} now={now} arranging={arranging} onMove={onMove} onFavorite={onFavorite} />)}
             </li>
           ))}
         </ul>
@@ -366,7 +379,7 @@ function Results({ list, view, group, q, now, arranging, onMove, onFavorite }: {
   );
 }
 
-interface ItemProps { it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
+interface ItemProps { results: boolean; it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
 
 function Strip({ history, name }: { history: Tone[]; name: string }) {
   if (history.length === 0) return <span className="faint small">no results yet</span>;
@@ -377,18 +390,18 @@ function Strip({ history, name }: { history: Tone[]; name: string }) {
 
 function Place({ it }: { it: XItem }) { return <span className="faint small xp-place">{it.path.length ? it.path.map((p) => p.label).join(" / ") : "Top level"}</span>; }
 
-function Card({ it, q, now, arranging, onMove, onFavorite }: ItemProps) {
+function Card({ results, it, q, now, arranging, onMove, onFavorite }: ItemProps) {
   return (
     <article className={"xp-card " + it.tone} draggable={arranging} onDragStart={(e) => e.dataTransfer.setData("text/plain", it.id)} aria-label={it.name}>
       <header>
-        <Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />
+        {results && <Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />}
         <a href={it.href} onClick={onLink} className="xp-name"><Hl text={it.name} q={q} /></a>
         {onFavorite && <button type="button" className="xp-star" aria-pressed={it.favorite} aria-label={`${it.favorite ? "Remove" : "Add"} ${it.name} ${it.favorite ? "from" : "to"} favorites`} onClick={() => onFavorite(it, !it.favorite)}>{it.favorite ? "★" : "☆"}</button>}
       </header>
       <Place it={it} />
       {it.description && <p className="small xp-desc"><Hl text={it.description} q={q} /></p>}
-      <p className="small">{it.last ? <>{it.last.href ? <a href={it.last.href} onClick={onLink}>{it.last.text}</a> : it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <> · <b>{it.running} running</b></>}</p>
-      <div className="xp-foot"><Strip history={it.history} name={it.name} />
+      {results && <p className="small">{it.last ? <>{it.last.href ? <a href={it.last.href} onClick={onLink}>{it.last.text}</a> : it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <> · <b>{it.running} running</b></>}</p>}
+      <div className="xp-foot">{results && <Strip history={it.history} name={it.name} />}
         {it.labels.length > 0 && <span className="xp-labels">{it.labels.slice(0, 3).map((l) => <span key={l} className="vchip"><Hl text={l} q={q} /></span>)}</span>}
         <span className="xp-grow" />
         {(it.actions ?? []).slice(0, 2).map((a) => <a key={a.label} className="btn btn-sm" href={a.href} onClick={onLink}>{a.label}</a>)}
@@ -398,15 +411,15 @@ function Card({ it, q, now, arranging, onMove, onFavorite }: ItemProps) {
   );
 }
 
-function TableRow({ it, q, now, arranging, onMove, onFavorite }: ItemProps) {
+function TableRow({ results, it, q, now, arranging, onMove, onFavorite }: ItemProps) {
   return (
     <div className={"xp-trow " + it.tone} role="group" aria-label={it.name} draggable={arranging} onDragStart={(e) => e.dataTransfer.setData("text/plain", it.id)}>
-      <span className="xp-tname"><Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />
+      <span className="xp-tname">{results && <Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />}
         <a href={it.href} onClick={onLink}><Hl text={it.name} q={q} /></a>
         {onFavorite && <button type="button" className="xp-star" aria-pressed={it.favorite} aria-label={`${it.favorite ? "Remove" : "Add"} ${it.name} ${it.favorite ? "from" : "to"} favorites`} onClick={() => onFavorite(it, !it.favorite)}>{it.favorite ? "★" : "☆"}</button>}</span>
       <Place it={it} />
-      <span className="small">{it.last ? <>{it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <b> · {it.running} running</b>}</span>
-      <Strip history={it.history} name={it.name} />
+      {results ? <span className="small">{it.last ? <>{it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <b> · {it.running} running</b>}</span> : <span className="small faint">{it.description}</span>}
+      {results ? <Strip history={it.history} name={it.name} /> : <span />}
       <span className="xp-acts">{(it.actions ?? []).slice(0, 1).map((a) => <a key={a.label} className="btn btn-sm" href={a.href} onClick={onLink}>{a.label}</a>)}
         {arranging && <button type="button" className="btn btn-sm" onClick={() => onMove(it)} aria-label={`Move ${it.name} to…`}>Move to…</button>}</span>
     </div>

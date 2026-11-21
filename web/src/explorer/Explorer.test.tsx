@@ -85,7 +85,7 @@ describe("the Explorer", () => {
     expect(document.activeElement).toBe(rows().at(-1));
   });
   it("the tree: a folder with sub-folders opens and closes with the arrow keys", async () => {
-    const nested = [item("a", [seg("Team"), seg("Svc", "f2")]), item("b", [seg("Team")])];
+    const nested = [item("a", [seg("Org"), seg("Team"), seg("Svc", "f2")]), item("b", [seg("Org"), seg("Team")])];
     render(<Explorer {...props()} items={nested} />);
     const tree = screen.getByRole("tree");
     const team = within(tree).getByRole("treeitem", { name: /^Team/ });

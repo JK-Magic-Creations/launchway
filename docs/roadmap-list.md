@@ -105,6 +105,7 @@ compliance items provide controls and evidence.
 | Pipelines drawn the way they run | Steps that run together appear side by side on the run page, drawn from their dependencies. |
 | Rollback after a successful deployment | Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry. ([more](guide/rollback-after-success.md)) |
 | Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
+| Organizing at scale | Pipelines and repositories in an explorer with folders (by hand or from names), labels, favorites and search; the home page arranged for everyone or just for you, listing a failure only when nothing newer has replaced it. Custom panels, a trail of what you worked on and folders for Sorties are not built yet. ([more](guide/organizing.md)) |
 
 ## Milestone 1: Host your code and run your pipelines in one place (Now)
 

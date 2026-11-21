@@ -7,6 +7,9 @@ import { useOrganized } from "./useOrganized";
 import type { Tone, XItem } from "./tree";
 import { terms } from "../terms";
 import { LinkButton } from "../kit/layout";
+import { useLoad } from "../guided/useLoad";
+import { organizeApi } from "../organizeApi";
+import { useCallback } from "react";
 
 const toneOf = (r: RunSummary | null | undefined): Tone => {
   if (!r) return "none";
@@ -19,6 +22,10 @@ const WORD: Record<string, string> = { succeeded: "Passed", failed: "Failed", ru
  * lives, its last result, a strip of recent results and what runs now. */
 export default function PipelinesExplorer({ projects, runs, now, me }: { projects: Project[]; runs: RunSummary[]; now: number; me: string }) {
   const org = useOrganized("pipelines");
+  // The recent results of each pipeline's default branch, and what runs now, come from the same answer Home uses.
+  const homeFn = useCallback((bg: boolean) => organizeApi.home("all", bg), []);
+  const home = useLoad(homeFn, 15000).data;
+  const stats = useMemo(() => new Map((home?.categories ?? []).flatMap((c) => c.projects).map((p) => [p.name, p])), [home]);
   const byProject = useMemo(() => {
     const m = new Map<string, RunSummary[]>();
     for (const r of runs) m.set(r.project, [...(m.get(r.project) ?? []), r]);
@@ -32,13 +39,13 @@ export default function PipelinesExplorer({ projects, runs, now, me }: { project
     return {
       id: p.name, name: p.name, path: where.path, labels: where.labels, tone: toneOf(last),
       last: last ? { text: `${WORD[last.status] ?? last.status} · #${last.number}`, at: last.finished_at || last.created_at, href: `/runs/${last.id}` } : undefined,
-      history: trend.ticks.map((t) => (t === "skip" ? "none" : t)) as Tone[],
-      running: rs.filter((r) => r.status === "running" || r.status === "queued").length,
+      history: stats.has(p.name) ? [...stats.get(p.name)!.history].reverse().map((h): Tone => (h === "succeeded" ? "ok" : h === "failed" ? "bad" : "none")) : trend.ticks.map((t) => (t === "skip" ? "none" : t)) as Tone[],
+      running: stats.get(p.name)?.running ?? rs.filter((r) => r.status === "running" || r.status === "queued").length,
       href: `/projects/${encodeURIComponent(p.name)}/pipeline`, favorite: org.favorites.has("project:" + p.name),
       mine: rs.some((r) => r.actor === me),
       actions: [{ label: "Open", href: `/projects/${encodeURIComponent(p.name)}/pipeline` }],
     };
-  }), [projects, byProject, org, me]);
+  }), [projects, byProject, org, me, stats]);
   const t = terms();
   return (
     <Explorer noun={{ singular: "pipeline", plural: "pipelines" }} items={items} now={now}

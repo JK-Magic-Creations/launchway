@@ -353,7 +353,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `prefs.layout.set` | `PUT /api/v1/me/layouts/{page}`: Saves the caller's own arrangement of a page; it follows them across devices and never changes what others see |
 | `prefs.layout.reset` | `DELETE /api/v1/me/layouts/{page}`: Resets the caller's own arrangement of a page to the shared default |
 | `prefs.layout.reset_all` | `DELETE /api/v1/me/layouts`: Resets all of the caller's own arrangements (favorites stay) |
-| `prefs.favorite` | `POST /api/v1/me/favorites`: Adds or removes a favorite for the caller: `{"item":"project:<name>"|"repository:<path>","on":true}` |
+| `prefs.favorite` | `POST /api/v1/me/favorites`: Adds or removes a favorite for the caller |
 | `layout.import` | `POST /api/v1/layouts-import`: Applies such a document: adds and updates what it names and never deletes what it leaves out |
 | `auth.local.password_changed` | `POST /api/v1/account/password`: someone changed their own password (their other sessions end) |
 | `auth.local.second_factor_begin` | `POST /api/v1/account/second-factor`: someone started adding an authenticator |

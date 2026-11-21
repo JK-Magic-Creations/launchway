@@ -17,7 +17,7 @@ const answer = (over: Partial<HomeAnswer> = {}): HomeAnswer => ({
 });
 const stubHome = (a: HomeAnswer) => vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(a), { status: 200, headers: { "Content-Type": "application/json" } })));
 afterEach(() => vi.unstubAllGlobals());
-const failedNeed = { key: "failed:run_412", kind: "failed" as const, tone: "bad" as const, project: "shop-api", title: "Sortie #412 of shop-api failed on main", why: "Nothing newer has run since, and it is the latest result on main, the default branch.", do: "See what went wrong, then fix it or run it again.", since: 9_000, href: "/runs/run_412" };
+const failedNeed = { key: "failed:run_412", kind: "failed" as const, tone: "bad" as const, project: "shop-api", title: "Sortie #412 of shop-api failed on main", why: "It is the latest result on main, the default branch; nothing newer has run.", do: "See what went wrong, then fix it or run it again.", since: 9_000, href: "/runs/run_412" };
 
 describe("Home on a new installation", () => {
   it("asks for the first thing and nothing else", async () => {
