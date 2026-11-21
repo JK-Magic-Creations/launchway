@@ -607,8 +607,9 @@ type NewRun struct {
 	// with the run like Push; Delivery, for a run of event webhook, is the
 	// caller's idempotency key, if it sent one. CreateRun returns
 	// ErrAlreadyClaimed if another server or call claimed it first.
-	Fire     *Firing
-	Delivery *Delivery
+	Fire      *Firing
+	Delivery  *Delivery
+	EventLink // the event log's part of a new run (schema 42)
 }
 
 // CreateRun records a new run and queues the steps that can start.
@@ -680,19 +681,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 				return err
 			}
 		}
-		if nr.Push != nil {
-			detail := fmt.Sprintf("started run #%d", number)
-			if len(superseded) > 0 {
-				nums := make([]string, len(superseded))
-				for i, n := range superseded {
-					nums[i] = "#" + strconv.Itoa(n)
-				}
-				detail += ", superseding " + strings.Join(nums, ", ")
-			}
-			return insertDecision(c.tx, nr.Project, PushDecision{At: c.now, Ref: nr.Push.Ref, SHA: nr.Push.New,
-				Outcome: "started", Detail: strings.TrimSpace(detail + " " + nr.Note + laneDetail(laneNote)), RunID: runID})
-		}
-		return nil
+		return c.recordStart(&nr, number, runID, goes, laneNote, superseded, draft != nil)
 	})
 	if err != nil {
 		return nil, err
@@ -750,7 +739,7 @@ func (c *cmd) supersede(project, ref string, number int) ([]int, error) {
 				SupersededBy: &Superseder{Run: c.runID, Number: number}})
 			o.advance()
 			done = append(done, st.Number)
-			return nil
+			return o.supersededEvent("superseded by a newer event: " + supersededWords(c.st.Trigger.Event, number))
 		})
 		if err != nil {
 			return nil, err

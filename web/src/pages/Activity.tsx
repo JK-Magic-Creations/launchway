@@ -16,6 +16,7 @@ import { onLink } from "../router";
 import { terms } from "../terms";
 
 const QueuePanel = lazy(() => import("./QueuePanel"));
+const EventsPage = lazy(() => import("./Events").then((m) => ({ default: m.EventsPage })));
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "", label: "All" }, { key: "running", label: "Running" }, { key: "failed", label: "Failed" }, { key: "succeeded", label: "Passed" },
@@ -42,7 +43,11 @@ function toneOf(r: RunSummary): "bad" | "wait" | "run" | "hold" | "ok" | "idle" 
 
 /** Activity answers: what has happened, and what is happening. Each run is one row with its launch line,
  * one sentence about where it is and who started it; a chosen project shows how its runs have been going. */
-export function ActivityPage() {
+export function ActivityPage({ events }: { events?: boolean }) {
+  return events ? <Suspense fallback={null}><EventsPage /></Suspense> : <RunsActivity />;
+}
+
+function RunsActivity() {
   const [project, setProject] = useState("");
   const [status, setStatus] = useState("");
   const [lane, setLane] = useState("");

@@ -56,10 +56,17 @@ func checkMarkers(t *testing.T, e *Engine, n int) {
 // database of the schema before, each brings exactly its own tables and
 // columns, on SQLite and (with LAUNCHWAY_TEST_POSTGRES) PostgreSQL.
 func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
-	if len(migrations) != schemaToggles || schemaToggles != schemaRegistry+1 || schemaRegistry != schemaArchive+1 || schemaArchive != schemaDelivery+1 || schemaDelivery != schemaQueues+1 || schemaQueues != schemaAccounts+1 || schemaAccounts != schemaCacheTrust+1 || schemaCacheTrust != schemaEncryption+1 || schemaEncryption != schemaPulls+1 || schemaPulls != schemaRollback+1 || schemaRollback != schemaSSH+1 || schemaSSH != schemaMirror+1 || schemaMirror != schemaVariables+1 || schemaVariables != schemaStandIn28+1 || schemaStandIn28 != schemaParity2+1 || schemaParity2 != schemaForge+1 || schemaForge != schemaCache+1 || schemaCache != schemaFlow+1 || schemaFlow != schemaConfig+1 || schemaConfig != schemaResources+1 || schemaResources != schemaPools+1 || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
-		schemaVerify != schemaReports+1 || schemaReports != schemaBlobs+1 || schemaBlobs != schemaPolicy+1 {
-		t.Fatalf("schemas are not 16 to 41 in a row: toggles %d, registry %d, archive %d, delivery %d, queues %d, accounts %d, cache trust %d, encryption %d, pulls %d, rollback %d, ssh %d, mirror %d, variables %d, stand-in %d, parity2 %d, forge %d, policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, resources %d, config %d, flow %d, cache %d, migrations %d",
-			schemaToggles, schemaRegistry, schemaArchive, schemaDelivery, schemaQueues, schemaAccounts, schemaCacheTrust, schemaEncryption, schemaPulls, schemaRollback, schemaSSH, schemaMirror, schemaVariables, schemaStandIn28, schemaParity2, schemaForge, schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, schemaConfig, schemaFlow, schemaCache, len(migrations))
+	// The schemas from 16 to the last are numbered in a row (one line each is a merge conflict, so this is a list):
+	// a new migration adds its constant at the end.
+	order := []int{schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, schemaConfig, schemaFlow, schemaCache, schemaForge, schemaParity2, schemaStandIn28, schemaVariables, schemaMirror, schemaSSH, schemaRollback, schemaPulls, schemaEncryption, schemaCacheTrust, schemaAccounts, schemaQueues, schemaDelivery, schemaArchive, schemaRegistry, schemaToggles,
+		schemaEvents}
+	for i := 1; i < len(order); i++ {
+		if order[i] != order[i-1]+1 {
+			t.Fatalf("schemas are not in a row: the %dth is %d after %d", i+1, order[i], order[i-1])
+		}
+	}
+	if len(migrations) != order[len(order)-1] {
+		t.Fatalf("%d migrations, but the last schema is %d", len(migrations), order[len(order)-1])
 	}
 	create := regexp.MustCompile(`(?i)CREATE TABLE (?:IF NOT EXISTS )?(\w+)`)
 	alter := regexp.MustCompile(`(?i)ALTER TABLE (\w+) ADD COLUMN (\w+)`)

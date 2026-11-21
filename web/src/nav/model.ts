@@ -102,6 +102,7 @@ export const SECTIONS: Section[] = [
     tabs: [
       { id: "runs", get label() { return say("{Runs}"); }, href: "/activity", icon: "activity", aka: "Runs" },
       { id: "approvals", label: "Waiting for a decision", href: "/activity/approvals", icon: "gate" },
+      { id: "events", label: "Events", href: "/activity/events", icon: "clock" },
     ],
   },
   {
@@ -232,6 +233,7 @@ export const PAGES: PageInfo[] = [
 
   page("/activity", "activity", "runs", () => terms().say("{Runs}"), () => [{ label: terms().say("{Runs}") }]),
   page("/activity/approvals", "activity", "approvals", () => "Waiting for a decision", () => [{ label: "Waiting for a decision" }]),
+  page("/activity/events", "activity", "events", () => "Events", () => []),
   page("/runs/:id", "activity", "runs", (p) => terms().say(`{Run} ${p.id}`), (p) => [{ label: terms().say("{Runs}"), href: "/activity" }, { label: terms().say(`{Run} ${p.id.slice(0, 8)}`) }]),
 
   page("/images", "images", undefined, () => "Images", () => []),

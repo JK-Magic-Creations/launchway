@@ -105,6 +105,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/playground": return <PlaygroundPage />;
     case "/activity": return <RunsPage />;
     case "/activity/approvals": return <ApprovalsPage approvals={approvals} />;
+    case "/activity/events": return <RunsPage events />;
     case "/runs/:id": return <RunPage id={p.id} />;
     case "/deployments": return <DeploymentsPage />;
     case "/deployments/environments": return <EnvironmentsPage />;

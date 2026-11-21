@@ -83,6 +83,7 @@ Usage:
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway registry status|list|tags|inspect|delete|retention|policy|gc   the built-in image and chart registry
   launchway toggles list|get|create|set|rules|history|revert|keys|safeguards|plan|apply  feature toggles: roll a feature out to a share of users without a deployment
+  launchway events   list|show|replay            what reached the server and what was decided about it; start one again
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
@@ -117,6 +118,7 @@ var commands = map[string]func([]string) error{
 	"config":         cmdConfig,
 	"run-limits":     cmdRunLimits,
 	"caches":         cmdCaches,
+	"events":         cmdEvents,
 	"variables":      cmdVariables,
 	"toggles":        cmdToggles,
 	"doctor":         cmdDoctor,

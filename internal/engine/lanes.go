@@ -176,7 +176,7 @@ func (c *cmd) joinLane(project string, l *pipeline.Lane, trig Trigger, number in
 			o.emit(RunCancelRequested, Payload{Reason: fmt.Sprintf("replaced in lane %s by run #%d", label, number),
 				SupersededBy: &Superseder{Run: c.runID, Number: number}})
 			o.advance()
-			return nil
+			return o.supersededEvent(fmt.Sprintf("replaced in lane %s by run #%d", label, number))
 		}); err != nil {
 			return false, "", err
 		}
@@ -214,7 +214,7 @@ func (c *cmd) displaceInLane(runID string, number int, label string) error {
 		o.emit(RunCancelRequested, Payload{Reason: fmt.Sprintf("replaced in lane %s by run #%d", label, number),
 			SupersededBy: &Superseder{Run: c.runID, Number: number}})
 		o.advance()
-		return nil
+		return o.supersededEvent(fmt.Sprintf("replaced in lane %s by run #%d", label, number))
 	})
 }
 

@@ -92,6 +92,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/encryption/root-key-copy` | — | — | — | exempt: whether a recovery copy of the root key was taken is shown in the browser guide; the audit trail records it for every interface |
 | `POST /api/v1/encryption/root-key-copy` | — | — | — | exempt: taking a copy of the root key asks a person to type their password and a code again; a token or agent must never be able to export the key (the server's own console has launchway encryption) |
 | `GET /api/v1/environments` | `list_config (kind environments)` | `environments list` | `launchway_environment` | equal |
+| `GET /api/v1/events` | `list_events` | `events list` | `not needed by terraform` | equal |
+| `GET /api/v1/events/{id}` | `get_event` | `events show` | `not needed by terraform` | equal |
+| `POST /api/v1/events/{id}/replay` | `replay_event` | `events replay` | `not needed by terraform` | equal |
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
 | `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |

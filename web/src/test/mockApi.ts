@@ -22,6 +22,11 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/runs": [failed, run()],
     "/api/v1/runs/run_7": detail,
     "/api/v1/approvals": [approval()],
+    "/api/v1/events": [
+      { id: "evt_1", project: "shop-api", at: 1794646800000, source: "push", verified: true, summary: "Push to main at 3f2a1c9", ref: "refs/heads/main", sha: "3f2a1c9aaaa",
+        replay: { ref: "refs/heads/main", sha: "3f2a1c9aaaa" }, decisions: [{ id: 1, at: 1794646800000, trigger: "push", decision: "started", reason: "started run #7", run_id: "run_7", run_number: 7 }] },
+      { id: "evt_2", project: "shop-api", at: 1794646700000, source: "webhook", source_name: "deploy", verified: false, summary: "Webhook call: deploy", decisions: [{ id: 2, at: 1794646700000, trigger: "webhook:deploy", decision: "refused", reason: "the signature did not match" }] },
+    ],
     "/api/v1/runners": [runner()],
     "/api/v1/environments": [environment()],
     "/api/v1/runs/run_2": { ...detail, id: "run_2", project: "shop-web", number: 118, status: "running", step_list: [step({ id: "approve", status: "waiting", kind: "approval" })] },

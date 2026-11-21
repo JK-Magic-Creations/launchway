@@ -24,12 +24,15 @@ import (
 // result and reads the old data (the product promises that for a rolling update), and sealing of what
 // was in the clear waits while an older server is seen and then completes without losing a value. On
 // SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
+// schemaLast is the schema of the build under test: the last migration (a merge that adds one changes it here).
+const schemaLast = schemaEvents
+
 func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if len(migrations) != schemaToggles || schemaToggles != 41 {
-		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 41", schemaToggles, len(migrations))
+	if len(migrations) != schemaLast || schemaLast != 42 {
+		t.Fatalf("the final schema is %d with %d migrations; this test and the upgrade notes name 42", schemaLast, len(migrations))
 	}
-	for i := schemaEncryption; i <= schemaToggles; i++ {
+	for i := schemaEncryption; i <= schemaLast; i++ {
 		if strings.TrimSpace(migrations[i-1].sql) == "" {
 			t.Fatalf("migration %d is an empty stand-in", i)
 		}
@@ -67,24 +70,24 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	}
 	old.Close()
 
-	// One start of this build: exactly 34 to 39.
+	// One start of this build: exactly 34 to 49.
 	var log syncBuffer
 	cur, err := openAs(t, addr, clk, 0, &log)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	for v := schemaEncryption; v <= schemaToggles; v++ {
+	for v := schemaEncryption; v <= schemaLast; v++ {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	if n := strings.Count(log.String(), "applied a database migration"); n != schemaToggles-schemaPulls {
-		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaToggles-schemaPulls, log.String())
+	if n := strings.Count(log.String(), "applied a database migration"); n != schemaLast-schemaPulls {
+		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaLast-schemaPulls, log.String())
 	}
-	checkMarkers(t, cur, schemaToggles)
+	checkMarkers(t, cur, schemaLast)
 	info, err := cur.Schema(ctx)
-	if err != nil || info.Database != schemaToggles || info.Code != schemaToggles || !info.Compatible() {
+	if err != nil || info.Database != schemaLast || info.Code != schemaLast || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	count := func(q string) (n int) {
@@ -114,7 +117,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 	// A build of schema 33 (a server of the release in use during a rolling update, or after a rollback)
 	// still starts against the upgraded database and reads the old data.
 	older := mustOpenAs(t, addr, clk, schemaPulls, &syncBuffer{})
-	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaToggles || oi.Code != schemaPulls || !oi.Compatible() {
+	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaLast || oi.Code != schemaPulls || !oi.Compatible() {
 		t.Fatalf("the build of schema 33 against the final schema: %+v %v", oi, err)
 	}
 	var title, whSecret string

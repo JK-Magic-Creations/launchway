@@ -795,6 +795,18 @@ launchway run-limits set --max-run-timeout D [--json]
 
 The same operations are `GET` and `PUT /api/v1/run-limits` in the [HTTP API](http-api.md#run-limits), and the MCP tools `get_run_limits` and `set_run_limits`.
 
+## launchway events
+
+The event log: what reached the server and what was decided about it. See [Events](../guide/events.md).
+
+```text
+launchway events list [--project P] [--source S] [--decision D] [--verified yes|no] [--ref R] [--limit N] [--json]
+launchway events show EVENT [--json]
+launchway events replay EVENT
+```
+
+`list` prints each event with a line for every decision and its reason. `show` adds the payload as kept. `replay` starts the run the event asked for again, at the same commit and with the same inputs, for operators; only verified events can be replayed, and the new event points back to the first. The same are `GET /api/v1/events`, `GET /api/v1/events/{id}` and `POST /api/v1/events/{id}/replay` in the [HTTP API](http-api.md) and the MCP tools `list_events`, `get_event` and `replay_event`.
+
 ## launchway caches
 
 Shows a project's build caches (the `cache:` key of a step), deletes entries, and shows and changes the policy that says how much is kept. Listing needs the rights to read the project, deleting those to operate it (it is recorded in the Logbook as `cache.delete`), and the policy is an administrator's (`cache_policy.set`, `cache_policy.set_project`, `cache_policy.clear_project`). The policy is in the database: an installation's default and, optionally, an override for one project.

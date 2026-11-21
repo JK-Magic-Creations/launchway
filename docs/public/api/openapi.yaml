@@ -2242,6 +2242,93 @@ paths:
             tags:
                 - environments
             x-launchway-access: signed-in
+    /api/v1/events:
+        get:
+            description: 'The event log: what the server received (pushes, pull requests, schedule firings, webhook calls, runs started by hand, other projects'' results), newest first, limited to the projects the caller may read. Each event has its id, project, at, source, verified, summary, payload as kept (credential-looking values removed), and decisions: for each trigger judged, the decision (started, held, waiting, filtered, superseded, skipped, duplicate, refused or error), the reason in words and the run_number it started. Filters: project, source, decision, verified (yes or no), ref, since and before (Unix milliseconds or RFC 3339), limit (100 by default, at most 500). See [Events](../guide/events.md).'
+            operationId: get_api_v1_events
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The event log: what the server received (pushes, pull requests, schedule firings, webhook calls, runs started by hand, other projects'' results), newest first, limited to the projects the caller may read.'
+            tags:
+                - events
+            x-launchway-access: signed-in
+    /api/v1/events/{id}:
+        get:
+            description: One event with its decisions. An event of a project the caller cannot read is 404.
+            operationId: get_api_v1_events_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: One event with its decisions.
+            tags:
+                - events
+            x-launchway-access: signed-in
+    /api/v1/events/{id}/replay:
+        post:
+            description: Starts the run the event asked for again, at the commit it was about and with the inputs it had, for an operator of its project (403 otherwise). Answers 201 with the run and replay_of. A new event points back to the first. An event that was not verified is 409 with code not_verified; one with nothing to repeat is 409 with code not_replayable.
+            operationId: post_api_v1_events_id_replay
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Starts the run the event asked for again, at the commit it was about and with the inputs it had, for an operator of its project (403 otherwise).
+            tags:
+                - events
+            x-launchway-access: signed-in
+            x-launchway-audit: event.replay
     /api/v1/health-sources:
         get:
             description: The health sources the caller's projects may use, by name, type and projects; never where they are or how they are reached.

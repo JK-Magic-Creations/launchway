@@ -210,6 +210,9 @@ var mcpPermissionTable = map[string]mcpRow{
 	"check_repository":      {map[string]any{"repo": "/nonexistent/none"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"check_signin":          {map[string]any{"issuer": "not a url", "client_id": "x", "redirect_url": "y", "client_secret_env": "Z"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"list_queue":            {map[string]any{}, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"list_events":           {map[string]any{}, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"get_event":             {map[string]any{"event_id": "{evt}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"replay_event":          {map[string]any{"event_id": "{evt}"}, false, [5]string{mUnlisted, mUnlisted, mOK, mNotFound, mOK}},
 	"trust_run":             {map[string]any{"run_id": "{pay}"}, true, [5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
 	"queue_run":             {map[string]any{"run_id": "{pay}", "action": "hold"}, true, [5]string{mUnlisted, mUnlisted, mAllowed, mNotFound, mAllowed}},
 	"list_lanes":            {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
@@ -257,6 +260,11 @@ func TestMCPPermissionMatrix(t *testing.T) {
 	e := mcpEnv(t, envOpts{mcp: &MCPOptions{RequestsPerMinute: 2000}})
 	pay := e.startRun(t, "pay-api")
 	e.startRun(t, "web")
+	evs, err := e.eng.EventLog(engine.EventFilter{Project: "pay-api"})
+	if err != nil || len(evs) == 0 {
+		t.Fatalf("the run left no event: %v %v", evs, err)
+	}
+	evt := evs[0].ID
 	tools := make([]string, 0, len(mcpPermissionTable))
 	for name := range mcpPermissionTable {
 		tools = append(tools, name)
@@ -275,6 +283,9 @@ func TestMCPPermissionMatrix(t *testing.T) {
 			for k, v := range row.args {
 				if v == "{pay}" {
 					v = run
+				}
+				if v == "{evt}" {
+					v = evt
 				}
 				args[k] = v
 			}

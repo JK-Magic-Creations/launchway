@@ -156,6 +156,10 @@ type StartRequest struct {
 	// Inputs are the values given for the pipeline's inputs, as text (see
 	// pipeline.Input.Canon); those not given take their defaults.
 	Inputs map[string]string
+	// SHA, if set, pins the run to that commit instead of the ref's tip (a
+	// replay of an event runs what the event was about). ReplayOf names the
+	// event being replayed, which the new event points back to.
+	SHA, ReplayOf string
 }
 
 // StartRunWith starts a run by hand, with input values.
@@ -170,6 +174,9 @@ func (m *Manager) StartRunWith(ctx context.Context, rq StartRequest) (*engine.Ru
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	r, err := p.resolve(ctx, rq.Ref, false)
+	if rq.SHA != "" {
+		r, err = p.pinned(ctx, rq.Ref, rq.SHA, r, err)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -183,8 +190,38 @@ func (m *Manager) StartRunWith(ctx context.Context, rq StartRequest) (*engine.Ru
 	}
 	t := trigger(r, pipeline.EventManual, rq.Actor)
 	t.Inputs = vals
-	return m.createRun(ctx, engine.NewRun{Project: rq.Project, Pipeline: pl, Trigger: t,
-		Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}}, rec)
+	nr := engine.NewRun{Project: rq.Project, Pipeline: pl, Trigger: t, Source: engine.Source{Kind: "git", URL: p.URL, Libraries: libs}}
+	nr.ReplayOf = rq.ReplayOf
+	return m.createRun(ctx, nr, rec)
+}
+
+// pinned makes a ref at an exact commit: the resolved ref with its commit
+// replaced, or, when the ref is gone (a deleted branch, a pull request's
+// ref that is not listed), one made from its name. The commit must be in the
+// mirror.
+func (p *project) pinned(ctx context.Context, ref, sha string, r Ref, resolveErr error) (Ref, error) {
+	if _, err := gitOut(ctx, p.dir, "cat-file", "-e", sha+"^{commit}"); err != nil {
+		return Ref{}, fmt.Errorf("%w: the commit %s is no longer in the project's mirror, so the event cannot be replayed exactly", engine.ErrConflict, short(sha))
+	}
+	if resolveErr != nil {
+		if !errors.Is(resolveErr, engine.ErrNotFound) {
+			return Ref{}, resolveErr
+		}
+		switch {
+		case strings.HasPrefix(ref, "refs/pull/"):
+			n := strings.TrimSuffix(strings.TrimPrefix(ref, "refs/pull/"), "/head")
+			r = Ref{Name: n, Kind: kindPull, full: ref}
+		case strings.HasPrefix(ref, "refs/tags/"):
+			r = Ref{Name: strings.TrimPrefix(ref, "refs/tags/"), Kind: "tag"}
+		default:
+			r = Ref{Name: strings.TrimPrefix(ref, "refs/heads/"), Kind: "branch"}
+		}
+	}
+	r.SHA = sha
+	if subj, err := gitOut(ctx, p.dir, "log", "-1", "--format=%s", sha); err == nil {
+		r.Subject = strings.TrimSpace(subj)
+	}
+	return r, nil
 }
 
 // startProblem passes on problems a caller can fix, and words others.

@@ -244,6 +244,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `run.cancel` | `POST /api/v1/runs/{id}/cancel` |
 | `run.resume` | `POST /api/v1/runs/{id}/resume` |
 | `run.rerun` | `POST /api/v1/runs/{id}/rerun`: re-running from a step |
+| `event.replay` | `POST /api/v1/events/{id}/replay`: an event started again by an operator; the target is the event, the detail says what started |
 | `run.queue` | `POST /api/v1/runs/{id}/queue`: run next, hold or release a Sortie that waits in a Holding pattern (the action is in the detail) |
 | `run.trust` | `POST /api/v1/runs/{id}/trust`: a maintainer approving a restricted run, *Run with secrets* (the comment is in the detail) |
 | `approval.approve` | `POST /api/v1/runs/{id}/steps/{step}/approve` |

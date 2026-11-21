@@ -16,7 +16,7 @@ import (
 // On SQLite and, with LAUNCHWAY_TEST_POSTGRES set, on PostgreSQL.
 func TestUpgradeFromTheFirstCombinedBuildKeepsEverything(t *testing.T) {
 	ctx := context.Background()
-	if schemaArchive != 39 || schemaRegistry != 40 || schemaToggles != 41 || len(migrations) != 41 {
+	if schemaArchive != 39 || schemaRegistry != 40 || schemaToggles != 41 || len(migrations) < schemaToggles {
 		t.Fatalf("the schemas are archive %d, registry %d, toggles %d with %d migrations; this test names 39, 40 and 41", schemaArchive, schemaRegistry, schemaToggles, len(migrations))
 	}
 	clk, addr := newClock(), testdb.New(t)
@@ -42,16 +42,16 @@ func TestUpgradeFromTheFirstCombinedBuildKeepsEverything(t *testing.T) {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	for _, v := range []int{schemaRegistry, schemaToggles} {
+	for v := schemaRegistry; v <= schemaLast; v++ {
 		if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	if n := strings.Count(log.String(), "applied a database migration"); n != 2 {
-		t.Errorf("%d migrations applied, want 2:\n%s", n, log.String())
+	if n := strings.Count(log.String(), "applied a database migration"); n != schemaLast-schemaArchive {
+		t.Errorf("%d migrations applied, want %d:\n%s", n, schemaLast-schemaArchive, log.String())
 	}
-	checkMarkers(t, cur, schemaToggles)
-	if info, err := cur.Schema(ctx); err != nil || info.Database != schemaToggles || info.Code != schemaToggles || !info.Compatible() {
+	checkMarkers(t, cur, schemaLast)
+	if info, err := cur.Schema(ctx); err != nil || info.Database != schemaLast || info.Code != schemaLast || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	count := func(q string) (n int) {
@@ -71,7 +71,7 @@ func TestUpgradeFromTheFirstCombinedBuildKeepsEverything(t *testing.T) {
 	}
 
 	older := mustOpenAs(t, addr, clk, schemaArchive, &syncBuffer{})
-	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaToggles || oi.Code != schemaArchive || !oi.Compatible() {
+	if oi, err := older.Schema(ctx); err != nil || oi.Database != schemaLast || oi.Code != schemaArchive || !oi.Compatible() {
 		t.Fatalf("the build of schema 39 against the final schema: %+v %v", oi, err)
 	}
 	var title string

@@ -134,6 +134,9 @@ func (e *Engine) recordPush(project string, ch RefChange, d PushDecision) (bool,
 	if err := insertDecision(tx, project, d); err != nil {
 		return false, err
 	}
+	if err := e.insertPushEvent(tx, project, d); err != nil {
+		return false, err
+	}
 	return true, tx.Commit()
 }
 
@@ -163,6 +166,18 @@ func claimRef(tx *txx, project string, ch RefChange) (bool, error) {
 func insertDecision(tx *txx, project string, d PushDecision) error {
 	_, err := tx.Exec(`INSERT INTO push_decisions(project, at, ref, sha, outcome, detail, run_id) VALUES(?,?,?,?,?,?,?)`,
 		project, d.At, d.Ref, d.SHA, d.Outcome, d.Detail, d.RunID)
+	return err
+}
+
+// insertPushEvent records a push decision that started nothing in the event
+// log (one that started a run is written with the run, by CreateRun). It is
+// a no-op before schema 42.
+func (e *Engine) insertPushEvent(tx *txx, project string, d PushDecision) error {
+	if d.Outcome == "started" || !e.knows(schemaEvents) {
+		return nil
+	}
+	ev, dec := eventOfPush(project, d)
+	_, err := insertEventTx(tx, ev, []EventDecision{dec}, d.At)
 	return err
 }
 
@@ -218,6 +233,9 @@ func (e *Engine) RecordDecision(project string, d PushDecision) error {
 	if err == nil && n == 0 {
 		d.At = e.now().UnixMilli()
 		err = insertDecision(tx, project, d)
+		if err == nil {
+			err = e.insertPushEvent(tx, project, d)
+		}
 	}
 	if err == nil {
 		err = tx.Commit()
