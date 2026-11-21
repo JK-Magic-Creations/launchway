@@ -36,13 +36,14 @@ type Database interface {
 
 // Store is the work tables.
 type Store struct {
-	db     Database
-	now    func() time.Time
-	chains Chains
-	mu     sync.Mutex
-	cache  map[Scope]cached
-	hook   Hook
-	closed map[string]bool
+	db       Database
+	now      func() time.Time
+	chains   Chains
+	mu       sync.Mutex
+	cache    map[Scope]cached
+	hook     Hook
+	closed   map[string]bool
+	prefixes map[Scope]string
 }
 
 type cached struct {
@@ -164,6 +165,25 @@ func (s *Store) ensureScope(ctx context.Context, tx DB, sc Scope) error {
 // Prefix returns the prefix of a scope's refs (making the scope's record if
 // it has none yet).
 func (s *Store) Prefix(ctx context.Context, sc Scope) (string, error) {
+	s.mu.Lock()
+	if p, ok := s.prefixes[sc]; ok {
+		s.mu.Unlock()
+		return p, nil
+	}
+	s.mu.Unlock()
+	p, err := s.prefixUncached(ctx, sc)
+	if err == nil {
+		s.mu.Lock()
+		if s.prefixes == nil {
+			s.prefixes = map[Scope]string{}
+		}
+		s.prefixes[sc] = p
+		s.mu.Unlock()
+	}
+	return p, err
+}
+
+func (s *Store) prefixUncached(ctx context.Context, sc Scope) (string, error) {
 	var p string
 	err := s.db.QueryRow(ctx, `SELECT prefix FROM work_scopes WHERE scope_kind = ? AND scope_id = ?`, sc.Kind, sc.ID).Scan(&p)
 	if isNoRows(err) {
@@ -268,3 +288,7 @@ func (s *Store) History(ctx context.Context, itemID string, after int64, limit i
 // DB exposes the database the store uses, for tests and the importers that
 // read the archive's tables.
 func (s *Store) DB() DB { return s.db }
+
+// BeginTx starts a transaction, for the importers and tests that write many
+// rows at once.
+func (s *Store) BeginTx(ctx context.Context) (Tx, error) { return s.db.BeginTx(ctx) }

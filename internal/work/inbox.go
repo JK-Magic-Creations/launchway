@@ -47,6 +47,7 @@ func (s *Store) invalidate() {
 	s.mu.Lock()
 	s.cache = nil
 	s.closed = nil
+	s.prefixes = nil
 	s.mu.Unlock()
 }
 

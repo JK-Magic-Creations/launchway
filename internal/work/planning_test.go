@@ -368,3 +368,32 @@ func TestBoardColumnsWIPAndLanes(t *testing.T) {
 		t.Fatal("bad lane")
 	}
 }
+
+func TestCommitsLinkAndOnlyAPersonClosesFromTheDefaultBranch(t *testing.T) {
+	s, ctx := newStore(t), context.Background()
+	a := mustCreate(t, s, bob, work.NewItem{Title: "a"})
+	b := mustCreate(t, s, bob, work.NewItem{Title: "b"})
+	// On a branch: linked, nothing moves.
+	res, err := s.ApplyCommit(ctx, proj, work.CommitChange{Repo: "acme/shop", SHA: "aaaa", Message: "Fixes #1 on a branch", Branch: "topic", By: bob})
+	if err != nil || len(res.Linked) != 1 || len(res.Moved) != 0 {
+		t.Fatalf("%+v %v", res, err)
+	}
+	if g, _ := s.Get(ctx, bob, a.Ref); g.State != "backlog" {
+		t.Fatalf("a commit on a branch moved work: %s", g.State)
+	}
+	// Straight to the default branch by a person: it closes.
+	res, err = s.ApplyCommit(ctx, proj, work.CommitChange{Repo: "acme/shop", SHA: "bbbb", Message: "closes " + b.Ref, Branch: "main", Default: true, By: bob})
+	if err != nil || len(res.Moved) != 1 {
+		t.Fatalf("%+v %v", res, err)
+	}
+	if g, _ := s.Get(ctx, bob, b.Ref); g.State != "done" {
+		t.Fatalf("%s", g.State)
+	}
+	if l, _ := s.CodeLinks(ctx, bob, b.Ref); len(l) != 1 || l[0].Kind != "commit" {
+		t.Fatalf("%+v (no stray pull link is left behind)", l)
+	}
+	items, _ := s.ItemsForCode(ctx, bob, "commit", "acme/shop", "aaaa")
+	if len(items) != 1 || items[0].Ref != a.Ref {
+		t.Fatalf("%+v", items)
+	}
+}

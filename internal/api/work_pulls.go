@@ -7,6 +7,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 	"github.com/jk-magic-creations/launchway/internal/work"
 )
@@ -200,4 +201,40 @@ func (s *Server) workMergeCheck(ctx context.Context, repoID string, p pulls.Pull
 		return pulls.Refuse("this is an agent's change and it needs a person's approval first (or an independent agent's, where the policy allows it for a change like this): %s", strings.Join(d.Reasons, "; "))
 	}
 	return nil
+}
+
+// workOnPush links the work that the commit messages of a push name. A closing
+// keyword on a commit that reaches the default branch directly is treated like
+// a merge, by a person only.
+func (s *Server) workOnPush(ctx context.Context, c gitCaller, repo forge.Repository, updates []githttp.RefUpdate) {
+	if s.Forge == nil || s.Forge.Pulls == nil {
+		return
+	}
+	st := s.work()
+	home := work.Scope{Kind: work.ScopeProject, ID: repo.Path}
+	for _, u := range updates {
+		if !strings.HasPrefix(u.Name, "refs/heads/") || zeroSHA(u.New) {
+			continue
+		}
+		branch := strings.TrimPrefix(u.Name, "refs/heads/")
+		base := u.Old
+		if zeroSHA(base) {
+			base = repo.DefaultBranch
+			if base == branch {
+				continue
+			}
+		}
+		cs, err := s.Forge.Pulls.CommitsBetween(ctx, repo.ID, base, u.New, 50)
+		if err != nil {
+			continue
+		}
+		by := work.Caller{Actor: work.Actor{Name: c.user, Kind: work.KindPerson, Via: "git"}}
+		if isAgentUser(c.user) {
+			by = work.Caller{Actor: work.Actor{Name: agentNameOf(c.user), Kind: work.KindAgent, Via: "git"}}
+		}
+		for _, ci := range cs {
+			_, _ = st.ApplyCommit(ctx, home, work.CommitChange{Repo: repo.Path, SHA: ci.SHA, Message: ci.Subject + "\n" + ci.Body, Branch: branch, Default: branch == repo.DefaultBranch,
+				By: by, MayClose: func(sc work.Scope) bool { return s.mayCloseFor(c.user, sc) }})
+		}
+	}
 }

@@ -17,3 +17,15 @@ func (s *Service) Contains(ctx context.Context, repoID, anc, desc string) (bool,
 
 // Refuse is an error that stops a merge with a reason a person can act on.
 func Refuse(format string, a ...any) error { return conflict(format, a...) }
+
+// CommitsBetween lists the commits reachable from head and not from base,
+// oldest first, at most limit (for work that commit messages name).
+func (s *Service) CommitsBetween(ctx context.Context, repoID, base, head string, limit int) ([]CommitInfo, error) {
+	var out []CommitInfo
+	err := s.read(ctx, repoID, func(g gitRunner) error {
+		var err error
+		out, err = g.commits(ctx, base, head, limit)
+		return err
+	})
+	return out, err
+}

@@ -6,8 +6,8 @@ import (
 
 // Backlog order is a whole-number rank per scope: lower is higher up. New work
 // goes to the bottom with a gap of rankGap, so most moves are one update; when
-// two neighbors have no room between them the scope is renumbered in the same
-// transaction. Every change to ranks first locks the scope, so concurrent
+// two neighbors have no room between them, everything above the gap moves up
+// by one gap in the same statement. Every change to ranks first locks the scope, so concurrent
 // moves queue instead of colliding.
 const rankGap = 1024
 
@@ -25,30 +25,6 @@ func (s *Store) nextRank(ctx context.Context, tx DB, sc Scope) (int64, error) {
 		return 0, err
 	}
 	return max + rankGap, nil
-}
-
-// renumber spaces a scope's items evenly in their current order.
-func (s *Store) renumber(ctx context.Context, tx DB, sc Scope) error {
-	rows, err := tx.Query(ctx, `SELECT id FROM work_items WHERE scope_kind = ? AND scope_id = ? ORDER BY rank, number`, sc.Kind, sc.ID)
-	if err != nil {
-		return err
-	}
-	var idList []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return err
-		}
-		idList = append(idList, id)
-	}
-	rows.Close()
-	for i, id := range idList {
-		if _, err := tx.Exec(ctx, `UPDATE work_items SET rank = ? WHERE id = ?`, int64(i+1)*rankGap, id); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // Position says where a moved item goes.
@@ -82,83 +58,82 @@ func (s *Store) Rank(ctx context.Context, c Caller, ref string, pos Position) (*
 }
 
 func (s *Store) placeRank(ctx context.Context, tx DB, c Caller, it *Item, pos Position) error {
-	for attempt := 0; attempt < 2; attempt++ {
-		var target int64
-		switch pos.Where {
-		case "top":
-			var min int64
-			if err := tx.QueryRow(ctx, `SELECT COALESCE(MIN(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID).Scan(&min); err != nil {
-				return err
-			}
-			target = min - rankGap
-			if target < 1 {
-				if err := s.renumber(ctx, tx, it.Scope); err != nil {
-					return err
-				}
-				if err := tx.QueryRow(ctx, `SELECT COALESCE(MIN(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID).Scan(&min); err != nil {
-					return err
-				}
-				// Make room above the first.
-				if _, err := tx.Exec(ctx, `UPDATE work_items SET rank = rank + ? WHERE scope_kind = ? AND scope_id = ?`, rankGap, it.Scope.Kind, it.Scope.ID); err != nil {
-					return err
-				}
-				target = rankGap / 2
-			}
-		case "bottom":
-			var max int64
-			if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID).Scan(&max); err != nil {
-				return err
-			}
-			target = max + rankGap
-		case "before", "after":
-			oid, err := s.idOf(ctx, tx, pos.Other)
-			if err != nil {
-				return err
-			}
-			var other Item
-			if err := tx.QueryRow(ctx, `SELECT rank, scope_kind, scope_id FROM work_items WHERE id = ?`, oid).Scan(&other.Rank, &other.Scope.Kind, &other.Scope.ID); err != nil {
-				return notFound("no item " + pos.Other)
-			}
-			if other.Scope != it.Scope {
-				return invalid("an item is placed relative to one of the same project")
-			}
-			if oid == it.ID {
-				return invalid("an item cannot be placed relative to itself")
-			}
-			var neighbor int64
-			if pos.Where == "before" {
-				if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND rank < ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, other.Rank, it.ID).Scan(&neighbor); err != nil {
-					return err
-				}
-				target = (neighbor + other.Rank) / 2
-				if other.Rank-neighbor < 2 {
-					target = -1
-				}
-			} else {
-				if err := tx.QueryRow(ctx, `SELECT COALESCE(MIN(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND rank > ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, other.Rank, it.ID).Scan(&neighbor); err != nil {
-					return err
-				}
-				if neighbor == 0 {
-					target = other.Rank + rankGap
-				} else if neighbor-other.Rank < 2 {
-					target = -1
-				} else {
-					target = (neighbor + other.Rank) / 2
-				}
-			}
-			if target == -1 {
-				if err := s.renumber(ctx, tx, it.Scope); err != nil {
-					return err
-				}
-				continue
-			}
-		default:
-			return invalid("where is top, bottom, before or after")
-		}
-		if _, err := tx.Exec(ctx, `UPDATE work_items SET rank = ?, version = version + 1, updated_at = ? WHERE id = ?`, target, ms(s.now()), it.ID); err != nil {
+	var target int64
+	one := func(q string, a ...any) (int64, error) {
+		var v int64
+		err := tx.QueryRow(ctx, q, a...).Scan(&v)
+		return v, err
+	}
+	switch pos.Where {
+	case "top":
+		min, err := one(`SELECT COALESCE(MIN(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID)
+		if err != nil {
 			return err
 		}
-		return s.event(ctx, tx, it.ID, c.Actor, "ranked", 0, map[string]any{"where": pos.Where, "other": pos.Other})
+		target = min - rankGap // ranks may go below zero: only their order matters
+	case "bottom":
+		max, err := one(`SELECT COALESCE(MAX(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND id <> ?`, it.Scope.Kind, it.Scope.ID, it.ID)
+		if err != nil {
+			return err
+		}
+		target = max + rankGap
+	case "before", "after":
+		oid, err := s.idOf(ctx, tx, pos.Other)
+		if err != nil {
+			return err
+		}
+		if oid == it.ID {
+			return invalid("an item cannot be placed relative to itself")
+		}
+		var osc Scope
+		var orank int64
+		if err := tx.QueryRow(ctx, `SELECT rank, scope_kind, scope_id FROM work_items WHERE id = ?`, oid).Scan(&orank, &osc.Kind, &osc.ID); err != nil {
+			return notFound("no item " + pos.Other)
+		}
+		if osc != it.Scope {
+			return invalid("an item is placed relative to one of the same project")
+		}
+		target, err = s.betweenRank(ctx, tx, it, orank, pos.Where == "before")
+		if err != nil {
+			return err
+		}
+	default:
+		return invalid("where is top, bottom, before or after")
 	}
-	return conflict("the order could not be changed; try again")
+	if _, err := tx.Exec(ctx, `UPDATE work_items SET rank = ?, version = version + 1, updated_at = ? WHERE id = ?`, target, ms(s.now()), it.ID); err != nil {
+		return err
+	}
+	return s.event(ctx, tx, it.ID, c.Actor, "ranked", 0, map[string]any{"where": pos.Where, "other": pos.Other})
+}
+
+// betweenRank finds a rank next to another item's: halfway to its neighbor,
+// and when the two touch, after making room by moving everything above the
+// gap up in one statement (the order is kept).
+func (s *Store) betweenRank(ctx context.Context, tx DB, it *Item, orank int64, before bool) (int64, error) {
+	var neighbor int64
+	var has int
+	q := `SELECT COUNT(*), COALESCE(MAX(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND rank < ? AND id <> ?`
+	if !before {
+		q = `SELECT COUNT(*), COALESCE(MIN(rank), 0) FROM work_items WHERE scope_kind = ? AND scope_id = ? AND rank > ? AND id <> ?`
+	}
+	if err := tx.QueryRow(ctx, q, it.Scope.Kind, it.Scope.ID, orank, it.ID).Scan(&has, &neighbor); err != nil {
+		return 0, err
+	}
+	switch {
+	case has == 0 && before:
+		return orank - rankGap, nil
+	case has == 0:
+		return orank + rankGap, nil
+	}
+	low, high := neighbor, orank
+	if !before {
+		low, high = orank, neighbor
+	}
+	if high-low < 2 {
+		if _, err := tx.Exec(ctx, `UPDATE work_items SET rank = rank + ? WHERE scope_kind = ? AND scope_id = ? AND rank >= ? AND id <> ?`, rankGap, it.Scope.Kind, it.Scope.ID, high, it.ID); err != nil {
+			return 0, err
+		}
+		high += rankGap
+	}
+	return (low + high) / 2, nil
 }
