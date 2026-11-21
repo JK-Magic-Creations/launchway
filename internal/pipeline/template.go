@@ -566,6 +566,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 		ps.parseSteps(v, p)
 	}
 	if ps.check(p) {
+		ps.checkOutputTests(p)
 		ps.checkImages(p)
 	}
 	ps.checkArtifacts(p)
@@ -745,7 +746,7 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 		x.loopLimit = DefaultMaxLoopMembers
 	}
 	out := &Pipeline{Name: p.Name, On: p.On, Origin: p.Origin, Supersede: p.Supersede, Inputs: p.Inputs, Loops: p.Loops, maxLoop: p.maxLoop,
-		Runner: p.Runner, Requires: p.Requires}
+		Runner: p.Runner, Requires: p.Requires, Timeout: p.Timeout, TimeoutLine: p.TimeoutLine, Lane: p.Lane}
 	if !p.Bound() {
 		return nil, Problems{{Message: "the pipeline has loops or input references that have not been bound to a run's values"}}
 	}
@@ -802,6 +803,7 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	if out.UsesSchemaResources() {
 		out.Requires = max(out.Requires, SchemaResources)
 	}
+	out.requireFlow() // likewise for the flow control keys a template's step uses
 	return out, nil
 }
 
@@ -831,7 +833,7 @@ type scope struct {
 	inherit       []string // the steps it needs
 	inheritGroups []string
 	when          *Condition
-	retry         *int
+	retry         *retryPolicy
 	timeout       *Duration
 	each          map[string]string // the loop values of the uses step, and of those around it
 }
@@ -1044,10 +1046,10 @@ func (x *expander) emit(sc *scope) {
 			child.when, child.retry, child.timeout = sc.when, sc.retry, sc.timeout
 			child.each = mergeEach(sc.each, s.Each)
 			if s.When != nil {
-				child.when = s.When
+				child.when = whenIn(s.When, sc.prefix)
 			}
 			if s.retrySet {
-				r := s.Retry
+				r := s.retryPolicy()
 				child.retry = &r
 			}
 			if s.timeoutSet {
@@ -1077,11 +1079,9 @@ func (x *expander) emit(sc *scope) {
 		if c.Container != "" {
 			c.Container = sc.containers[s.Container]
 		}
-		if c.When == nil {
-			c.When = sc.when
-		}
+		c.When = sc.whenFor(c.When)
 		if !s.retrySet && sc.retry != nil && !s.IsApproval() {
-			c.Retry = *sc.retry
+			c.setRetryPolicy(*sc.retry)
 		}
 		if !s.timeoutSet && sc.timeout != nil {
 			c.Timeout = *sc.timeout

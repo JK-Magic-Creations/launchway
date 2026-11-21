@@ -42,10 +42,14 @@ const clientUsage = `Usage:
   launchway login --server URL              store an API token for the server (read from
                   [--allow-http]            LAUNCHWAY_TOKEN, or typed or piped in)
   launchway runs start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
-  launchway runs list [--project P] [--status S] [--limit N] [--json]
+  launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json]
   launchway runs show <run-id> [--json]
   launchway runs logs <run-id> [--step S] [--follow]
   launchway runs cancel <run-id>
+  launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same run goes on, running its failed steps again
+  launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
+                                                          a new run from those steps (or the failed ones), reusing the rest
+  launchway runs lanes <project> [--json]          each lane: the run that holds it, and the runs waiting
   launchway runs tests <run-id> [--all | --status S] [--tag T] [--json]   failures first, with messages
   launchway runs coverage <run-id> [--files] [--json]
   launchway runs reports <run-id> [--json]                links to its HTML reports
@@ -171,9 +175,14 @@ func newClient(c credentials, out io.Writer) *client {
 // call sends a request and decodes the answer into v. Problems the server
 // reports are returned as they are, including input values that do not
 // fit, by name.
+// rawText is a request body sent as it is, not as JSON: a pipeline file.
+type rawText string
+
 func (cl *client) call(method, path string, body, v any) error {
 	var rd io.Reader
-	if body != nil {
+	if raw, ok := body.(rawText); ok {
+		rd = strings.NewReader(string(raw))
+	} else if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
 			return err
@@ -190,7 +199,9 @@ func (cl *client) call(method, path string, body, v any) error {
 	// every caller as its user and asks every change for this header,
 	// which a page of another site cannot send.
 	req.Header.Set("X-Launchway-CSRF", "1")
-	if body != nil {
+	if _, raw := body.(rawText); raw {
+		req.Header.Set("Content-Type", "text/plain")
+	} else if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	resp, err := cl.http.Do(req)
@@ -342,6 +353,12 @@ func cmdRuns(args []string) error {
 			return cl.reports(args[1:])
 		case "cancel":
 			return cl.cancel(args[1:])
+		case "lanes":
+			return cl.lanes(args[1:])
+		case "resume":
+			return cl.resume(args[1:])
+		case "rerun":
+			return cl.rerun(args[1:])
 		}
 		return usageErr("unknown command runs %s\n\n%s", args[0], clientUsage)
 	})
@@ -382,18 +399,62 @@ type runView struct {
 	Message    string `json:"message"`
 	CreatedAt  int64  `json:"created_at"`
 	FinishedAt int64  `json:"finished_at"`
-	StepList   []struct {
+	// CancelReason says why a run was canceled when not by hand, such as
+	// "run timeout of 2h reached"; DeadlineAt is when its timeout cancels it.
+	CancelReason string `json:"cancel_reason"`
+	DeadlineAt   int64  `json:"deadline_at"`
+	// AllowedFailures counts the steps that failed and were allowed to.
+	AllowedFailures     int      `json:"allowed_failures"`
+	AllowedFailureSteps []string `json:"allowed_failure_steps"`
+	// PullRequest and PullRequestInto: a pull-request run, and the branch
+	// it targets.
+	PullRequest     int    `json:"pull_request"`
+	PullRequestInto string `json:"pull_request_into"`
+	// Lane is the run's place in its pipeline's lane, if it has one.
+	Lane *struct {
+		Label    string `json:"label"`
+		State    string `json:"state"`
+		Position int    `json:"position"`
+		Behind   *struct {
+			Number int `json:"number"`
+		} `json:"behind"`
+		Reason string `json:"reason"`
+	} `json:"lane"`
+	StepList []struct {
 		ID       string `json:"id"`
 		Status   string `json:"status"`
 		Attempt  int    `json:"attempt"`
 		Error    string `json:"error"`
 		ExitCode *int   `json:"exit_code"`
+		// AllowedFailure: failed, and its pipeline allows that.
+		AllowedFailure bool `json:"allowed_failure"`
+		// NotBefore is when a retry that waits is handed to a runner;
+		// FailureCause why the last attempt failed.
+		NotBefore    int64  `json:"not_before"`
+		FailureCause string `json:"failure_cause"`
+		Retry        int    `json:"retry"`
 	} `json:"step_list"`
 	TriggerDetail *struct {
 		Inputs   map[string]string `json:"inputs"`
 		Schedule string            `json:"schedule"`
 		Webhook  string            `json:"webhook"`
 	} `json:"trigger_detail"`
+}
+
+// runRef says what a run is of: its branch or tag, or its pull request and
+// the branch that targets.
+func runRef(r runView) string {
+	if r.PullRequest > 0 {
+		ref := fmt.Sprintf("pull request #%d", r.PullRequest)
+		if r.PullRequestInto != "" {
+			ref += " into " + r.PullRequestInto
+		}
+		return ref
+	}
+	if r.Branch != "" {
+		return r.Branch
+	}
+	return r.Tag
 }
 
 func terminal(status string) bool {
@@ -515,6 +576,7 @@ func (cl *client) list(args []string) error {
 	fs := flag.NewFlagSet("runs list", flag.ContinueOnError)
 	project := fs.String("project", "", "only this project's runs")
 	status := fs.String("status", "", "only runs with this status")
+	lane := fs.String("lane", "", "only runs in the lane of this name")
 	limit := fs.Int("limit", 20, "at most this many")
 	asJSON := fs.Bool("json", false, "print JSON")
 	if _, err := parseArgs(fs, args); err != nil {
@@ -527,6 +589,9 @@ func (cl *client) list(args []string) error {
 	if *status != "" {
 		q.Set("status", *status)
 	}
+	if *lane != "" {
+		q.Set("lane", *lane)
+	}
 	q.Set("limit", strconv.Itoa(*limit))
 	var runs []runView
 	if err := cl.call("GET", "/api/v1/runs?"+q.Encode(), nil, &runs); err != nil {
@@ -534,12 +599,13 @@ func (cl *client) list(args []string) error {
 	}
 	return cl.print(runs, *asJSON, func() {
 		for _, r := range runs {
-			ref := r.Branch
-			if ref == "" {
-				ref = r.Tag
-			}
-			fmt.Fprintf(cl.out, "%-24s %-16s #%-5d %-10s %-12s %-14s %s\n", r.ID, r.Project, r.Number, r.Status, r.Event, ref,
+			ref := runRef(r)
+			line := fmt.Sprintf("%-24s %-16s #%-5d %-10s %-12s %-14s %s", r.ID, r.Project, r.Number, r.Status, r.Event, ref,
 				time.UnixMilli(r.CreatedAt).Format(time.DateTime))
+			if note := allowedNote(r.AllowedFailures, r.AllowedFailureSteps); note != "" {
+				line += "  (" + note + ")"
+			}
+			fmt.Fprintln(cl.out, line)
 		}
 	})
 }
@@ -568,11 +634,11 @@ func (cl *client) show(args []string) error {
 	if err := cl.call("GET", "/api/v1/runs/"+url.PathEscape(pos[0]), nil, &r); err != nil {
 		return err
 	}
-	ref := r.Branch
-	if ref == "" {
-		ref = r.Tag
-	}
+	ref := runRef(r)
 	fmt.Fprintf(cl.out, "Run #%d of %s: %s\n", r.Number, r.Project, r.Status)
+	if note := allowedNote(r.AllowedFailures, r.AllowedFailureSteps); note != "" {
+		fmt.Fprintf(cl.out, "  %s\n", note)
+	}
 	fmt.Fprintf(cl.out, "  %s at %.10s, %s by %s, %s\n", ref, r.SHA, r.Event, r.Actor, time.UnixMilli(r.CreatedAt).Format(time.DateTime))
 	if d := r.TriggerDetail; d != nil {
 		if d.Schedule != "" {
@@ -590,9 +656,35 @@ func (cl *client) show(args []string) error {
 			fmt.Fprintf(cl.out, "  input %s = %s\n", n, d.Inputs[n])
 		}
 	}
+	if l := r.Lane; l != nil {
+		switch {
+		case l.State == "waiting" && l.Behind != nil:
+			fmt.Fprintf(cl.out, "  lane %s: waiting, number %d in line, behind run #%d\n", l.Label, l.Position, l.Behind.Number)
+		case l.Behind != nil:
+			fmt.Fprintf(cl.out, "  lane %s: %s (run #%d)\n", l.Label, l.State, l.Behind.Number)
+		default:
+			fmt.Fprintf(cl.out, "  lane %s: %s\n", l.Label, l.State)
+		}
+	}
+	if r.CancelReason != "" {
+		fmt.Fprintf(cl.out, "  canceled: %s\n", r.CancelReason)
+	}
+	if r.DeadlineAt > 0 && !terminal(r.Status) {
+		fmt.Fprintf(cl.out, "  times out at %s\n", time.UnixMilli(r.DeadlineAt).Format(time.DateTime))
+	}
 	fmt.Fprintf(cl.out, "  %s/runs/%s\n\nSteps:\n", cl.c.Server, r.ID)
 	for _, s := range r.StepList {
-		line := fmt.Sprintf("  %-10s %s", s.Status, s.ID)
+		status := s.Status
+		if s.AllowedFailure {
+			status = "failed (allowed)"
+		}
+		line := fmt.Sprintf("  %-10s %s", status, s.ID)
+		if s.Status == "queued" && s.NotBefore > time.Now().UnixMilli() {
+			line += fmt.Sprintf(": retrying in %s (attempt %d of %d)", time.Until(time.UnixMilli(s.NotBefore)).Round(time.Second), s.Attempt, s.Retry+1)
+		}
+		if s.FailureCause != "" && s.FailureCause != "exit" {
+			line += " [cause: " + s.FailureCause + "]"
+		}
 		if s.Error != "" {
 			line += ": " + s.Error
 		}
@@ -711,4 +803,155 @@ func bindLocal(p *pipeline.Pipeline, given []string) (*pipeline.Pipeline, map[st
 		resolved = nil
 	}
 	return b, resolved, nil
+}
+
+// lanes lists a project's lanes that are held or have runs waiting.
+func (cl *client) lanes(args []string) error {
+	fs := flag.NewFlagSet("runs lanes", flag.ContinueOnError)
+	asJSON := fs.Bool("json", false, "print JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("say which project: launchway runs lanes <project> [--json]")
+	}
+	type ref struct {
+		ID     string `json:"id"`
+		Number int    `json:"number"`
+		Status string `json:"status"`
+	}
+	var lanes []struct {
+		Label   string `json:"label"`
+		Holder  *ref   `json:"holder"`
+		Waiting []ref  `json:"waiting"`
+	}
+	if err := cl.call("GET", "/api/v1/projects/"+url.PathEscape(pos[0])+"/lanes", nil, &lanes); err != nil {
+		return err
+	}
+	return cl.print(lanes, *asJSON, func() {
+		if len(lanes) == 0 {
+			fmt.Fprintln(cl.out, "No lane is held and no run is waiting for one.")
+		}
+		for _, l := range lanes {
+			holder := "no run holds it"
+			if l.Holder != nil {
+				holder = fmt.Sprintf("held by run #%d (%s)", l.Holder.Number, l.Holder.Status)
+			}
+			fmt.Fprintf(cl.out, "%s: %s\n", l.Label, holder)
+			for i, w := range l.Waiting {
+				fmt.Fprintf(cl.out, "  %d. run #%d waits\n", i+1, w.Number)
+			}
+		}
+	})
+}
+
+// resume continues a failed or canceled run: the same run, its failed and
+// canceled steps run again, what succeeded is kept. With --wait it exits as
+// runs start --wait does.
+func (cl *client) resume(args []string) error {
+	fs := flag.NewFlagSet("runs resume", flag.ContinueOnError)
+	wait := fs.Bool("wait", false, "wait for the run to finish, and exit with its outcome")
+	timeout := fs.Duration("timeout", 0, "with --wait, stop waiting after this long (the run goes on)")
+	asJSON := fs.Bool("json", false, "print the run as JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
+		return usageErr("say which run: launchway runs resume <run-id> [--wait]")
+	}
+	if err := cl.call("POST", "/api/v1/runs/"+url.PathEscape(pos[0])+"/resume", map[string]any{}, nil); err != nil {
+		return err
+	}
+	return cl.followRun(pos[0], *wait, *timeout, *asJSON, "Resumed run %s: its failed steps run again.\n")
+}
+
+// followRun prints, or waits for, a run a command just made or resumed.
+func (cl *client) followRun(id string, wait bool, timeout time.Duration, asJSON bool, started string) error {
+	if !wait {
+		var run runView
+		if err := cl.call("GET", "/api/v1/runs/"+url.PathEscape(id), nil, &run); err != nil {
+			return err
+		}
+		return cl.print(run, asJSON, func() {
+			fmt.Fprintf(cl.out, started, id)
+			fmt.Fprintf(cl.out, "Run #%d of %s: %s/runs/%s\n", run.Number, run.Project, cl.c.Server, run.ID)
+		})
+	}
+	if !asJSON {
+		fmt.Fprintf(os.Stderr, started, id)
+	}
+	final, err := cl.waitFor(id, timeout, !asJSON)
+	if err != nil {
+		return err
+	}
+	if err := cl.print(final, asJSON, func() {
+		fmt.Fprintf(cl.out, "Run #%d %s\n", final.Number, final.Status)
+	}); err != nil {
+		return err
+	}
+	return outcome(final.Status)
+}
+
+// rerunPlan is what a re-run would do, as the server says.
+type rerunPlan struct {
+	From  []string `json:"from"`
+	Run   []string `json:"run"`
+	Reuse []string `json:"reuse"`
+}
+
+// rerun makes a new run of a finished one from steps, or from the ones that
+// failed. With --plan it only says what would run and what would be reused,
+// or why it cannot be done.
+func (cl *client) rerun(args []string) error {
+	fs := flag.NewFlagSet("runs rerun", flag.ContinueOnError)
+	var froms multi
+	fs.Var(&froms, "from", "a step to start from; give it once for each step")
+	failed := fs.Bool("failed", false, "start from the smallest set of steps that covers every failed and canceled step")
+	plan := fs.Bool("plan", false, "only say what would run again and what would be reused")
+	wait := fs.Bool("wait", false, "wait for the new run to finish, and exit with its outcome")
+	timeout := fs.Duration("timeout", 0, "with --wait, stop waiting after this long (the run goes on)")
+	asJSON := fs.Bool("json", false, "print JSON")
+	pos, err := parseArgs(fs, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 || (len(froms) == 0 && !*failed) {
+		return usageErr("launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait]: name the steps with --from, or use --failed")
+	}
+	id := pos[0]
+	if *plan {
+		q := url.Values{}
+		for _, f := range froms {
+			q.Add("from", f)
+		}
+		if *failed {
+			q.Set("failed", "true")
+		}
+		var p rerunPlan
+		if err := cl.call("GET", "/api/v1/runs/"+url.PathEscape(id)+"/rerun?"+q.Encode(), nil, &p); err != nil {
+			return err
+		}
+		return cl.print(p, *asJSON, func() {
+			fmt.Fprintf(cl.out, "Re-running from %s would run again:\n", strings.Join(p.From, ", "))
+			for _, s := range p.Run {
+				fmt.Fprintf(cl.out, "  run    %s\n", s)
+			}
+			for _, s := range p.Reuse {
+				fmt.Fprintf(cl.out, "  reuse  %s\n", s)
+			}
+		})
+	}
+	body := map[string]any{"from": []string(froms), "failed": *failed}
+	var run runView
+	if err := cl.call("POST", "/api/v1/runs/"+url.PathEscape(id)+"/rerun", body, &run); err != nil {
+		return err
+	}
+	if !*wait {
+		return cl.print(run, *asJSON, func() {
+			fmt.Fprintf(cl.out, "Started run #%d of %s, a re-run: %s/runs/%s\n", run.Number, run.Project, cl.c.Server, run.ID)
+		})
+	}
+	return cl.followRun(run.ID, true, *timeout, *asJSON, "Started a re-run, run %s.\n")
 }

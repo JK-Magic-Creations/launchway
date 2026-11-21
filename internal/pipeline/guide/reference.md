@@ -16,10 +16,12 @@ example `steps.build.needs`), and nothing starts while there are any.
 pipeline: my-service        # required: lower-case letters, digits and hyphens
 on:                         # what starts runs by itself (a run can always be started by hand)
   push: { branches: [main, "release/*"], tags: ["v*"] }
-  pull_request: {}
+  pull_request: {}            # or { into: [main, "release/*"] } to run only for pull requests into those branches
   schedule: [ { cron: "0 3 * * *", timezone: Europe/Berlin, ref: main, inputs: { dry_run: false } } ]
   webhook: { name: deploy-request, ref: main, inputs: { version: body.release.version } }
 supersede: true             # a new push or pull-request run cancels older ones of the same ref
+timeout: 2h                 # a run open longer than this is canceled (waiting for approvals does not count)
+lane: { per: [ref], when_busy: wait, queue: newest }   # runs of the project take turns; see Lane
 inputs: { … }               # values a run is started with; see Inputs
 libraries: { … }            # shared template libraries; see Templates
 containers: { … }           # named toolboxes and services; see Containers
@@ -29,8 +31,10 @@ steps: { … }                # required: the steps, by name
 | Key | Meaning |
 |---|---|
 | `pipeline` | The pipeline's name |
-| `on` | `push` (with `branches` and `tags` patterns), `pull_request: {}`, `schedule` (a list of `cron`, `timezone`, `ref`, `inputs`) and `webhook` (`name`, `ref`, `inputs` mapping fields of the request body). Schedules and webhooks are read from the default branch only |
+| `on` | `push` (with `branches` and `tags` patterns), `pull_request: {}` (or `{ into: [patterns] }`: only for pull requests that target such a branch, as the project's forge says), `schedule` (a list of `cron`, `timezone`, `ref`, `inputs`) and `webhook` (`name`, `ref`, `inputs` mapping fields of the request body). Schedules and webhooks are read from the default branch only |
 | `supersede` | `true`: a run started by a push or pull request cancels the older such runs of the same branch, tag or pull request that are still going |
+| `lane` | `name` (default the pipeline's), `per` (`ref`, `pull_request`, `input:<name>`: what splits it into separate lanes), `when_busy` (`wait`, `cancel` or `skip`: what a run that arrives while the lane is held does) and `queue` (`newest`: a waiting run is replaced by a newer one; or `all`). At most one run of a lane goes at a time. Not with `supersede` |
+| `timeout` | How long a run may stay open, `1m` to `720h` (and no more than the installation's limit): a run past it is canceled with the reason `run timeout of 2h reached`. Time spent waiting for an approval does not count |
 | `inputs` | Values a run is started with |
 | `libraries` | Template libraries: `name: { repo: <library the server lists>, version: <tag, branch or full commit> }` |
 | `containers` | Named containers steps run in, and services beside them |
@@ -73,7 +77,7 @@ steps:
 | `when` | Conditions; the step is skipped when they do not hold (below) |
 | `env` | Extra environment variables: `NAME: value` |
 | `secrets` | Environment variables whose values the runner looks up: `NAME: { store: vault, key: path, field: name }`. The server never sees the values; they are masked in logs |
-| `retry` | Extra attempts after a failure (default 0) |
+| `retry` | Extra attempts after a failure (default 0). A mapping adds a pause and causes: `retry: { times: 3, wait: 30s, backoff: 2, on: [timeout, infrastructure] }`; `wait` is the pause before the first retry (`1s` to `1h`), `backoff` multiplies it for each retry after (1 to 10), `on` lists the causes retried (`exit`, `timeout`, `infrastructure`; default every cause) |
 | `timeout` | Per attempt, such as `90s`, `10m`, `1h` (default 1h, at most 24h). For an approval, how long to wait (default 24h, at most 30 days) |
 | `reports` | Files read when the step ends, pass or fail: `tests` (JUnit XML or `go test -json`), `findings` (SARIF 2.1.0), `sbom` (CycloneDX JSON). Each is a glob or a list of globs relative to the workspace |
 | `resources` | CPU and memory for a step that runs a script: `{ cpu: 2, memory: 6Gi }`, with `cpu_limit` and `memory_limit` to let it use more than it is promised. A limit left out is the amount promised. Without it the step gets the installation's default for its kind (up to 4 CPUs and 6 GiB to start with). Tools are told to start only as many parallel jobs as fit (`GOMAXPROCS`, `MAKEFLAGS`, `CARGO_BUILD_JOBS`, `LAUNCHWAY_PARALLELISM`). A run is refused if a step asks for more than the installation or the cluster allows. Not for image, deploy, rollout, rollback, verify, ai or approval steps |
@@ -83,6 +87,7 @@ steps:
 | `uses` | `library/template`: the step becomes that template's steps |
 | `with` | Values for the template's parameters |
 | `for_each` | Repeat the step over lists; with `exclude`, `max_parallel` and `fail_fast` |
+| `on_failure` | `stop` (default) or `continue` (steps that run a script, and image steps): a final failure is shown as failed (allowed), the run's outcome ignores it and steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }` |
 | `deployment` | For a `rollback` or `rollout` step: the deploy step it acts on |
 
 ### Environment every step gets
@@ -102,6 +107,7 @@ when: { branch: [main, "release/*"] }          # only on these branches
 when: { tag: "v*" }
 when: { event: [push, manual] }                # push, manual, draft, pull_request, schedule, webhook
 when: { input: dry_run, equals: false }        # a run input; a boolean input alone means equals: true
+when: { output: scan.changed, equals: true }   # an output of a step this one needs; never written: skipped
 when: { upstream: failed }                     # run if a needed step failed (notifications)
 when: { upstream: always }                     # run whatever happened (cleanup)
 ```

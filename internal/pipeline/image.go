@@ -145,7 +145,7 @@ func (p *Pipeline) UsesSchema15() bool {
 }
 
 var (
-	imageKeys        = []string{"kind", "description", "needs", "when", "timeout", "retry", "fetch", "context", "file", "target", "platforms", "build_args", "secrets", "tags", "push", "cache", "sbom", "provenance", "sign", "scan"}
+	imageKeys        = []string{"kind", "description", "needs", "when", "timeout", "retry", "on_failure", "fetch", "context", "file", "target", "platforms", "build_args", "secrets", "tags", "push", "cache", "sbom", "provenance", "sign", "scan"}
 	imageTagKeys     = []string{"registry", "repository", "tag"}
 	imageRepoKeys    = []string{"registry", "repository"}
 	imageSecretKeys  = []string{"id", "secret"}
@@ -220,11 +220,9 @@ func (ps *parser) parseImageStep(k, v *yaml.Node, at string) *Step {
 				s.timeoutSet = true
 			}
 		case "retry":
-			s.Retry = ps.int(n, where)
-			s.retrySet = true
-			if s.Retry < 0 || s.Retry > MaxRetry {
-				ps.add(n, where, "retry must be between 0 and %d", MaxRetry)
-			}
+			ps.parseRetry(s, n, where)
+		case "on_failure":
+			ps.parseOnFailure(s, n, where)
 		case "fetch":
 			s.Fetch = ps.parseFetch(n, where)
 		case "context":

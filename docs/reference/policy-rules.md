@@ -61,6 +61,7 @@ flowchart TD
 | `sbom` | mapping | before deploying | a step before the deploy step made an SBOM of at least `min_components` components |
 | `deployed_images` | mapping | before deploying | every image the deployment writes is pinned by digest, built by this run, signed and scanned, as asked |
 | `approvals` | mapping | before deploying | at least `min` people other than the person who started the run approved an approval step before the deploy step |
+| `allowed_failures` | mapping | before deploying | at most `max` (none by default) of the steps before the deploy step failed and were allowed to (`on_failure: continue`) |
 | `refs` | mapping | before deploying | the run is of a branch or tag that matches the patterns |
 | `image_push` | mapping | before an image push | an image step that pushes scans with `mode: enforce`, signs, makes an SBOM and provenance, and pushes only to allowed registries, as asked |
 <!-- rule-catalogue:end -->
@@ -243,6 +244,22 @@ policies:
     mode: enforce
     rules:
       approvals: { min: 1 }
+```
+
+### Allowed failures
+
+`allowed_failures` counts the steps before the deploy step that failed for good and whose pipeline tolerates that (`on_failure: continue`). Such a run shows as succeeded; this rule lets a protected environment refuse to deploy from one.
+
+| Option | Type | Default | Values |
+|---|---|---|---|
+| `max` | whole number | `0` | 0 to 100 |
+
+```yaml
+policies:
+  - name: clean-deploys
+    mode: enforce
+    rules:
+      allowed_failures: { max: 0 }
 ```
 
 ### Refs

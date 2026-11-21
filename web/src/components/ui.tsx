@@ -63,8 +63,10 @@ export function shownStatus(s: { status: StepStatus; wait_kind?: string }): Step
  * deployment to finish. phase, if given, is where a deployment stands. */
 export function stepLabel(s: {
   status: StepStatus; kind?: string; wait_kind?: string; environment?: string; skip_kind?: string; policy_blocked?: boolean;
+  allowed_failure?: boolean;
 }, phase?: string): string {
   if (s.status === "failed" && s.policy_blocked) return "Blocked by policy";
+  if (s.status === "failed" && s.allowed_failure) return "Failed (allowed)";
   if (s.status === "waiting") {
     // A verification that was inconclusive waits for someone to mark it.
     if (s.kind === "verify" || s.wait_kind === "verify") return "Waiting for a person";

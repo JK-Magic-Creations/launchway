@@ -478,7 +478,7 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	ws, err := r.workspace(ctx, job, sys)
 	if err != nil {
 		sys("Could not prepare the workspace: %v", err)
-		return engine.Result{Outcome: "failed", Error: "preparing the workspace: " + err.Error()}, nil
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseInfrastructure, Error: "preparing the workspace: " + err.Error()}, nil
 	}
 	libraryEnv(env, job, r.Exec.WorkspacePath(ws))
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
@@ -514,23 +514,27 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 	switch {
 	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
 		sys("Timed out after %s", job.Timeout.D())
-		return engine.Result{Outcome: "failed", Error: fmt.Sprintf("timed out after %s", job.Timeout.D()), Excerpt: tail.excerpt()}, collect
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseTimeout, Error: fmt.Sprintf("timed out after %s", job.Timeout.D()), Excerpt: tail.excerpt()}, collect
 	case err != nil && ctx.Err() != nil:
 		return engine.Result{Outcome: "canceled"}, collect
 	case errors.Is(err, executor.ErrInfrastructure):
 		msg := mask.Mask(err.Error())
 		sys("%s. The step will be run again.", msg)
-		return engine.Result{Outcome: "lost", Error: msg}, nil
+		return engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: msg}, nil
 	case err != nil:
 		msg := mask.Mask(err.Error())
 		sys("Could not run the step: %s", msg)
-		return engine.Result{Outcome: "failed", Error: msg}, collect
+		res := engine.Result{Outcome: "failed", Error: msg}
+		if errors.Is(err, executor.ErrCannotStart) {
+			res.Cause = pipeline.CauseInfrastructure
+		}
+		return res, collect
 	}
 	outputs := maskOutputs(executor.ReadOutputs(meta), mask)
 	ec := code
 	if code != 0 {
 		sys("Failed with exit code %d after %s", code, took)
-		return engine.Result{Outcome: "failed", ExitCode: &ec, Error: fmt.Sprintf("exit code %d", code), Outputs: outputs,
+		return engine.Result{Outcome: "failed", Cause: pipeline.CauseExit, ExitCode: &ec, Error: fmt.Sprintf("exit code %d", code), Outputs: outputs,
 			Excerpt: tail.excerpt()}, collect
 	}
 	sys("Succeeded in %s", took)
@@ -608,7 +612,7 @@ func (r *Runner) resolveSecrets(ctx context.Context, job *engine.Job, sys func(s
 			return nil, &engine.Result{Outcome: "canceled"}
 		case secrets.IsUnavailable(err):
 			sys("%s. The step will be run again.", msg)
-			return nil, &engine.Result{Outcome: "lost", Error: msg}
+			return nil, &engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: msg}
 		default:
 			sys("%s", msg)
 			return nil, &engine.Result{Outcome: "failed", Error: msg}

@@ -39,7 +39,7 @@ have advanced the number with an empty placeholder for another branch's migratio
 any migrations and checking compatibility, but before recovering runs or opening the HTTP listener,
 the server checks every marker in `schemaMarkers` (`internal/engine/schema_markers.go`) up to and
 including the recorded database version. The markers currently cover the tables and columns of
-schemas 17 to 23. The migration-order tests use the same marker list and the same SQLite and
+schemas 17 to 24. The migration-order tests use the same marker list and the same SQLite and
 PostgreSQL metadata helpers, so the startup check and those tests cannot drift apart.
 
 These are metadata lookups (`sqlite_master` and `pragma_table_info` on SQLite, `information_schema`
@@ -391,6 +391,57 @@ Rolling back from schema 23 to 22:
 `TestConfigurationInTheDatabaseTwoServersAndRollback` runs this on PostgreSQL with real processes:
 the first start's import, a change through one server seen by the other, a restart that keeps the
 database's settings over the file's, and the release before running with an exported file.
+
+Schema 24 brings flow control, built one key at a time. It is additive. `steps` gains `allowed`
+(default 0), which says that a failed step was allowed to fail. Pipeline keys: `when.output` and
+`on_failure` (a step that fails for good with `on_failure: continue` records `allowed` on its
+`step.finished` event, and a re-run's `step.reused` of such a step has outcome `failed` and
+`allowed`). A pipeline that uses any key of schema 24, including one that arrives through a template,
+carries `"requires": 24` and has `runs.min_schema` 24, so older servers leave its runs alone
+(`TestOlderServerLeavesFlowControlRunsAlone`). Servers of schema 22 read the new `Step` fields as keys
+they do not know, which makes the run not understood, so the rule holds even for a run created by a
+build that forgot `requires`. A run that finished with an allowed failure reads as succeeded to an
+older server, which is why the pipeline, not the event, carries the guard. Nothing needs undoing to
+roll back: the column is ignored, and runs of pipelines that use the keys wait for a server of schema
+24.
+
+Retry waits and causes, and the run timeout, are schema 24's too. `steps` gains `not_before` (when a
+queued retry may be handed to a runner; leasing skips queued steps whose time has not come) and
+`fail_cause`; `runs` gains `deadline_at` (when the run's timeout ends it, from its events: 0 for none,
+and while an approval waits), with a partial index so every server's reaper finds the runs that are
+due in SQL; and `installation_limits` holds the installation's `max_run_timeout`. The events carry
+new fields older servers ignore harmlessly because the pipeline's `requires` already keeps them away:
+`cause` on `step.finished`, `not_before` on `step.queued`. A server of schema 22 or older never
+cancels such a run for its timeout, since it leaves the run alone. The cancel is an event, so of two
+servers that find a run overdue exactly one appends it.
+
+Lanes are schema 24's too. Four event types, `run.lane_waiting`, `run.lane_started`,
+`run.lane_replaced` and `run.lane_skipped` (all in `eventSince`), say where a run stands in its lane;
+`lane_holders` and `lane_waiting` are derived from them as `deploy_locks` and `deploy_queue` are from
+the deploy events, and `runs` gains `lane_name`, `lane_key`, `lane_label`, `lane_state`, `lane_other` and
+`lane_other_number` for lists and filters. A pipeline with `lane` carries `"requires": 24`, so older
+servers leave its runs alone and never see a waiting run as one with steps to lease. A run joins its lane
+in the transaction that creates it, after taking the project's `run_counters` row, which is why servers
+creating runs at once take turns; a holder that ends releases its lane in its own transaction, which
+takes the same row, and starts the first waiting run. A promotion that was lost leaves a lane with
+waiting runs and no live holder: every server's reaper (`recoverLanes`) starts the first of them, and a
+run that arrives meanwhile does not jump the queue. On a rollback, waiting runs stay waiting until a
+server of schema 24 runs again.
+
+Re-running from several steps is schema 24's too, and needs no pipeline key: `runs` gains `rerun_froms`
+(the steps as JSON; `rerun_from` keeps the first, as before), and the `rerun` of a `run.created`
+event gains `froms`. A re-run from one step is exactly as it was. A re-run from several carries
+`requires` 24 on its `run.created`, which an older server does not know, so it leaves the run alone
+instead of reading it as a re-run from the first step.
+
+`on.pull_request.into` is schema 24's last pipeline key. A pipeline with it carries `"requires": 24`,
+so older servers refuse to read it as a pipeline file (they do not know the key) and leave its runs
+alone. `runs` gains `pull_request_into`, and a run's trigger gains `pull_request_into`: the branch the
+project's forge said the pull request targets when the run was created. Pull requests wait for the
+forge, never run unfiltered: a decision with outcome `waiting` is recorded without claiming the
+head, so the next poll tries again. The forge itself is not database state here: a project's connection
+is given to the server's source manager, and a project without one runs no pull request of a
+pipeline that filters.
 
 ## Writing a migration
 

@@ -119,9 +119,13 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 
 	p := &Pipeline{}
-	var stepsNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner"}, func(k, v *yaml.Node) {
+	var stepsNode, laneNode *yaml.Node
+	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner", "timeout", "lane"}, func(k, v *yaml.Node) {
 		switch k.Value {
+		case "lane":
+			laneNode = v
+		case "timeout":
+			ps.parseRunTimeout(p, v)
 		case "runner":
 			ps.parseRunner(v, p)
 		case "pipeline":
@@ -140,6 +144,9 @@ func Parse(data []byte) (*Pipeline, error) {
 			ps.parseInputs(v, p)
 		}
 	})
+	if laneNode != nil {
+		ps.parseLane(p, laneNode) // after supersede, which it may not be written with
+	}
 	if p.Name == "" {
 		ps.add(root, "pipeline", "a name is required, for example: pipeline: my-service")
 	} else if !nameRe.MatchString(p.Name) {
@@ -151,6 +158,7 @@ func Parse(data []byte) (*Pipeline, error) {
 		ps.parseSteps(stepsNode, p)
 	}
 	if ps.check(p) {
+		ps.checkOutputTests(p)
 		ps.checkDeploys(p)
 		ps.checkImages(p)
 		ps.checkVerify(p)
@@ -158,6 +166,7 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	ps.checkUses(p)
 	ps.checkInputs(p)
+	ps.checkLane(p)
 	ps.checkArtifacts(p)
 	if len(ps.problems) > 0 {
 		sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })
@@ -177,6 +186,9 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	if p.UsesSchemaResources() {
 		p.Requires = SchemaResources
+	}
+	if p.UsesSchemaFlow() {
+		p.Requires = SchemaFlow
 	}
 	return p, nil
 }
@@ -244,8 +256,7 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 			return
 		}
 		if k.Value == "pull_request" {
-			ps.parsePullRequest(v)
-			p.On.PullRequest = &PullRequestTrigger{}
+			p.On.PullRequest = ps.parsePullRequest(v)
 			return
 		}
 		t := &PushTrigger{}
@@ -267,35 +278,52 @@ func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
 	})
 }
 
-// parsePullRequest checks on.pull_request, which takes no settings: written
-// as pull_request: {} or with no value at all.
-func (ps *parser) parsePullRequest(v *yaml.Node) {
+// parsePullRequest reads on.pull_request: written pull_request: {} (or with
+// no value at all) for every pull request, or with into: the branches a pull
+// request must target. A pull request has no branch of its own that could be
+// filtered, only the one it targets.
+func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
+	t := &PullRequestTrigger{}
 	switch {
 	case v.Kind == yaml.ScalarNode && v.Tag == "!!null":
-	case v.Kind == yaml.MappingNode && len(v.Content) == 0:
 	case v.Kind == yaml.MappingNode:
-		k := v.Content[0]
-		if k.Value == "branches" || k.Value == "tags" {
-			ps.add(k, "on.pull_request."+k.Value, "pull requests cannot be filtered by branch: the server sees only each pull request's head "+
-				"(refs/pull/<n>/head), not the branch it targets. Write pull_request: {}")
-		} else {
-			ps.add(k, "on.pull_request."+k.Value, "unknown key %q; pull_request takes no settings: write pull_request: {}", k.Value)
+		// branches and tags are push's keys: say where a pull request's
+		// filter is, instead of listing what is expected.
+		rest := &yaml.Node{Kind: yaml.MappingNode, Line: v.Line, Column: v.Column}
+		for i := 0; i+1 < len(v.Content); i += 2 {
+			k := v.Content[i]
+			if k.Value == "branches" || k.Value == "tags" {
+				ps.add(k, "on.pull_request."+k.Value, "a pull request has no branch or tag of its own to filter: the server sees the branch it "+
+					"targets. To run only for pull requests into some branches, write pull_request: { into: [main, \"release/*\"] }")
+				continue
+			}
+			rest.Content = append(rest.Content, v.Content[i], v.Content[i+1])
 		}
+		ps.eachKey(rest, "on.pull_request", []string{"into"}, func(k, x *yaml.Node) {
+			t.Into = ps.strList(x, "on.pull_request.into")
+			for _, pat := range t.Into {
+				ps.checkPattern(x, "on.pull_request.into", pat)
+			}
+			if len(t.Into) == 0 {
+				ps.add(x, "on.pull_request.into", "list the branches pull requests may target, for example: into: [main]; or write pull_request: {} for any")
+			}
+		})
 	default:
-		ps.add(v, "on.pull_request", "write pull_request: {}")
+		ps.add(v, "on.pull_request", "write pull_request: {}, or pull_request: { into: [main] }")
 	}
+	return t
 }
 
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
-		"for_each", "exclude", "max_parallel", "fail_fast", "artifacts", "fetch", "deployment", "resources"}
+		"for_each", "exclude", "max_parallel", "fail_fast", "artifacts", "fetch", "deployment", "resources", "on_failure"}
 	// useKeys are the keys a step that uses a template may have; the
 	// template says everything else.
 	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message"}
-	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources"}
+	runOnly      = []string{"container", "image", "run", "env", "secrets", "retry", "reports", "artifacts", "fetch", "resources", "on_failure"}
 	// Kinds from the design that are recognised but not implemented yet.
 	kindsNotYet   = map[string]bool{"release": true, "promote": true, "input": true}
 	secretKeys    = []string{"store", "key", "field"}
@@ -441,11 +469,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				secretsNode = v2
 				s.Secrets = ps.parseSecrets(v2, where)
 			case "retry":
-				s.Retry = ps.int(v2, where)
-				s.retrySet = true
-				if s.Retry < 0 || s.Retry > MaxRetry {
-					ps.add(v2, where, "retry must be between 0 and %d", MaxRetry)
-				}
+				ps.parseRetry(s, v2, where)
 			case "timeout":
 				d, err := time.ParseDuration(ps.scalar(v2, where))
 				if err != nil {
@@ -454,6 +478,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 					timeoutNode, timeout = v2, d
 					s.timeoutSet = true
 				}
+			case "on_failure":
+				ps.parseOnFailure(s, v2, where)
 			case "reports":
 				s.Reports = ps.parseReports(v2, where)
 			case "resources":
@@ -581,7 +607,7 @@ func (ps *parser) parseApproval(k *yaml.Node, at string, s *Step, keys map[strin
 
 func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 	c := &Condition{}
-	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "equals", "upstream"}, func(k, v *yaml.Node) {
+	ps.eachKey(n, at, []string{"branch", "tag", "event", "input", "output", "equals", "upstream"}, func(k, v *yaml.Node) {
 		if k.Value == "upstream" {
 			c.Upstream = ps.str(v, at+".upstream")
 			if !slices.Contains(Upstreams, c.Upstream) {
@@ -589,7 +615,7 @@ func (ps *parser) parseWhen(n *yaml.Node, at string) *Condition {
 			}
 			return
 		}
-		if k.Value == "input" || k.Value == "equals" {
+		if k.Value == "input" || k.Value == "output" || k.Value == "equals" {
 			ps.parseInputTest(c, k, v, at)
 			return
 		}

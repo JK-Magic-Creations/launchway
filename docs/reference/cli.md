@@ -12,10 +12,10 @@ launchway runner   --server URL --join J      enrol a runner with a join token, 
                    [--config runner.yaml] [--health-listen ADDR] [--labels a,b]
 launchway runner   --server URL --token T     run a runner with the shared token (no identity)
 launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
-launchway validate [file]                     check a pipeline file
+launchway validate [file] [--project P]       check a pipeline file
 launchway graph    [file]                     print a pipeline's graph as JSON
 launchway login    --server URL               store an API token for a server
-launchway runs     start|list|show|logs|cancel  start and follow runs on a server
+launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs on a server
 launchway policy   list|run                   the policies in force; a run's decisions
 launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
 launchway blobs    status|copy                see and move where artifacts are kept
@@ -193,10 +193,12 @@ It exits with `0` if the run succeeded and `1` otherwise. The first Ctrl-C cance
 Checks a pipeline file and prints a summary.
 
 ```text
-launchway validate [FILE]
+launchway validate [FILE] [--project NAME]
 ```
 
 `FILE` defaults to `.launchway/pipeline.yaml`. Steps that use library templates are not expanded: the command reads only the file. To check them, use the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
+
+With `--project NAME` the server you are signed in to checks the file for that project as well, as its editor does: the libraries templates use, the limits the installation sets (such as `max_run_timeout`), and what the project must have for the pipeline to work. It warns, for example, that a pipeline that filters pull requests by their target branch (`on.pull_request.into`) will run none in a project with no forge connection. Warnings are printed to standard error and do not change the exit code; problems do.
 
 ```sh
 launchway validate
@@ -213,7 +215,7 @@ bad.yaml:3: steps.a: say what to run in, for example: image: alpine:3.22, or con
 bad.yaml:4: steps.b.needs: needs "c", but there is no step with that name
 ```
 
-`validate` takes no flags: `launchway validate -h` looks for a file called `-h`.
+`launchway validate` also accepts a file name after the flags.
 
 ## launchway graph
 
@@ -326,13 +328,14 @@ launchway: the run's inputs have problems:
 Lists runs, newest first.
 
 ```text
-launchway runs list [--project P] [--status S] [--limit N] [--json]
+launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json]
 ```
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--project` | every project you may see | Only this project's runs. |
 | `--status` | any | Only runs with this status: `queued`, `running`, `succeeded`, `failed` or `canceled`. |
+| `--lane` | any | Only runs in the [lane](pipeline.md#lane) of this name. |
 | `--limit` | `20` | At most this many (the server allows up to 500). |
 | `--json` | off | Print JSON. |
 
@@ -416,7 +419,60 @@ launchway runs cancel run_06gzde34x0b6151zjapg
 Asked run run_06gzde34x0b6151zjapg to cancel.
 ```
 
-A run that has finished exits with `4`: `launchway: the run has already finished`.
+A run that has finished exits with `4`: `launchway: the run has already finished`. A run waiting for its [lane](pipeline.md#lane) is canceled like any other, and leaves the line.
+
+### launchway runs resume
+
+Continues a failed or canceled run: the same run goes on, running again its failed and canceled steps and keeping what succeeded.
+
+```text
+launchway runs resume RUN_ID [--wait] [--timeout D] [--json]
+```
+
+With `--wait` it follows the run and exits as [`runs start`](#launchway-runs-start) does: `0` if it succeeded, `1` if it failed, `3` if it was canceled, `5` if `--timeout` passed first. A run that is not failed or canceled, or that opened a deployment, is refused with `4`. The same operation is `POST /api/v1/runs/{id}/resume`.
+
+### launchway runs rerun
+
+Makes a new run of a finished one, from steps you name or from the ones that failed; every other step is reused.
+
+```text
+launchway runs rerun RUN_ID [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
+```
+
+| Flag | Meaning |
+|---|---|
+| `--from` | A step to start from; give it once for each step. The steps after any of them run again |
+| `--failed` | The smallest set of steps that covers every failed and canceled step |
+| `--plan` | Print what would run and what would be reused, or why it cannot be done (exit `4`), and make no run |
+| `--wait`, `--timeout` | As for `runs start`, with the same exit codes |
+| `--json` | Print JSON |
+
+```text
+launchway runs rerun run_06gzde1rb0s24hb652q0 --failed --plan
+Re-running from lint, unit would run again:
+  run    lint
+  run    unit
+  run    deploy
+  reuse  build
+```
+
+The same operation is `POST /api/v1/runs/{id}/rerun`, and the MCP tool `retry_run` with `from_steps` or `failed_only`. See [Re-running](../guide/approvals-and-reruns.md#re-running-from-a-step-and-what-each-step-was-given) for what a re-run reuses and how it differs from a resume.
+
+### launchway runs lanes
+
+Lists a project's [lanes](pipeline.md#lane) that have a run going or runs waiting.
+
+```text
+launchway runs lanes PROJECT [--json]
+```
+
+```text
+release/ref main: held by run #41 (running)
+  1. run #42 waits
+  2. run #43 waits
+```
+
+`launchway runs show` prints a run's own place in its lane (`lane release/ref main: waiting, number 1 in line, behind run #41`). The same data is `GET /api/v1/projects/{name}/lanes` in the [HTTP API](http-api.md) and the MCP tool `list_lanes`.
 
 ## launchway policy
 
@@ -653,6 +709,22 @@ launchway step-resources set-default KIND [--cpu Q] [--cpu-limit Q] [--memory Q]
 | `set-default` | Changes the default of a kind in the same way. Refused for a quantity that does not read, a limit below what is promised, or a value above the limits |
 
 Quantities are written as in a pipeline: `500m` or `2` for CPU, `512Mi` or `6Gi` for memory. The same operations are `GET /api/v1/step-resources` and the routes under it in the [HTTP API](http-api.md#step-resources), and the MCP tools `get_step_resources`, `set_step_resource_limits` and `set_step_resource_default`.
+
+## launchway run-limits
+
+Shows and changes the installation's limits on pipelines: `max_run_timeout`, the longest top-level [`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Reading needs only sign-in. Changing needs the admin role on every project and is recorded in the audit trail (`run_limits.set`). The values live in the database, so a change applies to every server at once.
+
+```text
+launchway run-limits get [--json]
+launchway run-limits set --max-run-timeout D [--json]
+```
+
+| Command | What it does |
+|---|---|
+| `get` | Prints the longest run timeout, or `not set` |
+| `set` | Changes it: a duration from `1m` to `720h`, such as `48h`; `--max-run-timeout ""` removes the limit. A pipeline whose timeout is longer is refused when a run starts and by validation in the editor and the MCP tool |
+
+The same operations are `GET` and `PUT /api/v1/run-limits` in the [HTTP API](http-api.md#run-limits), and the MCP tools `get_run_limits` and `set_run_limits`.
 
 ## launchway version
 

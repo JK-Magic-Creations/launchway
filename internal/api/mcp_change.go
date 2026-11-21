@@ -26,7 +26,7 @@ func addChangeTools(srv *mcp.Server, c *mcpCall) {
 		Description: "Cancel a run that is still going: running steps are stopped and the rest do not start."},
 		mcpCallTimeout, cancelRun)
 	addTool(srv, c, &mcp.Tool{Name: "retry_run", Annotations: changes("Retry a run", false, false),
-		Description: "Without from_step: resume a failed or canceled run, running its failed and canceled steps again and keeping what succeeded. With from_step: start a new run of the same commit that runs that step and every step after it again, reusing the others' results (for a finished run)."},
+		Description: "Resume or re-run a finished run. Without from_step, from_steps and failed_only: RESUME it: the same run goes on, running its failed and canceled steps again, keeping what succeeded and the files its workspace holds (for a day); refused once a deployment opened. With from_step or from_steps: RE-RUN: start a new run of the same commit that runs those steps and every step after them again, reusing the others' results (outputs are kept, workspace files are not; a deploy step always runs again). With failed_only: re-run from the smallest set of steps that covers every failed and canceled step, which is what to use when two independent branches failed and a deployment opened, or when a fresh checkout is wanted. "},
 		mcpCallTimeout, retryRun)
 	addTool(srv, c, &mcp.Tool{Name: "decide_approval", Annotations: changes("Approve or reject", true, false),
 		Description: "Approve or reject an approval step that is waiting. Approving lets the steps after it run; rejecting fails it. The person who started a run usually may not approve it."},
@@ -125,8 +125,10 @@ func cancelRun(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in runIn
 }
 
 type retryIn struct {
-	RunID    string `json:"run_id"`
-	FromStep string `json:"from_step,omitempty" jsonschema:"re-run from this step in a new run; without it, resume this run"`
+	RunID      string   `json:"run_id"`
+	FromStep   string   `json:"from_step,omitempty" jsonschema:"re-run from this step in a new run; without it (and without from_steps and failed_only), resume this run"`
+	FromSteps  []string `json:"from_steps,omitempty" jsonschema:"re-run from several steps at once in a new run: each runs again with every step after it"`
+	FailedOnly bool     `json:"failed_only,omitempty" jsonschema:"re-run in a new run from the smallest set of steps that covers every failed and canceled step"`
 }
 
 type retryOut struct {
@@ -139,18 +141,27 @@ func retryRun(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in retryI
 	if in.RunID == "" {
 		return retryOut{}, errors.New("say which run: run_id")
 	}
-	if in.FromStep == "" {
+	if in.FromStep == "" && len(in.FromSteps) == 0 && !in.FailedOnly {
 		if err := c.apiJSON(ctx, "retry_run", http.MethodPost, apiPath("/api/v1/runs/%s/resume", in.RunID), nil, nil); err != nil {
 			return retryOut{}, err
 		}
 		return retryOut{RunID: in.RunID, URL: c.runURL(in.RunID), Summary: "Resumed: its failed and canceled steps run again. Call wait_for_run."}, nil
 	}
+	froms := in.FromSteps
+	if in.FromStep != "" {
+		froms = append([]string{in.FromStep}, froms...)
+	}
+	body := map[string]any{"from": froms, "failed": in.FailedOnly}
 	var run engine.RunSummary
-	if err := c.apiJSON(ctx, "retry_run", http.MethodPost, apiPath("/api/v1/runs/%s/rerun", in.RunID), map[string]string{"from": in.FromStep}, &run); err != nil {
+	if err := c.apiJSON(ctx, "retry_run", http.MethodPost, apiPath("/api/v1/runs/%s/rerun", in.RunID), body, &run); err != nil {
 		return retryOut{}, err
 	}
+	from := strings.Join(run.RerunFroms, ", ")
+	if from == "" {
+		from = run.RerunFrom
+	}
 	return retryOut{RunID: run.ID, URL: c.runURL(run.ID),
-		Summary: fmt.Sprintf("Started run #%d, re-running from %s. Call wait_for_run with run_id %s.", run.Number, in.FromStep, run.ID)}, nil
+		Summary: fmt.Sprintf("Started run #%d, re-running from %s. Call wait_for_run with run_id %s.", run.Number, from, run.ID)}, nil
 }
 
 type decideIn struct {

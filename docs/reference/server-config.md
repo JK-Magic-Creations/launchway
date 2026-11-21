@@ -251,6 +251,10 @@ commit that has its own `.launchway/pipeline.yaml`, that file wins.
 | `projects[].pipeline.on.push.tags` | list of patterns | none | |
 | `projects[].pipeline.on.pull_request` | empty mapping | none | Write `pull_request: {}` to run pull requests. It takes no settings |
 | `projects[].pipeline.supersede` | boolean | `false` | As a pipeline's [`supersede`](pipeline.md#top-level-keys) |
+| `projects[].pipeline.lane.name` | name | the project's name | The lane's name, as a pipeline's [`lane`](pipeline.md#lane): runs of the project take turns. Needs schema 24; not with `supersede` |
+| `projects[].pipeline.lane.per` | list | none | `ref`, `pull_request` or `input:<name>`: what splits the lane |
+| `projects[].pipeline.lane.when_busy` | `wait`, `cancel` or `skip` | `wait` | What a run that arrives while the lane is held does |
+| `projects[].pipeline.lane.queue` | `newest` or `all` | `newest` | For `wait`: whether a newer waiting run replaces an older one |
 | `projects[].pipeline.true` | | | Not written by hand: tools that read YAML 1.1 (Helm among them) turn an unquoted `on` into `true`. It is read as `on`; having both is refused |
 
 ## Libraries

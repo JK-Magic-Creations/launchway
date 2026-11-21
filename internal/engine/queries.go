@@ -42,6 +42,9 @@ type RunSummary struct {
 	RerunOf       string `json:"rerun_of,omitempty"`
 	RerunOfNumber int    `json:"rerun_of_number,omitempty"`
 	RerunFrom     string `json:"rerun_from,omitempty"`
+	// RerunFroms are all the steps a re-run started from, when it started
+	// from several (schema 24); RerunFrom is the first.
+	RerunFroms []string `json:"rerun_froms,omitempty"`
 	// MinSchema is the oldest schema whose servers understand the whole
 	// run; NeedsNewerServer says this server is older, so it leaves the
 	// run alone.
@@ -56,6 +59,21 @@ type RunSummary struct {
 	CancelReason       string `json:"cancel_reason,omitempty"`
 	SupersededBy       string `json:"superseded_by,omitempty"`
 	SupersededByNumber int    `json:"superseded_by_number,omitempty"`
+	// DeadlineAt is when the run's timeout will cancel it (Unix ms; schema
+	// 24); 0 when it has none, or it is paused (an approval waits) or over.
+	DeadlineAt int64 `json:"deadline_at,omitempty"`
+	// PullRequestInto is the branch the pull request targets (schema 24),
+	// for a pull-request run of a pipeline that filters by it.
+	PullRequestInto string `json:"pull_request_into,omitempty"`
+	// AllowedFailures counts the steps that failed for good and were allowed
+	// to (on_failure: continue), and AllowedFailureSteps names them: a run
+	// that succeeded with some is not quite as clean as one without
+	// (schema 24).
+	AllowedFailures     int      `json:"allowed_failures"`
+	AllowedFailureSteps []string `json:"allowed_failure_steps,omitempty"`
+	// Lane is the run's place in its lane (schema 24); nil when its pipeline
+	// has no lane.
+	Lane *LaneInfo `json:"lane,omitempty"`
 	// Tests adds up the run's test results (see RunTests); nil when no step
 	// has reported any.
 	Tests *TestTotals `json:"tests,omitempty"`
@@ -70,6 +88,9 @@ type RunSummary struct {
 type StepBrief struct {
 	ID     string     `json:"id"`
 	Status StepStatus `json:"status"`
+	// Allowed says a failed step was allowed to fail (on_failure:
+	// continue): the run does not count it as a failure.
+	Allowed bool `json:"allowed,omitempty"`
 }
 
 // StepView is a step with its definition and current state.
@@ -124,6 +145,23 @@ type StepView struct {
 	Inputs []AttemptInputs `json:"inputs"`
 	// Reports are the test result files the step declares, as globs.
 	Reports []string `json:"reports,omitempty"`
+	// AllowedFailure says the step failed for good and its pipeline
+	// tolerates that (on_failure: continue): shown as failed (allowed). The
+	// run does not fail because of it (schema 24).
+	AllowedFailure bool `json:"allowed_failure,omitempty"`
+	// OnFailure is the step's on_failure, from its definition: continue or
+	// empty (stop).
+	OnFailure string `json:"on_failure,omitempty"`
+	// NotBefore, for a step queued to be retried after a wait, is when it
+	// may be handed to a runner (Unix ms); FailureCause is why its last
+	// failed attempt failed (exit, timeout or infrastructure). RetryWait,
+	// RetryBackoff and RetryOn are its retry's other keys, from the
+	// definition (schema 24).
+	NotBefore    int64    `json:"not_before,omitempty"`
+	FailureCause string   `json:"failure_cause,omitempty"`
+	RetryWait    string   `json:"retry_wait,omitempty"`
+	RetryBackoff float64  `json:"retry_backoff,omitempty"`
+	RetryOn      []string `json:"retry_on,omitempty"`
 	// PolicyBlocked says the step failed because a policy in enforce mode
 	// refused it (schema 16); Error says which policy and rule, and why.
 	PolicyBlocked bool `json:"policy_blocked,omitempty"`
@@ -171,9 +209,11 @@ type RunPolicySummary struct {
 
 // RerunBrief is a re-run as listed with the run it re-runs.
 type RerunBrief struct {
-	ID     string    `json:"id"`
-	Number int       `json:"number"`
-	From   string    `json:"from"`
+	ID     string `json:"id"`
+	Number int    `json:"number"`
+	From   string `json:"from"`
+	// Froms are all the steps, when it started from several.
+	Froms  []string  `json:"froms,omitempty"`
 	Status RunStatus `json:"status"`
 	Actor  string    `json:"actor"`
 	At     int64     `json:"created_at"`
@@ -230,14 +270,21 @@ const runCols9 = `, cancel_reason, superseded_by, superseded_by_number`
 
 // runCols is the columns scanRun reads.
 func (e *Engine) runCols() string {
-	switch {
-	case e.knows(schemaPullRequests):
-		return runCols + runCols8 + runCols9
-	case e.knows(schemaReruns):
-		return runCols + runCols8
+	cols := runCols
+	if e.knows(schemaReruns) {
+		cols += runCols8
 	}
-	return runCols
+	if e.knows(schemaPullRequests) {
+		cols += runCols9
+	}
+	if e.knows(schemaFlow) {
+		cols += runCols24
+	}
+	return cols
 }
+
+// runCols24 are the columns of runs that schema 24 added.
+const runCols24 = `, deadline_at, lane_name, lane_key, lane_label, lane_state, lane_other, lane_other_number, pull_request_into, rerun_froms`
 
 func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error) {
 	r := &RunSummary{}
@@ -250,7 +297,17 @@ func (e *Engine) scanRun(sc interface{ Scan(...any) error }) (*RunSummary, error
 	if e.knows(schemaPullRequests) {
 		dst = append(dst, &r.CancelReason, &r.SupersededBy, &r.SupersededByNumber)
 	}
+	var froms string
+	var lane struct {
+		name, key, label, state, other string
+		number                         int
+	}
+	if e.knows(schemaFlow) {
+		dst = append(dst, &r.DeadlineAt, &lane.name, &lane.key, &lane.label, &lane.state, &lane.other, &lane.number, &r.PullRequestInto, &froms)
+	}
 	err := sc.Scan(dst...)
+	r.RerunFroms = rerunFroms(froms)
+	r.Lane = laneInfo(lane.name, lane.key, lane.label, lane.state, lane.other, lane.number, 0)
 	r.PullRequest = pullRequestNumber(r.Event, r.Ref)
 	r.CancelRequested = cancel != 0
 	r.Draft = draft != 0
@@ -312,7 +369,9 @@ func (e *Engine) Summary(id string) (*RunSummary, error) { return e.runSummary(i
 type RunFilter struct {
 	Project string
 	Status  string
-	Limit   int
+	// Lane, if set, lists only runs in the lane of this name (schema 24).
+	Lane  string
+	Limit int
 	// OnlyProjects, if not nil, limits the list to runs of these projects;
 	// an empty, non-nil list matches nothing.
 	OnlyProjects []string
@@ -341,6 +400,10 @@ func (e *Engine) ListRuns(f RunFilter) ([]*RunSummary, error) {
 	if f.Status != "" {
 		where = append(where, "status = ?")
 		args = append(args, f.Status)
+	}
+	if f.Lane != "" && e.knows(schemaFlow) {
+		where = append(where, "lane_name = ?")
+		args = append(args, f.Lane)
 	}
 	if f.OnlyProjects != nil {
 		if len(f.OnlyProjects) == 0 {
@@ -404,7 +467,11 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 	if e.knows(schemaDeploy) {
 		waitKind = `wait_kind`
 	}
-	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+` FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
+	allowed := `0`
+	if e.knows(schemaFlow) {
+		allowed = `allowed`
+	}
+	rows, err := e.db.Query(`SELECT run_id, step_id, status, `+waitKind+`, `+allowed+` FROM steps WHERE run_id IN (`+strings.Join(marks, ",")+`)
 		ORDER BY run_id, position`, args...)
 	if err != nil {
 		return err
@@ -413,11 +480,17 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 	for rows.Next() {
 		var runID, kind string
 		var b StepBrief
-		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind); err != nil {
+		var allowed int
+		if err := rows.Scan(&runID, &b.ID, &b.Status, &kind, &allowed); err != nil {
 			return err
 		}
+		b.Allowed = b.Status == StepFailed && allowed != 0
 		r := byID[runID]
 		r.Steps = append(r.Steps, b)
+		if b.Allowed {
+			r.AllowedFailures++
+			r.AllowedFailureSteps = append(r.AllowedFailureSteps, b.ID)
+		}
 		if b.Status == StepWaitingS && kind == "" {
 			r.Waiting = append(r.Waiting, b.ID)
 		}
@@ -426,6 +499,9 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		return err
 	}
 	rows.Close()
+	if err := e.attachLanePositions(runs); err != nil {
+		return err
+	}
 	if err := e.attachTests(runs); err != nil {
 		return err
 	}
@@ -440,13 +516,17 @@ const stepCols8 = `, reused_from, reused_from_number, reused_attempt`
 
 // stepCols is the columns scanStep reads.
 func (e *Engine) stepCols() string {
-	switch {
-	case e.knows(schemaDeploy):
-		return stepCols + stepCols8 + `, wait_kind`
-	case e.knows(schemaReruns):
-		return stepCols + stepCols8
+	cols := stepCols
+	if e.knows(schemaReruns) {
+		cols += stepCols8
 	}
-	return stepCols
+	if e.knows(schemaDeploy) {
+		cols += `, wait_kind`
+	}
+	if e.knows(schemaFlow) {
+		cols += `, allowed, not_before, fail_cause`
+	}
+	return cols
 }
 
 func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error) {
@@ -461,6 +541,10 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 	if e.knows(schemaDeploy) {
 		dst = append(dst, &v.WaitKind)
 	}
+	var allowed int
+	if e.knows(schemaFlow) {
+		dst = append(dst, &allowed, &v.NotBefore, &v.FailureCause)
+	}
 	if err := sc.Scan(dst...); err != nil {
 		return nil, err
 	}
@@ -470,6 +554,7 @@ func (e *Engine) scanStep(sc interface{ Scan(...any) error }) (*StepView, error)
 	}
 	v.Outputs = map[string]string{}
 	_ = json.Unmarshal([]byte(outputs), &v.Outputs)
+	v.AllowedFailure = v.Status == StepFailed && allowed != 0
 	v.PolicyBlocked = v.Status == StepFailed && (strings.HasPrefix(v.Error, policyBlockedPrefix) || strings.HasPrefix(v.Error, runRefusedPrefix))
 	return v, nil
 }
@@ -535,6 +620,11 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 		}
 		if def := st.Pipeline.Step(v.ID); def != nil {
 			v.Image, v.Run, v.Needs, v.When, v.Retry, v.Timeout = def.Image, def.Run, def.Needs, def.When, def.Retry, def.Timeout.Short()
+			v.OnFailure = def.OnFailure
+			if def.RetryWait > 0 {
+				v.RetryWait = def.RetryWait.Short()
+			}
+			v.RetryBackoff, v.RetryOn = def.RetryBackoff, def.RetryOn
 			v.Secrets = def.Secrets
 			v.Container = st.Pipeline.ContainerFor(def)
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
@@ -586,7 +676,13 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 
 // reruns lists the runs that re-run a run, oldest first.
 func (e *Engine) reruns(runID string) ([]RerunBrief, error) {
-	rows, err := e.db.Query(`SELECT id, number, rerun_from, status, actor, created_at FROM runs WHERE rerun_of = ?
+	cols := `rerun_from`
+	if e.knows(schemaFlow) {
+		cols += `, rerun_froms`
+	} else {
+		cols += `, ''`
+	}
+	rows, err := e.db.Query(`SELECT id, number, `+cols+`, status, actor, created_at FROM runs WHERE rerun_of = ?
 		ORDER BY created_at, number`, runID)
 	if err != nil {
 		return nil, err
@@ -595,9 +691,11 @@ func (e *Engine) reruns(runID string) ([]RerunBrief, error) {
 	out := []RerunBrief{}
 	for rows.Next() {
 		var b RerunBrief
-		if err := rows.Scan(&b.ID, &b.Number, &b.From, &b.Status, &b.Actor, &b.At); err != nil {
+		var froms string
+		if err := rows.Scan(&b.ID, &b.Number, &b.From, &froms, &b.Status, &b.Actor, &b.At); err != nil {
 			return nil, err
 		}
+		b.Froms = rerunFroms(froms)
 		out = append(out, b)
 	}
 	return out, rows.Err()

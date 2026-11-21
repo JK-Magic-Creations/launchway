@@ -91,6 +91,10 @@ func (pr *printer) update(eng *engine.Engine, d *engine.RunDetail) {
 			}
 			fmt.Println(pr.prefix(s.ID) + pr.c("32", "✓ succeeded "+took(s)))
 		case engine.StepFailed:
+			if s.AllowedFailure {
+				fmt.Println(pr.prefix(s.ID) + pr.c("33;1", "✗ failed (allowed; the run goes on): "+s.Error))
+				break
+			}
 			fmt.Println(pr.prefix(s.ID) + pr.c("31;1", "✗ failed: "+s.Error))
 		case engine.StepSkippedS:
 			fmt.Println(pr.prefix(s.ID) + pr.c("2", "↷ skipped: "+s.Error))
@@ -122,7 +126,12 @@ func (pr *printer) summary(d *engine.RunDetail) {
 				tests += fmt.Sprintf(", %d skipped", t.Skipped)
 			}
 		}
-		fmt.Printf("  %s %-*s  %-9s %s%s\n", mark, pr.width, s.ID, s.Status, pr.c("2", took(s)), tests)
+		status := string(s.Status)
+		if s.AllowedFailure {
+			status = "failed (allowed)"
+			mark = pr.c("33", "✗")
+		}
+		fmt.Printf("  %s %-*s  %-9s %s%s\n", mark, pr.width, s.ID, status, pr.c("2", took(s)), tests)
 	}
 	total := time.Duration(d.FinishedAt-d.CreatedAt) * time.Millisecond
 	label := map[engine.RunStatus]string{
@@ -130,6 +139,9 @@ func (pr *printer) summary(d *engine.RunDetail) {
 		engine.RunCanceled: pr.c("33;1", "Canceled"),
 	}[d.Status]
 	fmt.Printf("\n%s in %s\n", label, total.Round(100*time.Millisecond))
+	if note := allowedNote(d.AllowedFailures, d.AllowedFailureSteps); note != "" {
+		fmt.Println(pr.c("33", note))
+	}
 }
 
 func took(s *engine.StepView) string {

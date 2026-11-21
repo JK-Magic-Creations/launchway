@@ -1,0 +1,35 @@
+# A pipeline that reacts to what its steps found: a linter whose failure
+# is reported but does not fail the run, and a fix step that runs only
+# when the scan says something changed, a flaky integration test retried
+# after a pause, and a bound on how long the whole run may stay open.
+pipeline: flow-control
+timeout: 2h
+lane: { per: [ref], when_busy: wait, queue: newest }   # one run of a branch at a time
+
+steps:
+  lint:
+    image: golangci/golangci-lint:v2
+    run: golangci-lint run ./...
+    on_failure: continue
+
+  scan:
+    image: alpine:3.22
+    run: |
+      if ./find-drift.sh; then echo changed=false; else echo changed=true; fi >> "$LAUNCHWAY_OUTPUTS"
+
+  fix:
+    image: alpine:3.22
+    needs: scan
+    when: { output: scan.changed, equals: true }
+    run: ./apply-fixes.sh
+
+  integration:
+    image: alpine:3.22
+    run: ./integration.sh
+    retry: { times: 3, wait: 20s, backoff: 2, on: [timeout, infrastructure] }
+
+  report:
+    image: alpine:3.22
+    needs: [lint, fix, integration]
+    when: { upstream: always }
+    run: ./report.sh

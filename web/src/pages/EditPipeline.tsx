@@ -236,6 +236,11 @@ export function EditPipelinePage({ name }: { name: string }) {
         </div>
       )}
       <SaveNotice project={project} me={me?.user ?? ""} />
+      {res?.ok && (res.warnings?.length ?? 0) > 0 && (
+        <div className="callout callout-wait" role="status">
+          {res.warnings!.map((w) => <div key={w}><strong>Warning.</strong> {w}</div>)}
+        </div>
+      )}
 
       <div className="split split-play">
         <section className="card card-flush editor-card">

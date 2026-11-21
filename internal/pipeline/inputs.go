@@ -517,6 +517,12 @@ func (ps *parser) parseInputTest(c *Condition, k, v *yaml.Node, at string) {
 		if c.Input == "" {
 			ps.add(v, at+".input", "name an input")
 		}
+	case "output":
+		c.Output = strings.TrimSpace(ps.str(v, at+".output"))
+		c.inputLine = v.Line
+		if c.Output == "" {
+			ps.add(v, at+".output", "name a step and its output's key, for example: scan.changed")
+		}
 	case "equals":
 		if v.Kind == yaml.SequenceNode {
 			c.Equals = ps.strList(v, at+".equals")
@@ -537,8 +543,8 @@ func (ps *parser) parseInputTest(c *Condition, k, v *yaml.Node, at string) {
 func (ps *parser) checkInputTests(p *Pipeline) {
 	for _, s := range p.Steps {
 		c := s.When
-		if c == nil || (c.Input == "" && c.Equals == nil) {
-			continue
+		if c == nil || (c.Input == "" && c.Equals == nil) || (c.Input == "" && c.Output != "") {
+			continue // an output test is checked by checkOutputTests
 		}
 		at := "steps." + s.ID + ".when"
 		line := c.inputLine
@@ -628,7 +634,7 @@ func (p *Pipeline) UsesSchema13() bool {
 		return true
 	}
 	for _, s := range p.Steps {
-		if s.ForEach != nil || len(s.Each) > 0 || (s.When != nil && (s.When.Input != "" || len(s.When.Equals) > 0 || s.When.Upstream != "")) {
+		if s.ForEach != nil || len(s.Each) > 0 || (s.When != nil && (s.When.Input != "" || len(s.When.Equals) > 0 || s.When.Upstream != "" || s.When.Output != "")) {
 			return true
 		}
 		if s.When != nil && (slices.Contains(s.When.Event, EventSchedule) || slices.Contains(s.When.Event, EventWebhook)) {

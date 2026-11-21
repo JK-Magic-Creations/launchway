@@ -295,6 +295,12 @@ type JobReports struct {
 
 // Result is how a step attempt ended, as reported by its runner.
 type Result struct {
+	// Cause says why a failed or lost attempt ended, in the terms of retry.on:
+	// "infrastructure" (an image that cannot be pulled, a pod that was lost, a
+	// workspace or artifacts that could not be prepared, a refusal), "timeout"
+	// or "exit". Older runners send none, and the server then works it out
+	// from the error text (see failureCause).
+	Cause    string            `json:"cause,omitempty"`
 	Outcome  string            `json:"outcome"` // succeeded, failed, canceled, lost (the machinery failed; run it again) or refused (OutcomeRefused)
 	ExitCode *int              `json:"exit_code,omitempty"`
 	Error    string            `json:"error,omitempty"`
@@ -641,50 +647,8 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
 		return nil, err
 	}
-	// What each schema brought, in order: a server, or a build limited to
-	// an older schema for testing, refuses what it does not know.
-	if nr.Pipeline.UsesSchema10() && !e.knows(schemaTests) {
-		// A release that old cannot even read the pipeline; a build limited
-		// to it for testing refuses in the same place.
-		return nil, fmt.Errorf("%w: this server does not know test reports (schema %d)", ErrConflict, schemaTests)
-	}
-	if nr.Pipeline.UsesSchema11() {
-		if !e.knows(schemaDeploy) {
-			return nil, fmt.Errorf("%w: this server does not know deploy steps (schema %d)", ErrConflict, schemaDeploy)
-		}
-		if ps := e.CheckDeploys(nr.Project, nr.Pipeline); len(ps) > 0 {
-			return nil, ps
-		}
-	}
-	if nr.Pipeline.UsesSchema12() && !e.knows(schemaArtifacts) {
-		return nil, fmt.Errorf("%w: this server does not know artifacts, fetch or findings (schema %d)", ErrConflict, schemaArtifacts)
-	}
-	if nr.Pipeline.UsesSchema15() && !e.knows(schemaImages) {
-		return nil, fmt.Errorf("%w: this server does not know image steps or deploy changes that pin a digest (schema %d)", ErrConflict, schemaImages)
-	}
-	if nr.Pipeline.UsesSchema18() && !e.knows(schemaReports) {
-		return nil, fmt.Errorf("%w: this server does not know test attachments, coverage or HTML reports (schema %d)", ErrConflict, schemaReports)
-	}
-	if nr.Pipeline.UsesSchemaVerify() {
-		if !e.knows(schemaVerify) {
-			return nil, fmt.Errorf("%w: this server does not know verify or ai steps (schema %d)", ErrConflict, schemaVerify)
-		}
-		if ps := e.CheckVerify(nr.Project, nr.Pipeline); len(ps) > 0 {
-			return nil, ps
-		}
-	}
-	if nr.Pipeline.UsesSchemaPools() && !e.knows(schemaPools) {
-		return nil, fmt.Errorf("%w: this server does not know runner pools (runner:, schema %d)", ErrConflict, schemaPools)
-	}
-	if nr.Pipeline.UsesSchemaResources() {
-		if !e.knows(schemaResources) {
-			return nil, fmt.Errorf("%w: this server does not know step resources (resources:, schema %d)", ErrConflict, schemaResources)
-		}
-	}
-	// Step resources above the installation's limits could never be given;
-	// say so now, naming the limit, instead of failing the step later.
-	if ps := e.CheckResources(nr.Pipeline); len(ps) > 0 {
-		return nil, ps
+	if err := e.checkSchemas(&nr); err != nil {
+		return nil, err
 	}
 	// While build pools decide where runs go, older servers, which would
 	// hand any run's steps to any runner, must leave new runs alone.
@@ -751,7 +715,13 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 		}
 		c.emit(RunCreated, Payload{Project: nr.Project, Number: number, Pipeline: c.e.withStoreRequires(nr.Pipeline), Trigger: &trig, Source: &src, Draft: draft,
 			PullRequestSecrets: prSecrets, SelfApproval: c.e.selfApprovalNow(), Requires: poolRequires})
-		c.advance()
+		goes, laneNote, err := c.takeLane(&nr, draft != nil, trig, number)
+		if err != nil {
+			return err
+		}
+		if goes {
+			c.advance()
+		}
 		var superseded []int
 		if supersede {
 			var err error
@@ -769,7 +739,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 				detail += ", superseding " + strings.Join(nums, ", ")
 			}
 			return insertDecision(c.tx, nr.Project, PushDecision{At: c.now, Ref: nr.Push.Ref, SHA: nr.Push.New,
-				Outcome: "started", Detail: strings.TrimSpace(detail + " " + nr.Note), RunID: runID})
+				Outcome: "started", Detail: strings.TrimSpace(detail + " " + nr.Note + laneDetail(laneNote)), RunID: runID})
 		}
 		return nil
 	})
@@ -915,10 +885,18 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 			return fmt.Errorf("%w: %s made a deployment in this run, and deployments are not resumed: "+
 				"start a new run, or re-run this one from %s", ErrConflict, id, id)
 		}
+		// The limit may have been lowered since the run was made, and a
+		// resume gives a run that timed out a whole new budget.
+		if ps := c.e.checkRunLimits(c.tx, c.st.Pipeline); len(ps) > 0 {
+			return ps
+		}
+		if err := c.takeLaneForResume(); err != nil {
+			return err
+		}
 		c.emit(RunResumed, Payload{Actor: actor, DraftSecrets: draftSecrets})
 		for _, id := range c.st.Order {
 			s := c.st.Steps[id]
-			if s.Status == StepFailed || s.Status == StepCanceledS || (s.Status == StepSkippedS && s.SkipKind == "upstream") {
+			if (s.Status == StepFailed && !s.Allowed) || s.Status == StepCanceledS || (s.Status == StepSkippedS && s.SkipKind == "upstream") {
 				c.emit(StepReset, Payload{Step: id})
 			}
 		}
@@ -968,6 +946,10 @@ func (e *Engine) Lease(ctx context.Context, r RunnerInfo, wait time.Duration) (*
 		if e.db.pg {
 			left = min(left, recheckEvery)
 		}
+		if due := e.nextRetryDue(e.now().UnixMilli()); due > 0 {
+			// A retry is waiting for its time: look again when it comes.
+			left = min(left, time.Duration(due-e.now().UnixMilli())*time.Millisecond+10*time.Millisecond)
+		}
 		t := time.NewTimer(left)
 		select {
 		case <-ch:
@@ -1001,53 +983,8 @@ func (e *Engine) tryLease(r RunnerInfo) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Queued steps of runs this runner holds and, unless it should leave
-	// them to others, of runs no live runner holds. The transaction below
-	// checks again, against the run's current state.
-	where, args := `runs.runner = ?`, []any{r.ID}
-	if !ownOnly {
-		where = `(runs.runner = ? OR runs.runner = '' OR o.last_seen IS NULL OR o.last_seen < ?)`
-		args = append(args, now.Add(-e.runnerTimeout).UnixMilli())
-	}
-	if e.knows(schemaVerify) && r.Has(FeatureAI) {
-		// An ai step needs no workspace: any runner that calls models may
-		// take it, whoever holds the run.
-		where = `(` + where + ` OR s.kind = 'ai')`
-	}
-	if e.knows(schemaReruns) {
-		// Runs that need a newer server are left to one.
-		where += ` AND runs.min_schema <= ?`
-		args = append(args, e.schema)
-	}
-	if e.knows(schemaDeploy) {
-		// Deploy and rollback steps go to deploy runners (LeaseDeploy).
-		where += ` AND s.target = ''`
-	}
-	where += poolWhere
-	args = append(args, poolArgs...)
-	rows, err := e.db.Query(`SELECT s.run_id, s.step_id, s.attempt FROM steps s
-		JOIN runs ON runs.id = s.run_id
-		LEFT JOIN runners o ON o.id = runs.runner
-		WHERE s.status = 'queued' AND `+where+`
-		ORDER BY s.queued_at, s.run_id, s.position LIMIT 20`, args...)
+	cands, err := e.leaseCandidates(r, now, ownOnly, poolWhere, poolArgs)
 	if err != nil {
-		return nil, err
-	}
-	type cand struct {
-		run, step string
-		attempt   int
-	}
-	var cands []cand
-	for rows.Next() {
-		var c cand
-		if err := rows.Scan(&c.run, &c.step, &c.attempt); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		cands = append(cands, c)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	for _, cd := range cands {
@@ -1323,7 +1260,12 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Outputs, p.Tests = nil, nil
 			p.Reason = "the runner refused the step: " + nonEmpty(res.Error, "its accept: section does not allow it")
-			c.emit(StepFinished, p)
+			def := c.st.Pipeline.Step(l.stepID)
+			retry, wait := c.retryDue(def, s, pipeline.CauseInfrastructure, true)
+			c.emitFailure(&p, res, retry)
+			if retry {
+				c.queueRetry(l.stepID, s, wait)
+			}
 		case "lost":
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
@@ -1349,10 +1291,11 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Reason = nonEmpty(res.Error, "the step failed")
 			p.Excerpt = CleanExcerpt(res.Excerpt)
-			c.emit(StepFinished, p)
 			def := c.st.Pipeline.Step(l.stepID)
-			if def != nil && s.Failures <= def.Retry && !c.st.CancelRequested {
-				c.emit(StepQueued, Payload{Step: l.stepID, Attempt: s.Attempt + 1, Reason: "retry"})
+			retry, wait := c.retryDue(def, s, failureCause(res), false)
+			c.emitFailure(&p, res, retry)
+			if retry {
+				c.queueRetry(l.stepID, s, wait)
 			}
 		}
 		c.advance()
@@ -1484,6 +1427,8 @@ func (e *Engine) reaper(ctx context.Context) {
 			e.markAlive()
 			e.reap()
 			e.expireWaits()
+			e.expireRunTimeouts()
+			e.recoverLanes()
 			e.dispatchLocks()
 			if now := e.now(); now.Sub(pruned) >= time.Minute {
 				pruned = now
@@ -1607,6 +1552,9 @@ type cmd struct {
 func (c *cmd) emit(t EventType, p Payload) {
 	if c.st == nil {
 		c.st = &RunState{vocab: c.e.schema}
+	}
+	if t == StepFinished && c.tolerates(&p) {
+		p.Allowed = true
 	}
 	ev := Event{RunID: c.runID, Type: t, At: c.now, Data: p}
 	c.st.apply(ev)
@@ -1822,6 +1770,9 @@ func decodePayload(t EventType, data []byte) (p Payload, problem string, err err
 // The events go first: if another transaction has stored the same run_seq,
 // this fails with a conflict before anything else is touched.
 func (c *cmd) persist() error {
+	if err := c.lockLaneBeforeRows(); err != nil {
+		return err
+	}
 	for i := range c.events {
 		ev := &c.events[i]
 		data, err := json.Marshal(ev.Data)
@@ -1875,6 +1826,14 @@ func (c *cmd) persist() error {
 	}
 	if c.e.knows(schemaReruns) {
 		if err := c.persistSchema8(); err != nil {
+			return err
+		}
+	}
+	if c.e.knows(schemaFlow) {
+		if err := c.persistFlow(changed); err != nil {
+			return err
+		}
+		if err := c.persistLanes(); err != nil {
 			return err
 		}
 	}
@@ -2008,6 +1967,9 @@ func (c *cmd) advance() {
 	if st.Status.Terminal() {
 		return
 	}
+	if st.laneWaiting() && !st.CancelRequested {
+		return // the run waits for its lane; none of its steps is queued
+	}
 	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.startedOrResumed() {
 		c.policyChecked = true
 		c.gateRun()
@@ -2037,18 +1999,7 @@ func (c *cmd) advance() {
 				}
 				continue
 			}
-			ready, blocked := true, ""
-			for _, n := range def.Needs {
-				switch dep := st.Steps[n]; dep.Status {
-				case StepSucceeded:
-				case StepFailed, StepSkippedS, StepCanceledS:
-					if blocked == "" {
-						blocked = fmt.Sprintf("%s %s", n, dep.Status)
-					}
-				default:
-					ready = false
-				}
-			}
+			ready, blocked := c.needsState(def)
 			condSkip := ""
 			if rule := def.When.UpstreamRule(); rule != pipeline.UpstreamSucceeded {
 				ready, blocked, condSkip = c.upstreamGate(def, rule)
@@ -2061,8 +2012,8 @@ func (c *cmd) advance() {
 			case condSkip != "":
 				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: condSkip})
 				changed = true
-			case !def.When.Match(ctx):
-				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: "its when condition did not match"})
+			case c.whenSkip(def, ctx) != "":
+				c.emit(StepSkipped, Payload{Step: id, SkipKind: "condition", Reason: c.whenSkip(def, ctx)})
 				changed = true
 			case c.loopHolds(id):
 				// Its loop has max_parallel members going; it waits its turn.
@@ -2122,43 +2073,7 @@ func (c *cmd) advance() {
 			}
 		}
 	}
-	c.closeDeployments()
-	failed, canceled := false, false
-	for _, id := range st.Order {
-		switch st.Steps[id].Status {
-		case StepSucceeded, StepSkippedS:
-		case StepFailed:
-			failed = true
-		case StepCanceledS:
-			canceled = true
-		default:
-			return // something is still pending or running
-		}
-	}
-	status := RunSucceeded
-	switch {
-	case failed:
-		status = RunFailed
-	case canceled:
-		status = RunCanceled
-	}
-	c.emit(RunFinished, Payload{Status: string(status)})
-}
-
-// lose records that a step's runner disappeared, and queues it again unless
-// it has been lost too often or the run is being canceled.
-func (c *cmd) lose(stepID, reason string) {
-	s := c.st.Steps[stepID]
-	c.emit(StepLost, Payload{Step: stepID, Attempt: s.Attempt, Reason: reason})
-	switch {
-	case c.st.CancelRequested:
-		c.emit(StepCanceled, Payload{Step: stepID, Attempt: s.Attempt, Reason: c.st.canceledBecause()})
-	case s.Lost <= c.e.maxLost:
-		c.emit(StepQueued, Payload{Step: stepID, Attempt: s.Attempt + 1, Reason: "requeued after: " + reason})
-	default:
-		c.emit(StepFinished, Payload{Step: stepID, Attempt: s.Attempt, Outcome: string(StepFailed),
-			Reason: fmt.Sprintf("%s (gave up after %d tries)", reason, s.Lost)})
-	}
+	c.finishWhenDone()
 }
 
 // job builds what the runner needs, including the outputs of needed steps.

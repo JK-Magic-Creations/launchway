@@ -121,6 +121,8 @@ func (ps *parser) parseAIStep(k, v *yaml.Node, at string) *Step {
 					"put scripts in a step this one needs, and pass what they write as inputs")
 			case key.Value == "artifacts" || key.Value == "reports" || key.Value == "fetch":
 				ps.add(key, at+"."+key.Value, "an ai step keeps its answer as the artifact %q by itself, and takes files of other steps' artifacts under inputs", AIResponseArtifact)
+			case key.Value == "on_failure":
+				ps.add(key, at+".on_failure", "ai steps have their own failure handling, so they take no on_failure: give it to a step that runs a script or builds an image")
 			default:
 				ps.add(key, at+"."+key.Value, "%q is not a key of ai steps; expected one of: %s", key.Value, strings.Join(aiKeys, ", "))
 			}
@@ -154,11 +156,7 @@ func (ps *parser) parseAIStep(k, v *yaml.Node, at string) *Step {
 				s.timeoutSet = true
 			}
 		case "retry":
-			s.Retry = ps.int(n, where)
-			s.retrySet = true
-			if s.Retry < 0 || s.Retry > MaxRetry {
-				ps.add(n, where, "retry must be between 0 and %d", MaxRetry)
-			}
+			ps.parseRetry(s, n, where)
 		case "model":
 			a.Model = ps.str(n, where)
 			if !modelNameRe.MatchString(a.Model) {

@@ -153,7 +153,7 @@ function GrantPicker({ projects, rules, onPick }: { projects: string[]; rules: R
   const [project, setProject] = useState(projects[0] ?? "");
   const [policy, setPolicy] = useState(names[0] ?? "");
   const [rule, setRule] = useState((rules[names[0]] ?? [])[0] ?? "");
-  const deployRules = ["tests", "findings", "sbom", "deployed_images", "approvals", "refs"];
+  const deployRules = ["tests", "findings", "sbom", "deployed_images", "approvals", "allowed_failures", "refs"];
   return (
     <form className="pol-grant" aria-label="Grant a waiver" onSubmit={(e) => {
       e.preventDefault();

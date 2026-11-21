@@ -244,6 +244,25 @@ func TestValidateEndpoint(t *testing.T) {
 	}
 }
 
+// The server's check warns, with the line, about an output test that no step
+// writes, and still accepts the pipeline.
+func TestValidateEndpointWarnsAboutAnOutputNothingWrites(t *testing.T) {
+	e := setup(t, time.Second)
+	text := "pipeline: x\nsteps:\n  scan: {image: i, run: 'echo changed=1 >> $LAUNCHWAY_OUTPUTS'}\n  fix: {image: i, run: f, needs: scan, when: {output: scan.chnaged, equals: '1'}}\n"
+	resp, err := uiPost(e.srv.URL+"/api/v1/validate", "text/yaml", strings.NewReader(text))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out struct {
+		OK       bool     `json:"ok"`
+		Warnings []string `json:"warnings"`
+	}
+	json.NewDecoder(resp.Body).Decode(&out)
+	if !out.OK || len(out.Warnings) != 1 || !strings.HasPrefix(out.Warnings[0], "line 4, steps.fix.when.output: ") || !strings.Contains(out.Warnings[0], `"chnaged"`) {
+		t.Fatalf("%+v", out)
+	}
+}
+
 // uiPost posts as the web UI does, with the header that shows the request
 // comes from Launchway's own pages.
 func uiPost(url, contentType string, body io.Reader) (*http.Response, error) {

@@ -361,3 +361,80 @@ func TestCLIWithoutSignIn(t *testing.T) {
 		t.Fatalf("a change without sign-in: %v", err)
 	}
 }
+
+// runs resume and runs rerun work against a server, with runs start's exit
+// codes and --wait, and --plan says what would run without running it.
+func TestCLIResumeAndRerun(t *testing.T) {
+	c, eng := cliServer(t)
+	pollEvery = 20 * time.Millisecond
+	var out bytes.Buffer
+	cl := newClient(c, &out)
+	if err := cl.start([]string{"app", "-i", "outcome=fail", "--wait"}); exitCode(err) != exitRunFailed {
+		t.Fatalf("%v", err)
+	}
+	runs, _ := eng.ListRuns(engine.RunFilter{})
+	failed := runs[0].ID
+	if len(runs) != 1 {
+		t.Fatalf("%d runs", len(runs))
+	}
+
+	out.Reset()
+	if err := cl.rerun([]string{failed, "--failed", "--plan"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"from build would run again", "run    build", "run    test[os=debian]", "run    test[os=alpine]"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("plan lacks %q:\n%s", want, out.String())
+		}
+	}
+	out.Reset()
+	if err := cl.rerun([]string{failed, "--from", "build", "--plan", "--json"}); err != nil || !strings.Contains(out.String(), `"from": [`) {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+	if n := len(runsOfEngine(t, eng)); n != 1 {
+		t.Fatalf("a plan made a run: %d", n)
+	}
+	// A plan that cannot be carried out says why, with the server's exit code.
+	if err := cl.rerun([]string{failed, "--from", "test[os=alpine]", "--plan"}); exitCode(err) != exitAPI || !strings.Contains(err.Error(), "cannot re-run from") {
+		t.Fatalf("%v", err)
+	}
+	if err := cl.rerun([]string{failed}); exitCode(err) != exitUsage {
+		t.Fatalf("no steps named: %v", err)
+	}
+	if err := cl.resume(nil); exitCode(err) != exitUsage {
+		t.Fatalf("resume without a run: %v", err)
+	}
+
+	// The re-run is a new run that fails the same way: the exit says so.
+	out.Reset()
+	if err := cl.rerun([]string{failed, "--failed", "--wait"}); exitCode(err) != exitRunFailed {
+		t.Fatalf("%v", err)
+	}
+	if n := len(runsOfEngine(t, eng)); n != 2 {
+		t.Fatalf("%d runs after a re-run", n)
+	}
+	// Resume goes on in the same run.
+	if err := cl.resume([]string{failed, "--wait"}); exitCode(err) != exitRunFailed {
+		t.Fatalf("%v", err)
+	}
+	if n := len(runsOfEngine(t, eng)); n != 2 {
+		t.Fatalf("a resume made a run: %d", n)
+	}
+	if err := cl.resume([]string{"run_nope"}); exitCode(err) != exitAPI {
+		t.Fatalf("%v", err)
+	}
+	// Without --wait, the command returns at once.
+	out.Reset()
+	if err := cl.resume([]string{failed}); exitCode(err) != 0 {
+		t.Fatalf("%v", err)
+	}
+}
+
+func runsOfEngine(t *testing.T, eng *engine.Engine) []*engine.RunSummary {
+	t.Helper()
+	runs, err := eng.ListRuns(engine.RunFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return runs
+}

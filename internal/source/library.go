@@ -46,6 +46,17 @@ type ProjectPipeline struct {
 	// Supersede is the pipeline's supersede: a new run of a push or pull
 	// request cancels the older ones of the same ref still going.
 	Supersede bool `json:"supersede,omitempty"`
+	// Lane is the pipeline's lane (schema 24), as written in the
+	// configuration; the pipeline parser checks it.
+	Lane *ProjectLane `json:"lane,omitempty"`
+}
+
+// ProjectLane is the lane of a configured pipeline: the pipeline key lane.
+type ProjectLane struct {
+	Name     string   `json:"name,omitempty" yaml:"name,omitempty"`
+	Per      []string `json:"per,omitempty" yaml:"per,omitempty,flow"`
+	WhenBusy string   `json:"when_busy,omitempty" yaml:"when_busy,omitempty"`
+	Queue    string   `json:"queue,omitempty" yaml:"queue,omitempty"`
 }
 
 // MaxOverrides bounds the library overrides one start may ask for.
@@ -130,11 +141,13 @@ func configuredText(project string, pp *ProjectPipeline) (string, error) {
 		Pipeline  string         `yaml:"pipeline"`
 		On        *on            `yaml:"on,omitempty"`
 		Supersede bool           `yaml:"supersede,omitempty"`
+		Lane      *ProjectLane   `yaml:"lane,omitempty"`
 		Libraries map[string]lib `yaml:"libraries"`
 		Steps     map[string]use `yaml:"steps"`
 	}{
 		Pipeline:  project,
 		Supersede: pp.Supersede,
+		Lane:      pp.Lane,
 		Libraries: map[string]lib{pp.Library: {Repo: pp.Library, Version: pp.Version}},
 		Steps:     map[string]use{pp.Template: {Uses: pp.Library + "/" + pp.Template, With: pp.With}},
 	}

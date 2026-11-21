@@ -369,6 +369,24 @@ func TestDegradedDeploymentIsRolledBack(t *testing.T) {
 	}
 }
 
+// A step that fails and is allowed to (on_failure: continue) is, for the
+// steps that need it, a success: it does not roll the deployment back.
+func TestAllowedFailureDoesNotRollBack(t *testing.T) {
+	e, _ := newDeployEngine(t, prodEnv)
+	first := createShop(t, e, shopPipeline, 1)
+	deployToHealthy(t, e, first, "1.0.0", "c1")
+	ok(t, e, take(t, e), nil) // smoke
+
+	tolerant := strings.Replace(shopPipeline, "    run: smoke\n", "    run: smoke\n    on_failure: continue\n", 1)
+	id := createShop(t, e, tolerant, 2)
+	deployToHealthy(t, e, id, "1.1.0", "c2")
+	fail(t, e, take(t, e)) // smoke fails, and is allowed to
+	want(t, statuses(t, e, id), "run", "succeeded", "smoke", "failed", "rollback-prod", "skipped")
+	if v := stepOf(t, e, id, "rollback-prod"); v.SkipKind != SkipNotNeeded {
+		t.Fatalf("rollback skip kind %q", v.SkipKind)
+	}
+}
+
 // A revert that conflicts fails the rollback: the environment needs a
 // person, and the deployment says so.
 func TestRevertConflictNeedsAPerson(t *testing.T) {

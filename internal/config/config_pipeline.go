@@ -1,0 +1,54 @@
+package config
+
+import (
+	"gopkg.in/yaml.v3"
+
+	"github.com/jk-magic-creations/launchway/internal/source"
+)
+
+// ProjectPipelineConfig runs a library's template as a project's pipeline.
+type ProjectPipelineConfig struct {
+	Library  string            `yaml:"library"`
+	Version  string            `yaml:"version"` // a tag, branch or full commit id
+	Template string            `yaml:"template"`
+	With     map[string]string `yaml:"with"`
+	On       ProjectPipelineOn `yaml:"on"`
+	// Supersede: a new run of a push or pull request cancels the older runs
+	// of the same ref that are still going (see the pipeline key).
+	Supersede bool `yaml:"supersede"`
+	// Lane makes runs of the project take turns (see the pipeline key lane);
+	// the same fields, checked by the pipeline parser.
+	Lane *ProjectLaneConfig `yaml:"lane"`
+	// Tools that read YAML 1.1 (Helm values among them) turn a bare `on`
+	// key into the boolean true and write it back as "true". Take that
+	// spelling for what it was meant to be rather than refusing to start.
+	OnAsTrue *ProjectPipelineOn `yaml:"true"`
+}
+
+// ProjectLaneConfig is a configured pipeline's lane: the pipeline key lane,
+// with the same fields.
+type ProjectLaneConfig struct {
+	Name     string   `yaml:"name"`
+	Per      []string `yaml:"per"`
+	WhenBusy string   `yaml:"when_busy"`
+	Queue    string   `yaml:"queue"`
+}
+
+// ProjectPipelineOn says which events start a configured pipeline.
+type ProjectPipelineOn struct {
+	Push *struct {
+		Branches []string `yaml:"branches"`
+		Tags     []string `yaml:"tags"`
+	} `yaml:"push"`
+	// PullRequest, written pull_request: {} (or with no value), starts runs
+	// for pull requests. It takes no settings.
+	PullRequest yaml.Node `yaml:"pull_request"`
+}
+
+// source is the lane as the source package keeps it, or nil for none.
+func (l *ProjectLaneConfig) source() *source.ProjectLane {
+	if l == nil {
+		return nil
+	}
+	return &source.ProjectLane{Name: l.Name, Per: l.Per, WhenBusy: l.WhenBusy, Queue: l.Queue}
+}

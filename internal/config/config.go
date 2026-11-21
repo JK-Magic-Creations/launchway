@@ -623,33 +623,6 @@ type LibraryConfig struct {
 	Repo string `yaml:"repo"` // fetched with the same credentials as projects
 }
 
-// ProjectPipelineConfig runs a library's template as a project's pipeline.
-type ProjectPipelineConfig struct {
-	Library  string            `yaml:"library"`
-	Version  string            `yaml:"version"` // a tag, branch or full commit id
-	Template string            `yaml:"template"`
-	With     map[string]string `yaml:"with"`
-	On       ProjectPipelineOn `yaml:"on"`
-	// Supersede: a new run of a push or pull request cancels the older runs
-	// of the same ref that are still going (see the pipeline key).
-	Supersede bool `yaml:"supersede"`
-	// Tools that read YAML 1.1 (Helm values among them) turn a bare `on`
-	// key into the boolean true and write it back as "true". Take that
-	// spelling for what it was meant to be rather than refusing to start.
-	OnAsTrue *ProjectPipelineOn `yaml:"true"`
-}
-
-// ProjectPipelineOn says which events start a configured pipeline.
-type ProjectPipelineOn struct {
-	Push *struct {
-		Branches []string `yaml:"branches"`
-		Tags     []string `yaml:"tags"`
-	} `yaml:"push"`
-	// PullRequest, written pull_request: {} (or with no value), starts runs
-	// for pull requests. It takes no settings.
-	PullRequest yaml.Node `yaml:"pull_request"`
-}
-
 // pullRequests reports whether on.pull_request is written, and checks that
 // it has no settings.
 func (o ProjectPipelineOn) pullRequests() (bool, error) {
@@ -999,6 +972,7 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 		if pp := p.Pipeline; pp != nil {
 			sp.Pipeline = &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With,
 				Supersede: pp.Supersede}
+			sp.Pipeline.Lane = pp.Lane.source()
 			if t := pp.On.Push; t != nil {
 				sp.Pipeline.On.Push = &pipeline.PushTrigger{Branches: t.Branches, Tags: t.Tags}
 			}

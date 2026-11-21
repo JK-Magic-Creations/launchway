@@ -84,6 +84,9 @@ var mcpPermissionTable = map[string]mcpRow{
 	"list_config_imports":  {nil, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"check_repository":     {map[string]any{"repo": "/nonexistent/none"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"check_signin":         {map[string]any{"issuer": "not a url", "client_id": "x", "redirect_url": "y", "client_secret_env": "Z"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	"list_lanes":           {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"get_run_limits":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},
+	"set_run_limits":       {map[string]any{"max_run_timeout": "48h"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	"set_step_resource_default": {map[string]any{"kind": "step", "cpu": "1", "memory": "2Gi"}, false,
 		[5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 }

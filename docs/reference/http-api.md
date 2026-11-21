@@ -196,6 +196,7 @@ With sign-in on it has only `auth_mode` (`oidc`), `version` and `schema`.
 | `GET /api/v1/projects/{name}/refs` | `project-viewer` | — | The project's branches and tags. |
 | `GET /api/v1/projects/{name}/inputs` | `project-viewer` | — | The inputs the pipeline declares at `?ref=` (default: the default branch), for a start form. |
 | `GET /api/v1/projects/{name}/schedules` | `project-viewer` | — | The schedules read from the default branch, when each fires next, recent firings, and the project's webhook triggers. |
+| `GET /api/v1/projects/{name}/lanes` | `project-viewer` | — | The project's [lanes](pipeline.md#lane) that have a run going or runs waiting: for each, its `name`, `key` and `label`, the run that holds it (`holder`) and the runs waiting, in the order they start (`waiting`, each with its `position`). A run's own place is its `lane` block in the run JSON: `name`, `key`, `label`, `state` (`holding`, `waiting`, `replaced` or `skipped`), `position`, and `behind` (the run it waits behind, or that replaced it). `GET /api/v1/runs?lane=NAME` lists only runs in that lane. A waiting run is canceled with the run's cancel route. |
 
 A project object has the configuration (`name`, `url` with credentials removed, `default_branch`, `poll_seconds`, `push`), the latest poll (`last_fetch`, `decisions`), its newest run as `last_run`, and `editor`, what the caller may do in the pipeline editor:
 
@@ -224,8 +225,8 @@ A ref is `{"name", "kind" (branch or tag), "sha", "subject", "author", "committe
 | `GET /api/v1/runs/{id}/steps/{step}/logs` | `run-viewer` | — | A step's log lines. |
 | `POST /api/v1/runs/{id}/cancel` | `run-operator` | `run.cancel` | Cancels the run. |
 | `POST /api/v1/runs/{id}/resume` | `run-operator` | `run.resume` | Resumes a failed or canceled run, from the steps that did not succeed. |
-| `GET /api/v1/runs/{id}/rerun` | `run-viewer` | — | What re-running from `?from=<step>` would run again and reuse. |
-| `POST /api/v1/runs/{id}/rerun` | `run-operator` | `run.rerun` | Starts a new run that re-runs a finished one from a step. Answers `201` with the new run. |
+| `GET /api/v1/runs/{id}/rerun` | `run-viewer` | — | What re-running from `?from=<step>` (given once for each step) or `?failed=true` would run again and reuse. |
+| `POST /api/v1/runs/{id}/rerun` | `run-operator` | `run.rerun` | Starts a new run that re-runs a finished one from a step, several steps or the failed ones. Answers `201` with the new run. |
 
 **Start a run.** The body:
 
@@ -263,7 +264,7 @@ curl -s -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
 
 **Cancel and resume.** No body. Answers `{"ok": true}`. Resuming a draft run needs the right to start draft runs.
 
-**Re-run.** `GET …/rerun?from=smoke-test` answers `{"run": ["smoke-test", …], "reuse": ["lint", …]}`, or `409` with why it cannot be re-run from there. `POST …/rerun` takes `{"from": "smoke-test"}`.
+**Re-run.** `GET …/rerun?from=smoke-test` answers `{"from": ["smoke-test"], "run": ["smoke-test", …], "reuse": ["lint", …]}`, or `409` with why it cannot be re-run from there. `from=` may be repeated, and `failed=true` asks for the smallest set of steps that covers every failed and canceled step. `POST …/rerun` takes `{"from": "smoke-test"}`, `{"from": ["lint", "unit"]}` or `{"failed": true}`; the new run's JSON has `rerun_from` (the first step) and, for several, `rerun_froms`. The command line has `launchway runs resume` and `launchway runs rerun`, and the MCP tool `retry_run` takes `from_step`, `from_steps` and `failed_only`.
 
 ## Approvals
 
@@ -282,7 +283,7 @@ The body is optional: `{"comment": "Looks good"}`. Answers `{"ok": true}`. An ap
 | `GET /api/v1/projects/{name}/pipeline` | `project-viewer` | — | The pipeline file at the tip of `?ref=` (default: the default branch). |
 | `POST /api/v1/projects/{name}/pipeline` | `project-operator` | `pipeline.save` | Commits pipeline text to the project's repository, as the caller. |
 | `POST /api/v1/projects/{name}/draft-runs` | `project-draft` | `run.draft` | Runs pipeline text that is not in Git against a branch. |
-| `POST /api/v1/validate` | `any-viewer` | — | Checks pipeline text without running it. |
+| `POST /api/v1/validate` | `any-viewer` | — | Checks pipeline text without running it. With `?project=NAME` it checks it for that project too, and a valid pipeline may come back with `warnings` (for example, a pull-request filter by target branch in a project with no forge connection). |
 
 **Read.** `{"ref", "kind", "sha", "subject", "author", "committed_at", "path", "exists", "configured", "text"}`.
 
@@ -428,6 +429,19 @@ needs an administrator, and every change is audited with the values before and a
 | `PUT /api/v1/step-resources/limits` | `admin` | `step_resources.set_limits` | Replaces the limits: `{"max_cpu", "max_memory", "memory_per_thread"}`. A value left out is not set. `400` for a quantity that does not read, a `memory_per_thread` under 64Mi, or a maximum below a default (lower the default first). |
 | `GET /api/v1/step-resources/defaults/{kind}` | `signed-in` | — | One kind's default. `404` for a kind that has none. |
 | `PUT /api/v1/step-resources/defaults/{kind}` | `admin` | `step_resources.set_default` | Replaces a kind's default: `{"cpu", "cpu_limit", "memory", "memory_limit"}`. A value left out is not set. `400` for a quantity that does not read, a limit below what is promised, or a value above the installation's limits. |
+
+## Run limits
+
+The installation's limits on pipelines, kept in the database: `max_run_timeout`, the longest
+[`timeout`](pipeline.md#top-level-keys) a pipeline may ask for. Anyone signed in may read them; changing
+them needs an administrator, and every change is audited with the values before and after. A pipeline
+whose timeout is longer is refused when a run starts, when it is re-run or resumed (the limit may have been lowered since), and by `POST /api/v1/validate`, with the limit
+in the message.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/run-limits` | `signed-in` | — | `{"max_run_timeout", "updated_at", "updated_by"}`. An empty `max_run_timeout` is not set: pipelines may ask for up to `720h`. |
+| `PUT /api/v1/run-limits` | `admin` | `run_limits.set` | Replaces the limits: `{"max_run_timeout": "48h"}`; empty or left out removes the limit. `400` for a duration that does not read or is outside `1m` to `720h`. |
 
 ## API tokens
 

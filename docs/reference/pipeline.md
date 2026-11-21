@@ -100,6 +100,8 @@ lists every variable a step receives.
 | `libraries` | mapping | none | The [shared libraries](#libraries) whose templates steps use. At most 10 |
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
 | `runner` | mapping | none | Which runners may run the pipeline's steps; see [Runner](#runner) |
+| `lane` | mapping | none | Makes runs of the project take turns, and says what a run that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
+| `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A run past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a run's end and its resume. Needs schema 24 |
 | `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display |
 
 Keys that the design has but are not built yet are refused with a hint: `outputs` (write to
@@ -115,7 +117,7 @@ Keys that the design has but are not built yet are refused with a hint: `outputs
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `push` | mapping | none | Start a run when a matching branch or tag is pushed |
-| `pull_request` | empty mapping | none | Start a run when a pull request is opened or its head moves. Write `pull_request: {}` (or the key with no value). It takes no settings |
+| `pull_request` | mapping | none | Start a run when a pull request is opened or its head moves. Write `pull_request: {}` (or the key with no value) for every pull request, or filter by the branch they target with `into` (see [Pull request](#pull-request)) |
 | `schedule` | list | none | Start runs at times written as cron expressions. At most 20 |
 | `webhook` | mapping, or a list of mappings | none | Let other systems start runs by calling a URL. At most 20 |
 
@@ -137,11 +139,42 @@ At least one of `branches` or `tags` is required.
 
 Pull-request runs run the pipeline at the pull request's head commit (`refs/pull/<n>/head`). They
 run only if the pipeline on the project's default branch also has `pull_request`, so a pull request
-cannot turn pull-request runs on for itself. The server sees only each pull request's head, not the
-branch it targets, so `pull_request` takes no `branches` filter and `when: { branch: ... }` never
-matches a pull-request run. Steps of pull-request runs may not read secrets unless the server's
-configuration allows it ([`pull_requests.secrets`](server-config.md#drafts-and-pull-requests)).
-See [Pull requests](../tutorials/pull-requests.md).
+cannot turn pull-request runs on for itself. A pull request has no branch or tag of its own:
+`when: { branch: ... }` never matches a pull-request run, and `branches` and `tags` are not keys of
+`pull_request`. What it has is the branch it would land on, and `into` filters by that:
+
+<!-- keys: on-pull-request -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `into` | pattern, one value or a list | any branch | Run only for pull requests that target a branch matching one of the patterns, written as the `branches` of [`push`](#push). The step environment gets `LAUNCHWAY_PULL_REQUEST_INTO`. Needs schema 24 |
+
+The server sees only each pull request's head, so it learns the target from the project's **forge
+connection**, and does so when it first sees each head, reading the pipeline on the default branch
+(the reviewed one) to know whether to filter. If the project has no forge connection, a pipeline
+with `into` runs no pull requests, and the project's recent pushes say so, once: *waiting: pull request
+#12 not run: the pipeline filters by target branch and the project has no forge connection*. The head
+is not marked as seen, so every poll looks at it again, and it runs once the project has a forge. If the forge
+cannot be reached, the pull request is not run either (the server never runs unfiltered): the
+decision says *waiting: forge unreachable*, and the next poll tries again for as long as the head
+is the newest. The target is read once for each head; when a pull request is retargeted and its
+head moves, it is read again and the decision says that the target changed. The target is kept on
+the run (`pull_request_into` in the run JSON) and shown with the pull request. `pull_request: {}`
+needs no forge and no newer server.
+
+<!-- validate -->
+```yaml
+pipeline: checks
+on:
+  pull_request: { into: [main, "release/*"] }
+steps:
+  test:
+    image: alpine:3.22
+    run: echo "testing a change into $LAUNCHWAY_PULL_REQUEST_INTO"
+```
+
+Steps of pull-request runs may not read secrets unless the server's configuration allows it
+([`pull_requests.secrets`](server-config.md#drafts-and-pull-requests)). See
+[Pull requests](../tutorials/pull-requests.md).
 
 ### Schedule
 
@@ -306,7 +339,8 @@ The second column says which kinds take the key. `uses` stands for a step that u
 | `needs` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | step names, one value or a list | none | Steps that must end first. By default a step runs only if all of them succeeded; see [`when.upstream`](#when). A step cannot need itself, and needs may not form a loop. Needing a step that uses a template, or a loop, means needing all of its steps |
 | `when` | `step` `approval` `uses` `image` `deploy` `verify` `ai` | mapping | none | Conditions for the step to run; see [When](#when). Otherwise the step is skipped |
 | `timeout` | `step` `approval` `uses` `image` `deploy` `rollback` `rollout` `verify` `ai` | duration | depends on the kind | How long the step may take. Defaults and bounds per kind are in the kind's section |
-| `retry` | `step` `uses` `image` `ai` | whole number | `0` | Extra attempts after a failure, 0 to 10 |
+| `retry` | `step` `uses` `image` `ai` | whole number, or a mapping | `0` | Extra attempts after a failure, 0 to 10; the mapping also says how long to wait and for which causes (see [Retry](#retry)) |
+| `on_failure` | `step` `image` | `stop` or `continue` | `stop` | What a failure that is final (after its retries) does to the run. With `continue` the step ends `failed (allowed)`: the run's outcome ignores it, `fail_fast` ignores it, and the steps that need it run as if it had succeeded, unless they say `when: { upstream: failed }`. A rollback step also counts it as a success: a tolerated failure does not roll a deployment back. A run that succeeded with such failures says so: its summary (`GET /api/v1/runs`, `runs show`, the run list and page) carries `allowed_failures` (a count) and `allowed_failure_steps` (their names), and a policy's `allowed_failures` rule can refuse to deploy after one. Not for deploy, rollback, rollout, verify, ai or approval steps (each has its own failure handling), and not on a step that uses a template: set it inside the template. Needs schema 24 |
 
 For a step that uses a template, `when`, `retry` and `timeout` apply to every step of the
 template that does not set its own.
@@ -978,6 +1012,82 @@ maximum) and writes one line to the step's log saying what it lowered and why. A
 memory only is held to its memory, and its CPU default is lowered if need be, and the other way
 round.
 
+## Lane
+
+A lane makes runs take turns: at most one run of a lane goes at a time. A run that arrives while the
+lane is held waits its turn, replaces the run that holds it, or is skipped. A lane belongs to one
+project; two pipelines of a project that give their lanes the same `name` (and `per`) share one.
+
+<!-- keys: lane -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `name` | name | the pipeline's name | The lane's name: lower-case letters, digits, hyphens and underscores, as a step's |
+| `per` | list | none | What splits the name into separate lanes, so that runs of different branches do not wait for each other: `ref` (each branch, tag or pull-request ref), `pull_request` (each pull request) or `input:<name>` (each value of a `string` or `choice` [input](#inputs)) |
+| `when_busy` | `wait`, `cancel` or `skip` | `wait` | What a run that arrives while the lane is held does. `wait`: it is created and queued, with no step queued, and starts when the run before it ends. `cancel`: the run that holds the lane and every run waiting for it are canceled, saying `replaced in lane … by run #N`, and the new run goes; a holder with an open deployment finishes it first, and the new run waits. `skip`: the new run is created and canceled at once, saying `skipped: lane busy (run #N)`; it appears in lists and status posts and runs no step |
+| `queue` | `newest` or `all` | `newest` | For `wait`. `newest`: a newer run replaces an older one that is still waiting, which ends canceled saying `replaced in lane … by run #N`, so at most one run waits. `all`: every run waits, and they start in order |
+
+Runs started by a push, a pull request, a schedule, a webhook or by hand are all subject to the lane.
+A draft run never joins one, and a re-run does not either. A run that waits for its lane does not
+count that time against its [`timeout`](#top-level-keys). Cancel a waiting run with the cancel button
+(or `launchway runs cancel`): it leaves the line. Resuming a finished run of a lane is refused while
+another run holds it, and takes the lane otherwise. A lane is released whenever its holder ends, however
+it ends: a run that fails, is canceled or is lost to a server that died frees the lane, and a server that
+finds a lane with runs waiting and no live holder starts the first of them.
+
+A run that waits for an approval still holds its lane, until the approval is decided or expires (its
+`timeout`, 72 hours by default), so runs behind it wait that long too. The run's own `timeout` does
+not count that wait (see `timeout` in [top-level keys](#top-level-keys)), so only the approval's `timeout` ends it. If that is too long
+for the lane, give the approval a shorter `timeout`, or put the approval in a pipeline of its own.
+There is no key that lets a run give its lane up while it waits; that is on the backlog.
+
+<!-- validate -->
+```yaml
+pipeline: release
+lane:
+  name: release
+  per: [ref]        # one lane for each branch
+  when_busy: wait
+  queue: all        # every run goes, in turn
+steps:
+  ship:
+    image: alpine:3.22
+    run: ./ship.sh
+```
+
+`supersede: true` stays as the short form of `lane: { per: [ref], when_busy: cancel }` for runs
+started by a push or a pull request; writing both is an error.
+
+## Retry
+
+`retry: 2` retries a failed step twice at once, whatever the cause. The mapping form adds a pause and
+the causes worth retrying:
+
+<!-- keys: retry -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `times` | whole number | required | Extra attempts after a failure, 0 to 10 |
+| `wait` | duration | none | The pause before the first retry, `1s` to `1h`. The step is queued but not handed to a runner until it is over; the run page says `retrying in 20s (attempt 2 of 4)` |
+| `backoff` | number | `1` | What the pause is multiplied by for each retry after the first, 1 to 10; no pause is longer than `1h`. Goes with `wait` |
+| `on` | list of causes | every cause | The causes that are retried: `exit` (the script ended non-zero, and any failure that is none of the others), `timeout` (the step ran past its `timeout`) and `infrastructure` (the machinery failed: the image could not be pulled, the workspace or the fetched artifacts could not be prepared, or, only when `infrastructure` is listed here, a runner refused the step). A cause not listed fails the step at once. A runner states the cause itself (an older one sends none, and the server then works it out from the error text). An attempt lost to a failure of the infrastructure (a pod that disappeared, a runner that stopped responding) follows the same policy: it is tried again unless `on` leaves out `infrastructure`, after `wait` and `backoff`, and at most the server's `max_lost` times (3 by default), whatever `times` says, because `times` counts the step's own failures |
+
+A step whose runner is lost, or whose secret store is unavailable, is run again whatever `retry` says,
+a bounded number of times, as before. A step that fails its coverage threshold, is refused by a
+policy or is rejected is never retried. In a template, `times`, `wait`, `backoff` and `on` may be
+`{ param: name }`, and a `retry` written on the step that uses the template applies to the
+template's steps that write none of their own. The failed attempt's cause is shown on the step, in
+the API as `failure_cause`.
+
+<!-- validate -->
+```yaml
+pipeline: flaky-integration
+timeout: 2h
+steps:
+  integration:
+    image: alpine:3.22
+    run: ./integration.sh
+    retry: { times: 3, wait: 20s, backoff: 2, on: [timeout, infrastructure] }
+```
+
 ## When
 
 `when` holds conditions; every condition written must hold for the step to run, and within one,
@@ -990,13 +1100,41 @@ any listed value may match. It is a closed set of tests, not an expression langu
 | `tag` | pattern, one value or a list | none | The run's tag matches one |
 | `event` | one value or a list | none | The run's event is one of `push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook` |
 | `input` | input name | none | The step runs only if this [input](#inputs)'s value is one of `equals`. A `boolean` input alone means `equals: true`. A `list` input cannot be tested. Not in a template |
-| `equals` | one value or a list | `true` for a boolean | The values `input` is compared with, in canonical form |
+| `output` | `step.key` | none | The step runs only if this output of a step it needs (directly or through others) is one of `equals`. The step must be in `needs`, may not repeat (`for_each`) and may not be a step that uses a template. An output that was never written never matches, and the skip says which output was missing and what the step wrote instead: `the output "changed" of step scan was not set: scan did not write it (it wrote: other)`. Needs schema 24 |
+| `equals` | one value or a list | `true` for a boolean `input` | The values `input` or `output` is compared with, as text: a boolean is written `true` or `false`. A condition tests an input or an output, not both |
 | `upstream` | text | `succeeded` | How the steps it needs must have ended: `succeeded` (all of them), `failed` (at least one failed, was cancelled, or was not run because of a failure) or `always` (whatever happened). The step then waits until every step it needs has ended |
 
 In a [draft run](../glossary.md#draft-run) a step with a `when` runs only if its `event` names
 `draft`, so `when: { branch: main }` alone does not run in a draft of `main`. A `when` that only says
 `upstream` does not keep a step out of drafts. A deploy step, and an approval that names a
 deployment, take no `upstream`. In a template, the lists may be `{ param: name }`.
+
+A condition on an output reads what a step it needs wrote to `$LAUNCHWAY_OUTPUTS`; the step is
+skipped (a skip by condition, which a re-run reuses) when the output differs, and the skip says what
+the value was:
+
+<!-- validate -->
+```yaml
+pipeline: output-example
+steps:
+  scan:
+    image: alpine:3.22
+    run: ./scan.sh   # writes changed=true or changed=false to "$LAUNCHWAY_OUTPUTS"
+  fix:
+    image: alpine:3.22
+    needs: scan
+    when: { output: scan.changed, equals: true }
+    run: ./fix.sh
+  lint:
+    image: alpine:3.22
+    on_failure: continue   # a failing lint is reported but does not fail the run
+    run: ./lint.sh
+  build:
+    image: alpine:3.22
+    needs: [fix, lint]
+    when: { upstream: always }
+    run: make
+```
 
 <!-- validate -->
 ```yaml
@@ -1409,6 +1547,7 @@ older server. Use them only once every server and runner is upgraded; see
 | 14 | rollout steps, `rollout.until: paused`, `rollout.pauses`, an approval's `deployment`, `abort_first`, `on_cancel: abort` |
 | 15 | image steps, a change's `digest` |
 | 22 | a step's `resources` |
+| 24 | `when.output`, `on_failure`, `retry` with `wait`, `backoff` or `on`, the pipeline's `timeout`, `lane`, `on.pull_request.into` |
 
 ## What next
 

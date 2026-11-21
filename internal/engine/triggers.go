@@ -191,7 +191,7 @@ func (c *cmd) failFast() bool {
 		failed := ""
 		for _, m := range l.Members {
 			for _, id := range st.Order {
-				if m.Has(id) && st.Steps[id].Status == StepFailed {
+				if m.Has(id) && st.Steps[id].Status == StepFailed && !st.Steps[id].Allowed {
 					failed = id
 					break
 				}
@@ -241,13 +241,15 @@ type TriggerDetail struct {
 	Schedule     string            `json:"schedule,omitempty"`
 	ScheduledFor int64             `json:"scheduled_for,omitempty"`
 	Webhook      string            `json:"webhook,omitempty"`
+	// PullRequestInto is the branch a pull request targets (schema 24).
+	PullRequestInto string `json:"pull_request_into,omitempty"`
 }
 
 func triggerDetail(t Trigger) *TriggerDetail {
-	if len(t.Inputs) == 0 && t.Schedule == "" && t.Webhook == "" {
+	if len(t.Inputs) == 0 && t.Schedule == "" && t.Webhook == "" && t.PullRequestInto == "" {
 		return nil
 	}
-	return &TriggerDetail{Inputs: t.Inputs, Schedule: t.Schedule, ScheduledFor: t.ScheduledFor, Webhook: t.Webhook}
+	return &TriggerDetail{Inputs: t.Inputs, Schedule: t.Schedule, ScheduledFor: t.ScheduledFor, Webhook: t.Webhook, PullRequestInto: t.PullRequestInto}
 }
 
 // RunTrigger returns what a finished or running run was started with: its

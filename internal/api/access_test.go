@@ -135,6 +135,9 @@ var permissionTable = map[string]matrixRow{
 	"PUT /api/v1/step-resources/limits":          {"PUT", "/api/v1/step-resources/limits", `{"memory_per_thread":"1Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
 	"GET /api/v1/step-resources/defaults/{kind}": {"GET", "/api/v1/step-resources/defaults/step", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"PUT /api/v1/step-resources/defaults/{kind}": {"PUT", "/api/v1/step-resources/defaults/step", `{"cpu":"1","memory":"2Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
+	"GET /api/v1/projects/{name}/lanes":          {"GET", "/api/v1/projects/pay-api/lanes", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/run-limits":                     {"GET", "/api/v1/run-limits", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"PUT /api/v1/run-limits":                     {"PUT", "/api/v1/run-limits", `{"max_run_timeout":"48h"}`, [6]int{401, 403, 403, 403, 403, 200}},
 
 	// Artifacts, findings and SBOMs. {pay} keeps no artifact: 404 after the
 	// permission check (see TestArtifactAccess).

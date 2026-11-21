@@ -304,6 +304,7 @@ h2 { margin: 0; font-size: 17px; font-weight: 600; }
 .d-started .d-outcome { color: var(--ok-ink); }
 .d-ignored .d-outcome { color: var(--text-3); }
 .d-error .d-outcome { color: var(--bad-ink); }
+.d-waiting .d-outcome { color: var(--warn-ink); }
 .d-detail { flex: 1 1 260px; min-width: 0; }
 
 .dialog { border: 1px solid var(--border); border-radius: 14px; padding: 0; width: min(680px, calc(100vw - 32px)); background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .3); }
@@ -418,6 +419,10 @@ a.btn:hover { text-decoration: none; }
 .linkbtn { border: 0; padding: 0; background: none; color: var(--accent-ink); font: inherit; cursor: pointer; }
 .linkbtn:hover { text-decoration: underline; }
 .callout-info { background: var(--accent-soft); color: var(--text); }
+.callout-allowed { background: var(--warn-soft); color: var(--warn-ink); }
+.badge-button { border: 0; cursor: pointer; font-family: inherit; }
+.badge-button:hover { filter: brightness(0.95); }
+.badge-allowed { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .callout-draft { background: var(--warn-soft); color: var(--warn-ink); }
 .callout-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .callout-row > span { flex: 1 1 320px; }

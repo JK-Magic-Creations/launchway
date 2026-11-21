@@ -72,6 +72,7 @@ const (
 	RuleDeployedImages    = "deployed_images"
 	RuleApprovals         = "approvals"
 	RuleRefs              = "refs"
+	RuleAllowedFailures   = "allowed_failures"
 	RuleImagePush         = "image_push"
 	// RuleSource is not a rule anyone writes: it is how a policy source that
 	// could not be loaded fails closed. It cannot be waived.
@@ -98,6 +99,7 @@ var Catalogue = []RuleInfo{
 	{RuleDeployedImages, PointDeploy, "the images the deployment writes are pinned by digest, built by this run, signed and scanned"},
 	{RuleApprovals, PointDeploy, "people other than the one who started the run approved it before the deployment"},
 	{RuleRefs, PointDeploy, "the run is of an allowed branch or tag"},
+	{RuleAllowedFailures, PointDeploy, "at most max steps before the deployment failed and were allowed to (on_failure: continue); none by default"},
 	{RuleImagePush, PointImage, "an image step that pushes scans (enforced), signs, makes an SBOM and provenance, and pushes only to allowed registries"},
 }
 
@@ -160,6 +162,7 @@ type Rules struct {
 	DeployedImages    *DeployedImages    `json:"deployed_images,omitempty"`
 	Approvals         *Approvals         `json:"approvals,omitempty"`
 	Refs              *Refs              `json:"refs,omitempty"`
+	AllowedFailures   *AllowedFailures   `json:"allowed_failures,omitempty"`
 	ImagePush         *ImagePush         `json:"image_push,omitempty"`
 }
 
@@ -226,6 +229,12 @@ type Approvals struct {
 	Min int `json:"min"`
 }
 
+// AllowedFailures: at most Max of the steps before the deployment failed
+// and were allowed to (on_failure: continue); none by default.
+type AllowedFailures struct {
+	Max int `json:"max"`
+}
+
 // Refs: the run is of a branch matching Branches or a tag matching Tags.
 type Refs struct {
 	Branches []string `json:"branches,omitempty"`
@@ -262,6 +271,7 @@ func (r Rules) used() []string {
 	add(r.DeployedImages != nil, RuleDeployedImages)
 	add(r.Approvals != nil, RuleApprovals)
 	add(r.Refs != nil, RuleRefs)
+	add(r.AllowedFailures != nil, RuleAllowedFailures)
 	add(r.ImagePush != nil, RuleImagePush)
 	return out
 }

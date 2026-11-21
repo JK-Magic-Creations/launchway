@@ -205,11 +205,13 @@ libraries:
 containers:
   py: { image: python:3.13 }
 runner: { pool: gpu, labels: [cuda] }
+lane: { name: probe, per: [ref], when_busy: wait }
 steps:
   build:
     image: alpine:3.22
     run: "true"
     when: { branch: main }
+    retry: { times: 2, wait: 10s }
     resources: { cpu: 2, memory: 4Gi }
     secrets:
       TOKEN: { store: vault, key: ci/token, field: token }
@@ -345,6 +347,7 @@ var probes = []probe{
 	{table: "top"},
 	{table: "on", path: []any{"on"}},
 	{table: "on-push", path: []any{"on", "push"}},
+	{table: "on-pull-request", path: []any{"on", "pull_request"}},
 	{table: "on-schedule", path: []any{"on", "schedule", 0}},
 	{table: "on-webhook", path: []any{"on", "webhook"}},
 	{table: "inputs", path: []any{"inputs", "target"}},
@@ -354,12 +357,14 @@ var probes = []probe{
 	{table: "secret-ref", path: []any{"steps", "image", "secrets", 0, "secret"}},
 	{table: "secret-ref", path: []any{"steps", "image", "sign", "key"}},
 	{table: "when", path: []any{"steps", "build", "when"}},
+	{table: "retry", path: []any{"steps", "build", "retry"}},
 	{table: "reports", path: []any{"steps", "build", "reports"}},
 	{table: "reports-tests", path: []any{"steps", "build", "reports", "tests"}},
 	{table: "reports-coverage", path: []any{"steps", "build", "reports", "coverage"}},
 	{table: "reports-fail-under", path: []any{"steps", "build", "reports", "coverage", "fail_under"}},
 	{table: "reports-html", path: []any{"steps", "build", "reports", "html", 0}},
 	{table: "runner", path: []any{"runner"}},
+	{table: "lane", path: []any{"lane"}},
 	{table: "step-resources", path: []any{"steps", "build", "resources"}},
 	{table: "ai-input", path: []any{"steps", "notes", "inputs", 0}},
 	{table: "verify-metric", path: []any{"steps", "verify", "metrics", 0}},

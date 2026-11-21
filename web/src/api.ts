@@ -1,4 +1,5 @@
 // Types mirror the Go API in internal/engine and internal/source.
+import { rerunBody, rerunQuery, type RerunFrom } from "./api/flow"; // flow control (schema 24)
 
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "canceled";
 export type StepStatus =
@@ -616,7 +617,7 @@ export interface GraphGroup {
 
 export interface Graph {
   name: string;
-  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: Record<string, never> };
+  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: { into?: string[] } };
   /** A new run of a push or pull request cancels the older ones of the same ref still going. */
   supersede?: boolean;
   libraries?: GraphLibrary[];
@@ -716,7 +717,7 @@ export interface RunEvent {
   data: Record<string, unknown>;
 }
 
-export interface Decision { at: number; ref: string; sha: string; outcome: "started" | "ignored" | "error"; detail: string; run_id?: string }
+export interface Decision { at: number; ref: string; sha: string; outcome: "started" | "ignored" | "waiting" | "error"; detail: string; run_id?: string }
 
 export interface PushSettings { branch_prefix: string; allow_direct: string[] | null }
 
@@ -726,7 +727,7 @@ export interface ProjectPipeline {
   version: string;
   template: string;
   with?: Record<string, string> | null;
-  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: Record<string, never> };
+  on: { push?: { branches?: string[]; tags?: string[] }; pull_request?: { into?: string[] } };
   supersede?: boolean;
 }
 
@@ -946,10 +947,9 @@ export const api = {
   info: () => call<{ version: string; auth_mode: "none" | "oidc"; actor?: string }>("GET", "/api/v1/info"),
   me: () => call<Me>("GET", "/api/v1/me"),
   logout: () => call<void>("POST", "/auth/logout"),
-  runs: (q: { project?: string; status?: string; limit?: number } = {}, background = false) => {
+  runs: (q: { project?: string; status?: string; lane?: string; limit?: number } = {}, background = false) => {
     const p = new URLSearchParams();
-    if (q.project) p.set("project", q.project);
-    if (q.status) p.set("status", q.status);
+    for (const k of ["project", "status", "lane"] as const) if (q[k]) p.set(k, q[k]);
     if (q.limit) p.set("limit", String(q.limit));
     return call<RunSummary[]>("GET", "/api/v1/runs?" + p.toString(), undefined, { background });
   },
@@ -961,8 +961,8 @@ export const api = {
       `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/logs?attempt=${attempt}&after=${after}`),
   cancel: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/cancel`),
   resume: (id: string) => call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/resume`),
-  rerunPlan: (id: string, from: string) => call<RerunPlan>("GET", `/api/v1/runs/${id}/rerun?from=${encodeURIComponent(from)}`),
-  rerun: (id: string, from: string) => call<RunSummary>("POST", `/api/v1/runs/${id}/rerun`, { from }),
+  rerunPlan: (id: string, w: string | RerunFrom) => call<RerunPlan>("GET", `/api/v1/runs/${id}/rerun?${rerunQuery(w)}`),
+  rerun: (id: string, w: string | RerunFrom) => call<RunSummary>("POST", `/api/v1/runs/${id}/rerun`, rerunBody(w)),
   approve: (id: string, step: string, comment: string) =>
     call<{ ok: boolean }>("POST", `/api/v1/runs/${id}/steps/${encodeURIComponent(step)}/approve`, { comment }),
   reject: (id: string, step: string, comment: string) =>

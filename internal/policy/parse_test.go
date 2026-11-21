@@ -19,6 +19,7 @@ const goodFile = `policies:
       sbom: {}
       deployed_images: { digest: true, built_by_run: true, signed: true, scanned: true }
       approvals: { min: 2 }
+      allowed_failures: { max: 1 }
       refs: { branches: [main], tags: ["v*"] }
   - name: pipeline-shape
     mode: report
@@ -43,10 +44,10 @@ func TestParseAGoodFile(t *testing.T) {
 	if p.Name != "prod-evidence" || p.Mode != ModeEnforce || p.Source != "org" || p.File != "policies/org.yaml" || p.Line != 2 {
 		t.Fatalf("%+v", p)
 	}
-	if got := p.RuleList(); !slices.Equal(got, []string{RuleTests, RuleFindings, RuleSBOM, RuleDeployedImages, RuleApprovals, RuleRefs}) {
+	if got := p.RuleList(); !slices.Equal(got, []string{RuleTests, RuleFindings, RuleSBOM, RuleDeployedImages, RuleApprovals, RuleRefs, RuleAllowedFailures}) {
 		t.Fatalf("rules %v", got)
 	}
-	if p.Rules.Tests.Min != 10 || p.Rules.SBOM.MinComponents != 1 || p.Rules.Approvals.Min != 2 || p.Rules.Findings.PerTool["Trivy"] != "high" {
+	if p.Rules.Tests.Min != 10 || p.Rules.SBOM.MinComponents != 1 || p.Rules.Approvals.Min != 2 || p.Rules.AllowedFailures.Max != 1 || p.Rules.Findings.PerTool["Trivy"] != "high" {
 		t.Fatalf("%+v", p.Rules)
 	}
 	if !slices.Equal(p.Points(), []string{PointDeploy}) || !slices.Equal(ps[1].Points(), []string{PointRun, PointImage}) {
@@ -70,6 +71,7 @@ func TestParseRefusesMistakesWithTheirLines(t *testing.T) {
 		{"top key", "rules: {}\n", `x.yaml:1: rules: unknown key "rules"`},
 		{"unknown rule", "policies:\n  - name: a\n    mode: report\n    rules:\n      no_friday_deploys: true\n",
 			`x.yaml:5: policies[0].rules.no_friday_deploys: unknown rule "no_friday_deploys"; the rules are library_versions`},
+		{"allowed failures too many", "policies:\n  - name: a\n    mode: report\n    rules:\n      allowed_failures: { max: 500 }\n", "must be between 0 and 100"},
 		{"no mode", "policies:\n  - name: a\n    rules: { tests: {} }\n", "x.yaml:2: policies[0]: a policy needs a mode"},
 		{"bad mode", "policies:\n  - name: a\n    mode: warn\n    rules: { tests: {} }\n", `x.yaml:3: policies[0].mode: "warn": write report or enforce`},
 		{"no name", "policies:\n  - mode: report\n    rules: { tests: {} }\n", "x.yaml:2: policies[0]: a policy needs a name"},

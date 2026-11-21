@@ -376,8 +376,8 @@ func judge(p Policy, rule string, in Input, waivers []Waiver, at int64) RuleResu
 		}
 		return pass(fmt.Sprintf("an SBOM of %d components", best), want)
 
-	case RuleDeployedImages:
-		return judgeDeployed(r, rs.DeployedImages, in)
+	case RuleDeployedImages, RuleAllowedFailures:
+		return judgeFacts(rule, r, rs, in)
 
 	case RuleApprovals:
 		want := fmt.Sprintf("%d approval(s) before %s by people other than the one who started the run", rs.Approvals.Min, in.Step)

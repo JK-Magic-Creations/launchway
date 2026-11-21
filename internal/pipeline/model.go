@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -30,6 +31,14 @@ type Pipeline struct {
 	// too were started by a push or a pull request. Runs started by hand,
 	// drafts and re-runs never supersede and are never superseded.
 	Supersede bool `json:"supersede,omitempty"`
+	// Lane controls which runs of the project may go at the same time
+	// (schema 24); nil: runs overlap freely. See Lane.
+	Lane *Lane `json:"lane,omitempty"`
+	// Timeout bounds how long a run may stay open (schema 24); 0: no limit.
+	// Time spent waiting for an approval does not count.
+	Timeout Duration `json:"timeout,omitempty"`
+	// TimeoutLine is where the timeout was written, for messages.
+	TimeoutLine int `json:"-"`
 	// Requires is the schema a server must know to run the pipeline, when
 	// the pipeline uses something older servers would misread rather than
 	// refuse (see control.go). Servers that do not know this field refuse
@@ -112,8 +121,15 @@ type Triggers struct {
 	Webhook []*WebhookTrigger `json:"webhook,omitempty"`
 }
 
-// PullRequestTrigger starts a run for pull requests. It is empty for now.
-type PullRequestTrigger struct{}
+// PullRequestTrigger starts a run for pull requests. Without settings it is
+// every pull request. The server sees each pull request's head
+// (refs/pull/<n>/head) and learns the branch it targets from the project's
+// forge connection, so it can filter by that (schema 24).
+type PullRequestTrigger struct {
+	// Into are patterns of the branches a pull request may target, as the
+	// branches of on.push; empty means any.
+	Into []string `json:"into,omitempty"`
+}
 
 // PushTrigger starts a run when matching branches or tags are pushed.
 type PushTrigger struct {
@@ -143,7 +159,17 @@ type Step struct {
 	Env         map[string]string    `json:"env,omitempty"`
 	Secrets     map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
 	Retry       int                  `json:"retry"`             // extra attempts after a failure
-	Timeout     Duration             `json:"timeout"`           // per attempt; for an approval, how long to wait for a decision
+	// RetryWait, RetryBackoff and RetryOn are the rest of the map form of
+	// retry (schema 24): the pause before the first retry, what multiplies
+	// it each time (0 or 1: nothing), and the causes that are retried
+	// (empty: every cause, as for a whole number).
+	RetryWait    Duration `json:"retry_wait,omitempty"`
+	RetryBackoff float64  `json:"retry_backoff,omitempty"`
+	RetryOn      []string `json:"retry_on,omitempty"`
+	// OnFailure is continue when a step that fails for good (after its
+	// retries) must not fail the run (schema 24); empty means stop.
+	OnFailure string   `json:"on_failure,omitempty"`
+	Timeout   Duration `json:"timeout"` // per attempt; for an approval, how long to wait for a decision
 	// Reports are files the step writes that Launchway reads once it ends,
 	// whether it passed or failed: test results, for now.
 	Reports *Reports `json:"reports,omitempty"`
@@ -394,13 +420,18 @@ type Condition struct {
 	// (see Input.Canon), so they compare as text.
 	Input  string   `json:"input,omitempty"`
 	Equals []string `json:"equals,omitempty"`
+	// Output tests an output of a step this one needs (schema 24), written
+	// step.key: the step runs only if the output's value is one of Equals
+	// (the same list Input uses; a condition has one or the other). An
+	// output that was never written never matches.
+	Output string `json:"output,omitempty"`
 	// Upstream says how the steps this one needs must have ended for it
 	// to run (schema 13): succeeded (the default), failed (at least one
 	// failed, was cancelled or was not run because of a failure) or
 	// always (whatever happened). See UpstreamAllows.
 	Upstream string `json:"upstream,omitempty"`
 
-	inputLine int // where input was written, for messages
+	inputLine int // where input or output was written, for messages
 }
 
 // The events a run can be started by.
@@ -433,6 +464,63 @@ type Context struct {
 	Tag    string
 	// Inputs are the run's input values, canonical, by name.
 	Inputs map[string]string
+	// Output looks up an output a step wrote (schema 24); nil, or ok false,
+	// means it was never written.
+	Output func(step, key string) (value string, ok bool)
+	// OutputKeys lists the outputs a step did write, so that a missing one
+	// can say what was there instead; nil if not known.
+	OutputKeys func(step string) []string
+}
+
+// OutputRef splits the step and key of an output test, which are written
+// step.key; ok is false if c tests none.
+func (c *Condition) OutputRef() (step, key string, ok bool) {
+	if c == nil || c.Output == "" {
+		return "", "", false
+	}
+	step, key, ok = strings.Cut(c.Output, ".")
+	return step, key, ok
+}
+
+// OutputWhy explains why the condition's output test fails, or returns ""
+// if it holds or the condition has none. An output that was never written
+// is reported as such, not as a mismatch.
+func (c *Condition) OutputWhy(ctx Context) string {
+	step, key, ok := c.OutputRef()
+	if !ok {
+		return ""
+	}
+	if ctx.Output != nil {
+		if v, set := ctx.Output(step, key); set {
+			if slices.Contains(c.Equals, v) {
+				return ""
+			}
+			want := make([]string, len(c.Equals))
+			for i, e := range c.Equals {
+				want[i] = strconv.Quote(e)
+			}
+			if len(want) == 1 {
+				return c.Output + " was " + strconv.Quote(v) + ", not " + want[0]
+			}
+			return c.Output + " was " + strconv.Quote(v) + ", not one of " + strings.Join(want, ", ")
+		}
+	}
+	return c.missingOutput(ctx, step, key)
+}
+
+// missingOutput says which output was not written, and by which step, and
+// what the step wrote instead: a mistyped key is the usual cause.
+func (c *Condition) missingOutput(ctx Context, step, key string) string {
+	msg := "the output " + strconv.Quote(key) + " of step " + step + " was not set: " + step + " did not write it"
+	if ctx.OutputKeys == nil {
+		return msg
+	}
+	keys := ctx.OutputKeys(step)
+	if len(keys) == 0 {
+		return msg + " (it wrote no outputs)"
+	}
+	slices.Sort(keys)
+	return msg + " (it wrote: " + strings.Join(keys, ", ") + ")"
 }
 
 // Match reports whether the condition holds. A nil condition always holds.
@@ -455,10 +543,13 @@ func (c *Condition) Match(ctx Context) bool {
 			return false
 		}
 	}
+	if c.OutputWhy(ctx) != "" {
+		return false
+	}
 	if len(c.Event) > 0 {
 		return matchAny(c.Event, ctx.Event)
 	}
-	if c.Upstream != "" && len(c.Branch) == 0 && len(c.Tag) == 0 && c.Input == "" {
+	if c.Upstream != "" && len(c.Branch) == 0 && len(c.Tag) == 0 && c.Input == "" && c.Output == "" {
 		return true // only about upstream: not a guard that keeps steps out of drafts
 	}
 	return ctx.Event != EventDraft
@@ -477,6 +568,22 @@ func (t Triggers) MatchPush(branch, tag string) bool {
 
 // MatchPullRequest reports whether pull requests start a run.
 func (t Triggers) MatchPullRequest() bool { return t.PullRequest != nil }
+
+// FiltersPullRequests reports whether the pipeline runs only for pull
+// requests that target some branches (on.pull_request.into), which the
+// server can only learn from the project's forge connection.
+func (t Triggers) FiltersPullRequests() bool {
+	return t.PullRequest != nil && len(t.PullRequest.Into) > 0
+}
+
+// MatchPullRequestInto reports whether a pull request that targets the
+// branch starts a run: any does unless the trigger says into.
+func (t Triggers) MatchPullRequestInto(branch string) bool {
+	if t.PullRequest == nil {
+		return false
+	}
+	return len(t.PullRequest.Into) == 0 || matchAny(t.PullRequest.Into, branch)
+}
 
 // UsesSchema9 reports whether the pipeline uses keys that servers older
 // than schema 9 do not know: on.pull_request and supersede.

@@ -129,7 +129,7 @@ type route struct {
 }
 
 func (s *Server) routes() []route {
-	return append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...)
+	return append(append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...), s.flowRoutes()...)
 }
 
 func (s *Server) mainRoutes() []route {
@@ -792,7 +792,7 @@ func (s *Server) listRuns(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	f := engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Limit: limit, OnlyProjects: only}
+	f := engine.RunFilter{Project: q.Get("project"), Status: q.Get("status"), Lane: q.Get("lane"), Limit: limit, OnlyProjects: only}
 	if v := q.Get("before"); v != "" {
 		// The next page: after the run "<created_at>.<id>", as the last run
 		// of the previous page gives them.
@@ -954,62 +954,6 @@ func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
-// rerunPlan says what re-running the run from ?from= would run again and
-// reuse, or, as an error, why it cannot be re-run from there.
-func (s *Server) rerunPlan(w http.ResponseWriter, r *http.Request) {
-	plan, err := s.Engine.PlanRerun(r.PathValue("id"), r.URL.Query().Get("from"))
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, plan)
-}
-
-// rerunRun creates a new run that re-runs a finished one from a step:
-// {"from": "<step>"}. The step and every step after it run again; the
-// others are reused with their outcomes and outputs. A draft run's re-run
-// runs its unsaved text again, so it needs the right to start draft runs,
-// and whether its steps may read secrets is decided by the current setting.
-func (s *Server) rerunRun(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		From string `json:"from"`
-	}
-	if !decode(w, r, &in) {
-		return
-	}
-	if in.From == "" {
-		writeErr(w, http.StatusBadRequest, "say which step to re-run from: {\"from\": \"<step>\"}")
-		return
-	}
-	id := identityFrom(r)
-	sum, err := s.Engine.Summary(r.PathValue("id"))
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	rq := engine.RerunRequest{Run: sum.ID, From: in.From, Actor: id.User}
-	detail := fmt.Sprintf("re-run of #%d from step %s", sum.Number, in.From)
-	if sum.Draft {
-		detail += ", draft run, pipeline " + sum.PipelineHash
-	}
-	setAudit(r, "", detail)
-	if sum.Draft {
-		if !s.authorize(id, auth.RunDraft, sum.Project) {
-			writeErr(w, http.StatusForbidden, s.draftRefusal(sum.Project))
-			return
-		}
-		secrets := s.cur().Drafts.For(sum.Project).Secrets
-		rq.DraftSecrets = &secrets
-	}
-	run, err := s.Engine.Rerun(rq)
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	setAudit(r, "", fmt.Sprintf("%s: new run #%d %s", detail, run.Number, run.ID))
-	writeJSON(w, http.StatusCreated, run)
-}
-
 // decide approves or rejects an approval step. The body is optional:
 // {"comment": "..."}.
 func (s *Server) decide(approve bool) http.HandlerFunc {
@@ -1121,52 +1065,6 @@ func (s *Server) libraryTemplates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, out)
-}
-
-// validate checks a pipeline file without running it. With ?project=NAME
-// (which the caller must be able to see) or ?expand=1, templates are
-// expanded from the libraries' current versions, as a run would expand
-// them; otherwise a step that uses a template is one node of the graph.
-func (s *Server) validate(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	q := r.URL.Query()
-	project := q.Get("project")
-	expand := (project != "" || q.Get("expand") == "1") && s.Projects != nil
-	if project != "" {
-		if _, err := s.Projects.Get(project); err != nil || !s.authorize(identityFrom(r), auth.Read, project) {
-			s.fail(w, fmt.Errorf("%w: project %s", engine.ErrNotFound, project))
-			return
-		}
-	}
-	var p *pipeline.Pipeline
-	if expand {
-		p, err = s.Projects.Check(r.Context(), string(body), nil)
-	} else {
-		p, err = pipeline.Parse(body)
-	}
-	if err != nil {
-		var ps pipeline.Problems
-		if !errors.As(err, &ps) {
-			if !errors.Is(err, engine.ErrInvalid) {
-				s.fail(w, err)
-				return
-			}
-			ps = pipeline.Problems{{Message: strings.TrimPrefix(err.Error(), "invalid: ")}}
-		}
-		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
-		return
-	}
-	// The second pass, against this server's configuration: the
-	// environments deploy steps name.
-	if ps := s.Engine.CheckDeploys(project, p); len(ps) > 0 {
-		writeJSON(w, http.StatusOK, map[string]any{"ok": false, "problems": ps, "expanded": expand})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "graph": p, "levels": p.Levels(), "expanded": expand})
 }
 
 // stream sends live changes as server-sent events. With ?run=ID it sends only

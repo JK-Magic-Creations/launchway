@@ -75,6 +75,8 @@ func (p *Pipeline) UsesSchemaResources() bool {
 // notHere are keys that are known but that a mapping does not take, with
 // why. They are reported instead of the list of keys expected.
 var notHere = map[string]string{
+	"on_failure": "only steps that run a script and image steps can tolerate a failure; deploy, rollout, rollback, verify, ai and approval " +
+		"steps have their own failure handling, and a step that uses a template takes it inside the template",
 	"resources": "resources are for steps that run a script. An image step is built by the builder, whose memory is set where the builder is " +
 		"deployed; deploy, rollout, rollback, verify and ai steps run in the runner and an approval runs nothing. A container under containers " +
 		"takes cpu and memory",

@@ -36,11 +36,12 @@ steps:
 | `image` | Container image the step runs in |
 | `run` | Shell script, run with `sh -e` in the repository checkout |
 | `needs` | Steps that must succeed first; steps with no unmet needs run in parallel |
-| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook`) patterns, and `input` with `equals` (see [Run inputs](#run-inputs)); the step is skipped if they do not match. `upstream` says how the steps it needs must have ended; see [Cleanup and notification steps](#cleanup-and-notification-steps). In a [draft run](editor.md), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](triggers.md#pull-requests) has no branch, so `when: { branch: main }` never matches it |
+| `when` | `branch`, `tag` and `event` (`push`, `manual`, `draft`, `pull_request`, `schedule`, `webhook`) patterns, and `input` or `output` with `equals` (see [Run inputs](#run-inputs) and [Tolerating a failure](#tolerating-a-failure-and-testing-an-output)); the step is skipped if they do not match. `upstream` says how the steps it needs must have ended; see [Cleanup and notification steps](#cleanup-and-notification-steps). In a [draft run](editor.md), a step with a `when` runs only if its `event` names `draft`. A [pull-request run](triggers.md#pull-requests) has no branch, so `when: { branch: main }` never matches it |
 | `env` | Extra environment variables |
 | `secrets` | Environment variables whose values a runner looks up; see [Secrets](secrets.md) |
 | `container` | A named container from the `containers` section, instead of `image` |
-| `retry` | Extra attempts after a failure |
+| `retry` | Extra attempts after a failure; a mapping adds a wait and the causes worth retrying, see [Retrying after a wait](#retrying-after-a-wait-and-limiting-a-run) |
+| `on_failure` | `stop` (the default) or `continue`: with `continue` a step that fails for good is shown as failed (allowed) and the run goes on; see [Tolerating a failure](#tolerating-a-failure-and-testing-an-output) |
 | `timeout` | Per attempt; default 1h, at most 24h. For an approval, how long to wait for a decision; default 24h, at most 30 days |
 | `reports` | `tests:` one glob or a list, relative to the workspace: test result files read once the step ends; see [Test reports](test-reports.md) |
 | `kind` | `step` (the default), `approval` (see [Approvals](approvals-and-reruns.md#approvals)), `image` (see [Container images](images.md)), or `deploy`, `rollback` and `rollout` (see [Deployments](deployments.md)) |
@@ -115,6 +116,38 @@ runs it superseded. Runs started by hand, draft runs and re-runs never supersede
 superseded, and the new run's own pipeline is what decides. The cancelling happens in the same
 database transaction that creates the new run, so it is exact however many servers there are.
 A superseded run can be resumed like any cancelled run.
+
+## Lanes: one run at a time
+
+`supersede` only ever cancels. A **lane** makes the runs of a project take turns, and says what a
+run that arrives while another goes does:
+
+```yaml
+lane:
+  name: release          # default: the pipeline's name
+  per: [ref]             # a lane for each branch, tag or pull request; also pull_request, input:<name>
+  when_busy: wait        # wait (the default), cancel or skip
+  queue: all             # for wait: all, or newest (a waiting run is replaced by a newer one)
+```
+
+- **wait** puts the run in line: it is created, shown as *waiting for lane release/ref main (run #41
+  is running)*, and none of its steps is queued until the run before it ends. With `queue: newest`
+  (the default) a run that is still waiting is replaced by a newer one, and says so; with `all`
+  every run goes, in order.
+- **cancel** cancels the run that holds the lane and every run waiting for it, and the new run goes
+  at once. A holder with an open deployment finishes the deployment first, and the new run waits.
+- **skip** creates the new run and cancels it at once, so it appears in lists and status posts
+  but runs no step.
+
+Every kind of run is subject to a lane: pushes, pull requests, schedules (a schedule's firing
+records *skipped* or *waiting*), webhooks and runs started by hand. Draft runs and re-runs never join
+one. A lane is released when its holder ends, however it ends, and the next run starts in the same
+database transaction, so it is exact however many servers there are; a server that finds a lane
+with runs waiting and no live holder starts the first of them. Resuming a finished run is
+refused while another run holds its lane. A run that waits for an approval keeps its lane until the approval is decided or expires, so give approvals in a laned pipeline a short `timeout`. See the runs a project has in line with `launchway runs
+lanes PROJECT`, on the run page, or with the MCP tool `list_lanes`. `lane` and `supersede` cannot be written together:
+`supersede: true` is the short form of `lane: { per: [ref], when_busy: cancel }` for pushes and
+pull requests.
 
 ## Run inputs
 
@@ -216,6 +249,83 @@ would fit the engine this way: the producing step's outputs are recorded in its 
 event, so a new event (a loop's members, recorded when that step finishes) would add the member
 steps to the run, and every server would rebuild them from the log as it does now; servers that
 do not know the event would leave such runs alone, as they do any run they do not fully understand.
+
+## Retrying after a wait, and limiting a run
+
+`retry: 3` tries a failed step again at once, whatever went wrong. A flaky test or a service that
+needs a moment to come back wants a pause, and a failure that no retry can fix (a compile error)
+should not be tried again:
+
+```yaml
+  integration:
+    image: alpine:3.22
+    run: ./integration.sh
+    retry: { times: 3, wait: 20s, backoff: 2, on: [timeout, infrastructure] }
+```
+
+`wait` is the pause before the first retry and `backoff` multiplies it for each retry after (20 s,
+40 s, 80 s here; never more than an hour). While it lasts the step is queued but no runner is
+given it, and the run page says `retrying in 20s (attempt 2 of 4)`. `on` names the causes that are
+retried: `exit` (the script ended non-zero), `timeout` (the step ran past its `timeout`) and
+`infrastructure` (the image could not be pulled, the workspace could not be prepared, or a runner
+refused the step). Without `on`, every cause is retried, as with a whole number, except that a
+runner's refusal is retried only when you list `infrastructure`. A lost runner is always run again, a
+bounded number of times, whatever `retry` says.
+
+A pipeline can also bound a whole run: `timeout: 2h` at the top. A run still open after that is
+canceled with the reason `run timeout of 2h reached`; running steps are stopped as for any cancel,
+and a deployment the run holds is handled as when someone cancels it (`on_cancel` is honoured). **Time
+spent waiting for an approval does not count**, and neither does the time between a run's end and
+its resume. An administrator can cap what pipelines may ask for with `launchway run-limits set
+--max-run-timeout 48h`; a pipeline that asks for more is refused, with the limit in the message.
+
+## Tolerating a failure and testing an output
+
+A step that fails fails the run, and a step that needs it is not run. Two keys change that for
+the steps where it makes sense.
+
+`on_failure: continue` lets a step fail without failing the run, for a check that informs but does
+not gate (a linter, an optional scan):
+
+```yaml
+  lint:
+    image: alpine:3.22
+    on_failure: continue
+    run: ./lint.sh
+  build:
+    needs: lint            # runs after lint, whether lint passed or failed for good
+    run: make
+```
+
+A step that fails for good (after its `retry` attempts) ends **failed (allowed)** in the run page,
+the API, the MCP tools and `launchway runs show`. The run's outcome ignores it, `fail_fast` of a
+loop ignores it, and the steps that need it **run as if it had succeeded**, unless they say
+`when: { upstream: failed }`, which runs them after any failure. Take care with steps that need
+files the failed step should have written: they run anyway. A step that fails for a reason that
+is not tolerated still fails the run, and a step that needs it is skipped. A
+[resume](approvals-and-reruns.md) does not run an allowed failure again, and a re-run reuses it.
+`on_failure` is for steps that run a script and image steps; deploy, rollback, rollout, verify, ai
+and approval steps have their own failure handling, and a step that uses a template takes it from
+inside the template.
+
+`when: { output: step.key, equals: value }` skips a step because of what an earlier step found.
+The step must be one this step needs, directly or through others. Outputs compare as text (a
+boolean is `true` or `false`), a list of values matches any of them, and an output that was never
+written never matches: the skip says which output was missing and what the step wrote instead: `the output "changed" of step scan was not set: scan did not write it (it wrote: other)`. The step shows as skipped, not
+as passed, and a re-run reuses the skip.
+
+```yaml
+  scan:
+    run: ./scan.sh          # writes changed=true to "$LAUNCHWAY_OUTPUTS" when it finds something
+  fix:
+    needs: scan
+    when: { output: scan.changed, equals: true }
+    run: ./fix.sh
+```
+
+A step that repeats (`for_each`) cannot be named, because which member is not known when the
+pipeline is written; add a step that needs it and writes the output to test. Both keys need
+schema 24: older servers leave runs that use them alone.
 
 ## Cleanup and notification steps
 

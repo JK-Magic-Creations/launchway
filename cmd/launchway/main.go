@@ -60,10 +60,10 @@ Usage:
   launchway runner   --server URL --token T     run a runner with the shared token (no identity)
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
                      [-i name=value ...]
-  launchway validate [file]                     check a pipeline file
+  launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that project too)
   launchway graph    [file]                     print a pipeline's graph as JSON
   launchway login    --server URL               store an API token for a server
-  launchway runs     start|list|show|logs|cancel  start and follow runs on a server
+  launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs
                                                 (launchway runs, for more)
   launchway policy   list|run                   the policies in force; a run's decisions
   launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
@@ -79,6 +79,7 @@ Usage:
                                                 configuration kept in the database (launchway config, for more)
   launchway projects|libraries|environments|policies|runner-pools|role-bindings|policy-sources|units|secret-stores ...
                                                 the same commands for one kind of object
+  launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -129,6 +130,8 @@ func main() {
 		err = cmdConfig(args)
 	case "projects", "libraries", "environments", "policies", "runner-pools", "role-bindings", "policy-sources", "units", "secret-stores":
 		err = cmdKindAlias(os.Args[1])(args)
+	case "run-limits":
+		err = cmdRunLimits(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -590,21 +593,6 @@ func load(path string) (*pipeline.Pipeline, error) {
 		return nil, err
 	}
 	return p, nil
-}
-
-func cmdValidate(args []string) error {
-	path := pipelineFile(args)
-	p, err := load(path)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("%s: pipeline %q is valid, %d step(s) in %d level(s)\n", path, p.Name, len(p.Steps), len(p.Levels()))
-	if !p.Expanded() {
-		// Templates come from the libraries a server knows; this command
-		// reads only the file.
-		fmt.Printf("Steps that use templates are not expanded here: check the pipeline in a server's editor to see them.\n")
-	}
-	return nil
 }
 
 func cmdGraph(args []string) error {
