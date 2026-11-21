@@ -20,6 +20,8 @@ const reposUsage = `Usage:
                                     bring repositories in: same names and visibility, every ref copied and
                                     checked, left as pull mirrors (--once: ordinary repositories after the
                                     copy). Run it again to resume. --dry-run lists what would be created.
+  launchway repos verify --against NAME [--owner O] [--repo O/N] [--target-owner T] [--url ADDRESS ...] [--json]
+                                    prove every ref of every repository equals the source's; exits 1 if not
   launchway repos mirror status [OWNER/NAME] [--behind] [--json]
                                     the pull and push mirrors, their last sync, last error and lag
   launchway repos mirror add OWNER/NAME --url URL [--direction pull|push] [--username U]
@@ -81,6 +83,8 @@ func cmdRepos(args []string) error {
 			return cl.reposConnection(args[1:])
 		case "import":
 			return cl.reposImport(args[1:])
+		case "verify":
+			return cl.reposVerify(args[1:])
 		}
 		return usageErr("unknown command repos %s\n\n%s", args[0], reposUsage)
 	})

@@ -19,6 +19,7 @@ func addImportTools(srv *mcp.Server, c *mcpCall) {
 	if !c.mayAdminister {
 		return
 	}
+	addVerifyRepositoriesTool(srv, c)
 	addTool(srv, c, &mcp.Tool{Name: "list_connections", Annotations: readOnly("List source connections"),
 		Description: "Administrators only. The connections to servers that repositories can be imported from: name, kind (gitea, forgejo or plain), base_url and where the credential is read from (never the credential)."},
 		mcpCallTimeout, listConnections)

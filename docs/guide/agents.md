@@ -52,7 +52,8 @@ removed, lag and whether they are behind), and, listed to tokens that may change
 on the server, never a secret), `sync_mirror` and `stop_mirroring` (the cut-over step: the repository becomes
 the primary); the API decides by the caller's role on the repository, and each is audited. For moving
 repositories in, listed to an administrator only: `list_connections`, `add_connection`, `import_repositories`
-(a dry run, or one repository or an owner at a time, left as pull mirrors).
+(a dry run, or one repository or an owner at a time, left as pull mirrors) and `verify_repositories` (proves
+every ref equals the source's, for use before a cut-over).
 Tools are marked read-only or destructive with the protocol's annotations. Lists page with a cursor.
 The resources `launchway://docs/pipeline-reference`, `launchway://docs/agent-guide` and
 `launchway://docs/examples/<name>` hold the same documentation.

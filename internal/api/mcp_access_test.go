@@ -78,6 +78,7 @@ var mcpPermissionTable = map[string]mcpRow{
 	"list_connections":    {nil, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 	"add_connection":      {map[string]any{"name": "old", "kind": "gitea", "base_url": "https://git.example.com"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 	"import_repositories": {map[string]any{"connection": "old", "dry_run": true}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"verify_repositories": {map[string]any{"connection": "old"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 }
 
 func outcome(errText string) string {

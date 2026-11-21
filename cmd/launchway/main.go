@@ -73,7 +73,7 @@ Usage:
   launchway health-sources | models             what verify and ai steps may name
   launchway runners  list|join-token|revoke|rotate  runners, and join tokens to enrol them
   launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
-  launchway repos    connection|import|mirror  bring repositories in from other servers, keep them in step
+  launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take

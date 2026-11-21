@@ -19,6 +19,7 @@ func (s *Server) importRoutes() []route {
 		{"POST /api/v1/connections", administer, "connection.create", s.createConnection},
 		{"DELETE /api/v1/connections/{name}", administer, "connection.delete", s.deleteConnection},
 		{"POST /api/v1/imports", administer, "repository.import", s.importRepos},
+		{"POST /api/v1/imports/verify", administer, "repository.verify", s.verifyRepos},
 	}
 }
 

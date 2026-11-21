@@ -165,6 +165,7 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/connections":                   {"POST", "/api/v1/connections", `{"name":"old","kind":"gitea"}`, [6]int{401, 403, 403, 403, 403, 404}},
 	"DELETE /api/v1/connections/{name}":          {"DELETE", "/api/v1/connections/old", "", [6]int{401, 403, 403, 403, 403, 404}},
 	"POST /api/v1/imports":                       {"POST", "/api/v1/imports", `{"connection":"old","dry_run":true}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/imports/verify":                {"POST", "/api/v1/imports/verify", `{"connection":"old"}`, [6]int{401, 403, 403, 403, 403, 404}},
 	"PUT /api/v1/step-resources/limits":          {"PUT", "/api/v1/step-resources/limits", `{"memory_per_thread":"1Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
 	"GET /api/v1/step-resources/defaults/{kind}": {"GET", "/api/v1/step-resources/defaults/step", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"PUT /api/v1/step-resources/defaults/{kind}": {"PUT", "/api/v1/step-resources/defaults/step", `{"cpu":"1","memory":"2Gi"}`, [6]int{401, 403, 403, 403, 403, 200}},
