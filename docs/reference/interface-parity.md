@@ -157,6 +157,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/security` | `get_security_findings` | — | — | gap: launchway has no findings command yet |
 | `POST /api/v1/projects/{name}/sources/{source}` | — | — | — | exempt: the address other systems call, signed with the source's secret: not an operation for people or agents (the console tests it with launchway event-sources test) |
 | `GET /api/v1/projects/{name}/tests` | `get_test_results` | `runs tests` | — | equal |
+| `GET /api/v1/projects/{name}/tests/flaky` | `list_flaky_tests` | `tests flaky` | — | equal |
 | `GET /api/v1/projects/{name}/tests/history` | `get_test_results` | `runs tests` | — | equal |
 | `POST /api/v1/projects/{name}/toggle-apply` | `apply_toggles_file` | `toggles apply` | `the file is the declarative form: toggles.yaml applied with launchway toggles apply` | equal |
 | `GET /api/v1/projects/{name}/toggle-changes` | `list_toggle_changes_waiting` | `toggles waiting` | `not needed by terraform` | equal |
@@ -190,6 +191,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/projects/{name}/toggles/{key}/lock` | `unlock_toggle` | `toggles unlock` | `planned: resource launchway_toggle (lock block)` | equal |
 | `PUT /api/v1/projects/{name}/toggles/{key}/lock` | `lock_toggle` | `toggles lock` | `planned: resource launchway_toggle (lock block)` | equal |
 | `GET /api/v1/projects/{name}/toggles/{key}/usage` | `get_toggle_usage` | `toggles usage` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/tests/shards` | `split_tests` | `tests split` | — | equal |
+| `GET /api/v1/projects/{name}/tests/timings` | `split_tests` | `tests timings` | — | equal |
 | `GET /api/v1/projects/{name}/variables` | `get_effective_variables` | `variables effective` | `planned: data source launchway_effective_variables` | equal |
 | `POST /api/v1/projects/{name}/waivers` | — | `waivers grant` | — | gap: no MCP tool grants waivers yet |
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | — | `waivers revoke` | — | gap: no MCP tool revokes waivers yet |
@@ -298,6 +301,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/runs/{id}/cancel` | `cancel_run` | `runs cancel` | — | equal |
 | `GET /api/v1/runs/{id}/coverage` | — | `runs coverage` | — | gap: no MCP tool reads coverage yet |
 | `GET /api/v1/runs/{id}/coverage/files` | — | `runs coverage` | — | gap: no MCP tool reads coverage yet |
+| `GET /api/v1/runs/{id}/debrief` | `get_debrief` | `debrief show` | — | equal |
+| `GET /api/v1/runs/{id}/debrief/export` | `get_debrief` | `debrief export` | — | equal |
+| `GET /api/v1/runs/{id}/debrief/summary` | `get_debrief` | `debrief summary` | — | equal |
 | `POST /api/v1/runs/{id}/deployments/{dep}/abort` | `control_rollout` | — | — | gap: launchway has no rollout commands yet |
 | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` | `control_rollout` | — | — | gap: withdrawing a queued rollout command is UI only so far |
 | `GET /api/v1/runs/{id}/deployments/{dep}/controls` | `get_deployments` | — | — | gap: launchway has no rollout commands yet |

@@ -362,8 +362,14 @@ When the text is valid, `ok` is `true` and `graph` and `levels` describe it.
 | `GET /api/v1/projects/{name}/tests/history` | `project-viewer` | — | One test's results in the project's last runs. |
 | `GET /api/v1/runs/{id}/tests/compare` | `run-viewer` | — | A Sortie's tests beside the previous run of the same ref: new failures, fixed tests and tests still failing. |
 | `GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}` | `run-viewer` | — | One attachment of a test result (a screenshot, video or trace), number `n` from 0. Supports `Range`, so videos can be played and sought. Served as a download or an image, never as a page. |
-| `GET /api/v1/runs/{id}/coverage` | `run-viewer` | — | A Sortie's coverage, step by step, with the previous run of its ref and the project's default branch to compare. |
-| `GET /api/v1/runs/{id}/coverage/files` | `run-viewer` | — | A Sortie's per-file coverage: `?step=`, `?q=`, `?sort=` (`path`, `lines` or `missed`), `?limit=` and `?offset=`. |
+| `GET /api/v1/runs/{id}/coverage` | `run-viewer` | — | A run's coverage, step by step, with the previous run of its ref and the project's default branch to compare. |
+| `GET /api/v1/runs/{id}/coverage/files` | `run-viewer` | — | A run's per-file coverage: `?step=`, `?q=`, `?sort=` (`path`, `lines` or `missed`), `?limit=` and `?offset=`. |
+| `GET /api/v1/runs/{id}/debrief` | `run-viewer` | — | The Debrief of a run: summary, change against the default branch's last good run, failures with expected against actual values, where each first failed and whether it also fails on the default branch, flaky and quarantined tests, slowest tests, suites, grid, coverage including the coverage of a pull request's change, trend. |
+| `GET /api/v1/runs/{id}/debrief/export` | `run-viewer` | — | The Debrief as a download: `?format=html` (one file, no network needed), `pdf`, `json` or `junit` (every result, merged). |
+| `GET /api/v1/runs/{id}/debrief/summary` | `run-viewer` | — | The short Markdown form for a pull request comment; `?format=json` adds the headline and the annotations (failing assertions with a file and line). |
+| `GET /api/v1/projects/{name}/tests/flaky` | `project-viewer` | — | The project's flaky tests from its history, with scores, affected branches, first seen and a quarantine entry to copy. `?limit=` (default 100, at most 500). |
+| `GET /api/v1/projects/{name}/tests/timings` | `project-viewer` | — | Each test's typical duration from its statistics, slowest first. `?limit=` (at most 100000). |
+| `GET /api/v1/projects/{name}/tests/shards` | `project-viewer` | — | A balanced split of the tests for `?count=` shards (1 to 256) by duration. |
 | `GET /api/v1/projects/{name}/coverage` | `project-viewer` | — | A project's coverage over its last runs of a ref (`?ref=`, `?runs=`). |
 | `GET /api/v1/runs/{id}/reports` | `run-viewer` | — | A Sortie's hosted HTML reports, each with a fresh signed link. |
 | `GET /hosted/{link}/{path...}` | `public` | — | A file of a hosted HTML report. It takes no session: the signed `link`, scoped to one report for a few hours and given only to people who may see the Sortie, is the permission. Served with a sandboxing `Content-Security-Policy`, and from the separate origin `reports.origin` when one is configured. |

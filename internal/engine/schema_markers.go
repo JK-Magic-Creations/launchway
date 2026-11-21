@@ -50,6 +50,7 @@ var schemaMarkers = []schemaMarker{
 	schemaMarkersToggles,
 	schemaMarkersEvents,
 	schemaMarkersReview,
+	schemaMarkersDebrief,
 }
 
 type schemaMarker struct {

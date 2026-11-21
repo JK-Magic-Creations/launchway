@@ -92,7 +92,22 @@ type File struct {
 	Lines     Counter `json:"lines"` // statements for Go (see Report.Unit)
 	Branches  Counter `json:"branches"`
 	Functions Counter `json:"functions"`
+	// CoveredLines and MissedLines are the line numbers the report says a
+	// test ran, and those it says code is on but nothing ran, as ranges
+	// ("1-5,9,12-20"), each cut at MaxLineRangeBytes (a cut is at a range
+	// boundary, so every range written is right). A line in neither has no
+	// code as far as the report says. Formats with no per-line data (an
+	// Istanbul json-summary) leave both empty.
+	CoveredLines string `json:"covered_lines,omitempty"`
+	MissedLines  string `json:"missed_lines,omitempty"`
 }
+
+// MaxLineRangeBytes bounds each of File.CoveredLines and File.MissedLines.
+const MaxLineRangeBytes = 6000
+
+// maxBlockSpanLines bounds how many lines one Go block may span; a block
+// written with a wildly wrong end line is not expanded.
+const maxBlockSpanLines = 5000
 
 // Totals are the counters of a whole report.
 type Totals struct {
@@ -373,7 +388,87 @@ func (f *fileAcc) finalize() {
 		out.Functions = f.fb.Functions.norm()
 	}
 	out.Lines = out.Lines.norm()
+	out.CoveredLines, out.MissedLines = f.lineRanges()
 	f.out = out
+}
+
+// lineRanges encodes which lines were covered and which missed.
+func (f *fileAcc) lineRanges() (covered, missed string) {
+	hit := map[int64]bool{}
+	miss := map[int64]bool{}
+	switch {
+	case f.has&hasLines != 0:
+		for _, l := range f.lines {
+			if l.n <= 0 {
+				continue
+			}
+			if l.hits > 0 {
+				hit[l.n] = true
+			} else {
+				miss[l.n] = true
+			}
+		}
+	case f.has&hasBlocks != 0:
+		for _, b := range f.blocks {
+			if b.sl <= 0 || b.el < b.sl || b.el-b.sl > maxBlockSpanLines {
+				continue
+			}
+			for n := b.sl; n <= b.el; n++ {
+				if b.count > 0 {
+					hit[n] = true
+				} else {
+					miss[n] = true
+				}
+			}
+		}
+	default:
+		return "", ""
+	}
+	for n := range hit {
+		delete(miss, n)
+	}
+	return encodeRanges(hit), encodeRanges(miss)
+}
+
+func encodeRanges(set map[int64]bool) string {
+	if len(set) == 0 {
+		return ""
+	}
+	ns := make([]int64, 0, len(set))
+	for n := range set {
+		ns = append(ns, n)
+	}
+	slices.Sort(ns)
+	var b strings.Builder
+	emit := func(a, z int64) bool {
+		var piece string
+		if a == z {
+			piece = fmt.Sprint(a)
+		} else {
+			piece = fmt.Sprintf("%d-%d", a, z)
+		}
+		if b.Len()+len(piece)+1 > MaxLineRangeBytes {
+			return false
+		}
+		if b.Len() > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(piece)
+		return true
+	}
+	start, prev := ns[0], ns[0]
+	for _, n := range ns[1:] {
+		if n == prev+1 {
+			prev = n
+			continue
+		}
+		if !emit(start, prev) {
+			return b.String()
+		}
+		start, prev = n, n
+	}
+	emit(start, prev)
+	return b.String()
 }
 
 func cmp64(a, b int64) int {

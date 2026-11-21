@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/debrief"
 	"strings"
 	"time"
 	"unicode"
@@ -47,6 +48,10 @@ type TestLimits struct {
 	// over all its runs; the oldest runs' are removed first. Default
 	// 1,000,000.
 	MaxCasesPerProject int
+	// MaxAgeDays is how long individual results and per-test statistics
+	// are kept; older ones are removed even when the project is under its
+	// count (schema 44). Default 180.
+	MaxAgeDays int
 }
 
 // Defaults for TestLimits.
@@ -54,6 +59,7 @@ const (
 	DefaultTestUploadBytes     = 24 << 20
 	DefaultTestCasesPerRun     = 50_000
 	DefaultTestCasesPerProject = 1_000_000
+	DefaultTestAgeDays         = 180
 )
 
 func (l TestLimits) withDefaults() (TestLimits, error) {
@@ -66,8 +72,11 @@ func (l TestLimits) withDefaults() (TestLimits, error) {
 	if l.MaxCasesPerProject == 0 {
 		l.MaxCasesPerProject = DefaultTestCasesPerProject
 	}
+	if l.MaxAgeDays == 0 {
+		l.MaxAgeDays = DefaultTestAgeDays
+	}
 	switch {
-	case l.MaxUploadBytes < 0 || l.MaxCasesPerRun < 0 || l.MaxCasesPerProject < 0:
+	case l.MaxUploadBytes < 0 || l.MaxCasesPerRun < 0 || l.MaxCasesPerProject < 0 || l.MaxAgeDays < 0:
 		return l, errors.New("test report limits cannot be negative")
 	case l.MaxCasesPerProject < l.MaxCasesPerRun:
 		return l, fmt.Errorf("tests: max_cases_per_project (%d) must be at least max_cases_per_run (%d)", l.MaxCasesPerProject, l.MaxCasesPerRun)
@@ -141,6 +150,10 @@ type TestSummary struct {
 	// 18). Older servers ignore them: they only record.
 	Attachments        int `json:"attachments,omitempty"`
 	AttachmentsMissing int `json:"attachments_missing,omitempty"`
+	// Quarantine says which failing tests the repository's quarantine file
+	// excused in this attempt (see quarantine.go); nil when the file was
+	// not sent.
+	Quarantine *QuarantineRecord `json:"quarantine,omitempty"`
 }
 
 // stepAttempt names one attempt of one step.
@@ -186,9 +199,22 @@ func (e *Engine) parseTests(in *CollectedReports) *parsedTests {
 	}
 	budget := e.live().tests.MaxUploadBytes
 	room := e.live().tests.MaxCasesPerRun
-	for i, f := range in.Files {
+	files := in.Files
+	var quarantine []byte
+	haveQuarantine := false
+	if e.knows(schemaDebrief) {
+		files = make([]ReportFile, 0, len(in.Files))
+		for _, f := range in.Files {
+			if f.Path == debrief.QuarantinePath {
+				quarantine, haveQuarantine = f.Data, true
+				continue
+			}
+			files = append(files, f)
+		}
+	}
+	for i, f := range files {
 		if i >= maxReportFiles {
-			s.note(fmt.Sprintf("%d more files were sent; only the first %d were read", len(in.Files)-i, maxReportFiles))
+			s.note(fmt.Sprintf("%d more files were sent; only the first %d were read", len(files)-i, maxReportFiles))
 			s.Truncated = true
 			break
 		}
@@ -243,6 +269,9 @@ func (e *Engine) parseTests(in *CollectedReports) *parsedTests {
 			out.cases = append(out.cases, storedCase{Case: tc, key: tc.Key(), file: tf.Path})
 		}
 		s.Files = append(s.Files, tf)
+	}
+	if haveQuarantine {
+		out.quarantine(e.now(), quarantine)
 	}
 	return out
 }
@@ -303,7 +332,8 @@ func (c *cmd) jobReports(def *pipeline.Step) *JobReports {
 	if !c.e.knows(schemaTests) || def.Reports == nil {
 		return nil
 	}
-	jr := &JobReports{Tests: append([]string(nil), def.Reports.Tests...), MaxBytes: c.e.live().tests.MaxUploadBytes}
+	jr := &JobReports{Tests: append([]string(nil), def.Reports.Tests...), MaxBytes: c.e.live().tests.MaxUploadBytes,
+		JobReportsDebrief: JobReportsDebrief{Quarantine: c.e.knows(schemaDebrief) && len(def.Reports.Tests) > 0}}
 	if c.e.knows(schemaArtifacts) && len(def.Reports.Findings) > 0 {
 		jr.Findings, jr.FindingsMaxBytes = append([]string(nil), def.Reports.Findings...), c.e.live().finds.MaxUploadBytes
 	}
@@ -327,9 +357,10 @@ func (c *cmd) persistSchema10() error {
 		}
 		t := p.Tests
 		detail, err := json.Marshal(struct {
-			Files []TestFile `json:"files"`
-			Notes []string   `json:"notes,omitempty"`
-		}{t.Files, t.Notes})
+			Files      []TestFile        `json:"files"`
+			Notes      []string          `json:"notes,omitempty"`
+			Quarantine *QuarantineRecord `json:"quarantine,omitempty"`
+		}{t.Files, t.Notes, t.Quarantine})
 		if err != nil {
 			return err
 		}
@@ -349,6 +380,11 @@ func (c *cmd) persistSchema10() error {
 		}
 		if err := insertCases(c.tx, st, p.Step, p.Attempt, c.tests[stepAttempt{p.Step, p.Attempt}], c.e.knows(schemaReports)); err != nil {
 			return err
+		}
+		if c.e.knows(schemaDebrief) {
+			if err := upsertTestStats(c.tx, c.e.db.pg, st, ev.At, c.tests[stepAttempt{p.Step, p.Attempt}]); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -427,6 +463,7 @@ func (e *Engine) pruneTests() {
 	if !e.knows(schemaTests) {
 		return
 	}
+	e.pruneTestsByAge()
 	limit := e.live().tests.MaxCasesPerProject
 	rows, err := e.db.Query(`SELECT project FROM test_reports GROUP BY project HAVING SUM(stored) > ?`, limit)
 	if err != nil {

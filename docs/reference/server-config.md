@@ -384,9 +384,10 @@ Limits on what the server keeps of the Debriefs (test reports) steps declare. `0
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `tests.max_upload_mib` | whole number | `24` | MiB of report files accepted per step attempt; Stations are told and send no more. At most 1024 |
-| `tests.max_cases_per_run` | whole number | `50000` | Individual results one Sortie keeps; beyond it, only the totals |
-| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its Sorties, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
+| `tests.max_upload_mib` | whole number | `24` | MiB of report files accepted per step attempt; runners are told and send no more. At most 1024 |
+| `tests.max_cases_per_run` | whole number | `50000` | Individual results one run keeps; beyond it, only the totals |
+| `tests.max_cases_per_project` | whole number | `1000000` | Individual results a project keeps over all its runs, the oldest runs' removed first. At least `max_cases_per_run` (checked when the server starts) |
+| `tests.max_age_days` | whole number | `180` | How long individual test results and a test's statistics (its typical duration, first and last appearance) are kept. Older results are removed whatever the count; each run's totals stay. At most 3650 |
 
 ## Reports
 
@@ -404,6 +405,9 @@ from. `0` means the default. See [Debriefs](../guide/test-reports.md).
 | `reports.max_coverage_files_per_run` | whole number | `20000` | Per-file coverage records one Sortie keeps; beyond it, only the totals |
 | `reports.max_coverage_files_per_project` | whole number | `2000000` | Per-file coverage records a project keeps, the oldest runs' removed first |
 | `reports.origin` | URL | none | A separate origin, such as `https://reports.example.com`, that alone serves hosted HTML reports, on its own host name pointing at the same servers. Without it, reports are served from Launchway's own origin, sandboxed |
+| `reports.brand_name` | text | none | A name for the header and cover of exported Debriefs (HTML and PDF), at most 60 characters. Without it they say Launchway |
+| `reports.brand_logo` | file path | none | A PNG or JPEG file of at most 256 KiB shown in exported Debriefs. The server reads it when it starts |
+| `reports.change_coverage_floor` | number | `80` | The share of a pull request's changed lines that should be covered by tests, from 0 to 100. It advises in the Debrief and the pull request summary; nothing fails |
 
 The other sizes are at most 1048576. Limits are checked when the server starts.
 

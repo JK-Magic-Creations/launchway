@@ -295,6 +295,7 @@ type JobReports struct {
 	// FeatureCoverage are given steps that declare them.
 	Coverage         []string `json:"coverage,omitempty"`
 	CoverageMaxBytes int64    `json:"coverage_max_bytes,omitempty"`
+	JobReportsDebrief
 }
 
 // Result is how a step attempt ended, as reported by its runner.
@@ -1103,12 +1104,10 @@ func (e *Engine) Heartbeat(leaseID string) (cancel bool, err error) {
 	return flag != 0, nil
 }
 
-// Finish records how a step attempt ended.
-//
-// For a step that declares test reports, the files the runner collected
-// are parsed first, outside the transaction; the attempt's summary goes in
-// the event that ends it and the individual results in test_cases, in the
-// same transaction. Nothing about the reports changes the step's outcome.
+// Finish records how a step attempt ended. A step's test reports are parsed
+// first, outside the transaction; the summary goes in the event that ends the
+// attempt, the results in test_cases. Only a coverage floor or a quarantine
+// file (quarantineFlip) changes the step's outcome.
 func (e *Engine) Finish(leaseID string, res Result) error {
 	l, err := e.findLease(leaseID)
 	if err != nil {
@@ -1166,6 +1165,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			return err
 		}
 		p.Caches = c.keepCacheResults(c.st.Pipeline.Step(l.stepID), res.Caches)
+		quarantineFlip(c.e, &res, &p)
 		coverageFail, err := c.finish18(l, res, &p, prep18)
 		if err != nil {
 			return err

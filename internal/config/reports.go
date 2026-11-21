@@ -1,9 +1,11 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
@@ -25,6 +27,46 @@ type ServerReportsConfig struct {
 	// servers. Without it, they are served from Launchway's own origin,
 	// sandboxed (see docs/guide/test-reports.md, "HTML reports").
 	Origin string `yaml:"origin"`
+	// BrandName and BrandLogo brand the exported Debriefs (HTML and PDF);
+	// without them the exports carry the product's name and no logo.
+	// BrandLogo is the path of a PNG or JPEG file of at most 256 KiB.
+	BrandName string `yaml:"brand_name"`
+	BrandLogo string `yaml:"brand_logo"`
+	// ChangeCoverageFloor is the share of a pull request's changed lines
+	// that should be covered by tests, 0 to 100 (default 80). It advises in
+	// the Debrief and the pull request summary; nothing fails.
+	ChangeCoverageFloor float64 `yaml:"change_coverage_floor"`
+}
+
+// DebriefBrand returns the name and the logo (as a data URL) for exported
+// Debriefs, and the advised floor for a change's coverage.
+func (c *Config) DebriefBrand() (name, logo string, floor float64, err error) {
+	r := c.Reports
+	name = strings.TrimSpace(r.BrandName)
+	if len(name) > 60 || strings.ContainsAny(name, "\x00\r\n") {
+		return "", "", 0, errors.New("reports: brand_name is at most 60 characters on one line")
+	}
+	if r.ChangeCoverageFloor < 0 || r.ChangeCoverageFloor > 100 {
+		return "", "", 0, errors.New("reports: change_coverage_floor is from 0 to 100")
+	}
+	if r.BrandLogo != "" {
+		data, err := os.ReadFile(r.BrandLogo)
+		if err != nil {
+			return "", "", 0, fmt.Errorf("reports: brand_logo: %w", err)
+		}
+		if len(data) > 256<<10 {
+			return "", "", 0, errors.New("reports: brand_logo is larger than 256 KiB")
+		}
+		switch {
+		case len(data) > 8 && string(data[:8]) == "\x89PNG\r\n\x1a\n":
+			logo = "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)
+		case len(data) > 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF:
+			logo = "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(data)
+		default:
+			return "", "", 0, errors.New("reports: brand_logo must be a PNG or JPEG file")
+		}
+	}
+	return name, logo, r.ChangeCoverageFloor, nil
 }
 
 // ReportOptions converts the reports settings for the engine.

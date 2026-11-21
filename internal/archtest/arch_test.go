@@ -34,6 +34,7 @@ var allowedImports = map[string][]string{
 	"internal/bootstrap":                 {},
 	"internal/config":                    {"internal/accept", "internal/ai", "internal/auth", "internal/blobstore", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/forge/egress", "internal/imagebuild", "internal/notify", "internal/pipeline", "internal/policy", "internal/secrets", "internal/source", "internal/starters", "internal/verify/source"},
 	"internal/coverage":                  {},
+	"internal/debrief":                   {},
 	"internal/depupdate":                 {},
 	"internal/depupdate/gitfs":           {"internal/gitexec"},
 	"internal/depupdate/container":       {"internal/depupdate"},

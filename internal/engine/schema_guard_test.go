@@ -30,7 +30,8 @@ func TestSchemaGuardRefusesIncompleteDatabase(t *testing.T) {
 	_, err := openAs(t, addr, clk, 0, &syncBuffer{})
 	want := fmt.Sprintf("database schema check failed: recorded schema %d does not match its tables and columns: "+
 		"schema 18 (richer test reports and coverage): missing table coverage_files; "+
-		"schema 19 (verify and ai steps): missing column steps.kind. "+
+		"schema 19 (verify and ai steps): missing column steps.kind; "+
+		"schema 44 (per-test statistics and flaky digests): missing columns coverage_files.covered_lines, coverage_files.missed_lines. "+
 		"Restore the database from a known-good backup, or recreate only the listed objects with the corresponding migration SQL in internal/engine/db.go; "+
 		"do not change meta.schema_version to hide the mismatch. To start anyway, set LAUNCHWAY_SKIP_SCHEMA_CHECK=1 (unsafe: runs may fail later)", len(migrations))
 	if err == nil || err.Error() != want {

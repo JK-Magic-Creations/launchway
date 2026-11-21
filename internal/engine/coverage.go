@@ -236,15 +236,25 @@ func (c *cmd) persistSchema18() error {
 			files = files[n:]
 			var q strings.Builder
 			q.WriteString(`INSERT INTO coverage_files(run_id, step_id, attempt, project, run_number, path, package, lines_covered, lines_total,
-				branches_covered, branches_total, functions_covered, functions_total) VALUES `)
-			args := make([]any, 0, n*13)
+				branches_covered, branches_total, functions_covered, functions_total`)
+			cols := 13
+			if c.e.knows(schemaDebrief) {
+				q.WriteString(`, covered_lines, missed_lines`)
+				cols = 15
+			}
+			q.WriteString(`) VALUES `)
+			args := make([]any, 0, n*cols)
+			marks := "(" + strings.TrimSuffix(strings.Repeat("?,", cols), ",") + ")"
 			for i, f := range batch {
 				if i > 0 {
 					q.WriteString(",")
 				}
-				q.WriteString("(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+				q.WriteString(marks)
 				args = append(args, st.ID, p.Step, p.Attempt, st.Project, st.Number, f.Path, f.Package, f.Lines.Covered, f.Lines.Total,
 					f.Branches.Covered, f.Branches.Total, f.Functions.Covered, f.Functions.Total)
+				if cols == 15 {
+					args = append(args, f.CoveredLines, f.MissedLines)
+				}
 			}
 			if _, err := c.tx.Exec(q.String(), args...); err != nil {
 				return err

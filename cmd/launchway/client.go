@@ -285,6 +285,10 @@ func (cl *client) call(method, path string, body, v any) error {
 		}
 		return apiErr("%s", msg)
 	}
+	if raw, ok := v.(*[]byte); ok {
+		*raw = data // a file, not JSON (see debrief export)
+		return nil
+	}
 	if v != nil && len(data) > 0 {
 		if err := json.Unmarshal(data, v); err != nil {
 			return apiErr("the server's answer is not what this command expects: %v", err)

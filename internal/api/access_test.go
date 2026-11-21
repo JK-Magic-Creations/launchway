@@ -414,10 +414,16 @@ var permissionTable = map[string]matrixRow{
 	// {pay} has no test results: 404 after the permission check too.
 	"GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}": {"GET", "/api/v1/runs/{pay}/tests/cases/1/attachments/0", "",
 		[6]int{401, 404, 404, 404, 404, 404}},
-	"GET /api/v1/runs/{id}/coverage":       {"GET", "/api/v1/runs/{pay}/coverage", "", [6]int{401, 404, 200, 200, 404, 200}},
-	"GET /api/v1/runs/{id}/coverage/files": {"GET", "/api/v1/runs/{pay}/coverage/files", "", [6]int{401, 404, 200, 200, 404, 200}},
-	"GET /api/v1/projects/{name}/coverage": {"GET", "/api/v1/projects/pay-api/coverage", "", [6]int{401, 404, 200, 200, 404, 200}},
-	"GET /api/v1/runs/{id}/reports":        {"GET", "/api/v1/runs/{pay}/reports", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/debrief":             {"GET", "/api/v1/runs/{pay}/debrief", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/debrief/export":      {"GET", "/api/v1/runs/{pay}/debrief/export?format=json", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/debrief/summary":     {"GET", "/api/v1/runs/{pay}/debrief/summary", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/tests/flaky":   {"GET", "/api/v1/projects/pay-api/tests/flaky", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/tests/timings": {"GET", "/api/v1/projects/pay-api/tests/timings", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/tests/shards":  {"GET", "/api/v1/projects/pay-api/tests/shards?count=2", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/coverage":            {"GET", "/api/v1/runs/{pay}/coverage", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/coverage/files":      {"GET", "/api/v1/runs/{pay}/coverage/files", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/projects/{name}/coverage":      {"GET", "/api/v1/projects/pay-api/coverage", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"GET /api/v1/runs/{id}/reports":             {"GET", "/api/v1/runs/{pay}/reports", "", [6]int{401, 404, 200, 200, 404, 200}},
 	// A hosted report needs its signed link, whoever asks (see TestHostedReports).
 	"GET /hosted/{link}/{path...}": {"GET", "/hosted/art_x.zz.bad/index.html", "", [6]int{404, 404, 404, 404, 404, 404}},
 

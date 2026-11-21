@@ -80,6 +80,8 @@ Usage:
   launchway projects|libraries|environments|policies|runner-pools|role-bindings|policy-sources|units|secret-stores ...
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
+  launchway debrief  show|summary|export <run-id>   the report of a run's tests: read it, or export it as html, pdf, json or junit
+  launchway tests    flaky|timings|split <project>   flaky tests, typical durations, and a balanced split of tests for N shards
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway registry status|list|tags|inspect|delete|retention|policy|gc   the built-in image and chart registry
   launchway toggles list|get|create|set|rules|history|revert|keys|safeguards|plan|apply  feature toggles: roll a feature out to a share of users without a deployment
@@ -105,6 +107,8 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 // commands take their arguments and nothing else, by name (registry.go adds registry).
 var commands = map[string]func([]string) error{
 	"runs":           cmdRuns,
+	"debrief":        cmdDebrief,
+	"tests":          cmdTests,
 	"approvals":      cmdApprovals,
 	"notifications":  cmdNotifications,
 	"deployments":    cmdDeployments,
@@ -246,6 +250,11 @@ func cmdServer(args []string) error {
 	eng.SetTOTPBox(secretsSvc.TOTP()) // authenticator secrets of built-in accounts are stored sealed
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Secrets: secretsSvc, Actor: cfg.User, Auth: authOpts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin, OpenInstall: openInstall}
+	brandName, brandLogo, changeFloor, err := cfg.DebriefBrand()
+	if err != nil {
+		return err
+	}
+	srv.SetDebrief(api.DebriefSettings{Name: brandName, Logo: brandLogo, ChangeFloor: changeFloor})
 	if store.Available() {
 		srv.Settings = store
 	}

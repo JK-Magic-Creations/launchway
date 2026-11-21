@@ -17,6 +17,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/accept"
 	"github.com/jk-magic-creations/launchway/internal/ai"
+	"github.com/jk-magic-creations/launchway/internal/debrief"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
@@ -499,9 +500,19 @@ func (r *Runner) testCollector(job *engine.Job, spec executor.Spec, sys func(str
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), collectTimeout)
 		defer cancel()
-		got, err := executor.Collect(ctx, r.execFor(job), spec, job.Reports.Tests, lim)
+		// The repository's quarantine list travels with the reports (it is
+		// read at the commit under test); a step with none has no note
+		// about it.
+		globs := append([]string{}, job.Reports.Tests...)
+		if job.Reports.JobReportsDebrief.Quarantine {
+			globs = append(globs, debrief.QuarantinePath)
+		}
+		got, err := executor.Collect(ctx, r.execFor(job), spec, globs, lim)
 		out := &engine.CollectedReports{Files: []engine.ReportFile{}, Workspace: r.execFor(job).WorkspacePath(spec.Workspace)}
 		if got != nil {
+			got.Notes = slices.DeleteFunc(got.Notes, func(n string) bool {
+				return strings.Contains(n, debrief.QuarantinePath) && strings.Contains(n, "matched no files")
+			})
 			for _, f := range got.Files {
 				out.Files = append(out.Files, engine.ReportFile{Path: f.Path, Data: f.Data, Size: f.Size, Cut: f.Cut})
 			}

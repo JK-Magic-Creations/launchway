@@ -20,6 +20,14 @@ func (s *Server) laterRoutes() []route {
 		// Richer test results, coverage and HTML reports (schema 18).
 		{"GET /api/v1/runs/{id}/tests/compare", runRead, "", s.runTestCompare},
 		{"GET /api/v1/runs/{id}/tests/cases/{case}/attachments/{n}", runRead, "", s.testAttachment},
+		// The Debrief: a run's test report, its exports, flaky tests, timings
+		// and the split of tests among shards (schema 44).
+		{"GET /api/v1/runs/{id}/debrief", runRead, "", s.runDebrief},
+		{"GET /api/v1/runs/{id}/debrief/export", runRead, "", s.runDebriefExport},
+		{"GET /api/v1/runs/{id}/debrief/summary", runRead, "", s.runDebriefSummary},
+		{"GET /api/v1/projects/{name}/tests/flaky", projectRead, "", s.projectFlaky},
+		{"GET /api/v1/projects/{name}/tests/timings", projectRead, "", s.projectTimings},
+		{"GET /api/v1/projects/{name}/tests/shards", projectRead, "", s.projectShards},
 		{"GET /api/v1/runs/{id}/coverage", runRead, "", s.runCoverage},
 		{"GET /api/v1/runs/{id}/coverage/files", runRead, "", s.runCoverageFiles},
 		{"GET /api/v1/projects/{name}/coverage", projectRead, "", s.projectCoverage},
