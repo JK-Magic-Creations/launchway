@@ -15,6 +15,8 @@ Launchway is one place to host your code, build it, test it, scan it and deliver
 - Now available: pull requests with code review and merge rules, parallel steps drawn as parallel, a step user with an account entry, testing like the pipeline, and rollback after a successful deployment.
 - In progress: encryption of stored secrets under a root key, the cache correctness fixes, built-in accounts, the installer, and waiting for room instead of failing.
 - How we build has four new principles: simple to install, walled-off Bases proven by tests, a cache that never changes a result, and an order the system works out and a person can override.
+- Steps that cannot start for lack of room now wait with a reason, runs have limits and a fair order, triggers and steps have path filters, and pull requests from automation accounts run restricted until a maintainer approves.
+- Delivery gaps closed: a built-in health proof for verify steps, GitOps write-back races, tags with digests and hosted repositories, notifications, template defaults and offline validate.
 
 
 Order is by value, not a schedule, and plans change. An item is **available** only when it is on the
@@ -67,6 +69,7 @@ compliance items provide controls and evidence.
 | Pull requests and code review | Open, review, comment on lines, suggest changes and merge inside Launchway, with merge rules that block until required checks pass. ([more](guide/pull-requests.md)) |
 | Pipelines drawn the way they run | Steps that run together appear side by side on the run page, drawn from their dependencies. |
 | Rollback after a successful deployment | Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry. ([more](guide/rollback-after-success.md)) |
+| Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
 
 ## Milestone 1: Host your code and run your pipelines in one place (Now)
 
@@ -174,6 +177,10 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Runs wait for room instead of failing](roadmap/milestone-1.md#runs-wait-for-room-instead-of-failing) | In progress | A step with no room in its namespace or on any node waits in line with a plain reason, instead of failing. |
 | [Run priority and limits](roadmap/milestone-1.md#run-priority-and-limits) | In progress | Set which runs go first and how many may run at once, per installation or project. |
 | [Path filters](roadmap/milestone-1.md#path-filters) | Planned | Start a pipeline only when the files that changed match, or do not match, paths you name. |
+| [Steps wait for room instead of failing](roadmap/milestone-1.md#steps-wait-for-room-instead-of-failing) | Available | A full step namespace makes a step wait, with the reason, the runs that hold the room and its place in line, instead of failing the build. ([docs](guide/queues.md)) |
+| [Limits and a fair order for runs](roadmap/milestone-1.md#limits-and-a-fair-order-for-runs) | Available | Runs over a limit are held with a reason, in a visible order, and the main build is never held. ([docs](guide/queues.md)) |
+| [Path filters on triggers and steps](roadmap/milestone-1.md#path-filters-on-triggers-and-steps) | Available | A documentation-only change builds the docs and skips the image and the deploy approvals. ([docs](reference/pipeline.md#path-filters)) |
+| [Restricted runs for untrusted pull requests](roadmap/milestone-1.md#restricted-runs-for-untrusted-pull-requests) | Available | Pull requests from automation accounts and forks run without secrets, deploys or write caches until a maintainer approves. ([docs](guide/pull-request-trust.md)) |
 
 ### A guided interface a complete beginner can use
 
@@ -334,6 +341,10 @@ See and control everything you run, whether it is an application in a cluster, a
 | [AI analysis as an optional rollback gate](roadmap/milestone-3.md#ai-analysis-as-an-optional-rollback-gate) | Planned | Let a verification step use AI analysis of metrics and logs to trigger automatic rollback, off by default and able to require a person for production. |
 | [An HTTP health proof for verifying deployments](roadmap/milestone-3.md#an-http-health-proof-for-verifying-deployments) | Planned | Verify a deployment by calling an address you name and checking the answer, with no metrics store needed. |
 | [GitOps write-back to a hosted repository](roadmap/milestone-3.md#gitops-write-back-to-a-hosted-repository) | Planned | After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, on the hosted Git service of your choice. |
+| [A health proof built into verification](roadmap/milestone-3.md#a-health-proof-built-into-verification) | Available | A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer. ([docs](guide/verification.md)) |
+| [GitOps write-back done right](roadmap/milestone-3.md#gitops-write-back-done-right) | Available | Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request. ([docs](guide/gitops-write-back.md)) |
+| [Delivery notifications](roadmap/milestone-3.md#delivery-notifications) | Available | An approval that waits, a failed run or deployment, a rollback and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries. ([docs](guide/notifications.md)) |
+| [Templates with derived defaults and optional parts](roadmap/milestone-3.md#templates-with-derived-defaults-and-optional-parts) | Available | A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server. ([docs](guide/libraries.md)) |
 
 ### Debug a deployment, then see everything
 

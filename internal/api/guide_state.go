@@ -69,35 +69,7 @@ func (s *Server) setupGuide(w http.ResponseWriter, r *http.Request) {
 	g.Steps = append(g.Steps, signin)
 
 	// 4: encryption
-	src := currentRootKeySource()
-	enc := GuideStep{ID: "encryption", Title: "Encryption and the root key", State: "todo"}
-	taken, takenAt := s.rootKeyCopyTaken()
-	var rep *sealing.Report
-	if svc, err := s.secretStore(); err == nil {
-		if rr, err := svc.Report(r.Context()); err == nil {
-			rep = &rr
-		}
-	}
-	enc.Encryption = rep
-	encrypted := src.Available() || (rep != nil && rep.Encrypted)
-	sealedAll := rep == nil || (rep.Remaining == 0 && rep.Migration.State == "complete")
-	switch {
-	case encrypted && taken && sealedAll:
-		enc.State = "done"
-		enc.Summary = "Stored secrets are encrypted under a root key held outside the database. A recovery copy of the key was taken."
-	case encrypted && !taken:
-		enc.Summary = "Stored secrets are encrypted under a root key held outside the database. No recovery copy of the key has been taken yet: without the key, nothing stored can be read after a loss."
-	case encrypted:
-		enc.Summary = "A recovery copy of the root key was taken, but not every stored secret is sealed yet."
-	default:
-		enc.Summary = "This server has no root key configured, so stored secrets are not encrypted at rest."
-	}
-	if rep != nil && rep.Summary != "" && encrypted {
-		enc.Summary += " " + rep.Summary
-	}
-	canExport, why, would := s.canExportRootKey(r)
-	enc.Actions = []engine.Action{act("download_root_key_copy", canExport, why, would)}
-	_ = takenAt
+	enc, taken := s.encryptionStep(r)
 	g.Steps = append(g.Steps, enc)
 
 	// 5: a runner
@@ -178,6 +150,42 @@ func (s *Server) setupGuide(w http.ResponseWriter, r *http.Request) {
 
 	g.Checklist = securitycheck.Check(s.securityFacts(taken, g.Kubernetes, id.User != ""))
 	writeJSON(w, http.StatusOK, g)
+}
+
+// encryptionStep is step 4 of the guide: what encryption protects now (the installation's real report), and
+// the guarded recovery copy of the root key. It also says whether a copy was taken.
+func (s *Server) encryptionStep(r *http.Request) (GuideStep, bool) {
+	src := currentRootKeySource()
+	enc := GuideStep{ID: "encryption", Title: "Encryption and the root key", State: "todo"}
+	taken, takenAt := s.rootKeyCopyTaken()
+	var rep *sealing.Report
+	if svc, err := s.secretStore(); err == nil {
+		if rr, err := svc.Report(r.Context()); err == nil {
+			rep = &rr
+		}
+	}
+	enc.Encryption = rep
+	encrypted := src.Available() || (rep != nil && rep.Encrypted)
+	sealedAll := rep == nil || (rep.Remaining == 0 && rep.Migration.State == "complete")
+	switch {
+	case encrypted && taken && sealedAll:
+		enc.State = "done"
+		enc.Summary = "Stored secrets are encrypted under a root key held outside the database. A recovery copy of the key was taken."
+	case encrypted && !taken:
+		enc.Summary = "Stored secrets are encrypted under a root key held outside the database. No recovery copy of the key has been taken yet: without the key, nothing stored can be read after a loss."
+	case encrypted:
+		enc.Summary = "A recovery copy of the root key was taken, but not every stored secret is sealed yet."
+	default:
+		enc.Summary = "This server has no root key configured, so stored secrets are not encrypted at rest."
+	}
+	if rep != nil && rep.Summary != "" && encrypted {
+		enc.Summary += " " + rep.Summary
+	}
+	canExport, why, would := s.canExportRootKey(r)
+	enc.Actions = []engine.Action{act("download_root_key_copy", canExport, why, would)}
+	_ = takenAt
+	return enc, taken
+
 }
 
 func (s *Server) securityFacts(copied, kube, _ bool) securitycheck.Facts {

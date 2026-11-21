@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -35,6 +36,9 @@ func cmdUsers(args []string) error {
 	fs := flag.NewFlagSet("users", flag.ContinueOnError)
 	cfgPath := fs.String("config", "launchway.yaml", "the server's bootstrap file")
 	if err := fs.Parse(args[1:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil // the flag set has printed its help
+		}
 		return usageErr("%v", err)
 	}
 	cfg, err := config.LoadBootstrap(*cfgPath)

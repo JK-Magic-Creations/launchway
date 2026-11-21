@@ -88,6 +88,7 @@ func dumpEverything(t *testing.T, e *Engine, addr string) []byte {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var c col
 		if err := rows.Scan(&c.table, &c.column, &c.typ); err != nil {
@@ -95,25 +96,32 @@ func dumpEverything(t *testing.T, e *Engine, addr string) []byte {
 		}
 		cols = append(cols, c)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 	for _, c := range cols {
 		sel := `SELECT "` + c.column + `"::text FROM "` + c.table + `"`
 		if c.typ == "bytea" {
 			sel = `SELECT encode("` + c.column + `", 'escape') FROM "` + c.table + `"`
 		}
-		rs, err := e.db.Query(sel)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for rs.Next() {
-			var v sql.NullString
-			if err := rs.Scan(&v); err != nil {
+		func() {
+			rs, err := e.db.Query(sel)
+			if err != nil {
 				t.Fatal(err)
 			}
-			out.WriteString(v.String)
-			out.WriteByte('\n')
-		}
-		rs.Close()
+			defer rs.Close()
+			for rs.Next() {
+				var v sql.NullString
+				if err := rs.Scan(&v); err != nil {
+					t.Fatal(err)
+				}
+				out.WriteString(v.String)
+				out.WriteByte('\n')
+			}
+			if err := rs.Err(); err != nil {
+				t.Fatal(err)
+			}
+		}()
 	}
 	return out.Bytes()
 }

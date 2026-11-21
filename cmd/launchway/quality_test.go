@@ -134,3 +134,19 @@ func TestLocalRunHasNoColorOffATerminalAndStatusInWords(t *testing.T) {
 		}
 	}
 }
+
+// The sections and subcommands added after the first release answer --help with exit 0 and no server too.
+func TestNewSubcommandsHaveHelpThatNeedsNoServer(t *testing.T) {
+	for _, args := range [][]string{
+		{"doctor", "security"}, {"doctor", "encryption"}, {"doctor", "ssh"}, {"doctor", "database"},
+		{"deps", "list"}, {"deps", "check"}, {"deps", "update"}, {"deps", "ignore"},
+		{"updates", "preview"}, {"updates", "run"}, {"updates", "settings"},
+		{"repos", "import-all"}, {"runs", "trust"}, {"runs", "queue"}, {"runs", "lanes"},
+		{"validate"}, {"install"}, {"notifications"}, {"users", "reset"}, {"encryption", "init"},
+	} {
+		out, errs, code := cli(t, t.TempDir(), nil, append(args, "--help")...)
+		if code != 0 || len(strings.Fields(out+errs)) < 4 {
+			t.Errorf("launchway %s --help: exit %d, output %q", strings.Join(args, " "), code, out+errs)
+		}
+	}
+}

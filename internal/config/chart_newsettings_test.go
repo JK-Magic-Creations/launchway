@@ -137,4 +137,3 @@ func policyOf(t *testing.T, rendered, name string) string {
 	t.Fatalf("no NetworkPolicy %s in the render", name)
 	return ""
 }
-

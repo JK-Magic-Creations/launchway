@@ -78,6 +78,16 @@ func (r gitReport) lines() []string {
 	}
 }
 
+// doctorSections are the doctor's sections that are commands of their own, by name.
+var doctorSections = map[string]func([]string) error{"security": doctorSecurity, "ssh": doctorSSH, "encryption": doctorEncryption}
+
+func firstArg(args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	return args[0]
+}
+
 // cmdDoctor runs the doctor's sections, git and database. It reads the same configuration as the server (and LAUNCHWAY_DATABASE) and
 // opens the database directly, not through a server.
 func cmdDoctor(args []string) error {
@@ -85,14 +95,8 @@ func cmdDoctor(args []string) error {
 		fmt.Print(doctorUsage)
 		return nil
 	}
-	if len(args) > 0 && args[0] == "security" {
-		return doctorSecurity(args[1:])
-	}
-	if len(args) > 0 && args[0] == "ssh" {
-		return doctorSSH(args[1:])
-	}
-	if len(args) > 0 && args[0] == "encryption" {
-		return doctorEncryption(args[1:])
+	if run, ok := doctorSections[firstArg(args)]; ok {
+		return run(args[1:])
 	}
 	section := ""
 	if len(args) > 0 && (args[0] == "database" || args[0] == "git") {

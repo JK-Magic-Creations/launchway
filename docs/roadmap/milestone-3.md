@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 3 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 3 in progress · 89 planned · 92 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 4 available · 3 in progress · 89 planned · 96 capabilities</p>
 
 See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.
 
@@ -50,7 +50,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Applications and rollouts](#g-applications-and-rollouts) | 13 | 0 | 1 | 12 |
+| [Applications and rollouts](#g-applications-and-rollouts) | 17 | 4 | 1 | 12 |
 | [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 0 | 2 | 3 |
 | [Where it deploys](#g-where-it-deploys) | 12 | 0 | 0 | 12 |
 | [Infrastructure as code](#g-infrastructure-as-code) | 5 | 0 | 0 | 5 |
@@ -191,6 +191,46 @@ Verify a deployment by calling an address you name and checking the answer, with
 After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, on the hosted Git service of your choice. Next in line.
 
 [Area page](delivery.md)
+
+#### A health proof built into verification {#a-health-proof-built-into-verification}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer. HTTP and TCP checks from the deploy runner, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.
+
+**Depends on:** Argo CD in depth.
+
+[Read the documentation](../guide/verification.md) · [Area page](delivery.md)
+
+#### GitOps write-back done right {#gitops-write-back-done-right}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request. Not yet: rolling back several deployments at once by pull request.
+
+**Depends on:** Argo CD in depth.
+
+[Read the documentation](../guide/gitops-write-back.md) · [Area page](delivery.md)
+
+#### Delivery notifications {#delivery-notifications}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+An approval that waits, a failed run or deployment, a rollback and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries. Email, per-person muting and a rollback review on Home are not done yet.
+
+**Depends on:** Argo CD in depth.
+
+[Read the documentation](../guide/notifications.md) · [Area page](delivery.md)
+
+#### Templates with derived defaults and optional parts {#templates-with-derived-defaults-and-optional-parts}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server. Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or environments a server allows.
+
+**Depends on:** Argo CD in depth.
+
+[Read the documentation](../guide/libraries.md) · [Area page](delivery.md)
 
 ### Debug a deployment, then see everything {#g-debug-a-deployment-then-see-everything}
 

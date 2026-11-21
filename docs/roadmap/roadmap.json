@@ -256,6 +256,12 @@
       "title": "Rollback after a successful deployment",
       "value": "Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry.",
       "link": "guide/rollback-after-success"
+    },
+    {
+      "theme": "Pipelines",
+      "title": "Queues, limits and path filters",
+      "value": "Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted.",
+      "link": "guide/queues"
     }
   ],
   "milestones": [
@@ -876,6 +882,42 @@
               "value": "Start a pipeline only when the files that changed match, or do not match, paths you name.",
               "detail": "Next in line after queueing.",
               "area": "pipelines"
+            },
+            {
+              "status": "available",
+              "title": "Steps wait for room instead of failing",
+              "value": "A full step namespace makes a step wait, with the reason, the runs that hold the room and its place in line, instead of failing the build.",
+              "detail": "A step that cannot start because the namespace's quota is used up, or no node has space, stays queued with a plain reason and a stable code, is tried again after a growing pause, and fails only after a configurable longest wait (60 minutes by default). A step that asks for more than the whole quota fails at once with the numbers.",
+              "needs": "Nothing beyond what runs pipelines today.",
+              "area": "pipelines",
+              "link": "guide/queues"
+            },
+            {
+              "status": "available",
+              "title": "Limits and a fair order for runs",
+              "value": "Runs over a limit are held with a reason, in a visible order, and the main build is never held.",
+              "detail": "Limits on concurrent runs of a project, a pipeline, each kind of run and automation accounts, with defaults that stop a burst of dependency pull requests from starving the main build. Held runs go by priority, an operator can move one to the front, hold it or release it, and a new commit on a pull request cancels the older run of that pull request.",
+              "needs": "Nothing beyond what runs pipelines today.",
+              "area": "pipelines",
+              "link": "guide/queues"
+            },
+            {
+              "status": "available",
+              "title": "Path filters on triggers and steps",
+              "value": "A documentation-only change builds the docs and skips the image and the deploy approvals.",
+              "detail": "paths and paths_ignore on push and pull-request triggers and when: { changed } on a step, with precise glob rules, the previous head or the merge base to compare with, and a run that always starts when the change cannot be told. A skipped step says why and counts as passed for required checks.",
+              "needs": "Nothing beyond what runs pipelines today.",
+              "area": "pipelines",
+              "link": "reference/pipeline#path-filters"
+            },
+            {
+              "status": "available",
+              "title": "Restricted runs for untrusted pull requests",
+              "value": "Pull requests from automation accounts and forks run without secrets, deploys or write caches until a maintainer approves.",
+              "detail": "A run from an automation account or a fork takes its pipeline from the default branch, reads no secrets, deploys nothing, saves no cache and pushes nothing to a registry; a maintainer can choose Run with secrets, which is recorded. The run page says which mode it is in and why.",
+              "needs": "Nothing beyond what runs pipelines today.",
+              "area": "pipelines",
+              "link": "guide/pull-request-trust"
             }
           ]
         },
@@ -1765,6 +1807,42 @@
               "value": "After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, on the hosted Git service of your choice.",
               "detail": "Next in line.",
               "area": "delivery"
+            },
+            {
+              "status": "available",
+              "title": "A health proof built into verification",
+              "value": "A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer.",
+              "detail": "HTTP and TCP checks from the deploy runner, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery",
+              "link": "guide/verification"
+            },
+            {
+              "status": "available",
+              "title": "GitOps write-back done right",
+              "value": "Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request.",
+              "detail": "Not yet: rolling back several deployments at once by pull request.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery",
+              "link": "guide/gitops-write-back"
+            },
+            {
+              "status": "available",
+              "title": "Delivery notifications",
+              "value": "An approval that waits, a failed run or deployment, a rollback and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries.",
+              "detail": "Email, per-person muting and a rollback review on Home are not done yet.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery",
+              "link": "guide/notifications"
+            },
+            {
+              "status": "available",
+              "title": "Templates with derived defaults and optional parts",
+              "value": "A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server.",
+              "detail": "Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or environments a server allows.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery",
+              "link": "guide/libraries"
             }
           ]
         },
@@ -5124,7 +5202,9 @@
       "The hosted service now describes your own Base for every customer, a vendor console and separate vendor sign-in that see the service and never your work, and support bundles you choose and preview.",
       "Now available: pull requests with code review and merge rules, parallel steps drawn as parallel, a step user with an account entry, testing like the pipeline, and rollback after a successful deployment.",
       "In progress: encryption of stored secrets under a root key, the cache correctness fixes, built-in accounts, the installer, and waiting for room instead of failing.",
-      "How we build has four new principles: simple to install, walled-off Bases proven by tests, a cache that never changes a result, and an order the system works out and a person can override."
+      "How we build has four new principles: simple to install, walled-off Bases proven by tests, a cache that never changes a result, and an order the system works out and a person can override.",
+      "Steps that cannot start for lack of room now wait with a reason, runs have limits and a fair order, triggers and steps have path filters, and pull requests from automation accounts run restricted until a maintainer approves.",
+      "Delivery gaps closed: a built-in health proof for verify steps, GitOps write-back races, tags with digests and hosted repositories, notifications, template defaults and offline validate."
     ]
   }
 }

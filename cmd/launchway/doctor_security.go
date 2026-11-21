@@ -83,6 +83,9 @@ func doctorSecurity(args []string) error {
 	cfgPath := fs.String("config", "launchway.yaml", "configuration file")
 	url := fs.String("url", "", "the address people use (default: from listen)")
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil // the flag set has printed its help
+		}
 		return usageErr("%v", err)
 	}
 	in := installer.DoctorInput{URL: *url, Facts: map[string]string{}}

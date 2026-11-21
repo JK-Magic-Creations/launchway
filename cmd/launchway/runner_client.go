@@ -99,12 +99,12 @@ func runDeployRunner(ctx context.Context, o *runnerOptions, client *runner.Clien
 		d.AI = &ai.Client{}
 	}
 	if o.HealthListen != "" {
-		ln, err := net.Listen("tcp", o.HealthListen)
+		ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", o.HealthListen)
 		if err != nil {
 			return fmt.Errorf("--health-listen: %w", err)
 		}
 		hs := &http.Server{Handler: d.Health(), ReadHeaderTimeout: 10 * time.Second}
-		go hs.Serve(ln)
+		go func() { _ = hs.Serve(ln) }()
 		defer hs.Close()
 	}
 	return d.Run(ctx)
