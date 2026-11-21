@@ -86,6 +86,7 @@ Usage:
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway doctor   [database]                 would this installation survive losing its database?
   launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
+  launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take

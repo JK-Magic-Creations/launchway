@@ -20,6 +20,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/hosting"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 )
 
 // These tests run the real git client against the real server.
@@ -28,8 +29,7 @@ func git(t *testing.T, dir string, args ...string) (string, error) {
 	t.Helper()
 	cmd := exec.Command("git", append([]string{"-c", "credential.helper=", "-c", "init.defaultBranch=main"}, args...)...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "HOME="+t.TempDir(),
-		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com")
+	cmd.Env = testlib.GitEnv(t, "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com")
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
@@ -115,7 +115,7 @@ func TestGitCloneFetchPushWithAToken(t *testing.T) {
 	out := mustGit(t, b, "-c", "protocol.version=2", "ls-remote", u)
 	_ = out
 	cmd := exec.Command("git", "-c", "credential.helper=", "-c", "protocol.version=2", "ls-remote", u)
-	cmd.Env = append(os.Environ(), "GIT_TRACE_PACKET=1", "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = testlib.GitEnv(t, "GIT_TRACE_PACKET=1")
 	trace, err := cmd.CombinedOutput()
 	if err != nil || !strings.Contains(string(trace), "version 2") {
 		t.Errorf("protocol v2 was not used: %v", err)
@@ -479,5 +479,21 @@ func TestDoctorWarnsAboutAnOwnerThatCollidesWithAReservedPath(t *testing.T) {
 	w, err := h.Check(t.Context())
 	if err != nil || len(w) != 1 || !strings.Contains(w[0], "api/x") {
 		t.Errorf("%v %v", w, err)
+	}
+}
+
+// An unauthenticated clone of a private repository fails at once with an
+// authentication error; git never falls back to a credential prompt (a
+// desktop session's askpass helper would open a dialog).
+func TestUnauthenticatedCloneOfAPrivateRepositoryFailsWithoutPrompting(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	hostedRepo(t, e, "acme/shop")
+	start := time.Now()
+	out, err := git(t, t.TempDir(), "clone", "-q", e.srv.URL+"/acme/shop.git", "c")
+	if err == nil || time.Since(start) > 20*time.Second {
+		t.Fatalf("clone of a private repository without credentials: %v after %v\n%s", err, time.Since(start), out)
+	}
+	if !strings.Contains(out, "401") && !strings.Contains(strings.ToLower(out), "authentication") && !strings.Contains(out, "terminal prompts disabled") && !strings.Contains(out, "could not read") {
+		t.Errorf("not an authentication failure:\n%s", out)
 	}
 }

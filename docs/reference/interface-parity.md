@@ -64,15 +64,21 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `PUT /api/v1/config/{kind}/{obj}` | `put_config` | `config set` | `create or update of the resource` | equal |
 | `GET /api/v1/config/{kind}/{obj}/history` | `get_config_history` | `config history` | `not needed by terraform` | equal |
 | `POST /api/v1/config/{kind}/{obj}/restore` | `restore_config` | `config restore` | `not needed by terraform` | equal |
+| `GET /api/v1/connections` | `list_connections` | `repos connection list` | — | equal |
+| `POST /api/v1/connections` | `add_connection` | `repos connection add` | — | equal |
+| `DELETE /api/v1/connections/{name}` | `remove_connection` | `repos connection remove` | — | equal |
 | `GET /api/v1/deployments` | `get_deployments` | — | — | gap: launchway has no deployments command yet |
 | `GET /api/v1/environments` | `list_config (kind environments)` | `environments list` | `launchway_environment` | equal |
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |
+| `POST /api/v1/imports` | `import_repositories` | `repos import` | — | equal |
+| `POST /api/v1/imports/verify` | `verify_repositories` | `repos verify` | — | equal |
 | `GET /api/v1/info` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /api/v1/launch-lines` | — | — | — | exempt: a read model for the Home page, worked out from a run's steps and deployments, which list_runs, get_run and get_deployments already give in full |
 | `GET /api/v1/libraries` | `list_config (kind libraries)` | `libraries list` | `launchway_library` | equal |
 | `GET /api/v1/libraries/{library}/templates` | `list_templates` | — | — | gap: launchway has no templates command yet |
 | `GET /api/v1/me` | — | — | — | exempt: the caller's own identity: the token is the credential for MCP and the CLI |
+| `GET /api/v1/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |
 | `GET /api/v1/policies` | `list_config (kind policies)` | `policy list` | `launchway_policy` | equal |
 | `GET /api/v1/projects` | `list_projects` | `projects list` | — | equal |
 | `GET /api/v1/projects/{name}` | `get_project` | `projects get` | — | equal |
@@ -108,6 +114,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}` | `delete_repository` | `repos delete` | `planned: launchway_repository` | equal |
 | `GET /api/v1/repositories/{owner}/{name}` | `get_repository` | `repos get` | `planned: launchway_repository` | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}` | `update_repository` | `repos update` | `planned: launchway_repository` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/mirrors` | `list_mirrors` | `repos mirror status` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/mirrors` | `set_mirror` | `repos mirror add` | — | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}` | `change_mirror` | `repos mirror remove` | — | equal |
+| `PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}` | `change_mirror` | `repos mirror pause` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync` | `sync_mirror` | `repos mirror sync` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `PUT /api/v1/run-limits` | `set_run_limits` | `run-limits set` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `GET /api/v1/runner-join-tokens` | — | — | — | gap: join tokens are made from the UI wizard or the CLI; no MCP tool and no CLI list yet |

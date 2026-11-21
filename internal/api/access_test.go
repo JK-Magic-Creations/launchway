@@ -190,6 +190,20 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/projects/{name}/cache-policy":    {"GET", "/api/v1/projects/pay-api/cache-policy", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"PUT /api/v1/projects/{name}/cache-policy":    {"PUT", "/api/v1/projects/pay-api/cache-policy", `{"idle_days":3}`, [6]int{401, 403, 403, 403, 403, 200}},
 	"DELETE /api/v1/projects/{name}/cache-policy": {"DELETE", "/api/v1/projects/pay-api/cache-policy", "", [6]int{401, 403, 403, 403, 403, 200}},
+	// Mirrors of hosted repositories: with hosting off every call is 404 feature_off.
+	"GET /api/v1/mirrors":                                        {"GET", "/api/v1/mirrors", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repositories/{owner}/{name}/mirrors":            {"GET", "/api/v1/repositories/o/x/mirrors", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/repositories/{owner}/{name}/mirrors":           {"POST", "/api/v1/repositories/o/x/mirrors", `{"url":"https://git.example.com/x.git"}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}":     {"PATCH", "/api/v1/repositories/o/x/mirrors/mir_x", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}":    {"DELETE", "/api/v1/repositories/o/x/mirrors/mir_x", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync": {"POST", "/api/v1/repositories/o/x/mirrors/mir_x/sync", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/repositories/{owner}/{name}/stop-mirroring":    {"POST", "/api/v1/repositories/o/x/stop-mirroring", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	// Getting repositories in: connections, import and verification (admin; hosting off is 404).
+	"GET /api/v1/connections":           {"GET", "/api/v1/connections", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/connections":          {"POST", "/api/v1/connections", `{"name":"old","kind":"gitea"}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"DELETE /api/v1/connections/{name}": {"DELETE", "/api/v1/connections/old", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/imports":              {"POST", "/api/v1/imports", `{"connection":"old","dry_run":true}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/imports/verify":       {"POST", "/api/v1/imports/verify", `{"connection":"old"}`, [6]int{401, 403, 403, 403, 403, 404}},
 
 	// Artifacts, findings and SBOMs. {pay} keeps no artifact: 404 after the
 	// permission check (see TestArtifactAccess).

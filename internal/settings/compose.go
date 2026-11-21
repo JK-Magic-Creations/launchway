@@ -508,7 +508,7 @@ func movedKeys(c *config.Config) []string {
 	set(len(c.AI.Models) > 0, "ai.models")
 	set(len(c.Auth.Access) > 0, "auth.access")
 	set(c.Auth.Tokens != (config.TokensConfig{}), "auth.tokens")
-	set(c.Forge != (config.ForgeConfig{}), "forge")
+	set(!reflect.DeepEqual(c.Forge, config.ForgeConfig{}), "forge")
 	return keys
 }
 

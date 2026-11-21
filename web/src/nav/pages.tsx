@@ -45,6 +45,8 @@ const SettingsPage = lz(() => import("../pages/SettingsHome"), "SettingsHomePage
 const AccessPage = lz(() => import("../pages/Settings"), "AccessPage");
 const RunnersPage = lz(() => import("../pages/Runners"), "RunnersPage");
 const TokensPage = lz(() => import("../pages/Tokens"), "TokensPage");
+const RepositoryPage = lz(() => import("../pages/Repository"), "RepositoryPage");
+const ImportRepositoriesPage = lz(() => import("../pages/ImportRepositories"), "ImportRepositoriesPage");
 const AgentsPage = lz(() => import("../pages/Agents"), "AgentsPage");
 const PolicyPage = lz(() => import("../pages/Policy"), "PolicyPage");
 const SettingsWordsPage = lz(() => import("../pages/SettingsWords"), "SettingsWordsPage");
@@ -69,6 +71,9 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/security": return <ProjectSecurityPage key={p.name} name={p.name} />;
     case "/projects/:name/caches": return <ProjectCachesPage key={p.name} name={p.name} />;
     case "/projects/:name/variables": return <ProjectVariablesPage key={p.name} name={p.name} />;
+    case "/repositories/import": return <ImportRepositoriesPage />;
+    case "/repositories/:owner/:name": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="overview" />;
+    case "/repositories/:owner/:name/mirrors": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="mirrors" />;
     case "/playground": return <PlaygroundPage />;
     case "/activity": return <RunsPage />;
     case "/activity/approvals": return <ApprovalsPage approvals={approvals} />;

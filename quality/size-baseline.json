@@ -11,7 +11,7 @@
     "internal/engine/engine.go": 2172,
     "internal/engine/testqueries.go": 1226,
     "internal/engine/verify.go": 1442,
-    "internal/pipeline/template.go": 1180,
+    "internal/pipeline/template.go": 1109,
     "web/src/api.ts": 1564
   },
   "functions": {

@@ -385,6 +385,7 @@ takes effect when each server next restarts.
 | `forge.max_concurrent` | whole number | `32` | The most `git` processes serving Git requests at once; more requests wait, then are refused |
 | `forge.cache_gib` | whole number | no limit | How much the repository caches on this server may take, in GiB; the least recently used are removed |
 | `forge.maintain_every` | text | `15m` | How often packs are consolidated, collected and checked. At least `1m` |
+| `forge.mirror_allow` | list of text | none | Internal hosts and networks that mirrors and imports may contact: a host name (`git.corp.example`, or `*.corp.example`), an address or a network (`10.20.0.0/16`). Launchway refuses to contact an internal address (loopback, private, link-local, cloud metadata) that is not listed here, so nobody who can set up a mirror can use the server to reach the network around it. Public addresses need no entry. Only `https` and `http` addresses are mirrored, and a redirect is not followed |
 
 ## Findings
 

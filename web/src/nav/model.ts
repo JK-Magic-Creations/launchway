@@ -121,6 +121,7 @@ export const SECTIONS: Section[] = [
       { id: "approvals", get label() { return say("{Clearances}"); }, href: "/settings/approvals", icon: "gate", aka: "Approvals" },
       { id: "rules", label: "Rules", href: "/settings/rules", icon: "shield", show: ({ me }) => me.runners },
       { id: "variables", label: "Variables", href: "/settings/variables", icon: "list" },
+      { id: "import", label: "Import repositories", href: "/repositories/import", icon: "code", show: ({ me }) => me.admin && (me as Me & { hosting?: boolean }).hosting === true },
       { id: "words", label: "Words", href: "/settings/words", icon: "info", show: ({ me }) => me.admin },
       { id: "audit", get label() { return say("{Logbook}"); }, href: "/settings/audit", icon: "clock", aka: "Audit trail", show: ({ me }) => me.admin },
       { id: "config", label: "Configuration", href: "/config", icon: "globe", show: ({ me }) => me.admin },
@@ -187,6 +188,10 @@ export const PAGES: PageInfo[] = [
   page("/projects/:name/security", "pipelines", undefined, (p) => `Security of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Security" }]),
   page("/projects/:name/caches", "pipelines", undefined, (p) => `Caches of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Build caches" }]),
   page("/projects/:name/variables", "pipelines", undefined, (p) => `Variables of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Variables" }]),
+  page("/repositories/import", "settings", "import", () => "Import repositories", () => [{ label: "Import repositories" }]),
+  page("/repositories/:owner/:name", "projects", undefined, (p) => p.owner + "/" + p.name, (p) => [{ label: p.owner + "/" + p.name }]),
+  page("/repositories/:owner/:name/mirrors", "projects", undefined, (p) => `Mirrors of ${p.owner}/${p.name}`,
+    (p) => [{ label: p.owner + "/" + p.name, href: `/repositories/${enc(p.owner)}/${enc(p.name)}` }, { label: "Mirrors" }]),
   page("/playground", "projects", undefined, () => "Try a pipeline", () => [{ label: "Try a pipeline without saving" }]),
 
   page("/deployments", "deployments", "overview", () => "Deployments", () => []),
