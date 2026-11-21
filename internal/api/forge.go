@@ -21,6 +21,7 @@ type HostedProvider interface {
 	Rename(ctx context.Context, path, home, name string) (forge.Repository, error)
 	SetVisibility(ctx context.Context, path string, v forge.Visibility) error
 	SetArchived(ctx context.Context, path string, on bool) error
+	Refs(ctx context.Context, repo forge.Repository) ([]forge.Ref, error)
 }
 
 // ForgeHosting is hosting, set up, as the API serves it.
@@ -54,7 +55,7 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return append(s.gitRoutes(), []route{
+	return append(append(s.gitRoutes(), s.compatRoutes()...), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},
@@ -140,18 +141,25 @@ func (s *Server) createRepo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, got)
 }
 
+// repoUpdate is a change to a repository; nil fields stay as they are.
+type repoUpdate struct {
+	Owner         *string           `json:"owner"`
+	Name          *string           `json:"name"`
+	DefaultBranch *string           `json:"default_branch"`
+	Visibility    *forge.Visibility `json:"visibility"`
+	Archived      *bool             `json:"archived"`
+}
+
 func (s *Server) updateRepo(w http.ResponseWriter, r *http.Request) {
-	path := repoSubject(r.PathValue("owner"), r.PathValue("name"))
-	var in struct {
-		Owner         *string           `json:"owner"`
-		Name          *string           `json:"name"`
-		DefaultBranch *string           `json:"default_branch"`
-		Visibility    *forge.Visibility `json:"visibility"`
-		Archived      *bool             `json:"archived"`
-	}
+	var in repoUpdate
 	if !decode(w, r, &in) {
 		return
 	}
+	s.applyUpdate(w, r, in)
+}
+
+func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpdate) {
+	path := repoSubject(r.PathValue("owner"), r.PathValue("name"))
 	ctx, p := r.Context(), s.Forge.Provider
 	var changes []string
 	if _, err := p.Repositories().Get(ctx, path); err != nil {

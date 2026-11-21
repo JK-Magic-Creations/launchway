@@ -132,6 +132,13 @@ var permissionTable = map[string]matrixRow{
 	// Step resources: anyone signed in reads, an admin changes.
 	"GET /api/v1/step-resources":        {"GET", "/api/v1/step-resources", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/step-resources/limits": {"GET", "/api/v1/step-resources/limits", "", [6]int{401, 200, 200, 200, 200, 200}},
+	// The Gitea-style repository calls, with hosting off.
+	"GET /api/v1/user":                                   {"GET", "/api/v1/user", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"POST /api/v1/user/repos":                            {"POST", "/api/v1/user/repos", `{"name":"x"}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"GET /api/v1/repos/{owner}/{name}":                   {"GET", "/api/v1/repos/o/x", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PATCH /api/v1/repos/{owner}/{name}":                 {"PATCH", "/api/v1/repos/o/x", `{}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"DELETE /api/v1/repos/{owner}/{name}":                {"DELETE", "/api/v1/repos/o/x", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/repos/{owner}/{name}/branches/{branch}": {"GET", "/api/v1/repos/o/x/branches/main", "", [6]int{401, 404, 404, 404, 404, 404}},
 	// Git over HTTP authenticates by itself (Basic or a token, never a cookie); with hosting off every call is 404 feature_off.
 	"GET /git/{owner}/{name}/info/refs":         {"GET", "/git/o/x.git/info/refs?service=git-upload-pack", "", [6]int{404, 404, 404, 404, 404, 404}},
 	"POST /git/{owner}/{name}/git-upload-pack":  {"POST", "/git/o/x.git/git-upload-pack", "", [6]int{404, 404, 404, 404, 404, 404}},

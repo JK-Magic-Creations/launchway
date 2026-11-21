@@ -157,3 +157,42 @@ func TestHostingOffAnswersFeatureOffAndKeepsTheData(t *testing.T) {
 		t.Errorf("turned on again: %d", r.status)
 	}
 }
+
+func TestGiteaStyleRepositoryCalls(t *testing.T) {
+	e, _ := hostedEnv(t, envOpts{})
+	ada := e.signIn(t, "ada")
+	var me struct{ Login string }
+	ada.get(e.srv.URL + "/api/v1/user").json(t, &me)
+	if me.Login != "ada" {
+		t.Fatalf("login %q", me.Login)
+	}
+	api := e.srv.URL + "/api/v1"
+	var made compatRepo
+	r := ada.do("POST", api+"/user/repos", `{"name":"lw-x","private":true,"default_branch":"main"}`)
+	r.json(t, &made)
+	if r.status != 201 || made.FullName != "ada/lw-x" || !made.Private || !made.Empty || made.Owner.Login != "ada" {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	if r := ada.do("PATCH", api+"/repos/ada/lw-x", `{"has_actions":false}`); r.status != 200 {
+		t.Errorf("an unknown field: %d %s", r.status, r.body)
+	}
+	if r := ada.get(api + "/repos/ada/lw-x/branches/main"); r.status != 404 {
+		t.Errorf("a branch of an empty repository: %d", r.status)
+	}
+	tok := e.tokenFor(t, "ada", "git")
+	mustGit(t, work(t), "version")
+	src := work(t)
+	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/ada/lw-x.git", tok), "HEAD:refs/heads/main")
+	if r := ada.get(api + "/repos/ada/lw-x/branches/main"); r.status != 200 {
+		t.Errorf("the pushed branch: %d %s", r.status, r.body)
+	}
+	if r := ada.do("PATCH", api+"/repos/ada/lw-x", `{"private":false,"archived":true}`); r.status != 200 {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	if out, err := git(t, src, "push", withToken(e.srv.URL, "/ada/lw-x.git", tok), "HEAD:refs/heads/more"); err == nil || !strings.Contains(out, "archived") {
+		t.Errorf("a push to an archived repository: %v\n%s", err, out)
+	}
+	if r := ada.do("DELETE", api+"/repos/ada/lw-x", ""); r.status != 204 {
+		t.Errorf("delete: %d", r.status)
+	}
+}

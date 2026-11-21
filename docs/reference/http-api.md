@@ -411,6 +411,20 @@ Only with `forge.hosting` on; otherwise every route answers `404` with `{"error"
 | `PATCH /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.update` | Changes `visibility`, `default_branch`, `archived`, or renames with `owner` and `name`. The old address stops working. |
 | `DELETE /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.delete` | Moves the repository to the trash: it is no longer served or listed, its data is kept, and its name can be used again. |
 
+
+### Gitea-style repository calls
+
+The few calls tools that create and inspect repositories send to a Gitea server, so they work unchanged against Launchway. This is the start of the compatibility layer, not all of it: there are no issues, pull requests or webhooks here. Answers carry `name`, `full_name`, `owner.login`, `private`, `archived`, `empty`, `default_branch` and `clone_url`.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/user` | `signed-in` | — | The caller: `login`, `username`, `full_name`, `email`. |
+| `POST /api/v1/user/repos` | `admin` | `repository.create` | Creates a repository under the caller's own name: `{"name", "private", "default_branch"}`. `private` is true unless given as false. |
+| `GET /api/v1/repos/{owner}/{name}` | `repo-viewer` | — | One repository. |
+| `PATCH /api/v1/repos/{owner}/{name}` | `repo-admin` | `repository.update` | Changes `name`, `private`, `archived` or `default_branch`; other fields are ignored. |
+| `DELETE /api/v1/repos/{owner}/{name}` | `repo-admin` | `repository.delete` | Moves the repository to the trash. |
+| `GET /api/v1/repos/{owner}/{name}/branches/{branch}` | `repo-viewer` | — | `{"name", "commit": {"id"}}`, or `404` when there is no such branch (yet): a push may take a moment to show. |
+
 ### Git over HTTP
 
 Clone, fetch and push with the real `git`. Every address has two forms: `/git/<owner>/<name>.git/...` and the form other Git hosts use, `/<owner>/<name>.git/...`, so a remote moves to Launchway by changing its host. `.git` may be left off. A browser that opens `/<owner>/<name>` (no `.git`) and may read the repository is redirected to `/repositories/<owner>/<name>`, the repository's screen; anyone else gets the web UI's own answer. Owner names Launchway keeps for its own paths (`api`, `git`, `projects`, `runs` and others) cannot be used, so the second form never collides with the web UI. Only the smart protocol is served (protocol version 2 for fetch, gzip request bodies).
