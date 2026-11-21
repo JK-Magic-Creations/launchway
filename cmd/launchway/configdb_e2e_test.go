@@ -14,6 +14,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/jk-magic-creations/launchway/internal/keyring"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -45,6 +46,14 @@ func TestConfigurationInTheDatabaseTwoServersAndRollback(t *testing.T) {
 		t.Fatalf("go build (schema 22): %v\n%s", err, out)
 	}
 	dbURL := testdb.New(t)
+	// The servers share one database, so they share its root key: a new
+	// installation's first server would make one in its own data directory,
+	// and the second, with another data directory, would refuse to start.
+	rootKey := filepath.Join(dir, "root.key")
+	if err := keyring.WriteKeyFile(rootKey); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LAUNCHWAY_ROOT_KEY_FILE", rootKey)
 
 	repo := filepath.Join(dir, "repo")
 	os.MkdirAll(filepath.Join(repo, ".launchway"), 0o755)

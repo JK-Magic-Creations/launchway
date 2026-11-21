@@ -102,16 +102,32 @@ func Reexec() {
 }
 
 var (
-	selfOnce sync.Once
-	selfErr  error
+	selfMu sync.Mutex
+	selfOK bool
 )
+
+// selfChecked runs checkSelf until it has answered once. A binary that was
+// seen answering the protocol keeps answering it, so that answer is kept; a
+// failure that was only the check not finishing (a start that failed, the
+// time limit under a loaded machine) is not kept, or one slow moment would
+// refuse every later limited run of the process for good. A binary that ran
+// and did not answer is not going to, but it is cheap to ask again.
+func selfChecked(ctx context.Context) error {
+	selfMu.Lock()
+	defer selfMu.Unlock()
+	if selfOK {
+		return nil
+	}
+	err := checkSelf(ctx)
+	selfOK = err == nil
+	return err
+}
 
 // limitedCommand builds the re-exec command line, after checking once that
 // this binary answers the re-exec protocol.
 func limitedCommand(ctx context.Context, l Limits, prog string, argv []string) (*exec.Cmd, error) {
-	selfOnce.Do(func() { selfErr = checkSelf() })
-	if selfErr != nil {
-		return nil, selfErr
+	if err := selfChecked(ctx); err != nil {
+		return nil, err
 	}
 	self, err := os.Executable()
 	if err != nil {
@@ -123,12 +139,12 @@ func limitedCommand(ctx context.Context, l Limits, prog string, argv []string) (
 	return exec.CommandContext(ctx, self, append(args, argv...)...), nil //nolint:gosec // self is this binary; no shell
 }
 
-func checkSelf() error {
+func checkSelf(parent context.Context) error {
 	self, err := os.Executable()
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(parent, time.Minute) // a trivial run; the time is for a machine that is swamped
 	defer cancel()
 	cmd := exec.CommandContext(ctx, self, reexecArg, selfTest) //nolint:gosec // self is this binary
 	cmd.Env = append(os.Environ(), reexecEnv+"=1")

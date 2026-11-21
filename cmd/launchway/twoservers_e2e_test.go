@@ -22,6 +22,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	"github.com/jk-magic-creations/launchway/internal/keyring"
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
@@ -48,6 +49,14 @@ func TestTwoServersShareArtifactsThroughTheDatabase(t *testing.T) {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}
 	dbURL := testdb.New(t)
+	// The servers share one database, so they share its root key: a new
+	// installation's first server would make one in its own data directory,
+	// and the second, with another data directory, would refuse to start.
+	rootKey := filepath.Join(dir, "root.key")
+	if err := keyring.WriteKeyFile(rootKey); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LAUNCHWAY_ROOT_KEY_FILE", rootKey)
 
 	const size = 320 << 20 // big enough that the upload takes a while
 	repo := filepath.Join(dir, "repo")
@@ -96,6 +105,7 @@ steps:
 data: %s
 database: %q
 runner: { enabled: false }
+egress: { allow_local: true } # the project's repository is a path on this machine
 projects:
   - { name: demo, repo: %s, branch: main, poll: 1h }
 `, port, data, dbURL, repo)), 0o644)

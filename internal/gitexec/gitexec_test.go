@@ -435,7 +435,7 @@ func (zeros) Read(p []byte) (int, error) { clear(p); return len(p), nil }
 
 func TestLimitsRefusedWhenBinaryCannotApplyThem(t *testing.T) {
 	// A fake "self" cannot be injected, so test the unit that decides.
-	if err := checkSelf(); err != nil {
+	if err := checkSelf(context.Background()); err != nil {
 		t.Fatalf("this test binary answers the protocol: %v", err)
 	}
 }
