@@ -51,8 +51,10 @@ func (k *Kubernetes) userInit(sp ContainerSpec) corev1.Container {
 		Name:  "user-" + sp.Name,
 		Image: sp.Image,
 		// "sh" is $0; the script's arguments follow.
-		Command: []string{"sh", "-c", userScript, "sh", "/launchway-user/" + sp.Name,
-			strconv.FormatInt(*k.o.RunAsUser, 10), strconv.FormatInt(*k.o.RunAsGroup, 10), stepUserName, stepHome},
+		// The files go in the volume's root, named after the container: a directory per container would have to be
+		// made first, and nothing in the pod can make it.
+		Command: []string{"sh", "-c", userScript, "sh", "/launchway-user",
+			strconv.FormatInt(*k.o.RunAsUser, 10), strconv.FormatInt(*k.o.RunAsGroup, 10), stepUserName, stepHome, sp.Name + "."},
 		VolumeMounts:    []corev1.VolumeMount{{Name: userFilesVolume, MountPath: "/launchway-user"}},
 		Resources:       k.resources(ContainerSpec{}),
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -66,8 +68,8 @@ func (k *Kubernetes) userInit(sp ContainerSpec) corev1.Container {
 // userMounts are the two read-only mounts that put a step container's files over /etc/passwd and /etc/group.
 func userMounts(container string) []corev1.VolumeMount {
 	return []corev1.VolumeMount{
-		{Name: userFilesVolume, MountPath: "/etc/passwd", SubPath: container + "/passwd", ReadOnly: true},
-		{Name: userFilesVolume, MountPath: "/etc/group", SubPath: container + "/group", ReadOnly: true},
+		{Name: userFilesVolume, MountPath: "/etc/passwd", SubPath: container + ".passwd", ReadOnly: true},
+		{Name: userFilesVolume, MountPath: "/etc/group", SubPath: container + ".group", ReadOnly: true},
 	}
 }
 

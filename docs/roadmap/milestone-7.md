@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 7 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 2 in progress · 27 planned · 29 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 2 in progress · 39 planned · 41 capabilities</p>
 
 Use Launchway without running it, on a plan that follows your choices, with the controls enterprises and regulated teams ask for.
 
@@ -47,6 +47,7 @@ flowchart TD
 | [A hosted service that never holds your network or secrets](#g-a-hosted-service-that-never-holds-your-network-or-secrets) | 10 | 0 | 0 | 10 |
 | [A protected demonstration](#g-a-protected-demonstration) | 4 | 0 | 0 | 4 |
 | [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 0 | 2 | 5 |
+| [Your own Base, and what the service sees](#g-your-own-base-and-what-the-service-sees) | 12 | 0 | 0 | 12 |
 
 ### Hosted service and demo {#g-hosted-service-and-demo}
 
@@ -138,7 +139,7 @@ Before the first outside customer. The hosted side coordinates; a small program 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-One small program on your side starts your runners, looks things up in your secret store and reads your clusters, metrics, logs and DNS. It only calls out. Nothing is opened into your network.
+One small program on your side starts your runners, looks things up in your secret store and reads your clusters, metrics, logs and DNS. It only calls out; nothing is opened into your network. It holds your secrets, reaches your systems and sees your traffic, so the hosted side never does.
 
 **Depends on:** Runners on your machines.
 
@@ -286,9 +287,9 @@ The controls enterprises and regulated teams ask for.
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys. Built: accounts with Argon2id password hashes, a password policy with an offline blocklist, sign-in rate limits with lockout and backoff, authenticator codes (TOTP) with recovery codes, required for administrators by default, a one-time setup code for the first administrator, invitations and resets by one-time link or by the console command launchway users reset, sessions with idle and absolute limits and sign out everywhere, and an audit entry for every sign-in event. Not built yet: passkeys (WebAuthn), outgoing mail, and the first-run wizard steps after the first administrator.
+Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys. Built: accounts with Argon2id password hashes, a password policy with an offline blocklist, sign-in rate limits with lockout and backoff, authenticator codes (TOTP) with recovery codes, required for administrators by default, a one-time setup code for the first administrator, invitations and resets by one-time link or by the console command launchway users reset, sessions with idle and absolute limits and sign out everywhere, and an audit entry for every sign-in event. Not built yet: passkeys (WebAuthn) and outgoing mail.
 
-[Read the documentation](../guide/built-in-accounts.md)
+[Read the documentation](../guide/built-in-accounts.md) · [Area page](installing.md)
 
 #### Directory groups and custom roles {#directory-groups-and-custom-roles}
 
@@ -334,6 +335,106 @@ Policy templates and an evidence report that maps controls to requirements. It s
 
 Every service, runner and person proves identity on every call. No shared secrets between components.
 
+
+### Your own Base, and what the service sees {#g-your-own-base-and-what-the-service-sees}
+
+On the hosted product every customer has its own complete Base. The service operator sees the service, never your work, and you choose what to send when you need help.
+
+#### Every customer has its own Base {#every-customer-has-its-own-base}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A customer’s top level is its own complete, private Base, and the highest thing that customer can see or name. Inside it the usual levels apply.
+
+[Area page](hosted-service.md)
+
+#### The operator’s own Base is walled off {#the-operator-s-own-base-is-walled-off}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The service operator’s own organization is a separate Base that no customer or demonstration visitor can see, list, search or guess. Nothing flows down from it: shared starters and libraries are published by the product, public by nature.
+
+[Area page](hosted-service.md)
+
+#### Nothing crosses between Bases {#nothing-crosses-between-bases}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+No interface, search, graph, runner pool, cache, registry path, webhook or metric crosses a Base, and “not found” looks the same as “not allowed”. Identifiers cannot be listed or guessed.
+
+[Area page](hosted-service.md)
+
+#### Proven by tests that gate every release {#proven-by-tests-that-gate-every-release}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A suite tries every list, search, lookup, count, error, export and agent tool from one Base against another’s data. No outside customer is admitted until it passes.
+
+[Area page](hosted-service.md)
+
+#### A vendor console, separate from any Base {#a-vendor-console-separate-from-any-base}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The service operator sees how many Bases exist, plans, usage trends, resource use and the health of the hosted side, and never repositories, run logs, secrets, findings or traffic. It can suspend a Base, change a plan or publish a service notice.
+
+[Area page](hosted-service.md)
+
+#### A separate sign-in for the vendor {#a-separate-sign-in-for-the-vendor}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Vendor access is a different identity entered on purpose, with strong authentication, a stated reason and a session that ends by itself. An everyday account can never hold a vendor role.
+
+[Area page](hosted-service.md)
+
+#### Everything the vendor does shows in your Logbook {#everything-the-vendor-does-shows-in-your-logbook}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every vendor action that touches your Base appears in your Base’s own Logbook, with who, why and when. You can see what was done to your Base without asking.
+
+[Area page](hosted-service.md)
+
+#### Support tickets from inside your Base {#support-tickets-from-inside-your-base}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Open a ticket with a category and severity from your Base, or by email if the product is unreachable. The service operator lists tickets across Bases with their status and response clocks.
+
+[Area page](hosted-service.md)
+
+#### Support bundles you choose and preview {#support-bundles-you-choose-and-preview}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+You pick from a checklist what goes in, secrets are removed, and you see a preview of exactly what will be sent before sending. Encrypted to the support team, kept for a stated time, and you can withdraw it.
+
+[Area page](hosted-service.md)
+
+#### A break-glass session you approve {#a-break-glass-session-you-approve}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+If a bundle is not enough, you can grant a time-limited, read-only-by-default session for one problem, watch it live and end it at any moment. Every session is recorded where you can see it.
+
+[Area page](hosted-service.md)
+
+#### The same bundle for self-hosted installations {#the-same-bundle-for-self-hosted-installations}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Self-hosted installations use the same command and send the file by their own channel, and an air-gapped customer can read it first. The same checklist, redaction and preview apply.
+
+[Area page](hosted-service.md)
+
+#### Proven in development, then production {#proven-in-development-then-production}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every release runs in a development installation first, and only builds that passed are promoted to the production one, which is also the hosted product. Production has encryption at rest, tested backups and at least two server replicas.
+
+[Area page](hosted-service.md)
 
 ## What done means
 

@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 3 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 3 in progress · 56 planned · 59 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 3 in progress · 89 planned · 92 capabilities</p>
 
 See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.
 
@@ -44,13 +44,13 @@ flowchart TD
 
 **Builds on:** [Milestone 1: Host and run](milestone-1.md). **Leads to:** [Milestone 5: Software graph](milestone-5.md), [Milestone 8: Zero downtime](milestone-8.md), [Milestone 9: Network and traffic](milestone-9.md).
 
-**Go deeper:** [Delivery: applications, rollouts and hosts](delivery.md) · [Live traffic, protection and reliability](traffic.md).
+**Go deeper:** [Delivery: applications, rollouts and hosts](delivery.md) · [Live traffic, protection and reliability](traffic.md) · [The golden path](developer-experience.md) · [Built-in platform services](platform-services.md) · [Configuration as code](config-as-code.md).
 
 ## The capabilities
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Applications and rollouts](#g-applications-and-rollouts) | 11 | 0 | 1 | 10 |
+| [Applications and rollouts](#g-applications-and-rollouts) | 13 | 0 | 1 | 12 |
 | [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 0 | 2 | 3 |
 | [Where it deploys](#g-where-it-deploys) | 12 | 0 | 0 | 12 |
 | [Infrastructure as code](#g-infrastructure-as-code) | 5 | 0 | 0 | 5 |
@@ -58,6 +58,9 @@ flowchart TD
 | [Watch and protect](#g-watch-and-protect) | 10 | 0 | 0 | 10 |
 | [Change and insight](#g-change-and-insight) | 7 | 0 | 0 | 7 |
 | [Moving over from other delivery platforms](#g-moving-over-from-other-delivery-platforms) | 3 | 0 | 0 | 3 |
+| [The golden path](#g-the-golden-path) | 13 | 0 | 0 | 13 |
+| [Built-in platform services](#g-built-in-platform-services) | 9 | 0 | 0 | 9 |
+| [Configuration as code and the automation control center](#g-configuration-as-code-and-the-automation-control-center) | 9 | 0 | 0 | 9 |
 
 ### Applications and rollouts {#g-applications-and-rollouts}
 
@@ -172,6 +175,22 @@ Let a verification step use AI analysis of metrics and logs to trigger automatic
 **Depends on:** A built-in model gateway.
 
 [Area page](ai.md)
+
+#### An HTTP health proof for verifying deployments {#an-http-health-proof-for-verifying-deployments}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Verify a deployment by calling an address you name and checking the answer, with no metrics store needed. Next in line.
+
+[Area page](delivery.md)
+
+#### GitOps write-back to a hosted repository {#gitops-write-back-to-a-hosted-repository}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+After a build, Launchway writes the new version into the environment repository for the GitOps controller to pick up, on the hosted Git service of your choice. Next in line.
+
+[Area page](delivery.md)
 
 ### Debug a deployment, then see everything {#g-debug-a-deployment-then-see-everything}
 
@@ -357,17 +376,17 @@ State, plans and checks you can trust.
 
 Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection. Users never wonder where state goes, and Launchway guides them to good practice by default.
 
-[Area page](delivery.md)
+[Area page](config-as-code.md)
 
 #### State and locking built in {#state-and-locking-built-in}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-State is stored, versioned and locked inside Launchway with access rules. Nothing external is needed, and the state remains exportable.
+Terraform and OpenTofu state is stored, versioned, encrypted and locked inside Launchway, with access rules. It speaks the standard HTTP backend, so a pipeline step needs no backend setup and existing state can be imported.
 
 **Depends on:** Terraform and OpenTofu.
 
-[Area page](delivery.md)
+[Area page](platform-services.md)
 
 #### Ansible {#ansible}
 
@@ -375,15 +394,15 @@ State is stored, versioned and locked inside Launchway with access rules. Nothin
 
 Typed steps with per-host results and a check mode before apply. Results show per host, with the check result shown before anything is changed.
 
-[Area page](delivery.md)
+[Area page](config-as-code.md)
 
 #### Chef {#chef}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A real step with per-node results where Chef reports them, check mode before apply, and templates. It has the same standing as Ansible, using the free build by default.
+A real step with per-node results where Chef reports them, check mode before apply, and templates. Later and by choice: a real step with per-node results where Chef reports them, a check before apply, and tests as checks.
 
-[Area page](delivery.md)
+[Area page](config-as-code.md)
 
 #### Packer builds as a first-class step {#packer-builds-as-a-first-class-step}
 
@@ -401,9 +420,9 @@ Settings, keys and toggles managed together, per zone and environment.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A built-in toggle service that applications and agents read, per environment, with percentage and client-type rollouts. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.
+A built-in toggle service that applications and agents read through the OpenFeature standard, per environment, with percentages and rules. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.
 
-[Area page](traffic.md)
+[Area page](platform-services.md)
 
 #### Configuration, keys and toggles per zone {#configuration-keys-and-toggles-per-zone}
 
@@ -649,6 +668,268 @@ Measured comparisons of footprint, speed and capabilities that anyone can reprod
 
 Answers to the questions an enterprise reviewer asks, with a support bundle and an evidence page. Close the gaps that gate adoption.
 
+
+### The golden path {#g-the-golden-path}
+
+A developer describes what an application is in a short file, or in nothing at all; the platform team says how things are delivered once; Launchway does the rest and records the evidence.
+
+#### A small workload description {#a-small-workload-description}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A short file in the repository says what an application is: how it listens, its health check, its backing services and the names of its secrets. Detection can fill it in. Launchway derives the pipeline, checks and rollout plan from it.
+
+[Area page](developer-experience.md)
+
+#### Import from and export to Score {#import-from-and-export-to-score}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The workload description reads and writes the open Score specification, so you are never locked in. First landing: Kubernetes with Argo CD.
+
+[Area page](developer-experience.md)
+
+#### Landings chosen per environment {#landings-chosen-per-environment}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The platform team chooses where each environment lands, and the same description is delivered there. Kubernetes first.
+
+[Area page](developer-experience.md)
+
+#### Virtual machine and bootable-container landings {#virtual-machine-and-bootable-container-landings}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The same description can land as a package or machine image on virtual machines, or on a fleet of bootable-container hosts. Second phase.
+
+[Area page](developer-experience.md)
+
+#### Serverless and managed container landings {#serverless-and-managed-container-landings}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The same description can land as a function or a managed container service. Later phase.
+
+[Area page](developer-experience.md)
+
+#### Show what was generated, and eject {#show-what-was-generated-and-eject}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Everything Launchway generates can be shown, and a team can take ownership of the generated files for one landing. Never a black box and never a silent rewrite of your repository.
+
+[Area page](developer-experience.md)
+
+#### Automatic change records {#automatic-change-records}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every delivery becomes a change record with its evidence, without anyone filling in a form. Facts come from the pipeline, the proofs and the approvals.
+
+[Area page](developer-experience.md)
+
+#### Standard, normal and emergency changes {#standard-normal-and-emergency-changes}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A repeatable low-risk change is approved by a rule; a normal change goes to the right people with the evidence; an emergency change acts first and is reviewed after. Risk is computed from facts and shown with its reasoning.
+
+[Area page](developer-experience.md)
+
+#### Separation of duties {#separation-of-duties}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The author of a change is never its only approver, and nobody approves a rule that applies to them. An unavailable action says why.
+
+[Area page](developer-experience.md)
+
+#### Freezes and a release calendar {#freezes-and-a-release-calendar}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A hold blocks approval and the production step for a time, while work continues up to it, and a calendar shows windows and scheduled changes. Emergency changes use their own path.
+
+[Area page](developer-experience.md)
+
+#### An external change system, optional {#an-external-change-system-optional}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Change records can be sent to and approved in an external change management system through an adapter. The built-in changes area works with no adapter.
+
+[Area page](developer-experience.md)
+
+#### A security review only when the facts warrant it {#a-security-review-only-when-the-facts-warrant-it}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A lightweight review is triggered by facts such as a new public route or a new kind of data, not on every change. Continuous checks run on every change regardless.
+
+[Area page](developer-experience.md)
+
+#### Golden path health for the platform team {#golden-path-health-for-the-platform-team}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+See how many deliveries follow the path, where developers leave it and which standard stops the most. A view for the platform owner.
+
+[Area page](developer-experience.md)
+
+### Built-in platform services {#g-built-in-platform-services}
+
+Four things that sit next to your pipelines are built in and optional: object storage, Terraform and OpenTofu state, a managed cache and feature toggles. Each can be swapped for the product you already run.
+
+#### S3-compatible object storage {#s3-compatible-object-storage}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A small S3-compatible front door on the storage Launchway already has, speaking the part of S3 that Terraform, registries, backup tools and build caches use. Promised for Launchway’s own data and your pipelines. For production application data you connect your own bucket, or bundle a managed server.
+
+[Area page](platform-services.md)
+
+#### Short-lived storage credentials {#short-lived-storage-credentials}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A step proves its identity and gets a temporary key, so a pipeline never holds a stored storage key. Part of the first phase.
+
+[Area page](platform-services.md)
+
+#### Versioning, lifecycle and events for storage {#versioning-lifecycle-and-events-for-storage}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Keep versions, expire objects by rule and send events when objects change. Second phase.
+
+[Area page](platform-services.md)
+
+#### State you can read safely {#state-you-can-read-safely}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Terraform and OpenTofu state is shown as a difference with secrets masked and never as raw text, with history and rollback. Second phase, after state and locking.
+
+**Depends on:** State and locking built in.
+
+[Area page](platform-services.md)
+
+#### A managed cache as a backing service {#a-managed-cache-as-a-backing-service}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Give an application a cache in an environment: a managed Valkey, installed through GitOps, with its credentials in the vault. Launchway is not a database vendor, and says so. PostgreSQL covers Launchway’s own needs.
+
+[Area page](platform-services.md)
+
+#### Give this app a backing service {#give-this-app-a-backing-service}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The same pattern provisions a cache, a database, a queue or object storage for an application and wires it in as a connection. Third phase.
+
+[Area page](platform-services.md)
+
+#### Toggle providers for the main languages {#toggle-providers-for-the-main-languages}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Thin OpenFeature providers for Go, Java, JavaScript and TypeScript, Python and .NET read toggles from Launchway. Rules evaluate inside the application, so personal data never leaves it.
+
+[Area page](platform-services.md)
+
+#### Toggles keep working when Launchway is down {#toggles-keep-working-when-launchway-is-down}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Providers keep the last known values and verify signed rules, so an outage never flips a feature. Also evaluation counts for hygiene.
+
+[Area page](platform-services.md)
+
+#### Bring your own backend {#bring-your-own-backend}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each platform service has a built-in default and a popular backend you can use instead, without losing data. What you install: Launchway, and PostgreSQL for production.
+
+[Area page](platform-services.md)
+
+### Configuration as code and the automation control center {#g-configuration-as-code-and-the-automation-control-center}
+
+Everything that configures a system is code in Git, reviewed like code, applied from a plan, and watched for drift.
+
+#### A configuration change is a plan {#a-configuration-change-is-a-plan}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A dry run is its first proof, people give go or no-go on the reviewed plan, Launchway applies exactly what was reviewed, and the way back is the previous version. Ansible cannot apply a saved plan the way Terraform can, so a guard enforces it and the page says so.
+
+[Area page](config-as-code.md)
+
+#### Inventories {#inventories}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Hosts come from a static list first, then from clusters, clouds and other sources, with search over what is known about each. Inventory stays on your side on the hosted service.
+
+[Area page](config-as-code.md)
+
+#### Flight plans as job templates, with a form {#flight-plans-as-job-templates-with-a-form}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A stack or playbook becomes a flight plan with a form for its inputs, a schedule, credentials and role-based access. A wizard writes the pipeline for a repository it finds.
+
+[Area page](config-as-code.md)
+
+#### Results for every host {#results-for-every-host}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+See per host and per task what changed, with the tool’s own output kept alongside. Launchway keeps the tool’s own output beside a readable summary.
+
+[Area page](config-as-code.md)
+
+#### Drift and converge now {#drift-and-converge-now}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+See which hosts and resources differ from their code and why, and press converge with the same clearance as any change. Drift is checked on a schedule and shown per host.
+
+[Area page](config-as-code.md)
+
+#### Short-lived access to hosts {#short-lived-access-to-hosts}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Runs use workload identity or per-run secure shell certificates, never a stored cloud key. Least privilege for hosts and secrets.
+
+[Area page](config-as-code.md)
+
+#### Launchway’s own settings as code, both ways {#launchway-s-own-settings-as-code-both-ways}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Change settings on screen or in Git; each way produces a visible, reviewable change in the other. Built on the Terraform provider.
+
+[Area page](config-as-code.md)
+
+#### Event-driven fixes {#event-driven-fixes}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An alert or a drift report can start a reviewed fix, with limits so it cannot run away. Second phase.
+
+[Area page](config-as-code.md)
+
+#### Other configuration tools later {#other-configuration-tools-later}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Agent-based tools and other infrastructure tools join through one common interface. Third phase.
+
+[Area page](config-as-code.md)
 
 ## What done means
 

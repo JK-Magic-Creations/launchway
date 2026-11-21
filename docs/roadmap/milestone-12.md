@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 12 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 5 available · 2 in progress · 16 planned · 23 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 5 available · 2 in progress · 29 planned · 36 capabilities</p>
 
 Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.
 
@@ -38,7 +38,7 @@ flowchart TD
 
 **Builds on:** [Milestone 1: Host and run](milestone-1.md). 
 
-**Go deeper:** [Security and trust](security-trust.md).
+**Go deeper:** [Security and trust](security-trust.md) · [The same standards for every repository](repository-standards.md).
 
 ## The capabilities
 
@@ -48,10 +48,11 @@ flowchart TD
 | [Launchway’s own vault](#g-launchway-s-own-vault) | 4 | 0 | 0 | 4 |
 | [The security program](#g-the-security-program) | 4 | 2 | 0 | 2 |
 | [Certification, in an honest order](#g-certification-in-an-honest-order) | 6 | 0 | 0 | 6 |
+| [The same standards for every repository](#g-the-same-standards-for-every-repository) | 13 | 0 | 0 | 13 |
 
 ### Encryption at rest {#g-encryption-at-rest}
 
-Stored secrets are sealed today; stored files, logs and caches are next.
+First phase, in progress.
 
 #### An installation key and a key hierarchy {#an-installation-key-and-a-key-hierarchy}
 
@@ -276,6 +277,114 @@ An independent report on the hosted service’s controls, then a longer-period r
 A table of which payment-card and health-data requirements Launchway’s features help you meet and which remain yours. Launchway supports compliance work; it is not a certification.
 
 [Read the documentation](../security/controls-and-compliance.md) · [Area page](security-trust.md)
+
+### The same standards for every repository {#g-the-same-standards-for-every-repository}
+
+The scans Launchway holds itself to are offered to every repository it hosts or builds, built in, with nothing to install and every check a switch.
+
+#### A profile for each repository {#a-profile-for-each-repository}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Launchway looks at what a repository holds, such as Go, a Dockerfile or Helm charts, and attaches the checks that fit, each with the reason it was recommended. Checks are on from the first push.
+
+[Area page](repository-standards.md)
+
+#### Every check on, advice or block {#every-check-on-advice-or-block}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Each check is off, advice or a block, at any level and per repository, and a level above can require a minimum. The team in charge of a repository keeps the choice unless a level above locks it.
+
+[Area page](repository-standards.md)
+
+#### Vulnerability, secret, dependency and license checks {#vulnerability-secret-dependency-and-license-checks}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Vulnerability and secret scans, dependency and license checks, and best practices for each language run for every repository, not only Launchway’s own. Checks are visible steps, never hidden magic.
+
+[Area page](repository-standards.md)
+
+#### Language profiles {#language-profiles}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Go, Python, JavaScript and TypeScript, Java, Dockerfile and Helm come first; Kotlin, C#, Rust, Ruby, PHP, C and C++, shell, Terraform and Ansible follow. Each profile brings starter files the team may change.
+
+[Area page](repository-standards.md)
+
+#### Findings in one list {#findings-in-one-list}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Every check reports into one findings list with what it is, where, how serious, how sure the tool is, how to fix it and when it was first seen. Findings show on the pull request and in the repository, team and organization views.
+
+[Area page](repository-standards.md)
+
+#### Fix proposals as pull requests {#fix-proposals-as-pull-requests}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Launchway opens a pull request for a dependency bump, a base image update, a formatter run, a pinned digest or a hardened setting, and never edits silently. Limits keep teams from being flooded, and automatic merging is off by default.
+
+[Area page](repository-standards.md)
+
+#### Safe defaults and a break-glass path {#safe-defaults-and-a-break-glass-path}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A new critical or high vulnerability with a fix, or a secret, blocks a merge to a protected branch; everything else is advice; every block has a reasoned, expiring way through. Only new findings block, so an old backlog does not stop work.
+
+[Area page](repository-standards.md)
+
+#### Exceptions with an owner and an expiry {#exceptions-with-an-owner-and-an-expiry}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Waive a finding with a reason, an owner and an end date, and optionally say why it cannot be exploited, in a format you can publish. When an exception expires the finding counts again.
+
+[Area page](repository-standards.md)
+
+#### Stored parts lists rechecked against new advisories {#stored-parts-lists-rechecked-against-new-advisories}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+When a new advisory is published, Launchway says which repositories and running versions are affected without anyone pushing a commit. Stored software bills of materials are matched again each time an advisory appears.
+
+[Area page](repository-standards.md)
+
+#### Patch everything affected by an advisory {#patch-everything-affected-by-an-advisory}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Start a campaign that opens one fix per affected repository and tracks it until the new version is seen running. A page shows each repository’s state, owner and deadline.
+
+[Area page](repository-standards.md)
+
+#### A standards home and a posture view {#a-standards-home-and-a-posture-view}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+See a score with what moves it, the top risks, repositories without a profile and trends, per organization, team and repository. The score is a view, never a gate by itself.
+
+[Area page](repository-standards.md)
+
+#### Evidence for auditors {#evidence-for-auditors}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A report for a period shows which checks were on, evidence that they ran, findings and fixes, and exceptions. Evidence support only; not a certification.
+
+[Area page](repository-standards.md)
+
+#### Checks that run on your side {#checks-that-run-on-your-side}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+On the hosted service checks run on your runners, so source code and finding detail stay with you. Only counts and summaries cross to the hosted side.
+
+[Area page](repository-standards.md)
 
 ## What done means
 

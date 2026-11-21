@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 13 available · 8 in progress · 58 planned · 79 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 16 available · 19 in progress · 62 planned · 97 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -42,7 +42,7 @@ flowchart TD
 
 **Builds on:** nothing; this is where it starts. **Leads to:** [Milestone 2: Pipeline power](milestone-2.md), [Milestone 3: Delivery depth](milestone-3.md), [Milestone 4: Registry](milestone-4.md), [Milestone 6: AI helper](milestone-6.md), [Milestone 7: Hosted service](milestone-7.md), [Milestone 12: Security and trust](milestone-12.md).
 
-**Go deeper:** [Git hosting and change review](git-hosting.md) · [Pipelines and flow control](pipelines.md) · [The guided interface](guided-interface.md).
+**Go deeper:** [Git hosting and change review](git-hosting.md) · [Pipelines and flow control](pipelines.md) · [The guided interface](guided-interface.md) · [Installing Launchway](installing.md).
 
 ## The capabilities
 
@@ -54,10 +54,11 @@ flowchart TD
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
 | [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
 | [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 5 | 0 | 0 | 5 |
-| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 7 | 2 | 1 | 4 |
+| [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 12 | 4 | 3 | 5 |
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 1 | 5 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
-| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 5 | 0 | 3 | 2 |
+| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 6 | 1 | 3 | 2 |
+| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 0 | 9 | 3 |
 
 ### Host your code {#g-host-your-code}
 
@@ -361,7 +362,7 @@ Templates that pre-fill the description of a pull request or work item, and issu
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Report each run back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one. A connected host that has no status feature gets the same result as a comment and an approval, so the rule is the same everywhere.
+Report each run back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one. Each run is reported back to the pull request as a status that can block a merge, on built-in and connected hosts. Built-in pull requests already show the latest run and the required checks.
 
 **Depends on:** Every Git host, equally.
 
@@ -647,7 +648,7 @@ Run a step only when it should, retry what is flaky, make runs take turns, and r
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Keep dependencies between runs so builds start warm, with rules for who may read and write them. A pull request can write an entry the default branch never reads, which removes the cache-poisoning risk.
+Keep dependencies between runs so builds start warm, with rules for who may read and write them. A pull request can write an entry the default branch never reads, which removes the cache-poisoning risk. Cache correctness is being tightened in Build tools and caches.
 
 [Read the documentation](../guide/build-caches.md) · [Area page](pipelines.md)
 
@@ -688,6 +689,46 @@ Re-run just the failed steps of a run, with earlier results reused. Re-running f
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
 Each step can choose its own image, runner and working area. A step that needs a large machine or special hardware asks for it without moving the whole pipeline.
+
+[Area page](pipelines.md)
+
+#### Parallel steps drawn as parallel {#parallel-steps-drawn-as-parallel}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Steps that run together are drawn side by side on the run page, so the shape of a pipeline is the shape you see. Steps are drawn from their dependencies, so a run reads like the pipeline you wrote.
+
+[Area page](pipelines.md)
+
+#### A step's user has an account entry {#a-step-s-user-has-an-account-entry}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+The user a step runs as is known to the system inside the step, so tools that look up a user, such as secure shell, work. Applies to steps on runners and on Kubernetes.
+
+[Area page](pipelines.md)
+
+#### Runs wait for room instead of failing {#runs-wait-for-room-instead-of-failing}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+A step with no room in its namespace or on any node waits in line with a plain reason, instead of failing. Being built: the run page, API and command line say what the step waits for and where it stands in line.
+
+[Area page](pipelines.md)
+
+#### Run priority and limits {#run-priority-and-limits}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Set which runs go first and how many may run at once, per installation or project. Being built, together with waiting for room.
+
+[Area page](pipelines.md)
+
+#### Path filters {#path-filters}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Start a pipeline only when the files that changed match, or do not match, paths you name. Next in line after queueing.
 
 [Area page](pipelines.md)
 
@@ -765,7 +806,7 @@ An approval is a card with what, who, risk, evidence and what happens next, read
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A pipeline appears as stations on tracks, with parallel steps splitting and joining, live while it runs. Selecting a station shows its facts, and the log sits under the line.
+A pipeline appears as stations on tracks, with parallel steps splitting and joining, live while it runs. Parallel steps are already drawn side by side on the run page. The rest, stations on tracks with live motion, is still to come.
 
 **Depends on:** The guided interface.
 
@@ -842,6 +883,113 @@ No pile of connectors, services and environments to define before anything works
 Reproducible release builds with SBOMs, deb and rpm packages, an install script for runners and a runner-only Helm chart, with signing and provenance in the release workflow. All of it has been exercised on a machine of its own. The release workflow has not yet run for real, so no release is published; until then, build from source.
 
 [Read the documentation](../security/verify-downloads.md)
+
+#### Test like the pipeline {#test-like-the-pipeline}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Run Launchway's own checks locally in the same containers the pipeline uses, so a change that passes locally passes there. The local run gives each step the same user and files as the server run.
+
+
+### Install Launchway in minutes {#g-install-launchway-in-minutes}
+
+One command and a few plain questions on a laptop, a server or Kubernetes, then a guided first sign-in in the browser. Nothing else is assumed to be installed.
+
+#### A few values and nothing else {#a-few-values-and-nothing-else}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+The chart starts a secure working installation from about ten lines or fewer: the address, the database choice and high availability on or off. Being built. Everything else is a secure default or is set in the product after first sign-in.
+
+[Area page](installing.md)
+
+#### Secrets made once and kept {#secrets-made-once-and-kept}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. Being built. It also holds when a GitOps controller renders the chart.
+
+[Area page](installing.md)
+
+#### Secure by default in the chart {#secure-by-default-in-the-chart}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed. Being built.
+
+[Area page](installing.md)
+
+#### One-time setup code and built-in accounts {#one-time-setup-code-and-built-in-accounts}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+A new installation requires sign-in from the first moment and offers a built-in first administrator with a second step. Being built: a one-time setup code is printed once, and the rest happens in the browser.
+
+[Area page](installing.md)
+
+#### One command, three targets {#one-command-three-targets}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+launchway install asks the same few plain questions for a laptop, a single server or Kubernetes, and ends by printing the address and the one-time step. Being built. It is safe to run again and never regenerates keys.
+
+[Area page](installing.md)
+
+#### Asks before it touches a cluster {#asks-before-it-touches-a-cluster}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+On Kubernetes the installer shows the cluster it will change and asks by name, then writes a small values file and runs Helm, or writes files to commit where a GitOps controller manages the cluster. Being built.
+
+[Area page](installing.md)
+
+#### A first-run wizard {#a-first-run-wizard}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+After first sign-in a wizard names your organization, sets sign-in, shows encryption status, backs up the root key, adds a runner and Git hosting, imports repositories and starts a first pipeline. Being built: the remaining steps. A new sign-in provider is tested before sign-in is switched to it.
+
+[Area page](installing.md)
+
+#### A security checklist at the end {#a-security-checklist-at-the-end}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+The installer finishes with a plain checklist of what is protected and what to do next, and the doctor repeats it later. Being built.
+
+[Area page](installing.md)
+
+#### Nothing else to install {#nothing-else-to-install}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+The installer carries the chart, the exact image references of its own release and what it needs to talk to a cluster, so no other tool is required. Being built. A release image already carries the chart.
+
+[Area page](installing.md)
+
+#### A small Kubernetes on a server with none {#a-small-kubernetes-on-a-server-with-none}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+On a server with no cluster the installer offers to run Launchway by itself or to set up a small bundled Kubernetes. Next in line after the three targets.
+
+[Area page](installing.md)
+
+#### Every cluster feature checked {#every-cluster-feature-checked}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+On an existing cluster the installer checks storage, a way in, certificates, a name, policy enforcement and rights, and offers a fix or a labeled trial option for each one missing. Never a dead end; anything not yet built is shown as coming.
+
+[Area page](installing.md)
+
+#### An offline bundle {#an-offline-bundle}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+One file with everything Launchway needs, for networks with no internet. The same walk-through, ending in the browser.
+
+[Area page](installing.md)
 
 ## What done means
 
