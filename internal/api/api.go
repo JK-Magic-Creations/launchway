@@ -63,8 +63,7 @@ type Server struct {
 	TokenMaxDays int
 	// WaiveRole is the role needed to waive a policy's rule (policy.waivers.allow); nil means admin, NoRole nobody.
 	WaiveRole *auth.Role
-	// ReportsOrigin, when set (https://reports.example.com), is a separate
-	// origin that alone serves hosted HTML reports (see reports.go).
+	// ReportsOrigin, when set (https://reports.example.com), is a separate origin that alone serves hosted HTML reports (see reports.go).
 	ReportsOrigin string
 	// AI, when models are configured, lets people ask one to explain a
 	// failed step; the server reads model keys from AISecrets (ai.secrets),

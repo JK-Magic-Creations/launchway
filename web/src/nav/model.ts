@@ -161,8 +161,6 @@ export interface PageInfo {
 
 const enc = encodeURIComponent;
 
-const repoName = (p: Record<string, string>) => p.owner + "/" + p.name;
-const repoCrumb = (p: Record<string, string>): Crumb => ({ label: repoName(p), href: `/repositories/${enc(p.owner)}/${enc(p.name)}` });
 
 /** What a configuration kind is called in a trail: the level words where the kind is a level. */
 function kindWord(kind: string): string {
