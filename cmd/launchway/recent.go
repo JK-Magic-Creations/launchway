@@ -19,7 +19,7 @@ func cmdRecent(args []string) error {
 		fs := flag.NewFlagSet("recent", flag.ContinueOnError)
 		limit := fs.Int("limit", 20, "at most this many")
 		asJSON := fs.Bool("json", false, "print JSON")
-		clear := fs.Bool("clear", false, "delete your trail")
+		wipe := fs.Bool("clear", false, "delete your trail")
 		pause := fs.Bool("pause", false, "stop writing your trail")
 		resume := fs.Bool("resume", false, "start writing your trail again")
 		fs.Usage = func() { fmt.Fprint(os.Stderr, recentUsage) }
@@ -32,7 +32,7 @@ func cmdRecent(args []string) error {
 		}
 		cl := newClient(c, os.Stdout)
 		switch {
-		case *clear:
+		case *wipe:
 			return cl.call("DELETE", "/api/v1/activity", nil, nil)
 		case *pause || *resume:
 			return cl.call("PUT", "/api/v1/activity/pause", map[string]bool{"paused": *pause}, nil)
