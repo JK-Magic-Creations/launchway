@@ -80,3 +80,4 @@ mark { background: color-mix(in srgb, var(--warn) 30%, transparent); color: inhe
   .xp-filters { display: none; }
   .xp-filters.show { display: flex; flex-wrap: wrap; gap: 10px 14px; width: 100%; }
 }
+.xp .callout { margin: 0; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: var(--r1); background: var(--signal-wash); color: var(--signal-ink); }
