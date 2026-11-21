@@ -187,11 +187,16 @@ func decideApproval(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in 
 	if len(in.Comment) > 1000 {
 		return okOut{}, errors.New("the comment is longer than 1000 bytes")
 	}
+	var got decisionOut
 	if err := c.apiJSON(ctx, "decide_approval", http.MethodPost, apiPath("/api/v1/runs/%s/steps/%s/", in.RunID, in.Step)+verb,
-		map[string]string{"comment": in.Comment}, nil); err != nil {
+		map[string]string{"comment": in.Comment}, &got); err != nil {
 		return okOut{}, err
 	}
-	return okOut{OK: true, Summary: verb + "d " + in.Step + "."}, nil
+	summary := verb + "d " + in.Step + "."
+	if p := progressText(got.Decision); p != "" && verb == "approve" {
+		summary += " " + p + "."
+	}
+	return okOut{OK: true, Summary: summary}, nil
 }
 
 type rolloutIn struct {

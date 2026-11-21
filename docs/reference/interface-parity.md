@@ -98,6 +98,15 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/projects/{name}/waivers` | — | `waivers grant` | — | gap: no MCP tool grants waivers yet |
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | — | `waivers revoke` | — | gap: no MCP tool revokes waivers yet |
 | `POST /api/v1/projects/{name}/webhooks/{trigger}` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
+| `DELETE /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
+| `GET /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
+| `PATCH /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
+| `GET /api/v1/repos/{owner}/{name}/branches/{branch}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
+| `GET /api/v1/repositories` | `list_repositories` | `repos list` | `planned: launchway_repository` | equal |
+| `POST /api/v1/repositories` | `create_repository` | `repos create` | `planned: launchway_repository` | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}` | `delete_repository` | `repos delete` | `planned: launchway_repository` | equal |
+| `GET /api/v1/repositories/{owner}/{name}` | `get_repository` | `repos get` | `planned: launchway_repository` | equal |
+| `PATCH /api/v1/repositories/{owner}/{name}` | `update_repository` | `repos update` | `planned: launchway_repository` | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `PUT /api/v1/run-limits` | `set_run_limits` | `run-limits set` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `GET /api/v1/runner-join-tokens` | — | — | — | gap: join tokens are made from the UI wizard or the CLI; no MCP tool and no CLI list yet |
@@ -155,15 +164,23 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/tokens` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `GET /api/v1/tokens/limits` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `DELETE /api/v1/tokens/{id}` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
+| `GET /api/v1/user` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
+| `POST /api/v1/user/repos` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/validate` | `validate_pipeline` | `validate` | — | equal |
 | `GET /api/v1/verifications` | `get_verification` | `verifications list` | — | equal |
 | `GET /api/v1/waivers` | — | `waivers list` | — | gap: no MCP tool lists waivers yet |
 | `GET /auth/callback` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /auth/login` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /auth/logout` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `POST /git/{owner}/{name}/git-receive-pack` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |
+| `POST /git/{owner}/{name}/git-upload-pack` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |
+| `GET /git/{owner}/{name}/info/refs` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |
 | `GET /healthz` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /hosted/{link}/{path...}` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `DELETE /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /mcp` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `GET /readyz` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `POST /{owner}/{name}/git-receive-pack` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |
+| `POST /{owner}/{name}/git-upload-pack` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |
+| `GET /{owner}/{name}/info/refs` | — | — | — | exempt: the Git smart-HTTP protocol: git clients speak it (clone, fetch, push), with their own token authentication |

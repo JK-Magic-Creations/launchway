@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"github.com/jk-magic-creations/launchway/internal/testlib"
 	"io"
 	"os"
 	"os/exec"
@@ -18,6 +19,7 @@ import (
 // TestMain lets a test run this binary as launchway mcp, the way an agent
 // starts it.
 func TestMain(m *testing.M) {
+	testlib.NoPrompt()
 	if os.Getenv("LAUNCHWAY_TEST_RUN_MCP") == "1" {
 		if err := cmdMCP(nil); err != nil {
 			os.Exit(1)

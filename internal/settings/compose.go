@@ -295,6 +295,7 @@ func applyInstallation(c *config.Config, s *Installation) {
 		ensurePolicy(c).Waivers = s.PolicyWaivers
 	}
 	c.Auth.Tokens = s.Tokens
+	c.Forge = s.Forge
 }
 
 // Bootstrap returns a copy of a configuration with only what the file keeps
@@ -325,6 +326,7 @@ func Bootstrap(boot *config.Config) *config.Config {
 	c.AI.Models = nil
 	c.Auth.Access = nil
 	c.Auth.Tokens = config.TokensConfig{}
+	c.Forge = config.ForgeConfig{}
 	c.Auth.SetAccessInDatabase(false)
 	return &c
 }
@@ -462,7 +464,7 @@ func installationOf(c *config.Config) Installation {
 		Artifacts: ArtifactLimits{MaxFileMiB: c.Artifacts.MaxFileMiB, MaxRunMiB: c.Artifacts.MaxRunMiB, MaxProjectGiB: c.Artifacts.MaxProjectGiB,
 			Retain: c.Artifacts.Retain, MaxRetain: c.Artifacts.MaxRetain,
 			Store: c.Artifacts.Store, Database: c.Artifacts.Database, Dir: c.Artifacts.Dir, S3: c.Artifacts.S3},
-		MCP: c.MCP, Egress: EgressAllow{Allow: c.Egress.Allow}, History: c.History}
+		MCP: c.MCP, Egress: EgressAllow{Allow: c.Egress.Allow}, History: c.History, Forge: c.Forge}
 	s.Reports.Origin = ""
 	if c.Policy != nil {
 		s.PolicyWaivers = c.Policy.Waivers
@@ -506,6 +508,7 @@ func movedKeys(c *config.Config) []string {
 	set(len(c.AI.Models) > 0, "ai.models")
 	set(len(c.Auth.Access) > 0, "auth.access")
 	set(c.Auth.Tokens != (config.TokensConfig{}), "auth.tokens")
+	set(c.Forge != (config.ForgeConfig{}), "forge")
 	return keys
 }
 

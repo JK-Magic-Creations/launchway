@@ -158,15 +158,9 @@ var (
 	severitiesFailOn = []string{"critical", "high", "medium", "low"}
 )
 
-// parseImageStep reads a step of kind image.
-func (ps *parser) parseImageStep(k, v *yaml.Node, at string) *Step {
-	s := &Step{ID: k.Value, Line: k.Line, Kind: KindImage}
-	b := &ImageBuild{Context: ".", Provenance: true, tagLines: map[int]int{}}
-	s.ImageBuild = b
-	var timeoutNode, fileNode, tagsNode *yaml.Node
-	var timeout time.Duration
-	ps.cur = s
-	defer func() { ps.cur = nil }()
+// refuseImageKeys says, for each key of an image step that no image step
+// takes, why, and what to write instead.
+func (ps *parser) refuseImageKeys(v *yaml.Node, at string) {
 	if v.Kind == yaml.MappingNode {
 		for i := 0; i+1 < len(v.Content); i += 2 {
 			key := v.Content[i]
@@ -175,6 +169,8 @@ func (ps *parser) parseImageStep(k, v *yaml.Node, at string) *Step {
 			case key.Value == "if" && ps.tmpl != nil:
 			case key.Value == "for_each" || key.Value == "exclude" || key.Value == "max_parallel" || key.Value == "fail_fast":
 				ps.add(key, at+"."+key.Value, "an image step cannot be repeated by for_each yet; write one image step for each image")
+			case key.Value == "runner":
+				ps.add(key, at+".runner", "an image step builds in the run's workspace, on a runner that can build images, so it takes no runner of its own; put the build in a step that needs the one that chooses the runner")
 			case key.Value == "run" || key.Value == "image" || key.Value == "container" || key.Value == "env":
 				ps.add(key, at+"."+key.Value, "an image step runs no script: the runner builds the Dockerfile named by file (and context) "+
 					"with its builder; put commands in the Dockerfile, or in a step this one needs")
@@ -188,6 +184,18 @@ func (ps *parser) parseImageStep(k, v *yaml.Node, at string) *Step {
 			}
 		}
 	}
+}
+
+// parseImageStep reads a step of kind image.
+func (ps *parser) parseImageStep(k, v *yaml.Node, at string) *Step {
+	s := &Step{ID: k.Value, Line: k.Line, Kind: KindImage}
+	b := &ImageBuild{Context: ".", Provenance: true, tagLines: map[int]int{}}
+	s.ImageBuild = b
+	var timeoutNode, fileNode, tagsNode *yaml.Node
+	var timeout time.Duration
+	ps.cur = s
+	defer func() { ps.cur = nil }()
+	ps.refuseImageKeys(v, at)
 	known := imageKeys
 	if ps.tmpl != nil {
 		known = append(append([]string{}, imageKeys...), "if")

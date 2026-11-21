@@ -26,6 +26,10 @@ func (sc *scope) whenFor(own *Condition) *Condition {
 // control keys need (on_failure, a condition on an output, a retry that
 // waits), if its steps use them.
 func (p *Pipeline) requireFlow() {
+	p.requireParity2() // keys of schema 27 are carried the same way
+	if p.UsesSchemaVerify() {
+		p.Requires = max(p.Requires, SchemaVerify) // verify and ai steps a template brought
+	}
 	if p.UsesSchemaFlow() {
 		p.Requires = max(p.Requires, SchemaFlow)
 	}

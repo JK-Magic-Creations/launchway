@@ -80,8 +80,8 @@ type Server struct {
 	sealer    *auth.Sealer // seals the state of sign-ins in progress
 	reportKey []byte       // signs links to HTML reports
 
-	// MCP turns on the Model Context Protocol endpoint, /mcp; nil is off.
-	MCP *MCPOptions
+	MCP   *MCPOptions   // turns on the Model Context Protocol endpoint, /mcp; nil is off
+	Forge *ForgeHosting // Git hosting; nil is off
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
 	checks   checkLimiter
@@ -129,7 +129,7 @@ type route struct {
 }
 
 func (s *Server) routes() []route {
-	return append(append(append(append(append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...), s.flowRoutes()...), s.cacheRoutes()...), s.launchRoutes()...), s.approvalSettingsRoutes()...)
+	return append(append(append(append(append(append(append(s.mainRoutes(), s.laterRoutes()...), s.configRoutes()...), s.flowRoutes()...), s.cacheRoutes()...), s.launchRoutes()...), s.approvalSettingsRoutes()...), s.forgeRoutes()...)
 }
 
 func (s *Server) mainRoutes() []route {
@@ -253,14 +253,14 @@ func (s *Server) Handler() http.Handler {
 	}
 	mux := http.NewServeMux()
 	for _, rt := range s.routes() {
-		mux.Handle(rt.pattern, s.guard(rt))
+		s.register(mux, rt)
 	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "no such API endpoint")
 	})
 	mux.Handle("/", s.ui())
 	s.mux = mux
-	return s.recoverer(securityHeaders(s.splitOrigin(mux)))
+	return s.recoverer(securityHeaders(s.splitOrigin(s.gitAlias(mux))))
 }
 
 // ---- shutting down ----
@@ -895,114 +895,6 @@ func (s *Server) runPipelineFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"text": text, "draft": false})
-}
-
-func (s *Server) stepLogs(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
-	attempt, _ := strconv.Atoi(q.Get("attempt"))
-	after, _ := strconv.Atoi(q.Get("after"))
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	// ?tail=1 reads the last lines rather than the first; ?q= only lines
-	// that contain it, ignoring case.
-	search := q.Get("q")
-	if len(search) > 200 {
-		writeErr(w, http.StatusBadRequest, "the search text is longer than 200 bytes")
-		return
-	}
-	lines, att, err := s.Engine.QueryLogs(r.PathValue("id"), r.PathValue("step"),
-		engine.LogQuery{Attempt: attempt, After: after, Limit: limit, Tail: q.Get("tail") == "1", Search: search})
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"attempt": att, "lines": lines})
-}
-
-func (s *Server) cancelRun(w http.ResponseWriter, r *http.Request) {
-	if err := s.Engine.Cancel(r.PathValue("id"), identityFrom(r).User); err != nil {
-		s.fail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
-}
-
-// resumeRun resumes a failed or canceled run. Resuming a draft run runs its
-// unsaved text again, so it needs the right to start draft runs, and
-// whether its steps may read secrets is decided again by the current
-// setting.
-func (s *Server) resumeRun(w http.ResponseWriter, r *http.Request) {
-	id := identityFrom(r)
-	sum, err := s.Engine.Summary(r.PathValue("id"))
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	if sum.Draft {
-		if !s.authorize(id, auth.RunDraft, sum.Project) {
-			writeErr(w, http.StatusForbidden, s.draftRefusal(sum.Project))
-			return
-		}
-		setAudit(r, "", "draft run, pipeline "+sum.PipelineHash)
-		err = s.Engine.ResumeDraft(sum.ID, id.User, s.cur().Drafts.For(sum.Project).Secrets)
-	} else {
-		err = s.Engine.Resume(sum.ID, id.User)
-	}
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
-}
-
-// decide approves or rejects an approval step. The body is optional:
-// {"comment": "..."}.
-func (s *Server) decide(approve bool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var in struct {
-			Comment string `json:"comment"`
-		}
-		if !decode(w, r, &in) {
-			return
-		}
-		setAudit(r, r.PathValue("id")+"/"+r.PathValue("step"), "")
-		// An approval that names a deployment needs the role on its
-		// environment too.
-		if env, err := s.Engine.EnvironmentOf(r.PathValue("id"), r.PathValue("step"), ""); err != nil {
-			s.fail(w, err)
-			return
-		} else if env != "" {
-			project, err := s.Engine.RunProject(r.PathValue("id"))
-			if err != nil {
-				s.fail(w, err)
-				return
-			}
-			if msg := s.envRefusal(identityFrom(r), project, env); msg != "" {
-				writeErr(w, http.StatusForbidden, msg)
-				return
-			}
-		}
-		if err := s.Engine.Decide(r.PathValue("id"), r.PathValue("step"), approve, identityFrom(r).User, in.Comment); err != nil {
-			s.fail(w, err)
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
-	}
-}
-
-func (s *Server) listApprovals(w http.ResponseWriter, r *http.Request) {
-	list, err := s.Engine.Approvals()
-	if err != nil {
-		s.fail(w, err)
-		return
-	}
-	id := identityFrom(r)
-	out := list[:0]
-	for _, a := range list {
-		if s.authorize(id, auth.Read, a.Project) {
-			out = append(out, a)
-		}
-	}
-	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {

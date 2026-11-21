@@ -35,7 +35,7 @@ How a request is authenticated depends on the server's `auth.mode` and on the ro
 |---|---|---|
 | Sign-in off (`auth.mode: none`) | anyone | No credentials. Every request acts as the configured `user`, with every right. An `Authorization` header is ignored. |
 | Sign-in on (`auth.mode: oidc`) | a browser | The `launchway_session` cookie set by [`GET /auth/callback`](#sign-in). |
-| Sign-in on | a script | `Authorization: Bearer lw_…`, an [API token](#api-tokens). A request that sends an `Authorization` header is judged by the token alone, never by a cookie. |
+| Sign-in on | a script | `Authorization: Bearer lw_…`, an [API token](#api-tokens); `Authorization: token lw_…` and HTTP Basic with the token as the password are accepted too, for clients written for other Git hosts. A request that sends an `Authorization` header is judged by the token alone, never by a cookie. |
 | Either | a runner | `Authorization: Bearer <runner token>`: the shared runner token, a deploy runner pool's token, or the short-lived access token of an enrolled runner. Only the [runner API](#runner-api) accepts these. |
 | Either | a webhook caller | A secret the project's configuration names. See [Webhooks](#webhooks). |
 
@@ -83,6 +83,9 @@ Every route belongs to one access class. The server checks it before the handler
 | `project-draft` | Whoever `drafts.allow` allows to start draft runs of the project in `{name}` (operator by default). | `404` if not a viewer, else `403` |
 | `run-viewer` | A viewer of the project of the run in `{id}`. | `404` |
 | `run-operator` | An operator of the project of the run in `{id}`. | `404` if not a viewer, else `403` |
+| `repo-viewer` | A viewer of the repository `<owner>/<name>` (bindings name it by that path). | `404` (also when Git hosting is off, with `code: feature_off`) |
+| `repo-operator` | An operator of the repository. | `404` if not a viewer, else `403` |
+| `repo-admin` | An admin of the repository. | `404` if not a viewer, else `403` |
 | `admin` | An admin of every project (from an `access` entry without `projects`). | `403` |
 
 Some handlers check more after the class: deployment commands and approvals that name a deployment need the role on the environment, waivers need the role `policy.waivers.allow` names, saving with `force` needs admin on the project, and protected environments refuse the run's starter. Those refusals are `403`.
@@ -121,6 +124,7 @@ Lists return at most a fixed number of items. Ask for fewer or more with `limit`
 |---|---|---|---|---|
 | `GET /api/v1/runs` | `limit` | 50 | 500 | the default |
 | `GET /api/v1/runs/{id}/steps/{step}/logs` | `limit`, `after` | 5000 | 10000 | the default |
+| `GET /api/v1/runs/{id}/steps/{step}/logs` | `stream` (`stdout`, `stderr`, `system` or `service`), `service` | all but `service` | | a name that is not one is refused |
 | `GET /api/v1/runs/{id}/tests/cases` | `limit`, `offset` | 200 | 1000 | the maximum |
 | `GET /api/v1/runs/{id}/findings` | `limit`, `offset` | 100 | 500 | the maximum |
 | `GET /api/v1/projects/{name}/tests/history` | `limit` | 30 | 200 | the maximum |
@@ -465,6 +469,47 @@ database, as the installation's default with an override for a project.
 | `GET /api/v1/projects/{name}/cache-policy` | `project-viewer` | — | The policy that applies to the project, with `source` `project` (its own override), `installation` or `default`. |
 | `PUT /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.set_project` | Overrides the policy for one project; a field left out keeps the value that applies to it now. |
 | `DELETE /api/v1/projects/{name}/cache-policy` | `admin` | `cache_policy.clear_project` | Removes the override: the installation's policy applies again. |
+
+## Repositories (Git hosting)
+
+Only with the installation setting `forge.hosting` on (Configuration, Installation settings; a change applies when each server next restarts); otherwise every route answers `404` with `{"error": "feature_off: ...", "code": "feature_off"}` and the repositories are kept. A repository is `<owner>/<name>`; a bindings' project patterns match that path (`jkhunter/*`).
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/repositories` | `signed-in` | — | The repositories the caller may read: `{"items": [...]}`, each with `id`, `path`, `home`, `name`, `default_branch`, `visibility`, `archived` and `clone.https`. |
+| `POST /api/v1/repositories` | `admin` | `repository.create` | Creates one: `{"owner", "name", "default_branch", "visibility"}`. The owner defaults to `forge.default_owner`, the branch to `main`, the visibility to `private`. `400` for a name that is not a plain name (traversal, `.git`, control characters, reserved words, more than 100 characters), `409` for a name in use or an owner at its limit, `429` when repositories are made too fast. |
+| `GET /api/v1/repositories/{owner}/{name}` | `repo-viewer` | — | One repository. |
+| `PATCH /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.update` | Changes `visibility`, `default_branch`, `archived`, or renames with `owner` and `name`. The old address stops working. |
+| `DELETE /api/v1/repositories/{owner}/{name}` | `repo-admin` | `repository.delete` | Moves the repository to the trash: it is no longer served or listed, its data is kept, and its name can be used again. |
+
+
+### Gitea-style repository calls
+
+The few calls tools that create and inspect repositories send to a Gitea server, so they work unchanged against Launchway. This is the start of the compatibility layer, not all of it: there are no issues, pull requests or webhooks here. Answers carry `name`, `full_name`, `owner.login`, `private`, `archived`, `empty`, `default_branch` and `clone_url`.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/user` | `signed-in` | — | The caller: `login`, `username`, `full_name`, `email`. |
+| `POST /api/v1/user/repos` | `admin` | `repository.create` | Creates a repository under the caller's own name: `{"name", "private", "default_branch"}`. `private` is true unless given as false. |
+| `GET /api/v1/repos/{owner}/{name}` | `repo-viewer` | — | One repository. |
+| `PATCH /api/v1/repos/{owner}/{name}` | `repo-admin` | `repository.update` | Changes `name`, `private`, `archived` or `default_branch`; other fields are ignored. |
+| `DELETE /api/v1/repos/{owner}/{name}` | `repo-admin` | `repository.delete` | Moves the repository to the trash. |
+| `GET /api/v1/repos/{owner}/{name}/branches/{branch}` | `repo-viewer` | — | `{"name", "commit": {"id"}}`, or `404` when there is no such branch (yet): a push may take a moment to show. |
+
+### Git over HTTP
+
+Clone, fetch and push with the real `git`. Every address has two forms: `/git/<owner>/<name>.git/...` and the form other Git hosts use, `/<owner>/<name>.git/...`, so a remote moves to Launchway by changing its host. `.git` may be left off. A browser that opens `/<owner>/<name>` (no `.git`) and may read the repository is redirected to `/repositories/<owner>/<name>`, the repository's screen; anyone else gets the web UI's own answer. Owner names Launchway keeps for its own paths (`api`, `git`, `projects`, `runs` and others) cannot be used, so the second form never collides with the web UI. Only the smart protocol is served (protocol version 2 for fetch, gzip request bodies).
+
+These routes do not use cookies. They take HTTP Basic (the password is a Launchway API token, the user name is ignored; a token alone as the user name works too), `Authorization: Bearer <token>`, `Authorization: token <token>`, or a run's read-only credential. A token in the query string is refused with `400`. Basic over plain HTTP is refused with `403` unless the listener is loopback or `forge.allow_insecure_http` is on. A failure answers `401` with `WWW-Authenticate: Basic`; a repository that does not exist, one the caller may not read and, without credentials, a private one are told apart by nobody. Anonymous clones work only on a repository whose visibility is `public`. A push to an archived or mirror repository answers `403`. With Git hosting off every route answers `404 feature_off`.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /git/{owner}/{name}/info/refs` | `repo-viewer` | — | The ref advertisement (`?service=git-upload-pack`, or `git-receive-pack`, which needs push rights). The dumb protocol is not served. |
+| `POST /git/{owner}/{name}/git-upload-pack` | `repo-viewer` | — | Fetch and clone. The request body is limited to 32 MiB. |
+| `POST /git/{owner}/{name}/git-receive-pack` | `repo-operator` | `git.push` | Push. The body is limited by `forge.max_push_mib`; the audit entry names the refs and the token. |
+| `GET /{owner}/{name}/info/refs` | `repo-viewer` | — | The same, at the address other Git hosts use. |
+| `POST /{owner}/{name}/git-upload-pack` | `repo-viewer` | — | The same. |
+| `POST /{owner}/{name}/git-receive-pack` | `repo-operator` | `git.push` | The same. |
 
 ## API tokens
 

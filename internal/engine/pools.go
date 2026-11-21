@@ -195,19 +195,30 @@ func (e *Engine) leaseFilter(r RunnerInfo) (where string, args []any, ok bool, e
 	if !e.knows(schemaPools) {
 		return "", nil, true, nil
 	}
-	rows, err := e.db.Query(`SELECT DISTINCT runs.project, runs.event, runs.runner_pool, runs.runner_labels FROM steps s
+	// A step with a runner of its own is matched on its own selector, not
+	// the run's (schema 27).
+	poolCol, labelsCol, ownCol, ownSel := `runs.runner_pool`, `runs.runner_labels`, `0`, ``
+	if e.knows(schemaParity2) {
+		poolCol = `CASE WHEN s.own_workspace = 1 THEN s.runner_pool ELSE runs.runner_pool END`
+		labelsCol = `CASE WHEN s.own_workspace = 1 THEN s.runner_labels ELSE runs.runner_labels END`
+		ownCol, ownSel = `s.own_workspace`, `s.own_workspace = ? AND `
+	}
+	rows, err := e.db.Query(`SELECT DISTINCT runs.project, runs.event, `+poolCol+`, `+labelsCol+`, `+ownCol+` FROM steps s
 		JOIN runs ON runs.id = s.run_id
 		WHERE s.status = 'queued' AND s.target = '' AND runs.min_schema <= ?`, e.schema)
 	if err != nil {
 		return "", nil, false, err
 	}
 	defer rows.Close()
-	type combo struct{ project, event, pool, labels string }
+	type combo struct {
+		project, event, pool, labels string
+		own                          int
+	}
 	var allowed []combo
 	all := true
 	for rows.Next() {
 		var c combo
-		if err := rows.Scan(&c.project, &c.event, &c.pool, &c.labels); err != nil {
+		if err := rows.Scan(&c.project, &c.event, &c.pool, &c.labels, &c.own); err != nil {
 			return "", nil, false, err
 		}
 		var sel *pipeline.RunnerSelector
@@ -235,8 +246,12 @@ func (e *Engine) leaseFilter(r RunnerInfo) (where string, args []any, ok bool, e
 		if i > 0 {
 			b.WriteString(` OR `)
 		}
-		b.WriteString(`(runs.project = ? AND runs.event = ? AND runs.runner_pool = ? AND runs.runner_labels = ?)`)
-		args = append(args, c.project, c.event, c.pool, c.labels)
+		b.WriteString(`(runs.project = ? AND runs.event = ? AND ` + ownSel + `(` + poolCol + `) = ? AND (` + labelsCol + `) = ?)`)
+		args = append(args, c.project, c.event)
+		if ownSel != "" {
+			args = append(args, c.own)
+		}
+		args = append(args, c.pool, c.labels)
 	}
 	b.WriteString(`)`)
 	return b.String(), args, true, nil

@@ -8,7 +8,6 @@ import (
 	"maps"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -20,6 +19,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/ai"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
@@ -811,20 +811,21 @@ func containerSpecs(job *engine.Job) []executor.ContainerSpec {
 		out[i] = executor.ContainerSpec{Name: c.Name, Image: c.Image, Env: c.Env, CPU: c.CPU, Memory: c.Memory,
 			Service: c.Service, Command: c.Command,
 			CPULimit: c.CPULimit, MemoryLimit: c.MemoryLimit, Threads: c.Threads,
-			ExplicitCPU: c.ExplicitCPU, ExplicitMemory: c.ExplicitMemory}
+			ExplicitCPU: c.ExplicitCPU, ExplicitMemory: c.ExplicitMemory, Ready: readySpec(c.Ready)}
 	}
 	return out
 }
 
+// git runs git through the one hardened runner. The repositories a runner
+// clones belong to other people, so their objects are checked on transfer.
 func git(ctx context.Context, dir string, args ...string) error {
-	cmd := exec.CommandContext(ctx, "git", args...)
-	if dir != "" {
-		cmd.Dir = dir
-	}
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-	out, err := cmd.CombinedOutput()
+	_, err := gitexec.Run(ctx, gitexec.Spec{Dir: dir, Args: args, Inherit: gitexec.Remote, Untrusted: true})
 	if err != nil {
-		return fmt.Errorf("git %s: %s", args[0], redact.URLs(strings.TrimSpace(string(out))))
+		var ee *gitexec.ExitError
+		if errors.As(err, &ee) {
+			return fmt.Errorf("git %s: %s", args[0], redact.URLs(ee.Output()))
+		}
+		return fmt.Errorf("git %s: %s", args[0], redact.URLs(err.Error()))
 	}
 	return nil
 }

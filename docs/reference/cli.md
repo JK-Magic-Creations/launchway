@@ -25,6 +25,7 @@ launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
 launchway version
 ```
 
@@ -42,7 +43,7 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 | `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
-| `4` | `login`, `config` and the commands that take its verbs, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `caches`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
+| `4` | `login`, `config` and the commands that take its verbs, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `caches`, `repos`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
 | `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
@@ -385,12 +386,13 @@ Steps:
 Prints a run's logs, step by step in the pipeline's order, each step under a `── <step> (attempt N)` header.
 
 ```text
-launchway runs logs RUN_ID [--step S] [--follow]
+launchway runs logs RUN_ID [--step S] [--service NAME] [--follow]
 ```
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--step` | every step | Only this step, without the header. A step that does not exist exits with `4`. |
+| `--service` | off | Print this service container's output (the lines of the stream `service` whose text starts with the service's name) instead of the steps' own. |
 | `--follow` | off | Keep printing new lines until the run finishes. |
 
 ```sh
@@ -749,6 +751,20 @@ launchway caches policy clear PROJECT [--json]
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
 
+## launchway repos
+
+Lists, makes, changes and deletes the Git repositories this server hosts. Git hosting must be on (the installation setting `forge.hosting`, in Configuration under Installation settings; off by default); otherwise every command answers `feature_off` and nothing is lost. A repository is `OWNER/NAME`, and who may do what comes from the same role bindings as a project's, matched on that path. Making one is an administrator's; changing or deleting one is its administrator's. Changes are recorded in the audit trail (`repository.create`, `repository.update`, `repository.delete`).
+
+```text
+launchway repos list [--json]
+launchway repos get OWNER/NAME [--json]
+launchway repos create NAME [--owner O] [--branch B] [--visibility private|internal|public] [--json]
+launchway repos update OWNER/NAME [--visibility V] [--branch B] [--archived=false] [--rename-to OWNER/NAME] [--json]
+launchway repos delete OWNER/NAME
+```
+
+The same operations are the routes under [Repositories](http-api.md#repositories-git-hosting) in the HTTP API, and the MCP tools `list_repositories`, `get_repository`, `create_repository`, `update_repository` and `delete_repository`. A Terraform resource `launchway_repository` is planned.
+
 ## launchway version
 
 Prints the version. `--version` and `-v` do the same.
@@ -766,3 +782,30 @@ launchway f717337
 - [HTTP API](http-api.md): what the client commands call.
 - [Environment variables](environment-variables.md)
 - [Server configuration](server-config.md) and [runner configuration](runner-config.md)
+
+### launchway approvals
+
+Lists the approvals waiting for a decision, and approves or rejects one.
+
+```text
+launchway approvals list [--project P] [--json]
+launchway approvals approve RUN_ID STEP [--comment TEXT]
+launchway approvals reject RUN_ID STEP [--comment TEXT]
+```
+
+`list` prints the run, step, question, who started it, when it has waited since and expires, and
+"1 of 2 approved (ann)" for an approval that asks for several people. The server's refusals (you
+started the run, it expired, it is not waiting, you may not decide it) are printed as they are, and
+the exit code is `4`. The same operations are `GET /api/v1/approvals` and
+`POST /api/v1/runs/{id}/steps/{step}/approve` and `/reject`, and the MCP tools `list_approvals` and
+`decide_approval`.
+
+### launchway templates
+
+```text
+launchway templates list [LIBRARY] [--version V] [--json]
+```
+
+Without a library, the libraries the server lists; with one, its templates and each parameter's type,
+default, and `[names a secret]` when a step takes a secret reference's store, key or field from it. The
+same data is `GET /api/v1/libraries/{library}/templates` and the MCP tool `list_templates`.

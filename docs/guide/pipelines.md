@@ -48,7 +48,7 @@ steps:
 | `message` | For an approval: the question to decide, one line of at most 500 characters |
 | `uses` | `library/template`: the step is replaced by a template's steps; see [Shared libraries](libraries.md) |
 | `with` | Values for the template's parameters; a value may be `{ input: name }`, a [run input](#run-inputs) |
-| `for_each` | Repeats the step over lists; with `exclude`, `max_parallel` and `fail_fast`. See [Repeating a step over lists](#repeating-a-step-over-lists) |
+| `for_each` | Repeats the step over lists; with `exclude`, `add`, `continue_for`, `max_parallel` and `fail_fast`. See [Repeating a step over lists](#repeating-a-step-over-lists) |
 
 At the top level, beside `pipeline`, `on`, `containers` and `steps`, `libraries` names the
 [shared libraries](libraries.md) the pipeline's templates come from, and `supersede: true`
@@ -228,6 +228,12 @@ its `image`, an `env` value or a `with` value. A step that `needs: test` waits f
 another step reaches one's outputs as `LAUNCHWAY_NEEDS_TEST_PYTHON_3_12_OS_DEBIAN_<OUTPUT>`.
 
 - `exclude` leaves out the combinations that match an entry.
+- `add: [ { python: "3.14", os: debian } ]` appends whole combinations that are not in the cross
+  product (every key named), after the others and in the order written. Existing members keep
+  their names.
+- `continue_for: [ { python: "3.14" } ]` selects members, matched like `exclude` entries, that may
+  fail without failing the run: they end as failed (allowed), steps that need the loop go on, and
+  `fail_fast` ignores them.
 - `max_parallel` bounds how many are queued or running at once.
 - `fail_fast` (on by default): once one fails for good (after its retries), the others that have
   not started are cancelled and those running are stopped, saying why. Resuming the run runs them

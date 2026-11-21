@@ -112,7 +112,10 @@ type Param struct {
 	Default     *string  `json:"default,omitempty"`
 	Description string   `json:"description,omitempty"`
 	Options     []string `json:"options,omitempty"`
-	Line        int      `json:"-"`
+	// SecretReference says a step takes its secret reference's store, key or
+	// field from the parameter; set when templates are described.
+	SecretReference bool `json:"secret_reference,omitempty"`
+	Line            int  `json:"-"`
 }
 
 // check returns why v is not a value of the parameter, or "".
@@ -802,6 +805,9 @@ func Expand(p *Pipeline, load TemplateLoader) (*Pipeline, error) {
 	// did not show.
 	out.Requires = out.requiresNewer(out.Requires) // step resources, build caches
 	out.requireFlow()                              // likewise for the flow control keys a template's step uses
+	if ps := checkFetchLoops(out, true); len(ps) > 0 {
+		return nil, ps
+	}
 	return out, nil
 }
 
@@ -834,6 +840,7 @@ type scope struct {
 	retry         *retryPolicy
 	timeout       *Duration
 	each          map[string]string // the loop values of the uses step, and of those around it
+	continueFail  bool              // continue_for selected the loop member of the uses step
 }
 
 func (x *expander) problem(sc *scope, line, col int, path, format string, args ...any) {
@@ -1043,6 +1050,7 @@ func (x *expander) emit(sc *scope) {
 			child.inherit, child.inheritGroups = needs, groups
 			child.when, child.retry, child.timeout = sc.when, sc.retry, sc.timeout
 			child.each = mergeEach(sc.each, s.Each)
+			child.continueFail = sc.continueFail || s.continueFail
 			if s.When != nil {
 				child.when = whenIn(s.When, sc.prefix)
 			}
@@ -1077,7 +1085,10 @@ func (x *expander) emit(sc *scope) {
 		if c.Container != "" {
 			c.Container = sc.containers[s.Container]
 		}
-		c.When = sc.whenFor(c.When)
+		c.When, c.AI = sc.whenFor(c.When), c.AI.inScope(sc.prefix)
+		if sc.continueFail {
+			c.tolerate()
+		}
 		if !s.retrySet && sc.retry != nil && !s.IsApproval() {
 			c.setRetryPolicy(*sc.retry)
 		}
@@ -1166,82 +1177,4 @@ func mergeEach(outer, own map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
-}
-
-// TemplateInfo describes a template for someone choosing one: what it is
-// for, the parameters a use passes in with:, and the outputs it gives.
-type TemplateInfo struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description,omitempty"`
-	Params      []*Param `json:"params"`
-	Outputs     []string `json:"outputs"`
-	// Problems are problems in the template file itself, if any: a use of
-	// it would report them too.
-	Problems Problems `json:"problems,omitempty"`
-}
-
-// DescribeTemplate reads what a template takes and gives, without the
-// values of a use. The rest of the file is checked as a use with every
-// parameter at its default would check it.
-func DescribeTemplate(data []byte, name string) TemplateInfo {
-	info := TemplateInfo{Name: name, Params: []*Param{}, Outputs: []string{}}
-	if len(data) > MaxFileBytes {
-		info.Problems = Problems{{Message: fmt.Sprintf("the template is larger than %d KiB", MaxFileBytes>>10)}}
-		return info
-	}
-	var doc yaml.Node
-	if err := yaml.Unmarshal(data, &doc); err != nil {
-		info.Problems = Problems{syntaxProblem(err)}
-		return info
-	}
-	if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
-		info.Problems = Problems{{Message: "the template is empty or not a mapping"}}
-		return info
-	}
-	ps := &parser{}
-	ps.eachKey(doc.Content[0], "", templateKeys, func(k, v *yaml.Node) {
-		switch k.Value {
-		case "description":
-			info.Description = strings.TrimSpace(ps.str(v, "description"))
-		case "params":
-			if params := ps.parseParams(v); params != nil {
-				info.Params = params
-			}
-		case "outputs":
-			if v.Kind == yaml.MappingNode {
-				for i := 0; i+1 < len(v.Content); i += 2 {
-					info.Outputs = append(info.Outputs, v.Content[i].Value)
-				}
-			}
-		}
-	})
-	info.Problems = ps.problems
-	if len(info.Problems) == 0 {
-		// A parameter without a default gets a value of its type.
-		with := map[string]string{}
-		for _, p := range info.Params {
-			if p.Default == nil {
-				with[p.Name] = sampleValue(p)
-			}
-		}
-		_, info.Problems = readTemplate(data, name, with, nil, 0, func(int, int, string, string) {}, DefaultMaxLoopMembers, "")
-	}
-	return info
-}
-
-// sampleValue is a value of a parameter's type, for checking a template
-// without a use.
-func sampleValue(p *Param) string {
-	if len(p.Options) > 0 {
-		return p.Options[0]
-	}
-	switch p.Type {
-	case paramTypeNumber:
-		return "1"
-	case paramTypeBoolean:
-		return "true"
-	case paramTypeList:
-		return "[]"
-	}
-	return "x"
 }

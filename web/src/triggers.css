@@ -44,6 +44,8 @@
 .loop-cell-on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .loop-cell-none { color: var(--text-3); font-size: 12px; }
 .loop-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.loop-extra { align-items: center; }
+.loop-extra-label { font-size: 12px; color: var(--muted, inherit); text-transform: uppercase; letter-spacing: .04em; }
 /* Schedules and webhooks on the project page. */
 .sched-table td, .sched-table th { vertical-align: top; }
 .sched-off { color: var(--warn-ink); font-weight: 600; }

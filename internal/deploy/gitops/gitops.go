@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 )
 
@@ -762,27 +762,31 @@ func (r *Repo) git(ctx context.Context, stdin []byte, args ...string) (string, e
 // is 0, standard output, otherwise standard error and output together. err
 // is set only when git could not be run or ctx ended.
 func (r *Repo) gitCode(ctx context.Context, stdin []byte, args ...string) (int, string, error) {
-	full := append(r.configArgs(), args...)
-	cmd := exec.CommandContext(ctx, "git", full...)
-	cmd.Dir = r.dir()
-	cmd.Env = r.env()
+	spec := gitexec.Spec{Dir: r.dir(), Args: append(r.configArgs(), args...), Env: r.env(), Inherit: gitexec.Remote,
+		Secrets: r.secrets()}
 	if stdin != nil {
-		cmd.Stdin = bytes.NewReader(stdin)
+		spec.Stdin = bytes.NewReader(stdin)
 	}
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	err := cmd.Run()
+	res, err := gitexec.Run(ctx, spec)
 	if ctx.Err() != nil {
 		return -1, "", fmt.Errorf("git %s: %w", args[0], ctx.Err())
 	}
-	var exit *exec.ExitError
+	var exit *gitexec.ExitError
 	if errors.As(err, &exit) {
-		return exit.ExitCode(), stderr.String() + stdout.String(), nil
+		return exit.Code, exit.Stderr + exit.Stdout, nil
 	}
 	if err != nil {
 		return -1, "", fmt.Errorf("git %s: %s", args[0], r.clean(err.Error()))
 	}
-	return 0, stdout.String(), nil
+	return 0, res.Stdout, nil
+}
+
+// secrets are the values git's messages must never show.
+func (r *Repo) secrets() []string {
+	if r.Auth == nil {
+		return nil
+	}
+	return []string{r.Auth.Password, strings.TrimPrefix(r.authHeader(), "Authorization: Basic ")}
 }
 
 // configArgs are settings given to every git command, so that the user's
@@ -802,29 +806,14 @@ func (r *Repo) configArgs() []string {
 	}
 }
 
-// env is the environment for git: the process's own, without any GIT_
-// variables that could point git elsewhere or make it trace what it sends,
-// and with the credentials as configuration that exists only in memory.
+// env is what this repository adds to git's environment: literal
+// pathspecs, and the credentials as configuration that exists only in memory.
+// The runner supplies everything else, and never lets a GIT_ variable of the
+// server's own through.
 func (r *Repo) env() []string {
-	var env []string
-	for _, kv := range os.Environ() {
-		k, _, _ := strings.Cut(kv, "=")
-		if strings.HasPrefix(k, "GIT_") || k == "LC_ALL" || k == "LANG" || k == "LANGUAGE" {
-			continue
-		}
-		env = append(env, kv)
-	}
-	env = append(env,
-		"GIT_TERMINAL_PROMPT=0",
-		"GIT_ASKPASS=",
-		"SSH_ASKPASS=",
-		"LC_ALL=C",
-		"GIT_LITERAL_PATHSPECS=1",
-		// Never let git look above Dir for a repository.
-		"GIT_CEILING_DIRECTORIES="+filepath.Dir(r.dir()),
-	)
+	env := []string{"GIT_LITERAL_PATHSPECS=1", "GIT_CONFIG_COUNT=0"}
 	if h := r.authHeader(); h != "" {
-		env = append(env, "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=http.extraHeader", "GIT_CONFIG_VALUE_0="+h)
+		env = []string{"GIT_LITERAL_PATHSPECS=1", "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=http.extraHeader", "GIT_CONFIG_VALUE_0=" + h}
 	}
 	return env
 }

@@ -15,9 +15,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	neturl "net/url"
 	"os"
-	"os/exec"
 	"os/signal"
 	"os/user"
 	"path/filepath"
@@ -40,6 +38,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/executor"
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/imagebuild"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/runner"
@@ -66,6 +65,8 @@ Usage:
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs
                                                 (launchway runs, for more)
+  launchway approvals list|approve|reject       approvals waiting for a decision, and deciding them
+  launchway templates list [library]            the shared libraries' templates and their parameters
   launchway policy   list|run                   the policies in force; a run's decisions
   launchway waivers  list|grant|revoke          waive a policy's rule for a while, with a reason
   launchway blobs    status|copy                see and move where artifacts are kept
@@ -82,6 +83,7 @@ Usage:
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+  launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -89,6 +91,7 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 `
 
 func main() {
+	gitexec.Reexec()
 	if len(os.Args) < 2 {
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
@@ -112,6 +115,10 @@ func main() {
 		err = cmdBlobs(args)
 	case "runs":
 		err = cmdRuns(args)
+	case "approvals":
+		err = cmdApprovals(args)
+	case "templates":
+		err = cmdTemplates(args)
 	case "policy":
 		err = cmdPolicy(args)
 	case "waivers":
@@ -136,6 +143,8 @@ func main() {
 		err = cmdRunLimits(args)
 	case "caches":
 		err = cmdCaches(args)
+	case "repos":
+		err = cmdRepos(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -241,6 +250,9 @@ func cmdServer(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if err := startHosting(ctx, eff, eng, log, srv); err != nil {
+		return err
+	}
 	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		if err := httpSrv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -388,39 +400,6 @@ func serverAuth(cfg *config.Config) (*api.Auth, error) {
 		SecureCookies: strings.HasPrefix(o.RedirectURL, "https://"),
 	}, nil
 }
-
-// describeDatabase names the database without revealing a password.
-func describeDatabase(addr string) string {
-	u, err := neturl.Parse(addr)
-	if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") {
-		return "SQLite database " + addr
-	}
-	return "PostgreSQL database " + u.Redacted()
-}
-
-// listening says where the server listens and, when that is every address,
-// how to reach it from this machine.
-func listening(addr net.Addr) string {
-	host, _, err := net.SplitHostPort(addr.String())
-	if ip := net.ParseIP(host); err == nil && ip != nil && ip.IsUnspecified() {
-		return fmt.Sprintf("%s, every address; from this machine http://%s", addr, loopback(addr.String()))
-	}
-	return "http://" + addr.String()
-}
-
-// loopback turns 0.0.0.0:8080 or [::]:8080 into 127.0.0.1:8080.
-func loopback(addr string) string {
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return addr
-	}
-	if ip := net.ParseIP(host); ip == nil || ip.IsUnspecified() {
-		host = "127.0.0.1"
-	}
-	return net.JoinHostPort(host, port)
-}
-
-// ---- runner ----
 
 // runnerOptions is what `launchway runner` runs with.
 type runnerOptions struct {
@@ -698,14 +677,7 @@ func cmdRun(args []string) error {
 	defer httpSrv.Close()
 
 	trig := engine.Trigger{Event: "manual", Actor: currentUser(), Inputs: inputs}
-	if out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output(); err == nil {
-		if b := strings.TrimSpace(string(out)); b != "HEAD" {
-			trig.Branch, trig.Ref = b, "refs/heads/"+b
-		}
-	}
-	if out, err := exec.Command("git", "rev-parse", "HEAD").Output(); err == nil {
-		trig.SHA = strings.TrimSpace(string(out))
-	}
+	trig.Branch, trig.Ref, trig.SHA = currentGitHead()
 	run, err := eng.CreateRun(engine.NewRun{Project: "local", Pipeline: p, Trigger: trig, Source: engine.Source{Kind: "dir", Path: dir}})
 	if err != nil {
 		return err

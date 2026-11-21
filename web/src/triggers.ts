@@ -32,7 +32,8 @@ export interface InputsInfo {
 /** What a form holds for one input. */
 export type InputValue = string | boolean | string[];
 
-export interface LoopMember { id: string; each: Record<string, string> }
+/** extra: written by add, outside the lists; allowed_failure: continue_for lets it fail without failing the run. */
+export interface LoopMember { id: string; each: Record<string, string>; extra?: boolean; allowed_failure?: boolean }
 export interface Loop { id: string; description?: string; keys: string[]; members: LoopMember[]; max_parallel?: number; fail_fast: boolean }
 
 export interface TriggerDetail {

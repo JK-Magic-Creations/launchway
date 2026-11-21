@@ -66,7 +66,7 @@ type Kind struct {
 // names comes before it.
 var kinds = []*Kind{
 	{Name: "installation", Path: "installation", Title: "Installation settings", Plural: "Installation settings", Singleton: "installation",
-		FileKey: "(approvals, drafts, pull_requests, schedules, loops, tests, findings, reports, artifacts limits, runner_admin, policy.waivers, auth.tokens)",
+		FileKey: "(approvals, drafts, pull_requests, schedules, loops, tests, findings, reports, artifacts limits, runner_admin, policy.waivers, auth.tokens, forge)",
 		Doc:     "Settings of the whole installation: what the levels are called, approvals, drafts, pull requests, schedules, limits and retention.",
 		spec:    func() any { return &Installation{} }},
 	{Name: "organisation", Path: "organisation", Title: "Organization", Plural: "Organizations", Singleton: "default",
@@ -185,6 +185,9 @@ type Installation struct {
 	RunnerAdmin   string                     `yaml:"runner_admin"`
 	PolicyWaivers config.PolicyWaiversConfig `yaml:"policy_waivers"`
 	Tokens        config.TokensConfig        `yaml:"tokens"`
+	// Forge is Git hosting: off by default. A change takes effect when each
+	// server next restarts.
+	Forge config.ForgeConfig `yaml:"forge"`
 }
 
 // EgressAllow is the allowed hosts of the installation.

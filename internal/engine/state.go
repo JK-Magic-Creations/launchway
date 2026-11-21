@@ -174,6 +174,13 @@ type StepState struct {
 	DecidedBy string // who approved or rejected it; empty if it expired
 	DecidedAt int64
 	Comment   string
+	// Approvals are the people who have approved a waiting approval so far,
+	// or all who did once it succeeded; Needed is how many distinct approvals
+	// it asks for and NeededFrom where that number comes from (schema 27;
+	// zero Needed is one approval, as before).
+	Approvals  []ApprovalRecord
+	Needed     int
+	NeededFrom string
 	// A step reused by a re-run: the run (and its number) where it actually
 	// ran, and the attempt there. Empty for a step that ran in this run.
 	ReusedFrom    string
@@ -293,6 +300,7 @@ func (st *RunState) stoppedBecause() string {
 func (s *StepState) clearDecision() {
 	s.Deadline, s.DecidedAt = 0, 0
 	s.DecidedBy, s.Comment = "", ""
+	s.Approvals, s.Needed, s.NeededFrom = nil, 0, ""
 }
 
 // Fold rebuilds a run's state from its events, in order, understanding
@@ -421,6 +429,7 @@ func (st *RunState) checkCreated(p Payload) bool {
 		{p.Pipeline.UsesSchema18(), schemaReports, "test attachments, coverage or HTML reports (schema %d)"},
 		{p.Pipeline.UsesSchemaVerify(), schemaVerify, "verify or ai steps (schema %d)"},
 		{p.Pipeline.UsesSchemaFlow(), schemaFlow, "a pipeline key of schema %d (flow control: when.output, on_failure, retry waits, timeout, lane or into)"},
+		{p.Pipeline.UsesSchemaParity2(), schemaParity2, "a pipeline key of schema %d (fetch from a loop, a step's own runner, approvers, service readiness)"},
 	} {
 		if !k.uses {
 			continue
@@ -518,8 +527,8 @@ func (st *RunState) apply(ev Event) {
 	case StepWaiting:
 		st.applyWaiting(ev, s)
 
-	case StepApproved, StepRejected:
-		st.applyDecided(ev, s)
+	case StepApproved, StepRejected, StepApprovalRecorded:
+		st.applyApproval(s, ev)
 
 	case StepReused:
 		s.applyReused(p, ev)
@@ -610,11 +619,12 @@ func (st *RunState) applyLeased(ev Event, s *StepState) {
 	s.LeaseID = p.Lease
 	s.Runner = p.Runner
 	// A deploy runner's actions need no workspace: they do not move the
-	// run to that runner. Nor do verify and ai steps.
+	// run to that runner. Nor do verify and ai steps, or a step with a runner
+	// of its own (schema 27).
 	if def := st.Pipeline.Step(p.Step); def != nil && def.IsDeployKind() {
 		return
 	}
-	if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI()) {
+	if def := st.Pipeline.Step(p.Step); def != nil && (def.IsVerify() || def.IsAI() || def.HasOwnRunner()) {
 		if st.Status == RunQueued {
 			st.Status, st.StartedAt = RunRunning, ev.At
 		}
@@ -653,27 +663,11 @@ func (st *RunState) applyWaiting(ev Event, s *StepState) {
 	s.QueuedAt, s.StartedAt, s.FinishedAt = ev.At, ev.At, 0
 	s.Error = ""
 	s.clearDecision()
-	s.Deadline = p.Deadline
+	s.Deadline, s.Needed, s.NeededFrom = p.Deadline, p.Needed, p.NeededFrom
 	if st.Status == RunQueued {
 		st.Status = RunRunning
 		st.StartedAt = ev.At
 	}
-}
-
-// applyDecided folds StepApproved and StepRejected.
-func (st *RunState) applyDecided(ev Event, s *StepState) {
-	p := ev.Data
-	st.endApprovalWait(s, ev.At)
-	if ev.Type == StepApproved {
-		s.Status = StepSucceeded
-		s.Error = ""
-	} else {
-		s.Status = StepFailed
-		s.Failures++
-		s.Error = p.Reason
-	}
-	s.FinishedAt = ev.At
-	s.DecidedBy, s.DecidedAt, s.Comment = p.Actor, ev.At, p.Comment
 }
 
 // endApprovalWait counts the time an approval waited, now that it ends,

@@ -80,6 +80,7 @@ oldest schema whose servers understand it.
 | Type | Schema | Written when | Main fields in `data` |
 |---|---|---|---|
 | `step.waiting` | 4 | an approval step starts waiting for a person | `step`, `attempt`, `deadline` (when it is rejected if nobody decides, Unix milliseconds) |
+| `step.approval_recorded` | 27 | one of several people approves an approval that asks for more than one approval (`approvers.count`, or an environment's `min_approvals`); the step goes on waiting until enough have | `step`, `attempt`, `actor`, `comment` |
 | `step.approved` | 4 | a person approves it; the step succeeds | `step`, `attempt`, `actor`, `comment` |
 | `step.rejected` | 4 | a person rejects it, nobody decides in time, or the deployment it names failed | `step`, `attempt`, `actor` (`launchway` when the server rejected it), `comment`, `reason` (such as `nobody decided within 24h`) |
 
@@ -264,6 +265,10 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `cache_policy.set` | `PUT /api/v1/cache-policy` (also `launchway caches policy set`); the detail holds the policy before and after |
 | `cache_policy.set_project` | `PUT /api/v1/projects/{name}/cache-policy`; the detail holds the policy before and after |
 | `cache_policy.clear_project` | `DELETE /api/v1/projects/{name}/cache-policy` |
+| `repository.create` | `POST /api/v1/repositories`; the target is the repository's path, the detail its visibility |
+| `repository.update` | `PATCH /api/v1/repositories/{owner}/{name}`; the detail lists what changed (visibility, default branch, archived, a rename) |
+| `repository.delete` | `DELETE /api/v1/repositories/{owner}/{name}`; the repository moves to the trash |
+| `git.push` | A push over HTTP, to `/git/{owner}/{name}.git` or `/{owner}/{name}.git`; the user is the person (or `run <id>`), the detail the token's name and each ref with its old and new commit, the outcome `ok`, `failed` (it lost a race or did not commit) or `denied` (no push rights, or the repository is archived) |
 | `policy.waive` | `POST /api/v1/projects/{name}/waivers`: granting a waiver (also `launchway waivers grant`) |
 | `policy.revoke_waiver` | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` |
 | `webhook.git` | `POST /api/v1/projects/{name}/git-hook`: a Git host's call that made the project poll (`ok`) or could not prove itself (`denied`); ignored events and repeated deliveries are not recorded |

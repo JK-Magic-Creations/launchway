@@ -12,6 +12,7 @@ import { Button, Decision, EmptyState, LinkButton, PageHead, Sheet } from "../ki
 import { Icon } from "../kit/Icon";
 import { onLink } from "../router";
 import { terms } from "../terms";
+import { progressText, whoMayDecide, type ApprovalProgress } from "../api/approvals";
 import { useNow, type Approvals } from "../live";
 
 /** The approvals waiting for a decision, each as a card: what is asked, the evidence available today,
@@ -64,6 +65,9 @@ export function ApprovalCard({ a, me, project, settings, now }: { a: Approval; m
     { key: "who", label: "Started by", value: a.started_by || "unknown", note: detail ? (detail.event === "push" ? "a push" : detail.event) : undefined },
     { key: "left", label: "Expires", value: left > 0 ? duration(left) : "now", note: `asked ${ago(a.waiting_since, now)}` },
   ];
+  const several = progressText(a as unknown as ApprovalProgress);
+  const may = whoMayDecide(a as unknown as ApprovalProgress);
+  if (several || may) evidence.push({ key: "several", label: "Decided by", value: several ? several.split(";")[0] : "one person", note: may ? `may decide: ${may}` : undefined });
   return (
     <Decision icon="gate" tone="warn" title={a.message || `Run #${a.run_number} of ${a.project} needs ${t.lower("clearance")}`} evidence={evidence}
       children={`Run #${a.run_number} of ${a.project} stopped at ${a.step_id} and waits for a person.`}

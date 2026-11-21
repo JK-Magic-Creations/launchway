@@ -85,6 +85,9 @@ type Container struct {
 	Memory  string            `json:"memory,omitempty"`  // e.g. 512Mi or 2Gi
 	Service bool              `json:"service,omitempty"` // runs its own command for the whole run
 	Command []string          `json:"command,omitempty"` // services only; default: the image's own
+	// Ready, for a service, says when it is ready; the first step waits for
+	// it (schema 27; see ready.go).
+	Ready *Ready `json:"ready,omitempty"`
 
 	// What the server works out for a run's container from its steps'
 	// resources and the installation's defaults, and hands the runner with
@@ -147,18 +150,22 @@ const (
 // Step runs a script in a container image, or, if it is an approval, waits
 // for a person to approve or reject the run going further.
 type Step struct {
-	ID          string               `json:"id"`                    // after expansion, <uses-step>/<template-step> for a template's steps
-	Description string               `json:"description,omitempty"` // one line saying what the step is for
-	Kind        string               `json:"kind,omitempty"`        // empty for a plain step, or KindApproval
-	Message     string               `json:"message,omitempty"`     // approvals: the question to decide
-	Container   string               `json:"container,omitempty"`   // a named container; Image is then filled from it
-	Image       string               `json:"image"`
-	Run         string               `json:"run"`
-	Needs       []string             `json:"needs,omitempty"`
-	When        *Condition           `json:"when,omitempty"`
-	Env         map[string]string    `json:"env,omitempty"`
-	Secrets     map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
-	Retry       int                  `json:"retry"`             // extra attempts after a failure
+	ID          string `json:"id"`                    // after expansion, <uses-step>/<template-step> for a template's steps
+	Description string `json:"description,omitempty"` // one line saying what the step is for
+	Kind        string `json:"kind,omitempty"`        // empty for a plain step, or KindApproval
+	Message     string `json:"message,omitempty"`     // approvals: the question to decide
+	// Runner, when set, gives the step a runner and a workspace of its own
+	// (schema 27); see step_runner.go.
+	Runner    *RunnerSelector      `json:"runner,omitempty"`
+	Approvers *Approvers           `json:"approvers,omitempty"` // approvals: who may decide and how many must approve (schema 27)
+	Container string               `json:"container,omitempty"` // a named container; Image is then filled from it
+	Image     string               `json:"image"`
+	Run       string               `json:"run"`
+	Needs     []string             `json:"needs,omitempty"`
+	When      *Condition           `json:"when,omitempty"`
+	Env       map[string]string    `json:"env,omitempty"`
+	Secrets   map[string]SecretRef `json:"secrets,omitempty"` // variable name → where its value is kept
+	Retry     int                  `json:"retry"`             // extra attempts after a failure
 	// RetryWait, RetryBackoff and RetryOn are the rest of the map form of
 	// retry (schema 24): the pause before the first retry, what multiplies
 	// it each time (0 or 1: nothing), and the causes that are retried
@@ -205,6 +212,10 @@ type Step struct {
 	Pauses     string `json:"pauses,omitempty"`      // rollout: wait, promote or fail
 	AbortFirst bool   `json:"abort_first,omitempty"` // rollback: abort the rollout before reverting
 	ctl        controlLines
+
+	// continueFail says a loop's continue_for selected this member, or the
+	// loop member it is part of (template steps): see tolerate.
+	continueFail bool
 
 	environmentLine, deploymentLine, versionLine, resourcesLine int
 	// environmentInput is the run input a deploy step's environment comes
