@@ -35,8 +35,9 @@ The first-run wizard asks plain questions and sets up your first project.
   [security](docs/security/index.md).
 - **[Roadmap](https://jk-magic-creations.github.io/launchway/roadmap.html)**
   ([as a list](docs/roadmap-list.md)): what is available, in progress and planned, in milestones
-  marked Now, Next and Later. The first milestone is hosting your code and running your pipelines in
-  one place.
+  marked Now, Next and Later, with a big-picture diagram, a detail page for each milestone
+  ([the first](docs/roadmap/milestone-1.md)) and a page with diagrams for each large area. The first
+  milestone is hosting your code and running your pipelines in one place.
 
 Launchway is early software. Turn on sign-in before anyone else can reach a server.
 

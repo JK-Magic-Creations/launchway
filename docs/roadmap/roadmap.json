@@ -191,6 +191,12 @@
       "title": "Open source",
       "value": "Free software under the AGPL-3.0, with a commercial licence for those who cannot use it, and this documentation site with its roadmap.",
       "link": "https://github.com/JK-Magic-Creations/launchway/blob/main/LICENSING.md"
+    },
+    {
+      "theme": "Platform",
+      "title": "A public documentation site and roadmap",
+      "value": "Enterprise-level documentation with diagrams, security guidance, a graphical roadmap with drill-down pages, and a local demo.",
+      "link": "start/overview"
     }
   ],
   "milestones": [
@@ -201,117 +207,700 @@
       "name": "Host your code and run your pipelines in one place",
       "short": "Host and run",
       "promise": "A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.",
+      "audience": "Teams that want one product for their code and their builds, and teams that keep their code on another host but want Launchway to run the pipelines and report back.",
+      "what": "Milestone 1 makes Launchway a complete home for day-to-day engineering. Code can live in Launchway or stay where it is; either way people review changes, see every check on the change, and run every pipeline they had on a hosted CI service. The interface follows a change from idea to running software so a beginner can find their way.",
+      "scenarios": [
+        "You push a branch and open a change. The page shows the pipeline running, the tests and findings as they arrive, and a plain sentence saying what stops it from merging.",
+        "A teammate suggests a one-line fix in review and you apply it with one click; the checks run again by themselves.",
+        "You keep your code on another host. Launchway runs the pipeline and writes the result back to the pull request, and a failing run blocks the merge there too.",
+        "You re-run a failed run from the third step, and the first two steps use what they produced last time.",
+        "A new colleague opens Home and is told, in order, what to set up next."
+      ],
+      "diagram": "flowchart TD\n  Dev[\"Developer\"] -->|push| Host[\"Git hosting<br/>built in or connected\"]\n  Host --> PR[\"Change for review\"]\n  PR -->|starts| Run[\"Pipeline run\"]\n  Run --> Runners[\"Runners\"]\n  Runners -->|results| Run\n  Run -->|status and evidence| PR\n  Rules[\"Branch rules and policy\"] --> PR\n  Reviewer[\"Reviewer\"] -->|approve| PR\n  PR -->|merge when allowed| Main[\"Main branch\"]\n  Main -->|starts| Run",
+      "diagramNote": "A change from push to merge. The built-in host and a connected host look the same to the pipeline engine.",
+      "done": [
+        "A repository can be created, cloned, pushed to, reviewed and merged in Launchway, and a deliberate failure of a server during a push never loses an acknowledged push.",
+        "A written acceptance suite for hosting passes, including importing from another host.",
+        "A pull request on a connected host receives a status from Launchway and cannot be merged when the run fails.",
+        "Every pipeline feature in the milestone has a reference page and a worked example.",
+        "Every setting introduced has a command, an API call, an agent tool and a Terraform resource, checked by a test.",
+        "A new user can complete setup from Home without editing a file."
+      ],
+      "notIncluded": [
+        "Custom step languages, generated pipelines and the visual designer (Milestone 2).",
+        "Deep application and host delivery (Milestone 3).",
+        "The built-in registry (Milestone 4).",
+        "Hosted service and sandboxed runners (Milestone 7)."
+      ],
+      "buildsOn": [],
+      "deepDives": [
+        {
+          "title": "Git hosting and change review",
+          "area": "git-hosting"
+        },
+        {
+          "title": "Pipelines and flow control",
+          "area": "pipelines"
+        },
+        {
+          "title": "The guided interface",
+          "area": "guided-interface"
+        }
+      ],
       "groups": [
         {
           "name": "Host your code",
+          "blurb": "Launchway stores your repositories and serves them, so one product and a database are enough.",
           "items": [
             {
               "status": "in-progress",
               "title": "Built-in Git hosting",
-              "value": "Launchway stores your repositories and serves them over standard HTTPS, with storage designed so that no acknowledged push is ever lost."
+              "value": "Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost.",
+              "detail": "A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the base every other hosting item stands on.",
+              "needs": "A database; the shared blob store that already exists.",
+              "area": "git-hosting"
             },
             {
               "status": "planned",
-              "title": "Pull requests on the built-in host",
-              "value": "Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass."
+              "title": "Safe storage and failover for repositories",
+              "value": "If a server or the database fails over, every acknowledged push is still there.",
+              "detail": "Refs and their history live in the database with an atomic update, content lives in the blob store, and servers hold only disposable caches. A test kills servers mid-push and the pass mark is that nothing acknowledged is lost.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Git over SSH",
+              "value": "Clone, fetch and push over SSH with your own keys, beside HTTPS.",
+              "detail": "User keys and per-repository read-only deploy keys are listed and revocable in one place, the server proves itself with a protected host key that stays the same across servers, and SSH uses the same permissions, limits and audit as HTTPS. Run-scoped read-only credentials mean a pipeline holds a credential only while it runs.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Create, rename, archive and set visibility",
+              "value": "The everyday repository lifecycle: create, rename with redirects, transfer, archive as read-only, and private, internal or public visibility.",
+              "detail": "The same wizard connects an existing repository from another host or creates a hosted one, so people do not need to learn two flows. Old addresses keep working after a rename.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
             },
             {
               "status": "planned",
               "title": "Browse and search your code",
-              "value": "History, blame, raw files, archives, permanent links and code search, so you rarely leave Launchway to read code."
+              "value": "History, file history, blame, raw files, archives, permanent links with line ranges, and a go-to-file finder.",
+              "detail": "Reading code is where most of the time goes, so it has to be quick and linkable. The newest commit is drawn on its journey above the file tree, so you see where the change is, not only what it contains.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
             },
             {
               "status": "planned",
-              "title": "Repository administration",
-              "value": "Settings screens, maintenance tools and a trash from which a deleted repository can come back."
+              "title": "Search inside a repository",
+              "value": "Find text and file names in the branch you are looking at.",
+              "detail": "Search runs on a disposable cache with bounded resources, so there is no index to keep in step. Results also cover pipeline files, templates and steps.",
+              "needs": "Browse and search your code.",
+              "area": "git-hosting"
             },
+            {
+              "status": "planned",
+              "title": "Show every kind of file properly",
+              "value": "Markdown, diagrams, math, tables of data, images with before and after, documents and notebooks render in the browser.",
+              "detail": "Pipeline files also render as a drawing beside the text. Rendering is sandboxed so a file can never run anything.",
+              "needs": "Browse and search your code.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Edit in the browser, as a commit",
+              "value": "Edit, upload, delete and create a branch from the web page; every save is a real commit.",
+              "detail": "This is the same commit path the pipeline editor uses, so there is one way a change gets into Git. Cherry-pick, revert and patch download are there too.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Verified commits and tags",
+              "value": "Verify signatures on commits and tags, manage signing keys, and let a rule require signed commits.",
+              "detail": "A verified state is a fact a branch rule or a deployment policy can ask for, so an unsigned change cannot reach production if you say so.",
+              "needs": "Branches, tags and rules.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Repository maintenance and health",
+              "value": "Scheduled housekeeping, an integrity check, a size report and a health note on the home page.",
+              "detail": "Problems appear in the same attention list as everything else instead of being found when a push is slow. Maintenance runs as separate programs, not inside the server.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Repository trash",
+              "value": "A deleted repository goes to a trash and can come back within a set time.",
+              "detail": "Delete is reversible for a period you choose, and both the delete and the restore are in the audit trail.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Mirrors in and out",
+              "value": "Pull a repository from another host on a schedule, or push every change to another host as a safety copy.",
+              "detail": "Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Repository settings screens",
+              "value": "Collaborators, access, tokens, webhooks, merge options and feature switches, each as a plain screen.",
+              "detail": "Features that are switched off are hidden, so a small project stays small. Each screen explains what it does in a sentence.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Branch and tag manager",
+              "value": "List, rename, delete and restore branches, set the default, and delete merged branches automatically.",
+              "detail": "It also shows the last pipeline result on every branch, so stale or broken branches are easy to spot.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Large files",
+              "value": "Store large binary files outside the normal history, with locks and quotas.",
+              "detail": "Quotas and usage are shown next to the repository. The runner image includes the tooling, so builds fetch large files without extra setup.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Forks and templates",
+              "value": "Fork a repository to propose changes from your own copy, and start new repositories from templates.",
+              "detail": "A template can carry a pipeline and an environment setup, so a new repository arrives with a working path to production. Fork runs follow the rule that untrusted code never sees secrets.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Repository quotas and size limits",
+              "value": "Limits on repository size, large-file storage and per-organisation usage, shared with artifact and log quotas.",
+              "detail": "One quota model for everything that takes space, with warnings before a limit is reached.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Activity, language and topic information",
+              "value": "Contributor activity, commit graphs, languages, topics and a repository picture.",
+              "detail": "Delivery information such as deployment frequency and lead time sits on the same page, because Launchway already knows it.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Webhooks to other tools",
+              "value": "Send repository events to chat tools and any web address, with a delivery log, retries and test deliveries.",
+              "detail": "One notification channel set is shared with pipelines and approvals. Payloads are signed, and compatible shapes are offered so existing tools keep working.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Notifications and email",
+              "value": "An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email.",
+              "detail": "Sending mail is optional and off until configured. The same preferences cover review, work item and pipeline events.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            }
+          ]
+        },
+        {
+          "name": "Review and merge changes",
+          "blurb": "Pull requests that show the run, the tests and the policy verdict on one page.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Pull requests on the built-in host",
+              "value": "Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass.",
+              "detail": "A pull request page shows its pipeline run, tests, coverage change, findings, policy verdict, preview environment and deployment together, with no round trip through a webhook. Expected results are written in the same step that accepts the push, so a change never looks mergeable before its checks exist.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Review with inline comments and suggestions",
+              "value": "Comment on lines and ranges, suggest a change the author can apply in one click, and mark files as viewed.",
+              "detail": "Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Branch rules and protected tags",
+              "value": "Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move.",
+              "detail": "The page says in plain words why a change cannot land yet and what would unblock it. A tag pinned by a template resolves to a commit and is recorded on the run.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Code owners",
+              "value": "Name who must review changes to which paths, using people or groups.",
+              "detail": "Owners can be the group that owns the deployment environment, so the people who run a service review the changes to it.",
+              "needs": "Review with inline comments and suggestions.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Merge styles and auto-merge",
+              "value": "Merge, squash, rebase and fast-forward, and merge automatically when the checks pass.",
+              "detail": "Auto-merge is driven by events, not polling. A manually merged marker handles changes landed outside Launchway.",
+              "needs": "Branch rules and protected tags.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Merge queue",
+              "value": "Queue approved changes and test the real merged result with the real pipeline before it lands.",
+              "detail": "The queue is visible on each change, so people see where they stand and why a change was held back.",
+              "needs": "Merge styles and auto-merge.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Resolve conflicts in the browser",
+              "value": "See the conflict, choose a side or edit, and finish the merge on the page.",
+              "detail": "Conflict detection runs as soon as the target moves, so the page tells you early.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Findings and failures on the diff",
+              "value": "Security findings and test failures appear as notes on the lines they concern.",
+              "detail": "The same results feed the policy verdict, so what you read on the line is what blocks the merge.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Templates for changes and work",
+              "value": "Templates that pre-fill the description of a pull request or work item, and issue forms.",
+              "detail": "Teams keep their expectations in one place and new contributors get a prompt instead of a blank box.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Pull-request status everywhere",
+              "value": "Report each run back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one.",
+              "detail": "A connected host that has no status feature gets the same result as a comment and an approval, so the rule is the same everywhere.",
+              "needs": "Every Git host, equally."
+            }
+          ]
+        },
+        {
+          "name": "Work items and decisions",
+          "blurb": "Track work, decisions and releases next to the code.",
+          "items": [
             {
               "status": "planned",
               "title": "Issues and work items",
-              "value": "Track work next to the code, import existing issues, and link every change to the reason for it."
+              "value": "Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it.",
+              "detail": "An item also traces to commits, runs and deployments, so the question which environment a request reached has a one-click answer.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
             },
             {
               "status": "planned",
+              "title": "Labels, milestones and templates for work",
+              "value": "Coloured and exclusive labels, milestones with progress, and templates and forms for new items.",
+              "detail": "Labels and milestones are shared across projects at the levels you choose.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Dependencies and parent items",
+              "value": "Mark that one item blocks another, and group items under a parent.",
+              "detail": "A blocked item drops out of the list of what is ready next, for people and for agents.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Boards that show delivery",
+              "value": "A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production.",
+              "detail": "The board is the same data as the list, drawn differently.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Decision records",
+              "value": "A question, the options, a recommendation, what it blocks, and the answer with who gave it and when.",
+              "detail": "Decisions are reviewed and answered in bulk in the interface. They are first-class records, so months later you can find why something was done.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Import and sync from other trackers",
+              "value": "Bring issues in from other trackers, or keep them in sync in both directions while you switch.",
+              "detail": "Six trackers are supported equally. A dry run reports counts before anything is written.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Optional time tracking and due dates",
+              "value": "Estimates, timers and due dates, off until a project turns them on.",
+              "detail": "Time joins the delivery chain, so effort can be read next to lead time.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Confidential items and links to the code",
+              "value": "Items visible only to chosen people, and branches started from an item that carry its reference.",
+              "detail": "Confidentiality uses the same permission model as everything else, so nothing leaks across a boundary. The branch name needs no typing to stay traceable.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "A wiki per repository",
+              "value": "A wiki that is itself a Git repository, with history, linked live to pipelines and deployments.",
+              "detail": "Pages can show current status. A vault of notes can stay in step with it (see the Obsidian sync).",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Static pages",
+              "value": "Publish a static site from a branch of a repository, built by a pipeline.",
+              "detail": "The site is served by Launchway with its own address and the same access rules as the repository.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Releases with notes and evidence",
+              "value": "Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached.",
+              "detail": "A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting"
+            }
+          ]
+        },
+        {
+          "name": "People and access on the host",
+          "blurb": "Accounts, organisations, tokens and administration for the built-in host.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Organisations, teams and collaborators",
+              "value": "Teams with their own permissions on repositories, and invitations for people from outside.",
+              "detail": "One permission model covers code, work items, pipelines and environments, so there is no second set of users to maintain.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Tokens and scoped access",
+              "value": "Personal and service tokens limited to chosen repositories and actions.",
+              "detail": "Tokens use the same audit trail and limits as sign-in sessions. Service accounts are for tools, not people.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Launchway as a sign-in provider",
+              "value": "Let other tools sign in with accounts that live in Launchway.",
+              "detail": "Useful for small teams that run a handful of internal tools and want one place for identity.",
+              "needs": "Built-in accounts with MFA.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Host administration screens",
+              "value": "Users, repositories, queues, background tasks, a banner and a maintenance mode.",
+              "detail": "Everything an administrator checks daily is on one set of pages, and it is also available through the API and the command line.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Compatible addresses and tools",
+              "value": "Clone addresses, push events and read interfaces shaped like the common ones, so existing remotes, bots and editors keep working.",
+              "detail": "This makes moving over a matter of changing a setting, not rewriting scripts.",
+              "needs": "Built-in Git hosting.",
+              "area": "git-hosting"
+            },
+            {
+              "status": "planned",
+              "title": "Languages and themes",
+              "value": "A translated interface, light and dark, and custom themes.",
+              "detail": "Accessibility checks are part of the build, so a theme cannot ship with unreadable text.",
+              "needs": "The guided interface.",
+              "area": "git-hosting"
+            }
+          ]
+        },
+        {
+          "name": "Move your repositories in",
+          "blurb": "A tested path from another Git host, so switching is a step and not a leap.",
+          "items": [
+            {
+              "status": "planned",
               "title": "Move your repositories in",
-              "value": "Import repositories, issues and settings from another Git host, and keep a mirror back while you switch."
+              "value": "Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch.",
+              "detail": "Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time.",
+              "needs": "Built-in Git hosting."
             },
             {
               "status": "in-progress",
               "title": "An acceptance suite for hosting",
-              "value": "A written end-to-end suite that hosting must pass before it is called ready, so that switching is a tested step, not a leap."
+              "value": "A written end-to-end suite that hosting must pass before it is called ready, so that switching is a tested step, not a leap.",
+              "detail": "Each requirement a team has of its current host becomes a check, run against Launchway before and after the switch. It is also the proof anyone can read.",
+              "needs": "Built-in Git hosting."
             },
             {
               "status": "planned",
               "title": "A complete Git forge",
-              "value": "Wiki, static pages, forks, large files, SSH access, time tracking and the rest of a hosted Git service, in order of value, with an interface that is better integrated than a stand-alone one."
+              "value": "Discussions, snippets, notifications, activity feeds and the rest of a hosted Git service, in order of value, with an interface that is better integrated than a stand-alone one.",
+              "detail": "Everything here is optional and off until chosen. The point is that people who want a single place do not have to give up the usual features.",
+              "needs": "Built-in Git hosting."
+            },
+            {
+              "status": "planned",
+              "title": "Replacing a self-hosted Git server",
+              "value": "A guide and a checklist for retiring a self-hosted Git server in favour of Launchway.",
+              "detail": "Covers moving, redirects, users, hooks, integrations, backups and a rollback plan, with each step verified by the acceptance suite.",
+              "needs": "An acceptance suite for hosting."
             }
           ]
         },
         {
           "name": "Keep your Git host, if you prefer",
+          "blurb": "Launchway works with the host you already use. Hosting is optional.",
           "items": [
             {
               "status": "planned",
               "title": "Every Git host, equally",
-              "value": "First-class connections to every major Git host, including self-managed ones, with each one's limits stated plainly in the docs and the wizards."
+              "value": "First-class connections to every major Git host, including GitHub, AWS CodeCommit and self-managed ones, with each one's limits stated plainly in the docs and the wizards.",
+              "detail": "Each host passes the same conformance suite as the built-in one. A host that has not yet passed is labelled so until it does.",
+              "needs": "A common provider model."
             },
             {
               "status": "planned",
-              "title": "Pull-request status everywhere",
-              "value": "Report each run back to the pull request as a status and block a merge that does not pass, on the built-in host and on every connected one."
+              "title": "Self-managed variants of hosts",
+              "value": "Hosts you run yourself, with their own addresses and certificates, are first-class.",
+              "detail": "Setup asks for the address and trust, nothing more. Each variant's differences are stated in the wizard.",
+              "needs": "Every Git host, equally."
+            },
+            {
+              "status": "planned",
+              "title": "Hosts without webhooks",
+              "value": "Hosts that cannot call Launchway are watched through polling or a bridge from their event service.",
+              "detail": "The result is the same: a push starts a run. Launchway posts status as a comment and an approval where the host has no status feature.",
+              "needs": "Every Git host, equally."
+            },
+            {
+              "status": "planned",
+              "title": "One identity across hosts",
+              "value": "Map the same person on different hosts to one Launchway user.",
+              "detail": "Reviews, approvals and audit entries are then attributed to a person, not to a host account.",
+              "needs": "Every Git host, equally."
+            },
+            {
+              "status": "planned",
+              "title": "A common provider model",
+              "value": "One internal contract every host, including the built-in one, must satisfy.",
+              "detail": "The built-in host is a provider like the others, so a feature that works on one works on all, or the docs say it does not."
             }
           ]
         },
         {
           "name": "Pipelines that match what teams expect from hosted CI",
+          "blurb": "Everything a hosted CI service offers, in one place.",
           "items": [
             {
               "status": "available",
               "title": "Conditions, retries, lanes and re-runs",
               "value": "Run a step only when it should, retry what is flaky, make runs take turns, and re-run from any step.",
-              "link": "reference/pipeline#when"
+              "detail": "Re-running from a step keeps what each earlier step was given, so a fix does not mean starting over.",
+              "link": "reference/pipeline#when",
+              "area": "pipelines"
             },
             {
               "status": "available",
               "title": "Warm builds with caches",
               "value": "Keep dependencies between runs so builds start warm, with rules for who may read and write them.",
-              "link": "guide/build-caches"
+              "detail": "A pull request can write an entry the default branch never reads, which removes the cache-poisoning risk.",
+              "link": "guide/build-caches",
+              "area": "pipelines"
             },
             {
               "status": "in-progress",
               "title": "Flow control, part two",
-              "value": "Services with readiness checks and logs, a runner and workspace of their own per step, approval quorums, and loops that tolerate chosen members."
+              "value": "Services with readiness checks and logs, a runner and workspace of their own per step, approval quorums, and loops that tolerate chosen members.",
+              "detail": "This completes the control a complex pipeline needs without dropping into scripts.",
+              "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Platform matrices",
-              "value": "Run the same steps across operating systems and architectures from one definition."
+              "value": "Run the same steps across operating systems and architectures from one definition.",
+              "detail": "Results show as one grid with a failure marked where it happened. Runners with the right platform are chosen automatically.",
+              "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Cloud sign-in per step",
-              "value": "Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored."
+              "value": "Each step proves its identity to a cloud with short-lived tokens, so no long-lived cloud keys are stored.",
+              "detail": "The trust is set up in the cloud once, and the token carries the project, branch and environment.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Re-run only what failed",
+              "value": "Re-run just the failed steps of a run, with earlier results reused.",
+              "detail": "Combined with caches, a flaky test costs minutes instead of a full run.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Per-step runner and workspace",
+              "value": "Each step can choose its own image, runner and working area.",
+              "detail": "A step that needs a large machine or special hardware asks for it without moving the whole pipeline.",
+              "area": "pipelines"
+            }
+          ]
+        },
+        {
+          "name": "A guided interface a complete beginner can use",
+          "blurb": "Everything by clicking, with every page saying what it is for and what to do next.",
+          "items": [
+            {
+              "status": "in-progress",
+              "title": "Follow a change on its launch line",
+              "value": "A single line that shows one change travelling from idea to running software, with each station opening its evidence.",
+              "detail": "Choose a station and its review, tests, image, place or decision opens underneath. This is the page that answers where is my change and is it all right.",
+              "needs": "The guided interface.",
+              "area": "guided-interface"
+            },
+            {
+              "status": "in-progress",
+              "title": "A Home that tells you what to do next",
+              "value": "One sentence about what needs you, rows with one recommended action each, and a checklist that disappears as you finish it.",
+              "detail": "When nothing needs anyone it becomes a calm all-clear page with the board of changes in flight.",
+              "area": "guided-interface"
+            },
+            {
+              "status": "in-progress",
+              "title": "Six plainly named sections",
+              "value": "Home, Projects, Deployments, Activity, Library and Settings replace a long flat menu.",
+              "detail": "Anything switched off is not shown, so a new installation is small and grows as you turn things on.",
+              "area": "guided-interface"
+            },
+            {
+              "status": "planned",
+              "title": "Overview, then focus, then detail",
+              "value": "Every topic follows one pattern: a picture of what is going on, one thing in focus, then everything about it for engineers.",
+              "detail": "Pages link to each other in context, so you follow a problem instead of searching a menu.",
+              "needs": "The guided interface.",
+              "area": "guided-interface"
+            },
+            {
+              "status": "planned",
+              "title": "Nothing lost for a nicer look",
+              "value": "Every detail the current interface shows is kept, and the new one adds to it.",
+              "detail": "Each screen of today has a recorded place in the new layout, and a check confirms nothing has been dropped.",
+              "needs": "The guided interface.",
+              "area": "guided-interface"
+            },
+            {
+              "status": "planned",
+              "title": "A do bar for every task",
+              "value": "A search box that finds pages and starts guided actions such as turn a toggle off or why did this fail.",
+              "detail": "It reaches everything without adding to the menu.",
+              "needs": "The guided interface.",
+              "area": "guided-interface"
+            },
+            {
+              "status": "planned",
+              "title": "Decision cards that read on a phone",
+              "value": "An approval is a card with what, who, risk, evidence and what happens next, readable in seconds.",
+              "detail": "Reject needs a reason. A decision can be undone until it has acted.",
+              "needs": "Approvals and protected environments.",
+              "area": "guided-interface"
+            },
+            {
+              "status": "planned",
+              "title": "Pipelines drawn as living lines",
+              "value": "A pipeline appears as stations on tracks, with parallel steps splitting and joining, live while it runs.",
+              "detail": "Selecting a station shows its facts, and the log sits under the line.",
+              "needs": "The guided interface.",
+              "area": "guided-interface"
+            },
+            {
+              "status": "planned",
+              "title": "Light, dark and phone widths",
+              "value": "The same interface in light and dark and on a phone, with an accessibility check as a build gate.",
+              "detail": "Charts say where they came from and never rely on colour alone.",
+              "needs": "The guided interface.",
+              "area": "guided-interface"
             }
           ]
         },
         {
           "name": "Move your existing pipelines over",
+          "blurb": "Bring pipelines across in waves, without surprises.",
           "items": [
             {
               "status": "planned",
               "title": "A converter and a move-over guide",
-              "value": "Bring pipelines written for other CI services across in waves, with a report of anything that needs a person."
+              "value": "Bring pipelines written for other CI services across in waves, with a report of anything that needs a person.",
+              "detail": "The converter says what it could not translate, and why. The guide covers running both side by side while you compare results."
+            },
+            {
+              "status": "planned",
+              "title": "Run old and new side by side",
+              "value": "Compare a Launchway run with the run it replaces and see where results differ.",
+              "detail": "This is how a team gains confidence before switching.",
+              "needs": "A converter and a move-over guide."
             }
           ]
         },
         {
           "name": "Foundations that finish alongside",
+          "blurb": "The groundwork that every other item stands on.",
           "items": [
             {
               "status": "planned",
               "title": "Terraform provider",
               "value": "Every kind of setting managed as code, each new kind shipping with its resource, so nothing is reachable only by clicking.",
+              "detail": "A test fails the build when an object exists without its Terraform resource. The provider ships beside the server.",
               "link": "reference/config-objects#terraform"
+            },
+            {
+              "status": "planned",
+              "title": "Database failover and no lost push",
+              "value": "High availability that covers the database and repository storage as well as the servers.",
+              "detail": "Failover is rehearsed in tests with writes in flight."
+            },
+            {
+              "status": "in-progress",
+              "title": "Launchway builds and deploys itself",
+              "value": "Launchway is built, tested, signed and rolled out by Launchway, in a group of servers, with rollouts and checks.",
+              "detail": "Runners on virtual machines and customer machines update themselves too (see the runner update item)."
+            },
+            {
+              "status": "planned",
+              "title": "Fewer concepts to learn",
+              "value": "No pile of connectors, services and environments to define before anything works.",
+              "detail": "Six words cover everyday use: project, pipeline, step, run, environment and runner."
             }
           ]
         }
@@ -324,81 +913,230 @@
       "name": "Deeper pipeline power, and a way off self-hosted automation servers",
       "short": "Pipeline power",
       "promise": "Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.",
+      "audience": "Teams whose pipelines need real code, many repositories sharing logic, or a move away from a self-hosted automation server.",
+      "what": "Milestone 2 makes pipelines as dynamic as real code needs without giving up checking. Steps become programs you test, pipelines can be generated, conditions are typed, and you can design visually. Teams on automation servers get a tested gap analysis and an importer.",
+      "scenarios": [
+        "You write a deployment step in the language your team already uses, test it on your laptop, and share it as a pinned version.",
+        "A step looks at the repository and prints the extra steps it needs; Launchway checks them and shows them on the run.",
+        "You drag a step onto a pipeline and see the exact lines it will change in Git before you save.",
+        "A message on a queue starts a pipeline, and a rejected message is visible with the reason.",
+        "You import jobs from an automation server and read a report of what needs a person."
+      ],
+      "diagram": "flowchart TD\n  Repo[\"Repository<br/>pipeline file, step programs\"] --> Plan[\"Check and expand<br/>schema, types, policy\"]\n  Gen[\"Generated steps\"] --> Plan\n  Trig[\"Triggers<br/>push, queue, schedule\"] --> Plan\n  Plan --> Graph[\"Run graph\"]\n  Graph --> Steps[\"Steps in sandboxes\"]\n  Steps -->|typed outputs| Graph\n  Designer[\"Visual designer\"] <-->|same file| Repo\n  Catalogue[\"Catalogue of templates and steps\"] --> Repo",
+      "diagramNote": "Text, designer and generated steps all end in one checked definition.",
+      "done": [
+        "A custom step in at least three languages runs from a published contract and is unit-tested outside Launchway.",
+        "A generated pipeline is checked against the same schema and policy as a written one.",
+        "Expressions are checked before a run and have no loops or side effects.",
+        "The designer and the text editor produce identical files for identical pipelines.",
+        "The gap analysis lists every gap with a test, and each gap is closed or recorded as a decision.",
+        "Runners on virtual machines update under policy without manual work."
+      ],
+      "notIncluded": [
+        "Applications, hosts and traffic (Milestone 3).",
+        "Hosted runners (Milestone 7)."
+      ],
+      "buildsOn": [
+        "m1"
+      ],
+      "deepDives": [
+        {
+          "title": "Pipelines and flow control",
+          "area": "pipelines"
+        }
+      ],
       "groups": [
         {
           "name": "Write pipelines your way",
+          "blurb": "Pipelines as real programs, checked before they run.",
           "items": [
             {
               "status": "planned",
               "title": "Custom steps in your own language",
-              "value": "A step is a program in your repository with typed inputs, outputs and secrets, runnable and testable on its own, so pipeline logic is ordinary tested code."
+              "value": "A step is a program in your repository with typed inputs, outputs and secrets, runnable and testable on its own, so pipeline logic is ordinary tested code.",
+              "detail": "You write the step in a language you already use and unit-test it like any application. A template is the interface and the code is what runs.",
+              "needs": "Pipelines as code.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "A step contract and starter kits",
+              "value": "A published contract for what a step receives and returns, with starter kits for common languages.",
+              "detail": "Starter kits include the types, a local test harness and an example, so the first step takes minutes.",
+              "needs": "Custom steps in your own language.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Steps run in a sandbox",
+              "value": "Custom steps run in an isolated container with only the secrets and network they declared.",
+              "detail": "A shared step cannot read what it was not given, which makes sharing steps across teams safe.",
+              "needs": "Custom steps in your own language.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Share and pin steps and templates",
+              "value": "Publish a step or template from a repository and pin users to a tag, branch or commit.",
+              "detail": "Releases are plain Git tags, so versions, history and review use the tools you already have.",
+              "needs": "Shared libraries.",
+              "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Generated pipelines",
-              "value": "A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the run."
+              "value": "A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the run.",
+              "detail": "This gives the freedom of a script with the safety of a checked definition, and it makes dynamic pipelines possible without file-first configuration.",
+              "needs": "Custom steps in your own language.",
+              "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Expressions for conditions",
               "value": "A small typed expression language with no loops and no side effects, checked before the run; today's conditions keep working.",
+              "detail": "Because expressions cannot loop or change anything, a pipeline is always checkable without running it.",
+              "area": "pipelines",
               "link": "reference/pipeline#when"
             },
             {
               "status": "planned",
               "title": "Typed outputs between steps",
-              "value": "A step declares what it passes on, and a reference to an output that does not exist fails before the run, not in the middle of it."
+              "value": "A step declares what it passes on, and a reference to an output that does not exist fails before the run, not in the middle of it.",
+              "detail": "Types make the earlier values on a re-run knowable, which keeps restarting from a step honest.",
+              "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "A browsable catalogue of templates and steps",
               "value": "Shared libraries pinned by tag already work; the catalogue lets you find, compare and update them from inside the product.",
+              "detail": "Each entry shows who uses it, what it needs and which version is current, with an update shown as a change you can review.",
+              "needs": "Shared libraries.",
+              "area": "pipelines",
               "link": "guide/libraries"
             },
             {
               "status": "planned",
-              "title": "A triggers page",
-              "value": "One page showing every trigger and exactly which pipelines it starts."
+              "title": "Update notices for shared libraries",
+              "value": "See which projects use an old version of a template and open an update as a reviewable change.",
+              "detail": "Teams keep common pipeline logic current without a manual hunt.",
+              "needs": "A browsable catalogue of templates and steps.",
+              "area": "pipelines"
             },
             {
               "status": "planned",
-              "title": "Event sources and container graphs",
-              "value": "Start pipelines from message queues and buses, and lay steps out as a graph of containers."
+              "title": "A triggers page",
+              "value": "One page showing every trigger and exactly which pipelines it starts.",
+              "detail": "You can answer what starts this pipeline and what does this trigger start without opening files.",
+              "needs": "Triggers.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Event sources from queues and buses",
+              "value": "Start pipelines from message queues and event buses, with filters, and replies back.",
+              "detail": "Filters, retries and a dead-letter view show what arrived and what was ignored.",
+              "needs": "A triggers page.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Steps as a graph of containers",
+              "value": "Lay steps out as a graph of containers with fan-out and join, for work that is not a straight line.",
+              "detail": "Each node shows its own logs and result, and the graph is the same object whether drawn or written.",
+              "needs": "Custom steps in your own language.",
+              "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "Runners that keep themselves updated",
-              "value": "Runners on VMs and on customers' machines update under your policy, so the fleet never drifts."
+              "value": "Runners on VMs and on customers' machines update under your policy, so the fleet never drifts.",
+              "detail": "Hosted pools update automatically, self-hosted pools are notified, and Kubernetes runners follow the chart.",
+              "needs": "Runner identity and pools.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Pipeline history and flaky tests",
+              "value": "Duration charts, pass rate, the slowest steps, and a list of tests that pass and fail without changes.",
+              "detail": "Flaky tests are marked on the run and on the pull request, so they are quarantined instead of argued over.",
+              "needs": "Test, coverage and HTML reports.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Step pages",
+              "value": "Each step has a page: where its code lives, its inputs and types, and which pipelines use it.",
+              "detail": "Before changing a step, you see who it would affect.",
+              "needs": "Custom steps in your own language.",
+              "area": "pipelines"
             }
           ]
         },
         {
           "name": "Design visually",
+          "blurb": "Draw it, read it as text, and see that both are the same thing.",
           "items": [
             {
               "status": "planned",
               "title": "A visual pipeline designer",
-              "value": "Drag built-in and custom steps into place; it edits the same pipeline file as the text editor, so the two are views of one thing."
+              "value": "Drag built-in and custom steps into place; it edits the same pipeline file as the text editor, so the two are views of one thing.",
+              "detail": "The designer shows the lines it will change in Git before you save, and saving is a reviewable change. Nothing is stored outside the file.",
+              "needs": "Pipelines as code.",
+              "area": "pipelines"
             },
             {
               "status": "planned",
               "title": "A drawing canvas and diagrams",
-              "value": "Architecture diagrams drawn in Launchway beside generated ones and Mermaid, and a two-way sync with note-taking vaults."
+              "value": "Architecture diagrams drawn in Launchway beside generated ones and Mermaid.",
+              "detail": "Diagrams are saved as files in Git and exported safely, so documentation and architecture drawings live beside the code.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Generated architecture views",
+              "value": "Views of your delivery and runtime drawn from what Launchway knows, always current.",
+              "detail": "Applications, pipelines and environments appear as diagrams you can paste into a document.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Two-way Obsidian sync",
+              "value": "Export and import documents, and keep an Obsidian vault in step with Launchway documents in both directions.",
+              "detail": "A plug-in is provided if the sync needs one. Conflicts are shown, not hidden.",
+              "area": "pipelines"
             }
           ]
         },
         {
           "name": "Move off a self-hosted automation server",
+          "blurb": "Everything teams rely on such a server for, without its weaknesses.",
           "items": [
             {
               "status": "planned",
               "title": "A verified gap analysis",
-              "value": "A tested list of what teams rely on automation servers for (dynamic pipelines, extensions, agents anywhere) with a plan for each gap."
+              "value": "A tested list of what teams rely on automation servers for (dynamic pipelines, extensions, agents anywhere) with a plan for each gap.",
+              "detail": "Each gap names the Launchway feature that closes it and a test that proves it."
             },
             {
               "status": "planned",
               "title": "Import of existing jobs",
-              "value": "Convert job definitions and shared libraries, with a report of what needs a person, and none of the file-first configuration or fragile plug-ins."
+              "value": "Convert job definitions and shared libraries, with a report of what needs a person, and none of the file-first configuration or fragile plug-ins.",
+              "detail": "The import produces ordinary pipelines in Git and tells you what it could not convert.",
+              "needs": "A verified gap analysis."
+            },
+            {
+              "status": "planned",
+              "title": "Extensions without fragility",
+              "value": "A step catalogue and typed custom steps instead of plug-ins that run inside the server.",
+              "detail": "Nothing a team adds can crash or compromise the server, and every extension has a version and an owner.",
+              "needs": "Custom steps in your own language."
+            },
+            {
+              "status": "planned",
+              "title": "Agents anywhere",
+              "value": "Runners on any machine, in any network, connected outward, with pools and labels.",
+              "detail": "Equivalent to the build agents teams rely on, with identity and audit on every connection.",
+              "needs": "Runner identity and pools."
             }
           ]
         }
@@ -411,125 +1149,552 @@
       "name": "Delivery and GitOps depth",
       "short": "Delivery depth",
       "promise": "See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.",
+      "audience": "Teams that deploy to Kubernetes, virtual machines, machine images and clouds, and people who answer for what is running and whether it is healthy.",
+      "what": "Milestone 3 is about everything after the build. See every application and host in one place, find out why a deployment failed, roll out safely with weights and checks, run infrastructure as code with state kept for you, manage image-based hosts, and watch traffic, protection and reliability in the same views.",
+      "scenarios": [
+        "A deployment fails. Launchway says in one sentence why, shows the evidence, and offers to roll back the setting that caused it.",
+        "You send ten percent of mobile traffic to a new version and watch errors on a map before widening it.",
+        "You turn off a misbehaving feature with one button on a page that also shows its effect.",
+        "A fleet of image-based hosts upgrades in batches with a check between each, and one batch pauses.",
+        "A reviewer sees an automatically written change record with its risk and freeze status."
+      ],
+      "diagram": "flowchart TD\n  Image[\"Image or chart\"] --> Plan[\"Delivery plan<br/>policy, approval\"]\n  Plan --> Targets\n  subgraph Targets[\"Where it runs\"]\n    K8s[\"Kubernetes<br/>Argo CD or built-in\"]\n    VMs[\"Virtual machines\"]\n    Hosts[\"Image-based hosts\"]\n    Cloud[\"Clouds and serverless\"]\n  end\n  Targets --> Watch[\"Watch<br/>health, traffic, errors\"]\n  Config[\"Configuration, secrets, toggles<br/>per zone\"] --> Targets\n  Watch -->|verdict| Plan\n  Watch --> Insight[\"Metrics, changes, incidents\"]",
+      "diagramNote": "One plan, many targets, and a watch loop that can send a change back.",
+      "done": [
+        "An application, a virtual machine and an image-based host can each be deployed, verified and rolled back from the interface.",
+        "A failed deployment shows a diagnosis, its evidence and the full resource tree with logs.",
+        "Canary weights by client type work on the gateway and on a mesh, and the map shows them.",
+        "State for infrastructure code is stored, locked and recoverable inside Launchway.",
+        "Toggles, settings and secrets resolve per zone with one clear rule.",
+        "Every lever change goes through preview, policy and audit, with an undo."
+      ],
+      "notIncluded": [
+        "The built-in registry (Milestone 4).",
+        "The software graph and patching loop (Milestone 5).",
+        "Hosted-service features (Milestone 7)."
+      ],
+      "buildsOn": [
+        "m1"
+      ],
+      "deepDives": [
+        {
+          "title": "Delivery: applications, rollouts and hosts",
+          "area": "delivery"
+        },
+        {
+          "title": "Live traffic, protection and reliability",
+          "area": "traffic"
+        }
+      ],
       "groups": [
         {
           "name": "Applications and rollouts",
+          "blurb": "See and control everything you run, then deliver to it safely.",
           "items": [
             {
               "status": "planned",
               "title": "Argo CD in depth",
               "value": "Application hierarchy views (app-of-apps and ApplicationSet trees) with status, sync, health, history and actions, ready health checks, and a hosted or your own Argo CD.",
+              "detail": "Launchway reads each application as the deploy engine sees it, shows drift, and lets you act with the same permissions as everything else. Argo CD is first-class, never required.",
+              "needs": "GitOps with Argo CD.",
+              "area": "delivery",
               "link": "guide/deployments"
             },
             {
               "status": "planned",
+              "title": "Applications and ApplicationSets from the interface",
+              "value": "Generate applications and sets, and compose app-of-apps, from a guided screen.",
+              "detail": "The generated manifests are shown as a change you review and merge, so GitOps remains the record.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Health checks set up from the interface",
+              "value": "Write and test custom health checks for resources without editing configuration by hand.",
+              "detail": "A check shows its result against live resources before you save it.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Hosted or your own Argo CD",
+              "value": "Use an Argo CD that Launchway runs for you, or connect one you already have.",
+              "detail": "Both are equal in the interface. Teams that do not use Argo CD can use built-in deploys instead.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Rollout control inside a run",
+              "value": "A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station.",
+              "detail": "Verification tests run between steps, and the run keeps the evidence.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
               "title": "A single pane of glass",
-              "value": "One fleet view of every application and every host: what runs where, its health, drift and evidence."
+              "value": "One fleet view of every application and every host: what runs where, its health, drift and evidence.",
+              "detail": "Error rates, version, last change and owner are on one screen, and each tile opens the page that explains it.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery"
             },
             {
               "status": "planned",
               "title": "Weighted canaries and traffic control",
-              "value": "Send a share of traffic, by client type, to a new version through the Gateway API or a service mesh, with mesh metrics as ready-made health checks."
+              "value": "Send a share of traffic, by client type, to a new version through the Gateway API or a service mesh, with mesh metrics as ready-made health checks.",
+              "detail": "The overlay on the traffic map shows what share each version takes right now.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery"
             },
             {
               "status": "planned",
               "title": "Releases across services",
-              "value": "Ship several services as one ordered, gated release with a promotion view across environments."
+              "value": "Ship several services as one ordered, gated release with a promotion view across environments.",
+              "detail": "Promotion moves the same digest, never a rebuild, and every step shows who approved it.",
+              "needs": "A single pane of glass.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Promotion across environments",
+              "value": "Move a version from one environment to the next with checks and approvals in between.",
+              "detail": "The matrix shows what runs where, which places are behind, and a button to move a version.",
+              "needs": "Releases across services.",
+              "area": "delivery"
             },
             {
               "status": "planned",
               "title": "Post-deploy watch and incidents",
-              "value": "Keep watching after release, roll back automatically, and tie incidents to the change that caused them."
+              "value": "Keep watching after release, roll back automatically, and tie incidents to the change that caused them.",
+              "detail": "An incident links back to the commit, run and setting change nearest to it.",
+              "needs": "Verification after a deploy.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "AI analysis as an optional rollback gate",
+              "value": "Let a verification step use AI analysis of metrics and logs to trigger automatic rollback, off by default and able to require a person for production.",
+              "detail": "Plain threshold checks remain the default, and AI can decide only where you allow it.",
+              "needs": "A built-in model gateway.",
+              "area": "ai"
+            }
+          ]
+        },
+        {
+          "name": "Debug a deployment, then see everything",
+          "blurb": "Why did it fail, in one sentence, then every resource behind it.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Why did it fail to deploy",
+              "value": "A failed application opens with a diagnosis in one sentence, the evidence behind it and one recommended action.",
+              "detail": "Each piece of evidence is a button that opens the resource where it shows: manifest, events or log. AI can help word the diagnosis, but the evidence is always facts.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "A timeline of changes and symptoms",
+              "value": "Changes, new copies starting, alerts and health on a single time line, with what changed since it last worked.",
+              "detail": "A comparison with the last working version covers image, settings and manifests.",
+              "needs": "Why did it fail to deploy.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Everything deployed",
+              "value": "The whole resource tree: workloads, pods, containers, services, routes, settings, volumes, jobs and custom resources.",
+              "detail": "Each node has overview, events, manifest with desired against live, and logs. Secrets show by name only.",
+              "needs": "Why did it fail to deploy.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Logs where you need them",
+              "value": "Container logs now and from before the last restart, with search, follow, a time range and jump to the first error.",
+              "detail": "Restarts, exit codes and resource use sit beside the log.",
+              "needs": "Everything deployed.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Fix actions with their consequence",
+              "value": "Roll a setting back, retry an update or open the failing pod, each saying in words what will happen.",
+              "detail": "Every action is a guided change that can be undone and is audited.",
+              "needs": "Why did it fail to deploy.",
+              "area": "delivery"
             }
           ]
         },
         {
           "name": "Where it deploys",
+          "blurb": "Clusters, virtual machines, machine images, clouds and serverless.",
           "items": [
             {
               "status": "planned",
               "title": "Built-in Helm and Kubernetes deploys",
-              "value": "Deploy and roll back without Argo CD; Argo stays first class for long-lived environments."
+              "value": "Deploy and roll back without Argo CD; Argo stays first class for long-lived environments.",
+              "detail": "The deploy is a typed step with a plan, a diff, health checks and a rollback to the last good release.",
+              "needs": "Container images.",
+              "area": "delivery"
             },
             {
               "status": "planned",
               "title": "Preview environments",
-              "value": "Every pull request or branch gets its own environment and address, tested and cleaned up on merge."
+              "value": "Every pull request or branch gets its own environment and address, tested and cleaned up on merge.",
+              "detail": "The pull request page shows the address and the verification result.",
+              "needs": "Built-in Helm and Kubernetes deploys.",
+              "area": "delivery"
             },
             {
               "status": "planned",
               "title": "VM deploys",
-              "value": "Roll a change across virtual machines in batches over SSH, with verification between batches."
-            },
-            {
-              "status": "planned",
-              "title": "Image-based hosts",
-              "value": "Machines that are really images, built, signed, upgraded and rolled back like container images, with host setup done at first boot."
+              "value": "Roll a change across virtual machines in batches over SSH, with verification between batches.",
+              "detail": "Hosts appear next to applications on the fleet page, with what runs on each.",
+              "area": "delivery"
             },
             {
               "status": "planned",
               "title": "Machine images with Packer",
-              "value": "Bake machine images in a pipeline and roll them through instance groups."
+              "value": "Bake machine images in a pipeline and roll them through instance groups.",
+              "detail": "Images have contents, scan results and signatures like container images.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Image-based hosts",
+              "value": "Machines that are really images (built on bootc), built, signed, upgraded and rolled back like container images, with host setup done at first boot.",
+              "detail": "Staged upgrades, reboots in batches and a go-back button use the same runway as an application rollout.",
+              "needs": "Machine images with Packer.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "First boot owned by Launchway",
+              "value": "The first-boot unit applies host name, network, keys and zone, and may run a configuration playbook once before the host takes traffic.",
+              "detail": "Running a playbook on a host that is already serving traffic stays refused, because that is what brings drift back.",
+              "needs": "Image-based hosts.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Configuration at build time",
+              "value": "Ansible and image builders work together at build time to prepare images.",
+              "detail": "What belongs in the image is baked, and what must differ per host is applied at first boot.",
+              "needs": "Image-based hosts.",
+              "area": "delivery"
             },
             {
               "status": "planned",
               "title": "An infrastructure stack designer",
-              "value": "Compose image, build and configuration blocks visually and have them turned into pipelines."
+              "value": "Compose image, build and configuration blocks visually and have them turned into pipelines.",
+              "detail": "The picture and the generated files stay in step, and the result is reviewable in Git.",
+              "needs": "A drawing canvas and diagrams.",
+              "area": "delivery"
             },
             {
               "status": "planned",
-              "title": "Cloud and serverless targets",
-              "value": "AWS, Google Cloud and Azure, including serverless and managed instance groups, with no stored cloud keys."
+              "title": "Image as a service for enterprise Linux teams",
+              "value": "Watch base images and advisories, rebuild, re-sign, re-scan and roll out across zones with verification.",
+              "detail": "You can ask whether every production host runs an approved, signed and scanned image patched inside its deadline, and get a yes or a list.",
+              "needs": "Image-based hosts.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Hosts and machine images in the interface",
+              "value": "A catalogue of images with contents and base, and a hosts page showing version, staged upgrade, drift and last seen.",
+              "detail": "A host page draws first boot as a short line, with boot history and logs.",
+              "needs": "Image-based hosts.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Cloud targets: AWS, Google Cloud and Azure",
+              "value": "Deploy to the three major clouds with their own features, with no stored cloud keys.",
+              "detail": "Each target uses short-lived identity from the pipeline step.",
+              "needs": "Cloud sign-in per step.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Serverless and managed instance groups",
+              "value": "Functions, container services and managed instance groups as deploy targets.",
+              "detail": "Rollouts, health checks and rollbacks follow the same model as on Kubernetes.",
+              "needs": "Cloud targets: AWS, Google Cloud and Azure.",
+              "area": "delivery"
             }
           ]
         },
         {
           "name": "Infrastructure as code",
+          "blurb": "State, plans and checks you can trust.",
           "items": [
             {
               "status": "planned",
               "title": "Terraform and OpenTofu",
-              "value": "Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection."
+              "value": "Reviewed plans, applies that run only the reviewed plan, state kept and locked inside Launchway, and drift detection.",
+              "detail": "Users never wonder where state goes, and Launchway guides them to good practice by default.",
+              "area": "delivery"
             },
             {
               "status": "planned",
-              "title": "Ansible and Chef",
-              "value": "Typed steps with per-host or per-node results and a check mode before apply."
+              "title": "State and locking built in",
+              "value": "State is stored, versioned and locked inside Launchway with access rules.",
+              "detail": "Nothing external is needed, and the state remains exportable.",
+              "needs": "Terraform and OpenTofu.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Ansible",
+              "value": "Typed steps with per-host results and a check mode before apply.",
+              "detail": "Results show per host, with the check result shown before anything is changed.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Chef",
+              "value": "A real step with per-node results where Chef reports them, check mode before apply, and templates.",
+              "detail": "It has the same standing as Ansible, using the free build by default.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Database change steps",
+              "value": "Apply database schema changes as a pipeline step, with a plan and a rollback where the tool supports it.",
+              "detail": "Changes pass the same gates as other deploys.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Packer builds as a first-class step",
+              "value": "Run image builds with their results, logs and artifacts attached to the run.",
+              "detail": "Output images go to the registry or the image store with provenance.",
+              "area": "delivery"
             }
           ]
         },
         {
           "name": "Runtime configuration",
+          "blurb": "Settings, keys and toggles managed together, per zone and environment.",
           "items": [
             {
               "status": "planned",
               "title": "Feature toggles",
-              "value": "A built-in toggle service that applications and agents read, per environment, with percentage and client-type rollouts."
+              "value": "A built-in toggle service that applications and agents read, per environment, with percentage and client-type rollouts.",
+              "detail": "It speaks an open protocol, so existing applications can read it with no Launchway library.",
+              "area": "traffic"
             },
             {
               "status": "planned",
               "title": "Configuration, keys and toggles per zone",
-              "value": "Manage settings and secrets together per zone and environment, for virtual machines and Kubernetes alike."
+              "value": "Manage settings and secrets together per zone and environment, for virtual machines and Kubernetes alike.",
+              "detail": "A zone is a named place and failure domain such as a region or a cluster. The nearest owner wins unless a higher level has enforced the value.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Routing by client attributes",
+              "value": "Decide which version a request gets from who sent it, such as a share of mobile clients, inside the application or at the network.",
+              "detail": "The effective exposure of route share times toggle share is always shown.",
+              "needs": "Feature toggles.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "A guided change for every lever",
+              "value": "Preview, policy check, approval where required, applied and audited, with an undo, for toggles, weights and limits.",
+              "detail": "Moving a lever to its safe state is never gated, and moving away from it always is.",
+              "needs": "Feature toggles.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Secrets with an external store",
+              "value": "Use an existing secret store beside the built-in one.",
+              "detail": "The store stays authoritative and values never reach the control plane.",
+              "needs": "Secrets that stay with runners.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Service mesh support including VMs",
+              "value": "Traffic, identity and policy for services on a mesh, and for virtual machines that join it.",
+              "detail": "Machines outside the mesh still appear on the map as declared.",
+              "needs": "Weighted canaries and traffic control.",
+              "area": "traffic"
+            }
+          ]
+        },
+        {
+          "name": "Watch and protect",
+          "blurb": "See traffic, protect it, and know whether each service is meeting its target.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "A live traffic map",
+              "value": "See how traffic flows between services, workloads and virtual machines, with rates, errors and latency.",
+              "detail": "Each connection says whether it was observed, declared or not observed, and no number is ever made up for one that is not observed.",
+              "needs": "Service mesh support including VMs.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Diagnose along a flow",
+              "value": "From a red connection, a one-sentence diagnosis, the failing requests, the pod, the change that caused it and the logs.",
+              "detail": "You go from symptom to cause without changing tools.",
+              "needs": "A live traffic map.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Replay the last hours",
+              "value": "A time slider that replays the last twelve hours of the map with incidents and rollouts marked.",
+              "detail": "Useful for what changed when errors began.",
+              "needs": "A live traffic map.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Inject delays and errors safely",
+              "value": "Add a delay or an error to a share of requests on a healthy connection, with a hard limit on share and time.",
+              "detail": "The dialog shows who is affected, and conditions stop the test early.",
+              "needs": "A live traffic map.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Rate limiting and traffic protection",
+              "value": "Limits per client, route and tenant, connection limits, timeouts, retries and circuit breakers, shown with how close traffic is to each.",
+              "detail": "Changing one is a guided change with a preview that replays the last hour against the new value.",
+              "needs": "A live traffic map.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Attack and abuse signals",
+              "value": "Signs of attack or abuse as plain sentences with evidence and three actions: limit, block or ignore with a reason.",
+              "detail": "Each signal says honestly where it came from.",
+              "needs": "Rate limiting and traffic protection.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Reliability pages",
+              "value": "Services ranked by error budget, saturation and restarts, with deploys, settings, toggles and scaling marked on the charts.",
+              "detail": "Cause and effect are visible on one time line.",
+              "needs": "Service reliability targets.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Toggles in context",
+              "value": "Which features are on where and for whom, with the effect of a toggle shown and one button to turn it off.",
+              "detail": "Toggle first, roll back second, in seconds.",
+              "needs": "Feature toggles.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Signal sources",
+              "value": "Connect metrics, logs, analytics, traces, the mesh, a firewall and the toggle service, with a test for each.",
+              "detail": "Every chart names its source and links to the query.",
+              "area": "traffic"
+            },
+            {
+              "status": "planned",
+              "title": "Service reliability targets",
+              "value": "Set targets for the services you run and see whether a release is spending the budget.",
+              "detail": "Targets can be imported and exported in an open format.",
+              "area": "traffic"
             }
           ]
         },
         {
           "name": "Change and insight",
+          "blurb": "Know what changed, who approved it, and how delivery is going.",
           "items": [
             {
               "status": "planned",
               "title": "Change management",
-              "value": "Automatic change records with risk scores, freezes and approvals, with optional ServiceNow and Jira Service Management."
+              "value": "Automatic change records with risk scores, freezes and approvals, and optional two-way sync with an IT service tool.",
+              "detail": "Works standalone, so a team without such a tool still has records.",
+              "needs": "Approvals and protected environments.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Connections to ServiceNow and Jira Service Management",
+              "value": "Create and update change records in ServiceNow or Jira Service Management and take their approval back.",
+              "detail": "Optional and equal to the built-in records.",
+              "needs": "Change management.",
+              "area": "delivery"
             },
             {
               "status": "planned",
               "title": "Delivery metrics and executive dashboards",
-              "value": "Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the runs behind each number."
+              "value": "Deployment frequency, lead time, change failure rate and time to restore, with drill-down to the runs behind each number.",
+              "detail": "Graphs are meant for people who do not use Launchway daily.",
+              "area": "delivery"
             },
             {
               "status": "planned",
-              "title": "Service reliability targets",
-              "value": "Set targets for the services you run and see whether a release is spending the budget."
+              "title": "Test intelligence and flow insights",
+              "value": "Find slow and flaky tests, bottlenecks in review and idle time in delivery.",
+              "detail": "Suggestions are shown with the evidence.",
+              "needs": "Delivery metrics and executive dashboards.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Policy rules in an open language",
+              "value": "Write extra policy rules in an open policy language alongside the built-in rules.",
+              "detail": "Rules run at the same decision point and are shown in the verdict.",
+              "needs": "Policy gates.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Portfolio bill of materials",
+              "value": "A bill of materials across every project and image, searchable by component.",
+              "detail": "Pairs with the software graph.",
+              "needs": "Findings and SBOMs per run.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Experiments with toggles",
+              "value": "Compare outcomes between users with a toggle on and off.",
+              "detail": "Results join delivery data, so you see effect and cost.",
+              "needs": "Feature toggles.",
+              "area": "traffic"
+            }
+          ]
+        },
+        {
+          "name": "Moving over from other delivery platforms",
+          "blurb": "Importers and proof for teams that already have a delivery platform.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Importers for other delivery platforms",
+              "value": "Convert pipelines, services and environments from other delivery and GitOps platforms, with a report of what needs a person.",
+              "detail": "The report is honest about gaps."
+            },
+            {
+              "status": "planned",
+              "title": "Published proof points",
+              "value": "Measured comparisons of footprint, speed and capabilities that anyone can reproduce.",
+              "detail": "Methods and results are published."
+            },
+            {
+              "status": "planned",
+              "title": "Enterprise readiness checklist",
+              "value": "Answers to the questions an enterprise reviewer asks, with a support bundle and an evidence page.",
+              "detail": "Close the gaps that gate adoption."
             }
           ]
         }
@@ -542,30 +1707,144 @@
       "name": "A built-in registry",
       "short": "Registry",
       "promise": "Images, Helm charts and other OCI artifacts stored beside the code, under the same permissions and policies.",
+      "audience": "Teams that want images and charts stored beside the code, with the same permissions, policy and audit and nothing else to run.",
+      "what": "Milestone 4 adds a registry to the binary. Images, charts and other artifacts are stored in the same database and blob store as everything else, promoted by digest, cleaned up without ever deleting what is deployed, and checked by policy on the way in and on the way out. Any other registry stays equally supported.",
+      "scenarios": [
+        "A build pushes an image; policy refuses it because it is unsigned.",
+        "You promote the exact image tested in staging to production with no copy.",
+        "Retention cleans old images but keeps the one a cluster is running.",
+        "A project's packages tab shows its images and charts and where each runs."
+      ],
+      "diagram": "flowchart TD\n  Build[\"Build\"] -->|push| Gate[\"Policy on push\"]\n  Gate --> Store[\"Registry<br/>database + blob store\"]\n  Store --> Scan[\"Scan, sign, record\"]\n  Scan --> Promote[\"Promote by digest\"]\n  Promote --> Deploy[\"Policy on deploy\"]\n  Deploy --> Run[\"Running\"]\n  Public[\"Public registries\"] -->|pull-through cache| Store\n  Store -->|replicate| Other[\"Other registries\"]\n  Retention[\"Retention\"] -.->|never deletes deployed| Store",
+      "diagramNote": "An image from build to running, with policy at both ends.",
+      "done": [
+        "The OCI conformance suite passes.",
+        "Docker, container runtimes and Helm work against it with no special setup.",
+        "Retention never deletes an image that is deployed, proven by a test.",
+        "Promotion by digest moves no bytes.",
+        "A registry operation is available in the API, the command line, the agent endpoint and Terraform."
+      ],
+      "notIncluded": [
+        "Package formats beyond the first set, which come in order of demand.",
+        "Continuous scanning of what runs (Milestone 5)."
+      ],
+      "buildsOn": [
+        "m1"
+      ],
+      "deepDives": [
+        {
+          "title": "The built-in registry",
+          "area": "registry"
+        }
+      ],
       "groups": [
         {
-          "name": "Registry",
+          "name": "The registry",
+          "blurb": "Images, charts and other artifacts stored beside the code, under the same permissions.",
           "items": [
             {
               "status": "planned",
               "title": "A built-in OCI registry",
-              "value": "Store container images, Helm charts and other OCI artifacts in Launchway, passing the OCI conformance suite, with nothing else to run."
+              "value": "Store container images, Helm charts and other OCI artifacts in Launchway, passing the OCI conformance suite, with nothing else to run.",
+              "detail": "It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.",
+              "needs": "Built-in artifact storage.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Helm charts and other artifacts as first-class",
+              "value": "Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly.",
+              "detail": "A chart page shows its versions, which applications use which, and the values it accepts.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "An image page that tells the whole story",
+              "value": "Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the run and commit that built it.",
+              "detail": "Its history is drawn as a line: built, scanned, signed, in test, in production.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Promotion by digest",
+              "value": "Move an image from one environment to the next without copying or rebuilding it.",
+              "detail": "What was tested is exactly what ships.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
             },
             {
               "status": "planned",
               "title": "Retention that protects what runs",
-              "value": "Clean up old images without ever deleting one that is deployed, and promote an image between environments by its digest."
+              "value": "Clean up old images without ever deleting one that is deployed.",
+              "detail": "The label says why each item is kept, such as kept because deployed.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
             },
             {
               "status": "planned",
-              "title": "Pull-through cache and image guard",
-              "value": "Cache public images, and keep unchecked images away from sandboxed builds."
+              "title": "Policy on push and deploy",
+              "value": "The same policy engine checks an image when it is pushed and when it is deployed.",
+              "detail": "Unsigned, unscanned or vulnerable images can be refused at either point.",
+              "needs": "Policy gates.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Pull-through cache",
+              "value": "Cache public images so builds are faster and unaffected by rate limits.",
+              "detail": "Cached images are scanned and counted against quotas like any other.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Image guard for sandboxed builds",
+              "value": "Keep unchecked images away from sandboxed builds, and fetch every image through a checking proxy.",
+              "detail": "Names that resolve to private addresses are refused.",
+              "needs": "Pull-through cache.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Replication with other registries",
+              "value": "Copy images to and from other registries on a rule.",
+              "detail": "Useful for a disaster-recovery copy or a customer-facing mirror.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Per-project packages and permissions",
+              "value": "A packages tab in each project that is a filtered view of the registry, with per-package access.",
+              "detail": "The registry and the code share one permission model.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "Signing and verification",
+              "value": "Sign images on build and verify signatures on pull and deploy.",
+              "detail": "Signatures and attestations are stored next to the image.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
+            },
+            {
+              "status": "planned",
+              "title": "More package formats",
+              "value": "Language and system packages, such as for common programming languages, with cleanup rules and quotas.",
+              "detail": "Added in order of demand, with a shared storage model.",
+              "needs": "A built-in OCI registry.",
+              "area": "registry"
             },
             {
               "status": "available",
               "title": "Any other registry, equally",
               "value": "Pushing to any OCI registry works today and stays first class beside the built-in one.",
-              "link": "guide/images"
+              "detail": "Choose per project and move later.",
+              "link": "guide/images",
+              "area": "registry"
             }
           ]
         }
@@ -578,45 +1857,163 @@
       "name": "The software graph, with automated patching",
       "short": "Software graph",
       "promise": "One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.",
+      "audience": "Teams and security groups who need to know what runs where, what it is made of and how to fix it safely.",
+      "what": "Milestone 5 connects code, dependencies, images and deployments in one graph kept in Launchway's own database. It answers what is running, from what, containing what and is any of it vulnerable. Patching then becomes an ordinary change that goes through tests, change management and a controlled rollout.",
+      "scenarios": [
+        "A new advisory arrives; Launchway lists the services affected and who owns each.",
+        "You search for a function across every repository you can see.",
+        "Automatic patching is switched on for one zone; a dependency update arrives as a change, passes its tests and rolls out.",
+        "An agent asks which services use a library and gets an answer from the graph, not from reading files."
+      ],
+      "diagram": "flowchart TD\n  Code[\"Code and commits\"] --> Graph[(\"Software graph\")]\n  Deps[\"Packages and licences\"] --> Graph\n  Img[\"Images and charts\"] --> Graph\n  Dep[\"Deployments and hosts\"] --> Graph\n  Adv[\"Advisories\"] --> Graph\n  Graph --> Q[\"Questions<br/>what, where, who, how bad\"]\n  Graph --> Patch[\"Patch proposal\"]\n  Patch --> Review[\"Tests and change management\"]\n  Review --> Roll[\"Rollout and verification\"]\n  Roll --> Dep",
+      "diagramNote": "The graph is built from facts Launchway already records, keyed by what is deployed.",
+      "done": [
+        "For any running image Launchway can show its commit, run, components and findings.",
+        "A new advisory re-scores running software without a rebuild.",
+        "An automated patch reaches production only through the same gates as any change.",
+        "Patching can be switched off per zone and is off by default."
+      ],
+      "notIncluded": [
+        "Cost management and the developer portal (Beyond)."
+      ],
+      "buildsOn": [
+        "m3",
+        "m4"
+      ],
+      "deepDives": [
+        {
+          "title": "Software graph and automated patching",
+          "area": "software-graph"
+        }
+      ],
       "groups": [
         {
           "name": "Know what you run",
+          "blurb": "One connected picture of code, dependencies, images and deployments.",
           "items": [
             {
               "status": "available",
               "title": "Findings and SBOMs per run",
               "value": "The starting point already works: findings and components recorded for every run.",
+              "detail": "Components are recorded as bills of materials and findings are kept with the run.",
               "link": "guide/security-findings"
             },
             {
               "status": "planned",
               "title": "What is deployed where",
-              "value": "Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes."
+              "value": "Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes.",
+              "detail": "Facts are keyed by image digest and by deployment, so one query can answer across Git, the registry, scans and the deploy engine.",
+              "needs": "Built-in registry.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "A continuous observer of what runs",
+              "value": "Watch clusters and hosts for what is actually running, not only what was deployed.",
+              "detail": "Surprises, such as an image nobody deployed, are flagged.",
+              "needs": "What is deployed where.",
+              "area": "software-graph"
             },
             {
               "status": "planned",
               "title": "Continuous scanning of what runs",
-              "value": "Scan deployed software for new vulnerabilities and best-practice gaps, not only at build time."
+              "value": "Scan deployed software for new vulnerabilities and best-practice gaps, not only at build time.",
+              "detail": "A new advisory re-scores everything already running.",
+              "needs": "What is deployed where.",
+              "area": "software-graph"
             },
             {
               "status": "planned",
-              "title": "Code search and code intelligence",
-              "value": "Search symbols and references across repositories, and give people and agents the context they need."
+              "title": "Advisories, exceptions and licences",
+              "value": "Record which vulnerabilities apply, import vendor statements that they do not, and check licences.",
+              "detail": "A finding can be waived with a reason and an expiry.",
+              "needs": "Continuous scanning of what runs.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "Who owns what",
+              "value": "Each component, service and repository has an owner, and findings go to that owner.",
+              "detail": "Questions like which services use this library get an answer.",
+              "needs": "What is deployed where.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "Code search across repositories",
+              "value": "Search symbols and text across every repository, hosted or connected, filtered by what you may see.",
+              "detail": "Results include pipelines, templates and steps.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "Code intelligence",
+              "value": "Definitions, references and call information, for people and for agents.",
+              "detail": "Gives agents the context they need without sending whole repositories.",
+              "needs": "Code search across repositories.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "Code knowledge for AI, with fewer tokens",
+              "value": "Answer AI questions from a graph of code and deployments instead of pasting files.",
+              "detail": "Fewer tokens are sent and the answers cite where they came from.",
+              "needs": "Code intelligence.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "Blast radius of a vulnerability",
+              "value": "From an advisory, see which deployed services and environments are affected and who owns them.",
+              "detail": "The list becomes a set of proposed fixes.",
+              "needs": "What is deployed where.",
+              "area": "software-graph"
             }
           ]
         },
         {
           "name": "Fix it safely",
+          "blurb": "Patch as a normal change, with checks and a controlled rollout.",
           "items": [
             {
               "status": "planned",
               "title": "Automated patching",
-              "value": "Off by default and turned on per zone: updates open as changes, pass tests and change management, and roll out through Argo CD."
+              "value": "Off by default and turned on per zone: updates open as changes, pass tests and change management, and roll out through Argo CD.",
+              "detail": "The loop is propose, test, approve, roll out and verify, and every step is recorded.",
+              "needs": "What is deployed where.",
+              "area": "software-graph"
             },
             {
               "status": "planned",
               "title": "Built-in dependency updates",
-              "value": "Keep common ecosystems' dependencies current, as ordinary reviewable pull requests."
+              "value": "Keep common ecosystems' dependencies current, as ordinary reviewable pull requests.",
+              "detail": "Updates carry their release notes and test results.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "Image refresh and patching of base images",
+              "value": "Rebuild images when their base changes and roll the new ones out.",
+              "detail": "Fits into the same patching loop and its deadlines.",
+              "needs": "Automated patching.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "AI-proposed fixes",
+              "value": "An optional helper proposes a fix or an upgrade note, flagged as AI, never merged on its own.",
+              "detail": "A person approves, and everything it did is recorded.",
+              "needs": "Automated patching.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "Patch deadlines and evidence",
+              "value": "Track how long each vulnerability has been open and produce evidence of patching within your own deadline.",
+              "detail": "The question is every production host patched in time answered with a query.",
+              "needs": "Automated patching.",
+              "area": "software-graph"
             }
           ]
         }
@@ -629,61 +2026,162 @@
       "name": "AI as an optional first-class helper",
       "short": "AI helper",
       "promise": "AI wherever it saves effort, always optional, always off until an administrator turns a purpose on, and never able to hide a failure.",
+      "audience": "Anyone who wants AI help with delivery, and anyone who wants it kept out.",
+      "what": "Milestone 6 puts AI wherever it saves effort and keeps it entirely optional. A built-in gateway routes to any model with spending limits, local models are first-class, regulated projects have a protected path, and a failing check can never be hidden by a model.",
+      "scenarios": [
+        "An administrator turns on AI explanations for failures only, and sets a monthly limit.",
+        "A regulated project is allowed to use only models with recorded data terms.",
+        "A step calls the gateway by model name; moving to another provider needs no pipeline change.",
+        "You sketch a delivery and are shown a pipeline you can read and edit."
+      ],
+      "diagram": "flowchart TD\n  Use[\"Steps, agents, interface\"] --> Gate[\"Purpose switch<br/>off until enabled\"]\n  Gate --> Comp[\"Context compression\"]\n  Comp --> GW[\"Model gateway<br/>limits, usage, routing\"]\n  GW --> Local[\"Local models\"]\n  GW --> Cloud[\"Hosted models\"]\n  GW --> Safe[\"Protected path<br/>recorded data terms\"]\n  GW --> Rec[\"Usage and audit record\"]",
+      "diagramNote": "Every AI call passes the purpose switch, and every call is recorded.",
+      "done": [
+        "With every AI purpose off, no model is ever called.",
+        "Spending limits stop or warn before a budget is exceeded.",
+        "Compression never removes file paths, line numbers or error codes, and marks each omission.",
+        "A regulated project cannot reach a model it is not allowed to use.",
+        "A model verdict never overrides a failing check."
+      ],
+      "notIncluded": [
+        "Anything that decides without an explicit setting."
+      ],
+      "buildsOn": [
+        "m1"
+      ],
+      "deepDives": [
+        {
+          "title": "AI as an optional helper",
+          "area": "ai"
+        }
+      ],
       "groups": [
         {
           "name": "Today",
+          "blurb": "What already works.",
           "items": [
             {
               "status": "available",
               "title": "Models in steps and verification",
               "value": "Hosted or local models in steps, with explanations of failures and verdicts that never override a failing check.",
+              "detail": "Models are configured once and used by name.",
               "link": "guide/ai"
             },
             {
               "status": "available",
               "title": "Agents as users",
               "value": "The agent endpoint gives agents the same permissions, limits and audit as any user.",
+              "detail": "An agent connects with a token and the same rules as a person.",
               "link": "guide/agents"
             }
           ]
         },
         {
-          "name": "Next",
+          "name": "A gateway of your own",
+          "blurb": "One endpoint for every model, with limits and monitoring.",
           "items": [
             {
               "status": "planned",
               "title": "A built-in model gateway",
-              "value": "One endpoint that routes to any hosted or self-hosted model, with usage monitoring and easy switching of providers."
+              "value": "One endpoint that routes to any hosted or self-hosted model, with usage monitoring and easy switching of providers.",
+              "detail": "Applications and steps call one address and a model name. Outside gateways remain an optional integration.",
+              "needs": "Models in steps and verification.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "Local and self-hosted models",
+              "value": "Run and serve open models on your own machines and use them like any other.",
+              "detail": "Useful where data cannot leave the building.",
+              "needs": "A built-in model gateway.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "Provider switching and fallbacks",
+              "value": "Change provider or model in one place, with fallbacks if one is down.",
+              "detail": "No code changes in pipelines.",
+              "needs": "A built-in model gateway.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "Usage monitoring",
+              "value": "See usage by model, project and purpose, with cost.",
+              "detail": "Charts feed the same dashboards as everything else.",
+              "needs": "A built-in model gateway.",
+              "area": "ai"
             },
             {
               "status": "planned",
               "title": "Spending limits",
-              "value": "Budgets in money, per model, project and purpose, not only in tokens."
+              "value": "Budgets in money, per model, project and purpose, not only in tokens.",
+              "detail": "Calls stop or warn when a limit is reached.",
+              "needs": "A built-in model gateway.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "AI off until a purpose is turned on",
+              "value": "Every purpose, such as explaining failures or reviewing changes, is off until an administrator turns it on.",
+              "detail": "Nothing is sent to a model by surprise.",
+              "area": "ai"
             },
             {
               "status": "planned",
               "title": "Context compression",
-              "value": "Shrink what is sent to a model without losing file paths, line numbers or error codes, with every omission marked and the saving measured."
+              "value": "Shrink what is sent to a model without losing file paths, line numbers or error codes, with every omission marked and the saving measured.",
+              "detail": "Never breaks a provider's prompt cache, and the saving is shown in money.",
+              "needs": "A built-in model gateway.",
+              "area": "ai"
             },
             {
               "status": "planned",
               "title": "A protected path for regulated data",
-              "value": "Use only models whose data-handling terms you have recorded, so that regulated projects never reach the wrong one."
+              "value": "Use only models whose data-handling terms you have recorded, so that regulated projects never reach the wrong one.",
+              "detail": "Adapters for the big cloud model services are included.",
+              "needs": "A built-in model gateway.",
+              "area": "ai"
             },
             {
               "status": "planned",
               "title": "Models that know Launchway",
-              "value": "Optional models tuned on Launchway itself, runnable locally and never trained on customer data."
-            },
-            {
-              "status": "planned",
-              "title": "AI analysis as an optional rollback gate",
-              "value": "Let a verification step use AI analysis of metrics and logs to trigger automatic rollback, off by default and able to require a person for production."
+              "value": "Optional models tuned on Launchway itself, runnable locally and never trained on customer data.",
+              "detail": "They answer questions about the product and write configuration.",
+              "needs": "Local and self-hosted models.",
+              "area": "ai"
             },
             {
               "status": "planned",
               "title": "From a picture to a pipeline",
-              "value": "Design a delivery visually and have AI help translate it into a pipeline you can read and edit."
+              "value": "Design a delivery visually and have AI help translate it into a pipeline you can read and edit.",
+              "detail": "Output is a proposed change in Git, never applied unseen.",
+              "needs": "A visual pipeline designer.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "AI summaries and review of changes",
+              "value": "Optional summaries and review comments on pull requests, labelled as AI.",
+              "detail": "It never approves or merges.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "AI help with failures",
+              "value": "Explain why a run or deploy failed, with the evidence it used.",
+              "detail": "Always shows the facts first.",
+              "needs": "Why did it fail to deploy.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "Agent guidance and an agent catalogue",
+              "value": "Ready-made instructions so agents know how to use Launchway, and a list of agents with their permissions.",
+              "detail": "Each agent is audited like a user.",
+              "needs": "Agents as users.",
+              "area": "ai"
             }
           ]
         }
@@ -696,66 +2194,153 @@
       "name": "The hosted service, the public demo and enterprise controls",
       "short": "Hosted service",
       "promise": "Use Launchway without running it, on a plan that follows your choices, with the controls enterprises and regulated teams ask for.",
+      "audience": "Teams that want Launchway as a service, evaluators who want to try it, and enterprises and regulated teams that need strong identity, audit and compliance.",
+      "what": "Milestone 7 lets you use Launchway without running it. Organisations are isolated, runners on your machines connect out, hosted steps run in isolated machines, and a public demo is available. The same milestone adds the identity, audit and retention controls enterprises ask for.",
+      "scenarios": [
+        "You sign up, connect a runner on your own cluster and run a pipeline without any of your code leaving your network.",
+        "A regulated team enables encryption keys with rotation and a retention rule.",
+        "An auditor exports a tamper-evident audit trail to the security tools.",
+        "A visitor explores the public demo with realistic data."
+      ],
+      "diagram": "flowchart TD\n  User[\"Your team\"] --> Org[\"Your organisation<br/>isolated\"]\n  Org --> Engine[\"Hosted engine\"]\n  Engine --> Sand[\"Sandboxed hosted runners\"]\n  Engine <-->|outbound only| Own[\"Runners on your machines\"]\n  Engine --> Audit[\"Audit, retention, encryption\"]\n  Audit --> Siem[\"Your security tools\"]",
+      "diagramNote": "Two ways to run steps: hosted in a sandbox, or on your own machines connected outward.",
+      "done": [
+        "Organisations cannot see each other, proven by a test.",
+        "A step in a sandbox cannot reach anything but the internet.",
+        "Usage is metered and shown before it is billed.",
+        "Audit entries are chained and exportable.",
+        "The compliance pack lists each control with its evidence."
+      ],
+      "notIncluded": [
+        "Any claim of certification."
+      ],
+      "buildsOn": [
+        "m1"
+      ],
+      "deepDives": [
+        {
+          "title": "The hosted service and sandboxed runners",
+          "area": "hosted-service"
+        }
+      ],
       "groups": [
         {
           "name": "Hosted service and demo",
+          "blurb": "Use Launchway without running it, on a plan that follows your choices.",
           "items": [
             {
               "status": "planned",
               "title": "Hosted service",
-              "value": "Launchway as a service: sign-up, quotas, usage metering, a free tier, pay for use, every option on every plan, and data residency."
+              "value": "Launchway as a service: sign-up, quotas, usage metering, a free tier, pay for use, every option on every plan, and data residency.",
+              "detail": "Price follows your choices, such as availability and users, and no feature is held back by plan.",
+              "needs": "Organisations.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Free tier and pay for use",
+              "value": "A free tier, and pay-for-use billing from the start, with no extras for basics.",
+              "detail": "Usage is metered and shown before it is billed.",
+              "needs": "Hosted service.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Data residency",
+              "value": "Choose where your data lives.",
+              "detail": "Region choices are shown at sign-up and recorded.",
+              "needs": "Hosted service.",
+              "area": "hosted-service"
             },
             {
               "status": "planned",
               "title": "Runners on your machines",
-              "value": "Runners on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network."
+              "value": "Runners on your own servers or clusters connect out to the hosted engine, so code and secrets never leave your network.",
+              "detail": "Only outbound connections are needed.",
+              "needs": "Runner identity and pools.",
+              "area": "hosted-service"
             },
             {
               "status": "planned",
               "title": "Sandboxed hosted runners",
-              "value": "Each step in its own isolated machine, with no route to anything but the internet and firm quotas; the same profile available to any self-hosted server."
+              "value": "Each step in its own isolated machine, with no route to anything but the internet and firm quotas; the same profile available to any self-hosted server.",
+              "detail": "Layers of isolation back each other up, and a kill switch exists at the network.",
+              "needs": "Hosted service.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Hosted capacity that can grow",
+              "value": "Everything is portable, so capacity can be added on any provider as demand justifies.",
+              "detail": "Nothing is tied to one machine.",
+              "needs": "Hosted service.",
+              "area": "hosted-service"
             },
             {
               "status": "planned",
               "title": "A public demo",
               "value": "A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start.",
+              "detail": "Try it with your own runner follows once organisation isolation exists.",
+              "needs": "Organisations.",
+              "area": "hosted-service",
               "link": "demo"
             },
             {
               "status": "planned",
               "title": "Organisations",
-              "value": "Several organisations on one installation, isolated from each other, with the level names you choose."
+              "value": "Several organisations on one installation, isolated from each other, with the level names you choose.",
+              "detail": "Isolation is tested.",
+              "area": "hosted-service"
             }
           ]
         },
         {
           "name": "Identity, audit and compliance",
+          "blurb": "The controls enterprises and regulated teams ask for.",
           "items": [
             {
               "status": "planned",
               "title": "Built-in accounts with MFA",
-              "value": "Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys."
+              "value": "Small teams without an identity provider still get secure sign-in with authenticator codes or passkeys.",
+              "detail": "Recovery codes and session management are included."
             },
             {
               "status": "planned",
               "title": "Directory groups and custom roles",
-              "value": "LDAP and Active Directory groups mapped to roles at each level, leavers removed automatically, and a view of who can do what, and why."
+              "value": "LDAP and Active Directory groups mapped to roles at each level, leavers removed automatically, and a view of who can do what, and why.",
+              "detail": "Roles are custom and permissions are clear."
+            },
+            {
+              "status": "planned",
+              "title": "Other single sign-on and provisioning",
+              "value": "SAML sign-in and automatic user provisioning for larger companies.",
+              "detail": "Works beside directory groups.",
+              "needs": "Directory groups and custom roles."
             },
             {
               "status": "planned",
               "title": "Tamper-evident audit and SIEM export",
-              "value": "An audit trail nobody can quietly edit, streamed to your security tools."
+              "value": "An audit trail nobody can quietly edit, streamed to your security tools.",
+              "detail": "Entries are chained so a gap shows."
             },
             {
               "status": "planned",
               "title": "Retention, legal hold and encryption at rest",
-              "value": "Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted."
+              "value": "Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted.",
+              "detail": "A hold overrides cleanup."
             },
             {
               "status": "planned",
               "title": "A compliance pack for PCI DSS and HIPAA",
               "value": "Policy templates and an evidence report that maps controls to requirements. It supports your compliance work and is not a certification.",
+              "detail": "Controls are listed with evidence.",
               "link": "security/controls-and-compliance"
+            },
+            {
+              "status": "planned",
+              "title": "Zero trust throughout",
+              "value": "Every service, runner and person proves identity on every call.",
+              "detail": "No shared secrets between components."
             }
           ]
         }
@@ -768,29 +2353,91 @@
       "name": "Beyond delivery",
       "short": "Beyond",
       "promise": "Ideas that grow naturally from one connected platform. Planned, but behind everything above.",
+      "audience": "Teams that, once delivery is in one place, want to operate what they ship from the same place.",
+      "what": "These are ideas that grow from one connected platform. They are planned, but they come after everything above.",
+      "scenarios": [
+        "You see what each service costs next to what it delivers.",
+        "A pipeline step breaks a pre-production environment on purpose and checks that verification notices.",
+        "A new engineer finds a service, its owner, its docs and its last deployment in one directory."
+      ],
+      "diagram": "flowchart TD\n  Graph[(\"Software graph\")] --> Cost[\"Cost by service\"]\n  Graph --> Portal[\"Service catalogue\"]\n  Verify[\"Verification\"] --> Chaos[\"Chaos steps\"]\n  Graph --> Chaos",
+      "diagramNote": "Each idea reuses data the earlier milestones already hold.",
+      "done": [
+        "Each item is its own small, optional feature that is off until chosen."
+      ],
+      "notIncluded": [
+        "Anything earlier in the roadmap."
+      ],
+      "buildsOn": [
+        "m5"
+      ],
+      "deepDives": [],
       "groups": [
         {
           "name": "Operate what you ship",
+          "blurb": "Ideas that grow naturally from one connected platform.",
           "items": [
             {
               "status": "planned",
               "title": "Cloud cost management",
-              "value": "See what each service, team and environment costs to run, next to what it delivers."
+              "value": "See what each service, team and environment costs to run, next to what it delivers.",
+              "detail": "Includes the cost of runner pools.",
+              "needs": "The software graph."
             },
             {
               "status": "planned",
               "title": "Chaos testing",
-              "value": "Deliberately break things in a pre-production environment as a pipeline step, and see whether verification notices."
+              "value": "Deliberately break things in a pre-production environment as a pipeline step, and see whether verification notices.",
+              "detail": "Built-in host experiments and well-known chaos tools are supported.",
+              "needs": "Inject delays and errors safely."
             },
             {
               "status": "planned",
               "title": "A developer portal and service catalogue",
-              "value": "A directory of every service with its owner, health, docs and deployments."
+              "value": "A directory of every service with its owner, health, docs and deployments.",
+              "detail": "Built on the same data as everything else.",
+              "needs": "What is deployed where."
             },
             {
               "status": "planned",
               "title": "Smaller integrations",
-              "value": "Chat approvals, feature-flag mitigation and more event sources."
+              "value": "Chat approvals, feature-flag mitigation and more event sources.",
+              "detail": "Added by demand."
+            },
+            {
+              "status": "planned",
+              "title": "Discussions and snippets",
+              "value": "A forum for projects and shareable snippets.",
+              "detail": "Optional and off by default.",
+              "needs": "Built-in Git hosting."
+            },
+            {
+              "status": "planned",
+              "title": "Cloud development environments",
+              "value": "Ready-made environments to work on a project from a browser.",
+              "detail": "Reuses preview environments.",
+              "needs": "Preview environments."
+            },
+            {
+              "status": "planned",
+              "title": "Runtime and API protection",
+              "value": "Protect running services from known attack patterns.",
+              "detail": "Builds on traffic protection.",
+              "needs": "Rate limiting and traffic protection."
+            },
+            {
+              "status": "planned",
+              "title": "Ticket to code agent",
+              "value": "An agent that takes a work item to a proposed change.",
+              "detail": "A person always reviews.",
+              "needs": "Agents as users."
+            },
+            {
+              "status": "planned",
+              "title": "Attestation programme",
+              "value": "Publish signed attestations about how Launchway itself is built.",
+              "detail": "Everyone can verify.",
+              "needs": "Signed releases and installers."
             }
           ]
         }

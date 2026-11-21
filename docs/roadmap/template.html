@@ -164,6 +164,45 @@ noscript div { border: 1px solid var(--line); border-radius: 8px; padding: 12px 
 }
 @media (prefers-reduced-motion: no-preference) { .card { transition: border-color .15s, transform .15s; } .card:hover { border-color: var(--brand); transform: translateY(-1px); } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* Detail level: collapsible groups, diagrams, area links */
+.btn { display: inline-block; margin-top: 8px; padding: 6px 14px; border: 1px solid var(--brand); border-radius: 18px; color: var(--brand); font-weight: 600; font-size: 14px; text-decoration: none; }
+.btn:hover { background: var(--brand-soft); }
+.m-detail { margin: 0; }
+.stat-l { font-size: 13px; color: var(--text-2); max-width: 90px; line-height: 1.25; }
+.stat:last-child b { color: var(--text); }
+details.subgroup { margin: 10px 0 0; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft); }
+details.subgroup > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; padding: 12px 16px; font-weight: 700; list-style: none; }
+details.subgroup > summary::-webkit-details-marker { display: none; }
+details.subgroup > summary::before { content: "▸"; color: var(--brand); margin-right: 8px; display: inline-block; transition: transform .15s; }
+details.subgroup[open] > summary::before { transform: rotate(90deg); }
+.g-name { flex: 1; min-width: 200px; }
+.g-count .bar { width: 90px; } .g-count { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 13px; color: var(--text-2); }
+.g-blurb { margin: 0; padding: 0 16px 8px; color: var(--text-2); font-size: 15px; }
+details.subgroup > .grid { padding: 4px 14px 16px; }
+.picture { margin: 8px 0 28px; }
+.diagram-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--bg-soft); padding: 12px; }
+.diagram { display: block; width: 100%; min-width: 720px; height: auto; font-family: inherit; }
+.diagram-note { color: var(--text-2); font-size: 14px; margin: 8px 0 0; max-width: 820px; }
+.diagram a { cursor: pointer; }
+.diagram a:focus-visible { outline: 2px solid var(--focus); }
+.bp-station rect, .dep-node rect { fill: var(--bg-card); stroke: var(--brand); stroke-width: 2; }
+.bp-station:hover rect, .dep-node:hover rect { fill: var(--brand-soft); }
+.dep-node.when-now rect { stroke: var(--wip); } .dep-node.when-later rect { stroke: var(--plan); stroke-dasharray: 6 4; }
+.bp-t { fill: var(--text); font-size: 17px; font-weight: 700; text-anchor: middle; }
+.dep-l { text-anchor: start; font-size: 13px; fill: var(--text-2); font-weight: 700; }
+.dep-n { fill: var(--text); font-size: 15px; font-weight: 600; }
+.bp-s { fill: var(--text-2); font-size: 12.5px; text-anchor: middle; }
+.bp-m { fill: var(--brand); font-size: 12.5px; font-weight: 700; text-anchor: middle; }
+.bp-label { fill: var(--text-2); font-size: 14px; font-weight: 600; }
+.bp-mid { text-anchor: middle; }
+.bp-arrow, .bp-loop { fill: none; stroke: var(--text-2); stroke-width: 2; }
+.bp-loop { stroke-dasharray: 6 5; }
+.bp-headfill { fill: var(--text-2); }
+.bp-band { fill: var(--brand-soft); stroke: var(--brand); stroke-width: 1.5; }
+.bp-base { fill: var(--plan-soft); stroke: var(--plan); }
+.bp-band-t { fill: var(--text); font-size: 14.5px; font-weight: 600; }
+.areas-grid .card { border-left-color: var(--brand); }
 </style>
 </head>
 <body>
@@ -176,6 +215,7 @@ noscript div { border: 1px solid var(--line); border-radius: 8px; padding: 12px 
   <span class="spacer"></span>
   <nav aria-label="Documentation">
     <a href="./start/overview.html">Docs</a>
+    <a href="./roadmap/git-hosting.html">Areas</a>
     <a href="./roadmap-list.html">Roadmap as a list</a>
     <a href="https://github.com/JK-Magic-Creations/launchway">GitHub</a>
   </nav>
@@ -211,6 +251,7 @@ noscript div { border: 1px solid var(--line); border-radius: 8px; padding: 12px 
     })
     Array.prototype.forEach.call(document.querySelectorAll('.subgroup, .st-section'), function (g) {
       g.hidden = !g.querySelector('.card[data-status]:not([hidden])')
+      if (g.tagName === 'DETAILS') g.open = !!(state.f || state.q) && !g.hidden
     })
     Array.prototype.forEach.call(document.querySelectorAll('.milestone'), function (m) {
       m.hidden = !m.querySelector('.card[data-status]:not([hidden])')
