@@ -59,6 +59,19 @@ steps:
 		t.Fatalf("run %s", d.Status)
 	}
 
+	// The recap is on the launch line of the run.
+	var lines []LaunchLine
+	getJSON(t, e.srv.URL+"/api/v1/launch-lines?run="+r.ID, &lines)
+	var conf *Station
+	for i := range lines[0].Stations {
+		if lines[0].Stations[i].Key == "configuration" {
+			conf = &lines[0].Stations[i]
+		}
+	}
+	if conf == nil || conf.State != "failed" || !strings.Contains(conf.Detail, "1 failed") || !strings.Contains(conf.Detail, "to destroy") {
+		t.Fatalf("the launch line has no recap: %+v", lines[0].Stations)
+	}
+
 	var list struct {
 		Reports []engine.CacReport `json:"reports"`
 	}

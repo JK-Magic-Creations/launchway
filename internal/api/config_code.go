@@ -744,3 +744,52 @@ func (s *Server) configurationOverview(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"environments": out, "state": ws, "sealed": s.stateSealed()})
 }
+
+// declaresConfig says whether a run has a step that keeps configuration reports.
+func declaresConfig(d *engine.RunDetail) bool {
+	if d.Graph == nil {
+		return false
+	}
+	for _, st := range d.Graph.Steps {
+		for _, a := range st.Artifacts {
+			if a.Name == ConfigArtifact {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// addConfigRecap puts the recap of a run's configuration reports on its
+// launch line: "12 hosts: 9 changed, 3 ok, 0 failed". Nothing is added to a
+// run that has none.
+func (s *Server) addConfigRecap(ctx context.Context, d *engine.RunDetail, line *LaunchLine) {
+	if !declaresConfig(d) {
+		return
+	}
+	if d.Status.Terminal() {
+		_ = s.syncConfigReports(ctx, d.ID)
+	}
+	reps, err := s.Engine.CacReportsOfRun(ctx, d.ID)
+	if err != nil || len(reps) == 0 {
+		return
+	}
+	// The newest report of each step wins; the line shows the last one, and
+	// the worst state of all.
+	state := stationDone
+	var parts []string
+	step := ""
+	for _, r := range reps {
+		switch r.Status {
+		case "failed", "unreachable", "unreadable":
+			state = stationFailed
+		case "drifted":
+			if state != stationFailed {
+				state = stationWaiting
+			}
+		}
+		parts = append(parts, r.Recap)
+		step = r.Step
+	}
+	line.Stations = append(line.Stations, Station{Key: "configuration", Label: "Configuration", State: state, Detail: strings.Join(parts, "; "), Step: step})
+}

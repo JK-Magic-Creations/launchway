@@ -87,7 +87,9 @@ func (s *Server) listLaunchLines(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, []LaunchLine{launchLineOf(d)})
+		ll := launchLineOf(d)
+		s.addConfigRecap(r.Context(), d, &ll)
+		writeJSON(w, http.StatusOK, []LaunchLine{ll})
 		return
 	}
 	runs, err := s.Engine.ListRuns(engine.RunFilter{Project: q.Get("project"), Limit: limit, OnlyProjects: only})
@@ -102,7 +104,9 @@ func (s *Server) listLaunchLines(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, err)
 			return
 		}
-		out = append(out, launchLineOf(d))
+		ll := launchLineOf(d)
+		s.addConfigRecap(r.Context(), d, &ll)
+		out = append(out, ll)
 	}
 	writeJSON(w, http.StatusOK, out)
 }
