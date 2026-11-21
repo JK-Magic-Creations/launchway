@@ -61,6 +61,14 @@ export function MergeRulesPanel({ path }: { path: string }) {
               <label className="check"><input type="checkbox" checked={r.require_up_to_date} onChange={(e) => patch(i, { require_up_to_date: e.target.checked })} /> The branch must contain the latest target</label>
               <label className="check"><input type="checkbox" checked={r.require_resolved_threads} onChange={(e) => patch(i, { require_resolved_threads: e.target.checked })} /> Every review thread must be resolved</label>
               <label className="check"><input type="checkbox" checked={r.no_self_approval} onChange={(e) => patch(i, { no_self_approval: e.target.checked })} /> The author's own approval does not count</label>
+              <label className="check"><input type="checkbox" checked={!!r.require_owner_approval} onChange={(e) => patch(i, { require_owner_approval: e.target.checked })} /> An owner of every changed file must approve (from <Mono>.launchway/owners</Mono>)</label>
+              <label className="check"><input type="checkbox" checked={!!r.require_latest_push_approved_by_other} onChange={(e) => patch(i, { require_latest_push_approved_by_other: e.target.checked })} /> The latest push must be approved by someone other than who pushed it</label>
+              <label className="check"><input type="checkbox" checked={!!r.dismiss_stale_approvals} onChange={(e) => patch(i, { dismiss_stale_approvals: e.target.checked })} /> Dismiss approvals when new commits are pushed to a pull request into it</label>
+              <label className="check"><input type="checkbox" checked={!!r.merge_queue} onChange={(e) => patch(i, { merge_queue: e.target.checked })} /> Merge through the merge queue (tested on the latest target, one at a time)</label>
+              <label className="field"><span>Checks required only when matching files change</span>
+                <input value={(r.required_checks_by_path ?? []).map((c) => `${c.paths.join(",")}=${c.check}`).join("; ")} placeholder="docs/,*.md=docs; /cmd/**=build"
+                  onChange={(e) => patch(i, { required_checks_by_path: e.target.value.split(";").map((part) => part.trim()).filter(Boolean).map((part) => { const [paths, check] = part.split("="); return { paths: (paths ?? "").split(",").map((x) => x.trim()).filter(Boolean), check: (check ?? "").trim() }; }) })} />
+                <small>Each entry is <Mono>paths=check</Mono>. A pipeline that its own path filter kept from running never blocks.</small></label>
               <label className="check"><input type="checkbox" checked={r.allow_admin_bypass} onChange={(e) => patch(i, { allow_admin_bypass: e.target.checked })} /> Administrators may merge past the rule, saying why (recorded)</label>
             </fieldset>
             {signed && !signed.available && <p className="faint small">Signed commits cannot be required yet. {signed.reason}</p>}
@@ -88,6 +96,13 @@ export function MergeRulesPanel({ path }: { path: string }) {
                 {allowed.map(([, m, label]) => <option key={m} value={m}>{label}</option>)}
               </select></label>
             <label className="check"><input type="checkbox" checked={settings.delete_branch_after_merge} onChange={(e) => { setSettings({ ...settings, delete_branch_after_merge: e.target.checked }); setSaved(""); }} /> Delete the source branch after a merge</label>
+            <label className="field"><span>Ask reviewers automatically</span>
+              <select value={settings.assign_reviewers ?? ""} onChange={(e) => { setSettings({ ...settings, assign_reviewers: e.target.value }); setSaved(""); }}>
+                <option value="">Not at all</option>
+                <option value="owners">Every owner of the changed files</option>
+                <option value="round_robin">One owner per file, by turns</option>
+                <option value="least_loaded">One owner per file, whoever has the fewest open requests</option>
+              </select><small>From <Mono>.launchway/owners</Mono> on the target branch, when a pull request is ready for review.</small></label>
             <label className="check"><input type="checkbox" checked={settings.dismiss_stale_approvals} onChange={(e) => { setSettings({ ...settings, dismiss_stale_approvals: e.target.checked }); setSaved(""); }} /> Dismiss approvals when new commits are pushed</label>
           </fieldset>
           <ErrorBox error={error} />

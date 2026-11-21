@@ -67,10 +67,11 @@ function ThreadView({ t, path, n, me, canApply, onChange, onError }: { t: Thread
   );
 }
 
-function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError, startOpen }: {
+function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError, startOpen, owners, viewed, onViewed }: {
   f: FileChange; path: string; n: number; conv: Conversation | null; mode: "unified" | "split"; since?: number; me: string; canApply: boolean; reload: () => void; onError: (e: unknown) => void; startOpen: boolean;
+  owners?: string[]; viewed: boolean; onViewed: (on: boolean) => void;
 }) {
-  const [open, setOpen] = useState(startOpen);
+  const [open, setOpen] = useState(startOpen && !viewed);
   const [patch, setPatch] = useState<Patch | null>(null);
   const [comment, setComment] = useState<{ line: number; text: string } | null>(null);
   const load = useCallback((full: boolean) => { pullsApi.patch(path, n, f.path, full, since).then(setPatch).catch(onError); }, [path, n, f.path, since, onError]);
@@ -124,6 +125,8 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
         <h3 tabIndex={-1}>{f.old_path ? `${f.old_path} → ${f.path}` : f.path}</h3>
         <Chip>{f.status}</Chip>
         {!f.binary && <span className="small"><span className="pr-add">+{f.additions}</span> <span className="pr-del">-{f.deletions}</span></span>}
+        {owners && owners.length > 0 && <span className="small faint" data-owners>Owned by {owners.map((o) => (o.startsWith("group:") ? `group ${o.slice(6)}` : `@${o}`)).join(", ")}</span>}
+        <label className="check small"><input type="checkbox" checked={viewed} aria-label={`Viewed ${f.path}`} data-viewed onChange={(e) => { onViewed(e.target.checked); if (e.target.checked) setOpen(false); }} /> Viewed</label>
         <button type="button" className="btn btn-sm" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide" : "Show"}</button>
       </header>
       {open && f.binary && <p className="pr-note faint">A binary file: there is no text to show.</p>}
@@ -143,6 +146,21 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
   );
 }
 
+/** Where the pull request is in the branch's merge queue, and the run that is testing it. */
+function QueueBox({ pull }: { pull: Pull }) {
+  const q = pull.queue;
+  const live = q && q.state !== "removed" && q.state !== "merged";
+  return (
+    <div className="pr-queue" role="group" aria-label="Merge queue">
+      <h3>Merge queue</h3>
+      {live && <p role="status">Number {q.position} in the queue for {pull.target_branch}, {q.state === "testing" ? "being tested on the branch's latest commit" : "waiting its turn"}.{" "}
+        {(q.runs ?? []).map((id) => <Link key={id} href={`/runs/${id}`}>the run testing it</Link>)}</p>}
+      {q?.state === "removed" && <p role="status">It was taken out of the queue: {q.reason}.</p>}
+      {!q && <p className="faint">{pull.target_branch} merges through a queue: pull requests are brought up to date, tested and merged one at a time.</p>}
+    </div>
+  );
+}
+
 /** One pull request: the conversation, its commits and its files, and the box that says what is needed to merge it. */
 export function PullRequestPage({ path, number }: { path: string; number: number }) {
   const [pull, setPull] = useState<Pull | null>(null);
@@ -159,6 +177,10 @@ export function PullRequestPage({ path, number }: { path: string; number: number
   const [del, setDel] = useState(false);
   const [bypass, setBypass] = useState("");
   const [busy, setBusy] = useState("");
+  const [owners, setOwners] = useState<Record<string, string[]>>({});
+  const [ownerNote, setOwnerNote] = useState("");
+  const [viewed, setViewed] = useState<string[]>([]);
+  const [keys, setKeys] = useState(false);
   const load = useCallback(() => {
     pullsApi.get(path, number).then((p) => { setPull(p); setError(null); }).catch(setError);
     pullsApi.conversation(path, number).then(setConv).catch(setError);
@@ -171,13 +193,25 @@ export function PullRequestPage({ path, number }: { path: string; number: number
     return () => clearTimeout(t);
   }, [pull, path, number]);
   useEffect(() => { pullsApi.files(path, number, since).then((r) => setFiles(r.files)).catch(setError); }, [path, number, since, pull?.head_sha]);
+  useEffect(() => {
+    if (tab !== "files") return;
+    pullsApi.owners(path, number).then((r) => {
+      setOwners(Object.fromEntries(r.owners.files.map((f) => [f.path, f.owners])));
+      setOwnerNote(r.owners.problems.length ? `The owners file has a problem on line ${r.owners.problems[0].line}: ${r.owners.problems[0].message}.` : "");
+    }).catch(() => {});
+    pullsApi.viewed(path, number).then(setViewed).catch(() => {});
+  }, [tab, path, number, pull?.head_sha]);
+  const markViewed = (file: string, on: boolean) => {
+    setViewed((v) => (on ? [...v, file] : v.filter((x) => x !== file)));
+    pullsApi.setViewed(path, number, [file], on).then(setViewed).catch((e) => { setError(e); pullsApi.viewed(path, number).then(setViewed).catch(() => {}); });
+  };
   useEffect(() => { if (tab === "commits") pullsApi.commits(path, number).then(setCommits).catch(setError); }, [tab, path, number, pull?.head_sha]);
 
   // j and k move between files, n and p between comments.
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
-      if (el.closest("input, textarea, select") || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (el?.closest?.("input, textarea, select") || e.metaKey || e.ctrlKey || e.altKey) return;
       const move = (sel: string, dir: 1 | -1) => {
         const all = [...document.querySelectorAll<HTMLElement>(sel)];
         if (!all.length) return;
@@ -190,6 +224,9 @@ export function PullRequestPage({ path, number }: { path: string; number: number
       else if (e.key === "k") move("[data-file]", -1);
       else if (e.key === "n") move("[data-thread]", 1);
       else if (e.key === "p") move("[data-thread]", -1);
+      else if (e.key === "v") (document.activeElement?.closest("[data-file]")?.querySelector<HTMLInputElement>("[data-viewed]"))?.click();
+      else if (e.key === "?") setKeys((k) => !k);
+      else if (e.key === "Escape") setKeys(false);
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
@@ -251,7 +288,11 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                 )}
               </>
             )}
+            {pull.state === "open" && rd?.queue && <QueueBox pull={pull} />}
             <div className="pr-actions" style={{ marginTop: 10 }}>
+              {can("queue") && <Button sm kind="pri" onClick={() => run("queue", () => pullsApi.enqueue(path, number, method))}>Add to the merge queue</Button>}
+              {can("dequeue") && <Button sm onClick={() => run("queue", () => pullsApi.dequeue(path, number))}>Take out of the queue</Button>}
+              {can("update_branch") && <Button sm onClick={() => run("update", () => pullsApi.updateBranch(path, number))}>Update the branch</Button>}
               {can("mark_ready") && <Button sm onClick={() => run("ready", () => pullsApi.update(path, number, { draft: false }))}>Mark ready for review</Button>}
               {can("mark_draft") && <Button sm onClick={() => run("draft", () => pullsApi.update(path, number, { draft: true }))}>Convert to draft</Button>}
               {can("auto_merge") && pull.state === "open" && <Button sm onClick={() => run("auto", () => pullsApi.update(path, number, { auto_merge: method || "merge" }))}>Merge when the rules pass</Button>}
@@ -321,9 +362,14 @@ export function PullRequestPage({ path, number }: { path: string; number: number
                       </select></label>
                   )}
                 </div>
-                <p className="faint small">Keys: j and k move between files, n and p between comments.</p>
+                <p className="faint small">Keys: j and k move between files, n and p between comments, v marks the file viewed. Press ? to see them all.</p>
+                {keys && <div role="dialog" aria-label="Keyboard shortcuts" className="pr-note pr-keys"><h3>Keyboard shortcuts</h3>
+                  <dl><dt>j, k</dt><dd>next and previous file</dd><dt>n, p</dt><dd>next and previous comment thread</dd><dt>v</dt><dd>mark the focused file viewed or not</dd><dt>?</dt><dd>show or hide this list</dd><dt>Escape</dt><dd>close it</dd></dl>
+                  <button type="button" className="btn btn-sm" onClick={() => setKeys(false)}>Close</button></div>}
+                {ownerNote && <p className="pr-note" role="note">{ownerNote}</p>}
+                {files && files.length > 0 && <p className="faint small" aria-live="polite">{files.filter((f) => viewed.includes(f.path)).length} of {files.length} files viewed.</p>}
                 {files && files.length === 0 && <Empty title="No changes">{since ? "Nothing changed since that revision." : "The branches hold the same files."}</Empty>}
-                {files && files.map((f, i) => <FileView key={f.path + (since ?? "")} f={f} path={path} n={number} conv={conv} mode={mode} since={since} me="" canApply={can("merge")} reload={load} onError={setError} startOpen={i < 5 && !f.too_large} />)}
+                {files && files.map((f, i) => <FileView key={f.path + (since ?? "")} f={f} path={path} n={number} conv={conv} mode={mode} since={since} me="" canApply={can("merge")} reload={load} onError={setError} startOpen={i < 5 && !f.too_large} owners={owners[f.path]} viewed={viewed.includes(f.path)} onViewed={(on) => markViewed(f.path, on)} />)}
               </>
             )}
           </div>
@@ -331,6 +377,8 @@ export function PullRequestPage({ path, number }: { path: string; number: number
         <aside className="pr-side" aria-label="Details">
           <PullList title="Reviewers" noun="reviewer" none="None asked" items={pull.requested_reviewers} editable={can("request_review")}
             onAdd={(n) => run("people", () => pullsApi.requestReview(path, number, [n]))} onRemove={(n) => run("people", () => pullsApi.unrequestReview(path, number, n))} />
+          {((pull.requested_reviewer_groups?.length ?? 0) > 0 || can("request_review")) && <PullList title="Reviewer groups" noun="group" none="None asked" items={pull.requested_reviewer_groups ?? []} editable={can("request_review")}
+            onAdd={(n) => run("people", () => pullsApi.requestReviewGroup(path, number, n))} onRemove={(n) => run("people", () => pullsApi.unrequestReviewGroup(path, number, n))} />}
           <PullList title="Assignees" noun="assignee" none="None" items={pull.assignees} editable={can("edit")}
             onAdd={(n) => run("people", () => pullsApi.update(path, number, { assignees: [...pull.assignees, n] }))} onRemove={(n) => run("people", () => pullsApi.update(path, number, { assignees: pull.assignees.filter((a) => a !== n) }))} />
           <PullList title="Labels" noun="label" none="None" chip items={pull.labels} editable={can("edit")}

@@ -7,15 +7,18 @@ export interface Check { name: string; status: string; required: boolean; run_id
 export interface Readiness {
   can_merge: boolean; why?: string; can_bypass?: boolean; approvals: number; changes_requested_by: string[]; open_threads: number;
   checks: Check[]; methods: string[]; default_method: string; blockers: { code: string; why: string }[];
+  needs_owner_approval?: { path: string; owners: string[] }[]; queue?: boolean;
 }
+export interface QueueEntry { pull_number: number; title?: string; position: number; state: "waiting" | "testing" | "removed" | "merged"; method: string; queued_by?: string; reason?: string; runs?: string[]; head_sha?: string; tested_sha?: string }
+export interface OwnersView { present: boolean; problems: { line: number; message: string }[]; files: { path: string; owners: string[] }[]; owners: string[] }
 export interface Pull {
   id: string; number: number; repository?: string; title: string; body: string; author: string; source_branch: string; target_branch: string;
-  state: "open" | "merged" | "closed"; draft: boolean; labels: string[]; assignees: string[]; requested_reviewers: string[];
+  state: "open" | "merged" | "closed"; draft: boolean; labels: string[]; assignees: string[]; requested_reviewers: string[]; requested_reviewer_groups?: string[];
   head_sha: string; base_sha: string; merge_base?: string; merge_commit?: string; merge_method?: string; merged_by?: string; reverts?: number;
   auto_merge?: string; linked_runs: string[]; created_at: string; updated_at: string; merged_at?: string; closed_at?: string; revisions: number;
   mergeability: { state: "clean" | "conflicts" | "checking" | "unknown"; conflicting_files?: string[]; behind: number; ahead: number; reason?: string };
   // Present in the full view only.
-  readiness?: Readiness; actions?: Action[]; fetch_ref?: string; your_role?: string;
+  readiness?: Readiness; actions?: Action[]; fetch_ref?: string; your_role?: string; queue?: QueueEntry;
 }
 export interface FileChange { path: string; old_path?: string; status: string; additions: number; deletions: number; binary: boolean; similarity?: number; too_large?: boolean }
 export interface Patch { path?: string; diff: string; truncated?: boolean; held?: boolean; binary?: boolean; bytes: number }
@@ -37,10 +40,12 @@ export interface BranchComparison {
 export interface MergeRule {
   pattern: string; required_approvals: number; approval_role: string; required_checks: string[]; require_up_to_date: boolean;
   require_resolved_threads: boolean; no_self_approval: boolean; require_signed_commits: boolean; allow_admin_bypass: boolean;
+  require_owner_approval?: boolean; dismiss_stale_approvals?: boolean; require_latest_push_approved_by_other?: boolean; merge_queue?: boolean;
+  required_checks_by_path?: { paths: string[]; check: string }[];
 }
 export interface PullSettings {
   allow_merge: boolean; allow_squash: boolean; allow_rebase: boolean; default_method: string; delete_branch_after_merge: boolean;
-  dismiss_stale_approvals: boolean; merge_message_template: string; squash_message_template: string;
+  dismiss_stale_approvals: boolean; merge_message_template: string; squash_message_template: string; assign_reviewers?: string;
 }
 
 const enc = encodeURIComponent;
@@ -75,5 +80,14 @@ export const pullsApi = {
   setRules: (path: string, rules: MergeRule[]) => call<{ rules: MergeRule[]; actions: Action[] }>("PUT", `${base(path)}/merge-rules`, { rules }),
   settings: (path: string) => call<PullSettings>("GET", `${base(path)}/pull-settings`),
   setSettings: (path: string, b: Partial<PullSettings>) => call<PullSettings>("PUT", `${base(path)}/pull-settings`, b),
+  owners: (path: string, n: number) => call<{ file: string; branch: string; owners: OwnersView }>("GET", `${base(path)}/pulls/${n}/owners`),
+  viewed: (path: string, n: number) => call<{ viewed: string[] }>("GET", `${base(path)}/pulls/${n}/viewed`).then((r) => r.viewed),
+  setViewed: (path: string, n: number, paths: string[], viewed: boolean) => call<{ viewed: string[] }>("PUT", `${base(path)}/pulls/${n}/viewed`, { paths, viewed }).then((r) => r.viewed),
+  enqueue: (path: string, n: number, method?: string) => call<QueueEntry>("POST", `${base(path)}/pulls/${n}/queue`, { method }),
+  dequeue: (path: string, n: number) => call<void>("DELETE", `${base(path)}/pulls/${n}/queue`),
+  updateBranch: (path: string, n: number) => call<{ head: string }>("POST", `${base(path)}/pulls/${n}/update-branch`, {}),
+  requestReviewGroup: (path: string, n: number, group: string) => call<Pull>("POST", `${base(path)}/pulls/${n}/review-requests`, { groups: [group] }),
+  unrequestReviewGroup: (path: string, n: number, group: string) => call<Pull>("DELETE", `${base(path)}/pulls/${n}/review-requests/${enc("group:" + group)}`),
+  inbox: () => call<{ items: { repository: string; number: number; title: string; kind: string; why: string }[] }>("GET", "/api/v1/pulls/inbox").then((r) => r.items),
   dismiss: (path: string, n: number, id: string, reason: string) => call<void>("POST", `${base(path)}/pulls/${n}/reviews/${enc(id)}/dismiss`, { reason }),
 };
