@@ -38,7 +38,7 @@ func TestUpgradeFromSchema27ToVariablesAndBack(t *testing.T) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaAccounts)
+	checkMarkers(t, cur, len(migrations))
 	if j := take(t, cur); j.RunID != half {
 		t.Fatalf("the half-done run did not carry on: %+v", j)
 	}
@@ -54,7 +54,7 @@ func TestUpgradeFromSchema27ToVariablesAndBack(t *testing.T) {
 		t.Fatalf("a build of schema 27 on a database of 29: %v\n%s", err, olderLog.String())
 	}
 	defer older.Close()
-	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaAccounts || info.Code != schemaParity2 || !info.Compatible() {
+	if info, err := older.Schema(context.Background()); err != nil || info.Database != len(migrations) || info.Code != schemaParity2 || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	var n int

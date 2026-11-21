@@ -137,6 +137,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}` | `delete_repository` | `repos delete` | `planned: launchway_repository` | equal |
 | `GET /api/v1/repositories/{owner}/{name}` | `get_repository` | `repos get` | `planned: launchway_repository` | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}` | `update_repository` | `repos update` | `planned: launchway_repository` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/archive/issues` | `list_archived_issues` | `repos archive list` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/archive/issues` | `import_archive` | `repos import-archive` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/archive/issues/{number}` | `get_archived_issue` | `repos archive show` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/compare` | `compare_branches` | `pr create` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `list_deploy_keys` | `repos deploy-keys list` | `planned: launchway_deploy_key` | equal |
 | `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `add_deploy_key` | `repos deploy-keys add` | `planned: launchway_deploy_key` | equal |

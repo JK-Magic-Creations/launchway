@@ -277,6 +277,7 @@ export default defineConfig({
           { text: 'Configuration objects', link: '/reference/config-objects' },
           { text: 'Interface parity', link: '/reference/interface-parity' },
           { text: 'Accessibility conformance', link: '/reference/accessibility-conformance' },
+          { text: 'Archive format', link: '/reference/archive-format' },
           { text: 'Events and audit actions', link: '/reference/events' },
           { text: 'Roles and permissions', link: '/reference/roles' },
           { text: 'Policy rules', link: '/reference/policy-rules' },

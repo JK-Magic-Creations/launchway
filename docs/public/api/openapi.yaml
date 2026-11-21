@@ -3727,6 +3727,120 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: repository.update
+    /api/v1/repositories/{owner}/{name}/archive/issues:
+        get:
+            description: 'The repository''s imported issues, newest number first, without their text: {"items": [...], "total", "open", "closed", "page", "per_page"}. Query: state (open, closed, all), q (text in titles, bodies and comments, ignoring case), page, per_page (default 50, at most 200). Read-only history; see [the archive format](archive-format.md).'
+            operationId: get_api_v1_repositories_owner_name_archive_issues
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The repository''s imported issues, newest number first, without their text: {"items": [...], "total", "open", "closed", "page", "per_page"}.'
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
+        post:
+            description: 'Stores a document of the archive format (launchway-archive/1: source, issues with their comments), at most 500 issues a call. Importing a number again replaces it. Answers {"issues", "comments", "replaced", "total"}.'
+            operationId: post_api_v1_repositories_owner_name_archive_issues
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Stores a document of the archive format (launchway-archive/1: source, issues with their comments), at most 500 issues a call.'
+            tags:
+                - repositories
+            x-launchway-access: repo-admin
+            x-launchway-audit: archive.import
+    /api/v1/repositories/{owner}/{name}/archive/issues/{number}:
+        get:
+            description: One imported issue with its text and its comments in their original order.
+            operationId: get_api_v1_repositories_owner_name_archive_issues_number
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: One imported issue with its text and its comments in their original order.
+            tags:
+                - repositories
+            x-launchway-access: repo-viewer
     /api/v1/repositories/{owner}/{name}/compare:
         get:
             description: 'What a pull request from ?head= into ?base= (default: the default branch) would contain: commits, files, ahead and behind, mergeability, and the number of an open pull request between them.'

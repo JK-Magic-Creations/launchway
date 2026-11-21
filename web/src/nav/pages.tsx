@@ -84,6 +84,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/repositories/:owner/:name/pulls/new": return <NewPullRequestPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
     case "/repositories/:owner/:name/pulls/:number": return <PullRequestPage key={p.owner + "/" + p.name + "#" + p.number} path={p.owner + "/" + p.name} number={Number(p.number)} />;
     case "/repositories/:owner/:name/mirrors": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="mirrors" />;
+    case "/repositories/:owner/:name/history": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="history" />;
     case "/playground": return <PlaygroundPage />;
     case "/activity": return <RunsPage />;
     case "/activity/approvals": return <ApprovalsPage approvals={approvals} />;

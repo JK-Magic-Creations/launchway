@@ -75,6 +75,12 @@ export function forgeFixtures(): Record<string, unknown> {
     "/api/v1/ssh": { enabled: true, host: "launchway.example", port: 2222, certificates: false,
       host_keys: [{ algorithm: "ssh-ed25519", type: "ed25519", fingerprint: "SHA256:hostkeyfingerprint", public_key: "ssh-ed25519 BBBB", created_at: "2026-10-01T10:00:00Z" }] },
     "/api/v1/user/ssh-keys": { items: [key] },
+    "/api/v1/repositories/acme/shop/archive/issues": { items: [
+      { number: 12, title: "Checkout crashes on empty carts", state: "closed", author: "bob", body: "", labels: ["bug"], assignees: ["ada"], comment_count: 1, created_at: "2024-01-02T03:04:05Z" },
+      { number: 3, title: "Add a receipt page", state: "open", author: "ada", body: "", labels: [], assignees: [], comment_count: 0, created_at: "2023-12-01T00:00:00Z" }], total: 2, open: 1, closed: 1, page: 1, per_page: 50 },
+    "/api/v1/repositories/acme/shop/archive/issues/12": { number: 12, title: "Checkout crashes on empty carts", state: "closed", author: "bob", body: "Steps:\n<script>alert(1)</script>", labels: ["bug"], assignees: ["ada"],
+      url: "https://old.example/acme/shop/issues/12", comment_count: 1, created_at: "2024-01-02T03:04:05Z", closed_at: "2024-01-03T03:04:05Z",
+      comments: [{ id: "77", author: "ada", body: "Fixed in the next release.", created_at: "2024-01-03T01:00:00Z" }] },
     "/api/v1/repositories/acme/shop/deploy-keys": { items: [{ ...key, id: "key_2", kind: "deploy", name: "build server", can_write: false }] },
     "/api/v1/repositories/acme/shop/protected-branches": { patterns: ["main", "release/*"] },
     "/api/v1/repositories/acme/shop/hooks": hooks,

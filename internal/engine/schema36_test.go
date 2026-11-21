@@ -47,9 +47,9 @@ func TestUpgradeFromSchema33ToAccounts(t *testing.T) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaAccounts)
+	checkMarkers(t, cur, len(migrations))
 	info, err := cur.Schema(context.Background())
-	if err != nil || info.Database != schemaAccounts || !info.Compatible() {
+	if err != nil || info.Database != len(migrations) || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 
@@ -66,7 +66,7 @@ func TestUpgradeFromSchema33ToAccounts(t *testing.T) {
 
 	older := mustOpenAs(t, addr, clk, schemaPulls, &log0)
 	defer older.Close()
-	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaAccounts || info.Code != schemaPulls || !info.Compatible() {
+	if info, err := older.Schema(context.Background()); err != nil || info.Database != len(migrations) || info.Code != schemaPulls || !info.Compatible() {
 		t.Fatalf("the schema-33 build's view: %+v %v", info, err)
 	}
 }
@@ -140,10 +140,10 @@ func TestUpgradeFromSchema35ToAccountsWithSealedSecrets(t *testing.T) {
 		t.Fatalf("%v\n%s", err, log.String())
 	}
 	defer cur.Close()
-	if strings.Count(log.String(), "applied a database migration") != 1 || !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, schemaAccounts)) {
-		t.Fatalf("only migration 36 should apply:\n%s", log.String())
+	if strings.Count(log.String(), "applied a database migration") != len(migrations)-schemaCacheTrust || !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, schemaAccounts)) {
+		t.Fatalf("only migrations after 35 should apply:\n%s", log.String())
 	}
-	checkMarkers(t, cur, schemaAccounts)
+	checkMarkers(t, cur, len(migrations))
 	s2, err := sealing.Start(ctx, sealing.Options{DB: cur.Database(), Holder: h, Log: quiet, Instance: "t"})
 	if err != nil {
 		t.Fatal(err)

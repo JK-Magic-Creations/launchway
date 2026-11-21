@@ -87,6 +87,9 @@ var mcpPermissionTable = map[string]mcpRow{
 	"list_deploy_keys":       {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"add_deploy_key":         {map[string]any{"owner": "o", "name": "x", "public_key": "x"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"delete_deploy_key":      {map[string]any{"owner": "o", "name": "x", "id": "k"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"list_archived_issues":   {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_archived_issue":     {map[string]any{"owner": "o", "name": "x", "number": 1}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"import_archive":         {map[string]any{"owner": "o", "name": "x", "document": map[string]any{"issues": []any{}}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"get_protected_branches": {map[string]any{"owner": "o", "name": "x"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
 	"set_protected_branches": {map[string]any{"owner": "o", "name": "x", "patterns": []string{"main"}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	// Pull requests: with hosting off every call that gets as far as the repository is not found.

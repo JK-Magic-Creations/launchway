@@ -38,6 +38,7 @@ func addRepositoryTools(srv *mcp.Server, c *mcpCall) {
 			mcpCallTimeout, createRepository)
 	}
 	addKeyTools(srv, c)
+	addArchiveTools(srv, c)
 }
 
 type repositoryOut struct {

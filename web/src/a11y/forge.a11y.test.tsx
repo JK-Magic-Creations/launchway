@@ -44,6 +44,12 @@ describe.each(["light", "dark"])("Git hosting views, %s theme", (theme) => {
     await screen.findByText(/build server/, {}, { timeout: 8000 });
     await expectClean("owner webhooks");
   }, 20000);
+  it("an imported issue", async () => {
+    await open("/repositories/acme/shop/history");
+    fireEvent.click(await screen.findByRole("button", { name: "Checkout crashes on empty carts" }, { timeout: 8000 }));
+    await screen.findByText(/Fixed in the next release/, {}, { timeout: 8000 });
+    await expectClean("imported issue");
+  }, 20000);
   it("the host key fingerprints", async () => {
     await open("/settings/access/ssh-keys");
     await screen.findByText(/SHA256:hostkeyfingerprint/, {}, { timeout: 8000 });

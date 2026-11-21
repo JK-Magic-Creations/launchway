@@ -39,7 +39,7 @@ func TestUpgradeFromSchema27ToMirrors(t *testing.T) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaAccounts)
+	checkMarkers(t, cur, len(migrations))
 	if j := take(t, cur); j.RunID != half {
 		t.Fatalf("the half-done run did not carry on: %+v", j)
 	}
@@ -83,7 +83,7 @@ func TestUpgradeFromSchema29ToMirrorsKeepsWhatIsThere(t *testing.T) {
 			t.Errorf("migration %d, already applied, was applied again", v)
 		}
 	}
-	checkMarkers(t, cur, schemaAccounts)
+	checkMarkers(t, cur, len(migrations))
 	var val string
 	if err := cur.db.QueryRow(`SELECT value FROM variables WHERE name = 'replicas'`).Scan(&val); err != nil || val != "3" {
 		t.Fatalf("variable after the upgrade: %q %v", val, err)
