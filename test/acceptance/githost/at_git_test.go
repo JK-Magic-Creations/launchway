@@ -1,4 +1,4 @@
-package giteaaccept
+package githostaccept
 
 import (
 	"crypto/rand"
@@ -18,7 +18,7 @@ func (c *Config) pushed(t *testing.T) (name, seed string) {
 	seed = c.seedRepo(t)
 	name = c.newRepo(t)
 	c.must(t, seed, "push", "-q", "--mirror", c.repoURL(name))
-	// A host may register a push after it answers (Gitea does, through a queue): wait until the repository is no longer empty.
+	// A host may register a push after it answers (the existing host does, through a queue): wait until the repository is no longer empty.
 	c.waitBranch(t, name, "main")
 	// The host picked the default branch when the repository was empty; point it at main now that it exists.
 	if _, ok := eventually(30*time.Second, func() bool {
@@ -322,7 +322,7 @@ func TestAT_HG_08_ProtectedTags(t *testing.T) {
 	c.must(t, seed, "push", "-q", url, "v2.3")
 	other := os.Getenv("LW_ACCEPT_OTHER_USER")
 	if other == "" {
-		r.skip(t, "Gitea needs an allowed-user list that does not include the pusher: set LW_ACCEPT_OTHER_USER to another existing user (Launchway's ref rules need no such user)")
+		r.skip(t, "the existing host needs an allowed-user list that does not include the pusher: set LW_ACCEPT_OTHER_USER to another existing user (Launchway's ref rules need no such user)")
 	}
 	c.api(t, "POST", c.repoPath(name)+"/tag_protections", map[string]any{"name_pattern": "v*", "whitelist_usernames": []string{other}}, nil, 200, 201)
 	r.Saw(t, "tag protection v* created after tag v2.3 existed")

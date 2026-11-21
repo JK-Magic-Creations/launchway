@@ -1,18 +1,18 @@
-# Gitea-replacement acceptance suite
+# Git hosting acceptance suite
 
 Executable form of AT-HG-01 to AT-HG-31 and AT-GAP-9 (design repository, `docs/32-replacing-homelab-gitea.md`, story S40-01).
-The same Go tests run against today's Gitea (they must pass: that proves the tests) and against Launchway's own Git hosting
-once it exists. Nothing is skipped by silence: every test records the values it compared, and every part it does not
+The same Go tests run against Launchway's own Git hosting (switch it on with the installation setting `forge.hosting`) and
+against any other compatible Git host, such as the one being replaced (it must pass: that proves the tests). Nothing is skipped by silence: every test records the values it compared, and every part it does not
 cover is listed in the report with the reason.
 
 ```sh
 export LW_ACCEPT_URL=http://192.168.1.242:3000 LW_ACCEPT_TOKEN=...      # token from Vault, never on a command line
 export LW_ACCEPT_URL_ALT=http://git.home.jk-magic-creations.com          # optional second address
-LW_ACCEPT_REPORT=/tmp/report timeout -k 30s 12m go test -count=1 -timeout 10m -v ./test/acceptance/gitea/
+LW_ACCEPT_REPORT=/tmp/report timeout -k 30s 12m go test -count=1 -timeout 10m -v ./test/acceptance/githost/
 ```
 
 Without `LW_ACCEPT_URL` every test skips, so `go test ./...` is unaffected. The variables are listed in `doc.go`.
-Against Launchway add `LW_ACCEPT_FLAVOR=launchway` (turns on the checks only Launchway must meet, such as `/metrics`).
+Against Launchway add `LW_ACCEPT_FLAVOR=launchway`; the default flavor is `gitea`, the host kind the suite was first proven against (turns on the checks only Launchway must meet, such as `/metrics`).
 
 The tests create only repositories named `lw-acceptance-<random>` under the token's own user and delete exactly those. They
 never touch another repository, setting or user. The token travels in the environment of the Git processes, never in an

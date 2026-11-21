@@ -1,4 +1,4 @@
-package giteaaccept
+package githostaccept
 
 import (
 	"bytes"
@@ -41,7 +41,7 @@ func (c *Config) gitWith(dir string, env []string, args ...string) (string, erro
 	// A Git command that hangs (a prompt, a stalled host) is killed, with the helpers it started, after three minutes.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // the arguments are the suite's own fixed Git commands; there is no shell
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = 10 * time.Second
@@ -79,7 +79,7 @@ func (c *Config) fingerprint(t *testing.T, dir string) (refs, objects string) {
 func (c *Config) seedRepo(t *testing.T) string {
 	t.Helper()
 	d := filepath.Join(t.TempDir(), "seed")
-	if err := os.MkdirAll(d, 0o755); err != nil {
+	if err := os.MkdirAll(d, 0o750); err != nil {
 		t.Fatal(err)
 	}
 	g := func(args ...string) { t.Helper(); c.must(t, d, args...) }
@@ -111,7 +111,7 @@ func (c *Config) seedRepo(t *testing.T) string {
 // commit adds a file and a commit in dir and returns the new commit id.
 func (c *Config) commit(t *testing.T, dir, file, body, msg string) string {
 	t.Helper()
-	if err := os.WriteFile(filepath.Join(dir, file), []byte(body), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, file), []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	c.must(t, dir, "add", "-A")

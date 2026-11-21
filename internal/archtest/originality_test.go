@@ -45,6 +45,12 @@ var allowedForIntegration = []string{
 	"internal/forge/providers/plain/plain.go",
 	"internal/api/forge_compat.go", "internal/api/forge_git.go", "internal/api/forge_git_e2e_test.go",
 	"internal/api/access.go", "internal/api/access_test.go",
+	// The Git hosting acceptance suite can be pointed at any compatible host. It names the host
+	// kind it was first proven against only in its README and docs, in the flavor option, in the
+	// webhook kind and headers that host's protocol uses, and in the access-log census tool for
+	// leaving it.
+	"test/acceptance/githost/README.md", "test/acceptance/githost/doc.go", "test/acceptance/githost/config.go",
+	"test/acceptance/githost/servers.go", "test/acceptance/githost/at_access_test.go", "test/acceptance/githost/census/census.py",
 	// The project's own release and docs workflows run on a hosted CI service.
 	".github/", "packaging/", "docs/contributing/docs.md",
 	// The Argo CD test bed uses a throwaway Git server image.

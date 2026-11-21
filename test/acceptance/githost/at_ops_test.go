@@ -1,4 +1,4 @@
-package giteaaccept
+package githostaccept
 
 import (
 	"archive/tar"
@@ -109,7 +109,7 @@ func TestAT_HG_20_ReadAPI(t *testing.T) {
 		t.Fatalf("surface mismatch: version %q user %q found %v commits %d head ok %v readme %q dir %d branches %d", v.Version, u.Login, found, len(commits), len(commits) > 0 && commits[0].Sha == head, body, len(dir), len(br))
 	}
 	r.Saw(t, "version %s; user %s; repos/search finds the repository; newest commit %.12s; README content decodes; %d root entries; %d branches", v.Version, u.Login, head, len(dir), len(br))
-	r.NotAutomated(t, "Beacon Deliveries and Security for five known commits, mcp-accounts, jkma-sandbox, Homepage, Blackbox; Gitea scaled to zero for an hour")
+	r.NotAutomated(t, "Beacon Deliveries and Security for five known commits, mcp-accounts, jkma-sandbox, Homepage, Blackbox; the existing host scaled to zero for an hour")
 }
 
 func TestAT_HG_24_BackupRestore(t *testing.T) {
@@ -164,7 +164,7 @@ func TestAT_HG_25_ProbeAndMetrics(t *testing.T) {
 	case c.Launchway():
 		t.Fatalf("Launchway must expose /metrics: status %d", st)
 	default:
-		r.Saw(t, "/metrics answers %d (required of Launchway only: Gitea's are off)", st)
+		r.Saw(t, "/metrics answers %d (required of Launchway only: the existing host's are off)", st)
 	}
 	r.NotAutomated(t, "ServiceProbeDown within 5 minutes of killing the pods; Homepage tile; BackupJobStale and RestoreDrillFailed names (Prometheus)")
 }

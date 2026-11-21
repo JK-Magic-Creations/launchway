@@ -1,6 +1,7 @@
-package giteaaccept
+package githostaccept
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -62,7 +63,7 @@ func (c *Config) receiverHost() (string, error) {
 	if u.Port() == "" {
 		host = net.JoinHostPort(u.Hostname(), "80")
 	}
-	conn, err := net.Dial("udp", host)
+	conn, err := (&net.Dialer{}).DialContext(context.Background(), "udp", host)
 	if err != nil {
 		return "", fmt.Errorf("cannot find this machine's address towards %s: %w", host, err)
 	}

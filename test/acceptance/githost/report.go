@@ -1,4 +1,4 @@
-package giteaaccept
+package githostaccept
 
 import (
 	"encoding/json"
@@ -80,7 +80,7 @@ func (r *Result) skip(t *testing.T, why string) {
 
 // writeReport writes report.json and report.md into dir.
 func writeReport(dir, host, flavor string) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil { //nolint:gosec // G703: dir is the LW_ACCEPT_REPORT directory the operator named
 		return err
 	}
 	var all []*Result
@@ -92,11 +92,11 @@ func writeReport(dir, host, flavor string) error {
 		all = append(all, &Result{ID: e.ID, Status: "skip", Coverage: e.Coverage, Reason: "not automated: " + e.Why})
 	}
 	b, _ := json.MarshalIndent(map[string]any{"host": host, "flavor": flavor, "date": time.Now().UTC().Format(time.RFC3339), "results": all}, "", " ")
-	if err := os.WriteFile(filepath.Join(dir, "report.json"), b, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "report.json"), b, 0o600); err != nil { //nolint:gosec // G703: dir is the LW_ACCEPT_REPORT directory the operator named
 		return err
 	}
 	var md strings.Builder
-	fmt.Fprintf(&md, "# Gitea-replacement acceptance report\n\nHost %s (%s), %s\n\n| Test | Result | Coverage | Evidence or reason |\n|---|---|---|---|\n", host, flavor, time.Now().UTC().Format("2006-01-02 15:04 UTC"))
+	fmt.Fprintf(&md, "# Git hosting acceptance report\n\nHost %s (%s), %s\n\n| Test | Result | Coverage | Evidence or reason |\n|---|---|---|---|\n", host, flavor, time.Now().UTC().Format("2006-01-02 15:04 UTC"))
 	for _, r := range all {
 		ev := strings.Join(r.Evidence, "; ")
 		if r.Reason != "" {
@@ -107,5 +107,5 @@ func writeReport(dir, host, flavor string) error {
 		}
 		fmt.Fprintf(&md, "| %s | %s | %s | %s |\n", r.ID, r.Status, r.Coverage, strings.ReplaceAll(ev, "|", "/"))
 	}
-	return os.WriteFile(filepath.Join(dir, "report.md"), []byte(md.String()), 0o644)
+	return os.WriteFile(filepath.Join(dir, "report.md"), []byte(md.String()), 0o600) //nolint:gosec // G703: as above
 }

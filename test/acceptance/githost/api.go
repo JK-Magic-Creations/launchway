@@ -1,7 +1,8 @@
-package giteaaccept
+package githostaccept
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,7 +24,7 @@ func (c *Config) do(method, path string, body any, anon bool) (int, []byte, erro
 		b, _ := json.Marshal(body)
 		rd = bytes.NewReader(b)
 	}
-	req, err := http.NewRequest(method, c.URL+path, rd)
+	req, err := http.NewRequestWithContext(context.Background(), method, c.URL+path, rd)
 	if err != nil {
 		return 0, nil, err
 	}

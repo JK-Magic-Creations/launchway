@@ -1,4 +1,4 @@
-package giteaaccept
+package githostaccept
 
 import (
 	"bytes"
@@ -56,7 +56,7 @@ func (c *Config) readOnlyToken(t *testing.T, r *Result, own string) {
 	t.Helper()
 	tok, repo := os.Getenv("LW_ACCEPT_RO_TOKEN"), os.Getenv("LW_ACCEPT_RO_REPO")
 	if tok == "" || repo == "" {
-		r.NotAutomated(t, "a token that reads one repository only: set LW_ACCEPT_RO_TOKEN and LW_ACCEPT_RO_REPO (Gitea tokens are not repository-scoped; making a restricted user on the real Gitea is not allowed)")
+		r.NotAutomated(t, "a token that reads one repository only: set LW_ACCEPT_RO_TOKEN and LW_ACCEPT_RO_REPO (the existing host's tokens are not repository-scoped; making a restricted user on the live host is not allowed)")
 		return
 	}
 	ro := &Config{User: c.User, Token: tok}
@@ -124,7 +124,7 @@ func TestAT_HG_09_PullRequests(t *testing.T) {
 		t.Fatalf("replay merge added a merge commit to main (%s before, %s after)", before, after)
 	}
 	r.Saw(t, "replay (rebase) merge added no merge commit to main (%s before and after)", before)
-	r.NotAutomated(t, "the 16 real pull requests equal to Gitea's (importer, needs both hosts); results attached to a proposal")
+	r.NotAutomated(t, "the 16 real pull requests equal to the existing host's (importer, needs both hosts); results attached to a proposal")
 }
 
 func TestAT_HG_10_Issues(t *testing.T) {
@@ -160,7 +160,7 @@ func TestAT_HG_10_Issues(t *testing.T) {
 		t.Fatalf("issue round trip lost something: %s", b)
 	}
 	r.Saw(t, "issue #%d: state %s, label %s, milestone %s, %d comment, created %s, closed %s, body kept", is.Number, got.State, got.Labels[0].Name, got.Milestone.Title, got.Comments, got.Created, got.Closed)
-	r.NotAutomated(t, "681 real issues 1:1, Gitea down for an hour draining a queue, ten items claimed through MCP (doc 27 section 10.2)")
+	r.NotAutomated(t, "681 real issues 1:1, the existing host down for an hour draining a queue, ten items claimed through MCP (doc 27 section 10.2)")
 }
 
 func TestAT_HG_11_Unused(t *testing.T) {
@@ -257,7 +257,7 @@ func (c *Config) webhook(t *testing.T, r *Result, name, seed string) {
 		t.Fatal("the delivery's HMAC-SHA256 signature does not match the secret")
 	}
 	r.Saw(t, "webhook delivered %s after the push: event push, ref %s, after %.12s, HMAC-SHA256 valid (limit 15 s)", took.Round(time.Millisecond), p.Ref, p.After)
-	r.NotAutomated(t, "60 Argo CD applications Synced at the same revision as Gitea (argocd app list)")
+	r.NotAutomated(t, "60 Argo CD applications Synced at the same revision as the existing host (argocd app list)")
 }
 
 func TestAT_HG_15_WritePath(t *testing.T) {
@@ -288,7 +288,7 @@ func TestAT_HG_16_Statuses(t *testing.T) {
 	post := func(sha, ctx, state string) {
 		c.api(t, "POST", c.repoPath(name)+"/statuses/"+sha, map[string]any{"state": state, "context": ctx, "description": state, "target_url": c.URL + "/run/1"}, nil, 201)
 	}
-	// Each commit is read only after all its statuses are posted: Gitea caches the combined state of a commit it was just
+	// Each commit is read only after all its statuses are posted: the existing host caches the combined state of a commit it was just
 	// asked about, so reading between posts would test its cache, not the statuses.
 	newCommit := func(n string) string {
 		id := c.commit(t, seed, n+".txt", n+"\n", "status "+n)
@@ -318,7 +318,7 @@ func TestAT_HG_16_Statuses(t *testing.T) {
 	var list []any
 	c.api(t, "GET", c.repoPath(name)+"/commits/"+b+"/statuses", nil, &list, 200)
 	r.Saw(t, "pending alone is pending; pending then success is success; success plus a failing second context is failure (2 contexts); %d status records kept for the second commit", len(list))
-	r.NotAutomated(t, "Beacon Deliveries within 30 s; a failing run blocking a proposal (ref rule); a read between two posts of one commit (Gitea answers from a cache: Launchway must not)")
+	r.NotAutomated(t, "Beacon Deliveries within 30 s; a failing run blocking a proposal (ref rule); a read between two posts of one commit (the existing host answers from a cache: Launchway must not)")
 }
 
 func TestAT_HG_17_SignInRedirect(t *testing.T) {

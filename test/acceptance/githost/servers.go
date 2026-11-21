@@ -1,6 +1,7 @@
-package giteaaccept
+package githostaccept
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -8,13 +9,14 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/http/cgi"
+	"net/http/cgi" //nolint:gosec // G504: the receiver only serves the host under test; the httpoxy issue is of Go before 1.6.3
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // Delivery is one webhook request the test receiver got.
@@ -41,7 +43,7 @@ func (c *Config) startReceiver(t *testing.T) *Receiver {
 	if err != nil {
 		t.Skip(err.Error())
 	}
-	ln, err := net.Listen("tcp", "0.0.0.0:0")
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "0.0.0.0:0") //nolint:gosec // G102: the host under test must reach the receiver from another machine
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,14 +54,14 @@ func (c *Config) startReceiver(t *testing.T) *Receiver {
 		mux.Handle("/git/"+r.Secret+"/", &cgi.Handler{Path: be, Root: "/git/" + r.Secret,
 			Env: []string{"GIT_PROJECT_ROOT=" + r.root, "GIT_HTTP_EXPORT_ALL=1", "GIT_CONFIG_GLOBAL=/dev/null"}})
 	}
-	srv := &http.Server{Handler: mux}
-	go srv.Serve(ln)
+	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	go func() { _ = srv.Serve(ln) }()
 	t.Cleanup(func() { srv.Close() })
 	return r
 }
 
 func gitHTTPBackend() (string, error) {
-	out, err := exec.Command("git", "--exec-path").Output()
+	out, err := exec.CommandContext(context.Background(), "git", "--exec-path").Output()
 	if err != nil {
 		return "", err
 	}
