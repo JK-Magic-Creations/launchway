@@ -51,7 +51,9 @@ type Step struct {
 type Work struct {
 	Edits map[string]string // file -> new text, made in the server (manifests only)
 	Steps []Step
-	Notes []string // things the pull request must say (a lock that the pipeline must regenerate, ...)
+	// Isolated says the steps run in containers (not on the runner's host).
+	Isolated bool
+	Notes    []string // things the pull request must say (a lock that the pipeline must regenerate, ...)
 	// Files lists every file the proposal may end up changing.
 	Files []string
 }

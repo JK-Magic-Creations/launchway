@@ -109,6 +109,9 @@ func (p *Proposer) one(ctx context.Context, d plan.Decision, base, prefix string
 	if err != nil {
 		return err
 	}
+	if iso, ok := p.Runner.(interface{ Isolated() bool }); ok {
+		work.Isolated = iso.Isolated()
+	}
 	if _, err := Apply(ctx, p.WS, d.Proposal, work, p.Runner, prefix, p.Scratch); err != nil {
 		return err
 	}

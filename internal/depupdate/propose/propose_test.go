@@ -166,7 +166,7 @@ func TestGoUpdateEndToEnd(t *testing.T) {
 		t.Fatalf("%+v", host.created)
 	}
 	body := host.created[0].Body
-	for _, want := range []string{"fixes a known security problem", "example.com/lib", "`v1.4.0`", "`v1.4.2`", "go get example.com/lib@v1.4.2", "go.sum", "ignore this major", "isolated container"} {
+	for _, want := range []string{"fixes a known security problem", "example.com/lib", "`v1.4.0`", "`v1.4.2`", "go get example.com/lib@v1.4.2", "go.sum", "ignore this major", "not edited by hand"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q:\n%s", want, body)
 		}

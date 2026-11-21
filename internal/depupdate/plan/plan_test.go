@@ -206,6 +206,11 @@ func TestPolicyRules(t *testing.T) {
 	if u := r.Resolve(context.Background(), []depupdate.Dep{dep("npm", "vite", "5.1.4", "web/package.json")}, nil)[0]; u.Target != "5.2.0" {
 		t.Errorf("ignored major: %+v", u)
 	}
+	// "ignore this version" covers the versions below it too
+	r.Closed = map[string]bool{"npm|vite|5.2.0": true}
+	if u := r.Resolve(context.Background(), []depupdate.Dep{dep("npm", "vite", "5.1.4", "web/package.json")}, nil)[0]; u.Target != "" || u.Major == nil || u.Major.Target != "6.0.0" {
+		t.Errorf("ignoring 5.2.0 must not propose 5.1.5: %+v", u)
+	}
 	r.Closed["npm|vite|*"] = true
 	if u := r.Resolve(context.Background(), []depupdate.Dep{dep("npm", "vite", "5.1.4", "web/package.json")}, nil)[0]; u.Status != StatusIgnored {
 		t.Errorf("ignored dependency: %+v", u)

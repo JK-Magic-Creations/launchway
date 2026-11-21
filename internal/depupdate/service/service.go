@@ -12,6 +12,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -42,6 +43,9 @@ type Config struct {
 	OSVURL, OSVDir string
 	// Offline: only the addresses above are used, never a public default.
 	Offline bool
+	// CacheTTL is how long answers of registries are kept (default 1 hour); a
+	// negative value keeps nothing.
+	CacheTTL time.Duration
 }
 
 // FromEnv reads the configuration from environment variables
@@ -51,6 +55,14 @@ func FromEnv(getenv func(string) string) Config {
 		PyPI: getenv("LAUNCHWAY_UPDATES_PYPI"), HostAPI: getenv("LAUNCHWAY_UPDATES_HOST_API"),
 		OSVURL: getenv("LAUNCHWAY_UPDATES_OSV_URL"), OSVDir: getenv("LAUNCHWAY_UPDATES_OSV_DIR"),
 		Offline: getenv("LAUNCHWAY_UPDATES_OFFLINE") == "1" || getenv("LAUNCHWAY_UPDATES_OFFLINE") == "true"}
+	if v := getenv("LAUNCHWAY_UPDATES_CACHE_TTL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			c.CacheTTL = d
+			if d == 0 {
+				c.CacheTTL = -1
+			}
+		}
+	}
 	for _, kv := range strings.Split(getenv("LAUNCHWAY_UPDATES_OCI_MIRRORS"), ",") {
 		if k, v, ok := strings.Cut(strings.TrimSpace(kv), "="); ok && k != "" && v != "" {
 			if c.OCIMirrors == nil {
@@ -64,7 +76,10 @@ func FromEnv(getenv func(string) string) Config {
 
 // Sources builds the version sources. client is the egress guard's client.
 func (c Config) Sources(client *http.Client, cache source.Cache) map[string]source.Source {
-	f := &source.Fetcher{Client: client, Cache: cache, Offline: c.Offline}
+	f := &source.Fetcher{Client: client, Cache: cache, Offline: c.Offline, TTL: c.CacheTTL}
+	if c.CacheTTL < 0 {
+		f.Cache = nil
+	}
 	return map[string]source.Source{
 		"go":        &source.GoProxy{F: f, BaseURL: c.GoProxy},
 		"npm":       &source.NPMRegistry{F: f, BaseURL: c.NPMRegistry},
@@ -141,13 +156,6 @@ func (s *Service) Report(ctx context.Context, repoID, repoPath, branch string, i
 	if err != nil {
 		return preview.Report{}, "", err
 	}
-	key := fmt.Sprintf("%s|%s|%v", repoID, commit, immediate)
-	s.mu.Lock()
-	if m, ok := s.memo[key]; ok && s.now().Sub(m.at) < 5*time.Minute {
-		s.mu.Unlock()
-		return m.rep, commit, nil
-	}
-	s.mu.Unlock()
 	var levels []plan.Layer
 	if s.Levels != nil {
 		if levels, err = s.Levels(ctx, repoPath); err != nil {
@@ -155,14 +163,30 @@ func (s *Service) Report(ctx context.Context, repoID, repoPath, branch string, i
 		}
 	}
 	open, closed := s.pullState(ctx, repoID, levels)
+	// What is open and what people closed is part of the answer, so it is part of the key.
+	key := fmt.Sprintf("%s|%s|%v|%s", repoID, commit, immediate, stateKey(open, closed))
+	s.mu.Lock()
+	if m, ok := s.memo[key]; ok && s.now().Sub(m.at) < 5*time.Minute {
+		s.mu.Unlock()
+		return m.rep, commit, nil
+	}
+	s.mu.Unlock()
 	rep, err := preview.Run(ctx, preview.Input{FS: tree, Levels: levels, Sources: s.Config.Sources(s.Client, s.cache), OSV: s.Config.Vulnerabilities(s.Client),
 		Open: open, Closed: closed, Now: s.now(), Immediate: immediate})
 	if err != nil {
 		return rep, commit, err
 	}
-	s.mu.Lock()
-	s.memo[key] = memo{rep, s.now()}
-	s.mu.Unlock()
+	answered := true
+	for _, u := range rep.Updates {
+		if u.Status == plan.StatusUnknown {
+			answered = false // a source that did not answer is asked again next time
+		}
+	}
+	if answered {
+		s.mu.Lock()
+		s.memo[key] = memo{rep, s.now()}
+		s.mu.Unlock()
+	}
 	return rep, commit, nil
 }
 
@@ -206,4 +230,21 @@ func (s *Service) pullState(ctx context.Context, repoID string, levels []plan.La
 		closed = append(closed, propose.PR{Number: p.Number, Branch: p.SourceBranch, Body: p.Body, Reason: reason})
 	}
 	return propose.OpenFrom(open), propose.IgnoreKeys(closed, func(k string) string { return strings.SplitN(k, "-", 2)[0] })
+}
+
+func stateKey(open []plan.Open, closed map[string]bool) string {
+	var parts []string
+	for _, o := range open {
+		var t []string
+		for k, v := range o.Targets {
+			t = append(t, k+"="+v)
+		}
+		sort.Strings(t)
+		parts = append(parts, fmt.Sprintf("o%d:%s:%s", o.Number, o.Key, strings.Join(t, ",")))
+	}
+	for k := range closed {
+		parts = append(parts, "c:"+k)
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, ";")
 }

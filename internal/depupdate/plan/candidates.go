@@ -119,13 +119,22 @@ func (r *Resolver) excluded(d depupdate.Dep, cur string, c cand) string {
 		}
 	}
 	if r.Closed != nil {
-		for _, key := range []string{
-			d.Ecosystem + "|" + d.Name + "|" + c.ver,
-			d.Ecosystem + "|" + d.Name + "|major-" + majorOf(c.ver),
-			d.Ecosystem + "|" + d.Name + "|*",
-		} {
-			if r.Closed[key] {
-				return "A person closed an earlier pull request for this and asked not to be shown it again."
+		if r.Closed[d.Ecosystem+"|"+d.Name+"|*"] || r.Closed[d.Ecosystem+"|"+d.Name+"|major-"+majorOf(c.ver)] {
+			return "A person closed an earlier pull request for this and asked not to be shown it again."
+		}
+		// "ignore this version" also covers every version below it: nobody wants the
+		// one just under the version they turned down.
+		prefix := d.Ecosystem + "|" + d.Name + "|"
+		for k := range r.Closed {
+			if !strings.HasPrefix(k, prefix) {
+				continue
+			}
+			ig := strings.TrimPrefix(k, prefix)
+			if ig == "*" || strings.HasPrefix(ig, "major-") {
+				continue
+			}
+			if c.cmp(c, cand{ver: ig}) <= 0 {
+				return "A person closed an earlier pull request for this version or a newer one and asked not to be shown it again."
 			}
 		}
 	}

@@ -473,8 +473,8 @@ func (h *restHost) Closed(_ context.Context, prefix string) ([]propose.PR, error
 
 func (h *restHost) Create(_ context.Context, n propose.NewPR) (propose.PR, error) {
 	var p restPull
-	err := h.cl.call("POST", h.base+"/pulls", map[string]any{"title": n.Title, "body": n.Body, "source": n.Branch, "target": n.Base,
-		"labels": n.Labels, "reviewers": n.Reviewers, "assignees": n.Assignees}, &p)
+	err := h.cl.call("POST", h.base+"/pulls", map[string]any{"title": n.Title, "body": n.Body, "source_branch": n.Branch, "target_branch": n.Base,
+		"labels": n.Labels, "requested_reviewers": n.Reviewers, "assignees": n.Assignees}, &p)
 	return propose.PR{Number: p.Number, Branch: n.Branch, Title: n.Title}, err
 }
 
@@ -568,6 +568,14 @@ func registryEnv() map[string]string {
 	for k, v := range map[string]string{"GOPROXY": "LAUNCHWAY_UPDATES_GOPROXY", "npm_config_registry": "LAUNCHWAY_UPDATES_NPM_REGISTRY", "UV_INDEX_URL": "LAUNCHWAY_UPDATES_PYPI_SIMPLE"} {
 		if x := os.Getenv(v); x != "" {
 			env[k] = x
+		}
+	}
+	// Anything else a registry needs (GONOSUMDB, GOFLAGS, an npm CA file) is passed on
+	// by name: LAUNCHWAY_UPDATES_ENV_GOSUMDB=off becomes GOSUMDB=off in the step. Nothing
+	// else of this machine's environment reaches the step, and never a credential.
+	for _, kv := range os.Environ() {
+		if k, v, ok := strings.Cut(kv, "="); ok && strings.HasPrefix(k, "LAUNCHWAY_UPDATES_ENV_") {
+			env[strings.TrimPrefix(k, "LAUNCHWAY_UPDATES_ENV_")] = v
 		}
 	}
 	return env

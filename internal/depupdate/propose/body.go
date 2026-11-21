@@ -75,7 +75,11 @@ func Body(pr plan.Proposal, work Work, now time.Time, policy plan.Policy) string
 	b.WriteString("\n## What will be rebuilt\n\nThe pipeline runs on this pull request like on any other, with its normal checks. ")
 	b.WriteString("Files changed: " + codeList(work.Files) + ".\n")
 	if len(work.Steps) > 0 {
-		b.WriteString("\nThe lock files were written by the ecosystem's own tool in an isolated container with no secrets, not edited by hand:\n")
+		if work.Isolated {
+			b.WriteString("\nThe lock files were written by the ecosystem's own tool in an isolated container with no secrets, not edited by hand:\n")
+		} else {
+			b.WriteString("\nThe lock files were written by the ecosystem's own tool, not edited by hand (this run used the host executor of a runner, which does not isolate the tool):\n")
+		}
 		for _, s := range work.Steps {
 			b.WriteString(fmt.Sprintf("- `%s` in `%s`: %s\n", strings.Join(flat(s.Commands), " && "), s.Image, s.Why))
 		}

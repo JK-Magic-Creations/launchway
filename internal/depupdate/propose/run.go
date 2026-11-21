@@ -62,8 +62,8 @@ func (r *ExecRunner) Run(ctx context.Context, st Step, tree string, log func(str
 		env["HOME"] = meta
 		env["GOCACHE"] = filepath.Join(meta, "gocache")
 		env["GOMODCACHE"] = filepath.Join(meta, "gomod")
-		if env["GOFLAGS"] == "" {
-			env["GOFLAGS"] = "-modcacherw" // the module cache must be removable
+		if !strings.Contains(env["GOFLAGS"], "-modcacherw") {
+			env["GOFLAGS"] = strings.TrimSpace(env["GOFLAGS"] + " -modcacherw") // the module cache must be removable
 		}
 	}
 	spec := executor.Spec{RunID: "dependency-update", Name: "dep-update-" + filepath.Base(meta), Image: st.Image,
@@ -173,4 +173,10 @@ func paths(m map[string][]byte) []string {
 	}
 	sort.Strings(o)
 	return o
+}
+
+// Isolated says steps run in containers, not directly on the host.
+func (r *ExecRunner) Isolated() bool {
+	_, host := r.Exec.(*executor.Host)
+	return !host
 }
