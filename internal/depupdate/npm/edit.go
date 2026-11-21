@@ -28,7 +28,7 @@ func LockCommands(dir string) Command {
 // A range that cannot be rewritten (a union such as ">=1 <2") is an error:
 // the pull request then asks a person to choose the range.
 func EditManifest(src, name, to string) (string, error) {
-	re := regexp.MustCompile(`(?m)^(\s*"` + regexp.QuoteMeta(name) + `"\s*:\s*")([^"]*)(")`)
+	re := regexp.MustCompile(`(["]` + regexp.QuoteMeta(name) + `"\s*:\s*")([^"]*)(")`)
 	m := re.FindStringSubmatchIndex(src)
 	if m == nil {
 		return src, fmt.Errorf("%s is not in package.json", name)

@@ -111,6 +111,9 @@ type Partial struct {
 	Assignees    *[]string             `yaml:"assignees,omitempty" json:"assignees,omitempty"`
 	Prereleases  *bool                 `yaml:"prereleases,omitempty" json:"prereleases,omitempty"`
 	ImageFiles   *[]string             `yaml:"image_files,omitempty" json:"image_files,omitempty"` // files with NAME_IMAGE='ref' lines
+	// Toolchains names the images the lock files are regenerated in
+	// (keys go, node, uv). Pin them by digest and mirror them.
+	Toolchains *map[string]string `yaml:"toolchains,omitempty" json:"toolchains,omitempty"`
 
 	// Lock lists keys this level fixes: no narrower level and not the
 	// repository's file may change them. The file's own Lock is ignored.
@@ -137,6 +140,7 @@ type Policy struct {
 	Assignees    []string             `json:"assignees,omitempty"`
 	Prereleases  bool                 `json:"prereleases"`
 	ImageFiles   []string             `json:"image_files,omitempty"`
+	Toolchains   map[string]string    `json:"toolchains,omitempty"`
 	// Locked says which level locked each key, for the settings page.
 	Locked map[string]string `json:"locked,omitempty"`
 	// Ignored lists file settings that were not applied, with the reason.
@@ -259,6 +263,9 @@ func Merge(layers ...Layer) (Policy, error) {
 	}
 	if acc.ImageFiles != nil {
 		p.ImageFiles = *acc.ImageFiles
+	}
+	if acc.Toolchains != nil {
+		p.Toolchains = *acc.Toolchains
 	}
 	return p, p.Validate()
 }
