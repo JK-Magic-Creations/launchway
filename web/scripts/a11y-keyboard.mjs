@@ -76,17 +76,20 @@ await journey("search: open with the slash key, find a failed run, read why it f
   assert.equal((await active(page)).id, "main");
   await page.waitForFunction(() => /Run/.test(document.querySelector('[data-announcer="polite"]')?.textContent ?? ""));
   const tree = await snapshot(page.getByRole("main"));
-  has(tree, /heading ".*" \[level=1\]/, /group "Launch line/, /region "What went wrong"/, "TestPriceRounding");
+  has(tree, /heading ".*" \[level=1\]/, /list "Pipeline: \d+ steps?/, /region "What went wrong"/, "TestPriceRounding");
 });
 
-await journey("a failed run reads as text: the launch line is a group of stations with their states, and says which is current", async (page) => {
+await journey("a failed run reads as text: the pipeline is a list of stages whose steps are buttons that name their states", async (page) => {
   await open(page, `/runs/${runs.RUN_FAILED}`);
-  const line = page.getByRole("group", { name: /Launch line/ }).first();
-  await line.waitFor();
-  const stations = await line.getByRole("button").evaluateAll((b) => b.map((x) => x.getAttribute("aria-label") || x.textContent));
-  assert.ok(stations.length >= 2, "stations are buttons with names");
-  assert.ok(stations.some((t) => /failed/.test(t)), "the failed station says failed in words: " + stations.join(" | "));
-  // The list of runs on Activity draws the same line as a list with the same words.
+  // The graph is a list of stages (named "Pipeline: N steps in M stages") whose steps are buttons.
+  const graph = page.locator("ol.pg-stages").first();
+  await graph.waitFor({ state: "attached" });
+  assert.match(await graph.getAttribute("aria-label"), /^Pipeline: \d+ steps?/);
+  const steps = await page.locator("button[data-node]:visible").evaluateAll((b) => b.map((x) => x.getAttribute("aria-label") || x.textContent));
+  assert.ok(steps.length >= 2, "steps are buttons with names");
+  assert.ok(steps.some((t) => /failed/i.test(t)), "the failed step says failed in words: " + steps.join(" | "));
+  assert.ok(steps.every((t) => /^\S/.test(t)), "each name starts with the step's own visible label");
+  // The list of runs draws a launch line as a list with the same words.
   await open(page, "/");
   const lists = page.getByRole("list", { name: /Launch line/ });
   if (await lists.count()) assert.ok((await lists.first().getByRole("listitem").allTextContents()).some((t) => /passed|failed|waiting|running|not yet/.test(t)));

@@ -71,8 +71,8 @@ export function GraphNode({ node, x, y, w, h, selected, tabbable, sub, label, se
         <button type="button" ref={setRef} tabIndex={tabbable ? 0 : -1} data-node={node.id} aria-expanded="false" aria-label={label} onClick={onFold} onKeyDown={onKey}
           className={`pg-node pg-folded t-${tone(status)}${selected ? " pg-selected" : ""}`}
           title={node.kind === "group" ? `${node.group?.uses ?? ""}. Choose to show its steps.` : "Steps one after another. Choose to show them."}>
-          <span className="pg-top"><StatusIcon status={status} /><span className="pg-name">{nodeName(node)}</span><span className="pg-count" aria-hidden="true">▸ {count}</span></span>
-          <span className="pg-sub">{sub}</span>
+          <span className="pg-top"><StatusIcon status={status} /><span className="pg-name">{nodeName(node)}</span>{" "}<span className="pg-count" aria-hidden="true">▸ {count}</span></span>{" "}
+          <span className="pg-sub">{sub}</span>{" "}
           <span className="pg-needs" aria-hidden="true">{needsText}</span>
         </button>
       </li>
@@ -88,14 +88,14 @@ export function GraphNode({ node, x, y, w, h, selected, tabbable, sub, label, se
         onClick={onChoose} onKeyDown={onKey} title={s.description || s.id}>
         <span className="pg-top">
           <StatusIcon status={shown} />
-          <span className="pg-name">{nodeName(node)}</span>
-          {s.kind === "image" && <span className="node-kind" title="Builds a container image"><ImageIcon size={11} />image</span>}
-          {s.policy_blocked && <span className="node-policy" title="Blocked by policy">policy</span>}
-          {s.kind === "verify" && <span className="node-kind" title="Watches an environment's metrics and logs">verify</span>}
-          {s.kind === "ai" && <span className="node-kind" title="Asks a model">ai</span>}
+          <span className="pg-name">{nodeName(node)}</span>{" "}
+          {s.kind === "image" && <span className="node-kind" title="Builds a container image"><ImageIcon size={11} />image</span>}{" "}
+          {s.policy_blocked && <span className="node-policy" title="Blocked by policy">policy</span>}{" "}
+          {s.kind === "verify" && <span className="node-kind" title="Watches an environment's metrics and logs">verify</span>}{" "}
+          {s.kind === "ai" && <span className="node-kind" title="Asks a model">ai</span>}{" "}
           {s.attempt > 1 && <span className="node-attempt" title={`Attempt ${s.attempt}`}>#{s.attempt}</span>}
-        </span>
-        <span className="pg-sub">{sub}</span>
+        </span>{" "}
+        <span className="pg-sub">{sub}</span>{" "}
         <span className="pg-needs" aria-hidden="true">{needsText}</span>
       </button>
     </li>
