@@ -187,7 +187,15 @@ func deleteDeployKey(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in
 }
 
 type protectedOut struct {
-	Patterns []string `json:"patterns"`
+	Patterns        []string         `json:"patterns"`
+	PipelineWriters []pipelineWriter `json:"pipeline_writers"`
+}
+
+// pipelineWriter admits a pipeline to a protected branch, for exactly some files.
+type pipelineWriter struct {
+	Branch   string   `json:"branch" jsonschema:"the protected branch or pattern the rule covers, such as main"`
+	Projects []string `json:"projects" jsonschema:"project names or patterns whose deploy steps are admitted, such as mcp-*"`
+	Files    []string `json:"files" jsonschema:"the files the pipeline may change, relative to the repository's root; ** matches any number of directories"`
 }
 
 func getProtectedBranches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in repositoryIn) (protectedOut, error) {
@@ -203,6 +211,8 @@ type setProtectedIn struct {
 	Owner    string   `json:"owner" jsonschema:"the repository's owner"`
 	Name     string   `json:"name" jsonschema:"the repository's name"`
 	Patterns []string `json:"patterns" jsonschema:"branch names or patterns such as main or release/*; an empty list removes the protection"`
+	// PipelineWriters replaces the rules that admit pipelines (deploy steps that write back to this repository); leave it out to keep them.
+	PipelineWriters *[]pipelineWriter `json:"pipeline_writers,omitempty" jsonschema:"rules that admit a deploy step's own credential to a protected branch for exactly the files it may write; leave out to keep the current rules, give an empty list to remove them"`
 }
 
 func setProtectedBranches(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in setProtectedIn) (protectedOut, error) {
@@ -210,6 +220,6 @@ func setProtectedBranches(ctx context.Context, c *mcpCall, _ *mcp.CallToolReques
 		return protectedOut{}, errors.New("say which repository: owner and name")
 	}
 	var out protectedOut
-	err := c.apiJSON(ctx, "set_protected_branches", http.MethodPut, apiPath("/api/v1/repositories/%s/%s/protected-branches", in.Owner, in.Name), map[string]any{"patterns": in.Patterns}, &out)
+	err := c.apiJSON(ctx, "set_protected_branches", http.MethodPut, apiPath("/api/v1/repositories/%s/%s/protected-branches", in.Owner, in.Name), map[string]any{"patterns": in.Patterns, "pipeline_writers": in.PipelineWriters}, &out)
 	return out, err
 }

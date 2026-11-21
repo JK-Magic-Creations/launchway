@@ -623,3 +623,34 @@ func TestImageDigest(t *testing.T) {
 		t.Fatalf("tag over a digest: %v", err)
 	}
 }
+
+// A readable tag stays beside the digest, for references with a registry
+// host and a tag, a bare name under image, and one already pinned.
+func TestImageTagDigest(t *testing.T) {
+	const d = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	in := "# jkma\n" +
+		"spec:\n  containers:\n" +
+		"    - image: harbor.example.com/homelab/jkma:ci-latest   # api\n" +
+		"    - image: homelab/jkma:20261101-aaaaaaaa@sha256:" + strings.Repeat("a", 64) + "\n" +
+		"    - name: other\n      image: homelab/other:1\n" +
+		"  env:\n    - { name: IMG, value: homelab/jkma }\n"
+	out, n, err := ImageTagDigest([]byte(in), "homelab/jkma", "20261121-1234abcd", d)
+	if err != nil || n != 2 {
+		t.Fatalf("n=%d err=%v\n%s", n, err, out)
+	}
+	want := strings.NewReplacer(
+		"harbor.example.com/homelab/jkma:ci-latest", "harbor.example.com/homelab/jkma:20261121-1234abcd@"+d,
+		"homelab/jkma:20261101-aaaaaaaa@sha256:"+strings.Repeat("a", 64), "homelab/jkma:20261121-1234abcd@"+d,
+	).Replace(in)
+	if string(out) != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", out, want)
+	}
+	if _, _, err := ImageTagDigest([]byte(in), "homelab/jkma", "bad tag", d); err == nil {
+		t.Fatal("a bad tag was accepted")
+	}
+	// Written again with the same values, nothing changes.
+	again, _, err := ImageTagDigest(out, "homelab/jkma", "20261121-1234abcd", d)
+	if err != nil || string(again) != string(out) {
+		t.Fatalf("not idempotent: %v", err)
+	}
+}

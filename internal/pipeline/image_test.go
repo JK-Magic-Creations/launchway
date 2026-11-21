@@ -204,9 +204,10 @@ steps:
 func TestDeployDigestChange(t *testing.T) {
 	base := "pipeline: a\nsteps:\n  b: { image: x, run: y }\n  d:\n    kind: deploy\n    needs: b\n    environment: prod\n    argocd:\n      application: a\n      write_back:\n        repo: gitops\n        branch: main\n        changes:\n          - "
 	for change, want := range map[string]string{
-		"{ file: a.yaml, image: team/a, tag: v1, digest: { output: b.digest } }": "not both",
-		"{ file: a.yaml, image: team/a, digest: sha256:abc }":                    "not a sha256 digest",
-		"{ file: a.yaml, image: team/a }":                                        "tag or digest",
+		"{ file: a.yaml, image: team/a, tag: v1, format: digest }":         "format is tag, digest, tag_and_digest",
+		"{ file: a.yaml, image: team/a, tag: v1, format: tag_and_digest }": "tag_and_digest needs both",
+		"{ file: a.yaml, image: team/a, digest: sha256:abc }":              "not a sha256 digest",
+		"{ file: a.yaml, image: team/a }":                                  "tag or digest",
 	} {
 		_, err := Parse([]byte(base + change + "\n"))
 		if err == nil {
@@ -282,5 +283,24 @@ steps:
 	}
 	if _, ok := p.UsesRunFact("tag"); ok {
 		t.Fatal("tag is not used")
+	}
+}
+
+func TestDeployTagAndDigestChange(t *testing.T) {
+	base := "pipeline: a\nsteps:\n  b: { image: x, run: y }\n  d:\n    kind: deploy\n    needs: b\n    environment: prod\n    argocd:\n      application: a\n      write_back:\n        repo: gitops\n        branch: main\n        changes:\n          - "
+	for change, form := range map[string]string{
+		"{ file: a.yaml, image: team/a, tag: { output: b.tag }, digest: { output: b.digest } }":          "tag_and_digest",
+		"{ file: a.yaml, image: team/a, tag: v1, digest: { output: b.digest }, format: tag_and_digest }": "tag_and_digest",
+		"{ file: a.yaml, image: team/a, digest: { output: b.digest } }":                                  "digest",
+		"{ file: a.yaml, image: team/a, tag: v1 }":                                                       "tag",
+	} {
+		p, err := Parse([]byte(base + change + "\n"))
+		if err != nil {
+			t.Errorf("%s: %v", change, err)
+			continue
+		}
+		if got := p.Steps[1].ArgoCD.WriteBack.Changes[0].ChangeForm(); got != form {
+			t.Errorf("%s: form %s, want %s", change, got, form)
+		}
 	}
 }

@@ -637,7 +637,8 @@ scalar at a YAML path gets a value. Comments and layout are kept.
 | `file` | path | required | The file, relative to the repository's root, without `..` or a leading `/` |
 | `image` | image name | with `tag` or `digest` | The image whose references change, such as `team/shop`. A file with no reference to it is an error |
 | `tag` | [value](#value-forms) | | The new tag |
-| `digest` | [value](#value-forms) | | The new digest, such as `{ output: image.digest }`: references become `image@sha256:...`, which nobody can move. Not with `tag` |
+| `digest` | [value](#value-forms) | | The new digest, such as `{ output: image.digest }`: references become `image@sha256:...`, which nobody can move. With a `tag` as well, they become `image:tag@sha256:...`: readable and pinned |
+| `format` | text | from the values given | `tag`, `digest` or `tag_and_digest`. Without it a tag alone writes the tag, a digest alone pins by digest, and both write `image:tag@sha256:...`. Rolling back restores the previous text exactly, both parts |
 | `set` | YAML path | with `value` | The scalar to change, such as `image.tag` |
 | `value` | [value](#value-forms) | | Its new value |
 

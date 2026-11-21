@@ -2,6 +2,8 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
 	"net/http"
 	"strings"
 	"time"
@@ -243,7 +245,12 @@ func (s *Server) getProtected(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"patterns": pats})
+	ws, err := s.Forge.Rules.Writers(r.Context(), repo.ID)
+	if err != nil {
+		s.fail(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"patterns": pats, "pipeline_writers": ws})
 }
 
 func (s *Server) setProtected(w http.ResponseWriter, r *http.Request) {
@@ -256,6 +263,9 @@ func (s *Server) setProtected(w http.ResponseWriter, r *http.Request) {
 	}
 	var in struct {
 		Patterns []string `json:"patterns"`
+		// PipelineWriters, when present, replaces the rules that admit
+		// pipelines to protected branches; absent leaves them as they are.
+		PipelineWriters *[]refrules.Writer `json:"pipeline_writers"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -264,7 +274,14 @@ func (s *Server) setProtected(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if in.PipelineWriters != nil {
+		if err := s.Forge.Rules.SetWriters(r.Context(), repo.ID, *in.PipelineWriters, identityFrom(r).User); err != nil {
+			writeErr(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 	pats, _ := s.Forge.Rules.Patterns(r.Context(), repo.ID)
-	setAudit(r, repo.Path, "protected branches: "+strings.Join(pats, ", "))
-	writeJSON(w, http.StatusOK, map[string]any{"patterns": pats})
+	ws, _ := s.Forge.Rules.Writers(r.Context(), repo.ID)
+	setAudit(r, repo.Path, fmt.Sprintf("protected branches: %s; pipeline writers: %d", strings.Join(pats, ", "), len(ws)))
+	writeJSON(w, http.StatusOK, map[string]any{"patterns": pats, "pipeline_writers": ws})
 }

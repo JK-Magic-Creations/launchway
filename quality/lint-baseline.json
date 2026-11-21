@@ -1,6 +1,6 @@
 {
   "comment": "Findings tolerated because they predate the quality gates. May only shrink: `make lint-baseline-update`.",
-  "total": 464,
+  "total": 462,
   "entries": [
     {
       "file": "cmd/launchway/blobs.go",
@@ -177,12 +177,6 @@
       "count": 2
     },
     {
-      "file": "internal/api/deploy.go",
-      "linter": "dupl",
-      "text": "50-85 lines are duplicate of `internal/api/verify.go:20-55`",
-      "count": 1
-    },
-    {
       "file": "internal/api/mcp.go",
       "linter": "revive",
       "text": "redefines-builtin-id: redefinition of the built-in function max",
@@ -216,12 +210,6 @@
       "file": "internal/api/verify.go",
       "linter": "contextcheck",
       "text": "Non-inherited new context, use function like `context.WithXXX` or `r.Context` instead",
-      "count": 1
-    },
-    {
-      "file": "internal/api/verify.go",
-      "linter": "dupl",
-      "text": "20-55 lines are duplicate of `internal/api/deploy.go:50-85`",
       "count": 1
     },
     {
@@ -377,7 +365,7 @@
     {
       "file": "internal/deploy/argocd/config.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 32 of func `(*Config).Check` is high (\u003e 30)",
+      "text": "cyclomatic complexity 31 of func `(*Config).Check` is high (\u003e 30)",
       "count": 1
     },
     {
@@ -389,7 +377,7 @@
     {
       "file": "internal/deploy/edit/edit.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 36 of func `imageRef` is high (\u003e 30)",
+      "text": "cyclomatic complexity 35 of func `imageRef` is high (\u003e 30)",
       "count": 1
     },
     {

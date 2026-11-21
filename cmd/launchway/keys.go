@@ -256,12 +256,14 @@ func (cl *client) protectedBranches(args []string) error {
 	fs := flag.NewFlagSet("repos protected-branches", flag.ContinueOnError)
 	set := fs.String("set", "", "replace the patterns with these, comma separated (an empty value removes the protection)")
 	asJSON := fs.Bool("json", false, "print as JSON")
+	var writers writerFlag
+	fs.Var(&writers, "writer", "admit a pipeline to a protected branch: BRANCH=PROJECTS=FILES, each list comma separated (repeat; none removes all rules)")
 	pos, err := parseArgs(fs, args)
 	if err != nil {
 		return err
 	}
 	if len(pos) != 1 {
-		return usageErr("launchway repos protected-branches OWNER/NAME [--set main,release/*]")
+		return usageErr("launchway repos protected-branches OWNER/NAME [--set main,release/*] [--writer main=mcp-*=apps/mcp-servers/base.yaml]")
 	}
 	path, err := repoPath(pos[0])
 	if err != nil {
@@ -269,9 +271,19 @@ func (cl *client) protectedBranches(args []string) error {
 	}
 	path += "/protected-branches"
 	var out struct {
-		Patterns []string `json:"patterns"`
+		Patterns        []string       `json:"patterns"`
+		PipelineWriters []pipelineRule `json:"pipeline_writers"`
 	}
-	if visited(fs)["set"] {
+	keep := false
+	if visited(fs)["writer"] && !visited(fs)["set"] {
+		// Only the pipeline rules change: keep the patterns as they are.
+		if err := cl.call("GET", path, nil, &out); err != nil {
+			return err
+		}
+		*set = strings.Join(out.Patterns, ",")
+		keep = true
+	}
+	if visited(fs)["set"] || keep {
 		var pats []string
 		for _, p := range strings.Split(*set, ",") {
 			if p = strings.TrimSpace(p); p != "" {
@@ -281,7 +293,11 @@ func (cl *client) protectedBranches(args []string) error {
 		if pats == nil {
 			pats = []string{}
 		}
-		err = cl.call("PUT", path, map[string]any{"patterns": pats}, &out)
+		body := map[string]any{"patterns": pats}
+		if visited(fs)["writer"] {
+			body["pipeline_writers"] = writers.rules
+		}
+		err = cl.call("PUT", path, body, &out)
 	} else {
 		err = cl.call("GET", path, nil, &out)
 	}
@@ -294,5 +310,42 @@ func (cl *client) protectedBranches(args []string) error {
 			return
 		}
 		fmt.Fprintln(cl.out, "Protected branches (direct pushes from administrators only, never deleted): "+strings.Join(out.Patterns, ", "))
+		for _, w := range out.PipelineWriters {
+			fmt.Fprintf(cl.out, "Pipelines admitted to %s: projects %s may change only %s\n", w.Branch, strings.Join(w.Projects, ", "), strings.Join(w.Files, ", "))
+		}
 	})
+}
+
+// pipelineRule is a rule that admits pipelines to a protected branch.
+type pipelineRule struct {
+	Branch   string   `json:"branch"`
+	Projects []string `json:"projects"`
+	Files    []string `json:"files"`
+}
+
+// writerFlag collects --writer BRANCH=PROJECTS=FILES.
+type writerFlag struct{ rules []pipelineRule }
+
+func (w *writerFlag) String() string { return "" }
+
+func (w *writerFlag) Set(v string) error {
+	if v == "none" {
+		w.rules = []pipelineRule{}
+		return nil
+	}
+	parts := strings.Split(v, "=")
+	if len(parts) != 3 {
+		return fmt.Errorf("write --writer BRANCH=PROJECTS=FILES, for example main=mcp-*=apps/mcp-servers/base.yaml (lists are comma separated)")
+	}
+	split := func(s string) []string {
+		var out []string
+		for _, p := range strings.Split(s, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				out = append(out, p)
+			}
+		}
+		return out
+	}
+	w.rules = append(w.rules, pipelineRule{Branch: strings.TrimSpace(parts[0]), Projects: split(parts[1]), Files: split(parts[2])})
+	return nil
 }

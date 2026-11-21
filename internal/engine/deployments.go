@@ -90,6 +90,9 @@ type Environment struct {
 	// emergency rollback of a protected environment: allow (no approval
 	// first; an approver reviews it afterwards) or require_approval.
 	EmergencyRollback string
+	// WriteBack, when set, says how deploy steps write to a GitOps
+	// repository hosted by Launchway (schema 39; see writeback.go).
+	WriteBack *WriteBack
 }
 
 // Allows reports whether a project may deploy to the environment.
@@ -131,7 +134,7 @@ func checkEnvironments(envs []Environment) (map[string]Environment, error) {
 		if err := checkMinApprovals(env); err != nil {
 			return nil, err
 		}
-		if err := checkEmergency(env.EmergencyRollback, "environment "+env.Name+": emergency_rollback"); err != nil {
+		if err := checkEnvironmentRest(env); err != nil {
 			return nil, err
 		}
 		out[env.Name] = env
@@ -604,9 +607,12 @@ func (c *cmd) resolveChanges(def *pipeline.Step) ([]DeployChange, error) {
 		dc := DeployChange{File: ch.File, Image: ch.Image, Set: ch.Set}
 		var err error
 		switch {
-		case ch.Image != "" && ch.Digest != nil:
+		case ch.Image != "" && ch.ChangeForm() != "tag":
 			if dc.Digest, err = c.resolve(def, ch.Digest); err == nil {
 				err = edit.CheckDigest(dc.Digest)
+			}
+			if err == nil && ch.ChangeForm() == "tag_and_digest" {
+				dc.Tag, err = c.resolve(def, ch.Tag)
 			}
 		case ch.Image != "":
 			dc.Tag, err = c.resolve(def, ch.Tag)
@@ -804,9 +810,8 @@ type DeployChange struct {
 	File  string `json:"file"`
 	Image string `json:"image,omitempty"`
 	Tag   string `json:"tag,omitempty"`
-	// Digest pins the image (schema 15). A change has a tag or a digest,
-	// never both, so a deploy runner older than this, which knows only Tag,
-	// refuses the empty tag rather than writing a tag in its place.
+	// Digest pins the image (schema 15): image@digest, or image:tag@digest
+	// with a Tag too. A runner that knows only Tag refuses the empty tag.
 	Digest string `json:"digest,omitempty"`
 	Set    string `json:"set,omitempty"`
 	Value  string `json:"value,omitempty"`
@@ -847,6 +852,9 @@ type DeployJob struct {
 	// undo, newest first, each with its own commit message. The runner
 	// reverts them all or none (one push); Commit is then unused.
 	Reverts []DeployRevert `json:"reverts,omitempty"`
+	// WriteBack, when the environment writes to a repository hosted by
+	// Launchway, says how and carries the step's own credential (schema 39).
+	WriteBack *WriteBackJob `json:"write_back,omitempty"`
 }
 
 // deployJob builds a deploy runner's job for a leased deploy or rollback step.
@@ -867,7 +875,7 @@ func (c *cmd) deployJob(stepID, leaseID string) (*Job, error) {
 	dep := s.Dep
 	dj := &DeployJob{Action: dep.Action, Deployment: dep.ID, Environment: dep.Environment, Service: dep.Service, Target: dep.Target,
 		Application: dep.Application, Version: dep.Version, Repo: deployDef.ArgoCD.WriteBack.Repo, Branch: deployDef.ArgoCD.WriteBack.Branch,
-		Sync: deployDef.ArgoCD.Sync, Deadline: s.Deadline}
+		Sync: deployDef.ArgoCD.Sync, Deadline: s.Deadline, WriteBack: c.writeBack(dep.Environment, dep.ID)}
 	if dep.Previous != nil {
 		dj.PreviousVersion = dep.Previous.Version
 	}

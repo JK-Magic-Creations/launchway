@@ -1,8 +1,10 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/verify"
 )
 
@@ -54,6 +56,25 @@ func clipClusters(cs []verify.Cluster) []verify.Cluster {
 			c.Samples[i] = clipText(strings.ToValidUTF8(c.Samples[i], "?"), verify.MaxSampleBytes)
 		}
 		out = append(out, c)
+	}
+	return out
+}
+
+// checkAIStep checks an ai step's model, schema and temperature.
+func (e *Engine) checkAIStep(project string, s *pipeline.Step) pipeline.Problems {
+	out := e.checkModel(project, s, s.AI.Model)
+	add := func(path, format string, a ...any) {
+		out = append(out, pipeline.Problem{Line: s.Line, Path: "steps." + s.ID + path, Message: s.ID + ": " + fmt.Sprintf(format, a...)})
+	}
+	if s.AI.Schema != "" {
+		if err := checkSchema(s.AI.Schema); err != nil {
+			add(".schema", "%v", err)
+		}
+	}
+	if m, ok := e.model(s.AI.Model); ok {
+		if s.AI.Temperature != nil && !m.SupportsTemperature() {
+			add(".temperature", "model %s (%s) does not take a temperature; take it out", m.Name, m.Provider)
+		}
 	}
 	return out
 }

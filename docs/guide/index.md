@@ -20,6 +20,7 @@ key and setting see the [reference](../reference/index.md).
 | [Container images](images.md) | BuildKit builds, scans, push rules, signing, provenance |
 | [Deployments](deployments.md) | GitOps with Argo CD, rollouts, promote, abort, retry, rollback |
 | [Policies](policies.md) | Rules, modes, waivers, policies from Git |
+| [GitOps write-back](gitops-write-back.md) | Several pipelines writing one repository, a tag with its digest, and writing to a repository Launchway hosts: direct or by pull request |
 | [Verifying a deployment](verification.md) | Metrics and logs after a deploy, health sources, how the verdict is decided |
 | [AI models](ai.md) | Optional models for steps, verdict explanations and failed steps |
 | [Git over SSH](git-over-ssh.md) | SSH keys, deploy keys, host key fingerprints, protected branches, certificates, limits |

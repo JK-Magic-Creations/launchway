@@ -81,6 +81,7 @@ func (s *Server) deployLease(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	s.mintWriteBack(r.Context(), job)
 	writeJSON(w, http.StatusOK, job)
 }
 

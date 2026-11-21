@@ -293,6 +293,8 @@ type EnvironmentConfig struct {
 	// EmergencyRollback overrides approvals.emergency_rollback for this
 	// environment: allow or require_approval.
 	EmergencyRollback string `yaml:"emergency_rollback"`
+	// WriteBack: how deploy steps write to a repository Launchway hosts.
+	WriteBack *WriteBackConfig `yaml:"write_back"`
 }
 
 // ReviewersConfig names who may acknowledge an emergency rollback.
@@ -332,7 +334,7 @@ func (c *Config) EngineEnvironments() []engine.Environment {
 			reviewers = &pipeline.Approvers{Users: e.Reviewers.Users, Groups: e.Reviewers.Groups, Count: 1}
 		}
 		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue, Protected: e.Protected, MinApprovals: e.MinApprovals,
-			Reviewers: reviewers, EmergencyRollback: e.EmergencyRollback})
+			Reviewers: reviewers, EmergencyRollback: e.EmergencyRollback, WriteBack: e.WriteBack.engine()})
 	}
 	return out
 }

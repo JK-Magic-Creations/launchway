@@ -56,7 +56,7 @@ func checkMarkers(t *testing.T, e *Engine, n int) {
 // database of the schema before, each brings exactly its own tables and
 // columns, on SQLite and (with LAUNCHWAY_TEST_POSTGRES) PostgreSQL.
 func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
-	if len(migrations) != schemaPulls || schemaPulls != schemaRollback+1 || schemaRollback != schemaSSH+1 || schemaSSH != schemaMirror+1 || schemaMirror != schemaVariables+1 || schemaVariables != schemaStandIn28+1 || schemaStandIn28 != schemaParity2+1 || schemaParity2 != schemaForge+1 || schemaForge != schemaCache+1 || schemaCache != schemaFlow+1 || schemaFlow != schemaConfig+1 || schemaConfig != schemaResources+1 || schemaResources != schemaPools+1 || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
+	if len(migrations) != schemaDelivery || schemaDelivery != schemaStandIn38+1 || schemaStandIn38 != schemaStandIn37+1 || schemaStandIn37 != schemaStandIn36+1 || schemaStandIn36 != schemaStandIn35+1 || schemaStandIn35 != schemaStandIn34+1 || schemaStandIn34 != schemaPulls+1 || schemaPulls != schemaRollback+1 || schemaRollback != schemaSSH+1 || schemaSSH != schemaMirror+1 || schemaMirror != schemaVariables+1 || schemaVariables != schemaStandIn28+1 || schemaStandIn28 != schemaParity2+1 || schemaParity2 != schemaForge+1 || schemaForge != schemaCache+1 || schemaCache != schemaFlow+1 || schemaFlow != schemaConfig+1 || schemaConfig != schemaResources+1 || schemaResources != schemaPools+1 || schemaPools != schemaIdentity+1 || schemaIdentity != schemaVerify+1 ||
 		schemaVerify != schemaReports+1 || schemaReports != schemaBlobs+1 || schemaBlobs != schemaPolicy+1 {
 		t.Fatalf("schemas are not 16 to 33 in a row: pulls %d, stand-in 32 %d, ssh %d, mirror %d, variables %d, stand-in %d, parity2 %d, forge %d, policy %d, blobs %d, reports %d, verify %d, identity %d, pools %d, resources %d, config %d, flow %d, cache %d, migrations %d",
 			schemaPulls, schemaRollback, schemaSSH, schemaMirror, schemaVariables, schemaStandIn28, schemaParity2, schemaForge, schemaPolicy, schemaBlobs, schemaReports, schemaVerify, schemaIdentity, schemaPools, schemaResources, schemaConfig, schemaFlow, schemaCache, len(migrations))
@@ -89,7 +89,7 @@ func TestEachSchemaFrom17HoldsItsRealMigration(t *testing.T) {
 	}
 	// No number after 16 is a placeholder, whatever it brings.
 	for i := schemaPolicy; i < len(migrations); i++ {
-		if strings.TrimSpace(migrations[i].sql) == "" && i+1 != schemaStandIn28 { // 28 is held for an unmerged branch (schema28.go)
+		if strings.TrimSpace(migrations[i].sql) == "" && i+1 != schemaStandIn28 && (i+1 < schemaStandIn34 || i+1 > schemaStandIn38) { // 28 is held for an unmerged branch (schema28.go)
 			t.Errorf("migration %d is empty", i+1)
 		}
 	}
@@ -116,7 +116,7 @@ func TestFreshDatabaseReachesTheNewestSchema(t *testing.T) {
 	var buf syncBuffer
 	e := mustOpenAs(t, addr, clk, 0, &buf)
 	info, err := e.Schema(context.Background())
-	if err != nil || info.Database != len(migrations) || info.Code != len(migrations) || info.Database != schemaPulls || !info.Compatible() {
+	if err != nil || info.Database != len(migrations) || info.Code != len(migrations) || info.Database != schemaDelivery || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	if info.Minimum != 7 {
@@ -180,10 +180,10 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 			}
 			t.Cleanup(func() { cur.Close() })
 			info, err := cur.Schema(context.Background())
-			if err != nil || info.Database != schemaPulls || info.Code != schemaPulls || !info.Compatible() || info.Minimum != 7 {
+			if err != nil || info.Database != schemaDelivery || info.Code != schemaDelivery || !info.Compatible() || info.Minimum != 7 {
 				t.Fatalf("after the upgrade: %+v %v", info, err)
 			}
-			for v := from + 1; v <= schemaPulls; v++ {
+			for v := from + 1; v <= schemaDelivery; v++ {
 				if !strings.Contains(logCur.String(), fmt.Sprintf(`applied a database migration" schema=%d `, v)) {
 					t.Errorf("migration %d was not applied:\n%s", v, logCur.String())
 				}
@@ -191,7 +191,7 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 			if strings.Contains(logCur.String(), fmt.Sprintf(`applied a database migration" schema=%d `, from)) {
 				t.Errorf("migration %d, already applied, was applied again", from)
 			}
-			checkMarkers(t, cur, schemaPulls)
+			checkMarkers(t, cur, schemaDelivery)
 			var after int
 			if err := cur.db.QueryRow(`SELECT count(*) FROM events`).Scan(&after); err != nil || after < events {
 				t.Fatalf("events after the upgrade: %d, before %d: %v", after, events, err)
@@ -228,7 +228,7 @@ func TestUpgradeFromTheIntegrationSchemaAndBack(t *testing.T) {
 
 				var log syncBuffer
 				older := mustOpenAs(t, addr, clk, back, &log)
-				if info, err := older.Schema(context.Background()); err != nil || info.Code != back || info.Database != schemaPulls || !info.Compatible() {
+				if info, err := older.Schema(context.Background()); err != nil || info.Code != back || info.Database != schemaDelivery || !info.Compatible() {
 					t.Fatalf("the schema-%d build's view: %+v %v", back, info, err)
 				}
 				if c := strings.Count(log.String(), "running against a database written by a newer version"); c != 1 {

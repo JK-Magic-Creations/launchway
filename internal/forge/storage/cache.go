@@ -32,6 +32,20 @@ func (s *Store) git(ctx context.Context, gitDir, stdin string, args ...string) (
 	return res.Stdout, nil
 }
 
+// gitWith runs git in a repository with extra environment, such as the
+// directory of a push's objects in quarantine.
+func (s *Store) gitWith(ctx context.Context, gitDir string, env []string, args ...string) (string, error) {
+	res, err := gitexec.Run(ctx, gitexec.Spec{GitDir: gitDir, Args: args, Env: env, AllowAlternates: true, Timeout: 5 * time.Minute, Limits: s.o.Limits})
+	if err != nil {
+		var ee *gitexec.ExitError
+		if errors.As(err, &ee) {
+			return res.Stdout, fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(ee.Stderr+ee.Stdout))
+		}
+		return res.Stdout, fmt.Errorf("git %s: %w", args[0], err)
+	}
+	return res.Stdout, nil
+}
+
 // guard is the per-repository lock of one server's cache, an flock so that the
 // kernel releases it when a process dies, however it dies. Running
 // receive-packs hold it shared. Sync and the removal of stale lock files hold

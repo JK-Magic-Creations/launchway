@@ -116,6 +116,7 @@ var rows = []Row{
 	{Route: "DELETE /mcp", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs"},
 	{Route: "GET /.well-known/oauth-protected-resource/mcp", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs"},
 	{Route: "POST /api/runner/v1/deploy/verify/lease", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the runner protocol: only runners call it, with their own credentials"},
+	{Route: "POST /api/runner/v1/deploy/pull-request", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the runner protocol: only runners call it, with their own credentials"},
 	{Route: "POST /api/runner/v1/deploy/verify/interval", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "the runner protocol: only runners call it, with their own credentials"},
 	{Route: "GET /api/v1/runs/{id}/verifications", MCP: "get_verification", CLI: "verifications show", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/verifications", MCP: "get_verification", CLI: "verifications list", Terraform: "", Status: Equal, Reason: ""},

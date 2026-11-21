@@ -386,6 +386,7 @@ Kubernetes API with its own identity, and runs no other steps. Its token must be
 | `deploy.repos.<name>.credentials.key` | text | | |
 | `deploy.repos.<name>.credentials.field` | text | | |
 | `deploy.repos.<name>.username` | text | `launchway` | The user name sent with the credentials |
+| `deploy.repos.<name>.hosted` | boolean | `false` | The repository is hosted by Launchway and `url` is its address. Deploy steps then write with their own credential, which the server gives each deployment (the environment's `write_back`), and never with a stored one; `credentials`, if any, only read. A hosted repository needs the environment's `write_back`, and `write_back` needs `hosted: true` |
 | `deploy.repos.<name>.paths[].projects` | list of patterns | required | Projects a rule allows |
 | `deploy.repos.<name>.paths[].files` | list of patterns | required | Files they may change; `**` matches any number of directories. At least one rule is required |
 | `deploy.repos.<name>.author.name` | text | `Launchway` | The commits' author |

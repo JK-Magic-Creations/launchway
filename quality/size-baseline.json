@@ -10,7 +10,7 @@
     "internal/engine/db.go": 1560,
     "internal/engine/engine.go": 2117,
     "internal/engine/testqueries.go": 1226,
-    "internal/engine/verify.go": 1418,
+    "internal/engine/verify.go": 1408,
     "web/src/api.ts": 1564
   },
   "functions": {

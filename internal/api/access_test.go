@@ -49,6 +49,7 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/runner/v1/deploy/commands":        {"POST", "/api/runner/v1/deploy/commands", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"POST /api/runner/v1/deploy/command-done":    {"POST", "/api/runner/v1/deploy/command-done", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"POST /api/runner/v1/deploy/verify/lease":    {"POST", "/api/runner/v1/deploy/verify/lease", "{}", [6]int{401, 401, 401, 401, 401, 401}},
+	"POST /api/runner/v1/deploy/pull-request":    {"POST", "/api/runner/v1/deploy/pull-request", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"POST /api/runner/v1/deploy/verify/interval": {"POST", "/api/runner/v1/deploy/verify/interval", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"GET /api/v1/runs/{id}/verifications":        {"GET", "/api/v1/runs/{pay}/verifications", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/verifications":                  {"GET", "/api/v1/verifications", "", [6]int{401, 200, 200, 200, 200, 200}},

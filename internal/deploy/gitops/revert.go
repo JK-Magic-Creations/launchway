@@ -20,7 +20,7 @@ func (r *Repo) Revert(ctx context.Context, deployment, commit, message string) (
 	if err != nil {
 		return RevertResult{}, err
 	}
-	return RevertResult{Commit: res.Commits[0], Existing: res.Existing}, nil
+	return RevertResult{Commit: res.Commits[0], Existing: res.Existing, OnWork: res.OnWork}, nil
 }
 
 // RevertItem is one deployment's commit to revert in a series.
@@ -37,6 +37,8 @@ type SeriesResult struct {
 	Commits []string
 	// Existing: every item was found already; nothing was pushed.
 	Existing bool
+	// OnWork says the revert is on the work branch, not yet on the branch.
+	OnWork bool
 }
 
 // RevertSeries reverts several commits, in the order given (newest change
@@ -71,6 +73,14 @@ func (r *Repo) RevertSeries(ctx context.Context, items []RevertItem) (SeriesResu
 		tip, err := r.refresh(ctx)
 		if err != nil {
 			return SeriesResult{}, err
+		}
+		if len(items) == 1 {
+			if w, err := r.existingWork(ctx, revertKey+items[0].Deployment); err != nil {
+				return SeriesResult{}, err
+			} else if w != "" {
+				r.logf("The revert of %s is already on %s as %s; nothing to push", items[0].Deployment, r.WorkBranch, short(w))
+				return SeriesResult{Commits: []string{w}, Existing: true, OnWork: true}, nil
+			}
 		}
 		res := SeriesResult{Commits: make([]string, len(items)), Existing: true}
 		for i, it := range items {

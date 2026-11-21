@@ -217,6 +217,7 @@ export default defineConfig({
           { text: 'Security findings and SBOMs', link: '/guide/security-findings' },
           { text: 'Container images', link: '/guide/images' },
           { text: 'Deployments', link: '/guide/deployments' },
+          { text: 'GitOps write-back', link: '/guide/gitops-write-back' },
           { text: 'Policies', link: '/guide/policies' },
           { text: 'Verifying a deployment', link: '/guide/verification' },
           { text: 'AI models', link: '/guide/ai' },

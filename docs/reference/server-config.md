@@ -442,6 +442,10 @@ steps are refused. Checked when the server starts.
 | `environments[].reviewers.users` | list of names | none | With `reviewers.groups`: who may acknowledge an emergency rollback of this environment; when neither is given, any operator of the project other than the person who asked for it (unless `approvals.allow_self` lets them) |
 | `environments[].reviewers.groups` | list of names | none | Groups whose members may acknowledge an emergency rollback of this environment |
 | `environments[].emergency_rollback` | `allow` or `require_approval` | the installation's | Overrides `approvals.emergency_rollback` for this environment |
+| `environments[].write_back.repo` | `owner/name` | none | A GitOps repository hosted by this Launchway that the environment's deploy steps write to with a credential of their own (nothing stored). Without `write_back` they use the deploy runner's configured credentials. See [GitOps write-back](../guide/gitops-write-back.md) |
+| `environments[].write_back.mode` | `direct` or `pull_request` | required with `write_back` | `direct`: the step pushes to the branch, and a pipeline writer rule of the repository admits its project for exactly the files it may write. `pull_request`: the step pushes a branch of its own and opens a pull request |
+| `environments[].write_back.merge` | `auto` or `person` | `auto` | `pull_request` only: `auto` merges the pull request itself as soon as the repository's merge rules are met; `person` waits for a person to merge it |
+| `environments[].write_back.method` | `merge`, `squash` or `rebase` | the repository's default | `pull_request` only: how the pull request is merged |
 | `environments[].min_approvals` | whole number | `0` | With `protected: true`: the fewest distinct approvals an approval step that guards a deployment here needs, 1 to 5, whatever its pipeline's `approvers.count` says |
 
 ## Runner pools

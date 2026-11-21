@@ -103,8 +103,9 @@ type gitReq struct {
 type gitCaller struct {
 	id     *identity
 	run    *githttp.RunClaim
-	deploy *sshkeys.Key // a repository's deploy key (SSH only)
-	sshKey string       // the fingerprint of the key an SSH caller used
+	deploy *sshkeys.Key         // a repository's deploy key (SSH only)
+	pipe   *githttp.DeployClaim // a deploy step's own credential (HTTP only)
+	sshKey string               // the fingerprint of the key an SSH caller used
 	user   string
 }
 
@@ -183,6 +184,14 @@ func (s *Server) gitAuthenticate(w http.ResponseWriter, r *http.Request, q gitRe
 			return c, false
 		}
 		c.run = &claim
+	case q.present && strings.HasPrefix(q.tok, githttp.DeployTokenPrefix):
+		claim, err := s.Forge.RunTokens.VerifyDeploy(q.tok)
+		if err != nil {
+			s.tokenDenied(r, true, "", "", "an invalid or expired deploy credential")
+			unauthorised(w)
+			return c, false
+		}
+		c.pipe = &claim
 	case q.present && strings.HasPrefix(q.tok, tokenPrefix):
 		id, err := s.tokenIdentity(r, q.tok, true)
 		if err != nil {
@@ -200,6 +209,9 @@ func (s *Server) gitAuthenticate(w http.ResponseWriter, r *http.Request, q gitRe
 		return c, false
 	}
 	c.user = s.gitUser(c.id, c.run, r)
+	if c.pipe != nil {
+		c.user = "pipeline " + c.pipe.Project + " (deployment " + c.pipe.Deployment + ")"
+	}
 	return c, true
 }
 
@@ -236,7 +248,7 @@ func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecisi
 		return d
 	}
 	switch {
-	case c.id == nil && c.run == nil && c.deploy == nil:
+	case c.id == nil && c.run == nil && c.deploy == nil && c.pipe == nil:
 		// Anonymous: only a repository whose access class is public, and only to read.
 		if !found || repo.Visibility != forge.Public || q.class != repoRead {
 			d.code, d.unauth = http.StatusUnauthorized, true // the same answer for a private repository and one that does not exist
@@ -248,6 +260,10 @@ func (s *Server) gitDecide(ctx context.Context, q gitReq, c gitCaller) gitDecisi
 		}
 		if q.class != repoRead {
 			return deny(http.StatusForbidden, "a run's credential can read a repository, not push to it")
+		}
+	case c.pipe != nil:
+		if !found || c.pipe.Repo != repo.ID {
+			return notFound()
 		}
 	case c.deploy != nil:
 		if !found || c.deploy.RepoID != repo.ID {
@@ -309,6 +325,8 @@ func (c gitCaller) credentialNote() string {
 		return "ssh key " + c.sshKey
 	case c.id != nil && c.id.Via == viaToken:
 		return "token " + c.id.tokenTag
+	case c.pipe != nil:
+		return "deploy credential of deployment " + c.pipe.Deployment
 	}
 	return ""
 }

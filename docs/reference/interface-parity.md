@@ -25,6 +25,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/runner/v1/deploy/commands` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/lease` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/observe` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/deploy/pull-request` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/verify/interval` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/verify/lease` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/watch` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
