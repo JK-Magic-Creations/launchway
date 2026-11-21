@@ -44,6 +44,12 @@ func (r *ExecRunner) Run(ctx context.Context, st Step, tree string, log func(str
 	if st.Dir != "" {
 		dir = filepath.ToSlash(filepath.Join(dir, st.Dir))
 	}
+	if _, host := r.Exec.(*executor.Host); !host {
+		// HOME is set inside the container by the script, not in the step's environment: the container
+		// client reads the environment it is started with too, and a HOME of the container's own would
+		// make it look for its configuration in a directory that exists only in the container.
+		sb.WriteString("export HOME=/tmp/launchway-updater-home\nmkdir -p \"$HOME\"\n")
+	}
 	sb.WriteString("cd " + quote(dir) + "\n")
 	for _, c := range st.Commands {
 		for i, a := range c {
@@ -54,7 +60,7 @@ func (r *ExecRunner) Run(ctx context.Context, st Step, tree string, log func(str
 		}
 		sb.WriteByte('\n')
 	}
-	env := map[string]string{"CI": "true", "HOME": filepath.Join(os.TempDir(), "launchway-updater-home")}
+	env := map[string]string{"CI": "true"}
 	for k, v := range r.Env {
 		env[k] = v
 	}

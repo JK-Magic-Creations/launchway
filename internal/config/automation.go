@@ -20,7 +20,7 @@ type AutomationConfig struct {
 
 // DefaultAutomationAccounts are the names common dependency and release bots
 // use: a name ending in [bot], and the usual tools.
-var DefaultAutomationAccounts = []string{"*[bot]", "dependabot*", "renovate*", "github-actions*", "release-please*"}
+var DefaultAutomationAccounts = []string{"*[bot]", "dependabot*", "renovate*", "github-actions*", "release-please*", "launchway-updater*"}
 
 // Validate checks the patterns.
 func (a AutomationConfig) Validate() error {

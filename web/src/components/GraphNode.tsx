@@ -31,13 +31,27 @@ export function stepSub(s: StepView, now: number, phases?: Record<string, string
   }
 }
 
-/** The words a screen reader gets for one node: name, state, what it follows and what runs beside it. */
+/** The words a screen reader gets for one node. They START with the node's visible text, in the order it is drawn
+ * (name, the badges, the attempt, the status line, what it follows), so that the accessible name contains the visible
+ * label as WCAG 2.5.3 asks; the extra words (the step kind, the description, what runs beside it) come after. */
 export function nodeLabel(n: RNode, sub: string, before: string[], beside: string[], names: (id: string) => string): string {
-  const parts = [`${nodeName(n)}${n.kind === "step" && n.steps[0].kind && n.steps[0].kind !== "deploy" ? ` (${n.steps[0].kind})` : ""}`, sub];
+  const s = n.kind === "step" ? n.steps[0] : undefined;
+  const visible = [nodeName(n)];
+  if (s) {
+    if (s.kind === "image") visible.push("image");
+    if (s.policy_blocked) visible.push("policy");
+    if (s.kind === "verify") visible.push("verify");
+    if (s.kind === "ai") visible.push("ai");
+    if (s.attempt > 1) visible.push(`#${s.attempt}`);
+  }
+  visible.push(sub);
+  if (before.length) visible.push(`after ${before.map(names).join(", ")}`);
+  const parts = [visible.filter(Boolean).join(" ")];
+  if (s?.kind && s.kind !== "deploy") parts.push(`${s.kind} step`);
   if (n.kind === "group") parts.push(`template ${n.group?.uses ?? ""}. Choose to show its steps`);
   if (n.kind === "chain") parts.push("Choose to show them");
-  if (n.kind === "step" && n.steps[0].description) parts.push(n.steps[0].description);
-  if (before.length) parts.push(`after ${before.map(names).join(", ")}`);
+  if (s?.description) parts.push(s.description);
+  if (s?.attempt && s.attempt > 1) parts.push(`attempt ${s.attempt}`);
   if (beside.length) parts.push(`runs together with ${beside.map(names).join(", ")}`);
   return parts.join(". ");
 }

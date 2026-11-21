@@ -9,7 +9,7 @@ mode** until a maintainer has looked.
 
 - A pull request from an **automation account**: an author or a person who started the run whose
   name matches `automation.accounts` (by default `*[bot]`, `dependabot*`, `renovate*`,
-  `github-actions*`, `release-please*`; matching ignores case). Accounts that a forge hosted by
+  `github-actions*`, `release-please*`, `launchway-updater*`; matching ignores case). Accounts that a forge hosted by
   Launchway marks as bots count too.
 - A pull request from a **fork**, where the forge says so. (A project that is polled from another
   Git host cannot tell a fork from a branch, so only the automation list applies there.)

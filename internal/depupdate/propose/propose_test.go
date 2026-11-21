@@ -126,17 +126,65 @@ func rd(t *testing.T, bare, branch, file string) string {
 
 const goMod = "module example.com/app\n\ngo 1.21\n\nrequire example.com/lib v1.4.0\n"
 
+// The lock-file regeneration is tried where it runs for real: in a container, with the fake module
+// proxy on the host's loopback made reachable by host networking (the container has no other way to
+// it, and the test must not widen anything else). That is the default assertion; the host executor,
+// which is only for a machine that is itself the sandbox, is the fallback where no container engine
+// or no Go toolchain image is there.
 func TestGoUpdateEndToEnd(t *testing.T) {
+	if ex, ok := containerForTest(t); ok {
+		goUpdateEndToEnd(t, ex, map[string]string{"GOPROXY": "", "GOSUMDB": "off", "GOTOOLCHAIN": "local", "GOFLAGS": "-mod=mod", "GONOSUMDB": "*", "GOPRIVATE": ""}, true)
+		return
+	}
+	t.Log("no container engine or no Go toolchain image here: trying with the host executor")
 	if _, err := exec.LookPath("go"); err != nil {
 		t.Skip("no go toolchain")
 	}
+	goUpdateEndToEnd(t, &executor.Host{}, map[string]string{"GOPROXY": "", "GOSUMDB": "off", "GOTOOLCHAIN": "local", "GOFLAGS": "-mod=mod -modcacherw", "GONOSUMDB": "*", "GOPRIVATE": ""}, false)
+}
+
+// TestGoUpdateEndToEndOnTheHost keeps the host executor honest too, where there is a Go toolchain.
+func TestGoUpdateEndToEndOnTheHost(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("no go toolchain")
+	}
+	goUpdateEndToEnd(t, &executor.Host{}, map[string]string{"GOPROXY": "", "GOSUMDB": "off", "GOTOOLCHAIN": "local", "GOFLAGS": "-mod=mod -modcacherw", "GONOSUMDB": "*", "GOPRIVATE": ""}, false)
+}
+
+// containerForTest is a container executor with host networking, when podman or docker and the
+// default Go toolchain image are here (it never pulls an image).
+func containerForTest(t *testing.T) (*executor.Container, bool) {
+	t.Helper()
+	for _, b := range []string{"podman", "docker"} {
+		bin, err := exec.LookPath(b)
+		if err != nil {
+			continue
+		}
+		img := Toolchains{}.Defaults().Go
+		if err := exec.Command(bin, "image", "exists", img).Run(); err != nil && b == "podman" {
+			continue
+		}
+		if b == "docker" {
+			if err := exec.Command(bin, "image", "inspect", img).Run(); err != nil {
+				continue
+			}
+		}
+		return &executor.Container{Bin: bin, Network: "host"}, true
+	}
+	return nil, false
+}
+
+func goUpdateEndToEnd(t *testing.T, ex executor.Executor, env map[string]string, isolated bool) {
 	proxy := goProxy(t, "example.com/lib", "v1.4.0", "v1.4.2")
+	env["GOPROXY"] = proxy.URL
 	bare := remote(t, map[string]string{"go.mod": goMod, "main.go": "package main\n\nimport _ \"example.com/lib\"\n\nfunc main() {}\n", "go.sum": ""})
 	scratch := t.TempDir()
 	policy, _ := plan.Merge(plan.Layer{Level: "defaults", Partial: plan.Defaults()})
 	ws := &Workspace{URL: "file://" + bare, Dir: filepath.Join(scratch, "ws"), Author: Author{"Launchway", "updates@launchway.invalid"}}
-	runner := &ExecRunner{Exec: &executor.Host{}, Meta: scratch, Env: map[string]string{
-		"GOPROXY": proxy.URL, "GOSUMDB": "off", "GOTOOLCHAIN": "local", "GOFLAGS": "-mod=mod -modcacherw", "GONOSUMDB": "*", "GOPRIVATE": ""}}
+	runner := &ExecRunner{Exec: ex, Meta: scratch, Env: env}
+	if runner.Isolated() != isolated {
+		t.Fatalf("isolated is %v, want %v", runner.Isolated(), isolated)
+	}
 	host := &fakeHost{}
 
 	d := plan.Update{Dep: depupdate.Dep{Ecosystem: "go", Name: "example.com/lib", Current: "v1.4.0", Constraint: "v1.4.0", Direct: true, File: "go.mod", Line: 5},
@@ -166,10 +214,17 @@ func TestGoUpdateEndToEnd(t *testing.T) {
 		t.Fatalf("%+v", host.created)
 	}
 	body := host.created[0].Body
+	isolation := "isolated container"
+	if !isolated {
+		isolation = "host executor"
+	}
 	for _, want := range []string{"fixes a known security problem", "example.com/lib", "`v1.4.0` to `v1.4.2`", "go get example.com/lib@v1.4.2", "go.sum", "ignore this major", "not edited by hand"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q:\n%s", want, body)
 		}
+	}
+	if want := map[bool]string{true: "isolated container with no secrets", false: "this run used the host executor"}[isolated]; !strings.Contains(body, want) {
+		t.Errorf("the body does not say how the lock files were made (%s): want %q\n%s", isolation, want, body)
 	}
 	if len(events) != 1 || events[0].Action != "opened" || events[0].Number != 1 {
 		t.Errorf("audit: %+v", events)
@@ -185,6 +240,7 @@ func TestGoUpdateEndToEnd(t *testing.T) {
 	// a newer version appears: the same branch is replaced and the pull request updated in place
 	proxy2 := goProxy(t, "example.com/lib", "v1.4.0", "v1.4.2", "v1.4.3")
 	runner.Env["GOPROXY"] = proxy2.URL
+	_ = proxy2
 	d.Target = "v1.4.3"
 	host.open = []PR{{Number: 1, Branch: b, Body: body}}
 	decisions = plan.Plan(plan.Input{Policy: policy, Now: now, Immediate: true, Updates: []plan.Update{d}, Open: OpenFrom(host.open)})

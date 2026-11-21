@@ -373,7 +373,7 @@ queue (`queues.automation_runs`).
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `automation.accounts` | list of patterns | `*[bot]`, `dependabot*`, `renovate*`, `github-actions*`, `release-please*` | Account names, matched without regard to case against the commit's author and the person who started the run; `*` and `?` match. An empty list names none |
+| `automation.accounts` | list of patterns | `*[bot]`, `dependabot*`, `renovate*`, `github-actions*`, `release-please*`, `launchway-updater*` | Account names, matched without regard to case against the commit's author and the person who started the run; `*` and `?` match. An empty list names none |
 
 ## Tests
 

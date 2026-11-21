@@ -21,27 +21,27 @@ describe("the pipeline graph", () => {
   it("shows every running step as running, in words as well as the picture", () => {
     draw();
     for (const name of ["test", "security-go"]) {
-      const node = screen.getByRole("button", { name: new RegExp("^" + name + "\\. Running") });
+      const node = screen.getByRole("button", { name: new RegExp("^" + name + " Running") });
       expect(node).toHaveClass("t-run");
       expect(node).toHaveTextContent(/Running · 9m 55s/);
     }
-    expect(screen.getByRole("button", { name: /^security-web\. Passed/ })).not.toHaveClass("t-run");
+    expect(screen.getByRole("button", { name: /^security-web Passed/ })).not.toHaveClass("t-run");
   });
 
   it("says what a step follows and what runs beside it", () => {
     draw();
-    expect(screen.getByRole("button", { name: /^test\. Running · 9m 55s\. after check-code\. runs together with security-go, security-web/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^test Running · 9m 55s after check-code\. runs together with security-go, security-web/ })).toBeInTheDocument();
   });
 
   it("chooses a step by click and by keyboard, as before", () => {
     const { onSelect } = draw();
-    fireEvent.click(screen.getByRole("button", { name: /^test\./ }));
+    fireEvent.click(screen.getByRole("button", { name: /^test / }));
     expect(onSelect).toHaveBeenCalledWith("test");
   });
 
   it("moves between nodes with the arrow keys, following the connectors", () => {
     draw();
-    const at = (n: string) => screen.getByRole("button", { name: new RegExp("^" + n + "\\.") });
+    const at = (n: string) => screen.getByRole("button", { name: new RegExp("^" + n + " ") });
     at("check-code").focus();
     fireEvent.keyDown(at("check-code"), { key: "ArrowRight" });
     expect(at("test")).toHaveFocus();
@@ -63,36 +63,36 @@ describe("the pipeline graph", () => {
   it("draws a wide fan-out, a diamond and skipped dependents with distinct states", () => {
     draw(FAN_OUT);
     expect(screen.getByText("Stage 2 (runs together): shard-1, shard-2, shard-3, shard-4, shard-5, shard-6, shard-7, shard-8")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^shard-8\. Waiting for a runner/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^shard-8 Waiting for a runner/ })).toBeInTheDocument();
     draw(DIAMOND);
     expect(screen.getByText("Stage 2 (runs together): unit, lint")).toBeInTheDocument();
     draw(FAILED_WITH_SKIPPED);
-    expect(screen.getByRole("button", { name: /^test\. Failed/ })).toHaveClass("t-bad");
-    const skipped = screen.getByRole("button", { name: /^build-ui\. Skipped: not needed/ });
+    expect(screen.getByRole("button", { name: /^test Failed/ })).toHaveClass("t-bad");
+    const skipped = screen.getByRole("button", { name: /^build-ui Skipped: not needed/ });
     expect(skipped).toHaveClass("pg-skipped");
   });
 
   it("marks a step waiting for a person apart from one not started", () => {
     draw(MIXED, { groups: MIXED_GROUPS });
-    expect(screen.getByRole("button", { name: /^approve \(approval\)\. Waiting/ })).toHaveClass("t-wait");
-    expect(screen.getByRole("button", { name: /^ship\. Not started/ })).toHaveClass("pg-pending");
+    expect(screen.getByRole("button", { name: /^approve Waiting.*approval step/ })).toHaveClass("t-wait");
+    expect(screen.getByRole("button", { name: /^ship Not started/ })).toHaveClass("pg-pending");
   });
 
   it("folds a template group into one node and opens it again", () => {
     draw(MIXED, { groups: MIXED_GROUPS });
-    expect(screen.getByRole("button", { name: /^compile\./ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^compile / })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /build · template go\/build/ }));
-    const folded = screen.getByRole("button", { name: /^build\. Running · 1\/2/ });
+    const folded = screen.getByRole("button", { name: /^build Running · 1\/2/ });
     expect(folded).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("button", { name: /^compile\./ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^compile / })).toBeNull();
     fireEvent.click(folded);
-    expect(screen.getByRole("button", { name: /^compile\./ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^compile / })).toBeInTheDocument();
   });
 
   it("folds the inside of a long chain while it is quiet, and shows it again on request", () => {
     draw([...LONG_CHAIN.slice(0, 5).map((s) => ({ ...s, status: "succeeded" as const })), ...LONG_CHAIN.slice(5, 9), ...[10, 11, 12, 13, 14, 15].map((i) => ({ ...LONG_CHAIN[8], id: "stage-" + i, needs: ["stage-" + (i - 1)] }))].map((s, i, all) => ({ ...s, needs: i ? [all[i - 1].id] : [] })));
-    expect(screen.getByRole("button", { name: /^13 in a row\./ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^13 in a row / })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /13 steps in a row · stage-2 to stage-14/ }));
-    expect(screen.getByRole("button", { name: /^stage-7\./ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^stage-7 / })).toBeInTheDocument();
   });
 });

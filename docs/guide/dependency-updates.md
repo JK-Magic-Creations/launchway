@@ -73,7 +73,7 @@ launchway deps ignore tinyfmt --reason "pinned until the vendor fixes 2.x"
 ## Running it
 
 The updater runs as a step of a pipeline on a runner with a token that may push branches and open pull requests,
-so the pull requests it opens are ordinary and the runner, not the server, runs the package tools:
+so the pull requests it opens are ordinary and the runner, not the server, runs the package tools. Give that token to an account named like `launchway-updater` (the name is on the default list of automation accounts): the pull requests it opens then run in the restricted mode of [pull-request trust](pull-request-trust.md), with no secrets, no deploys and no cache written outside their own scope, and they can still pass the required checks that need none. An account with another name is a person to Launchway, and its pull requests run as any other, so add the name to `automation.accounts` if you use one:
 
 ```yaml
 pipeline: dependency-updates

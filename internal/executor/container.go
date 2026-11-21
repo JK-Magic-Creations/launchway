@@ -19,6 +19,10 @@ import (
 type Container struct {
 	Bin   string // path to podman or docker
 	Owner string // identifies this runner's pods, for cleaning up
+	// Network, when set, is passed to the engine as --network (for example "host"). Empty: the
+	// engine's own default. Steps of a pipeline never set it; a test that must reach a fake
+	// registry on the host's loopback address does.
+	Network string
 
 	mu    sync.Mutex
 	locks map[string]*sync.Mutex
@@ -70,6 +74,9 @@ func (c *Container) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 		"--entrypoint", "/bin/sh",
 	}
 	args = append(args, podArgs...)
+	if c.Network != "" {
+		args = append(args, "--network", c.Network)
+	}
 	if sc, ok := s.stepContainer(); ok && !sc.Service {
 		if flags := containerFlags(sc); len(flags) > 0 {
 			args = append(args, flags...)

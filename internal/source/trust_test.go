@@ -80,3 +80,16 @@ func TestAutomationPullRequestRunsRestrictedWithTheDefaultBranchPipeline(t *test
 		})
 	}
 }
+
+// The dependency updater's pull requests are automation-authored: an account named like the updater
+// is on the default list, so its pull requests run restricted (no secrets, no deploys, no cache outside
+// the default branch's read-only one) and a person's do not.
+func TestTheDependencyUpdaterAccountIsAutomationByDefault(t *testing.T) {
+	defaults := []string{"*[bot]", "launchway-updater*"} // the tail of config.DefaultAutomationAccounts (checked in internal/config)
+	if !isAutomation(defaults, "launchway-updater") || !isAutomation(defaults, "Launchway-Updater-2") {
+		t.Fatal("the updater's account is not treated as automation")
+	}
+	if isAutomation(defaults, "ada") {
+		t.Fatal("a person is treated as automation")
+	}
+}
