@@ -27,7 +27,7 @@ const configUsage = `Usage:
   launchway config list KIND [--deleted] [--json]     objects of a kind: projects, libraries, environments,
                                                       runner-pools, role-bindings, policies, policy-sources,
                                                       health-sources, models, secret-stores, units,
-                                                      installation, organisation
+                                                      installation, organization
   launchway config get KIND NAME [--json]             one object, as YAML (or JSON)
   launchway config set KIND NAME -f SPEC.yaml         create or replace an object; - reads standard input
                      [--unit U] [--version N | --force] [--comment TEXT] [--manager terraform] [--take-ownership]

@@ -2215,7 +2215,7 @@ paths:
             x-launchway-audit: webhook.test
     /api/v1/policies:
         get:
-            description: The rule catalogue, the policies in force with their sources and versions, and recent verdicts (?recent=N per policy, at most 100) of runs the caller may see.
+            description: The rule catalog, the policies in force with their sources and versions, and recent verdicts (?recent=N per policy, at most 100) of runs the caller may see.
             operationId: get_api_v1_policies
             responses:
                 "200":
@@ -2232,7 +2232,7 @@ paths:
                     $ref: '#/components/responses/Error'
                 "503":
                     $ref: '#/components/responses/Error'
-            summary: The rule catalogue, the policies in force with their sources and versions, and recent verdicts (?recent=N per policy, at most 100) of runs the caller may see.
+            summary: The rule catalog, the policies in force with their sources and versions, and recent verdicts (?recent=N per policy, at most 100) of runs the caller may see.
             tags:
                 - policies
             x-launchway-access: any-viewer

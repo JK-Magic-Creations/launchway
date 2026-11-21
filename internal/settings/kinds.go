@@ -70,7 +70,7 @@ var kinds = []*Kind{
 		Doc:     "Settings of the whole installation: what the levels are called, approvals, drafts, pull requests, schedules, limits and retention.",
 		spec:    func() any { return &Installation{} }},
 	{Name: "organisation", Path: "organisation", Title: "Organization", Plural: "Organizations", Singleton: "default",
-		Doc:  "The organisation that owns the projects. There is one today; its display name is shown where it helps.",
+		Doc:  "The organization that owns the projects. There is one today; its display name is shown where it helps.",
 		spec: func() any { return &Organisation{} }},
 	{Name: "unit", Path: "units", Title: "Unit", Plural: "Units", FileKey: "",
 		Doc:  "A group of projects with shared settings: roles, libraries, policies, environments, runner pools and secret stores defined at a unit apply to its projects.",

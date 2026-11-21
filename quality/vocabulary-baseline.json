@@ -1,9 +1,4 @@
 {
   "comment": "Counts of vocabulary errors that predate the guard (scripts/vocabulary/check.mjs). They may only shrink: lower with `make vocabulary-update`; fix, do not add.",
-  "counts": {
-    "british-spelling|cmd/launchway/config.go": 1,
-    "british-spelling|deploy/helm/launchway/values.yaml": 1,
-    "british-spelling|internal/api/mcp_config.go": 6,
-    "british-spelling|internal/settings/kinds.go": 1
-  }
+  "counts": {}
 }
