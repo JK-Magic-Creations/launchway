@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -322,7 +323,7 @@ func (in *Installer) askWayIn(e *installer.Env, a *installer.Asker, st *installe
 	}
 	if way == "forward" {
 		st.portFwd = true
-		port := "18080"
+		port := strconv.Itoa(freeLocalPort(18080))
 		p, err := a.Ask(installer.Question{Key: "kubernetes.local_port", Prompt: "Local port for the port-forward", Default: port})
 		if err != nil {
 			return err
@@ -631,6 +632,18 @@ func trialStorage(r *Rendered) {
 		kept = append(kept, o)
 	}
 	r.Objects = kept
+}
+
+// freeLocalPort is the first port from start that nothing on this machine is listening on.
+func freeLocalPort(start int) int {
+	for p := start; p < start+200; p++ {
+		l, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(p))
+		if err == nil {
+			_ = l.Close()
+			return p
+		}
+	}
+	return start
 }
 
 var _ = corev1.Secret{}

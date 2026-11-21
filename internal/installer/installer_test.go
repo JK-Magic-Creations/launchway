@@ -26,10 +26,10 @@ func newFake(t *testing.T) *fakeEnv {
 	f := &fakeEnv{out: &bytes.Buffer{}, open: map[string]bool{}, programs: map[string]bool{}}
 	home := t.TempDir()
 	f.Env = Env{In: strings.NewReader(""), Out: f.out, GOOS: "linux", UID: 1000, Home: home, Root: t.TempDir(),
-		Getenv:   func(string) string { return "" },
-		Now:      func() time.Time { return time.Unix(1_700_000_000, 0) },
-		Version:  "v9.9.9",
-		Binary:   filepath.Join(home, "launchway-bin")}
+		Getenv:  func(string) string { return "" },
+		Now:     func() time.Time { return time.Unix(1_700_000_000, 0) },
+		Version: "v9.9.9",
+		Binary:  filepath.Join(home, "launchway-bin")}
 	_ = os.WriteFile(f.Binary, []byte("#!/bin/sh\n"), 0o755)
 	f.LookPath = func(n string) (string, error) {
 		if f.programs[n] {

@@ -79,6 +79,7 @@ func Run(ctx context.Context, env Env, o Options) (res Result, err error) {
 		if len(res.Unused) > 0 {
 			env.Printf("\nThese answers were given but nothing asked for them (a typo?): %s\n", strings.Join(res.Unused, ", "))
 		}
+		t.Line("questions asked: %d, answers typed: %d, took %s", a.Asked, a.Typed, res.Elapsed.Round(time.Second))
 		if err != nil {
 			t.Line("stopped: %v", err)
 		}

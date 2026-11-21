@@ -87,7 +87,7 @@ func (in *Installer) finish(ctx context.Context, e *installer.Env, a *installer.
 		st.portFwd = true
 		u, _ := url.Parse(addr)
 		_ = u
-		addr = "http://127.0.0.1:18080"
+		addr = "http://127.0.0.1:" + strconv.Itoa(freeLocalPort(18080))
 	}
 	if st.portFwd {
 		local := 18080
@@ -123,8 +123,8 @@ func (in *Installer) finish(ctx context.Context, e *installer.Env, a *installer.
 	e.Printf("KEEP the root key: the Secret ending in -root-key in namespace %s is not removed by uninstall and is the only way to read the installation's stored secrets. Copy it somewhere safe.\n", s.Namespace)
 	facts := map[string]string{"sign_in": "accounts", "tls": map[bool]string{true: "yes", false: "no"}[strings.HasPrefix(s.ExternalURL, "https://")],
 		"network_policies": map[Tri]string{Yes: "enforced", No: "not-enforced", Unknown: "unknown"}[st.facts.NetpolEnforced]}
-	if forwarded {
-		facts["tls"] = "loopback"
+	if st.portFwd {
+		facts["tls"], facts["loopback"] = "loopback", "yes"
 	}
 	if o.Doctor != nil {
 		e.Printf("\nA plain security check of what you just installed:\n")
@@ -186,6 +186,19 @@ func (in *Installer) uninstall(ctx context.Context, e *installer.Env, a *install
 	if err := in.remove(ctx, cl, ns, release); err != nil {
 		return res, err
 	}
-	e.Printf("\nRemoved. To delete the data as well (cannot be undone): kubectl -n %s delete pvc,secret -l app.kubernetes.io/instance=%s\n", ns, release)
+	e.Printf("\nRemoved. To delete the data as well (cannot be undone), and only if you will never need it again:\n")
+	c := cl.Clientset()
+	if l, err := c.CoreV1().PersistentVolumeClaims(ns).List(ctx, metav1.ListOptions{LabelSelector: "app.kubernetes.io/instance=" + release}); err == nil {
+		for _, p := range l.Items {
+			e.Printf("  kubectl -n %s delete pvc %s\n", ns, p.Name)
+		}
+	}
+	if l, err := c.CoreV1().Secrets(ns).List(ctx, metav1.ListOptions{}); err == nil {
+		for _, sec := range l.Items {
+			if strings.HasPrefix(sec.Name, release) {
+				e.Printf("  kubectl -n %s delete secret %s\n", ns, sec.Name)
+			}
+		}
+	}
 	return res, nil
 }
