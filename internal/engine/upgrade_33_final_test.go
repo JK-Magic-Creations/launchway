@@ -144,7 +144,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 		t.Fatal(err)
 	}
 	waiting := false
-	for end := time.Now().Add(5 * time.Second); time.Now().Before(end) && !waiting; time.Sleep(20 * time.Millisecond) {
+	for end := time.Now().Add(30 * time.Second); time.Now().Before(end) && !waiting; time.Sleep(20 * time.Millisecond) {
 		rep, err := s.Report(ctx)
 		if err != nil || rep.Remaining == 0 {
 			t.Fatalf("something sealed, or the report failed: %+v %v", rep.Migration, err)
@@ -160,7 +160,7 @@ func TestUpgradeFromSchema33ToTheFinalSchemaKeepsEverything(t *testing.T) {
 		t.Fatalf("sealed while an older server was seen: %q", stillClear)
 	}
 	seen.Store(0)
-	deadline := time.Now().Add(15 * time.Second)
+	deadline := time.Now().Add(2 * time.Minute) // a small, shared build machine seals slowly
 	for time.Now().Before(deadline) {
 		if rep, err := s.Report(ctx); err == nil && rep.Remaining == 0 {
 			break

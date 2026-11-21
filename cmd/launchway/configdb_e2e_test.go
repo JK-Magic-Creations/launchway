@@ -38,10 +38,10 @@ func TestConfigurationInTheDatabaseTwoServersAndRollback(t *testing.T) {
 	}
 	dir := t.TempDir()
 	bin, old := filepath.Join(dir, "launchway"), filepath.Join(dir, "launchway-22")
-	if out, err := exec.Command("go", "build", "-o", bin, ".").CombinedOutput(); err != nil {
+	if out, err := exec.Command("go", "build", "-buildvcs=false", "-o", bin, ".").CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}
-	if out, err := exec.Command("go", "build", "-ldflags", "-X github.com/jk-magic-creations/launchway/internal/engine.schemaLimit=22",
+	if out, err := exec.Command("go", "build", "-buildvcs=false", "-ldflags", "-X github.com/jk-magic-creations/launchway/internal/engine.schemaLimit=22",
 		"-o", old, ".").CombinedOutput(); err != nil {
 		t.Fatalf("go build (schema 22): %v\n%s", err, out)
 	}

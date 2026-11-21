@@ -45,7 +45,7 @@ func TestTwoServersShareArtifactsThroughTheDatabase(t *testing.T) {
 	}
 	dir := t.TempDir()
 	bin := filepath.Join(dir, "launchway")
-	if out, err := exec.Command("go", "build", "-o", bin, ".").CombinedOutput(); err != nil {
+	if out, err := exec.Command("go", "build", "-buildvcs=false", "-o", bin, ".").CombinedOutput(); err != nil {
 		t.Fatalf("go build: %v\n%s", err, out)
 	}
 	dbURL := testdb.New(t)

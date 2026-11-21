@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 		dir, err := os.MkdirTemp("", "lw-hookbin-")
 		if err == nil {
 			bin := filepath.Join(dir, "launchway")
-			if out, err := exec.Command("go", "build", "-o", bin, "github.com/jk-magic-creations/launchway/cmd/launchway").CombinedOutput(); err != nil {
+			if out, err := exec.Command("go", "build", "-buildvcs=false", "-o", bin, "github.com/jk-magic-creations/launchway/cmd/launchway").CombinedOutput(); err != nil {
 				fmt.Fprintf(os.Stderr, "building the hook binary: %v\n%s", err, out)
 				os.Exit(1)
 			}
