@@ -58,7 +58,7 @@ export default function Agents() {
       )}
       {current && <AgentPanel key={current.name} a={current} onChanged={refresh} onToken={(t) => setToken({ agent: current.name, token: t, rotated: true })} onError={setError} />}
       <Sheet title="Spend" pad>
-        <p className="sub">What agents reported spending. {spend.data?.note}</p>
+        <p className="sub">{spend.data?.note ? spend.data.note[0].toUpperCase() + spend.data.note.slice(1) + "." : ""}</p>
         <ErrorPanel error={spend.error} onRetry={spend.reload} />
         {spend.data && spend.data.rows.length === 0 && <p className="faint">Nothing has been spent yet.</p>}
         {spend.data && spend.data.rows.length > 0 && (

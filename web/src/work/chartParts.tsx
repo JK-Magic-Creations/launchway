@@ -22,7 +22,7 @@ function Axes({ max, ticks = 4, unit }: { max: number; ticks?: number; unit?: st
         const v = (max / ticks) * i, y = T + ih - (v / max) * ih;
         return <g key={i}><line x1={L} x2={W - R} y1={y} y2={y} className={i === 0 ? "base" : "grid"} /><text x={L - 6} y={y + 4} textAnchor="end">{fmt(v)}</text></g>;
       })}
-      {unit && <text x={4} y={10} className="unit">{unit}</text>}
+      {unit && <text x={W - R} y={10} textAnchor="end" className="unit">{unit}</text>}
     </g>
   );
 }

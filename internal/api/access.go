@@ -85,7 +85,7 @@ func (s *Server) authorize(id *identity, a auth.Action, project string) bool {
 		}
 		return s.cur().Drafts.For(project).AllowsDraft(role)
 	}
-	if s.Auth == nil {
+	if s.Auth == nil && (id == nil || id.agent == nil) {
 		return true // sign-in is off: everyone has every right
 	}
 	if id == nil || id.Via == viaNone || id.User == "" {
@@ -111,6 +111,11 @@ func (s *Server) draftRefusal(project string) string {
 // touch, using a session or token is recorded (at most once a minute).
 func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 	if s.Auth == nil {
+		// An agent's token still names the agent, so its limits hold even
+		// where people need no sign-in.
+		if tok, ok := apiToken(r.Header.Get("Authorization")); ok && strings.HasPrefix(tok, work.TokenPrefix) {
+			return s.agentIdentity(r, tok, touch)
+		}
 		return &identity{User: s.Actor, Via: viaNone}, nil
 	}
 	now := s.Now()

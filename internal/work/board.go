@@ -247,7 +247,7 @@ func (s *Store) Burndown(ctx context.Context, c Caller, sprintID string) (*Burnd
 		if days > 1 {
 			ideal = committed * float64(days-1-d) / float64(days-1)
 		}
-		bd.Points = append(bd.Points, Point{Date: day.Format("2006-01-02"), Remaining: remaining, Ideal: ideal, Done: done, Added: added})
+		bd.Points = append(bd.Points, Point{Date: day.Format("2006-01-02"), Remaining: round2(remaining), Ideal: round2(ideal), Done: round2(done), Added: round2(added)})
 	}
 	return bd, nil
 }
