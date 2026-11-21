@@ -665,7 +665,7 @@
           "items": [
             {
               "status": "planned",
-              "title": "Organizations, teams and collaborators",
+              "title": "Wings, Squadrons and collaborators",
               "value": "Teams with their own permissions on repositories, and invitations for people from outside.",
               "detail": "One permission model covers code, work items, pipelines and environments, so there is no second set of users to maintain.",
               "needs": "Built-in Git hosting.",
@@ -3270,7 +3270,7 @@
             },
             {
               "status": "planned",
-              "title": "Organizations",
+              "title": "Several Wings on one Base",
               "value": "Several Wings on one installation, isolated from each other, with the level names you choose.",
               "detail": "Isolation is tested.",
               "area": "hosted-service"

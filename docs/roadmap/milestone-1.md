@@ -486,7 +486,7 @@ Releases with tags, notes, attachments and drafts, with notes grouped by work it
 
 Accounts, organizations, tokens and administration for the built-in host.
 
-#### Organizations, teams and collaborators {#organizations-teams-and-collaborators}
+#### Wings, Squadrons and collaborators {#wings-squadrons-and-collaborators}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 

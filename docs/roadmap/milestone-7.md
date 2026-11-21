@@ -132,7 +132,7 @@ A safe instance on the internet with realistic data anyone can explore, read-onl
 
 [Read the documentation](../demo.md) · [Area page](hosted-service.md)
 
-#### Organizations {#organizations}
+#### Several Wings on one Base {#several-wings-on-one-base}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 

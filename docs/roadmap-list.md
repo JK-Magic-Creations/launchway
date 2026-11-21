@@ -166,7 +166,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Organizations, teams and collaborators](roadmap/milestone-1.md#organizations-teams-and-collaborators) | Planned | Teams with their own permissions on repositories, and invitations for people from outside. |
+| [Wings, Squadrons and collaborators](roadmap/milestone-1.md#wings-squadrons-and-collaborators) | Planned | Teams with their own permissions on repositories, and invitations for people from outside. |
 | [Tokens and scoped access](roadmap/milestone-1.md#tokens-and-scoped-access) | Planned | Personal and service tokens limited to chosen repositories and actions. |
 | [Launchway as a sign-in provider](roadmap/milestone-1.md#launchway-as-a-sign-in-provider) | Planned | Let other tools sign in with accounts that live in Launchway. |
 | [Host administration screens](roadmap/milestone-1.md#host-administration-screens) | Planned | Users, repositories, queues, background tasks, a banner and a maintenance mode. |
@@ -645,7 +645,7 @@ Sign up and go, or keep your files on your own machines; hosted, hosted with you
 | [Sandboxed hosted runners](roadmap/milestone-7.md#sandboxed-hosted-runners) | Planned | Each step in its own isolated machine, with no route to anything but the internet and firm quotas; the same profile available to any self-hosted server. |
 | [Hosted capacity that can grow](roadmap/milestone-7.md#hosted-capacity-that-can-grow) | Planned | Everything is portable, so capacity can be added on any provider as demand justifies. |
 | [A public demo](roadmap/milestone-7.md#a-public-demo) | Planned | A safe instance on the internet with realistic data anyone can explore, read-only at first. A local demo already runs from the quick start. ([docs](demo.md)) |
-| [Organizations](roadmap/milestone-7.md#organizations) | Planned | Several Wings on one installation, isolated from each other, with the level names you choose. |
+| [Several Wings on one Base](roadmap/milestone-7.md#several-wings-on-one-base) | Planned | Several Wings on one installation, isolated from each other, with the level names you choose. |
 
 ### Sign up and go
 
