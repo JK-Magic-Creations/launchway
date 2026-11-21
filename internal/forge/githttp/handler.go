@@ -207,7 +207,7 @@ func (h *Handler) Serve(w http.ResponseWriter, r *http.Request, q Request) Resul
 	h2.Set("Expires", "Fri, 01 Jan 1980 00:00:00 GMT")
 	if q.Advertise {
 		h2.Set("Content-Type", "application/x-"+q.Service+"-advertisement")
-		if !(q.Service == UploadPack && strings.Contains(rpc.GitProtocol, "version=2")) {
+		if q.Service != UploadPack || !strings.Contains(rpc.GitProtocol, "version=2") {
 			pkt := "# service=" + q.Service + "\n"
 			fmt.Fprintf(out, "%04x%s0000", len(pkt)+4, pkt)
 		}
@@ -239,7 +239,7 @@ func (h *Handler) Serve(w http.ResponseWriter, r *http.Request, q Request) Resul
 		err = fmt.Errorf("%w (%v)", ErrTooLarge, err)
 	}
 	res.Err = err
-	h.failure(w, out, &res, err, ctx)
+	h.failure(ctx, w, out, &res, err)
 	return res
 }
 
@@ -251,7 +251,7 @@ func tooLarge(w http.ResponseWriter, limit int64) Result {
 // failure tells the client what it can still be told: if nothing was sent
 // yet, a status and a sentence; otherwise the connection just ends, and
 // git reports the truncated response.
-func (h *Handler) failure(w http.ResponseWriter, out *streamWriter, res *Result, err error, ctx context.Context) {
+func (h *Handler) failure(ctx context.Context, w http.ResponseWriter, out *streamWriter, res *Result, err error) {
 	var tooBig *http.MaxBytesError
 	status, msg := http.StatusInternalServerError, "something went wrong on the server; its log has the details"
 	switch {

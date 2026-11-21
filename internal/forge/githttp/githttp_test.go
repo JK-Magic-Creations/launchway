@@ -32,7 +32,7 @@ func serve(h *Handler, user string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		svc, adv, err := Service(r)
 		if err != nil {
-			http.Error(w, err.Error(), 403)
+			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
 		who := user

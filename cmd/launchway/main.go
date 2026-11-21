@@ -235,8 +235,7 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	loopLimit, _ := cfg.LoopLimit() // checked when the file was read
-	mgr.SetLoopLimit(loopLimit)
+	mgr.SetLoopLimit(loopLimitOf(cfg))
 	token, err := config.RunnerToken(cfg.Data, eng)
 	if err != nil {
 		return err
@@ -252,10 +251,6 @@ func cmdServer(args []string) error {
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts, Drafts: drafts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, WaiveRole: &waiveRole, ReportsOrigin: reportsOrigin, RunnersRole: &runnersRole}
 	srv.TokenMaxDays, _ = cfg.TokenMaxDays() // checked when the file was read
-	hosted, err := newHosting(cfg, eng, log, srv)
-	if err != nil {
-		return fmt.Errorf("%s: forge: %w", *cfgPath, err)
-	}
 	if m := cfg.MCP; m.On() {
 		srv.MCP = &api.MCPOptions{AllowedOrigins: m.AllowedOrigins, RequestsPerMinute: m.RequestsPerMinute, Concurrent: m.Concurrent, Total: m.Total}
 		if o := m.OAuth; o != nil {
@@ -294,6 +289,9 @@ func cmdServer(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if err := startHosting(ctx, cfg, eng, log, srv); err != nil {
+		return err
+	}
 	httpSrv := &http.Server{Handler: srv.Handler(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		if err := httpSrv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -302,7 +300,6 @@ func cmdServer(args []string) error {
 		}
 	}()
 	mgr.Start(ctx)
-	hosted.Start(ctx)
 	mgr.WatchPolicySources(ctx)
 
 	url := "http://" + loopback(ln.Addr().String())

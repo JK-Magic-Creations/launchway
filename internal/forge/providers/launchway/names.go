@@ -42,7 +42,7 @@ func ValidSegment(s string) error {
 	case len(s) > MaxNameLength:
 		return fmt.Errorf("%w: a name is at most %d characters", forge.ErrInvalid, MaxNameLength)
 	case strings.Contains(s, ".."):
-		return fmt.Errorf("%w: a name cannot contain ..", forge.ErrInvalid)
+		return fmt.Errorf("%w: a name cannot contain two dots in a row", forge.ErrInvalid)
 	case strings.HasSuffix(s, ".") || strings.HasSuffix(strings.ToLower(s), ".git") || strings.HasSuffix(strings.ToLower(s), ".lock"):
 		return fmt.Errorf("%w: a name cannot end in a dot, .git or .lock", forge.ErrInvalid)
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
@@ -84,123 +85,165 @@ func loopbackListener(r *http.Request) bool {
 
 const gitRealm = `Basic realm="Launchway Git", charset="UTF-8"`
 
-// gitHTTP authenticates, authorises and serves one Git request.
+// gitReq is what a Git request asks for and carries.
+type gitReq struct {
+	svc       string
+	advertise bool
+	class     access
+	path      string
+	tok       string
+	basic     bool
+	present   bool
+}
+
+// gitCaller is who a Git request is from: a person (an API token), a run
+// (a run token), or nobody (anonymous).
+type gitCaller struct {
+	id   *identity
+	run  *githttp.RunClaim
+	user string
+}
+
+// gitHTTP authenticates, authorises and serves one Git request, in that
+// order and before the storage is touched.
 func (s *Server) gitHTTP(w http.ResponseWriter, r *http.Request) {
-	f := s.Forge
-	if f == nil || f.Git == nil {
+	if s.Forge == nil || s.Forge.Git == nil {
 		http.Error(w, featureOff, http.StatusNotFound)
 		return
 	}
-	plain := func(code int, msg string) { http.Error(w, msg, code) }
-	unauthorised := func() {
-		w.Header().Set("WWW-Authenticate", gitRealm)
-		plain(http.StatusUnauthorized, "authentication required")
+	q, ok := s.gitParse(w, r)
+	if !ok {
+		return
 	}
+	c, ok := s.gitAuthenticate(w, r, q)
+	if !ok {
+		return
+	}
+	repo, ok := s.gitAuthorise(w, r, q, c)
+	if !ok {
+		return
+	}
+	res := s.Forge.Git.Serve(w, r, githttp.Request{Repo: repo, Service: q.svc, Advertise: q.advertise, User: c.user})
+	if q.svc == githttp.ReceivePack && !q.advertise {
+		s.gitPushed(r, c.id, c.run, repo, res)
+	}
+}
+
+func unauthorised(w http.ResponseWriter) {
+	w.Header().Set("WWW-Authenticate", gitRealm)
+	http.Error(w, "authentication required", http.StatusUnauthorized)
+}
+
+// gitParse reads what is asked for, and refuses what is never accepted: the
+// dumb protocol, a token in the address, Basic over plain HTTP.
+func (s *Server) gitParse(w http.ResponseWriter, r *http.Request) (gitReq, bool) {
 	svc, advertise, err := githttp.Service(r)
 	if err != nil {
-		plain(http.StatusForbidden, err.Error())
-		return
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return gitReq{}, false
 	}
-	q := r.URL.Query()
 	for _, k := range tokenInURL {
-		if q.Has(k) {
-			plain(http.StatusBadRequest, "a token must not be sent in the address (it would be logged); send it in the Authorization header, as git does with a credential")
-			return
+		if r.URL.Query().Has(k) {
+			http.Error(w, "a token must not be sent in the address (it would be logged); send it in the Authorization header, as git does with a credential", http.StatusBadRequest)
+			return gitReq{}, false
 		}
 	}
-	class := repoRead
+	q := gitReq{svc: svc, advertise: advertise, class: repoRead,
+		path: repoSubject(r.PathValue("owner"), strings.TrimSuffix(r.PathValue("name"), ".git"))}
 	if svc == githttp.ReceivePack {
-		class = repoWrite
+		q.class = repoWrite
 	}
-	owner, name := r.PathValue("owner"), strings.TrimSuffix(r.PathValue("name"), ".git")
-	path := repoSubject(owner, name)
+	q.tok, q.basic, q.present = gitCredential(r)
+	if q.present && q.basic && !s.isHTTPS(r) && !loopbackListener(r) && !s.Forge.AllowInsecureHTTP {
+		http.Error(w, "Launchway does not accept a password or token over plain HTTP; use HTTPS (or set forge.allow_insecure_http for a private network)", http.StatusForbidden)
+		return gitReq{}, false
+	}
+	return q, true
+}
 
-	tok, basic, present := gitCredential(r)
-	if present && basic && !s.isHTTPS(r) && !loopbackListener(r) && !f.AllowInsecureHTTP {
-		plain(http.StatusForbidden, "Launchway does not accept a password or token over plain HTTP; use HTTPS (or set forge.allow_insecure_http for a private network)")
-		return
+// gitAuthenticate works out who is calling. A credential that is present and
+// wrong is a 401 (and counts against the sender); none at all is anonymous.
+func (s *Server) gitAuthenticate(w http.ResponseWriter, r *http.Request, q gitReq) (gitCaller, bool) {
+	var c gitCaller
+	if q.present && s.tooManyFailures(w, r) {
+		return c, false
 	}
-	if present && s.tooManyFailures(w, r) {
-		return
-	}
-	// Who is calling, before anything else is looked at.
-	var id *identity
-	var run *githttp.RunClaim
 	switch {
 	case s.Auth == nil:
-		id = &identity{User: s.Actor, Via: viaNone}
-	case present && strings.HasPrefix(tok, githttp.RunTokenPrefix):
-		c, err := f.RunTokens.Verify(tok)
+		c.id = &identity{User: s.Actor, Via: viaNone}
+	case q.present && strings.HasPrefix(q.tok, githttp.RunTokenPrefix):
+		claim, err := s.Forge.RunTokens.Verify(q.tok)
 		if err != nil {
 			s.tokenDenied(r, true, "", "", "an invalid or expired run token")
-			unauthorised()
-			return
+			unauthorised(w)
+			return c, false
 		}
-		run = &c
-	case present && strings.HasPrefix(tok, tokenPrefix):
-		if id, err = s.tokenIdentity(r, tok, true); err != nil {
+		c.run = &claim
+	case q.present && strings.HasPrefix(q.tok, tokenPrefix):
+		id, err := s.tokenIdentity(r, q.tok, true)
+		if err != nil {
 			s.fail(w, err)
-			return
+			return c, false
 		}
 		if id == nil {
-			unauthorised()
-			return
+			unauthorised(w)
+			return c, false
 		}
-	case present:
+		c.id = id
+	case q.present:
 		s.tokenDenied(r, true, "", "", "the credential is not a Launchway API token")
-		unauthorised()
-		return
+		unauthorised(w)
+		return c, false
 	}
-	repo, err := f.Provider.Repositories().Get(r.Context(), path)
+	c.user = s.gitUser(c.id, c.run, r)
+	return c, true
+}
+
+// gitAuthorise finds the repository and decides whether this caller may do
+// this to it. Everything that cannot be told apart is answered alike.
+func (s *Server) gitAuthorise(w http.ResponseWriter, r *http.Request, q gitReq, c gitCaller) (forge.Repository, bool) {
+	repo, err := s.Forge.Provider.Repositories().Get(r.Context(), q.path)
 	found := err == nil
 	if err != nil && !errors.Is(err, forge.ErrNotFound) {
 		s.fail(w, err)
-		return
+		return repo, false
 	}
-	user := s.gitUser(id, run, r)
-	deny := func(code int, msg string) {
-		s.gitDenied(r, id, run, path, svc, msg)
-		plain(code, msg)
+	deny := func(code int, msg string) (forge.Repository, bool) {
+		s.gitDenied(r, c.id, c.run, q.path, q.svc, msg)
+		http.Error(w, msg, code)
+		return repo, false
 	}
 	switch {
-	case id == nil && run == nil:
+	case c.id == nil && c.run == nil:
 		// Anonymous: only a repository whose access class is public, and only to read.
-		if !found || repo.Visibility != forge.Public || class != repoRead {
-			unauthorised() // the same answer for a private repository and one that does not exist
-			return
+		if !found || repo.Visibility != forge.Public || q.class != repoRead {
+			unauthorised(w) // the same answer for a private repository and one that does not exist
+			return repo, false
 		}
-		user = "anonymous " + s.clientAddr(r)
-	case run != nil:
-		if !found || run.Repo != repo.ID {
-			plain(http.StatusNotFound, "repository not found")
-			return
+	case c.run != nil:
+		if !found || c.run.Repo != repo.ID {
+			http.Error(w, "repository not found", http.StatusNotFound)
+			return repo, false
 		}
-		if class != repoRead {
-			deny(http.StatusForbidden, "a run's credential can read a repository, not push to it")
-			return
+		if q.class != repoRead {
+			return deny(http.StatusForbidden, "a run's credential can read a repository, not push to it")
 		}
 	default:
 		if !found {
-			plain(http.StatusNotFound, "repository not found")
-			return
+			http.Error(w, "repository not found", http.StatusNotFound)
+			return repo, false
 		}
-		if code, msg := s.checkRepo(id, class, path); code != 0 {
-			if code == http.StatusNotFound {
-				plain(code, "repository not found")
-				return
-			}
-			deny(code, msg)
-			return
+		if code, msg := s.checkRepo(c.id, q.class, q.path); code == http.StatusNotFound {
+			http.Error(w, "repository not found", code)
+			return repo, false
+		} else if code != 0 {
+			return deny(code, msg)
 		}
 	}
-	if class == repoWrite && (repo.Archived || repo.Mirror) {
-		deny(http.StatusForbidden, "this repository is "+map[bool]string{true: "archived", false: "a mirror"}[repo.Archived]+" and takes no pushes")
-		return
+	if q.class == repoWrite && (repo.Archived || repo.Mirror) {
+		return deny(http.StatusForbidden, "this repository is "+map[bool]string{true: "archived", false: "a mirror"}[repo.Archived]+" and takes no pushes")
 	}
-	res := f.Git.Serve(w, r, githttp.Request{Repo: repo, Service: svc, Advertise: advertise, User: user})
-	if svc == githttp.ReceivePack && !advertise {
-		s.gitPushed(r, id, run, repo, res)
-	}
+	return repo, true
 }
 
 func (s *Server) gitUser(id *identity, run *githttp.RunClaim, r *http.Request) string {
@@ -266,10 +309,14 @@ func short(sha string) string {
 // stay in the route table, with their access class, and are served by
 // gitAlias instead.
 func (s *Server) register(mux *http.ServeMux, rt route) {
-	if isGitRoute(rt.pattern) && !strings.Contains(rt.pattern, " /git/") {
+	switch {
+	case isGitRoute(rt.pattern) && !strings.Contains(rt.pattern, " /git/"):
 		return
+	case isGitRoute(rt.pattern):
+		mux.Handle(rt.pattern, http.HandlerFunc(rt.handler)) // authenticates by itself: see gitHTTP
+	default:
+		mux.Handle(rt.pattern, s.guard(rt))
 	}
-	mux.Handle(rt.pattern, s.guard(rt))
 }
 
 // notOwners are first path segments that are Launchway's own, never an owner.
@@ -318,6 +365,6 @@ func (s *Server) redirectToRepository(w http.ResponseWriter, r *http.Request, ow
 	if _, err := s.Forge.Provider.Repositories().Get(r.Context(), repoSubject(owner, name)); err != nil {
 		return false
 	}
-	http.Redirect(w, r, "/repositories/"+owner+"/"+name, http.StatusFound)
+	http.Redirect(w, r, "/repositories/"+url.PathEscape(owner)+"/"+url.PathEscape(name), http.StatusFound)
 	return true
 }

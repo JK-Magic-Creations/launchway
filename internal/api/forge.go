@@ -221,6 +221,15 @@ func (s *Server) deleteRepo(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// checkRepoRequest is checkRepo for a request whose path names the repository
+// ({owner} and {name}); with hosting off it is the feature_off answer.
+func (s *Server) checkRepoRequest(id *identity, a access, r *http.Request) (int, string) {
+	if s.Forge == nil {
+		return http.StatusNotFound, featureOff
+	}
+	return s.checkRepo(id, a, repoSubject(r.PathValue("owner"), r.PathValue("name")))
+}
+
 // checkRepo applies a repository access class. A repository someone may not
 // read is reported exactly as one that does not exist.
 func (s *Server) checkRepo(id *identity, a access, repo string) (int, string) {

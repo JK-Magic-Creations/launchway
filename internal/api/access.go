@@ -162,9 +162,6 @@ func (s *Server) requestIdentity(r *http.Request) (*identity, error) {
 // guard wraps a route's handler with everything access needs: who is
 // calling, the CSRF check, the permission check, and the audit record.
 func (s *Server) guard(rt route) http.Handler {
-	if isGitRoute(rt.pattern) {
-		return rt.handler // authenticates by itself: see gitHTTP
-	}
 	switch rt.access {
 	case public:
 		return rt.handler
@@ -218,12 +215,6 @@ func (s *Server) guard(rt route) http.Handler {
 		switch rt.access {
 		case projectRead, projectOperate, projectDraft:
 			project = r.PathValue("name")
-		case repoRead, repoWrite, repoAdmin:
-			if s.Forge == nil {
-				deny(http.StatusNotFound, featureOff)
-				return
-			}
-			project = repoSubject(r.PathValue("owner"), r.PathValue("name"))
 		case runRead, runOperate:
 			if project, err = s.Engine.RunProject(r.PathValue("id")); err != nil {
 				if errors.Is(err, engine.ErrNotFound) {
@@ -276,7 +267,7 @@ func (s *Server) check(id *identity, a access, project string, r *http.Request) 
 		return http.StatusNotFound, fmt.Errorf("%w: project %s", engine.ErrNotFound, project).Error()
 	}
 	if a == repoRead || a == repoWrite || a == repoAdmin {
-		return s.checkRepo(id, a, project)
+		return s.checkRepoRequest(id, a, r)
 	}
 	switch a {
 	case signedIn:
