@@ -40,6 +40,12 @@ type Service struct {
 	Paths func(ctx context.Context, repoID string) (string, error)
 	// AfterMerge is told of a merge made by auto-merge, which no request made.
 	AfterMerge func(ctx context.Context, repoID string, p PullRequest)
+	// AfterBranchMoved is told of a push the service made to a source branch
+	// (updating it, applying suggestions), so pipelines and webhooks learn of it.
+	AfterBranchMoved func(ctx context.Context, repoID, actor string, ups []RefUpdate)
+	// ProtectedBranch says whether a branch's rules keep the queue from
+	// pushing to it (nil: none do).
+	ProtectedBranch func(ctx context.Context, repoID, branch string) bool
 	Log        *slog.Logger
 	// Clock gives the time of commits made by the server (default time.Now).
 	Clock func() time.Time
@@ -48,6 +54,7 @@ type Service struct {
 	sem          chan struct{}
 	wg           sync.WaitGroup
 	mu           sync.Mutex
+	qlocks       map[string]chan struct{}
 	jobs         map[string]*job
 	// background is canceled by Stop.
 	background context.Context
@@ -179,6 +186,9 @@ func (s *Service) Open(ctx context.Context, repoID, author string, n New) (PullR
 	}
 	s.schedule(ctx, repoID, p.ID)
 	s.emit(ctx, "opened", repoID, p, author, nil)
+	if !p.Draft {
+		s.AutoAssign(ctx, repoID, p, "system")
+	}
 	return p, nil
 }
 
@@ -291,6 +301,9 @@ func (s *Service) baseMoved(ctx context.Context, repoID string, p PullRequest, b
 func (s *Service) afterNewCommits(ctx context.Context, repoID string, p PullRequest, head, actor string) {
 	s.reanchorComments(ctx, repoID, p, head)
 	s.dismissStale(ctx, repoID, p, head)
+	if np, err := s.Store.ByID(ctx, p.ID); err == nil {
+		s.AutoAssign(ctx, repoID, np, "system")
+	}
 }
 
 // schedule asks for the judgment of a pull request to be (re)made in the

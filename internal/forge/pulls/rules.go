@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 
@@ -58,6 +59,54 @@ type Rule struct {
 	// BypassAdmins lets an administrator of the repository merge anyway, saying
 	// why; the reason and what was bypassed are recorded.
 	BypassAdmins bool `json:"allow_admin_bypass"`
+	// RequireOwnerApproval asks that, for every changed file the repository's
+	// owners file (see Owners) names an owner of, one of that file's owners
+	// approved. A file nobody owns needs nothing extra.
+	RequireOwnerApproval bool `json:"require_owner_approval"`
+	// DismissStale dismisses approvals when new commits arrive on a pull
+	// request into these branches, whatever the repository setting says.
+	DismissStale bool `json:"dismiss_stale_approvals"`
+	// RequireFreshApproval asks that the latest push be approved by someone
+	// other than the person who pushed it.
+	RequireFreshApproval bool `json:"require_latest_push_approved_by_other"`
+	// PathChecks are checks required only when a changed file matches.
+	PathChecks []PathCheck `json:"required_checks_by_path"`
+	// MergeQueue sends merges into these branches through the merge queue:
+	// a pull request is queued, tested on the tip plus the entries ahead,
+	// and merged in order.
+	MergeQueue bool `json:"merge_queue"`
+}
+
+// PathCheck requires a check only when the pull request changes a file that
+// matches one of Paths (the patterns of the owners file: docs/, *.go,
+// /cmd/**). A pipeline kept from running by its own path filter never blocks:
+// the check counts as satisfied, as for any required check.
+type PathCheck struct {
+	Paths []string `json:"paths"`
+	Check string   `json:"check"`
+}
+
+// ruleExtra is what the extra column holds.
+type ruleExtra struct {
+	OwnerApproval bool        `json:"owner_approval,omitempty"`
+	DismissStale  bool        `json:"dismiss_stale,omitempty"`
+	FreshApproval bool        `json:"fresh_approval,omitempty"`
+	PathChecks    []PathCheck `json:"path_checks,omitempty"`
+	Queue         bool        `json:"queue,omitempty"`
+}
+
+func (r Rule) extra() string {
+	b, _ := json.Marshal(ruleExtra{r.RequireOwnerApproval, r.DismissStale, r.RequireFreshApproval, r.PathChecks, r.MergeQueue})
+	return string(b)
+}
+
+func (r *Rule) setExtra(s string) {
+	var e ruleExtra
+	_ = json.Unmarshal([]byte(s), &e)
+	r.RequireOwnerApproval, r.DismissStale, r.RequireFreshApproval, r.PathChecks, r.MergeQueue = e.OwnerApproval, e.DismissStale, e.FreshApproval, e.PathChecks, e.Queue
+	if r.PathChecks == nil {
+		r.PathChecks = []PathCheck{}
+	}
 }
 
 // Validate checks a rule a person sent.
@@ -98,10 +147,33 @@ func (r *Rule) Validate() error {
 		return invalid("at most 50 required checks")
 	}
 	r.RequiredChecks = checks
+	if len(r.PathChecks) > 50 {
+		return invalid("at most 50 checks required by path")
+	}
+	for i := range r.PathChecks {
+		pc := &r.PathChecks[i]
+		pc.Check = strings.TrimSpace(pc.Check)
+		if pc.Check == "" || len(pc.Check) > 200 || strings.ContainsAny(pc.Check, "\x00\n\r`") {
+			return invalid("required check %d by path has no valid check name", i+1)
+		}
+		if len(pc.Paths) == 0 || len(pc.Paths) > 50 {
+			return invalid("`%s` is required by path: give 1 to 50 paths (docs/, *.go, /cmd/**)", pc.Check)
+		}
+		for j, p := range pc.Paths {
+			p = strings.TrimSpace(p)
+			if err := validOwnerPattern(p); err != nil {
+				return invalid("`%s`: %v", pc.Check, err)
+			}
+			pc.Paths[j] = p
+		}
+	}
+	if r.PathChecks == nil {
+		r.PathChecks = []PathCheck{}
+	}
 	return nil
 }
 
-const ruleCols = `pattern, required_approvals, approval_role, required_checks, require_up_to_date, require_resolved, no_self_approval, require_signed, bypass_admins`
+const ruleCols = `pattern, required_approvals, approval_role, required_checks, require_up_to_date, require_resolved, no_self_approval, require_signed, bypass_admins, extra`
 
 // Rules lists a repository's rules, by pattern.
 func (s *Store) Rules(ctx context.Context, repoID string) ([]Rule, error) {
@@ -115,9 +187,11 @@ func (s *Store) Rules(ctx context.Context, repoID string) ([]Rule, error) {
 		var r Rule
 		var checks string
 		var up, res, self, sig, byp int
-		if err := rows.Scan(&r.Pattern, &r.RequiredApprovals, &r.ApprovalRole, &checks, &up, &res, &self, &sig, &byp); err != nil {
+		var extra string
+		if err := rows.Scan(&r.Pattern, &r.RequiredApprovals, &r.ApprovalRole, &checks, &up, &res, &self, &sig, &byp, &extra); err != nil {
 			return nil, err
 		}
+		r.setExtra(extra)
 		_ = json.Unmarshal([]byte(checks), &r.RequiredChecks)
 		if r.RequiredChecks == nil {
 			r.RequiredChecks = []string{}
@@ -136,8 +210,8 @@ func (s *Store) SetRule(ctx context.Context, repoID string, r Rule, by string) e
 	}
 	checks, _ := json.Marshal(r.RequiredChecks)
 	res, err := s.db.Exec(ctx, `UPDATE branch_rules SET required_approvals = ?, approval_role = ?, required_checks = ?, require_up_to_date = ?, require_resolved = ?,
-		no_self_approval = ?, require_signed = 0, bypass_admins = ? WHERE repo_id = ? AND pattern = ?`,
-		r.RequiredApprovals, r.ApprovalRole, string(checks), b2i(r.RequireUpToDate), b2i(r.RequireResolved), b2i(r.NoSelfApproval), b2i(r.BypassAdmins), repoID, r.Pattern)
+		no_self_approval = ?, require_signed = 0, bypass_admins = ?, extra = ? WHERE repo_id = ? AND pattern = ?`,
+		r.RequiredApprovals, r.ApprovalRole, string(checks), b2i(r.RequireUpToDate), b2i(r.RequireResolved), b2i(r.NoSelfApproval), b2i(r.BypassAdmins), r.extra(), repoID, r.Pattern)
 	if err != nil {
 		return err
 	}
@@ -145,9 +219,9 @@ func (s *Store) SetRule(ctx context.Context, repoID string, r Rule, by string) e
 		return nil
 	}
 	_, err = s.db.Exec(ctx, `INSERT INTO branch_rules(id, repo_id, pattern, push_role, created_at, created_by, required_approvals, approval_role, required_checks,
-		require_up_to_date, require_resolved, no_self_approval, bypass_admins) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		require_up_to_date, require_resolved, no_self_approval, bypass_admins, extra) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		ids.New("rul"), repoID, r.Pattern, "admin", ms(s.now()), by, r.RequiredApprovals, r.ApprovalRole, string(checks),
-		b2i(r.RequireUpToDate), b2i(r.RequireResolved), b2i(r.NoSelfApproval), b2i(r.BypassAdmins))
+		b2i(r.RequireUpToDate), b2i(r.RequireResolved), b2i(r.NoSelfApproval), b2i(r.BypassAdmins), r.extra())
 	return err
 }
 
@@ -166,6 +240,7 @@ func RuleFor(rules []Rule, branch string) (Rule, bool) {
 			out.Pattern = branch
 			out.RequiredChecks = append([]string{}, r.RequiredChecks...)
 			out.BypassAdmins = r.BypassAdmins
+			out.PathChecks = append([]PathCheck{}, r.PathChecks...)
 			continue
 		}
 		out.RequiredApprovals = max(out.RequiredApprovals, r.RequiredApprovals)
@@ -176,6 +251,11 @@ func RuleFor(rules []Rule, branch string) (Rule, bool) {
 		out.RequireUpToDate = out.RequireUpToDate || r.RequireUpToDate
 		out.RequireResolved = out.RequireResolved || r.RequireResolved
 		out.NoSelfApproval = out.NoSelfApproval || r.NoSelfApproval
+		out.RequireOwnerApproval = out.RequireOwnerApproval || r.RequireOwnerApproval
+		out.DismissStale = out.DismissStale || r.DismissStale
+		out.RequireFreshApproval = out.RequireFreshApproval || r.RequireFreshApproval
+		out.MergeQueue = out.MergeQueue || r.MergeQueue
+		out.PathChecks = append(out.PathChecks, r.PathChecks...)
 		out.BypassAdmins = out.BypassAdmins && r.BypassAdmins // every covering rule must allow it
 	}
 	if found {
@@ -431,6 +511,25 @@ type Readiness struct {
 	// Methods are the ways the repository allows to merge.
 	Methods       []string `json:"methods"`
 	DefaultMethod string   `json:"default_method"`
+	// NeedsOwners are the changed files whose owners have not approved yet,
+	// each with who may (only when the rule asks for owner approval).
+	NeedsOwners []FileOwners `json:"needs_owner_approval,omitempty"`
+	// Queue says merges into this branch go through the merge queue.
+	Queue bool `json:"queue,omitempty"`
+
+	counted []Review // the approvals that count, newest per person
+}
+
+// IsWIP says a title marks the work as in progress: it begins with WIP or
+// Draft (any case) and a colon, or the same in brackets.
+func IsWIP(title string) bool {
+	t := strings.ToLower(strings.TrimSpace(title))
+	for _, p := range []string{"wip:", "[wip]", "wip -", "draft:", "[draft]", "(wip)"} {
+		if strings.HasPrefix(t, p) {
+			return true
+		}
+	}
+	return false
 }
 
 // plural returns "1 more approval" or "2 more approvals".
@@ -463,11 +562,23 @@ func (s *Service) Readiness(ctx context.Context, repoID, repoPath string, p Pull
 		r.Why = "this pull request is already " + string(p.State)
 		return r, nil
 	}
+	r.Queue = covered && rule.MergeQueue
 	r.stateBlockers(p)
 	if err := s.reviewBlockers(ctx, p, rule, covered, &r); err != nil {
 		return r, err
 	}
-	if err := s.checkBlockers(ctx, repoID, repoPath, p, rule, covered, &r); err != nil {
+	var changed []string
+	if covered && (rule.RequireOwnerApproval || len(rule.PathChecks) > 0) {
+		if changed, err = s.ChangedPaths(ctx, repoID, p); err != nil {
+			return r, err
+		}
+	}
+	if covered && rule.RequireOwnerApproval {
+		if err := s.ownerBlockers(ctx, repoID, p, changed, &r); err != nil {
+			return r, err
+		}
+	}
+	if err := s.checkBlockers(ctx, repoID, repoPath, p, rule, covered, changed, &r); err != nil {
 		return r, err
 	}
 	if len(r.Methods) == 0 {
@@ -485,6 +596,8 @@ func (r *Readiness) block(code, why string) {
 func (r *Readiness) stateBlockers(p PullRequest) {
 	if p.Draft {
 		r.block("draft", "it is a draft; mark it ready for review")
+	} else if IsWIP(p.Title) {
+		r.block("wip", "its title says it is work in progress; take WIP or Draft off the title when it is ready")
 	}
 	switch p.Mergeability.State {
 	case MergeConflicts:
@@ -531,6 +644,7 @@ func (s *Service) reviewBlockers(ctx context.Context, p PullRequest, rule Rule, 
 				continue
 			}
 			approvers[who] = true
+			r.counted = append(r.counted, rv)
 		}
 	}
 	sort.Strings(r.ChangesRequested)
@@ -554,14 +668,97 @@ func (s *Service) reviewBlockers(ctx context.Context, p PullRequest, rule Rule, 
 	if rule.RequireResolved && r.OpenThreads > 0 {
 		r.block("threads", plural(r.OpenThreads, "conversation is", "conversations are")+" not resolved")
 	}
+	if rule.RequireFreshApproval {
+		s.freshBlocker(ctx, p, r)
+	}
 	return nil
 }
 
+// freshBlocker: the latest push must be approved, on its own commit, by
+// someone other than the person who pushed it.
+func (s *Service) freshBlocker(ctx context.Context, p PullRequest, r *Readiness) {
+	revs, err := s.Store.Revisions(ctx, p.ID)
+	pusher := ""
+	if err == nil && len(revs) > 0 {
+		pusher = revs[len(revs)-1].Actor
+	}
+	if pusher == "" {
+		pusher = p.Author
+	}
+	for _, rv := range r.counted {
+		if rv.CommitSHA == p.HeadSHA && rv.Author != pusher {
+			return
+		}
+	}
+	r.block("latest_push", "the latest push, by "+pusher+", needs an approval of its own commit from someone else")
+}
+
+// ownerBlockers: for each changed file that has owners, one of them must have
+// approved (by name, or through a group they belonged to when they reviewed).
+// The owners file is read from the target branch; one with problems blocks,
+// since what it means cannot be trusted.
+func (s *Service) ownerBlockers(ctx context.Context, repoID string, p PullRequest, changed []string, r *Readiness) error {
+	view, _, err := s.Owners(ctx, repoID, p, changed)
+	if err != nil {
+		return err
+	}
+	if len(view.Problems) > 0 {
+		r.block("owners_file", OwnersDoc{Problems: view.Problems}.Valid().Error()[len(ErrInvalid.Error())+2:]+"; fix it on "+p.TargetBranch)
+		return nil
+	}
+	for _, f := range view.Files {
+		if len(f.Owners) == 0 || ownerApproved(f.Owners, r.counted, p.Author) {
+			continue
+		}
+		r.NeedsOwners = append(r.NeedsOwners, f)
+	}
+	if n := len(r.NeedsOwners); n > 0 {
+		first := r.NeedsOwners[0]
+		r.block("owners", fmt.Sprintf("%s still need approval from an owner (for %s: %s)", plural(n, "changed file", "changed files"), first.Path, ownerNames(first.Owners)))
+	}
+	return nil
+}
+
+func ownerNames(o []string) string {
+	out := make([]string, len(o))
+	for i, w := range o {
+		if g, ok := strings.CutPrefix(w, groupPrefix); ok {
+			out[i] = "group " + g
+		} else {
+			out[i] = "@" + w
+		}
+	}
+	return strings.Join(out, ", ")
+}
+
+// ownerApproved: some counted approval is by one of the owners (a person's own
+// approval of their own pull request never answers for them).
+func ownerApproved(owners []string, approvals []Review, author string) bool {
+	for _, rv := range approvals {
+		if rv.Author == author {
+			continue
+		}
+		for _, o := range owners {
+			if g, ok := strings.CutPrefix(o, groupPrefix); ok {
+				if slices.Contains(rv.Groups, g) {
+					return true
+				}
+			} else if o == rv.Author {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // checkBlockers: the required checks that have not passed.
-func (s *Service) checkBlockers(ctx context.Context, repoID, repoPath string, p PullRequest, rule Rule, covered bool, r *Readiness) error {
+func (s *Service) checkBlockers(ctx context.Context, repoID, repoPath string, p PullRequest, rule Rule, covered bool, changed []string, r *Readiness) error {
 	var required []string
 	if covered {
-		required = rule.RequiredChecks
+		required = append(required, rule.RequiredChecks...)
+		required = append(required, pathRequired(rule.PathChecks, changed)...)
+		sort.Strings(required)
+		required = dedupe(required)
 	}
 	checks, _, err := s.Checks(ctx, repoID, repoPath, p, required)
 	if err != nil {
@@ -585,6 +782,25 @@ func (s *Service) checkBlockers(ctx context.Context, repoID, repoPath string, p 
 	return nil
 }
 
+// pathRequired lists the checks required by path whose paths match a changed file.
+func pathRequired(pcs []PathCheck, changed []string) []string {
+	var out []string
+	for _, pc := range pcs {
+		hit := false
+		for _, f := range changed {
+			for _, pat := range pc.Paths {
+				if MatchPath(pat, f) {
+					hit = true
+				}
+			}
+		}
+		if hit {
+			out = append(out, pc.Check)
+		}
+	}
+	return out
+}
+
 // conclude says whether the pull request can merge, in one sentence, and
 // whether an administrator may bypass what blocks it.
 func (r *Readiness) conclude(rule Rule, covered bool, actorRole string, p PullRequest) {
@@ -601,7 +817,7 @@ func (r *Readiness) conclude(rule Rule, covered bool, actorRole string, p PullRe
 	r.CanBypass = covered && rule.BypassAdmins && actorRole == RoleAdmin && p.State == Open
 	for _, b := range r.Blockers {
 		switch b.Code {
-		case "conflicts", "state", "method", "checking", "draft":
+		case "conflicts", "state", "method", "checking", "draft", "wip", "owners_file":
 			r.CanBypass = false
 		}
 	}

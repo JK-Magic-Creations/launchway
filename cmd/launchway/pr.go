@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -26,7 +27,10 @@ const prUsage = `Usage:
   launchway pr comment N [-R OWNER/NAME] --body TEXT [--path P --line L [--start-line S]] [--reply-to ID]
                       [--edit ID] [--resolve ID] [--reopen ID] [--delete ID]   comment on the conversation or on a line; manage a comment
   launchway pr review N [-R OWNER/NAME] (--approve | --request-changes | --comment) [--body TEXT] [--request A,B | --unrequest A,B]
-                      [--dismiss ID --reason TEXT] [--request USER,USER]   review, dismiss a review, ask people to review
+                      [--dismiss ID --reason TEXT] [--request USER,USER] [--request-group G,G] [--unrequest-group G,G]
+                                                          review, dismiss a review, ask people or groups to review
+  launchway pr owners N [-R OWNER/NAME] [--json]          who owns each changed file (from .launchway/owners on the target branch)
+  launchway pr owners --check FILE [-R OWNER/NAME]        check an owners file and say what is wrong with it, by line
   launchway pr merge N [-R OWNER/NAME] [--merge | --squash | --rebase] [--delete-branch] [--message M]
                       [--auto] [--bypass-reason TEXT]       merge it (or have it merge itself when the rules pass; --auto=false turns that off)
   launchway pr close N [-R OWNER/NAME]                    close without merging
@@ -35,9 +39,11 @@ const prUsage = `Usage:
   launchway pr revert N [-R OWNER/NAME]                   open a new pull request that undoes a merged one
   launchway pr apply N COMMENT-ID [-R OWNER/NAME]         apply a suggestion as a commit (needs push access)
   launchway pr settings [-R OWNER/NAME] [--allow-merge=B] [--allow-squash=B] [--allow-rebase=B] [--default-method M]
-                      [--delete-branch=B] [--dismiss-stale=B]   the merge methods and settings (set: repository administrators)
+                      [--delete-branch=B] [--dismiss-stale=B] [--assign-reviewers owners|round_robin|least_loaded|off]
+                                                          the merge methods and settings (set: repository administrators)
   launchway pr rules [-R OWNER/NAME] [--branch PATTERN --approvals N --approval-role operator|admin --check NAME,NAME
-                      --up-to-date --resolved --no-self-approval=B --admin-bypass]   the merge rules of protected branches (set: administrators)
+                      --up-to-date --resolved --no-self-approval=B --admin-bypass --owner-approval --dismiss-stale
+                      --fresh-approval --queue --path-check PATHS=CHECK]   the merge rules of protected branches (set: administrators)
 
 N is a pull request number. -R names the repository; without it the repository is the one that "origin" points to.
 `
@@ -218,6 +224,8 @@ func (cl *client) pr(verb string, args []string) error {
 		return cl.prSettings(args)
 	case "rules":
 		return cl.prRules(args)
+	case "owners":
+		return cl.prOwners(args)
 	}
 	return usageErr("unknown command pr %s\n\n%s", verb, prUsage)
 }
@@ -588,6 +596,8 @@ func (cl *client) prReview(args []string) error {
 	reason := f.fs.String("reason", "", "why it is dismissed")
 	request := f.fs.String("request", "", "people to ask to review, comma separated")
 	unrequest := f.fs.String("unrequest", "", "people to take off the list of those asked to review, comma separated")
+	requestGroup := f.fs.String("request-group", "", "groups to ask to review (any member's review answers), comma separated")
+	unrequestGroup := f.fs.String("unrequest-group", "", "groups to take off the list, comma separated")
 	if err := f.parse(args); err != nil {
 		return err
 	}
@@ -602,6 +612,20 @@ func (cl *client) prReview(args []string) error {
 			return err
 		}
 		fmt.Fprintln(cl.out, "Dismissed.")
+		return nil
+	case *requestGroup != "":
+		if err := cl.call("POST", base+"/review-requests", map[string]any{"groups": splitList(*requestGroup)}, nil); err != nil {
+			return err
+		}
+		fmt.Fprintf(cl.out, "Asked group %s to review.\n", strings.Join(splitList(*requestGroup), ", "))
+		return nil
+	case *unrequestGroup != "":
+		for _, name := range splitList(*unrequestGroup) {
+			if err := cl.call("DELETE", base+"/review-requests/"+url.PathEscape("group:"+name), nil, nil); err != nil {
+				return err
+			}
+		}
+		fmt.Fprintf(cl.out, "No longer asking group %s to review.\n", strings.Join(splitList(*unrequestGroup), ", "))
 		return nil
 	case *request != "":
 		var p prSummary
@@ -810,10 +834,17 @@ func (cl *client) prSettings(args []string) error {
 	dm := f.fs.String("default-method", "", "merge, squash or rebase")
 	db := f.fs.Bool("delete-branch", false, "delete the source branch after a merge by default")
 	ds := f.fs.Bool("dismiss-stale", true, "dismiss approvals when new commits arrive")
+	assign := f.fs.String("assign-reviewers", "", "how reviewers are chosen from the owners: owners, round_robin, least_loaded or off")
 	if err := f.parse(args); err != nil {
 		return err
 	}
 	patch := map[string]any{}
+	if f.given["assign-reviewers"] {
+		if *assign == "off" {
+			*assign = ""
+		}
+		patch["assign_reviewers"] = *assign
+	}
 	for flagName, key := range map[string]string{"allow-merge": "allow_merge", "allow-squash": "allow_squash", "allow-rebase": "allow_rebase", "delete-branch": "delete_branch_after_merge", "dismiss-stale": "dismiss_stale_approvals"} {
 		if f.given[flagName] {
 			patch[key] = map[string]bool{"allow-merge": *am, "allow-squash": *as, "allow-rebase": *ar, "delete-branch": *db, "dismiss-stale": *ds}[flagName]
@@ -853,6 +884,11 @@ func (cl *client) prRules(args []string) error {
 	resolved := f.fs.Bool("resolved", false, "every thread must be resolved")
 	noSelf := f.fs.Bool("no-self-approval", true, "the author's approval does not count")
 	bypass := f.fs.Bool("admin-bypass", false, "an administrator may merge past the rules, saying why")
+	ownerOK := f.fs.Bool("owner-approval", false, "an owner of each changed file must approve")
+	stale := f.fs.Bool("dismiss-stale", false, "dismiss approvals when new commits arrive")
+	fresh := f.fs.Bool("fresh-approval", false, "the latest push must be approved by someone other than who pushed it")
+	queue := f.fs.Bool("queue", false, "merge through the merge queue")
+	pathChecks := f.fs.String("path-check", "", "checks required only when matching files change: PATHS=CHECK;PATHS=CHECK (paths comma separated, such as docs/,*.md=docs)")
 	if err := f.parse(args); err != nil {
 		return err
 	}
@@ -866,12 +902,32 @@ func (cl *client) prRules(args []string) error {
 			RequireResolved   bool     `json:"require_resolved_threads"`
 			NoSelfApproval    bool     `json:"no_self_approval"`
 			BypassAdmins      bool     `json:"allow_admin_bypass"`
+			OwnerApproval     bool     `json:"require_owner_approval"`
+			DismissStale      bool     `json:"dismiss_stale_approvals"`
+			FreshApproval     bool     `json:"require_latest_push_approved_by_other"`
+			MergeQueue        bool     `json:"merge_queue"`
+			PathChecks        []struct {
+				Paths []string `json:"paths"`
+				Check string   `json:"check"`
+			} `json:"required_checks_by_path"`
 		} `json:"rules"`
 	}
 	method, body := "GET", any(nil)
 	if *branch != "" {
 		method = "PUT"
-		body = map[string]any{"rules": []map[string]any{{"pattern": *branch, "required_approvals": *approvals, "approval_role": *role, "required_checks": splitList(*checks),
+		var pcs []map[string]any
+		for _, part := range strings.Split(*pathChecks, ";") {
+			if part = strings.TrimSpace(part); part == "" {
+				continue
+			}
+			paths, check, ok := strings.Cut(part, "=")
+			if !ok {
+				return usageErr("--path-check wants PATHS=CHECK, such as docs/,*.md=docs; %q has no =", part)
+			}
+			pcs = append(pcs, map[string]any{"paths": splitList(paths), "check": strings.TrimSpace(check)})
+		}
+		body = map[string]any{"rules": []map[string]any{{"pattern": *branch, "require_owner_approval": *ownerOK, "dismiss_stale_approvals": *stale,
+			"require_latest_push_approved_by_other": *fresh, "merge_queue": *queue, "required_checks_by_path": pcs, "required_approvals": *approvals, "approval_role": *role, "required_checks": splitList(*checks),
 			"require_up_to_date": *upToDate, "require_resolved_threads": *resolved, "no_self_approval": *noSelf, "allow_admin_bypass": *bypass}}}
 	}
 	if err := cl.call(method, f.base+"/merge-rules", body, &out); err != nil {
@@ -884,6 +940,88 @@ func (cl *client) prRules(args []string) error {
 		for _, r := range out.Rules {
 			fmt.Fprintf(cl.out, "%s: %d approval(s) from %s; checks [%s]; up to date %v; resolved %v; no self-approval %v; admin bypass %v\n", r.Pattern, r.RequiredApprovals,
 				r.ApprovalRole, strings.Join(r.RequiredChecks, ", "), r.RequireUpToDate, r.RequireResolved, r.NoSelfApproval, r.BypassAdmins)
+			var more []string
+			for name, on := range map[string]bool{"owner approval": r.OwnerApproval, "dismiss stale approvals": r.DismissStale, "latest push approved by someone else": r.FreshApproval, "merge queue": r.MergeQueue} {
+				if on {
+					more = append(more, name)
+				}
+			}
+			sort.Strings(more)
+			for _, pc := range r.PathChecks {
+				more = append(more, fmt.Sprintf("%s when %s change", pc.Check, strings.Join(pc.Paths, ", ")))
+			}
+			if len(more) > 0 {
+				fmt.Fprintf(cl.out, "  also: %s\n", strings.Join(more, "; "))
+			}
+		}
+	})
+}
+
+func (cl *client) prOwners(args []string) error {
+	f := newPRFlags("owners")
+	check := f.fs.String("check", "", "an owners file to check (a path on this computer)")
+	if err := f.parse(args); err != nil {
+		return err
+	}
+	if *check != "" {
+		text, err := os.ReadFile(*check)
+		if err != nil {
+			return err
+		}
+		var out struct {
+			Valid    bool `json:"valid"`
+			Problems []struct {
+				Line    int    `json:"line"`
+				Message string `json:"message"`
+			} `json:"problems"`
+		}
+		if err := cl.call("POST", f.base+"/owners/check", map[string]any{"text": string(text)}, &out); err != nil {
+			return err
+		}
+		return cl.print(out, *f.asJSON, func() {
+			if out.Valid {
+				fmt.Fprintln(cl.out, "The owners file is valid.")
+				return
+			}
+			for _, p := range out.Problems {
+				fmt.Fprintf(cl.out, "line %d: %s\n", p.Line, p.Message)
+			}
+		})
+	}
+	n, _, err := prNumber(f.pos, "owners")
+	if err != nil {
+		return err
+	}
+	var out struct {
+		Owners struct {
+			Present bool `json:"present"`
+			Files   []struct {
+				Path   string   `json:"path"`
+				Owners []string `json:"owners"`
+			} `json:"files"`
+			Problems []struct {
+				Line    int    `json:"line"`
+				Message string `json:"message"`
+			} `json:"problems"`
+		} `json:"owners"`
+	}
+	if err := cl.call("GET", fmt.Sprintf("%s/pulls/%d/owners", f.base, n), nil, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if !out.Owners.Present {
+			fmt.Fprintln(cl.out, "The target branch has no .launchway/owners file, so no file has an owner.")
+			return
+		}
+		for _, p := range out.Owners.Problems {
+			fmt.Fprintf(cl.out, "owners file, line %d: %s\n", p.Line, p.Message)
+		}
+		for _, fl := range out.Owners.Files {
+			who := strings.Join(fl.Owners, " ")
+			if who == "" {
+				who = "(no owner)"
+			}
+			fmt.Fprintf(cl.out, "%-50s %s\n", fl.Path, who)
 		}
 	})
 }

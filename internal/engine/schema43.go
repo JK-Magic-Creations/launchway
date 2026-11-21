@@ -28,6 +28,7 @@ func init() {
 //	by an older server. Downgrade: nothing to undo.
 var reviewMigration = migration{additive, `
 ALTER TABLE branch_rules ADD COLUMN extra TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE repo_pull_settings ADD COLUMN extra TEXT NOT NULL DEFAULT '{}';
 ALTER TABLE pull_reviews ADD COLUMN reviewer_groups TEXT NOT NULL DEFAULT '[]';
 
 CREATE TABLE pull_viewed (

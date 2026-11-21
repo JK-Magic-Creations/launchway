@@ -152,7 +152,7 @@ func (s *Store) ByID(ctx context.Context, id string) (PullRequest, error) {
 
 // fill adds the people, revisions count and runs.
 func (s *Store) fill(ctx context.Context, p PullRequest) (PullRequest, error) {
-	p.Assignees, p.Reviewers, p.LinkedRuns = []string{}, []string{}, []string{}
+	p.Assignees, p.Reviewers, p.ReviewerGroups, p.LinkedRuns = []string{}, []string{}, []string{}, []string{}
 	if err := s.people(ctx, &p); err != nil {
 		return p, err
 	}
@@ -186,9 +186,12 @@ func (s *Store) people(ctx context.Context, p *PullRequest) error {
 		if err := rows.Scan(&k, &n); err != nil {
 			return err
 		}
-		if k == "assignee" {
+		switch k {
+		case "assignee":
 			p.Assignees = append(p.Assignees, n)
-		} else {
+		case "reviewer_group":
+			p.ReviewerGroups = append(p.ReviewerGroups, n)
+		default:
 			p.Reviewers = append(p.Reviewers, n)
 		}
 	}

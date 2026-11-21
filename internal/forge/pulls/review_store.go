@@ -2,6 +2,7 @@ package pulls
 
 import (
 	"context"
+	"encoding/json"
 	"database/sql"
 	"errors"
 	"strings"
@@ -66,6 +67,10 @@ type Review struct {
 	// submitted (viewer, operator or admin): an approval counts toward a rule
 	// that asks for a role only if it was given by that role.
 	Role string `json:"role,omitempty"`
+	// Groups are the groups the author belonged to when the review was
+	// submitted: a review answers a request for a group, and counts as an
+	// owner's approval for a group that owns a file, only through them.
+	Groups []string `json:"reviewer_groups,omitempty"`
 	// State is submitted or dismissed.
 	State           string    `json:"state"`
 	DismissedBy     string    `json:"dismissed_by,omitempty"`
@@ -202,13 +207,13 @@ func (s *Store) MarkApplied(ctx context.Context, pullID, id, sha, by string) err
 	return s.Resolve(ctx, pullID, c.ThreadID, by, true)
 }
 
-const reviewCols = `id, author, verdict, body, commit_sha, author_role, state, dismissed_by, dismissed_reason, created_at`
+const reviewCols = `id, author, verdict, body, commit_sha, author_role, state, dismissed_by, dismissed_reason, created_at, reviewer_groups`
 
 // AddReview stores a review.
 func (s *Store) AddReview(ctx context.Context, pullID string, r Review) (Review, error) {
 	r.ID = ids.New("prv")
-	if _, err := s.db.Exec(ctx, `INSERT INTO pull_reviews(id, pull_id, author, verdict, body, commit_sha, author_role, created_at) VALUES(?,?,?,?,?,?,?,?)`,
-		r.ID, pullID, r.Author, r.Verdict, r.Body, r.CommitSHA, r.Role, ms(s.now())); err != nil {
+	if _, err := s.db.Exec(ctx, `INSERT INTO pull_reviews(id, pull_id, author, verdict, body, commit_sha, author_role, created_at, reviewer_groups) VALUES(?,?,?,?,?,?,?,?,?)`,
+		r.ID, pullID, r.Author, r.Verdict, r.Body, r.CommitSHA, r.Role, ms(s.now()), groupsJSON(r.Groups)); err != nil {
 		return r, err
 	}
 	return s.Review(ctx, pullID, r.ID)
@@ -217,8 +222,10 @@ func (s *Store) AddReview(ctx context.Context, pullID string, r Review) (Review,
 func scanReview(sc interface{ Scan(...any) error }) (Review, error) {
 	var r Review
 	var at int64
-	err := sc.Scan(&r.ID, &r.Author, &r.Verdict, &r.Body, &r.CommitSHA, &r.Role, &r.State, &r.DismissedBy, &r.DismissedReason, &at)
+	var groups string
+	err := sc.Scan(&r.ID, &r.Author, &r.Verdict, &r.Body, &r.CommitSHA, &r.Role, &r.State, &r.DismissedBy, &r.DismissedReason, &at, &groups)
 	r.CreatedAt = fromMS(at)
+	_ = json.Unmarshal([]byte(groups), &r.Groups)
 	return r, err
 }
 
@@ -284,4 +291,12 @@ func Mentions(body string) []string {
 
 func isNameByte(b byte) bool {
 	return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || b == '-' || b == '_' || b == '.'
+}
+
+func groupsJSON(g []string) string {
+	if g == nil {
+		g = []string{}
+	}
+	b, _ := json.Marshal(g)
+	return string(b)
 }

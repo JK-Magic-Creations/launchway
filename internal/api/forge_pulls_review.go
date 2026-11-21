@@ -181,27 +181,40 @@ func (s *Server) pullCommentDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) pullApplySuggestion(w http.ResponseWriter, r *http.Request) {
+	s.applySuggestionsTo(w, r, []string{r.PathValue("id")})
+}
+
+// pullApplySuggestions applies several suggestions as one commit.
+func (s *Server) pullApplySuggestions(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		CommentIDs []string `json:"comment_ids"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	s.applySuggestionsTo(w, r, in.CommentIDs)
+}
+
+func (s *Server) applySuggestionsTo(w http.ResponseWriter, r *http.Request, commentIDs []string) {
 	repo, p, ok := s.pullTarget(w, r)
 	if !ok {
 		return
 	}
 	id := identityFrom(r)
-	if c, err := s.Forge.Pulls.Store.Comment(r.Context(), p.ID, r.PathValue("id")); err == nil && c.Path != "" {
-		// Applying commits to the source branch: a protected one takes it only from an administrator, as a push would.
-		if rules, _ := s.Forge.Rules.Patterns(r.Context(), repo.ID); len(rules) > 0 {
-			if err := refrulesCheck(rules, p.SourceBranch, s.authorize(id, auth.AdministerProject, repo.Path)); err != nil {
-				writeErr(w, http.StatusForbidden, err.Error())
-				return
-			}
+	// Applying commits to the source branch: a protected one takes it only from an administrator, as a push would.
+	if rules, _ := s.Forge.Rules.Patterns(r.Context(), repo.ID); len(rules) > 0 {
+		if err := refrulesCheck(rules, p.SourceBranch, s.authorize(id, auth.AdministerProject, repo.Path)); err != nil {
+			writeErr(w, http.StatusForbidden, err.Error())
+			return
 		}
 	}
-	sha, err := s.Forge.Pulls.ApplySuggestion(r.Context(), repo.ID, p, r.PathValue("id"), id.User)
+	sha, err := s.Forge.Pulls.ApplySuggestions(r.Context(), repo.ID, p, commentIDs, id.User)
 	if err != nil {
 		s.failPull(w, err)
 		return
 	}
 	s.pullRefsMoved(r.Context(), id.User, repo, []pulls.RefUpdate{{Name: "refs/heads/" + p.SourceBranch, Old: p.HeadSHA, New: sha}})
-	setAudit(r, repo.Path, fmt.Sprintf("#%d suggestion applied as %s", p.Number, short(sha)))
+	setAudit(r, repo.Path, fmt.Sprintf("#%d %d suggestion(s) applied as %s", p.Number, len(commentIDs), short(sha)))
 	writeJSON(w, http.StatusOK, map[string]any{"commit": sha})
 }
 
@@ -221,7 +234,7 @@ func (s *Server) pullReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := identityFrom(r)
-	ri := pulls.ReviewInput{Verdict: in.Verdict, Body: in.Body, Role: s.pullRole(id, repo.Path)}
+	ri := pulls.ReviewInput{Verdict: in.Verdict, Body: in.Body, Role: s.pullRole(id, repo.Path), Groups: auth.StripReservedGroups(id.Groups)}
 	for _, c := range in.Comments {
 		ri.Comments = append(ri.Comments, c.comment())
 	}
@@ -260,19 +273,29 @@ func (s *Server) pullRequestReview(w http.ResponseWriter, r *http.Request) {
 	}
 	var in struct {
 		Reviewers []string `json:"reviewers"`
+		// Groups are groups asked to review: any member's review answers.
+		Groups []string `json:"groups"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	if len(in.Reviewers) == 0 {
-		writeErr(w, http.StatusBadRequest, "name at least one person to ask")
+	if len(in.Reviewers) == 0 && len(in.Groups) == 0 {
+		writeErr(w, http.StatusBadRequest, "name at least one person (reviewers) or group (groups) to ask")
 		return
 	}
-	if err := s.Forge.Pulls.RequestReview(r.Context(), repo.ID, p, identityFrom(r).User, in.Reviewers); err != nil {
-		s.failPull(w, err)
-		return
+	if len(in.Reviewers) > 0 {
+		if err := s.Forge.Pulls.RequestReview(r.Context(), repo.ID, p, identityFrom(r).User, in.Reviewers); err != nil {
+			s.failPull(w, err)
+			return
+		}
 	}
-	setAudit(r, repo.Path, fmt.Sprintf("#%d review requested from %s", p.Number, strings.Join(in.Reviewers, ", ")))
+	if len(in.Groups) > 0 {
+		if err := s.Forge.Pulls.RequestReviewGroups(r.Context(), repo.ID, p, identityFrom(r).User, in.Groups); err != nil {
+			s.failPull(w, err)
+			return
+		}
+	}
+	setAudit(r, repo.Path, fmt.Sprintf("#%d review requested from %s", p.Number, strings.Join(append(append([]string{}, in.Reviewers...), prefixAll("group ", in.Groups)...), ", ")))
 	np, _ := s.Forge.Pulls.Store.ByID(r.Context(), p.ID)
 	np.Repository = repo.Path
 	v, err := s.viewPull(r, repo, np)
@@ -289,7 +312,13 @@ func (s *Server) pullUnrequestReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := r.PathValue("reviewer")
-	if err := s.Forge.Pulls.RemoveReviewRequest(r.Context(), repo.ID, p, identityFrom(r).User, name); err != nil {
+	var err error
+	if g, isGroup := strings.CutPrefix(name, "group:"); isGroup {
+		err = s.Forge.Pulls.RemoveReviewGroupRequest(r.Context(), repo.ID, p, g)
+	} else {
+		err = s.Forge.Pulls.RemoveReviewRequest(r.Context(), repo.ID, p, identityFrom(r).User, name)
+	}
+	if err != nil {
 		s.failPull(w, err)
 		return
 	}
@@ -417,4 +446,12 @@ func (s *Server) setMergeRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"rules": rules})
+}
+
+func prefixAll(prefix string, in []string) []string {
+	out := make([]string, len(in))
+	for i, s := range in {
+		out[i] = prefix + s
+	}
+	return out
 }

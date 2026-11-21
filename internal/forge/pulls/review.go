@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -53,7 +54,7 @@ func ParseSuggestion(body string) (text string, ok bool) {
 }
 
 func validPath(p string) error {
-	if p == "" || len(p) > 4096 || strings.ContainsAny(p, "\x00\n\r") || strings.HasPrefix(p, "/") || p != path.Clean(p) {
+	if p == "" || len(p) > 4096 || strings.ContainsAny(p, "\x00\n\r") || strings.HasPrefix(p, "/") || p != path.Clean(p) || p == ".." || strings.HasPrefix(p, "../") {
 		return invalid("%q is not a path inside the repository", p)
 	}
 	return nil
@@ -200,6 +201,8 @@ type ReviewInput struct {
 	Comments []NewComment
 	// Role is the reviewer's role on the repository (the API fills it in).
 	Role string
+	// Groups are the reviewer's groups (the API fills them in).
+	Groups []string
 }
 
 // SubmitReview records a verdict on the pull request as it is now, with the
@@ -229,7 +232,7 @@ func (s *Service) SubmitReview(ctx context.Context, repoID string, p PullRequest
 			return Review{}, fmt.Errorf("comment %d: %w", i+1, err)
 		}
 	}
-	r, err := s.Store.AddReview(ctx, p.ID, Review{Author: author, Verdict: in.Verdict, Body: in.Body, CommitSHA: p.HeadSHA, Role: in.Role})
+	r, err := s.Store.AddReview(ctx, p.ID, Review{Author: author, Verdict: in.Verdict, Body: in.Body, CommitSHA: p.HeadSHA, Role: in.Role, Groups: in.Groups})
 	if err != nil {
 		return r, err
 	}
@@ -241,6 +244,9 @@ func (s *Service) SubmitReview(ctx context.Context, repoID string, p PullRequest
 	// A person who reviewed is no longer waiting to be asked to.
 	if in.Verdict != VerdictComment {
 		_ = s.Store.RemovePerson(ctx, p.ID, "reviewer", author)
+		for _, g := range in.Groups {
+			_ = s.Store.RemovePerson(ctx, p.ID, "reviewer_group", g)
+		}
 	}
 	np, _ := s.Store.ByID(ctx, p.ID)
 	detail := map[string]string{"review": r.ID, "verdict": r.Verdict}
@@ -284,6 +290,37 @@ func (s *Service) RequestReview(ctx context.Context, repoID string, p PullReques
 	return nil
 }
 
+// RequestReviewGroups asks groups to review: a review by any member answers
+// the request. A group name is the sign-in provider's or a local one.
+func (s *Service) RequestReviewGroups(ctx context.Context, repoID string, p PullRequest, by string, groups []string) error {
+	if p.State != Open {
+		return conflict("this pull request is %s", p.State)
+	}
+	for _, g := range groups {
+		g = strings.TrimSpace(g)
+		if g == "" || len(g) > 100 || strings.ContainsAny(g, " \t\n\x00,") {
+			return invalid("%q is not a group name", g)
+		}
+		if err := s.Store.AddPerson(ctx, p.ID, "reviewer_group", g, by); err != nil {
+			return err
+		}
+	}
+	np, _ := s.Store.ByID(ctx, p.ID)
+	s.emit(ctx, "review_requested", repoID, np, by, map[string]string{"groups": strings.Join(groups, ",")})
+	return nil
+}
+
+// RemoveReviewGroupRequest withdraws a request for a group.
+func (s *Service) RemoveReviewGroupRequest(ctx context.Context, repoID string, p PullRequest, name string) error {
+	if p.State != Open {
+		return conflict("this pull request is %s", p.State)
+	}
+	if !slices.Contains(p.ReviewerGroups, name) {
+		return fmt.Errorf("%w: the group %s has not been asked to review this pull request", ErrNotFound, name)
+	}
+	return s.Store.RemovePerson(ctx, p.ID, "reviewer_group", name)
+}
+
 // RemoveReviewRequest takes a person off the list of those asked to review. It
 // changes nothing else: a review the person already gave stays.
 func (s *Service) RemoveReviewRequest(ctx context.Context, repoID string, p PullRequest, by, name string) error {
@@ -300,8 +337,14 @@ func (s *Service) RemoveReviewRequest(ctx context.Context, repoID string, p Pull
 // setting says so; a request for changes stays until its author looks again.
 func (s *Service) dismissStale(ctx context.Context, repoID string, p PullRequest, head string) {
 	set, err := s.Store.Settings(ctx, repoID)
-	if err != nil || !set.DismissStale {
+	if err != nil {
 		return
+	}
+	if !set.DismissStale {
+		rules, _ := s.Store.Rules(ctx, repoID)
+		if rule, ok := RuleFor(rules, p.TargetBranch); !ok || !rule.DismissStale {
+			return
+		}
 	}
 	rs, err := s.Store.Reviews(ctx, p.ID)
 	if err != nil {
@@ -416,70 +459,127 @@ func (s *Service) reanchorComments(ctx context.Context, repoID string, p PullReq
 	})
 }
 
-// ApplySuggestion applies a suggestion of a review comment as a commit on the
-// source branch, by someone with push access (the caller checks that). It
-// works only while the comment is anchored to the current head and the branch
-// is still there: the commit is made through the ledger's compare-and-swap, so
-// a push to the branch in the meantime makes it fail, never overwrite.
+// ApplySuggestion applies one suggestion; see ApplySuggestions.
 func (s *Service) ApplySuggestion(ctx context.Context, repoID string, p PullRequest, commentID, by string) (string, error) {
-	c, err := s.Store.Comment(ctx, p.ID, commentID)
-	switch {
-	case err != nil:
-		return "", err
-	case p.State != Open:
+	return s.ApplySuggestions(ctx, repoID, p, []string{commentID}, by)
+}
+
+// ApplySuggestions applies suggestions of review comments as one commit on the
+// pull request's source branch, by someone with push access (the caller
+// checks that, and the branch's rules). Every suggestion must still be
+// anchored to the current head; two that change the same lines of a file are
+// refused, naming both, because only a person can say which wins. The commit
+// is made through the ledger's compare-and-swap: a push to the branch in the
+// meantime makes it fail, never overwrite. All or none are applied.
+func (s *Service) ApplySuggestions(ctx context.Context, repoID string, p PullRequest, commentIDs []string, by string) (string, error) {
+	if len(commentIDs) == 0 {
+		return "", invalid("name at least one suggestion to apply")
+	}
+	if len(commentIDs) > 100 {
+		return "", invalid("at most 100 suggestions in one commit")
+	}
+	if p.State != Open {
 		return "", conflict("this pull request is %s", p.State)
-	case !c.HasSuggestion || c.Deleted:
-		return "", invalid("this comment holds no suggestion")
-	case c.AppliedSHA != "":
-		return "", conflict("this suggestion was already applied in %s", c.AppliedSHA[:10])
-	case c.Outdated || c.CommitSHA != p.HeadSHA:
-		return "", conflict("the code under this suggestion has changed since it was written; ask for it again on the current code")
-	case p.SourceRepo != "":
+	}
+	if p.SourceRepo != "" {
 		return "", conflict("suggestions cannot be applied to a branch of another repository")
 	}
+	var cs []Comment
+	seen := map[string]bool{}
+	for _, id := range commentIDs {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		c, err := s.Store.Comment(ctx, p.ID, id)
+		switch {
+		case err != nil:
+			return "", err
+		case !c.HasSuggestion || c.Deleted:
+			return "", invalid("the comment on %s line %d holds no suggestion", c.Path, c.Line)
+		case c.AppliedSHA != "":
+			return "", conflict("the suggestion on %s line %d was already applied in %s", c.Path, c.Line, c.AppliedSHA[:10])
+		case c.Outdated || c.CommitSHA != p.HeadSHA:
+			return "", conflict("the code under the suggestion on %s line %d has changed since it was written; ask for it again on the current code", c.Path, c.Line)
+		}
+		if c.StartLine == 0 {
+			c.StartLine = c.Line
+		}
+		cs = append(cs, c)
+	}
+	byFile := map[string][]Comment{}
+	for _, c := range cs {
+		for _, o := range byFile[c.Path] {
+			if c.StartLine <= o.Line && o.StartLine <= c.Line {
+				return "", conflict("the suggestions by @%s and @%s on %s both change lines %d to %d; apply one, then ask for the other again",
+					o.Author, c.Author, c.Path, max(c.StartLine, o.StartLine), min(c.Line, o.Line))
+			}
+		}
+		byFile[c.Path] = append(byFile[c.Path], c)
+	}
+	paths := make([]string, 0, len(byFile))
+	for path := range byFile {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
 	ref := branchRef(p.SourceBranch)
 	var made string
-	_, err = s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
+	_, err := s.Git.Mutate(ctx, repoID, func(ctx context.Context, refs map[string]string, scratch string) ([]storage.RefUpdate, error) {
 		tip := refs[ref]
 		if tip != p.HeadSHA {
 			return nil, conflict("the branch %s moved since the pull request last looked; refresh and try again", p.SourceBranch)
 		}
 		g := s.runner(scratch, true)
 		g.env = []string{"GIT_LITERAL_PATHSPECS=1"}
-		content, found, err := g.readFile(ctx, tip, c.Path)
-		if err != nil || !found {
-			return nil, conflict("%s no longer exists on the branch", c.Path)
-		}
-		next, err := replaceLines(content, c.StartLine, c.Line, c.Suggestion)
-		if err != nil {
-			return nil, err
-		}
-		blob, err := g.raw(ctx, next, "hash-object", "-w", "--stdin")
-		if err != nil {
-			return nil, err
-		}
-		ent, err := g.out(ctx, "ls-tree", tip, "--", c.Path)
-		if err != nil {
-			return nil, err
-		}
-		mode, _, _ := strings.Cut(ent, " ")
-		if mode == "" {
-			mode = "100644"
-		}
 		idx := scratch + "/suggest-index"
 		g.env = append(g.env, "GIT_INDEX_FILE="+idx)
 		if _, err := g.out(ctx, "read-tree", tip); err != nil {
 			return nil, err
 		}
-		if _, err := g.raw(ctx, mode+" "+strings.TrimSpace(blob)+"\t"+c.Path+"\n", "update-index", "--index-info"); err != nil {
-			return nil, err
+		for _, path := range paths {
+			content, found, err := g.readFile(ctx, tip, path)
+			if err != nil || !found {
+				return nil, conflict("%s no longer exists on the branch", path)
+			}
+			fileCs := byFile[path]
+			sort.Slice(fileCs, func(i, j int) bool { return fileCs[i].StartLine > fileCs[j].StartLine }) // from the bottom up, so line numbers hold
+			for _, c := range fileCs {
+				if content, err = replaceLines(content, c.StartLine, c.Line, c.Suggestion); err != nil {
+					return nil, err
+				}
+			}
+			blob, err := g.raw(ctx, content, "hash-object", "-w", "--stdin")
+			if err != nil {
+				return nil, err
+			}
+			ent, err := g.out(ctx, "ls-tree", tip, "--", path)
+			if err != nil {
+				return nil, err
+			}
+			mode, _, _ := strings.Cut(ent, " ")
+			if mode == "" {
+				mode = "100644"
+			}
+			if _, err := g.raw(ctx, mode+" "+strings.TrimSpace(blob)+"\t"+path+"\n", "update-index", "--index-info"); err != nil {
+				return nil, err
+			}
 		}
 		tree, err := g.out(ctx, "write-tree")
 		if err != nil {
 			return nil, err
 		}
 		g.env = ident(by, s.now())
-		msg := fmt.Sprintf("Apply suggestion from @%s\n\nSuggested in pull request #%d on %s.", c.Author, p.Number, c.Path)
+		var msg string
+		if len(cs) == 1 {
+			msg = fmt.Sprintf("Apply suggestion from @%s\n\nSuggested in pull request #%d on %s.", cs[0].Author, p.Number, cs[0].Path)
+		} else {
+			var b strings.Builder
+			fmt.Fprintf(&b, "Apply %d suggestions\n\nSuggested in pull request #%d:\n", len(cs), p.Number)
+			for _, c := range cs {
+				fmt.Fprintf(&b, "- @%s on %s line %d\n", c.Author, c.Path, c.Line)
+			}
+			msg = b.String()
+		}
 		made, err = g.out(ctx, "commit-tree", tree, "-p", tip, "-m", msg)
 		if err != nil {
 			return nil, err
@@ -489,8 +589,10 @@ func (s *Service) ApplySuggestion(ctx context.Context, repoID string, p PullRequ
 	if err != nil {
 		return "", err
 	}
-	if err := s.Store.MarkApplied(ctx, p.ID, c.ID, made, by); err != nil {
-		return made, err
+	for _, c := range cs {
+		if err := s.Store.MarkApplied(ctx, p.ID, c.ID, made, by); err != nil {
+			return made, err
+		}
 	}
 	s.Pushed(ctx, repoID, by, []RefUpdate{{Name: ref, Old: p.HeadSHA, New: made}})
 	return made, nil

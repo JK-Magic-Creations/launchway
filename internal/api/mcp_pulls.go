@@ -26,6 +26,12 @@ func addPullTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "compare_branches", Annotations: readOnly("Compare two branches before opening a pull request"),
 		Description: "What a pull request from head into base would contain: commits, changed files, how far ahead and behind, whether it merges cleanly, and the number of an open pull request between them."},
 		mcpCallTimeout, compareBranchesTool)
+	addTool(srv, c, &mcp.Tool{Name: "get_pull_owners", Annotations: readOnly("Who owns the files a pull request changes"),
+		Description: "The owners of each file a pull request changes, from .launchway/owners on the target branch (people as names, groups as group:name), with any problems found in that file."},
+		mcpCallTimeout, getPullOwners)
+	addTool(srv, c, &mcp.Tool{Name: "check_owners_file", Annotations: readOnly("Check an owners file"),
+		Description: "Check the text of an owners file (.launchway/owners) and say what is wrong with it, line by line, in plain words. Stores nothing."},
+		mcpCallTimeout, checkOwnersFile)
 	addTool(srv, c, &mcp.Tool{Name: "get_pull_settings", Annotations: readOnly("Get a repository's merge settings and rules"),
 		Description: "The merge methods a repository allows, its default, whether the branch is deleted after a merge and approvals are dismissed when new commits arrive, and the merge rules of its protected branches."},
 		mcpCallTimeout, getPullSettings)
@@ -55,7 +61,7 @@ func addPullTools(srv *mcp.Server, c *mcpCall) {
 		mcpCallTimeout, reviewPullRequest)
 	if c.mayAdminister {
 		addTool(srv, c, &mcp.Tool{Name: "set_pull_settings", Annotations: changes("Set a repository's merge settings and rules", false, true),
-			Description: "Repository administrators only. Set which merge methods are allowed and the rest of the settings (what you leave out stays), and the merge rules of branch patterns: required approvals and the role they come from, required checks, up to date, resolved threads, no self-approval, administrator bypass. Signed commits are reserved. Audited."},
+			Description: "Repository administrators only. Set which merge methods are allowed and the rest of the settings (what you leave out stays; assign_reviewers is owners, round_robin, least_loaded or empty), and the merge rules of branch patterns: required approvals and the role they come from, required checks, up to date, resolved threads, no self-approval, administrator bypass, require_owner_approval, dismiss_stale_approvals, require_latest_push_approved_by_other, required_checks_by_path (paths and a check), merge_queue. Signed commits are reserved. Audited."},
 			mcpCallTimeout, setPullSettings)
 	}
 }
@@ -525,6 +531,7 @@ type reviewPullIn struct {
 	ReviewID  string   `json:"review_id,omitempty" jsonschema:"for dismiss: the review's ID"`
 	Reason    string   `json:"reason,omitempty" jsonschema:"for dismiss: why it is dismissed"`
 	Reviewers []string `json:"reviewers,omitempty" jsonschema:"for request: the people to ask; for unrequest: the people to take off the list"`
+	Groups    []string `json:"groups,omitempty" jsonschema:"for request: groups to ask (any member's review answers); for unrequest: groups to take off the list"`
 }
 
 type reviewOut struct {
@@ -557,12 +564,16 @@ func reviewPullRequest(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, 
 		if err != nil {
 			return reviewOut{}, err
 		}
-		return reviewOut{Done: "requested"}, c.apiJSON(ctx, "review_pull_request", http.MethodPost, p, map[string]any{"reviewers": in.Reviewers}, nil)
+		return reviewOut{Done: "requested"}, c.apiJSON(ctx, "review_pull_request", http.MethodPost, p, map[string]any{"reviewers": in.Reviewers, "groups": in.Groups}, nil)
 	case "unrequest":
-		if len(in.Reviewers) == 0 {
-			return reviewOut{}, errors.New("name the people to take off the list in reviewers")
+		if len(in.Reviewers) == 0 && len(in.Groups) == 0 {
+			return reviewOut{}, errors.New("name the people (reviewers) or groups (groups) to take off the list")
 		}
-		for _, name := range in.Reviewers {
+		names := append([]string{}, in.Reviewers...)
+		for _, g := range in.Groups {
+			names = append(names, "group:"+g)
+		}
+		for _, name := range names {
 			p, err := in.path("/review-requests/" + url.PathEscape(name))
 			if err != nil {
 				return reviewOut{}, err
@@ -624,4 +635,74 @@ func setPullSettings(ctx context.Context, c *mcpCall, req *mcp.CallToolRequest, 
 		}
 	}
 	return getPullSettings(ctx, c, req, repositoryIn{Owner: in.Owner, Name: in.Name})
+}
+
+type pullOwnersOut struct {
+	File     string            `json:"file" jsonschema:"where the owners are written"`
+	Branch   string            `json:"branch" jsonschema:"the branch the file is read from"`
+	Present  bool              `json:"present" jsonschema:"whether the branch has an owners file"`
+	Files    []ownedFileOut    `json:"files" jsonschema:"each changed file and its owners"`
+	Owners   []string          `json:"owners" jsonschema:"every distinct owner of the changed files"`
+	Problems []ownerProblemOut `json:"problems" jsonschema:"what is wrong with the owners file"`
+}
+
+type ownedFileOut struct {
+	Path   string   `json:"path" jsonschema:"the changed file"`
+	Owners []string `json:"owners" jsonschema:"who owns it (group:name for a group)"`
+}
+
+type ownerProblemOut struct {
+	Line    int    `json:"line" jsonschema:"the line of the file"`
+	Message string `json:"message" jsonschema:"what is wrong, in plain words"`
+}
+
+func getPullOwners(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in repoNumberIn) (pullOwnersOut, error) {
+	p, err := in.path("/owners")
+	if err != nil {
+		return pullOwnersOut{}, err
+	}
+	var raw struct {
+		File   string `json:"file"`
+		Branch string `json:"branch"`
+		Owners struct {
+			Present  bool              `json:"present"`
+			Files    []ownedFileOut    `json:"files"`
+			All      []string          `json:"owners"`
+			Problems []ownerProblemOut `json:"problems"`
+		} `json:"owners"`
+	}
+	if err := c.apiJSON(ctx, "get_pull_owners", http.MethodGet, p, nil, &raw); err != nil {
+		return pullOwnersOut{}, err
+	}
+	return pullOwnersOut{File: raw.File, Branch: raw.Branch, Present: raw.Owners.Present, Files: orEmpty(raw.Owners.Files), Owners: orEmpty(raw.Owners.All), Problems: orEmpty(raw.Owners.Problems)}, nil
+}
+
+func orEmpty[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}
+
+type checkOwnersIn struct {
+	Owner string `json:"owner" jsonschema:"the repository's owner"`
+	Name  string `json:"name" jsonschema:"the repository's name"`
+	Text  string `json:"text" jsonschema:"the text of the owners file"`
+}
+
+type checkOwnersOut struct {
+	Valid    bool              `json:"valid" jsonschema:"whether the file has no problems"`
+	Problems []ownerProblemOut `json:"problems" jsonschema:"what is wrong, by line"`
+}
+
+func checkOwnersFile(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in checkOwnersIn) (checkOwnersOut, error) {
+	if in.Owner == "" || in.Name == "" {
+		return checkOwnersOut{}, errors.New("say which repository: owner and name")
+	}
+	var out checkOwnersOut
+	if err := c.apiJSON(ctx, "check_owners_file", http.MethodPost, apiPath("/api/v1/repositories/%s/%s/owners/check", in.Owner, in.Name), map[string]any{"text": in.Text}, &out); err != nil {
+		return out, err
+	}
+	out.Problems = orEmpty(out.Problems)
+	return out, nil
 }

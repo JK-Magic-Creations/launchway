@@ -66,6 +66,9 @@ type PullRequest struct {
 	Labels       []string `json:"labels"`
 	Assignees    []string `json:"assignees"`
 	Reviewers    []string `json:"requested_reviewers"`
+	// ReviewerGroups are groups (of the sign-in provider or the local ones)
+	// asked to review: a review by any member of one answers the request.
+	ReviewerGroups []string `json:"requested_reviewer_groups"`
 	// HeadSHA and BaseSHA are the tips of the source and target as last seen;
 	// MergeBase is where they diverge. After a merge they stay at what was
 	// merged.
@@ -132,6 +135,7 @@ type New struct {
 	Labels     []string
 	Assignees  []string
 	Reviewers  []string
+	ReviewerGroups []string
 	Reverts    int
 }
 

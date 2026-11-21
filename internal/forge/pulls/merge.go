@@ -49,6 +49,9 @@ type MergeInput struct {
 	Actor, ActorRole string
 	// RepoPath is the repository's path (owner/name).
 	RepoPath string
+	// Queue says the merge comes from the merge queue, the only way into a
+	// branch whose rule asks for one (an administrator's bypass excepted).
+	Queue bool
 }
 
 // MergeResult is what a merge did.
@@ -142,6 +145,9 @@ func (s *Service) mergeGate(ctx context.Context, repoID string, p PullRequest, i
 		}
 	}
 	g.rule, g.covered = RuleFor(mustRules(ctx, s.Store, repoID), p.TargetBranch)
+	if g.covered && g.rule.MergeQueue && !in.Queue && strings.TrimSpace(in.Bypass) == "" {
+		return g, conflict("%s merges through the merge queue; add the pull request to the queue instead of merging it", p.TargetBranch)
+	}
 	g.deleteBranch = set.DeleteBranch
 	if in.DeleteBranch != nil {
 		g.deleteBranch = *in.DeleteBranch
@@ -494,6 +500,7 @@ func (s *Service) Edit(ctx context.Context, repoID string, p PullRequest, e Edit
 		s.emit(ctx, "converted_to_draft", repoID, np, actor, nil)
 	case e.Draft != nil && !*e.Draft && p.Draft:
 		s.emit(ctx, "ready_for_review", repoID, np, actor, nil)
+		s.AutoAssign(ctx, repoID, np, "system")
 		s.autoMerge(ctx, repoID, p.ID)
 	default:
 		s.emit(ctx, "edited", repoID, np, actor, nil)
@@ -602,6 +609,15 @@ func (s *Service) autoMerge(ctx context.Context, repoID, id string) {
 	if err != nil {
 		return
 	}
+	if rule, ok := RuleFor(mustRules(ctx, s.Store, repoID), p.TargetBranch); ok && rule.MergeQueue {
+		// A branch with a queue takes the pull request into it, with the method it asked for.
+		if e, _ := s.Store.QueueEntryOf(ctx, p.ID); e == nil || e.State == QueueRemoved {
+			if _, err := s.Enqueue(ctx, repoID, path, p, p.AutoMerge, p.AutoMergeBy, RoleNone, 0); err == nil {
+				_ = s.Store.SetAutoMerge(ctx, p.ID, "", "")
+			}
+		}
+		return
+	}
 	ready, err := s.Readiness(ctx, repoID, path, p, RoleNone)
 	if err != nil || !ready.CanMerge {
 		return
@@ -623,6 +639,7 @@ func (s *Service) autoMerge(ctx context.Context, repoID, id string) {
 // Sweep tries every pull request that asked for auto-merge: the checks of
 // a run finish without telling anyone, so a periodic look closes that gap.
 func (s *Service) Sweep(ctx context.Context) {
+	s.SweepQueue(ctx)
 	rows, err := s.Store.AutoMergeCandidates(ctx)
 	if err != nil {
 		return
