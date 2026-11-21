@@ -44,7 +44,20 @@ type Agent struct {
 	// is how often it looks (default 2s). See pairing.go.
 	PairTimeout, PairSettle, PairEvery time.Duration
 
+	// KeepStaleOperations stops the runner from ending a sync operation that
+	// was started with source revisions the application no longer points at
+	// (the controller retries it with the same stale revisions, for as long
+	// as it is left). Default: it ends it, for the application it is deploying
+	// only, and says so. It needs the right to patch the application, which the
+	// runner already has for refresh and sync.
+	KeepStaleOperations bool
+	// ComparisonGrace is how long a ComparisonError must last before the step
+	// fails on it (default 20s).
+	ComparisonGrace time.Duration
+
 	mu       sync.Mutex
+	seenCmp  map[string]time.Time
+	cleared  map[string]string
 	clusters map[string]*Cluster
 	repos    map[string]*sync.Mutex
 }
@@ -329,6 +342,15 @@ func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ..
 	} else {
 		log("Reverted %s with %s on %s", short(commit), short(res.Commit), d.Branch)
 	}
+	if d.WriteBack == nil || d.WriteBack.Mode != engine.WriteBackPullRequest {
+		pinRevert, perr := a.revertPin(ctx, job, log)
+		if perr != nil {
+			return facts, perr
+		}
+		if pinRevert != "" {
+			res.Commit, facts.Revert = pinRevert, pinRevert
+		}
+	}
 	facts.Sync, err = a.requestSync(ctx, job, res.Commit, log)
 	return facts, err
 }
@@ -509,6 +531,9 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 	}
 	snap := deploy.Snapshot{App: deploy.ReduceApplication(app, it.Spec, rc.ArgoCDURL, contains)}
 	unlock()
+	if it.Kind != engine.WatchUnit {
+		a.watchController(ctx, cl, it, app, snap.App)
+	}
 	// An application that syncs by itself shows nothing in its status while
 	// a sync window holds it; say so from the windows themselves.
 	if app != nil && snap.App.Automated {
@@ -693,4 +718,98 @@ func (a *Agent) canWrite(project, name string) (bool, string) {
 		return false, fmt.Sprintf("this deploy runner has no credentials for repository %s (deploy.repos.%s.credentials), so it cannot push to it", name, name)
 	}
 	return true, ""
+}
+
+// watchController adds to the snapshot what a person needs to see why a
+// deployment waits: a ComparisonError that lasts, and a sync operation stuck
+// on stale source revisions, which it ends (and says so) unless told not to.
+func (a *Agent) watchController(ctx context.Context, cl *Cluster, it engine.WatchItem, obj map[string]any, app *deploy.App) {
+	if obj == nil || !app.Found {
+		return
+	}
+	a.mu.Lock()
+	if a.seenCmp == nil {
+		a.seenCmp, a.cleared = map[string]time.Time{}, map[string]string{}
+	}
+	key := it.Key
+	if app.ComparisonError == "" {
+		delete(a.seenCmp, key)
+	} else {
+		first, ok := a.seenCmp[key]
+		if !ok {
+			a.seenCmp[key] = time.Now()
+		} else {
+			grace := a.ComparisonGrace
+			if grace == 0 {
+				grace = 20 * time.Second
+			}
+			app.ComparisonPersistent = time.Since(first) >= grace
+		}
+	}
+	prev := a.cleared[key]
+	a.mu.Unlock()
+	if app.StaleOperation == "" {
+		a.mu.Lock()
+		delete(a.cleared, key)
+		a.mu.Unlock()
+		return
+	}
+	if prev != "" {
+		app.Cleared = prev
+		return
+	}
+	if a.KeepStaleOperations {
+		app.Cleared = "not ended: this runner keeps stale operations (keep_stale_operations)"
+		return
+	}
+	if err := cl.TerminateOperation(ctx, it.Application); err != nil {
+		app.Cleared = "ending it failed: " + err.Error()
+		return
+	}
+	app.Cleared = "the deploy runner ended that operation so that the application's own sync starts a fresh one at the intended revisions"
+	a.mu.Lock()
+	a.cleared[key] = app.Cleared
+	a.mu.Unlock()
+}
+
+// revertPin finishes the rollback of a deployment that was written as two
+// commits (see pairing.go): the values were reverted first (the previous image
+// under the new chart, which the chart's compatibility rule allows), and now
+// the application's own manifest is reverted in a commit of its own, and the
+// runner waits until the cluster shows the old pin. It returns that commit, or
+// "" when the deployment made no pin commit.
+func (a *Agent) revertPin(ctx context.Context, job *engine.Job, log func(string, ...any)) (string, error) {
+	d := job.Deploy
+	repo, unlock, err := a.repoWrite(ctx, job, log)
+	if err != nil {
+		return "", err
+	}
+	pinCommit, err := repo.Find(ctx, d.Deployment+"-pin")
+	if err != nil || pinCommit == "" {
+		unlock()
+		return "", err
+	}
+	files, err := repo.CommitFiles(ctx, pinCommit)
+	if err != nil {
+		unlock()
+		return "", err
+	}
+	res, err := repo.Revert(ctx, d.Deployment+"-pin", pinCommit, d.Message+"\n\n(the application's own manifest, after the values)")
+	var pins []pinned
+	if err == nil {
+		for _, f := range files {
+			if data, rerr := repo.ReadFile(f); rerr == nil && manifestKind(data, d.Application) == "application" {
+				pins = intendedPins(data, d.Application)
+			}
+		}
+	}
+	unlock()
+	if err != nil {
+		return "", fmt.Errorf("reverting the application's own manifest (%s): %w", short(pinCommit), err)
+	}
+	log("Rollback, step 2 of 2: reverted the application's own manifest %s with %s; waiting for the cluster to show the old chart pin before the sync is judged", short(pinCommit), short(res.Commit))
+	if err := a.waitForPin(ctx, job, pins, res.Commit, log); err != nil {
+		return "", err
+	}
+	return res.Commit, nil
 }

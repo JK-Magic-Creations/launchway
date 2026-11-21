@@ -329,6 +329,18 @@ func (r *Repo) ReadFile(p string) ([]byte, error) {
 	return data, err
 }
 
+// CommitFiles lists the files a commit changed.
+func (r *Repo) CommitFiles(ctx context.Context, commit string) ([]string, error) {
+	if err := checkRevision(commit); err != nil {
+		return nil, err
+	}
+	out, err := r.git(ctx, nil, "diff-tree", "--no-commit-id", "--name-only", "-r", "-z", commit)
+	if err != nil {
+		return nil, err
+	}
+	return splitNUL(out), nil
+}
+
 // Tip fetches and returns the branch's current commit.
 func (r *Repo) Tip(ctx context.Context) (string, error) {
 	if err := r.check(); err != nil {

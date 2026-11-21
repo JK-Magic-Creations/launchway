@@ -98,6 +98,20 @@ next pods, rendered by the new chart, refuse to start.
   edits the application manifest too); disabling automated sync around a release (fights the parent's self-heal);
   one commit (the race this section is about).
 
+**Rollback, stuck operations and what the step says while it waits.** A rollback of a deployment that was
+written as two commits reverts the values first (the previous image under the new chart) and then the application's
+own manifest in a commit of its own, and waits for the cluster to show the old pin. While a deployment waits for
+the controller, the step's log carries the controller's own account (sync and health, the operation's phase and
+message and retry count, the failing hook or resource with its message) each time it changes. A `ComparisonError`
+that lasts (default 20 seconds) fails the step with its full text. If the controller is retrying a sync that
+was started with revisions the application no longer points at, the step says so ("started with source 0 at X; the
+application now points at Y") and, unless the runner is configured with `KeepStaleOperations`, ends that operation
+(it removes the application's `operation`, which needs the right to patch that application, the same right used for
+refresh and sync, and is done only for the application being deployed) so the application's own sync starts a
+fresh one. Not done yet: checking before a rollback that the chart being rolled back to still accepts the current
+values (a values key only the new chart knows makes the old chart refuse to render; the ComparisonError above now
+names the key, but the rollback does not yet remove it).
+
 **What "compatible" means.** Between the two commits the application may sync the **new chart with the old
 image**. A chart must therefore work with the image of the release before it (the rule for every chart change:
 additive values, no required new mount). Where a release cannot do that (the chart removes something the old image

@@ -164,6 +164,13 @@ func (c *Cluster) RefreshHard(ctx context.Context, app string) error {
 	return c.patchApp(ctx, app, patch)
 }
 
+// TerminateOperation removes the application's current operation (a sync the
+// controller is running or retrying), which is how a stuck operation is ended
+// from the API; the application's own sync policy then starts a new one.
+func (c *Cluster) TerminateOperation(ctx context.Context, app string) error {
+	return c.patchApp(ctx, app, map[string]any{"operation": nil})
+}
+
 // Sync sets the application's operation to a sync, if its resourceVersion
 // is still resourceVersion: a change since it was read makes it fail with a
 // conflict, and the caller reads it again.

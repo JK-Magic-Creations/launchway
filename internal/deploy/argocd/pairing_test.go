@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stesting "k8s.io/client-go/testing"
 
+	"github.com/jk-magic-creations/launchway/internal/deploy"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 )
 
@@ -84,6 +85,7 @@ type controller struct {
 	pinNew      bool
 	mixedRender bool // the child synced the new values while still on the old pin
 	revisionsAt func(pinNew bool) []any
+	revertMode  bool // the rollback: the parent applies the OLD pin after the pin revert is in Git
 }
 
 func (c *controller) app(wantPin bool) map[string]any {
@@ -106,6 +108,15 @@ func (c *controller) look() {
 	log := gitLog(c.t, c.bare)
 	valuesIn := strings.Contains(log, "Launchway-Deployment: dep_1\n")
 	pinIn := strings.Contains(log, "Launchway-Deployment: dep_1-pin")
+	if c.revertMode {
+		if strings.Contains(log, "Launchway-Revert: dep_1-pin") && c.pinNew {
+			c.seen++
+			if c.seen > c.looksAfter {
+				c.pinNew = false
+			}
+		}
+		return
+	}
 	if pinIn && !c.pinNew {
 		c.seen++
 		if c.seen > c.looksAfter {
@@ -248,5 +259,137 @@ func TestClassifyRefusesAnApplicationSet(t *testing.T) {
 	}
 	if p := parentOf(map[string]any{"metadata": map[string]any{"labels": map[string]any{"app.kubernetes.io/instance": "root"}}}, "shop"); p != "root" {
 		t.Fatal(p)
+	}
+}
+
+func staleApp(bare string) map[string]any {
+	return map[string]any{"apiVersion": "argoproj.io/v1alpha1", "kind": "Application",
+		"metadata": map[string]any{"name": "shop", "namespace": "argocd", "resourceVersion": "7"},
+		"spec": map[string]any{"sources": []any{
+			map[string]any{"repoURL": "https://charts.example", "chart": "shop", "targetRevision": "1.0.0"},
+			map[string]any{"repoURL": bare, "targetRevision": "main"}},
+			"syncPolicy": map[string]any{"automated": map[string]any{}}},
+		"status": map[string]any{"sync": map[string]any{"status": "OutOfSync"}, "health": map[string]any{"status": "Missing"},
+			"operationState": map[string]any{"phase": "Running", "message": "one or more synchronization tasks completed unsuccessfully",
+				"retry": map[string]any{"count": int64(3)},
+				"syncResult": map[string]any{
+					"sources": []any{
+						map[string]any{"repoURL": "https://charts.example", "chart": "shop", "targetRevision": "2.0.0"},
+						map[string]any{"repoURL": bare, "targetRevision": "main"}},
+					"resources": []any{map[string]any{"kind": "Job", "name": "shop-bootstrap", "hookPhase": "Failed", "message": "usage: launchway <command>"}}}}}}
+}
+
+// A sync operation the controller keeps retrying with revisions the application
+// no longer points at is named plainly and ended (once), and what the
+// controller says is in the snapshot so a person can see why the step waits.
+func TestStaleOperationIsDetectedAndEnded(t *testing.T) {
+	bare, _ := bareRepo(t)
+	dyn, cl := fakeCluster(t, staleApp(bare))
+	a := agentFor(t, bare, cl)
+	it := engine.WatchItem{Key: "k", Project: "shop", Target: "homelab", Application: "shop", Repo: "gitops", Branch: "main"}
+	it.Spec.Commit, it.Spec.Health, it.Spec.Windows = "0000000000000000000000000000000000000000", "application", "wait"
+	snap := a.Observe(context.Background(), it)
+	if snap.Error != "" || snap.App == nil {
+		t.Fatalf("%+v", snap)
+	}
+	app := snap.App
+	if !strings.Contains(app.StaleOperation, "started with source 0 at 2.0.0") || !strings.Contains(app.StaleOperation, "now points at 1.0.0") ||
+		!strings.Contains(app.Cleared, "ended that operation") {
+		t.Fatalf("%+v", app)
+	}
+	for _, want := range []string{"operation Running", "retry 3", "failing: Job/shop-bootstrap: usage: launchway <command>"} {
+		if !strings.Contains(app.Controller, want) {
+			t.Errorf("the controller's status lacks %q: %s", want, app.Controller)
+		}
+	}
+	terminated := 0
+	for _, p := range patches(dyn) {
+		if v, ok := p["operation"]; ok && v == nil {
+			terminated++
+		}
+	}
+	if terminated != 1 {
+		t.Fatalf("operation removed %d times: %v", terminated, patches(dyn))
+	}
+	a.Observe(context.Background(), it) // looks again: it is not ended twice
+	n := 0
+	for _, p := range patches(dyn) {
+		if v, ok := p["operation"]; ok && v == nil {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("ended twice: %d", n)
+	}
+	// A runner told to keep stale operations leaves it alone and says so.
+	dyn2, cl2 := fakeCluster(t, staleApp(bare))
+	a2 := agentFor(t, bare, cl2)
+	a2.KeepStaleOperations = true
+	if s := a2.Observe(context.Background(), it); !strings.Contains(s.App.Cleared, "not ended") || len(patches(dyn2)) != 0 {
+		t.Fatalf("%+v %v", s.App, patches(dyn2))
+	}
+}
+
+// A ComparisonError that lasts fails the step with its full text, instead of
+// waiting for the timeout; a passing one does not.
+func TestComparisonErrorFailsPromptlyWhenItLasts(t *testing.T) {
+	bare, _ := bareRepo(t)
+	app := staleApp(bare)
+	app["status"].(map[string]any)["operationState"] = nil
+	app["status"].(map[string]any)["conditions"] = []any{map[string]any{"type": "ComparisonError",
+		"message": "Failed to load target state: values don't meet the specifications of the schema(s): additional properties 'networkPolicy' not allowed"}}
+	_, cl := fakeCluster(t, app)
+	a := agentFor(t, bare, cl)
+	a.ComparisonGrace = 30 * time.Millisecond
+	it := engine.WatchItem{Key: "k", Project: "shop", Target: "homelab", Application: "shop", Repo: "gitops", Branch: "main"}
+	it.Spec.Commit, it.Spec.Health, it.Spec.Windows = "0000000000000000000000000000000000000000", "application", "wait"
+	first := a.Observe(context.Background(), it)
+	if v := deploy.Evaluate(it.Spec, first); v.Outcome != deploy.Continue || !strings.Contains(v.Detail, "ComparisonError") {
+		t.Fatalf("the first look must wait, and say what the controller says: %+v", v)
+	}
+	time.Sleep(60 * time.Millisecond)
+	v := deploy.Evaluate(it.Spec, a.Observe(context.Background(), it))
+	if v.Outcome != deploy.Failed || v.Phase != deploy.PhaseComparison || !strings.Contains(v.Detail, "additional properties 'networkPolicy' not allowed") {
+		t.Fatalf("%+v", v)
+	}
+}
+
+// A rollback of a paired deployment reverts the values first and then the
+// application's own manifest, and waits for the cluster to show the old pin.
+func TestRollbackOfAPairedDeploymentRevertsValuesThenThePinAndWaits(t *testing.T) {
+	bare := pairRepo(t)
+	ctl := &controller{t: t, bare: bare, looksAfter: 2, revisionsAt: func(n bool) []any {
+		if n {
+			return []any{"2.0.0", "x"}
+		}
+		return []any{"1.0.0", "x"}
+	}}
+	a, _ := pairSetup(t, ctl)
+	if _, err := a.Apply(context.Background(), pairJob(), func(string, ...any) {}); err != nil {
+		t.Fatal(err)
+	}
+	// Now the rollback: the parent applies the old pin only some looks after the pin revert is in Git.
+	ctl.mu.Lock()
+	ctl.revertMode, ctl.seen = true, 0
+	ctl.mu.Unlock()
+	rb := pairJob()
+	rb.Deploy.Action = engine.ActionRevert
+	rb.Deploy.Message = "Roll back shop"
+	var lines []string
+	facts, err := a.Revert(context.Background(), rb, func(f string, args ...any) { lines = append(lines, fmt.Sprintf(f, args...)) })
+	if err != nil || !facts.Reverted {
+		t.Fatalf("%v %+v", err, facts)
+	}
+	ctl.look()
+	if ctl.pinNew {
+		t.Fatal("the cluster still shows the new pin")
+	}
+	log := gitLog(t, bare)
+	iv, ip := strings.Index(log, "Launchway-Revert: dep_1\n"), strings.Index(log, "Launchway-Revert: dep_1-pin")
+	if iv < 0 || ip < 0 || ip > iv { // newest first: the pin revert is newer
+		t.Fatalf("revert order (newest first):\n%s", log)
+	}
+	if !strings.Contains(strings.Join(lines, "\n"), "Rollback, step 2 of 2") || !strings.Contains(strings.Join(lines, "\n"), "shows the new pin") {
+		t.Fatalf("log:\n%s", strings.Join(lines, "\n"))
 	}
 }

@@ -99,6 +99,7 @@ func ReduceApplication(obj map[string]any, spec Spec, repoURL string, contains C
 	}
 
 	reduceLeftovers(app, status)
+	reduceController(app, obj)
 	if spec.Health == "resources" {
 		for _, want := range spec.Resources {
 			r := Resource{Group: want.Group, Kind: want.Kind, Namespace: want.Namespace, Name: want.Name}
@@ -475,4 +476,67 @@ func reduceLeftovers(app *App, status map[string]any) {
 		}
 	}
 	app.SyncedExceptLeftovers = app.Sync == "OutOfSync" && outOfSync == 0 && len(app.Leftovers) > 0
+}
+
+// reduceController words what the controller is doing and finds a sync
+// operation that was started with source revisions the application no longer
+// points at.
+func reduceController(app *App, obj map[string]any) {
+	status := mapAt(obj, "status")
+	parts := []string{"sync " + nonEmpty(app.Sync, "unknown"), "health " + nonEmpty(app.Health, "unknown")}
+	os := mapAt(status, "operationState")
+	if os != nil {
+		op := "operation " + str(os, "phase")
+		if m := str(os, "message"); m != "" {
+			op += ": " + m
+		}
+		if rc := integer(mapAt(os, "retry")["count"]); rc > 0 {
+			op += fmt.Sprintf(" (retry %d)", rc)
+		}
+		parts = append(parts, op)
+		for _, r := range list(mapAt(os, "syncResult"), "resources") {
+			rm := asMap(r)
+			if str(rm, "hookPhase") == "Failed" || str(rm, "status") == "SyncFailed" {
+				parts = append(parts, fmt.Sprintf("failing: %s/%s: %s", str(rm, "kind"), str(rm, "name"), str(rm, "message")))
+			}
+		}
+		if phase := str(os, "phase"); phase == "Running" || phase == "Failed" || phase == "Error" {
+			app.StaleOperation = staleOperation(obj, os)
+		}
+	}
+	for _, c := range app.Conditions {
+		if strings.HasPrefix(c, "ComparisonError: ") {
+			app.ComparisonError = strings.TrimPrefix(c, "ComparisonError: ")
+		}
+	}
+	if app.ComparisonError != "" {
+		parts = append(parts, "ComparisonError: "+app.ComparisonError)
+	}
+	app.Controller = strings.Join(parts, "; ")
+}
+
+// staleOperation compares the sources an operation ran with to the sources the
+// application points at now.
+func staleOperation(obj, os map[string]any) string {
+	spec := mapAt(obj, "spec")
+	ran := list(mapAt(os, "syncResult"), "sources")
+	now := list(spec, "sources")
+	if len(ran) == 0 {
+		if s := mapAt(mapAt(os, "syncResult"), "source"); s != nil {
+			ran = []any{s}
+		}
+		if s := mapAt(spec, "source"); s != nil && len(now) == 0 {
+			now = []any{s}
+		}
+	}
+	for i := range ran {
+		if i >= len(now) {
+			break
+		}
+		a, b := str(asMap(ran[i]), "targetRevision"), str(asMap(now[i]), "targetRevision")
+		if a != "" && b != "" && a != b {
+			return fmt.Sprintf("the controller is running (or retrying) a sync that was started with source %d at %s; the application now points at %s", i, a, b)
+		}
+	}
+	return ""
 }

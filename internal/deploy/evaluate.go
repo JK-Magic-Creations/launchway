@@ -29,8 +29,9 @@ const (
 	PhasePaused     = "rollout_paused"
 	PhaseAborted    = "rollout_aborted"
 	PhaseHealthy    = "healthy"
-	PhaseCrashLoop  = "crash_looping" // the application's new pods keep crashing
-	PhaseLeftovers  = "leftovers"     // objects of an earlier render are still there and pruning is off
+	PhaseComparison = "comparison_error" // the application cannot be rendered
+	PhaseCrashLoop  = "crash_looping"    // the application's new pods keep crashing
+	PhaseLeftovers  = "leftovers"        // objects of an earlier render are still there and pruning is off
 )
 
 // Verdict is the result of evaluating one snapshot.
@@ -90,7 +91,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		return cont(PhaseBlocked, "%s; waiting until a window allows it", blocked)
 	}
 	if app.Contains == nil {
-		return cont(PhaseSyncing, "waiting for Argo CD to see commit %s", short(spec.Commit))
+		return cont(PhaseSyncing, "waiting for Argo CD to see commit %s%s", short(spec.Commit), controllerWords(app))
 	}
 	if !*app.Contains {
 		what := "waiting for Argo CD to sync commit " + short(spec.Commit)
@@ -100,7 +101,7 @@ func Evaluate(spec Spec, s Snapshot) Verdict {
 		if op := app.Operation; op != nil && op.Phase == "Running" {
 			what += "; a sync is running"
 		}
-		return cont(PhaseSyncing, "%s", what)
+		return cont(PhaseSyncing, "%s%s", what, controllerWords(app))
 	}
 
 	// The revision is ours. A rollback that aborted the rollout first waits
@@ -435,8 +436,37 @@ func (a *App) settled() bool { return a.Sync == "Synced" || a.SyncedExceptLeftov
 
 // syncFailure is the verdict for a sync of the deployment's commit that failed.
 func syncFailure(app *App) *Verdict {
+	if v := controllerStuck(app); v != nil {
+		return v
+	}
 	if op := app.Operation; op != nil && isTrue(op.Contains) && (op.Phase == "Failed" || op.Phase == "Error") {
 		v := fail(PhaseSyncFailed, "Argo CD could not sync %s: %s", short(op.Revision), nonEmpty(op.Message, "no reason given"))
+		return &v
+	}
+	return nil
+}
+
+// controllerWords is what the controller reports, for a step that waits: a
+// bare "waiting" never tells a person why.
+func controllerWords(app *App) string {
+	out := ""
+	if app.Controller != "" {
+		out = ". The controller says: " + app.Controller
+	}
+	if app.StaleOperation != "" {
+		out += ". " + app.StaleOperation
+		if app.Cleared != "" {
+			out += "; " + app.Cleared
+		}
+	}
+	return out
+}
+
+// controllerStuck fails promptly on a render error the controller cannot get
+// past (a ComparisonError, which the runner reports only once it has lasted).
+func controllerStuck(app *App) *Verdict {
+	if app.ComparisonError != "" && app.ComparisonPersistent {
+		v := fail(PhaseComparison, "Argo CD cannot render the application, so nothing can sync: %s", app.ComparisonError)
 		return &v
 	}
 	return nil

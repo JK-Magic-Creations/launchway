@@ -101,6 +101,20 @@ type App struct {
 	Notes []string `json:"notes,omitempty"`
 	// Conditions are the application's error and warning conditions.
 	Conditions []string `json:"conditions,omitempty"`
+	// Controller is the controller's own account of what it is doing, for the
+	// step's log: sync and health, the operation's phase and message, the
+	// failing resource or hook with its message. ComparisonError is the
+	// text of a ComparisonError condition in full.
+	Controller      string `json:"controller,omitempty"`
+	ComparisonError string `json:"comparison_error,omitempty"`
+	// ComparisonPersistent says the runner saw the same ComparisonError on
+	// two looks a while apart, so it is not a passing hiccup.
+	ComparisonPersistent bool `json:"comparison_persistent,omitempty"`
+	// StaleOperation says the sync operation in progress or retrying was
+	// started with source revisions the application no longer points at.
+	// Cleared says what the deploy runner did about it.
+	StaleOperation string `json:"stale_operation,omitempty"`
+	Cleared        string `json:"cleared,omitempty"`
 }
 
 // Operation is an application's current or last sync operation.
