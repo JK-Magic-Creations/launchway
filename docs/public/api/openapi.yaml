@@ -2734,6 +2734,70 @@ paths:
             tags:
                 - projects
             x-launchway-access: project-viewer
+    /api/v1/projects/{name}/rollback:
+        get:
+            description: 'What a service can be rolled back to in an environment after its deployment succeeded: ?environment= (required), ?service=. Answers the plan: what runs now (current), the lock holder if any (holder), and the rollback action as the server reports it (available, or reason, instead and would_help; targets, the earlier successful deployments, each with the deployments it reverts, its consequence and suggestions; queueable, emergency, requires_approval). Without the operator role on the project (and the environment) the action says so and offers no targets. See [rollback after success](../guide/rollback-after-success.md).'
+            operationId: get_api_v1_projects_name_rollback
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What a service can be rolled back to in an environment after its deployment succeeded: ?environment= (required), ?service=.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/rollbacks:
+        post:
+            description: 'Rolls a service back: {"environment", "service", "to", "reason", "queue"}. to is a deployment ID or a version (default the previous successful deployment); reason is required; queue waits behind a deployment that holds the environment''s lock. Answers 201 with the rollback run. Refused with the action''s own reason (409) when the action is not available. Needs the operator role on the environment too.'
+            operationId: post_api_v1_projects_name_rollbacks
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Rolls a service back: {"environment", "service", "to", "reason", "queue"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: deployment.rollback
     /api/v1/projects/{name}/runs:
         post:
             description: Starts a run. Answers 201 with the run.
@@ -4054,6 +4118,29 @@ paths:
                 - repositories
             x-launchway-access: repo-admin
             x-launchway-audit: mirror.promote
+    /api/v1/rollbacks/review:
+        get:
+            description: 'Emergency rollbacks of protected environments that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why. Only projects the caller may see.'
+            operationId: get_api_v1_rollbacks_review
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Emergency rollbacks of protected environments that no approver has acknowledged, newest first, each with acknowledge: whether the caller may, and if not why.'
+            tags:
+                - rollbacks
+            x-launchway-access: signed-in
     /api/v1/run-limits:
         get:
             description: '{"max_run_timeout", "updated_at", "updated_by"}. An empty max_run_timeout is not set: pipelines may ask for up to 720h.'
@@ -5098,6 +5185,39 @@ paths:
                 - runs
             x-launchway-access: run-operator
             x-launchway-audit: run.resume
+    /api/v1/runs/{id}/review:
+        post:
+            description: 'Acknowledges an emergency rollback: {"comment"} (required). Refused for the person who asked unless approvals.allow_self is true, and for anyone the environment''s reviewers leave out. Answers {"ok": true}.'
+            operationId: post_api_v1_runs_id_review
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Acknowledges an emergency rollback: {"comment"} (required).'
+            tags:
+                - runs
+            x-launchway-access: run-operator
+            x-launchway-audit: rollback.review
     /api/v1/runs/{id}/steps/{step}/approve:
         post:
             description: Approves a waiting approval step.

@@ -34,8 +34,8 @@ func addRollbackChangeTools(srv *mcp.Server, c *mcpCall) {
 }
 
 type rollbackOptionsIn struct {
-	Project     string `json:"project"`
-	Environment string `json:"environment"`
+	Project     string `json:"project" jsonschema:"the project's name"`
+	Environment string `json:"environment" jsonschema:"the environment's name, such as prod"`
 	Service     string `json:"service,omitempty" jsonschema:"default the project's name"`
 }
 
@@ -53,8 +53,8 @@ func getRollbackOptions(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest,
 }
 
 type rollbackIn struct {
-	Project     string `json:"project"`
-	Environment string `json:"environment"`
+	Project     string `json:"project" jsonschema:"the project's name"`
+	Environment string `json:"environment" jsonschema:"the environment's name, such as prod"`
 	Service     string `json:"service,omitempty" jsonschema:"default the project's name"`
 	To          string `json:"to,omitempty" jsonschema:"the deployment (dep_…) or version to restore; default the previous successful deployment"`
 	Reason      string `json:"reason" jsonschema:"why, in words; required and recorded"`
