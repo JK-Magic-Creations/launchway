@@ -2,12 +2,12 @@
 
 A policy is a set of rules every run must meet, which a pipeline cannot opt out of: for example
 that deploys to production have passing tests and an SBOM. The wizard builds one from the rule
-catalogue.
+catalog.
 
 ## What it asks
 
 1. **What is it for?** A name and a sentence describing it.
-2. **Which rules?** The wizard lists every rule in the [catalogue](../reference/policy-rules.md) with a
+2. **Which rules?** The wizard lists every rule in the [catalog](../reference/policy-rules.md) with a
    plain explanation, and what each one needs you to fill in (a minimum number of tests, the library
    versions allowed, and so on).
 3. **Enforce, or only report?** *Enforce* stops a run that breaks a rule. *Report* lets it through and

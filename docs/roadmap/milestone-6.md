@@ -189,7 +189,7 @@ Explain why a deploy failed as well as a step, with the evidence used. Explainin
 
 [Area page](ai.md)
 
-#### Agent guidance and an agent catalogue {#agent-guidance-and-an-agent-catalogue}
+#### Agent guidance and an agent catalog {#agent-guidance-and-an-agent-catalog}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 

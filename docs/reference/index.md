@@ -17,6 +17,6 @@ behind it.
 | [Accessibility conformance](accessibility-conformance.md) | each WCAG 2.2 criterion: what is supported, partly supported or not, with remarks |
 | [Events and audit actions](events.md) | the run event log, the live stream and the audit trail |
 | [Roles and permissions](roles.md) | what viewers, operators and admins may do |
-| [Policy rules](policy-rules.md) | the policy rule catalogue |
+| [Policy rules](policy-rules.md) | the policy rule catalog |
 | [Vocabulary](vocabulary.md) | the words Launchway uses for its own concepts, and the rules for using them |
 | [Environment variables](environment-variables.md) | what Launchway reads, and what steps receive |

@@ -9,7 +9,7 @@ organization, and on what terms.
 3. [Secrets](../guide/secrets.md): references, runner-side lookup, masking, allow-lists.
 4. [Sign-in and access](../guide/access.md) and [Roles and permissions](../reference/roles.md).
 5. [Supply chain](../security/supply-chain.md): pinning, SBOMs, provenance, signing, scans.
-6. [Policies](../guide/policies.md) and the [rule catalogue](../reference/policy-rules.md).
+6. [Policies](../guide/policies.md) and the [rule catalog](../reference/policy-rules.md).
 7. [Controls and compliance](../security/controls-and-compliance.md): what exists, what is
    planned, how to present it to an assessor.
 8. [Hardening checklist](../security/hardening.md).

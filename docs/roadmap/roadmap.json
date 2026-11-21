@@ -580,7 +580,7 @@
             {
               "status": "planned",
               "title": "Labels, milestones and templates for work",
-              "value": "Coloured and exclusive labels, milestones with progress, and templates and forms for new items.",
+              "value": "Colored and exclusive labels, milestones with progress, and templates and forms for new items.",
               "detail": "Labels and milestones are shared across projects at the levels you choose.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
@@ -741,7 +741,7 @@
             {
               "status": "planned",
               "title": "Replacing a self-hosted Git server",
-              "value": "A guide and a checklist for retiring a self-hosted Git server in favour of Launchway.",
+              "value": "A guide and a checklist for retiring a self-hosted Git server in favor of Launchway.",
               "detail": "Covers moving, redirects, users, hooks, integrations, backups and a rollback plan, with each step verified by the acceptance suite.",
               "needs": "An acceptance suite for hosting."
             }
@@ -1203,7 +1203,7 @@
         "A message on a queue starts a pipeline, and a rejected message is visible with the reason.",
         "You import jobs from an automation server and read a report of what needs a person."
       ],
-      "diagram": "flowchart TD\n  Repo[\"Repository<br/>pipeline file, step programs\"] --> Plan[\"Check and expand<br/>schema, types, policy\"]\n  Gen[\"Generated steps\"] --> Plan\n  Trig[\"Triggers<br/>push, queue, schedule\"] --> Plan\n  Plan --> Graph[\"Run graph\"]\n  Graph --> Steps[\"Steps in sandboxes\"]\n  Steps -->|typed outputs| Graph\n  Designer[\"Visual designer\"] <-->|same file| Repo\n  Catalogue[\"Catalogue of templates and steps\"] --> Repo",
+      "diagram": "flowchart TD\n  Repo[\"Repository<br/>pipeline file, step programs\"] --> Plan[\"Check and expand<br/>schema, types, policy\"]\n  Gen[\"Generated steps\"] --> Plan\n  Trig[\"Triggers<br/>push, queue, schedule\"] --> Plan\n  Plan --> Graph[\"Run graph\"]\n  Graph --> Steps[\"Steps in sandboxes\"]\n  Steps -->|typed outputs| Graph\n  Designer[\"Visual designer\"] <-->|same file| Repo\n  Catalog[\"Catalog of templates and steps\"] --> Repo",
       "diagramNote": "Text, designer and generated steps all end in one checked definition.",
       "done": [
         "A custom step in at least three languages runs from a published contract and is unit-tested outside Launchway.",
@@ -1296,8 +1296,8 @@
             },
             {
               "status": "planned",
-              "title": "A browsable catalogue of templates and steps",
-              "value": "Shared libraries pinned by tag already work; the catalogue lets you find, compare and update them from inside the product.",
+              "title": "A browsable catalog of templates and steps",
+              "value": "Shared libraries pinned by tag already work; the catalog lets you find, compare and update them from inside the product.",
               "detail": "Each entry shows who uses it, what it needs and which version is current, with an update shown as a change you can review.",
               "needs": "Shared libraries.",
               "area": "pipelines",
@@ -1308,7 +1308,7 @@
               "title": "Update notices for shared libraries",
               "value": "See which projects use an old version of a template and open an update as a reviewable change.",
               "detail": "Teams keep common pipeline logic current without a manual hunt.",
-              "needs": "A browsable catalogue of templates and steps.",
+              "needs": "A browsable catalog of templates and steps.",
               "area": "pipelines"
             },
             {
@@ -1484,7 +1484,7 @@
             {
               "status": "planned",
               "title": "Extensions without fragility",
-              "value": "A step catalogue and typed custom steps instead of plug-ins that run inside the server.",
+              "value": "A step catalog and typed custom steps instead of plug-ins that run inside the server.",
               "detail": "Nothing a team adds can crash or compromise the server, and every extension has a version and an owner.",
               "needs": "Custom steps in your own language."
             },
@@ -2036,7 +2036,7 @@
             {
               "status": "planned",
               "title": "Hosts and machine images in the interface",
-              "value": "A catalogue of images with contents and base, and a hosts page showing version, staged upgrade, drift and last seen.",
+              "value": "A catalog of images with contents and base, and a hosts page showing version, staged upgrade, drift and last seen.",
               "detail": "A host page draws first boot as a short line, with boot history and logs.",
               "needs": "Image-based hosts.",
               "area": "delivery"
@@ -2192,7 +2192,7 @@
             {
               "status": "planned",
               "title": "Rate limiting and traffic protection",
-              "value": "Limits per client, route and tenant, connection limits, timeouts, retries and circuit breakers, shown with how close traffic is to each.",
+              "value": "Limits per client, route and customer, connection limits, timeouts, retries and circuit breakers, shown with how close traffic is to each.",
               "detail": "Changing one is a guided change with a preview that replays the last hour against the new value.",
               "needs": "A live traffic map.",
               "area": "traffic"
@@ -3153,7 +3153,7 @@
             },
             {
               "status": "planned",
-              "title": "Agent guidance and an agent catalogue",
+              "title": "Agent guidance and an agent catalog",
               "value": "Ready-made instructions so agents know how to use Launchway, and a list of agents with their permissions.",
               "detail": "Each agent is audited like a user.",
               "needs": "Agents as users.",
@@ -3550,7 +3550,7 @@
             {
               "status": "planned",
               "title": "Your logs, artifacts and audit stay with you",
-              "value": "Build logs, test reports, artifacts and an audit log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold.",
+              "value": "Build logs, test reports, artifacts andaudit trail log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold.",
               "detail": "The hosted service keeps a separate record of what it did.",
               "needs": "The Detachment.",
               "area": "hosted-service"
@@ -5383,7 +5383,7 @@
         "You see what each service costs next to what it delivers.",
         "A new engineer finds a service, its owner, its docs and its last deployment in one directory."
       ],
-      "diagram": "flowchart TD\n  Graph[(\"Software graph\")] --> Cost[\"Cost by service\"]\n  Graph --> Portal[\"Service catalogue\"]",
+      "diagram": "flowchart TD\n  Graph[(\"Software graph\")] --> Cost[\"Cost by service\"]\n  Graph --> Portal[\"Service catalog\"]",
       "diagramNote": "Each idea reuses data the earlier milestones already hold.",
       "done": [
         "Each item is its own small, optional feature that is off until chosen."
@@ -5410,7 +5410,7 @@
             },
             {
               "status": "planned",
-              "title": "A developer portal and service catalogue",
+              "title": "A developer portal and service catalog",
               "value": "A directory of every service with its owner, health, docs and deployments.",
               "detail": "Built on the same data as everything else.",
               "needs": "What is deployed where."

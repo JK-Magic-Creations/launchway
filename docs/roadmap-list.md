@@ -151,7 +151,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | Item | Status | What it gives you |
 |---|---|---|
 | [Issues and work items](roadmap/milestone-1.md#issues-and-work-items) | Planned | Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it. |
-| [Labels, milestones and templates for work](roadmap/milestone-1.md#labels-milestones-and-templates-for-work) | Planned | Coloured and exclusive labels, milestones with progress, and templates and forms for new items. |
+| [Labels, milestones and templates for work](roadmap/milestone-1.md#labels-milestones-and-templates-for-work) | Planned | Colored and exclusive labels, milestones with progress, and templates and forms for new items. |
 | [Dependencies and parent items](roadmap/milestone-1.md#dependencies-and-parent-items) | Planned | Mark that one item blocks another, and group items under a parent. |
 | [Boards that show delivery](roadmap/milestone-1.md#boards-that-show-delivery) | Planned | A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production. |
 | [Decision records](roadmap/milestone-1.md#decision-records) | Planned | A question, the options, a recommendation, what it blocks, and the answer with who gave it and when. |
@@ -180,7 +180,7 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 | [Move your repositories in](roadmap/milestone-1.md#move-your-repositories-in) | Available | Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch. |
 | [An acceptance suite for hosting](roadmap/milestone-1.md#an-acceptance-suite-for-hosting) | In progress | A written end-to-end suite that hosting must pass before it is called ready, so that switching is a tested step, not a leap. |
 | [A complete Git forge](roadmap/milestone-1.md#a-complete-git-forge) | Planned | Discussions, snippets, notifications, activity feeds and the rest of a hosted Git service, in order of value, with an interface that is better integrated than a stand-alone one. |
-| [Replacing a self-hosted Git server](roadmap/milestone-1.md#replacing-a-self-hosted-git-server) | Planned | A guide and a checklist for retiring a self-hosted Git server in favour of Launchway. |
+| [Replacing a self-hosted Git server](roadmap/milestone-1.md#replacing-a-self-hosted-git-server) | Planned | A guide and a checklist for retiring a self-hosted Git server in favor of Launchway. |
 
 ### Keep your Git host, if you prefer
 
@@ -288,7 +288,7 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 | [Generated pipelines](roadmap/milestone-2.md#generated-pipelines) | Planned | A step can print more steps in any language; Launchway checks them against the same schema and policy and shows them on the run. |
 | [Expressions for conditions](roadmap/milestone-2.md#expressions-for-conditions) | Planned | A small typed expression language with no loops and no side effects, checked before the run; today's conditions keep working. ([docs](reference/pipeline.md#when)) |
 | [Typed outputs between steps](roadmap/milestone-2.md#typed-outputs-between-steps) | Planned | A step declares what it passes on, and a reference to an output that does not exist fails before the run, not in the middle of it. |
-| [A browsable catalogue of templates and steps](roadmap/milestone-2.md#a-browsable-catalogue-of-templates-and-steps) | Planned | Shared libraries pinned by tag already work; the catalogue lets you find, compare and update them from inside the product. ([docs](guide/libraries.md)) |
+| [A browsable catalog of templates and steps](roadmap/milestone-2.md#a-browsable-catalog-of-templates-and-steps) | Planned | Shared libraries pinned by tag already work; the catalog lets you find, compare and update them from inside the product. ([docs](guide/libraries.md)) |
 | [Update notices for shared libraries](roadmap/milestone-2.md#update-notices-for-shared-libraries) | Planned | See which projects use an old version of a template and open an update as a reviewable change. |
 | [A triggers page](roadmap/milestone-2.md#a-triggers-page) | Planned | One page showing every trigger and exactly which pipelines it starts. |
 | [Event sources from queues and buses](roadmap/milestone-2.md#event-sources-from-queues-and-buses) | Planned | Start pipelines from message queues and event buses, with filters, and replies back. |
@@ -329,7 +329,7 @@ Pipelines can be as dynamic as real code needs, and a team running an automation
 |---|---|---|
 | [A verified gap analysis](roadmap/milestone-2.md#a-verified-gap-analysis) | Planned | A tested list of what teams rely on automation servers for (dynamic pipelines, extensions, agents anywhere) with a plan for each gap. |
 | [Import of existing jobs](roadmap/milestone-2.md#import-of-existing-jobs) | Planned | Convert job definitions and shared libraries, with a report of what needs a person, and none of the file-first configuration or fragile plug-ins. |
-| [Extensions without fragility](roadmap/milestone-2.md#extensions-without-fragility) | Planned | A step catalogue and typed custom steps instead of plug-ins that run inside the server. |
+| [Extensions without fragility](roadmap/milestone-2.md#extensions-without-fragility) | Planned | A step catalog and typed custom steps instead of plug-ins that run inside the server. |
 | [Agents anywhere](roadmap/milestone-2.md#agents-anywhere) | Planned | Guidance and checks that show runners on any machine, in any network, replace the build agents teams rely on. Runners that connect outward, with pools and labels, already work. |
 
 ### Share and reuse across projects
@@ -424,7 +424,7 @@ See and control everything you run, whether it is an application in a cluster, a
 | [Configuration at build time](roadmap/milestone-3.md#configuration-at-build-time) | Planned | Ansible and image builders work together at build time to prepare images. |
 | [An infrastructure stack designer](roadmap/milestone-3.md#an-infrastructure-stack-designer) | Planned | Compose image, build and configuration blocks visually and have them turned into pipelines. |
 | [Image as a service for enterprise Linux teams](roadmap/milestone-3.md#image-as-a-service-for-enterprise-linux-teams) | Planned | Watch base images and advisories, rebuild, re-sign, re-scan and roll out across zones with verification. |
-| [Hosts and machine images in the interface](roadmap/milestone-3.md#hosts-and-machine-images-in-the-interface) | Planned | A catalogue of images with contents and base, and a hosts page showing version, staged upgrade, drift and last seen. |
+| [Hosts and machine images in the interface](roadmap/milestone-3.md#hosts-and-machine-images-in-the-interface) | Planned | A catalog of images with contents and base, and a hosts page showing version, staged upgrade, drift and last seen. |
 | [Cloud targets: AWS, Google Cloud and Azure](roadmap/milestone-3.md#cloud-targets-aws-google-cloud-and-azure) | Planned | Deploy to the three major clouds with their own features, with no stored cloud keys. |
 | [Serverless and managed instance groups](roadmap/milestone-3.md#serverless-and-managed-instance-groups) | Planned | Functions, container services and managed instance groups as deploy targets. |
 
@@ -457,7 +457,7 @@ See and control everything you run, whether it is an application in a cluster, a
 | [Diagnose along a flow](roadmap/milestone-3.md#diagnose-along-a-flow) | Planned | From a red connection, a one-sentence diagnosis, the failing requests, the pod, the change that caused it and the logs. |
 | [Replay the last hours](roadmap/milestone-3.md#replay-the-last-hours) | Planned | A time slider that replays the last twelve hours of the map with incidents and rollouts marked. |
 | [Inject delays and errors safely](roadmap/milestone-3.md#inject-delays-and-errors-safely) | Planned | Add a delay or an error to a share of requests on a healthy connection, with a hard limit on share and time. |
-| [Rate limiting and traffic protection](roadmap/milestone-3.md#rate-limiting-and-traffic-protection) | Planned | Limits per client, route and tenant, connection limits, timeouts, retries and circuit breakers, shown with how close traffic is to each. |
+| [Rate limiting and traffic protection](roadmap/milestone-3.md#rate-limiting-and-traffic-protection) | Planned | Limits per client, route and customer, connection limits, timeouts, retries and circuit breakers, shown with how close traffic is to each. |
 | [Attack and abuse signals](roadmap/milestone-3.md#attack-and-abuse-signals) | Planned | Signs of attack or abuse as plain sentences with evidence and three actions: limit, block or ignore with a reason. |
 | [Reliability pages](roadmap/milestone-3.md#reliability-pages) | Planned | Services ranked by error budget, saturation and restarts, with deploys, settings, toggles and scaling marked on the charts. |
 | [Toggles in context](roadmap/milestone-3.md#toggles-in-context) | Planned | Which features are on where and for whom, with the effect of a toggle shown and one button to turn it off. |
@@ -628,7 +628,7 @@ AI wherever it saves effort, always optional, always off until an administrator 
 | [From a picture to a pipeline](roadmap/milestone-6.md#from-a-picture-to-a-pipeline) | Planned | Design a delivery visually and have AI help translate it into a pipeline you can read and edit. |
 | [AI summaries and review of changes](roadmap/milestone-6.md#ai-summaries-and-review-of-changes) | Planned | Optional summaries and review comments on pull requests, labelled as AI. |
 | [AI help with failures](roadmap/milestone-6.md#ai-help-with-failures) | Planned | Explain why a deploy failed as well as a step, with the evidence used. Explaining a failed step already works. |
-| [Agent guidance and an agent catalogue](roadmap/milestone-6.md#agent-guidance-and-an-agent-catalogue) | Planned | Ready-made instructions so agents know how to use Launchway, and a list of agents with their permissions. |
+| [Agent guidance and an agent catalog](roadmap/milestone-6.md#agent-guidance-and-an-agent-catalog) | Planned | Ready-made instructions so agents know how to use Launchway, and a list of agents with their permissions. |
 
 ## Milestone 7: The hosted service, the public demo and enterprise controls (Next)
 
@@ -711,7 +711,7 @@ Sign up and go, or keep your files on your own machines; hosted, hosted with you
 | [The Detachment](roadmap/milestone-7.md#the-detachment) | Planned | One small program on your side starts your runners, looks things up in your secret store and reads your clusters, metrics, logs and DNS. |
 | [The boundary, data kind by data kind](roadmap/milestone-7.md#the-boundary-data-kind-by-data-kind) | Planned | A published table says what stays with you, what crosses and what the hosted side may see, such as names, states, counts and timings. |
 | [Screens drawn from your data, not stored hosted](roadmap/milestone-7.md#screens-drawn-from-your-data-not-stored-hosted) | Planned | The pages you read are drawn in your browser from data fetched live from your Detachment over an encrypted channel. |
-| [Your logs, artifacts and audit stay with you](roadmap/milestone-7.md#your-logs-artifacts-and-audit-stay-with-you) | Planned | Build logs, test reports, artifacts and an audit log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold. |
+| [Your logs, artifacts and audit stay with you](roadmap/milestone-7.md#your-logs-artifacts-and-audit-stay-with-you) | Planned | Build logs, test reports, artifacts andaudit trail log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold. |
 | [Least privilege grants](roadmap/milestone-7.md#least-privilege-grants) | Planned | You grant access to your systems from none upward, each step showing what it adds. |
 | [Updates you control](roadmap/milestone-7.md#updates-you-control) | Planned | Signed updates with a pin, a window and a rollback; your Detachment checks the signature and your policy before accepting. |
 | [Works when the hosted service is unreachable](roadmap/milestone-7.md#works-when-the-hosted-service-is-unreachable) | Planned | Your Detachment keeps working for what it can, then catches up. |
@@ -1053,7 +1053,7 @@ Ideas that grow naturally from one connected platform. Planned, but behind every
 | Item | Status | What it gives you |
 |---|---|---|
 | [Cloud cost management](roadmap/beyond.md#cloud-cost-management) | Planned | See what each service, team and environment costs to run, next to what it delivers. |
-| [A developer portal and service catalogue](roadmap/beyond.md#a-developer-portal-and-service-catalogue) | Planned | A directory of every service with its owner, health, docs and deployments. |
+| [A developer portal and service catalog](roadmap/beyond.md#a-developer-portal-and-service-catalog) | Planned | A directory of every service with its owner, health, docs and deployments. |
 | [Smaller integrations](roadmap/beyond.md#smaller-integrations) | Planned | Chat approvals, feature-flag mitigation and more event sources. |
 | [Discussions and snippets](roadmap/beyond.md#discussions-and-snippets) | Planned | A forum for projects and shareable snippets. |
 | [Cloud development environments](roadmap/beyond.md#cloud-development-environments) | Planned | Ready-made environments to work on a project from a browser. |

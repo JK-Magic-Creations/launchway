@@ -29,7 +29,7 @@ flowchart LR
 
 Policies live in the server's configuration (or a Git repository pinned by tag), never in the
 pipeline file, so a pipeline's authors cannot switch them off. Each rule comes from a fixed
-[catalogue](../reference/policy-rules.md); there is no policy language.
+[catalog](../reference/policy-rules.md); there is no policy language.
 
 ## 1 Add a policy in report mode
 

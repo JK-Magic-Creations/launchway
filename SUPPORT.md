@@ -12,7 +12,7 @@ same version (packages write a pre-release as `1.4.0~rc.1`, which sorts before `
   notes say otherwise (see [docs/development/migrations.md](docs/development/migrations.md)).
 - **Major** releases may remove things, after a minor release has warned of it.
 
-Until 1.0 the project is young: a minor release may change behaviour, and its notes say how.
+Until 1.0 the project is young: a minor release may change behavior, and its notes say how.
 
 ## Which releases get fixes
 

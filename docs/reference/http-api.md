@@ -381,7 +381,7 @@ The command routes take an optional `{"comment": "..."}` and answer `201` with t
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/policies` | `any-viewer` | — | The rule catalogue, the policies in force with their sources and versions, and recent verdicts (`?recent=N` per policy, at most 100) of runs the caller may see. |
+| `GET /api/v1/policies` | `any-viewer` | — | The rule catalog, the policies in force with their sources and versions, and recent verdicts (`?recent=N` per policy, at most 100) of runs the caller may see. |
 | `GET /api/v1/runs/{id}/policy` | `run-viewer` | — | A run's policy decisions, rule by rule, the waivers that could apply, and whether the caller may waive. |
 | `GET /api/v1/waivers` | `signed-in` | — | Waivers of the projects the caller may see: `?project=`, `?active=1`, `?limit=`. |
 | `POST /api/v1/projects/{name}/waivers` | `project-viewer` | `policy.waive` | Waives one rule of one policy. Answers `201` with the waiver. |

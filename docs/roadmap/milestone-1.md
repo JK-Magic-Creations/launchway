@@ -386,7 +386,7 @@ Track work next to the code, with labels, milestones, assignees and links betwee
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Coloured and exclusive labels, milestones with progress, and templates and forms for new items. Labels and milestones are shared across projects at the levels you choose.
+Colored and exclusive labels, milestones with progress, and templates and forms for new items. Labels and milestones are shared across projects at the levels you choose.
 
 **Depends on:** Issues and work items.
 
@@ -581,7 +581,7 @@ Discussions, snippets, notifications, activity feeds and the rest of a hosted Gi
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A guide and a checklist for retiring a self-hosted Git server in favour of Launchway. Covers moving, redirects, users, hooks, integrations, backups and a rollback plan, with each step verified by the acceptance suite.
+A guide and a checklist for retiring a self-hosted Git server in favor of Launchway. Covers moving, redirects, users, hooks, integrations, backups and a rollback plan, with each step verified by the acceptance suite.
 
 **Depends on:** An acceptance suite for hosting.
 

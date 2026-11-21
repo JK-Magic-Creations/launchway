@@ -3,7 +3,7 @@
 Runner pools, join tokens, runner identities and the limits a runner sets for itself.
 
 A runner only ever connects out to the server, over HTTPS, so it can sit in any network that can
-reach the server: another machine, another cluster, a customer's data centre. Each runner belongs
+reach the server: another machine, another cluster, a customer's data center. Each runner belongs
 to a **pool**, and a pool says which projects' work its runners may take.
 
 ## Connecting a runner

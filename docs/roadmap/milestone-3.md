@@ -340,7 +340,7 @@ Watch base images and advisories, rebuild, re-sign, re-scan and roll out across 
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A catalogue of images with contents and base, and a hosts page showing version, staged upgrade, drift and last seen. A host page draws first boot as a short line, with boot history and logs.
+A catalog of images with contents and base, and a hosts page showing version, staged upgrade, drift and last seen. A host page draws first boot as a short line, with boot history and logs.
 
 **Depends on:** Image-based hosts.
 
@@ -520,7 +520,7 @@ Add a delay or an error to a share of requests on a healthy connection, with a h
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Limits per client, route and tenant, connection limits, timeouts, retries and circuit breakers, shown with how close traffic is to each. Changing one is a guided change with a preview that replays the last hour against the new value.
+Limits per client, route and customer, connection limits, timeouts, retries and circuit breakers, shown with how close traffic is to each. Changing one is a guided change with a preview that replays the last hour against the new value.
 
 **Depends on:** A live traffic map.
 

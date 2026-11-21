@@ -33,7 +33,7 @@ flowchart TD
   Graph --> Steps["Steps in sandboxes"]
   Steps -->|typed outputs| Graph
   Designer["Visual designer"] <-->|same file| Repo
-  Catalogue["Catalogue of templates and steps"] --> Repo
+  Catalog["Catalog of templates and steps"] --> Repo
 ```
 
 *Text, designer and generated steps all end in one checked definition.*
@@ -125,11 +125,11 @@ A step declares what it passes on, and a reference to an output that does not ex
 
 [Area page](pipelines.md)
 
-#### A browsable catalogue of templates and steps {#a-browsable-catalogue-of-templates-and-steps}
+#### A browsable catalog of templates and steps {#a-browsable-catalog-of-templates-and-steps}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Shared libraries pinned by tag already work; the catalogue lets you find, compare and update them from inside the product. Each entry shows who uses it, what it needs and which version is current, with an update shown as a change you can review.
+Shared libraries pinned by tag already work; the catalog lets you find, compare and update them from inside the product. Each entry shows who uses it, what it needs and which version is current, with an update shown as a change you can review.
 
 **Depends on:** Shared libraries.
 
@@ -141,7 +141,7 @@ Shared libraries pinned by tag already work; the catalogue lets you find, compar
 
 See which projects use an old version of a template and open an update as a reviewable change. Teams keep common pipeline logic current without a manual hunt.
 
-**Depends on:** A browsable catalogue of templates and steps.
+**Depends on:** A browsable catalog of templates and steps.
 
 [Area page](pipelines.md)
 
@@ -345,7 +345,7 @@ Convert job definitions and shared libraries, with a report of what needs a pers
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A step catalogue and typed custom steps instead of plug-ins that run inside the server. Nothing a team adds can crash or compromise the server, and every extension has a version and an owner.
+A step catalog and typed custom steps instead of plug-ins that run inside the server. Nothing a team adds can crash or compromise the server, and every extension has a version and an owner.
 
 **Depends on:** Custom steps in your own language.
 

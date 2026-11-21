@@ -115,8 +115,8 @@ configuration kinds keep their names (`organisation`, `unit`), so files and scri
 Levels nobody uses stay hidden: with no squadron there is no squadron column, picker or page.
 
 There is exactly one wing today. The tables carry an `org` column in their keys, so
-several wings (tenants) can be added later without rewriting them; nothing isolates
-tenants from each other yet, and this release does not claim to.
+several wings can be added later without rewriting them; nothing isolates
+wings from each other yet, and this release does not claim to.
 
 ## Upgrading and rolling back
 

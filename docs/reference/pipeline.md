@@ -297,7 +297,7 @@ are reserved.
 ### Service readiness
 
 Without `ready` a service is used as soon as it has started, so a test can race a database that is
-still initialising. With it, the first step starts only when the service is ready:
+still initializing. With it, the first step starts only when the service is ready:
 
 <!-- keys: container-ready -->
 | Key | Type | Default | Description |

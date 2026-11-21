@@ -15,7 +15,7 @@ The packages of the code base and what the tests cover. For contributors.
 | `internal/fakeidp` | An OpenID Connect provider for tests, which can be made to misbehave |
 | `internal/blobstore` | Where artifacts are kept: the database (in chunks), a directory, or S3-compatible object storage |
 | `internal/findings`, `internal/sbom` | Read SARIF scanner results and CycloneDX SBOMs, treating them as hostile input |
-| `internal/policy` | Delivery policies: the rule catalogue, policy files read with their lines, and the pure function that judges a run |
+| `internal/policy` | Delivery policies: the rule catalog, policy files read with their lines, and the pure function that judges a run |
 | `internal/imagebuild` | Image steps on the runner: BuildKit's client, pushing, scanning, signing and provenance |
 | `internal/testreport`, `internal/coverage` | Read test result files in 13 formats and coverage files (Cobertura, JaCoCo, Clover, LCOV, Istanbul, Go), treating them as hostile input |
 | `internal/verify`, `internal/verify/source` | Judge a deployment with plain statistics and log clustering, and read the metrics and logs from Prometheus, Loki, ClickHouse, Elasticsearch, PostgreSQL and JSON APIs |

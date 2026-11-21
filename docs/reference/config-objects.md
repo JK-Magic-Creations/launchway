@@ -41,7 +41,7 @@ command line, the MCP server and the planned Terraform provider name them. For t
 | Environment | `environments` | Where deploys may go: `target`, `projects`, `queue` (`newest` or `all`), `protected` | `launchway_environment` |
 | Runner pool | `runner-pools` | A group of runners: `kind` (`deploy` or `build`), `targets`, `projects`, `events`, `require_identity`, `token_env` | `launchway_runner_pool` |
 | Role binding | `role-bindings` | A user or group, a role (`viewer`, `operator`, `admin`), the `projects` and `environments` it covers | `launchway_role_binding` |
-| Policy | `policies` | A delivery policy: `mode` (`enforce` or `report`), `scope`, and rules from the [policy rule catalogue](policy-rules.md) | `launchway_policy` |
+| Policy | `policies` | A delivery policy: `mode` (`enforce` or `report`), `scope`, and rules from the [policy rule catalog](policy-rules.md) | `launchway_policy` |
 | Policy source | `policy-sources` | A library whose files hold policies, at a pinned version | `launchway_policy_source` |
 | Health source | `health-sources` | A metrics or logs system verify steps may read by name: `type`, `projects`. Its address and credentials stay with the deploy runners | `launchway_health_source` |
 | AI model | `models` | A model steps may ask: provider, endpoint, model, `key` (a reference to a secret store, never a value), `projects`, limits | `launchway_model` |
