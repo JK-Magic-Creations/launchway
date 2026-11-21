@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
+	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 	"github.com/jk-magic-creations/launchway/internal/forge/store"
 )
 
@@ -53,6 +54,12 @@ type Options struct {
 	CredentialTTL time.Duration
 	Minter        Minter
 	Now           func() time.Time
+	// Pulls is the pull-request service; without it the provider declares no
+	// proposals.
+	Pulls *pulls.Service
+	// ProposalAuthor is who proposals created or closed through the provider
+	// are made as (default "launchway").
+	ProposalAuthor string
 }
 
 // Capabilities of the internal provider so far.
@@ -97,7 +104,12 @@ func New(c forge.Connection, st *store.Store, sto Storage, o Options) *Provider 
 	if o.Now == nil {
 		o.Now = time.Now
 	}
-	return &Provider{Base: forge.Base{K: forge.KindLaunchway, Caps: Capabilities(), Mat: forge.Supported}, conn: c, st: st, sto: sto, o: o}
+	caps := Capabilities()
+	if o.Pulls != nil {
+		caps[forge.CapProposals] = forge.Declaration{Support: forge.Native}
+		caps[forge.CapDrafts] = forge.Declaration{Support: forge.Native} // New.Draft is stored and honored
+	}
+	return &Provider{Base: forge.Base{K: forge.KindLaunchway, Caps: caps, Mat: forge.Supported}, conn: c, st: st, sto: sto, o: o}
 }
 
 // Connection is the connection this provider serves.

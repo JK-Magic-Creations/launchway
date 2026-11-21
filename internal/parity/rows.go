@@ -267,6 +267,8 @@ var rows = []Row{
 	{Route: "DELETE /api/v1/connections/{name}", MCP: "remove_connection", CLI: "repos connection remove", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/imports", MCP: "import_repositories", CLI: "repos import", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/imports/verify", MCP: "verify_repositories", CLI: "repos verify", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/repositories/{owner}/{name}/dependencies", MCP: "list_dependencies", CLI: "deps list", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/repositories/{owner}/{name}/updates/preview", MCP: "preview_updates", CLI: "updates preview", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/mirrors", MCP: "list_mirrors", CLI: "repos mirror status", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/mirrors", MCP: "list_mirrors", CLI: "repos mirror status", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/mirrors", MCP: "set_mirror", CLI: "repos mirror add", Terraform: "", Status: Equal, Reason: ""},

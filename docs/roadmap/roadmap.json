@@ -2725,12 +2725,13 @@
               "area": "software-graph"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Built-in dependency updates",
-              "value": "Keep common ecosystems' dependencies current, as ordinary reviewable pull requests.",
-              "detail": "Updates carry their release notes and test results.",
+              "value": "Launchway finds outdated and vulnerable dependencies in a repository and proposes the updates as ordinary reviewable pull requests, so no outside update robot is needed.",
+              "detail": "Available for Go modules, npm, Python manifests, container base images, and the workflow files a repository still carries. Known vulnerabilities are matched against OSV data (a mirror directory works offline), security fixes come first and are not held back, other versions wait three days after release, and a limit keeps a burst of pull requests from flooding the pipeline. Lock files are written by the ecosystem's own tool in a step container, never on the server. Launchway's own repository uses it. Coming, not available yet: Maven and Gradle, Cargo, .NET, Helm charts and Terraform providers; changelog excerpts in the pull request; settings edited in the web interface (today they are the repository's file and the levels' settings); automatic merging.",
               "needs": "Pull requests on the built-in host.",
-              "area": "software-graph"
+              "area": "software-graph",
+              "link": "guide/dependency-updates"
             },
             {
               "status": "planned",

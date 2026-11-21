@@ -1,0 +1,47 @@
+# Launchway's own dependency updates (read by Launchway from the default branch).
+# Reference: docs/reference/dependency-updates.md. The settings of an administrator
+# level can lock any key below; the file cannot loosen them.
+version: 1
+
+schedule:
+  interval: weekly
+  day: monday
+  hour: 6
+  timezone: America/Chicago
+
+# Routine updates wait three days after a release is published; security fixes do not.
+cooldown_days: 3
+
+limits:
+  max_open: 6                # open update pull requests in this repository
+  max_per_run: 3             # opened by one run, so a burst never floods the pipeline
+  max_open_per_ecosystem: 2  # the same two per ecosystem the previous tool allowed
+
+ecosystems:
+  go: {enabled: true}
+  npm: {enabled: true}
+  container: {enabled: true}
+  workflow: {enabled: true}
+  python: {enabled: false}   # this repository has no Python manifests
+
+groups:
+  # Minor and patch updates of one ecosystem and directory share one pull request;
+  # a major update is always its own pull request.
+  - {name: minor-and-patch, ecosystem: go}
+  - {name: minor-and-patch, ecosystem: npm, directory: web}
+  - {name: minor-and-patch, ecosystem: npm, directory: docs}
+  # Base images and tool images together; the pinned workflow actions together.
+  - {name: minor-and-patch, ecosystem: container}
+  - {name: minor-and-patch, ecosystem: workflow}
+
+# Tool images named in scripts (the project's security tooling) are pinned by tag
+# and digest; keeping them current is what this file is for.
+image_files:
+  - scripts/security/*.sh
+
+# Examples and test data show other people's pipelines; they are not this project's dependencies.
+exclude:
+  - "examples/*"
+  - "test/*"
+
+labels: [dependencies]

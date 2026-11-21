@@ -125,7 +125,7 @@ An exception is never silent. It lives in a file, with a reason and an end date:
 | Binary-Artifacts, Dangerous-Workflow, Fuzzing, License, Security-Policy, Token-Permissions | 10 | none |
 | Pinned-Dependencies | 8 | Dockerfile base images are pinned by tag; pin by digest, kept current by Launchway's own dependency updates once they are built |
 | SAST | 0 | CodeQL workflow added |
-| Dependency-Update-Tool | 0 | Not met yet: dependency updates are being built into Launchway itself (proposals as pull requests), so the project uses its own tool rather than the code host's |
+| Dependency-Update-Tool | 0 | Not met by a third party tool on purpose: dependency updates are Launchway's own feature. This repository's settings are in `.launchway/updates.yaml`; Launchway proposes the updates as pull requests, with the vulnerable ones first. The check looks for another vendor's tool, so the score stays low until it is told otherwise |
 | Vulnerabilities | 0 (96 found on the published commit) | the docs-tools part is fixed here; re-run after the next push |
 | Branch-Protection | 0 | repository setting: protect `main`, require pull requests and status checks |
 | Code-Review | 0 | requires a second reviewer; not possible with one maintainer until a second person joins |

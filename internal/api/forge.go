@@ -52,6 +52,9 @@ type ForgeHosting struct {
 	// repositories by.
 	Pulls    *pulls.Service
 	RepoByID func(ctx context.Context, id string) (forge.Repository, error)
+	// Updates reports dependencies and what the updater would open (nil: not
+	// available).
+	Updates UpdatesService
 }
 
 // The access classes of repositories. A repository's roles come from the
@@ -74,7 +77,7 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return append(append(append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), s.keyRoutes()...), s.pullRoutes()...), append(s.hookRoutes(), []route{
+	return append(append(append(append(append(append(s.gitRoutes(), s.compatRoutes()...), s.mirrorRoutes()...), s.importRoutes()...), s.keyRoutes()...), s.pullRoutes()...), append(append(s.updateRoutes(), s.hookRoutes()...), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},

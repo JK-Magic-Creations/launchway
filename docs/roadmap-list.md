@@ -513,7 +513,7 @@ One connected picture of code, dependencies, images and deployments, so you alwa
 | Item | Status | What it gives you |
 |---|---|---|
 | [Automated patching](roadmap/milestone-5.md#automated-patching) | Planned | Off by default and turned on per zone: updates open as changes, pass tests and change management, and roll out through Argo CD. |
-| [Built-in dependency updates](roadmap/milestone-5.md#built-in-dependency-updates) | Planned | Keep common ecosystems' dependencies current, as ordinary reviewable pull requests. |
+| [Built-in dependency updates](roadmap/milestone-5.md#built-in-dependency-updates) | Available | Launchway finds outdated and vulnerable dependencies in a repository and proposes the updates as ordinary reviewable pull requests, so no outside update robot is needed. ([docs](guide/dependency-updates.md)) |
 | [Image refresh and patching of base images](roadmap/milestone-5.md#image-refresh-and-patching-of-base-images) | Planned | Rebuild images when their base changes and roll the new ones out. |
 | [AI-proposed fixes](roadmap/milestone-5.md#ai-proposed-fixes) | Planned | An optional helper proposes a fix or an upgrade note, flagged as AI, never merged on its own. |
 | [Patch deadlines and evidence](roadmap/milestone-5.md#patch-deadlines-and-evidence) | Planned | Track how long each vulnerability has been open and produce evidence of patching within your own deadline. |
