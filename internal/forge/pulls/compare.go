@@ -80,9 +80,9 @@ func (s *Service) Files(ctx context.Context, repoID string, p PullRequest, lim L
 func (s *Service) PatchOf(ctx context.Context, repoID, from, to string, paths []string, full bool, lim Limits) (Patch, error) {
 	var out Patch
 	err := s.read(ctx, repoID, func(g gitRunner) error {
-		max := lim.MaxDiffBytes
+		limit := lim.MaxDiffBytes
 		if len(paths) > 0 {
-			max = lim.MaxPatchBytes
+			limit = lim.MaxPatchBytes
 			// A file whose line counts are over the limit is held back before it is read.
 			if !full {
 				c, err := g.compare(ctx, from, to, lim)
@@ -104,10 +104,10 @@ func (s *Service) PatchOf(ctx context.Context, repoID, from, to string, paths []
 			}
 		}
 		if full {
-			max = lim.HardBytes
+			limit = lim.HardBytes
 		}
 		var err error
-		out, err = g.patch(ctx, from, to, paths, max)
+		out, err = g.patch(ctx, from, to, paths, limit)
 		return err
 	})
 	return out, err

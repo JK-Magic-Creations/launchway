@@ -141,7 +141,7 @@ func (s *Server) pullCommentUpdate(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusBadRequest, "only a thread of review comments on a line can be resolved")
 			return
 		}
-		if !(p.Author == id.User || c.Author == id.User || s.authorize(id, auth.Operate, repo.Path)) {
+		if p.Author != id.User && c.Author != id.User && !s.authorize(id, auth.Operate, repo.Path) {
 			writeErr(w, http.StatusForbidden, "only the author of the pull request, of the thread, or an operator may resolve it")
 			return
 		}

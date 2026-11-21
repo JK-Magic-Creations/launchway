@@ -62,7 +62,7 @@ func (s *Store) Mutate(ctx context.Context, repo string, fn MutateFunc) (Converg
 		return res, err
 	}
 	res.Generation = snap.Gen
-	var real []RefUpdate
+	var moved []RefUpdate
 	for _, u := range ups {
 		if norm(u.Old) == norm(u.New) {
 			res.Unchanged++
@@ -76,12 +76,12 @@ func (s *Store) Mutate(ctx context.Context, repo string, fn MutateFunc) (Converg
 		default:
 			res.Updated++
 		}
-		real = append(real, u)
+		moved = append(moved, u)
 	}
-	if len(real) == 0 {
+	if len(moved) == 0 {
 		return res, nil
 	}
-	err = s.storeAndCommit(ctx, repo, scratch, snap.Refs, real, &res)
+	err = s.storeAndCommit(ctx, repo, scratch, snap.Refs, moved, &res)
 	return res, err
 }
 

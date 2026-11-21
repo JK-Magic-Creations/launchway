@@ -172,7 +172,7 @@ func (s *Service) Open(ctx context.Context, repoID, author string, n New) (PullR
 	if err := s.setRefs(ctx, repoID, map[string]string{PullRef(p.Number): head, RevisionRef(p.Number, 1): head}); err != nil {
 		return p, fmt.Errorf("keeping the head of pull request #%d: %w", p.Number, err)
 	}
-	s.schedule(repoID, p.ID)
+	s.schedule(ctx, repoID, p.ID)
 	s.emit(ctx, "opened", repoID, p, author, nil)
 	return p, nil
 }
@@ -242,7 +242,7 @@ func (s *Service) headMoved(ctx context.Context, repoID string, p PullRequest, h
 		s.Log.Warn("moving a pull request's head ref", "pull", p.Number, "err", err)
 	}
 	s.afterNewCommits(ctx, repoID, p, head, actor)
-	s.schedule(repoID, p.ID)
+	s.schedule(ctx, repoID, p.ID)
 	np, _ := s.Store.ByID(ctx, p.ID)
 	s.emit(ctx, "synchronize", repoID, np, actor, map[string]string{"before": p.HeadSHA, "after": head, "forced": fmt.Sprint(forced)})
 }
@@ -279,7 +279,7 @@ func (s *Service) baseMoved(ctx context.Context, repoID string, p PullRequest, b
 	if err := s.Store.AddRevision(ctx, p.ID, p.HeadSHA, base, false, actor); err != nil {
 		s.Log.Warn("recording a pull request's revision", "pull", p.Number, "err", err)
 	}
-	s.schedule(repoID, p.ID)
+	s.schedule(ctx, repoID, p.ID)
 }
 
 // afterNewCommits is where reviews react to new commits (see review.go).
@@ -290,8 +290,9 @@ func (s *Service) afterNewCommits(ctx context.Context, repoID string, p PullRequ
 
 // schedule asks for the judgement of a pull request to be (re)made in the
 // background: at most four run at once, and a request for one already
-// running makes it run once more when it finishes.
-func (s *Service) schedule(repoID, id string) {
+// running makes it run once more when it finishes. The work outlives the
+// request that asked (only its values are kept) and ends when the service stops.
+func (s *Service) schedule(ctx context.Context, repoID, id string) {
 	s.mu.Lock()
 	if j, ok := s.jobs[id]; ok {
 		j.again = true
@@ -300,6 +301,7 @@ func (s *Service) schedule(repoID, id string) {
 	}
 	s.jobs[id] = &job{}
 	s.mu.Unlock()
+	base := context.WithoutCancel(ctx)
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -310,8 +312,10 @@ func (s *Service) schedule(repoID, id string) {
 				s.finish(id, true)
 				return
 			}
-			ctx, cancel := context.WithTimeout(s.background, 2*time.Minute)
-			s.judge(ctx, repoID, id)
+			jctx, cancel := context.WithTimeout(base, 2*time.Minute)
+			stop := context.AfterFunc(s.background, cancel) //nolint:contextcheck // the judgement outlives the request that asked for it; it ends with its own timeout or when the service stops
+			s.judge(jctx, repoID, id)
+			stop()
 			cancel()
 			<-s.sem
 			if s.finish(id, false) {
@@ -391,4 +395,4 @@ func (s *Service) afterReview(ctx context.Context, repoID string, p PullRequest)
 
 // Schedule asks for a pull request's judgement of mergeability to be made in
 // the background (a request that finds it missing or stale calls it).
-func (s *Service) Schedule(repoID, id string) { s.schedule(repoID, id) }
+func (s *Service) Schedule(ctx context.Context, repoID, id string) { s.schedule(ctx, repoID, id) }

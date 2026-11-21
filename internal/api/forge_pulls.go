@@ -223,7 +223,7 @@ func (s *Server) getPull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p.State == pulls.Open && (p.Mergeability.State == pulls.MergeChecking || p.Mergeability.State == pulls.MergeUnknown) {
-		s.Forge.Pulls.Schedule(repo.ID, p.ID) // the judgement is made in the background; this answer says "checking"
+		s.Forge.Pulls.Schedule(r.Context(), repo.ID, p.ID) // the judgement is made in the background; this answer says "checking"
 	}
 	writeJSON(w, http.StatusOK, v)
 }
@@ -297,7 +297,7 @@ func (s *Server) updatePull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	op := s.authorize(id, auth.Operate, repo.Path)
-	if !(op || p.Author == id.User && id.User != "") {
+	if !op && (p.Author != id.User || id.User == "") {
 		writeErr(w, http.StatusForbidden, "only the author or someone with the operator role on "+repo.Path+" may change a pull request")
 		return
 	}

@@ -23,6 +23,7 @@ key and setting see the [reference](../reference/index.md).
 | [Verifying a deployment](verification.md) | Metrics and logs after a deploy, health sources, how the verdict is decided |
 | [AI models](ai.md) | Optional models for steps, verdict explanations and failed steps |
 | [Git over SSH](git-over-ssh.md) | SSH keys, deploy keys, host key fingerprints, protected branches, certificates, limits |
+| [Pull requests and code review](pull-requests.md) | Opening, reviewing and merging changes on hosted repositories; merge rules; checks |
 | [Webhooks and events](webhooks.md) | Repository and owner webhooks, signed deliveries, the delivery log, redelivery, turning off, pipelines on push |
 | [Secrets](secrets.md) | Secret references, stores, masking |
 | [The words Launchway uses](words.md) | Base, Wing, Squadron, Wingman, Logbook and the rest, in plain terms, and how to change them |

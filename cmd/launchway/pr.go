@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/url"
@@ -127,7 +128,7 @@ func prRepo(flagValue string) (string, error) {
 }
 
 func gitOut(args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(context.Background(), "git", args...) //nolint:gosec // git, with arguments this command builds itself
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	b, err := cmd.Output()
 	return string(b), err
@@ -155,12 +156,12 @@ func splitList(s string) []string {
 }
 
 type prFlags struct {
-	fs        *flag.FlagSet
-	repo      *string
-	asJSON    *bool
-	given     map[string]bool
-	pos       []string
-	base, url string
+	fs     *flag.FlagSet
+	repo   *string
+	asJSON *bool
+	given  map[string]bool
+	pos    []string
+	base   string
 }
 
 func newPRFlags(name string) *prFlags {
@@ -322,6 +323,9 @@ func (cl *client) prView(args []string) error {
 		}
 	}
 	fmt.Fprintf(cl.out, "You can: %s\n", strings.Join(can, ", "))
+	if len(cannot) > 0 {
+		fmt.Fprintf(cl.out, "Not now: %s\n", strings.Join(cannot, "; "))
+	}
 	if p.Body != "" {
 		fmt.Fprintf(cl.out, "\n%s\n", p.Body)
 	}

@@ -72,56 +72,86 @@ const mergeAttempts = 5
 // new tip (up to five times, then it fails cleanly and says so); a push is
 // never lost, and a merge never half-lands.
 func (s *Service) Merge(ctx context.Context, repoID string, p PullRequest, in MergeInput) (MergeResult, error) {
-	var res MergeResult
 	p, err := s.Store.ByID(ctx, p.ID)
 	if err != nil {
-		return res, err
+		return MergeResult{}, err
 	}
+	g, err := s.mergeGate(ctx, repoID, p, in)
+	if err != nil {
+		return MergeResult{}, err
+	}
+	merged, ups, err := s.land(ctx, repoID, p, in, g)
+	if err != nil {
+		return MergeResult{}, err
+	}
+	return s.recordMerge(ctx, repoID, p, in, g, merged, ups)
+}
+
+// gate is what a merge was allowed to do.
+type gate struct {
+	method       string
+	set          Settings
+	rule         Rule
+	covered      bool
+	deleteBranch bool
+	bypassed     []string
+}
+
+// mergeGate decides whether a merge may be made at all: the pull request is
+// open and is the one the person saw, the method is allowed, a fresh judgement
+// says it merges, and the rules are met or an administrator waives them.
+func (s *Service) mergeGate(ctx context.Context, repoID string, p PullRequest, in MergeInput) (gate, error) {
+	var g gate
 	if p.State != Open {
-		return res, conflict("this pull request is already %s", p.State)
+		return g, conflict("this pull request is already %s", p.State)
 	}
 	if in.ExpectHead != "" && in.ExpectHead != p.HeadSHA {
-		return res, conflict("the pull request changed while you were looking at it (new commits arrived); look again before merging")
+		return g, conflict("the pull request changed while you were looking at it (new commits arrived); look again before merging")
 	}
 	set, err := s.Store.Settings(ctx, repoID)
 	if err != nil {
-		return res, err
+		return g, err
 	}
-	method := in.Method
-	if method == "" {
-		method = set.DefaultMethod
+	g.set, g.method = set, in.Method
+	if g.method == "" {
+		g.method = set.DefaultMethod
 	}
-	if !set.allows(method) {
-		return res, invalid("this repository does not allow merging by %s; it allows %s", method, strings.Join(set.Allowed(), ", "))
+	if !set.allows(g.method) {
+		return g, invalid("this repository does not allow merging by %s; it allows %s", g.method, strings.Join(set.Allowed(), ", "))
 	}
 	// A judgement made for these very tips, now, not the stored one: the one
 	// thing that must never be stale is "it merges cleanly".
 	m, err := s.Judge(ctx, repoID, p)
 	if err != nil {
-		return res, err
+		return g, err
 	}
 	p.Mergeability = m
 	ready, err := s.Readiness(ctx, repoID, in.RepoPath, p, in.ActorRole)
 	if err != nil {
-		return res, err
+		return g, err
 	}
 	if !ready.CanMerge {
-		reason := strings.TrimSpace(in.Bypass)
-		if !(ready.CanBypass && reason != "") {
-			if ready.CanBypass {
-				return res, invalid("an administrator may merge past these rules, but must say why: %s", ready.Why)
-			}
-			return res, &NotReadyError{Readiness: ready}
+		if !ready.CanBypass {
+			return g, &NotReadyError{Readiness: ready}
+		}
+		if strings.TrimSpace(in.Bypass) == "" {
+			return g, invalid("an administrator may merge past these rules, but must say why: %s", ready.Why)
 		}
 		for _, b := range ready.Blockers {
-			res.Bypassed = append(res.Bypassed, b.Why)
+			g.bypassed = append(g.bypassed, b.Why)
 		}
 	}
-	rule, covered := RuleFor(mustRules(ctx, s.Store, repoID), p.TargetBranch)
-	deleteBranch := set.DeleteBranch
+	g.rule, g.covered = RuleFor(mustRules(ctx, s.Store, repoID), p.TargetBranch)
+	g.deleteBranch = set.DeleteBranch
 	if in.DeleteBranch != nil {
-		deleteBranch = *in.DeleteBranch
+		g.deleteBranch = *in.DeleteBranch
 	}
+	return g, nil
+}
+
+// land makes the merge commit and moves the refs, trying again on a new tip
+// when a push got there first.
+func (s *Service) land(ctx context.Context, repoID string, p PullRequest, in MergeInput, g gate) (string, []storage.RefUpdate, error) {
 	var merged string
 	var ups []storage.RefUpdate
 	var lastErr error
@@ -138,11 +168,11 @@ func (s *Service) Merge(ctx context.Context, repoID string, p PullRequest, in Me
 			case head != p.HeadSHA:
 				return nil, conflict("the branch %s moved since this pull request last looked at it; look again before merging", p.SourceBranch)
 			}
-			g := s.runner(scratch, true)
-			if covered && rule.RequireUpToDate {
-				if up, err := g.isAncestor(ctx, base, head); err != nil {
+			gr := s.runner(scratch, true)
+			if g.covered && g.rule.RequireUpToDate && len(g.bypassed) == 0 {
+				if up, err := gr.isAncestor(ctx, base, head); err != nil {
 					return nil, err
-				} else if !up && len(res.Bypassed) == 0 {
+				} else if !up {
 					return nil, conflict("%s moved while merging and this pull request must be up to date with it; update the branch", p.TargetBranch)
 				}
 			}
@@ -150,12 +180,12 @@ func (s *Service) Merge(ctx context.Context, repoID string, p PullRequest, in Me
 				s.beforeCommit()
 			}
 			var err error
-			merged, err = s.makeMerge(ctx, g, p, method, base, head, in, set)
+			merged, err = s.makeMerge(ctx, gr, p, g.method, base, head, in, g.set)
 			if err != nil {
 				return nil, err
 			}
 			ups = []storage.RefUpdate{{Name: tgt, Old: base, New: merged}}
-			if deleteBranch && s.canDeleteSource(ctx, repoID, p, refs, rule, covered) {
+			if g.deleteBranch && s.canDeleteSource(ctx, repoID, p) {
 				ups = append(ups, storage.RefUpdate{Name: src, Old: head, New: strings.Repeat("0", 40)})
 			}
 			return ups, nil
@@ -166,15 +196,19 @@ func (s *Service) Merge(ctx context.Context, repoID string, p PullRequest, in Me
 		}
 		s.Log.Info("a push reached the target while a pull request was being merged; merging again", "pull", p.Number, "attempt", attempt+1)
 	}
-	if lastErr != nil {
-		var stale *storage.ErrStale
-		if errors.As(lastErr, &stale) {
-			return res, conflict("%s kept moving while merging; nothing was changed, try again in a moment", p.TargetBranch)
-		}
-		return res, lastErr
+	var stale *storage.ErrStale
+	if errors.As(lastErr, &stale) {
+		return "", nil, conflict("%s kept moving while merging; nothing was changed, try again in a moment", p.TargetBranch)
 	}
-	if err := s.Store.SetMerged(ctx, p.ID, merged, method, in.Actor); err != nil {
-		return res, err
+	return merged, ups, lastErr
+}
+
+// recordMerge marks the pull request merged, notes a bypass on it, and tells
+// the rest of the system.
+func (s *Service) recordMerge(ctx context.Context, repoID string, p PullRequest, in MergeInput, g gate, merged string, ups []storage.RefUpdate) (MergeResult, error) {
+	res := MergeResult{Bypassed: g.bypassed, Commit: merged}
+	if err := s.Store.SetMerged(ctx, p.ID, merged, g.method, in.Actor); err != nil {
+		return MergeResult{}, err
 	}
 	for _, u := range ups {
 		res.Updates = append(res.Updates, RefUpdate{Name: u.Name, Old: u.Old, New: u.New})
@@ -182,13 +216,12 @@ func (s *Service) Merge(ctx context.Context, repoID string, p PullRequest, in Me
 			res.BranchDeleted = true
 		}
 	}
-	res.Commit = merged
 	if len(res.Bypassed) > 0 {
 		note := fmt.Sprintf("Merged by @%s past the rules (%s). Reason: %s", in.Actor, strings.Join(res.Bypassed, "; "), strings.TrimSpace(in.Bypass))
 		_, _ = s.Store.AddComment(ctx, p.ID, Comment{Author: in.Actor, Body: note})
 	}
 	res.Pull, _ = s.Store.ByID(ctx, p.ID)
-	detail := map[string]string{"method": method, "commit": merged, "branch_deleted": fmt.Sprint(res.BranchDeleted)}
+	detail := map[string]string{"method": g.method, "commit": merged, "branch_deleted": fmt.Sprint(res.BranchDeleted)}
 	if len(res.Bypassed) > 0 {
 		detail["bypass"] = strings.TrimSpace(in.Bypass)
 	}
@@ -206,7 +239,7 @@ func mustRules(ctx context.Context, st *Store, repoID string) []Rule {
 // canDeleteSource says whether the source branch may go with the merge: not
 // the default or a protected branch, and not the source of another open pull
 // request.
-func (s *Service) canDeleteSource(ctx context.Context, repoID string, p PullRequest, refs map[string]string, _ Rule, _ bool) bool {
+func (s *Service) canDeleteSource(ctx context.Context, repoID string, p PullRequest) bool {
 	rules := mustRules(ctx, s.Store, repoID)
 	if _, protected := RuleFor(rules, p.SourceBranch); protected {
 		return false
@@ -384,7 +417,7 @@ func (s *Service) syncTips(ctx context.Context, repoID string, p PullRequest, he
 		s.baseMoved(ctx, repoID, p, base, actor)
 		return
 	}
-	s.schedule(repoID, p.ID)
+	s.schedule(ctx, repoID, p.ID)
 }
 
 // Retarget changes the branch a pull request goes into.
@@ -436,7 +469,7 @@ func (s *Service) Retarget(ctx context.Context, repoID string, p PullRequest, ta
 	}
 	_ = s.Store.AddRevision(ctx, p.ID, p.HeadSHA, base, false, actor)
 	np, _ := s.Store.ByID(ctx, p.ID)
-	s.schedule(repoID, p.ID)
+	s.schedule(ctx, repoID, p.ID)
 	s.emit(ctx, "edited", repoID, np, actor, map[string]string{"changes": "base", "from": p.TargetBranch, "to": target})
 	return nil
 }

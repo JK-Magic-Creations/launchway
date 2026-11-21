@@ -221,6 +221,7 @@ export default defineConfig({
           { text: 'Verifying a deployment', link: '/guide/verification' },
           { text: 'AI models', link: '/guide/ai' },
           { text: 'Git over SSH', link: '/guide/git-over-ssh' },
+          { text: 'Pull requests and code review', link: '/guide/pull-requests' },
           { text: 'Webhooks and events', link: '/guide/webhooks' },
           { text: 'Secrets', link: '/guide/secrets' },
           { text: 'Configuration and levels', link: '/guide/configuration' },

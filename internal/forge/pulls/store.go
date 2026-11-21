@@ -153,23 +153,9 @@ func (s *Store) ByID(ctx context.Context, id string) (PullRequest, error) {
 // fill adds the people, revisions count and runs.
 func (s *Store) fill(ctx context.Context, p PullRequest) (PullRequest, error) {
 	p.Assignees, p.Reviewers, p.LinkedRuns = []string{}, []string{}, []string{}
-	rows, err := s.db.Query(ctx, `SELECT kind, name FROM pull_people WHERE pull_id = ? ORDER BY added_at, name`, p.ID)
-	if err != nil {
+	if err := s.people(ctx, &p); err != nil {
 		return p, err
 	}
-	for rows.Next() {
-		var k, n string
-		if err := rows.Scan(&k, &n); err != nil {
-			rows.Close()
-			return p, err
-		}
-		if k == "assignee" {
-			p.Assignees = append(p.Assignees, n)
-		} else {
-			p.Reviewers = append(p.Reviewers, n)
-		}
-	}
-	rows.Close()
 	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM pull_revisions WHERE pull_id = ?`, p.ID).Scan(&p.Revisions); err != nil {
 		return p, err
 	}
@@ -186,6 +172,56 @@ func (s *Store) fill(ctx context.Context, p PullRequest) (PullRequest, error) {
 		p.LinkedRuns = append(p.LinkedRuns, id)
 	}
 	return p, rr.Err()
+}
+
+// people reads the assignees and requested reviewers into p.
+func (s *Store) people(ctx context.Context, p *PullRequest) error {
+	rows, err := s.db.Query(ctx, `SELECT kind, name FROM pull_people WHERE pull_id = ? ORDER BY added_at, name`, p.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var k, n string
+		if err := rows.Scan(&k, &n); err != nil {
+			return err
+		}
+		if k == "assignee" {
+			p.Assignees = append(p.Assignees, n)
+		} else {
+			p.Reviewers = append(p.Reviewers, n)
+		}
+	}
+	return rows.Err()
+}
+
+// pullRows reads rows of pullCols into filled pull requests.
+func (s *Store) pullRows(ctx context.Context, q string, args ...any) ([]PullRequest, error) {
+	rows, err := s.db.Query(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var got []PullRequest
+	for rows.Next() {
+		p, err := scanPull(rows)
+		if err != nil {
+			return nil, err
+		}
+		got = append(got, p.PullRequest)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range got {
+		if got[i], err = s.fill(ctx, got[i]); err != nil {
+			return nil, err
+		}
+	}
+	if got == nil {
+		got = []PullRequest{}
+	}
+	return got, nil
 }
 
 // List returns a repository's pull requests, newest first, and how many match.
@@ -230,29 +266,8 @@ func (s *Store) List(ctx context.Context, repoID string, f Filter) ([]PullReques
 		limit = 50
 	}
 	q := `SELECT ` + prefixed("p.", pullCols) + ` FROM pull_requests p WHERE ` + cond + ` ORDER BY p.number DESC LIMIT ? OFFSET ?`
-	rows, err := s.db.Query(ctx, q, append(args, limit, max(f.Offset, 0))...)
-	if err != nil {
-		return nil, 0, err
-	}
-	var got []PullRequest
-	for rows.Next() {
-		p, err := scanPull(rows)
-		if err != nil {
-			rows.Close()
-			return nil, 0, err
-		}
-		got = append(got, p.PullRequest)
-	}
-	rows.Close()
-	out := make([]PullRequest, 0, len(got))
-	for _, p := range got {
-		p, err := s.fill(ctx, p)
-		if err != nil {
-			return nil, 0, err
-		}
-		out = append(out, p)
-	}
-	return out, total, nil
+	out, err := s.pullRows(ctx, q, append(args, limit, max(f.Offset, 0))...)
+	return out, total, err
 }
 
 func prefixed(pre, cols string) string {
@@ -279,26 +294,7 @@ func (s *Store) OpenAt(ctx context.Context, repoID, sha string) ([]PullRequest, 
 }
 
 func (s *Store) open(ctx context.Context, cond string, args ...any) ([]PullRequest, error) {
-	rows, err := s.db.Query(ctx, `SELECT `+pullCols+` FROM pull_requests WHERE `+cond+` ORDER BY number`, args...)
-	if err != nil {
-		return nil, err
-	}
-	var got []PullRequest
-	for rows.Next() {
-		p, err := scanPull(rows)
-		if err != nil {
-			rows.Close()
-			return nil, err
-		}
-		got = append(got, p.PullRequest)
-	}
-	rows.Close()
-	for i := range got {
-		if got[i], err = s.fill(ctx, got[i]); err != nil {
-			return nil, err
-		}
-	}
-	return got, nil
+	return s.pullRows(ctx, `SELECT `+pullCols+` FROM pull_requests WHERE `+cond+` ORDER BY number`, args...)
 }
 
 // Edit changes what a person may change on a pull request; nil stays.

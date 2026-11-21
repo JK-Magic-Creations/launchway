@@ -79,6 +79,7 @@
         "guide/verification",
         "guide/ai",
         "guide/git-over-ssh",
+        "guide/pull-requests",
         "guide/webhooks",
         "guide/secrets",
         "guide/configuration",

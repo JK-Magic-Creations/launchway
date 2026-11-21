@@ -154,10 +154,8 @@ func main() {
 		err = cmdVariables(args)
 	case "doctor":
 		err = cmdDoctor(args)
-	case "repos", "keys":
+	case "repos", "keys", "pr":
 		err = cmdHosting(os.Args[1], args)
-	case "pr":
-		err = cmdPR(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":

@@ -427,47 +427,69 @@ func (s *Service) Readiness(ctx context.Context, repoID, repoPath string, p Pull
 	if covered {
 		r.Rule = &rule
 	}
-	block := func(code, why string) { r.Blockers = append(r.Blockers, Blocker{Code: code, Why: why}) }
 	if p.State != Open {
-		block("state", "it is already "+string(p.State))
+		r.Blockers = append(r.Blockers, Blocker{Code: "state", Why: "it is already " + string(p.State)})
 		r.Why = "this pull request is already " + string(p.State)
 		return r, nil
 	}
+	r.stateBlockers(p)
+	if err := s.reviewBlockers(ctx, p, rule, covered, &r); err != nil {
+		return r, err
+	}
+	if err := s.checkBlockers(ctx, repoID, repoPath, p, rule, covered, &r); err != nil {
+		return r, err
+	}
+	if len(r.Methods) == 0 {
+		r.block("method", "the repository allows no way of merging")
+	}
+	r.conclude(rule, covered, actorRole, p)
+	return r, nil
+}
+
+func (r *Readiness) block(code, why string) {
+	r.Blockers = append(r.Blockers, Blocker{Code: code, Why: why})
+}
+
+// stateBlockers: a draft, conflicts, a judgement that is not made yet.
+func (r *Readiness) stateBlockers(p PullRequest) {
 	if p.Draft {
-		block("draft", "it is a draft; mark it ready for review")
+		r.block("draft", "it is a draft; mark it ready for review")
 	}
 	switch p.Mergeability.State {
 	case MergeConflicts:
-		block("conflicts", "it has conflicts in "+strings.Join(p.Mergeability.Files, ", ")+"; update the branch and resolve them")
+		r.block("conflicts", "it has conflicts in "+strings.Join(p.Mergeability.Files, ", ")+"; update the branch and resolve them")
 	case MergeChecking, MergeUnknown:
 		why := "it is still being checked for conflicts"
 		if p.Mergeability.State == MergeUnknown && p.Mergeability.Reason != "" {
 			why = "it could not be checked for conflicts (" + p.Mergeability.Reason + ")"
 		}
-		block("checking", why)
+		r.block("checking", why)
 	}
+}
+
+// reviewBlockers: approvals, requested changes, up to date, open threads.
+func (s *Service) reviewBlockers(ctx context.Context, p PullRequest, rule Rule, covered bool, r *Readiness) error {
 	reviews, err := s.Store.Reviews(ctx, p.ID)
 	if err != nil {
-		return r, err
+		return err
 	}
 	comments, err := s.Store.Comments(ctx, p.ID)
 	if err != nil {
-		return r, err
+		return err
 	}
-	seen := map[string]bool{}
+	open := map[string]bool{}
 	for _, c := range comments {
 		if c.Path != "" && c.ThreadID == c.ID && !c.Resolved && !c.Deleted {
-			seen[c.ThreadID] = true
+			open[c.ThreadID] = true
 		}
 	}
-	r.OpenThreads = len(seen)
+	r.OpenThreads = len(open)
 	approvers := map[string]bool{}
 	latest := map[string]Review{}
 	for _, rv := range reviews { // oldest first: the last non-comment review of each person stands
-		if rv.State != "submitted" || rv.Verdict == VerdictComment {
-			continue
+		if rv.State == "submitted" && rv.Verdict != VerdictComment {
+			latest[rv.Author] = rv
 		}
-		latest[rv.Author] = rv
 	}
 	for who, rv := range latest {
 		switch rv.Verdict {
@@ -483,54 +505,61 @@ func (s *Service) Readiness(ctx context.Context, repoID, repoPath string, p Pull
 	sort.Strings(r.ChangesRequested)
 	r.Approvals = len(approvers)
 	if len(r.ChangesRequested) > 0 {
-		block("changes_requested", strings.Join(r.ChangesRequested, ", ")+" asked for changes")
+		r.block("changes_requested", strings.Join(r.ChangesRequested, ", ")+" asked for changes")
 	}
-	if covered {
-		if need := rule.RequiredApprovals - r.Approvals; need > 0 {
-			why := "needs " + plural(need, "more approval", "more approvals")
-			if rule.ApprovalRole == RoleAdmin {
-				why += " from an administrator"
-			}
-			block("approvals", why)
-		}
-		if rule.RequireUpToDate && p.Mergeability.Behind > 0 {
-			block("behind", fmt.Sprintf("it is %s behind %s and must be up to date; update the branch", plural(p.Mergeability.Behind, "commit", "commits"), p.TargetBranch))
-		}
-		if rule.RequireResolved && r.OpenThreads > 0 {
-			block("threads", plural(r.OpenThreads, "conversation is", "conversations are")+" not resolved")
-		}
+	if !covered {
+		return nil
 	}
+	if need := rule.RequiredApprovals - r.Approvals; need > 0 {
+		why := "needs " + plural(need, "more approval", "more approvals")
+		if rule.ApprovalRole == RoleAdmin {
+			why += " from an administrator"
+		}
+		r.block("approvals", why)
+	}
+	if rule.RequireUpToDate && p.Mergeability.Behind > 0 {
+		r.block("behind", fmt.Sprintf("it is %s behind %s and must be up to date; update the branch", plural(p.Mergeability.Behind, "commit", "commits"), p.TargetBranch))
+	}
+	if rule.RequireResolved && r.OpenThreads > 0 {
+		r.block("threads", plural(r.OpenThreads, "conversation is", "conversations are")+" not resolved")
+	}
+	return nil
+}
+
+// checkBlockers: the required checks that have not passed.
+func (s *Service) checkBlockers(ctx context.Context, repoID, repoPath string, p PullRequest, rule Rule, covered bool, r *Readiness) error {
 	var required []string
 	if covered {
 		required = rule.RequiredChecks
 	}
 	checks, _, err := s.Checks(ctx, repoID, repoPath, p, required)
 	if err != nil {
-		return r, err
+		return err
 	}
 	r.Checks = checks
 	for _, name := range required {
 		c, ok := findCheck(checks, name)
 		switch {
-		case !ok:
-			block("check", "`"+name+"` has not passed")
+		case !ok || c.Status == CheckRunning || c.Status == CheckPending:
+			r.block("check", "`"+name+"` has not passed")
 		case c.Status == CheckPassed:
 		case c.Status == CheckFailed:
-			block("check", "`"+name+"` failed")
-		case c.Status == CheckRunning || c.Status == CheckPending:
-			block("check", "`"+name+"` has not passed")
+			r.block("check", "`"+name+"` failed")
 		case c.Status == CheckCanceled:
-			block("check", "`"+name+"` was canceled")
+			r.block("check", "`"+name+"` was canceled")
 		default:
-			block("check", "`"+name+"` was "+c.Status)
+			r.block("check", "`"+name+"` was "+c.Status)
 		}
 	}
-	if len(r.Methods) == 0 {
-		block("method", "the repository allows no way of merging")
-	}
+	return nil
+}
+
+// conclude says whether the pull request can merge, in one sentence, and
+// whether an administrator may bypass what blocks it.
+func (r *Readiness) conclude(rule Rule, covered bool, actorRole string, p PullRequest) {
 	if len(r.Blockers) == 0 {
 		r.CanMerge = true
-		return r, nil
+		return
 	}
 	parts := make([]string, len(r.Blockers))
 	for i, b := range r.Blockers {
@@ -540,9 +569,9 @@ func (s *Service) Readiness(ctx context.Context, repoID, repoPath string, p Pull
 	// The rules that can be bypassed are the review rules, never a conflict or a draft.
 	r.CanBypass = covered && rule.BypassAdmins && actorRole == RoleAdmin && p.State == Open
 	for _, b := range r.Blockers {
-		if b.Code == "conflicts" || b.Code == "state" || b.Code == "method" || b.Code == "checking" || b.Code == "draft" {
+		switch b.Code {
+		case "conflicts", "state", "method", "checking", "draft":
 			r.CanBypass = false
 		}
 	}
-	return r, nil
 }
