@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { Arrange, arranged, BUILTIN, type HomeDoc } from "./panels/Arrange";
+import { cleanPanels } from "./panels/registry";
 import { Linked } from "../components/EntityLink";
 import { LinkButton } from "../kit/layout";
 import type { Need } from "../guided/needs";
@@ -12,6 +14,7 @@ import { onLink } from "../router";
 import { organizeApi, type AttentionItem, type HomeAnswer, type HomeCategory, type HomeProject, type HomeRunning } from "../organizeApi";
 import { terms } from "../terms";
 import "./home-sections.css";
+import "./panels/panels.css";
 
 // What Home shows once the page has drawn: what needs a person (by the one attention rule), what runs now,
 // the projects by Squadron with their health, favorites and what finished lately. One call answers all of it
@@ -19,11 +22,8 @@ import "./home-sections.css";
 // reordered and collapsed by each person ("my layout"); someone who may arrange for everyone sets the default.
 // See docs/guide/home-page.md and docs/contributing/panels.md.
 
-type SectionId = "needs" | "running" | "favorites" | "categories" | "recent";
-const DEFAULT_ORDER: SectionId[] = ["needs", "running", "favorites", "categories", "recent"];
-const TITLES: Record<SectionId, string> = { needs: "Needs you", running: "Running now", favorites: "Favorites", categories: "By category", recent: "Recently finished" };
-
-interface Prefs { view?: "mine" | "all"; order?: SectionId[]; hidden?: SectionId[]; open?: Record<string, boolean> }
+const TITLES = Object.fromEntries(BUILTIN.map((b) => [b.id, b.title])) as Record<string, string>;
+const PanelView = lazy(() => import("./panels/PanelView"));
 
 export default function HomeSections({ onCount, extra = [] }: { onCount?: (n: number) => void; extra?: Need[] }) {
   const [view, setView] = useState<"mine" | "all" | "">("");
@@ -31,79 +31,60 @@ export default function HomeSections({ onCount, extra = [] }: { onCount?: (n: nu
   const { data, error, reload } = useLoad<HomeAnswer>(fn, 10000);
   const now = useNow(1000);
   useEffect(() => { if (data) onCount?.(data.needs.length); }, [data, onCount]);
-  const prefs = (data?.layout.effective ?? {}) as Prefs;
-  const save = useCallback(async (next: Prefs) => {
-    const personal = { ...((data?.layout.personal ?? {}) as Prefs), ...next };
-    await organizeApi.setMyLayout("home", personal as Record<string, unknown>);
+  const effective = (data?.layout.effective ?? {}) as HomeDoc;
+  // Where a change is saved: for me (my own layer) or, with the right, for everyone (the Base's shared default).
+  const save = useCallback(async (mode: "me" | "everyone", patch: HomeDoc) => {
+    if (mode === "me") {
+      await organizeApi.setMyLayout("home", { ...((data?.layout.personal ?? {}) as HomeDoc), ...patch } as Record<string, unknown>);
+    } else {
+      const lvl = data?.layout.levels.find((l) => l.scope === "base");
+      await organizeApi.setLayout("home", "base", { ...((lvl?.data ?? {}) as HomeDoc), ...patch } as Record<string, unknown>, lvl?.locked ?? false);
+    }
     reload();
   }, [data, reload]);
   if (error && !data) return <p role="alert" className="callout">Home could not be loaded. Try again in a moment.</p>;
   if (!data) return <HomeSkeleton />;
-  const order = [...new Set([...(prefs.order ?? []).filter((s) => DEFAULT_ORDER.includes(s)), ...DEFAULT_ORDER])];
-  const hidden = new Set(prefs.hidden ?? []);
-  const openCats = prefs.open ?? {};
+  const panels = cleanPanels(effective.panels);
+  const items = arranged(effective, panels);
+  const hidden = new Set(effective.hidden ?? []);
+  const openCats = effective.open ?? {};
   const effView = view || data.view;
-  const move = (id: SectionId, d: -1 | 1) => {
-    const i = order.indexOf(id), j = i + d;
-    if (j < 0 || j >= order.length) return;
-    const next = [...order];
-    [next[i], next[j]] = [next[j], next[i]];
-    void save({ order: next });
-    announce(`${TITLES[id]} moved ${d < 0 ? "up" : "down"}.`);
-  };
-  const toggleHide = (id: SectionId) => { const h = new Set(hidden); if (h.has(id)) h.delete(id); else h.add(id); void save({ hidden: [...h] as SectionId[] }); announce(`${TITLES[id]} ${h.has(id) ? "hidden" : "shown"}.`); };
-  const toggleCat = (key: string, nowOpen: boolean) => { void save({ open: { ...openCats, [key]: !nowOpen } }); };
+  const toggleCat = (key: string, nowOpen: boolean) => { void save("me", { open: { ...openCats, [key]: !nowOpen } }); };
   const brandNew = data.counts.projects === 0;
+  const sharedDoc = (data.layout.shared ?? {}) as HomeDoc;
 
   return (
     <div className="hm" data-testid="home-sections">
       <div className="hm-top">
         <div className="hm-seg" role="group" aria-label="Whose work to show">
           {(["mine", "all"] as const).map((v) => (
-            <button key={v} type="button" className="btn btn-sm" aria-pressed={effView === v} onClick={() => { setView(v); void save({ view: v }); }}>{v === "mine" ? "My work" : "Everything I can see"}</button>
+            <button key={v} type="button" className="btn btn-sm" aria-pressed={effView === v} onClick={() => { setView(v); void save("me", { view: v }); }}>{v === "mine" ? "My work" : "Everything I can see"}</button>
           ))}
         </div>
-        <Customize order={order} hidden={hidden} onMove={move} onToggle={toggleHide} customized={data.layout.customized} onReset={async () => { await organizeApi.resetMyLayout("home"); setView(""); reload(); announce("Home is back to the default layout."); }} />
+        <Arrange docs={{ me: effective, everyone: sharedDoc }} panelsOf={(d) => cleanPanels(d.panels)} canShare={!!data.layout.may_arrange?.base} customized={data.layout.customized}
+          onSave={save} onReset={async () => { await organizeApi.resetMyLayout("home"); setView(""); reload(); announce("Home is back to the default layout."); }} />
       </div>
       {data.layout.customized && <p className="faint small hm-note" role="status">You are viewing your own arrangement of this page.</p>}
       {brandNew && <div className="callout">{`Nothing is here yet. Add a ${terms().lower("project")} and its results, what runs and what needs you appear on this page.`}</div>}
-      {order.filter((id) => !hidden.has(id)).map((id) => (
-        <section key={id} className="hm-sec" aria-labelledby={`hm-${id}`}>
-          {id === "needs" && <Needs data={data} now={now} reload={reload} extra={extra} />}
-          {id === "running" && <Running data={data} now={now} />}
-          {id === "favorites" && data.favorites.length > 0 && <Favorites list={data.favorites} now={now} />}
-          {id === "categories" && <Categories cats={data.categories} openCats={openCats} onToggle={toggleCat} now={now} />}
-          {id === "recent" && <Recent data={data} now={now} />}
-        </section>
-      ))}
+      <div className="hm-grid">
+        {items.filter((it) => !hidden.has(it.id)).map((it) => (
+          <section key={it.id} className={`hm-sec hm-span-${it.size}`} aria-labelledby={it.custom ? undefined : `hm-${it.id}`}>
+            {it.id === "needs" && <Needs data={data} now={now} reload={reload} extra={extra} />}
+            {it.id === "running" && <Running data={data} now={now} />}
+            {it.id === "favorites" && data.favorites.length > 0 && <Favorites list={data.favorites} now={now} />}
+            {it.id === "continue" && <Suspense fallback={<div className="hm-skel" />}><PanelView def={{ id: "continue", type: "continue", title: TITLES.continue, size: 3, settings: {} }} home={data} now={now} /></Suspense>}
+            {it.id === "categories" && <Categories cats={data.categories} openCats={openCats} onToggle={toggleCat} now={now} />}
+            {it.id === "recent" && <Recent data={data} now={now} />}
+            {it.custom && <Suspense fallback={<div className="hm-skel" />}><PanelView def={it.custom} home={data} now={now} /></Suspense>}
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
 
 function HomeSkeleton() {
   return <div className="hm" aria-busy="true" aria-label="Loading what needs you and what runs now"><div className="hm-skel" /><div className="hm-skel" /><div className="hm-skel tall" /></div>;
-}
-
-function Customize({ order, hidden, onMove, onToggle, customized, onReset }: { order: SectionId[]; hidden: Set<string>; onMove: (id: SectionId, d: -1 | 1) => void; onToggle: (id: SectionId) => void; customized: boolean; onReset: () => void }) {
-  return (
-    <details className="hm-cust">
-      <summary className="btn btn-sm">Arrange for me</summary>
-      <div className="hm-cust-b">
-        <p className="faint small">This changes only your Home page. Someone who may arrange for everyone sets the default.</p>
-        <ul>
-          {order.map((id, i) => (
-            <li key={id}>
-              <span className={hidden.has(id) ? "faint" : ""}>{TITLES[id]}{hidden.has(id) ? " (hidden)" : ""}</span>
-              <button type="button" className="btn btn-sm" disabled={i === 0} onClick={() => onMove(id, -1)} aria-label={`Move ${TITLES[id]} up`}>Up</button>
-              <button type="button" className="btn btn-sm" disabled={i === order.length - 1} onClick={() => onMove(id, 1)} aria-label={`Move ${TITLES[id]} down`}>Down</button>
-              <button type="button" className="btn btn-sm" onClick={() => onToggle(id)}>{hidden.has(id) ? "Show" : "Hide"}<span className="sr-only"> {TITLES[id]}</span></button>
-            </li>
-          ))}
-        </ul>
-        <button type="button" className="btn btn-sm" disabled={!customized} onClick={onReset}>Reset to the default</button>
-      </div>
-    </details>
-  );
 }
 
 const KIND_ICON: Record<AttentionItem["kind"], "x" | "gate" | "alert" | "server"> = { failed: "x", decision: "gate", deployment: "alert", stuck: "server" };

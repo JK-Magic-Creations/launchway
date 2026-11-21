@@ -101,6 +101,20 @@ describe("the Explorer", () => {
     render(<Explorer {...props()} />);
     expect(within(screen.getByRole("tree")).getByRole("treeitem", { name: /Payments, 2 items, 1 failed/ })).toBeInTheDocument();
   });
+  it("pins the view to the person's own Home as a saved-view panel", async () => {
+    const calls: { method: string; path: string; body?: unknown }[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (u: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({ method: init?.method ?? "GET", path: String(u), body: init?.body ? JSON.parse(String(init.body)) : undefined });
+      return new Response(JSON.stringify({ personal: {}, shared: {}, effective: {}, levels: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
+    history.replaceState(null, "", "/pipelines?q=pay&result=bad");
+    render(<Explorer {...props()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Pin to Home" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "PUT")).toBeTruthy());
+    const put = calls.find((c) => c.method === "PUT")!;
+    expect(put.path).toBe("/api/v1/me/layouts/home");
+    expect(put.body).toMatchObject({ panels: [{ type: "pinned", settings: { href: "/pipelines?q=pay&result=bad" } }] });
+  });
   it("the f key jumps to the filter (the slash key opens the finder)", async () => {
     render(<Explorer {...props()} />);
     await userEvent.keyboard("f");

@@ -80,6 +80,7 @@ export function Frame({ me, approvals }: { me: Me; approvals: Approvals }) {
   useEffect(() => {
     const set = () => { const v = currentViewTitle(); document.title = (v ? v + " · " : "") + pageTitle(path); };
     set();
+    void import("../trail").then((m) => m.noteView(path)); // what was opened is kept in the person's own trail, in the background
     return onViewTitle(set);
   }, [path]);
   // A page change in a single-page app is silent: say where we are, and put the reading position at the top of the page.

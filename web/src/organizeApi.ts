@@ -32,7 +32,14 @@ export interface LayoutAnswer {
 }
 export interface SearchHit { kind: string; name: string; detail?: string; path?: string; href: string; score: number }
 
+export interface TrailEntry { kind: string; obj: string; project: string; title: string; href: string; action: string; state: string; at: number; now_state?: string; changed?: string }
+export interface Trail { continue: TrailEntry[]; recent: TrailEntry[]; paused: boolean; retention_days: number }
+
 export const organizeApi = {
+  trail: (limit = 100) => call<Trail>("GET", `/api/v1/activity?limit=${limit}`),
+  note: (e: Partial<TrailEntry>) => call<void>("PUT", "/api/v1/activity", e),
+  clearTrail: () => call<unknown>("DELETE", "/api/v1/activity"),
+  pauseTrail: (paused: boolean) => call<unknown>("PUT", "/api/v1/activity/pause", { paused }),
   home: (view: "mine" | "all", background = false) => call<HomeAnswer>("GET", `/api/v1/home?view=${view}`, undefined, { background }),
   attention: () => call<{ needs: AttentionItem[]; dismissed: AttentionItem[]; retrying: Retry[]; count: number }>("GET", "/api/v1/attention"),
   dismiss: (key: string, snoozeHours = 0) => call<unknown>("POST", "/api/v1/attention/dismiss", { key, snooze_hours: snoozeHours }),
@@ -48,6 +55,6 @@ export const organizeApi = {
   setLayout: (page: string, scope: string, data: Record<string, unknown>, locked = false) => call<LayoutAnswer>("PUT", `/api/v1/layouts/${page}`, { scope, data, locked }),
   setMyLayout: (page: string, data: Record<string, unknown>) => call<LayoutAnswer>("PUT", `/api/v1/me/layouts/${page}`, data),
   resetMyLayout: (page?: string) => call<unknown>("DELETE", page ? `/api/v1/me/layouts/${page}` : "/api/v1/me/layouts"),
-  search: (q: string, limit = 20) => call<{ q: string; hits: SearchHit[]; favorites?: string[] }>("GET", `/api/v1/search?q=${encodeURIComponent(q)}&limit=${limit}`),
+  search: (q: string, limit = 20) => call<{ q: string; hits: SearchHit[]; favorites?: string[]; recent?: TrailEntry[] }>("GET", `/api/v1/search?q=${encodeURIComponent(q)}&limit=${limit}`),
   attentionRuns: (which: "needs" | "running", background = false) => call<import("./api").RunSummary[]>("GET", `/api/v1/runs?attention=${which}`, undefined, { background }),
 };

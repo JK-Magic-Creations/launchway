@@ -7,6 +7,7 @@ import { onLink } from "../router";
 import { terms } from "../terms";
 import { bool, oneOf, setUrl, useUrlState } from "../urlState";
 import { ago } from "../format";
+import { pinToHome } from "./pin";
 import { buildTree, highlight, itemScore, nodeKey, ROOT, visibleNodes, worst, type Seg, type Tone, type XItem, type XNode } from "./tree";
 import "./explorer.css";
 
@@ -210,6 +211,7 @@ export function Explorer(p: ExplorerProps) {
             <span className="faint small" role="status">{list.length} of {p.items.length} {p.noun.plural}{filtering ? " match" : ""}</span>
             <span className="xp-grow" />
             <button type="button" className="btn btn-sm" onClick={() => { void navigator.clipboard?.writeText(location.href); announce("Link to this view copied."); }}>Copy link to this view</button>
+            <button type="button" className="btn btn-sm" onClick={() => { const t = `${p.noun.plural[0].toUpperCase()}${p.noun.plural.slice(1)}${filtering ? ": " + (q.trim() || [status !== "all" && status, label, kind, favOnly && "favorites", mineOnly && "mine"].filter(Boolean).join(", ")) : ""}`; pinToHome(t, location.pathname + location.search).then(() => announce("Pinned to your Home."), () => announce("Could not pin this view.", "assertive")); }}>Pin to Home</button>
             {p.onMove && <button type="button" className="btn btn-sm" aria-pressed={arranging} onClick={() => { setArranging(!arranging); announce(arranging ? "Arranging is off." : "Arranging for everyone is on: drag an item onto a folder, or use Move to."); }}>{arranging ? "Done arranging" : "Arrange for everyone"}</button>}
           </div>
           {arranging && <p className="callout" role="note">Arranging for everyone: what you move here changes the folders for everyone who can see these {p.noun.plural}. Drag an item onto a folder, or use <b>Move to…</b> on it.</p>}
