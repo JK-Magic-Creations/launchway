@@ -116,6 +116,7 @@ CREATE TABLE pull_reviews (
   verdict          TEXT    NOT NULL,
   body             TEXT    NOT NULL DEFAULT '',
   commit_sha       TEXT    NOT NULL DEFAULT '',
+  author_role      TEXT    NOT NULL DEFAULT '',
   state            TEXT    NOT NULL DEFAULT 'submitted',
   dismissed_by     TEXT    NOT NULL DEFAULT '',
   dismissed_reason TEXT    NOT NULL DEFAULT '',

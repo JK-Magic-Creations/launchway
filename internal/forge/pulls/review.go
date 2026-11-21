@@ -197,6 +197,8 @@ type ReviewInput struct {
 	Verdict  string
 	Body     string
 	Comments []NewComment
+	// Role is the reviewer's role on the repository (the API fills it in).
+	Role string
 }
 
 // SubmitReview records a verdict on the pull request as it is now, with the
@@ -226,7 +228,7 @@ func (s *Service) SubmitReview(ctx context.Context, repoID string, p PullRequest
 			return Review{}, fmt.Errorf("comment %d: %w", i+1, err)
 		}
 	}
-	r, err := s.Store.AddReview(ctx, p.ID, Review{Author: author, Verdict: in.Verdict, Body: in.Body, CommitSHA: p.HeadSHA})
+	r, err := s.Store.AddReview(ctx, p.ID, Review{Author: author, Verdict: in.Verdict, Body: in.Body, CommitSHA: p.HeadSHA, Role: in.Role})
 	if err != nil {
 		return r, err
 	}

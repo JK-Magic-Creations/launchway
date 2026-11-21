@@ -62,6 +62,10 @@ type Review struct {
 	Verdict   string `json:"verdict"`
 	Body      string `json:"body,omitempty"`
 	CommitSHA string `json:"commit_sha"`
+	// Role is the author's role on the repository when the review was
+	// submitted (viewer, operator or admin): an approval counts toward a rule
+	// that asks for a role only if it was given by that role.
+	Role string `json:"role,omitempty"`
 	// State is submitted or dismissed.
 	State           string    `json:"state"`
 	DismissedBy     string    `json:"dismissed_by,omitempty"`
@@ -198,13 +202,13 @@ func (s *Store) MarkApplied(ctx context.Context, pullID, id, sha, by string) err
 	return s.Resolve(ctx, pullID, c.ThreadID, by, true)
 }
 
-const reviewCols = `id, author, verdict, body, commit_sha, state, dismissed_by, dismissed_reason, created_at`
+const reviewCols = `id, author, verdict, body, commit_sha, author_role, state, dismissed_by, dismissed_reason, created_at`
 
 // AddReview stores a review.
 func (s *Store) AddReview(ctx context.Context, pullID string, r Review) (Review, error) {
 	r.ID = ids.New("prv")
-	if _, err := s.db.Exec(ctx, `INSERT INTO pull_reviews(id, pull_id, author, verdict, body, commit_sha, created_at) VALUES(?,?,?,?,?,?,?)`,
-		r.ID, pullID, r.Author, r.Verdict, r.Body, r.CommitSHA, ms(s.now())); err != nil {
+	if _, err := s.db.Exec(ctx, `INSERT INTO pull_reviews(id, pull_id, author, verdict, body, commit_sha, author_role, created_at) VALUES(?,?,?,?,?,?,?,?)`,
+		r.ID, pullID, r.Author, r.Verdict, r.Body, r.CommitSHA, r.Role, ms(s.now())); err != nil {
 		return r, err
 	}
 	return s.Review(ctx, pullID, r.ID)
@@ -213,7 +217,7 @@ func (s *Store) AddReview(ctx context.Context, pullID string, r Review) (Review,
 func scanReview(sc interface{ Scan(...any) error }) (Review, error) {
 	var r Review
 	var at int64
-	err := sc.Scan(&r.ID, &r.Author, &r.Verdict, &r.Body, &r.CommitSHA, &r.State, &r.DismissedBy, &r.DismissedReason, &at)
+	err := sc.Scan(&r.ID, &r.Author, &r.Verdict, &r.Body, &r.CommitSHA, &r.Role, &r.State, &r.DismissedBy, &r.DismissedReason, &at)
 	r.CreatedAt = fromMS(at)
 	return r, err
 }

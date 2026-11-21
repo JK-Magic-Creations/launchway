@@ -34,14 +34,21 @@ type Service struct {
 	Git   *storage.Store
 	// OnEvent is told of every change (nil: nobody).
 	OnEvent func(ctx context.Context, e Event)
-	Log     *slog.Logger
+	// Runs finds the runs of a pull request (nil: no checks are known).
+	Runs RunSource
+	// Paths gives a repository's path (owner/name) from its ID (nil: auto-merge is unavailable).
+	Paths func(ctx context.Context, repoID string) (string, error)
+	// AfterMerge is told of a merge made by auto-merge, which no request made.
+	AfterMerge func(ctx context.Context, repoID string, p PullRequest)
+	Log        *slog.Logger
 	// Clock gives the time of commits made by the server (default time.Now).
 	Clock func() time.Time
 
-	sem  chan struct{}
-	wg   sync.WaitGroup
-	mu   sync.Mutex
-	jobs map[string]*job
+	beforeCommit func()
+	sem          chan struct{}
+	wg           sync.WaitGroup
+	mu           sync.Mutex
+	jobs         map[string]*job
 	// background is cancelled by Close.
 	background context.Context
 	cancel     context.CancelFunc
@@ -49,7 +56,7 @@ type Service struct {
 
 type job struct{ again bool }
 
-// NewService makes the service. Close stops its background work.
+// NewService makes the service. Stop ends its background work.
 func NewService(store *Store, git *storage.Store, log *slog.Logger) *Service {
 	if log == nil {
 		log = slog.Default()
@@ -58,8 +65,8 @@ func NewService(store *Store, git *storage.Store, log *slog.Logger) *Service {
 	return &Service{Store: store, Git: git, Log: log, sem: make(chan struct{}, 4), jobs: map[string]*job{}, background: ctx, cancel: cancel}
 }
 
-// Close stops the background judging and waits for it.
-func (s *Service) Close() {
+// Stop stops the background judging and waits for it.
+func (s *Service) Stop() {
 	s.cancel()
 	s.wg.Wait()
 }

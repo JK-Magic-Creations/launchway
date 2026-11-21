@@ -57,7 +57,7 @@ func newWorld(t *testing.T) *world {
 		t.Fatal(err)
 	}
 	svc := NewService(NewStore(eng.Database()), st, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	t.Cleanup(svc.Close)
+	t.Cleanup(svc.Stop)
 	return &world{t: t, eng: eng, st: st, svc: svc, ctx: context.Background()}
 }
 

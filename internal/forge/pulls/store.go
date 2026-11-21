@@ -454,3 +454,24 @@ func (s *Store) LinkRun(ctx context.Context, pullID, runID, head string) error {
 	_, err := s.db.Exec(ctx, `INSERT INTO pull_runs(pull_id, run_id, head_sha, created_at) VALUES(?,?,?,?) ON CONFLICT(pull_id, run_id) DO NOTHING`, pullID, runID, head, ms(s.now()))
 	return err
 }
+
+// Candidate is a pull request waiting for its rules to pass.
+type Candidate struct{ RepoID, ID string }
+
+// AutoMergeCandidates lists the open pull requests that asked for auto-merge.
+func (s *Store) AutoMergeCandidates(ctx context.Context) ([]Candidate, error) {
+	rows, err := s.db.Query(ctx, `SELECT repo_id, id FROM pull_requests WHERE state = 'open' AND auto_merge <> '' ORDER BY updated_at LIMIT 500`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Candidate
+	for rows.Next() {
+		var c Candidate
+		if err := rows.Scan(&c.RepoID, &c.ID); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
