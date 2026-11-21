@@ -727,6 +727,8 @@ type logIn struct {
 	Query    string `json:"query,omitempty" jsonschema:"search: the text to look for, ignoring case (at most 200 bytes)"`
 	Stream   string `json:"stream,omitempty" jsonschema:"only this stream: stdout, stderr, system or service (the output of the services beside the steps, each line starting with the service's name); default all but service"`
 	Service  string `json:"service,omitempty" jsonschema:"with stream service: only this service's lines"`
+	// WaitSeconds makes head mode a live follow: with after_seq set (the previous call's next_seq), the call waits until new lines exist.
+	WaitSeconds int `json:"wait_seconds,omitempty" jsonschema:"head with after_seq: wait up to this many seconds (at most 25) for new lines instead of answering at once with none; call again with next_seq to follow a step live"`
 }
 
 type logLineOut struct {
@@ -741,6 +743,7 @@ type logOut struct {
 	Attempt int    `json:"attempt"`
 	Mode    string `json:"mode"`
 	// More says that there is more of the log in the direction read.
+	NextSeq   int    `json:"next_seq" jsonschema:"the cursor: the sequence number of the last line returned (or after_seq if none); pass it as after_seq to read what comes next"`
 	More      bool   `json:"more,omitempty" jsonschema:"there are more lines: for head, call again with after_seq set to the last seq; for tail, earlier lines exist"`
 	Cut       string `json:"cut,omitempty" jsonschema:"what was shortened to stay within the size limit"`
 	Untrusted struct {
@@ -781,10 +784,21 @@ func getStepLog(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in logI
 		Attempt int              `json:"attempt"`
 		Lines   []engine.LogLine `json:"lines"`
 	}
-	if err := c.apiJSON(ctx, "get_step_log", http.MethodGet, apiPath("/api/v1/runs/%s/steps/%s/logs", in.RunID, in.Step)+"?"+q.Encode(), nil, &got); err != nil {
-		return logOut{}, err
+	deadline := time.Now().Add(time.Duration(min(max(in.WaitSeconds, 0), 25)) * time.Second)
+	for {
+		if err := c.apiJSON(ctx, "get_step_log", http.MethodGet, apiPath("/api/v1/runs/%s/steps/%s/logs", in.RunID, in.Step)+"?"+q.Encode(), nil, &got); err != nil {
+			return logOut{}, err
+		}
+		if len(got.Lines) > 0 || mode != "head" || in.AfterSeq <= 0 || !time.Now().Before(deadline) {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return logOut{}, ctx.Err()
+		case <-time.After(300 * time.Millisecond):
+		}
 	}
-	out := logOut{RunID: in.RunID, Step: in.Step, Attempt: got.Attempt, Mode: mode}
+	out := logOut{RunID: in.RunID, Step: in.Step, Attempt: got.Attempt, Mode: mode, NextSeq: in.AfterSeq}
 	out.Untrusted.Lines = []logLineOut{}
 	lines := got.Lines
 	if len(lines) > n {
@@ -818,6 +832,9 @@ func getStepLog(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in logI
 		slices.Reverse(kept)
 	}
 	out.Untrusted.Lines = kept
+	if n := len(kept); n > 0 && mode != "search" {
+		out.NextSeq = kept[n-1].Seq
+	}
 	var cuts []string
 	if cutLines > 0 {
 		cuts = append(cuts, fmt.Sprintf("%d long lines were cut to %d bytes", cutLines, maxLineBytes))

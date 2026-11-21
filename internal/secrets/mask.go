@@ -15,7 +15,8 @@ const MinMaskLen = 4
 // Masker replaces secret values in text with ***. A nil *Masker masks
 // nothing.
 type Masker struct {
-	r *strings.Replacer
+	r      *strings.Replacer
+	pieces []string
 }
 
 // NewMasker returns a masker for the given values, keyed by variable name.
@@ -51,7 +52,7 @@ func NewMasker(values map[string]string) (*Masker, []string) {
 	for _, p := range pieces {
 		pairs = append(pairs, p, "***")
 	}
-	return &Masker{r: strings.NewReplacer(pairs...)}, short
+	return &Masker{r: strings.NewReplacer(pairs...), pieces: pieces}, short
 }
 
 // Mask returns s with every secret value replaced by ***.
@@ -60,4 +61,23 @@ func (m *Masker) Mask(s string) string {
 		return s
 	}
 	return m.r.Replace(s)
+}
+
+// Hold says how many bytes at the end of s could be the start of a secret
+// value: text that stops there, without a newline, must wait for more before
+// it is shown, or the secret would be cut in two and escape masking.
+func (m *Masker) Hold(s string) int {
+	if m == nil {
+		return 0
+	}
+	most := 0
+	for _, p := range m.pieces {
+		for k := min(len(p)-1, len(s)); k > most; k-- {
+			if strings.HasSuffix(s, p[:k]) {
+				most = k
+				break
+			}
+		}
+	}
+	return most
 }

@@ -44,7 +44,7 @@ const clientUsage = `Usage:
   launchway runs start <project> [--ref R] [-i name=value ...] [--wait] [--timeout D] [--json]
   launchway runs list [--project P] [--status S] [--lane NAME] [--limit N] [--json]
   launchway runs show <run-id> [--json]
-  launchway runs logs <run-id> [--step S] [--service NAME] [--follow]   --service: a service container's output
+  launchway runs logs <run-id> [step] [--step S] [--service NAME] [--follow]   --service: a service container's output
   launchway runs cancel <run-id>
   launchway approvals list|approve|reject          see launchway approvals
   launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same run goes on, running its failed steps again
@@ -692,8 +692,12 @@ func (cl *client) logs(args []string) error {
 	if err != nil {
 		return err
 	}
+	if len(pos) == 2 && *step == "" {
+		*step = pos[1] // launchway runs logs --follow <run> <step>
+		pos = pos[:1]
+	}
 	if len(pos) != 1 {
-		return usageErr("say which run: launchway runs logs <run-id> [--step S] [--service NAME] [--follow]")
+		return usageErr("say which run: launchway runs logs <run-id> [step] [--step S] [--service NAME] [--follow]")
 	}
 	id := pos[0]
 	type progress struct {
@@ -748,9 +752,14 @@ func (cl *client) logs(args []string) error {
 		if !*follow || terminal(r.Status) {
 			return nil
 		}
-		time.Sleep(pollEvery)
+		// Lines reach the server within about a second of being printed;
+		// following asks twice as often as the other waits do.
+		time.Sleep(min(pollEvery, followEvery))
 	}
 }
+
+// followEvery is how often --follow asks for new lines.
+const followEvery = 400 * time.Millisecond
 
 // bindLocal binds a pipeline run on this machine to its input values
 // (given as -i name=value), as a server does.

@@ -287,8 +287,8 @@ func (k *Kubernetes) Run(ctx context.Context, s Spec, out Sink) (int, error) {
 	stderrR, stderrW := io.Pipe()
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go pipeLines(stdoutR, "stdout", s.Mask, out, &wg)
-	go pipeLines(stderrR, "stderr", s.Mask, out, &wg)
+	go pipeLines(stdoutR, "stdout", s.Mask, s.Hold, out, &wg)
+	go pipeLines(stderrR, "stderr", s.Mask, s.Hold, out, &wg)
 
 	streamCtx, stopStream := context.WithCancel(context.Background())
 	defer stopStream()
