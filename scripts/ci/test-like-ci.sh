@@ -30,7 +30,15 @@ if [ -z "$tool" ] || ! command -v "$tool" >/dev/null 2>&1; then
 fi
 
 work=$(mktemp -d)
-trap 'chmod -R u+rwX "$work" 2>/dev/null; rm -rf "$work"' EXIT
+# Files the container wrote belong to a mapped user under rootless podman: remove them from inside
+# that mapping when plain removal cannot, and never let cleanup change the exit status.
+cleanup() {
+	st=$?
+	chmod -R u+rwX "$work" 2>/dev/null || true
+	rm -rf "$work" 2>/dev/null || { [ "$tool" = podman ] && podman unshare rm -rf "$work" 2>/dev/null; } || true
+	exit "$st"
+}
+trap cleanup EXIT
 
 # The test step's image and run block, from the pipeline file (a two-space step key, its fields at six).
 awk -v out="$work/cmd.sh" -v imgout="$work/image" '

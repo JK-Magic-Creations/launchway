@@ -129,7 +129,8 @@ func prRepo(flagValue string) (string, error) {
 }
 
 func gitOut(args ...string) (string, error) {
-	return gitexec.Output(context.Background(), gitexec.Spec{Args: args, Inherit: gitexec.Remote})
+	// The person's own git in their own working copy: see gitexec.UserOutput.
+	return gitexec.UserOutput(context.Background(), args...)
 }
 
 func prNumber(pos []string, verb string) (int, []string, error) {
