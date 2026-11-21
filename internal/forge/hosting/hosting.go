@@ -28,6 +28,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/forge/store"
 	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
+	"github.com/jk-magic-creations/launchway/internal/sealing"
 )
 
 // ConnectionName is the name of the connection of kind launchway, made when
@@ -68,6 +69,11 @@ type Options struct {
 	// retries and the delivery client; zero values are the defaults.
 	Egress *egress.Guard
 	Hooks  webhooks.Options
+	// Secrets seals the secrets hosting stores (the run token key, webhook
+	// secrets) under the installation's root key. Nil: a service with no
+	// root key is made, which keeps the run token key in the clear and
+	// refuses webhook secrets, as a server with no root key does.
+	Secrets *sealing.Service
 }
 
 // Hosting is hosting, set up.
@@ -129,7 +135,13 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	if conn.Kind != forge.KindLaunchway {
 		return nil, fmt.Errorf("a connection named %s exists and is of kind %s; rename it before turning hosting on", ConnectionName, conn.Kind)
 	}
-	key, err := o.Engine.SharedValue("git_run_token_key", auth.NewKey())
+	sec := o.Secrets
+	if sec == nil {
+		if sec, err = sealing.Start(ctx, sealing.Options{DB: o.Engine.Database(), Log: o.Log}); err != nil {
+			return nil, err
+		}
+	}
+	key, err := sec.SharedValue("git_run_token_key", auth.NewKey())
 	if err != nil {
 		return nil, fmt.Errorf("the key for run tokens: %w", err)
 	}
@@ -154,13 +166,7 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	hk := o.Hooks
 	hk.DB, hk.Log = db, o.Log
 	if hk.Sealer == nil {
-		seal, err := o.Engine.SharedValue("webhook_secret_seal", auth.NewKey())
-		if err != nil {
-			return nil, fmt.Errorf("the key for webhook secrets: %w", err)
-		}
-		if hk.Sealer, err = auth.NewSealer(seal, "webhook-secret"); err != nil {
-			return nil, err
-		}
+		hk.Sealer = sec.Webhooks()
 	}
 	if hk.Client == nil {
 		g := o.Egress

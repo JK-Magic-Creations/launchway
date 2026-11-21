@@ -74,7 +74,7 @@ func startHosting(ctx context.Context, cfg *config.Config, eng *engine.Engine, l
 		MaxRepoBytes: int64(f.MaxRepoMiB) << 20, MaxPackBytes: int64(f.MaxPushMiB) << 20,
 		Provider:    launchway.Options{DefaultHome: f.DefaultOwner, MaxPerHome: f.MaxPerOwner, CreatesPerMinute: f.CreatesPerMinute, SSHPrefix: sshPrefix},
 		MirrorAllow: f.MirrorAllow, Every: f.MaintainInterval(), CacheBytes: int64(f.CacheGiB) << 30,
-		Hooks: webhooks.Options{OnDisabled: srv.WebhookDisabled},
+		Hooks: webhooks.Options{OnDisabled: srv.WebhookDisabled}, Secrets: srv.Secrets,
 	})
 	if err != nil {
 		return fmt.Errorf("forge.hosting: %w", err)

@@ -380,9 +380,10 @@ func (s *Service) attempt(ctx context.Context, id string, once bool) (Delivery, 
 	}
 	secret := ""
 	if sealed != "" {
-		if err := s.o.Sealer.Open(sealed, &secret); err != nil {
-			secret = ""
+		if b, err := s.o.Sealer.Open(ctx, h.ID, sealed); err != nil {
 			d.Error = "the secret could not be opened with this server's key"
+		} else {
+			secret = string(b)
 		}
 	}
 	status, took, body, sendErr := s.send(ctx, h, d, secret)

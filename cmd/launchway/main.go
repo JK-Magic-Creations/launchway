@@ -185,6 +185,10 @@ func cmdServer(args []string) error {
 	}
 	defer eng.Close()
 	logStore(eng, log)
+	secretsSvc, err := su.startSecrets(context.Background(), eng)
+	if err != nil {
+		return err
+	}
 
 	// Everything but the bootstrap settings is kept in the database
 	// (schema 23): the file's copies are imported once, then ignored.
@@ -217,11 +221,11 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	token, err := config.RunnerToken(cfg.Data, eng)
+	token, err := config.RunnerToken(cfg.Data, secretsSvc)
 	if err != nil {
 		return err
 	}
-	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Actor: cfg.User, Auth: authOpts,
+	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Secrets: secretsSvc, Actor: cfg.User, Auth: authOpts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin}
 	if store.Available() {
 		srv.Settings = store

@@ -51,6 +51,10 @@ func hostedEnvWith(t *testing.T, o envOpts, ho hosting.Options, go_ githttp.Opti
 		ho.Hooks.OnDisabled = e.api.WebhookDisabled
 	}
 	ho.Engine, ho.Blobs, ho.Data, ho.Server, ho.BaseURL, ho.Log = e.eng, blobs, t.TempDir(), "api-test", e.srv.URL, quiet()
+	if ho.Secrets == nil {
+		ho.Secrets = testSecrets(t, e.eng)
+	}
+	e.api.Secrets = ho.Secrets
 	h, err := hosting.New(t.Context(), ho)
 	if err != nil {
 		t.Fatal(err)

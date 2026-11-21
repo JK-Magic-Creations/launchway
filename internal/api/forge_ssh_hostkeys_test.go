@@ -1,13 +1,15 @@
 package api
 
 import (
+	"strings"
 	"sync"
 	"testing"
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
+	"github.com/jk-magic-creations/launchway/internal/keyring"
+	"github.com/jk-magic-creations/launchway/internal/sealing"
 )
 
 // Servers that start together, over one database, end up with the same host
@@ -16,10 +18,8 @@ import (
 // does not open with another sealing key.
 func TestSSHHostKeysAreTheSameOnEveryServer(t *testing.T) {
 	e, _ := hostedEnv(t, envOpts{})
-	seal, err := auth.NewSealer(auth.NewKey(), "ssh-host-key")
-	if err != nil {
-		t.Fatal(err)
-	}
+	svc := e.api.Secrets
+	seal := svc.HostKeys()
 	const servers = 5
 	got := make([][]ssh.Signer, servers)
 	errs := make([]error, servers)
@@ -46,13 +46,12 @@ func TestSSHHostKeysAreTheSameOnEveryServer(t *testing.T) {
 	if types[0] != ssh.KeyAlgoED25519 || types[1] != ssh.KeyAlgoECDSA256 || types[2] != ssh.KeyAlgoRSA {
 		t.Errorf("host key types: %v", types)
 	}
-	// Sealed: another sealing key cannot open them.
-	other, _ := auth.NewSealer(auth.NewKey(), "ssh-host-key")
-	if _, err := sshkeys.New(e.eng.Database()).HostSigners(t.Context(), other); err == nil {
-		t.Error("host keys opened with another sealing key")
+	// Sealed: another root key does not even start against this database.
+	if _, err := sealing.Start(t.Context(), sealing.Options{DB: e.eng.Database(), Holder: testRootKey(t)}); err == nil {
+		t.Error("another root key opened this database's keys")
 	}
 	var raw string
-	if err := e.eng.Database().QueryRow(t.Context(), `SELECT sealed FROM ssh_host_keys WHERE algo = 'ed25519'`).Scan(&raw); err != nil || len(raw) < 60 {
+	if err := e.eng.Database().QueryRow(t.Context(), `SELECT sealed FROM ssh_host_keys WHERE algo = 'ed25519'`).Scan(&raw); err != nil || len(raw) < 60 || !strings.HasPrefix(raw, keyring.Prefix) {
 		t.Fatalf("stored value: %q %v", raw, err)
 	}
 }

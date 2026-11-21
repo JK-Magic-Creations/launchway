@@ -46,7 +46,7 @@ func (s *Server) loginSealer() (*auth.Sealer, error) {
 	if s.sealer != nil {
 		return s.sealer, nil
 	}
-	key, err := s.Engine.SharedValue("login_state_key", auth.NewKey())
+	key, err := s.sharedSecret("login_state_key")
 	if err != nil {
 		return nil, err
 	}

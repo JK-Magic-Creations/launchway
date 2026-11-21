@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 )
 
@@ -244,7 +243,7 @@ func (s *Server) hostedKey() ([]byte, error) {
 	if s.reportKey != nil {
 		return s.reportKey, nil
 	}
-	v, err := s.Engine.SharedValue("hosted_report_key", auth.NewKey())
+	v, err := s.sharedSecret("hosted_report_key")
 	if err != nil {
 		return nil, err
 	}

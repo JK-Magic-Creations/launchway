@@ -7,6 +7,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
+	"github.com/jk-magic-creations/launchway/internal/keyring"
 )
 
 // Webhooks of repositories and of owners. A repository's hooks are its
@@ -50,6 +51,8 @@ func (s *Server) failHook(w http.ResponseWriter, err error) {
 		writeErr(w, http.StatusNotFound, "no such webhook")
 	case errors.Is(err, webhooks.ErrInvalid):
 		writeErr(w, http.StatusBadRequest, strings.TrimPrefix(err.Error(), "invalid webhook: "))
+	case errors.Is(err, keyring.ErrNoRootKey):
+		writeNoRootKey(w, "Webhooks with secrets")
 	default:
 		s.fail(w, err)
 	}

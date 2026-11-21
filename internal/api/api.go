@@ -75,7 +75,7 @@ type Server struct {
 	// Settings is the configuration kept in the database (schema 23), under /api/v1/config; nil if none.
 	Settings  *settings.Service
 	Variables *settings.VariableService // variables set at levels (schema 29)
-
+	Secrets   *secretsService           // seals the stored secrets under the root key (see secret_store.go); nil: made on first use, without a root key
 	sealerMu  sync.Mutex
 	sealer    *auth.Sealer // seals the state of sign-ins in progress
 	reportKey []byte       // signs links to HTML reports
