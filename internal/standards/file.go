@@ -90,9 +90,7 @@ func ParseFile(data []byte, now time.Time) (Settings, []string) {
 	rest := s
 	rest.Ignore = nil
 	rest.Checks = nil
-	for _, p := range rest.Problems(now, false) {
-		problems = append(problems, p)
-	}
+	problems = append(problems, rest.Problems(now, false)...)
 	if len(s.Ignore) > maxIgnores {
 		problems = append(problems, fmt.Sprintf("ignore: at most %d entries.", maxIgnores))
 		s.Ignore = s.Ignore[:maxIgnores]

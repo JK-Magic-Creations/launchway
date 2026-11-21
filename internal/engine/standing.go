@@ -49,7 +49,7 @@ func (c *cmd) enrichFindings(step string, list []storedFinding, rules []findings
 	for i := range list {
 		list[i].std = standards.NormalizeOne(check, list[i].Finding, byRule[list[i].Tool+"\x00"+list[i].RuleID], seen)
 		// What is shown is the path in the repository, not where the tool saw it in its container.
-		list[i].Finding.File = list[i].std.File
+		list[i].File = list[i].std.File
 	}
 }
 
@@ -156,18 +156,12 @@ func (c *cmd) gateEvidence(def *pipeline.Step) (*gateEvidence, error) {
 		n := min(len(ts), 20)
 		cond, args := findingTripleFilter(ts[:n])
 		ts = ts[n:]
-		rows, err := c.tx.Query(`SELECT check_id, tool, rule_id, severity, kind, message, file, start_line, package, version, fixed_in, advisories,
-				reachable, fix, track FROM findings f WHERE `+cond+` ORDER BY id`, args...)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
+		if err := queryEach(c.tx, func(rows *sql.Rows) error {
 			var f standards.Finding
 			var sev, kind, adv string
 			if err := rows.Scan(&f.Check, &f.Tool, &f.Rule, &sev, &kind, &f.Title, &f.File, &f.Line, &f.Package, &f.Version, &f.FixedIn, &adv,
 				&f.Reachable, &f.Fix, &f.Fingerprint); err != nil {
-				rows.Close()
-				return nil, err
+				return err
 			}
 			f.Severity, f.Kind = findings.Severity(sev), standards.Kind(kind)
 			if adv != "" {
@@ -177,9 +171,9 @@ func (c *cmd) gateEvidence(def *pipeline.Step) (*gateEvidence, error) {
 				seenFP[k] = true
 				ev.findings = append(ev.findings, f)
 			}
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
+			return nil
+		}, `SELECT check_id, tool, rule_id, severity, kind, message, file, start_line, package, version, fixed_in, advisories,
+				reachable, fix, track FROM findings f WHERE `+cond+` ORDER BY id`, args...); err != nil {
 			return nil, err
 		}
 	}
@@ -193,20 +187,14 @@ func (c *cmd) gateEvidence(def *pipeline.Step) (*gateEvidence, error) {
 		return nil, err
 	}
 	ev.hasBase = n > 0
-	rows, err := c.tx.Query(`SELECT track FROM standing_tracked WHERE project = ? AND status = 'open'`, st.Project)
-	if err != nil {
-		return nil, err
-	}
-	for rows.Next() {
+	if err := queryEach(c.tx, func(brows *sql.Rows) error {
 		var t string
-		if err := rows.Scan(&t); err != nil {
-			rows.Close()
-			return nil, err
+		if err := brows.Scan(&t); err != nil {
+			return err
 		}
 		ev.baseline[t] = true
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+		return nil
+	}, `SELECT track FROM standing_tracked WHERE project = ? AND status = 'open'`, st.Project); err != nil {
 		return nil, err
 	}
 	ds, err := activeDecisions(c.tx, st.Project, c.now)
@@ -315,15 +303,10 @@ func (c *cmd) recordBacklog(ev *gateEvidence, now time.Time) error {
 
 func (c *cmd) recordHistory(now time.Time) error {
 	var total, crit, high, med, low int
-	rows, err := c.tx.Query(`SELECT severity, count(*) FROM standing_tracked WHERE project = ? AND status = 'open' GROUP BY severity`, c.st.Project)
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
+	if err := queryEach(c.tx, func(rows *sql.Rows) error {
 		var sev string
 		var n int
 		if err := rows.Scan(&sev, &n); err != nil {
-			rows.Close()
 			return err
 		}
 		total += n
@@ -337,12 +320,11 @@ func (c *cmd) recordHistory(now time.Time) error {
 		case "low":
 			low = n
 		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+		return nil
+	}, `SELECT severity, count(*) FROM standing_tracked WHERE project = ? AND status = 'open' GROUP BY severity`, c.st.Project); err != nil {
 		return err
 	}
-	_, err = c.tx.Exec(`INSERT INTO standing_history(project, day, total, critical, high, medium, low) VALUES(?,?,?,?,?,?,?)
+	_, err := c.tx.Exec(`INSERT INTO standing_history(project, day, total, critical, high, medium, low) VALUES(?,?,?,?,?,?,?)
 		ON CONFLICT(project, day) DO UPDATE SET total = excluded.total, critical = excluded.critical, high = excluded.high, medium = excluded.medium, low = excluded.low`,
 		c.st.Project, now.UTC().Format("2006-01-02"), total, crit, high, med, low)
 	return err
@@ -370,4 +352,22 @@ func activeDecisions(q interface {
 		out[d.Fingerprint] = d
 	}
 	return out, rows.Err()
+}
+
+// queryEach runs a query and calls scan for every row, closing the rows on
+// every path.
+func queryEach(q interface {
+	Query(string, ...any) (*sql.Rows, error)
+}, scan func(*sql.Rows) error, query string, args ...any) error {
+	rows, err := q.Query(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := scan(rows); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }

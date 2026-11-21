@@ -113,10 +113,10 @@ func Write(dir string, only ...string) error {
 		}
 		body = strings.ReplaceAll(strings.ReplaceAll(body, "@TOKEN@", token()), "@PLAIN@", "abcd1234"+"efgh5678ijkl")
 		p := filepath.Join(dir, filepath.FromSlash(name))
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
 			return err
 		}
-		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+		if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
 			return err
 		}
 	}

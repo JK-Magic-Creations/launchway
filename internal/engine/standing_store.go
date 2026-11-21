@@ -301,16 +301,7 @@ func (e *Engine) StandingFindings(project string, q StandingQuery) (*StandingLis
 		default:
 			out.Accepted++
 		}
-		switch {
-		case want == "accepted" && f.Status != standards.StatusAccepted && f.Status != standards.StatusFalsePositive:
-			continue
-		case want != "all" && want != "accepted" && f.Status != want:
-			continue
-		case len(sevs) > 0 && !sevs[f.Severity]:
-			continue
-		case q.Check != "" && f.Check != q.Check:
-			continue
-		case search != "" && !strings.Contains(strings.ToLower(f.Title+" "+f.Rule+" "+f.File+" "+f.Package), search):
+		if !q.keeps(f, want, sevs, search) {
 			continue
 		}
 		match = append(match, f)
@@ -374,20 +365,14 @@ func (e *Engine) StandingHistory(project string, days int) (*StandingSeries, err
 		days = 90
 	}
 	since := e.now().AddDate(0, 0, -days).UTC().Format("2006-01-02")
-	rows, err := e.db.Query(`SELECT day, total, critical, high, medium, low FROM standing_history WHERE project = ? AND day >= ? ORDER BY day`, project, since)
-	if err != nil {
-		return nil, err
-	}
-	for rows.Next() {
+	if err := queryEach(e.db, func(rows *sql.Rows) error {
 		var p StandingPoint
 		if err := rows.Scan(&p.Day, &p.Total, &p.Critical, &p.High, &p.Medium, &p.Low); err != nil {
-			rows.Close()
-			return nil, err
+			return err
 		}
 		s.Points = append(s.Points, p)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+		return nil
+	}, `SELECT day, total, critical, high, medium, low FROM standing_history WHERE project = ? AND day >= ? ORDER BY day`, project, since); err != nil {
 		return nil, err
 	}
 	var sum sql.NullFloat64
@@ -503,28 +488,9 @@ func (e *Engine) RunInspection(runID string, q InspectionQuery) (*RunInspection,
 	if gate == nil {
 		return out, nil
 	}
-	out.Present = true
-	var raw string
-	var blocked, def int
-	err = e.db.QueryRow(`SELECT blocked, default_branch, summary, detail FROM standing_verdicts WHERE run_id = ?`, runID).Scan(&blocked, &def, &out.Summary, &raw)
-	var det verdictDetail
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		out.Pending = true
-		out.Summary = "The checks have not all finished, so there is no verdict yet."
-		if gate.Gate != nil {
-			_ = json.Unmarshal(gate.Gate.Policy, &det.Policy)
-		}
-	case err != nil:
+	det, err := e.loadVerdict(runID, gate, out)
+	if err != nil {
 		return nil, err
-	default:
-		out.Blocked, out.DefaultBranch = blocked == 1, def == 1
-		_ = json.Unmarshal([]byte(raw), &det)
-		out.Counts, out.NoBaseline, out.Incomplete, out.Truncated = det.Counts, det.NoBaseline, det.Incomplete, det.Truncated
-	}
-	out.ProfileVersion, out.FailOn, out.Notices = det.Policy.ProfileVersion, string(det.Policy.FailOn), det.Policy.Notices
-	if out.Counts == nil {
-		out.Counts = map[string]int{}
 	}
 	isNew := map[string]bool{}
 	for _, f := range det.New {
@@ -544,20 +510,7 @@ func (e *Engine) RunInspection(runID string, q InspectionQuery) (*RunInspection,
 			ts = append(ts, triple{runID, need, s.Attempt})
 		}
 	}
-	checkTotals := map[string]*InspectionCheck{}
-	for _, pc := range det.Policy.Checks {
-		ran := false
-		for _, need := range gate.Needs {
-			if checkOfStep(st.Pipeline.Step(need)) == pc.ID {
-				if s := st.Steps[need]; s != nil && s.Status.Terminal() && s.Status != StepSkippedS && s.Status != StepCanceledS {
-					ran = true
-				}
-			}
-		}
-		ic := &InspectionCheck{ID: pc.ID, Title: pc.Title, State: string(pc.State), Ran: ran && !contains(out.Incomplete, pc.ID)}
-		checkTotals[pc.ID] = ic
-		out.Checks = append(out.Checks, *ic)
-	}
+	inspectionChecks(det, gate, st, out)
 	idx := map[string]int{}
 	for i, c := range out.Checks {
 		idx[c.ID] = i
@@ -618,27 +571,20 @@ func (e *Engine) inspectionFindings(ts []triple, decisions map[string]standards.
 		n := min(len(ts), 20)
 		cond, args := findingTripleFilter(ts[:n])
 		ts = ts[n:]
-		rows, err := e.db.Query(`SELECT step_id, check_id, tool, rule_id, severity, kind, message, file, start_line, package, version, fixed_in, advisories,
-				reachable, fix, track, COALESCE((SELECT help_uri FROM finding_rules r WHERE r.run_id = f.run_id AND r.step_id = f.step_id AND r.attempt = f.attempt AND r.tool = f.tool AND r.rule_id = f.rule_id), '')
-			FROM findings f WHERE `+cond+` ORDER BY id`, args...)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
+		if err := queryEach(e.db, func(rows *sql.Rows) error {
 			var f InspectionFinding
 			var adv string
 			if err := rows.Scan(&f.Step, &f.Check, &f.Tool, &f.Rule, &f.Severity, &f.Kind, &f.Title, &f.File, &f.Line, &f.Package, &f.Version, &f.FixedIn, &adv, &f.Reachable, &f.Fix, &f.Fingerprint, &f.HelpURI); err != nil {
-				rows.Close()
-				return nil, err
+				return err
 			}
 			if adv != "" {
 				f.Advisories = strings.Split(adv, ",")
 			}
-			if k := f.Step + "\x00" + f.Fingerprint; seen[k] {
-				continue // the same package and advisory reported twice is one finding
-			} else {
-				seen[k] = true
+			k := f.Step + "\x00" + f.Fingerprint
+			if seen[k] {
+				return nil // the same package and advisory reported twice is one finding
 			}
+			seen[k] = true
 			standingOf(&f, decisions, out, isNew)
 			f.Gating = gating[f.Fingerprint] && f.Standing == standards.StandingNew || gating[f.Fingerprint] && out.DefaultBranch
 			if i, ok := idx[f.Check]; ok {
@@ -648,9 +594,10 @@ func (e *Engine) inspectionFindings(ts []triple, decisions map[string]standards.
 				}
 			}
 			all = append(all, f)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
+			return nil
+		}, `SELECT step_id, check_id, tool, rule_id, severity, kind, message, file, start_line, package, version, fixed_in, advisories,
+				reachable, fix, track, COALESCE((SELECT help_uri FROM finding_rules r WHERE r.run_id = f.run_id AND r.step_id = f.step_id AND r.attempt = f.attempt AND r.tool = f.tool AND r.rule_id = f.rule_id), '')
+			FROM findings f WHERE `+cond+` ORDER BY id`, args...); err != nil {
 			return nil, err
 		}
 	}
@@ -689,4 +636,65 @@ func (e *Engine) StandingInspected(project string) bool {
 		return false
 	}
 	return n > 0
+}
+
+// keeps says whether a backlog finding matches the query.
+func (q StandingQuery) keeps(f TrackedFinding, want string, sevs map[string]bool, search string) bool {
+	switch {
+	case want == "accepted" && f.Status != standards.StatusAccepted && f.Status != standards.StatusFalsePositive:
+		return false
+	case want != "all" && want != "accepted" && f.Status != want:
+		return false
+	case len(sevs) > 0 && !sevs[f.Severity]:
+		return false
+	case q.Check != "" && f.Check != q.Check:
+		return false
+	case search != "" && !strings.Contains(strings.ToLower(f.Title+" "+f.Rule+" "+f.File+" "+f.Package), search):
+		return false
+	}
+	return true
+}
+
+// loadVerdict reads what the gate said about a run into out (or says it has
+// not said anything yet) and returns the detail it kept.
+func (e *Engine) loadVerdict(runID string, gate *pipeline.Step, out *RunInspection) (verdictDetail, error) {
+	out.Present = true
+	var raw string
+	var blocked, def int
+	err := e.db.QueryRow(`SELECT blocked, default_branch, summary, detail FROM standing_verdicts WHERE run_id = ?`, runID).Scan(&blocked, &def, &out.Summary, &raw)
+	var det verdictDetail
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		out.Pending = true
+		out.Summary = "The checks have not all finished, so there is no verdict yet."
+		if gate.Gate != nil {
+			_ = json.Unmarshal(gate.Gate.Policy, &det.Policy)
+		}
+	case err != nil:
+		return det, err
+	default:
+		out.Blocked, out.DefaultBranch = blocked == 1, def == 1
+		_ = json.Unmarshal([]byte(raw), &det)
+		out.Counts, out.NoBaseline, out.Incomplete, out.Truncated = det.Counts, det.NoBaseline, det.Incomplete, det.Truncated
+	}
+	out.ProfileVersion, out.FailOn, out.Notices = det.Policy.ProfileVersion, string(det.Policy.FailOn), det.Policy.Notices
+	if out.Counts == nil {
+		out.Counts = map[string]int{}
+	}
+	return det, nil
+}
+
+// inspectionChecks lists the checks of a run and whether each one ran.
+func inspectionChecks(det verdictDetail, gate *pipeline.Step, st *RunState, out *RunInspection) {
+	for _, pc := range det.Policy.Checks {
+		ran := false
+		for _, need := range gate.Needs {
+			if checkOfStep(st.Pipeline.Step(need)) == pc.ID {
+				if s := st.Steps[need]; s != nil && s.Status.Terminal() && s.Status != StepSkippedS && s.Status != StepCanceledS {
+					ran = true
+				}
+			}
+		}
+		out.Checks = append(out.Checks, InspectionCheck{ID: pc.ID, Title: pc.Title, State: string(pc.State), Ran: ran && !contains(out.Incomplete, pc.ID)})
+	}
 }

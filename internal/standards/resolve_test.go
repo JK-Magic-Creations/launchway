@@ -56,7 +56,7 @@ func TestNearestLevelWinsAndShowsWhatItOverrides(t *testing.T) {
 	if c.V != Advise || c.From.Level != LevelProject || c.Locked != nil {
 		t.Fatalf("%+v", c)
 	}
-	if len(c.Chain) != 3 || c.Chain[0].Display != "advise" || !c.Chain[1].Overridden || c.Chain[1].Source.Level != LevelOrganization || !c.Chain[2].Overridden {
+	if len(c.Chain) != 3 || c.Chain[0].Display != "advise" || !c.Chain[1].Overridden || c.Chain[1].Level != LevelOrganization || !c.Chain[2].Overridden {
 		t.Errorf("chain: %+v", c.Chain)
 	}
 }
