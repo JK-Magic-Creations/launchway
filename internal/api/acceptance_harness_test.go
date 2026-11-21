@@ -26,7 +26,7 @@ import (
 // its pull-mirror test); with the variable unset it skips and says why. The
 // suite's own result, id by id, is in the report directory (report.md and
 // report.json) and in the test's log. The test fails when the suite does, so
-// a run is a real check; the ids that need the Gitea-compatible routes fail
+// a run is a real check; the ids that need the compatibility routes fail
 // until those routes exist (the README lists them).
 func TestHostingAcceptanceSuite(t *testing.T) {
 	if os.Getenv("LAUNCHWAY_ACCEPTANCE") == "" {

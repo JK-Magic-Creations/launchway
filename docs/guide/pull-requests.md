@@ -158,5 +158,5 @@ Plainly, these do not exist today:
 - **Notifications beyond events and webhooks.** Launchway records every change as an event and sends the
   webhooks you set up; it sends no email, chat message or inbox entry by itself, and has no per-person
   "watching" settings. Whatever listens to the events decides who is told.
-- **The Gitea-compatible pull request routes.** Tools written for Gitea's API cannot yet list or open pull
+- **The compatibility pull request routes.** Tools written for another Git host's API (the routes the acceptance suite lists) cannot yet list or open pull
   requests here; they use Launchway's own routes above.
