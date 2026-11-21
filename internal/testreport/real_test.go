@@ -179,7 +179,7 @@ func TestRealJUnitDialects(t *testing.T) {
 	r = parseReal(t, "dotnet/xunit/junit.xml", FormatJUnit)
 	wantCounts(t, r, Counts{Total: 7, Passed: 3, Failed: 3, Skipped: 1})
 
-	// Playwright's JUnit reporter names attachments the Jenkins way.
+	// Playwright's JUnit reporter names attachments with the [[ATTACHMENT|path]] text form.
 	r = parseReal(t, "playwright/junit.xml", FormatJUnit)
 	wantCounts(t, r, Counts{Total: 12, Passed: 8, Failed: 2, Skipped: 2})
 	c = findCase(t, r, "shop › flaky: passes on retry")

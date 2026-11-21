@@ -219,7 +219,7 @@ func (p *junitParser) addProp(name, value string) {
 }
 
 // attachSink keeps a case's output and picks out the attachments it names
-// the Jenkins way: [[ATTACHMENT|path]].
+// the plain-text way many report writers use: [[ATTACHMENT|path]].
 type attachSink struct {
 	out *tailBuf
 	c   *jcase

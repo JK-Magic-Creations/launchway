@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean test-s3 \
+.PHONY: all web build image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality test-s3 \
 	tools release-local release-reproduce release-images vulncheck license-check lint-scripts lint-workflows \
 	charts-sync test-install test-runner-chart bundle test-bundle
 
@@ -316,6 +316,9 @@ lint-baseline-update: $(GOLANGCI_LINT)
 arch:
 	go test -count=1 -run 'TestImportsAreInTheTable|TestTableHasNoStaleEdges|TestForbiddenEdges|TestKnownExceptionsAreStillNeeded' ./internal/archtest/
 
+originality:
+	go test -count=1 -run TestNoOtherProductsAreNamed ./internal/archtest/
+
 ratchet:
 	go test -count=1 -run TestSizeRatchet ./internal/archtest/
 
@@ -352,7 +355,7 @@ coverage-update: coverage
 	go run ./scripts/quality/covercheck update bin/coverage.txt $(QUALITY_DIR)/coverage-floor.json
 
 # The fast gates: a few minutes, no test suite of the server.
-check: fmt-check vet lint arch ratchet web-lint web-test
+check: fmt-check vet lint arch originality ratchet web-lint web-test
 	@echo "make check: all fast gates passed"
 
 # Everything, including the Go tests with the coverage floors and the bundle budget.
