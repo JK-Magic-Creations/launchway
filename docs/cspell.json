@@ -13,7 +13,8 @@
     "/\\]\\([^)]*\\)/g",
     "/https?:\\/\\/\\S+/g",
     "/<[^>]+>/g",
-    "/sha256:[0-9a-f…]+/g"
+    "/sha256:[0-9a-f…]+/g",
+    "/\\b[a-z]{3}_[0-9a-z]{16,}\\b/g"
   ],
   "words": [
     "bestpractices", "COEP", "errcheck", "golangci", "gosec", "HSTS", "keylessly", "kubeconform", "shellcheck", "Subresource", "Syft", "Tetrate", "Liquibase", "Virt", "bootable", "cutover",
