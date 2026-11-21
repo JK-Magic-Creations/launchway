@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
+	"strconv"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -42,6 +44,15 @@ func sshEnvWith(t *testing.T, o envOpts, mod func(*SSHOptions)) *sshHarness {
 	t.Helper()
 	if _, err := exec.LookPath("ssh"); err != nil {
 		t.Skip("no ssh client")
+	}
+	// The OpenSSH client refuses to run for a user with no account entry ("No user exists for
+	// uid N"), which is how some containers run a step. These tests need the real client, so
+	// they are skipped there unless LAUNCHWAY_REQUIRE_SSH_TESTS says they must run.
+	if _, err := user.LookupId(strconv.Itoa(os.Getuid())); err != nil {
+		if os.Getenv("LAUNCHWAY_REQUIRE_SSH_TESTS") != "" {
+			t.Fatalf("the ssh client cannot run here: no account entry for uid %d", os.Getuid())
+		}
+		t.Skipf("the ssh client cannot run here: no account entry for uid %d", os.Getuid())
 	}
 	e, _ := hostedEnv(t, o)
 	addr := make(chan net.Addr, 1)
