@@ -1,5 +1,6 @@
 // GET /api/v1/launch-lines: where each recent change is on its way (internal/api/launchlines.go).
 import { call } from "../api";
+import type { Parallel } from "../kit/LaunchLine";
 
 /** Station states as the server says them. */
 export type StationState = "done" | "running" | "waiting" | "failed" | "idle" | "skipped";
@@ -13,6 +14,8 @@ export interface StationView {
   detail: string;
   /** The step to open to see more. */
   step?: string;
+  /** Set when the station stands for several steps: how many, how many can run together, how each is doing. */
+  parallel?: Parallel;
 }
 
 export interface LaunchLineView {

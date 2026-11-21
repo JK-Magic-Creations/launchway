@@ -2,11 +2,25 @@ import { Icon } from "./Icon";
 import { stateOfStation, type State } from "./Status";
 
 /** One station: a place a change has to pass. state is the design's state; unknown states are drawn as not started. */
-export interface LineStation { key: string; label: string; state: State; detail?: string }
+export interface LineStation { key: string; label: string; state: State; detail?: string; parallel?: Parallel }
+
+/** A station that stands for several steps: how many, how many can run at the same time, how each is doing. */
+export interface Parallel {
+  total: number; together: number; done: number; running: number; waiting: number; failed: number; skipped: number; idle: number;
+  steps: { id: string; state: string }[];
+}
 
 /** The station states the server's launch lines use, as the design's. */
-export function toStations(list: { key: string; label: string; state: string; detail?: string }[]): LineStation[] {
-  return list.map((s) => ({ key: s.key, label: s.label, state: stateOfStation(s.state), detail: s.detail }));
+export function toStations(list: { key: string; label: string; state: string; detail?: string; parallel?: Parallel }[]): LineStation[] {
+  return list.map((s) => ({ key: s.key, label: s.label, state: stateOfStation(s.state), detail: s.detail, parallel: s.parallel }));
+}
+
+/** "3 at once: 2 passed, 1 running": what a station made of several steps is doing, in words. */
+export function parallelText(p: Parallel): string {
+  const parts = ([[p.done, "passed"], [p.running, "running"], [p.waiting, "waiting for a person"], [p.failed, "failed"], [p.skipped, "skipped"], [p.idle, "not started"]] as const)
+    .filter(([n]) => n > 0).map(([n, w]) => `${n} ${w}`);
+  const head = p.together >= p.total ? `${p.total} at once` : p.together > 1 ? `${p.total} steps, ${p.together} at once` : `${p.total} steps in a row`;
+  return `${head}: ${parts.join(", ")}`;
 }
 
 /** LaunchLine draws a change's journey: stations on a track. Track colour carries state: slate passed,
@@ -30,7 +44,8 @@ export function LaunchLine({ stations, big, compact, selected, onSelect, label }
             <span className="p" aria-hidden="true">{pin(s.state)}</span>
             <span className="t" aria-hidden="true">{s.label}</span>
             <span className="u" title={s.detail} aria-hidden="true">{s.detail ?? ""}</span>
-            <span className="visually-hidden">{`${s.label}: ${WORDS[s.state]}${s.detail ? ". " + s.detail : ""}${i === at && s.state !== "idle" ? " (now)" : ""}`}</span>
+            {s.parallel && <Stack p={s.parallel} />}
+            <span className="visually-hidden">{`${s.label}: ${WORDS[s.state]}${s.detail ? ". " + s.detail : ""}${s.parallel ? ". " + parallelText(s.parallel) : ""}${i === at && s.state !== "idle" ? " (now)" : ""}`}</span>
           </>
         );
         const c = `ls ${s.state}${i === stations.length - 1 && s.state === "ok" ? " last" : ""}`;
@@ -52,4 +67,20 @@ function pin(state: State) {
     case "run": return <span className="st run spinner" aria-hidden="true" />;
     default: return null;
   }
+}
+
+const STEP_WORDS: Record<string, string> = { done: "passed", running: "running", waiting: "waiting for a person", failed: "failed", skipped: "skipped", idle: "not started" };
+
+/** The mark of a station that stands for several steps: a small stack with the count, and, on hover or when the row has
+ * focus, each step with its state. The words are in the station's text alternative; the stack is for the eye. */
+function Stack({ p }: { p: Parallel }) {
+  return (
+    <span className={"pstack" + (p.together > 1 ? " together" : "")} aria-hidden="true">
+      <span className="pstack-n">{p.together > 1 ? "×" : ""}{p.total}</span>
+      <span className="ppop">
+        <b>{parallelText(p)}</b>
+        {p.steps.map((x) => <span key={x.id} className={"pp-" + x.state}>{x.id} <i>{STEP_WORDS[x.state] ?? x.state}</i></span>)}
+      </span>
+    </span>
+  );
 }

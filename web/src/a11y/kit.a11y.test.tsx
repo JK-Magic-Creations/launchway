@@ -12,6 +12,8 @@ import { UserMenu } from "../shell/UserMenu";
 import { NO_FACTS } from "../nav/model";
 import { expectAccessible } from "../test/axe";
 import { me, project, run } from "../test/fixtures";
+import { DIAMOND, FAILED_WITH_SKIPPED, FAN_OUT, LONG_CHAIN, MIXED, MIXED_GROUPS, NOW, OWN_PIPELINE } from "../test/graphFixtures";
+import { Graph } from "../components/Graph";
 
 const STATES: State[] = ["ok", "bad", "warn", "wait", "run", "idle", "skip"];
 const stations: LineStation[] = STATES.map((s) => ({ key: s, label: "Station " + s, state: s, detail: s === "idle" ? undefined : "detail of " + s }));
@@ -50,6 +52,20 @@ describe.each(["light", "dark"])("the kit, %s theme", (theme) => {
       </main>,
     );
     await expectAccessible(container, { name: "states" });
+  });
+
+  it("the pipeline graph, with steps running together, skipped, waiting, failed and folded", async () => {
+    const { container } = render(
+      <main>
+        <h1>Graphs</h1>
+        {[OWN_PIPELINE, FAN_OUT, DIAMOND, LONG_CHAIN, FAILED_WITH_SKIPPED].map((steps, i) => <Graph key={i} steps={steps} selected="test" onSelect={() => {}} now={NOW} />)}
+        <Graph steps={MIXED} groups={MIXED_GROUPS} selected={null} onSelect={() => {}} now={NOW} />
+        <Graph steps={OWN_PIPELINE} selected={null} onSelect={() => {}} now={0} compact describe={(x) => x.container ?? "image"} />
+        <LaunchLine stations={[{ key: "c", label: "Checks", state: "run", detail: "running", parallel: { total: 3, together: 3, done: 2, running: 1, waiting: 0, failed: 0, skipped: 0, idle: 0,
+          steps: [{ id: "a", state: "done" }, { id: "b", state: "done" }, { id: "c", state: "running" }] } }, { key: "d", label: "Deploy", state: "idle" }]} compact />
+      </main>,
+    );
+    await expectAccessible(container, { name: "graph" });
   });
 
   it("tabs, a dialog, the search palette, the areas list and the user menu", async () => {

@@ -57,6 +57,31 @@ request, and `inputs` declares the [values a run is started with](#run-inputs). 
 (with `branches` and `tags` patterns), `pull_request: {}`, [`schedule`](triggers.md#schedules) and
 [`webhook`](triggers.md#webhooks).
 
+## The picture of a pipeline
+
+The run page, the pipeline's **Live** tab and the editor's preview draw the steps as a graph, built from `needs`.
+A step sits one **stage** to the right of the deepest step it needs, so steps that do not wait for each other share a
+stage and are stacked in one column: they run at the same time. A connector runs from each step to the steps that
+need it; one that skips stages goes around the steps between. Each step shows its name, its state in words and an
+icon (never color alone), and how long it has run or took. Every step that is running at the moment has the running
+treatment, so several can be seen at once; skipped, not started and waiting-for-a-person look different from one another.
+
+- Choose a step with the pointer or the keyboard. Arrow right and left follow the connectors to what a step needs and
+  what needs it; arrow up and down move between the steps of a stage; Home and End go to the first and last stage.
+- A pipeline wider than its box scrolls sideways, with a small map to jump along it. In a pipeline of more than 14 steps,
+  a long run of steps one after another folds into one node while none of them needs a look; use the button above the
+  graph to open it. The steps of a template can be folded into one node, named after the template.
+- On a narrow screen (under 640 px) the same picture is a vertical list: each stage is a heading, and the steps that run
+  together are indented under it.
+- For a screen reader the graph is a list of stages: "Stage 2 (runs together): test, security-go, security-web", and each
+  step says what it follows and what runs beside it. Motion respects the reduced-motion setting.
+- `launchway runs show RUN_ID` prints the same stages as text, and the run's `levels` and each step's `needs` are in
+  `GET /api/v1/runs/{id}` and the MCP tool `get_run`.
+
+On Home, in the run lists and on pull requests the compact [launch line](../learn/concepts/launch-line.md) stays one line.
+A station that stands for several steps shows a small stack with their number, and the station's text says it: "3 at once:
+2 passed, 1 running". Hover over it (or focus the row) to see each step.
+
 ## Containers and services
 
 Name the toolboxes a pipeline needs once, then use them by name. Every container in a run shares

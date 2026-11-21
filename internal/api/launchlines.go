@@ -35,6 +35,8 @@ type Station struct {
 	Detail string `json:"detail"`
 	// Step is the step to open to see more, when one stands for the station.
 	Step string `json:"step,omitempty"`
+	// Parallel is set when the station stands for several steps: how many, how many run together, how each is doing.
+	Parallel *Parallel `json:"parallel,omitempty"`
 }
 
 // LaunchLine is one run drawn as stations, with one sentence about where it is.
@@ -166,6 +168,7 @@ func launchLineOf(d *engine.RunDetail) LaunchLine {
 	line.Stations = append(line.Stations, Station{Key: "commit", Label: "Commit", State: stationDone, Detail: shortSHA(d.SHA)})
 	for _, b := range list {
 		resolve(b, deps, d)
+		b.Parallel = parallelOf(b.steps, d.Levels)
 		line.Stations = append(line.Stations, b.Station)
 	}
 	// Verified stands at the end of a line that deploys anywhere: when no verify

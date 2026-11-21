@@ -611,7 +611,9 @@ func (cl *client) show(args []string) error {
 	if r.DeadlineAt > 0 && !terminal(r.Status) {
 		fmt.Fprintf(cl.out, "  times out at %s\n", time.UnixMilli(r.DeadlineAt).Format(time.DateTime))
 	}
-	fmt.Fprintf(cl.out, "  %s/runs/%s\n\nSteps:\n", cl.c.Server, r.ID)
+	fmt.Fprintf(cl.out, "  %s/runs/%s\n\n", cl.c.Server, r.ID)
+	printRunStages(cl.out, &r)
+	fmt.Fprintln(cl.out, "Steps:")
 	defer printActions(cl.out, r.Actions)
 	for _, s := range r.StepList {
 		status := s.Status

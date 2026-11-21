@@ -38,6 +38,10 @@ groups the steps into stations it can name:
 
 A pipeline without a deploy has no environment stations. The line only shows what applies.
 
+A station can stand for several steps. When it does, it shows a small stack with their number, and says how they are
+doing, such as "3 at once: 2 passed, 1 running"; hover over it to see each step. The full shape, with the steps that run
+together side by side, is the graph on the run page.
+
 ## Reading the colors
 
 The color of the track carries the state, so you can read a line at a glance:

@@ -366,7 +366,9 @@ Shows a run and its steps.
 launchway runs show RUN_ID [--json]
 ```
 
-`--json` prints the whole run as the server returns it.
+`--json` prints the whole run as the server returns it. Without it the steps are listed after the run's **stages**: the steps
+of a stage do not wait for each other, so a stage with several runs them at the same time (`stage 2 (runs together): test
+(running), security-go (running)`).
 
 ```sh
 launchway runs show run_06gzde02yts1v325jvp0

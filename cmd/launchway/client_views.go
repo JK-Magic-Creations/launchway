@@ -41,7 +41,9 @@ type runView struct {
 		Reason string `json:"reason"`
 	} `json:"lane"`
 	// Actions are what the server says this caller may do with the run now.
-	Actions  []engine.Action `json:"actions"`
+	Actions []engine.Action `json:"actions"`
+	// Levels are the stages: the step IDs grouped by dependency depth; the steps of one run together.
+	Levels   [][]string `json:"levels"`
 	StepList []struct {
 		ID       string            `json:"id"`
 		Status   string            `json:"status"`

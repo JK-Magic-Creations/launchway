@@ -360,7 +360,7 @@ Downloads are sent as `application/octet-stream` (or `application/zip`) with `Co
 |---|---|---|---|
 | `GET /api/v1/environments` | `signed-in` | — | The configured environments that list a project the caller may see, with what is deployed in each. |
 | `GET /api/v1/deployments` | `signed-in` | — | Deployments, newest first: `?environment=`, `?project=`, `?service=`, `?limit=`. |
-| `GET /api/v1/launch-lines` | `signed-in` | — | Where each recent change is on its way, as stations worked out from a run's steps and deployments (commit, checks, tests, package, each environment, verified), each with a state and one plain sentence: `?project=`, `?limit=` (12, at most 50). Only projects the caller may see. |
+| `GET /api/v1/launch-lines` | `signed-in` | — | Where each recent change is on its way, as stations worked out from a run's steps and deployments (commit, checks, tests, package, each environment, verified), each with a state and one plain sentence; a station that stands for several steps also has `parallel` (how many steps, how many can run together, how many are done, running, waiting, failed or skipped, and each step's state): `?project=`, `?limit=` (12, at most 50). Only projects the caller may see. |
 | `GET /api/v1/settings/approvals` | `signed-in` | — | Whether the person who started a run may approve it here (`allow_self`), and whether people sign in. The approval cards use it to say exactly why someone cannot approve. |
 | `GET /api/v1/runs/{id}/deployments/{dep}/controls` | `run-viewer` | — | Which commands the caller could give a deployment now, and why not the others. |
 | `POST /api/v1/runs/{id}/deployments/{dep}/promote` | `run-operator` | `deployment.promote` | Promotes a paused rollout one step. |
