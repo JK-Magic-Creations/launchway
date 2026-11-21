@@ -57,9 +57,9 @@ steps:
       exit $status
     reports:
       tests: reports/go-test.json
-    # An earlier run of this step on the shared runners was killed for memory: ask for it.
+    # Killed for memory twice as the suite grew (last at 6Gi); 8Gi is what the local pipeline-like run uses.
     when: { changed: [ "**", "!docs/**", "!**/*.md" ] }
-    resources: { cpu: 2, cpu_limit: 4, memory: 4Gi, memory_limit: 6Gi }
+    resources: { cpu: 2, cpu_limit: 4, memory: 4Gi, memory_limit: 8Gi }
     timeout: 20m
 
   # Security gates that need only the toolchain (docs/security/how-launchway-is-scanned.md). The ones
