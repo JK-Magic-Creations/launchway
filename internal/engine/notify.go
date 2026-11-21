@@ -130,8 +130,7 @@ func (e *Engine) listen(ctx context.Context, conn *pgx.Conn) {
 			continue
 		}
 		conn, backoff = c, first
-		// Work may have been queued while nothing was listening.
-		e.notify()
+		e.reconnected()
 	}
 }
 
