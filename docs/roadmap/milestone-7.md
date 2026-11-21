@@ -452,7 +452,7 @@ The pages you read are drawn in your browser from data fetched live from your De
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Build logs, test reports, artifacts andaudit trail log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold. The hosted service keeps a separate record of what it did.
+Build logs, test reports, artifacts an audit trail you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold. The hosted service keeps a separate record of what it did.
 
 **Depends on:** The Detachment.
 

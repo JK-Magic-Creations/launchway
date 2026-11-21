@@ -1,29 +1,9 @@
 {
   "comment": "Counts of vocabulary errors that predate the guard (scripts/vocabulary/check.mjs). They may only shrink: lower with `make vocabulary-update`; fix, do not add.",
   "counts": {
-    "audit-log|docs/roadmap/roadmap.json": 1,
-    "british-spelling|CONTRIBUTING.md": 9,
-    "british-spelling|SUPPORT.md": 1,
     "british-spelling|cmd/launchway/config.go": 1,
     "british-spelling|deploy/helm/launchway/values.yaml": 1,
-    "british-spelling|docs/contributing/codebase.md": 1,
-    "british-spelling|docs/guide/policies.md": 3,
-    "british-spelling|docs/guide/runner-identity.md": 1,
-    "british-spelling|docs/howto/add-policy.md": 2,
-    "british-spelling|docs/paths/security-reviewer.md": 1,
-    "british-spelling|docs/reference/config-objects.md": 1,
-    "british-spelling|docs/reference/http-api.md": 1,
-    "british-spelling|docs/reference/index.md": 1,
-    "british-spelling|docs/reference/pipeline.md": 1,
-    "british-spelling|docs/reference/policy-rules.md": 4,
-    "british-spelling|docs/roadmap/roadmap.json": 12,
-    "british-spelling|docs/tutorials/policy-gates.md": 1,
     "british-spelling|internal/api/mcp_config.go": 6,
-    "british-spelling|internal/settings/kinds.go": 1,
-    "tenant|docs/guide/configuration.md": 2,
-    "tenant|docs/roadmap/roadmap.json": 1,
-    "tenant|docs/roadmap/traffic.md": 1,
-    "tenant|docs/security/threat-model.md": 1,
-    "tenant|docs/security/trust-model.md": 1
+    "british-spelling|internal/settings/kinds.go": 1
   }
 }

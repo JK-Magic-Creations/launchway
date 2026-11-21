@@ -3550,7 +3550,7 @@
             {
               "status": "planned",
               "title": "Your logs, artifacts and audit stay with you",
-              "value": "Build logs, test reports, artifacts andaudit trail log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold.",
+              "value": "Build logs, test reports, artifacts an audit trail you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold.",
               "detail": "The hosted service keeps a separate record of what it did.",
               "needs": "The Detachment.",
               "area": "hosted-service"

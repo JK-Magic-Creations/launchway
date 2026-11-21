@@ -35,7 +35,7 @@ for (const { path, kind } of listFiles(root, vocab)) {
   if (only.length && !only.some((o) => path.startsWith(o))) continue
   const text = readFileSync(join(root, path), 'utf8')
   const lines = text.split('\n')
-  const fs = fileFindings(path, kind, text, checks).filter((f) => f.severity === 'error' && !allowed(f, lines[f.line - 1]))
+  const fs = fileFindings(path, kind, text, checks).sort((a, b) => a.start - b.start).filter((f) => f.severity === 'error' && !allowed(f, lines[f.line - 1]))
   let out = text, shift = 0
   for (const f of fs) {
     const to = mechanicalFix(f)
