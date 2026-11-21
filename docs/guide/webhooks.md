@@ -162,7 +162,7 @@ repository already asks Argo CD to refresh the application it deployed (the refr
 default; it needs the right to patch that Application). For changes made by anyone else (a person
 pushing to the GitOps repository), add a webhook to the repository that sends **push** events to
 `https://<argocd>/api/webhook`, with the secret you set as `webhook.github.secret` in Argo CD's `argocd-secret`.
-Argo CD's receiver accepts the formats of GitHub, GitLab, Bitbucket and Azure DevOps; Launchway's push
+Argo CD's receiver accepts the formats of several Git hosts, GitHub's among them; Launchway's push
 payload carries GitHub's names (`ref`, `before`, `after`, `repository.html_url`, `clone_url`, `ssh_url`) and
 header (`X-GitHub-Event: push`, `X-Hub-Signature-256`), so it is read as GitHub's. Argo CD matches the
 repository's address with the applications' `repoURL`: it must be the address Argo CD reads from. Argo CD
