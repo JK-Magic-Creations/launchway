@@ -15,6 +15,7 @@ import { ExplainerContext, Guide, type Explainer } from "./Guide";
 import { Launcher } from "./Launcher";
 import { Pulse, Route, TabBar, type PulseState } from "./Route";
 import { SideNav } from "./SideNav";
+import { shortcutOn } from "./prefs";
 import { useFocusableScrollers } from "./scrollers";
 import { currentTheme, setTheme } from "./theme";
 import { UserMenu } from "./UserMenu";
@@ -33,7 +34,7 @@ export function pulseOf(needsBad: number, needsWarn: number, running: boolean): 
 
 /** Whether a key press should open the do bar: the slash key, outside a field, with no modifier. */
 export function opensDoBar(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "target">): boolean {
-  if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return false;
+  if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || !shortcutOn()) return false;
   const t = e.target as HTMLElement | null;
   const tag = t?.tagName;
   return !(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || t?.isContentEditable);

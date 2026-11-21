@@ -46,6 +46,13 @@ main li > a:only-child { display: inline-block; min-height: 24px; padding-block:
   .route a[aria-current="page"]::after { background: Highlight; }
   .vtabs [role="tab"][aria-selected="true"] { border-bottom: 3px solid Highlight; }
   .ls[aria-pressed="true"] .p, .btn[aria-pressed="true"], .btn.on { outline: 3px solid Highlight; }
+  button[aria-pressed="true"], [role="tab"][aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
   .pulse { display: none; }
   .skip-link { border: 2px solid ButtonText; }
 }
+
+/* A focused control is never hidden behind the sticky top bar or the phone's bottom bar (2.4.11). */
+html { scroll-padding-top: 76px; scroll-padding-bottom: 20px; }
+@media (max-width: 760px) { html { scroll-padding-bottom: 84px; } }
+.usermenu-pref { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; min-height: 24px; font-size: 13.5px; }
+.usermenu-pref kbd { font: 11px var(--mono); border: 1px solid var(--control-line); border-radius: 4px; padding: 0 5px; }

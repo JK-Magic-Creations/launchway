@@ -66,6 +66,10 @@ describe("the slash key", () => {
     expect(opensDoBar(key("/", { tagName: "TEXTAREA" }))).toBe(false);
     expect(opensDoBar(key("/", { tagName: "DIV" }, { ctrlKey: true }))).toBe(false);
     expect(opensDoBar(key("a", { tagName: "BODY" }))).toBe(false);
+    // A person can turn the single-key shortcut off.
+    localStorage.setItem("lw-shortcut", "off");
+    expect(opensDoBar(key("/", { tagName: "BODY" }))).toBe(false);
+    localStorage.removeItem("lw-shortcut");
   });
 });
 
