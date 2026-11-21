@@ -81,14 +81,18 @@ func (e *Engine) BeginCache(ctx context.Context, leaseID string, in BeginCache) 
 	if err != nil {
 		return nil, err
 	}
-	project, scope := cc.st.Project, cc.scopes.write
+	project, scope, ns := cc.st.Project, cc.scopes.write, cc.namespace(in.Name)
+	sensitive := 0
+	if d := cc.declared(in.Name); d != nil && d.Sensitive {
+		sensitive = 1
+	}
 	same := func(r *cacheRowT) bool {
 		return r.CreatedRun == cc.l.runID && r.CreatedStep == cc.l.stepID && r.CreatedAttempt == cc.l.attempt && r.SHA256 == in.SHA256 && r.Bytes == in.Bytes
 	}
 	// Entries are immutable: one that exists is not replaced.
 	existing := func(q querier) (*cacheRowT, error) {
-		r, err := scanCache(q.QueryRow(`SELECT `+cacheCols+` FROM caches WHERE project = ? AND scope = ? AND name = ? AND key = ? AND platform = ?
-			AND status IN (?, ?)`, project, scope, in.Name, in.Key, in.Platform, cacheUploading, cacheKept))
+		r, err := scanCache(q.QueryRow(`SELECT `+cacheCols+` FROM caches WHERE project = ? AND scope = ? AND pipeline = ? AND name = ? AND key = ? AND platform = ?
+			AND status IN (?, ?)`, project, scope, ns, in.Name, in.Key, in.Platform, cacheUploading, cacheKept))
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -137,9 +141,9 @@ func (e *Engine) BeginCache(ctx context.Context, leaseID string, in BeginCache) 
 			return errCacheFull
 		}
 		if _, err := tx.Exec(`INSERT INTO caches(id, project, scope, name, key, platform, blob_key, store, sha256, bytes, files, created_run, created_step,
-			created_attempt, created_at, last_used_at, status, upload_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			created_attempt, created_at, last_used_at, status, upload_id, pipeline, sensitive, generation) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
 			id, project, scope, in.Name, in.Key, in.Platform, blobKey, store.Name(), in.SHA256, in.Bytes, in.Files, cc.l.runID, cc.l.stepID,
-			cc.l.attempt, now, now, cacheUploading, uploadID); err != nil {
+			cc.l.attempt, now, now, cacheUploading, uploadID, ns, sensitive); err != nil {
 			return err
 		}
 		won = true

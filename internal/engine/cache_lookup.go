@@ -82,11 +82,13 @@ func (e *Engine) LookupCache(leaseID string, in CacheLookup) (*CacheLookupResult
 		return &CacheLookupResult{Reason: strings.TrimPrefix(err.Error(), ErrConflict.Error()+": ")}, nil
 	}
 	project := cc.st.Project
+	d := cc.declared(in.Name)
+	ns := cc.namespace(in.Name)
 	find := func(exact bool) (*CacheEntry, error) {
-		for _, scope := range cc.scopes.read {
+		for _, scope := range cc.scopes.readFor(d != nil && d.Sensitive) {
 			q := `SELECT id, key, scope, platform, bytes, files, sha256 FROM caches
-				WHERE project = ? AND scope = ? AND name = ? AND platform = ? AND status = ? AND store = ?`
-			args := []any{project, scope, in.Name, in.Platform, cacheKept, store.Name()}
+				WHERE project = ? AND scope = ? AND pipeline = ? AND (sensitive = 0 OR scope = ?) AND name = ? AND platform = ? AND status = ? AND store = ?`
+			args := []any{project, scope, ns, cc.scopes.write, in.Name, in.Platform, cacheKept, store.Name()}
 			if exact {
 				q += ` AND key = ?`
 				args = append(args, in.Key)
@@ -199,7 +201,7 @@ func (e *Engine) openCache(ctx context.Context, leaseID, id string, offset int64
 		}
 		return nil, 0, "", err
 	}
-	if row.Project != cc.st.Project || !cc.scopes.canRead(row.Scope) || row.Status != cacheKept {
+	if !cc.mayRead(row) || row.Status != cacheKept {
 		return nil, 0, "", fmt.Errorf("%w: cache entry %s", ErrNotFound, id)
 	}
 	if !cc.limits.enabled {
@@ -244,7 +246,7 @@ func (e *Engine) DiscardCache(leaseID, id, why string) error {
 		}
 		return err
 	}
-	if row.Project != cc.st.Project || !cc.scopes.canRead(row.Scope) || row.Status != cacheKept {
+	if !cc.mayRead(row) || row.Status != cacheKept {
 		return fmt.Errorf("%w: cache entry %s", ErrNotFound, id)
 	}
 	// Reading an entry does not give the right to end it: a pull-request

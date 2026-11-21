@@ -1556,6 +1556,9 @@ that keeps build layers, is a different thing with a different shape.
 | `key` | mapping | required | What the entry's key is made of: the keys below |
 | `fallback` | text | `none` | `latest`: when no entry has the exact key, start from the newest entry of the same name and platform that the run may read |
 | `save` | text | `success` | After which outcomes the paths are saved: `success`, `always` (the step succeeded or failed) or `never` |
+| `sensitive` | boolean | `false` | `true`: the cache is never read outside the scope that wrote it. A pull request, another branch or a draft does not restore what the default branch saved, and an entry saved as sensitive stays unreadable to them even if their own pipeline says otherwise |
+| `share` | text | none | A group name, as for `name`. Caches of one project that name the same group, the same cache `name` and the same scope see each other's entries, whichever pipeline they are in. Without it a cache belongs to its pipeline: two pipelines that use one cache name do not share it |
+| `max_age` | duration | the policy's, 7 days | How old an entry may be, counted from when it was made, before a restore treats it as missing and the step rebuilds it: `7d`, `36h`, `90m`; between 1 hour and 365 days. An administrator's cache policy sets the longest allowed |
 
 <!-- keys: cache-key -->
 | Key | Type | Default | Description |

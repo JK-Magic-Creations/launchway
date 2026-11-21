@@ -49,6 +49,12 @@ export interface CacheEntry {
   created_at: number;
   last_used_at: number;
   hits: number;
+  /** pipeline:<name>, or shared:<name> for caches that pipelines share. */
+  pipeline: string;
+  /** Which of the entries of one key this is; the newest is restored. */
+  generation: number;
+  /** Never read outside its own scope. */
+  sensitive?: boolean;
   /** The run that wrote it. */
   run_id: string;
   run_number: number;

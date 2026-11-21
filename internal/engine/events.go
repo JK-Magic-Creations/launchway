@@ -385,6 +385,10 @@ type Trigger struct {
 	Author     string `json:"author,omitempty"`
 	// PullRequest is the pull request's number, for event pull_request.
 	PullRequest int `json:"pull_request,omitempty"`
+	// Fork says the pull request is from a repository other than the
+	// project's own; its build caches are isolated (see cacheScopes). The
+	// forge integration sets it.
+	Fork bool `json:"fork,omitempty"`
 	// PullRequestInto is the branch the pull request targets, as the
 	// project's forge said when the run was created (schema 24); empty when
 	// the pipeline does not filter by target and none was read.

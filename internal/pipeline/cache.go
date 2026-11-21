@@ -3,6 +3,7 @@ package pipeline
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -54,7 +55,7 @@ func (ps *parser) parseCaches(n *yaml.Node, at string) []*Cache {
 			return s
 		}
 		var pathsNode, keyNode *yaml.Node
-		ps.eachKey(item, where, []string{"name", "paths", "key", "fallback", "save"}, func(k, v *yaml.Node) {
+		ps.eachKey(item, where, []string{"name", "paths", "key", "fallback", "save", "sensitive", "share", "max_age"}, func(k, v *yaml.Node) {
 			w := where + "." + k.Value
 			switch k.Value {
 			case "name":
@@ -73,6 +74,12 @@ func (ps *parser) parseCaches(n *yaml.Node, at string) []*Cache {
 				default:
 					ps.add(v, w, "fallback is none (the default) or latest")
 				}
+			case "sensitive":
+				c.Sensitive = ps.bool(v, w)
+			case "share":
+				c.Share = ps.str(v, w)
+			case "max_age":
+				c.MaxAge = ps.cacheAge(v, w)
 			case "save":
 				switch f := ps.str(v, w); f {
 				case CacheSaveSuccess:
@@ -182,6 +189,26 @@ func (ps *parser) cacheKey(v *yaml.Node, where, idx string, scalar func(*yaml.No
 		}
 	})
 	return k
+}
+
+// cacheAge reads a duration written as 7d, 36h or 90m; a day is 24 hours.
+func (ps *parser) cacheAge(v *yaml.Node, where string) Duration {
+	text := ps.scalar(v, where)
+	var d time.Duration
+	var err error
+	if days, ok := strings.CutSuffix(text, "d"); ok {
+		var n int
+		if n, err = strconv.Atoi(days); err == nil {
+			d = time.Duration(n) * 24 * time.Hour
+		}
+	} else {
+		d, err = time.ParseDuration(text)
+	}
+	if err != nil || d < MinCacheMaxAge || d > MaxCacheMaxAge {
+		ps.add(v, where, "max_age is between 1h and 365d, such as 7d or 36h")
+		return 0
+	}
+	return Duration(d)
 }
 
 // cacheVersions reads key.versions: a list of commands (a plain string) or

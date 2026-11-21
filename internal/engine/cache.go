@@ -19,7 +19,8 @@ import (
 // blob store under caches/, whose bytes are uploaded in chunks exactly as
 // artifacts' are, and never changed once committed.
 //
-// Who may read and write which entry is the security heart of the feature:
+// Who may read and write which entry is the security heart of the feature (schema 35 added the pipeline
+// and sensitive rules below):
 // a run of untrusted code (a pull request from anyone who can open one, a
 // draft that is not in Git) must never be able to plant bytes that a trusted
 // run restores and then runs. So an entry's scope is worked out here, on the
@@ -105,19 +106,29 @@ type cacheRowT struct {
 	Received                                int64
 	HashState                               string
 	Parts                                   []blobstore.Part
+	// Pipeline is the namespace the entry belongs to (see cacheNamespace),
+	// Sensitive whether it is never read outside its own scope, Generation
+	// which of the entries of one key it is (the newest is restored), and
+	// Content a digest of what it holds.
+	Pipeline   string
+	Sensitive  bool
+	Generation int
+	Content    string
 }
 
 const cacheCols = `id, project, scope, name, key, platform, blob_key, store, sha256, bytes, files, created_run, created_step, created_attempt,
-	created_at, last_used_at, hits, status, ended_at, upload_id, received, hash_state, parts`
+	created_at, last_used_at, hits, status, ended_at, upload_id, received, hash_state, parts, pipeline, sensitive, generation, content`
 
 func scanCache(r interface{ Scan(...any) error }) (*cacheRowT, error) {
 	c := &cacheRowT{}
 	var parts string
+	var sens int
 	err := r.Scan(&c.ID, &c.Project, &c.Scope, &c.Name, &c.Key, &c.Platform, &c.BlobKey, &c.Store, &c.SHA256, &c.Bytes, &c.Files, &c.CreatedRun,
-		&c.CreatedStep, &c.CreatedAttempt, &c.CreatedAt, &c.LastUsedAt, &c.Hits, &c.Status, &c.EndedAt, &c.UploadID, &c.Received, &c.HashState, &parts)
+		&c.CreatedStep, &c.CreatedAttempt, &c.CreatedAt, &c.LastUsedAt, &c.Hits, &c.Status, &c.EndedAt, &c.UploadID, &c.Received, &c.HashState, &parts, &c.Pipeline, &sens, &c.Generation, &c.Content)
 	if err != nil {
 		return nil, err
 	}
+	c.Sensitive = sens != 0
 	if err := json.Unmarshal([]byte(parts), &c.Parts); err != nil {
 		return nil, fmt.Errorf("cache entry %s: reading its parts: %w", c.ID, err)
 	}

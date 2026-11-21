@@ -4,6 +4,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -52,7 +53,20 @@ type Cache struct {
 	// Save says after which outcomes the paths are saved: success (the
 	// default, written as empty), always (succeeded or failed) or never.
 	Save string `json:"save,omitempty"`
-	Line int    `json:"-"`
+	// Sensitive marks a cache that is never read outside the scope that
+	// wrote it: a pull request, a branch or a draft does not restore what
+	// the default branch saved.
+	Sensitive bool `json:"sensitive,omitempty"`
+	// Share, when set, is the name of a group of caches shared by pipelines
+	// of the project: caches that name the same group (and the same cache
+	// name and scope) see each other's entries. Without it, a cache is the
+	// pipeline's own.
+	Share string `json:"share,omitempty"`
+	// MaxAge is how old an entry may be, from when it was made, before a
+	// restore treats it as missing and the step rebuilds it; 0 is the cache
+	// policy's (7 days unless changed).
+	MaxAge Duration `json:"max_age,omitempty"`
+	Line   int      `json:"-"`
 }
 
 // CacheKey says what the key of a cache entry is made of.
@@ -94,6 +108,8 @@ const (
 // Limits on caches.
 const (
 	MaxCachesPerStep  = 10
+	MinCacheMaxAge    = time.Hour
+	MaxCacheMaxAge    = 365 * 24 * time.Hour
 	MaxCachePaths     = 20
 	MaxCacheKeyFiles  = 20
 	MaxCacheKeyText   = 256
@@ -152,6 +168,12 @@ func CacheProblems(c *Cache) []string {
 		if msg != "" {
 			out = append(out, msg)
 		}
+	}
+	if c.Share != "" && !ValidArtifactName(c.Share) {
+		out = append(out, quoteText(c.Share)+" is not a valid share name: use lower-case letters, digits, '.', '-' and '_', starting with a letter or digit, at most 64")
+	}
+	if c.MaxAge != 0 && (c.MaxAge.D() < MinCacheMaxAge || c.MaxAge.D() > MaxCacheMaxAge) {
+		out = append(out, "max_age is between 1h and 365d, such as 7d")
 	}
 	switch {
 	case len(c.Key.Files) == 0 && c.Key.Text == "":
