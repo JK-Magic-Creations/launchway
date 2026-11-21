@@ -1,0 +1,82 @@
+/* The guided interface: Home, the project, template, environment and
+   application pages, and the shared "at a glance" card. Uses the tokens in
+   tokens.css, so light and dark follow the system. */
+
+.head-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; color: var(--accent-ink); cursor: pointer; text-align: left; }
+.linkbtn:hover { text-decoration: underline; }
+.entity-link { font-weight: 600; }
+
+/* Home */
+.guided-next { border: 2px solid var(--accent); background: linear-gradient(135deg, var(--accent-soft), var(--surface)); display: flex; flex-direction: column; gap: 8px; }
+.guided-eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-ink); font-weight: 700; }
+.guided-next-title { font-size: 22px; font-weight: 700; }
+.guided-next-why { margin: 0; color: var(--text-2); font-size: 15px; max-width: 60ch; }
+.guided-next-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 4px; }
+.guided-bar { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+.guided-bar i { display: block; height: 100%; background: var(--ok); }
+.guided-allset { font-size: 15px; }
+.guided-doneline { margin: 0 0 8px; }
+.guided-check { list-style: none; margin: 0; padding: 0; }
+.guided-check li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.guided-check li:last-child { border-bottom: 0; }
+.guided-dot { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border-strong); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--text-3); }
+.guided-check-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.guided-attn { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.guided-attn li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; border-left: 4px solid var(--warn); background: var(--warn-soft); flex-wrap: wrap; }
+.guided-attn li.guided-attn-bad { border-left-color: var(--bad); background: var(--bad-soft); }
+.guided-attn-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 260px; overflow-wrap: anywhere; }
+.guided-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.guided-list li { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.guided-list li:last-child { border-bottom: 0; }
+.guided-grow { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+
+/* Lists whose every row opens its page */
+.guided-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.guided-rows-flat { gap: 0; }
+.guided-row { display: flex; gap: 12px 20px; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.guided-rows-flat .guided-row { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; padding: 10px 0; background: none; }
+.guided-rows-flat .guided-row:last-child { border-bottom: 0; }
+.guided-row:hover { border-color: var(--accent); }
+.guided-rows-flat .guided-row:hover { border-color: var(--border); }
+.guided-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 240px; overflow-wrap: anywhere; }
+.guided-row-name { font-size: 16px; }
+.guided-row-side { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.guided-warn { color: var(--bad-ink); font-size: 13px; }
+
+/* Tiles */
+.guided-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; list-style: none; margin: 0; padding: 0; }
+.guided-tile { display: flex; gap: 14px; align-items: center; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); }
+.guided-tile:hover { border-color: var(--accent); text-decoration: none; }
+.guided-tile-n { font-size: 30px; font-weight: 750; line-height: 1; min-width: 36px; }
+.guided-tile-block { flex-direction: column; align-items: flex-start; gap: 4px; height: 100%; }
+.guided-tiles-wide { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.guided-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+
+/* The five answers every detail page gives first */
+.glance { border-left: 4px solid var(--accent); }
+.glance-grid { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 28px; }
+.glance-grid dt { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 700; margin-bottom: 3px; }
+.glance-grid dd { margin: 0; overflow-wrap: anywhere; }
+.glance-actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+
+/* Tables */
+.guided-table { width: 100%; border-collapse: collapse; }
+.guided-table th { text-align: left; font-size: 12px; color: var(--text-3); font-weight: 650; padding: 10px 14px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.guided-table td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.guided-table tr:last-child td { border-bottom: 0; }
+.tablewrap { overflow-x: auto; }
+.toolbar input[type="search"] { min-height: 34px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 0 10px; background: var(--surface); color: var(--text); font: inherit; }
+
+/* A failed run, explained */
+.explain { border: 2px solid var(--bad); border-radius: var(--radius); background: var(--surface); padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+.explain-title { color: var(--bad-ink); }
+.explain-headline { font-size: 16px; font-weight: 600; margin: 0; overflow-wrap: anywhere; }
+.explain-advice { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.explain-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+
+@media (max-width: 760px) {
+  .guided-two { grid-template-columns: 1fr; }
+  .guided-next-title { font-size: 19px; }
+  .head-actions { width: 100%; }
+}

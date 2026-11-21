@@ -43,7 +43,7 @@ export function ComponentsPage() {
     const q = new URLSearchParams();
     if (name.trim()) q.set("name", name.trim());
     if (version.trim()) q.set("version", version.trim());
-    navigate(`/components${q.toString() ? "?" + q.toString() : ""}`);
+    navigate(`/library/components${q.toString() ? "?" + q.toString() : ""}`);
   };
 
   return (

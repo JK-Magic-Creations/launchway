@@ -92,7 +92,7 @@ export function AgentsPage() {
         {signIn ? (
           <form onSubmit={make} className="inputs-form" aria-label="Make a token for an agent">
             <p className="sub">Give the agent its own token, with no more than it needs: a <strong>viewer</strong> token can read and
-              diagnose but not start or approve anything. You can revoke it on the <Link href="/tokens">API tokens</Link> page.</p>
+              diagnose but not start or approve anything. You can revoke it on the <Link href="/settings/access/keys">API tokens</Link> page.</p>
             <div className="tokenform-grid">
               <label className="field"><span>Name</span>
                 <input value={name} maxLength={100} required onChange={(e) => setName(e.target.value)} /></label>

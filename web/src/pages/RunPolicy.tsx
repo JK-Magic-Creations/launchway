@@ -85,7 +85,7 @@ export function PolicyTab({ run, version }: { run: RunDetail; version: string })
         <h3 className="h-sm">Waivers for this run</h3>
         {data.waivers.length
           ? <WaiverList waivers={data.waivers} mayRevoke={() => data.can_waive} onChange={() => load()} showProject={false} />
-          : <p className="faint">None. Waivers of {run.project}'s rules for every run, or for this one, are listed here. See also the <Link href="/policy">Policy</Link> page.</p>}
+          : <p className="faint">None. Waivers of {run.project}'s rules for every run, or for this one, are listed here. See also the <Link href="/settings/rules">Policy</Link> page.</p>}
       </section>
     </div>
   );

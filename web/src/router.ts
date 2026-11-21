@@ -9,6 +9,12 @@ export function navigate(path: string) {
   window.scrollTo(0, 0);
 }
 
+/** Like navigate, but the address being left is not kept in the history: for an old address that moved. */
+export function replace(path: string) {
+  history.replaceState(null, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 export function usePath(): string {
   const [path, setPath] = useState(location.pathname);
   useEffect(() => {

@@ -25,6 +25,10 @@ import { CopyValue, serious, seriousLabel } from "../components/Security";
 import { ImagesTab, imageSteps } from "./RunImages";
 import { PolicyTab } from "./RunPolicy";
 import { useRunVerifications, VerificationPanel, VerificationsTab, VerificationSummaryRows } from "../components/Verification";
+import { EntityLink } from "../components/EntityLink";
+import { FailurePanel } from "../components/FailurePanel";
+import { explainFailure } from "../guided/derive";
+import { useCrumbLabel } from "../nav/crumbs";
 import { AIStepResult, ExplainFailure } from "../components/Explain";
 import { DIGEST_KEEP, ImageBuildFacts, ImageIcon, shortImageRef } from "../components/Images";
 import { CacheResults } from "../components/CacheResults";
@@ -179,17 +183,19 @@ export function RunPage({ id }: { id: string }) {
     try { await fn(); } catch (e) { setActionErr(e); } finally { setBusy(false); }
   };
 
+  useCrumbLabel(run ? `Run #${run.number} of ${run.project}` : undefined);
   if (error) {
-    return <div className="page"><ErrorBox error={error instanceof ApiError && error.status === 404 ? "This run does not exist." : error} /><Link href="/">Back to runs</Link></div>;
+    return <div className="page"><ErrorBox error={error instanceof ApiError && error.status === 404 ? "This run does not exist." : error} /><Link href="/activity">Back to runs</Link></div>;
   }
   if (!run) return <div className="page"><div className="loading">Loading…</div></div>;
 
   const step = run.step_list.find((s) => s.id === selected) ?? null;
   const loopView = collapseLoops(run);
   const loop = loopFor(run, selected);
-  const failedCount = run.step_list.filter((s) => s.status === "failed" && !s.allowed_failure).length;
+  // A step that failed and is allowed to (on_failure: continue) does not fail the run.
   const firstFailed = run.step_list.find((s) => s.status === "failed" && !s.allowed_failure);
-    // Only approvals wait for someone to decide; deploy steps wait for their
+  const failure = explainFailure(run.step_list);
+  // Only approvals wait for someone to decide; deploy steps wait for their
   // environment's lock or for the deployment to finish.
   const waitingStep = done ? undefined : run.step_list.find((s) => s.status === "waiting" && s.kind === "approval");
   const deploying = done ? undefined : run.step_list.find((s) => s.status === "waiting" && (s.kind === "deploy" || s.kind === "rollback" || s.kind === "rollout"));
@@ -215,9 +221,6 @@ export function RunPage({ id }: { id: string }) {
 
   return (
     <div className="page page-wide">
-      <nav className="crumbs" aria-label="Breadcrumb">
-        <Link href="/">Runs</Link><span>/</span><span>{run.project}</span><span>/</span><span>#{run.number}</span>
-      </nav>
 
       <header className="run-head">
         <div className="run-head-main">
@@ -234,7 +237,7 @@ export function RunPage({ id }: { id: string }) {
             <h1>{run.message || run.pipeline}</h1>
           </div>
           <div className="run-meta">
-            <span className="meta"><strong>{run.project}</strong> #{run.number}</span>
+            <span className="meta"><strong><EntityLink kind="project" name={run.project} /></strong> #{run.number}</span>
             {refLabel(run) && <span className="meta" title={run.ref}><BranchIcon />{refLabel(run)}</span>}
             {run.sha && <span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span>}
             <span className="meta">{starterLabel(run)}</span>
@@ -275,8 +278,8 @@ export function RunPage({ id }: { id: string }) {
           {mayOperate && !done && !run.cancel_requested && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
-          {mayOperate && !run.needs_newer_server && (run.status === "failed" || run.status === "canceled") && !run.draft && <RerunFailedButton run={run} />}
-          {mayOperate && !run.needs_newer_server && (run.status === "failed" || run.status === "canceled") && (
+          {mayOperate && !run.needs_newer_server && run.status === "canceled" && !run.draft && <RerunFailedButton run={run} />}
+          {mayOperate && !run.needs_newer_server && run.status === "canceled" && (
             <button type="button" className="btn btn-primary" disabled={busy}
               title="Runs again, in this run, only the steps that did not succeed. To start a new run from a step of your choice, open the step and choose Re-run from this step."
               onClick={() => act(async () => { await api.resume(run.id); if (firstFailed) select(firstFailed.id); })}>
@@ -302,7 +305,7 @@ export function RunPage({ id }: { id: string }) {
 
       {run.pool_hint && (
         <div className="callout callout-draft" role="status">
-          <strong>Waiting for a runner that may take this run.</strong> {run.pool_hint} <Link href="/runners">Runners and pools</Link>
+          <strong>Waiting for a runner that may take this run.</strong> {run.pool_hint} <Link href="/settings/runners">Runners and pools</Link>
         </div>
       )}
 
@@ -360,13 +363,18 @@ export function RunPage({ id }: { id: string }) {
 
       <RunFlowBanners run={run} done={done} onSelect={select} />
 
-      {run.status === "failed" && firstFailed && (
-        <div className="callout callout-bad">
-          <strong>{failedCount === 1 ? `${firstFailed.id} failed` : `${failedCount} steps failed`}.</strong>{" "}
-          {firstFailed.error.replace(/\.$/, "")}. Steps that succeeded are kept: resuming runs only what did not finish, using the same commit.
-          {firstFailed.policy_blocked && <> <button type="button" className="linkbtn" onClick={() => setTab("policy")}>See the policy decision</button>.</>}
-          {firstFailed.excerpt && <Excerpt step={firstFailed} />}
-        </div>
+      {run.status === "failed" && failure && firstFailed && (
+        <FailurePanel failure={failure} actions={<>
+          {mayOperate && !run.needs_newer_server && (
+            <button type="button" className="btn btn-primary" disabled={busy}
+              title="Runs again, in this same run, only the steps that did not succeed. The steps that passed are kept."
+              onClick={() => act(async () => { await api.resume(run.id); select(firstFailed.id); })}>Run again from the failed step</button>
+          )}
+          {mayOperate && !run.needs_newer_server && !run.draft && <RerunFailedButton run={run} />}
+          {mayRerun && run.step_list.length > 1 && <RerunButton run={run} step={run.step_list[0]} label="Run everything again" />}
+          <button type="button" className="btn btn-sm" onClick={() => { select(firstFailed.id); setTab("graph"); }}>Open the log of {firstFailed.id}</button>
+          {firstFailed.policy_blocked && <button type="button" className="btn btn-sm" onClick={() => setTab("policy")}>See the policy decision</button>}
+        </>} />
       )}
 
       <DeploymentSummary run={run} onSelect={(s) => { select(s); setTab("graph"); }} />
@@ -437,6 +445,8 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   const [lines, setLines] = useState<LogLine[]>([]);
   const [loaded, setLoaded] = useState(false);
   const following = attempt === step.attempt;
+  // The what-went-wrong panel above shows the last lines of the first failed step.
+  const excerptInPanel = run.status === "failed" && run.step_list.find((x) => x.status === "failed")?.id === step.id;
 
   // Follow the newest attempt when a retry starts.
   useEffect(() => { setAttempt(step.attempt); }, [step.id, step.attempt]);
@@ -535,7 +545,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
               ))}
             </div>
           )}
-          {rerun && <RerunButton run={run} step={step} />}
+          {rerun && step.status !== "failed" && <RerunButton run={run} step={step} />}
         </div>
       </div>
       {reused && <ReusedNote run={run} step={step} />}
@@ -562,10 +572,10 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           <button type="button" className="btn btn-sm" onClick={showPolicy}>See the decision</button>
         </div>
       )}
-      {step.status === "failed" && following && step.kind !== "verify" && (step.excerpt || (step.error && !/^exit code \d+$/.test(step.error))) && (
+      {step.status === "failed" && following && step.kind !== "verify" && ((step.excerpt && !excerptInPanel) || (step.error && !/^exit code \d+$/.test(step.error))) && (
         <div className="callout callout-bad">
           {step.error && !/^exit code \d+$/.test(step.error) && <div>{step.error}</div>}
-          {step.excerpt && <Excerpt step={step} />}
+          {step.excerpt && !excerptInPanel && <Excerpt step={step} />}
         </div>
       )}
       {step.status === "failed" && following && !reused && <ExplainFailure run={run} step={step} />}
@@ -948,7 +958,7 @@ function DefinitionTab({ run }: { run: RunDetail }) {
   }, [run.id, run.source.kind]);
   const graph = useMemo(() => JSON.stringify(run.graph, null, 2), [run.graph]);
   const branch = run.branch;
-  const editHref = `/projects/${encodeURIComponent(run.project)}/pipeline?ref=${encodeURIComponent(branch)}`;
+  const editHref = `/projects/${encodeURIComponent(run.project)}/pipeline/edit?ref=${encodeURIComponent(branch)}`;
   return (
     <div className="split">
       <section className="card">

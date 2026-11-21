@@ -26,7 +26,7 @@ export function ArtifactsTab({ run, version }: { run: RunDetail; version: string
     return (
       <Empty title="This server does not keep artifacts">
         <p>{data.problem ? data.problem.charAt(0).toUpperCase() + data.problem.slice(1).replace(/([^.])$/, "$1.") : "Artifacts are not set up on this server."}</p>
-        <p>With nothing configured, a server on PostgreSQL keeps artifacts in its database, shared by every server. The <Link href="/runners">Runners</Link> page says where this one keeps them.</p>
+        <p>With nothing configured, a server on PostgreSQL keeps artifacts in its database, shared by every server. The <Link href="/settings/runners">Runners</Link> page says where this one keeps them.</p>
       </Empty>
     );
   }

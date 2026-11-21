@@ -1,0 +1,56 @@
+/* ---- pipeline editor page ---- */
+a.btn:hover { text-decoration: none; }
+.linkbtn { border: 0; padding: 0; background: none; color: var(--accent-ink); font: inherit; cursor: pointer; }
+.linkbtn:hover { text-decoration: underline; }
+.callout-info { background: var(--accent-soft); color: var(--text); }
+.callout-allowed { background: var(--warn-soft); color: var(--warn-ink); }
+.badge-button { border: 0; cursor: pointer; font-family: inherit; }
+.badge-button:hover { filter: brightness(0.95); }
+.badge-allowed { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.callout-draft { background: var(--warn-soft); color: var(--warn-ink); }
+.callout-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.callout-row > span { flex: 1 1 320px; }
+.badge-draft { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; border: 1px dashed var(--warn); background: var(--warn-soft); color: var(--warn-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; white-space: nowrap; }
+.runrow-title .badge-draft { margin-right: 6px; font-size: 10.5px; padding: 1px 6px; }
+.refbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.refbtn:hover { background: var(--surface-2); }
+.project-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.step-desc { margin: 2px 0 6px; }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.card-head .h-sm { margin: 0; }
+.excerpt { margin: 10px 0 0; }
+.excerpt figcaption { font-size: 12.5px; font-weight: 600; margin-bottom: 4px; }
+.excerpt pre { margin: 0; padding: 10px 12px; border-radius: 6px; background: var(--log-bg); color: var(--log-err); font-family: var(--mono); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; }
+.choices { border: 0; padding: 0; margin: 0; gap: 8px; }
+.choices legend { padding: 0; margin-bottom: 6px; }
+.choice { display: flex; align-items: flex-start; gap: 8px; font-weight: 400; cursor: pointer; }
+.choice input { margin-top: 3px; }
+.choice-off { color: var(--text-3); cursor: default; }
+.dialog-actions-left { justify-content: flex-start; flex-wrap: wrap; }
+
+.checkline { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-weight: 600; cursor: pointer; }
+.project-pipeline { margin-top: 8px; }
+
+/* ---- re-runs and step inputs ---- */
+.node-reused { border-style: dashed; background: var(--surface-2); }
+.node-reused .node-sub { color: var(--text-2); font-style: italic; }
+.badge-reused { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; border: 1px dashed var(--border-strong); background: var(--surface-2); color: var(--text-2); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.steppanel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.rerun-plan { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+.rerun-plan > div { flex: 1 1 220px; min-width: 0; }
+.rerun-plan ul { margin: 6px 0 0; padding-left: 20px; }
+.inputs { flex: 1 1 100%; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.inputs summary { cursor: pointer; font-weight: 600; }
+.inputs .kv { flex: none; }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.inputs-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.inputs-table th { text-align: left; color: var(--text-3); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.inputs-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.inputs-value { overflow-wrap: anywhere; white-space: pre-wrap; max-width: 520px; }
+.inputs-from { color: var(--text-2); white-space: nowrap; }
+@media (max-width: 640px) {
+  .inputs-table thead { display: none; }
+  .inputs-table tr { display: block; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .inputs-table td { display: block; border: 0; padding: 2px 4px; }
+  .inputs-from { white-space: normal; }
+}

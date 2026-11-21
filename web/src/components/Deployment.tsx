@@ -497,7 +497,7 @@ function NoDeployment({ run, step, env, now }: { run: RunDetail; step: StepView;
             ? <>Run <Link href={`/runs/${holder.run}?step=${encodeURIComponent(holder.step ?? "")}`}>#{holder.number}</Link> holds it{holder.step ? <> with {holder.step}</> : null}{holder.version ? <>, deploying <Mono>{holder.version}</Mono></> : null}. </>
             : <>Another run is deploying to {env}. </>}
           Only one run deploys a service to an environment at a time; this one goes ahead when that deployment is done.
-          {" "}See <Link href="/environments">Environments</Link>.
+          {" "}See <Link href="/deployments/environments">Environments</Link>.
         </span>
       </div>
     );

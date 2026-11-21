@@ -66,9 +66,14 @@ export function ExplainFailure({ run, step }: { run: RunDetail; step: StepView }
 
   let offer;
   if (!models.server_can_explain || models.models.length === 0) {
-    offer = <p className="sub small">No AI model is configured; ask an operator to add one under <Mono>ai.models</Mono>.</p>;
+    offer = (
+      <div className="xform">
+        <p className="sub small">Launchway can read the log and suggest a cause. It is optional and off until you choose a model.</p>
+        {me?.admin ? <div><WizardButton wizard="add-model" label="Set up an AI model" primary={false} /></div> : <p className="sub small">An administrator can turn this on.</p>}
+      </div>
+    );
   } else if (usable.length === 0) {
-    offer = <p className="sub small">No AI model is open to {run.project}; an operator can add it to a model's <Mono>projects</Mono> under <Mono>ai.models</Mono>.</p>;
+    offer = <p className="sub small">No AI model is open to {run.project}; an administrator can choose which projects may use a model.</p>;
   } else {
     const why = !mayAsk ? `You need the operator role on ${run.project} to ask a model.` : "";
     offer = (

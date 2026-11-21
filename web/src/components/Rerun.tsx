@@ -8,13 +8,13 @@ import { RerunInputsNote } from "./RunTrigger";
 
 // RerunButton offers a new run of a finished run from the step shown, with
 // a preview of what runs again and what is reused.
-export function RerunButton({ run, step }: { run: RunDetail; step: StepView }) {
+export function RerunButton({ run, step, label = "Re-run from this step" }: { run: RunDetail; step: StepView; label?: string }) {
   const [open, setOpen] = useState(false);
   const from = useMemo<RerunFrom>(() => ({ from: [step.id] }), [step.id]);
   return (
     <>
       <button type="button" className="btn btn-sm" onClick={() => setOpen(true)}
-        title={`A new run at the same commit: ${step.id} and the steps after it run again; the others are reused.`}>Re-run from this step</button>
+        title={`A new run at the same commit: ${step.id} and the steps after it run again; the others are reused.`}>{label}</button>
       {open && <RerunDialog run={run} from={from} onClose={() => setOpen(false)} />}
     </>
   );

@@ -1,0 +1,19 @@
+/* The pipeline editor: a gutter of line numbers, and a text area over a
+   layer that marks lines with problems. All three scroll together. */
+.editor { display: flex; height: 600px; min-height: 320px; position: relative; }
+.editor-gutter { flex: 0 0 46px; overflow: hidden; text-align: right; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--text-3); background: var(--surface-2); user-select: none; }
+.editor-gutter-inner { padding: 14px 8px 40px 0; }
+.gutter-bad { color: #fff; background: var(--bad); border-radius: 0 4px 4px 0; font-weight: 700; cursor: help; }
+.editor-area { flex: 1; min-width: 0; position: relative; background: var(--surface); }
+.editor-marks { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.editor-marks-inner { padding: 14px 0 40px; font-size: 13px; line-height: 1.6; }
+.editor-marks-inner > div { height: 1.6em; }
+.mark-bad { background: var(--bad-soft); box-shadow: inset 3px 0 0 var(--bad); }
+.editor textarea { position: relative; display: block; width: 100%; height: 100%; border: 0; resize: none; padding: 14px 14px 40px; font-family: var(--mono); font-size: 13px; line-height: 1.6; background: transparent; color: var(--text); outline: none; white-space: pre; overflow: auto; tab-size: 2; }
+.editor textarea:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.editor-card { display: flex; flex-direction: column; }
+.editor-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px 8px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.editor-bar-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 760px) { .editor { height: 420px; } }
+.play-right { display: flex; flex-direction: column; gap: 14px; }
+.problems { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
