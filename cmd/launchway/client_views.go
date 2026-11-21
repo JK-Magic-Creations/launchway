@@ -40,6 +40,8 @@ type runView struct {
 		} `json:"behind"`
 		Reason string `json:"reason"`
 	} `json:"lane"`
+	// Actions are what the server says this caller may do with the run now.
+	Actions  []engine.Action `json:"actions"`
 	StepList []struct {
 		ID       string            `json:"id"`
 		Status   string            `json:"status"`

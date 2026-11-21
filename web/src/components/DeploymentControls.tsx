@@ -136,7 +136,8 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [confirmAbort, setConfirmAbort] = useState(false);
-  useEffect(() => { setComment(""); setError(null); setConfirmAbort(false); }, [d.id]);
+  const [confirmFull, setConfirmFull] = useState(false);
+  useEffect(() => { setComment(""); setError(null); setConfirmAbort(false); setConfirmFull(false); }, [d.id]);
 
   const ro = d.snapshot?.rollout;
   const shown = ACTIONS.flatMap((a) => {
@@ -184,7 +185,7 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
         const st = stateOf(latest);
         return (
           <p className={`dctl-last dcmd-${st.tone}`} role={st.tone === "bad" ? "alert" : "status"}>
-            Last command, {actionLabel(latest.action).toLowerCase()} by {whoGave(latest)}: {st.text}.
+            Last command, {actionLabel(latest.action).toLowerCase()} by {whoGave(latest)}: {latest.state === "done" && latest.result === "failed" ? "FAILED, it did not take effect (the reason is below)" : st.text}.
           </p>
         );
       })()}
@@ -196,12 +197,27 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
             <button key={s.action} type="button" className={cls} data-action={s.action}
               disabled={!s.enabled || busy} title={s.enabled ? WHAT[s.action] : undefined}
               aria-describedby={!s.enabled ? reasonId : undefined}
-              onClick={() => (s.action === "abort" ? setConfirmAbort(true) : give(s.action))}>
+              onClick={() => (s.action === "abort" ? setConfirmAbort(true) : s.action === "promote-full" ? setConfirmFull(true) : give(s.action))}>
               {LABEL[s.action]}
             </button>
           );
         })}
       </div>
+      {confirmFull && (
+        <div className="callout callout-bad dctl-confirm" role="alertdialog" aria-label="Confirm full promotion">
+          <span>
+            <strong>Promote {d.service} in {d.environment} fully?</strong> The new version gets all traffic now, and the remaining steps and analyses are skipped.
+            {(d.snapshot?.analysis ?? []).some((a) => a.phase === "Failed" || a.phase === "Error")
+              ? " An analysis of this version has failed: promoting past it ships a version a check rejected."
+              : (d.snapshot?.analysis ?? []).some((a) => a.phase === "Running") ? " An analysis is still running, and promoting stops waiting for it." : ""}
+            {" "}Suggestion: let the analysis finish, or promote one step at a time. You can still abort afterwards, or roll back.
+          </span>
+          <span className="dctl-confirm-actions">
+            <button type="button" className="btn btn-danger dctl-full-confirm" disabled={busy} onClick={() => { setConfirmFull(false); give("promote-full"); }}>Yes, promote fully</button>
+            <button type="button" className="btn" disabled={busy} onClick={() => setConfirmFull(false)}>Not yet</button>
+          </span>
+        </div>
+      )}
       {confirmAbort && (
         <div className="callout callout-bad dctl-confirm" role="alertdialog" aria-label="Confirm abort">
           <span>Abort the rollout of {d.service} in {d.environment}? All traffic goes back to the stable version.</span>

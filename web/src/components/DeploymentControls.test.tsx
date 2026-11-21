@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { DeploymentView, RunDetail } from "../api";
 
 vi.mock("../api", async (orig) => {
   const real = await orig<typeof import("../api")>();
-  return { ...real, api: { ...real.api, deploymentControls: vi.fn() } };
+  return { ...real, api: { ...real.api, deploymentControls: vi.fn(), command: vi.fn().mockResolvedValue({ id: "c9", state: "pending", action: "promote-full", actor: "ann", origin: "person", expect: {}, tries: 0, at: 1 }) } };
 });
 
 import { api } from "../api";
@@ -35,5 +36,18 @@ describe("rollout controls follow what the server reports", () => {
     expect(await screen.findByRole("button", { name: "Promote" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Promote full" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+  });
+
+  it("asks for confirmation, with the consequence and a suggestion, before a risky action, and then does it", async () => {
+    vi.mocked(api.deploymentControls).mockResolvedValue({ environment: "dev", protected: false, withdraw: true, withdraw_reason: "",
+      controls: [{ action: "promote", available: true }, { action: "promote-full", available: true }, { action: "abort", available: true }, { action: "retry", available: false }] } as never);
+    const d = { ...dep, commands: [], snapshot: { ...dep.snapshot, analysis: [{ name: "a", phase: "Failed" }] } } as unknown as DeploymentView;
+    render(<DeploymentControls run={{ id: "run_1" } as RunDetail} d={d} now={Date.now()} />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Promote full" }));
+    expect(api.command).not.toHaveBeenCalled();
+    expect(screen.getByRole("alertdialog", { name: "Confirm full promotion" }).textContent).toMatch(/failed.*Suggestion/);
+    await user.click(screen.getByRole("button", { name: "Yes, promote fully" }));
+    expect(api.command).toHaveBeenCalledWith("run_1", "d1", "promote-full", "");
   });
 });

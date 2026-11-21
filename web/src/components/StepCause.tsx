@@ -56,11 +56,11 @@ export function AnalysisEvidence({ run, failedOnly }: { run: DeployAnalysis; fai
 }
 
 /** StepCauseView shows a failed step's cause. */
-export function StepCauseView({ cause, summary = true }: { cause: StepCause; summary?: boolean }) {
+export function StepCauseView({ cause, summary = true, evidence = true }: { cause: StepCause; summary?: boolean; evidence?: boolean }) {
   return (
     <div className="cause" data-kind={cause.kind}>
       {summary && <p className="cause-summary"><strong>{cause.summary}</strong></p>}
-      {cause.analysis && <AnalysisEvidence run={cause.analysis} />}
+      {evidence && cause.analysis && <AnalysisEvidence run={cause.analysis} />}
       {cause.next && (
         <p className="cause-next" data-next={cause.next.kind}>
           <b>What Launchway did about it.</b> {cause.next.summary}

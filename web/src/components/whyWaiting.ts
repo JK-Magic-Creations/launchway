@@ -67,7 +67,7 @@ export function runSentence(run: RunDetail, now: number): string {
   if (run.status === "canceled") return `${n} was canceled${run.cancel_reason ? `: ${run.cancel_reason}` : ""}.`;
   if (run.status === "failed") {
     const f = run.step_list.find((s) => s.status === "failed" && !s.allowed_failure);
-    return f ? `${n} stopped at ${f.id}.` : `${n} failed.`;
+    return f ? (f.cause?.summary ? `${n} stopped at ${f.id}. ${f.cause.summary}` : `${n} stopped at ${f.id}.`) : `${n} failed.`;
   }
   if (run.status === "succeeded") return (run.allowed_failures ?? 0) > 0 ? `${n} finished. ${run.allowed_failures} step${run.allowed_failures === 1 ? "" : "s"} failed and the pipeline allows that.` : `${n} finished. Everything passed.`;
   if (run.cancel_requested) return `${n} is being canceled.`;

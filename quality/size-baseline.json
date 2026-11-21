@@ -4,14 +4,14 @@
   "max_func_lines": 150,
   "files": {
     "internal/api/api.go": 1050,
-    "internal/api/mcp_tools.go": 1368,
+    "internal/api/mcp_tools.go": 1356,
     "internal/engine/artifacts.go": 1211,
     "internal/engine/control.go": 1028,
     "internal/engine/db.go": 1560,
     "internal/engine/engine.go": 2172,
     "internal/engine/testqueries.go": 1226,
     "internal/engine/verify.go": 1442,
-    "internal/pipeline/template.go": 1180,
+    "internal/pipeline/template.go": 1109,
     "web/src/api.ts": 1564
   },
   "functions": {
