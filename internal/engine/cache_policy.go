@@ -97,7 +97,14 @@ func (e *Engine) readCacheLimits(q querier, project string) (cacheLimits, error)
 		var l cacheLimits
 		var enabled int
 		var idleDays, ageDays int
-		err := q.QueryRow(`SELECT enabled, max_project_bytes, max_entry_bytes, idle_days, max_age_days, updated_at, updated_by FROM cache_policy WHERE project = ?`,
+		// max_age_days is schema 35's; against an older database the column
+		// is not there (and a failed statement would abort a PostgreSQL
+		// transaction).
+		ageCol := "0"
+		if e.knows(schemaCacheTrust) {
+			ageCol = "max_age_days"
+		}
+		err := q.QueryRow(`SELECT enabled, max_project_bytes, max_entry_bytes, idle_days, `+ageCol+`, updated_at, updated_by FROM cache_policy WHERE project = ?`,
 			row.project).Scan(&enabled, &l.maxProject, &l.maxEntry, &idleDays, &ageDays, &l.updatedAt, &l.updatedBy)
 		if errors.Is(err, sql.ErrNoRows) {
 			continue
