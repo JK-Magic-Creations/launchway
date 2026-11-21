@@ -378,6 +378,8 @@ launchway runs show RUN_ID [--json]
 of a stage do not wait for each other, so a stage with several runs them at the same time (`stage 2 (runs together): test
 (running), security-go (running)`).
 
+While a run goes on, a line under the stages gives the time left (`Estimate: about 6 min left; waiting for a decision: approve.`), and each step that has not finished says what it usually takes (`[usually about 2 min]`). A finished run says `Took 8m 03s, 12% faster than usual.` See [Watching a run live](../guide/watching-runs.md).
+
 ```sh
 launchway runs show run_06gzde02yts1v325jvp0
 ```
@@ -401,14 +403,14 @@ Steps:
 Prints a run's logs, step by step in the pipeline's order, each step under a `── <step> (attempt N)` header.
 
 ```text
-launchway runs logs RUN_ID [--step S] [--service NAME] [--follow]
+launchway runs logs RUN_ID [STEP] [--step S] [--service NAME] [--follow]
 ```
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--step` | every step | Only this step, without the header. A step that does not exist exits with `4`. |
 | `--service` | off | Print this service container's output (the lines of the stream `service` whose text starts with the service's name) instead of the steps' own. |
-| `--follow` | off | Keep printing new lines until the run finishes. |
+| `--follow` | off | Keep printing new lines until the run finishes, asking every 400 ms. |
 
 ```sh
 launchway runs logs run_06gzde1rb0s24hb652q0 --step smoke-test

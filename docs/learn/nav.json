@@ -69,6 +69,7 @@
         "guide/built-in-accounts",
         "guide/libraries",
         "guide/approvals-and-reruns",
+        "guide/watching-runs",
         "guide/test-reports",
         "guide/artifacts",
         "guide/variables",

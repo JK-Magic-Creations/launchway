@@ -11,6 +11,7 @@ key and setting see the [reference](../reference/index.md).
 | [Editing pipelines](editor.md) | The web editor, draft runs of unsaved text, saving to Git |
 | [Shared libraries](libraries.md) | Templates and scripts in Git, versions, parameters, overrides |
 | [Approvals and re-runs](approvals-and-reruns.md) | Approval steps, re-running from a step, what each step was given |
+| [Watching a run live](watching-runs.md) | Output within a second, the log view, following from a terminal, and time estimates |
 | [Test reports](test-reports.md) | 13 formats, attachments, coverage, hosted HTML reports, flaky tests, history |
 | [Artifacts](artifacts.md) | Files steps keep and fetch, storage, limits |
 | [Variables at levels](variables.md) | A variable set at a level, overridden by a nearer one, locked from above, and how a pipeline takes it |

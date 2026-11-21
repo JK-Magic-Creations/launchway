@@ -291,7 +291,7 @@ curl -s -X POST -H 'X-Launchway-CSRF: 1' -H 'Content-Type: application/json' \
 {"attempt": 1, "lines": [{"seq": 1, "at": 1795140132325, "stream": "system", "text": "Runner build-1, executor container (podman)"}]}
 ```
 
-`stream` is `stdout`, `stderr` or `system` (what Launchway itself says). Secrets are masked before lines reach the server.
+`stream` is `stdout`, `stderr` or `system` (what Launchway itself says). A line printed without its newline appears after a short idle time, and the rest of it is a line of its own. Secrets are masked before lines reach the server.
 
 **Cancel and resume.** No body. Answers `{"ok": true}`. Resuming a draft run needs the right to start draft runs.
 
@@ -760,7 +760,7 @@ event: run
 data: {"id":"run_…","project":"demo-app","number":3,"status":"running",…}
 ```
 
-Without parameters it sends `run` events (run summaries) of the projects the caller may see. With `?run=<id>` it sends only that run's changes, including its log lines. With sign-in on, the session or token is checked again at every ping, and the stream ends when it is no longer valid. A client that falls behind is disconnected: reconnect and fetch again. Proxies must not buffer this route (the server sends `X-Accel-Buffering: no`). The message types are listed in [Events and audit trail](events.md).
+Without parameters it sends `run` events (run summaries) of the projects the caller may see. With `?run=<id>` it sends only that run's changes, including its log lines. With sign-in on, the session or token is checked again at every ping, and the stream ends when it is no longer valid. Log lines arrive as `log` events, `{"step", "attempt", "lines": [{"seq", "at", "stream", "text"}]}`, a moment after the runner sent them (about a second at most), also when the runner reported to another server of the same installation. Every line has a sequence number; after a reconnect, fetch from the last one you have (`GET …/logs?after=SEQ`). A client that falls behind is disconnected: reconnect and fetch again. Proxies must not buffer this route (the server sends `X-Accel-Buffering: no`). The message types are listed in [Events and audit trail](events.md).
 
 ```sh
 curl -N http://127.0.0.1:8080/api/v1/stream

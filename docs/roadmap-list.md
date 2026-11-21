@@ -64,6 +64,7 @@ compliance items provide controls and evidence.
 |---|---|
 | Pipelines as code | Typed YAML with steps, dependencies, run inputs, outputs passed between steps and loops, kept in Git next to the code they build. ([more](guide/pipelines.md)) |
 | Flow control | Conditions on steps, retries with back-off, lanes that make runs take turns, run timeouts, and re-running from any step with what each step was given. ([more](reference/pipeline.md#when)) |
+| Watching a run live, with time estimates | Output reaches the page within about a second, image builds print each step as the builder reports it, and each step and run shows how long it usually takes from earlier runs of the same pipeline, with the time left along the longest path. ([more](guide/watching-runs.md)) |
 | Build caches | Dependencies kept between runs in the database, with entries a pull request can write but the default branch never reads. ([more](guide/build-caches.md)) |
 | Triggers | Push, pull request (with target-branch filters, and newer pushes cancelling older runs), manual, schedule and webhook. ([more](guide/triggers.md)) |
 | Shared libraries | Templates and scripts in their own repository, pinned by tag, branch or commit, with typed parameters. ([more](guide/libraries.md)) |
