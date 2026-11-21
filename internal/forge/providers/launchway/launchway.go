@@ -107,6 +107,7 @@ func New(c forge.Connection, st *store.Store, sto Storage, o Options) *Provider 
 	caps := Capabilities()
 	if o.Pulls != nil {
 		caps[forge.CapProposals] = forge.Declaration{Support: forge.Native}
+		caps[forge.CapDrafts] = forge.Declaration{Support: forge.Native} // New.Draft is stored and honored
 	}
 	return &Provider{Base: forge.Base{K: forge.KindLaunchway, Caps: caps, Mat: forge.Supported}, conn: c, st: st, sto: sto, o: o}
 }

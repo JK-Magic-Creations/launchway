@@ -205,7 +205,8 @@ func (s *Service) pullState(ctx context.Context, repoID string, levels []plan.La
 	items, _, _ := s.Pulls.Store.List(ctx, repoID, pulls.Filter{State: "open", Limit: 200})
 	for _, p := range items {
 		if strings.HasPrefix(p.SourceBranch, prefix+"/") {
-			open = append(open, propose.PR{Number: p.Number, Branch: p.SourceBranch, Body: p.Body, Behind: p.Mergeability.Behind > 0})
+			open = append(open, propose.PR{Number: p.Number, Branch: p.SourceBranch, Body: p.Body,
+				Behind: p.Mergeability.Behind > 0 || s.rebaseAsked(ctx, p)})
 		}
 	}
 	items, _, _ = s.Pulls.Store.List(ctx, repoID, pulls.Filter{State: "closed", Limit: 200})
@@ -247,4 +248,26 @@ func stateKey(open []plan.Open, closed map[string]bool) string {
 	}
 	sort.Strings(parts)
 	return strings.Join(parts, ";")
+}
+
+// RebaseCommand in a comment asks the updater to rebuild a pull request on the
+// current default branch. It counts until the branch is rebuilt (a new revision).
+const RebaseCommand = "@launchway rebase"
+
+func (s *Service) rebaseAsked(ctx context.Context, p pulls.PullRequest) bool {
+	cs, err := s.Pulls.Store.Comments(ctx, p.ID)
+	if err != nil {
+		return false
+	}
+	revs, err := s.Pulls.Store.Revisions(ctx, p.ID)
+	if err != nil || len(revs) == 0 {
+		return false
+	}
+	last := revs[len(revs)-1].CreatedAt
+	for _, c := range cs {
+		if strings.Contains(strings.ToLower(c.Body), RebaseCommand) && c.CreatedAt.After(last) {
+			return true
+		}
+	}
+	return false
 }

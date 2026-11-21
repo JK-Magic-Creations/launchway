@@ -166,7 +166,7 @@ func TestGoUpdateEndToEnd(t *testing.T) {
 		t.Fatalf("%+v", host.created)
 	}
 	body := host.created[0].Body
-	for _, want := range []string{"fixes a known security problem", "example.com/lib", "`v1.4.0`", "`v1.4.2`", "go get example.com/lib@v1.4.2", "go.sum", "ignore this major", "not edited by hand"} {
+	for _, want := range []string{"fixes a known security problem", "example.com/lib", "`v1.4.0` to `v1.4.2`", "go get example.com/lib@v1.4.2", "go.sum", "ignore this major", "not edited by hand"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("body lacks %q:\n%s", want, body)
 		}
@@ -339,7 +339,7 @@ func TestBuildPerEcosystem(t *testing.T) {
 
 func TestIgnoreFromClosedPullRequests(t *testing.T) {
 	mk := func(reason string) PR {
-		body := Marker + `{"key":"npm-vite","targets":{"vite":"6.0.0"}} -->`
+		body := Marker + `{"key":"npm-vite","targets":{"vite":"6.0.0"}}` + "`"
 		return PR{Number: 3, Body: body, Reason: reason}
 	}
 	eco := func(k string) string { return strings.SplitN(k, "-", 2)[0] }

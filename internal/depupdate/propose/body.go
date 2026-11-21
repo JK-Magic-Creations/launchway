@@ -12,7 +12,7 @@ import (
 )
 
 // Marker starts the machine-readable line at the end of a pull request body.
-const Marker = "<!-- launchway-dependency-update "
+const Marker = "Updater record, please leave as it is: `launchway-dependency-update "
 
 type marker struct {
 	Key     string            `json:"key"`
@@ -29,9 +29,9 @@ func Body(pr plan.Proposal, work Work, now time.Time, policy plan.Policy) string
 	} else {
 		b.WriteString("This pull request keeps dependencies up to date.\n\n")
 	}
-	b.WriteString("## What changes\n\n| Dependency | From | To | Kind | File |\n|---|---|---|---|---|\n")
+	b.WriteString("## What changes\n\n")
 	for _, u := range pr.Updates {
-		fmt.Fprintf(&b, "| `%s` | `%s` | `%s` | %s | `%s` |\n", u.Dep.Name, nz(u.Dep.Current, u.Dep.Constraint), u.Target, kindWord(u), u.Dep.File)
+		fmt.Fprintf(&b, "- `%s`: `%s` to `%s` (%s), in `%s`\n", u.Dep.Name, nz(u.Dep.Current, u.Dep.Constraint), u.Target, kindWord(u), u.Dep.File)
 	}
 	b.WriteString("\n## Why\n\n")
 	found := false
@@ -91,9 +91,9 @@ func Body(pr plan.Proposal, work Work, now time.Time, policy plan.Policy) string
 		}
 	}
 	b.WriteString("\n## About this pull request\n\nOpened by Launchway's dependency updater (" + groupWord(pr) + "). It keeps this one pull request for these dependencies and updates it in place when a newer version appears. ")
-	b.WriteString("To stop, close it with a comment: `ignore this version`, `ignore this major` or `ignore this dependency`. To refresh it, comment `@launchway rebase`.\n\n")
+	b.WriteString("To stop, close it with a comment: `ignore this version`, `ignore this major` or `ignore this dependency`. To rebuild it on the current default branch, comment `@launchway rebase`; the updater picks that up on its next run.\n\n")
 	m, _ := json.Marshal(marker{pr.Key, targets(pr)})
-	b.WriteString(Marker + string(m) + " -->\n")
+	b.WriteString(Marker + string(m) + "`\n")
 	return b.String()
 }
 
@@ -104,7 +104,7 @@ func ParseMarker(body string) (key string, targets map[string]string, ok bool) {
 		return "", nil, false
 	}
 	rest := body[i+len(Marker):]
-	if j := strings.Index(rest, " -->"); j >= 0 {
+	if j := strings.Index(rest, "`"); j >= 0 {
 		rest = rest[:j]
 	}
 	var m marker

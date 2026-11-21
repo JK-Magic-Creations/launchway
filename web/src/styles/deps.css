@@ -3,7 +3,7 @@
 .deps-filter { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; }
 .deps-filter .field { flex: 0 1 220px; margin: 0; }
 .deps-filter .check { display: inline-flex; align-items: center; gap: 8px; }
-.deps-table { overflow-x: auto; }
+.deps-scroll { overflow-x: auto; max-width: 100%; }
 .deps-table tbody th { text-transform: none; letter-spacing: normal; font-weight: 600; text-align: left; }
 .deps-table tbody th .mono { text-transform: none; }
 .deps-table tbody th small { display: block; font-weight: 400; text-transform: none; letter-spacing: normal; }

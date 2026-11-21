@@ -85,11 +85,11 @@ export function DependenciesPage({ path }: { path: string }) {
           </Sheet>
           <Sheet title={`Dependencies (${rows.length})`}>
             {rows.length === 0 ? <p className="faint pad">Nothing matches these filters.</p> : (
-              <table className="table deps-table">
+              <div className="deps-scroll"><table className="table deps-table">
                 <caption className="sr-only">Dependencies of {path}</caption>
                 <thead><tr><th scope="col">Dependency</th><th scope="col">Ecosystem</th><th scope="col">In use</th><th scope="col">Newest</th><th scope="col">Proposed</th><th scope="col">Age of proposed</th><th scope="col">Known vulnerabilities</th><th scope="col">Pull request</th><th scope="col">Status</th></tr></thead>
                 <tbody>{rows.map((u) => <Row key={u.dep.ecosystem + u.dep.file + u.dep.name} u={u} path={path} pr={prOf.get(u.dep.ecosystem + "|" + u.dep.name)} />)}</tbody>
-              </table>
+              </table></div>
             )}
           </Sheet>
           {report.notes && report.notes.length > 0 && (
@@ -158,7 +158,7 @@ export function UpdatesPage({ path }: { path: string }) {
 
 function Decisions({ decisions }: { decisions: Decision[] }) {
   return (
-    <table className="table deps-table">
+    <div className="deps-scroll"><table className="table deps-table">
       <caption className="sr-only">What the updater would do</caption>
       <thead><tr><th scope="col">Pull request</th><th scope="col">What</th><th scope="col">Updates</th><th scope="col">Why</th></tr></thead>
       <tbody>{decisions.map((d) => (
@@ -168,6 +168,6 @@ function Decisions({ decisions }: { decisions: Decision[] }) {
           <td>{d.updates.map((u) => `${u.dep.name} ${u.dep.current || ""} → ${u.target ?? "?"}`).join("; ")}</td>
           <td>{d.why}</td>
         </tr>))}</tbody>
-    </table>
+    </table></div>
   );
 }
