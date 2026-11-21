@@ -102,7 +102,7 @@ func (p *Pipeline) RolloutStepsOf(deployID string) []*Step {
 
 // pausesValue reads wait, promote or fail.
 func (ps *parser) pausesValue(n *yaml.Node, at string) string {
-	switch v := ps.str(n, at); v {
+	switch v := ps.scalar(n, at); v {
 	case PausesWait, PausesPromote, PausesFail:
 		return v
 	default:
@@ -116,7 +116,7 @@ func (ps *parser) parseControlKey(k, n *yaml.Node, where string, s *Step) {
 	switch k.Value {
 	case "action":
 		s.ctl.action = n.Line
-		switch a := ps.str(n, where); {
+		switch a := ps.scalar(n, where); {
 		case contains(RolloutActions, a):
 			s.Action = a
 		default:
@@ -124,7 +124,7 @@ func (ps *parser) parseControlKey(k, n *yaml.Node, where string, s *Step) {
 		}
 	case "until":
 		s.ctl.until = n.Line
-		switch u := ps.str(n, where); u {
+		switch u := ps.scalar(n, where); u {
 		case "healthy", "paused":
 			s.Until = u
 		default:

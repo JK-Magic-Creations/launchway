@@ -313,15 +313,17 @@ func (ps *parser) parseDeployKeys(v *yaml.Node, at string, s *Step) {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "environment":
-			if n.Kind == yaml.MappingNode && hasKey(n, "input") {
-				ps.eachKey(n, where, []string{"input"}, func(_, x *yaml.Node) { s.environmentInput = ps.str(x, where+".input") })
+			if n.Kind == yaml.MappingNode && hasKey(n, "input") && ps.tmpl != nil {
+				ps.add(n, where, "a template cannot read run inputs; take the environment as a parameter of this template and write { param: name }")
+			} else if n.Kind == yaml.MappingNode && hasKey(n, "input") {
+				ps.eachKey(n, where, []string{"input"}, func(_, x *yaml.Node) { s.environmentInput = ps.scalar(x, where+".input") })
 				s.Environment = "{" + s.environmentInput + "}"
 			} else {
-				s.Environment = ps.str(n, where)
+				s.Environment = ps.scalar(n, where)
 			}
 			s.environmentLine = n.Line
 		case "service":
-			s.Service = ps.str(n, where)
+			s.Service = ps.scalar(n, where)
 		case "version":
 			s.Version = ps.value(n, where)
 			s.versionLine = n.Line
@@ -330,7 +332,7 @@ func (ps *parser) parseDeployKeys(v *yaml.Node, at string, s *Step) {
 		case "rollout":
 			s.Rollout = ps.parseRollout(n, where)
 		case "on_cancel":
-			switch c := ps.str(n, where); c {
+			switch c := ps.scalar(n, where); c {
 			case "leave":
 				s.OnCancel = c
 			case "abort":
@@ -341,7 +343,7 @@ func (ps *parser) parseDeployKeys(v *yaml.Node, at string, s *Step) {
 				ps.add(n, where, "write leave or abort")
 			}
 		case "deployment":
-			s.Deployment = ps.str(n, where)
+			s.Deployment = ps.scalar(n, where)
 			s.deploymentLine = n.Line
 		default:
 			ps.parseControlKey(k, n, where, s)
@@ -352,10 +354,6 @@ func (ps *parser) parseDeployKeys(v *yaml.Node, at string, s *Step) {
 // checkDeployKeys reports keys a deploy or rollback step does not take, and
 // then the keys it needs.
 func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step) {
-	if ps.tmpl != nil {
-		ps.add(k, at+".kind", "a %s step cannot be in a template yet; write it in the pipeline that uses the template", s.Kind)
-		return
-	}
 	known := deployKeys
 	switch {
 	case s.IsRollback():
@@ -433,15 +431,27 @@ func (ps *parser) value(n *yaml.Node, at string) *Value {
 		ps.add(n, at, "write a value, { output: step.key }, { run: sha } or { input: name }")
 		return &Value{}
 	}
+	if hasKey(n, "param") {
+		// A template's parameter: its value, written in place (resolved when
+		// the run is created).
+		lit := ps.scalar(n, at)
+		if strings.TrimSpace(lit) == "" {
+			ps.add(n, at, "a value is required")
+		}
+		return &Value{Literal: lit}
+	}
 	v := &Value{}
 	set := 0
 	ps.eachKey(n, at, []string{"output", "run", "input"}, func(k, x *yaml.Node) {
 		set++
 		switch k.Value {
 		case "input":
-			v.Input, v.inputLine = ps.str(x, at+".input"), x.Line
+			if ps.tmpl != nil {
+				ps.add(x, at+".input", "a template cannot read run inputs; take the value as a parameter of this template and write { param: name }")
+			}
+			v.Input, v.inputLine = ps.scalar(x, at+".input"), x.Line
 		case "output":
-			ref := ps.str(x, at+".output")
+			ref := ps.scalar(x, at+".output")
 			step, key, ok := strings.Cut(ref, ".")
 			if !ok || step == "" || strings.TrimSpace(key) == "" || strings.ContainsAny(key, " \t") {
 				ps.add(x, at+".output", "write the step and the output's key, for example: { output: build.tag }")
@@ -449,7 +459,7 @@ func (ps *parser) value(n *yaml.Node, at string) *Value {
 			}
 			v.Output = &OutputRef{Step: step, Key: key}
 		case "run":
-			fact := ps.str(x, at+".run")
+			fact := ps.scalar(x, at+".run")
 			if !contains(RunFacts, fact) {
 				ps.add(x, at+".run", "%q is not a fact about the run; use %s", fact, strings.Join(RunFacts, ", "))
 				return
@@ -479,7 +489,7 @@ func (ps *parser) parseArgoCD(n *yaml.Node, at string) *ArgoCD {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "application":
-			a.Application = ps.str(v, where)
+			a.Application = ps.scalar(v, where)
 			if a.Application != "" && !k8sNameRe.MatchString(a.Application) {
 				ps.add(v, where, "%q is not a valid application name", a.Application)
 			}
@@ -489,7 +499,7 @@ func (ps *parser) parseArgoCD(n *yaml.Node, at string) *ArgoCD {
 			ps.parseSync(v, where, &a.Sync)
 		case "health":
 			healthNode = v
-			a.Health = ps.str(v, where)
+			a.Health = ps.scalar(v, where)
 		}
 	})
 	if n.Kind != yaml.MappingNode {
@@ -538,12 +548,12 @@ func (ps *parser) parseWriteBack(n *yaml.Node, at string) *WriteBack {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "repo":
-			w.Repo = ps.str(v, where)
+			w.Repo = ps.scalar(v, where)
 			if w.Repo != "" && !repoNameRe.MatchString(w.Repo) {
 				ps.add(v, where, "%q is not a repository name; name one the deploy runner's configuration lists, in lower case", w.Repo)
 			}
 		case "branch":
-			w.Branch = ps.str(v, where)
+			w.Branch = ps.scalar(v, where)
 			if w.Branch != "" && (!branchRe.MatchString(w.Branch) || strings.Contains(w.Branch, "..") ||
 				strings.HasPrefix(w.Branch, "/") || strings.HasSuffix(w.Branch, "/") || strings.HasPrefix(w.Branch, "-")) {
 				ps.add(v, where, "%q is not a valid branch name", w.Branch)
@@ -589,9 +599,9 @@ func (ps *parser) parseChange(n *yaml.Node, at string) Change {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "file":
-			c.File = ps.str(v, where)
+			c.File = ps.scalar(v, where)
 		case "image":
-			c.Image = ps.str(v, where)
+			c.Image = ps.scalar(v, where)
 			if c.Image != "" {
 				if err := edit.CheckImage(c.Image); err != nil {
 					ps.add(v, where, "%s", err)
@@ -612,7 +622,7 @@ func (ps *parser) parseChange(n *yaml.Node, at string) Change {
 				}
 			}
 		case "set":
-			c.Set = ps.str(v, where)
+			c.Set = ps.scalar(v, where)
 			if c.Set != "" {
 				if err := edit.CheckPath(c.Set); err != nil {
 					ps.add(v, where, "%s", err)
@@ -659,7 +669,7 @@ func (ps *parser) parseSync(n *yaml.Node, at string, s *Sync) {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "request":
-			switch r := ps.str(v, where); r {
+			switch r := ps.scalar(v, where); r {
 			case "auto", "always", "never":
 				s.Request = r
 			default:
@@ -668,7 +678,7 @@ func (ps *parser) parseSync(n *yaml.Node, at string, s *Sync) {
 		case "prune":
 			s.Prune = ps.bool(v, where)
 		case "windows":
-			switch w := ps.str(v, where); w {
+			switch w := ps.scalar(v, where); w {
 			case "wait", "fail":
 				s.Windows = w
 			default:
@@ -694,7 +704,7 @@ func (ps *parser) parseResource(n *yaml.Node, at string) Resource {
 	groupSet := false
 	ps.eachKey(n, at, resourceKeys, func(k, v *yaml.Node) {
 		where := at + "." + k.Value
-		val := ps.str(v, where)
+		val := ps.scalar(v, where)
 		switch k.Value {
 		case "group":
 			r.Group, groupSet = val, true
@@ -749,17 +759,17 @@ func (ps *parser) parseRollout(n *yaml.Node, at string) *RolloutRef {
 		where := at + "." + k.Value
 		switch k.Value {
 		case "name":
-			r.Name = ps.str(v, where)
+			r.Name = ps.scalar(v, where)
 			if r.Name != "" && !k8sNameRe.MatchString(r.Name) {
 				ps.add(v, where, "%q is not a valid name", r.Name)
 			}
 		case "namespace":
-			r.Namespace = ps.str(v, where)
+			r.Namespace = ps.scalar(v, where)
 			if r.Namespace != "" && !k8sNamespaceRe.MatchString(r.Namespace) {
 				ps.add(v, where, "%q is not a valid namespace", r.Namespace)
 			}
 		case "until":
-			switch u := ps.str(v, where); u {
+			switch u := ps.scalar(v, where); u {
 			case "healthy", "paused":
 				r.Until, r.untilLine = u, v.Line
 			default:

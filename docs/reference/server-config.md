@@ -257,6 +257,8 @@ commit that has its own `.launchway/pipeline.yaml`, that file wins.
 | `projects[].pipeline.lane.when_busy` | `wait`, `cancel` or `skip` | `wait` | What a run that arrives while the lane is held does |
 | `projects[].pipeline.lane.queue` | `newest` or `all` | `newest` | For `wait`: whether a newer waiting run replaces an older one |
 | `projects[].pipeline.true` | | | Not written by hand: tools that read YAML 1.1 (Helm among them) turn an unquoted `on` into `true`. It is read as `on`; having both is refused |
+| `projects[].default_pipeline.enabled` | boolean | `true` | `false`: the project runs no [flight plan](config-objects.md#a-flight-plan-for-every-repository). A repository file still runs |
+| `projects[].default_pipeline.with` | mapping | none | Other values for some parameters of the flight plan's template; the rest stay as the flight plan sets them. Ignored when the project has its own `pipeline` |
 
 ## Libraries
 

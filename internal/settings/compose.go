@@ -37,6 +37,8 @@ type UnitView struct {
 	DisplayName string   `json:"display_name"`
 	Description string   `json:"description,omitempty"`
 	Projects    []string `json:"projects"`
+	// DefaultPipeline is the unit's default pipeline, if it has one.
+	DefaultPipeline *config.ProjectPipelineConfig `json:"-"`
 }
 
 // noProject is a project pattern that matches no project (names cannot
@@ -81,6 +83,7 @@ func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *
 			errs = append(errs, err)
 		}
 	}
+	applyDefaultPipelines(c, lay, units)
 	if len(policies.Content) > 0 {
 		ensurePolicy(c).Policies = policies
 	}
@@ -118,7 +121,7 @@ func decodeAll(live []engine.ConfigObject, lay *Layout) ([]any, map[string]*Unit
 		switch o.Kind {
 		case "unit":
 			u := v.(*Unit)
-			units[o.Name] = &UnitView{Name: o.Name, DisplayName: cmpOr(u.DisplayName, o.Name), Description: u.Description, Projects: []string{}}
+			units[o.Name] = &UnitView{Name: o.Name, DisplayName: cmpOr(u.DisplayName, o.Name), Description: u.Description, Projects: []string{}, DefaultPipeline: u.DefaultPipeline}
 		case "project":
 			lay.ProjectUnit[o.Name] = o.Unit
 		}
@@ -730,4 +733,43 @@ func toNode(v any) (*yaml.Node, error) {
 		return nil, err
 	}
 	return &n, nil
+}
+
+// applyDefaultPipelines gives each project that has no pipeline of its own
+// the default pipeline of its unit, or else of the organisation, with the
+// project's own say (switched off, or other values of some parameters)
+// applied. The project then runs it wherever its repository has no pipeline
+// file. A project that names a pipeline keeps it whole: the default is for
+// repositories nobody configured.
+func applyDefaultPipelines(c *config.Config, lay *Layout, units map[string]*UnitView) {
+	for i := range c.Projects {
+		p := &c.Projects[i]
+		if p.Pipeline != nil {
+			continue
+		}
+		if d := p.DefaultPipeline; d != nil && d.Enabled != nil && !*d.Enabled {
+			continue
+		}
+		def, from := lay.Organisation.DefaultPipeline, "organisation"
+		if u := units[lay.ProjectUnit[p.Name]]; u != nil && u.DefaultPipeline != nil {
+			def, from = u.DefaultPipeline, "unit "+u.Name
+		}
+		if def == nil {
+			continue
+		}
+		pp := *def
+		pp.With = make(map[string]string, len(def.With))
+		for k, v := range def.With {
+			pp.With[k] = v
+		}
+		if d := p.DefaultPipeline; d != nil {
+			for k, v := range d.With {
+				pp.With[k] = v
+			}
+		}
+		if len(pp.With) == 0 {
+			pp.With = nil
+		}
+		p.Pipeline, p.PipelineFrom = &pp, from
+	}
 }

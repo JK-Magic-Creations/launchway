@@ -417,7 +417,7 @@ by `for_each`. See [Deploy with an approval](../tutorials/deploy-with-approval.m
 |---|---|---|---|
 | `message` | text | required | The question to decide, one line of at most 500 characters |
 | `approvers` | mapping | anyone with the operator role, one approval | Who may decide and how many distinct people must approve; see [Approvers](#approvers) |
-| `deployment` | step name | none | A deploy step this approval guards: the approval then shows the live rollout, is rejected by itself if the rollout is aborted, and needs the operator role on that environment. The approval must need the deploy step, directly or not, and takes no `when.upstream`. Not allowed in a template |
+| `deployment` | step name | none | A deploy step this approval guards: the approval then shows the live rollout, is rejected by itself if the rollout is aborted, and needs the operator role on that environment. The approval must need the deploy step, directly or not, and takes no `when.upstream`. In a template, name a deploy step of the same template |
 
 <!-- validate -->
 ```yaml
@@ -591,8 +591,7 @@ steps:
 A deploy step commits a version to a GitOps repository, asks Argo CD to sync if it must, and waits
 until the application (and its Argo Rollouts rollout, if one is named) is healthy on that version.
 A deploy runner serving the environment's target does the work. `timeout` covers the whole step:
-default `30m`, from `1m` to `24h`. Deploy steps cannot be repeated by `for_each`, cannot be in a
-template, take no `when.upstream`, and do not run in draft runs, pull-request runs or
+default `30m`, from `1m` to `24h`. Deploy steps cannot be repeated by `for_each`, take no `when.upstream`, and do not run in draft runs, pull-request runs or
 `launchway run`. See [Deploy with an approval](../tutorials/deploy-with-approval.md).
 
 <!-- keys: kind-deploy -->
@@ -768,7 +767,7 @@ logs from [health sources](runner-config.md#health-sources) an operator configur
 **passed**, **failed** or **inconclusive** with built-in statistics. It runs no script: a deploy
 runner next to the monitoring systems reads the data. `timeout` defaults to the delay and the
 window plus an hour, and must leave room for the delay, the window and a minute more; at most
-`24h`. It cannot be in a template or in a loop. It needs a server that knows verify steps (schema
+`24h`. It may be in a template (see [Template steps](#template-steps)); it cannot be in a loop. It needs a server that knows verify steps (schema
 19). See [Verifying a deployment](../guide/verification.md) for how the verdict is reached.
 
 <!-- keys: kind-verify -->
@@ -1631,7 +1630,7 @@ Each entry of `params` maps a name (`^[a-z][a-z0-9_-]{0,39}$`) to its settings.
 <!-- keys: template-param -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `type` | text | `string` | `string`, `number`, `boolean` or `list` |
+| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment` or `application`. The last two are strings that mean something: an environment's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the deploy runs. Both take `options` and `format` as a string does |
 | `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list |
 | `description` | text | none | One line of at most 200 characters |
 | `options` | one value or a list | none | The values allowed. For `string` and `number` only |
@@ -1653,8 +1652,18 @@ Each entry of `outputs` maps an output name (`^[A-Za-z_][A-Za-z0-9_-]{0,62}$`) t
 
 ### Template steps
 
-Steps in a template take every key a pipeline's steps take, with these differences: they may not
-be deploy, rollback, rollout or verify steps; an approval may not name a `deployment`; `{ input: ... }` and
+Steps in a template take every key a pipeline's steps take, deploy, rollback, rollout, verify and
+approval steps included, with these differences. A deploy step's text values (`environment`,
+`service`, `argocd.application`, the write-back `repo`, `branch`, `file` and `image`, the `sync`
+settings, resource and rollout names) may be [`{ param: name }`](#parameter-values), and so may a
+change's `tag`, `digest` and `value` and a verify step's `params`; give the environment and the
+application the `environment` and `application` parameter types. The names a step gives other steps
+(`needs`, `deployment`, `{ output: step.key }`) are the template's own, and become
+`<uses-step>/<step>` when the run is created. A template authorizes nothing: once expanded, every
+step is checked as if the pipeline had written it, so a project cannot use a template to reach an
+environment it is not listed for ([`projects`](server-config.md#environments)), policies apply to
+the deployment, and problems name the step by its expanded name. A template reads no run inputs:
+`{ input: ... }` and
 `when.input` are refused (pass the input to a parameter instead); `uses` names a template of the
 same library by name alone; and they take one more key:
 

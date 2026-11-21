@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
+
 	"gopkg.in/yaml.v3"
 
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
@@ -23,6 +26,16 @@ type ProjectPipelineConfig struct {
 	// key into the boolean true and write it back as "true". Take that
 	// spelling for what it was meant to be rather than refusing to start.
 	OnAsTrue *ProjectPipelineOn `yaml:"true"`
+}
+
+// ProjectDefaultPipelineConfig is what one project says about the default
+// pipeline of its unit or organisation.
+type ProjectDefaultPipelineConfig struct {
+	// Enabled is true unless it says false: the project then runs no
+	// default pipeline (a repository file still runs).
+	Enabled *bool `yaml:"enabled"`
+	// With replaces the default's values of these template parameters.
+	With map[string]string `yaml:"with"`
 }
 
 // ProjectLaneConfig is a configured pipeline's lane: the pipeline key lane,
@@ -51,4 +64,27 @@ func (l *ProjectLaneConfig) source() *source.ProjectLane {
 		return nil
 	}
 	return &source.ProjectLane{Name: l.Name, Per: l.Per, WhenBusy: l.WhenBusy, Queue: l.Queue}
+}
+
+// sourcePipeline is the project's pipeline as the source package keeps it,
+// or nil for none.
+func (p ProjectConfig) sourcePipeline() (*source.ProjectPipeline, error) {
+	pp := p.Pipeline
+	if pp == nil {
+		return nil, nil
+	}
+	sp := &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With,
+		Supersede: pp.Supersede, Default: p.PipelineFrom}
+	sp.Lane = pp.Lane.source()
+	if t := pp.On.Push; t != nil {
+		sp.On.Push = &pipeline.PushTrigger{Branches: t.Branches, Tags: t.Tags}
+	}
+	prs, err := pp.On.pullRequests()
+	if err != nil {
+		return nil, fmt.Errorf("project %s: %w", p.Name, err)
+	}
+	if prs {
+		sp.On.PullRequest = &pipeline.PullRequestTrigger{}
+	}
+	return sp, nil
 }

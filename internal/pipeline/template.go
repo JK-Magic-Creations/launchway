@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -34,20 +35,22 @@ import (
 
 // Limits on libraries, templates and parameters.
 const (
-	MaxLibraries      = 10   // per pipeline
-	MaxParams         = 50   // per template, and values per with
-	MaxParamValueLen  = 4096 // bytes in one parameter value
-	MaxNesting        = 4    // templates using templates, below the pipeline
-	MaxExpandedSteps  = 500  // steps in a pipeline once expanded
-	MaxStepIDLen      = 200  // bytes in an expanded step's ID
-	MaxVersionLen     = 128
-	ParamEnvPrefix    = "PARAM_"
-	paramTypeString   = "string"
-	paramTypeNumber   = "number"
-	paramTypeBoolean  = "boolean"
-	paramTypeList     = "list"
-	templatesDir      = "templates/"
-	templateExtension = ".yaml"
+	MaxLibraries         = 10   // per pipeline
+	MaxParams            = 50   // per template, and values per with
+	MaxParamValueLen     = 4096 // bytes in one parameter value
+	MaxNesting           = 4    // templates using templates, below the pipeline
+	MaxExpandedSteps     = 500  // steps in a pipeline once expanded
+	MaxStepIDLen         = 200  // bytes in an expanded step's ID
+	MaxVersionLen        = 128
+	ParamEnvPrefix       = "PARAM_"
+	paramTypeString      = "string"
+	paramTypeNumber      = "number"
+	paramTypeBoolean     = "boolean"
+	paramTypeList        = "list"
+	paramTypeEnvironment = "environment"
+	paramTypeApplication = "application"
+	templatesDir         = "templates/"
+	templateExtension    = ".yaml"
 )
 
 var (
@@ -101,276 +104,6 @@ func EnvName(s string) string {
 			return '_'
 		}
 	}, s)
-}
-
-// paramScope is what a template being read knows about its parameters.
-type paramScope struct {
-	params map[string]*Param
-	values map[string]string // every parameter's value for this use, defaults included
-}
-
-type yamlPos struct{ Line, Column int }
-
-// paramTest is a template step's if: whether the step stays.
-type paramTest struct {
-	keep bool
-}
-
-// ---- reading pipelines that use templates ----
-
-// parseLibraries reads libraries: { name: { repo: r, version: v } }.
-func (ps *parser) parseLibraries(n *yaml.Node, p *Pipeline) {
-	if n.Kind != yaml.MappingNode {
-		ps.add(n, "libraries", "libraries is a mapping of names to libraries, for example: platform: { repo: ci-templates, version: v3 }")
-		return
-	}
-	if len(n.Content)/2 > MaxLibraries {
-		ps.add(n, "libraries", "a pipeline may use at most %d libraries", MaxLibraries)
-		return
-	}
-	seen := map[string]bool{}
-	for i := 0; i+1 < len(n.Content); i += 2 {
-		k, v := n.Content[i], n.Content[i+1]
-		at := "libraries." + k.Value
-		if seen[k.Value] {
-			ps.add(k, at, "library %q is written twice", k.Value)
-			continue
-		}
-		seen[k.Value] = true
-		if !libNameRe.MatchString(k.Value) {
-			ps.add(k, at, "%q is not a valid library name: use lower-case letters, digits and hyphens, starting with a letter (at most 40)", k.Value)
-		}
-		l := &Library{Name: k.Value, Line: k.Line}
-		ps.eachKey(v, at, []string{"repo", "version"}, func(k2, v2 *yaml.Node) {
-			switch k2.Value {
-			case "repo":
-				l.Repo = ps.str(v2, at+".repo")
-				if !libNameRe.MatchString(l.Repo) {
-					ps.add(v2, at+".repo", "repo names one of the libraries the server allows, such as ci-templates; %q is not such a name", clipText(l.Repo, 60))
-				}
-			case "version":
-				l.Version = ps.str(v2, at+".version")
-				if !ValidVersion(l.Version) {
-					ps.add(v2, at+".version", "the version is a tag, a branch or a full commit id, of at most %d letters, digits and . _ / + -", MaxVersionLen)
-				}
-			}
-		})
-		if v.Kind == yaml.MappingNode {
-			if l.Repo == "" {
-				ps.add(k, at+".repo", "say which library: repo: one of the libraries the server allows")
-			}
-			if l.Version == "" {
-				ps.add(k, at+".version", "say which version: a tag such as v3, a branch, or a full commit id")
-			}
-		}
-		p.Libraries = append(p.Libraries, l)
-	}
-}
-
-// parseWith reads the values a step passes to its template, as written. In a
-// template, a value may be { param: name }: the using template's parameter.
-func (ps *parser) parseWith(n *yaml.Node, at string) (map[string]string, map[string]*yamlPos) {
-	out, lines := map[string]string{}, map[string]*yamlPos{}
-	if n.Kind != yaml.MappingNode {
-		ps.add(n, at, "with is a mapping of parameter names to values")
-		return out, lines
-	}
-	if len(n.Content)/2 > MaxParams {
-		ps.add(n, at, "at most %d values", MaxParams)
-		return out, lines
-	}
-	for i := 0; i+1 < len(n.Content); i += 2 {
-		k, v := n.Content[i], n.Content[i+1]
-		where := at + "." + k.Value
-		if _, dup := out[k.Value]; dup {
-			ps.add(k, where, "%q is written twice", k.Value)
-			continue
-		}
-		ps.curField, ps.curName = "with", k.Value
-		val := ps.withValue(ps.cur, k.Value, v, where)
-		ps.curField, ps.curName = "", ""
-		if len(val) > MaxParamValueLen {
-			ps.add(v, where, "the value is longer than %d bytes", MaxParamValueLen)
-		}
-		out[k.Value] = val
-		lines[k.Value] = &yamlPos{Line: k.Line, Column: k.Column}
-	}
-	return out, lines
-}
-
-// parseUseStep checks a step that uses a template.
-func (ps *parser) parseUseStep(at string, s *Step, keys map[string]*yaml.Node) {
-	for _, key := range append(append([]string{}, stepKeys...), "if") {
-		n := keys[key]
-		if n != nil && !contains(useKeys, key) && (key != "if" || ps.tmpl == nil) {
-			ps.add(n, at+"."+key, "a step that uses a template takes no %s: the template says what to run (it may take %s)", key, strings.Join(useKeys[1:], ", "))
-		}
-	}
-	lib, name, cross := strings.Cut(s.Uses, "/")
-	switch {
-	case ps.tmpl != nil && cross:
-		ps.add(keys["uses"], at+".uses", "a template can use templates of its own library only, written by name alone (uses: %s); "+
-			"using a template of another library from a template is not supported yet", clipText(name, 60))
-	case ps.tmpl != nil:
-		if !templateNameRe.MatchString(s.Uses) {
-			ps.add(keys["uses"], at+".uses", "%q is not a template name", clipText(s.Uses, 60))
-		}
-	case !cross || !templateNameRe.MatchString(name) || lib == "":
-		ps.add(keys["uses"], at+".uses", "write uses: library/template, such as platform/python-service, with the library named under libraries:")
-	}
-}
-
-// parseIf reads a template step's if: { param: name } or
-// { param: name, equals: value }.
-func (ps *parser) parseIf(n *yaml.Node, at string) *paramTest {
-	t := &paramTest{keep: true}
-	if ps.tmpl == nil {
-		ps.add(n, at, "if is only for steps in templates; use when")
-		return t
-	}
-	var name, equals string
-	var nameNode, equalsNode *yaml.Node
-	ps.eachKey(n, at, []string{"param", "equals"}, func(k, v *yaml.Node) {
-		if k.Value == "param" {
-			name, nameNode = ps.str(v, at+".param"), v
-		} else {
-			equals, equalsNode = ps.str(v, at+".equals"), v
-		}
-	})
-	if n.Kind != yaml.MappingNode {
-		return t
-	}
-	p := ps.tmpl.params[name]
-	switch {
-	case nameNode == nil:
-		ps.add(n, at, "write if: { param: name } for a boolean parameter, or if: { param: name, equals: value }")
-	case p == nil:
-		ps.add(nameNode, at+".param", "%s", ps.unknownParam(name))
-	case equalsNode == nil && p.Type != paramTypeBoolean:
-		ps.add(n, at, "%s is a %s, not true or false: say which value keeps the step, with equals:", name, p.Type)
-	case equalsNode != nil:
-		if msg := p.check(equals); msg != "" {
-			ps.add(equalsNode, at+".equals", "%s", msg)
-		}
-		t.keep = sameValue(p.Type, ps.tmpl.values[name], equals)
-	default:
-		t.keep = ps.tmpl.values[name] == "true"
-	}
-	return t
-}
-
-// scalar reads a value written in place. In a template it may instead be a
-// reference to a parameter: { param: name }, or { param: name, format:
-// "text with one %s" } for a string parameter.
-func (ps *parser) scalar(n *yaml.Node, at string) string {
-	if n.Kind == yaml.MappingNode && hasKey(n, "each") {
-		return ps.eachValue(n, at)
-	}
-	if n.Kind != yaml.MappingNode || !hasKey(n, "param") {
-		return ps.str(n, at)
-	}
-	if ps.tmpl == nil {
-		ps.add(n, at, "{ param: … } is for templates; here, write the value itself")
-		return ""
-	}
-	var name, format string
-	var formatNode *yaml.Node
-	ps.eachKey(n, at, []string{"param", "format"}, func(k, v *yaml.Node) {
-		if k.Value == "param" {
-			name = ps.str(v, at+".param")
-		} else {
-			format, formatNode = ps.str(v, at+".format"), v
-		}
-	})
-	p := ps.tmpl.params[name]
-	if p == nil {
-		ps.add(n, at+".param", "%s", ps.unknownParam(name))
-		return ""
-	}
-	v := ps.tmpl.values[name]
-	if formatNode == nil {
-		return v
-	}
-	switch {
-	case p.Type != paramTypeString:
-		ps.add(formatNode, at+".format", "format is for string parameters; %s is a %s", name, p.Type)
-	case strings.Count(format, "%s") != 1 || strings.Count(format, "%") != 1:
-		ps.add(formatNode, at+".format", "a format has exactly one %%s, where the value goes, and no other %%")
-	default:
-		return strings.Replace(format, "%s", v, 1)
-	}
-	return ""
-}
-
-// valueList is strList whose items, or the whole of which, may be
-// parameter references in a template.
-func (ps *parser) valueList(n *yaml.Node, at string) []string {
-	switch {
-	case n.Kind == yaml.MappingNode:
-		if v := ps.scalar(n, at); v != "" {
-			return []string{v}
-		}
-		return nil
-	case n.Kind == yaml.SequenceNode:
-		out := make([]string, 0, len(n.Content))
-		for _, c := range n.Content {
-			switch {
-			case c.Kind == yaml.MappingNode:
-				out = append(out, ps.scalar(c, at))
-			case c.Kind != yaml.ScalarNode:
-				ps.add(c, at, "expected a list of values")
-			default:
-				out = append(out, c.Value)
-			}
-		}
-		return out
-	}
-	return ps.strList(n, at)
-}
-
-func (ps *parser) unknownParam(name string) string {
-	names := make([]string, 0, len(ps.tmpl.params))
-	for n := range ps.tmpl.params {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	if len(names) == 0 {
-		return fmt.Sprintf("there is no parameter %q: the template declares none under params:", clipText(name, 60))
-	}
-	return fmt.Sprintf("there is no parameter %q; the template declares %s", clipText(name, 60), strings.Join(names, ", "))
-}
-
-func hasKey(m *yaml.Node, key string) bool {
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == key {
-			return true
-		}
-	}
-	return false
-}
-
-// checkUses checks that every uses step names a library the pipeline lists.
-func (ps *parser) checkUses(p *Pipeline) {
-	for _, s := range p.Steps {
-		if !s.IsUse() || ps.tmpl != nil {
-			continue
-		}
-		lib, _, ok := strings.Cut(s.Uses, "/")
-		if ok && lib != "" && p.Library(lib) == nil {
-			ps.problems = append(ps.problems, Problem{Line: s.usesLine, Path: "steps." + s.ID + ".uses",
-				Message: fmt.Sprintf("no library called %q is listed under libraries:", clipText(lib, 60))})
-		}
-	}
-}
-
-func clipText(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	for n > 0 && !utf8.RuneStart(s[n]) {
-		n--
-	}
-	return s[:n] + "…"
 }
 
 // ---- reading templates ----
@@ -556,8 +289,8 @@ func (ps *parser) parseParams(n *yaml.Node) []*Param {
 			switch k2.Value {
 			case "type":
 				p.Type = ps.str(v2, where)
-				if p.Type != paramTypeString && p.Type != paramTypeNumber && p.Type != paramTypeBoolean && p.Type != paramTypeList {
-					ps.add(v2, where, "the type is string, number, boolean or list")
+				if !slices.Contains(ParamTypes, p.Type) {
+					ps.add(v2, where, "the type is %s or %s", strings.Join(ParamTypes[:len(ParamTypes)-1], ", "), ParamTypes[len(ParamTypes)-1])
 					p.Type = paramTypeString
 				}
 			case "default":
@@ -705,6 +438,7 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 	if len(x.problems) == 0 && len(out.Steps) > MaxExpandedSteps {
 		x.problems = append(x.problems, Problem{Message: fmt.Sprintf("expanded, the pipeline has %d steps; at most %d are allowed", len(out.Steps), MaxExpandedSteps)})
 	}
+	x.checkDeployments(out)
 	if len(x.problems) == 0 && len(out.Steps) == 0 {
 		x.problems = append(x.problems, Problem{Message: "expanded, the pipeline has no steps left: every template step's if was false"})
 	}
@@ -731,6 +465,7 @@ func expandBound(p *Pipeline, load TemplateLoader, vb *varBinding) (*Pipeline, e
 	out.Libraries = kept
 	// A template's step may ask for resources, which the pipeline file itself
 	// did not show.
+	out.requireDeploy()
 	out.Requires = out.requiresNewer(out.Requires) // step resources, build caches
 	out.requireFlow()                              // likewise for the flow control keys a template's step uses
 	if ps := checkFetchLoops(out, true); len(ps) > 0 {
@@ -1005,6 +740,7 @@ func (x *expander) emit(sc *scope) {
 		c.Needs, c.NeedsGroups = needs, groups
 		c.Fetch = x.fetchesOf(sc, s)
 		c.ImageBuild = x.imageOf(sc, s)
+		x.deployOf(sc, &c)
 		c.Each = mergeEach(sc.each, s.Each)
 		c.withLines, c.ifTest = nil, nil
 		if sc.group != nil {
