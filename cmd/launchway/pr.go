@@ -4,9 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"net/url"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -128,10 +128,8 @@ func prRepo(flagValue string) (string, error) {
 }
 
 func gitOut(args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), "git", args...) //nolint:gosec // git, with arguments this command builds itself
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-	b, err := cmd.Output()
-	return string(b), err
+	// The person's own git in their own working copy: see gitexec.UserOutput.
+	return gitexec.UserOutput(context.Background(), args...)
 }
 
 func prNumber(pos []string, verb string) (int, []string, error) {
