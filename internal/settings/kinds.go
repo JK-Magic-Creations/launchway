@@ -69,7 +69,7 @@ var kinds = []*Kind{
 		FileKey: "(approvals, drafts, pull_requests, schedules, loops, tests, findings, reports, artifacts limits, runner_admin, policy.waivers, auth.tokens)",
 		Doc:     "Settings of the whole installation: what the levels are called, approvals, drafts, pull requests, schedules, limits and retention.",
 		spec:    func() any { return &Installation{} }},
-	{Name: "organisation", Path: "organisation", Title: "Organisation", Plural: "Organisations", Singleton: "default",
+	{Name: "organisation", Path: "organisation", Title: "Organization", Plural: "Organizations", Singleton: "default",
 		Doc:  "The organisation that owns the projects. There is one today; its display name is shown where it helps.",
 		spec: func() any { return &Organisation{} }},
 	{Name: "unit", Path: "units", Title: "Unit", Plural: "Units", FileKey: "",
@@ -120,6 +120,11 @@ func Kinds() []*Kind { return slices.Clone(kinds) }
 
 // KindByPath finds a kind by its path or its name.
 func KindByPath(s string) *Kind {
+	// The American spelling is accepted for the kind that keeps its
+	// established name.
+	if s == "organization" {
+		s = "organisation"
+	}
 	for _, k := range kinds {
 		if k.Path == s || k.Name == s {
 			return k
@@ -148,8 +153,12 @@ func kindOrder(name string) int {
 
 // Installation is the installation's settings (kind installation).
 type Installation struct {
-	// Levels names the levels; empty means the built-in names.
-	Levels       Levels                    `yaml:"levels"`
+	// Levels renames the levels (kept for installations that set it; terms
+	// is the way to choose and rename words); empty means the set's names.
+	Levels Levels `yaml:"levels"`
+	// Terms are the words shown for Launchway's own concepts: a chosen set
+	// (aviation by default, or business) and single renames. Labels only.
+	Terms        Terms                     `yaml:"terms"`
 	Approvals    config.ApprovalsConfig    `yaml:"approvals"`
 	Drafts       config.DraftsConfig       `yaml:"drafts"`
 	PullRequests config.PullRequestsConfig `yaml:"pull_requests"`
@@ -214,30 +223,9 @@ type LevelName struct {
 	Plural   string `yaml:"plural" json:"plural"`
 }
 
-// DefaultLevels are the built-in names.
-var DefaultLevels = Levels{
-	Installation: LevelName{"Installation", "Installations"},
-	Organisation: LevelName{"Organisation", "Organisations"},
-	Unit:         LevelName{"Unit", "Units"},
-	Project:      LevelName{"Project", "Projects"},
-}
-
-// withDefaults fills in names left empty.
-func (l Levels) withDefaults() Levels {
-	fill := func(n *LevelName, d LevelName) {
-		if n.Singular == "" {
-			n.Singular = d.Singular
-		}
-		if n.Plural == "" {
-			n.Plural = d.Plural
-		}
-	}
-	fill(&l.Installation, DefaultLevels.Installation)
-	fill(&l.Organisation, DefaultLevels.Organisation)
-	fill(&l.Unit, DefaultLevels.Unit)
-	fill(&l.Project, DefaultLevels.Project)
-	return l
-}
+// DefaultLevels are the built-in names: the aviation set, Base, Wing,
+// Squadron, Project.
+var DefaultLevels = termLevels["aviation"]
 
 func (l Levels) check() error {
 	for _, n := range []struct {

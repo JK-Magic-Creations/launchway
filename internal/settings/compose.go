@@ -23,6 +23,7 @@ import (
 // which, the names of the levels, and where each object is defined.
 type Layout struct {
 	Levels       Levels            `json:"levels"`
+	Terms        Terms             `json:"terms"`
 	Organisation Organisation      `json:"organisation"`
 	Units        []UnitView        `json:"units"`
 	ProjectUnit  map[string]string `json:"project_unit"`
@@ -50,7 +51,7 @@ const noProject = "-"
 // Check does.
 func Compose(boot *config.Config, objs []engine.ConfigObject) (*config.Config, *Layout, error) {
 	c := Bootstrap(boot)
-	lay := &Layout{Levels: DefaultLevels, ProjectUnit: map[string]string{}, Units: []UnitView{}}
+	lay := &Layout{Levels: DefaultLevels, Terms: Terms{Set: TermSets[0], Overrides: map[string]string{}}, ProjectUnit: map[string]string{}, Units: []UnitView{}}
 	live := make([]engine.ConfigObject, 0, len(objs))
 	for _, o := range objs {
 		// Objects of a kind this version does not know were written by a
@@ -146,7 +147,8 @@ func composeObject(c *config.Config, lay *Layout, policies *yaml.Node, units map
 	switch t := v.(type) {
 	case *Installation:
 		applyInstallation(c, t)
-		lay.Levels = t.Levels.withDefaults()
+		lay.Levels = t.Terms.levelsFor(t.Levels)
+		lay.Terms = t.Terms.normal()
 	case *Organisation:
 		lay.Organisation = *t
 	case *config.LibraryConfig:
