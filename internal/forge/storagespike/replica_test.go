@@ -22,7 +22,7 @@ var hookNames = []string{"pre-receive", "reference-transaction", "post-receive",
 
 // git runs git in a repository with a generous timeout.
 func git(ctx context.Context, gitDir string, stdin string, args ...string) (string, error) {
-	spec := gitexec.Spec{GitDir: gitDir, Args: args, Timeout: 10 * time.Minute}
+	spec := gitexec.Spec{GitDir: gitDir, Args: args, Timeout: 5 * time.Minute, IdleTimeout: 2 * time.Minute}
 	if stdin != "" {
 		spec.Stdin = strings.NewReader(stdin)
 	}

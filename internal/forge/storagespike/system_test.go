@@ -81,7 +81,7 @@ func NewClient(ctx context.Context, dir string) (*Client, error) {
 }
 
 func (c *Client) git(ctx context.Context, args ...string) (string, error) {
-	res, err := gitexec.Run(ctx, gitexec.Spec{Dir: c.Dir, Args: args, Env: gitIdentity, Timeout: 30 * time.Minute})
+	res, err := gitexec.Run(ctx, gitexec.Spec{Dir: c.Dir, Args: args, Env: gitIdentity, Timeout: 5 * time.Minute, IdleTimeout: 2 * time.Minute})
 	if err != nil {
 		var ee *gitexec.ExitError
 		if errors.As(err, &ee) {
@@ -200,7 +200,7 @@ func DirSize(dir string) int64 {
 // cloneMirror makes a mirror clone of a repository through the upload-pack
 // transport (not a local hard-link copy).
 func cloneMirror(ctx context.Context, src, dest string) error {
-	_, err := gitexec.Run(ctx, gitexec.Spec{Args: []string{"clone", "-q", "--mirror", "--no-local", "file://" + src, dest}, Timeout: 30 * time.Minute})
+	_, err := gitexec.Run(ctx, gitexec.Spec{Args: []string{"clone", "-q", "--mirror", "--no-local", "file://" + src, dest}, Timeout: 5 * time.Minute, IdleTimeout: 2 * time.Minute})
 	if err != nil {
 		var ee *gitexec.ExitError
 		if errors.As(err, &ee) {
@@ -225,7 +225,7 @@ func runPush(ctx context.Context, cfgPath, wrapper, repo, client string, f Fault
 	env := append([]string{CfgEnv + "=" + cfgPath}, f.Env()...)
 	env = append(env, gitIdentity...)
 	start := time.Now()
-	res, err := gitexec.Run(ctx, gitexec.Spec{Dir: client, Args: args, Env: env, Timeout: 30 * time.Minute})
+	res, err := gitexec.Run(ctx, gitexec.Spec{Dir: client, Args: args, Env: env, Timeout: 5 * time.Minute, IdleTimeout: 2 * time.Minute})
 	out := PushOutcome{Duration: time.Since(start)}
 	var ee *gitexec.ExitError
 	switch {
