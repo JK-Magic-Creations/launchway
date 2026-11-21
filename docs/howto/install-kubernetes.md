@@ -258,8 +258,10 @@ written by hello in pod launchway-run-06gzdcyzh6hj0a2z1g40-a6018a1a50
 output and file received; running in pod launchway-run-06gzdcyzh6hj0a2z1g40-a6018a1a50
 ```
 
-The pod is removed once the run succeeds. A failed run's pod is kept for `runner.kubernetes.keepFailed`
-(2 hours by default) so that a resume can reuse its workspace.
+The pod is removed when the run ends, whether it succeeded, failed (at any step, including an image
+step), was canceled or timed out, because a running pod holds the step namespace's quota. A resume
+makes a new pod from the runner's checkout of the run; see
+[What happens to a run's pod](../reference/runner-config.md#what-happens-to-a-runs-pod).
 
 > [!NOTE]
 > The command line (`launchway runs start`) needs an API token, and tokens can only be made by
@@ -426,7 +428,7 @@ runner:
     memory: 256Mi
     memoryLimit: 4Gi
     imagePullSecrets: [registry-credentials] # Secrets in launchway-steps
-    keepFailed: 2h
+    keepFailed: 0s                          # a grace period for a failed run's pod; 0 removes it at once
   secretStores:
     vault:
       type: vault

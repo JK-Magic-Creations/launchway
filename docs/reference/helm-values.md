@@ -264,7 +264,8 @@ Kubernetes API.
 | `runner.kubernetes.maxCpu` | string or number | `""` (no cap) | The most CPU one step container may ask for, as a request or a limit; server defaults are lowered to it, an explicit ask above it fails the step. See [`kubernetes.max_cpu`](runner-config.md#kubernetes) |
 | `runner.kubernetes.maxMemory` | string or number | `""` (no cap) | The most memory one step container may ask for; same behaviour as `maxCpu` |
 | `runner.kubernetes.imagePullSecrets` | list | `[]` | Secrets in the step namespace for pulling step images |
-| `runner.kubernetes.keepFailed` | string | `""` (`2h`) | How long a failed or cancelled run's pod is kept for a resume |
+| `runner.kubernetes.keepFailed` | string | `""` (`0`) | A grace period before a failed or cancelled run's pod is removed; by default it goes when the run ends. See [What happens to a run's pod](runner-config.md#what-happens-to-a-runs-pod) |
+| `runner.kubernetes.maxPodAge` | string | `""` (`24h`) | The longest a step pod lives unless a step of it is executing; the reaper's bound for pods left by a crashed runner. `0` turns it off |
 | `runner.kubernetes.startTimeout` | string | `""` (`10m`) | How long to wait for a step pod's images and containers |
 | `runner.kubernetes.restricted` | boolean | `true` | Step containers run as `runAsUser`, without privileges, meeting Pod Security `restricted`; see [`kubernetes.restricted`](runner-config.md#kubernetes). Pipelines cannot change it |
 | `runner.kubernetes.runAsUser` | integer or null | unset (1000) | Not 0 |

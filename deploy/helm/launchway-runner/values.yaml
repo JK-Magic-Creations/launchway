@@ -119,9 +119,15 @@ runner:
     maxMemory: ""
     # -- Secrets in the step namespace for pulling step images, by name.
     imagePullSecrets: []
-    # -- How long a failed or canceled run's pod is kept, so that a resume can reuse its
-    # workspace (a Go duration such as 2h). Default 2h.
+    # -- A grace period before a failed or canceled run's pod is removed (a Go duration such as
+    # 10m). Default 0: the pod goes as soon as the run ends, because a running pod holds
+    # namespace quota; a resume refills a new pod from the runner's checkout. See the runner
+    # configuration reference, "What happens to a run's pod".
     keepFailed: ""
+    # -- The longest any step pod lives, whatever the server says about its run, unless a step
+    # of it is executing on that runner: the reaper's bound for pods that a crashed runner or a
+    # forgotten run left behind. Default 24h; 0 turns the bound off.
+    maxPodAge: ""
     # -- How long to wait for a step pod's images to be pulled and its containers to start.
     # Default 10m.
     startTimeout: ""

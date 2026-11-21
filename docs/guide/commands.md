@@ -48,7 +48,7 @@ kubernetes:
   memory: 256Mi
   memory_limit: 4Gi
   image_pull_secrets: [registry-credentials]
-  keep_failed: 2h             # keep a failed run's pod this long, for a resume
+  keep_failed: 0s             # a grace period for a failed run's pod; 0 removes it when the run ends
   start_timeout: 10m
   restricted: true            # the default: steps run as run_as_user, not root (see below)
   run_as_user: 1000

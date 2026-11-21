@@ -78,7 +78,7 @@ kubernetes:
   memory: 256Mi
   memory_limit: 4Gi
   image_pull_secrets: [registry-credentials]
-  keep_failed: 2h
+  keep_failed: 0s
   start_timeout: 10m
   restricted: true
   run_as_user: 1000
@@ -198,11 +198,46 @@ holding the workspace and a container per image or toolbox.
 | `kubernetes.max_cpu` | quantity | none (no cap) | The most CPU one container may ask for, as a request or a limit. A default the server chose (the installation's step resource defaults) is lowered to this, and the log says so; a step or container that explicitly asks for more fails before the pod is made, naming this setting |
 | `kubernetes.max_memory` | quantity | none (no cap) | The most memory one container may ask for, as a request or a limit. Server defaults are lowered to it; an explicit ask above it fails the step, naming this setting |
 | `kubernetes.image_pull_secrets` | list | none | Secrets in the namespace for pulling step images |
-| `kubernetes.keep_failed` | duration | `2h` | How long a failed or cancelled run's pod is kept, so a resume can reuse its workspace |
+| `kubernetes.keep_failed` | duration | `0` | A grace period before a failed or cancelled run's pod is removed. The default removes it as soon as the run ends: a running pod holds namespace quota, and a resume does not need it (see [What happens to a run's pod](#what-happens-to-a-runs-pod)) |
+| `kubernetes.max_pod_age` | duration | `24h` | The longest a step pod lives, whatever the server says about its run, unless a step of it is executing on this runner. Bounds what a crashed runner or a forgotten run can leave behind. `0` turns the bound off |
 | `kubernetes.start_timeout` | duration | `10m` | How long to wait for a pod's images to be pulled and its containers to start |
 | `kubernetes.restricted` | boolean | `true` | Every container, services included, runs as `run_as_user` with no privilege escalation, no capabilities and the `RuntimeDefault` seccomp profile, so step pods meet Pod Security `restricted`. `HOME` is a writable `/home/launchway`. `false` runs images as their own users, often root, and needs a namespace that allows it. Pipelines cannot change this |
 | `kubernetes.run_as_user` | whole number | `1000` | With `restricted`: the user containers run as. Not 0 |
 | `kubernetes.run_as_group` | whole number | `1000` | With `restricted`: the group, which also owns the pod's volumes |
+
+### What happens to a run's pod
+
+On Kubernetes each run has one step pod, which holds the run's workspace and its containers. A
+running pod holds CPU and memory in the step namespace's quota for as long as it exists, so the
+runner does not keep one for a run that has ended.
+
+The runner's reaper removes a pod when any of these holds:
+
+- the server says the run ended: succeeded, failed (at any step, including an image step, whether
+  the later steps were skipped or not, and including a run that timed out) or canceled. A failed or
+  canceled run's pod can be kept for a grace period with `kubernetes.keep_failed` (default 0, so no
+  grace);
+- the server does not know the run and this runner made the pod (pods of unknown runs that other
+  runners made are left to their runner, or to the age bound);
+- the pod is older than `kubernetes.max_pod_age` (24h) and no step of its run is executing on this
+  runner, whatever the server says. This is what stops a crashed runner, or a run nobody holds a
+  lease on, from leaking a pod.
+
+A pod with a step executing on this runner is never removed. The reaper looks when the runner
+starts (so a restarted runner clears what the crashed one left), soon after any step reports its
+result, and every 30 seconds. A step that cannot start because the namespace's quota is used up
+fails with the cause `infrastructure` and a message that names the quota, so `retry` with its
+backoff applies, and `retry.on` must list `infrastructure` for it to be retried.
+
+**What a resume keeps.** The run's workspace is the runner's checkout of the commit, on the
+runner's disk under its data directory (kept 24 hours after it was last used), not the pod. A
+resume, or a re-run from a step, makes a new pod and fills it from that checkout, so it still
+starts from the same commit and the same libraries. The trade-off: files that earlier steps wrote
+inside the pod (build output, downloaded dependencies) are not in the new pod, so a step that
+depends on them must be run again, or hand them on as [artifacts](../guide/artifacts.md). This
+costs a few seconds to start a pod and some re-work, and in return a failed run never holds quota.
+An operator who prefers a resume to find the old pod may set `keep_failed` to a short period such
+as `10m`; the pod then holds quota for that long, and `max_pod_age` is still the upper bound.
 
 ## Secrets
 

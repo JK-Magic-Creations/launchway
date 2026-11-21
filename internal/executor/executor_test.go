@@ -192,7 +192,7 @@ func TestRemovable(t *testing.T) {
 		{RunInfo{Status: "running"}, true, true, false},
 		{RunInfo{Status: "queued"}, true, false, false},
 		{RunInfo{Status: "succeeded", FinishedAt: now}, true, false, true},
-		{RunInfo{Status: "failed", FinishedAt: now}, true, false, false},
+		{RunInfo{Status: "failed", FinishedAt: now}, true, false, false}, // inside the grace period
 		{RunInfo{Status: "failed", FinishedAt: hourAgo}, true, false, true},
 		{RunInfo{Status: "canceled", FinishedAt: hourAgo}, true, true, true},
 		{RunInfo{}, false, false, false},
