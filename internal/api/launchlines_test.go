@@ -184,3 +184,35 @@ func TestLaunchLineStationSaysWhatRunsTogether(t *testing.T) {
 		t.Errorf("a one-step station is not parallel: %+v", tests.Parallel)
 	}
 }
+
+// A step that is queued is never a running one: the station holds, with the reason, and the run says so.
+func TestLaunchLineQueuedStepIsHoldingNotRunning(t *testing.T) {
+	lost := stepOf("unit-tests", "", engine.StepQueuedS, 1)
+	lost.Attempt, lost.FailureCause = 3, "infrastructure"
+	queued := stepOf("unit-tests", "", engine.StepQueuedS, 1)
+	room := stepOf("unit-tests", "", engine.StepQueuedS, 1)
+	room.WaitingFor = "The cluster is full"
+	running := stepOf("unit-tests", "", engine.StepRunning, 1)
+	for name, c := range map[string]struct {
+		step       engine.StepView
+		state, now string
+	}{
+		"queued":  {queued, stationHolding, "Tests: Holding: waiting for a runner to pick up unit-tests"},
+		"room":    {room, stationHolding, "Tests: Holding: The cluster is full"},
+		"lost":    {lost, stationHolding, "Tests: Holding: retrying on another runner, attempt 3, after the last one stopped responding"},
+		"running": {running, stationRunning, "Tests: unit-tests is running"},
+	} {
+		d := &engine.RunDetail{StepList: []engine.StepView{stepOf("lint", "", engine.StepSucceeded, 0), c.step}}
+		d.Status = engine.RunRunning
+		l := launchLineOf(d)
+		if s := stationByKey(l, "tests"); s.State != c.state {
+			t.Errorf("%s: station state %q, want %q", name, s.State, c.state)
+		}
+		if l.Now != c.now {
+			t.Errorf("%s: now %q, want %q", name, l.Now, c.now)
+		}
+		if name != "running" && l.Tone != "hold" {
+			t.Errorf("%s: tone %q", name, l.Tone)
+		}
+	}
+}

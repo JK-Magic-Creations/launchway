@@ -18,7 +18,7 @@ export function stepSub(s: StepView, now: number, phases?: Record<string, string
   switch (s.status) {
     case "skipped": return `Skipped: ${lowerFirst(stepLabel(s)).replace(/^skipped$/, "not needed")}`;
     case "pending": return "Not started";
-    case "queued": return "Waiting for a runner";
+    case "queued": return s.attempt > 1 && s.failure_cause === "infrastructure" ? `Retrying on another runner, attempt ${s.attempt}` : "Waiting for a runner";
     case "leased": return `Starting${t}`;
     case "running": {
       const e = s.estimate;

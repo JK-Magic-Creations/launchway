@@ -27,6 +27,10 @@ export function whyWaiting(run: RunDetail, step: StepView, now: number): Why | n
         const cause = step.failure_cause && step.failure_cause !== "exit" ? ` after ${step.failure_cause}` : step.failure_cause === "exit" ? " after a failed exit" : "";
         return { kind: "timer", short: `Retrying in ${duration(step.not_before! - now)}`, text: `Trying again in ${duration(step.not_before! - now)} (attempt ${step.attempt} of ${step.retry + 1})${cause}. The wait is the step's own retry delay.` };
       }
+      // A step that goes again because its runner stopped answering is not "waiting for a runner" like any other.
+      if (step.attempt > 1 && step.failure_cause === "infrastructure") {
+        return { kind: "runner", short: `Retrying, attempt ${step.attempt}`, text: `Retrying on another runner, attempt ${step.attempt}, because the last one stopped responding.` };
+      }
       // The server says what a queued step waits for (room in the step namespace, a free runner, ...).
       if (step.waiting_for) return { kind: "runner", short: step.waiting_code === "no_runner" || step.waiting_code === "runners_busy" ? "Waiting for a runner" : "Waiting for room", text: `${step.waiting_for}.` };
       const hint = run.pool_hint || run.runner_hint;
@@ -77,6 +81,7 @@ export function runSentence(run: RunDetail, now: number): string {
   const live = run.step_list.filter((s) => s.status === "running");
   const waits = run.step_list.filter((s) => s.status === "waiting" || s.status === "queued" || s.status === "leased");
   const w = waits.length ? whyWaiting(run, waits[0], now) : null;
-  const head = live.length ? `${n} is running ${live.map((s) => s.id).join(" and ")}.` : w ? `${n} is waiting.` : `${n} is not running anything right now.`;
+  const holding = !live.length && waits.length > 0 && waits.every((s) => s.status === "queued");
+  const head = live.length ? `${n} is running ${live.map((s) => s.id).join(" and ")}.` : holding ? `${n} is holding: nothing is running; ${waits[0].id} waits for a runner.` : w ? `${n} is waiting.` : `${n} is not running anything right now.`;
   return w ? `${head} ${waits[0].id}: ${w.text}` : head;
 }

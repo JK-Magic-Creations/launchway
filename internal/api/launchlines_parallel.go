@@ -11,6 +11,7 @@ type Parallel struct {
 	Together int `json:"together"`
 	Done     int `json:"done"`
 	Running  int `json:"running"`
+	Holding  int `json:"holding"`
 	Waiting  int `json:"waiting"`
 	Failed   int `json:"failed"`
 	Skipped  int `json:"skipped"`
@@ -35,8 +36,10 @@ func stationStepState(st engine.StepView) string {
 		return stationFailed
 	case engine.StepWaitingS:
 		return stationWaiting
-	case engine.StepRunning, engine.StepQueuedS, engine.StepLeasedS:
+	case engine.StepRunning, engine.StepLeasedS:
 		return stationRunning
+	case engine.StepQueuedS:
+		return stationHolding
 	case engine.StepSucceeded:
 		return stationDone
 	case engine.StepSkippedS, engine.StepCanceledS:
@@ -66,6 +69,8 @@ func parallelOf(steps []engine.StepView, levels [][]string) *Parallel {
 			p.Done++
 		case stationRunning:
 			p.Running++
+		case stationHolding:
+			p.Holding++
 		case stationWaiting:
 			p.Waiting++
 		case stationFailed:

@@ -21,17 +21,21 @@ const FILTERS: { key: string; label: string }[] = [
 ];
 
 const isDone = (s: string) => s === "succeeded" || s === "failed" || s === "canceled";
-const TONE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok: "ok", idle: "skip" };
+const TONE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", hold: "hold", ok: "ok", idle: "skip" };
 
 /** The stations of a run that has no launch line yet: its own steps. */
-function stepsAsStations(r: RunSummary): LineStation[] {
+export function stepsAsStations(r: RunSummary): LineStation[] {
   return r.steps.map((s) => ({ key: s.id, label: s.id, state: r.waiting?.includes(s.id) ? "wait" : stateOf(s.status) }));
 }
 
-function toneOf(r: RunSummary): "bad" | "wait" | "run" | "ok" | "idle" {
+function toneOf(r: RunSummary): "bad" | "wait" | "run" | "hold" | "ok" | "idle" {
   if (r.status === "failed") return "bad";
   if (!isDone(r.status) && (r.waiting?.length ?? 0) > 0) return "wait";
-  if (r.status === "running") return "run";
+  if (r.status === "running") {
+    // Only a step that is running makes a run look busy; one whose active steps are all queued is holding.
+    const live = r.steps.some((s) => s.status === "running" || s.status === "leased");
+    return live || !r.steps.some((s) => s.status === "queued") ? "run" : "hold";
+  }
   return r.status === "succeeded" ? "ok" : "idle";
 }
 
@@ -131,9 +135,11 @@ export function RunRow({ r, line, now }: { r: RunSummary; line?: LaunchLineView;
   const waits = !isDone(r.status) && (r.waiting?.length ?? 0) > 0;
   const where = refLabel(r);
   const took = elapsed(r.started_at || r.created_at, r.finished_at, now);
-  const sentence = line?.now && r.status !== "succeeded" ? line.now : runSentence(r, took);
+  const queued = r.steps.find((s) => s.status === "queued");
+  const sentence = line?.now && r.status !== "succeeded" ? line.now
+    : tone === "hold" && queued ? `Holding: nothing is running; ${queued.id} waits for a runner.` : runSentence(r, took);
   return (
-    <a href={waits ? `/runs/${r.id}?step=${encodeURIComponent(r.waiting[0])}` : `/runs/${r.id}`} onClick={onLink} className={`brow ${tone === "bad" ? "bad" : tone === "wait" ? "wait" : ""}`}>
+    <a href={waits ? `/runs/${r.id}?step=${encodeURIComponent(r.waiting[0])}` : `/runs/${r.id}`} onClick={onLink} className={`brow ${tone === "bad" ? "bad" : tone === "wait" || tone === "hold" ? "wait" : ""}`}>
       <div className="ct">
         <b>{r.message || r.pipeline}</b>
         <span>{r.project} · run #{r.number}{where ? ` · ${where}` : ""}{r.sha ? ` · ${shortSha(r.sha)}` : ""}</span>

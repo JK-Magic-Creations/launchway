@@ -21,6 +21,9 @@ import (
 const (
 	stationDone    = "done"
 	stationRunning = "running"
+	// stationHolding: every step of the station that is active is queued: it waits for a runner or for room.
+	// It is drawn without a spinner: nothing is running.
+	stationHolding = "holding"
 	stationWaiting = "waiting"
 	stationFailed  = "failed"
 	stationIdle    = "idle"
@@ -234,8 +237,8 @@ func hasEnv(ss []Station) bool {
 
 // resolve gives a station its state and detail from its steps and deployments.
 func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.RunDetail) {
-	var failed, waiting, running, done, skipped, idle int
-	var failedStep, waitStep, runStep *engine.StepView
+	var failed, waiting, running, holding, done, skipped, idle int
+	var failedStep, waitStep, runStep, holdStep *engine.StepView
 	for i := range b.steps {
 		st := &b.steps[i]
 		switch st.Status {
@@ -253,10 +256,15 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 			if waitStep == nil {
 				waitStep = st
 			}
-		case engine.StepRunning, engine.StepQueuedS, engine.StepLeasedS:
+		case engine.StepRunning, engine.StepLeasedS:
 			running++
 			if runStep == nil {
 				runStep = st
+			}
+		case engine.StepQueuedS:
+			holding++
+			if holdStep == nil {
+				holdStep = st
 			}
 		case engine.StepSucceeded:
 			done++
@@ -276,6 +284,9 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 	case running > 0:
 		b.State, b.Step = stationRunning, runStep.ID
 		b.Detail = runningReason(runStep, deps, d)
+	case holding > 0:
+		b.State, b.Step = stationHolding, holdStep.ID
+		b.Detail = holdingReason(holdStep, d)
 	case done > 0 && idle == 0:
 		b.State = stationDone
 		b.Step = b.steps[len(b.steps)-1].ID
@@ -358,16 +369,27 @@ func runningReason(st *engine.StepView, deps map[string]engine.DeploymentView, d
 	if dep, ok := deps[st.ID]; ok && dep.Detail != "" {
 		return dep.Detail
 	}
-	if st.Status == engine.StepQueuedS || st.Status == engine.StepLeasedS {
-		switch {
-		case d.PoolHint != "":
-			return d.PoolHint
-		case d.RunnerHint != "":
-			return d.RunnerHint
-		}
-		return "Waiting for a runner to pick it up"
+	if st.Status == engine.StepLeasedS {
+		return "A runner has taken " + st.ID + " and is starting it"
 	}
 	return st.ID + " is running"
+}
+
+// holdingReason says why a queued step is not running: the one reason every screen shows for it.
+func holdingReason(st *engine.StepView, d *engine.RunDetail) string {
+	switch {
+	case st.Attempt > 1 && st.FailureCause == "infrastructure":
+		return "Holding: retrying on another runner, attempt " + strconv.Itoa(st.Attempt) + ", after the last one stopped responding"
+	case st.Attempt > 1 && st.FailureCause != "":
+		return "Holding: retrying " + st.ID + ", attempt " + strconv.Itoa(st.Attempt)
+	case st.WaitingFor != "":
+		return "Holding: " + st.WaitingFor
+	case d.PoolHint != "":
+		return "Holding: " + d.PoolHint
+	case d.RunnerHint != "":
+		return "Holding: " + d.RunnerHint
+	}
+	return "Holding: waiting for a runner to pick up " + st.ID
 }
 
 func verifiedFrom(ss []Station, d *engine.RunDetail) Station {
@@ -429,6 +451,11 @@ func whereItIs(d *engine.RunDetail, ss []Station) (tone, now string) {
 	for _, s := range ss {
 		if s.State == stationRunning {
 			return "run", s.Label + ": " + s.Detail
+		}
+	}
+	for _, s := range ss {
+		if s.State == stationHolding {
+			return "hold", s.Label + ": " + s.Detail
 		}
 	}
 	for _, s := range ss {
