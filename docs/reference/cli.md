@@ -21,6 +21,7 @@ launchway waivers  list|grant|revoke          waive a policy's rule for a while,
 launchway blobs    status|copy                see and move where artifacts are kept
 launchway mcp      [--server URL]             the server's MCP tools for agents, on stdin and stdout
 launchway deployments options|rollback|review  roll a service back after a deployment succeeded; review emergency rollbacks
+launchway rollout  status|tree|manifest|logs|pause|resume|restart|scale|promote|abort ...  look into a delivery and steer it
 launchway verifications list|show|mark        verifications on a server
 launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
@@ -677,6 +678,22 @@ launchway deployments review RUN_ID --comment TEXT
 `options` says what the service can be rolled back to: the earlier successful deployments, newest first, each with what it would revert and the consequence, or why nothing can be done and what would help. `rollback` prints the same, then asks for the rollback; the previous successful deployment is the default, and `--to` takes a deployment ID or a version. `--reason` is required and recorded. `--queue` waits behind a deployment that holds the environment's lock; without it the command is refused, naming that run. `--dry-run` only prints what it would do. `--project` may be left out when one service is deployed to the environment. `review list` shows emergency rollbacks of protected environments that no approver has acknowledged, and whether you may; `review RUN_ID --comment TEXT` acknowledges one (`--comment` is required).
 
 The same operations are the MCP tools `get_rollback_options`, `rollback_deployment`, `list_rollback_reviews` and `review_rollback`, and the routes in the [HTTP API](http-api.md).
+
+## launchway rollout
+
+Looks into a delivery and steers it. It uses the stored credentials. The server decides who may; the tree and manifests need the viewer role, logs and controls the operator role on the environment. See [watching and steering a Launch](../guide/watching-and-steering-a-launch.md).
+
+```text
+launchway rollout status   RUN DEPLOYMENT [--json]
+launchway rollout tree     RUN DEPLOYMENT [--json]
+launchway rollout manifest RUN DEPLOYMENT OBJECT
+launchway rollout logs     RUN DEPLOYMENT (--pod P | --replica-set R | --role stable|canary|preview|active | --job J) [--container C] [--previous] [--tail N] [--follow]
+launchway rollout pause|resume|restart RUN DEPLOYMENT --reason TEXT [--object KIND/NS/NAME]
+launchway rollout scale    RUN DEPLOYMENT --replicas N --reason TEXT [--object KIND/NS/NAME]
+launchway rollout promote|promote-full|abort|retry RUN DEPLOYMENT --reason TEXT
+```
+
+`status` prints the strategy, its steps with the current one marked, the wanted and actual share of real traffic, and which controls are possible now (and why not for the rest); `tree` adds every object with its health, role, replicas and what changed. `logs --follow` reads the live stream; secrets are masked before a line leaves the deploy runner. `--reason` is required for every control and is kept in the Logbook; `promote-full` needs one too. The same operations are the MCP tools `get_delivery`, `get_delivery_manifest`, `get_delivery_logs`, `control_delivery` and `control_rollout`.
 
 ## launchway health-sources and launchway models
 

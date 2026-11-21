@@ -256,6 +256,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `deployment.rollback` | `POST /api/v1/projects/{name}/rollbacks`: the request, with the reason, and then the run it made |
 | `rollback.review` | `POST /api/v1/runs/{id}/review`: an approver acknowledging an emergency rollback, with the comment |
 | `deployment.withdraw` | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` |
+| `deployment.inspect` | `GET /api/v1/runs/{id}/deployments/{dep}/inspect` (recorded once every few minutes per person, not at each refresh) |
+| `deployment.manifest` | `GET /api/v1/runs/{id}/deployments/{dep}/inspect/manifest` |
+| `deployment.logs` | `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs` and `/logs/stream` |
+| `deployment.control` | `POST /api/v1/runs/{id}/deployments/{dep}/inspect/control` (the reason is in the detail) |
+| `deployment.control_outcome` | what the deploy runner did with a control, recorded when it answers (outcome `ok` or `failed`) |
 | `artifact.delete` | `DELETE /api/v1/runs/{id}/artifacts/{artifact}` |
 | `token.create` | `POST /api/v1/tokens` |
 | `token.revoke` | `DELETE /api/v1/tokens/{id}`, and an admin's `DELETE /api/v1/admin/tokens/{id}` |

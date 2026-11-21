@@ -103,6 +103,7 @@ compliance items provide controls and evidence.
 | Security scans as gates | Vulnerability, secret, dependency, image, chart and manifest scanning, fuzzing, an SBOM and security headers run on every change, backed by a security policy and a threat model. ([more](security/how-launchway-is-scanned.md)) |
 | Pull requests and code review | Open, review, comment on lines, suggest changes and merge inside Launchway, with merge rules that block until required checks pass. ([more](guide/pull-requests.md)) |
 | Pipelines drawn the way they run | Steps that run together appear side by side on the run page, drawn from their dependencies. |
+| Watch and steer a delivery | A Launch page shows every object a delivery made, live, with the logs of any pod (stable and canary side by side), the rollout's steps and weights, what was measured against what, and pause, restart, scale and an emergency return, each checked, audited and shown only where it works. ([more](guide/watching-and-steering-a-launch.md)) |
 | Rollback after a successful deployment | Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry. ([more](guide/rollback-after-success.md)) |
 | Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
 

@@ -164,6 +164,11 @@ Generated from the route table. "yes" means a person with that role on the proje
 | `POST /api/v1/runs/{id}/deployments/{dep}/promote-full` | run-operator | no | yes | yes | the operator role on the environment; on a protected environment, not the run's starter |
 | `POST /api/v1/runs/{id}/deployments/{dep}/abort` | run-operator | no | yes | yes | the operator role on the environment |
 | `POST /api/v1/runs/{id}/deployments/{dep}/retry` | run-operator | no | yes | yes | the operator role on the environment; on a protected environment, not the run's starter |
+| `GET /api/v1/runs/{id}/deployments/{dep}/inspect` | run-viewer | yes | yes | yes | the tree of a delivery's objects; Secret values are never in it |
+| `GET /api/v1/runs/{id}/deployments/{dep}/inspect/manifest` | run-viewer | yes | yes | yes | redacted |
+| `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs` | run-operator | no | yes | yes | the operator role on the environment; logs can hold anything a container prints |
+| `GET /api/v1/runs/{id}/deployments/{dep}/inspect/logs/stream` | run-operator | no | yes | yes | as the logs |
+| `POST /api/v1/runs/{id}/deployments/{dep}/inspect/control` | run-operator | no | yes | yes | the operator role on the environment; a reason is required |
 | `POST /api/v1/runs/{id}/deployments/{dep}/commands/{cmd}/withdraw` | run-operator | no | yes | yes | the operator role on the environment |
 | `GET /api/v1/libraries` | any-viewer | yes | yes | yes | the role on any project |
 | `GET /api/v1/libraries/{library}/templates` | any-viewer | yes | yes | yes | the role on any project |

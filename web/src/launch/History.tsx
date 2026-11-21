@@ -1,6 +1,7 @@
 import { ago, clock } from "../format";
 import type { DeploymentView } from "../api";
 import { Link } from "../components/ui";
+import { terms } from "../terms";
 
 /** Who did what to this delivery: commands given to the rollout, and what the deploy runners observed. */
 export function HistoryTab({ d, now, admin }: { d: DeploymentView; now: number; admin: boolean }) {
@@ -27,7 +28,7 @@ export function HistoryTab({ d, now, admin }: { d: DeploymentView; now: number; 
           </ol>
         )}
       </section>
-      <p className="faint lw-small">Pause, resume, restart, scale, manifest and log reads are kept in the audit trail with who asked and why{admin ? <>: <Link href="/settings/audit">open the audit trail</Link></> : "; an administrator reads it"}.</p>
+      <p className="faint lw-small">Pause, resume, restart, scale, manifest and log reads are kept in the {terms().lower("logbook")} with who asked and why{admin ? <>: <Link href="/settings/audit">open the {terms().lower("logbook")}</Link></> : "; an administrator reads it"}.</p>
     </div>
   );
 }

@@ -31,7 +31,7 @@ func addDeliveryTools(srv *mcp.Server, c *mcpCall) {
 
 func addDeliveryChangeTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "control_delivery", Annotations: changes("Control a delivery's workload", true, false),
-		Description: "Pause, resume, restart (rolling) or scale a delivery's workload, within what its Airfield allows. Needs a reason, which is kept in the audit trail, and confirm: true. Promote, promote-full, abort and retry of a rollout are control_rollout. get_delivery lists which actions are possible now and why not."},
+		Description: "Pause, resume, restart (rolling) or scale a delivery's workload, within what its Airfield allows. Needs a reason, which is kept in the Logbook, and confirm: true. Promote, promote-full, abort and retry of a rollout are control_rollout. get_delivery lists which actions are possible now and why not."},
 		mcpCallTimeout, controlDelivery)
 }
 
@@ -236,7 +236,7 @@ type controlDeliveryIn struct {
 	Action     string `json:"action" jsonschema:"pause, resume, restart or scale"`
 	Object     string `json:"object" jsonschema:"the workload, Kind/namespace/name, as get_delivery lists it"`
 	Replicas   int    `json:"replicas,omitempty" jsonschema:"for scale: the new count, within the Airfield's bound"`
-	Reason     string `json:"reason" jsonschema:"why; kept in the audit trail"`
+	Reason     string `json:"reason" jsonschema:"why; kept in the Logbook"`
 	Confirm    bool   `json:"confirm" jsonschema:"must be true: this changes a running service"`
 }
 

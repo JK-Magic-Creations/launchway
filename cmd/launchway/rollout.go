@@ -32,7 +32,7 @@ const rolloutUsage = `Usage:
 RUN is a run's ID (run_...), DEPLOYMENT a deployment's (dep_...; launchway runs show lists them).
 pause, resume, restart and scale act on the delivery's workload (found from the tree unless --object
 is given) when its Airfield allows; promote, promote-full, abort and retry are commands to the rollout.
-Every control needs a reason, which is kept in the audit trail. Roles: the tree and manifests need
+Every control needs a reason, which is kept in the Logbook. Roles: the tree and manifests need
 the viewer role; logs and controls the operator role on the environment.
 `
 
@@ -59,7 +59,7 @@ func (cl *client) rollout(args []string) error {
 	}
 	fs := flag.NewFlagSet("rollout "+cmd, flag.ContinueOnError)
 	asJSON := fs.Bool("json", false, "print JSON")
-	reason := fs.String("reason", "", "why; required for a control, kept in the audit trail")
+	reason := fs.String("reason", "", "why; required for a control, kept in the Logbook")
 	object := fs.String("object", "", "the workload, Kind/namespace/name")
 	replicas := fs.Int("replicas", 0, "for scale: the new count")
 	pod := fs.String("pod", "", "logs of a pod")
@@ -136,7 +136,7 @@ func (cl *client) rollout(args []string) error {
 		return nil
 	case "promote", "promote-full", "abort", "retry":
 		if strings.TrimSpace(*reason) == "" {
-			return usageErr("say why: --reason \"...\" (kept in the audit trail)")
+			return usageErr("say why: --reason \"...\" (kept in the Logbook)")
 		}
 		var out map[string]any
 		if err := cl.call("POST", base+"/"+cmd, map[string]string{"comment": *reason}, &out); err != nil {
@@ -147,7 +147,7 @@ func (cl *client) rollout(args []string) error {
 	}
 	// pause, resume, restart, scale: on the workload.
 	if strings.TrimSpace(*reason) == "" {
-		return usageErr("say why: --reason \"...\" (kept in the audit trail)")
+		return usageErr("say why: --reason \"...\" (kept in the Logbook)")
 	}
 	obj := *object
 	if obj == "" {

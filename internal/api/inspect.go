@@ -373,7 +373,7 @@ type controlBody struct {
 }
 
 // inspectControlH pauses, resumes, restarts or scales a workload of the
-// delivery. The reason is kept in the audit trail.
+// delivery. The reason is kept in the Logbook.
 func (s *Server) inspectControlH(w http.ResponseWriter, r *http.Request) {
 	var in controlBody
 	if !decode(w, r, &in) {
@@ -398,7 +398,7 @@ func (s *Server) inspectControlH(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if in.Reason == "" {
-		writeErr(w, http.StatusBadRequest, "say why: a control action needs a reason, which is kept in the audit trail")
+		writeErr(w, http.StatusBadRequest, "say why: a control action needs a reason, which is kept in the Logbook")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), askTimeout+5*time.Second)

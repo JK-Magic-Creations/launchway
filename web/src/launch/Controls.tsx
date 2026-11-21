@@ -5,6 +5,7 @@ import { ErrorBox } from "../components/ui";
 import { Dialog } from "../kit/Dialog";
 import { announce } from "../kit/announce";
 import { navigate } from "../router";
+import { terms } from "../terms";
 import { launchApi, type LAction, type TreeView } from "../launchApi";
 
 const WORDS: Record<LAction["action"], { label: string; what: string }> = {
@@ -62,7 +63,7 @@ function ControlDialog({ v, action, object, onClose, onDone }: { v: TreeView; ac
     <Dialog label={`${w.label}: ${object.split("/").pop()}`} onClose={onClose}>
       <form className="lw-form" onSubmit={(e) => { e.preventDefault(); if (reason.trim()) void submit(); }}>
         <h2>{w.label} {object.split("/").pop()}?</h2>
-        <p>{w.what} Through the deploy runner of {v.target}; kept in the audit trail with your reason.</p>
+        <p>{w.what} Through the deploy runner of {v.target}; kept in the {terms().lower("logbook")} with your reason.</p>
         {action.action === "scale" && (
           <label className="field"><span>Replicas</span><input type="number" min={1} value={replicas} onChange={(e) => setReplicas(Number(e.target.value))} /></label>
         )}

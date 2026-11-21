@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, type CommandView, type DeploymentControls as Controls, type DeployRollout, type DeploymentView, type RolloutAction, type RunDetail } from "../api";
 import { ago, clock } from "../format";
 import { ErrorBox, Mono } from "./ui";
+import { terms } from "../terms";
 import { freshness } from "./Deployment";
 import { RolloutOverview } from "./RolloutOverview";
 
@@ -211,7 +212,7 @@ function ControlForm({ run, d, now, controls, latest, onGiven }: {
               ? " An analysis of this version has failed: promoting past it ships a version a check rejected."
               : (d.snapshot?.analysis ?? []).some((a) => a.phase === "Running") ? " An analysis is still running, and promoting stops waiting for it." : ""}
             {" "}Suggestion: let the analysis finish, or promote one step at a time. You can still abort afterwards, or roll back.
-            {!comment.trim() && <strong> Say why in the comment above first: promoting fully needs a reason, which is kept in the audit trail.</strong>}
+            {!comment.trim() && <strong> Say why in the comment above first: promoting fully needs a reason, which is kept in the {terms().lower("logbook")}.</strong>}
           </span>
           <span className="dctl-confirm-actions">
             <button type="button" className="btn btn-danger dctl-full-confirm" disabled={busy || !comment.trim()} onClick={() => { setConfirmFull(false); give("promote-full"); }}>Yes, promote fully</button>

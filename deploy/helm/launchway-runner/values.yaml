@@ -373,6 +373,23 @@ deployRunner:
     # none, and commands are not applied (the runner reports that it may not).
     #   shop: [shop]
     controlRollouts: null
+    # -- Looking into a delivery from the Launch page (each is off by default, and each also
+    # needs the matching setting in the deploy runner's targets: deploy.targets.NAME.inspect).
+    # Everything is limited to rolloutNamespaces.
+    inspect:
+      # -- Read the objects a delivery made (pods, ReplicaSets, Services, routes, ConfigMaps,
+      # events, autoscalers and the like), so the Launch page can show the object tree.
+      read: false
+      # -- Read the logs of those pods. Logs can hold anything a container prints.
+      logs: false
+      # -- Read Secrets, only to hide their values wherever they appear (a log line, a
+      # ConfigMap). Their values never leave the deploy runner. The broadest right here.
+      secrets: false
+      # -- Workloads the deploy runner may pause, resume, restart and scale, by namespace; each
+      # namespace must be in rolloutNamespaces. Grants patch on exactly these names (RBAC cannot
+      # limit a patch to some fields). Default (unset): none.
+      #   shop: [shop]
+      controlWorkloads: null
   # -- A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the deploy runner change
   # only an Application's operation and refresh annotation, never its spec.
   admissionPolicy:

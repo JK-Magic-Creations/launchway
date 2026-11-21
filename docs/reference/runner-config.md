@@ -380,6 +380,10 @@ Kubernetes API with its own identity, and runs no other steps. Its token must be
 | `deploy.targets.<name>.applications[].names` | list of patterns | required | Applications they may deploy. At least one rule is required |
 | `deploy.targets.<name>.rollout_namespaces` | list | none | Namespaces whose Argo Rollouts rollouts deploy steps may watch |
 | `deploy.targets.<name>.refresh` | boolean | `true` | Ask Argo CD to look at the repository at once after a commit (the refresh annotation). Needs patch on the Application; without it, skipped with a note in the log |
+| `deploy.targets.<name>.inspect.read` | boolean | `false` | Let the runner show the live tree of a delivery's objects and their manifests (names and keys of Secrets only), in `rollout_namespaces`. The cluster rights come from the chart value `delivery.deployRunner.rbac.inspect.read` |
+| `deploy.targets.<name>.inspect.logs` | boolean | `false` | Let it read the logs of those pods, with secrets masked. Needs `inspect.read` |
+| `deploy.targets.<name>.inspect.control` | boolean | `false` | Let it pause, resume, restart and scale the delivery's workload when the server asks (the server checks the person's role first). Needs `inspect.read` |
+| `deploy.targets.<name>.inspect.scale_max` | number | `0` | The most replicas a person may scale a workload to; `0` turns scaling off |
 | `deploy.repos.<name>.url` | URL or path | required | The GitOps repository the runner clones and pushes to, by the name pipelines use (`write_back.repo`). No credentials in the URL |
 | `deploy.repos.<name>.argocd_url` | URL | `url` | The repository's address as Argo CD's Applications write it, when it differs |
 | `deploy.repos.<name>.credentials.store` | name | none | The token or password for HTTP basic authentication, from a secret store |

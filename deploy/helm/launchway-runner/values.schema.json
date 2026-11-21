@@ -871,7 +871,20 @@
                   "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
                 }
               }
-            }
+            },
+"inspect": {
+  "type": ["object", "null"],
+  "additionalProperties": false,
+  "properties": {
+    "read": { "type": "boolean" },
+    "logs": { "type": "boolean" },
+    "secrets": { "type": "boolean" },
+    "controlWorkloads": {
+      "type": ["object", "null"],
+      "additionalProperties": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" } }
+    }
+  }
+}
           }
         },
         "admissionPolicy": {
