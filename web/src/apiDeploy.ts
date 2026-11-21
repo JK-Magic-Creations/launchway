@@ -33,6 +33,27 @@ export interface ServerAction {
   name: string; available: boolean; reason?: string; instead?: string; would_help?: string; who: string;
   /** Risky but allowed: show the consequence and the suggestion, then confirm. */
   risk?: string; suggestion?: string;
+  /** A rollback: the earlier successful deployments it can restore, the previous one first. */
+  targets?: RollbackTarget[];
+  /** Not available only because another deployment holds the lock: asking to queue behind it works. */
+  queueable?: boolean;
+  /** An emergency action on a protected environment: no approval first, an approver reviews it afterwards. */
+  emergency?: boolean;
+  /** A setting asks for an approval first, even for an emergency. */
+  requires_approval?: boolean;
+}
+
+/** An earlier successful deployment a service can be rolled back to, and what choosing it does. */
+export interface RollbackTarget {
+  deployment: string; run: string; run_number: number; version: string;
+  /** When it was deployed (Unix ms). */
+  at: number;
+  /** The previous successful deployment: the default. */
+  previous?: boolean;
+  /** The deployments that stop running, newest first. */
+  reverts: { deployment: string; run: string; run_number: number; version: string; at: number }[];
+  consequence: string;
+  suggestions?: string[];
 }
 
 /** Why a failed step failed: the kind, one plain sentence, the evidence, and what Launchway did next. */

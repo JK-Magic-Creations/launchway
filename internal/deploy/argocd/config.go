@@ -221,6 +221,17 @@ func (r Repo) FileAllowed(project, file string) bool {
 	return false
 }
 
+// AllowsProject reports whether any path rule of the repository lets the
+// project change files in it.
+func (r Repo) AllowsProject(project string) bool {
+	for _, rule := range r.Paths {
+		if matchAny(rule.Projects, project) && len(rule.Files) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // globMatch matches a path against a pattern where a part ** matches any
 // number of directories (none included).
 func globMatch(pattern, name string) bool {

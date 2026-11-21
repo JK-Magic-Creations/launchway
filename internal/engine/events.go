@@ -19,6 +19,9 @@ const (
 	RunCancelRequested EventType = "run.cancel_requested"
 	RunResumed         EventType = "run.resumed"
 	RunFinished        EventType = "run.finished"
+	// RunReviewed is an approver acknowledging an emergency rollback that
+	// needed review (schema 32): payload actor and comment.
+	RunReviewed EventType = "run.reviewed"
 
 	StepQueued   EventType = "step.queued"   // ready, waiting for a runner
 	StepSkipped  EventType = "step.skipped"  // will not run
@@ -92,6 +95,7 @@ var eventSince = map[EventType]int{
 	DeployCommand: 14, DeployCommandWithdrawn: 14, DeployCommandTaken: 14, DeployCommandDone: 14,
 	PolicyEvaluated: 16,
 	VerifyStarted:   19, VerifyInterval: 19, VerifyVerdict: 19, VerifyOverride: 19,
+	RunReviewed:    schemaRollback,
 	RunLaneWaiting: schemaFlow, RunLaneStarted: schemaFlow, RunLaneReplaced: schemaFlow, RunLaneSkipped: schemaFlow,
 }
 

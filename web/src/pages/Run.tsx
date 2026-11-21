@@ -1,3 +1,4 @@
+import { RollbackBanner, RolledBackLine } from "../components/RollbackRun";
 import { EXPLAIN } from "../learn/links";
 import { LearnLink } from "../learn/LearnLink";
 import { RunHeader, storedDensity, saveDensity, type Density } from "../components/RunHeader";
@@ -219,7 +220,7 @@ export function RunPage({ id }: { id: string }) {
   const phases = deployPhases(run);
   const mayOperate = canOperate(me, run.project);
   // A finished run can be re-run from any step (the server says if not).
-  const mayRerun = done && mayOperate && !run.needs_newer_server;
+  const mayRerun = done && mayOperate && !run.needs_newer_server && act0("rerun")?.available !== false;
   const libraries = run.graph.libraries ?? [];
   const overridden = libraries.filter((l) => l.override);
   const images = imageSteps(run);
@@ -255,6 +256,8 @@ export function RunPage({ id }: { id: string }) {
           )}
         </>} />
       <ErrorBox error={actionErr} />
+      <RollbackBanner run={run} onChanged={() => load(true)} />
+      <RolledBackLine run={run} />
       {actionErr instanceof Error && /Re-run from/.test(actionErr.message) && rerunTarget && mayRerun && (
         <p className="refusal-action"><RerunButton run={run} step={rerunTarget} label={`Re-run from ${rerunTarget.id}`} primary /></p>
       )}
@@ -333,7 +336,10 @@ export function RunPage({ id }: { id: string }) {
 
       <RunFlowBanners run={run} done={done} onSelect={select} />
 
-      {resumeBlocked && mayOperate && !run.needs_newer_server && (
+      {resumeBlocked && mayOperate && !run.needs_newer_server && run.rollback && (run.status === "failed" || run.status === "canceled") && (
+        <div className="callout callout-info callout-row" role="status"><span><strong>This run cannot be resumed or re-run.</strong> {run.resume?.reason}.</span></div>
+      )}
+      {resumeBlocked && mayOperate && !run.needs_newer_server && !run.rollback && (run.status === "failed" || run.status === "canceled") && (
         <div className="callout callout-info callout-row" role="status">
           <span><strong>This run cannot be resumed.</strong> {run.resume?.reason}. Re-run from <Mono>{rerunTarget?.id ?? ""}</Mono> instead: it makes a new
             deployment attempt of the same version and reuses every step before it, so nothing is rebuilt.</span>
@@ -500,7 +506,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
             {step.kind === "image" && <span className="meta step-kind"><ImageIcon />builds a container image</span>}
             {step.kind === "verify" && <span className="meta">verifies {step.environment || environmentOf(run, step) || "an environment"}</span>}
             {step.kind === "ai" && <span className="meta">asks a model</span>}
-            {deploys && <span className="meta">{step.kind === "rollback" ? `rollback of ${step.deployment}` : step.kind === "rollout" ? `acts on the rollout of ${step.deployment}` : `deploy to ${env}`}</span>}
+            {deploys && <span className="meta">{step.kind === "rollback" ? step.deployment ? `rollback of ${step.deployment}` : `rolls ${env || step.environment || "the service"} back` : step.kind === "rollout" ? `acts on the rollout of ${step.deployment}` : `deploy to ${env}`}</span>}
             {reused && <span className="badge-reused">Reused from #{step.reused_from_number}</span>}
             {step.started_at > 0 && <span className="meta" title={since < step.started_at ? `since the verification started; this attempt started ${clock(step.started_at)}` : undefined}>
               {elapsed(since, step.finished_at, now)}</span>}

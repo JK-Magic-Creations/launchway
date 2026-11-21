@@ -286,6 +286,19 @@ type EnvironmentConfig struct {
 	// guards a deployment here needs, whatever its pipeline asks for; at
 	// most 5, and only with protected: true.
 	MinApprovals int `yaml:"min_approvals"`
+	// Reviewers are who may acknowledge an emergency rollback of this
+	// environment (users and groups); empty means any operator of the
+	// project other than the person who asked for it.
+	Reviewers *ReviewersConfig `yaml:"reviewers"`
+	// EmergencyRollback overrides approvals.emergency_rollback for this
+	// environment: allow or require_approval.
+	EmergencyRollback string `yaml:"emergency_rollback"`
+}
+
+// ReviewersConfig names who may acknowledge an emergency rollback.
+type ReviewersConfig struct {
+	Users  []string `yaml:"users"`
+	Groups []string `yaml:"groups"`
 }
 
 // RunnerPoolConfig is one runner pool. A deploy pool (the default kind)
@@ -314,7 +327,12 @@ type RunnerPoolConfig struct {
 func (c *Config) EngineEnvironments() []engine.Environment {
 	out := make([]engine.Environment, 0, len(c.Environments))
 	for _, e := range c.Environments {
-		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue, Protected: e.Protected, MinApprovals: e.MinApprovals})
+		var reviewers *pipeline.Approvers
+		if e.Reviewers != nil {
+			reviewers = &pipeline.Approvers{Users: e.Reviewers.Users, Groups: e.Reviewers.Groups, Count: 1}
+		}
+		out = append(out, engine.Environment{Name: e.Name, Target: e.Target, Projects: e.Projects, Queue: e.Queue, Protected: e.Protected, MinApprovals: e.MinApprovals,
+			Reviewers: reviewers, EmergencyRollback: e.EmergencyRollback})
 	}
 	return out
 }
@@ -588,6 +606,11 @@ type ApprovalsConfig struct {
 	// is yes when sign-in is off, where everyone is the same user, and no
 	// when it is on.
 	AllowSelf *bool `yaml:"allow_self"`
+	// EmergencyRollback is what happens when someone rolls back a protected
+	// environment after a successful deployment: allow (the default: no
+	// approval first, an approver reviews it afterwards) or require_approval
+	// (an approval comes first even then). An environment may override it.
+	EmergencyRollback string `yaml:"emergency_rollback"`
 }
 
 // ProjectConfig is one repository to watch.

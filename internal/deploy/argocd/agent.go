@@ -183,11 +183,15 @@ func (a *Agent) Apply(ctx context.Context, job *engine.Job, log func(string, ...
 
 // Revert reverts a deployment's commit (unless an earlier try did) and asks
 // Argo CD to sync if it must. A deployment that changed nothing in Git has
-// nothing to revert.
+// nothing to revert. The revert of a rollback run names several deployments
+// (d.Reverts): they are reverted together, newest first, or not at all.
 func (a *Agent) Revert(ctx context.Context, job *engine.Job, log func(string, ...any)) (*engine.DeployFacts, error) {
 	d := job.Deploy
 	if _, err := a.check(job.Project, d); err != nil {
 		return nil, err
+	}
+	if len(d.Reverts) > 0 {
+		return a.revertSeries(ctx, job, log)
 	}
 	abort := ""
 	if d.AbortFirst && d.Rollout != nil {
@@ -452,6 +456,7 @@ func (a *Agent) Observe(ctx context.Context, it engine.WatchItem) deploy.Snapsho
 		}
 		snap.Rights = cl.Rights(ctx, ro.Namespace, ro.Name)
 	}
+	snap.Rights = a.withWriteRights(snap.Rights, it.Project, it.Repo)
 	return snap
 }
 
@@ -497,4 +502,93 @@ func short(sha string) string {
 		return sha[:10]
 	}
 	return sha
+}
+
+// revertSeries reverts the deployments of a rollback run, newest first, as
+// one all-or-nothing change in Git, and asks Argo CD to sync. When one
+// revert does not apply it changes nothing and says which deployment
+// stands in the way and what to do.
+func (a *Agent) revertSeries(ctx context.Context, job *engine.Job, log func(string, ...any)) (*engine.DeployFacts, error) {
+	d := job.Deploy
+	repo, _, unlock, err := a.repo(ctx, job.Project, d.Repo, d.Branch, log)
+	if err != nil {
+		return nil, err
+	}
+	var items []gitops.RevertItem
+	for _, rv := range d.Reverts {
+		commit, err := repo.Find(ctx, rv.Deployment)
+		if err != nil {
+			unlock()
+			return nil, err
+		}
+		if commit == "" {
+			commit = rv.Commit // older than the history searched: trust what the server recorded
+		}
+		if commit == "" {
+			log("Deployment %s (%s) made no commit on %s, so there is nothing to revert for it", rv.Deployment, rv.Version, d.Branch)
+			continue
+		}
+		items = append(items, gitops.RevertItem{Deployment: rv.Deployment, Commit: commit, Message: rv.Message})
+	}
+	facts := &engine.DeployFacts{Repo: d.Repo, Branch: d.Branch}
+	if len(items) == 0 {
+		unlock()
+		log("None of the deployments after %s changed %s, so there is nothing to revert", d.Version, d.Branch)
+		return facts, nil
+	}
+	log("Rolling back to %s: reverting %d deployment(s), newest first, in one change", d.Version, len(items))
+	res, err := repo.RevertSeries(ctx, items)
+	unlock()
+	var conflict *gitops.ConflictError
+	if errors.As(err, &conflict) {
+		which := conflict.Deployment
+		for _, rv := range d.Reverts {
+			if rv.Deployment == conflict.Deployment {
+				which = fmt.Sprintf("%s (run #%d, deployment %s)", rv.Version, rv.RunNumber, rv.Deployment)
+			}
+		}
+		return facts, fmt.Errorf("rolling back to %s cannot be done cleanly: reverting %s does not apply to %s, because later commits changed the same lines of %s. "+
+			"Nothing was changed in Git. To go ahead anyway, fix those files by hand in the GitOps repository, or deploy the version you want with a normal run",
+			d.Version, which, d.Branch, strings.Join(conflict.Files, ", "))
+	}
+	if err != nil {
+		return facts, err
+	}
+	facts.Revert, facts.Reverted, facts.Existing = res.Commits[len(res.Commits)-1], true, res.Existing
+	facts.Commit = items[0].Commit
+	if res.Existing {
+		log("The reverts are already on %s (an earlier try made them)", d.Branch)
+	} else {
+		log("Reverted %d deployment(s) on %s; the last revert is %s", len(items), d.Branch, short(facts.Revert))
+	}
+	facts.Sync, err = a.requestSync(ctx, job, facts.Revert, log)
+	return facts, err
+}
+
+// withWriteRights adds to a snapshot's rights whether this runner can write
+// the repository a deployment's changes go to: a rollback is only offered
+// when it can.
+func (a *Agent) withWriteRights(r *deploy.Rights, project, repo string) *deploy.Rights {
+	if r == nil {
+		r = &deploy.Rights{}
+	}
+	ok, why := a.canWrite(project, repo)
+	r.Write = &ok
+	r.WriteWhy = why
+	return r
+}
+
+// canWrite says whether the runner's configuration lets it commit to a
+// repository for a project, and if not, what an administrator must change.
+func (a *Agent) canWrite(project, name string) (bool, string) {
+	rc, ok := a.Config.Repos[name]
+	switch {
+	case !ok:
+		return false, fmt.Sprintf("this deploy runner has no GitOps repository %s in its configuration (deploy.repos), so it cannot revert changes there", name)
+	case !rc.AllowsProject(project):
+		return false, fmt.Sprintf("this deploy runner may not change repository %s for project %s (see deploy.repos.%s.paths in the runner's configuration)", name, project, name)
+	case rc.Credentials == nil && (strings.HasPrefix(rc.URL, "https://") || strings.HasPrefix(rc.URL, "http://")):
+		return false, fmt.Sprintf("this deploy runner has no credentials for repository %s (deploy.repos.%s.credentials), so it cannot push to it", name, name)
+	}
+	return true, ""
 }

@@ -36,6 +36,10 @@ type Rights struct {
 	// Logs: read the pods and logs of analysis jobs.
 	Logs    *bool  `json:"logs,omitempty"`
 	LogsWhy string `json:"logs_why,omitempty"`
+	// Write: commit to the GitOps repository the deployment's changes go
+	// to, which a rollback needs to revert them.
+	Write    *bool  `json:"write,omitempty"`
+	WriteWhy string `json:"write_why,omitempty"`
 }
 
 // App is an Argo CD application, reduced.

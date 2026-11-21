@@ -214,7 +214,10 @@ type Step struct {
 	Until      string `json:"until,omitempty"`       // rollout: healthy or paused
 	Pauses     string `json:"pauses,omitempty"`      // rollout: wait, promote or fail
 	AbortFirst bool   `json:"abort_first,omitempty"` // rollback: abort the rollout before reverting
-	ctl        controlLines
+	// Restore, for the rollback step of a rollback run, is what to restore;
+	// see restore.go. Never written in a pipeline file.
+	Restore *Restore `json:"restore,omitempty"`
+	ctl     controlLines
 
 	// continueFail says a loop's continue_for selected this member, or the
 	// loop member it is part of (template steps): see tolerate.

@@ -101,6 +101,12 @@ steps:
 - **Not yet**: syncing to a revision without a commit, a "roll back to…" button that starts a run,
   pausing a rollout, and `kind: analysis` arrive in later releases.
 
+## Rolling back after the run succeeded
+
+The rollback step above undoes a deployment that fails its own guards. To roll a service back later, after
+a deployment succeeded and the run is finished, ask for a rollback of its own: a run that reverts the
+deployments after the version you choose, newest first. See [Rollback after success](rollback-after-success.md).
+
 ## Controlling a rollout: promote, abort, retry
 
 A canary can stop at a pause and wait: for a smoke test of the canary, for a person, or both.
@@ -281,11 +287,16 @@ buttons show unavailable with the words to fix it: list the rollout in
 
 ## What you may do: the `actions` list
 
+
 The server decides, once per resource, what a person may do now. A run's `actions` list (cancel, resume,
 rerun) has for each action its name, whether it is `available`, the plain `reason` when not, `instead` (the
 action that works), what role it needs (`who`), and for a risky action the `risk` and a `suggestion`.
 Risky actions are never blocked for being risky: the interface shows the consequence, asks for
 confirmation and goes ahead.
+
+A deployment, and each service of an environment, reports its `rollback` action the same way: whether the
+service can be rolled back and to what (`targets`), or why not and what would help. See
+[Rollback after success](rollback-after-success.md).
 
 ## Rollout control does not need the chart's admission policy
 

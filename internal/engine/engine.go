@@ -76,6 +76,8 @@ type Options struct {
 	// approve its approval steps. Nil means yes, because until there is
 	// sign-in everyone acts as the same configured user.
 	AllowSelfApproval *bool
+	// EmergencyRollback: see LiveOptions.
+	EmergencyRollback string
 	// Tests limits what is kept of test reports; zero fields take the
 	// defaults (see TestLimits).
 	Tests TestLimits
@@ -603,41 +605,6 @@ type NewRun struct {
 	Delivery *Delivery
 }
 
-// checkPullRequest checks the trigger of a pull-request run.
-func checkPullRequest(t Trigger) error {
-	if t.PullRequest <= 0 || t.Ref != PullRequestRef(t.PullRequest) || t.Branch != "" || t.Tag != "" {
-		return fmt.Errorf("%w: a pull-request run needs the pull request's number and its ref, refs/pull/<number>/head", ErrConflict)
-	}
-	return nil
-}
-
-// PullRequestRef is the ref a Git host keeps a pull request's head at.
-func PullRequestRef(number int) string { return "refs/pull/" + strconv.Itoa(number) + "/head" }
-
-// checkLibraries checks that a pipeline is ready to run and that the source
-// says where to fetch every library it was expanded from, at the same commit.
-func checkLibraries(p *pipeline.Pipeline, src Source) error {
-	if !p.Expanded() {
-		return fmt.Errorf("%w: the pipeline uses templates that have not been expanded; "+
-			"templates come from libraries the server knows, so run it on a server", ErrConflict)
-	}
-	for _, l := range p.Libraries {
-		found := false
-		for _, ls := range src.Libraries {
-			if ls.Name == l.Name {
-				found = ls.Commit == l.Commit && pipeline.IsCommitID(ls.Commit) && ls.URL != ""
-			}
-		}
-		if !found {
-			return fmt.Errorf("%w: the source does not say where to fetch library %s at %s", ErrConflict, l.Name, l.Commit)
-		}
-	}
-	if len(src.Libraries) > 0 && src.Kind != "git" {
-		return fmt.Errorf("%w: libraries are only for runs from a Git repository", ErrConflict)
-	}
-	return nil
-}
-
 // CreateRun records a new run and queues the steps that can start.
 func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if nr.Project == "" || nr.Pipeline == nil || len(nr.Pipeline.Steps) == 0 {
@@ -646,10 +613,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if nr.Trigger.Event == "" {
 		nr.Trigger.Event = pipeline.EventManual
 	}
-	if err := checkLibraries(nr.Pipeline, nr.Source); err != nil {
-		return nil, err
-	}
-	if err := e.checkSchemas(&nr); err != nil {
+	if err := e.checkRun(&nr); err != nil {
 		return nil, err
 	}
 	// While build pools decide where runs go, older servers, which would
@@ -658,34 +622,13 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	if e.knows(schemaPools) && e.buildPoolsConfigured() {
 		poolRequires = schemaPools
 	}
-	if err := e.checkNewRun(&nr); err != nil { // schema 13 and the run's inputs
+	draft, err := draftOf(&nr)
+	if err != nil {
 		return nil, err
 	}
-	var draft *Draft
-	switch {
-	case nr.Draft != nil:
-		if nr.Push != nil {
-			return nil, fmt.Errorf("%w: a draft run is never started by a push", ErrConflict)
-		}
-		draft = &Draft{Text: nr.Draft.Text, Hash: DraftHash(nr.Draft.Text), Secrets: nr.Draft.Secrets}
-		nr.Trigger.Event = pipeline.EventDraft
-	case nr.Trigger.Event == pipeline.EventDraft:
-		return nil, fmt.Errorf("%w: a draft run needs the text it runs", ErrConflict)
-	}
-	var prSecrets *bool
-	if nr.Trigger.Event == pipeline.EventPullRequest {
-		if !e.knows(schemaPullRequests) {
-			return nil, fmt.Errorf("%w: this server does not know pull-request runs (schema %d)", ErrConflict, schemaPullRequests)
-		}
-		if err := checkPullRequest(nr.Trigger); err != nil {
-			return nil, err
-		}
-		// Servers older than schema 9 do not know on.pull_request, so they
-		// leave such a run alone instead of running it with secrets.
-		if !nr.Pipeline.On.MatchPullRequest() {
-			return nil, fmt.Errorf("%w: a pull-request run's pipeline must ask for pull requests (on: { pull_request: {} })", ErrConflict)
-		}
-		prSecrets = &nr.PullRequestSecrets
+	prSecrets, err := e.pullRequestSecrets(&nr)
+	if err != nil {
+		return nil, err
 	}
 	runID := ids.New("run")
 	trig, src := nr.Trigger, nr.Source
@@ -693,7 +636,7 @@ func (e *Engine) CreateRun(nr NewRun) (*RunSummary, error) {
 	// the older ones of the same ref, in the transaction that creates it.
 	supersede := nr.Pipeline.Supersede && draft == nil && e.knows(schemaPullRequests) &&
 		(trig.Event == pipeline.EventPush || trig.Event == pipeline.EventPullRequest) && trig.Ref != ""
-	err := e.runTx(runID, true, func(c *cmd) error {
+	err = e.runTx(runID, true, func(c *cmd) error {
 		if nr.Push != nil {
 			claimed, err := claimRef(c.tx, nr.Project, *nr.Push)
 			if err != nil {
@@ -882,6 +825,9 @@ func (e *Engine) resume(runID, actor string, draftSecrets *bool) error {
 		}
 		if draftSecrets != nil && c.st.Draft == nil {
 			return fmt.Errorf("%w: run %s is not a draft run", ErrConflict, runID)
+		}
+		if c.st.isRollbackRun() {
+			return fmt.Errorf("%w: %s", ErrConflict, c.st.rollbackRunRefusal())
 		}
 		if id := c.st.openedDeployment(); id != "" {
 			return fmt.Errorf("%w: %s", ErrConflict, c.st.resumeRefusal(id))
@@ -1754,6 +1700,7 @@ func (c *cmd) persist() error {
 		{schemaReports, c.persistSchema18},
 		{schemaVerify, c.persistVerify},
 		{schemaPools, c.persistPools},
+		{schemaRollback, c.persistRollback},
 	} {
 		if !c.e.knows(w.schema) {
 			continue
@@ -1845,7 +1792,7 @@ func (c *cmd) advance() {
 	if st.laneWaiting() && !st.CancelRequested {
 		return // the run waits for its lane; none of its steps is queued
 	}
-	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.startedOrResumed() {
+	if !c.policyChecked && c.e.policiesOn() && st.RunGate == nil && c.policyDue() {
 		c.policyChecked = true
 		c.gateRun()
 		if c.err != nil {
@@ -1866,11 +1813,9 @@ func (c *cmd) advance() {
 				continue
 			}
 			def := st.Pipeline.Step(id)
-			if def.IsRollback() {
-				// The rollback rule replaces the usual one: it runs because
-				// a step it needs did not succeed.
-				if c.advanceRollback(id, def) {
-					changed = true
+			if c.advanceOwn(id, def, &changed) {
+				if c.err != nil {
+					return
 				}
 				continue
 			}

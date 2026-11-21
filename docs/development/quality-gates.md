@@ -28,7 +28,7 @@ make check-all    # the above, plus the bundle budget and the Go tests with the 
 | Coverage | `make coverage-check` | a package's coverage is below its floor | `quality/coverage-floor.json` |
 | Web lint | `make web-lint` | `eslint` or `tsc` reports something new | `web/eslint-suppressions.json` |
 | Web tests | `make web-test` | a `vitest` test fails | none |
-| Bundle size | `make web-size` | the built JavaScript or CSS is larger than the budget | `web/bundle-budget.json` |
+| Bundle size | `make web-size` | the JavaScript or CSS of the first load, or of the whole build, is larger than the budget | `web/bundle-budget.json` |
 
 ### Go lint
 
@@ -110,9 +110,11 @@ In `web/`:
   `src/router.test.tsx` and `src/components/ui.test.tsx` are the pattern: test what a person sees
   and does (roles, names, text), not how the component is built. A test file sits next to its
   source file and is called `<name>.test.ts` or `<name>.test.tsx`.
-- `npm run size` builds the UI and fails when the JavaScript or CSS is larger than
-  `bundle-budget.json`. Shrink with `React.lazy` per route; when the bundle gets smaller, run
-  `npm run size:update` (it never raises the budget).
+- `npm run size` builds the UI and fails when the JavaScript or CSS of the first load
+  (`initial_*`: what index.html names and the chunks it imports statically) or of the whole build
+  (`total_*`, a generous cap) is larger than `bundle-budget.json`. Shrink the first load with
+  `React.lazy` per route; when it gets smaller, run `npm run size:update` (it never raises the
+  budget).
 
 ## The oldest supported git
 

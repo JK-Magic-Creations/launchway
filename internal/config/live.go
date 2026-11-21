@@ -14,6 +14,7 @@ func (c *Config) EngineLive() (engine.LiveOptions, error) {
 	var err error
 	allowSelf := c.AllowSelfApproval()
 	o.AllowSelfApproval = &allowSelf
+	o.EmergencyRollback = c.Approvals.EmergencyRollback
 	if o.Tests, err = c.TestLimits(); err != nil {
 		return o, err
 	}

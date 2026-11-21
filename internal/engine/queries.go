@@ -213,6 +213,11 @@ type RunDetail struct {
 	// Actions are what a person may do with the run now, computed once by
 	// the server: cancel, resume, rerun.
 	Actions []Action `json:"actions"`
+	// Rollback says what a rollback run is (nil for any other run);
+	// RolledBackBy lists the rollback runs that undid a deployment of this
+	// run, which is the link "rolled back later by run #N" (schema 32).
+	Rollback     *RollbackRunView `json:"rollback,omitempty"`
+	RolledBackBy []RunRef         `json:"rolled_back_by,omitempty"`
 	// Resume says whether the run can be resumed, and if not, what to do
 	// instead; nil for a run that is not failed or canceled.
 	Resume *ResumeAdvice `json:"resume,omitempty"`
@@ -700,17 +705,16 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 	if d.RunnerHint, err = e.imageRunnerHint(st, d.StepList); err != nil {
 		return nil, err
 	}
-	if d.PoolHint, err = e.poolHint(st, d.StepList); err != nil {
+	if d.PoolHint, err = e.poolOrVerifyHint(st, d.StepList); err != nil {
 		return nil, err
-	}
-	if d.PoolHint == "" {
-		if d.PoolHint, err = e.verifyHint(st); err != nil {
-			return nil, err
-		}
 	}
 	d.Policy = policySummary(st)
 	d.Resume = st.resumeAdvice()
 	d.Actions = st.runActions()
+	d.Rollback = st.rollbackView()
+	if d.RolledBackBy, err = e.rolledBackBy(id); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
@@ -862,4 +866,14 @@ func (e *Engine) State(runID string) (*RunState, error) {
 		return nil, err
 	}
 	return Fold(evs), nil
+}
+
+// poolOrVerifyHint is the hint about build pools for a run's steps, or, when there is none, the one about the
+// pools its verification steps need.
+func (e *Engine) poolOrVerifyHint(st *RunState, steps []StepView) (string, error) {
+	hint, err := e.poolHint(st, steps)
+	if err != nil || hint != "" {
+		return hint, err
+	}
+	return e.verifyHint(st)
 }

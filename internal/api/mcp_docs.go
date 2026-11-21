@@ -22,7 +22,7 @@ How to work with it:
 - Write or fix a pipeline: read get_pipeline_reference (or the resource launchway://docs/pipeline-reference), check the text with validate_pipeline until it says ok (it gives line numbers), then try it with start_run and pipeline_text (a draft run) before anyone commits it.
 - Run and watch: start_run, then wait_for_run (it returns when the run ends, or after timeout_seconds; call it again to keep waiting).
 - Diagnose a failure: get_run says in words what failed and why; then get_step_log (the end of the failed step's output), get_test_results and get_security_findings. retry_run resumes a failed run.
-- Approvals and deployments: list_approvals, decide_approval, get_deployments, control_rollout; verifications of a deployment: get_verification, mark_verification.
+- Approvals and deployments: list_approvals, decide_approval, get_deployments, control_rollout; rolling back after a deployment succeeded: get_rollback_options, rollback_deployment, then list_rollback_reviews and review_rollback; verifications of a deployment: get_verification, mark_verification.
 
 Your token decides what you may do, exactly as on the API; tools that change things are listed only if it may change something. Results are bounded: logs and files are read in parts.
 

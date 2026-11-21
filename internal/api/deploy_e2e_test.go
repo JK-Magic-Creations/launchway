@@ -143,10 +143,14 @@ func setupDeploy(t *testing.T) *deployEnv {
 
 func setupDeployAt(t *testing.T, db string) *deployEnv {
 	t.Helper()
+	return setupDeployEnvs(t, db, []engine.Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}},
+		{Name: "staging", Target: "homelab", Projects: []string{"shop", "web-*"}}})
+}
+
+func setupDeployEnvs(t *testing.T, db string, envs []engine.Environment) *deployEnv {
+	t.Helper()
 	dir := t.TempDir()
-	eng, err := engine.Open(engine.Options{Database: db, LeaseTTL: 3 * time.Second, Logger: quiet(),
-		Environments: []engine.Environment{{Name: "prod", Target: "homelab", Projects: []string{"shop"}},
-			{Name: "staging", Target: "homelab", Projects: []string{"shop", "web-*"}}}})
+	eng, err := engine.Open(engine.Options{Database: db, LeaseTTL: 3 * time.Second, Logger: quiet(), Environments: envs})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -38,6 +38,7 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/waivers": { waivers: [], waive_projects: [], rules: {} },
     "/api/v1/config/history": { changes: [] },
     ...forgeFixtures(),
+    ...rollbackFixtures(detail),
     ...overrides,
   };
   class FakeSource { onopen = null; onerror = null; addEventListener() {} removeEventListener() {} close() {} }
@@ -71,5 +72,34 @@ export function forgeFixtures(): Record<string, unknown> {
     "/api/v1/repositories/acme/shop/hooks": hooks,
     "/api/v1/repositories/acme/shop/hooks/hook_1/deliveries": deliveries,
     "/api/v1/owners/acme/hooks": { items: [{ ...hook, scope: "owner", owner: "acme", repository: undefined }], events: hooks.events },
+  };
+}
+
+/** Rolling back after a deployment succeeded: an environment with a service that may be rolled back (and one
+ * that may not), the emergency rollbacks that need a review, and a rollback run's page. */
+export function rollbackFixtures(base: RunDetail): Record<string, unknown> {
+  const target = (version: string, n: number, previous = false) => ({
+    deployment: "dep_" + version, run: "run_" + n, run_number: n, version, at: 1_700_000_000_000, previous,
+    reverts: [{ deployment: "dep_x", run: "run_9", run_number: 9, version: "1.4.0", at: 1_700_000_100_000 }],
+    consequence: `prod goes from 1.4.0 back to ${version}; the deployment of 1.4.0 (run #9) is reverted in Git; the database and configuration are not rolled back`,
+    suggestions: ["If 1.4.0 included a database migration, check that it is backward compatible with " + version + ": a rollback never undoes a database."],
+  });
+  const unit = { project: "shop-api", service: "shop", waiting: [], current: { deployment: "dep_1.4.0", version: "1.4.0", run: "run_9", run_number: 9, since: 1_700_000_100_000 },
+    rollback: { name: "rollback", available: true, who: "operator", emergency: true, risk: "prod goes back to an earlier version", targets: [target("1.3.2", 7, true), target("1.3.0", 5)] } };
+  const idle = { project: "shop-web", service: "web", waiting: [], rollback: { name: "rollback", available: false, who: "operator", reason: "web has only one successful deployment in prod", would_help: "deploy a second version first" } };
+  const review = { run: "run_rb", number: 10, project: "shop-api", environment: "prod", service: "shop", from_version: "1.4.0", to_version: "1.3.2", reason: "checkout fails", actor: "ann", at: 1_700_000_200_000,
+    acknowledge: { name: "review", available: true, who: "approver" } };
+  const rbRun: RunDetail = { ...base, id: "run_rb", number: 10, project: "shop-api", status: "succeeded", message: "Roll back shop in prod to 1.3.2",
+    rollback: { environment: "prod", service: "shop", headline: "Rolled shop in prod back from 1.4.0 to 1.3.2", emergency: true, review_required: true, reason: "checkout fails", actor: "ann",
+      to: { deployment: "dep_1.3.2", version: "1.3.2", run: "run_7", run_number: 7, at: 1_700_000_000_000 },
+      from: { deployment: "dep_1.4.0", version: "1.4.0", run: "run_9", run_number: 9 },
+      reverts: [{ deployment: "dep_1.4.0", version: "1.4.0", commit: "abc1234", run: "run_9", run_number: 9 }],
+      note: "A rollback never undoes a database or configuration." } };
+  return {
+    "/api/v1/environments": [environment(), environment({ name: "prod", projects: ["shop-api", "shop-web"], services: [unit as never, idle as never] })],
+    "/api/v1/rollbacks/review": [review],
+    "/api/v1/runs/run_rb": rbRun,
+    "/api/v1/runs/run_rb/steps/test/logs": { lines: [] },
+    "/api/v1/runs/run_rb/variables": { run_id: "run_rb", variables: [] },
   };
 }

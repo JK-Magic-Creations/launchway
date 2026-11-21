@@ -1,6 +1,9 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { EnvironmentView, UnitView } from "../api";
+import { rollbackApi, type ReviewItem } from "../apiRollback";
 import { EntityLink } from "../components/EntityLink";
+import { NeedsReview } from "../components/RollbackRun";
+import { useLoad } from "../guided/useLoad";
 import { WizardButton, WizardEmpty } from "../components/WizardButton";
 import { ago } from "../format";
 import { diagnose, type Diagnosis } from "../guided/diagnose";
@@ -18,6 +21,8 @@ interface Row { env: EnvironmentView; unit: UnitView; dg: Diagnosis }
 export function DeploymentsOverviewPage() {
   const inst = useInstallation();
   const now = useNow(5000);
+  const reviewFn = useCallback((bg: boolean) => rollbackApi.reviews(bg), []);
+  const reviews = useLoad<ReviewItem[]>(reviewFn, 15000);
   const rows = useMemo<Row[]>(() => inst.environments.flatMap((env) => env.services.map((unit) => ({ env, unit, dg: diagnose(unit.last, unit.live, undefined, now) }))), [inst.environments, now]);
   if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
   const trouble = rows.filter((r) => r.dg.tone === "bad" || r.dg.tone === "wait").sort((a, b) => (a.dg.tone === "bad" ? 0 : 1) - (b.dg.tone === "bad" ? 0 : 1));
@@ -41,6 +46,7 @@ export function DeploymentsOverviewPage() {
             { key: "look", label: "Need a look", value: trouble.length, foot: trouble.length ? "failed or waiting" : "none", loud: trouble.some((r) => r.dg.tone === "bad") ? "bad" : trouble.length ? "warn" : undefined },
             { key: "mov", label: "Moving now", value: moving, foot: moving ? "being deployed" : "quiet" },
           ]} />
+          <NeedsReview items={reviews.data} onChanged={reviews.reload} />
           {trouble.length > 0 && (
             <Sheet title="Needs a look">
               {trouble.map((r) => {

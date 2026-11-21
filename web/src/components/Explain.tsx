@@ -4,7 +4,7 @@ import { ago, clock } from "../format";
 import { canOperate, useMe } from "../auth";
 import { ErrorBox, Mono } from "./ui";
 import { WizardButton } from "./WizardButton";
-import { costText, usageText } from "./Verification";
+import { costText, usageText } from "./usageText";
 
 // Models: asking one to explain a failed step, what an ai step's model
 // said, and the models the server knows. A model's words are always shown
