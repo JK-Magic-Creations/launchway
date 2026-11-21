@@ -46,8 +46,15 @@ func (s *Server) pullRoutes() []route {
 		{"POST " + prBase + "/pulls/{number}/reviews/{id}/dismiss", repoWrite, "pull.review_dismiss", s.pullDismiss},
 		{"POST " + prBase + "/pulls/{number}/review-requests", repoWrite, "pull.review_request", s.pullRequestReview},
 		{"DELETE " + prBase + "/pulls/{number}/review-requests/{reviewer}", repoWrite, "pull.review_unrequest", s.pullUnrequestReview},
+		{"GET " + prBase + "/pulls/{number}/queue", repoRead, "", s.pullQueueGet},
+		{"POST " + prBase + "/pulls/{number}/queue", repoWrite, "pull.queue", s.pullEnqueue},
+		{"DELETE " + prBase + "/pulls/{number}/queue", repoRead, "pull.dequeue", s.pullDequeue},
+		{"POST " + prBase + "/pulls/{number}/update-branch", repoWrite, "pull.update_branch", s.pullUpdateBranch},
+		{"GET " + prBase + "/pulls/{number}/viewed", repoRead, "", s.pullViewedGet},
+		{"PUT " + prBase + "/pulls/{number}/viewed", repoRead, "", s.pullViewedSet},
+		{"GET /api/v1/pulls/inbox", signedIn, "", s.pullInbox},
 		{"GET " + prBase + "/pulls/{number}/owners", repoRead, "", s.pullOwners},
-		{"POST " + prBase + "/owners/check", repoRead, "", s.checkOwnersFile},
+		{"POST " + prBase + "/owners/check", repoRead, "pull.owners_check", s.checkOwnersFile},
 		{"GET " + prBase + "/compare", repoRead, "", s.compareBranches},
 		{"GET " + prBase + "/pull-settings", repoRead, "", s.getPullSettings},
 		{"PUT " + prBase + "/pull-settings", repoAdmin, "repository.pull_settings", s.setPullSettings},
@@ -156,7 +163,7 @@ func (s *Server) listPulls(w http.ResponseWriter, r *http.Request) {
 }
 
 // pullAction is the one place an action's availability is decided.
-func (s *Server) pullActions(id *identity, repo forge.Repository, p pulls.PullRequest, rd pulls.Readiness) []engine.Action {
+func (s *Server) pullActions(id *identity, repo forge.Repository, p pulls.PullRequest, rd pulls.Readiness, queued *pulls.QueueEntry) []engine.Action {
 	op := s.authorize(id, auth.Operate, repo.Path)
 	mine := p.Author == id.User && id.User != ""
 	open := p.State == pulls.Open
@@ -175,6 +182,8 @@ func (s *Server) pullActions(id *identity, repo forge.Repository, p pulls.PullRe
 		add("merge", false, "operator", notOpen)
 	case !op:
 		add("merge", false, "operator", "you need the operator role on "+repo.Path+" to merge")
+	case rd.Queue && !rd.CanBypass:
+		add("merge", false, "operator", p.TargetBranch+" merges through the merge queue; add the pull request to the queue")
 	case !rd.CanMerge && !rd.CanBypass:
 		add("merge", false, "operator", rd.Why)
 	default:
@@ -187,6 +196,13 @@ func (s *Server) pullActions(id *identity, repo forge.Repository, p pulls.PullRe
 	add("edit", canEdit && p.State != pulls.Merged, "author or operator", map[bool]string{true: "a merged pull request cannot be edited", false: "only the author or an operator may edit"}[canEdit])
 	add("close", open && canEdit, "author or operator", map[bool]string{true: notOpen, false: "only the author or an operator may close"}[open])
 	add("reopen", p.State == pulls.Closed && canEdit, "author or operator", map[string]string{"merged": "a merged pull request cannot be reopened; revert it instead", "open": "this pull request is already open"}[string(p.State)])
+	if rd.Queue {
+		in := queued != nil && queued.State != pulls.QueueRemoved
+		hard := pulls.QueueBlockers(rd)
+		add("queue", open && op && !in && len(hard) == 0, "operator", map[bool]string{true: "it is already in the merge queue", false: strings.Join(hard, "; ")}[in])
+		add("dequeue", in && canEdit, "author or operator", "it is not in the merge queue")
+	}
+	add("update_branch", open && canEdit && p.Mergeability.Behind > 0, "author or operator", "the branch is already up to date")
 	add("mark_ready", open && p.Draft && canEdit, "author or operator", "only a draft can be marked ready")
 	add("mark_draft", open && !p.Draft && canEdit, "author or operator", "this pull request is already a draft")
 	add("review", s.authorize(id, auth.Read, repo.Path), "viewer", "you cannot read this repository")
@@ -204,6 +220,8 @@ type pullView struct {
 	// FetchRef is where git can fetch the head: git fetch origin <FetchRef>.
 	FetchRef string `json:"fetch_ref"`
 	YourRole string `json:"your_role"`
+	// Queue is the pull request's place in the merge queue (nil: never queued); a removed entry keeps its reason.
+	Queue *pulls.QueueEntry `json:"queue,omitempty"`
 }
 
 func (s *Server) viewPull(r *http.Request, repo forge.Repository, p pulls.PullRequest) (pullView, error) {
@@ -213,7 +231,8 @@ func (s *Server) viewPull(r *http.Request, repo forge.Repository, p pulls.PullRe
 	if err != nil {
 		return pullView{}, err
 	}
-	return pullView{PullRequest: p, Readiness: rd, Actions: s.pullActions(id, repo, p, rd), FetchRef: pulls.PullRef(p.Number), YourRole: role}, nil
+	qe, _ := s.Forge.Pulls.Store.QueueEntryOf(r.Context(), p.ID)
+	return pullView{PullRequest: p, Readiness: rd, Actions: s.pullActions(id, repo, p, rd, qe), Queue: qe, FetchRef: pulls.PullRef(p.Number), YourRole: role}, nil
 }
 
 func (s *Server) getPull(w http.ResponseWriter, r *http.Request) {
@@ -473,6 +492,7 @@ func (s *Server) pullEvent(ctx context.Context, e pulls.Event) {
 	if e.Actor == "system" { // what a request does is audited by its route; the server's own doings are audited here
 		s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: e.Actor, Action: "pull." + e.Action, Target: repo.Path, Outcome: "ok", Detail: fmt.Sprintf("#%d", e.Pull.Number)})
 	}
+	s.notifyPull(ctx, repo.Path, e)
 	switch e.Action {
 	case "opened", "synchronize", "reopened":
 		// The pull ref moved: the projects that watch the repository look at it now and run what asks for pull requests.

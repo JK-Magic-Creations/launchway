@@ -29,6 +29,12 @@ func addPullTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "get_pull_owners", Annotations: readOnly("Who owns the files a pull request changes"),
 		Description: "The owners of each file a pull request changes, from .launchway/owners on the target branch (people as names, groups as group:name), with any problems found in that file."},
 		mcpCallTimeout, getPullOwners)
+	addTool(srv, c, &mcp.Tool{Name: "get_pull_inbox", Annotations: readOnly("Pull requests that wait on you"),
+		Description: "The open pull requests that wait on you: reviews asked of you or your groups, changes asked on your own, and your own that the merge queue took out, each with why."},
+		mcpCallTimeout, getPullInbox)
+	addTool(srv, c, &mcp.Tool{Name: "get_pull_queue", Annotations: readOnly("A pull request's place in the merge queue"),
+		Description: "Whether the target branch has a merge queue, this pull request's place in it and its state (waiting, testing, or removed with the reason), and the whole queue of the branch."},
+		mcpCallTimeout, getPullQueue)
 	addTool(srv, c, &mcp.Tool{Name: "check_owners_file", Annotations: readOnly("Check an owners file"),
 		Description: "Check the text of an owners file (.launchway/owners) and say what is wrong with it, line by line, in plain words. Stores nothing."},
 		mcpCallTimeout, checkOwnersFile)
@@ -47,6 +53,15 @@ func addPullTools(srv *mcp.Server, c *mcpCall) {
 	addTool(srv, c, &mcp.Tool{Name: "merge_pull_request", Annotations: changes("Merge a pull request", true, false),
 		Description: "Merge a pull request by merge commit, squash or rebase, made on the server so a push that arrives meanwhile is never lost. If the rules are not met the answer says in one sentence what is missing (needs 1 more approval; `test` has not passed). An administrator may merge past the rules with a bypass_reason, which is recorded. Audited."},
 		mcpCallTimeout, mergePullRequest)
+	addTool(srv, c, &mcp.Tool{Name: "queue_pull_request", Annotations: changes("Add a pull request to the merge queue, or take it out", false, false),
+		Description: "Action queue (default) adds a ready pull request to its branch's merge queue (method merge, squash or rebase); action dequeue takes it out. The queue brings the branch up to date, waits for the required checks of that head and merges in order; a pull request that fails or changes is taken out with the reason. Needs the operator role to add; the author or an operator may take it out. Audited."},
+		mcpCallTimeout, queuePullRequest)
+	addTool(srv, c, &mcp.Tool{Name: "update_pull_branch", Annotations: changes("Bring a pull request's branch up to date", false, false),
+		Description: "Merge the target branch into the pull request's source branch (or rebase it, which rewrites the branch). A push like any other: the branch's rules apply and its checks run on the new head. Needs the operator role. Audited."},
+		mcpCallTimeout, updatePullBranch)
+	addTool(srv, c, &mcp.Tool{Name: "mark_pull_files_viewed", Annotations: changes("Mark files of a pull request viewed or not", false, true),
+		Description: "Your own marks: files you have looked at (a file that changes after is unmarked). With no paths it lists the files you marked."},
+		mcpCallTimeout, markPullFilesViewed)
 	addTool(srv, c, &mcp.Tool{Name: "revert_pull_request", Annotations: changes("Revert a merged pull request", false, false),
 		Description: "Open a new pull request that undoes a merged one. Needs the operator role. Audited."},
 		mcpCallTimeout, revertPullRequest)
@@ -705,4 +720,122 @@ func checkOwnersFile(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in
 	}
 	out.Problems = orEmpty(out.Problems)
 	return out, nil
+}
+
+type inboxItemOut struct {
+	Repository string `json:"repository" jsonschema:"owner/name"`
+	Number     int    `json:"number" jsonschema:"the pull request's number"`
+	Title      string `json:"title" jsonschema:"its title"`
+	Kind       string `json:"kind" jsonschema:"review_requested, changes_requested or queue_failed"`
+	Why        string `json:"why" jsonschema:"what it wants of you, in a sentence"`
+}
+
+type pullInboxOut struct {
+	Items []inboxItemOut `json:"items" jsonschema:"what waits on you, newest first"`
+}
+
+func getPullInbox(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, _ struct{}) (pullInboxOut, error) {
+	var out pullInboxOut
+	if err := c.apiJSON(ctx, "get_pull_inbox", http.MethodGet, "/api/v1/pulls/inbox", nil, &out); err != nil {
+		return out, err
+	}
+	out.Items = orEmpty(out.Items)
+	return out, nil
+}
+
+type queueEntryOut struct {
+	PullNumber int    `json:"pull_number" jsonschema:"the pull request"`
+	Title      string `json:"title,omitempty" jsonschema:"its title"`
+	Position   int    `json:"position" jsonschema:"1 is the front; 0 when removed"`
+	State      string `json:"state" jsonschema:"waiting, testing, removed or merged"`
+	Method     string `json:"method,omitempty" jsonschema:"how it will merge"`
+	Reason     string `json:"reason,omitempty" jsonschema:"why it was removed"`
+}
+
+type pullQueueOut struct {
+	Enabled bool            `json:"enabled" jsonschema:"whether the target branch has a merge queue"`
+	Branch  string          `json:"branch" jsonschema:"the target branch"`
+	Entry   *queueEntryOut  `json:"entry,omitempty" jsonschema:"this pull request's entry"`
+	Queue   []queueEntryOut `json:"queue" jsonschema:"the branch's whole queue, front first"`
+}
+
+func getPullQueue(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in repoNumberIn) (pullQueueOut, error) {
+	p, err := in.path("/queue")
+	if err != nil {
+		return pullQueueOut{}, err
+	}
+	var out pullQueueOut
+	if err := c.apiJSON(ctx, "get_pull_queue", http.MethodGet, p, nil, &out); err != nil {
+		return out, err
+	}
+	out.Queue = orEmpty(out.Queue)
+	return out, nil
+}
+
+type queuePullIn struct {
+	repoNumberIn
+	Action   string `json:"action,omitempty" jsonschema:"queue (default) or dequeue"`
+	Method   string `json:"method,omitempty" jsonschema:"merge, squash or rebase (default: the repository's)"`
+	Priority int    `json:"priority,omitempty" jsonschema:"a higher number goes first (repository administrators)"`
+}
+
+func queuePullRequest(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in queuePullIn) (queueEntryOut, error) {
+	p, err := in.path("/queue")
+	if err != nil {
+		return queueEntryOut{}, err
+	}
+	switch in.Action {
+	case "", "queue":
+		var out queueEntryOut
+		err := c.apiJSON(ctx, "queue_pull_request", http.MethodPost, p, map[string]any{"method": in.Method, "priority": in.Priority}, &out)
+		return out, err
+	case "dequeue":
+		return queueEntryOut{PullNumber: in.Number, State: "removed", Reason: "taken out of the queue"}, c.apiJSON(ctx, "queue_pull_request", http.MethodDelete, p, nil, nil)
+	}
+	return queueEntryOut{}, errors.New("action is queue or dequeue")
+}
+
+type updateBranchIn struct {
+	repoNumberIn
+	Method string `json:"method,omitempty" jsonschema:"merge (default) or rebase"`
+}
+
+type updateBranchOut struct {
+	Head string `json:"head" jsonschema:"the branch's new head commit"`
+}
+
+func updatePullBranch(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in updateBranchIn) (updateBranchOut, error) {
+	p, err := in.path("/update-branch")
+	if err != nil {
+		return updateBranchOut{}, err
+	}
+	var out updateBranchOut
+	err = c.apiJSON(ctx, "update_pull_branch", http.MethodPost, p, map[string]any{"method": in.Method}, &out)
+	return out, err
+}
+
+type markViewedIn struct {
+	repoNumberIn
+	Paths  []string `json:"paths,omitempty" jsonschema:"the files; empty lists the ones you marked"`
+	Viewed *bool    `json:"viewed,omitempty" jsonschema:"true (default) marks them viewed, false unmarks them"`
+}
+
+type markViewedOut struct {
+	Viewed []string `json:"viewed" jsonschema:"the files you have marked viewed that have not changed since"`
+}
+
+func markPullFilesViewed(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, in markViewedIn) (markViewedOut, error) {
+	p, err := in.path("/viewed")
+	if err != nil {
+		return markViewedOut{}, err
+	}
+	var out markViewedOut
+	if len(in.Paths) == 0 {
+		err = c.apiJSON(ctx, "mark_pull_files_viewed", http.MethodGet, p, nil, &out)
+	} else {
+		on := in.Viewed == nil || *in.Viewed
+		err = c.apiJSON(ctx, "mark_pull_files_viewed", http.MethodPut, p, map[string]any{"paths": in.Paths, "viewed": on}, &out)
+	}
+	out.Viewed = orEmpty(out.Viewed)
+	return out, err
 }

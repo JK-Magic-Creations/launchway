@@ -263,3 +263,17 @@ func RetryAfter(attempts int) (time.Duration, bool) {
 	}
 	return steps[attempts-1], true
 }
+
+// Events about pull requests. A channel is shared by the installation, so each
+// names the people it is about in its title.
+const (
+	PullReviewRequested  = "pull.review_requested"
+	PullApproved         = "pull.approved"
+	PullChangesRequested = "pull.changes_requested"
+	PullMentioned        = "pull.mentioned"
+	PullQueueFailed      = "pull.queue_failed"
+)
+
+func init() {
+	Events = append(Events, PullReviewRequested, PullApproved, PullChangesRequested, PullMentioned, PullQueueFailed)
+}

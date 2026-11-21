@@ -359,6 +359,10 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `pull.review_dismiss` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss`; the detail: pull request #N, the review and the reason |
 | `pull.review_request` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests`; the detail: pull request #N and the people asked |
 | `pull.review_unrequest` | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}`; the detail: pull request #N and the person taken off the list |
+| `pull.queue` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/queue`; the detail: pull request #N, who queued it and its state |
+| `pull.dequeue` | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/queue`; the detail: pull request #N |
+| `pull.update_branch` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/update-branch`; the detail: pull request #N and the new head |
+| `pull.owners_check` | `POST /api/v1/repositories/{owner}/{name}/owners/check`; checks the text of an owners file and stores nothing |
 | `repository.pull_settings` | `PUT /api/v1/repositories/{owner}/{name}/pull-settings`; the detail: the allowed methods and the default |
 | `repository.merge_rules` | `PUT /api/v1/repositories/{owner}/{name}/merge-rules`; the detail: the patterns and what they require |
 | `pull.auto_merge` | A pull request merged by auto-merge once its rules passed; made by the server, for the person who turned it on |

@@ -130,13 +130,13 @@ type New struct {
 	SourceBranch string
 	TargetBranch string
 	// SourceRepo is reserved for forks and refused while forks do not exist.
-	SourceRepo string
-	Draft      bool
-	Labels     []string
-	Assignees  []string
-	Reviewers  []string
+	SourceRepo     string
+	Draft          bool
+	Labels         []string
+	Assignees      []string
+	Reviewers      []string
 	ReviewerGroups []string
-	Reverts    int
+	Reverts        int
 }
 
 const (

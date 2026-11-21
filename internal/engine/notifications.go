@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/ids"
@@ -57,6 +58,7 @@ func (e *Engine) RunNotifications(ctx context.Context, n Notifier) {
 	if !e.knows(schemaDelivery) {
 		return
 	}
+	notifyBases.Store(e, n.BaseURL)
 	if n.Every <= 0 {
 		n.Every = 5 * time.Second
 	}
@@ -467,4 +469,27 @@ func signBody(key string, body []byte) string {
 	m := hmac.New(sha256.New, []byte(key))
 	m.Write(body)
 	return "sha256=" + hex.EncodeToString(m.Sum(nil))
+}
+
+// notifyBases remembers the address each engine's notifier builds links from,
+// so an event made outside the engine's own loop (a pull request's) carries a
+// link that opens.
+var notifyBases sync.Map
+
+// NotifyEvent offers an event made elsewhere (a review requested, a queue that
+// failed) to the notification rules, and queues a message for each channel they
+// name. The link is a path; the server's address is put in front of it. Nothing
+// happens when no rule names the event.
+func (e *Engine) NotifyEvent(ctx context.Context, ev notify.Event) {
+	cfg := e.live().notify
+	if len(cfg.Rules) == 0 || !e.knows(schemaDelivery) {
+		return
+	}
+	if base, ok := notifyBases.Load(e); ok && strings.HasPrefix(ev.Link, "/") {
+		ev.Link = strings.TrimRight(base.(string), "/") + ev.Link
+	}
+	if ev.At == 0 {
+		ev.At = time.Now().UnixMilli()
+	}
+	e.enqueueNotifications(ctx, cfg, ev)
 }

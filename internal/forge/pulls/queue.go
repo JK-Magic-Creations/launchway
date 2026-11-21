@@ -184,6 +184,9 @@ func hardBlockers(r Readiness) []string {
 	return out
 }
 
+// QueueBlockers are the reasons a pull request may not be queued now (none: it may).
+func QueueBlockers(r Readiness) []string { return hardBlockers(r) }
+
 // Enqueue puts a ready pull request in the queue of its target branch.
 // priority orders the queue before the order of arrival; the caller decides who
 // may give one.

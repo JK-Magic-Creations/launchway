@@ -55,7 +55,11 @@ func (q *queueWorld) enqueue(number int) (QueueEntry, error) {
 	return q.svc.Enqueue(q.ctx, repoID, "ada/demo", q.get(number), "merge", "ada", RoleOperator, 0)
 }
 
-func (q *queueWorld) advance() { q.svc.Settle(); q.svc.AdvanceQueue(q.ctx, repoID, "main"); q.svc.Settle() }
+func (q *queueWorld) advance() {
+	q.svc.Settle()
+	q.svc.AdvanceQueue(q.ctx, repoID, "main")
+	q.svc.Settle()
+}
 
 func (q *queueWorld) entry(number int) QueueEntry {
 	e, _ := q.svc.Store.QueueEntryOf(q.ctx, q.get(number).ID)

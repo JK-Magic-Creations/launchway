@@ -25,6 +25,15 @@ func (s *Server) WirePulls() {
 		r, err := s.Forge.RepoByID(ctx, id)
 		return r.Path, err
 	}
+	p.AfterBranchMoved = func(ctx context.Context, id, actor string, ups []pulls.RefUpdate) {
+		if r, err := s.Forge.RepoByID(ctx, id); err == nil {
+			s.pullRefsMoved(ctx, actor, r, ups)
+		}
+	}
+	p.ProtectedBranch = func(ctx context.Context, id, branch string) bool {
+		rules, _ := s.Forge.Rules.Patterns(ctx, id)
+		return len(rules) > 0 && refrulesCheck(rules, branch, false) != nil
+	}
 	p.AfterMerge = func(ctx context.Context, id string, np pulls.PullRequest) {
 		if r, err := s.Forge.RepoByID(ctx, id); err == nil {
 			s.record(&engine.AuditEntry{At: s.Now().UnixMilli(), User: np.AutoMergeBy, Action: "pull.auto_merge", Target: r.Path, Outcome: "ok",

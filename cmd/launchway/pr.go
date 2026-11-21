@@ -37,7 +37,12 @@ const prUsage = `Usage:
   launchway pr reopen N [-R OWNER/NAME]                   open a closed pull request again
   launchway pr edit N [-R OWNER/NAME] [--title T] [--body B] [--ready] [--draft] [--label L,L] [--assignee U,U] [--base BRANCH]
   launchway pr revert N [-R OWNER/NAME]                   open a new pull request that undoes a merged one
-  launchway pr apply N COMMENT-ID [-R OWNER/NAME]         apply a suggestion as a commit (needs push access)
+  launchway pr apply N COMMENT-ID... [-R OWNER/NAME]      apply one suggestion, or several as one commit (needs push access)
+  launchway pr queue N [-R OWNER/NAME] [--method M] [--priority P] [--cancel]
+                                                          add it to the branch's merge queue, show its place, or take it out (--cancel)
+  launchway pr update-branch N [-R OWNER/NAME] [--rebase]   bring the source branch up to date with the target
+  launchway pr viewed N [-R OWNER/NAME] [--mark PATH,PATH] [--unmark PATH,PATH]   the files you marked viewed (a file that changes is unmarked)
+  launchway pr inbox [--json]                             the pull requests that wait on you: reviews asked, changes asked, a queue that failed
   launchway pr settings [-R OWNER/NAME] [--allow-merge=B] [--allow-squash=B] [--allow-rebase=B] [--default-method M]
                       [--delete-branch=B] [--dismiss-stale=B] [--assign-reviewers owners|round_robin|least_loaded|off]
                                                           the merge methods and settings (set: repository administrators)
@@ -226,6 +231,14 @@ func (cl *client) pr(verb string, args []string) error {
 		return cl.prRules(args)
 	case "owners":
 		return cl.prOwners(args)
+	case "queue":
+		return cl.prQueue(args)
+	case "update-branch":
+		return cl.prUpdateBranch(args)
+	case "viewed":
+		return cl.prViewed(args)
+	case "inbox":
+		return cl.prInbox(args)
 	}
 	return usageErr("unknown command pr %s\n\n%s", verb, prUsage)
 }
@@ -814,13 +827,18 @@ func (cl *client) prApply(args []string) error {
 		return err
 	}
 	n, rest, err := prNumber(f.pos, "apply")
-	if err != nil || len(rest) != 1 {
-		return usageErr("launchway pr apply N COMMENT-ID")
+	if err != nil || len(rest) < 1 {
+		return usageErr("launchway pr apply N COMMENT-ID...")
 	}
 	var out struct {
 		Commit string `json:"commit"`
 	}
-	if err := cl.call("POST", fmt.Sprintf("%s/pulls/%d/comments/%s/apply", f.base, n, url.PathEscape(rest[0])), map[string]any{}, &out); err != nil {
+	if len(rest) == 1 {
+		err = cl.call("POST", fmt.Sprintf("%s/pulls/%d/comments/%s/apply", f.base, n, url.PathEscape(rest[0])), map[string]any{}, &out)
+	} else {
+		err = cl.call("POST", fmt.Sprintf("%s/pulls/%d/suggestions/apply", f.base, n), map[string]any{"comment_ids": rest}, &out)
+	}
+	if err != nil {
 		return err
 	}
 	return cl.print(out, *f.asJSON, func() { fmt.Fprintf(cl.out, "Applied as %s.\n", short10(out.Commit)) })
@@ -1022,6 +1040,166 @@ func (cl *client) prOwners(args []string) error {
 				who = "(no owner)"
 			}
 			fmt.Fprintf(cl.out, "%-50s %s\n", fl.Path, who)
+		}
+	})
+}
+
+func (cl *client) prQueue(args []string) error {
+	f := newPRFlags("queue")
+	method := f.fs.String("method", "", "merge, squash or rebase (default: the repository's)")
+	priority := f.fs.Int("priority", 0, "a higher number goes first (administrators)")
+	cancel := f.fs.Bool("cancel", false, "take it out of the queue")
+	if err := f.parse(args); err != nil {
+		return err
+	}
+	n, _, err := prNumber(f.pos, "queue")
+	if err != nil {
+		return err
+	}
+	base := fmt.Sprintf("%s/pulls/%d/queue", f.base, n)
+	if *cancel {
+		if err := cl.call("DELETE", base, nil, nil); err != nil {
+			return err
+		}
+		fmt.Fprintln(cl.out, "Taken out of the merge queue.")
+		return nil
+	}
+	if f.given["method"] || f.given["priority"] {
+		var e queueEntry
+		if err := cl.call("POST", base, map[string]any{"method": *method, "priority": *priority}, &e); err != nil {
+			return err
+		}
+		return cl.print(e, *f.asJSON, func() { fmt.Fprintln(cl.out, e.line()) })
+	}
+	var out struct {
+		Enabled bool         `json:"enabled"`
+		Branch  string       `json:"branch"`
+		Entry   *queueEntry  `json:"entry"`
+		Queue   []queueEntry `json:"queue"`
+	}
+	if err := cl.call("GET", base, nil, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if !out.Enabled {
+			fmt.Fprintf(cl.out, "%s has no merge queue.\n", out.Branch)
+			return
+		}
+		if out.Entry != nil {
+			fmt.Fprintln(cl.out, out.Entry.line())
+		} else {
+			fmt.Fprintln(cl.out, "Not in the merge queue. Add it with: launchway pr queue", n, "--method merge")
+		}
+		for _, e := range out.Queue {
+			fmt.Fprintf(cl.out, "  %d. #%d %s (%s)\n", e.Position, e.PullNumber, e.Title, e.State)
+		}
+	})
+}
+
+type queueEntry struct {
+	PullNumber int    `json:"pull_number"`
+	Title      string `json:"title"`
+	Position   int    `json:"position"`
+	State      string `json:"state"`
+	Method     string `json:"method"`
+	Reason     string `json:"reason"`
+}
+
+func (e queueEntry) line() string {
+	switch e.State {
+	case "removed":
+		return fmt.Sprintf("#%d was taken out of the merge queue: %s", e.PullNumber, e.Reason)
+	case "merged":
+		return fmt.Sprintf("#%d merged.", e.PullNumber)
+	case "testing":
+		return fmt.Sprintf("#%d is number %d in the merge queue and is being tested.", e.PullNumber, e.Position)
+	}
+	return fmt.Sprintf("#%d is number %d in the merge queue.", e.PullNumber, e.Position)
+}
+
+func (cl *client) prUpdateBranch(args []string) error {
+	f := newPRFlags("update-branch")
+	rebase := f.fs.Bool("rebase", false, "replay the branch's commits on the target instead of merging it in (rewrites the branch)")
+	if err := f.parse(args); err != nil {
+		return err
+	}
+	n, _, err := prNumber(f.pos, "update-branch")
+	if err != nil {
+		return err
+	}
+	method := "merge"
+	if *rebase {
+		method = "rebase"
+	}
+	var out struct {
+		Head string `json:"head"`
+	}
+	if err := cl.call("POST", fmt.Sprintf("%s/pulls/%d/update-branch", f.base, n), map[string]any{"method": method}, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() { fmt.Fprintf(cl.out, "The branch is up to date: %s.\n", short10(out.Head)) })
+}
+
+func (cl *client) prViewed(args []string) error {
+	f := newPRFlags("viewed")
+	mark := f.fs.String("mark", "", "files to mark viewed, comma separated")
+	unmark := f.fs.String("unmark", "", "files to unmark, comma separated")
+	if err := f.parse(args); err != nil {
+		return err
+	}
+	n, _, err := prNumber(f.pos, "viewed")
+	if err != nil {
+		return err
+	}
+	base := fmt.Sprintf("%s/pulls/%d/viewed", f.base, n)
+	var out struct {
+		Viewed []string `json:"viewed"`
+	}
+	switch {
+	case *mark != "":
+		err = cl.call("PUT", base, map[string]any{"paths": splitList(*mark), "viewed": true}, &out)
+	case *unmark != "":
+		err = cl.call("PUT", base, map[string]any{"paths": splitList(*unmark), "viewed": false}, &out)
+	default:
+		err = cl.call("GET", base, nil, &out)
+	}
+	if err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if len(out.Viewed) == 0 {
+			fmt.Fprintln(cl.out, "No files marked viewed.")
+		}
+		for _, p := range out.Viewed {
+			fmt.Fprintln(cl.out, p)
+		}
+	})
+}
+
+func (cl *client) prInbox(args []string) error {
+	f := &prFlags{fs: flag.NewFlagSet("pr inbox", flag.ContinueOnError)}
+	f.asJSON = f.fs.Bool("json", false, "print as JSON")
+	if _, err := parseArgs(f.fs, args); err != nil {
+		return err
+	}
+	var out struct {
+		Items []struct {
+			Repository string `json:"repository"`
+			Number     int    `json:"number"`
+			Title      string `json:"title"`
+			Kind       string `json:"kind"`
+			Why        string `json:"why"`
+		} `json:"items"`
+	}
+	if err := cl.call("GET", "/api/v1/pulls/inbox", nil, &out); err != nil {
+		return err
+	}
+	return cl.print(out, *f.asJSON, func() {
+		if len(out.Items) == 0 {
+			fmt.Fprintln(cl.out, "Nothing waits on you.")
+		}
+		for _, it := range out.Items {
+			fmt.Fprintf(cl.out, "%s#%d  %s: %s\n", it.Repository, it.Number, it.Title, it.Why)
 		}
 	})
 }

@@ -194,6 +194,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/projects/{name}/waivers` | — | `waivers grant` | — | gap: no MCP tool grants waivers yet |
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | — | `waivers revoke` | — | gap: no MCP tool revokes waivers yet |
 | `POST /api/v1/projects/{name}/webhooks/{trigger}` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
+| `GET /api/v1/pulls/inbox` | `get_pull_inbox` | `pr inbox` | — | equal |
 | `GET /api/v1/queue` | `list_queue` | `runs queue` | `not needed by terraform` | equal |
 | `GET /api/v1/registry` | `registry_status` | `registry status` | `not needed by terraform` | equal |
 | `GET /api/v1/registry/gc` | `registry_gc` | `registry gc` | `not needed by terraform` | equal |
@@ -242,6 +243,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}/mirrors/{id}` | `change_mirror` | `repos mirror remove` | — | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}/mirrors/{id}` | `change_mirror` | `repos mirror pause` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/mirrors/{id}/sync` | `sync_mirror` | `repos mirror sync` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/owners/check` | `check_owners_file` | `pr owners` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/protected-branches` | `get_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `PUT /api/v1/repositories/{owner}/{name}/protected-branches` | `set_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pull-settings` | `get_pull_settings` | `pr settings` | `planned: launchway_repository_merge_settings` | equal |
@@ -258,7 +260,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/conversation` | `get_pull_request` | `pr view` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/files` | `get_pull_request` | `pr diff` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/merge` | `merge_pull_request` | `pr merge` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/owners` | `get_pull_owners` | `pr owners` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/patch` | `get_pull_request` | `pr diff` | — | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/queue` | `queue_pull_request` | `pr queue` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/queue` | `get_pull_queue` | `pr queue` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/queue` | `queue_pull_request` | `pr queue` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/revert` | `revert_pull_request` | `pr revert` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests` | `review_pull_request` | `pr review` | — | equal |
 | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}` | `review_pull_request` | `pr review` | — | equal |
@@ -266,6 +272,10 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss` | `review_pull_request` | `pr review` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/raw` | `read_repository_file` | `repos cat` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/search` | `search_repository_code` | `repos search` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/suggestions/apply` | `update_pull_comment` | `pr apply` | — | equal |
+| `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/update-branch` | `update_pull_branch` | `pr update-branch` | — | equal |
+| `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/viewed` | `mark_pull_files_viewed` | `pr viewed` | — | equal |
+| `PUT /api/v1/repositories/{owner}/{name}/pulls/{number}/viewed` | `mark_pull_files_viewed` | `pr viewed` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/tags` | `list_repository_tags` | `repos tags` | — | equal |
 | `GET /api/v1/repositories/{owner}/{name}/updates/preview` | `preview_updates` | `updates preview` | — | equal |
