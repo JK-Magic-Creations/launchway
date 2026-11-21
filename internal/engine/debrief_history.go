@@ -1,12 +1,29 @@
 package engine
 
 import (
+	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/debrief"
 )
+
+// eachRow runs a query and calls scan for every row, closing the rows and
+// returning the first error, including one from the iteration.
+func (e *Engine) eachRow(q string, args []any, scan func(*sql.Rows) error) error {
+	rows, err := e.db.Query(q, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := scan(rows); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
+}
 
 // historyWindow is how many of a project's latest run numbers a test's
 // history is read from (every branch's runs count toward the number).
@@ -19,6 +36,36 @@ func (e *Engine) projectLatest(project string) (int, error) {
 	return n, err
 }
 
+// slot is one test's results in one step of one run, as its attempts come.
+type slot struct {
+	key, run, step string
+	number         int
+	final          string
+	failedEarlier  bool
+	toolFlaky      bool
+	sha, ref       string
+	at             int64
+	lastAttempt    int
+}
+
+// add takes the next attempt's result (attempts arrive in order).
+func (s *slot) add(status string, attempt int, toolFlaky bool) {
+	bad := status == "failed" || status == "errored"
+	if s.final == "failed" && status == "passed" {
+		s.failedEarlier = true
+	}
+	switch {
+	case bad:
+		s.final = "failed"
+	case status == "passed":
+		s.final = "passed"
+	case status == "skipped" && s.final == "":
+		s.final = "skipped"
+	}
+	s.toolFlaky = s.toolFlaky || toolFlaky
+	s.lastAttempt = attempt
+}
+
 // observations reads the history of some tests in a project, oldest first,
 // as one observation per run: the result of the last attempt of its step,
 // "failed" if any step failed it, and Retried when it passed only after
@@ -29,16 +76,6 @@ func (e *Engine) observations(project string, keys []string, refs []string, sinc
 	out := map[string][]debrief.Observation{}
 	if !e.knows(schemaTests) || len(keys) == 0 {
 		return out, nil
-	}
-	type slot struct {
-		key, run, step string
-		number         int
-		final          string
-		failedEarlier  bool
-		toolFlaky      bool
-		sha, ref       string
-		at             int64
-		lastAttempt    int
 	}
 	slots := map[string]*slot{}
 	var order []string
@@ -62,17 +99,12 @@ func (e *Engine) observations(project string, keys []string, refs []string, sinc
 			}
 		}
 		q += ` ORDER BY tc.test_key, tc.run_number, tc.step_id, tc.attempt`
-		rows, err := e.db.Query(q, args...)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
+		err := e.eachRow(q, args, func(rows *sql.Rows) error {
 			var key, run, step, status, sha, ref string
 			var number, attempt, flaky int
 			var at int64
 			if err := rows.Scan(&key, &run, &number, &step, &attempt, &status, &flaky, &sha, &ref, &at); err != nil {
-				rows.Close()
-				return nil, err
+				return err
 			}
 			id := key + "\x00" + run + "\x00" + step
 			s := slots[id]
@@ -81,21 +113,9 @@ func (e *Engine) observations(project string, keys []string, refs []string, sinc
 				slots[id] = s
 				order = append(order, id)
 			}
-			bad := status == "failed" || status == "errored"
-			if s.final == "failed" && !bad && status == "passed" {
-				s.failedEarlier = true
-			}
-			if status == "passed" || bad {
-				s.final = map[bool]string{true: "failed", false: "passed"}[bad]
-			}
-			if status == "skipped" && s.final == "" {
-				s.final = "skipped"
-			}
-			s.toolFlaky = s.toolFlaky || flaky != 0
-			s.lastAttempt = attempt
-		}
-		err = rows.Err()
-		rows.Close()
+			s.add(status, attempt, flaky != 0)
+			return nil
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -198,21 +218,16 @@ func (e *Engine) ProjectFlaky(project string, refs []string, limit int) (*FlakyL
 	}
 	q += ` GROUP BY tc.test_key HAVING SUM(CASE WHEN tc.status IN ('failed','errored') THEN 1 ELSE 0 END) > 0
 		AND SUM(CASE WHEN tc.status = 'passed' THEN 1 ELSE 0 END) > 0 LIMIT 3000`
-	rows, err := e.db.Query(q, args...)
-	if err != nil {
-		return nil, err
-	}
 	var keys []string
-	for rows.Next() {
+	err = e.eachRow(q, args, func(rows *sql.Rows) error {
 		var k string
 		if err := rows.Scan(&k); err != nil {
-			rows.Close()
-			return nil, err
+			return err
 		}
 		keys = append(keys, k)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 	out.Considered = len(keys)
@@ -297,20 +312,18 @@ func (e *Engine) testNames(project string, keys []string) (map[string]testName, 
 		if !e.knows(schemaDebrief) {
 			q = `SELECT test_key, MAX(suite), MAX(name), MAX(file), '' FROM test_cases WHERE project = ? AND test_key IN (` + marks + `) GROUP BY test_key`
 		}
-		rows, err := e.db.Query(q, args...)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
+		err := e.eachRow(q, args, func(rows *sql.Rows) error {
 			var k string
 			var n testName
 			if err := rows.Scan(&k, &n.Suite, &n.Name, &n.File, &n.Variant); err != nil {
-				rows.Close()
-				return nil, err
+				return err
 			}
 			out[k] = n
+			return nil
+		})
+		if err != nil {
+			return nil, err
 		}
-		rows.Close()
 	}
 	var missing []string
 	for _, k := range keys {

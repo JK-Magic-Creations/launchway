@@ -250,11 +250,7 @@ func cmdServer(args []string) error {
 	eng.SetTOTPBox(secretsSvc.TOTP()) // authenticator secrets of built-in accounts are stored sealed
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Secrets: secretsSvc, Actor: cfg.User, Auth: authOpts,
 		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin, OpenInstall: openInstall}
-	brandName, brandLogo, changeFloor, err := cfg.DebriefBrand()
-	if err != nil {
-		return err
-	}
-	srv.SetDebrief(api.DebriefSettings{Name: brandName, Logo: brandLogo, ChangeFloor: changeFloor})
+	setDebrief(srv, cfg, log)
 	if store.Available() {
 		srv.Settings = store
 	}

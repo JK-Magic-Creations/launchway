@@ -528,6 +528,19 @@ launchway runs trust RUN_ID [--comment TEXT]
 
 The same is `POST /api/v1/runs/{id}/trust` and the MCP tool `trust_run`.
 
+## launchway debrief and launchway tests
+
+The report of a run's tests, and what the history of a project's tests says. See [The Debrief](../guide/debrief.md).
+
+| Command | What it does |
+|---|---|
+| `launchway debrief show <run-id> [--json]` | The Debrief: summary, change against the default branch, failures with expected against actual, flaky and quarantined tests, coverage |
+| `launchway debrief summary <run-id>` | The short Markdown form for a pull request comment |
+| `launchway debrief export <run-id> --format html\|pdf\|json\|junit [--out FILE]` | A self-contained report; `--out -` writes to standard output |
+| `launchway tests flaky <project> [--limit N] [--json]` | Flaky tests with score, branches and first seen, and a quarantine entry to copy |
+| `launchway tests timings <project> [--limit N] [--json]` | Each test's typical duration, slowest first |
+| `launchway tests split <project> --shards N [--shard I] [--json]` | A balanced split of the tests; `--shard I` prints the names of one shard, one per line |
+
 ## launchway policy
 
 Shows the policies in force and a Sortie's policy decisions. See [Policy rules](policy-rules.md). `launchway policy` alone prints a summary and exits with `2`.

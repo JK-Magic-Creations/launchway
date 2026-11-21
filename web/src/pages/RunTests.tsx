@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, type CasePage, type CaseSort, type CompareCase, type Facet, type RunDetail, type RunTests, type StepTests, type TestCase, type TestCompare } from "../api";
 import { Empty, ErrorBox, Link, Mono } from "../components/ui";
 import { Badge, ReportsHowTo, TagPills, TestBar, TestIcon, VariantPill, failing, formatLabel, isBrowser, passRate, testDuration, testStatusLabel, BrowserIcon } from "../components/Tests";
@@ -19,8 +19,10 @@ function caseFromURL(): number {
 
 /** The address of one result on the run page. */
 export function caseHref(run: string, id: number): string {
-  return `/runs/${run}?tab=tests&case=${id}`;
+  return `/runs/${run}?tab=tests&view=results&case=${id}`;
 }
+
+const DebriefView = lazy(() => import("./Debrief").then((m) => ({ default: m.DebriefView })));
 
 // TestsTab shows a run's test results: a summary, how they compare with
 // the previous run, then every result, failures first, each opening to
@@ -31,6 +33,14 @@ export function TestsTab({ run, version, step, onStep }: {
   const [tests, setTests] = useState<RunTests | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [caseId, setCaseId] = useState(caseFromURL);
+  const [view, setView] = useState<"debrief" | "results">(() => (new URLSearchParams(location.search).get("view") === "results" ? "results" : "debrief"));
+  const chooseView = useCallback((v: "debrief" | "results") => {
+    const q = new URLSearchParams(location.search);
+    q.set("tab", "tests");
+    if (v === "results") q.set("view", "results"); else q.delete("view");
+    history.replaceState(null, "", location.pathname + "?" + q.toString());
+    setView(v);
+  }, []);
   useEffect(() => {
     let alive = true;
     api.runTests(run.id, true).then((t) => { if (alive) { setTests(t); setError(null); } }).catch((e) => alive && setError(e));
@@ -70,7 +80,17 @@ export function TestsTab({ run, version, step, onStep }: {
       </Empty>
     );
   }
-  return <TestsView run={run} tests={tests} version={version} step={step} onStep={onStep} openCase={openCase} />;
+  return (
+    <>
+      <div className="dview chips" role="group" aria-label="How to read the results">
+        <button type="button" className={"chip" + (view === "debrief" ? " chip-on" : "")} aria-pressed={view === "debrief"} onClick={() => chooseView("debrief")}>Debrief</button>
+        <button type="button" className={"chip" + (view === "results" ? " chip-on" : "")} aria-pressed={view === "results"} onClick={() => chooseView("results")}>All results</button>
+      </div>
+      {view === "debrief"
+        ? <Suspense fallback={<div className="loading">Loading the Debrief…</div>}><DebriefView runId={run.id} version={version} openCase={(id) => { chooseView("results"); openCase(id); }} /></Suspense>
+        : <TestsView run={run} tests={tests} version={version} step={step} onStep={onStep} openCase={openCase} />}
+    </>
+  );
 }
 
 function TestsView({ run, tests, version, step, onStep, openCase }: {

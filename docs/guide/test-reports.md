@@ -1,5 +1,7 @@
 # Debriefs (test reports) {#test-reports}
 
+The report of a run's tests is the [Debrief](debrief.md).
+
 How Launchway reads test result files and coverage, and what the Tests tab and the project Tests page show.
 
 A step can say which test result files it writes, and Launchway reads them when the step ends,
@@ -272,6 +274,7 @@ totals stay, and the Sortie says so. Coverage files are bounded the same way.
 | `tests.max_upload_mib` | server | 24 | MiB of report files accepted per step attempt; Stations are told and send no more |
 | `tests.max_cases_per_run` | server | 50000 | individual results one Sortie keeps; beyond it, only the totals |
 | `tests.max_cases_per_project` | server | 1000000 | individual results a project keeps; the oldest runs' go first |
+| `tests.max_age_days` | server | 180 | how long individual results and per-test statistics are kept; older ones go whatever the count |
 | `reports.max_attachment_files` | server | 2000 | files a step's attachments directory may hold |
 | `reports.max_attachment_mib` | server | 512 | MiB a step's attachments directory may hold |
 | `reports.max_html_files` | server | 5000 | files one HTML report may hold |

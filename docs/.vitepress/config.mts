@@ -216,6 +216,7 @@ export default defineConfig({
           { text: 'Shared libraries', link: '/guide/libraries' },
           { text: 'Approvals and re-runs', link: '/guide/approvals-and-reruns' },
           { text: 'Test reports', link: '/guide/test-reports' },
+          { text: 'The Debrief', link: '/guide/debrief' },
           { text: 'Artifacts', link: '/guide/artifacts' },
           { text: 'Variables at levels', link: '/guide/variables' },
           { text: 'Build caches', link: '/guide/build-caches' },

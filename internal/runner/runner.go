@@ -504,7 +504,7 @@ func (r *Runner) testCollector(job *engine.Job, spec executor.Spec, sys func(str
 		// read at the commit under test); a step with none has no note
 		// about it.
 		globs := append([]string{}, job.Reports.Tests...)
-		if job.Reports.JobReportsDebrief.Quarantine {
+		if job.Reports.Quarantine {
 			globs = append(globs, debrief.QuarantinePath)
 		}
 		got, err := executor.Collect(ctx, r.execFor(job), spec, globs, lim)

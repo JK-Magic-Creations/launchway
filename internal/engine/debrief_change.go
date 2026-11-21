@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"database/sql"
 	"fmt"
 	"sort"
 	"strings"
@@ -84,17 +85,12 @@ func (e *Engine) changeCoverage(runID string, ch *ChangedLines) *debrief.ChangeC
 		return nil
 	}
 	cond, args := coverageTripleFilter(ef)
-	rows, err := e.db.Query(`SELECT cf.path, cf.covered_lines, cf.missed_lines FROM coverage_files cf WHERE `+cond, args...)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
 	type lines struct{ cov, miss debrief.Ranges }
 	have := map[string]*lines{}
-	for rows.Next() {
+	err = e.eachRow(`SELECT cf.path, cf.covered_lines, cf.missed_lines FROM coverage_files cf WHERE `+cond, args, func(rows *sql.Rows) error {
 		var path, cs, ms string
-		if rows.Scan(&path, &cs, &ms) != nil {
-			return nil
+		if err := rows.Scan(&path, &cs, &ms); err != nil {
+			return err
 		}
 		l := have[path]
 		if l == nil {
@@ -108,6 +104,10 @@ func (e *Engine) changeCoverage(runID string, ch *ChangedLines) *debrief.ChangeC
 		for n := range debrief.ParseRanges(ms) {
 			l.miss[n] = true
 		}
+		return nil
+	})
+	if err != nil {
+		return nil
 	}
 	out := &debrief.ChangeCoverage{BaseRef: ch.BaseRef, Files: []debrief.FileCoverage{}}
 	paths := make([]string, 0, len(ch.Files))

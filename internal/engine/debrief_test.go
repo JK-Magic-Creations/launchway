@@ -80,8 +80,8 @@ func TestDebriefComparesWithTheLastGoodRunOfTheDefaultBranch(t *testing.T) {
 		if f.Diff == nil || f.Diff.Expected == "" {
 			t.Errorf("%s: no diff from %q", f.Name, f.Message)
 		}
-		if f.Line != 0 {
-			t.Errorf("a trace line without a file must not become a line: %d", f.Line)
+		if f.Line != 12 || f.File != "f_test.go" {
+			t.Errorf("the place of the assertion is read from the trace when the report names no file: %s:%d", f.File, f.Line)
 		}
 	}
 	// B passes on main (so this change broke it); D fails there too.

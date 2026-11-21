@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ProjectHead } from "./PipelineChrome";
 import { api, ApiError, type CoverageTrend, type OverviewRun, type TestHistory, type TestOverview, type TestStat } from "../api";
 import { ago, shortSha } from "../format";
@@ -15,7 +15,7 @@ function refName(ref: string): string { return ref.replace(/^refs\/(heads|tags)\
 // ProjectTestsPage shows a project's tests over its last runs of a branch:
 // how the totals and the time they take move, the tests that fail most,
 // flake or are slowest, and one test's history.
-export function ProjectTestsPage({ name }: { name: string }) {
+function ProjectResultsPage({ name }: { name: string }) {
   const [ref, setRef] = useState(() => params().get("ref") ?? "");
   const [test, setTest] = useState(() => params().get("test") ?? "");
   const [data, setData] = useState<TestOverview | null>(null);
@@ -419,4 +419,20 @@ function HistoryPanel({ project, testKey, gref, onClose }: { project: string; te
         )}
     </section>
   );
+}
+
+const ProjectFlaky = lazy(() => import("./ProjectFlaky").then((m) => ({ default: m.ProjectFlaky })));
+
+/** ProjectTestsPage is a project's tests; ?view=flaky shows its flaky tests (a lazy page of its own). */
+export function ProjectTestsPage({ name }: { name: string }) {
+  const [view, setView] = useState(() => params().get("view") ?? "");
+  useEffect(() => {
+    const on = () => setView(params().get("view") ?? "");
+    window.addEventListener("popstate", on);
+    return () => window.removeEventListener("popstate", on);
+  }, []);
+  if (view === "flaky") {
+    return <Suspense fallback={<div className="loading">Loading…</div>}><ProjectFlaky name={name} /></Suspense>;
+  }
+  return <ProjectResultsPage name={name} />;
 }

@@ -602,10 +602,11 @@ func TrendSVG(t []TrendPoint) string {
 		fmt.Fprintf(&b, "<line x1=\"%.0f\" x2=\"%.0f\" y1=\"%.1f\" y2=\"%.1f\" stroke=\"currentColor\" stroke-opacity=\".25\"/><text x=\"%.0f\" y=\"%.1f\" text-anchor=\"end\">%.0f%%</text>", l, w-r, y, y, l-6, y+4, g)
 	}
 	pts := make([]string, len(t))
+	xs, ys := make([]float64, len(t)), make([]float64, len(t))
 	for i, p := range t {
-		x := l + (w-l-r)*float64(i)/float64(len(t)-1)
-		y := top + (ht-top-bot)*(1-(p.PassRate-lo)/(100-lo))
-		pts[i] = fmt.Sprintf("%.1f,%.1f", x, y)
+		xs[i] = l + (w-l-r)*float64(i)/float64(len(t)-1)
+		ys[i] = top + (ht-top-bot)*(1-(p.PassRate-lo)/(100-lo))
+		pts[i] = fmt.Sprintf("%.1f,%.1f", xs[i], ys[i])
 	}
 	fmt.Fprintf(&b, "<polyline points=\"%s\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/>", strings.Join(pts, " "))
 	step := 1
@@ -613,8 +614,7 @@ func TrendSVG(t []TrendPoint) string {
 		step = (len(t) + 11) / 12
 	}
 	for i, p := range t {
-		var x, y float64
-		fmt.Sscanf(pts[i], "%f,%f", &x, &y)
+		x, y := xs[i], ys[i]
 		if p.PassRate < 100 {
 			fmt.Fprintf(&b, "<path d=\"M%.1f %.1f l5 9 h-10 z\" fill=\"currentColor\" stroke=\"#fff\" stroke-width=\"1\"/>", x, y-6) // a triangle where not everything passed
 		} else {

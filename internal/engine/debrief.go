@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -312,7 +313,7 @@ func (b *dbuild) failures() error {
 			fl.Link = fmt.Sprintf("%s/runs/%s?tab=tests&case=%d", base, b.sum.ID, f.id)
 		}
 		fl.Diff = debrief.Detect(full.Message, full.Details)
-		fl.Line = lineIn(f.file, full.Message, full.Details)
+		fl.File, fl.Line = lineIn(f.file, full.Message, full.Details)
 		for n, a := range full.Attachments {
 			at := debrief.Attachment{Name: a.Name, Kind: a.Kind, ContentType: a.ContentType, Bytes: a.Size}
 			if o.Brand.URL != "" {
@@ -410,7 +411,17 @@ func (b *dbuild) structure() error {
 // is essential, so a problem reading them leaves them out.
 func (b *dbuild) trendAndCoverage() error {
 	r := b.r
-	if ov, err := b.e.TestOverview(b.sum.Project, b.sum.Ref, debriefTrendRuns); err == nil {
+	ref := b.sum.Ref
+	ov, err := b.e.TestOverview(b.sum.Project, ref, debriefTrendRuns)
+	// A branch with only a few runs has no trend yet: show the default
+	// branch's, and say so.
+	if (err != nil || countWithTests(ov) < 5) && b.o.DefaultRef != "" && b.o.DefaultRef != ref {
+		if dov, derr := b.e.TestOverview(b.sum.Project, b.o.DefaultRef, debriefTrendRuns); derr == nil && countWithTests(dov) >= 2 {
+			ov, err = dov, nil
+			r.Notes = append(r.Notes, fmt.Sprintf("The trend shows %s: %s has fewer than 5 runs with tests so far.", strings.TrimPrefix(b.o.DefaultRef, "refs/heads/"), strings.TrimPrefix(ref, "refs/heads/")))
+		}
+	}
+	if err == nil {
 		for _, or := range ov.Runs {
 			if or.Tests == nil || or.Tests.Total == 0 {
 				continue
@@ -427,6 +438,18 @@ func (b *dbuild) trendAndCoverage() error {
 		r.Coverage = cov
 	}
 	return nil
+}
+
+func countWithTests(ov *TestOverview) int {
+	n := 0
+	if ov != nil {
+		for _, r := range ov.Runs {
+			if r.Tests != nil && r.Tests.Total > 0 {
+				n++
+			}
+		}
+	}
+	return n
 }
 
 func containsStr(l []string, s string) bool {
@@ -478,28 +501,22 @@ func (e *Engine) baseFor(s *RunSummary, defaultRef string) (*baseRef, error) {
 	if ref == "" {
 		return nil, nil
 	}
-	rows, err := e.db.Query(`SELECT id, number, sha, ref, branch, created_at, finished_at, actor, status FROM runs
-		WHERE project = ? AND ref = ? AND number < ? ORDER BY number DESC LIMIT 40`, s.Project, ref, s.Number)
-	if err != nil {
-		return nil, err
-	}
 	var cands []debrief.RunRef
 	var ids []string
-	for rows.Next() {
+	err := e.eachRow(`SELECT id, number, sha, ref, branch, created_at, finished_at, actor, status FROM runs
+		WHERE project = ? AND ref = ? AND number < ? ORDER BY number DESC LIMIT 40`, []any{s.Project, ref, s.Number}, func(rows *sql.Rows) error {
 		var rr debrief.RunRef
 		var status string
 		if err := rows.Scan(&rr.ID, &rr.Number, &rr.SHA, &rr.Ref, &rr.Branch, &rr.CreatedAt, &rr.FinishedAt, &rr.Actor, &status); err != nil {
-			rows.Close()
-			return nil, err
+			return err
 		}
-		if status != string(RunSucceeded) {
-			continue
+		if status == string(RunSucceeded) {
+			cands = append(cands, rr)
+			ids = append(ids, rr.ID)
 		}
-		cands = append(cands, rr)
-		ids = append(ids, rr.ID)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil || len(ids) == 0 {
+		return nil
+	})
+	if err != nil || len(ids) == 0 {
 		return nil, err
 	}
 	ef, err := e.effectiveReports(ids)
@@ -670,14 +687,13 @@ func (e *Engine) statusIn(base *baseRef, defaultRef string, s *RunSummary, keys 
 	return out, nil
 }
 
-var lineRe = regexp.MustCompile(`([\w./\\-]+\.\w{1,6}):(\d{1,7})`)
+var lineRe = regexp.MustCompile(`([\w./\\-]+\.(?:go|js|jsx|ts|tsx|mjs|py|rb|java|kt|cs|php|rs|c|cc|cpp|h|hpp|swift|scala|ex|exs|vue|svelte)):(\d{1,7})`)
 
-// lineIn finds the line of a failing assertion: a path ending in the test's
-// file name followed by :line in the message or the start of the trace.
-func lineIn(file string, texts ...string) int {
-	if file == "" {
-		return 0
-	}
+// lineIn finds where a failing assertion is: a path with :line in the message
+// or the start of the trace. When the report names the test's file, only a
+// path ending in that file's name counts; when it does not, the first source
+// path with a line is taken, and its file is returned as well.
+func lineIn(file string, texts ...string) (string, int) {
 	base := file
 	if i := strings.LastIndexAny(file, `/\`); i >= 0 {
 		base = file[i+1:]
@@ -687,13 +703,14 @@ func lineIn(file string, texts ...string) int {
 			t = t[:8192]
 		}
 		for _, m := range lineRe.FindAllStringSubmatch(t, 5) {
-			if strings.HasSuffix(m[1], base) {
-				n, _ := strconv.Atoi(m[2])
-				return n
+			if file != "" && !strings.HasSuffix(m[1], base) {
+				continue
 			}
+			n, _ := strconv.Atoi(m[2])
+			return strings.TrimPrefix(m[1], "./"), n
 		}
 	}
-	return 0
+	return file, 0
 }
 
 func (e *Engine) readAttachment(runID string, caseID int64, n int) string {

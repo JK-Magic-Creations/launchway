@@ -108,6 +108,7 @@ compliance items provide controls and evidence.
 | Pipelines drawn the way they run | Steps that run together appear side by side on the Sortie page, drawn from their dependencies. |
 | Rollback after a successful deployment | Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry. ([more](guide/rollback-after-success.md)) |
 | Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
+| The Debrief: test reports, flaky tests and exports | A report of each run's tests with what changed against the default branch, failures with expected against actual, flaky-test detection from history, quarantine by pull request, coverage of a change, timings and a balanced split for shards, and exports as one HTML file, a PDF, JSON and merged JUnit. ([more](guide/debrief.md)) |
 
 ## Milestone 1: Host your code and run your pipelines in one place (Now)
 

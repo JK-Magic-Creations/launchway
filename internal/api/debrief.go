@@ -216,7 +216,7 @@ func (s *Server) runDebriefExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(body)))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox")
-	_, _ = w.Write(body)
+	_, _ = w.Write(body) //nolint:gosec // G705: a download with nosniff, a sandboxing CSP and attachment disposition; the HTML escapes every report value
 }
 
 func safeName(s string) string {
@@ -244,7 +244,7 @@ func (s *Server) runDebriefSummary(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = w.Write([]byte(md))
+	_, _ = w.Write([]byte(md)) //nolint:gosec // G705: text/markdown with nosniff, never rendered as HTML by the browser; the text is escaped Markdown of report data
 }
 
 // projectFlaky lists a project's flaky tests.

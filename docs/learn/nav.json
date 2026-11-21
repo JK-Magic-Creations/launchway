@@ -78,6 +78,7 @@
         "guide/approvals-and-reruns",
         "guide/watching-runs",
         "guide/test-reports",
+        "guide/debrief",
         "guide/artifacts",
         "guide/variables",
         "guide/feature-toggles",

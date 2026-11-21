@@ -1,0 +1,73 @@
+/* The Debrief and the flaky tests page. Loaded with their lazy chunks only. */
+.debrief { display: flex; flex-direction: column; gap: 16px; }
+.dheadline { font-size: 18px; font-weight: 650; margin: 2px 0 12px; }
+.dstats { display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 0 0 14px; }
+.dstat { display: flex; flex-direction: column; gap: 2px; min-width: 112px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); border-left-width: 4px; }
+.dstat dt { font-size: 12px; font-weight: 600; color: var(--text-3); }
+.dstat dd { margin: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dstat-bad { border-left-color: var(--bad); } .dstat-bad dd { color: var(--bad-ink); }
+.dstat-ok { border-left-color: var(--ok); }
+.dstat-warn { border-left-color: var(--warn); } .dstat-warn dd { color: var(--warn-ink); }
+.dchart { margin: 10px 0; }
+.dchart svg { display: block; color: var(--text); }
+.dchart svg text { fill: currentColor; font-size: 12px; }
+.dchart figcaption { margin-top: 6px; }
+.dp-pass { fill: #2e8b57; } .dp-fail { fill: #c0392b; } .dp-skip { fill: #8d96a0; }
+.dbar-seg { stroke: currentColor; stroke-width: 1; }
+.dkey { display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; border: 1px solid var(--text); }
+.dkey-pass { background: #2e8b57; }
+.dkey-fail { background: repeating-linear-gradient(135deg, #c0392b 0 3px, #fff 3px 5px); }
+.dkey-skip { background: radial-gradient(circle, #fff 1.4px, #8d96a0 1.6px) 0 0 / 6px 6px; }
+.dgrid { stroke: currentColor; stroke-opacity: .25; }
+.dline { stroke: currentColor; stroke-width: 2; }
+.dmark { fill: currentColor; stroke: var(--surface); } .dmark-ok { fill: var(--surface); stroke: currentColor; stroke-width: 2; }
+.dtable { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.dtable-slim { width: auto; min-width: 280px; }
+.dtable th, .dtable td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.dtable thead th { background: var(--idle-soft); font-weight: 650; color: var(--text-2); }
+.dtable .num { text-align: right; font-variant-numeric: tabular-nums; }
+.dtable caption { text-align: left; padding: 4px 0; }
+.dcap { font-weight: 650; color: var(--text-2); font-size: 13px; padding-top: 12px !important; }
+.dscroll { overflow-x: auto; }
+.dname { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.dsuite { display: block; color: var(--text-3); font-size: 12.5px; font-weight: 400; }
+.t-bad { color: var(--bad-ink); font-weight: 650; }
+.dcount { display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px; background: var(--idle-soft); color: var(--idle-ink); font-size: 12px; font-weight: 700; vertical-align: 2px; }
+.dtools { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 10px; }
+.dchange ul, .dexports ul { margin: 6px 0 0; padding-left: 20px; }
+.dexports ul { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.dexports li { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.dfail { border: 1px solid var(--border); border-left: 5px solid var(--bad); border-radius: 8px; margin: 10px 0; background: var(--surface); }
+.dfail > summary { cursor: pointer; padding: 10px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; list-style: none; }
+.dfail > summary::-webkit-details-marker { display: none; }
+.dfail > summary:focus-visible, .dmore > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dfail-name { font-weight: 650; overflow-wrap: anywhere; }
+.dfail-suite { color: var(--text-3); font-size: 13px; }
+.dfail-body { padding: 0 12px 12px; }
+.dfacts { list-style: none; padding: 0; margin: 2px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--text-2); font-size: 13.5px; }
+.dfacts strong { color: var(--text); }
+.dpre { margin: 6px 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--code-bg, var(--idle-soft)); font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; }
+.ddiff { margin: 6px 0; border: 1px solid var(--border); border-radius: 6px; overflow: auto; font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.ddiff > div { padding: 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ddiff .op { display: inline-block; width: 1.4em; color: var(--text-3); user-select: none; }
+.ddiff-add { background: var(--ok-soft); } .ddiff-del { background: var(--bad-soft); }
+.dmore { margin: 6px 0; } .dmore > summary { cursor: pointer; color: var(--accent-ink); font-weight: 600; }
+.dshot img { max-width: 100%; max-height: 340px; border: 1px solid var(--border); border-radius: 6px; }
+.dshot figcaption { color: var(--text-3); font-size: 12.5px; }
+.dmeter { display: inline-block; width: 120px; height: 10px; border: 1px solid var(--text-2); border-radius: 2px; background: var(--surface); vertical-align: middle; }
+.dmeter i { display: block; height: 100%; background: var(--text-2); }
+.dmatrix td, .dmatrix th:not(:first-child) { text-align: center; }
+.dnotes { margin: 6px 0 0; padding-left: 20px; }
+.dadvice { margin: 6px 0; }
+.dview { display: inline-flex; gap: 8px; margin-bottom: 12px; }
+/* The flaky tests page */
+.flakylist { display: flex; flex-direction: column; gap: 12px; }
+.flakyrow { border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--surface); }
+.flakyrow-head { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.flakyscore { font-size: 22px; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--warn-ink); }
+.flakyhist { list-style: none; display: flex; flex-wrap: wrap; gap: 3px; padding: 0; margin: 8px 0; }
+.flakyhist li { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 1px solid var(--border-strong, var(--border)); border-radius: 4px; background: var(--surface); }
+.flakyhist .h-failed { border-color: var(--bad); background: var(--bad-soft); }
+.flakyhist .h-retried { border: 1px dashed var(--warn); background: var(--warn-soft); }
+.flakyhist .h-passed { background: var(--ok-soft); }
+.flakyrules { color: var(--text-2); max-width: 78ch; }

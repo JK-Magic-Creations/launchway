@@ -280,6 +280,12 @@
       "title": "Queues, limits and path filters",
       "value": "Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted.",
       "link": "guide/queues"
+    },
+    {
+      "theme": "Tests",
+      "title": "The Debrief: test reports, flaky tests and exports",
+      "value": "A report of each run's tests with what changed against the default branch, failures with expected against actual, flaky-test detection from history, quarantine by pull request, coverage of a change, timings and a balanced split for shards, and exports as one HTML file, a PDF, JSON and merged JUnit.",
+      "link": "guide/debrief"
     }
   ],
   "milestones": [

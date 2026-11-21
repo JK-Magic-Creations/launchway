@@ -60,7 +60,11 @@ func sample() *Report {
 func TestHTMLIsSelfContainedAndAccessible(t *testing.T) {
 	out := string(HTML(sample()))
 	for _, bad := range []string{"<script", "http://", "src=\"http", "href=\"//", "@import", "url(http"} {
-		if strings.Contains(out, bad) && !(bad == "http://" && !strings.Contains(strings.ReplaceAll(out, "http://www.w3.org", ""), bad)) {
+		text := out
+		if bad == "http://" {
+			text = strings.ReplaceAll(out, "http://www.w3.org", "")
+		}
+		if strings.Contains(text, bad) {
 			t.Errorf("the HTML mentions %q: it must need nothing outside the file", bad)
 		}
 	}
