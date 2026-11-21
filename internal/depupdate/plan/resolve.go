@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/depupdate"
@@ -42,6 +43,16 @@ type Update struct {
 	Published  time.Time     `json:"published,omitzero"`
 	NotesURL   string        `json:"notes_url,omitempty"`
 	HeldUntil  time.Time     `json:"held_until,omitzero"`
+	// Major is a new major version that policy allows to propose, on its own
+	// (the Target above is within the major in use).
+	Major *MajorUpdate `json:"major,omitempty"`
+}
+
+// MajorUpdate is the update to a new major version, proposed on its own.
+type MajorUpdate struct {
+	Target    string    `json:"target"`
+	Published time.Time `json:"published,omitzero"`
+	NotesURL  string    `json:"notes_url,omitempty"`
 }
 
 // AgeDays is how old the proposed version is, or -1 when unknown.
@@ -75,8 +86,10 @@ func (r *Resolver) Resolve(ctx context.Context, deps []depupdate.Dep, vulns []os
 	for _, m := range vulns {
 		byKey[m.Dep.Key()] = append(byKey[m.Dep.Key()], m)
 	}
-	var out []Update
-	for _, d := range deps {
+	out := make([]Update, len(deps))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 8)
+	for i, d := range deps {
 		u := Update{Dep: d, Advisories: byKey[d.Key()]}
 		if !d.Direct {
 			u.Status = StatusTransitive
@@ -85,12 +98,19 @@ func (r *Resolver) Resolve(ctx context.Context, deps []depupdate.Dep, vulns []os
 				u.Status = StatusVulnerable
 				u.Reason = "A package needed by another package is affected; update the package that needs it."
 			}
-			out = append(out, u)
+			out[i] = u
 			continue
 		}
-		r.one(ctx, &u)
-		out = append(out, u)
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, u Update) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			r.one(ctx, &u)
+			out[i] = u
+		}(i, u)
 	}
+	wg.Wait()
 	return out
 }
 
@@ -159,9 +179,41 @@ func (r *Resolver) one(ctx context.Context, u *Update) {
 		}
 		return
 	}
+	var inMajor, majors []cand
+	for _, c := range cands {
+		if c.kind == version.KindMajor {
+			majors = append(majors, c)
+		} else {
+			inMajor = append(inMajor, c)
+		}
+	}
+	u.Reason = ""
+	if c, ok := r.pick(ctx, u, src, inMajor, cur); ok {
+		u.Target, u.Kind, u.Published, u.NotesURL, u.Digest = c.ver, c.kind, c.rel.Time, c.rel.NotesURL, c.rel.Digest
+		u.Status, u.HeldUntil = StatusUpdate, time.Time{}
+		u.Reason = ""
+	}
+	if c, ok := r.pick(ctx, &Update{Dep: d}, src, majors, cur); ok {
+		u.Major = &MajorUpdate{Target: c.ver, Published: c.rel.Time, NotesURL: c.rel.NotesURL}
+		if u.Status == "" {
+			u.Status = StatusUpdate
+		}
+	}
+	if u.Status == "" {
+		u.Status = StatusIgnored
+		if u.Reason == "" {
+			u.Reason = "Every newer version is excluded by the update settings."
+		}
+	}
+}
+
+// pick walks candidates from the highest and returns the first the policy
+// allows and whose wait is over. u gets the reason of what it passed over.
+func (r *Resolver) pick(ctx context.Context, u *Update, src source.Source, cands []cand, cur string) (cand, bool) {
+	d := u.Dep
 	for _, c := range cands { // highest first
 		if reason := r.excluded(d, cur, c); reason != "" {
-			if c.ver == cands[0].ver && u.Target == "" {
+			if u.Reason == "" && u.Target == "" {
 				u.Reason = reason
 			}
 			continue
@@ -179,16 +231,9 @@ func (r *Resolver) one(ctx context.Context, u *Update) {
 			u.Status, u.Reason = StatusHeld, c.ver+" has no publication time, so its age cannot be checked; it is not proposed."
 			continue
 		}
-		u.Target, u.Kind, u.Published, u.NotesURL, u.Digest = c.ver, c.kind, c.rel.Time, c.rel.NotesURL, c.rel.Digest
-		u.Status, u.Reason, u.HeldUntil = StatusUpdate, "", time.Time{}
-		return
+		return c, true
 	}
-	if u.Status == "" {
-		u.Status = StatusIgnored
-		if u.Reason == "" {
-			u.Reason = "Every newer version is excluded by the update settings."
-		}
-	}
+	return cand{}, false
 }
 
 func (r *Resolver) tooNew(rel source.Release) (bool, time.Time) {

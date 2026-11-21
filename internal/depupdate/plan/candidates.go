@@ -78,7 +78,7 @@ func (r *Resolver) candidates(d depupdate.Dep, cur string, rels []source.Release
 // excluded says why policy leaves a candidate out ("" when it may be proposed).
 func (r *Resolver) excluded(d depupdate.Dep, cur string, c cand) string {
 	p := r.Policy
-	if len(p.Allow) > 0 && !anyGlob(p.Allow, d.Name) {
+	if len(p.Allow) > 0 && !AnyGlob(p.Allow, d.Name) {
 		return "The dependency is not on the allow list."
 	}
 	for _, ig := range p.Ignore {

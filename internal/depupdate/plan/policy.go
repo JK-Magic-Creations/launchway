@@ -111,6 +111,9 @@ type Partial struct {
 	Assignees    *[]string             `yaml:"assignees,omitempty" json:"assignees,omitempty"`
 	Prereleases  *bool                 `yaml:"prereleases,omitempty" json:"prereleases,omitempty"`
 	ImageFiles   *[]string             `yaml:"image_files,omitempty" json:"image_files,omitempty"` // files with NAME_IMAGE='ref' lines
+	// Exclude lists path globs (* matches any run of characters, "/"
+	// included) whose files are not looked at: examples, test fixtures.
+	Exclude *[]string `yaml:"exclude,omitempty" json:"exclude,omitempty"`
 	// Toolchains names the images the lock files are regenerated in
 	// (keys go, node, uv). Pin them by digest and mirror them.
 	Toolchains *map[string]string `yaml:"toolchains,omitempty" json:"toolchains,omitempty"`
@@ -141,6 +144,7 @@ type Policy struct {
 	Prereleases  bool                 `json:"prereleases"`
 	ImageFiles   []string             `json:"image_files,omitempty"`
 	Toolchains   map[string]string    `json:"toolchains,omitempty"`
+	Exclude      []string             `json:"exclude,omitempty"`
 	// Locked says which level locked each key, for the settings page.
 	Locked map[string]string `json:"locked,omitempty"`
 	// Ignored lists file settings that were not applied, with the reason.
@@ -263,6 +267,9 @@ func Merge(layers ...Layer) (Policy, error) {
 	}
 	if acc.ImageFiles != nil {
 		p.ImageFiles = *acc.ImageFiles
+	}
+	if acc.Exclude != nil {
+		p.Exclude = *acc.Exclude
 	}
 	if acc.Toolchains != nil {
 		p.Toolchains = *acc.Toolchains

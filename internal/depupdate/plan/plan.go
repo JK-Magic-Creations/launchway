@@ -192,6 +192,13 @@ func group(updates []Update, p Policy) []Proposal {
 		pr.Security = pr.Security || u.Security
 	}
 	for _, u := range updates {
+		if u.Major != nil && u.Status != StatusSecurity {
+			mu := u
+			mu.Target, mu.Kind, mu.Published, mu.NotesURL, mu.Digest = u.Major.Target, version.KindMajor, u.Major.Published, u.Major.NotesURL, ""
+			mu.Major = nil
+			d := mu.Dep
+			add(d.Ecosystem+"-"+slug(d.Name)+"-major"+dirSlug(depupdate.Dir(d.File)), "", "", mu)
+		}
 		if u.Target == "" || (u.Status != StatusUpdate && u.Status != StatusSecurity) {
 			continue
 		}
@@ -264,7 +271,7 @@ func matchGroup(groups []Group, u Update) (Group, bool) {
 		if g.Ecosystem != "" && g.Ecosystem != u.Dep.Ecosystem {
 			continue
 		}
-		if len(g.Patterns) > 0 && !anyGlob(g.Patterns, u.Dep.Name) {
+		if len(g.Patterns) > 0 && !AnyGlob(g.Patterns, u.Dep.Name) {
 			continue
 		}
 		if g.Directory != "" && g.Directory != depupdate.Dir(u.Dep.File) {

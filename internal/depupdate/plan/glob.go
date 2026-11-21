@@ -28,7 +28,8 @@ func Glob(pattern, name string) bool {
 	return strings.HasSuffix(n, parts[len(parts)-1])
 }
 
-func anyGlob(patterns []string, name string) bool {
+// AnyGlob reports whether any pattern matches the name.
+func AnyGlob(patterns []string, name string) bool {
 	for _, p := range patterns {
 		if Glob(p, name) {
 			return true

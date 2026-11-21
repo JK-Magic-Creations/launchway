@@ -106,7 +106,7 @@ func TestResolveRoutine(t *testing.T) {
 		"example.com/lib":        {StatusUpdate, "v1.5.0"}, // rc and pseudo skipped; v2 is a different module
 		"example.com/two":        {StatusHeld, ""},         // 1 day old, cooldown 3
 		"example.com/old":        {StatusUpdate, "v1.1.0"}, // 10 days old, past the cooldown
-		"vite":                   {StatusUpdate, "6.0.0"},
+		"vite":                   {StatusUpdate, "5.2.0"},
 		"left-pad":               {StatusUpdate, "1.3.1"},              // 1.4.0 deprecated
 		"docker.io/library/node": {StatusUpdate, "24.23.0-alpine3.23"}, // not the bookworm variant, not the rc
 		"requests":               {StatusUpdate, "2.31.0"},             // 2.32 yanked, 3.0rc1 pre
@@ -123,8 +123,17 @@ func TestResolveRoutine(t *testing.T) {
 	if u := byName(ups, "example.com/two"); !u.HeldUntil.Equal(rel("v1.0.1", 1).Time.Add(72 * time.Hour)) {
 		t.Errorf("held until %v", u.HeldUntil)
 	}
-	if u := byName(ups, "vite"); u.Kind != version.KindMajor || u.AgeDays(now) != 10 {
+	if u := byName(ups, "vite"); u.Kind != version.KindMinor || u.Major == nil || u.Major.Target != "6.0.0" || u.AgeDays(now) != 20 {
 		t.Errorf("vite: %+v", u)
+	}
+	// the in-major update is grouped, the major is its own pull request
+	ds := Plan(Input{Policy: p, Now: now, Immediate: true, Updates: []Update{byName(ups, "vite")}})
+	keys := map[string]bool{}
+	for _, d := range ds {
+		keys[d.Key] = true
+	}
+	if !keys["npm-minor-and-patch-web"] || !keys["npm-vite-major-web"] || len(keys) != 2 {
+		t.Errorf("proposals: %v", keys)
 	}
 }
 
