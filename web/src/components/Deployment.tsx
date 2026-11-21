@@ -293,6 +293,7 @@ export function DeploymentPanel({ run, step }: { run: RunDetail; step: StepView 
         <dd>{d.holding ? `Holds ${d.environment}'s lock for ${d.service}: other runs wait until it is done.` : `Does not hold ${d.environment}'s lock${d.verdict ? " (released when it ended)" : ""}.`}</dd>
         <dt>Opened</dt><dd>{clock(d.opened_at)}{d.deployed_at ? <span className="faint">, deployed {clock(d.deployed_at)}</span> : null}</dd>
       </dl>
+      <p className="dep-launch"><Link href={`/runs/${run.id}/launch/${d.id}`}>Open this Launch</Link> <span className="faint">to see every object it made, their logs and tests, and to steer it.</span></p>
       <Observed d={d} now={now} />
       <DeploymentControls run={run} d={d} now={now} />
       <DeploymentRollback d={d} />
