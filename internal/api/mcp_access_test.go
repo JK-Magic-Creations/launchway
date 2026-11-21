@@ -138,10 +138,23 @@ var mcpPermissionTable = map[string]mcpRow{
 	"delete_variable":         {map[string]any{"name": "gone", "level": "project", "scope": "pay-api"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
 	"lock_variable":           {map[string]any{"name": "x", "level": "project", "scope": "pay-api", "reason": "fixed"}, false, [5]string{mUnlisted, mUnlisted, mRefused, mNotFound, mOK}},
 	"unlock_variable":         {map[string]any{"name": "x", "level": "project", "scope": "pay-api"}, false, [5]string{mUnlisted, mUnlisted, mRefused, mNotFound, mOK}},
-	"list_caches":             {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
-	"delete_cache":            {map[string]any{"project": "pay-api", "id": "cch_nope"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
-	"get_cache_policy":        {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
-	"set_cache_policy":        {map[string]any{"idle_days": 9}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	// The built-in registry (this server has none, so what the permission check lets
+	// through is answered 404 feature_off): everyone is told what the API tells them;
+	// deleting and policy are offered to operators and refused by the API to all but
+	// project admins; collection is offered to an administrator only.
+	"registry_status":            {nil, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"list_registry_images":       {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"inspect_registry_image":     {map[string]any{"project": "pay-api", "repository": "pay-api/x", "reference": "1"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"get_registry_policy":        {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"preview_registry_retention": {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mNotFound, mNotFound, mNotFound, mNotFound}},
+	"delete_registry_image":      {map[string]any{"project": "pay-api", "repository": "pay-api/x", "reference": "1"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"set_registry_policy":        {map[string]any{"project": "pay-api", "immutable_tags": []string{"v*"}}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"run_registry_retention":     {map[string]any{"project": "pay-api"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"registry_gc":                {map[string]any{"dry_run": true}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
+	"list_caches":                {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"delete_cache":               {map[string]any{"project": "pay-api", "id": "cch_nope"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"get_cache_policy":           {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"set_cache_policy":           {map[string]any{"idle_days": 9}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	// Step resources: anyone reads; only an administrator is offered the
 	// tools that change them, as the API refuses everyone else.
 	"get_step_resources":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},

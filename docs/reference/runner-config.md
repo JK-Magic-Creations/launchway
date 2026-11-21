@@ -322,7 +322,7 @@ one builder per platform when no single one does.
 ### Registries
 
 `images.registries` maps the names pipelines use (`tags: [{ registry: harbor, ... }]`) to
-registries. Names match `^[a-z0-9][a-z0-9_-]{0,62}$`.
+registries. Names match `^[a-z0-9][a-z0-9_-]{0,62}$`. The name `launchway` is the [built-in registry](../guide/registry.md): a step that names it (or names no registry) is handed its address and a credential made for the run by the server, and nothing needs configuring here; a registry you configure under that name is used instead.
 
 <!-- keys: runner -->
 | Setting | Type | Default | Description |

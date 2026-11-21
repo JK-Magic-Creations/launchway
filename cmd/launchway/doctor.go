@@ -19,6 +19,7 @@ const doctorUsage = `Usage:
   launchway doctor ssh [--address HOST:PORT] [--config launchway.yaml]
   launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
   launchway doctor security [--url ADDRESS] [--config launchway.yaml]
+  launchway doctor registry [--config launchway.yaml] [--json]
 
 Checks an installation and says what it finds in plain words. With no section
 it runs both.
@@ -30,6 +31,8 @@ it runs both.
              secrets are sealed, and whether a copy of the database alone could reveal one. Exit 1 when it could.
              --restore-drill opens every sealed secret to prove the key and the database belong together
   security   the plain security checklist: sign-in, encryption in transit and at rest, exposure
+  registry   whether the built-in registry would work as configured (it needs sign-in and an artifact store) and, plainly,
+             that Launchway does not encrypt its blobs itself in this release. Exit 1 when something stops it working
 `
 
 // exitOn ends the program for an error from a command.
@@ -79,7 +82,7 @@ func (r gitReport) lines() []string {
 }
 
 // doctorSections are the doctor's sections that are commands of their own, by name.
-var doctorSections = map[string]func([]string) error{"security": doctorSecurity, "ssh": doctorSSH, "encryption": doctorEncryption}
+var doctorSections = map[string]func([]string) error{"security": doctorSecurity, "ssh": doctorSSH, "encryption": doctorEncryption, "registry": doctorRegistry}
 
 func firstArg(args []string) string {
 	if len(args) == 0 {

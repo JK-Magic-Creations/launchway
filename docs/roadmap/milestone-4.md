@@ -54,33 +54,33 @@ Images, charts and other artifacts stored beside the code, under the same permis
 
 #### A built-in OCI registry {#a-built-in-oci-registry}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Store container images, Helm charts and other OCI artifacts in Launchway, passing the OCI conformance suite, with nothing else to run. It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.
+Store container images, Helm charts and other OCI artifacts in Launchway, with nothing else to run. First slice built: the Distribution API under /v2/ (chunked and resumable uploads that work across servers, cross-repository mounts, Range reads, referrers, multi-platform indexes), private by default, in the same database and blob store as everything else. Tested with podman, skopeo, helm and a registry client library, on SQLite and PostgreSQL. Still to do before it can claim conformance: run the official OCI conformance suite (it could not be fetched offline), encrypt blobs at rest (they are not encrypted by Launchway yet) and settle S3-backed stores with a real bucket.
 
 **Depends on:** Built-in artifact storage.
 
-[Area page](registry.md)
+[Read the documentation](../guide/registry.md) · [Area page](registry.md)
 
 #### Helm charts and other artifacts as first-class {#helm-charts-and-other-artifacts-as-first-class}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly. A chart page shows its versions, which applications use which, and the values it accepts.
+Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly. Charts and any OCI artifact are stored, listed with their type and fetched with helm; signatures, SBOMs and scan results are attached as referrers and shown. Not yet: a chart page with its versions, which applications use it and the values it accepts.
 
 **Depends on:** A built-in OCI registry.
 
-[Area page](registry.md)
+[Read the documentation](../guide/registry.md) · [Area page](registry.md)
 
 #### An image page that tells the whole story {#an-image-page-that-tells-the-whole-story}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the run and commit that built it. Its history is drawn as a line: built, scanned, signed, in test, in production.
+Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the run and commit that built it. The Registry tab of Images lists repositories, tags and manifests with size, digest, platforms, who pushed each from which run, whether it is signed, has an SBOM, a vulnerability summary and a pull reference to copy. Not yet: where it runs now, layers, and the history drawn as a line.
 
 **Depends on:** A built-in OCI registry.
 
-[Area page](registry.md)
+[Read the documentation](../guide/registry.md) · [Area page](registry.md)
 
 #### Promotion by digest {#promotion-by-digest}
 
@@ -94,13 +94,13 @@ Move an image from one environment to the next without copying or rebuilding it.
 
 #### Retention that protects what runs {#retention-that-protects-what-runs}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Clean up old images without ever deleting one that is deployed. The label says why each item is kept, such as kept because deployed.
+Clean up old images without ever deleting one that is deployed. Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an environment runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.
 
 **Depends on:** A built-in OCI registry.
 
-[Area page](registry.md)
+[Read the documentation](../guide/registry.md) · [Area page](registry.md)
 
 #### Policy on push and deploy {#policy-on-push-and-deploy}
 
@@ -144,23 +144,23 @@ Copy images to and from other registries on a rule. Useful for a disaster-recove
 
 #### Per-project packages and permissions {#per-project-packages-and-permissions}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A packages tab in each project that is a filtered view of the registry, with per-package access. The registry and the code share one permission model.
+A packages tab in each project that is a filtered view of the registry, with per-package access. Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Registry tab shows a project's repositories. Per-package access inside a project is not built.
 
 **Depends on:** A built-in OCI registry.
 
-[Area page](registry.md)
+[Read the documentation](../guide/registry.md) · [Area page](registry.md)
 
 #### Signing and verification {#signing-and-verification}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Sign images on build and verify signatures on pull and deploy. Signatures and attestations are stored next to the image.
+Sign images on build and verify signatures on pull and deploy. Signatures and attestations an image step writes are stored next to the image and shown. Verifying signatures on pull and deploy is not built.
 
 **Depends on:** A built-in OCI registry.
 
-[Area page](registry.md)
+[Read the documentation](../guide/registry.md) · [Area page](registry.md)
 
 #### More package formats {#more-package-formats}
 

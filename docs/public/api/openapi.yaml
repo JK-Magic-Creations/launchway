@@ -3183,6 +3183,290 @@ paths:
             tags:
                 - projects
             x-launchway-access: project-viewer
+    /api/v1/projects/{name}/registry:
+        get:
+            description: 'The project''s repositories (images, tags, bytes, pushed_at), used_bytes against quota_bytes (-1: none), the policy in force with where each part comes from, and how to push.'
+            operationId: get_api_v1_projects_name_registry
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The project''s repositories (images, tags, bytes, pushed_at), used_bytes against quota_bytes (-1: none), the policy in force with where each part comes from, and how to push.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/registry/image:
+        delete:
+            description: ?repository=&reference= deletes the image with its tags and attachments; the caller must be an admin of the project (an operator gets 403). Refused with 409 for an immutable tag or an image a deployment uses. The bytes go at the next collection.
+            operationId: delete_api_v1_projects_name_registry_image
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: ?repository=&reference= deletes the image with its tags and attachments; the caller must be an admin of the project (an operator gets 403).
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: registry.image_delete
+        get:
+            description: '?repository=&reference= (a tag or a digest): one image as above and its manifest.'
+            operationId: get_api_v1_projects_name_registry_image
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?repository=&reference= (a tag or a digest): one image as above and its manifest.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/registry/images:
+        get:
+            description: '?repository= the images of one repository, newest first: digest, tags, total_size, platforms, created_by and run_id, signed, has_sbom, vulnerabilities (counts from an attached scan result), attached (signatures, SBOMs, scan results) and a copyable pull reference.'
+            operationId: get_api_v1_projects_name_registry_images
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: '?repository= the images of one repository, newest first: digest, tags, total_size, platforms, created_by and run_id, signed, has_sbom, vulnerabilities (counts from an attached scan result), attached (signatures, SBOMs, scan results) and a copyable pull reference.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/registry/policy:
+        get:
+            description: The project's policy (with ?repository= one repository's) and the effective values after the levels are combined.
+            operationId: get_api_v1_projects_name_registry_policy
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The project's policy (with ?repository= one repository's) and the effective values after the levels are combined.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: Replaces it; project admin only. A project admin may lower the quota but not raise it above the installation's.
+            operationId: put_api_v1_projects_name_registry_policy
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Replaces it; project admin only.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: registry.policy
+    /api/v1/projects/{name}/registry/retention:
+        get:
+            description: 'What the retention rules would delete now (?repository= for one repository): each candidate with its tags, size and reason. Deletes nothing.'
+            operationId: get_api_v1_projects_name_registry_retention
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'What the retention rules would delete now (?repository= for one repository): each candidate with its tags, size and reason.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        post:
+            description: Deletes them; project admin only. Answers what was deleted.
+            operationId: post_api_v1_projects_name_registry_retention
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Deletes them; project admin only.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: registry.retention_run
+    /api/v1/projects/{name}/registry/tag:
+        delete:
+            description: ?repository=&tag= deletes only the tag; project admin only; 409 for an immutable tag.
+            operationId: delete_api_v1_projects_name_registry_tag
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: ?repository=&tag= deletes only the tag; project admin only; 409 for an immutable tag.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: registry.tag_delete
     /api/v1/projects/{name}/rollback:
         get:
             description: 'What a service can be rolled back to in an environment after its deployment succeeded: ?environment= (required), ?service=. Answers the plan: what runs now (current), the lock holder if any (holder), and the rollback action as the server reports it (available, or reason, instead and would_help; targets, the earlier successful deployments, each with the deployments it reverts, its consequence and suggestions; queueable, emergency, requires_approval). Without the operator role on the project (and the environment) the action says so and offers no targets. See [rollback after success](../guide/rollback-after-success.md).'
@@ -3563,6 +3847,125 @@ paths:
             tags:
                 - queue
             x-launchway-access: signed-in
+    /api/v1/registry:
+        get:
+            description: 'Whether the registry is on, its address, the host clients write before a repository, whether it is plain HTTP (insecure), the blob store, limits, the number of repositories the caller may see, how to log in, and encryption: blobs_encrypted_by_launchway is false in this release, with a note saying what protects blobs at rest. An administrator also gets last_gc.'
+            operationId: get_api_v1_registry
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Whether the registry is on, its address, the host clients write before a repository, whether it is plain HTTP (insecure), the blob store, limits, the number of repositories the caller may see, how to log in, and encryption: blobs_encrypted_by_launchway is false in this release, with a note saying what protects blobs at rest.'
+            tags:
+                - registry
+            x-launchway-access: signed-in
+    /api/v1/registry/gc:
+        get:
+            description: 'The report of the last garbage collection: ran, at, report.'
+            operationId: get_api_v1_registry_gc
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The report of the last garbage collection: ran, at, report.'
+            tags:
+                - registry
+            x-launchway-access: admin
+        post:
+            description: 'Collects garbage. Body {"dry_run": true} lists what would go (blobs, bytes, links, uploads, strays, the first digests) and removes nothing. 409 when another server is collecting.'
+            operationId: post_api_v1_registry_gc
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'POST /api/v1/registry/gc: Collects garbage.'
+            tags:
+                - registry
+            x-launchway-access: admin
+            x-launchway-audit: registry.gc_run
+    /api/v1/registry/policy:
+        get:
+            description: 'The installation''s policy, or with ?scope=organization&name= an organization''s: quota_bytes, retention, immutable_tags.'
+            operationId: get_api_v1_registry_policy
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The installation''s policy, or with ?scope=organization&name= an organization''s: quota_bytes, retention, immutable_tags.'
+            tags:
+                - registry
+            x-launchway-access: admin
+        put:
+            description: 'Replaces it. Body {"scope": "installation", "policy": {...}}; an empty policy removes it.'
+            operationId: put_api_v1_registry_policy
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'PUT /api/v1/registry/policy: Replaces it.'
+            tags:
+                - registry
+            x-launchway-access: admin
+            x-launchway-audit: registry.policy
     /api/v1/repos/{owner}/{name}:
         delete:
             description: Moves the repository to the trash.

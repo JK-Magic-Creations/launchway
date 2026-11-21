@@ -304,3 +304,14 @@ func TestDeployTagAndDigestChange(t *testing.T) {
 		}
 	}
 }
+
+func TestAnImageTagThatNamesNoRegistryUsesTheBuiltInOne(t *testing.T) {
+	p, err := Parse([]byte("pipeline: app\nsteps:\n  image:\n    kind: image\n    context: .\n    file: Dockerfile\n    tags:\n      - { repository: api, tag: latest }\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := p.Step("image")
+	if st.ImageBuild == nil || len(st.ImageBuild.Tags) != 1 || st.ImageBuild.Tags[0].Registry != BuiltinRegistry {
+		t.Fatalf("%+v", st.ImageBuild)
+	}
+}

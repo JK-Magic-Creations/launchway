@@ -15,7 +15,7 @@ params:
   image: { type: boolean, default: { nonempty: deliver }, description: "Build an image (a web server around the site) from the Dockerfile: on when the project has environments to deliver to" }
   push: { type: boolean, default: { nonempty: deliver }, description: "Push the image to the registry: on when the project has environments to deliver to, off otherwise" }
   image_repository: { type: string, default: { text: "{image_namespace}/{service}" }, description: "The image's repository in the registry, without the host: team/app; by default the namespace and the project's name" }
-  registry: { type: string, from: registry, default: "registry", description: "A registry the runner's configuration names" }
+  registry: { type: string, from: registry, default: "launchway", description: "The registry to push to: launchway is the registry built into this server, or a name the runner's configuration lists" }
   dockerfile: { type: string, default: "Dockerfile", description: "The Dockerfile, relative to the repository" }
   context: { type: string, default: ".", description: "The build context, relative to the repository" }
   image_branch: { type: string, default: "main", description: "The branch whose commits are built into an image" }

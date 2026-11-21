@@ -37,7 +37,10 @@ func startServices(ctx context.Context, eff, cfg *config.Config, eng *engine.Eng
 	if err := announceSetup(srv, cfg, log); err != nil {
 		return err
 	}
-	return startHosting(ctx, eff, eng, log, srv)
+	if err := startHosting(ctx, eff, eng, log, srv); err != nil {
+		return err
+	}
+	return startRegistry(ctx, eff, eng, log, srv)
 }
 
 // signInBanner says in a few words how people sign in, for the start-up message.

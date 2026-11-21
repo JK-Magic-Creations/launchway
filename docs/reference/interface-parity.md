@@ -122,6 +122,15 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/projects/{name}/pipeline` | `get_project` | `config get projects` | — | equal |
 | `POST /api/v1/projects/{name}/pipeline` | — | — | — | gap: the pipeline editor commits to Git; agents and the CLI edit the file in the repository and check it with validate_pipeline and launchway validate |
 | `GET /api/v1/projects/{name}/refs` | — | — | — | exempt: branch and tag picker of the UI; start_run and runs start take the ref as text |
+| `GET /api/v1/projects/{name}/registry` | `list_registry_images` | `registry list` | `not needed by terraform` | equal |
+| `DELETE /api/v1/projects/{name}/registry/image` | `delete_registry_image` | `registry delete` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/registry/image` | `inspect_registry_image` | `registry inspect` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/registry/images` | `list_registry_images` | `registry list`, `registry tags` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/registry/policy` | `get_registry_policy` | `registry policy get` | `not needed by terraform` | equal |
+| `PUT /api/v1/projects/{name}/registry/policy` | `set_registry_policy` | `registry policy set` | — | exempt: MCP and CLI manage the registry policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
+| `GET /api/v1/projects/{name}/registry/retention` | `preview_registry_retention` | `registry retention` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/registry/retention` | `run_registry_retention` | `registry retention` | `not needed by terraform` | equal |
+| `DELETE /api/v1/projects/{name}/registry/tag` | `delete_registry_image` | `registry delete` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/rollback` | `get_rollback_options` | `deployments options` | — | equal |
 | `POST /api/v1/projects/{name}/rollbacks` | `rollback_deployment` | `deployments rollback` | — | equal |
 | `POST /api/v1/projects/{name}/runs` | `start_run` | `runs start` | — | equal |
@@ -134,6 +143,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/projects/{name}/waivers/{waiver}/revoke` | — | `waivers revoke` | — | gap: no MCP tool revokes waivers yet |
 | `POST /api/v1/projects/{name}/webhooks/{trigger}` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
 | `GET /api/v1/queue` | `list_queue` | `runs queue` | `not needed by terraform` | equal |
+| `GET /api/v1/registry` | `registry_status` | `registry status` | `not needed by terraform` | equal |
+| `GET /api/v1/registry/gc` | `registry_gc` | `registry gc` | `not needed by terraform` | equal |
+| `POST /api/v1/registry/gc` | `registry_gc` | `registry gc` | `not needed by terraform` | equal |
+| `GET /api/v1/registry/policy` | `get_registry_policy` | `registry policy get` | `not needed by terraform` | equal |
+| `PUT /api/v1/registry/policy` | `set_registry_policy` | `registry policy set` | — | exempt: MCP and CLI manage the registry policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
 | `DELETE /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `GET /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `PATCH /api/v1/repos/{owner}/{name}` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |

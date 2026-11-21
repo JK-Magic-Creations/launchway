@@ -23,9 +23,10 @@ or replace it. It is for operators.
 | Logs and run records | The same |
 | Build caches | The same. The cached archives are not encrypted, and cache entries are not signed; see [build caches](build-caches.md#what-a-cache-entry-is-not-yet) |
 | Hosted Git repository packs | The same |
+| Registry images, charts and other OCI artifacts (the [built-in registry](registry.md)) | The same. Layers, configs and manifests are stored as pushed; `launchway doctor registry` says so |
 | Run metadata, project names, states, counts, the Logbook | These are searched, so they stay readable; use database and volume encryption |
 
-The next slice adds per-object encryption of artifacts, logs, caches and Git packs under the same
+The next slice adds per-object encryption of artifacts, logs, caches, Git packs and registry blobs under the same
 keys. Until then, **encrypt the database volume and the artifact store as well**: Launchway cannot see
 whether you have. A dump of the database today reveals build outputs and source history, though not
 the secrets above.

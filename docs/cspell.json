@@ -19,6 +19,7 @@
   "words": [
     "rulebook", "renameable", "Renameable", "organisation", "nogo",
     "Valkey",
+    "skopeo",
     "bestpractices", "COEP", "errcheck", "golangci", "gosec", "HSTS", "keylessly", "kubeconform", "shellcheck", "Subresource", "Syft", "Tetrate", "Liquibase", "Virt", "bootable", "cutover",
     "applicationsets", "blocklist",
     "Authentik",

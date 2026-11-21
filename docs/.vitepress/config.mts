@@ -215,6 +215,7 @@ export default defineConfig({
           { text: 'Artifacts', link: '/guide/artifacts' },
           { text: 'Variables at levels', link: '/guide/variables' },
           { text: 'Build caches', link: '/guide/build-caches' },
+          { text: 'The built-in registry', link: '/guide/registry' },
           { text: 'Where artifacts are kept', link: '/artifacts' },
           { text: 'Security findings and SBOMs', link: '/guide/security-findings' },
           { text: 'Container images', link: '/guide/images' },

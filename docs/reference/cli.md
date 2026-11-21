@@ -26,8 +26,9 @@ launchway health-sources | models             what verify and ai steps may name
 launchway runners  list|join-token|revoke-token|revoke|rotate  runners, and join tokens to enrol them
 launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
 launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+launchway registry status|list|tags|inspect|delete|retention|policy|gc   the built-in image and chart registry
 launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
-launchway doctor   [database|git|ssh|encryption]  would this installation survive losing its database? is git new enough? is Git over SSH reachable? are its secrets encrypted at rest?
+launchway doctor   [database|git|ssh|encryption|registry]  would this installation survive losing its database? is git new enough? is Git over SSH reachable? are its secrets encrypted at rest? would the built-in registry work?
 launchway encryption init|status|rotate|rewrap   the root key for encryption at rest
 launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
 launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
@@ -49,7 +50,7 @@ Flags are written `--name value`, `--name=value`, `-name value` or `-name=value`
 | `1` | The run failed (`runs start --wait`, `run`); or an error such as a configuration file that is not valid, a pipeline file with problems (`validate`, `graph`, `run`), or a runner that cannot start. |
 | `2` | The command was written wrongly: an unknown command or flag, a missing argument, or not signed in. |
 | `3` | `runs start --wait`: the run was canceled. |
-| `4` | `login`, `config` and the commands that take its verbs, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `caches`, `repos`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
+| `4` | `login`, `config` and the commands that take its verbs, `runs`, `policy`, `waivers`, `mcp`, `verifications`, `health-sources`, `models`, `runners`, `step-resources`, `caches`, `registry`, `repos`: the server refused the request (including input values that do not fit, each named) or could not be reached. |
 | `5` | `runs start --wait --timeout`: the time passed before the run finished. The run goes on. |
 | `130` | `run`: interrupted twice with Ctrl-C. |
 
@@ -816,6 +817,36 @@ launchway caches policy clear PROJECT [--json]
 
 The same operations are the routes under [Build caches](http-api.md#build-caches) in the HTTP API, and the MCP tools `list_caches`, `delete_cache`, `get_cache_policy` and `set_cache_policy`.
 
+## launchway registry
+
+Shows what the built-in OCI registry holds, deletes images, and shows and changes its quota, retention and immutable-tag policy. A repository is `PROJECT/NAME`, the project first. Reading needs the viewer role on the project; deleting, policy changes and retention runs the admin role of the project; garbage collection and the installation's policy an administrator's. Everything that changes something is recorded in the audit trail (`registry.image_delete`, `registry.tag_delete`, `registry.policy`, `registry.retention_run`, `registry.gc_run`). See [the registry guide](../guide/registry.md).
+
+```text
+launchway registry status [--json]
+launchway registry list PROJECT|REPOSITORY [--json]
+launchway registry tags REPOSITORY [--json]
+launchway registry inspect REPOSITORY REFERENCE [--json]
+launchway registry delete REPOSITORY REFERENCE [--tag] [--json]
+launchway registry retention PROJECT|REPOSITORY [--run] [--json]
+launchway registry policy get [PROJECT|REPOSITORY] [--json]
+launchway registry policy set [PROJECT|REPOSITORY] [--quota-gib N] [--keep-last N] [--keep-tags P,P] [--untagged-days N] [--immutable-tags P,P] [--pull-from P,P] [--json]
+launchway registry gc [--dry-run] [--last] [--json]
+```
+
+| Command | What it does |
+|---|---|
+| `status` | The registry's address, how to log in, its limits, how many repositories you may see, and what protects blobs at rest (Launchway does not encrypt them in this release) |
+| `list` | With a project, its repositories with images, tags and bytes, and usage against the quota; with a repository, its images: tags, digest, size, platforms, who pushed it (and which run), signature, SBOM and vulnerability summary, and the pull reference to copy |
+| `tags` | The repository's tags and the digest each points at |
+| `inspect` | One image or artifact, by tag or digest, with its manifest |
+| `delete` | Deletes an image by tag or digest, with its tags, signatures and SBOMs; `--tag` deletes only the tag. Refused for an immutable tag and for an image a deployment uses. The bytes go at the next collection |
+| `retention` | Previews what the retention rules would delete (nothing is deleted); `--run` deletes it |
+| `policy get` | The policy set at a level and the effective values after the levels are combined |
+| `policy set` | Replaces the policy at a level: the quota, the retention rule (keep the newest N tagged images, keep tags matching patterns, delete untagged images older than D days), the immutable tag patterns and which projects' runs may pull. Without a project it is the installation's |
+| `gc` | Collects garbage: blobs and uploads nothing refers to. `--dry-run` lists what would go; `--last` shows the last report |
+
+The same operations are the routes under [Built-in registry](http-api.md#built-in-registry) in the HTTP API, and the MCP tools `registry_status`, `list_registry_images`, `inspect_registry_image`, `delete_registry_image`, `get_registry_policy`, `set_registry_policy`, `preview_registry_retention`, `run_registry_retention` and `registry_gc`. Pushing and pulling are done with the clients you already have (`docker`, `podman`, `skopeo`, `helm`), with an API token as the password.
+
 ## launchway variables
 
 Sets, shows, locks and unlocks variables at a level, and shows what is in effect for a project. The nearest setting wins: what is given when a run starts, then the pipeline file's own `with:`, then the project, the Squadron, the Wing, the Base, then the template's own default; at the same level a variable set for the environment being deployed to beats the general one; and a lock set at a level beats everything below it. Setting needs an operator of the project, or an administrator of the Squadron, Wing or installation; locking needs the level's administrator. Each change is audited (`variable.set`, `variable.delete`, `variable.lock`, `variable.unlock`).
@@ -877,6 +908,14 @@ launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
 ```
 
 Says whether the secrets this installation stores are encrypted at rest, reading only: which holder keeps the root key (never the key), the key versions and the age of the oldest, how many stored secrets are sealed and how many are still in the clear, the progress of sealing, any addresses that carry a password, and **whether a database dump alone could reveal a secret** (yes only when a root key is in use and nothing is left in the clear). It names what is not yet encrypted (artifacts, logs, caches, Git packs) and that disk or volume encryption cannot be seen from here. Exit status 1 when a dump alone could reveal a secret, so a script can gate on it. A database that is encrypted, with no key configured, or with a key that does not open it, is refused with the plain message the server gives. `--restore-drill` also opens every sealed secret with the configured key, reading only, and exits 1 if one does not open: run it against a restored copy to prove the dump and the key belong together. The plain `launchway doctor` prints the one-sentence state. See [Encryption at rest](../guide/encryption-at-rest.md).
+
+### launchway doctor registry
+
+```text
+launchway doctor registry [--config launchway.yaml] [--json]
+```
+
+Says whether the built-in registry would work as configured: whether it is on, which artifact store holds its blobs, whether sign-in is on (it answers every request with `503` while it is off, because there is no anonymous registry), whether an address is set, and, plainly, **that Launchway does not encrypt the registry's blobs itself in this release**, so the volume, database or bucket that holds the artifact store must be encrypted. Exit status 1 when something stops it working.
 
 ## launchway encryption
 

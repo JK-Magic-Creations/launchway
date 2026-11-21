@@ -2,7 +2,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Registry · <a href="../roadmap-list.html">as a list</a></p>
 
-A registry for container images, Helm charts and other OCI artifacts, inside the same product as your code and pipelines. **Status:** planned, in [Milestone 4](milestone-4.md). Pushing to any other registry works today and stays first-class.
+A registry for container images, Helm charts and other OCI artifacts, inside the same product as your code and pipelines. **Status:** in progress, in [Milestone 4](milestone-4.md). The first slice is built: the OCI protocol, private by default with the project's own roles, run credentials for pipelines, quotas, immutable tags, retention with a preview, garbage collection and an Images tab (see [the guide](../guide/registry.md)). Not built yet: the official conformance run, encryption of blobs at rest, the pull-through cache, replication, promotion by digest, policy on push and more package formats. Pushing to any other registry works and stays first-class.
 
 ## From build to running
 

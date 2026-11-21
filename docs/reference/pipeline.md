@@ -633,7 +633,7 @@ Other output names are refused.
 <!-- keys: image-tag -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `registry` | name | required | A registry the runner's configuration names ([`images.registries`](runner-config.md#images)), in lower case |
+| `registry` | name | `launchway` in `tags` (required in `cache`) | A registry the runner's configuration names ([`images.registries`](runner-config.md#images)), in lower case; or `launchway`, the [built-in registry](../guide/registry.md), which needs no runner configuration: the step gets its address and a credential made for the run. A tag that names no registry uses it, and its `repository` may leave out the project (`api` in project `cart` is `cart/api`) |
 | `repository` | text | required | The repository in that registry, without the host, such as `team/app` |
 | `tag` | [value](#value-forms) | required | The tag, such as `latest` or `{ run: short_sha }` |
 

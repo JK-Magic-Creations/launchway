@@ -279,6 +279,18 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `variable.lock` | `PUT /api/v1/variables/{name}/lock` (also `launchway variables lock`); the detail is the reason |
 | `variable.unlock` | `DELETE /api/v1/variables/{name}/lock` (also `launchway variables unlock`) |
 | `cache_policy.clear_project` | `DELETE /api/v1/projects/{name}/cache-policy` |
+| `registry.push` | a manifest was pushed to the built-in registry over `/v2/` (the target is `repository:tag` or `repository@digest`, the detail names the run when a step pushed it); a push refused for lack of the operator role is recorded with outcome `denied` |
+| `registry.pull` | a pull or read refused over `/v2/` (outcome `denied`); allowed pulls are not recorded one by one |
+| `registry.delete` | an image was deleted (over `/v2/`, the API, the CLI or an MCP tool); the detail says how many manifests went with it (signatures, SBOMs); a refused delete is recorded with outcome `denied` |
+| `registry.untag` | a tag was deleted and the image stays |
+| `registry.retention` | a retention rule deleted images (the actor is the person who ran it, or `retention` for the scheduled run) |
+| `registry.gc` | garbage collection removed blobs; the detail has the counts and bytes |
+| `registry.quota` | a push was refused because the project or organization is over its quota (outcome `denied`) |
+| `registry.gc_run` | `POST /api/v1/registry/gc` (also `launchway registry gc`); the detail says dry run or collection |
+| `registry.policy` | `PUT /api/v1/registry/policy` and `PUT /api/v1/projects/{name}/registry/policy` (also `launchway registry policy set`); the target is the level and its name |
+| `registry.image_delete` | `DELETE /api/v1/projects/{name}/registry/image` (also `launchway registry delete`); the target is `repository@reference` |
+| `registry.tag_delete` | `DELETE /api/v1/projects/{name}/registry/tag` (also `launchway registry delete --tag`) |
+| `registry.retention_run` | `POST /api/v1/projects/{name}/registry/retention` (also `launchway registry retention --run`) |
 | `repository.create` | `POST /api/v1/repositories`; the target is the repository's path, the detail its visibility |
 | `repository.update` | `PATCH /api/v1/repositories/{owner}/{name}`; the detail lists what changed (visibility, default branch, archived, a rename) |
 | `repository.delete` | `DELETE /api/v1/repositories/{owner}/{name}`; the repository moves to the trash |

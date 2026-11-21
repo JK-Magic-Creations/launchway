@@ -507,6 +507,19 @@ variable name or a file path), never as a value. Older servers ignore the tables
 a project is watched depends on them: if the rows cannot be written the watcher says so once and goes
 on. The migration lives in its own file because `db.go` is over the size limit.
 
+Schema 46 brings the built-in registry (`internal/registry`), additive: ten new tables and nothing else.
+`registry_repositories` (a repository and its project and organization), `registry_blobs` (one row per
+organization and digest: content is shared inside an organization and never across two) with
+`registry_repo_blobs` (which repository may see which blob), `registry_manifests`,
+`registry_manifest_refs` and `registry_tags`, `registry_uploads` and `registry_upload_chunks` (uploads
+in progress, so any server of a group may take the next chunk), `registry_policies` (quota, retention and
+immutable tags per level) and `registry_gc_state` (the lease of the one server that collects). The bytes
+are objects in the blob store under `registry/`. Numbers 37 to 45 are empty stand-ins held for branches
+that have not merged (`schema37.go`); each is replaced by its real migration when it merges, and the
+range in `schemaStandInFirst` and `schemaStandInLast` shrinks. A server of an older schema ignores the
+tables; the blobs they name stay in the blob store until a newer server collects them. The startup
+check covers the tables (`schemaMarkersRegistry`).
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

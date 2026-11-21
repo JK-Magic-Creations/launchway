@@ -29,6 +29,7 @@
         "concepts/pipelines-and-runs",
         "concepts/templates-and-libraries",
         "concepts/variables",
+        "concepts/registry",
         "concepts/environments-and-deployments",
         "concepts/approvals",
         "concepts/high-availability"
@@ -74,6 +75,7 @@
         "guide/artifacts",
         "guide/variables",
         "guide/build-caches",
+        "guide/registry",
         "artifacts",
         "guide/security-findings",
         "guide/images",

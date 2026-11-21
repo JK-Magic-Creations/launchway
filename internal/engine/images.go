@@ -63,6 +63,27 @@ type ImageJob struct {
 	Ref        string            `json:"ref,omitempty"`
 	Repository string            `json:"repository,omitempty"`
 	Libraries  []ImageJobLibrary `json:"libraries,omitempty"`
+	// Registry, when the job uses the built-in registry, is its address and
+	// a credential made for this run alone (see BuiltinRegistryName). Never
+	// kept in the run's events.
+	Registry *ImageJobRegistry `json:"registry,omitempty"`
+}
+
+// BuiltinRegistryName is the name a pipeline gives the registry that is part
+// of Launchway: no runner configuration is needed for it, and an image step
+// that names no registry uses it.
+const BuiltinRegistryName = "launchway"
+
+// ImageJobRegistry is how an image step reaches the built-in registry: the
+// host as written in image references, whether it speaks plain HTTP, and a
+// credential that lets this run pull from its own project's repositories and
+// push to them (Push), and for nothing else. It expires with the run.
+type ImageJobRegistry struct {
+	Host     string `json:"host"`
+	Insecure bool   `json:"insecure,omitempty"`
+	Username string `json:"username"`
+	Token    string `json:"token"`
+	Push     bool   `json:"push"`
 }
 
 // ImageJobTag is one name to push under, its tag worked out.

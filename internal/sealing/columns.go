@@ -160,6 +160,8 @@ var explained = []struct{ column, why string }{
 	{"artifact_blobs.store_key", "the object's name in the blob store"},
 	{"blob_uploads.key", "the object's name in the blob store"},
 	{"caches.blob_key", "the object's name in the blob store"},
+	{"registry_blobs.store_key", "the object's name in the blob store"},
+	{"registry_upload_chunks.store_key", "the object's name in the blob store"},
 	{"caches.key", "the cache's key as the pipeline names it"},
 	{"repo_packs.blob_key", "the object's name in the blob store"},
 	{"deployments.snapshot_key", "the name of a stored snapshot"},

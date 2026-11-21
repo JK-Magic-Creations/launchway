@@ -342,6 +342,10 @@ func (c *Config) Registry(name string) (RegistryConfig, error) {
 			return r, nil
 		}
 	}
+	if name == BuiltinName {
+		return RegistryConfig{}, fmt.Errorf("the built-in registry is not available to this step: the server gave it no address and credential (the registry is off, or the server has no sign-in); " +
+			"turn it on (registry.enabled), or name a registry this runner has")
+	}
 	var names []string
 	if c != nil {
 		for n := range c.Registries {

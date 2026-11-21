@@ -70,6 +70,10 @@ type ImageBuild struct {
 // requests and drafts).
 func (b *ImageBuild) Pushes() bool { return b.Push == nil || *b.Push }
 
+// BuiltinRegistry is the name of the registry that is part of Launchway. An
+// image tag that names no registry uses it; it needs no runner configuration.
+const BuiltinRegistry = "launchway"
+
 // ImageTag is one name to push the image under: a registry the runner's
 // configuration names, a repository in it, and a tag.
 type ImageTag struct {
@@ -454,6 +458,10 @@ func (ps *parser) parseImageTags(n *yaml.Node, at string, b *ImageBuild) []Image
 		})
 		if item.Kind != yaml.MappingNode {
 			continue
+		}
+		if t.Registry == "" && ps.tmpl == nil {
+			// No registry named: the one that is part of Launchway.
+			t.Registry = BuiltinRegistry
 		}
 		ps.checkImageRepo(item, where, t.Registry, t.Repository)
 		switch {

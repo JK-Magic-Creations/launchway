@@ -137,8 +137,8 @@ dependency cache under a key made of the lock file and the tool version, check, 
 ### The image
 
 Flight plans with a `Dockerfile` build the image on the branch named by `image_branch` (default `main`), scan it, write its
-software bill of materials and sign it, **and push it only when `push: true`**. The registry name is `registry` (default `registry`;
-a name your runners' configuration lists) and the repository `image_repository`:
+software bill of materials and sign it, **and push it only when `push: true`**. The registry is `registry` (default `launchway`, the [built-in registry](registry.md) of this server, which names an
+image under the project; or a name your runners' configuration lists) and the repository `image_repository`:
 
 ```yaml
 steps:

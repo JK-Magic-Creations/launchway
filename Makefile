@@ -329,7 +329,7 @@ GOLANGCI_LINT_VERSION := v2.15.0
 GOLANGCI_LINT := $(TOOLS)/bin/golangci-lint
 QUALITY_DIR := $(CURDIR)/quality
 
-.PHONY: tools lint lint-baseline-update arch ratchet ratchet-update fmt-check vet \
+.PHONY: tracked-files tools lint lint-baseline-update arch ratchet ratchet-update fmt-check vet \
 	web-lint web-test web-size web-a11y coverage coverage-check coverage-update check check-all
 
 tools: $(GOLANGCI_LINT)
@@ -364,6 +364,9 @@ vocabulary:
 
 vocabulary-update:
 	node scripts/vocabulary/check.mjs --update-baseline
+
+tracked-files:
+	sh scripts/check-tracked-files.sh
 
 ratchet:
 	go test -count=1 -run TestSizeRatchet ./internal/archtest/
@@ -415,7 +418,7 @@ coverage-update: coverage
 	go run ./scripts/quality/covercheck update bin/coverage.txt $(QUALITY_DIR)/coverage-floor.json
 
 # The fast gates: a few minutes, no test suite of the server.
-check: fmt-check vet lint arch originality vocabulary ratchet web-lint web-test learn-check
+check: fmt-check vet lint arch originality vocabulary tracked-files ratchet web-lint web-test learn-check
 	@echo "make check: all fast gates passed"
 
 # Everything, including the Go tests with the coverage floors and the bundle budget.

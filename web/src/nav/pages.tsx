@@ -39,6 +39,7 @@ const TemplatesPage = lz(() => import("../pages/Library"), "TemplatesPage");
 const TemplatePage = lz(() => import("../pages/TemplatePage"), "TemplatePage");
 const ImagesPage = lz(() => import("../pages/Images"), "ImagesPage");
 const ComponentsPage = lz(() => import("../pages/Components"), "ComponentsPage");
+const RegistryPage = lz(() => import("../pages/Registry"), "RegistryPage");
 const ImageDetailPage = lz(() => import("../pages/ImageDetail"), "ImageDetailPage");
 const PipelinesPage = lz(() => import("../pages/PipelinesList"), "PipelinesPage");
 const LearnPage = lz(() => import("../learn/Learn"), "LearnRoot");
@@ -110,6 +111,8 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/library/templates/:library/:name": return <TemplatePage key={p.library + "/" + p.name} library={p.library} name={p.name} />;
     case "/images": return <><ImagesSwitch on="images" /><ImagesPage /></>;
     case "/images/components": return <><ImagesSwitch on="components" /><ComponentsPage /></>;
+    case "/images/registry": return <><ImagesSwitch on="registry" /><RegistryPage /></>;
+    case "/images/registry/:project": return <><ImagesSwitch on="registry" /><RegistryPage key={p.project} project={p.project} /></>;
     case "/images/digest/:digest": return <ImageDetailPage key={p.digest} digest={p.digest} />;
     case "/pipelines": return <PipelinesPage />;
     case "/kit": return <KitPage />;

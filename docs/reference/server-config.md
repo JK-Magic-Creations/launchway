@@ -469,6 +469,32 @@ takes effect when each server next restarts.
 | `forge.ssh.idle_timeout` | text | `10m` | An SSH connection that moves no bytes is closed. At least `1m` |
 | `forge.ssh.max_duration` | text | `6h` | The longest any SSH connection lasts. At least `1m` |
 
+## Registry
+
+Launchway's built-in OCI registry: container images, Helm charts and other OCI artifacts, served under `/v2/`
+beside the API (see [the registry guide](../guide/registry.md)). It keeps blobs in the artifact store
+(`artifacts.store`), so several servers need a store they all share, as Git hosting does. It is on by default
+wherever the server has an artifact store **and sign-in**: with sign-in off the registry answers `503`
+(`needs_sign_in`), because there is no anonymous registry. These settings are read from the file when the
+server starts. Quotas, retention and immutable tags are not here: they are policies kept in the database, set
+per installation, project or repository (`launchway registry policy set`).
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `registry.enabled` | boolean | `true` | Turn the registry off with `false`. Nothing is deleted |
+| `registry.public_url` | URL | `forge.public_url`, then the address a request came in on | The address clients push and pull at, without a path (`https://registry.example.com`); also the address pipelines' image steps use when they name no registry |
+| `registry.allow_insecure_http` | boolean | `false` | Accept a password or token over plain HTTP from any address; otherwise only a loopback listener does |
+| `registry.max_blob_mib` | whole number | `10240` | The largest layer or blob accepted, in MiB |
+| `registry.max_manifest_kib` | whole number | `4096` | The largest manifest accepted, in KiB |
+| `registry.default_quota_gib` | whole number | `20` | What a project may store when no policy says otherwise, in GiB; `-1` for no quota. Each distinct blob is counted once |
+| `registry.requests_per_minute` | whole number | `3000` | The most requests one caller makes in a minute; `-1` for no cap |
+| `registry.max_repositories_per_project` | whole number | `500` | The most repositories a project may have |
+| `registry.max_tags_per_repository` | whole number | `5000` | The most tags a repository may have |
+| `registry.gc_grace` | text | `1h` | How old an unreferenced blob must be before garbage collection removes it, so a push in progress is never collected. At least `1m` |
+| `registry.maintain_every` | text | `6h` | How often retention rules are applied and garbage is collected; `off` turns the schedule off (`launchway registry gc` still works). At least `1m` |
+| `registry.upload_ttl` | text | `24h` | How long an unfinished upload may sit idle before it is removed. At least `1m` |
+
 ## Findings
 
 Limits on what the server keeps of security findings (SARIF) and SBOMs. `0` means the default.

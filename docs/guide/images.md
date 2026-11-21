@@ -49,7 +49,7 @@ steps:
 | `platforms` | `os/arch` values; default the builder's own. See *Several platforms* |
 | `build_args` | Values as for deploy steps: written in place, `{ output: step.key }`, `{ run: sha \| short_sha \| branch \| tag \| number \| commit_time }` or `{ input: name }`. They are recorded in the provenance: never put a secret in one |
 | `secrets` | Build secrets by ID, read from the runner's secret stores like any step's secrets. They reach the build only as `RUN --mount=type=secret` mounts: never in a layer, the image's history, the provenance, the log (masked like any secret), an event or the database |
-| `tags` | Names to push under: a registry as the runner's configuration names it, a repository in it, and a tag (a value, as above) |
+| `tags` | Names to push under: a registry as the runner's configuration names it, a repository in it, and a tag (a value, as above). A tag that names no registry (or `registry: launchway`) goes to the [built-in registry](registry.md): no runner configuration, and the step is handed a credential made for the run. There the repository is under the project (`api` in project `shop` is `shop/api`) |
 | `push` | Default true. Pull-request and draft runs never push, whatever it says |
 | `cache` | A repository the build cache is read from and, on runs that push and may push there, written to |
 | `sbom` | Make a CycloneDX SBOM of each platform's image: kept as the step's `sbom` artifact and summarized, as for `reports.sbom`, and searchable under *Components* |

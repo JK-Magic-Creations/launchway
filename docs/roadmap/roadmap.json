@@ -2687,28 +2687,31 @@
           "blurb": "Images, charts and other artifacts stored beside the code, under the same permissions.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "A built-in OCI registry",
-              "value": "Store container images, Helm charts and other OCI artifacts in Launchway, passing the OCI conformance suite, with nothing else to run.",
-              "detail": "It lives in the same database and blob store as everything else, so permissions, audit, quotas and retention are one model. The protocol is small and well specified, so the hard parts are cleanup, tenancy and policy.",
+              "value": "Store container images, Helm charts and other OCI artifacts in Launchway, with nothing else to run. First slice built: the Distribution API under /v2/ (chunked and resumable uploads that work across servers, cross-repository mounts, Range reads, referrers, multi-platform indexes), private by default, in the same database and blob store as everything else.",
+              "detail": "Tested with podman, skopeo, helm and a registry client library, on SQLite and PostgreSQL. Still to do before it can claim conformance: run the official OCI conformance suite (it could not be fetched offline), encrypt blobs at rest (they are not encrypted by Launchway yet) and settle S3-backed stores with a real bucket.",
               "needs": "Built-in artifact storage.",
-              "area": "registry"
+              "area": "registry",
+              "link": "guide/registry"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Helm charts and other artifacts as first-class",
               "value": "Charts, signatures, bills of materials, attestations, operating-system images and WebAssembly modules are stored and shown properly.",
-              "detail": "A chart page shows its versions, which applications use which, and the values it accepts.",
+              "detail": "Charts and any OCI artifact are stored, listed with their type and fetched with helm; signatures, SBOMs and scan results are attached as referrers and shown. Not yet: a chart page with its versions, which applications use it and the values it accepts.",
               "needs": "A built-in OCI registry.",
-              "area": "registry"
+              "area": "registry",
+              "link": "guide/registry"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "An image page that tells the whole story",
               "value": "Where an image runs now, tags, layers, vulnerabilities with fixes, contents, signature, provenance and the run and commit that built it.",
-              "detail": "Its history is drawn as a line: built, scanned, signed, in test, in production.",
+              "detail": "The Registry tab of Images lists repositories, tags and manifests with size, digest, platforms, who pushed each from which run, whether it is signed, has an SBOM, a vulnerability summary and a pull reference to copy. Not yet: where it runs now, layers, and the history drawn as a line.",
               "needs": "A built-in OCI registry.",
-              "area": "registry"
+              "area": "registry",
+              "link": "guide/registry"
             },
             {
               "status": "planned",
@@ -2719,12 +2722,13 @@
               "area": "registry"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Retention that protects what runs",
               "value": "Clean up old images without ever deleting one that is deployed.",
-              "detail": "The label says why each item is kept, such as kept because deployed.",
+              "detail": "Retention rules (keep the newest N, keep tags matching patterns, untagged older than D days) at installation, project and repository level, with an exact preview before anything is deleted; an image an environment runs is never deleted, by retention or by hand. Cleanup is mark and sweep with a grace period, safe beside pushes. The label saying why each item is kept is not built.",
               "needs": "A built-in OCI registry.",
-              "area": "registry"
+              "area": "registry",
+              "link": "guide/registry"
             },
             {
               "status": "planned",
@@ -2759,20 +2763,22 @@
               "area": "registry"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Per-project packages and permissions",
               "value": "A packages tab in each project that is a filtered view of the registry, with per-package access.",
-              "detail": "The registry and the code share one permission model.",
+              "detail": "Every repository belongs to the project named by its first path component and follows the project's roles (viewer pulls, operator pushes, admin deletes); the Registry tab shows a project's repositories. Per-package access inside a project is not built.",
               "needs": "A built-in OCI registry.",
-              "area": "registry"
+              "area": "registry",
+              "link": "guide/registry"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Signing and verification",
               "value": "Sign images on build and verify signatures on pull and deploy.",
-              "detail": "Signatures and attestations are stored next to the image.",
+              "detail": "Signatures and attestations an image step writes are stored next to the image and shown. Verifying signatures on pull and deploy is not built.",
               "needs": "A built-in OCI registry.",
-              "area": "registry"
+              "area": "registry",
+              "link": "guide/registry"
             },
             {
               "status": "planned",

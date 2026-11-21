@@ -59,8 +59,7 @@ type Server struct {
 	StreamPing time.Duration
 	// TokenMaxDays is the longest an API token may last; 0 is 365 days.
 	TokenMaxDays int
-	// WaiveRole is the role needed to waive a policy's rule
-	// (policy.waivers.allow); nil means admin, NoRole nobody.
+	// WaiveRole is the role needed to waive a policy's rule (policy.waivers.allow); nil means admin, NoRole nobody.
 	WaiveRole *auth.Role
 	// ReportsOrigin, when set (https://reports.example.com), is a separate
 	// origin that alone serves hosted HTML reports (see reports.go).
@@ -82,8 +81,9 @@ type Server struct {
 	sealer    *auth.Sealer // seals the state of sign-ins in progress
 	reportKey []byte       // signs links to HTML reports
 
-	MCP   *MCPOptions   // turns on the Model Context Protocol endpoint, /mcp; nil is off
-	Forge *ForgeHosting // Git hosting; nil is off
+	MCP      *MCPOptions      // turns on the Model Context Protocol endpoint, /mcp; nil is off
+	Forge    *ForgeHosting    // Git hosting; nil is off
+	Registry *RegistryHosting // the built-in OCI registry under /v2/; nil is off
 
 	mux      *http.ServeMux // the routes, which MCP tools call in process
 	checks   checkLimiter
@@ -262,7 +262,7 @@ func (s *Server) Handler() http.Handler {
 	})
 	mux.Handle("/", s.ui())
 	s.mux = mux
-	return s.requestIDs(s.recoverer(s.hsts(securityHeaders(s.splitOrigin(s.gitAlias(mux))))))
+	return s.requestIDs(s.recoverer(s.hsts(securityHeaders(s.splitOrigin(s.registryMiddleware(s.gitAlias(mux)))))))
 }
 
 // ---- shutting down ----
@@ -433,7 +433,7 @@ func (s *Server) lease(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	writeJSON(w, http.StatusOK, job)
+	s.writeLeased(w, r, job)
 }
 
 type leaseReq struct {

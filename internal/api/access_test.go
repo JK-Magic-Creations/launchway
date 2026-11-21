@@ -143,7 +143,24 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/tokens":                          {"GET", "/api/v1/tokens", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"POST /api/v1/tokens":                         {"POST", "/api/v1/tokens", `{"name":"matrix"}`, [6]int{401, 201, 201, 201, 201, 201}},
 	"DELETE /api/v1/tokens/{id}":                  {"DELETE", "/api/v1/tokens/tok_nope", "", [6]int{401, 404, 404, 404, 404, 404}},
-	"GET /api/v1/audit":                           {"GET", "/api/v1/audit", "", [6]int{401, 403, 403, 403, 403, 200}},
+	// The built-in registry's management routes. This server has no registry
+	// (registry_e2e_test.go covers it on): what passes the permission check
+	// gets 404 feature_off.
+	"GET /api/v1/registry":                            {"GET", "/api/v1/registry", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/registry/gc":                         {"GET", "/api/v1/registry/gc", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"POST /api/v1/registry/gc":                        {"POST", "/api/v1/registry/gc", `{"dry_run":true}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"GET /api/v1/registry/policy":                     {"GET", "/api/v1/registry/policy", "", [6]int{401, 403, 403, 403, 403, 404}},
+	"PUT /api/v1/registry/policy":                     {"PUT", "/api/v1/registry/policy", `{}`, [6]int{401, 403, 403, 403, 403, 404}},
+	"GET /api/v1/projects/{name}/registry":            {"GET", "/api/v1/projects/pay-api/registry", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/registry/images":     {"GET", "/api/v1/projects/pay-api/registry/images?repository=pay-api/x", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/registry/image":      {"GET", "/api/v1/projects/pay-api/registry/image?repository=pay-api/x&reference=1", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"DELETE /api/v1/projects/{name}/registry/image":   {"DELETE", "/api/v1/projects/pay-api/registry/image?repository=pay-api/x&reference=1", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"DELETE /api/v1/projects/{name}/registry/tag":     {"DELETE", "/api/v1/projects/pay-api/registry/tag?repository=pay-api/x&tag=1", "", [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/registry/policy":     {"GET", "/api/v1/projects/pay-api/registry/policy", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PUT /api/v1/projects/{name}/registry/policy":     {"PUT", "/api/v1/projects/pay-api/registry/policy", `{}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/registry/retention":  {"GET", "/api/v1/projects/pay-api/registry/retention", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/projects/{name}/registry/retention": {"POST", "/api/v1/projects/pay-api/registry/retention", `{}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/audit":                               {"GET", "/api/v1/audit", "", [6]int{401, 403, 403, 403, 403, 200}},
 	// Step resources: anyone signed in reads, an admin changes.
 	"GET /api/v1/step-resources":                 {"GET", "/api/v1/step-resources", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/step-resources/limits":          {"GET", "/api/v1/step-resources/limits", "", [6]int{401, 200, 200, 200, 200, 200}},

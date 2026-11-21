@@ -31,7 +31,7 @@ export function kindOf(name: string, type: string): FileKind {
   if (type === "symlink") return "link";
   if (type === "submodule") return "module";
   const lower = name.toLowerCase();
-  if (lower === "dockerfile" || lower === "makefile" || lower === "jenkinsfile") return "config";
+  if (lower === "dockerfile" || lower === "makefile") return "config";
   if (lower === "license" || lower === "licence" || lower === "readme" || lower === "authors" || lower === "notice") return "doc";
   if (lower === "package-lock.json" || lower === "go.sum") return "lock";
   if (lower.startsWith(".") && !lower.includes(".", 1)) return "config";

@@ -143,6 +143,9 @@ A Git repository Launchway watches and runs pipelines for.
 ### Provenance
 A signed statement of how an image was built: from what source, with what, by which runner.
 
+### Registry
+Launchway's own store for container images, Helm charts and other OCI artifacts, served under `/v2/` on the server's address. A repository in it is named `PROJECT/NAME`, and the project's roles decide who may pull, push and delete. See [The built-in registry](guide/registry.md).
+
 ### Re-run
 A new run that starts again from a chosen step, reusing the results of the steps before it.
 

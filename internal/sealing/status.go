@@ -70,6 +70,7 @@ var NotYetEncrypted = []string{
 	"logs",
 	"build caches",
 	"hosted Git repository packs",
+	"registry images, charts and other OCI artifacts",
 }
 
 // Report reads the state. It changes nothing.

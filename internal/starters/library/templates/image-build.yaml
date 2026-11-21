@@ -11,7 +11,7 @@ template: image-build
 description: "Maneuver: build, scan, SBOM, sign and push one image from a Dockerfile"
 params:
   image_repository: { type: string, default: "launchway/app", description: "The image's repository in the registry, without the host: team/app" }
-  registry: { type: string, default: "registry", description: "A registry the runner's configuration names" }
+  registry: { type: string, default: "launchway", description: "The registry to push to: launchway is the registry built into this server, or a name the runner's configuration lists" }
   dockerfile: { type: string, default: "Dockerfile", description: "The Dockerfile, relative to the repository (not to the context)" }
   context: { type: string, default: ".", description: "The build context, relative to the repository" }
   push: { type: boolean, default: false, description: "Push the image; off builds and scans only" }

@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import type { RunDetail } from "../api";
 import { approval, environment, me, project, run, runner, step } from "./fixtures";
+import { registryFixtures } from "./registryFixtures";
 
 /** A stand-in for the server for tests that draw whole pages: fixtures for the main lists, an empty answer
  * for anything else. `overrides` maps a path (without the query) to the JSON to answer with. */
@@ -55,6 +56,7 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/signin/test": { tested: false },
     "/api/v1/encryption/root-key-copy": { taken: false, can_take: true },
     ...forgeFixtures(),
+    ...registryFixtures(),
     ...rollbackFixtures(detail),
     ...pullFixtures(),
     ...browseFixtures(),

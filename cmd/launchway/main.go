@@ -81,6 +81,7 @@ Usage:
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+  launchway registry status|list|tags|inspect|delete|retention|policy|gc   the built-in image and chart registry
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
@@ -97,7 +98,7 @@ The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
 --secrets-config FILE, the secret stores they may read.
 `
 
-// commands are the commands that take their arguments and nothing else, by name.
+// commands take their arguments and nothing else, by name (registry.go adds registry).
 var commands = map[string]func([]string) error{
 	"runs":           cmdRuns,
 	"approvals":      cmdApprovals,
@@ -325,8 +326,7 @@ func cmdServer(args []string) error {
 	})
 }
 
-// shutdownTimeout bounds how long a stopping server waits for the requests
-// in flight to finish.
+// shutdownTimeout bounds how long a stopping server waits for requests in flight.
 const shutdownTimeout = 15 * time.Second
 
 // shutdown stops serving gracefully. At once, /readyz reports that the

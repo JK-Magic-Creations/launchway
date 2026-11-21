@@ -83,6 +83,9 @@ func (c *Config) checkTriggers() error {
 	if err := c.Forge.Check(); err != nil {
 		return err
 	}
+	if err := c.Registry.Check(); err != nil {
+		return err
+	}
 	for _, p := range c.Projects {
 		if h := p.GitWebhook; h != nil {
 			if !slices.Contains(GitHookKinds, h.Kind) {

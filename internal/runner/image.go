@@ -95,6 +95,7 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 	}
 	meta := filepath.Join(r.DataDir, "steps", job.LeaseID)
 	defer os.RemoveAll(meta)
+	images, builtinToken := r.builtinRegistry(job, mask, sys)
 	spec := executor.Spec{
 		RunID: job.RunID, Containers: containerSpecs(job), Container: job.Container,
 		Name: "launchway-" + job.LeaseID, Image: job.Image, Workspace: ws, WorkspaceID: workspaceID(job), MetaDir: meta, Mask: mask.Mask,
@@ -147,13 +148,7 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 		RunnerID: r.runnerURI(),
 		Version:  r.Info.Version,
 		WorkDir:  filepath.Join(work, "build"),
-		Lookup: func(ctx context.Context, ref pipeline.SecretRef) (string, error) {
-			v, err := r.lookup(ctx, job.Project, ref, sys)
-			if err == nil {
-				mask.add("credential "+ref.String(), v)
-			}
-			return v, err
-		},
+		Lookup:   r.imageLookup(job, mask, sys, builtinToken),
 		Log: func(line string) {
 			out("stdout", mask.Mask(line))
 		},
@@ -171,7 +166,8 @@ func (r *Runner) runImage(ctx context.Context, job *engine.Job, sys func(string,
 		req.Scan = &imagebuild.Scan{FailOn: b.Scan.FailOn, Enforce: b.Scan.Mode == "enforce"}
 	}
 	start := time.Now()
-	res, err := imagebuild.Build(tctx, r.Images, req)
+	res, err := imagebuild.Build(tctx, images, req)
+	imagebuild.AttachToBuiltin(tctx, images, req, res, err)
 	took := time.Since(start).Round(100 * time.Millisecond)
 	record := imageRecord(res)
 	switch {

@@ -15,6 +15,7 @@ key and setting see the [reference](../reference/index.md).
 | [Test reports](test-reports.md) | 13 formats, attachments, coverage, hosted HTML reports, flaky tests, history |
 | [Artifacts](artifacts.md) | Files steps keep and fetch, storage, limits |
 | [Variables at levels](variables.md) | A variable set at a level, overridden by a nearer one, locked from above, and how a pipeline takes it |
+| [The built-in registry](registry.md) | Images and Helm charts stored in Launchway: who may push and pull, run credentials, quotas, retention, collection |
 | [Build caches](build-caches.md) | Keeping dependencies between runs, keys, who can read and write what, limits |
 | [Where artifacts are kept](../artifacts.md) | The database, filesystem and S3 stores, measurements, moving between them |
 | [Security findings and SBOMs](security-findings.md) | SARIF findings, new and fixed, SBOMs, component search |

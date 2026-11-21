@@ -482,6 +482,56 @@ in the message.
 | `GET /api/v1/encryption` | `admin` | — | Encryption at rest: `{"encrypted", "dump_alone_cannot_reveal_secrets", "root_key_holder": {"kind", "where", "strength", "reachable"}, "keys", "columns", "secrets_sealed", "secrets_remaining", "migration": {"state", ...}, "warnings", "advice", "not_yet_encrypted", "summary"}`. Never any key material. Read-only: the root key is a bootstrap setting held outside the database, and `launchway encryption` rotates or replaces it where the key is. `409` with code `no_root_key` is what a request for something that stores secrets (a webhook with a secret) gets on a server with no root key |
 | `GET /api/v1/run-limits` | `signed-in` | — | `{"max_run_timeout", "updated_at", "updated_by"}`. An empty `max_run_timeout` is not set: pipelines may ask for up to `720h`. |
 | `PUT /api/v1/run-limits` | `admin` | `run_limits.set` | Replaces the limits: `{"max_run_timeout": "48h"}`; empty or left out removes the limit. `400` for a duration that does not read or is outside `1m` to `720h`. |
+## Built-in registry
+
+Launchway serves an OCI registry for container images, Helm charts and other OCI artifacts. The registry
+protocol itself is under `/v2/` (see [the registry guide](../guide/registry.md)); these routes manage what
+is in it. A repository is `PROJECT/NAME`: the first path component is the project, and the project's roles
+decide everything: viewer pulls and lists, operator pushes, admin deletes and sets policy. A repository
+someone may not read is answered as one that does not exist. The registry is off (`404`, code `feature_off`)
+when `registry.enabled` is false or the server has no artifact store, and answers `503` (code
+`needs_sign_in`) while sign-in is off: there is no anonymous registry.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/registry` | `signed-in` | — | Whether the registry is on, its `address`, the `host` clients write before a repository, whether it is plain HTTP (`insecure`), the blob `store`, `limits`, the number of `repositories` the caller may see, how to log in, and `encryption`: `blobs_encrypted_by_launchway` is `false` in this release, with a note saying what protects blobs at rest. An administrator also gets `last_gc`. |
+| `GET /api/v1/registry/gc` | `admin` | — | The report of the last garbage collection: `ran`, `at`, `report`. |
+| `POST /api/v1/registry/gc` | `admin` | `registry.gc_run` | Collects garbage. Body `{"dry_run": true}` lists what would go (`blobs`, `bytes`, `links`, `uploads`, `strays`, the first `digests`) and removes nothing. `409` when another server is collecting. |
+| `GET /api/v1/registry/policy` | `admin` | — | The installation's policy, or with `?scope=organization&name=` an organization's: `quota_bytes`, `retention`, `immutable_tags`. |
+| `PUT /api/v1/registry/policy` | `admin` | `registry.policy` | Replaces it. Body `{"scope": "installation", "policy": {...}}`; an empty policy removes it. |
+| `GET /api/v1/projects/{name}/registry` | `project-viewer` | — | The project's repositories (`images`, `tags`, `bytes`, `pushed_at`), `used_bytes` against `quota_bytes` (`-1`: none), the `policy` in force with where each part comes from, and how to push. |
+| `GET /api/v1/projects/{name}/registry/images` | `project-viewer` | — | `?repository=` the images of one repository, newest first: `digest`, `tags`, `total_size`, `platforms`, `created_by` and `run_id`, `signed`, `has_sbom`, `vulnerabilities` (counts from an attached scan result), `attached` (signatures, SBOMs, scan results) and a copyable `pull` reference. |
+| `GET /api/v1/projects/{name}/registry/image` | `project-viewer` | — | `?repository=&reference=` (a tag or a digest): one image as above and its `manifest`. |
+| `DELETE /api/v1/projects/{name}/registry/image` | `project-operator` | `registry.image_delete` | `?repository=&reference=` deletes the image with its tags and attachments; the caller must be an admin of the project (an operator gets `403`). Refused with `409` for an immutable tag or an image a deployment uses. The bytes go at the next collection. |
+| `DELETE /api/v1/projects/{name}/registry/tag` | `project-operator` | `registry.tag_delete` | `?repository=&tag=` deletes only the tag; project admin only; `409` for an immutable tag. |
+| `GET /api/v1/projects/{name}/registry/policy` | `project-viewer` | — | The project's policy (with `?repository=` one repository's) and the `effective` values after the levels are combined. |
+| `PUT /api/v1/projects/{name}/registry/policy` | `project-operator` | `registry.policy` | Replaces it; project admin only. A project admin may lower the quota but not raise it above the installation's. |
+| `GET /api/v1/projects/{name}/registry/retention` | `project-viewer` | — | What the retention rules would delete now (`?repository=` for one repository): each `candidate` with its tags, size and reason. Deletes nothing. |
+| `POST /api/v1/projects/{name}/registry/retention` | `project-operator` | `registry.retention_run` | Deletes them; project admin only. Answers what was `deleted`. |
+
+### The registry protocol under `/v2/`
+
+These endpoints speak the OCI Distribution API (version 1.1) and are not JSON-API routes: errors are the
+protocol's (`{"errors": [{"code", "message"}]}`, with Launchway's `error`, `code` and `next` beside them).
+Everything needs credentials: `GET /v2/` answers `401` with a `WWW-Authenticate: Bearer realm=".../v2/token"`
+challenge. Clients send HTTP Basic with any user name and an API token as the password, either directly or to
+`GET /v2/token` (which grants only what the caller may do, for five minutes); a pipeline's steps use a
+credential made for their run (`lwi_...`), which pulls its own project's repositories and those a project's
+policy shares with it, pushes only to its own project and never for a pull request or draft run, and stops
+working when the run ends. Passwords and tokens are accepted over HTTPS, or over HTTP only on a loopback
+listener or with `registry.allow_insecure_http`.
+
+| Endpoint | Does |
+|---|---|
+| `GET /v2/` | version check (authenticated) |
+| `GET /v2/_catalog` | the repositories the caller may pull |
+| `GET /v2/{name}/tags/list?n=&last=` | tags, paginated with a `Link` header |
+| `HEAD`, `GET`, `PUT`, `DELETE /v2/{name}/manifests/{reference}` | manifests by tag or digest; delete by tag removes the tag, by digest the image and its attachments |
+| `HEAD`, `GET /v2/{name}/blobs/{digest}` | blobs, with `Range` reads; a blob is visible only in repositories it was pushed or mounted to |
+| `POST /v2/{name}/blobs/uploads/` | start an upload; `?digest=` for a monolithic push, `?mount=&from=` for a cross-repository mount (inside one organization only) |
+| `GET`, `PATCH`, `PUT`, `DELETE /v2/{name}/blobs/uploads/{id}` | status, chunk (with `Content-Range`), finish (`?digest=`), cancel; any server of a group may take any request |
+| `GET /v2/{name}/referrers/{digest}?artifactType=` | manifests whose `subject` is the digest (signatures, SBOMs, attestations) as an image index |
+
 ## Build caches
 
 A step's `cache:` key (see [the pipeline reference](pipeline.md#cache)) keeps directories between runs.
