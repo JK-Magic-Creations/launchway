@@ -46,6 +46,7 @@ const clientUsage = `Usage:
   launchway runs show <run-id> [--json]
   launchway runs logs <run-id> [--step S] [--follow]
   launchway runs cancel <run-id>
+  launchway approvals list|approve|reject          see launchway approvals
   launchway runs resume <run-id> [--wait] [--timeout D] [--json]       the same run goes on, running its failed steps again
   launchway runs rerun <run-id> [--from STEP]... [--failed] [--plan] [--wait] [--timeout D] [--json]
                                                           a new run from those steps (or the failed ones), reusing the rest
