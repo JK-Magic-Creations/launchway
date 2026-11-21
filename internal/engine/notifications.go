@@ -476,6 +476,17 @@ func signBody(key string, body []byte) string {
 // link that opens.
 var notifyBases sync.Map
 
+// PullNotice is a pull request event for the notification rules; Kind is one of the
+// notify.Pull... names (pull.review_requested, pull.approved, ...).
+type PullNotice struct {
+	Kind, Repository, Branch, Title, Detail, Link, Key string
+}
+
+// NotifyPull offers a pull request's event to the notification rules (see NotifyEvent).
+func (e *Engine) NotifyPull(ctx context.Context, n PullNotice) {
+	e.NotifyEvent(ctx, notify.Event{Kind: n.Kind, Project: n.Repository, Branch: n.Branch, Title: n.Title, Detail: n.Detail, Link: n.Link, Key: n.Key})
+}
+
 // NotifyEvent offers an event made elsewhere (a review requested, a queue that
 // failed) to the notification rules, and queues a message for each channel they
 // name. The link is a path; the server's address is put in front of it. Nothing
@@ -493,3 +504,5 @@ func (e *Engine) NotifyEvent(ctx context.Context, ev notify.Event) {
 	}
 	e.enqueueNotifications(ctx, cfg, ev)
 }
+
+func notifyEventsKnown() []string { return notify.Events }

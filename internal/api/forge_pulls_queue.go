@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
-	"github.com/jk-magic-creations/launchway/internal/notify"
 )
 
 // The merge queue, updating a branch, files marked viewed, and the inbox of
@@ -178,37 +178,36 @@ func (s *Server) notifyPull(ctx context.Context, repoPath string, e pulls.Event)
 	if s.Engine == nil {
 		return
 	}
-	ev := notify.Event{Project: repoPath, Branch: e.Pull.TargetBranch, At: s.Now().UnixMilli(),
-		Link: fmt.Sprintf("/repositories/%s/pulls/%d", repoPath, e.Pull.Number)}
+	n := engine.PullNotice{Repository: repoPath, Branch: e.Pull.TargetBranch, Link: fmt.Sprintf("/repositories/%s/pulls/%d", repoPath, e.Pull.Number)}
 	who := e.Actor
 	name := fmt.Sprintf("%s#%d", repoPath, e.Pull.Number)
 	switch e.Action {
 	case "review_requested":
 		asked := strings.Trim(strings.Join([]string{e.Detail["reviewers"], prefixJoin("group ", e.Detail["groups"])}, ", "), ", ")
-		ev.Kind, ev.Title, ev.Detail = notify.PullReviewRequested, "Review requested from "+asked+" on "+name+": "+e.Pull.Title, "Open the pull request to review it."
+		n.Kind, n.Title, n.Detail = "pull.review_requested", "Review requested from "+asked+" on "+name+": "+e.Pull.Title, "Open the pull request to review it."
 	case "review_submitted":
 		switch e.Detail["verdict"] {
 		case "approve":
-			ev.Kind, ev.Title = notify.PullApproved, who+" approved "+name+": "+e.Pull.Title
+			n.Kind, n.Title = "pull.approved", who+" approved "+name+": "+e.Pull.Title
 		case "request_changes":
-			ev.Kind, ev.Title, ev.Detail = notify.PullChangesRequested, who+" asked for changes on "+name+": "+e.Pull.Title, "Open the pull request to see what to change."
+			n.Kind, n.Title, n.Detail = "pull.changes_requested", who+" asked for changes on "+name+": "+e.Pull.Title, "Open the pull request to see what to change."
 		default:
 			if e.Detail["mentions"] != "" {
-				ev.Kind, ev.Title = notify.PullMentioned, who+" mentioned "+e.Detail["mentions"]+" in a review of "+name
+				n.Kind, n.Title = "pull.mentioned", who+" mentioned "+e.Detail["mentions"]+" in a review of "+name
 			}
 		}
 	case "commented":
 		if e.Detail["mentions"] != "" {
-			ev.Kind, ev.Title = notify.PullMentioned, who+" mentioned "+e.Detail["mentions"]+" on "+name+": "+e.Pull.Title
+			n.Kind, n.Title = "pull.mentioned", who+" mentioned "+e.Detail["mentions"]+" on "+name+": "+e.Pull.Title
 		}
 	case "queue_failed":
-		ev.Kind, ev.Title, ev.Detail = notify.PullQueueFailed, name+" was taken out of the merge queue: "+e.Pull.Title, e.Detail["reason"]
+		n.Kind, n.Title, n.Detail = "pull.queue_failed", name+" was taken out of the merge queue: "+e.Pull.Title, e.Detail["reason"]
 	}
-	if ev.Kind == "" {
+	if n.Kind == "" {
 		return
 	}
-	ev.Key = fmt.Sprintf("pull:%s:%s:%d", e.Pull.ID, e.Action, s.Now().UnixNano())
-	s.Engine.NotifyEvent(ctx, ev)
+	n.Key = fmt.Sprintf("pull:%s:%s:%d", e.Pull.ID, e.Action, s.Now().UnixNano())
+	s.Engine.NotifyPull(ctx, n)
 }
 
 func prefixJoin(prefix, csv string) string {
