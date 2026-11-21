@@ -1,4 +1,5 @@
 import type { RunDetail, StepView } from "../api";
+import "../estimateApi";
 import { runTiming, stepTiming } from "../estimate";
 import { Link } from "./ui";
 import "../estimate.css";

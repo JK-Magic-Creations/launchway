@@ -651,9 +651,7 @@ func (cl *client) show(args []string) error {
 		} else if s.Error != "" {
 			line += ": " + s.Error
 		}
-		if u := s.Estimate.Usual(); u != "" && !terminal(r.Status) && (s.Status == "running" || s.Status == "queued" || s.Status == "pending" || s.Status == "leased") {
-			line += " [" + u + "]"
-		}
+		line += usualNote(s.Estimate, r.Status, s.Status)
 		fmt.Fprintln(cl.out, line)
 		if s.Cause != nil {
 			for _, e := range s.Cause.Evidence() {

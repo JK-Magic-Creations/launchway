@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RunEstimate, StepEstimate } from "./api";
+import type { RunEstimate, StepEstimate } from "./estimateApi";
 import { approx, runTiming, stepTiming } from "./estimate";
 
 const est = (o: Partial<StepEstimate> = {}): StepEstimate => ({ samples: 8, enough: true, typical_ms: 120_000, low_ms: 100_000, high_ms: 150_000, slow_ms: 200_000, basis: "same_kind", ...o });

@@ -116,3 +116,16 @@ type cacheView struct {
 		Value string `json:"value"`
 	} `json:"key_parts"`
 }
+
+// usualNote is what a step that has not finished usually takes, for runs show.
+func usualNote(e *engine.StepEstimate, runStatus, stepStatus string) string {
+	switch stepStatus {
+	case "running", "queued", "pending", "leased":
+	default:
+		return ""
+	}
+	if u := e.Usual(); u != "" && !terminal(runStatus) {
+		return " [" + u + "]"
+	}
+	return ""
+}

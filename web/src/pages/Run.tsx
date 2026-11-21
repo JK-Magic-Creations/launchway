@@ -15,6 +15,7 @@ import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
 import { StepTimingLine } from "../components/Estimate";
+import { useStepLog } from "../useStepLog";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill, shownStatus, stepLabel } from "../components/ui";
 import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, phaseLabel, verdictLabel } from "../components/Deployment";
 import { TemplateFacts } from "../components/Libraries";
@@ -447,9 +448,6 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   showPolicy: () => void;
 }) {
   const [attempt, setAttempt] = useState(step.attempt);
-  const [lines, setLines] = useState<LogLine[]>([]);
-  const [dropped, setDropped] = useState(0);
-  const [loaded, setLoaded] = useState(false);
   const following = attempt === step.attempt;
   // The what-went-wrong panel above shows the last lines of the first failed step.
   const excerptInPanel = run.status === "failed" && run.step_list.find((x) => x.status === "failed")?.id === step.id;
@@ -457,63 +455,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   // Follow the newest attempt when a retry starts.
   useEffect(() => { setAttempt(step.attempt); }, [step.id, step.attempt]);
 
-  // The newest lines are kept in the view; more than this and the oldest are let go (they stay in the full log).
-  const KEEP = 20000;
-  const last = useRef(0);
-  const alive = useRef(0);
-  const append = useCallback((incoming: LogLine[]) => {
-    setLines((prev) => {
-      const seen = prev.length ? prev[prev.length - 1].seq : 0;
-      const fresh = incoming.filter((l) => l.seq > seen);
-      if (!fresh.length) return prev;
-      const all = prev.concat(fresh);
-      last.current = all[all.length - 1].seq;
-      if (all.length > KEEP) { setDropped((d) => d + all.length - KEEP); return all.slice(all.length - KEEP); }
-      return all;
-    });
-  }, []);
-  // Fetch what the view lacks after the last line it has: after a gap in the stream, or a reconnect.
-  const catchUp = useCallback(async (token: number) => {
-    for (;;) {
-      const r = await api.logs(run.id, step.id, attempt, last.current).catch(() => null);
-      if (!r || alive.current !== token || r.lines.length === 0) return;
-      append(r.lines);
-      if (r.lines.length < 5000) return;
-    }
-  }, [run.id, step.id, attempt, append]);
-
-  useEffect(() => {
-    const token = ++alive.current;
-    setLines([]); setLoaded(false); setDropped(0); last.current = 0;
-    if (attempt < 1) { setLoaded(true); return; }
-    (async () => {
-      let after = 0;
-      let all: LogLine[] = [];
-      let skipped = 0;
-      for (;;) {
-        const r = await api.logs(run.id, step.id, attempt, after).catch(() => null);
-        if (alive.current !== token || !r) break;
-        all = all.concat(r.lines);
-        if (all.length > KEEP) { skipped += all.length - KEEP; all = all.slice(all.length - KEEP); }
-        if (r.lines.length < 5000) break;
-        after = r.lines[r.lines.length - 1].seq;
-      }
-      if (alive.current === token) { setLines(all); setDropped(skipped); last.current = all.length ? all[all.length - 1].seq : 0; setLoaded(true); }
-    })();
-    const mine = alive;
-    return () => { mine.current++; };
-  }, [run.id, step.id, attempt]);
-
-  useEffect(() => {
-    sink.current = (s, a, incoming) => {
-      if (s === "" && a === 0) { void catchUp(alive.current); return; } // the stream came back
-      if (s !== step.id || a !== attempt) return;
-      // A batch that does not follow on from the last line means lines were missed: fetch them.
-      if (incoming.length && last.current > 0 && incoming[0].seq > last.current + 1) { void catchUp(alive.current); return; }
-      append(incoming);
-    };
-    return () => { sink.current = null; };
-  }, [step.id, attempt, sink, append, catchUp]);
+  const { lines, dropped, loaded } = useStepLog(run.id, step.id, attempt, sink);
 
   const why = whyWaiting(run, step, now);
   const isLive = following && (step.status === "running" || step.status === "leased");

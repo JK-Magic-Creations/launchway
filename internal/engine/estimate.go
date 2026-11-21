@@ -144,6 +144,14 @@ func runKind(event string) string {
 	return "branch"
 }
 
+// histCaches holds one cache per database an Engine uses.
+var histCaches sync.Map
+
+func (e *Engine) histCache() *historyCache {
+	v, _ := histCaches.LoadOrStore(e.db, &historyCache{})
+	return v.(*historyCache)
+}
+
 type historyCache struct {
 	mu sync.Mutex
 	m  map[string]*history
@@ -152,9 +160,10 @@ type historyCache struct {
 // pipelineHistory reads (or reuses) what the last runs of a pipeline did.
 func (e *Engine) pipelineHistory(project, pipeline, exceptRun string) (*history, error) {
 	key := project + "\x00" + pipeline
-	e.hist.mu.Lock()
-	h := e.hist.m[key]
-	e.hist.mu.Unlock()
+	hc := e.histCache()
+	hc.mu.Lock()
+	h := hc.m[key]
+	hc.mu.Unlock()
 	// A run that has ended since the last read makes it stale at once.
 	var stamp int64
 	if err := e.db.QueryRow(`SELECT COALESCE(MAX(finished_at), 0) FROM runs WHERE project = ? AND pipeline = ?`, project, pipeline).Scan(&stamp); err != nil {
@@ -164,52 +173,18 @@ func (e *Engine) pipelineHistory(project, pipeline, exceptRun string) (*history,
 		return h, nil
 	}
 	h = &history{steps: map[string][]stepSample{}, read: time.Now(), stamp: stamp}
-	rows, err := e.db.Query(`SELECT s.step_id, r.id, r.number, r.event, s.started_at, s.finished_at, s.decided_by
-		FROM steps s JOIN runs r ON r.id = s.run_id
-		WHERE r.id IN (SELECT id FROM runs WHERE project = ? AND pipeline = ? ORDER BY created_at DESC LIMIT ?)
-		AND s.status = 'succeeded' AND s.started_at > 0 AND s.finished_at >= s.started_at
-		ORDER BY r.created_at DESC, s.position`, project, pipeline, estimateRuns)
-	if err != nil {
+	if err := e.readStepSamples(h, project, pipeline); err != nil {
 		return nil, err
 	}
-	for rows.Next() {
-		var id, run, event, by string
-		var number int
-		var from, to int64
-		if err := rows.Scan(&id, &run, &number, &event, &from, &to, &by); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		h.steps[id] = append(h.steps[id], stepSample{run: run, number: number, ms: to - from, kind: runKind(event), person: by != ""})
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
+	if err := e.readRunSamples(h, project, pipeline); err != nil {
 		return nil, err
 	}
-	rows.Close()
-	rr, err := e.db.Query(`SELECT id, event, started_at, finished_at FROM runs WHERE project = ? AND pipeline = ? AND status = 'succeeded'
-		AND started_at > 0 AND finished_at >= started_at ORDER BY created_at DESC LIMIT ?`, project, pipeline, estimateRuns)
-	if err != nil {
-		return nil, err
+	hc.mu.Lock()
+	if hc.m == nil {
+		hc.m = map[string]*history{}
 	}
-	defer rr.Close()
-	for rr.Next() {
-		var id, event string
-		var from, to int64
-		if err := rr.Scan(&id, &event, &from, &to); err != nil {
-			return nil, err
-		}
-		h.runs = append(h.runs, runSample{run: id, ms: to - from, kind: runKind(event)})
-	}
-	if err := rr.Err(); err != nil {
-		return nil, err
-	}
-	e.hist.mu.Lock()
-	if e.hist.m == nil {
-		e.hist.m = map[string]*history{}
-	}
-	e.hist.m[key] = h
-	e.hist.mu.Unlock()
+	hc.m[key] = h
+	hc.mu.Unlock()
 	return h, nil
 }
 
@@ -468,20 +443,20 @@ func estimateFor(h *history, exceptRun, kind string, steps []estStep, now int64,
 	}
 	if runDone {
 		var usual []weighted
-		var any []weighted
+		var all []weighted
 		w := 1.0
 		for _, r := range h.runs {
 			if r.run == exceptRun {
 				continue
 			}
-			any = append(any, weighted{float64(r.ms), w})
+			all = append(all, weighted{float64(r.ms), w})
 			if r.kind == kind {
 				usual = append(usual, weighted{float64(r.ms), w})
 			}
 			w *= recencyWeight
 		}
 		if len(usual) < MinEstimateSamples {
-			usual = any
+			usual = all
 		}
 		if len(usual) >= MinEstimateSamples && tookMs > 0 {
 			re.Known = true
@@ -586,19 +561,10 @@ func (e *Engine) listEstimates(runs []*RunSummary) {
 		if err != nil {
 			continue
 		}
-		rows, err := e.db.Query(`SELECT step_id, started_at, queued_at FROM steps WHERE run_id = ?`, r.ID)
+		started, err := e.stepTimes(r.ID)
 		if err != nil {
 			continue
 		}
-		started := map[string][2]int64{}
-		for rows.Next() {
-			var id string
-			var a, b int64
-			if rows.Scan(&id, &a, &b) == nil {
-				started[id] = [2]int64{a, b}
-			}
-		}
-		rows.Close()
 		waiting := map[string]bool{}
 		for _, w := range r.Waiting {
 			waiting[w] = true
@@ -610,4 +576,63 @@ func (e *Engine) listEstimates(runs []*RunSummary) {
 		est, _ := estimateFor(h, r.ID, runKind(r.Event), steps, e.now().UnixMilli(), false, 0)
 		r.Estimate = est
 	}
+}
+
+// stepTimes reads when each step of a run started and was queued.
+func (e *Engine) stepTimes(runID string) (map[string][2]int64, error) {
+	rows, err := e.db.Query(`SELECT step_id, started_at, queued_at FROM steps WHERE run_id = ?`, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string][2]int64{}
+	for rows.Next() {
+		var id string
+		var a, b int64
+		if err := rows.Scan(&id, &a, &b); err != nil {
+			return nil, err
+		}
+		out[id] = [2]int64{a, b}
+	}
+	return out, rows.Err()
+}
+
+func (e *Engine) readStepSamples(h *history, project, pipeline string) error {
+	rows, err := e.db.Query(`SELECT s.step_id, r.id, r.number, r.event, s.started_at, s.finished_at, s.decided_by
+		FROM steps s JOIN runs r ON r.id = s.run_id
+		WHERE r.id IN (SELECT id FROM runs WHERE project = ? AND pipeline = ? ORDER BY created_at DESC LIMIT ?)
+		AND s.status = 'succeeded' AND s.started_at > 0 AND s.finished_at >= s.started_at
+		ORDER BY r.created_at DESC, s.position`, project, pipeline, estimateRuns)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, run, event, by string
+		var number int
+		var from, to int64
+		if err := rows.Scan(&id, &run, &number, &event, &from, &to, &by); err != nil {
+			return err
+		}
+		h.steps[id] = append(h.steps[id], stepSample{run: run, number: number, ms: to - from, kind: runKind(event), person: by != ""})
+	}
+	return rows.Err()
+}
+
+func (e *Engine) readRunSamples(h *history, project, pipeline string) error {
+	rr, err := e.db.Query(`SELECT id, event, started_at, finished_at FROM runs WHERE project = ? AND pipeline = ? AND status = 'succeeded'
+		AND started_at > 0 AND finished_at >= started_at ORDER BY created_at DESC LIMIT ?`, project, pipeline, estimateRuns)
+	if err != nil {
+		return err
+	}
+	defer rr.Close()
+	for rr.Next() {
+		var id, event string
+		var from, to int64
+		if err := rr.Scan(&id, &event, &from, &to); err != nil {
+			return err
+		}
+		h.runs = append(h.runs, runSample{run: id, ms: to - from, kind: runKind(event)})
+	}
+	return rr.Err()
 }

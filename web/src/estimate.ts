@@ -1,4 +1,5 @@
-import type { RunEstimate, StepEstimate, StepView } from "./api";
+import type { StepView } from "./api";
+import type { RunEstimate, StepEstimate } from "./estimateApi";
 import { duration } from "./format";
 import { terms } from "./terms";
 

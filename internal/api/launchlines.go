@@ -238,7 +238,7 @@ func hasEnv(ss []Station) bool {
 // resolve gives a station its state and detail from its steps and deployments.
 func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.RunDetail) {
 	var failed, waiting, running, holding, done, skipped, idle int
-	var failedStep, waitStep, runStep, holdStep *engine.StepView
+	var failedStep, waitStep, runStep *engine.StepView
 	for i := range b.steps {
 		st := &b.steps[i]
 		switch st.Status {
@@ -263,9 +263,6 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 			}
 		case engine.StepQueuedS:
 			holding++
-			if holdStep == nil {
-				holdStep = st
-			}
 		case engine.StepSucceeded:
 			done++
 		case engine.StepSkippedS, engine.StepCanceledS:
@@ -285,8 +282,9 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 		b.State, b.Step = stationRunning, runStep.ID
 		b.Detail = runningReason(runStep, deps, d)
 	case holding > 0:
-		b.State, b.Step = stationHolding, holdStep.ID
-		b.Detail = holdingReason(holdStep, d)
+		held := b.firstWith(engine.StepQueuedS)
+		b.State, b.Step = stationHolding, held.ID
+		b.Detail = holdingReason(held, d)
 	case done > 0 && idle == 0:
 		b.State = stationDone
 		b.Step = b.steps[len(b.steps)-1].ID
@@ -373,6 +371,16 @@ func runningReason(st *engine.StepView, deps map[string]engine.DeploymentView, d
 		return "A runner has taken " + st.ID + " and is starting it"
 	}
 	return st.ID + " is running"
+}
+
+// firstWith is the first step of the station in this status.
+func (b *stationBuild) firstWith(status engine.StepStatus) *engine.StepView {
+	for i := range b.steps {
+		if b.steps[i].Status == status {
+			return &b.steps[i]
+		}
+	}
+	return &b.steps[0]
 }
 
 // holdingReason says why a queued step is not running: the one reason every screen shows for it.

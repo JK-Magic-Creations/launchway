@@ -214,7 +214,6 @@ type logBuffer struct {
 	mu    sync.Mutex
 	cond  *sync.Cond
 	lines []engine.LogLine
-	wake  chan struct{} // a batch worth sending is ready
 }
 
 const (
@@ -223,16 +222,13 @@ const (
 	logBufferMax = 50_000
 	// logBufferWait is the longest such a wait lasts.
 	logBufferWait = 2 * time.Second
-	// logFlushNow is how many waiting lines send the batch without waiting
-	// for the next tick.
-	logFlushNow = 500
 	// logFlushEvery is how often a step's waiting lines are sent: a line
 	// reaches the server within about this time.
 	logFlushEvery = 150 * time.Millisecond
 )
 
 func newLogBuffer() *logBuffer {
-	b := &logBuffer{wake: make(chan struct{}, 1)}
+	b := &logBuffer{}
 	b.cond = sync.NewCond(&b.mu)
 	return b
 }
@@ -249,14 +245,7 @@ func (b *logBuffer) add(stream, text string) {
 		t.Stop()
 	}
 	b.lines = append(b.lines, engine.LogLine{At: time.Now().UnixMilli(), Stream: stream, Text: text})
-	n := len(b.lines)
 	b.mu.Unlock()
-	if n >= logFlushNow {
-		select {
-		case b.wake <- struct{}{}:
-		default:
-		}
-	}
 }
 
 func (b *logBuffer) take(max int) []engine.LogLine {
@@ -355,8 +344,6 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 			case <-bgStop:
 				return
 			case <-fl.C:
-				flush()
-			case <-logs.wake:
 				flush()
 			case <-hb.C:
 				c, err := r.Client.Heartbeat(report, job.LeaseID)
