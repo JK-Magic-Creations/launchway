@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"runtime"
@@ -146,13 +147,13 @@ func Plan(p *Probe, w Want) Decision {
 		return len(miss) == 0, strings.Join(miss, ", ")
 	}
 	if w.Prefer == StrategyBlueGreen {
-		if ok, miss := fits(w.Hosts); ok {
+		ok, miss := fits(w.Hosts)
+		if ok {
 			d.Strategy = StrategyBlueGreen
 			d.Why = append(d.Why, fmt.Sprintf("a second fleet of %d hosts fits", w.Hosts))
 			return d
-		} else {
-			d.Why = append(d.Why, "a second fleet would need "+miss+"; using a rolling update in place")
 		}
+		d.Why = append(d.Why, "a second fleet would need "+miss+"; using a rolling update in place")
 	}
 	d.Strategy = StrategyRolling
 	if w.Prefer != StrategyBlueGreen {
@@ -276,7 +277,7 @@ func (l *LocalHypervisor) Probe(ctx context.Context) (*Probe, error) {
 	if l.Dir != "" {
 		var st syscall.Statfs_t
 		if err := syscall.Statfs(l.Dir, &st); err == nil {
-			p.Capacity.DiskMB = int64(st.Bavail) * int64(st.Bsize) / (1 << 20)
+			p.Capacity.DiskMB = int64(st.Bavail&math.MaxInt64) * int64(st.Bsize) / (1 << 20) //nolint:gosec // masked to the int64 range, and a block size is small
 		} else {
 			p.Notes = append(p.Notes, "disk: "+err.Error())
 		}

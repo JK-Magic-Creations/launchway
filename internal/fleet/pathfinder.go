@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"time"
 )
 
@@ -75,14 +74,19 @@ func gcd(a, b int) int {
 	return a
 }
 
-// Pathfinder runs the plan.
-func (f *Fleet) Pathfinder(ctx context.Context, stable, fresh []Host, spec PathfinderSpec) (*PathfinderReport, error) {
-	rep := &PathfinderReport{Release: spec.Release, Weights: map[string]int{}}
+// pathRun is one Pathfinder in progress.
+type pathRun struct {
+	f             *Fleet
+	stable, fresh []Host
+	rep           *PathfinderReport
+}
+
+func (f *Fleet) pathPreflight(stable, fresh []Host, spec *PathfinderSpec) error {
 	if f.Traffic == nil {
-		return rep, errors.New("a Pathfinder moves traffic by weights and needs a traffic provider")
+		return errors.New("a Pathfinder moves traffic by weights and needs a traffic provider")
 	}
 	if spec.Verify == nil {
-		return rep, errors.New("a Pathfinder needs a verification between steps; it will not move traffic on faith")
+		return errors.New("a Pathfinder needs a verification between steps; it will not move traffic on faith")
 	}
 	if len(spec.Steps) == 0 {
 		spec.Steps = []int{10, 50, 100}
@@ -90,100 +94,110 @@ func (f *Fleet) Pathfinder(ctx context.Context, stable, fresh []Host, spec Pathf
 	last := 0
 	for _, p := range spec.Steps {
 		if p <= last || p > 100 {
-			return rep, fmt.Errorf("steps must rise and end at most at 100: %v", spec.Steps)
+			return fmt.Errorf("steps must rise and end at most at 100: %v", spec.Steps)
 		}
 		last = p
 	}
 	if len(stable) == 0 || len(fresh) == 0 {
-		return rep, errors.New("a Pathfinder needs a stable group and a new group, each with at least one host")
+		return errors.New("a Pathfinder needs a stable group and a new group, each with at least one host")
 	}
 	for _, h := range append(append([]Host{}, stable...), fresh...) {
 		if err := h.Validate(); err != nil {
-			return rep, err
+			return err
 		}
 		if h.Member == "" {
-			return rep, fmt.Errorf("host %s has no load balancer member", h.Name)
+			return fmt.Errorf("host %s has no load balancer member", h.Name)
 		}
 		if f.Refuse != nil {
 			if err := f.Refuse(h); err != nil {
-				return rep, err
+				return err
 			}
 		}
 	}
+	return nil
+}
+
+// setW gives the new group the share (percent) of traffic.
+func (r *pathRun) setW(ctx context.Context, percent int) error {
+	sw, nw, err := WeightsFor(len(r.stable), len(r.fresh), percent)
+	if err != nil {
+		return err
+	}
+	// Raise the side that gains first, so capacity never dips.
+	for _, h := range r.fresh {
+		if err := r.f.Traffic.SetWeight(ctx, h.Member, nw); err != nil {
+			return err
+		}
+		r.rep.Weights[h.Name] = nw
+	}
+	for _, h := range r.stable {
+		if err := r.f.Traffic.SetWeight(ctx, h.Member, sw); err != nil {
+			return err
+		}
+		r.rep.Weights[h.Name] = sw
+	}
+	w := map[string]int{}
+	for k, v := range r.rep.Weights {
+		w[k] = v
+	}
+	if r.f.Events != nil {
+		r.f.Events(Event{Time: time.Now(), Phase: "weights", Message: fmt.Sprintf("new group at %d percent", percent), Weights: w})
+	}
+	return nil
+}
+
+// back puts the weights back at once and reports the failure.
+func (r *pathRun) back(ctx context.Context, why error) (*PathfinderReport, error) {
+	r.rep.Failure = why.Error()
+	r.f.Events.emit("", "failed", "%v; putting the weights back", why)
+	if err := r.setW(context.WithoutCancel(ctx), 0); err != nil {
+		r.f.Events.emit("", "quarantine", "the weights could not be put back: %v", err)
+		return r.rep, fmt.Errorf("%w; and putting the weights back failed: %v", ErrPathfinderReturned, err)
+	}
+	r.rep.Returned, r.rep.Reached = true, 0
+	return r.rep, fmt.Errorf("%w: %v", ErrPathfinderReturned, why)
+}
+
+// Pathfinder runs the plan.
+func (f *Fleet) Pathfinder(ctx context.Context, stable, fresh []Host, spec PathfinderSpec) (*PathfinderReport, error) {
+	rep := &PathfinderReport{Release: spec.Release, Weights: map[string]int{}}
+	if err := f.pathPreflight(stable, fresh, &spec); err != nil {
+		return rep, err
+	}
+	r := &pathRun{f: f, stable: stable, fresh: fresh, rep: rep}
 	// The new group takes no traffic while it is changed and tested.
 	for _, h := range fresh {
 		if err := f.Traffic.SetWeight(ctx, h.Member, 0); err != nil {
 			return rep, err
 		}
 	}
-	setW := func(percent int) error {
-		sw, nw, err := WeightsFor(len(stable), len(fresh), percent)
-		if err != nil {
-			return err
-		}
-		// Raise the side that gains first, so capacity never dips.
-		for _, h := range fresh {
-			if err := f.Traffic.SetWeight(ctx, h.Member, nw); err != nil {
-				return err
-			}
-			rep.Weights[h.Name] = nw
-		}
-		for _, h := range stable {
-			if err := f.Traffic.SetWeight(ctx, h.Member, sw); err != nil {
-				return err
-			}
-			rep.Weights[h.Name] = sw
-		}
-		w := map[string]int{}
-		for k, v := range rep.Weights {
-			w[k] = v
-		}
-		if f.Events != nil {
-			f.Events(Event{Time: time.Now(), Phase: "weights", Message: fmt.Sprintf("new group at %d percent", percent), Weights: w})
-		}
-		return nil
-	}
-	back := func(why error) (*PathfinderReport, error) {
-		rep.Failure = why.Error()
-		f.Events.emit("", "failed", "%v; putting the weights back", why)
-		bctx := context.WithoutCancel(ctx)
-		if err := setW(0); err != nil {
-			f.Events.emit("", "quarantine", "the weights could not be put back: %v", err)
-			return rep, fmt.Errorf("%w; and putting the weights back failed: %v", ErrPathfinderReturned, err)
-		}
-		_ = bctx
-		rep.Returned, rep.Reached = true, 0
-		return rep, fmt.Errorf("%w: %v", ErrPathfinderReturned, why)
-	}
-	if err := setW(0); err != nil {
+	if err := r.setW(ctx, 0); err != nil {
 		return rep, err
 	}
-	// Change the new group in place while it takes nothing (weight 0): rolling
-	// with the whole group as one batch, drained first.
-	sub := &Fleet{Remote: f.Remote, Traffic: f.Traffic, Check: f.Check, CheckURL: f.CheckURL, Layout: f.Layout, Events: f.Events, Refuse: f.Refuse}
-	ir, err := sub.rollGroup(ctx, fresh, RollSpec{Release: spec.Release, Artifact: spec.Artifact, MaxUnavailable: len(fresh),
+	// Change the new group in place while it takes nothing (weight 0): the
+	// whole group as one batch, drained first.
+	ir, err := f.rollGroup(ctx, fresh, RollSpec{Release: spec.Release, Artifact: spec.Artifact, MaxUnavailable: len(fresh),
 		DrainMax: spec.DrainMax, Healthy: spec.Healthy, CheckEvery: spec.CheckEvery, CheckWithin: spec.CheckWithin})
 	rep.Install = ir
 	if err != nil {
 		// rollGroup returned the new group; the stable group was never touched.
-		_ = setW(0)
+		_ = r.setW(ctx, 0)
 		rep.Failure, rep.Returned = err.Error(), true
 		return rep, fmt.Errorf("%w: %v", ErrPathfinderReturned, err)
 	}
-	// Weight 0 hosts were admitted by rollGroup (state ready, weight kept at 0).
 	for _, p := range spec.Steps {
 		f.Events.emit("", "weights", "moving the new group to %d percent", p)
-		if err := setW(p); err != nil {
-			return back(err)
+		if err := r.setW(ctx, p); err != nil {
+			return r.back(ctx, err)
 		}
 		rep.Reached = p
 		select {
 		case <-time.After(spec.Bake):
 		case <-ctx.Done():
-			return back(ctx.Err())
+			return r.back(ctx, ctx.Err())
 		}
 		if err := spec.Verify(ctx, p); err != nil {
-			return back(fmt.Errorf("verification at %d percent failed: %w", p, err))
+			return r.back(ctx, fmt.Errorf("verification at %d percent failed: %w", p, err))
 		}
 		f.Events.emit("", "verify", "verified at %d percent", p)
 	}
@@ -194,15 +208,10 @@ func (f *Fleet) Pathfinder(ctx context.Context, stable, fresh []Host, spec Pathf
 		case <-ctx.Done():
 		}
 		if err := spec.Verify(ctx, 100); err != nil {
-			return back(fmt.Errorf("Overwatch failed: %w", err))
+			return r.back(ctx, fmt.Errorf("overwatch failed: %w", err))
 		}
 	}
 	f.Events.emit("", "done", "release %s serves 100 percent; the old group is kept at weight 0 for the way back", spec.Release)
-	keys := make([]string, 0, len(rep.Weights))
-	for k := range rep.Weights {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
 	return rep, nil
 }
 

@@ -417,12 +417,7 @@ func (ps *parser) checkDeployStep(k *yaml.Node, v *yaml.Node, at string, s *Step
 	if s.Version == nil {
 		s.Version = &Value{Run: "short_sha"}
 	}
-	switch {
-	case s.ArgoCD != nil && s.Fleet != nil:
-		ps.add(k, at+".fleet", "a deploy step deploys one way: write argocd or fleet, not both")
-	case s.ArgoCD == nil && s.Fleet == nil:
-		ps.add(k, at+".argocd", "say how to deploy: argocd: { application: ..., write_back: ... } or, to a fleet of hosts, fleet: { ... }")
-	}
+	ps.checkDeployWay(k, at, s)
 	if s.OnCancel == "" {
 		s.OnCancel = "leave"
 	}
@@ -950,5 +945,15 @@ func (ps *parser) checkDeploys(p *Pipeline) {
 			ps.problems = append(ps.problems, Problem{Line: b.Line, Path: "steps." + b.ID,
 				Message: fmt.Sprintf("%s and %s both deploy %s to %s and neither needs the other", a.ID, b.ID, what, a.Environment)})
 		}
+	}
+}
+
+// checkDeployWay requires exactly one way to deploy: Argo CD or a fleet.
+func (ps *parser) checkDeployWay(k *yaml.Node, at string, s *Step) {
+	switch {
+	case s.ArgoCD != nil && s.Fleet != nil:
+		ps.add(k, at+".fleet", "a deploy step deploys one way: write argocd or fleet, not both")
+	case s.ArgoCD == nil && s.Fleet == nil:
+		ps.add(k, at+".argocd", "say how to deploy: argocd: { application: ..., write_back: ... } or, to a fleet of hosts, fleet: { ... }")
 	}
 }

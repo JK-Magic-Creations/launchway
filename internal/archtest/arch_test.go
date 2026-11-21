@@ -69,6 +69,7 @@ var allowedImports = map[string][]string{
 	"internal/standards/standardstest":   {},
 	"internal/findings/jsonscan":         {},
 	"internal/forge":                     {},
+	"internal/fleet":                     {"internal/engine", "internal/pipeline"},
 	"internal/forge/archive":             {"internal/forge"},
 	"internal/forge/egress":              {},
 	"internal/forge/files":               {"internal/forge", "internal/forge/storage", "internal/gitexec"},

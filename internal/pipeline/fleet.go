@@ -234,32 +234,7 @@ func (ps *parser) checkFleet(n *yaml.Node, at string, f *FleetSpec, s *Step) {
 	if f.Service == "" {
 		f.Service = s.Service
 	}
-	if f.Method == "systemd" {
-		if !fleetNameRe.MatchString(f.Service) {
-			ps.add(n, at+".service", "name the systemd unit (lower-case letters, digits and hyphens), for example: service: web")
-		}
-		switch {
-		case f.Artifact == "":
-			ps.add(n, at+".artifact", "name the file to install, relative to the workspace, for example: artifact: dist/web")
-		case strings.HasPrefix(f.Artifact, "/") || strings.Contains(f.Artifact, ".."):
-			ps.add(n, at+".artifact", "the artifact is a path inside the workspace: no leading slash and no ..")
-		}
-		if f.Image != nil {
-			ps.add(n, at+".image", "image is for method bootc")
-		}
-	} else {
-		if f.Image == nil {
-			ps.add(n, at+".image", "name the operating-system image by digest, for example: image: { output: build.image } (name@sha256:...)")
-		} else if f.Image.Literal != "" && !strings.Contains(f.Image.Literal, "@sha256:") {
-			ps.add(n, at+".image", "a host takes an image by digest (name@sha256:...), because a tag can move")
-		}
-		if f.Artifact != "" {
-			ps.add(n, at+".artifact", "artifact is for method systemd")
-		}
-		if f.Strategy == "pathfinder" {
-			ps.add(n, at+".strategy", "a Pathfinder for image hosts is not built yet; use rolling (hosts reboot in batches, drained first)")
-		}
-	}
+	ps.checkFleetPayload(n, at, f)
 	if f.MaxUnavailable < 1 || f.MaxUnavailable > MaxFleetBatch {
 		ps.add(n, at+".max_unavailable", "max_unavailable is how many hosts change at once, from 1 to %d", MaxFleetBatch)
 	}
@@ -276,6 +251,41 @@ func (ps *parser) checkFleet(n *yaml.Node, at string, f *FleetSpec, s *Step) {
 	if f.SSH == nil || f.SSH.Key.Store == "" || f.SSH.Key.Key == "" {
 		ps.add(n, at+".ssh", "name the key the Station reaches hosts with, by reference, for example: ssh: { key: { store: vault, key: fleet/prod, field: private_key } }")
 	}
+	ps.checkFleetTraffic(n, at, f)
+	ps.checkFleetPathfinder(n, at, f)
+}
+
+// checkFleetPayload checks what is delivered: an artifact or an image.
+func (ps *parser) checkFleetPayload(n *yaml.Node, at string, f *FleetSpec) {
+	if f.Method == "systemd" {
+		if !fleetNameRe.MatchString(f.Service) {
+			ps.add(n, at+".service", "name the systemd unit (lower-case letters, digits and hyphens), for example: service: web")
+		}
+		switch {
+		case f.Artifact == "":
+			ps.add(n, at+".artifact", "name the file to install, relative to the workspace, for example: artifact: dist/web")
+		case strings.HasPrefix(f.Artifact, "/") || strings.Contains(f.Artifact, ".."):
+			ps.add(n, at+".artifact", "the artifact is a path inside the workspace: no leading slash and no ..")
+		}
+		if f.Image != nil {
+			ps.add(n, at+".image", "image is for method bootc")
+		}
+		return
+	}
+	if f.Image == nil {
+		ps.add(n, at+".image", "name the operating-system image by digest, for example: image: { output: build.image } (name@sha256:...)")
+	} else if f.Image.Literal != "" && !strings.Contains(f.Image.Literal, "@sha256:") {
+		ps.add(n, at+".image", "a host takes an image by digest (name@sha256:...), because a tag can move")
+	}
+	if f.Artifact != "" {
+		ps.add(n, at+".artifact", "artifact is for method systemd")
+	}
+	if f.Strategy == "pathfinder" {
+		ps.add(n, at+".strategy", "a Pathfinder for image hosts is not built yet; use rolling (hosts reboot in batches, drained first)")
+	}
+}
+
+func (ps *parser) checkFleetTraffic(n *yaml.Node, at string, f *FleetSpec) {
 	switch {
 	case f.Traffic == nil && !f.AllowNoTraffic:
 		ps.add(n, at+".traffic", "name the load balancer to drain hosts from, for example: traffic: { provider: haproxy, admin: \"unix:/run/haproxy/admin.sock\" }; "+
@@ -293,38 +303,41 @@ func (ps *parser) checkFleet(n *yaml.Node, at string, f *FleetSpec, s *Step) {
 			}
 		}
 	}
-	if f.Strategy == "pathfinder" {
-		p := f.Pathfinder
-		switch {
-		case f.Traffic == nil:
-			ps.add(n, at+".traffic", "a Pathfinder moves traffic by weights and needs a traffic provider")
-		case p == nil:
-			ps.add(n, at+".pathfinder", "say the steps, for example: pathfinder: { steps: [10, 50, 100], bake: 30s }")
-		default:
-			if len(p.Steps) == 0 {
-				p.Steps = []int{10, 50, 100}
-			}
-			last := 0
-			for _, x := range p.Steps {
-				if x <= last || x > 100 {
-					ps.add(n, at+".pathfinder.steps", "steps rise and end at most at 100, for example [10, 50, 100]")
-					break
-				}
-				last = x
-			}
-			if len(p.Steps) > MaxPathfinderSteps {
-				ps.add(n, at+".pathfinder.steps", "at most %d steps", MaxPathfinderSteps)
-			}
-			if !fleetNameRe.MatchString(p.StableGroup) || !fleetNameRe.MatchString(p.NewGroup) || p.StableGroup == p.NewGroup {
-				ps.add(n, at+".pathfinder", "stable_group and new_group name two different groups of the Airfield's fleet")
-			}
-		}
-	} else if f.Pathfinder != nil {
-		ps.add(n, at+".pathfinder", "pathfinder is for strategy: pathfinder")
-	}
 }
 
-func fmtSscan(s string, p *int) (int, error) { return fmt.Sscan(s, p) }
+func (ps *parser) checkFleetPathfinder(n *yaml.Node, at string, f *FleetSpec) {
+	if f.Strategy != "pathfinder" {
+		if f.Pathfinder != nil {
+			ps.add(n, at+".pathfinder", "pathfinder is for strategy: pathfinder")
+		}
+		return
+	}
+	p := f.Pathfinder
+	switch {
+	case f.Traffic == nil:
+		ps.add(n, at+".traffic", "a Pathfinder moves traffic by weights and needs a traffic provider")
+	case p == nil:
+		ps.add(n, at+".pathfinder", "say the steps, for example: pathfinder: { steps: [10, 50, 100], bake: 30s }")
+	default:
+		if len(p.Steps) == 0 {
+			p.Steps = []int{10, 50, 100}
+		}
+		last := 0
+		for _, x := range p.Steps {
+			if x <= last || x > 100 {
+				ps.add(n, at+".pathfinder.steps", "steps rise and end at most at 100, for example [10, 50, 100]")
+				break
+			}
+			last = x
+		}
+		if len(p.Steps) > MaxPathfinderSteps {
+			ps.add(n, at+".pathfinder.steps", "at most %d steps", MaxPathfinderSteps)
+		}
+		if !fleetNameRe.MatchString(p.StableGroup) || !fleetNameRe.MatchString(p.NewGroup) || p.StableGroup == p.NewGroup {
+			ps.add(n, at+".pathfinder", "stable_group and new_group name two different groups of the Airfield's fleet")
+		}
+	}
+}
 
 // Target0 returns the path of a fleet check's url (what is called on each
 // host).
@@ -334,3 +347,5 @@ func (c *HealthCheck) Target0() string {
 	}
 	return c.URL
 }
+
+func fmtSscan(s string, p *int) (int, error) { return fmt.Sscan(s, p) }
