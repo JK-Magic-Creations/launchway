@@ -90,6 +90,7 @@ var permissionTable = map[string]matrixRow{
 	"GET /api/v1/info":                 {"GET", "/api/v1/info", "", [6]int{200, 200, 200, 200, 200, 200}},
 	"GET /api/v1/me":                   {"GET", "/api/v1/me", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/projects":             {"GET", "/api/v1/projects", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/launch-lines":         {"GET", "/api/v1/launch-lines", "", [6]int{401, 200, 200, 200, 200, 200}},
 	"GET /api/v1/projects/{name}":      {"GET", "/api/v1/projects/pay-api", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/projects/{name}/refs": {"GET", "/api/v1/projects/pay-api/refs", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"POST /api/v1/projects/{name}/runs": {"POST", "/api/v1/projects/pay-api/runs", `{"ref":"main"}`,
