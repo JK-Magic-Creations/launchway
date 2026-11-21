@@ -256,7 +256,7 @@ docs: docs/node_modules
 docs-serve: docs/node_modules
 	cd docs && DOCS_BASE='$(DOCS_BASE)' npx vitepress dev . --host 127.0.0.1 --port 5173
 
-.PHONY: docs docs-serve docs-roadmap docs-roadmap-sync docs-diagrams docs-reference
+.PHONY: docs docs-serve docs-roadmap docs-diagrams docs-reference
 
 # Renders every Mermaid diagram of the built site in a headless browser, light
 # and dark (run make docs first). Needs a Chromium: `cd docs && npx
@@ -274,13 +274,6 @@ docs-reference: build
 # Rebuilds docs/public/roadmap.html and docs/roadmap-list.md from docs/roadmap/.
 docs-roadmap:
 	node scripts/docs/build-roadmap.mjs .
-
-# Writes docs/roadmap/roadmap.json from a maintainer's roadmap file, keeping only the public
-# fields and dropping items that are not about the product (see scripts/docs/build-roadmap.mjs),
-# then rebuilds. Usage: make docs-roadmap-sync ROADMAP_JSON=path/to/roadmap.json
-docs-roadmap-sync:
-	@test -n '$(ROADMAP_JSON)' || { echo 'docs-roadmap-sync: set ROADMAP_JSON=path/to/roadmap.json' >&2; exit 2; }
-	node scripts/docs/build-roadmap.mjs --sync='$(ROADMAP_JSON)' .
 
 # ---------------------------------------------------------------------------
 # Quality gates (docs/development/quality-gates.md). Each fails the build.

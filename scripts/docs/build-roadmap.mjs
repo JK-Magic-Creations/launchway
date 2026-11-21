@@ -1,121 +1,219 @@
 #!/usr/bin/env node
 // Builds the roadmap pages from the public roadmap data.
 //
-//   docs/roadmap/roadmap.json   the public roadmap: "available" pairs and ranked "items", each with
-//                               only rank, status, theme, title and value
-//   docs/roadmap/template.html  the page, with /*ROADMAP_DATA*/ where the data goes
+//   docs/roadmap/roadmap.json   the public roadmap: the vision, what is available, and the
+//                               milestones with their items (title, one sentence, status, link)
+//   docs/roadmap/template.html  the page shell, with /*ROADMAP_BODY*/ where the content goes
 //
-// The maintainers' own roadmap has more in it (notes on progress, work on their own
-// infrastructure). `--sync=FILE` reads that file and writes docs/roadmap/roadmap.json from it, keeping
-// only the public fields and applying the rules below, so a private note can never be copied
-// into the site. The build refuses a roadmap.json that has other fields or that mentions
-// anything on the DENY list.
-//
-// Writes docs/public/roadmap.html (self-contained: the data is inlined) and
-// docs/roadmap-list.md (the same items as Markdown). With --check, writes
-// nothing and exits 1 if either file is out of date.
-// Usage: node scripts/docs/build-roadmap.mjs [--check] [--sync=FILE] [repo-root]
+// Writes docs/public/roadmap.html (self-contained, readable without JavaScript) and
+// docs/roadmap-list.md (the same items as Markdown). With --check, writes nothing and exits 1 if
+// either file is out of date. The build refuses data that has unknown fields, a bad status, a
+// link to a page that does not exist, or text on the DENY list.
+// Usage: node scripts/docs/build-roadmap.mjs [--check] [repo-root]
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-// Work on the maintainers' own infrastructure, not the product: left out of the public roadmap.
-const NOT_PUBLIC = ['Move every Gitea Actions workflow to Launchway']
-// Items that this repository ships: shown as available rather than ranked.
-const SHIPPED = ['Public documentation site and roadmap']
-// Wording corrections: [pattern, replacement], applied to every value.
-const REWORD = [[/, webhook, upstream\s+run\.$/, ' and webhook.']]
-// Text that must not appear anywhere in the public roadmap.
-const DENY = [/home[- ]?lab/i, /\byour OK\b/i, /upstream\s+run/i, /\b(?:\d{1,3}\.){3}\d{1,3}\b/, /\/home\//]
+// Text that must not appear anywhere in the public roadmap: private places and details, and
+// dates promised (the roadmap is ordered Now, Next, Later and promises no calendar date).
+const DENY = [
+  /home[- ]?lab/i, /\byour OK\b/i, /upstream\s+run/i, /\b(?:\d{1,3}\.){3}\d{1,3}\b/, /\/home\//,
+  /\b(?:Q[1-4]|H[12])\s?20\d\d\b/, /\b(?:by|in|before|until)\s+(?:early |late |mid-)?(?:January|February|March|April|May|June|July|August|September|October|November|December|20\d\d)\b/i,
+  /\b[A-Z]{1,3}\d{2,3}-\d{2,3}\b/, /\bS\d{2}-\d{2}\b/, /\bE\d{2}\b/, /\bR-[A-M]\d+\b/,
+]
 
 const args = process.argv.slice(2)
 const check = args.includes('--check')
-const syncFrom = (args.find((a) => a.startsWith('--sync=')) || '').slice('--sync='.length)
 const root = args.find((a) => !a.startsWith('--')) || '.'
 const p = (f) => join(root, f)
 const fail = (m) => { console.error(`build-roadmap: ${m}`); process.exit(1) }
 
-if (args.some((a) => a === '--sync' || a === '--sync=')) fail('--sync needs a file: --sync=path/to/roadmap.json')
-if (syncFrom) {
-  if (!existsSync(syncFrom)) fail(`${syncFrom} does not exist`)
-  const full = JSON.parse(readFileSync(syncFrom, 'utf8'))
-  for (const t of [...NOT_PUBLIC, ...SHIPPED]) {
-    if (!full.items.some((i) => i.title === t) && !full.available.some(([a]) => a === t)) fail(`the rules name "${t}", which is not in ${syncFrom}; update NOT_PUBLIC or SHIPPED`)
-  }
-  const reword = (s) => REWORD.reduce((v, [from, to]) => v.replace(from, to), s)
-  const kept = full.items.filter((i) => !NOT_PUBLIC.includes(i.title)).sort((a, b) => a.rank - b.rank)
-  const shipped = kept.filter((i) => SHIPPED.includes(i.title))
-  const ranked = kept.filter((i) => !SHIPPED.includes(i.title))
-  const out = {
-    updated: full.updated,
-    available: [
-      ...full.available.map(([title, value]) => [title, reword(value)]),
-      ...shipped.map((i) => [i.title, reword(i.value)]),
-    ],
-    items: ranked.map((i, n) => ({ rank: n + 1, status: i.status, theme: i.theme, title: i.title, value: reword(i.value) })),
-  }
-  writeFileSync(p('docs/roadmap/roadmap.json'), JSON.stringify(out, null, 2) + '\n')
-}
-
 const raw = readFileSync(p('docs/roadmap/roadmap.json'), 'utf8')
 const src = JSON.parse(raw)
-
+for (const d of DENY) if (d.test(raw)) fail(`roadmap.json matches ${d}, which must not be published; fix the text`)
 if (!/^\d{4}-\d{2}-\d{2}$/.test(src.updated || '')) fail('roadmap.json needs "updated": "YYYY-MM-DD"')
-for (const d of DENY) if (d.test(raw)) fail(`roadmap.json matches ${d}, which must not be published; fix the source or the rules in this script and run make docs-roadmap-sync`)
-const statuses = ['in-progress', 'planned']
-const fields = ['rank', 'status', 'theme', 'title', 'value']
-const seen = new Set()
-for (const i of src.items) {
-  for (const k of fields) if (i[k] === undefined || i[k] === '') fail(`item ${JSON.stringify(i.title)} has no ${k}`)
-  for (const k of Object.keys(i)) if (!fields.includes(k)) fail(`item ${JSON.stringify(i.title)} has the field "${k}"; only ${fields.join(', ')} are public`)
-  if (!statuses.includes(i.status)) fail(`item ${i.title}: status ${i.status} is not one of ${statuses.join(', ')}`)
-  if (seen.has(i.rank)) fail(`rank ${i.rank} is used twice`)
-  seen.add(i.rank)
+
+const STATUS = { available: 'Available', 'in-progress': 'In progress', planned: 'Planned' }
+const WHEN = { now: 'Now', next: 'Next', later: 'Later' }
+const only = (o, keys, what) => { for (const k of Object.keys(o)) if (!keys.includes(k)) fail(`${what} has the field "${k}"; only ${keys.join(', ')} are public`) }
+const need = (o, keys, what) => { for (const k of keys) if (o[k] === undefined || o[k] === '') fail(`${what} has no ${k}`) }
+const checkLink = (link, what) => {
+  if (!link) return
+  if (/^https:\/\//.test(link)) return
+  const [page] = link.split('#')
+  if (!existsSync(p(`docs/${page}.md`))) fail(`${what} links to ${link}, but docs/${page}.md does not exist`)
 }
-if (![...seen].sort((a, b) => a - b).every((r, n) => r === n + 1)) fail('ranks must run 1, 2, 3 ... with no gaps')
-for (const a of src.available) if (!Array.isArray(a) || a.length !== 2) fail('each "available" entry is [title, value]')
 
-const items = [
-  ...src.available.map(([title, value]) => ({ status: 'available', title, value })),
-  ...src.items,
-]
+if (!Array.isArray(src.vision) || src.vision.length !== 3) fail('"vision" is three sentences')
+const titles = new Set()
+const note = (t) => { if (titles.has(t)) fail(`the title "${t}" is used twice`); titles.add(t) }
+for (const a of src.available) {
+  only(a, ['theme', 'title', 'value', 'link'], `available item ${a.title}`)
+  need(a, ['theme', 'title', 'value'], `available item ${a.title}`)
+  checkLink(a.link, a.title)
+  note(a.title)
+}
+for (const m of src.milestones) {
+  only(m, ['id', 'number', 'when', 'name', 'short', 'promise', 'groups'], `milestone ${m.id}`)
+  need(m, ['id', 'when', 'name', 'short', 'promise', 'groups'], `milestone ${m.id}`)
+  if (!WHEN[m.when]) fail(`milestone ${m.id}: when ${m.when} is not one of ${Object.keys(WHEN).join(', ')}`)
+  for (const g of m.groups) {
+    need(g, ['name', 'items'], `a group of ${m.id}`)
+    for (const i of g.items) {
+      only(i, ['status', 'title', 'value', 'link'], `item ${i.title}`)
+      need(i, ['status', 'title', 'value'], `item ${i.title}`)
+      if (!STATUS[i.status]) fail(`item ${i.title}: status ${i.status} is not one of ${Object.keys(STATUS).join(', ')}`)
+      checkLink(i.link, i.title)
+      note(i.title)
+    }
+  }
+}
 
-const data = { updated: src.updated, items }
-const json = JSON.stringify(data).replace(/</g, '\\u003c')
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+const href = (link) => (/^https:/.test(link) ? link : `./${link.replace(/#.*$/, '')}.html${link.includes('#') ? '#' + link.split('#')[1] : ''}`)
+const mdHref = (link) => (/^https:/.test(link) ? link : `${link.replace(/#.*$/, '')}.md${link.includes('#') ? '#' + link.split('#')[1] : ''}`)
+const icon = { available: '✓', 'in-progress': '◐', planned: '○' }
+const chip = (s) => `<span class="chip st-${s}"><span aria-hidden="true">${icon[s]}</span> ${STATUS[s]}</span>`
+const anchor = (m) => (m.id === 'beyond' ? 'beyond' : `milestone-${m.number}`)
+const itemsOf = (m) => m.groups.flatMap((g) => g.items)
+const count = (list) => ({
+  available: list.filter((i) => i.status === 'available').length,
+  'in-progress': list.filter((i) => i.status === 'in-progress').length,
+  planned: list.filter((i) => i.status === 'planned').length,
+})
+const bar = (c) => {
+  const total = c.available + c['in-progress'] + c.planned
+  const seg = (s) => (c[s] ? `<span class="seg st-${s}" style="flex:${c[s]}"></span>` : '')
+  return `<span class="bar" role="img" aria-label="${c.available} available, ${c['in-progress']} in progress, ${c.planned} planned of ${total}">${seg('available')}${seg('in-progress')}${seg('planned')}</span>`
+}
+const more = (i) => (i.link ? ` <a class="more" href="${esc(href(i.link))}">Read more<span class="visually-hidden"> about ${esc(i.title)}</span> →</a>` : '')
+
+const allMilestoneItems = src.milestones.flatMap(itemsOf)
+const totals = count([...src.available.map(() => ({ status: 'available' })), ...allMilestoneItems.filter((i) => i.status !== 'available')])
+
+const journey = `<ol class="journey" aria-label="The milestones, in order">
+  <li class="st-done"><a href="#available"><span class="node node-a" aria-hidden="true">✓</span><span class="jname">Available today</span><span class="jwhen">${src.available.length} things</span></a></li>
+${src.milestones.map((m) => {
+  const c = count(itemsOf(m))
+  return `  <li class="when-${m.when}"><a href="#${anchor(m)}"><span class="node" aria-hidden="true">${m.number || '+'}</span><span class="jname">${esc(m.short)}</span><span class="jwhen">${WHEN[m.when]}</span>${bar(c)}</a></li>`
+}).join('\n')}
+</ol>`
+
+const availableByTheme = [...new Set(src.available.map((a) => a.theme))]
+const availableHtml = `<section class="group st-section" id="available" aria-labelledby="h-available">
+  <div class="sec-head"><h2 id="h-available">Available today</h2><span class="sec-note">On the main branch, tested and documented. ${src.available.length} things.</span></div>
+${availableByTheme.map((t) => `  <h3 class="theme-h">${esc(t)}</h3>
+  <ul class="grid">
+${src.available.filter((a) => a.theme === t).map((a) => `    <li class="card st-available" data-status="available"><h4>${a.link ? `<a href="${esc(href(a.link))}">${esc(a.title)}</a>` : esc(a.title)}</h4><p>${esc(a.value)}</p></li>`).join('\n')}
+  </ul>`).join('\n')}
+</section>`
+
+const milestoneHtml = (m) => {
+  const list = itemsOf(m)
+  const c = count(list)
+  const head = m.number ? `<span class="mnum" aria-hidden="true">${m.number}</span>` : `<span class="mnum mnum-plus" aria-hidden="true">+</span>`
+  return `<section class="milestone when-${m.when}" id="${anchor(m)}" aria-labelledby="h-${anchor(m)}">
+  <header class="m-head">
+    ${head}
+    <div class="m-title">
+      <p class="when"><span class="when-chip when-${m.when}">${WHEN[m.when]}</span>${m.number ? ` Milestone ${m.number}` : ' After the milestones'}</p>
+      <h2 id="h-${anchor(m)}">${esc(m.name)}</h2>
+      <p class="promise">${esc(m.promise)}</p>
+    </div>
+    <div class="m-progress">${bar(c)}<span class="m-count">${c.available} available · ${c['in-progress']} in progress · ${c.planned} planned</span></div>
+  </header>
+${m.groups.map((g) => `  <div class="subgroup">
+    <h3 class="theme-h">${esc(g.name)}</h3>
+    <ul class="grid">
+${g.items.map((i) => `      <li class="card st-${i.status}" data-status="${i.status}">${chip(i.status)}<h4>${esc(i.title)}</h4><p>${esc(i.value)}${more(i)}</p></li>`).join('\n')}
+    </ul>
+  </div>`).join('\n')}
+</section>`
+}
+
+const body = `<main id="content">
+  <p class="eyebrow">Roadmap</p>
+  <h1>Where Launchway is going</h1>
+  <ol class="vision" aria-label="The vision">
+${src.vision.map((v) => `    <li>${esc(v)}</li>`).join('\n')}
+  </ol>
+  <p class="asof">As of ${src.updated}. Items are ordered by value, in milestones marked Now, Next and Later. There are no dates: plans change, and an item moves to Available only when it is merged, tested and documented.</p>
+
+  <div class="stats" aria-label="Where things stand">
+    <div class="stat st-available"><b>${totals.available}</b><span>${chip('available')}</span></div>
+    <div class="stat st-in-progress"><b>${totals['in-progress']}</b><span>${chip('in-progress')}</span></div>
+    <div class="stat st-planned"><b>${totals.planned}</b><span>${chip('planned')}</span></div>
+  </div>
+
+  <nav aria-label="Milestones">
+${journey}
+  </nav>
+
+  <div class="controls" id="controls" hidden>
+    <div class="chips" role="group" aria-label="Filter by status">
+      <button type="button" class="fchip" data-f="" aria-pressed="true">All</button>
+      <button type="button" class="fchip" data-f="available" aria-pressed="false">Available</button>
+      <button type="button" class="fchip" data-f="in-progress" aria-pressed="false">In progress</button>
+      <button type="button" class="fchip" data-f="planned" aria-pressed="false">Planned</button>
+    </div>
+    <label class="visually-hidden" for="q">Search the roadmap</label>
+    <input id="q" class="search" type="search" placeholder="Search the roadmap" autocomplete="off">
+    <p class="count" id="count" role="status" aria-live="polite"></p>
+  </div>
+
+${availableHtml}
+
+${src.milestones.map(milestoneHtml).join('\n\n')}
+
+  <section class="principles" aria-labelledby="h-throughout">
+    <div class="sec-head"><h2 id="h-throughout">Throughout, not a milestone</h2><span class="sec-note">The standard every item is held to.</span></div>
+    <ul class="grid principles-grid">
+${src.principles.map((x) => `      <li class="card"><h4>${esc(x.title)}</h4><p>${esc(x.value)}</p></li>`).join('\n')}
+    </ul>
+  </section>
+
+  <footer>
+    <p>Launchway is not certified against any compliance standard; compliance items provide controls and evidence. Nothing here is a commitment to a date. The same items, as a table, are in <a href="./roadmap-list.html">the roadmap as a list</a>.</p>
+  </footer>
+</main>`
+
 const tpl = readFileSync(p('docs/roadmap/template.html'), 'utf8')
-if (!tpl.includes('/*ROADMAP_DATA*/')) fail('template.html has no /*ROADMAP_DATA*/')
-const html = tpl.replace('/*ROADMAP_DATA*/', json)
+if (!tpl.includes('/*ROADMAP_BODY*/')) fail('template.html has no /*ROADMAP_BODY*/')
+const html = tpl.replace('/*ROADMAP_BODY*/', () => body)
 
 const cell = (s) => String(s).replace(/\|/g, '\\|')
-const byRank = (a, b) => a.rank - b.rank
-const sec = (status) => items.filter((i) => i.status === status)
-let md = `# Roadmap, as a list
+const row = (i) => `| ${cell(i.title)} | ${STATUS[i.status]} | ${cell(i.value)}${i.link ? ` ([more](${mdHref(i.link)}))` : ''} |`
+const md = `# Roadmap, as a list
 
-What Launchway does today, what is being built now, and what is planned, in order of value. The
-same items are drawn on the [interactive roadmap](./public/roadmap.html). As of ${src.updated}.
+What Launchway does today and what is planned, in milestones marked Now, Next and Later. The same
+items are drawn on the [roadmap](./public/roadmap.html). As of ${src.updated}.
 
 <!-- Generated by scripts/docs/build-roadmap.mjs from docs/roadmap/roadmap.json. Do not edit by hand. -->
 
-Only items marked **available** are on the main branch. Order is by value, not a schedule, and
-plans change. Launchway is not certified against any compliance standard; compliance items
-provide controls and evidence.
+${src.vision.join(' ')}
+
+Order is by value, not a schedule, and plans change. An item is **available** only when it is on the
+main branch, tested and documented. Launchway is not certified against any compliance standard;
+compliance items provide controls and evidence.
 
 ## Available today
 
 | Item | What it gives you |
 |---|---|
-${sec('available').map((i) => `| ${cell(i.title)} | ${cell(i.value)} |`).join('\n')}
+${src.available.map((a) => `| ${cell(a.title)} | ${cell(a.value)}${a.link ? ` ([more](${mdHref(a.link)}))` : ''} |`).join('\n')}
 
-## Being built now
+${src.milestones.map((m) => `## ${m.number ? `Milestone ${m.number}: ` : ''}${m.name} (${WHEN[m.when]})
 
-| Rank | Item | Theme | What it gives you |
-|---|---|---|---|
-${sec('in-progress').sort(byRank).map((i) => `| ${i.rank} | ${cell(i.title)} | ${cell(i.theme)} | ${cell(i.value)} |`).join('\n')}
+${m.promise}
 
-## Planned
+${m.groups.map((g) => `### ${g.name}
 
-| Rank | Item | Theme | What it gives you |
-|---|---|---|---|
-${sec('planned').sort(byRank).map((i) => `| ${i.rank} | ${cell(i.title)} | ${cell(i.theme)} | ${cell(i.value)} |`).join('\n')}
+| Item | Status | What it gives you |
+|---|---|---|
+${g.items.map(row).join('\n')}
+`).join('\n')}`).join('\n')}
+## Throughout, not a milestone
+
+${src.principles.map((x) => `- **${x.title}.** ${x.value}`).join('\n')}
 `
 
 const outputs = [['docs/public/roadmap.html', html], ['docs/roadmap-list.md', md]]
@@ -127,4 +225,4 @@ for (const [f, content] of outputs) {
   else writeFileSync(p(f), content)
 }
 if (stale) process.exit(1)
-console.log(`build-roadmap: ${items.length} items (${sec('available').length} available, ${sec('in-progress').length} in progress, ${sec('planned').length} planned)${check ? ' are up to date' : ' written'}`)
+console.log(`build-roadmap: ${totals.available} available, ${totals['in-progress']} in progress, ${totals.planned} planned across ${src.milestones.length} milestones${check ? ' are up to date' : ' written'}`)
