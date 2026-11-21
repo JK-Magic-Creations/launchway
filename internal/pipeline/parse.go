@@ -47,6 +47,9 @@ type Problem struct {
 	Column  int    `json:"column,omitempty"`
 	Path    string `json:"path,omitempty"`
 	Message string `json:"message"`
+	// Code names the kind of a warning, so that a policy can treat one kind
+	// differently (see CacheWarnings); empty for a problem.
+	Code string `json:"code,omitempty"`
 }
 
 func (p Problem) String() string {

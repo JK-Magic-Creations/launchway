@@ -13,5 +13,8 @@ func outputWarnings(p *pipeline.Pipeline) []string {
 	for _, w := range pipeline.OutputWarnings(p) {
 		out = append(out, fmt.Sprintf("line %d, %s: %s", w.Line, w.Path, w.Message))
 	}
+	for _, w := range pipeline.CacheWarnings(p) {
+		out = append(out, fmt.Sprintf("line %d, %s: %s", w.Line, w.Path, w.Message))
+	}
 	return out
 }

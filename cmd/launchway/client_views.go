@@ -73,7 +73,7 @@ type runView struct {
 			AgeSeconds      int64  `json:"age_seconds"`
 			MaxAgeSeconds   int64  `json:"max_age_seconds"`
 			SavedGeneration int    `json:"saved_generation"`
-			KeyParts []struct {
+			KeyParts        []struct {
 				Label string `json:"label"`
 				Value string `json:"value"`
 			} `json:"key_parts"`
