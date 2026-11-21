@@ -362,7 +362,7 @@ func fold(events []Event, vocab int) *RunState {
 
 // Values a server of this version understands, inside events.
 var (
-	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval, pipeline.KindDeploy, pipeline.KindRollback, pipeline.KindRolloutStep,
+	knownStepKinds = []string{"", pipeline.KindStep, pipeline.KindApproval, pipeline.KindDeploy, pipeline.KindRollback, pipeline.KindRolloutStep, pipeline.KindGate,
 		pipeline.KindImage, pipeline.KindVerify, pipeline.KindAI}
 	knownOutcomes  = []string{string(StepSucceeded), string(StepFailed)}
 	knownRunEnds   = []string{string(RunSucceeded), string(RunFailed), string(RunCanceled)}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/findings"
 	"github.com/jk-magic-creations/launchway/internal/sbom"
+	"github.com/jk-magic-creations/launchway/internal/standards"
 )
 
 // Security findings and SBOMs. A step that declares reports.findings has
@@ -74,7 +75,7 @@ const (
 	findingsPerInsert                 = 200
 	componentsPerInsert               = 300
 	findingRulesPerInsert             = 100
-	findingHelpBytes                  = 4096
+	findingHelpBytes                  = 16384 // a dependency advisory's text carries its table of fixed versions at the end
 	findingTagsPerRule                = 20
 	sbomPartMax                 int64 = 16 << 20
 )
@@ -233,6 +234,9 @@ func (s *SBOMSummary) note(n string) {
 type storedFinding struct {
 	findings.Finding
 	file string // the SARIF file it came from
+	// std is the finding in the product's one model (internal/standards),
+	// worked out when the attempt's findings are kept.
+	std standards.Finding
 }
 
 // parsedFindings is what an attempt's SARIF files said, before the run's
@@ -289,7 +293,18 @@ func (e *Engine) parseFindings(in *CollectedReports) *parsedFindings {
 			s.Files = append(s.Files, ff)
 			continue
 		}
+		// Reports in another format an adapter knows (shellcheck, the license
+		// report, the native findings JSON) are turned into SARIF first, so
+		// the one reader below judges every file the same way.
+		adapted, _, aerr := standards.Adapt(f.Data)
+		if aerr != nil {
+			ff.Error = cleanText(aerr.Error(), maxReportText)
+			s.Files = append(s.Files, ff)
+			continue
+		}
+		f.Data = adapted
 		lim := findings.DefaultLimits()
+		lim.MaxHelpBytes = findingHelpBytes
 		lim.MaxFindings = max(room, 1)
 		lim.Timeout = min(lim.Timeout, left)
 		rep, err := findings.Parse(ctx, f.Data, lim)
@@ -501,6 +516,7 @@ func (c *cmd) keepFindings(step string, attempt int, f *parsedFindings) (*Findin
 		sum.note(fmt.Sprintf("%d of the %d findings were kept with the run, which keeps at most %d; the counts include them all",
 			sum.Stored, sum.Total, c.e.live().finds.MaxPerRun))
 	}
+	c.enrichFindings(step, list, f.rules)
 	c.s12().findings[stepAttempt{step, attempt}] = &keptFindings{list: list, rules: f.rules}
 	return &sum, nil
 }
@@ -571,19 +587,30 @@ func (c *cmd) persistFindings(at int64, step string, attempt int, t *FindingsSum
 		return nil
 	}
 	list := k.list
+	standing := c.e.knows(schemaStandings)
+	cols, width := `run_id, step_id, attempt, project, run_number, fingerprint, tool, rule_id, severity, level,
+			message, file, start_line, end_line, start_column, secret, report_file`, 17
+	if standing {
+		cols += `, check_id, kind, package, version, fixed_in, advisories, reachable, fix, track`
+		width = 26
+	}
+	row := "(" + strings.TrimSuffix(strings.Repeat("?,", width), ",") + ")"
 	for len(list) > 0 {
 		n := min(len(list), findingsPerInsert)
 		var q strings.Builder
-		q.WriteString(`INSERT INTO findings(run_id, step_id, attempt, project, run_number, fingerprint, tool, rule_id, severity, level,
-			message, file, start_line, end_line, start_column, secret, report_file) VALUES `)
-		args := make([]any, 0, n*17)
+		q.WriteString(`INSERT INTO findings(` + cols + `) VALUES `)
+		args := make([]any, 0, n*width)
 		for i, f := range list[:n] {
 			if i > 0 {
 				q.WriteString(",")
 			}
-			q.WriteString("(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+			q.WriteString(row)
 			args = append(args, st.ID, step, attempt, st.Project, st.Number, f.Fingerprint, f.Tool, f.RuleID, string(f.Severity), f.Level,
 				f.Message, f.File, f.StartLine, f.EndLine, f.StartColumn, boolInt(f.Secret), f.file)
+			if standing {
+				args = append(args, f.std.Check, string(f.std.Kind), f.std.Package, f.std.Version, f.std.FixedIn, strings.Join(f.std.Advisories, ","),
+					f.std.Reachable, f.std.Fix, f.std.Fingerprint)
+			}
 		}
 		if _, err := c.tx.Exec(q.String(), args...); err != nil {
 			return err

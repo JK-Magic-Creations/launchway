@@ -481,6 +481,26 @@ in the message.
 | `GET /api/v1/encryption` | `admin` | — | Encryption at rest: `{"encrypted", "dump_alone_cannot_reveal_secrets", "root_key_holder": {"kind", "where", "strength", "reachable"}, "keys", "columns", "secrets_sealed", "secrets_remaining", "migration": {"state", ...}, "warnings", "advice", "not_yet_encrypted", "summary"}`. Never any key material. Read-only: the root key is a bootstrap setting held outside the database, and `launchway encryption` rotates or replaces it where the key is. `409` with code `no_root_key` is what a request for something that stores secrets (a webhook with a secret) gets on a server with no root key |
 | `GET /api/v1/run-limits` | `signed-in` | — | `{"max_run_timeout", "updated_at", "updated_by"}`. An empty `max_run_timeout` is not set: pipelines may ask for up to `720h`. |
 | `PUT /api/v1/run-limits` | `admin` | `run_limits.set` | Replaces the limits: `{"max_run_timeout": "48h"}`; empty or left out removes the limit. `400` for a duration that does not read or is outside `1m` to `720h`. |
+## Standing orders
+
+The same scans and best-practice checks for every repository, on by default (see [Standing orders](../guide/standing-orders.md)). The routes serve what can run, the settings of each level, a repository's effective profile with where each value comes from, the findings the default branch has had and what people decided about them, and a run's Inspection. A level's settings are changed by someone who administers the level (the project's admin at a project); a value weaker than a lock above is refused with `409` and the plain sentence that names the lock.
+
+| Route | Access | Audit | What it does |
+|---|---|---|---|
+| `GET /api/v1/standards/profile` | `signed-in` | — | The profile: every check with what it looks for, why, its ecosystem, tool, the tool's license and image digest, default state, whether it can block, its time budget and what it needs from the network; the gate defaults and the setting keys. |
+| `GET /api/v1/standards/settings` | `signed-in` | — | The settings one level has: `?level=` installation, organization, unit or project and `&scope=NAME`, with `version` (0 when none are stored). |
+| `PUT /api/v1/standards/settings` | `signed-in` | `standards.settings_set` | Replaces one level's settings (`level`, `scope`, `settings`, and `version` as read: a different version is `409`). `400` with the plain problems for an invalid value; `409` for a value weaker than a lock above. Switching Standing orders off needs a reason and is recorded as such. |
+| `GET /api/v1/standards/coverage` | `signed-in` | — | For the projects of a level that the caller may read: whether Standing orders are off, each check's state and whether it runs, open findings by severity. |
+| `GET /api/v1/projects/{name}/standards` | `project-viewer` | — | The effective profile of a project at its default branch: each check, the gate, license lists, exemptions, where every value comes from and what a lock holds, notices, what was detected, and the repository's own file with its problems. |
+| `GET /api/v1/projects/{name}/standards/file` | `project-viewer` | — | The repository's `.launchway/standards.yaml` as it is, its problems, and the file the project's own settings would make. |
+| `GET /api/v1/projects/{name}/findings` | `project-viewer` | — | The findings the default branch has had: `?status=` open, fixed, accepted or all, `severity`, `check`, `q`, `sort=oldest`, `limit`, `offset`; with totals by severity and check. |
+| `GET /api/v1/projects/{name}/findings/history` | `project-viewer` | — | Open findings by day, the mean days to fix, the oldest open finding. |
+| `GET /api/v1/projects/{name}/findings/export` | `project-viewer` | — | The findings as `?format=` json, csv or sarif (`status` as above). SARIF carries the fingerprint as a partial fingerprint. |
+| `GET /api/v1/projects/{name}/findings/{fingerprint}` | `project-viewer` | — | One finding with its decision. |
+| `POST /api/v1/projects/{name}/findings/{fingerprint}/accept` | `project-operator` | `finding.accept` | Accepts a risk or marks a false positive: `reason` (at least 10 characters), `expires` (`YYYY-MM-DD`, at most 365 days away), `status` (`accepted-risk` or `false-positive`). Audited with the reason. |
+| `POST /api/v1/projects/{name}/findings/{fingerprint}/reopen` | `project-operator` | `finding.reopen` | Ends the decision in force, so the finding counts again. |
+| `GET /api/v1/runs/{id}/inspection` | `run-viewer` | — | A run's Inspection: the verdict and its sentence, the profile in force when the run was made, each check and whether it ran, and the findings with their standing (new, existing, accepted, false positive), filtered by `standing`, `check`, `severity`. |
+
 ## Build caches
 
 A step's `cache:` key (see [the pipeline reference](pipeline.md#cache)) keeps directories between runs.

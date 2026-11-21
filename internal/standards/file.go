@@ -76,106 +76,13 @@ func ParseFile(data []byte, now time.Time) (Settings, []string) {
 		case "off_reason":
 			s.OffReason = v.Value
 		case "checks":
-			if v.Kind != yaml.MappingNode {
-				add(v, "checks should be a list of check: state pairs, for example `secrets: block`.")
-				continue
-			}
-			s.Checks = map[string]State{}
-			for j := 0; j+1 < len(v.Content); j += 2 {
-				id, val := v.Content[j], v.Content[j+1]
-				state := val.Value
-				if val.Kind == yaml.MappingNode {
-					state = ""
-					for x := 0; x+1 < len(val.Content); x += 2 {
-						if val.Content[x].Value == "state" {
-							state = val.Content[x+1].Value
-						} else {
-							add(val.Content[x], "%q is not a setting of a check; only state is.", val.Content[x].Value)
-						}
-					}
-				}
-				if _, ok := CheckByID(id.Value); !ok {
-					add(id, "%q is not a check.%s The checks are: %s.", id.Value, didYouMean(id.Value, CheckIDs()), strings.Join(CheckIDs(), ", "))
-					continue
-				}
-				if !State(state).Valid() {
-					add(val, "%q is not a state; use off, advise or block.", state)
-					continue
-				}
-				s.Checks[id.Value] = State(state)
-			}
+			s.Checks = fileChecks(v, add)
 		case "gate":
-			if v.Kind != yaml.MappingNode {
-				add(v, "gate should be a group of settings: fail_on, require_fix, default_branch, incomplete.")
-				continue
-			}
-			unknown(v, gateKeys, " of gate")
-			for j := 0; j+1 < len(v.Content); j += 2 {
-				gk, gv := v.Content[j], v.Content[j+1]
-				switch gk.Value {
-				case "fail_on":
-					s.Gate.FailOn = findings.Severity(strings.ToLower(gv.Value))
-				case "require_fix":
-					var b bool
-					if gv.Decode(&b) != nil {
-						add(gv, "gate.require_fix should be true or false.")
-					} else {
-						s.Gate.RequireFix = &b
-					}
-				case "default_branch":
-					s.Gate.DefaultBranch = State(strings.ToLower(gv.Value))
-				case "incomplete":
-					s.Gate.Incomplete = strings.ToLower(gv.Value)
-				}
-			}
+			fileGate(&s, v, add, unknown)
 		case "licenses":
-			if v.Kind != yaml.MappingNode {
-				add(v, "licenses should be a group of settings: allow and deny, each a list of license names.")
-				continue
-			}
-			unknown(v, licenseKeys, " of licenses")
-			for j := 0; j+1 < len(v.Content); j += 2 {
-				lk, lv := v.Content[j], v.Content[j+1]
-				var list []string
-				if lv.Decode(&list) != nil {
-					add(lv, "licenses.%s should be a list of license names, for example [MIT, Apache-2.0].", lk.Value)
-					continue
-				}
-				if list == nil {
-					list = []string{}
-				}
-				switch lk.Value {
-				case "allow":
-					s.Licenses.Allow = &list
-				case "deny":
-					s.Licenses.Deny = &list
-				}
-			}
+			fileLicenses(&s, v, add, unknown)
 		case "ignore":
-			if v.Kind != yaml.SequenceNode {
-				add(v, "ignore should be a list of entries, each with check, rule, package or path, a reason and an end date.")
-				continue
-			}
-			for _, e := range v.Content {
-				if e.Kind != yaml.MappingNode {
-					add(e, "an ignore entry should be a group of settings (rule, reason, expires...).")
-					continue
-				}
-				unknown(e, ignoreKeys, " of an ignore entry")
-				var ig Ignore
-				if err := e.Decode(&ig); err != nil {
-					add(e, "this ignore entry could not be read: %s", yamlMessage(err))
-					continue
-				}
-				if ps := ig.Problems(now, fmt.Sprintf("line %d: ignore entry", e.Line)); len(ps) > 0 {
-					problems = append(problems, ps...)
-					continue
-				}
-				if ig.Status == "" {
-					ig.Status = StatusAccepted
-				}
-				s.Ignore = append(s.Ignore, ig)
-			}
+			fileIgnores(&s, v, now, add, &problems)
 		}
 	}
 	// The same checks as for settings from anywhere else, for what the
@@ -192,6 +99,123 @@ func ParseFile(data []byte, now time.Time) (Settings, []string) {
 	}
 	sort.Strings(problems)
 	return s, problems
+}
+
+type addFn func(n *yaml.Node, format string, a ...any)
+type unknownFn func(m *yaml.Node, allowed []string, where string)
+
+func fileChecks(v *yaml.Node, add addFn) map[string]State {
+	if v.Kind != yaml.MappingNode {
+		add(v, "checks should be a list of check: state pairs, for example `secrets: block`.")
+		return nil
+	}
+	out := map[string]State{}
+	for j := 0; j+1 < len(v.Content); j += 2 {
+		id, val := v.Content[j], v.Content[j+1]
+		state := val.Value
+		if val.Kind == yaml.MappingNode {
+			state = ""
+			for x := 0; x+1 < len(val.Content); x += 2 {
+				if val.Content[x].Value == "state" {
+					state = val.Content[x+1].Value
+				} else {
+					add(val.Content[x], "%q is not a setting of a check; only state is.", val.Content[x].Value)
+				}
+			}
+		}
+		if _, ok := CheckByID(id.Value); !ok {
+			add(id, "%q is not a check.%s The checks are: %s.", id.Value, didYouMean(id.Value, CheckIDs()), strings.Join(CheckIDs(), ", "))
+			continue
+		}
+		if !State(state).Valid() {
+			add(val, "%q is not a state; use off, advise or block.", state)
+			continue
+		}
+		out[id.Value] = State(state)
+	}
+	return out
+}
+
+func fileGate(s *Settings, v *yaml.Node, add addFn, unknown unknownFn) {
+	if v.Kind != yaml.MappingNode {
+		add(v, "gate should be a group of settings: fail_on, require_fix, default_branch, incomplete.")
+		return
+	}
+	unknown(v, gateKeys, " of gate")
+	for j := 0; j+1 < len(v.Content); j += 2 {
+		gk, gv := v.Content[j], v.Content[j+1]
+		switch gk.Value {
+		case "fail_on":
+			s.Gate.FailOn = findings.Severity(strings.ToLower(gv.Value))
+		case "require_fix":
+			var b bool
+			if gv.Decode(&b) != nil {
+				add(gv, "gate.require_fix should be true or false.")
+			} else {
+				s.Gate.RequireFix = &b
+			}
+		case "default_branch":
+			s.Gate.DefaultBranch = State(strings.ToLower(gv.Value))
+		case "incomplete":
+			s.Gate.Incomplete = strings.ToLower(gv.Value)
+		}
+	}
+}
+
+func fileLicenses(s *Settings, v *yaml.Node, add addFn, unknown unknownFn) {
+	if v.Kind != yaml.MappingNode {
+		add(v, "licenses should be a group of settings: allow and deny, each a list of license names.")
+		return
+	}
+	unknown(v, licenseKeys, " of licenses")
+	for j := 0; j+1 < len(v.Content); j += 2 {
+		lk, lv := v.Content[j], v.Content[j+1]
+		var list []string
+		if lv.Decode(&list) != nil {
+			add(lv, "licenses.%s should be a list of license names, for example [MIT, Apache-2.0].", lk.Value)
+			continue
+		}
+		if list == nil {
+			list = []string{}
+		}
+		switch lk.Value {
+		case "allow":
+			s.Licenses.Allow = &list
+		case "deny":
+			s.Licenses.Deny = &list
+		}
+	}
+}
+
+func fileIgnores(s *Settings, v *yaml.Node, now time.Time, add addFn, problems *[]string) {
+	if v.Kind != yaml.SequenceNode {
+		add(v, "ignore should be a list of entries, each with check, rule, package or path, a reason and an end date.")
+		return
+	}
+	for _, e := range v.Content {
+		if e.Kind != yaml.MappingNode {
+			add(e, "an ignore entry should be a group of settings (rule, reason, expires...).")
+			continue
+		}
+		for i := 0; i+1 < len(e.Content); i += 2 {
+			if k := e.Content[i].Value; !contains(ignoreKeys, k) {
+				add(e.Content[i], "%q is not a setting of an ignore entry.%s", k, didYouMean(k, ignoreKeys))
+			}
+		}
+		var ig Ignore
+		if err := e.Decode(&ig); err != nil {
+			add(e, "this ignore entry could not be read: %s", yamlMessage(err))
+			continue
+		}
+		if ps := ig.Problems(now, fmt.Sprintf("line %d: ignore entry", e.Line)); len(ps) > 0 {
+			*problems = append(*problems, ps...)
+			continue
+		}
+		if ig.Status == "" {
+			ig.Status = StatusAccepted
+		}
+		s.Ignore = append(s.Ignore, ig)
+	}
 }
 
 func contains(list []string, s string) bool {

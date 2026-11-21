@@ -40,6 +40,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/secrets"
 	"github.com/jk-magic-creations/launchway/internal/settings"
 	"github.com/jk-magic-creations/launchway/internal/source"
+	standardsservice "github.com/jk-magic-creations/launchway/internal/standards/service"
 	"github.com/jk-magic-creations/launchway/web"
 )
 
@@ -80,6 +81,8 @@ Usage:
                                                 the same commands for one kind of object
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
+  launchway standards show|set|explain|coverage|profile  the Standing orders every repository has: checks, gates, settings by level
+  launchway findings list|show|accept|reopen|export|inspect  what the checks found: the backlog, decisions, a run's verdict
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
@@ -114,6 +117,8 @@ var commands = map[string]func([]string) error{
 	"config":         cmdConfig,
 	"run-limits":     cmdRunLimits,
 	"caches":         cmdCaches,
+	"standards":      cmdStandards,
+	"findings":       cmdFindings,
 	"variables":      cmdVariables,
 	"doctor":         cmdDoctor,
 	"users":          cmdUsers,
@@ -242,6 +247,11 @@ func cmdServer(args []string) error {
 	vars := store.Variables()
 	mgr.SetVariables(vars)
 	srv.Variables = vars
+	// Standing orders (schema 55): the manager adds the Inspection to every
+	// run it makes, the server serves the settings and the findings.
+	stds := &standardsservice.Service{Eng: eng, Layout: store.LayoutOrFile}
+	mgr.SetInspector(stds)
+	srv.Standards = stds
 	applyLive := func(c *config.Config) error {
 		l, err := serverLive(c, token, authOpts)
 		if err != nil {

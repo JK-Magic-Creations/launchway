@@ -18,9 +18,12 @@ type Policy struct {
 	FailOn         findings.Severity `json:"fail_on"`
 	RequireFix     bool              `json:"require_fix"`
 	// DefaultBranchBlocks: findings on the default branch fail the run.
-	DefaultBranchBlocks bool     `json:"default_branch_blocks"`
-	IncompleteFails     bool     `json:"incomplete_fails"`
-	Exemptions          []Ignore `json:"exemptions,omitempty"`
+	DefaultBranchBlocks bool `json:"default_branch_blocks"`
+	// DefaultBranchRun: the run is for the default branch, so what it finds
+	// is the backlog the other changes are measured against.
+	DefaultBranchRun bool     `json:"default_branch_run"`
+	IncompleteFails  bool     `json:"incomplete_fails"`
+	Exemptions       []Ignore `json:"exemptions,omitempty"`
 	// Notices repeat what the effective profile said, so the run page can
 	// show them without looking the settings up again.
 	Notices []string `json:"notices,omitempty"`

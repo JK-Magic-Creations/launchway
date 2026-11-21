@@ -386,16 +386,21 @@ func (in ResolveInput) sourcePhrase(s Source) string {
 // the configuration in the database, the file's projects are all there is,
 // each outside any unit.
 func (s *Service) Variables() *VariableService {
-	return NewVariableService(NewVariableStore(s.eng), func() (*Layout, error) {
-		if s.Available() {
-			return s.Levels()
+	return NewVariableService(NewVariableStore(s.eng), s.LayoutOrFile)
+}
+
+// LayoutOrFile is the levels as the configuration in the database has them,
+// or, without it, the file's projects, each outside any unit. Standing orders
+// read the units of projects from it.
+func (s *Service) LayoutOrFile() (*Layout, error) {
+	if s.Available() {
+		return s.Levels()
+	}
+	lay := &Layout{Levels: DefaultLevels, ProjectUnit: map[string]string{}, Units: []UnitView{}}
+	if s.boot != nil {
+		for _, p := range s.boot.Projects {
+			lay.ProjectUnit[p.Name] = ""
 		}
-		lay := &Layout{Levels: DefaultLevels, ProjectUnit: map[string]string{}, Units: []UnitView{}}
-		if s.boot != nil {
-			for _, p := range s.boot.Projects {
-				lay.ProjectUnit[p.Name] = ""
-			}
-		}
-		return lay, nil
-	})
+	}
+	return lay, nil
 }

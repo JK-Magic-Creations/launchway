@@ -64,6 +64,8 @@ func (c *cmd) advanceOwn(id string, def *pipeline.Step, changed *bool) (handled 
 		*changed = c.advanceRestore(id, def) || *changed
 	case def.IsRollback():
 		*changed = c.advanceRollback(id, def) || *changed
+	case def.IsGate():
+		*changed = c.advanceGate(id, def) || *changed
 	default:
 		return false
 	}

@@ -290,7 +290,21 @@ var permissionTable = map[string]matrixRow{
 		[6]int{401, 404, 403, 404, 404, 404}},
 	"GET /api/v1/runs/{id}/findings":       {"GET", "/api/v1/runs/{pay}/findings", "", [6]int{401, 404, 200, 200, 404, 200}},
 	"GET /api/v1/projects/{name}/security": {"GET", "/api/v1/projects/pay-api/security", "", [6]int{401, 404, 200, 200, 404, 200}},
-	"GET /api/v1/components":               {"GET", "/api/v1/components?name=left-pad", "", [6]int{401, 200, 200, 200, 200, 200}},
+	// Standing orders: the test server has none, so every call that passes the permission check is 404 feature_off.
+	"GET /api/v1/standards/profile":                              {"GET", "/api/v1/standards/profile", "", [6]int{401, 200, 200, 200, 200, 200}},
+	"GET /api/v1/standards/settings":                             {"GET", "/api/v1/standards/settings?level=installation", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"PUT /api/v1/standards/settings":                             {"PUT", "/api/v1/standards/settings", `{"level":"installation","settings":{}}`, [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/standards/coverage":                             {"GET", "/api/v1/standards/coverage", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/standards":                      {"GET", "/api/v1/projects/pay-api/standards", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/standards/file":                 {"GET", "/api/v1/projects/pay-api/standards/file", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/findings":                       {"GET", "/api/v1/projects/pay-api/findings", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/findings/history":               {"GET", "/api/v1/projects/pay-api/findings/history", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/findings/export":                {"GET", "/api/v1/projects/pay-api/findings/export", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/projects/{name}/findings/{fingerprint}":         {"GET", "/api/v1/projects/pay-api/findings/abc", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"POST /api/v1/projects/{name}/findings/{fingerprint}/accept": {"POST", "/api/v1/projects/pay-api/findings/abc/accept", `{"reason":"a good enough reason","expires":"2027-01-01"}`, [6]int{401, 404, 403, 404, 404, 404}},
+	"POST /api/v1/projects/{name}/findings/{fingerprint}/reopen": {"POST", "/api/v1/projects/pay-api/findings/abc/reopen", "{}", [6]int{401, 404, 403, 404, 404, 404}},
+	"GET /api/v1/runs/{id}/inspection":                           {"GET", "/api/v1/runs/{pay}/inspection", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/components":                                     {"GET", "/api/v1/components?name=left-pad", "", [6]int{401, 200, 200, 200, 200, 200}},
 
 	// Shared libraries and their templates: anyone who may see a project.
 	// The test server has no library called nope.
