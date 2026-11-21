@@ -220,7 +220,7 @@ steps:
 
 Each interval the runner makes a call every `every` (default 5 seconds) and records each one with
 its time, status and latency. If some failed, the verification says so in words: "3 of 20 requests
-to /healthz returned 503", or "2 did not answer within 5s". The run page lists the failed calls under
+to the health address returned 503", or "2 did not answer within 5s". The run page lists the failed calls under
 the metric, and the deployment panel shows the same sentence. As with any metric, `failures` (default
 2) consecutive failing intervals fail the verification, and `on_fail: rollback` rolls back; use
 `on_fail: abort` to stop a canary at once, which makes the proof a smoke test of a rollout step.

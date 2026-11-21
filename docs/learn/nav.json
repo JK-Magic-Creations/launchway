@@ -79,6 +79,7 @@
         "guide/rollback-after-success",
         "guide/policies",
         "guide/verification",
+        "guide/notifications",
         "guide/ai",
         "guide/git-over-ssh",
         "guide/pull-requests",

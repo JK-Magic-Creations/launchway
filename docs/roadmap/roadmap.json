@@ -1346,6 +1346,42 @@
               "link": "guide/deployments"
             },
             {
+              "status": "available",
+              "title": "A health proof built into verification",
+              "value": "A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer.",
+              "detail": "HTTP and TCP checks from the deploy runner, limited to the hosts and namespaces its operator lists; credentials are secret references. gRPC health checks are not built in yet.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery",
+              "link": "guide/verification"
+            },
+            {
+              "status": "available",
+              "title": "GitOps write-back done right",
+              "value": "Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request.",
+              "detail": "Not yet: rolling back several deployments at once by pull request.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery",
+              "link": "guide/gitops-write-back"
+            },
+            {
+              "status": "available",
+              "title": "Delivery notifications",
+              "value": "An approval that waits, a failed run or deployment, a rollback and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries.",
+              "detail": "Email, per-person muting and a rollback review on Home are not done yet.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery",
+              "link": "guide/notifications"
+            },
+            {
+              "status": "available",
+              "title": "Templates with derived defaults and optional parts",
+              "value": "A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server.",
+              "detail": "Defaults derive only for string parameters, from string parameters. The offline command does not know which libraries or environments a server allows.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery",
+              "link": "guide/libraries"
+            },
+            {
               "status": "planned",
               "title": "A single pane of glass",
               "value": "One fleet view of every application and every host: what runs where, its health, drift and evidence.",
@@ -4194,7 +4230,8 @@
       "Statuses now reflect what has been built: hosting over HTTPS and SSH, mirrors and import, webhooks, protected branches (a first version), variables at levels, failures that say why, the Learn area and the accessibility and security gates.",
       "Five new milestones: zero-downtime delivery with Argo CD (8), network and traffic (9), databases (10), Kubernetes and virtual machines (11), and security and trust (12).",
       "The hosted service milestone now describes a service that never holds your network or secrets, and a protected demonstration.",
-      "A new section, How we build, states the principles every item is held to, and a page shows the order of the build."
+      "A new section, How we build, states the principles every item is held to, and a page shows the order of the build.",
+      "Delivery gaps closed: a built-in health proof for verify steps, GitOps write-back races, tags with digests and hosted repositories, notifications, template defaults and offline validate."
     ]
   }
 }

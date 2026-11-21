@@ -13,6 +13,7 @@ Launchway is one place to host your code, build it, test it, scan it and deliver
 - Five new milestones: zero-downtime delivery with Argo CD (8), network and traffic (9), databases (10), Kubernetes and virtual machines (11), and security and trust (12).
 - The hosted service milestone now describes a service that never holds your network or secrets, and a protected demonstration.
 - A new section, How we build, states the principles every item is held to, and a page shows the order of the build.
+- Delivery gaps closed: a built-in health proof for verify steps, GitOps write-back races, tags with digests and hosted repositories, notifications, template defaults and offline validate.
 
 
 Order is by value, not a schedule, and plans change. An item is **available** only when it is on the
@@ -263,6 +264,10 @@ See and control everything you run, whether it is an application in a cluster, a
 | [Health checks set up from the interface](roadmap/milestone-3.md#health-checks-set-up-from-the-interface) | Planned | Write and test custom health checks for resources without editing configuration by hand. |
 | [Hosted or your own Argo CD](roadmap/milestone-3.md#hosted-or-your-own-argo-cd) | Planned | Use an Argo CD that Launchway runs for you, or connect one you already have. |
 | [Rollout control inside a run](roadmap/milestone-3.md#rollout-control-inside-a-run) | In progress | A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station. ([docs](guide/deployments.md)) |
+| [A health proof built into verification](roadmap/milestone-3.md#a-health-proof-built-into-verification) | Available | A verify step can call the service it just deployed, over its window, with no monitoring series to set up; a failure says how many requests got which answer. ([docs](guide/verification.md)) |
+| [GitOps write-back done right](roadmap/milestone-3.md#gitops-write-back-done-right) | Available | Several pipelines may write one manifest at once, a tag can sit beside its digest, and a repository Launchway hosts is written with a credential made for that one deployment, directly or by pull request. ([docs](guide/gitops-write-back.md)) |
+| [Delivery notifications](roadmap/milestone-3.md#delivery-notifications) | Available | An approval that waits, a failed run or deployment, a rollback and a step that waited too long are told to a signed webhook or a chat channel, with a delivery log and retries. ([docs](guide/notifications.md)) |
+| [Templates with derived defaults and optional parts](roadmap/milestone-3.md#templates-with-derived-defaults-and-optional-parts) | Available | A parameter's default can follow another parameter, any step kind or list entry of a template can be left out by a parameter, and launchway validate expands templates from a library directory with no server. ([docs](guide/libraries.md)) |
 | [A single pane of glass](roadmap/milestone-3.md#a-single-pane-of-glass) | Planned | One fleet view of every application and every host: what runs where, its health, drift and evidence. |
 | [Weighted canaries and traffic control](roadmap/milestone-3.md#weighted-canaries-and-traffic-control) | Planned | Send a share of traffic, by client type, to a new version through the Gateway API or a service mesh, with mesh metrics as ready-made health checks. |
 | [Releases across services](roadmap/milestone-3.md#releases-across-services) | Planned | Ship several services as one ordered, gated release with a promotion view across environments. |
