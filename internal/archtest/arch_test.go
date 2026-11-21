@@ -28,7 +28,7 @@ var allowedImports = map[string][]string{
 	"internal/accept":                    {},
 	"internal/ai":                        {"internal/pipeline"},
 	"internal/ai/aitest":                 {},
-	"internal/api":                       {"internal/depupdate", "internal/depupdate/preview", "internal/ai", "internal/auth", "internal/engine", "internal/forge", "internal/forge/archive", "internal/forge/files", "internal/localauth", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/gitssh", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/webhooks", "internal/hub", "internal/ids", "internal/keyring", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/verify"},
+	"internal/api":                       {"internal/depupdate", "internal/depupdate/preview", "internal/ai", "internal/auth", "internal/engine", "internal/forge", "internal/forge/archive", "internal/forge/files", "internal/localauth", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/gitssh", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/webhooks", "internal/hub", "internal/ids", "internal/keyring", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/sealing", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/verify", "internal/work"},
 	"internal/auth":                      {},
 	"internal/blobstore":                 {},
 	"internal/bootstrap":                 {},

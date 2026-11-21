@@ -21,6 +21,7 @@ func (s *Server) WirePulls() {
 	p := s.Forge.Pulls
 	p.OnEvent = s.pullEvent
 	p.Runs = pullRuns{s}
+	p.MergeCheck = s.workMergeCheck
 	p.Paths = func(ctx context.Context, id string) (string, error) {
 		r, err := s.Forge.RepoByID(ctx, id)
 		return r.Path, err

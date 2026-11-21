@@ -348,6 +348,10 @@ func (s *Server) updatePull(w http.ResponseWriter, r *http.Request) {
 		}
 		changes = append(changes, "state "+*in.State)
 	}
+	if in.AutoMerge != nil && id.agent != nil {
+		writeErr(w, http.StatusForbidden, "an agent does not turn on auto-merge; the autonomy policy decides what merges by itself")
+		return
+	}
 	if in.AutoMerge != nil {
 		if *in.AutoMerge != "" && !op {
 			writeErr(w, http.StatusForbidden, "only an operator may turn on auto-merge")
@@ -458,6 +462,7 @@ func (s *Server) pullEvent(ctx context.Context, e pulls.Event) {
 		return
 	}
 	e.Pull.Repository = repo.Path
+	s.workOnPull(ctx, repo, e)
 	if s.Forge != nil && s.Forge.Hooks != nil {
 		ev := webhooks.EventPullRequest
 		switch e.Action {

@@ -40,6 +40,10 @@ type Service struct {
 	Paths func(ctx context.Context, repoID string) (string, error)
 	// AfterMerge is told of a merge made by auto-merge, which no request made.
 	AfterMerge func(ctx context.Context, repoID string, p PullRequest)
+	// MergeCheck, when set, may refuse any merge (a request's or auto-merge's)
+	// before the rules are read; work tracking uses it for the rules about
+	// agents. actor is who merges.
+	MergeCheck func(ctx context.Context, repoID string, p PullRequest, actor string) error
 	Log        *slog.Logger
 	// Clock gives the time of commits made by the server (default time.Now).
 	Clock func() time.Time

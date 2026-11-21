@@ -15,16 +15,17 @@ type ChangedFile struct {
 
 // AgentChange describes an agent's pull request for the merge gate.
 type AgentChange struct {
-	Scope         Scope
-	Agent         string
-	ItemType      string
-	Files         []ChangedFile
-	Lines         int    // lines added and removed
-	TestsSkipped  bool   // the diff adds a skipped test
-	ChecksPassed  bool   // every required check passed
-	ChecksSkipped bool   // a required check was skipped or has not run
-	HumanApproved bool   // a person other than the author approved it
-	Repo, Pull    string // the pull request, to find the agent reviews that count
+	Scope          Scope
+	Agent          string
+	ItemType       string
+	Files          []ChangedFile
+	Lines          int    // lines added and removed
+	TestsSkipped   bool   // the diff adds a skipped test
+	ChecksPassed   bool   // every required check passed
+	ChecksRequired int    // how many checks are required; auto-merge needs at least one
+	ChecksSkipped  bool   // a required check was skipped or has not run
+	HumanApproved  bool   // a person other than the author approved it
+	Repo, Pull     string // the pull request, to find the agent reviews that count
 }
 
 // Decision is the gate's answer. It advises and explains; the caller enforces.
@@ -211,12 +212,14 @@ func (s *Store) Gate(ctx context.Context, ch AgentChange) (*Decision, error) {
 	}
 	if ch.ChecksSkipped || !ch.ChecksPassed {
 		why("required checks have not all passed (a failing or skipped check blocks every merge)")
+	} else if ch.ChecksRequired == 0 && d.EnforcedLevel >= AutonomyAutoMerge {
+		why("no check is required on this branch, so nothing can show that the change is safe to merge without a person")
 	}
 	if d.EnforcedLevel < AutonomyAutoMerge {
 		if d.Level < AutonomyPerson+1 {
 			why("policy: a person approves and merges")
 		}
-	} else if !protected && ch.ChecksPassed && !ch.ChecksSkipped {
+	} else if !protected && ch.ChecksPassed && !ch.ChecksSkipped && ch.ChecksRequired > 0 {
 		paused, n, err := s.Paused(ctx, ch.Scope, au)
 		if err != nil {
 			return nil, err

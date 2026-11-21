@@ -13,6 +13,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/work"
 )
 
 // limited reports whether the identity is a token with limits.
@@ -45,6 +46,13 @@ func matchPattern(patterns []string, project string) bool {
 
 // roleOn is the role the identity acts with on a project.
 func (s *Server) roleOn(id *identity, project string) auth.Role {
+	if id.agent != nil {
+		// An agent is never more than an operator, on the projects it is registered for.
+		if s.work().AgentCovers(id.agent, work.Scope{Kind: work.ScopeProject, ID: project}) {
+			return auth.Operator
+		}
+		return auth.NoRole
+	}
 	return id.limit(s.cur().Policy.RoleOn(id.User, id.Groups, project), project)
 }
 

@@ -131,7 +131,7 @@ func TestPushWebhookRefreshesApplicationsOfAGitOpsReceiver(t *testing.T) {
 	}
 
 	tok := e.tokenFor(t, "ada", "t")
-	src := work(t)
+	src := workingCopy(t)
 	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/git/acme/gitops.git", tok), "HEAD:refs/heads/main")
 	whUntil(t, h, "the three receivers to be told", func() bool {
 		current.mu.Lock()

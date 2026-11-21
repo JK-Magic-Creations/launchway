@@ -31,7 +31,7 @@ func TestAgentReviewIndependenceAndPolicy(t *testing.T) {
 	if _, err := s.Claim(ctx, author, work.ClaimOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	change := work.AgentChange{Scope: proj, ItemType: "issue", Files: []work.ChangedFile{{Path: "docs/a.md"}}, Lines: 5, ChecksPassed: true, Repo: "acme/shop", Pull: "3"}
+	change := work.AgentChange{Scope: proj, ItemType: "issue", Files: []work.ChangedFile{{Path: "docs/a.md"}}, Lines: 5, ChecksPassed: true, ChecksRequired: 1, Repo: "acme/shop", Pull: "3"}
 	in := work.ReviewInput{Change: change, Repo: "acme/shop", Pull: "3", AuthorAgents: []string{"writer"}, ItemIDs: []string{it.ID}, Verdict: goodVerdict()}
 
 	// Under the default policy an agent's review is advice and does not count.

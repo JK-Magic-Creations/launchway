@@ -33,7 +33,7 @@ func TestPullMirrorThroughTheAPI(t *testing.T) {
 	ada, vic, otto := e.signIn(t, "ada"), e.signIn(t, "vic"), e.signIn(t, "otto")
 	repos := e.srv.URL + "/api/v1/repositories"
 	ada.do("POST", repos, `{"owner":"acme","name":"app"}`)
-	src := work(t)
+	src := workingCopy(t)
 	up := bareOf(t, src)
 	base := repos + "/acme/app/mirrors"
 
@@ -152,7 +152,7 @@ func TestPushMirrorThroughTheAPIFollowsAcceptedPushes(t *testing.T) {
 		t.Fatalf("%d %s", r.status, r.body)
 	}
 	tok := e.tokenFor(t, "ada", "git")
-	src := work(t)
+	src := workingCopy(t)
 	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/acme/app.git", tok), "HEAD:refs/heads/main")
 	want := strings.TrimSpace(mustGit(t, src, "rev-parse", "HEAD"))
 	waitForMirror(t, "the push to reach the off-site copy", func() bool {

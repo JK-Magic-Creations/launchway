@@ -216,7 +216,7 @@ func TestLevelKillSwitchAndTakeOver(t *testing.T) {
 
 func TestAutonomyGate(t *testing.T) {
 	s, ctx := newStore(t), context.Background()
-	ok := work.AgentChange{Scope: proj, Agent: "docs", ItemType: "task", Files: []work.ChangedFile{{Path: "docs/a.md"}}, Lines: 10, ChecksPassed: true}
+	ok := work.AgentChange{Scope: proj, Agent: "docs", ItemType: "task", Files: []work.ChangedFile{{Path: "docs/a.md"}}, Lines: 10, ChecksPassed: true, ChecksRequired: 1}
 	d, err := s.Gate(ctx, ok)
 	if err != nil || d.AutoMerge || !d.NeedsHuman || d.Level != 1 || d.Source != "default" {
 		t.Fatalf("default is a person approves and merges: %+v %v", d, err)

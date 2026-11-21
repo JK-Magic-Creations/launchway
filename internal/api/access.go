@@ -14,6 +14,7 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/work"
 )
 
 // Who is calling, and what they may do.
@@ -30,6 +31,8 @@ type identity struct {
 	capRole  auth.Role
 	scope    []string
 	tokenTag string // the token's name, for the audit trail
+	// agent is set when the token is an agent's (internal/work).
+	agent *work.Agent
 }
 
 const (
@@ -114,6 +117,9 @@ func (s *Server) identify(r *http.Request, touch bool) (*identity, error) {
 	if h := r.Header.Get("Authorization"); h != "" {
 		// A request that names a token is judged by the token alone.
 		tok, ok := apiToken(h)
+		if ok && strings.HasPrefix(tok, work.TokenPrefix) {
+			return s.agentIdentity(r, tok, touch)
+		}
 		if !ok || !strings.HasPrefix(tok, tokenPrefix) {
 			s.tokenDenied(r, touch, "", "", "the Authorization header holds no Launchway API token")
 			return nil, nil
@@ -576,6 +582,9 @@ func shortSHA(sha string) string { return sha[:min(len(sha), 8)] }
 // revoked or expired (counted as a failed attempt), with touch recording
 // that it was used.
 func (s *Server) tokenIdentity(r *http.Request, tok string, touch bool) (*identity, error) {
+	if strings.HasPrefix(tok, work.TokenPrefix) {
+		return s.agentIdentity(r, tok, touch)
+	}
 	now := s.Now()
 	t, groups, err := s.Engine.LookupToken(auth.Hash(tok))
 	if errors.Is(err, engine.ErrNotFound) {
@@ -633,4 +642,23 @@ func auditTarget(r *http.Request) string {
 		return t
 	}
 	return r.PathValue("name")
+}
+
+// agentIdentity is who an agent's token stands for: the agent, limited to
+// Operator on the projects it is registered for. A switched-off agent is
+// refused (counted as a failed attempt), so its token stops working at once.
+func (s *Server) agentIdentity(r *http.Request, tok string, touch bool) (*identity, error) {
+	a, err := s.work().AgentForToken(r.Context(), tok)
+	if err != nil {
+		return nil, err
+	}
+	if a == nil {
+		s.tokenDenied(r, touch, "", "", "an unknown or rotated agent token")
+		return nil, nil
+	}
+	if a.Disabled {
+		s.tokenDenied(r, touch, "agent:"+a.Name, a.Name, "the agent "+a.Name+" is switched off")
+		return nil, nil
+	}
+	return &identity{User: "agent:" + a.Name, Via: viaToken, tokenTag: "agent " + a.Name, capRole: auth.Operator, scope: a.Projects, agent: a}, nil
 }

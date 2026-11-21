@@ -18,11 +18,12 @@ const (
 	EventRepository        = "repository"
 	EventPullRequest       = "pull_request"
 	EventPullRequestReview = "pull_request_review"
+	EventWorkItem          = "work_item"
 	EventPing              = "ping" // a test delivery; always delivered
 )
 
 // Events is the whole set, in a fixed order.
-var Events = []string{EventPush, EventCreate, EventDelete, EventRepository, EventPullRequest, EventPullRequestReview}
+var Events = []string{EventPush, EventCreate, EventDelete, EventRepository, EventPullRequest, EventPullRequestReview, EventWorkItem}
 
 // Scopes of a hook.
 const (
@@ -195,6 +196,8 @@ type Payload struct {
 	// review's verdict, the merge method).
 	Number      int            `json:"number,omitempty"`
 	PullRequest map[string]any `json:"pull_request,omitempty"`
+	// work_item: an item was assigned to an agent, or an agent handed one back or asked for review
+	Work map[string]any `json:"work,omitempty"`
 	// ping
 	Zen string `json:"zen,omitempty"`
 }

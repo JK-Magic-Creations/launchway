@@ -35,7 +35,7 @@ func TestImportThroughTheAPI(t *testing.T) {
 	e, _ := hostedEnvWith(t, envOpts{}, hosting.Options{Guard: guard}, githttp.Options{})
 	ada, otto := e.signIn(t, "ada"), e.signIn(t, "otto")
 	root := t.TempDir()
-	src := work(t)
+	src := workingCopy(t)
 	mustGit(t, src, "tag", "v1")
 	mustGit(t, root, "clone", "-q", "--mirror", src, filepath.Join(root, "old", "shop.git"))
 	other := otherServer(t, root)
