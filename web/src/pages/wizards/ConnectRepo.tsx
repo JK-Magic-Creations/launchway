@@ -307,7 +307,7 @@ export function useRepoFlow(overview: ConfigOverview): RepoFlow {
             <TextInput label="When (cron, UTC)" value={cron} onChange={setCron} mono help="Minute, hour, day of the month, month, day of the week. 0 3 * * * is every night at 03:00; @daily and @hourly work too." />
           )}
           {(onPush || onPR) && <CheckInput label="A newer run cancels older ones" checked={supersede} onChange={setSupersede} problems={by.supersede}
-            help="When you push again while a run of the same branch or pull request is still going, the older run is cancelled, so runners work on the latest commit only. A run that is deploying is never cancelled." />}
+            help="When you push again while a run of the same branch or pull request is still going, the older run is canceled, so runners work on the latest commit only. A run that is deploying is never cancelled." />}
         </div>
         {source === "template" && <p className="cf-help">A schedule needs a pipeline file in the repository; a {proj} that runs a library template can be started by pushes, pull requests or by hand.</p>}
         {source !== "template" && <p className="cf-help">With a pipeline file, these triggers are written in the file's <span className="mono">on:</span> section: the summary shows the lines to put there.</p>}

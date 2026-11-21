@@ -93,7 +93,7 @@ export function ComponentsPage() {
           <section aria-label="Runs">
             <div className="table-scroll card card-flush">
               <table className="inputs-table comptable">
-                <thead><tr><th>Project</th><th>Run</th><th>Branch</th><th>Step</th><th>Name</th><th>Version</th><th>Licences</th><th>When</th></tr></thead>
+                <thead><tr><th>Project</th><th>Run</th><th>Branch</th><th>Step</th><th>Name</th><th>Version</th><th>Licenses</th><th>When</th></tr></thead>
                 <tbody>
                   {data.hits.map((h, i) => (
                     <tr key={h.run_id + h.step + i}>

@@ -333,7 +333,7 @@ function oneLine(s: string): string {
   return line.length > 140 ? line.slice(0, 140) + "…" : line;
 }
 
-// SBOMSection shows each step's SBOM: how many components, their licences,
+// SBOMSection shows each step's SBOM: how many components, their licenses,
 // and the file to download.
 function SBOMSection({ run, sboms, version }: { run: RunDetail; sboms: StepSBOM[]; version: string }) {
   const [arts, setArts] = useState<ArtifactView[] | null>(null);
@@ -379,7 +379,7 @@ function SBOMSection({ run, sboms, version }: { run: RunDetail; sboms: StepSBOM[
             </ul>
             {lic.length > 0 && (
               <div className="lics">
-                <div className="finding-h">Licences{counted < s.components ? <span className="faint"> (the commonest; {s.components - counted} components not counted)</span> : null}</div>
+                <div className="finding-h">Licenses{counted < s.components ? <span className="faint"> (the commonest; {s.components - counted} components not counted)</span> : null}</div>
                 <ul className="licbars">
                   {lic.map(([name, n]) => (
                     <li key={name}>

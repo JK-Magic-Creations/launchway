@@ -203,7 +203,7 @@ function Editor({ k, name, overview, path }: { k: ConfigKind; name: string; over
                 {k.name === "policy" && (
                   catalogue.length ? <PolicyRules catalogue={catalogue} rules={(spec.rules as Record<string, unknown>) ?? {}} problems={by}
                     onChange={(r) => setSpec({ ...spec, rules: Object.keys(r).length ? r : undefined } as Spec)} />
-                    : <p className="faint">Loading the rule catalogue…</p>
+                    : <p className="faint">Loading the rule catalog…</p>
                 )}
                 <Unformed kind={k.name} spec={spec} />
               </>

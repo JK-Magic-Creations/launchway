@@ -95,7 +95,7 @@ export function PolicyPage() {
         )}
       </section>
 
-      <section className="card" aria-label="Rule catalogue">
+      <section className="card" aria-label="Rule catalog">
         <h2 className="h-sm">The rules a policy can use</h2>
         <div className="table-scroll">
           <table className="inputs-table pol-catalogue">

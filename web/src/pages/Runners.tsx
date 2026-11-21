@@ -84,7 +84,7 @@ export function RunnersPage() {
         <div className="callout callout-draft" role="status">
           <strong>{legacy.length === 1 ? "1 runner uses" : `${legacy.length} runners use`} a shared token, which gives no per-runner identity.</strong>{" "}
           The server cannot tell runners with the same token apart, so it trusts what each says about itself, and a leaked token lets
-          anyone take that pool's work. Enrol them with a join token instead{manage ? " (below)" : ""}, then set <Mono>require_identity</Mono> on the pool.
+          anyone take that pool's work. Enroll them with a join token instead{manage ? " (below)" : ""}, then set <Mono>require_identity</Mono> on the pool.
         </div>
       )}
 
@@ -145,7 +145,7 @@ export function RunnersPage() {
       {pools && manage && pools.identities && <AddRunner pools={pools.pools} onMade={() => load(true)} onError={setError} />}
       {pools && manage && pools.identities && tokens && (
         <JoinTokens tokens={tokens} now={now} onRevoke={(t) => {
-          if (window.confirm(`Revoke join token ${t.id}? No more runners can enrol with it; those it enrolled keep working.`)) act(() => api.revokeJoinToken(t.id));
+          if (window.confirm(`Revoke join token ${t.id}? No more runners can enroll with it; those it enrolled keep working.`)) act(() => api.revokeJoinToken(t.id));
         }} />
       )}
       {pools && !manage && (
@@ -349,7 +349,7 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
             </select>
           </label>
           <label className="field">
-            <span>Runners it may enrol</span>
+            <span>Runners it may enroll</span>
             <input type="number" min={1} max={10000} value={uses} onChange={(e) => setUses(Math.max(1, Number(e.target.value) || 1))} />
           </label>
           <label className="field">
@@ -367,7 +367,7 @@ function AddRunner({ pools, onMade, onError }: { pools: RunnerPool[]; onMade: ()
         </div>
         <label className="rn-check">
           <input type="checkbox" checked={ephemeral} onChange={(e) => setEphemeral(e.target.checked)} />
-          <span>Ephemeral: each runner is revoked when it leaves (for pods that enrol when they start)</span>
+          <span>Ephemeral: each runner is revoked when it leaves (for pods that enroll when they start)</span>
         </label>
         <div><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Making…" : "Make join token"}</button></div>
       </form>
@@ -412,7 +412,7 @@ function installCommands(origin: string, token: string, t: JoinToken, version: s
   return {
     vm: [
       {
-        title: "Install and enrol (Linux with systemd; the installer verifies what it downloads)",
+        title: "Install and enroll (Linux with systemd; the installer verifies what it downloads)",
         text: `curl -fsSLO ${installerURL(version)}\nsudo sh install.sh ${version ? `--version ${version} ` : ""}--server ${origin} --join ${token}`,
       },
       { title: "Or, with the launchway binary already on the machine", text: `launchway runner --server ${origin} --join ${token} --config /etc/launchway/runner.yaml` },

@@ -87,7 +87,7 @@ export const FIELDS: Record<string, FieldDef[]> = {
     num("findings.max_per_project", "Findings kept per project", "Default 500000.", "Limits"),
     num("findings.max_components_per_run", "SBOM components kept per run", "Default 20000.", "Limits"),
     num("findings.max_components_per_project", "SBOM components kept per project", "Default 1000000.", "Limits"),
-    num("findings.max_sbom_mib", "SBOM read per attempt (MiB)", "How much of an SBOM is read to summarise it. Default 64.", "Limits"),
+    num("findings.max_sbom_mib", "SBOM read per attempt (MiB)", "How much of an SBOM is read to summarize it. Default 64.", "Limits"),
     num("reports.max_attachment_files", "Attachment files per step", "Files in a step's attachments directory. Default 2000.", "Limits"),
     num("reports.max_attachment_mib", "Attachments per step (MiB)", "Default 512.", "Limits"),
     num("reports.max_html_files", "Files in one HTML report", "Default 5000.", "Limits"),
