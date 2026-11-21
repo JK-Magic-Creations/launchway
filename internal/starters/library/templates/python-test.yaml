@@ -1,0 +1,28 @@
+# A step template: installs dependencies and runs pytest with a JUnit report and a Cobertura coverage report.
+#
+#   test: { uses: launchway/python-test, with: { coverage_minimum: 80 } }
+template: python-test
+description: "Maneuver: install dependencies and run pytest with a Tests and a Coverage report"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  python_version: { type: string, default: "3.13", description: "The Python version of the image: the python image tag" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
+  test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
+containers:
+  python: { image: { param: python_version, format: "docker.io/library/python:%s-slim" } }
+steps:
+  run:
+    description: Install dependencies and run pytest
+    container: python
+    cache:
+      - name: python
+        paths: [.cache/pip, .cache/uv]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
+        fallback: latest
+    env: { PHASES: "setup test" }
+    run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
+    reports:
+      tests: ["**/reports/**/junit.xml"]
+      coverage: { paths: ["**/reports/**/coverage.xml"], fail_under: { param: coverage_minimum } }

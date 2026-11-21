@@ -34,6 +34,7 @@ const EnvironmentPage = lz(() => import("../pages/EnvironmentView"), "Environmen
 const ApplicationsPage = lz(() => import("../pages/ApplicationsList"), "ApplicationsListPage");
 const ApplicationPage = lz(() => import("../pages/ApplicationView"), "ApplicationViewPage");
 const LibraryPage = lz(() => import("../pages/Library"), "LibraryPage");
+const StartersPage = lz(() => import("../pages/Starters"), "StartersPage");
 const TemplatesPage = lz(() => import("../pages/Library"), "TemplatesPage");
 const TemplatePage = lz(() => import("../pages/TemplatePage"), "TemplatePage");
 const ImagesPage = lz(() => import("../pages/Images"), "ImagesPage");
@@ -101,6 +102,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/deployments/applications": return <ApplicationsPage />;
     case "/deployments/applications/:name": return <ApplicationPage key={p.name} name={p.name} />;
     case "/library": return <LibraryPage />;
+    case "/library/starters": return <StartersPage />;
     case "/library/templates": return <TemplatesPage />;
     case "/library/templates/:library/:name": return <TemplatePage key={p.library + "/" + p.name} library={p.library} name={p.name} />;
     case "/images": return <><ImagesSwitch on="images" /><ImagesPage /></>;

@@ -67,6 +67,7 @@
         "guide/queues",
         "guide/editor",
         "guide/built-in-accounts",
+        "guide/starters",
         "guide/libraries",
         "guide/approvals-and-reruns",
         "guide/test-reports",
@@ -212,6 +213,7 @@
         "guide/editor",
         "concepts/templates-and-libraries",
         "concepts/variables",
+        "guide/starters",
         "guide/libraries",
         "tutorials/tests-and-reports"
       ]

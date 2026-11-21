@@ -48,7 +48,7 @@ steps:
 | `message` | For an approval: the question to decide, one line of at most 500 characters |
 | `uses` | `library/template`: the step is replaced by a template's steps; see [Shared libraries](libraries.md) |
 | `with` | Values for the template's parameters; a value may be `{ input: name }`, a [run input](#run-inputs) |
-| `for_each` | Repeats the step over lists; with `exclude`, `add`, `continue_for`, `max_parallel` and `fail_fast`. See [Repeating a step over lists](#repeating-a-step-over-lists) |
+| `for_each` | Repeats the step over lists; with `exclude`, `add`, `continue_for`, `max_parallel`, `fail_fast` and `serial`. See [Repeating a step over lists](#repeating-a-step-over-lists) |
 
 At the top level, beside `pipeline`, `on`, `containers` and `steps`, `libraries` names the
 [shared libraries](libraries.md) the pipeline's templates come from, and `supersede: true`
@@ -229,7 +229,32 @@ Choices whose options come from a step or another system (`options_from:`) are n
 
 ## Repeating a step over lists
 
-`for_each` repeats a step, or a step that uses a template, once for each combination of values:
+`for_each` repeats a step, or a step that uses a template, once for each combination of values. This
+is the **matrix**: a step is written once, the lists of values are the axes, and each combination is a step
+of its own. (There is no key called `matrix`; a file that writes one is told to use `for_each`.)
+
+```yaml
+  test:
+    for_each: { go: ["1.26", "1.27"], os: [linux] }
+    image: { each: go, format: "golang:%s" }
+    run: go test ./...
+```
+
+What each combination gets, and what the matrix as a whole shows:
+
+- **Its own step**, with a stable name (`test[go=1.27,os=linux]`), its own log, its own
+  [cache](build-caches.md) when the cache key says `{ each: go }`, and its own [test report](test-reports.md) (write
+  reports to a directory per combination: the starters use `reports/<values>/`).
+- **A single "passed"** for steps that `needs: test`, which wait for every combination.
+- **A roll-up** on the launch line: `3 of 4 passed`, and with a failure `3 of 4 passed: test[go=1.26] ended with exit code 1`.
+- **One check** on a pull request: requiring `ci/test` requires every combination; requiring `ci/test[go=1.26]` names one.
+- **Re-running one combination**: re-run from its step (*Re-run from here*), and the others keep what they did.
+- **The run page** draws the matrix as one node that sums its combinations up, and a grid when you open it.
+- **A failure stops the others by default** (`fail_fast: true`): CI minutes are not spent on combinations of a run that already
+  failed. Write `fail_fast: false` when each combination's answer matters, as it does for a library on several versions; the
+  [library starters](starters.md) do.
+
+The full example, with all the keys:
 
 ```yaml
   test:
@@ -280,6 +305,26 @@ would fit the engine this way: the producing step's outputs are recorded in its 
 event, so a new event (a loop's members, recorded when that step finishes) would add the member
 steps to the run, and every server would rebuild them from the log as it does now; servers that
 do not know the event would leave such runs alone, as they do any run they do not fully understand.
+
+## Defaults for every step
+
+Steps that share an image, a variable, a timeout or a cache say it once:
+
+```yaml
+defaults:
+  image: docker.io/library/node:22
+  env: { CI: "true" }
+  timeout: 15m
+  cache:
+    - { name: npm, paths: [.cache/npm], key: { files: [package-lock.json] } }
+steps:
+  lint: { run: npm run lint }
+  test: { needs: lint, run: npm test }
+  e2e:  { image: mcr.microsoft.com/playwright:v1.50.0, needs: test, run: npm run e2e }   # its own image, the rest from defaults
+```
+
+A step's own value wins, `env` is merged key by key, and approvals, images, deploys, verifications and steps that use
+templates take none of it (see [Defaults](../reference/pipeline.md#defaults)).
 
 ## Retrying after a wait, and limiting a run
 

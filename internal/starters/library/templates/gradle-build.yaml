@@ -1,0 +1,26 @@
+# A step template: gradle build with the tests in Tests and JaCoCo's report (when the build writes one) in Coverage.
+#
+#   build: { uses: launchway/gradle-build }
+template: gradle-build
+description: "Maneuver: gradle build, with the test results and JaCoCo coverage as reports"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  java_version: { type: string, default: "21", description: "The Java version of the image: gradle:8-jdk<version>" }
+  build_command: { type: string, default: "", description: "Your own build command, in place of the default" }
+containers:
+  java: { image: { param: java_version, format: "docker.io/library/gradle:8-jdk%s" } }
+steps:
+  run:
+    description: Compile, test and package with Gradle
+    container: java
+    cache:
+      - name: gradle
+        paths: [.cache/gradle]
+        key: { files: ["**/*.gradle", "**/*.gradle.kts", "**/gradle-wrapper.properties", "**/gradle.lockfile"], text: { param: java_version, format: "jdk-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/java/gradle.sh"
+    reports:
+      tests: ["**/build/test-results/test/*.xml"]
+      coverage: ["**/build/reports/jacoco/test/jacocoTestReport.xml"]
+    artifacts:
+      - { name: jar, paths: ["**/build/libs/*.jar"] }

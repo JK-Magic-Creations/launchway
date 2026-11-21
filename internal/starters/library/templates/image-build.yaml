@@ -1,0 +1,47 @@
+# A maneuver of two steps: the tag, then the image: build, scan, SBOM, sign and (only when push is on) push.
+#
+#   image:
+#     uses: launchway/image-build
+#     needs: test
+#     with: { image_repository: team/app, push: true }
+#
+# Pull-request and draft runs never push, whatever push says. The tag comes from the commit's time and id, so the same commit always gets the same tag.
+# Outputs: tag, digest, image.
+template: image-build
+description: "Maneuver: build, scan, SBOM, sign and push one image from a Dockerfile"
+params:
+  image_repository: { type: string, default: "launchway/app", description: "The image's repository in the registry, without the host: team/app" }
+  registry: { type: string, default: "registry", description: "A registry the runner's configuration names" }
+  dockerfile: { type: string, default: "Dockerfile", description: "The Dockerfile, relative to the repository (not to the context)" }
+  context: { type: string, default: ".", description: "The build context, relative to the repository" }
+  push: { type: boolean, default: false, description: "Push the image; off builds and scans only" }
+  scan_mode: { type: string, default: "report", options: ["report", "enforce"], description: "report records findings; enforce fails before the push" }
+  scan_fail_on: { type: string, default: "high", options: ["critical", "high", "medium", "low"], description: "With enforce: the least serious finding that fails" }
+  moving_tag: { type: string, default: "", description: "A second, moving tag pushed with every build (ci-latest, for a Dockerfile that uses the image as a base); empty pushes only the commit's tag" }
+  sbom: { type: boolean, default: true, description: "Make the software bill of materials" }
+  sign: { type: boolean, default: true, description: "Sign with the runner's own key" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+steps:
+  tag:
+    description: The image tag, from the commit's time and id
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/image/tag.sh"
+  image:
+    kind: image
+    description: Build, scan and push the image
+    needs: tag
+    context: { param: context }
+    file: { param: dockerfile }
+    push: { param: push }
+    build_args:
+      GIT_SHA: { run: sha }
+    tags:
+      - { registry: { param: registry }, repository: { param: image_repository }, tag: { output: tag.tag } }
+      - { if: { param: moving_tag, empty: false }, registry: { param: registry }, repository: { param: image_repository }, tag: { param: moving_tag } }
+    sbom: { param: sbom }
+    sign: { param: sign }
+    scan: { mode: { param: scan_mode }, fail_on: { param: scan_fail_on } }
+outputs:
+  tag:    { from: tag.tag }
+  digest: { from: image.digest }
+  image:  { from: image.image }

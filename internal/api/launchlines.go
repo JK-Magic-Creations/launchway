@@ -288,6 +288,7 @@ func resolve(b *stationBuild, deps map[string]engine.DeploymentView, d *engine.R
 			b.State, b.Detail = stationRunning, strconv.Itoa(done)+" of "+strconv.Itoa(len(b.steps))+" steps done"
 		}
 	}
+	b.Detail = withMatrix(b, d)
 	// A deploy that succeeded as a step may still be rolling out.
 	if b.State == stationDone && strings.HasPrefix(b.Key, "env:") {
 		for _, st := range b.steps {
@@ -458,4 +459,62 @@ func stationLine(s, fallback string) string {
 		s = s[:140] + "..."
 	}
 	return s
+}
+
+// withMatrix adds how a matrix (a step repeated by for_each) is doing to a
+// station's detail: "3 of 4 passed". A matrix counts as one thing on the
+// line, whichever of its members the station shows; a station with more than
+// one matrix names the first.
+func withMatrix(b *stationBuild, d *engine.RunDetail) string {
+	if d == nil || d.Graph == nil {
+		return b.Detail
+	}
+	byID := map[string]*engine.StepView{}
+	for i := range b.steps {
+		byID[b.steps[i].ID] = &b.steps[i]
+	}
+	for _, l := range d.Graph.Loops {
+		var total, passed, failed int
+		for _, m := range l.Members {
+			var ok, bad, seen int
+			for id, st := range byID {
+				if !m.Has(id) {
+					continue
+				}
+				seen++
+				switch {
+				case st.Status == engine.StepSucceeded || (st.Status == engine.StepFailed && st.AllowedFailure):
+					ok++
+				case st.Status == engine.StepFailed:
+					bad++
+				}
+			}
+			if seen == 0 {
+				continue
+			}
+			total++
+			switch {
+			case bad > 0:
+				failed++
+			case ok == seen:
+				passed++
+			}
+		}
+		if total < 2 {
+			continue
+		}
+		roll := strconv.Itoa(passed) + " of " + strconv.Itoa(total) + " passed"
+		switch b.State {
+		case stationRunning, stationWaiting:
+			return roll + " so far"
+		case stationDone:
+			return roll
+		case stationFailed:
+			if b.Detail != "" {
+				return roll + ": " + b.Detail
+			}
+			return roll
+		}
+	}
+	return b.Detail
 }

@@ -1,0 +1,25 @@
+# A step template: installs dependencies and runs the build script; dist/ and build/ are kept as the artifact build.
+#
+#   build: { uses: launchway/node-build }
+template: node-build
+description: "Maneuver: install dependencies and run the package's build script"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  node_version: { type: string, default: "22", description: "The Node major version of the image: the node image tag" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  output_dir: { type: string, default: "dist", description: "The folder the build writes; kept as the artifact build" }
+containers:
+  node: { image: { param: node_version, format: "docker.io/library/node:%s" } }
+steps:
+  run:
+    description: Install dependencies and build
+    container: node
+    cache:
+      - name: node
+        paths: [.cache/npm, .cache/pnpm, .cache/yarn]
+        key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
+        fallback: latest
+    env: { PHASES: "setup build" }
+    run: "$LAUNCHWAY_LIB/scripts/node/run.sh"
+    artifacts:
+      - { name: build, paths: ["**/dist", "**/build"] }

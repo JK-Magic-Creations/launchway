@@ -70,7 +70,12 @@ type ForEach struct {
 	// FailFast stops the other members once one fails: those not started
 	// are not run, and those running are stopped. On by default.
 	FailFast bool `json:"fail_fast"`
-	Line     int  `json:"-"`
+	// Serial makes each member wait for the member before it to finish
+	// well: the members go one after the other in the order of the lists,
+	// and a member that fails ends the line (a delivery through dev, then
+	// staging, then prod).
+	Serial bool `json:"serial,omitempty"`
+	Line   int  `json:"-"`
 }
 
 // LoopList is where one key's values come from: written in place, or a run
@@ -90,6 +95,7 @@ type Loop struct {
 	Members     []LoopMember `json:"members"`
 	MaxParallel int          `json:"max_parallel,omitempty"`
 	FailFast    bool         `json:"fail_fast"`
+	Serial      bool         `json:"serial,omitempty"`
 }
 
 // LoopMember is one combination: a step, or, when the loop repeats a step
@@ -152,7 +158,7 @@ type eachRef struct {
 	line   int
 }
 
-var loopKeys = []string{"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for"}
+var loopKeys = []string{"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "serial"}
 
 // parseForEach reads for_each: { key: list, ... }.
 func (ps *parser) parseForEach(n *yaml.Node, at string) *ForEach {
@@ -283,6 +289,9 @@ func (ps *parser) parseLoopSettings(s *Step, at string, keys map[string]*yaml.No
 	if n := nodes["fail_fast"]; n != nil {
 		f.FailFast = ps.bool(n, at+".fail_fast")
 	}
+	if n := nodes["serial"]; n != nil {
+		f.Serial = ps.bool(n, at+".serial")
+	}
 	if n := nodes["exclude"]; n != nil {
 		if n.Kind != yaml.SequenceNode {
 			ps.add(n, at+".exclude", "exclude is a list of combinations, for example: exclude: [ { python: \"3.11\", os: alpine } ]")
@@ -380,7 +389,7 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 	replace := map[string][]string{}
 	var out []*Step
 	for _, s := range steps {
-		if s.ForEach == nil {
+		if s.ForEach == nil || dropped(s) {
 			out = append(out, s)
 			continue
 		}
@@ -432,7 +441,7 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 				"the loop makes %d combinations; this server allows at most %d per loop", len(combos), limit)})
 			continue
 		}
-		loop := &Loop{ID: prefix + s.ID, Description: s.Description, Keys: slices.Clone(f.Keys), MaxParallel: f.MaxParallel, FailFast: f.FailFast}
+		loop := &Loop{ID: prefix + s.ID, Description: s.Description, Keys: slices.Clone(f.Keys), MaxParallel: f.MaxParallel, FailFast: f.FailFast, Serial: f.Serial}
 		var ids []string
 		envNames := map[string]string{}
 		for _, combo := range combos {
@@ -463,6 +472,9 @@ func expandLoops(steps []*Step, prefix string, limit int, lookup loopLookup, pre
 			if msg := m.stepRunnerProblems(); msg != "" {
 				problems = append(problems, Problem{Line: s.Line, Path: "steps." + s.ID + ".runner", Message: id + ": " + msg})
 				break
+			}
+			if f.Serial && len(ids) > 0 {
+				m.Needs = append(m.Needs, ids[len(ids)-1])
 			}
 			out = append(out, m)
 			ids = append(ids, id)

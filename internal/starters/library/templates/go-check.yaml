@@ -1,0 +1,23 @@
+# A step template: one step, shared by every Go flight plan and usable on its own.
+#
+#   check: { uses: launchway/go-check }
+#
+# Fails when a file is not formatted the way gofmt writes it, or go vet finds a mistake.
+template: go-check
+description: "Maneuver: gofmt and go vet (and your lint command) for a Go module"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  go_version: { type: string, default: "1.27", description: "The Go version of the image: the golang image tag" }
+  lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
+containers:
+  go: { image: { param: go_version, format: "docker.io/library/golang:%s" } }
+steps:
+  run:
+    description: Format and vet the Go code
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/check.sh"

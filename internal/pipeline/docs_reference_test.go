@@ -207,6 +207,7 @@ containers:
   db: { image: postgres:17, service: true, ready: { http: { path: /health, port: 8080 }, every: 2s, within: 60s } }
 runner: { pool: gpu, labels: [cuda] }
 lane: { name: probe, per: [ref], when_busy: wait }
+defaults: { env: { TZ: UTC } }
 steps:
   build:
     image: alpine:3.22
@@ -243,6 +244,9 @@ steps:
     needs: build
     with:
       target: { input: target }
+    extend:
+      - after: lint
+        steps: { docs: { image: alpine, run: "true" } }
   image:
     kind: image
     needs: test
@@ -316,6 +320,7 @@ params:
   python: { type: string, default: "3.13", options: ["3.12", "3.13"] }
   scan: { type: boolean, default: true }
   pythons: { type: list, default: ["3.12"] }
+  derived: { type: string, default: { text: "{python}-x", override: { param: pythons, key: "k" } } }
 containers:
   py: { image: { param: python, format: "python:%s" } }
 steps:
@@ -351,6 +356,7 @@ type probe struct {
 
 var probes = []probe{
 	{table: "top"},
+	{table: "defaults", path: []any{"defaults"}},
 	{table: "on", path: []any{"on"}},
 	{table: "on-push", path: []any{"on", "push"}},
 	{table: "on-pull-request", path: []any{"on", "pull_request"}},
@@ -407,6 +413,9 @@ var probes = []probe{
 	{table: "template-top", template: true},
 	{table: "template-param", template: true, path: []any{"params", "python"}},
 	{table: "template-output", template: true, path: []any{"outputs", "result"}},
+	{table: "extend", path: []any{"steps", "ci", "extend", 0}},
+	{table: "template-derived-default", template: true, path: []any{"params", "derived", "default"}},
+	{table: "template-override", template: true, path: []any{"params", "derived", "default", "override"}},
 	{table: "template-if", template: true, path: []any{"steps", "scan", "if"}},
 	{table: "value-param", template: true, path: []any{"containers", "py", "image"}},
 	{table: "loop-list-param", template: true, path: []any{"steps", "loop", "for_each", "v"}},
@@ -485,8 +494,8 @@ func accepted(t *testing.T, pr probe) []string {
 func kindKeys() map[string][]string {
 	return map[string][]string{
 		// uses makes a step a uses step, and with goes with uses.
-		"step":     minus(stepKeys, approvalOnly, []string{"deployment", "uses", "with"}),
-		"approval": minus(stepKeys, runOnly, loopKeys, []string{"uses", "with"}),
+		"step":     minus(stepKeys, approvalOnly, []string{"deployment", "uses", "with", "skip", "extend", "replace"}),
+		"approval": minus(stepKeys, runOnly, loopKeys, []string{"uses", "with", "skip", "extend", "replace"}),
 		"uses":     sortedSet(useKeys),
 		"image":    sortedSet(imageKeys),
 		"deploy":   sortedSet(deployKeys),

@@ -1,0 +1,91 @@
+# FLIGHT PLAN for a repository that only has to build: the result is kept as an artifact for someone or something else to use.
+#
+#   ci: { uses: launchway/build-only, with: { language: go } }
+#
+# language is go, python (a wheel), node, maven or gradle. The built files are the artifact build.
+template: build-only
+description: "Flight plan: build the program for the toolchain you name and keep it as an artifact; no tests, no image"
+params:
+  language: { type: string, default: "go", options: ["go", "python", "node", "maven", "gradle"], description: "Which toolchain the repository uses: go, python, node, maven or gradle" }
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  go_version: { type: string, default: "1.27", description: "Go: the golang image tag" }
+  python_version: { type: string, default: "3.13", description: "Python: the python image tag" }
+  node_version: { type: string, default: "22", description: "Node: the node image tag" }
+  java_version: { type: string, default: "21", description: "Maven and Gradle: the Java version" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
+  test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
+  build_command: { type: string, default: "", description: "Your own build command, in place of the default" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+containers:
+  go: { image: { param: go_version, format: "docker.io/library/golang:%s" } }
+  python: { image: { param: python_version, format: "docker.io/library/python:%s-slim" } }
+  node: { image: { param: node_version, format: "docker.io/library/node:%s" } }
+  maven: { image: { param: java_version, format: "docker.io/library/maven:3.9-eclipse-temurin-%s" } }
+  gradle: { image: { param: java_version, format: "docker.io/library/gradle:8-jdk%s" } }
+steps:
+  go-build:
+    description: Build every package
+    if: { param: language, equals: go }
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/build.sh"
+    artifacts:
+      - { name: build, paths: [bin] }
+  python-build:
+    description: Build the wheel and source distribution
+    if: { param: language, equals: python }
+    container: python
+    cache:
+      - name: python
+        paths: [.cache/pip, .cache/uv]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
+        fallback: latest
+    env: { PHASES: "setup build" }
+    run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
+    artifacts:
+      - { name: build, paths: [dist] }
+  node-build:
+    description: Install dependencies and build
+    if: { param: language, equals: node }
+    container: node
+    cache:
+      - name: node
+        paths: [.cache/npm, .cache/pnpm, .cache/yarn]
+        key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
+        fallback: latest
+    env: { PHASES: "setup build" }
+    run: "$LAUNCHWAY_LIB/scripts/node/run.sh"
+    artifacts:
+      - { name: build, paths: ["**/dist", "**/build"] }
+  maven-build:
+    description: Package with Maven, skipping the tests
+    if: { param: language, equals: maven }
+    container: maven
+    cache:
+      - name: maven
+        paths: [.cache/m2]
+        key: { files: ["**/pom.xml"], text: { param: java_version, format: "jdk-%s" } }
+        fallback: latest
+    env: { LW_GOAL: "package -DskipTests" }
+    run: "$LAUNCHWAY_LIB/scripts/java/maven.sh"
+    artifacts:
+      - { name: build, paths: ["**/target/*.jar"] }
+  gradle-build:
+    description: Package with Gradle, skipping the tests
+    if: { param: language, equals: gradle }
+    container: gradle
+    cache:
+      - name: gradle
+        paths: [.cache/gradle]
+        key: { files: ["**/*.gradle", "**/*.gradle.kts", "**/gradle-wrapper.properties", "**/gradle.lockfile"], text: { param: java_version, format: "jdk-%s" } }
+        fallback: latest
+    env: { LW_GOAL: assemble }
+    run: "$LAUNCHWAY_LIB/scripts/java/gradle.sh"
+    artifacts:
+      - { name: build, paths: ["**/build/libs/*.jar"] }

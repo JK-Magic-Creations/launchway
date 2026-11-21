@@ -615,7 +615,7 @@ export interface Graph {
   steps: GraphStep[];
   groups?: GraphGroup[];
   /** Set when the pipeline is the one configured on the server, not a file in the repository. */
-  origin?: { kind: "server"; text: string };
+  origin?: { kind: "server"; text: string; default?: string; detected?: { flight: string; because: string } };
 }
 
 export interface RunDetail extends RunSummary {

@@ -74,12 +74,36 @@ func wantsVariables(pl *pipeline.Pipeline) bool {
 // bindVariables asks for the variables in effect for the run being made.
 func (m *Manager) bindVariables(ctx context.Context, project string, pl *pipeline.Pipeline, given map[string]string) (pipeline.Variables, string, error) {
 	src := m.variables()
-	if src == nil || project == "" || !wantsVariables(pl) {
+	if project == "" || !wantsVariables(pl) {
 		return nil, "", nil
 	}
 	env := environmentOf(pl, given)
+	if src == nil {
+		return m.withProjectFacts(project, nil), env, nil
+	}
 	vars, err := src.Bind(ctx, project, env)
-	return vars, env, err
+	if err != nil {
+		return vars, env, err
+	}
+	return m.withProjectFacts(project, vars), env, nil
+}
+
+// withProjectFacts adds what Launchway knows about the project to the
+// variables a template may take: its name and the environments it may
+// deliver to, in delivery order, and which of them are protected. A
+// variable a person set with the same name is left alone.
+func (m *Manager) withProjectFacts(project string, vars pipeline.Variables) pipeline.Variables {
+	if m.eng == nil {
+		return vars
+	}
+	var names, protected []string
+	for _, e := range m.eng.EnvironmentsFor(project) {
+		names = append(names, e.Name)
+		if e.Protected {
+			protected = append(protected, e.Name)
+		}
+	}
+	return pipeline.WithProjectFacts(vars, pipeline.ProjectFacts{Project: project, Environments: names, Protected: protected})
 }
 
 // record keeps what a run used; a failure is logged, never the run's.

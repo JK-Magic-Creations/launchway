@@ -1,0 +1,23 @@
+# A step template: installs dependencies (uv, Poetry or pip, from the lock file you have) and runs ruff.
+#
+#   lint: { uses: launchway/python-check }
+template: python-check
+description: "Maneuver: install dependencies and lint with ruff"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  python_version: { type: string, default: "3.13", description: "The Python version of the image: the python image tag" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
+containers:
+  python: { image: { param: python_version, format: "docker.io/library/python:%s-slim" } }
+steps:
+  run:
+    description: Install dependencies and lint the code
+    container: python
+    cache:
+      - name: python
+        paths: [.cache/pip, .cache/uv]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
+        fallback: latest
+    env: { PHASES: "setup check" }
+    run: "$LAUNCHWAY_LIB/scripts/python/run.sh"

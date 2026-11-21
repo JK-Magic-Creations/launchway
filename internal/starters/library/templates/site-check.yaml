@@ -1,0 +1,17 @@
+# A step template: checks that the site has an index.html and that its local links and images exist; the pages are kept as the artifact site. With a build_command (and a build image through tools_image) it builds first.
+#
+#   site: { uses: launchway/site-check, with: { site_dir: public } }
+template: site-check
+description: "Maneuver: build a static site if you give a command, then check its pages and links"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  site_dir: { type: string, default: ".", description: "The folder the site is in once built" }
+  build_command: { type: string, default: "", description: "Your own build command, in place of the default" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+steps:
+  run:
+    description: Build the site and check its links
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/site/check.sh"
+    artifacts:
+      - { name: site, paths: ["**/*.html", "**/*.css", "**/*.js", "**/*.svg", "**/*.png", "**/*.jpg"] }

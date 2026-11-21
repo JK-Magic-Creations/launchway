@@ -9,6 +9,7 @@ key and setting see the [reference](../reference/index.md).
 | [Pipelines](pipelines.md) | Steps, containers and services, outputs, superseding older runs, run inputs, loops, cleanup steps |
 | [Triggers](triggers.md) | Pull requests, schedules, webhooks |
 | [Editing pipelines](editor.md) | The web editor, draft runs of unsaved text, saving to Git |
+| [Starters](starters.md) | Flight plans and step templates that ship with Launchway, pipelines with no file, the gallery |
 | [Shared libraries](libraries.md) | Templates and scripts in Git, versions, parameters, overrides |
 | [Approvals and re-runs](approvals-and-reruns.md) | Approval steps, re-running from a step, what each step was given |
 | [Test reports](test-reports.md) | 13 formats, attachments, coverage, hosted HTML reports, flaky tests, history |

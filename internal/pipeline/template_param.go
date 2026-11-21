@@ -123,7 +123,7 @@ func fillParams(params []*Param, values, with map[string]string, template string
 	for _, p := range params {
 		if _, set := values[p.Name]; !set && p.DefaultFrom != nil {
 			ok = false
-			withProblem(usesLine, 0, "with."+p.Name, fmt.Sprintf("the default of %s is taken from %s, which has no value here: add one of them under with:", p.Name, p.DefaultFrom.Param))
+			withProblem(usesLine, 0, "with."+p.Name, fmt.Sprintf("the default of %s is taken from %s, which has no value here: add one of them under with:", p.Name, strings.Join(p.DefaultFrom.refs(), ", ")))
 		}
 	}
 	return ok

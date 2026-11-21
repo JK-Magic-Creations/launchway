@@ -3,7 +3,7 @@
   "max_file_lines": 1000,
   "max_func_lines": 150,
   "files": {
-    "internal/api/api.go": 1032,
+    "internal/api/api.go": 1017,
     "internal/api/mcp_tools.go": 1346,
     "internal/engine/artifacts.go": 1211,
     "internal/engine/control.go": 1028,

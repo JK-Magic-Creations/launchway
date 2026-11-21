@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/source"
 )
 
 // libraryFlag collects --library NAME=DIRECTORY.
@@ -21,7 +22,7 @@ func (l *libraryFlag) Set(v string) error { *l = append(*l, v); return nil }
 // expansion a server runs when it checks a pipeline, reading each library
 // from the directory given for it. It prints the problems as the server
 // reports them, and with resolved the resolved pipeline, as JSON.
-func validateOffline(path string, libs []string, resolved bool) error {
+func validateOffline(path string, libs []string, resolved bool, facts pipeline.ProjectFacts, vars pipeline.Variables) error {
 	dirs, err := pipeline.ParseLibraryFlags(libs)
 	if err != nil {
 		return err
@@ -30,7 +31,7 @@ func validateOffline(path string, libs []string, resolved bool) error {
 	if err != nil {
 		return err
 	}
-	p, err := pipeline.ExpandOffline(data, dirs, pipeline.BindOptions{})
+	p, err := source.ExpandOffline(data, dirs, pipeline.BindOptions{}, pipeline.WithProjectFacts(vars, facts))
 	if err != nil {
 		var ps pipeline.Problems
 		if !errors.As(err, &ps) {

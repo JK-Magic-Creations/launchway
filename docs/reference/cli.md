@@ -204,7 +204,7 @@ Checks a pipeline file and prints a summary.
 launchway validate [FILE] [--project NAME] [--library NAME=DIRECTORY ...] [--resolved]
 ```
 
-`FILE` defaults to `.launchway/pipeline.yaml`. By default steps that use library templates are not expanded: the command reads only the file. To check them without a server, give each library's directory with `--library` (below); to check them against a server, use `--project`, the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
+`FILE` defaults to `.launchway/pipeline.yaml`. By default steps that use library templates are not expanded: the command reads only the file, except that the [starters that ship with Launchway](starters.md) (`uses: launchway/go-service`) are always expanded and checked here, with no `--library`. To check them without a server, give each library's directory with `--library` (below); to check them against a server, use `--project`, the editor of a server, or [`POST /api/v1/validate?expand=1`](http-api.md#pipeline-editor).
 
 With `--library NAME=DIRECTORY`, once for each library the pipeline uses, the templates are expanded from those directories, with no server and no network. `NAME` is what the pipeline's `libraries:` section calls the library; `DIRECTORY` is the library's root, the directory that holds `templates/`. It is the same parse, binding and expansion a server runs when it checks a pipeline (a test compares the two on the example library), so the same problems come out, each with the file and line of the template it is in. Which libraries and environments a server allows, and its limits, are the server's to say: add `--project` against a server for that. `--resolved` prints the resolved pipeline (every step of every template, with its needs, containers and environment) as JSON, the graph `POST /api/v1/validate` returns; it needs `--library` for each library the pipeline uses. The library's own version is not looked at: the directory is what is read, so check out the tag you mean.
 
@@ -231,6 +231,20 @@ bad.yaml:4: steps.b.needs: needs "c", but there is no step with that name
 ```
 
 `launchway validate` also accepts a file name after the flags.
+
+## launchway init
+
+Proposes the pipeline file for the repository in the current directory, from what it holds.
+
+```text
+launchway init [--write] [--force]
+```
+
+It looks at the top level for `go.mod`, `pyproject.toml` (or `requirements.txt`, `uv.lock`, `poetry.lock`), `package.json`, `pom.xml`, `build.gradle`,
+`Chart.yaml`, a `Dockerfile` and an `index.html`, chooses a [flight plan](../guide/starters.md), and reads the version the repository's own
+files name (`go.mod`, `.python-version`, `.nvmrc`, `pom.xml`). Without `--write` it only prints the file; with it, the file is saved as
+`.launchway/pipeline.yaml`. A repository that already has one is left alone unless `--force`. When nothing fits it says what it looked for
+and exits with `1`.
 
 ## launchway graph
 

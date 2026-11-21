@@ -1,0 +1,23 @@
+# A step template: installs from the lock file (npm, pnpm or yarn) and runs the lint, format:check and typecheck scripts the package defines.
+#
+#   lint: { uses: launchway/node-check }
+template: node-check
+description: "Maneuver: install dependencies and run the lint, format and type checks the package defines"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  node_version: { type: string, default: "22", description: "The Node major version of the image: the node image tag" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
+containers:
+  node: { image: { param: node_version, format: "docker.io/library/node:%s" } }
+steps:
+  run:
+    description: Install dependencies and check the code
+    container: node
+    cache:
+      - name: node
+        paths: [.cache/npm, .cache/pnpm, .cache/yarn]
+        key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
+        fallback: latest
+    env: { PHASES: "setup check" }
+    run: "$LAUNCHWAY_LIB/scripts/node/run.sh"

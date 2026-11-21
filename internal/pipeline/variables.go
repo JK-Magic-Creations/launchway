@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -212,4 +213,50 @@ func (b *varBinding) checkWith(p *Param, written string) string {
 		value = canonList(written)
 	}
 	return b.lockedWith(p, value, written)
+}
+
+// ProjectFacts are what Launchway itself knows about a project, offered to
+// templates as variables a parameter may take (from: launchway_environments):
+// nothing a person set, and nothing hidden, because the run records them as
+// it records any variable it used.
+type ProjectFacts struct {
+	Project      string   // the project's name
+	Environments []string // where it may deploy, in delivery order
+	Protected    []string // those of them that are protected
+}
+
+// The names of the variables the facts become.
+const (
+	VarProject      = "launchway_project"
+	VarEnvironments = "launchway_environments"
+	VarProtected    = "launchway_protected"
+)
+
+// WithProjectFacts returns vars with the facts added. A variable that is
+// already there is kept: a person's value wins.
+func WithProjectFacts(vars Variables, f ProjectFacts) Variables {
+	out := make(Variables, len(vars)+3)
+	for k, v := range vars {
+		out[k] = v
+	}
+	put := func(name, typ, text, display string) {
+		if _, ok := out[name]; !ok {
+			out[name] = BoundVariable{Name: name, Type: typ, Text: text, Display: display, Source: "what Launchway knows about project " + f.Project}
+		}
+	}
+	list := func(l []string) (string, string) {
+		if l == nil {
+			l = []string{}
+		}
+		b, _ := json.Marshal(l)
+		return string(b), strings.Join(l, ", ")
+	}
+	if f.Project != "" {
+		put(VarProject, "string", f.Project, f.Project)
+	}
+	t, d := list(f.Environments)
+	put(VarEnvironments, "list", t, d)
+	t, d = list(f.Protected)
+	put(VarProtected, "list", t, d)
+	return out
 }

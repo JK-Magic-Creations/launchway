@@ -108,7 +108,7 @@ func Parse(data []byte) (*Pipeline, error) {
 	}
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return nil, Problems{syntaxProblem(err)}
+		return nil, Problems{plainSyntax(syntaxProblem(err), data)}
 	}
 	ps := &parser{}
 	if len(doc.Content) == 0 {
@@ -121,10 +121,13 @@ func Parse(data []byte) (*Pipeline, error) {
 		return nil, ps.problems
 	}
 
+	ps.desugar(root)
 	p := &Pipeline{}
-	var stepsNode, laneNode *yaml.Node
-	ps.eachKey(root, "", []string{"pipeline", "on", "supersede", "libraries", "containers", "steps", "inputs", "runner", "timeout", "lane"}, func(k, v *yaml.Node) {
+	var stepsNode, laneNode, defaultsNode *yaml.Node
+	ps.eachKey(root, "", topKeys, func(k, v *yaml.Node) {
 		switch k.Value {
+		case "defaults":
+			defaultsNode = v
 		case "lane":
 			laneNode = v
 		case "timeout":
@@ -159,6 +162,9 @@ func Parse(data []byte) (*Pipeline, error) {
 	if stepsNode == nil {
 		ps.add(root, "steps", "at least one step is required")
 	} else {
+		if defaultsNode != nil {
+			ps.applyDefaults(defaultsNode, stepsNode)
+		}
 		ps.parseSteps(stepsNode, p)
 	}
 	if ps.check(p) {
@@ -212,7 +218,11 @@ func syntaxProblem(err error) Problem {
 // eachKey walks a mapping, reporting unknown and repeated keys.
 func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v *yaml.Node)) {
 	if m.Kind != yaml.MappingNode {
-		ps.add(m, at, "expected a mapping")
+		if hint, ok := mappingHints[at]; ok {
+			ps.add(m, at, "%s", hint)
+		} else {
+			ps.add(m, at, "expected a mapping")
+		}
 		return
 	}
 	seen := map[string]bool{}
@@ -225,10 +235,14 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 		}
 		seen[k.Value] = true
 		if !contains(known, k.Value) {
-			if hint, ok := notYet[k.Value]; ok {
+			if hint, ok := renamed[k.Value]; ok && at == "" || ok && strings.HasPrefix(at, "steps.") {
+				ps.add(k, where, "there is no key called %q here: %s", k.Value, hint)
+			} else if hint, ok := notYet[k.Value]; ok {
 				ps.add(k, where, "%q is not supported yet (%s)", k.Value, hint)
 			} else if hint, ok := notHere[k.Value]; ok {
 				ps.add(k, where, "%q is not allowed here: %s", k.Value, hint)
+			} else if near := nearest(k.Value, known); near != "" {
+				ps.add(k, where, "unknown key %q: did you mean %q? (expected one of: %s)", k.Value, near, strings.Join(known, ", "))
 			} else {
 				ps.add(k, where, "unknown key %q; expected one of: %s", k.Value, strings.Join(known, ", "))
 			}
@@ -242,7 +256,6 @@ func (ps *parser) eachKey(m *yaml.Node, at string, known []string, fn func(k, v 
 var notYet = map[string]string{
 	"outputs": "write outputs to the file named by $LAUNCHWAY_OUTPUTS instead",
 	"runs_on": "choose runners for the whole pipeline with runner: { pool: …, labels: [ … ] } at its top",
-	"matrix":  "to repeat a step over lists, use for_each",
 }
 
 func (ps *parser) parseOn(n *yaml.Node, p *Pipeline) {
@@ -341,12 +354,12 @@ func (ps *parser) parsePullRequest(v *yaml.Node) *PullRequestTrigger {
 	return t
 }
 
+// topKeys are the keys of a pipeline file.
+var topKeys = []string{"pipeline", "on", "supersede", "libraries", "containers", "defaults", "steps", "inputs", "runner", "timeout", "lane", "uses", "with", "skip", "extend", "replace"}
+
 var (
 	stepKeys = []string{"kind", "description", "container", "image", "run", "needs", "when", "env", "secrets", "retry", "timeout", "reports", "message", "uses", "with",
-		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "artifacts", "fetch", "deployment", "resources", "on_failure", "cache", "approvers", "runner"}
-	// useKeys are the keys a step that uses a template may have; the
-	// template says everything else.
-	useKeys = []string{"uses", "with", "description", "needs", "when", "retry", "timeout", "for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for"}
+		"for_each", "exclude", "max_parallel", "fail_fast", "add", "continue_for", "serial", "skip", "extend", "replace", "artifacts", "fetch", "deployment", "resources", "on_failure", "cache", "approvers", "runner"}
 	// approvalOnly and runOnly are the keys that make sense for one kind of
 	// step and not the other.
 	approvalOnly = []string{"message", "approvers"}
@@ -526,6 +539,8 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 				s.usesLine = v2.Line
 			case "with":
 				s.With, s.withLines = ps.parseWith(v2, where)
+			case "skip", "extend", "replace":
+				ps.parseAdapt(s, k2.Value, v2, where)
 			case "if":
 				s.ifTest = ps.parseIf(v2, where)
 			case "message":
@@ -545,9 +560,7 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		})
 		ps.parseLoopSettings(s, at, keys, vals)
 		ps.cur = nil
-		if keys["with"] != nil && keys["uses"] == nil {
-			ps.add(keys["with"], at+".with", "with passes values to a template, so it goes with uses")
-		}
+		ps.checkAdaptKeys(at, keys)
 		switch {
 		case keys["uses"] != nil:
 			ps.parseUseStep(at, s, keys)
@@ -778,7 +791,7 @@ func (ps *parser) bool(n *yaml.Node, at string) bool {
 func (ps *parser) int(n *yaml.Node, at string) int {
 	v, err := strconv.Atoi(ps.scalar(n, at))
 	if err != nil {
-		ps.add(n, at, "expected a whole number")
+		ps.add(n, at, "retry is a number of extra attempts, such as retry: 2, or a mapping such as retry: { times: 3, wait: 10s }")
 	}
 	return v
 }

@@ -111,6 +111,12 @@ Which pipeline a project runs, first match first:
 3. the Flight plan of the project's unit;
 4. the Flight plan of the Wing.
 
+A level that has no flight plan of its own to name can let the repository choose one: `default_pipeline: { detect: true }` runs, where
+a repository has no pipeline file, the [starter](../guide/starters.md) that fits what the repository holds (`go.mod`: `go-service` or
+`go-library`, and so on); a repository where nothing fits has no pipeline, as before. `library: launchway` names a starter directly
+(`library: launchway, template: go-service`); it has one version and needs no `version`. The run says "No pipeline file: using
+launchway/go-service because go.mod was found", and can add that file to the repository as a pull request.
+
 A project changes the flight plan it gets, without leaving it, with `default_pipeline` on the project:
 `enabled: false` runs no flight plan (a repository file still runs), and `with` gives other values for
 some of the template's parameters; the rest stay as the Flight plan sets them. The Flight plan is checked

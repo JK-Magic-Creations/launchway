@@ -1,0 +1,27 @@
+# FLIGHT PLAN for a repository of a Helm chart.
+#
+#   ci: { uses: launchway/helm-chart }
+#
+# Runs helm lint --strict, renders the chart with its own values, packages it (the artifact chart) and scans for secrets. Publishing the package to a chart repository is coming.
+template: helm-chart
+description: "Flight plan: a Helm chart: lint, render, package"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  chart: { type: string, default: ".", description: "The chart's directory, relative to the working directory" }
+  helm_image: { type: string, default: "docker.io/alpine/helm:3.17.0", description: "An image with helm" }
+  secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+containers:
+  helm: { image: { param: helm_image } }
+steps:
+  chart:
+    description: Lint, render and package the chart
+    container: helm
+    run: "$LAUNCHWAY_LIB/scripts/helm/check.sh"
+    artifacts:
+      - { name: chart, paths: [dist] }
+  secrets:
+    description: Look for secrets committed by mistake
+    if: { param: secret_scan }
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/secrets.sh"

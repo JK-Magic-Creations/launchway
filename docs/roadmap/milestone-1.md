@@ -661,11 +661,11 @@ Services with readiness checks and logs, a runner and workspace of their own per
 
 [Area page](pipelines.md)
 
-#### Matrix builds {#matrix-builds}
+#### Platform matrices {#platform-matrices}
 
 <p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Run the same steps across operating systems, architectures and versions from one definition. Being built now. Results show as one grid with a failure marked where it happened, and runners with the right platform are chosen automatically. Windows and macOS runners are separate work.
+Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and test report for each combination, a grid on the run page, "3 of 4 passed" on the launch line, a pull request check that counts a matrix as one, and re-running one combination. Still to come: values read from an earlier step's output or a file in the repository, and runners with the right platform chosen automatically.
 
 [Area page](pipelines.md)
 

@@ -87,9 +87,14 @@ export interface SignInCheck {
   endpoints: { authorization?: string; token?: string; jwks?: string; claims_offered?: string[]; groups_claim_hint?: string };
 }
 
-export interface LibraryInfo { name: string; last_fetch: number }
+export interface LibraryInfo { name: string; last_fetch: number; builtin?: boolean }
 export interface TemplateParam { name: string; type: string; default?: string; description?: string; options?: string[] }
-export interface TemplateInfo { name: string; description?: string; params: TemplateParam[]; outputs: string[]; problems?: { message: string }[] }
+export interface TemplateStep { id: string; description?: string; needs?: string[]; kind?: string }
+export interface TemplateInfo {
+  name: string; description?: string; params: TemplateParam[]; outputs: string[]; problems?: { message: string }[];
+  /** Only for the starters that ship with Launchway: "flight plan" or "step template" (shown as Flight plan and Maneuver), a file that uses it, and the steps that file runs. */
+  kind?: string; example?: string; graph?: TemplateStep[];
+}
 export interface LibraryTemplates { library: string; version: string; commit: string; versions: string[]; templates: TemplateInfo[]; truncated?: boolean }
 
 const enc = encodeURIComponent;

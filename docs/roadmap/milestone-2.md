@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 2 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 6 in progress · 54 planned · 62 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 7 in progress · 53 planned · 62 capabilities</p>
 
 Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.
 
@@ -51,7 +51,7 @@ flowchart TD
 | [Reports people want to read](#g-reports-people-want-to-read) | 1 | 0 | 0 | 1 |
 | [Design visually](#g-design-visually) | 4 | 0 | 0 | 4 |
 | [Move off a self-hosted automation server](#g-move-off-a-self-hosted-automation-server) | 4 | 0 | 0 | 4 |
-| [Share and reuse across projects](#g-share-and-reuse-across-projects) | 7 | 2 | 0 | 5 |
+| [Share and reuse across projects](#g-share-and-reuse-across-projects) | 7 | 2 | 1 | 4 |
 | [Every popular build tool, with a cache that is never stale](#g-every-popular-build-tool-with-a-cache-that-is-never-stale) | 13 | 0 | 5 | 8 |
 | [The developer comes first](#g-the-developer-comes-first) | 12 | 0 | 1 | 11 |
 
@@ -391,9 +391,9 @@ A template says what it needs and offers, can be built on another, and a project
 
 #### Language starters {#language-starters}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants. Everything in a starter can be overridden; the default simply guides. Starters arrive for the most common languages first.
+Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants. Available today: built-in Flight plans for Go, Python, Node, Java, images, static sites and Helm charts, and a repository with no pipeline file runs the one that fits. Everything in a starter can be overridden; the default simply guides. Delivery runs for plain manifests and Helm values through GitOps write-back; it was exercised offline and against fakes, not yet end to end with a real image build and cluster. Still to come: assistant instruction files, formatter and linter configuration and a test layout written into the repository, findings of the analysis in the Security tab, bandit for library-only repositories, values read from an earlier step's output, and more languages.
 
 **Depends on:** Templates that read like code.
 

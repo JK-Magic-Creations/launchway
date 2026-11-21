@@ -75,6 +75,15 @@ type Origin struct {
 	// Default is set when the pipeline is a default shared by many projects:
 	// "organisation", or "unit <name>". Empty: configured for this project.
 	Default string `json:"default,omitempty"`
+	// Detected is set when the repository has no pipeline file and the
+	// server chose a flight plan by looking at what the repository holds.
+	Detected *Detected `json:"detected,omitempty"`
+}
+
+// Detected says which starter a repository with no pipeline file ran, and why.
+type Detected struct {
+	Flight  string `json:"flight"`  // launchway/go-service
+	Because string `json:"because"` // go.mod was found
 }
 
 // OriginServer is the Origin.Kind of a pipeline configured on the server.
@@ -278,6 +287,10 @@ type Step struct {
 	Each map[string]string `json:"each,omitempty"`
 
 	withLines map[string]*yamlPos // where each with value was written
+	// adapt is what a step that uses a template changes in it: stages left
+	// out, steps added before or after a stage, stages replaced (adapt.go).
+	adapt     *Adaptation
+	adaptedBy string // "extend" or "replace" for a step a use changed
 	usesLine  int
 	ifTest    *paramTest // templates only: removes the step when false
 	// What was written, so that a uses step's settings apply only where the

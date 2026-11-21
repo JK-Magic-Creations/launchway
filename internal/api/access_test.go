@@ -35,6 +35,7 @@ type matrixRow struct {
 // fails TestEveryRouteIsInThePermissionTable. {pay} is a run of pay-api.
 var permissionTable = map[string]matrixRow{
 	"GET /healthz":                               {"GET", "/healthz", "", [6]int{200, 200, 200, 200, 200, 200}},
+	"GET /schema/pipeline.json":                  {"GET", "/schema/pipeline.json", "", [6]int{200, 200, 200, 200, 200, 200}},
 	"GET /readyz":                                {"GET", "/readyz", "", [6]int{200, 200, 200, 200, 200, 200}},
 	"POST /api/runner/v1/lease":                  {"POST", "/api/runner/v1/lease", "{}", [6]int{401, 401, 401, 401, 401, 401}},
 	"POST /api/runner/v1/start":                  {"POST", "/api/runner/v1/start", "{}", [6]int{401, 401, 401, 401, 401, 401}},
@@ -364,7 +365,7 @@ const draftBody = `{"ref": "main", "pipeline": "pipeline: app\nsteps:\n  gate: {
 
 // The routes anyone may call without signing in. Anything else must need
 // an identity (or the runner token).
-var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info",
+var publicRoutes = []string{"GET /healthz", "GET /readyz", "GET /schema/pipeline.json", "GET /auth/login", "GET /auth/callback", "POST /auth/logout", "GET /api/v1/info",
 	"GET /hosted/{link}/{path...}", "POST /api/runner/v2/join", "POST /api/runner/v2/token", "POST /api/runner/v2/rotate"}
 
 // Every registered route must be in the permission table, and the table

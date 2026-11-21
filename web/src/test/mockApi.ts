@@ -34,6 +34,13 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/projects/shop-api/schedules": { schedules: [], webhooks: [], fires: [] },
     "/api/v1/runs/run_7/steps/test/logs": { lines: [] },
     "/api/v1/variables": { words: {}, variables: [] },
+    "/api/v1/libraries": [{ name: "launchway", last_fetch: 0, builtin: true }],
+    "/api/v1/libraries/launchway/templates": { library: "launchway", version: "builtin", commit: "0123456789abcdef0123456789abcdef01234567", versions: ["builtin"], templates: [
+      { name: "go-service", kind: "flight plan", description: "A Go service with a Dockerfile: format, vet, test, build, scan and image", outputs: [],
+        params: [{ name: "go_version", type: "string", default: "1.27", description: "The Go version of the image" }, { name: "push", type: "boolean", default: "false", description: "Push the image" }],
+        example: "pipeline: my-project\nsteps:\n  ci:\n    uses: launchway/go-service\n",
+        graph: [{ id: "ci/check", description: "Format and vet" }, { id: "ci/test", description: "Run every test" }, { id: "ci/build", needs: ["ci/check", "ci/test"], description: "Build" }] },
+      { name: "secret-scan", kind: "step template", description: "Look for private keys committed to the repository", outputs: [], params: [] }] },
     "/api/v1/projects/shop-api/variables": { words: {}, variables: [] },
     "/api/v1/projects/shop-api/tests": { ref: "main", runs: [], slowest: [], failing: [], flaky: [], refs: ["main"] },
     "/api/v1/runner-pools": { pools: [], manage: true, identities: false },

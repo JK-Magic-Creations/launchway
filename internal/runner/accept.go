@@ -9,6 +9,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/accept"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/redact"
+	"github.com/jk-magic-creations/launchway/internal/starters"
 )
 
 // What a runner checks in every job before it runs anything: the hard
@@ -50,6 +51,9 @@ func refusal(c *accept.Config, job *engine.Job, executorName string, remote bool
 		}
 	}
 	for _, l := range job.Source.Libraries {
+		if l.URL == starters.URL {
+			continue // carried by the runner itself; nothing is fetched
+		}
 		if why := c.Repository(l.URL); why != "" {
 			return "library " + l.Name + ": " + redact.URLs(why)
 		}

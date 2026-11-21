@@ -24,6 +24,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
 	"github.com/jk-magic-creations/launchway/internal/secrets"
+	"github.com/jk-magic-creations/launchway/internal/starters"
 )
 
 // Runner leases steps and executes them, Concurrency at a time.
@@ -746,7 +747,15 @@ func (r *Runner) workspace(ctx context.Context, job *engine.Job, sys func(string
 	switch job.Source.Kind {
 	case "dir":
 		if len(job.Source.Libraries) > 0 {
-			return "", errors.New("libraries need a run from a Git repository")
+			// Only the starters that ship with Launchway, which are carried.
+			for _, l := range job.Source.Libraries {
+				if l.URL != starters.URL {
+					return "", errors.New("libraries need a run from a Git repository")
+				}
+			}
+			if err := r.addLibraries(ctx, job, job.Source.Path, sys); err != nil {
+				return "", err
+			}
 		}
 		return job.Source.Path, nil
 	case "git":

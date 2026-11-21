@@ -1,0 +1,22 @@
+# A step template: go build -o bin/ ./..., the programs kept as the artifact bin.
+#
+#   build: { uses: launchway/go-build }
+template: go-build
+description: "Maneuver: go build of every package, the programs kept as the artifact bin"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  go_version: { type: string, default: "1.27", description: "The Go version of the image: the golang image tag" }
+containers:
+  go: { image: { param: go_version, format: "docker.io/library/golang:%s" } }
+steps:
+  run:
+    description: Build every package
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/build.sh"
+    artifacts:
+      - { name: bin, paths: [bin] }

@@ -48,6 +48,7 @@ const (
 	paramTypeBoolean     = "boolean"
 	paramTypeList        = "list"
 	paramTypeEnvironment = "environment"
+	paramTypeOutput      = "output"
 	paramTypeApplication = "application"
 	templatesDir         = "templates/"
 	templateExtension    = ".yaml"
@@ -185,10 +186,7 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 		p := scope.params[k]
 		if p == nil {
 			withOK = false
-			msg := fmt.Sprintf("the template %s has no parameter %q", name, clipText(k, 60))
-			if names := paramNames(t.Params); names != "" {
-				msg += "; it takes " + names
-			}
+			msg := unknownParamMessage(name, k, t.Params)
 			withProblem(pos.Line, pos.Column, "with."+k, msg)
 			continue
 		}
@@ -245,6 +243,25 @@ func readTemplate(data []byte, name string, with map[string]string, withLines ma
 	}
 	sort.SliceStable(ps.problems, func(i, j int) bool { return ps.problems[i].Line < ps.problems[j].Line })
 	return t, ps.problems
+}
+
+// unknownParamMessage says a use passes a parameter the template does not
+// have, suggests the nearest one it does have, and lists them.
+func unknownParamMessage(template, key string, params []*Param) string {
+	msg := fmt.Sprintf("the template %s has no parameter %q", template, clipText(key, 60))
+	var all []string
+	for _, p := range params {
+		all = append(all, p.Name)
+	}
+	sep := "; it takes "
+	if near := nearest(key, all); near != "" {
+		msg += ": did you mean " + near + "?"
+		sep = " It takes "
+	}
+	if names := paramNames(params); names != "" {
+		msg += sep + names
+	}
+	return msg
 }
 
 func paramNames(params []*Param) string {
@@ -568,7 +585,11 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 			continue
 		}
 		before := len(x.problems)
-		t, tps := readTemplate(data, name, s.With, s.withLines, s.usesLine, func(line, col int, path, msg string) {
+		with := s.With
+		if hasOutputRef(with) {
+			with = x.absoluteOutputs(sc, s, at)
+		}
+		t, tps := readTemplate(data, name, with, s.withLines, s.usesLine, func(line, col int, path, msg string) {
 			x.problem(sc, line, col, at+"."+path, "%s", msg)
 		}, x.loopLimit, sc.prefix+s.ID+"/", x.vb)
 		if len(tps) > 0 {
@@ -577,6 +598,9 @@ func (x *expander) open(sc *scope, root *Pipeline, depth int) {
 				x.problems = append(x.problems, tp)
 			}
 			x.problem(sc, s.usesLine, 0, at+".uses", "the template %s/%s has %d problem%s, listed with its file", lib.Name, name, len(tps), plural(len(tps)))
+		}
+		if len(x.problems) == before {
+			x.adapt(sc, s, t, at)
 		}
 		if len(x.problems) > before {
 			continue
@@ -627,6 +651,37 @@ func (x *expander) members(sc *scope) []string {
 	return out
 }
 
+// waitedFor are the steps a step that needs a use waits for: all of the use's
+// steps but its rollbacks. A rollback is skipped when everything went well,
+// and a skipped step would hold back what needs it; what a rollback is for
+// is found by the verification that failed before it ran.
+func (x *expander) waitedFor(sc *scope) []string {
+	var out []string
+	for _, id := range x.members(sc) {
+		if st := x.stepByRunID(sc, id); st != nil && st.Kind == KindRollback {
+			continue
+		}
+		out = append(out, id)
+	}
+	return out
+}
+
+func (x *expander) stepByRunID(sc *scope, id string) *Step {
+	for _, s := range sc.steps {
+		if sc.prefix+s.ID == id {
+			return s
+		}
+		if s.IsUse() {
+			if c := sc.children[s.ID]; c != nil {
+				if got := x.stepByRunID(c, id); got != nil {
+					return got
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // needsOf works out what a step in a scope needs, as run step IDs, and
 // which groups it needs as a whole.
 func (x *expander) needsOf(sc *scope, s *Step) (ids, groups []string) {
@@ -656,7 +711,7 @@ func (x *expander) needsOf(sc *scope, s *Step) (ids, groups []string) {
 			if c == nil {
 				continue
 			}
-			m := x.members(c)
+			m := x.waitedFor(c)
 			if len(m) == 0 {
 				// Nothing was left of it; it stands aside like a step left out.
 				i, g := x.needsOf(sc, t)
@@ -849,4 +904,50 @@ func mergeEach(outer, own map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
+}
+
+func hasOutputRef(with map[string]string) bool {
+	for _, v := range with {
+		if _, _, ok := OutputParam(v); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// absoluteOutputs returns the values a use passes, with each output named
+// as the run will name its step, so that the template can take it as a
+// parameter of type output. A step that is not in the file is a problem.
+func (x *expander) absoluteOutputs(sc *scope, use *Step, at string) map[string]string {
+	out := make(map[string]string, len(use.With))
+	for k, v := range use.With {
+		if step, key, ok := OutputParam(v); ok {
+			if t := sc.byID[step]; t != nil && dropped(t) {
+				pos := use.withLines[k]
+				line := use.usesLine
+				if pos != nil {
+					line = pos.Line
+				}
+				x.problem(sc, line, 0, at+".with."+k, "%s is switched off here, so it makes no output for %s: turn it on, or leave out what needs it", step, k)
+			} else if t == nil {
+				pos := use.withLines[k]
+				line := use.usesLine
+				if pos != nil {
+					line = pos.Line
+				}
+				x.problem(sc, line, 0, at+".with."+k, "{ output: %s.%s } names a step that is not here; the steps are %s", clipText(step, 40), clipText(key, 40), stepNames(sc))
+			}
+			v = "output(" + sc.prefix + step + "." + key + ")"
+		}
+		out[k] = v
+	}
+	return out
+}
+
+func stepNames(sc *scope) string {
+	var ids []string
+	for _, s := range sc.steps {
+		ids = append(ids, s.ID)
+	}
+	return strings.Join(ids, ", ")
 }

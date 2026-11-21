@@ -1,0 +1,10 @@
+#!/bin/sh
+# Runs the phases named in PHASES, in order, from this directory: setup,
+# check, test, build. A step that needs its own environment (a matrix
+# member) names several, so that it installs and then works in one step.
+set -e
+here=$(cd "$(dirname "$0")" && pwd)
+for phase in ${PHASES:?name the phases to run, for example: setup test}; do
+  echo "== $phase"
+  sh "$here/$phase.sh"
+done

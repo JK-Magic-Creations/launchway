@@ -1,0 +1,18 @@
+/* The starters gallery (Library → Starters). */
+.starters-filter { display: flex; gap: 16px 24px; flex-wrap: wrap; margin: 4px 0 16px; }
+.starters-filter input[type="search"], .starters-filter select { margin-left: 6px; }
+.starters-group { margin: 0 0 28px; }
+.starters-list { display: grid; gap: 12px; }
+.starter-head { display: flex; gap: 12px 20px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.starter-head p { margin: 4px 0 0; max-width: 70ch; }
+.starter-more { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+.starter-more .h-xs { margin: 16px 0 6px; font-size: 13px; text-transform: none; }
+.starter-params { width: 100%; border-collapse: collapse; font-size: 13px; }
+.starter-params th, .starter-params td { text-align: left; vertical-align: top; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--border); }
+.starter-code { background: var(--surface-2, var(--surface)); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12.5px; margin: 0 0 8px; }
+.starter-graph { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.starter-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.starter-col li ul li { border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; background: var(--surface); min-width: 150px; max-width: 230px; }
+.starter-step-d { display: block; font-size: 12px; }
+.starter-use-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 600px) { .starter-params th, .starter-params td { display: block; } .starter-params thead { display: none; } }

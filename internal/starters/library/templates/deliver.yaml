@@ -1,0 +1,134 @@
+# MANEUVER: deliver a built image to one environment: a decision where the environment is protected (Clearance), the deploy by GitOps write-back, a health proof for a watch period (Overwatch), and the return to the previous version if the proof fails (Return to base).
+#
+#   deliver:
+#     uses: launchway/deliver
+#     needs: image
+#     with: { environment: prod, image_repository: team/app, tag: { output: image.tag }, digest: { output: image.digest } }
+#
+# The flight plans use it once for each of the project's environments, in the order the environments are configured, so a file rarely names it. Every value that can be worked out is: the application is <service>-<environment>, the file that holds the image is apps/<application>/base.yaml in the GitOps repository, the namespace is <service>-<environment>, and the health address is http://<workload>.<namespace>.svc.cluster.local:<port><health_path>. Any of them can be written under with, or for one environment in overrides: ["prod.application=shop", "dev.port=3000"].
+# Whether a decision is asked is the environment's own setting (protected in the server's configuration), not this file's. The server's notification rules tell people when a decision waits (approval.requested) and when a deployment fails or is rolled back (deployment.failed, deployment.rolled_back).
+# The deploy runner serving the environment writes the image's digest (and tag) to the GitOps repository and waits for Argo CD; with method: helm-values it sets image.tag and image.digest in a values file instead of rewriting the image in a manifest.
+template: deliver
+description: "Maneuver: deliver an image to one environment: decision, deploy, health proof and return to base"
+params:
+  environment: { type: environment, description: "The environment, as the server's configuration names it" }
+  service: { type: string, from: launchway_project, default: "app", description: "What is deployed there; the project's name" }
+  image_repository: { type: string, description: "The image's repository, without the host: team/app" }
+  tag: { type: output, description: "The tag that was built: { output: image.tag }" }
+  digest: { type: output, description: "The digest that was built: { output: image.digest }" }
+  protected: { type: list, from: launchway_protected, default: [], description: "The environments that are protected; where this one is, a person decides first" }
+  overrides: { type: list, from: delivery_overrides, default: [], description: "Values for one environment, written environment.name=value: prod.application=shop, dev.verify=false" }
+  application: { type: application, default: { text: "{service}-{environment}", override: { param: overrides, key: "{environment}.application" } }, description: "The Argo CD application" }
+  manifest: { type: string, default: { text: "apps/{application}/base.yaml", override: { param: overrides, key: "{environment}.manifest" } }, description: "The file in the GitOps repository that holds the image (a values file with method helm-values)" }
+  namespace: { type: string, default: { text: "{service}-{environment}", override: { param: overrides, key: "{environment}.namespace" } }, description: "The workload's namespace" }
+  workload: { type: string, default: { text: "{service}", override: { param: overrides, key: "{environment}.workload" } }, description: "The workload Argo CD syncs and Launchway watches" }
+  approve: { type: boolean, default: { text: "true", override: { param: overrides, key: "{environment}.approve" } }, description: "Ask a person where the environment is protected; prod.approve=false skips the question for one environment (one decision for two services of one release)" }
+  rollout: { type: boolean, default: { text: "false", override: { param: overrides, key: "{environment}.rollout" } }, description: "The workload is an Argo Rollouts rollout (a canary): the deployment waits for its steps and analysis runs to be healthy" }
+  pauses: { type: string, default: "wait", options: ["wait", "promote", "fail"], description: "A rollout's indefinite pause: wait for a person, promote it, or fail" }
+  workload_kind: { type: string, default: "Deployment", options: ["Deployment", "StatefulSet", "DaemonSet"], description: "What kind the workload is" }
+  port: { type: number, default: { text: "8080", override: { param: overrides, key: "{environment}.port" } }, description: "The port the service listens on, for the health address" }
+  health_path: { type: string, from: health_path, default: { text: "/healthz", override: { param: overrides, key: "{environment}.health_path" } }, description: "The health path" }
+  health_url: { type: string, default: { text: "http://{workload}.{namespace}.svc.cluster.local:{port}{health_path}", override: { param: overrides, key: "{environment}.health_url" } }, description: "The address the deploy runner calls to prove the new version healthy" }
+  health_source: { type: string, from: health_source, default: "checks", description: "A health source of type check in the server's verification settings" }
+  health_success: { type: number, default: "0.95", description: "The share of calls that must answer well in each interval" }
+  verify: { type: boolean, default: { text: "true", override: { param: overrides, key: "{environment}.verify" } }, description: "Prove the new version healthy; off for an environment whose workload is scaled to zero" }
+  verify_delay: { type: string, default: "30s", description: "How long the new version warms up before the first call" }
+  verify_for: { type: string, default: "5m", description: "The watch period after the deployment: a whole number of intervals" }
+  verify_every: { type: string, default: "30s", description: "How often the health is judged" }
+  on_inconclusive: { type: string, default: "fail", options: ["fail", "pass", "pause"], description: "What to do when the proof has no data" }
+  method: { type: string, default: "image", options: ["image", "helm-values"], description: "image: rewrite every reference to the image in the manifest. helm-values: set image.tag and image.digest in a values file" }
+  tag_key: { type: string, default: "image.tag", description: "With helm-values: the YAML path of the tag" }
+  digest_key: { type: string, default: "image.digest", description: "With helm-values: the YAML path of the digest" }
+  gitops_repo: { type: string, from: gitops_repo, default: "gitops", description: "The write-back repository, as the deploy runner's configuration names it" }
+  gitops_branch: { type: string, from: gitops_branch, default: "main", description: "The branch of the GitOps repository the commit goes to" }
+  sync_request: { type: string, default: "auto", options: ["auto", "always", "never"], description: "Whether to ask Argo CD to sync" }
+  question: { type: string, default: { text: "Deploy {service} to {environment}?" }, description: "What the person who decides is asked" }
+steps:
+  approve:
+    kind: approval
+    description: A person decides before this environment changes
+    if: { all: [ { param: environment, in: protected }, { param: approve } ] }
+    message: { param: question }
+  deploy:
+    kind: deploy
+    description: Commit the image to the GitOps repository and wait for Argo CD
+    if: { param: rollout, equals: false }
+    needs: [approve]
+    environment: { param: environment }
+    service: { param: service }
+    version: { param: tag }
+    argocd:
+      application: { param: application }
+      write_back:
+        repo: { param: gitops_repo }
+        branch: { param: gitops_branch }
+        changes:
+          - { if: { param: method, equals: image }, file: { param: manifest }, image: { param: image_repository }, tag: { param: tag }, digest: { param: digest } }
+          - { if: { param: method, equals: helm-values }, file: { param: manifest }, set: { param: tag_key }, value: { param: tag } }
+          - { if: { param: method, equals: helm-values }, file: { param: manifest }, set: { param: digest_key }, value: { param: digest } }
+      sync:
+        request: { param: sync_request }
+        resources:
+          - { kind: { param: workload_kind }, name: { param: workload }, namespace: { param: namespace } }
+  deploy-rollout:
+    kind: deploy
+    description: Commit the image to the GitOps repository and wait for the rollout
+    if: { param: rollout }
+    needs: [approve]
+    environment: { param: environment }
+    service: { param: service }
+    version: { param: tag }
+    argocd:
+      application: { param: application }
+      write_back:
+        repo: { param: gitops_repo }
+        branch: { param: gitops_branch }
+        changes:
+          - { if: { param: method, equals: image }, file: { param: manifest }, image: { param: image_repository }, tag: { param: tag }, digest: { param: digest } }
+          - { if: { param: method, equals: helm-values }, file: { param: manifest }, set: { param: tag_key }, value: { param: tag } }
+          - { if: { param: method, equals: helm-values }, file: { param: manifest }, set: { param: digest_key }, value: { param: digest } }
+      sync:
+        request: { param: sync_request }
+        resources:
+          - { kind: Rollout, name: { param: workload }, namespace: { param: namespace } }
+    rollout: { name: { param: workload }, namespace: { param: namespace }, until: healthy, pauses: { param: pauses } }
+  verify:
+    kind: verify
+    description: Prove the new version healthy for the watch period
+    if: { all: [ { param: verify }, { param: rollout, equals: false } ] }
+    needs: [deploy]
+    deployment: deploy
+    delay: { param: verify_delay }
+    duration: { param: verify_for }
+    interval: { param: verify_every }
+    on_inconclusive: { param: on_inconclusive }
+    metrics:
+      - name: healthy
+        source: { param: health_source }
+        check: { url: { param: health_url }, success: { param: health_success } }
+  verify-rollout:
+    kind: verify
+    description: Prove the new version healthy for the watch period
+    if: { all: [ { param: verify }, { param: rollout } ] }
+    needs: [deploy-rollout]
+    deployment: deploy-rollout
+    delay: { param: verify_delay }
+    duration: { param: verify_for }
+    interval: { param: verify_every }
+    on_inconclusive: { param: on_inconclusive }
+    metrics:
+      - name: healthy
+        source: { param: health_source }
+        check: { url: { param: health_url }, success: { param: health_success } }
+  rollback:
+    kind: rollback
+    description: Put the previous version back if the deployment or its proof fails
+    if: { param: rollout, equals: false }
+    needs: [verify]
+    deployment: deploy
+  rollback-rollout:
+    kind: rollback
+    description: Put the previous version back if the deployment or its proof fails
+    if: { param: rollout }
+    needs: [verify-rollout]
+    deployment: deploy-rollout

@@ -50,7 +50,7 @@ policy:
 Restart the server. A mistake in a policy stops the server from starting, with the file and line.
 
 Start a run of `hello` (**Start a run**, or the `curl` command from the
-[first tutorial](first-pipeline.md#6-start-a-run-by-hand)). It runs as before, but its **Policy**
+[first tutorial](first-pipeline.md#7-start-a-run-by-hand)). It runs as before, but its **Policy**
 tab shows a warning, rule by rule:
 
 ```text

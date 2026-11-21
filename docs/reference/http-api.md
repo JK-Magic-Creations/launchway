@@ -146,6 +146,7 @@ For load balancers and orchestrators. Neither needs credentials.
 | Route | Access | Audit | What it does |
 |---|---|---|---|
 | `GET /healthz` | `public` | — | The process is up: `200 {"status": "ok"}`. |
+| `GET /schema/pipeline.json` | `public` | — | The JSON Schema of the pipeline file, for editors to complete and check keys. Also published as `pipeline.schema.json` with the documentation. |
 | `GET /readyz` | `public` | — | The server can do useful work: the database answered within 2 seconds, it can be written (not only reached), and the server is not shutting down. |
 
 `GET /readyz` answers `200` with the database schema:
@@ -238,8 +239,8 @@ A ref is `{"name", "kind" (branch or tag), "sha", "subject", "author", "committe
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
-| `GET /api/v1/libraries` | `any-viewer` | — | The shared libraries pipelines may use, by `name`, with the time of the last fetch (`last_fetch`). |
-| `GET /api/v1/libraries/{library}/templates` | `any-viewer` | — | A library's templates at `?version=` (default: its newest tag, else its default branch), with their parameters and outputs. `404` when no libraries are configured. |
+| `GET /api/v1/libraries` | `any-viewer` | — | The shared libraries pipelines may use, by `name`, with the time of the last fetch (`last_fetch`). The first is always `launchway`, marked `builtin: true`: the [starters](../guide/starters.md) that ship with Launchway. |
+| `GET /api/v1/libraries/{library}/templates` | `any-viewer` | — | A library's templates at `?version=` (default: its newest tag, else its default branch), with their parameters and outputs. `404` when no libraries are configured. For `launchway` (one version, `builtin`) each template also has its `kind` (`flight plan` or `step template`), an `example` pipeline file and the `graph` of steps that file runs. |
 
 ## Runs
 

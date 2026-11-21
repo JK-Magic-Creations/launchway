@@ -9,12 +9,16 @@ import (
 // strings that mean something: the name of a delivery environment, and of an
 // Argo CD application. A use that passes anything else is refused where it is
 // written, not when the deploy runs.
-var ParamTypes = []string{paramTypeString, paramTypeNumber, paramTypeBoolean, paramTypeList, paramTypeEnvironment, paramTypeApplication}
+var ParamTypes = []string{paramTypeString, paramTypeNumber, paramTypeBoolean, paramTypeList, paramTypeEnvironment, paramTypeApplication, paramTypeOutput}
 
 // checkName returns why v is not an environment's or an application's name,
 // or "".
 func (p *Param) checkName(v string) string {
 	switch {
+	case p.Type == paramTypeOutput:
+		if _, _, ok := OutputParam(v); !ok {
+			return fmt.Sprintf("%s is an output of an earlier step: write { output: step.key } under with", p.Name)
+		}
 	case p.Type == paramTypeEnvironment && !nameRe.MatchString(v):
 		return fmt.Sprintf("%s is the name of an environment: lower-case letters, digits and hyphens; %q is not one", p.Name, clipText(v, 60))
 	case p.Type == paramTypeApplication && !k8sNameRe.MatchString(v):
@@ -102,4 +106,19 @@ func (p *Pipeline) requireDeploy() {
 	if p.UsesSchemaVerify() {
 		p.Requires = max(p.Requires, SchemaVerify)
 	}
+}
+
+// OutputParam reads the value of a parameter of type output, written
+// output(step.key): the step and the key.
+func OutputParam(v string) (step, key string, ok bool) {
+	rest, found := strings.CutPrefix(v, "output(")
+	rest, found2 := strings.CutSuffix(rest, ")")
+	if !found || !found2 {
+		return "", "", false
+	}
+	i := strings.LastIndex(rest, ".")
+	if i <= 0 || i == len(rest)-1 {
+		return "", "", false
+	}
+	return rest[:i], rest[i+1:], true
 }

@@ -49,7 +49,7 @@ If `launchway --help` is not found, add `~/.local/bin` to `PATH` in your shell's
 - **Run the server with demo projects:** `make run` in the checkout; see the
   [quick start](../start/quick-start.md).
 - **Run the server for your own repositories:** see step 5 of
-  [First pipeline in 10 minutes](../tutorials/first-pipeline.md#5-let-a-server-run-it-on-every-commit).
+  [First pipeline in 10 minutes](../tutorials/first-pipeline.md#6-let-a-server-run-it-on-every-commit).
 
 ## Which executor runs the steps
 

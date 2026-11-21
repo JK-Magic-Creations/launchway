@@ -285,9 +285,10 @@ commit that has its own `.launchway/pipeline.yaml`, that file wins.
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `projects[].pipeline.library` | name | required | One of [`libraries`](#libraries) |
-| `projects[].pipeline.version` | text | required | A tag, branch or full commit id |
-| `projects[].pipeline.template` | name | required | The template to run |
+| `projects[].pipeline.library` | name | required, unless `detect` | One of [`libraries`](#libraries), or `launchway` for the [starters](../guide/starters.md) that ship with Launchway |
+| `projects[].pipeline.version` | text | required, except for `launchway` | A tag, branch or full commit id; `launchway` has one version and needs none |
+| `projects[].pipeline.template` | name | required, unless `detect` | The template to run |
+| `projects[].pipeline.detect` | boolean | `false` | Run the starter that fits what the repository holds (`go.mod`: `go-service` or `go-library`, and so on) where it has no pipeline file; `library`, `version` and `template` are then left out. Nothing that matches means no pipeline, as before |
 | `projects[].pipeline.with` | mapping | none | Values for the template's parameters |
 | `projects[].pipeline.on.push.branches` | list of patterns | none | As a pipeline's [`on.push`](pipeline.md#push) |
 | `projects[].pipeline.on.push.tags` | list of patterns | none | |

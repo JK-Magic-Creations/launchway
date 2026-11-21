@@ -2286,7 +2286,7 @@ paths:
             x-launchway-access: signed-in
     /api/v1/libraries:
         get:
-            description: The shared libraries pipelines may use, by name, with the time of the last fetch (last_fetch).
+            description: 'The shared libraries pipelines may use, by name, with the time of the last fetch (last_fetch). The first is always launchway, marked builtin: true: the [starters](../guide/starters.md) that ship with Launchway.'
             operationId: get_api_v1_libraries
             responses:
                 "200":
@@ -2309,7 +2309,7 @@ paths:
             x-launchway-access: any-viewer
     /api/v1/libraries/{library}/templates:
         get:
-            description: 'A library''s templates at ?version= (default: its newest tag, else its default branch), with their parameters and outputs. 404 when no libraries are configured.'
+            description: 'A library''s templates at ?version= (default: its newest tag, else its default branch), with their parameters and outputs. 404 when no libraries are configured. For launchway (one version, builtin) each template also has its kind (flight plan or step template), an example pipeline file and the graph of steps that file runs.'
             operationId: get_api_v1_libraries_library_templates
             parameters:
                 - in: path
@@ -8786,6 +8786,26 @@ paths:
             summary: 'The server can do useful work: the database answered within 2 seconds, it can be written (not only reached), and the server is not shutting down.'
             tags:
                 - readyz
+            x-launchway-access: public
+    /schema/pipeline.json:
+        get:
+            description: The JSON Schema of the pipeline file, for editors to complete and check keys. Also published as pipeline.schema.json with the documentation.
+            operationId: get_schema_pipeline.json
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: The JSON Schema of the pipeline file, for editors to complete and check keys.
+            tags:
+                - schema
             x-launchway-access: public
 security:
     - sessionCookie: []

@@ -54,7 +54,7 @@ terms:
     guide: Co-pilot
 ```
 
-The keys of `overrides` are `installation`, `organization`, `unit`, `project`, `guide`, `preflight`, `checklist`, `clearance`, `go`, `no_go`, `hold`, `flight_plan`, `logbook`, `payload`, `in_flight` and `launch_line`; a key may end in `_plural`. An unknown key is refused. The same entry is read and written through the configuration API, the MCP tools and the CLI (`launchway config get installation`), like the rest of the installation settings.
+The keys of `overrides` are `installation`, `organization`, `unit`, `project`, `guide`, `preflight`, `checklist`, `clearance`, `go`, `no_go`, `hold`, `flight_plan`, `maneuver`, `hangar`, `logbook`, `payload`, `in_flight` and `launch_line`; a key may end in `_plural`. An unknown key is refused. The same entry is read and written through the configuration API, the MCP tools and the CLI (`launchway config get installation`), like the rest of the installation settings.
 
 Names you set under the older `levels` entry keep working: they apply under the chosen set and are replaced by a rename in `terms`. Saving the words from Settings folds them into `terms`.
 

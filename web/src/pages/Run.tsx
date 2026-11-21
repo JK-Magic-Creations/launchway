@@ -24,6 +24,7 @@ import { RunTrigger } from "../components/RunTrigger";
 import { RunVariables } from "../components/Variables";
 import { progressText, whoMayDecide, type ApprovalProgress } from "../api/approvals";
 import { collapseLoops, LoopPanel, loopById, loopFor } from "../components/Loops";
+import { NoPipelineFile } from "../components/NoPipelineFile";
 import { ArtifactsTab } from "./RunArtifacts";
 import { CoverageTab } from "./RunCoverage";
 import { ReportsTab } from "./RunReports";
@@ -315,7 +316,8 @@ export function RunPage({ id }: { id: string }) {
         </div>
       )}
 
-      {run.graph.origin && (
+      {run.graph.origin?.detected && <NoPipelineFile run={run} onSee={() => setTab("definition")} />}
+      {run.graph.origin && !run.graph.origin.detected && (
         <div className="callout callout-info">
           The repository has no <Mono>.launchway/pipeline.yaml</Mono> at this commit, so the run used the pipeline configured for {run.project} on the server.
           {" "}See it on the <button type="button" className="linkbtn" onClick={() => setTab("definition")}>Pipeline</button> tab.

@@ -108,6 +108,7 @@ export const SECTIONS: Section[] = [
     id: "library", label: "Library", href: "/library", icon: "library", group: 3, side: "Templates for pipelines.",
     promise: "Ready-made templates and steps for pipelines.",
     tabs: [
+      { id: "starters", label: "Starters", href: "/library/starters", icon: "package" },
       { id: "templates", label: "Templates", href: "/library/templates", icon: "graph", show: ({ facts }) => has(facts.libraries) },
     ],
   },
@@ -237,6 +238,7 @@ export const PAGES: PageInfo[] = [
   page("/changes/:page", "changes", undefined, (p) => comingTitle("/changes/" + p.page), (p) => [{ label: comingTitle("/changes/" + p.page) }]),
 
   page("/library", "library", undefined, () => "Library", () => []),
+  page("/library/starters", "library", "starters", () => "Starters", () => [{ label: "Starters" }]),
   page("/library/templates", "library", "templates", () => "Templates", () => [{ label: "Templates" }]),
   page("/library/templates/:library/:name", "library", "templates", (p) => `Template ${p.name}`,
     (p) => [{ label: "Templates", href: "/library/templates" }, { label: p.library }, { label: p.name }]),

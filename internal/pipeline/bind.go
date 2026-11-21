@@ -167,6 +167,14 @@ func (ps *parser) withValue(s *Step, key string, v *yaml.Node, where string) str
 		}
 		raw, _ := jsonList(items)
 		return raw
+	case v.Kind == yaml.MappingNode && hasKey(v, "output") && !hasKey(v, "param"):
+		var ref string
+		ps.eachKey(v, where, []string{"output"}, func(_, v2 *yaml.Node) { ref = ps.str(v2, where+".output") })
+		if i := strings.LastIndex(ref, "."); i <= 0 || i == len(ref)-1 || strings.ContainsAny(ref, " \t()") {
+			ps.add(v, where, "write the step and the output's key, for example: { output: image.digest }")
+			return ""
+		}
+		return "output(" + ref + ")"
 	case v.Kind == yaml.MappingNode && hasKey(v, "input"):
 		if ps.tmpl != nil {
 			ps.add(v, where, "a template cannot read run inputs; take the value as a parameter of this template")

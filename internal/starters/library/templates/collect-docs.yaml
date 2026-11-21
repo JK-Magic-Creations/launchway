@@ -1,0 +1,15 @@
+# A step template: checks that a folder of documentation exists and keeps it as the artifact docs, for people to download or a later step to publish (publishing to a docs site is coming).
+#
+#   docs: { uses: launchway/collect-docs }
+template: collect-docs
+description: "Maneuver: keep a folder of documentation as the artifact docs"
+params:
+  docs_dir: { type: string, default: "docs", description: "The folder of documents, relative to the repository" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+steps:
+  run:
+    description: Collect the documentation
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/site/docs.sh"
+    artifacts:
+      - { name: docs, paths: ["**/*.md", "**/*.html", "**/*.pdf", "**/*.svg", "**/*.png"] }

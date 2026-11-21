@@ -1,0 +1,26 @@
+# A step template: mvn verify with the tests in Tests and JaCoCo's report (when the build writes one) in Coverage.
+#
+#   build: { uses: launchway/maven-verify, with: { java_version: "17" } }
+template: maven-verify
+description: "Maneuver: mvn verify, with the Surefire tests and JaCoCo coverage as reports"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  java_version: { type: string, default: "21", description: "The Java version of the image: the temurin tag in maven:3.9-eclipse-temurin-<version>" }
+  build_command: { type: string, default: "", description: "Your own build command, in place of the default" }
+containers:
+  java: { image: { param: java_version, format: "docker.io/library/maven:3.9-eclipse-temurin-%s" } }
+steps:
+  run:
+    description: Compile, test and package with Maven
+    container: java
+    cache:
+      - name: maven
+        paths: [.cache/m2]
+        key: { files: ["**/pom.xml"], text: { param: java_version, format: "jdk-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/java/maven.sh"
+    reports:
+      tests: ["**/target/surefire-reports/*.xml", "**/target/failsafe-reports/*.xml"]
+      coverage: ["**/target/site/jacoco/jacoco.xml"]
+    artifacts:
+      - { name: jar, paths: ["**/target/*.jar"] }

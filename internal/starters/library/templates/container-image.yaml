@@ -1,0 +1,75 @@
+# FLIGHT PLAN for a repository whose product is an image and that has no other toolchain.
+#
+#   ci: { uses: launchway/container-image, with: { push: true, image_repository: team/app } }
+#
+# Builds the Dockerfile, scans the image for known vulnerabilities, writes its software bill of materials, signs it with the runner's key and, only when push is true, pushes it under a tag made from the commit. Without push it still builds and scans, so a pull request shows the Dockerfile works.
+template: container-image
+description: "Flight plan: an image from a Dockerfile alone: build, scan, bill of materials, sign, push"
+params:
+  secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
+  push: { type: boolean, default: { nonempty: deliver }, description: "Push the image to the registry: on when the project has environments to deliver to, off otherwise" }
+  image_repository: { type: string, default: { text: "{image_namespace}/{service}" }, description: "The image's repository in the registry, without the host: team/app; by default the namespace and the project's name" }
+  registry: { type: string, from: registry, default: "registry", description: "A registry the runner's configuration names" }
+  dockerfile: { type: string, default: "Dockerfile", description: "The Dockerfile, relative to the repository" }
+  context: { type: string, default: ".", description: "The build context, relative to the repository" }
+  image_branch: { type: string, default: "main", description: "The branch whose commits are built into an image" }
+  scan_mode: { type: string, default: "enforce", options: ["report", "enforce"], description: "enforce fails the image step on a serious finding (high and worse); report records findings and goes on" }
+  sign: { type: boolean, default: true, description: "Sign the image with the runner's own key" }
+  sbom: { type: boolean, default: true, description: "Make the image's software bill of materials" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+  service: { type: string, from: launchway_project, default: "app", description: "What the project is called in deliveries and in the image's name; the project's own name" }
+  moving_tag: { type: string, default: "", description: "A second, moving tag pushed with every build (ci-latest, for a Dockerfile that uses the image as a base); empty pushes only the commit's tag" }
+  image_namespace: { type: string, from: image_namespace, default: "launchway", description: "The registry namespace of the image's repository; set once for every project with the variable image_namespace" }
+  deliver: { type: list, from: launchway_environments, default: [], description: "The environments to deliver to, in order: the project's environments as the server's configuration lists them, protected ones behind a decision. [] turns delivery off" }
+  deliver_branch: { type: string, default: { param: image_branch }, description: "The branch whose commits are delivered; the image branch" }
+  overrides: { type: list, from: delivery_overrides, default: [], description: "Delivery values for one environment, written environment.name=value: prod.application=shop, dev.port=3000, dev.verify=false (see the deliver maneuver)" }
+  port: { type: number, default: "8080", description: "The port the service listens on, for the health address of a delivery" }
+  health_path: { type: string, from: health_path, default: "/healthz", description: "The health path the proof after a deployment calls" }
+  verify_for: { type: string, default: "5m", description: "The watch period after each deployment: the proof calls the service for this long, and a failed proof puts the previous version back" }
+  method: { type: string, default: "image", options: ["image", "helm-values"], description: "How a delivery writes to the GitOps repository: rewrite the image in a manifest, or set image.tag and image.digest in a values file" }
+  gitops_repo: { type: string, from: gitops_repo, default: "gitops", description: "The write-back repository, as the deploy runner's configuration names it" }
+  gitops_branch: { type: string, from: gitops_branch, default: "main", description: "The branch of the GitOps repository that is written to" }
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+steps:
+  secrets:
+    description: Look for secrets committed by mistake
+    if: { param: secret_scan }
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/secrets.sh"
+  image:
+    description: Build the image, scan it, and push it when push is on
+    uses: image-build
+    when: { branch: { param: image_branch } }
+    with:
+      image_repository: { param: image_repository }
+      registry: { param: registry }
+      dockerfile: { param: dockerfile }
+      context: { param: context }
+      push: { param: push }
+      scan_mode: { param: scan_mode }
+      sign: { param: sign }
+      sbom: { param: sbom }
+      moving_tag: { param: moving_tag }
+      tools_image: { param: tools_image }
+  deliver:
+    description: Deliver the image to each environment in order, and put the previous version back if one fails
+    uses: deliver
+    if: { param: deliver, empty: false }
+    needs: [image]
+    for_each: { environment: { param: deliver } }
+    serial: true
+    fail_fast: false
+    when: { branch: { param: deliver_branch } }
+    with:
+      environment: { each: environment }
+      service: { param: service }
+      image_repository: { param: image_repository }
+      tag: { output: image.tag }
+      digest: { output: image.digest }
+      overrides: { param: overrides }
+      port: { param: port }
+      health_path: { param: health_path }
+      verify_for: { param: verify_for }
+      method: { param: method }
+      gitops_repo: { param: gitops_repo }
+      gitops_branch: { param: gitops_branch }

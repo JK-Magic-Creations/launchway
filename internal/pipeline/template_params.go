@@ -2,11 +2,14 @@ package pipeline
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/jk-magic-creations/launchway/internal/starters"
 )
 
 // Template parameters: what a template declares, and checking a value against it.
@@ -136,16 +139,35 @@ func (ps *parser) parseIf(n *yaml.Node, at string) *paramTest {
 		ps.add(n, at, "if is only for steps in templates; use when")
 		return t
 	}
-	var name, equals string
-	var nameNode, equalsNode *yaml.Node
-	ps.eachKey(n, at, []string{"param", "equals"}, func(k, v *yaml.Node) {
-		if k.Value == "param" {
+	var name, equals, in, empty string
+	var nameNode, equalsNode, inNode, emptyNode, allNode *yaml.Node
+	ps.eachKey(n, at, []string{"param", "equals", "in", "empty", "all"}, func(k, v *yaml.Node) {
+		switch k.Value {
+		case "all":
+			allNode = v
+		case "param":
 			name, nameNode = ps.str(v, at+".param"), v
-		} else {
+		case "in":
+			in, inNode = ps.str(v, at+".in"), v
+		case "empty":
+			empty, emptyNode = ps.str(v, at+".empty"), v
+		default:
 			equals, equalsNode = ps.str(v, at+".equals"), v
 		}
 	})
 	if n.Kind != yaml.MappingNode {
+		return t
+	}
+	if allNode != nil {
+		if nameNode != nil || allNode.Kind != yaml.SequenceNode || len(allNode.Content) == 0 {
+			ps.add(n, at, "write all: [ { param: a }, { param: b, equals: x } ] alone: the step stays when every test holds")
+			return t
+		}
+		for i, it := range allNode.Content {
+			if sub := ps.parseIf(it, fmt.Sprintf("%s.all[%d]", at, i)); sub != nil && !sub.keep {
+				t.keep = false
+			}
+		}
 		return t
 	}
 	p := ps.tmpl.params[name]
@@ -154,6 +176,30 @@ func (ps *parser) parseIf(n *yaml.Node, at string) *paramTest {
 		ps.add(n, at, "write if: { param: name } for a boolean parameter, or if: { param: name, equals: value }")
 	case p == nil:
 		ps.add(nameNode, at+".param", "%s", ps.unknownParam(name))
+	case inNode != nil:
+		l := ps.tmpl.params[in]
+		if l == nil {
+			ps.add(inNode, at+".in", "%s", ps.unknownParam(in))
+		} else if l.Type != paramTypeList {
+			ps.add(inNode, at+".in", "%s is a %s; in: takes a list parameter", in, l.Type)
+		} else {
+			items, _ := ParseList(ps.tmpl.values[in])
+			t.keep = slices.Contains(items, ps.tmpl.values[name])
+		}
+	case emptyNode != nil:
+		switch {
+		case p.Type != paramTypeList && p.Type != paramTypeString:
+			ps.add(emptyNode, at+".empty", "%s is a %s; empty: is for a list or a text parameter", name, p.Type)
+		case empty != "true" && empty != "false":
+			ps.add(emptyNode, at+".empty", "write empty: true (keep the step when the list is empty) or empty: false (keep it when the list has something)")
+		default:
+			isEmpty := strings.TrimSpace(ps.tmpl.values[name]) == ""
+			if p.Type == paramTypeList {
+				items, _ := ParseList(ps.tmpl.values[name])
+				isEmpty = len(items) == 0
+			}
+			t.keep = isEmpty == (empty == "true")
+		}
 	case equalsNode == nil && p.Type != paramTypeBoolean:
 		ps.add(n, at, "%s is a %s, not true or false: say which value keeps the step, with equals:", name, p.Type)
 	case equalsNode != nil:
@@ -264,6 +310,12 @@ func (ps *parser) checkUses(p *Pipeline) {
 			continue
 		}
 		lib, _, ok := strings.Cut(s.Uses, "/")
+		if ok && lib == starters.Name && p.Library(lib) == nil {
+			// The library that ships with Launchway needs no entry under
+			// libraries:; naming it there (with another repo) replaces it.
+			p.Libraries = append(p.Libraries, &Library{Name: starters.Name, Repo: starters.Name, Version: starters.Version, Line: s.usesLine})
+			continue
+		}
 		if ok && lib != "" && p.Library(lib) == nil {
 			ps.problems = append(ps.problems, Problem{Line: s.usesLine, Path: "steps." + s.ID + ".uses",
 				Message: fmt.Sprintf("no library called %q is listed under libraries:", clipText(lib, 60))})

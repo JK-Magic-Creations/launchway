@@ -443,6 +443,9 @@ func (ps *parser) value(n *yaml.Node, at string) *Value {
 		if strings.TrimSpace(lit) == "" {
 			ps.add(n, at, "a value is required")
 		}
+		if step, key, ok := OutputParam(lit); ok {
+			return &Value{Output: &OutputRef{Step: step, Key: key}}
+		}
 		return &Value{Literal: lit}
 	}
 	v := &Value{}

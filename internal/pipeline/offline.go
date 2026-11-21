@@ -53,7 +53,7 @@ func ParseLibraryFlags(args []string) (map[string]string, error) {
 // uses no templates is returned as parsed. Problems are the ones a server
 // reports, with one more that only an offline check can make: a library the
 // pipeline names has no directory.
-func ExpandOffline(data []byte, dirs map[string]string, o BindOptions) (*Pipeline, error) {
+func ExpandOffline(data []byte, dirs map[string]string, o BindOptions, vars Variables) (*Pipeline, error) {
 	p, err := Parse(data)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func ExpandOffline(data []byte, dirs map[string]string, o BindOptions) (*Pipelin
 			return nil, ErrNoTemplate
 		}
 		return b, err
-	}, nil)
+	}, vars)
 	return out, err
 }
 

@@ -118,8 +118,14 @@ func (m *Manager) ReadPipelineFile(ctx context.Context, name, ref string) (*Pipe
 	switch {
 	case errors.Is(err, ErrNoPipeline) && p.Pipeline != nil:
 		f.Configured = true
-		if f.Text, err = configuredText(name, p.Pipeline); err != nil {
-			return nil, err
+		text, _, cerr := p.configuredAt(ctx, r.SHA)
+		switch {
+		case errors.Is(cerr, ErrNoPipeline): // detection found nothing to run
+			f.Configured, f.Text = false, pipeline.Starter(name)
+		case cerr != nil:
+			return nil, cerr
+		default:
+			f.Text = text
 		}
 	case errors.Is(err, ErrNoPipeline):
 		f.Text = pipeline.Starter(name)

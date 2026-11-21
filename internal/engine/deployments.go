@@ -93,6 +93,7 @@ type Environment struct {
 	// WriteBack, when set, says how deploy steps write to a GitOps
 	// repository hosted by Launchway (schema 38; see writeback.go).
 	WriteBack *WriteBack
+	Position  int // its place in the configuration's list: delivery order
 }
 
 // Allows reports whether a project may deploy to the environment.
@@ -108,7 +109,8 @@ func (env Environment) Allows(project string) bool {
 // checkEnvironments checks a list of environments from the configuration.
 func checkEnvironments(envs []Environment) (map[string]Environment, error) {
 	out := map[string]Environment{}
-	for _, env := range envs {
+	for i, env := range envs {
+		env.Position = i
 		switch {
 		case !validName(env.Name):
 			return nil, fmt.Errorf("environment %q: use lower-case letters, digits and hyphens", env.Name)

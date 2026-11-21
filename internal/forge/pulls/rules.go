@@ -352,6 +352,14 @@ func matchesCheck(required, check string) bool {
 	if required == check {
 		return true
 	}
+	// A step repeated by for_each is several checks, ci/test[go=1.26] and so
+	// on. Naming ci/test (or test) asks for all of them, so the group is one
+	// check; naming a member, ci/test[go=1.26], asks for that one alone.
+	if !strings.Contains(required, "[") {
+		if base, ok := memberBase(check); ok && matchesCheck(required, base) {
+			return true
+		}
+	}
 	if !strings.Contains(required, "/") {
 		_, step, ok := strings.Cut(check, "/")
 		return ok && step == required
@@ -597,4 +605,17 @@ func (r *Readiness) conclude(rule Rule, covered bool, actorRole string, p PullRe
 			r.CanBypass = false
 		}
 	}
+}
+
+// memberBase is a check name without the member of a repeated step:
+// ci/test[go=1.26] is ci/test.
+func memberBase(check string) (string, bool) {
+	if !strings.HasSuffix(check, "]") {
+		return check, false
+	}
+	i := strings.LastIndex(check, "[")
+	if i <= 0 {
+		return check, false
+	}
+	return check[:i], true
 }

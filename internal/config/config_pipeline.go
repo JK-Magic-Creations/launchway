@@ -7,15 +7,20 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/source"
+	"github.com/jk-magic-creations/launchway/internal/starters"
 )
 
 // ProjectPipelineConfig runs a library's template as a project's pipeline.
 type ProjectPipelineConfig struct {
-	Library  string            `yaml:"library"`
-	Version  string            `yaml:"version"` // a tag, branch or full commit id
-	Template string            `yaml:"template"`
-	With     map[string]string `yaml:"with"`
-	On       ProjectPipelineOn `yaml:"on"`
+	Library  string `yaml:"library"`
+	Version  string `yaml:"version"` // a tag, branch or full commit id
+	Template string `yaml:"template"`
+	// Detect runs the flight plan that fits what the repository holds (go.mod:
+	// go-service, and so on) where it has no pipeline file; library, version
+	// and template are then left out. With still gives values to its parameters.
+	Detect bool              `yaml:"detect"`
+	With   map[string]string `yaml:"with"`
+	On     ProjectPipelineOn `yaml:"on"`
 	// Supersede: a new run of a push or pull request cancels the older runs
 	// of the same ref that are still going (see the pipeline key).
 	Supersede bool `yaml:"supersede"`
@@ -73,8 +78,12 @@ func (p ProjectConfig) sourcePipeline() (*source.ProjectPipeline, error) {
 	if pp == nil {
 		return nil, nil
 	}
-	sp := &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With,
-		Supersede: pp.Supersede, Default: p.PipelineFrom}
+	version := pp.Version
+	if version == "" && pp.Library == starters.Name {
+		version = starters.Version // the starters that ship with Launchway have one version
+	}
+	sp := &source.ProjectPipeline{Library: pp.Library, Version: version, Template: pp.Template, With: pp.With,
+		Supersede: pp.Supersede, Default: p.PipelineFrom, Detect: pp.Detect}
 	sp.Lane = pp.Lane.source()
 	if t := pp.On.Push; t != nil {
 		sp.On.Push = &pipeline.PushTrigger{Branches: t.Branches, Tags: t.Tags}

@@ -99,14 +99,60 @@ lists every variable a step receives.
 | `inputs` | mapping | none | The [run inputs](#inputs): values a run is started with. At most 50 |
 | `libraries` | mapping | none | The [shared libraries](#libraries) whose templates steps use. At most 10 |
 | `containers` | mapping | none | Named [containers and services](#containers) the steps run in or beside |
+| `defaults` | mapping | none | What every script step takes unless it says otherwise: image, environment, timeout, retry, caches; see [Defaults](#defaults) |
 | `runner` | mapping | none | Which runners may run the pipeline's steps; see [Runner](#runner) |
 | `lane` | mapping | none | Makes runs of the project take turns, and says what a run that arrives while another goes does; see [Lane](#lane). Not together with `supersede`. Needs schema 24 |
 | `timeout` | duration | none | How long a run may stay open, from its creation: `1m` to `720h`, and no more than the installation's `max_run_timeout` where it sets one (`launchway run-limits`). A run past it is canceled, with the reason `run timeout of 2h reached`; a deployment it holds is handled as a cancel by hand handles it. **Time spent waiting for an approval does not count**, nor does time between a run's end and its resume. Needs schema 24 |
-| `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display |
+| `steps` | mapping | required | The [steps](#steps), by name; at least one. Written order is kept for display. Not with `uses` |
+| `uses` | `library/template` | none | A file that is only a use of one Flight plan: `uses: launchway/go-service`. It stands for a pipeline named `ci` that runs on pushes to `main` and on pull requests (docs-only changes skipped), superseding older runs, with one step `ci`; what the file writes itself (`pipeline`, `on`, `supersede`, `containers`) is kept. See [Starters](../guide/starters.md) |
+| `with` | mapping | none | With `uses`: the values of the Flight plan's parameters, as for [a step that uses a template](#a-step-that-uses-a-template) |
+| `skip` | list of stage names | none | With `uses`: stages of the Flight plan to leave out; see [Changing what a template runs](#changing-what-a-template-runs) |
+| `extend` | list | none | With `uses`: steps to add before or after a stage |
+| `replace` | mapping | none | With `uses`: stages to take over wholesale |
 
 Keys that the design has but are not built yet are refused with a hint: `outputs` (write to
-`$LAUNCHWAY_OUTPUTS` instead), `runs_on` (use [`runner`](#runner)) and `matrix` (use
-[`for_each`](#for-each)).
+`$LAUNCHWAY_OUTPUTS` instead) and `runs_on` (use [`runner`](#runner)). Names other tools use for
+things Launchway already has are refused with the name to use: `matrix` is [`for_each`](#for-each),
+and a pipeline-level `env` is [`defaults`](#defaults)` env`.
+
+## Defaults
+
+`defaults` is written once for the pipeline and read as if each script step had written it. A step's
+own value always wins.
+
+<!-- keys: defaults -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `image` | text | none | The image of steps that name no `image` or `container` |
+| `container` | name | none | A named [container](#containers) for steps that name no `image` or `container`. Not with `image` |
+| `env` | mapping | none | Variables for every step. A step's `env` is merged with it key by key: the step adds to the defaults, and wins where it sets the same name |
+| `timeout` | duration | none | The timeout of steps that set none |
+| `retry` | number or mapping | none | The retry of steps that set none, as for a step |
+| `cache` | list | none | The [caches](#cache) of steps that set none |
+
+Only steps that run a script take them. Approvals, image, deploy, verify, rollback and AI steps, and
+steps that use a template, keep their own settings: a template is an interface, and what it runs is
+its own. A mistake in a default is reported in the same words as in a step, at the line of the
+default.
+
+<!-- validate -->
+```yaml
+pipeline: with-defaults
+defaults:
+  image: docker.io/library/golang:1.27
+  env: { TZ: UTC, CGO_ENABLED: "0" }
+  timeout: 20m
+  retry: 1
+steps:
+  vet: { run: go vet ./... }
+  test:
+    needs: vet
+    env: { CGO_ENABLED: "1" }      # adds to the defaults, and wins for this name
+    run: go test ./...
+  lint:
+    image: docker.io/golangci/golangci-lint:v2
+    run: golangci-lint run         # its own image; the defaults' env, timeout and retry still apply
+```
 
 ## Triggers
 
@@ -435,6 +481,7 @@ A step that runs a script. `timeout` is per attempt: default `1h`, from `1s` to 
 | `fail_fast` | boolean | `true` | With `for_each`: once a member fails for good, cancel the others not started and stop those running |
 | `add` | list | none | With `for_each`: whole combinations to add outside the lists, one value for every key; see [For each](#for-each) |
 | `continue_for` | list | none | With `for_each`: members, matched like `exclude` entries, that may fail without failing the run (as `on_failure: continue`) |
+| `serial` | boolean | `false` | With `for_each`: each member waits for the one before it (see [For each](#for-each)) |
 
 A step that fails keeps its last few lines of output with the step, so the reason shows where the
 run says it failed. Secret values are masked in logs and outputs; values shorter than 4 characters
@@ -517,9 +564,39 @@ pipeline's [libraries](#libraries). Its steps get the names `<step>/<template-st
 | `fail_fast` | boolean | `true` | With `for_each`: stop the other members once one fails |
 | `add` | list | none | With `for_each`: whole combinations to add outside the lists |
 | `continue_for` | list | none | With `for_each`: members that may fail without failing the run; the template's steps that run a script or build an image then behave as `on_failure: continue` |
+| `serial` | boolean | `false` | With `for_each`: each member waits for the one before it, in the order of the lists, so a delivery goes through dev, then staging, then prod and a failure ends the line. A member's rollbacks are not waited for |
+| `skip` | list of stage names | none | Stages of the template to leave out; what needed one then needs what it needed. A name the template does not have is refused, with the stages it has |
+| `extend` | list | none | Steps to add next to a stage; see [Changing what a template runs](#changing-what-a-template-runs) |
+| `replace` | mapping | none | Steps that take over a stage of the template, keeping its place |
 
 `launchway validate` checks such a step without reading the template; the server's editor and
-`POST /api/v1/validate?project=NAME` expand it.
+`POST /api/v1/validate?project=NAME` expand it. `launchway validate FILE --resolved` shows the steps that result, for the starters that ship with Launchway with no server (`--environment dev --environment prod:protected` and `--project-name NAME` stand in for what a server knows of the project, `--variable NAME=VALUE` for variables).
+
+#### Changing what a template runs
+
+A flight plan's steps are its **stages**. A use can switch stages off, add steps and take stages over, in one line each, and the result is what `--resolved` lists:
+
+<!-- keys: extend -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `after` | stage name | | Add the steps after this stage: they need it, and what needed it needs them too. One of `after` and `before` |
+| `before` | stage name | | Add the steps before this stage: they need what it needed, and it needs them |
+| `steps` | mapping | required | The steps to add, as a pipeline's steps (a plain step, an approval or a deploy; no `for_each`, no use of a template). Their names may not be a stage's |
+
+```yaml
+steps:
+  ci:
+    uses: launchway/python-service
+    skip: [licenses, analysis]
+    extend:
+      - after: test
+        steps:
+          docs: { image: alpine:3.22, run: ./check-docs.sh }
+    replace:
+      check: { image: python:3.13, run: ruff check . }
+```
+
+A replaced stage keeps its needs unless it gives its own, and stays off if its own switch (such as `lint: false`) turned it off.
 
 ### Kind image
 
@@ -1370,6 +1447,10 @@ step that needs the loop needs every member.
 - A loop has at most 64 combinations unless the server allows more
   ([`loops.max_members`](server-config.md#loops), at most 500), and a run at most 500 steps.
   An expanded step name may be at most 200 bytes.
+- `serial: true` makes each member wait for the member before it (not for its rollbacks, which are
+  skipped when all went well), so the members go in the order of the lists and a failure ends the
+  line: how the starters deliver through a project's environments. A loop over a template may hold
+  approval, deploy, verify and rollback steps.
 - Approval, image, deploy, rollback and rollout steps cannot be repeated. Fetching from a loop's
   members is not available yet.
 
@@ -1734,11 +1815,30 @@ Each entry of `params` maps a name (`^[a-z][a-z0-9_-]{0,39}$`) to its settings.
 <!-- keys: template-param -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment` or `application`. The last two are strings that mean something: an environment's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the deploy runs. Both take `options` and `format` as a string does |
+| `type` | text | `string` | `string`, `number`, `boolean`, `list`, `environment`, `application` or `output`. `environment` and `application` are strings that mean something: an environment's name (lower-case letters, digits, hyphens) and an Argo CD application's name. A use that passes anything else is refused when it is written, not when the deploy runs. Both take `options` and `format` as a string does |
 | `default` | value | none: the parameter is required | Used when `with` gives no value. A list's default is a YAML list. A string parameter's default may be taken from another string parameter: `default: { param: name, format: "apps/%s/base.yaml" }`, where `%s` (once or more) stands for the other parameter's value (without `format`, the value itself). A value given under `with` still wins, and a default that does not fit (an option not in `options`) is refused where the template is used, saying so |
 | `description` | text | none | One line of at most 200 characters |
 | `options` | one value or a list | none | The values allowed. For `string` and `number` only |
 | `from` | variable name | none | The [variable](../guide/variables.md) (set at a level) the parameter takes when `with` gives no value: it stands before `default`. A locked variable refuses a different value written under `with`, with the level that locked it and who can change it. Not for secrets or maps |
+
+A default can also be worked out. These forms are for string, number, boolean, environment and application parameters:
+
+<!-- keys: template-derived-default -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `param` | parameter name | none | Take another parameter's value, in `format` where `%s` stands |
+| `format` | text | the value itself | With `param` |
+| `text` | text | none | A text with `{name}` where another parameter's value goes: `apps/{service}/base.yaml` |
+| `nonempty` | list parameter name | none | `true` when the list has something in it |
+| `override` | mapping | none | Replace the worked-out value by an entry of a list parameter written `key=value` |
+
+<!-- keys: template-override -->
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `param` | list parameter name | required | The list, such as `overrides` |
+| `key` | text | required | The entry's key, with `{name}` filled in: `{environment}.application` |
+
+A parameter of type `output` takes a step's output from the file that uses the template: `with: { digest: { output: image.digest } }`. Starters also read what Launchway knows of the project through variables (`from: launchway_project`, `launchway_environments`, `launchway_protected`), which the run records like any variable it used.
 
 A parameter reaches the template in exactly three ways, all resolved when the run is created:
 every step of the template receives it as `PARAM_<NAME>` (names starting with `PARAM_` are reserved
@@ -1779,8 +1879,11 @@ same library by name alone; and they take one more key:
 <!-- keys: template-if -->
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `param` | parameter name | required | A `boolean` parameter, alone; or any parameter with `equals` |
+| `param` | parameter name | required | A `boolean` parameter, alone; or any parameter with `equals`, `in` or `empty` |
 | `equals` | value | none | Keep the step when the parameter has this value |
+| `in` | list parameter name | none | Keep the step when the parameter's value is one of the list's: `if: { param: environment, in: protected }` |
+| `empty` | boolean | none | For a list or text parameter: `empty: false` keeps the step when it has something, `empty: true` when it has nothing |
+| `all` | list of tests | none | Alone: keep the step when every test holds, each written as above |
 
 Inside a template, steps refer to each other by the names the template gives them; files of the
 library are at `$LAUNCHWAY_LIB`. Templates may use templates down to 4 levels.

@@ -59,7 +59,7 @@ export function InstallationProvider({ me, approvals, children }: { me: Me; appr
     const apps = applications(data.environments);
     const facts: Facts = data.loaded ? {
       projects: data.projects.length, runs: data.runs.length, runners: data.runners.length, environments: data.environments.length,
-      applications: apps.length, libraries: data.libraries.length, approvals: approvals.length,
+      applications: apps.length, libraries: data.libraries.filter((l) => !l.builtin).length, approvals: approvals.length,
     } : { ...NO_FACTS, approvals: approvals.length };
     return { ...data, applications: apps, approvals, facts, reload };
   }, [data, approvals, reload]);

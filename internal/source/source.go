@@ -484,8 +484,7 @@ func (m *Manager) pollPushes(ctx context.Context, p *project, refs []Ref, seen m
 		case err != nil:
 			what := "the pipeline file has problems"
 			if from == fromServer {
-				what = fmt.Sprintf("the pipeline configured on the server (%s@%s, template %s) has problems",
-					p.Pipeline.Library, p.Pipeline.Version, p.Pipeline.Template)
+				what = "the pipeline configured on the server (" + p.Pipeline.what() + ") has problems"
 			}
 			d.Outcome, d.Detail = "error", what+":\n"+redact.URLs(err.Error())
 		case !pl.On.MatchPush(branchOf(r), tagOf(r)):

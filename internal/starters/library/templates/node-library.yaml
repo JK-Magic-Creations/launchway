@@ -1,0 +1,61 @@
+# FLIGHT PLAN for an npm package or a front-end library that is not deployed as an image.
+#
+#   ci: { uses: launchway/node-library }
+#   # or: with: { test_versions: ["20", "22"] }
+#
+# Installs once, then runs the tests once for each version in test_versions (a matrix: test[node=20] ... each with its own log and report). The dependencies are installed with the default node_version; a package with native add-ons should install per version in its own pipeline.
+template: node-library
+description: "Flight plan: a Node or TypeScript package with no image: lint, tests on every Node version you list, build"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  node_version: { type: string, default: "22", description: "The Node major version of the image: the node image tag; the repository's .nvmrc is checked against it" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  lint: { type: boolean, default: true, description: "Check formatting and style" }
+  lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
+  test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
+  test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+  build: { type: boolean, default: true, description: "Run the package's build script" }
+  secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
+  test_versions: { type: list, default: ["22"], description: "The Node versions the tests run on, one step for each" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+containers:
+  node: { image: { param: node_version, format: "docker.io/library/node:%s" } }
+steps:
+  setup:
+    description: Install dependencies from the lock file (npm, pnpm or yarn)
+    container: node
+    cache:
+      - name: node
+        paths: [.cache/npm, .cache/pnpm, .cache/yarn]
+        key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/node/setup.sh"
+  check:
+    description: Lint, format and type checks the package defines
+    if: { param: lint }
+    needs: [setup]
+    container: node
+    run: "$LAUNCHWAY_LIB/scripts/node/check.sh"
+  test:
+    description: Run the tests, once for each Node version in test_versions
+    needs: [setup]
+    for_each: { node: { param: test_versions } }
+    fail_fast: false
+    image: { each: node, format: "docker.io/library/node:%s" }
+    run: "$LAUNCHWAY_LIB/scripts/node/test.sh"
+    reports:
+      tests: ["**/reports/**/junit.xml"]
+  build:
+    description: Run the package's build script
+    if: { param: build }
+    needs: [setup, check, test]
+    container: node
+    env: { LW_SCRIPT: build }
+    run: "$LAUNCHWAY_LIB/scripts/node/script.sh"
+    artifacts:
+      - { name: build, paths: ["**/dist", "**/build"] }
+  secrets:
+    description: Look for secrets committed by mistake
+    if: { param: secret_scan }
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/secrets.sh"

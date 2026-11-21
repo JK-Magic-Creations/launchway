@@ -22,6 +22,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
+	"github.com/jk-magic-creations/launchway/internal/starters"
 )
 
 // Library is a repository of templates that pipelines may use. Only the
@@ -52,6 +53,15 @@ type ProjectPipeline struct {
 	// Lane is the pipeline's lane (schema 24), as written in the
 	// configuration; the pipeline parser checks it.
 	Lane *ProjectLane `json:"lane,omitempty"`
+	// Detect says the project has no flight plan named but runs the one that
+	// fits what the repository holds (go.mod: go-service, and so on), found
+	// at each commit that has no pipeline file. Library and Template are then
+	// empty.
+	Detect bool `json:"detect,omitempty"`
+
+	// detected is what Detect found at the commit; set on the copy
+	// configuredAt writes text from.
+	detected *starters.Detection
 }
 
 // ProjectLane is the lane of a configured pipeline: the pipeline key lane.
@@ -72,6 +82,9 @@ func (m *Manager) addLibraries(cat *catalog, libs []Library, old *catalog) error
 	for _, l := range libs {
 		if !pipeline.ValidLibraryName(l.Name) {
 			return fmt.Errorf("library name %q: use lower-case letters, digits and hyphens, starting with a letter (at most 40)", l.Name)
+		}
+		if l.Name == starters.Name {
+			return fmt.Errorf("library name %q is reserved for the starters that ship with Launchway; use another name (a pipeline can still name its own library %s)", l.Name, starters.Name)
 		}
 		if cat.libraries[l.Name] != nil {
 			return fmt.Errorf("library %q is listed twice", l.Name)
@@ -97,6 +110,15 @@ func (m *Manager) addLibraries(cat *catalog, libs []Library, old *catalog) error
 func checkProjectPipeline(cat *catalog, p *Project) error {
 	pp := p.Pipeline
 	switch {
+	case pp.Detect:
+		if pp.Library != "" || pp.Template != "" {
+			return fmt.Errorf("project %s: pipeline.detect chooses the flight plan itself, so it takes no library or template", p.Name)
+		}
+		return nil
+	case pp.Library == starters.Name:
+		if _, ok := starters.Template(pp.Template); !ok {
+			return fmt.Errorf("project %s: pipeline.template %q is not one of the starters (%s)", p.Name, pp.Template, strings.Join(starters.Templates(), ", "))
+		}
 	case cat.libraries[pp.Library] == nil:
 		return fmt.Errorf("project %s: pipeline.library %q is not one of the libraries (%s)", p.Name, pp.Library, cat.libraryNames())
 	case !pipeline.ValidVersion(pp.Version):
@@ -170,7 +192,11 @@ func configuredText(project string, pp *ProjectPipeline) (string, error) {
 	head := "# The repository has no .launchway/pipeline.yaml, so this project runs the\n" +
 		"# pipeline configured for it on the server. A file in the repository takes\n" +
 		"# its place.\n"
-	if pp.Default != "" {
+	if d := pp.detected; d != nil {
+		head = "# No pipeline file: using " + starters.Name + "/" + d.Flight + " because " + d.Because + ".\n" +
+			"# Save this text as .launchway/pipeline.yaml to own it and change it; a file\n" +
+			"# in the repository always takes this one's place.\n"
+	} else if pp.Default != "" {
 		head = "# The repository has no .launchway/pipeline.yaml, so this project runs the\n" +
 			"# flight plan of its " + levelWord(pp.Default) + ", set on the server. A file in the\n" +
 			"# repository takes its place.\n"
@@ -191,7 +217,7 @@ const (
 func (p *project) pipelineText(ctx context.Context, sha string) (string, pipelineSource, error) {
 	_, text, err := p.fileAt(ctx, sha)
 	if errors.Is(err, ErrNoPipeline) && p.Pipeline != nil {
-		text, err = configuredText(p.Name, p.Pipeline)
+		text, _, err = p.configuredAt(ctx, sha)
 		return text, fromServer, err
 	}
 	return text, fromFile, err
@@ -203,12 +229,13 @@ func (p *project) note(from pipelineSource) string {
 	switch {
 	case p.Pipeline == nil:
 		return ""
+	case from == fromServer && p.Pipeline.Detect:
+		return "(the repository has no .launchway/pipeline.yaml, so the flight plan that fits what it holds ran: " + p.Pipeline.what() + ")"
 	case from == fromServer && p.Pipeline.Default != "":
-		return fmt.Sprintf("(the repository has no .launchway/pipeline.yaml, so the flight plan of the %s ran: %s@%s, template %s)",
-			levelWord(p.Pipeline.Default), p.Pipeline.Library, p.Pipeline.Version, p.Pipeline.Template)
+		return fmt.Sprintf("(the repository has no .launchway/pipeline.yaml, so the flight plan of the %s ran: %s)",
+			levelWord(p.Pipeline.Default), p.Pipeline.what())
 	case from == fromServer:
-		return fmt.Sprintf("(the repository has no .launchway/pipeline.yaml, so the pipeline configured on the server ran: %s@%s, template %s)",
-			p.Pipeline.Library, p.Pipeline.Version, p.Pipeline.Template)
+		return fmt.Sprintf("(the repository has no .launchway/pipeline.yaml, so the pipeline configured on the server ran: %s)", p.Pipeline.what())
 	case p.Pipeline.Default != "":
 		return "(the repository's own .launchway/pipeline.yaml ran, in place of the flight plan of the " + levelWord(p.Pipeline.Default) + ")"
 	default:
@@ -231,6 +258,11 @@ func (p *project) parsedAt(ctx context.Context, sha string) (*pipeline.Pipeline,
 		pl.Origin = &pipeline.Origin{Kind: pipeline.OriginServer, Text: text}
 		if p.Pipeline != nil {
 			pl.Origin.Default = p.Pipeline.Default
+			if p.Pipeline.Detect {
+				if _, d, _ := p.configuredAt(ctx, sha); d != nil {
+					pl.Origin.Detected = &pipeline.Detected{Flight: starters.Name + "/" + d.Flight, Because: d.Because}
+				}
+			}
 		}
 	}
 	return pl, from, nil
@@ -295,6 +327,14 @@ func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrid
 	mirrors := map[string]*project{}
 	for _, l := range pl.Libraries {
 		at := "libraries." + l.Name
+		if isBuiltin(l) {
+			if l.Override = overrides[l.Name]; l.Override != "" {
+				problems = append(problems, builtinProblem(l.Line, at+".version", "the library launchway is part of Launchway and has one version, so it cannot be overridden; to use other templates, name your own library"))
+				continue
+			}
+			l.Commit, l.RefKind = starters.Commit(), "builtin"
+			continue
+		}
 		lib := m.c().libraries[l.Repo]
 		if lib == nil {
 			problems = append(problems, pipeline.Problem{Line: l.Line, Path: at + ".repo",
@@ -324,13 +364,20 @@ func (m *Manager) expandVars(ctx context.Context, pl *pipeline.Pipeline, overrid
 		return nil, nil, nil, problems
 	}
 	out, used, err := pipeline.ExpandWith(pl, func(l *pipeline.Library, name string) ([]byte, error) {
+		if isBuiltin(l) {
+			return builtinTemplate(name)
+		}
 		return mirrors[l.Name].templateAt(ctx, l.Commit, name)
 	}, vars)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, plainBuiltin(err)
 	}
 	var libs []engine.LibrarySource
 	for _, l := range out.Libraries {
+		if isBuiltin(l) {
+			libs = append(libs, engine.LibrarySource{Name: l.Name, URL: starters.URL, Commit: l.Commit})
+			continue
+		}
 		libs = append(libs, engine.LibrarySource{Name: l.Name, URL: mirrors[l.Name].URL, Commit: l.Commit})
 	}
 	return out, libs, used, nil
@@ -410,6 +457,9 @@ type LibraryStatus struct {
 	URL       string `json:"url"`
 	LastFetch int64  `json:"last_fetch"`
 	Error     string `json:"error,omitempty"`
+	// Builtin marks the library that ships with Launchway: it needs no
+	// registration and has one version, the server's own.
+	Builtin bool `json:"builtin,omitempty"`
 }
 
 // LibraryTemplates is a library's templates at one version, for someone
@@ -436,6 +486,9 @@ const (
 // LibraryTemplates lists the templates of a library at a version, with
 // their parameters and outputs. An unknown library is ErrNotFound.
 func (m *Manager) LibraryTemplates(ctx context.Context, name, version string) (*LibraryTemplates, error) {
+	if name == starters.Name {
+		return builtinTemplates(), nil
+	}
 	lib := m.c().libraries[name]
 	if lib == nil {
 		return nil, fmt.Errorf("%w: library %q (the libraries are: %s)", engine.ErrNotFound, name, m.c().libraryNames())
@@ -507,7 +560,8 @@ func (m *Manager) LibraryTemplates(ctx context.Context, name, version string) (*
 // Libraries lists the libraries pipelines may use.
 func (m *Manager) Libraries() []LibraryStatus {
 	cat := m.c()
-	out := make([]LibraryStatus, 0, len(cat.libOrder))
+	out := make([]LibraryStatus, 0, len(cat.libOrder)+1)
+	out = append(out, LibraryStatus{Name: starters.Name, URL: starters.URL, Builtin: true})
 	for _, name := range cat.libOrder {
 		l := cat.libraries[name]
 		l.stateMu.Lock()
@@ -527,4 +581,74 @@ func (m *Manager) Libraries() []LibraryStatus {
 // configuration key and the API keep default_pipeline.
 func levelWord(level string) string {
 	return strings.Replace(level, "organisation", "organization", 1)
+}
+
+// what names the configured pipeline for a message.
+func (pp *ProjectPipeline) what() string {
+	if pp.Detect {
+		return "the flight plan found by looking at the repository"
+	}
+	return fmt.Sprintf("%s@%s, template %s", pp.Library, pp.Version, pp.Template)
+}
+
+// configuredAt is the text of the project's configured pipeline at a commit.
+// With detect on, it looks at the commit's files and chooses a flight plan;
+// ErrNoPipeline means nothing fits, as for a project with no pipeline.
+func (p *project) configuredAt(ctx context.Context, sha string) (string, *starters.Detection, error) {
+	pp := p.Pipeline
+	if !pp.Detect {
+		text, err := configuredText(p.Name, pp)
+		return text, nil, err
+	}
+	d, err := p.detectAt(ctx, sha)
+	if err != nil {
+		return "", nil, err
+	}
+	if d == nil {
+		return "", nil, ErrNoPipeline
+	}
+	c := *pp
+	c.Detect, c.detected = false, d
+	c.Library, c.Version, c.Template = starters.Name, starters.Version, d.Flight
+	c.With = map[string]string{}
+	for k, v := range d.With {
+		c.With[k] = v
+	}
+	for k, v := range pp.With {
+		c.With[k] = v
+	}
+	if len(c.With) == 0 {
+		c.With = nil
+	}
+	if c.On.Push == nil && c.On.PullRequest == nil {
+		branch := p.DefaultBranch
+		if branch == "" {
+			branch = "main"
+		}
+		c.On.Push = &pipeline.PushTrigger{Branches: []string{branch}}
+		c.On.PullRequest = &pipeline.PullRequestTrigger{}
+		c.Supersede = true
+	}
+	text, err := configuredText(p.Name, &c)
+	return text, d, err
+}
+
+// detectAt looks at the files of a commit and chooses a flight plan.
+func (p *project) detectAt(ctx context.Context, sha string) (*starters.Detection, error) {
+	out, err := gitOut(ctx, p.dir, "ls-tree", "-r", "--name-only", "--full-name", sha)
+	if err != nil {
+		return nil, err
+	}
+	files := strings.Split(strings.TrimSpace(out), "\n")
+	if len(files) > 50000 {
+		files = files[:50000]
+	}
+	read := func(name string) string {
+		data, err := gitOut(ctx, p.dir, "show", sha+":"+name)
+		if err != nil || len(data) > 1<<20 {
+			return ""
+		}
+		return data
+	}
+	return starters.Detect(files, read), nil
 }

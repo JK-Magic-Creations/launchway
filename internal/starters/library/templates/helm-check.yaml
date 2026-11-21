@@ -1,0 +1,18 @@
+# A step template: helm lint --strict, helm template, and helm package; the packaged chart is kept as the artifact chart.
+#
+#   chart: { uses: launchway/helm-check }
+template: helm-check
+description: "Maneuver: helm lint, helm template and helm package for a chart"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  chart: { type: string, default: ".", description: "The chart's directory, relative to the working directory" }
+  helm_image: { type: string, default: "docker.io/alpine/helm:3.17.0", description: "An image with helm" }
+containers:
+  helm: { image: { param: helm_image } }
+steps:
+  run:
+    description: Lint, render and package the chart
+    container: helm
+    run: "$LAUNCHWAY_LIB/scripts/helm/check.sh"
+    artifacts:
+      - { name: chart, paths: [dist] }

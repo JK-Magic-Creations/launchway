@@ -1,0 +1,74 @@
+# FLIGHT PLAN for a Go module that is not deployed: a library, or a tool people install.
+#
+#   ci: { uses: launchway/go-library }
+#   # or test on two Go versions: with: { test_versions: ["1.26", "1.27"] }
+#
+# Runs the same checks as go-service without the image. The tests run once for each version in test_versions (a matrix): each is its own step, test[go=1.26], with its own log, cache and test report.
+template: go-library
+description: "Flight plan: a Go library or command-line tool with no image: tests on every Go version you list"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  go_version: { type: string, default: "1.27", description: "The Go version of the image: the golang image tag; the repository's go.mod may ask for a newer one and Go fetches it" }
+  lint: { type: boolean, default: true, description: "Check formatting and style" }
+  lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
+  test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
+  race: { type: boolean, default: false, description: "Run the tests with the race detector" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
+  vuln_scan: { type: boolean, default: true, description: "Look for known vulnerabilities in the dependencies with govulncheck" }
+  secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
+  build: { type: boolean, default: true, description: "Build every package" }
+  test_versions: { type: list, default: ["1.27"], description: "The Go versions the tests run on, one step for each" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+containers:
+  go: { image: { param: go_version, format: "docker.io/library/golang:%s" } }
+steps:
+  check:
+    description: Format and vet the Go code
+    if: { param: lint }
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/check.sh"
+  test:
+    description: Run every Go test, once for each Go version in test_versions
+    for_each: { go: { param: test_versions } }
+    fail_fast: false
+    image: { each: go, format: "docker.io/library/golang:%s" }
+    run: "$LAUNCHWAY_LIB/scripts/go/test.sh"
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { each: go, format: "go-%s" } }
+        fallback: latest
+    reports:
+      tests: ["**/reports/**/go-test.json"]
+      coverage: { paths: ["**/reports/**/cover.out"], fail_under: { param: coverage_minimum } }
+  build:
+    description: Build every package
+    if: { param: build }
+    needs: [check, test]
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/build.sh"
+  vuln:
+    description: Look for known vulnerabilities in the dependencies
+    if: { param: vuln_scan }
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/vuln.sh"
+  secrets:
+    description: Look for secrets committed by mistake
+    if: { param: secret_scan }
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/secrets.sh"

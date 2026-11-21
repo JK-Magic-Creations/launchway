@@ -1,0 +1,305 @@
+{
+  "$id": "https://jk-magic-creations.github.io/launchway/pipeline.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A pipeline: its steps, and what starts it. Generated from the parser; `launchway validate` is the judge.",
+  "properties": {
+    "containers": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {},
+          "cpu": {},
+          "env": {
+            "description": "Environment variables of the step.",
+            "type": "object"
+          },
+          "image": {
+            "description": "The container image the step's script runs in.",
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "object",
+              "array"
+            ]
+          },
+          "memory": {},
+          "ready": {},
+          "service": {}
+        },
+        "type": "object"
+      },
+      "description": "Named images that steps run in, and services that run beside them.",
+      "type": "object"
+    },
+    "defaults": {
+      "additionalProperties": false,
+      "description": "What every script step takes unless it says otherwise: image, container, env, timeout, retry, cache.",
+      "properties": {
+        "cache": {
+          "description": "Directories kept between runs, restored before the step and saved after it.",
+          "type": "array"
+        },
+        "container": {
+          "description": "A named container from containers: that the step runs in.",
+          "type": "string"
+        },
+        "env": {
+          "description": "Environment variables of the step.",
+          "type": "object"
+        },
+        "image": {
+          "description": "The container image the step's script runs in.",
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "object",
+            "array"
+          ]
+        },
+        "retry": {
+          "description": "Extra attempts after a failure, or { times, wait, backoff, on }.",
+          "type": [
+            "integer",
+            "object"
+          ]
+        },
+        "timeout": {
+          "description": "How long one attempt may run, such as 10m.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "extend": {},
+    "inputs": {
+      "description": "Values a run is started with.",
+      "type": "object"
+    },
+    "lane": {
+      "description": "Which runs of the project may go at the same time.",
+      "type": "object"
+    },
+    "libraries": {
+      "description": "Shared libraries a pipeline uses templates from; launchway/ needs no entry.",
+      "type": "object"
+    },
+    "on": {
+      "description": "What starts a run: push, pull_request, schedule, webhook.",
+      "type": "object"
+    },
+    "pipeline": {
+      "description": "The pipeline's name: lower-case letters, digits and hyphens.",
+      "type": "string"
+    },
+    "replace": {},
+    "runner": {
+      "description": "Which runners may run the steps: a pool, labels or both.",
+      "type": "object"
+    },
+    "skip": {},
+    "steps": {
+      "additionalProperties": {
+        "additionalProperties": false,
+        "description": "One step. The keys that apply depend on kind; the parser says which do not.",
+        "properties": {
+          "abort_first": {},
+          "action": {},
+          "add": {
+            "description": "With for_each: whole combinations to add outside the lists.",
+            "type": "array"
+          },
+          "approvers": {},
+          "argocd": {},
+          "artifacts": {
+            "description": "Sets of files the step keeps for download and for later steps.",
+            "type": "array"
+          },
+          "baseline": {},
+          "build_args": {},
+          "cache": {
+            "description": "Directories kept between runs, restored before the step and saved after it.",
+            "type": "array"
+          },
+          "container": {
+            "description": "A named container from containers: that the step runs in.",
+            "type": "string"
+          },
+          "context": {},
+          "continue_for": {
+            "description": "With for_each: combinations that may fail without failing the run.",
+            "type": "array"
+          },
+          "decide": {},
+          "delay": {},
+          "deployment": {},
+          "description": {
+            "description": "One line saying what the step is for.",
+            "type": "string"
+          },
+          "duration": {},
+          "env": {
+            "description": "Environment variables of the step.",
+            "type": "object"
+          },
+          "environment": {},
+          "exclude": {
+            "description": "With for_each: combinations to leave out.",
+            "type": "array"
+          },
+          "extend": {},
+          "fail_fast": {
+            "description": "With for_each: stop the other combinations once one fails (default true).",
+            "type": "boolean"
+          },
+          "fetch": {
+            "description": "Artifacts of earlier steps to put in the workspace first.",
+            "type": "array"
+          },
+          "file": {},
+          "for_each": {
+            "description": "Repeat the step once for each combination of the lists (a matrix); see exclude, add, max_parallel, fail_fast, continue_for.",
+            "type": "object"
+          },
+          "image": {
+            "description": "The container image the step's script runs in.",
+            "type": [
+              "string",
+              "number",
+              "boolean",
+              "object",
+              "array"
+            ]
+          },
+          "inputs": {
+            "description": "Values a run is started with.",
+            "type": "object"
+          },
+          "instructions": {},
+          "interval": {},
+          "kind": {
+            "description": "What the step is: omit for a step that runs a script.",
+            "enum": [
+              "approval",
+              "image",
+              "deploy",
+              "rollback",
+              "rollout",
+              "verify",
+              "ai"
+            ]
+          },
+          "logs": {},
+          "max_parallel": {
+            "description": "With for_each: how many combinations may be queued or running at once.",
+            "type": "integer"
+          },
+          "max_tokens": {},
+          "message": {},
+          "metrics": {},
+          "model": {},
+          "needs": {
+            "description": "The steps that must succeed first; a step that uses for_each or a template is waited for as a whole.",
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "on_cancel": {},
+          "on_fail": {},
+          "on_failure": {},
+          "on_inconclusive": {},
+          "params": {},
+          "pauses": {},
+          "platforms": {},
+          "prompt": {},
+          "provenance": {},
+          "push": {},
+          "replace": {},
+          "reports": {
+            "description": "Files the step writes that Launchway reads: tests, coverage, findings, sbom.",
+            "type": "object"
+          },
+          "resources": {},
+          "retry": {
+            "description": "Extra attempts after a failure, or { times, wait, backoff, on }.",
+            "type": [
+              "integer",
+              "object"
+            ]
+          },
+          "rollout": {},
+          "run": {
+            "description": "The script to run.",
+            "type": "string"
+          },
+          "runner": {
+            "description": "Which runners may run the steps: a pool, labels or both.",
+            "type": "object"
+          },
+          "sbom": {},
+          "scan": {},
+          "schema": {},
+          "secrets": {
+            "description": "Variables whose values a runner looks up from a secret store.",
+            "type": "object"
+          },
+          "sensitivity": {},
+          "serial": {},
+          "service": {},
+          "sign": {},
+          "skip": {},
+          "tags": {},
+          "target": {},
+          "temperature": {},
+          "timeout": {
+            "description": "How long one attempt may run, such as 10m.",
+            "type": "string"
+          },
+          "until": {},
+          "uses": {
+            "description": "A template to use in place of this step: library/template, such as launchway/go-service.",
+            "type": "string"
+          },
+          "version": {},
+          "when": {
+            "description": "Conditions for the step to run: branch, tag, input, output, upstream.",
+            "type": "object"
+          },
+          "with": {
+            "description": "The values of the template's parameters.",
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "description": "The steps, by name.",
+      "minProperties": 1,
+      "type": "object"
+    },
+    "supersede": {
+      "description": "A new run of a push or pull request cancels older runs of the same ref still going.",
+      "type": "boolean"
+    },
+    "timeout": {
+      "description": "How long one attempt may run, such as 10m.",
+      "type": "string"
+    },
+    "uses": {
+      "description": "A template to use in place of this step: library/template, such as launchway/go-service.",
+      "type": "string"
+    },
+    "with": {
+      "description": "The values of the template's parameters.",
+      "type": "object"
+    }
+  },
+  "required": [
+    "pipeline",
+    "steps"
+  ],
+  "title": "Launchway pipeline file (.launchway/pipeline.yaml)",
+  "type": "object"
+}

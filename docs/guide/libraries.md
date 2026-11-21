@@ -2,6 +2,9 @@
 
 Templates and the scripts they run, kept in a Git repository and pinned by tag, branch or commit.
 
+Besides the libraries you list, one library needs no listing: [`launchway`](starters.md) ships inside Launchway, with Flight plans
+and step templates for common kinds of repository (`uses: launchway/go-service`). The name `launchway` is reserved for it.
+
 A shared library is a Git repository of pipeline templates and the scripts they run, developed
 like any application and released with Git tags. A pipeline names the library and a tag, branch
 or commit; nothing is imported into Launchway or registered with it, and the template and its

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
+	"github.com/jk-magic-creations/launchway/internal/starters"
 )
 
 // checkSchemas refuses a run whose pipeline uses what this server, or a build
@@ -101,7 +102,13 @@ func checkLibraries(p *pipeline.Pipeline, src Source) error {
 		}
 	}
 	if len(src.Libraries) > 0 && src.Kind != "git" {
-		return fmt.Errorf("%w: libraries are only for runs from a Git repository", ErrConflict)
+		// A run in a directory (launchway run) may use the starters that
+		// ship with Launchway, which are carried, not fetched.
+		for _, ls := range src.Libraries {
+			if ls.URL != starters.URL {
+				return fmt.Errorf("%w: libraries are only for runs from a Git repository", ErrConflict)
+			}
+		}
 	}
 	return nil
 }

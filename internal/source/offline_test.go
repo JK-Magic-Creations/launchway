@@ -18,7 +18,7 @@ func TestOfflineExpansionEqualsTheServersCheck(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	offline, err := pipeline.ExpandOffline([]byte(text), map[string]string{"platform": s.lib.Work}, pipeline.BindOptions{})
+	offline, err := pipeline.ExpandOffline([]byte(text), map[string]string{"platform": s.lib.Work}, pipeline.BindOptions{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

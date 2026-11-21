@@ -1,0 +1,8 @@
+{
+  "name": "tiny",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node --test",
+    "build": "node -e \"require('fs').mkdirSync('dist',{recursive:true});require('fs').writeFileSync('dist/tiny.js','module.exports=(a,b)=>a+b')\""
+  }
+}

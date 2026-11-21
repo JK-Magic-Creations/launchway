@@ -33,7 +33,9 @@ The four levels have one permanent name in the API, flags and files, and a word 
 | **Go** | Approve | The recorded answer that lets the run continue. The button says Approve in both sets. | yes | none |
 | **No-go** | Reject | The recorded answer that fails the step. The button says Reject in both sets. | yes | nogo, no go, NoGo |
 | **Hold** | Freeze | A time when changes may not go out. | yes | blackout, code freeze (use freeze in the plain set) |
-| **Flight plan** | Starter pipeline | A complete, ready-made pipeline for a kind of project, with a few things to fill in. | yes | blueprint, boilerplate, pipeline template (a step template is a different thing) |
+| **Flight plan** | Pipeline template | A complete, ready-made pipeline for a kind of project, with a few things to fill in. | yes | blueprint, boilerplate, starter pipeline (say Flight plan, or pipeline template as the plain word), step template (a Maneuver is a different thing) |
+| **Maneuver** | Step template | A reusable step, or a few steps, that a Flight plan or a pipeline uses: build an image, deliver to one environment. | yes | macro, snippet |
+| **Hangar** | Template library | The Flight plans and Maneuvers that ship inside Launchway, with their gallery. | yes | marketplace, store |
 | **Logbook** | Audit trail | The append-only record of who did what, and when. | yes | audit log |
 | **Payload** | Contents | What a change delivers. | yes | delivery contents, manifest (that is a file) |
 | **In flight** | In progress | A change on its way to production. | yes | none |
@@ -73,7 +75,7 @@ Every word above is a default that an installation can rename. Words everyone kn
 | `detachment-synonym` | fails the check | Detachment |
 | `wingman-synonym` | fails the check | the guide ({guide}: Wingman) |
 | `assistant-in-screens` | fails the check | the guide ({guide}: Wingman); 'assistant' stays only for a third-party AI assistant that connects through MCP |
-| `hardcoded-product-word` | fails the check | the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {payload}, {no_go} |
+| `hardcoded-product-word` | fails the check | the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {maneuver}, {hangar}, {payload}, {no_go} |
 | `hardcoded-level-word` | review list | the terms system when the level is meant ({organization}, {installation}); ordinary use (an organization's identity provider; installing software) may stay and goes on the allow list |
 | `approval-for-clearance` | review list | clearance for the thing a person gives; approval stays for pull-request reviews and the step key |
 | `template-ambiguity` | review list | flight plan (a whole ready-made pipeline) or step template (a reusable part) |

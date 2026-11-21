@@ -169,7 +169,7 @@
     {
       "key": "flight_plan",
       "default": "Flight plan",
-      "plain": "Starter pipeline",
+      "plain": "Pipeline template",
       "meaning": "A complete, ready-made pipeline for a kind of project, with a few things to fill in.",
       "renameable": true,
       "identifier": "flight_plan",
@@ -177,7 +177,34 @@
       "mustNotBeCalled": [
         "blueprint",
         "boilerplate",
-        "pipeline template (a step template is a different thing)"
+        "starter pipeline (say Flight plan, or pipeline template as the plain word)",
+        "step template (a Maneuver is a different thing)"
+      ]
+    },
+    {
+      "key": "maneuver",
+      "default": "Maneuver",
+      "plain": "Step template",
+      "meaning": "A reusable step, or a few steps, that a Flight plan or a pipeline uses: build an image, deliver to one environment.",
+      "renameable": true,
+      "identifier": "template (files, keys and uses: launchway/<name> are unchanged)",
+      "appears": "template library, learn pages",
+      "mustNotBeCalled": [
+        "macro",
+        "snippet"
+      ]
+    },
+    {
+      "key": "hangar",
+      "default": "Hangar",
+      "plain": "Template library",
+      "meaning": "The Flight plans and Maneuvers that ship inside Launchway, with their gallery.",
+      "renameable": true,
+      "identifier": "library launchway (uses: launchway/<name> is unchanged)",
+      "appears": "library page, learn pages",
+      "mustNotBeCalled": [
+        "marketplace",
+        "store"
       ]
     },
     {
@@ -374,9 +401,9 @@
       "scope": [
         "web"
       ],
-      "pattern": "(?<![{_])\\b(?:Wingmen|Wingman|Squadrons?|Preflight|Clearances?|Logbook|Flight plans?|Payloads?|No-go)\\b(?!\\})",
+      "pattern": "(?<![{_])\\b(?:Wingmen|Wingman|Squadrons?|Preflight|Clearances?|Logbook|Flight plans?|Maneuvers?|Hangar|Payloads?|No-go)\\b(?!\\})",
       "caseSensitive": true,
-      "use": "the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {payload}, {no_go}",
+      "use": "the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {maneuver}, {hangar}, {payload}, {no_go}",
       "fix": null
     },
     {

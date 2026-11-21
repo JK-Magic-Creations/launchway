@@ -1,0 +1,26 @@
+# A step template: installs dependencies and runs the package's tests; vitest, jest (with jest-junit) and node --test write the report the Tests tab shows.
+#
+#   test: { uses: launchway/node-test }
+template: node-test
+description: "Maneuver: install dependencies and run the tests with a Tests report"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  node_version: { type: string, default: "22", description: "The Node major version of the image: the node image tag" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
+  test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+containers:
+  node: { image: { param: node_version, format: "docker.io/library/node:%s" } }
+steps:
+  run:
+    description: Install dependencies and run the tests
+    container: node
+    cache:
+      - name: node
+        paths: [.cache/npm, .cache/pnpm, .cache/yarn]
+        key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
+        fallback: latest
+    env: { PHASES: "setup test" }
+    run: "$LAUNCHWAY_LIB/scripts/node/run.sh"
+    reports:
+      tests: ["**/reports/**/junit.xml"]

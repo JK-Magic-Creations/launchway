@@ -890,21 +890,6 @@ func (s *Server) listRunners(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rs)
 }
 
-// listLibraries lists the shared libraries pipelines may use, by name.
-func (s *Server) listLibraries(w http.ResponseWriter, r *http.Request) {
-	type lib struct {
-		Name      string `json:"name"`
-		LastFetch int64  `json:"last_fetch"`
-	}
-	out := []lib{}
-	if s.Projects != nil {
-		for _, l := range s.Projects.Libraries() {
-			out = append(out, lib{Name: l.Name, LastFetch: l.LastFetch})
-		}
-	}
-	writeJSON(w, http.StatusOK, out)
-}
-
 // libraryTemplates lists a library's templates at ?version= (default: its
 // newest tag, else its default branch), with their parameters and outputs.
 func (s *Server) libraryTemplates(w http.ResponseWriter, r *http.Request) {

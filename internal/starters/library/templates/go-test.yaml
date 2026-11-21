@@ -1,0 +1,26 @@
+# A step template: go test with go test -json for the Tests tab and a coverage profile for the Coverage tab.
+#
+#   test: { uses: launchway/go-test, with: { race: true } }
+template: go-test
+description: "Maneuver: go test with a Tests report and a coverage report"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  go_version: { type: string, default: "1.27", description: "The Go version of the image: the golang image tag" }
+  test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
+  race: { type: boolean, default: false, description: "Run the tests with the race detector" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
+containers:
+  go: { image: { param: go_version, format: "docker.io/library/golang:%s" } }
+steps:
+  run:
+    description: Run every Go test
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/test.sh"
+    reports:
+      tests: ["**/reports/**/go-test.json"]
+      coverage: { paths: ["**/reports/**/cover.out"], fail_under: { param: coverage_minimum } }

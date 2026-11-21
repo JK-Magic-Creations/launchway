@@ -55,6 +55,7 @@ Usage:
   launchway run      [--file F] [--executor E]  run this directory's pipeline on this machine
                      [-i name=value ...]
   launchway validate [file] [--project P]       check a pipeline file (with --project, the server checks it for that project too)
+  launchway init     [--write] [--force]         propose the pipeline file for this repository from what it holds
   launchway graph    [file]                     print a pipeline's graph as JSON
   launchway login    --server URL               store an API token for a server
   launchway runs     start|list|show|logs|cancel|lanes|resume|rerun  start, follow and re-run runs
@@ -145,6 +146,8 @@ func main() {
 		err = cmdRun(args)
 	case "validate":
 		err = cmdValidate(args)
+	case "init":
+		err = cmdInit(args)
 	case "graph":
 		err = cmdGraph(args)
 	case "login":
@@ -660,6 +663,13 @@ func cmdRun(args []string) error {
 	if err != nil {
 		return err
 	}
+	var libs []engine.LibrarySource
+	if !p.Expanded() {
+		// The starters that ship with Launchway need no server.
+		if p, libs, err = source.ExpandBound(p); err != nil {
+			return explainProblems(path, err)
+		}
+	}
 	if images == nil {
 		for _, s := range p.Steps {
 			if s.IsImage() {
@@ -708,7 +718,7 @@ func cmdRun(args []string) error {
 
 	trig := engine.Trigger{Event: "manual", Actor: currentUser(), Inputs: inputs}
 	trig.Branch, trig.Ref, trig.SHA = currentGitHead()
-	run, err := eng.CreateRun(engine.NewRun{Project: "local", Pipeline: p, Trigger: trig, Source: engine.Source{Kind: "dir", Path: dir}})
+	run, err := eng.CreateRun(engine.NewRun{Project: "local", Pipeline: p, Trigger: trig, Source: engine.Source{Kind: "dir", Path: dir, Libraries: libs}})
 	if err != nil {
 		return err
 	}

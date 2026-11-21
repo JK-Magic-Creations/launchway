@@ -32,7 +32,7 @@ var TermSets = []string{"aviation", "business"}
 var TermKeys = []string{
 	"installation", "organization", "unit", "project",
 	"guide", "preflight", "checklist", "clearance", "go", "no_go", "hold",
-	"flight_plan", "logbook", "payload", "in_flight", "launch_line",
+	"flight_plan", "maneuver", "hangar", "logbook", "payload", "in_flight", "launch_line",
 }
 
 // termLevels are the four level words of each set, singular and plural.

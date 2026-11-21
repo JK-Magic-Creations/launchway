@@ -32,6 +32,7 @@ export const LEARN_FOR: Record<string, LearnTarget> = {
   "/deployments/applications": t("Learn more about deployments", "guide/deployments"),
   "/deployments/applications/:name": t("Learn more about deployments", "guide/deployments"),
   "/library": t("Learn more about templates and libraries", "concepts/templates-and-libraries"),
+  "/library/starters": t("Learn more about the starters", "guide/starters"),
   "/library/templates": t("Learn more about templates and libraries", "concepts/templates-and-libraries"),
   "/library/templates/:library/:name": t("Learn more about templates", "concepts/templates-and-libraries", "what-exists-today"),
   "/images": t("Learn more about container images", "guide/images"),

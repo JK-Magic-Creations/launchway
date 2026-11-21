@@ -34,6 +34,13 @@ func exitAfter(err error, helping bool) {
 
 // helpTexts are the commands whose arguments are not parsed as flags only: asking for help prints this, and runs nothing.
 var helpTexts = map[string]string{
+	"init": `Usage: launchway init [--write] [--force]
+
+Proposes the pipeline file for the repository in the current directory from what it holds (go.mod,
+pyproject.toml, package.json, pom.xml, build.gradle, Chart.yaml, a Dockerfile, an index.html), as a use of
+one of the starters that ship with Launchway. Without --write it only prints the file; --write saves it
+as .launchway/pipeline.yaml, and --force replaces one that is there. Exits 1 when nothing fits.
+`,
 	"validate": `Usage: launchway validate [file] [--project NAME] [--library NAME=DIRECTORY ...] [--resolved]
 
 Checks a pipeline file (default .launchway/pipeline.yaml) and prints each problem with its file, line and
@@ -41,7 +48,8 @@ path, one per line. Exits 0 if the file is valid, 1 if it has problems. With --p
 are signed in to checks it for that project as well: its libraries, the limits the installation sets, and
 what the project must have for the pipeline to work.
 
-With --library NAME=DIRECTORY (once for each library the pipeline uses) the templates are expanded from those
+The starters that ship with Launchway (uses: launchway/go-service) are expanded here with no server and no
+--library. With --library NAME=DIRECTORY (once for each library the pipeline uses) the templates are expanded from those
 directories, with no server: the same parse and expansion a server does, so the same problems come out, each
 with the file and line of the template it is in. --resolved prints the resolved pipeline as JSON. Which
 libraries and environments a server allows is the server's to say: add --project against a server for that.

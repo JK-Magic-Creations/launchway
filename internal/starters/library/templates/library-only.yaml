@@ -1,0 +1,133 @@
+# FLIGHT PLAN for a repository that is checked but never built or shipped by Launchway: packages published elsewhere, scripts, manifests, documents.
+#
+#   ci: { uses: launchway/library-only, with: { language: python } }
+#
+# language is go, python, node, maven or gradle. Each runs what its own flight plan runs for checks and tests, with the same reports. Use the language's own flight plan when you also want the build or an image.
+template: library-only
+description: "Flight plan: checks only for the toolchain you name: format, lint, tests and reports; no build, no image"
+params:
+  language: { type: string, default: "go", options: ["go", "python", "node", "maven", "gradle"], description: "Which toolchain the repository uses: go, python, node, maven or gradle" }
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  go_version: { type: string, default: "1.27", description: "Go: the golang image tag" }
+  python_version: { type: string, default: "3.13", description: "Python: the python image tag" }
+  node_version: { type: string, default: "22", description: "Node: the node image tag" }
+  java_version: { type: string, default: "21", description: "Maven and Gradle: the Java version" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
+  test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
+  build_command: { type: string, default: "", description: "Your own build command, in place of the default" }
+  lint: { type: boolean, default: true, description: "Check formatting and style" }
+  lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
+  secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+containers:
+  go: { image: { param: go_version, format: "docker.io/library/golang:%s" } }
+  python: { image: { param: python_version, format: "docker.io/library/python:%s-slim" } }
+  node: { image: { param: node_version, format: "docker.io/library/node:%s" } }
+  maven: { image: { param: java_version, format: "docker.io/library/maven:3.9-eclipse-temurin-%s" } }
+  gradle: { image: { param: java_version, format: "docker.io/library/gradle:8-jdk%s" } }
+steps:
+  go-check:
+    description: Format and vet the Go code
+    if: { param: language, equals: go }
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/check.sh"
+  go-test:
+    description: Run every Go test
+    if: { param: language, equals: go }
+    container: go
+    cache:
+      - name: go
+        paths: [.cache/go-mod, .cache/go-build]
+        key: { files: ["**/go.sum", "**/go.mod"], text: { param: go_version, format: "go-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/go/test.sh"
+    reports:
+      tests: ["**/reports/**/go-test.json"]
+      coverage: { paths: ["**/reports/**/cover.out"], fail_under: { param: coverage_minimum } }
+  python-check:
+    description: Install dependencies and lint
+    if: { param: language, equals: python }
+    container: python
+    cache:
+      - name: python
+        paths: [.cache/pip, .cache/uv]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
+        fallback: latest
+    env: { PHASES: "setup check" }
+    run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
+  python-test:
+    description: Install dependencies and run pytest
+    if: { param: language, equals: python }
+    container: python
+    cache:
+      - name: python
+        paths: [.cache/pip, .cache/uv]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
+        fallback: latest
+    env: { PHASES: "setup test" }
+    run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
+    reports:
+      tests: ["**/reports/**/junit.xml"]
+      coverage: { paths: ["**/reports/**/coverage.xml"], fail_under: { param: coverage_minimum } }
+  node-check:
+    description: Install dependencies and run the checks
+    if: { param: language, equals: node }
+    container: node
+    cache:
+      - name: node
+        paths: [.cache/npm, .cache/pnpm, .cache/yarn]
+        key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
+        fallback: latest
+    env: { PHASES: "setup check" }
+    run: "$LAUNCHWAY_LIB/scripts/node/run.sh"
+  node-test:
+    description: Install dependencies and run the tests
+    if: { param: language, equals: node }
+    container: node
+    cache:
+      - name: node
+        paths: [.cache/npm, .cache/pnpm, .cache/yarn]
+        key: { files: ["**/package-lock.json", "**/pnpm-lock.yaml", "**/yarn.lock", "**/package.json"], text: { param: node_version, format: "node-%s" } }
+        fallback: latest
+    env: { PHASES: "setup test" }
+    run: "$LAUNCHWAY_LIB/scripts/node/run.sh"
+    reports:
+      tests: ["**/reports/**/junit.xml"]
+  maven-test:
+    description: Compile and test with Maven
+    if: { param: language, equals: maven }
+    container: maven
+    cache:
+      - name: maven
+        paths: [.cache/m2]
+        key: { files: ["**/pom.xml"], text: { param: java_version, format: "jdk-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/java/maven.sh"
+    reports:
+      tests: ["**/target/surefire-reports/*.xml", "**/target/failsafe-reports/*.xml"]
+      coverage: ["**/target/site/jacoco/jacoco.xml"]
+  gradle-test:
+    description: Compile and test with Gradle
+    if: { param: language, equals: gradle }
+    container: gradle
+    cache:
+      - name: gradle
+        paths: [.cache/gradle]
+        key: { files: ["**/*.gradle", "**/*.gradle.kts", "**/gradle-wrapper.properties", "**/gradle.lockfile"], text: { param: java_version, format: "jdk-%s" } }
+        fallback: latest
+    run: "$LAUNCHWAY_LIB/scripts/java/gradle.sh"
+    reports:
+      tests: ["**/build/test-results/test/*.xml"]
+      coverage: ["**/build/reports/jacoco/test/jacocoTestReport.xml"]
+  secrets:
+    description: Look for secrets committed by mistake
+    if: { param: secret_scan }
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/secrets.sh"

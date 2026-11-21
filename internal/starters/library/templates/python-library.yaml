@@ -1,0 +1,67 @@
+# FLIGHT PLAN for a Python package that is not deployed as an image.
+#
+#   ci: { uses: launchway/python-library }
+#   # or: with: { test_versions: ["3.12", "3.13"] }
+#
+# Runs ruff, pytest once for each version in test_versions (a matrix: test[python=3.12] ... each with its own log, cache and report), builds the wheel and source distribution (the artifact dist) and scans for secrets.
+template: python-library
+description: "Flight plan: a Python library or tool with no image: ruff, pytest on every Python version you list, a wheel"
+params:
+  working_directory: { type: string, default: ".", description: "The directory with the code, relative to the repository; use the template once for each directory of a monorepo" }
+  python_version: { type: string, default: "3.13", description: "The Python version of the image: the python image tag" }
+  install_command: { type: string, default: "", description: "Your own command to install dependencies, in place of the one the lock file implies" }
+  lint: { type: boolean, default: true, description: "Check formatting and style" }
+  lint_command: { type: string, default: "", description: "Your own lint command, run in place of the default check" }
+  test_command: { type: string, default: "", description: "Your own test command, in place of the default; write its report where this template's description says" }
+  test_env: { type: string, default: "", description: "Settings for the tests as KEY=VALUE lines, such as a database address of a service container beside the tests" }
+  coverage_minimum: { type: number, default: "0", description: "Fail below this percentage of lines covered; 0 sets no threshold" }
+  secret_scan: { type: boolean, default: true, description: "Look for private keys and provider tokens committed to the repository" }
+  test_versions: { type: list, default: ["3.13"], description: "The Python versions the tests run on, one step for each" }
+  tools_image: { type: string, default: "docker.io/library/alpine:3.22", description: "An image with a shell, for the small steps" }
+containers:
+  python: { image: { param: python_version, format: "docker.io/library/python:%s-slim" } }
+steps:
+  check:
+    description: Install dependencies and lint the code with ruff
+    if: { param: lint }
+    container: python
+    cache:
+      - name: python
+        paths: [.cache/pip, .cache/uv]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
+        fallback: latest
+    env: { PHASES: "setup check" }
+    run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
+  test:
+    description: Install dependencies and run pytest, once for each Python version in test_versions
+    for_each: { python: { param: test_versions } }
+    fail_fast: false
+    image: { each: python, format: "docker.io/library/python:%s-slim" }
+    env: { PHASES: "setup test" }
+    run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
+    cache:
+      - name: python
+        paths: [.cache/pip, .cache/uv]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { each: python, format: "python-%s" } }
+        fallback: latest
+    reports:
+      tests: ["**/reports/**/junit.xml"]
+      coverage: { paths: ["**/reports/**/coverage.xml"], fail_under: { param: coverage_minimum } }
+  build:
+    description: Build the wheel and the source distribution
+    needs: [check, test]
+    container: python
+    cache:
+      - name: python
+        paths: [.cache/pip, .cache/uv]
+        key: { files: ["**/requirements*.txt", "**/pyproject.toml", "**/uv.lock", "**/poetry.lock"], text: { param: python_version, format: "python-%s" } }
+        fallback: latest
+    env: { PHASES: "setup build" }
+    run: "$LAUNCHWAY_LIB/scripts/python/run.sh"
+    artifacts:
+      - { name: dist, paths: [dist] }
+  secrets:
+    description: Look for secrets committed by mistake
+    if: { param: secret_scan }
+    image: { param: tools_image }
+    run: "$LAUNCHWAY_LIB/scripts/secrets.sh"

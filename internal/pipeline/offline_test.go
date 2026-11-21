@@ -30,7 +30,7 @@ func TestOfflineExpansionMatchesTheServersOnTheExampleLibrary(t *testing.T) {
 		for _, l := range p.Libraries {
 			dirs[l.Name] = lib
 		}
-		got, err := ExpandOffline(data, dirs, BindOptions{})
+		got, err := ExpandOffline(data, dirs, BindOptions{}, nil)
 		if err != nil {
 			t.Fatalf("%s offline: %v", f, err)
 		}
@@ -79,7 +79,7 @@ func TestOfflineExpansionSaysWhatIsWrong(t *testing.T) {
 		{"a library the pipeline lacks", "broken", map[string]string{"platform": dir, "other": dir}, "the pipeline has no library called other"},
 	}
 	for _, c := range cases {
-		_, err := ExpandOffline([]byte(strings.Replace(pl, "%s", c.uses, 1)), c.dirs, BindOptions{})
+		_, err := ExpandOffline([]byte(strings.Replace(pl, "%s", c.uses, 1)), c.dirs, BindOptions{}, nil)
 		var ps Problems
 		if !errors.As(err, &ps) || !strings.Contains(ps.Error(), c.want) {
 			t.Errorf("%s: want %q, got %v", c.name, c.want, err)

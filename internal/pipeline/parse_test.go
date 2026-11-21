@@ -96,7 +96,7 @@ func TestParseProblems(t *testing.T) {
 		{"no steps", "pipeline: a\n", "at least one step"},
 		{"unknown top key", "pipeline: a\nstages: {}\nsteps:\n  a: {image: x, run: y}\n", `unknown key "stages"`},
 		{"unknown step key", "pipeline: a\nsteps:\n  a: {image: x, run: y, script: z}\n", `unknown key "script"`},
-		{"not yet", "pipeline: a\nsteps:\n  a: {image: x, run: y, matrix: {}}\n", "not supported yet"},
+		{"not yet", "pipeline: a\nsteps:\n  a: {image: x, run: y, matrix: {}}\n", `there is no key called "matrix" here`},
 		{"uses with run", "pipeline: a\nlibraries:\n  lib: {repo: r, version: v1}\nsteps:\n  a: {image: x, run: y, uses: lib/t}\n", "takes no image"},
 		{"missing image", "pipeline: a\nsteps:\n  a: {run: y}\n", "say what to run in"},
 		{"unknown container", "pipeline: a\nsteps:\n  a: {container: maven, run: y}\n", `no container called "maven"`},

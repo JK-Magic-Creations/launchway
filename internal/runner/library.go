@@ -24,6 +24,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 	"github.com/jk-magic-creations/launchway/internal/pipeline"
 	"github.com/jk-magic-creations/launchway/internal/redact"
+	"github.com/jk-magic-creations/launchway/internal/starters"
 )
 
 // LibDir is where libraries are in a workspace, one directory each.
@@ -52,6 +53,13 @@ func (r *Runner) addLibraries(ctx context.Context, job *engine.Job, ws string, s
 		if !pipeline.ValidLibraryName(l.Name) || !pipeline.IsCommitID(l.Commit) {
 			return fmt.Errorf("the server sent a library this runner cannot use: %q at %q", l.Name, l.Commit)
 		}
+		if l.URL == starters.URL {
+			sys("Library %s at %s: the starters that ship with Launchway", l.Name, short(l.Commit))
+			if err := addBuiltin(l, filepath.Join(ws, filepath.FromSlash(LibDir), l.Name)); err != nil {
+				return fmt.Errorf("library %s: %w", l.Name, err)
+			}
+			continue
+		}
 		sys("Library %s at %s from %s", l.Name, short(l.Commit), redact.URLs(l.URL))
 		repo, err := r.libraryRepo(ctx, l)
 		if err != nil {
@@ -69,6 +77,9 @@ func (r *Runner) addLibraries(ctx context.Context, job *engine.Job, ws string, s
 		}
 	}
 	exclude := filepath.Join(ws, ".git", "info", "exclude")
+	if _, err := os.Stat(filepath.Join(ws, ".git")); err != nil && job.Source.Kind == "dir" {
+		return nil // a directory that is not a Git checkout has nothing to keep them out of
+	}
 	if err := os.MkdirAll(filepath.Dir(exclude), 0o755); err != nil {
 		return err
 	}
@@ -216,3 +227,68 @@ func untar(r io.Reader, dest string) error {
 		}
 	}
 }
+
+// addBuiltin writes the starters this runner carries, if they are the ones
+// the server planned the run with. A runner of another release holds other
+// scripts, and running them under the server's templates would be running
+// something nobody reviewed together; it says so and refuses.
+func addBuiltin(l engine.LibrarySource, dest string) error {
+	if have := starters.Commit(); l.Commit != have {
+		return fmt.Errorf("the server planned this run with the starters of its own release (%s) and this runner carries other ones (%s): "+
+			"update the runner to the server's release", short(l.Commit), short(have))
+	}
+	// Steps of a run in a directory (launchway run) each ask; write once.
+	builtinMu.Lock()
+	defer builtinMu.Unlock()
+	marker := filepath.Join(dest, ".starters-commit")
+	if have, err := os.ReadFile(marker); err == nil && string(have) == l.Commit {
+		return nil
+	}
+	if err := os.RemoveAll(dest); err != nil {
+		return err
+	}
+	for _, name := range starters.List() {
+		data, err := starters.File(name)
+		if err != nil {
+			return err
+		}
+		path := filepath.Join(dest, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), dirMode); err != nil {
+			return err
+		}
+		mode := fileMode
+		if starters.IsExecutable(name) {
+			mode = execMode // scripts are run by the step, so they are executable, as Git records them
+		}
+		if err := writeLibFile(path, data, mode); err != nil {
+			return err
+		}
+	}
+	return writeLibFile(marker, []byte(l.Commit), fileMode)
+}
+
+// The modes of the files of a library in a workspace the steps' containers
+// read, whatever user they run as (see untar).
+var (
+	dirMode  = os.FileMode(0o755)
+	fileMode = os.FileMode(0o644)
+	execMode = os.FileMode(0o755)
+)
+
+// writeLibFile writes a file with exactly the mode, whatever the umask.
+func writeLibFile(path string, data []byte, mode os.FileMode) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Chmod(path, mode)
+	}
+	return err
+}
+
+var builtinMu sync.Mutex

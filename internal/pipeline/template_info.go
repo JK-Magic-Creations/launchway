@@ -19,6 +19,22 @@ type TemplateInfo struct {
 	// Problems are problems in the template file itself, if any: a use of
 	// it would report them too.
 	Problems Problems `json:"problems,omitempty"`
+	// Kind, Example and Graph are given for the library that ships with
+	// Launchway, for the gallery: "flight plan" (a whole pipeline) or "step
+	// template" (a building block), a pipeline file that uses it, and the
+	// steps that file expands to with every parameter at its default.
+	Kind    string         `json:"kind,omitempty"`
+	Example string         `json:"example,omitempty"`
+	Graph   []TemplateStep `json:"graph,omitempty"`
+}
+
+// TemplateStep is one step of what a template expands to.
+type TemplateStep struct {
+	ID          string   `json:"id"`
+	Description string   `json:"description,omitempty"`
+	Needs       []string `json:"needs,omitempty"`
+	Kind        string   `json:"kind,omitempty"`
+	Matrix      []string `json:"matrix,omitempty"` // the members, when the step is repeated by for_each
 }
 
 // DescribeTemplate reads what a template takes and gives, without the
@@ -62,7 +78,7 @@ func DescribeTemplate(data []byte, name string) TemplateInfo {
 		// A parameter without a default gets a value of its type.
 		with := map[string]string{}
 		for _, p := range info.Params {
-			if p.Default == nil {
+			if p.Default == nil && p.DefaultFrom == nil {
 				with[p.Name] = sampleValue(p)
 			}
 		}
@@ -88,6 +104,8 @@ func sampleValue(p *Param) string {
 		return "dev"
 	case paramTypeApplication:
 		return "app"
+	case paramTypeOutput:
+		return "output(sample.value)"
 	}
 	return "x"
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/pipeline"
 )
 
 func stepOf(id, kind string, status engine.StepStatus, pos int) engine.StepView {
@@ -182,5 +183,30 @@ func TestLaunchLineStationSaysWhatRunsTogether(t *testing.T) {
 	}
 	if tests := stationByKey(l, "tests"); tests.Parallel != nil {
 		t.Errorf("a one-step station is not parallel: %+v", tests.Parallel)
+	}
+}
+
+// A matrix counts as one thing on the line: "3 of 4 passed".
+func TestLaunchLineRollsAMatrixUp(t *testing.T) {
+	bad := stepOf("test[go=1.26]", "", engine.StepFailed, 2)
+	bad.Error = "exit code 1"
+	d := &engine.RunDetail{
+		StepList: []engine.StepView{
+			stepOf("lint", "", engine.StepSucceeded, 0),
+			stepOf("test[go=1.25]", "", engine.StepSucceeded, 1), bad,
+			stepOf("test[go=1.27]", "", engine.StepSucceeded, 3), stepOf("test[go=1.28]", "", engine.StepSucceeded, 4),
+		},
+		Graph: &pipeline.Pipeline{Loops: []*pipeline.Loop{{ID: "test", Keys: []string{"go"}, Members: []pipeline.LoopMember{
+			{ID: "test[go=1.25]"}, {ID: "test[go=1.26]"}, {ID: "test[go=1.27]"}, {ID: "test[go=1.28]"}}}}},
+	}
+	l := launchLineOf(d)
+	if s := stationByKey(l, "tests"); s == nil || s.State != stationFailed || s.Detail != "3 of 4 passed: test[go=1.26] ended with exit code 1" {
+		t.Fatalf("tests station %+v", s)
+	}
+	for i := range d.StepList {
+		d.StepList[i].Status, d.StepList[i].Error = engine.StepSucceeded, ""
+	}
+	if s := stationByKey(launchLineOf(d), "tests"); s == nil || s.State != stationDone || s.Detail != "4 of 4 passed" {
+		t.Fatalf("tests station %+v", s)
 	}
 }

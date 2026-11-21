@@ -32,6 +32,12 @@
     },
     {
       "theme": "Pipelines",
+      "title": "Built-in starters and pipelines with no file",
+      "value": "The Hangar: Flight plans and Maneuvers that ship with Launchway. A file can be two lines (uses: launchway/python-service), or none at all and the repository's own files choose one. A service Flight plan checks, tests, audits, scans, builds the image, and delivers to each of the project's environments in order, with a decision where an environment is protected, a health proof and an automatic return to base. Any stage can be switched off, extended or taken over from the file. A gallery shows each with its inputs and what it runs.",
+      "link": "guide/starters"
+    },
+    {
+      "theme": "Pipelines",
       "title": "Shared libraries",
       "value": "Templates and scripts in their own repository, pinned by tag, branch or commit, with typed parameters.",
       "link": "guide/libraries"
@@ -822,9 +828,9 @@
             },
             {
               "status": "in-progress",
-              "title": "Matrix builds",
-              "value": "Run the same steps across operating systems, architectures and versions from one definition.",
-              "detail": "Being built now. Results show as one grid with a failure marked where it happened, and runners with the right platform are chosen automatically. Windows and macOS runners are separate work.",
+              "title": "Platform matrices",
+              "value": "Run the same steps across versions, systems and architectures from one definition. Available today: for_each combinations with exclude, add, a cap, max_parallel and fail_fast, one log, cache and test report for each combination, a grid on the run page, \"3 of 4 passed\" on the launch line, a pull request check that counts a matrix as one, and re-running one combination.",
+              "detail": "Still to come: values read from an earlier step's output or a file in the repository, and runners with the right platform chosen automatically.",
               "area": "pipelines"
             },
             {
@@ -1566,10 +1572,10 @@
               "area": "pipelines"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Language starters",
-              "value": "Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants.",
-              "detail": "Everything in a starter can be overridden; the default simply guides. Starters arrive for the most common languages first.",
+              "value": "Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants. Available today: built-in Flight plans for Go, Python, Node, Java, images, static sites and Helm charts, and a repository with no pipeline file runs the one that fits.",
+              "detail": "Everything in a starter can be overridden; the default simply guides. Delivery runs for plain manifests and Helm values through GitOps write-back; it was exercised offline and against fakes, not yet end to end with a real image build and cluster. Still to come: assistant instruction files, formatter and linter configuration and a test layout written into the repository, findings of the analysis in the Security tab, bandit for library-only repositories, values read from an earlier step's output, and more languages.",
               "needs": "Templates that read like code.",
               "area": "pipelines"
             },

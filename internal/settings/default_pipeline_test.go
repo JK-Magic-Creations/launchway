@@ -103,3 +103,30 @@ func TestNoDefaultMeansNoPipeline(t *testing.T) {
 		t.Fatal("a pipeline from nowhere")
 	}
 }
+
+// An organisation that names no flight plan but says detect: true lets each
+// repository without a file run the starter that fits it, and a project may
+// still give values for the starter's inputs or switch it off.
+func TestDetectIsADefaultPipelineToo(t *testing.T) {
+	got, _, err := Compose(bootFile(t), []engine.ConfigObject{
+		obj("organisation", "default", "", `{"display_name":"Acme","default_pipeline":{"detect":true}}`),
+		obj("project", "a", "", `{"repo":"https://git.test/a.git","default_pipeline":{"with":{"vuln_scan":"false"}}}`),
+		obj("project", "b", "", `{"repo":"https://git.test/b.git","default_pipeline":{"enabled":false}}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Check(got, nil); err != nil {
+		t.Fatal(err)
+	}
+	by := map[string]config.ProjectConfig{}
+	for _, p := range got.Projects {
+		by[p.Name] = p
+	}
+	if a := by["a"]; a.Pipeline == nil || !a.Pipeline.Detect || a.Pipeline.With["vuln_scan"] != "false" || a.PipelineFrom != "organisation" {
+		t.Fatalf("a: %+v from %q", a.Pipeline, a.PipelineFrom)
+	}
+	if b := by["b"]; b.Pipeline != nil {
+		t.Fatalf("b switched the default off: %+v", b.Pipeline)
+	}
+}
