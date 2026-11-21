@@ -50,6 +50,18 @@ type Options struct {
 	// Wait bounds how long a starting server waits for another to finish
 	// sealing what was stored in the clear (default 60 seconds).
 	Wait time.Duration
+	// OlderServers counts servers of an older release still running against
+	// this database (nil: do not look). With it and QuietFor set, a server
+	// that finds stored secrets in the clear does not seal them at start: it
+	// serves, and seals once no older server has been seen for QuietFor, so
+	// that no older server, which cannot read a sealed value, ever meets one
+	// during a rolling update. See docs/guide/upgrading.md.
+	OlderServers func(ctx context.Context) (int, error)
+	// QuietFor is how long no older server must be seen (default 0: seal at
+	// start, as before; the server sets 45 seconds).
+	QuietFor time.Duration
+	// Poll is how often older servers are looked for while waiting (default 3 seconds).
+	Poll time.Duration
 }
 
 // Service seals and opens the server's stored secrets.
@@ -69,6 +81,9 @@ type Service struct {
 	configured  string
 	notUpgraded bool
 	passes      atomic.Int64 // migration passes this process ran (tests)
+	olderFn     func(context.Context) (int, error)
+	quietFor    time.Duration
+	poll        time.Duration
 	// sealedRows counts the rows this process sealed (tests).
 	sealedRows atomic.Int64
 }
@@ -85,7 +100,8 @@ var ErrDatabaseEncrypted = errors.New("this database is encrypted at rest (it ho
 // service in "not encrypted at rest" mode, unless the database is already
 // encrypted, which is refused.
 func Start(ctx context.Context, o Options) (*Service, error) {
-	s := &Service{db: o.DB, kdb: locked{o.DB}, log: o.Log, now: o.Now, instance: o.Instance, wait: o.Wait, auditFn: o.Audit, notes: o.Notes}
+	s := &Service{db: o.DB, kdb: locked{o.DB}, log: o.Log, now: o.Now, instance: o.Instance, wait: o.Wait, auditFn: o.Audit, notes: o.Notes,
+		olderFn: o.OlderServers, quietFor: o.QuietFor, poll: o.Poll}
 	if s.log == nil {
 		s.log = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
@@ -94,6 +110,9 @@ func Start(ctx context.Context, o Options) (*Service, error) {
 	}
 	if s.wait == 0 {
 		s.wait = 60 * time.Second
+	}
+	if s.poll == 0 {
+		s.poll = 3 * time.Second
 	}
 	if s.instance == "" {
 		s.instance = "server"
@@ -114,6 +133,11 @@ func Start(ctx context.Context, o Options) (*Service, error) {
 		return nil, err
 	}
 	s.kr, s.keys = kr, kr
+	if deferred, err := s.deferSealing(ctx); err != nil {
+		return nil, err
+	} else if deferred {
+		return s, nil
+	}
 	if err := s.migrateAtStart(ctx); err != nil {
 		return nil, err
 	}

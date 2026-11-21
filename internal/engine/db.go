@@ -60,6 +60,7 @@ func isPostgres(addr string) bool {
 func openDB(addr string, wait time.Duration, known int, log *slog.Logger) (*dbx, SchemaInfo, error) {
 	var d *dbx
 	if isPostgres(addr) {
+		addr = withApplicationName(addr)
 		db, err := sql.Open("pgx", addr)
 		if err != nil {
 			return nil, SchemaInfo{}, err

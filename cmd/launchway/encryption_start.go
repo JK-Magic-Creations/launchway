@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,7 +132,8 @@ func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*s
 	if err != nil {
 		return nil, err
 	}
-	o := sealing.Options{DB: eng.Database(), Log: log, Audit: auditEncryption(eng), Instance: instanceName()}
+	o := sealing.Options{DB: eng.Database(), Log: log, Audit: auditEncryption(eng), Instance: instanceName(),
+		OlderServers: eng.OlderServers, QuietFor: sealQuietFor(os.Getenv)}
 	if rk.kind == "" {
 		if rk, err = defaultKeyFile(ctx, cfg, eng, log); err != nil {
 			return nil, err
@@ -152,6 +154,19 @@ func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*s
 		log.Info("encryption at rest is on", "root_key_holder", rk.primary.Kind())
 	}
 	return svc, nil
+}
+
+// sealQuietFor is how long no server of an older release must be seen before
+// the secrets an older release stored in the clear are sealed
+// (LAUNCHWAY_SEAL_QUIET_SECONDS; 0 seals at start, as a single-server
+// installation may want; default 45).
+func sealQuietFor(getenv func(string) string) time.Duration {
+	if v := getenv("LAUNCHWAY_SEAL_QUIET_SECONDS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			return time.Duration(n) * time.Second
+		}
+	}
+	return 45 * time.Second
 }
 
 func instanceName() string {

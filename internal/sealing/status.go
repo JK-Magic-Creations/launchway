@@ -56,6 +56,11 @@ type Migration struct {
 	CompletedAt int64  `json:"completed_at,omitempty"`
 	Running     string `json:"running_on,omitempty"`
 	LastError   string `json:"last_error,omitempty"`
+	// Waiting is set while sealing of what already existed waits for servers
+	// of an older release to stop; OlderServers is how many were seen at the
+	// last look.
+	Waiting      bool `json:"waiting_for_older_servers,omitempty"`
+	OlderServers int  `json:"older_servers_seen,omitempty"`
 }
 
 // NotYetEncrypted is what this slice does not cover. It is said wherever
@@ -127,9 +132,14 @@ func (s *Service) migration(ctx context.Context, remaining int) Migration {
 			m.Running = owner
 		}
 	}
+	if n, _, ok := s.waiting(ctx); ok && remaining > 0 {
+		m.Waiting, m.OlderServers = true, n
+	}
 	switch {
 	case !s.Encrypted():
 		m.State = "not started"
+	case m.Waiting:
+		m.State = "waiting for older servers"
 	case m.LastError != "":
 		m.State = "needs attention"
 	case m.Running != "":
@@ -158,6 +168,9 @@ func (s *Service) advise(r *Report) {
 		r.Advice = append(r.Advice, "Until a root key exists, protect the database, its backups and its volume as you would the secrets themselves.")
 	} else {
 		switch {
+		case r.Remaining > 0 && r.Migration.Waiting:
+			r.Summary = fmt.Sprintf("Encryption at rest is on. %d stored secrets from before are still in the clear on purpose: sealing waits until no server of the previous release is running (%d seen at the last look), so that none of them reads a sealed value during the rolling update. It then seals them by itself.", r.Remaining, r.Migration.OlderServers)
+			r.Warnings = append(r.Warnings, r.Summary)
 		case r.Remaining > 0:
 			r.Summary = fmt.Sprintf("Encryption at rest is on, but %d stored secrets are still in the clear (sealing is %s).", r.Remaining, r.Migration.State)
 			r.Warnings = append(r.Warnings, r.Summary)
