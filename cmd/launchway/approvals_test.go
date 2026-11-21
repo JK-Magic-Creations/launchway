@@ -108,3 +108,22 @@ func asCliErr(err error, ce *cliErr) bool {
 	*ce = c
 	return ok
 }
+
+func TestCLITemplatesList(t *testing.T) {
+	var got []string
+	srv := approvalServer(t, 200, `{"library":"platform","version":"v1","templates":[{"name":"deliver","description":"Ship it","params":[
+		{"name":"app","type":"string","secret_reference":true},{"name":"count","type":"number","default":"1"}],"outputs":[]}]}`, &got)
+	var out bytes.Buffer
+	cl := newClient(credentials{Server: srv.URL, Token: "lw_x"}, &out)
+	if err := cl.templatesList([]string{"platform", "--version", "v1"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"platform at v1", "deliver: Ship it", "app (string) required [names a secret]", "count (number) default 1"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("missing %q in\n%s", want, out.String())
+		}
+	}
+	if got[0] != "GET /api/v1/libraries/platform/templates " {
+		t.Fatalf("%v", got)
+	}
+}

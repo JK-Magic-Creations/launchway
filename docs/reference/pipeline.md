@@ -859,7 +859,7 @@ outputs and artifacts. It runs no script. The runner makes the call with a key f
 stores (`ai: true` in its configuration); the key never enters a step's container. The model's
 answer is untrusted text: it can become the step's outputs and an artifact, never run anything. The
 model must be one of the server's [`ai.models`](server-config.md#ai-models) that the project may
-use. `timeout` defaults to `10m`, from `10s` to `1h`. It cannot be in a template or in a loop, and
+use. `timeout` defaults to `10m`, from `10s` to `1h`. It may be in a template, where `model`, `instructions` and `prompt` may be `{ param: … }` and its inputs name steps of the same template; the model is checked against the server's registry after expansion. It cannot be in a loop, and
 takes no `run`, `image`, `env`, `secrets`, `artifacts`, `reports` or `fetch`. It needs a server that
 knows ai steps (schema 19). See [AI models](../guide/ai.md).
 
@@ -1338,6 +1338,13 @@ the step's output. Used by a step's `secrets`, an image step's build secrets and
 | `key` | text | required | The secret's name or path in that store |
 | `field` | text | none | A field within the secret, for stores that have them (required for `vault`) |
 
+In a template, `store`, `key` and `field` may be `{ param: name }` (with `format:` for text around
+it) of a parameter of type `string`, so a use chooses which secret a step is given; a list, a number
+or a boolean is refused there. The expanded steps hold plain values, so the runner and the server
+see exactly what they see for a pipeline written by hand, and `GET /api/v1/libraries/{library}/templates`
+(and MCP `list_templates`, and `launchway templates list`) mark each parameter used this way with
+`secret_reference`.
+
 Steps of [draft runs](../glossary.md#draft-run) and pull-request runs that ask for secrets fail
 before any runner sees them, unless the server's configuration allows it.
 
@@ -1508,7 +1515,7 @@ Each entry of `outputs` maps an output name (`^[A-Za-z_][A-Za-z0-9_-]{0,62}$`) t
 ### Template steps
 
 Steps in a template take every key a pipeline's steps take, with these differences: they may not
-be deploy, rollback or rollout steps; an approval may not name a `deployment`; `{ input: ... }` and
+be deploy, rollback, rollout or verify steps; an approval may not name a `deployment`; `{ input: ... }` and
 `when.input` are refused (pass the input to a parameter instead); `uses` names a template of the
 same library by name alone; and they take one more key:
 

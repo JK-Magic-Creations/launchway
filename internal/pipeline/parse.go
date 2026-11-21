@@ -697,11 +697,11 @@ func (ps *parser) parseSecrets(n *yaml.Node, at string) map[string]SecretRef {
 		ps.eachKey(v, where, secretKeys, func(k2, v2 *yaml.Node) {
 			switch k2.Value {
 			case "store":
-				ref.Store = ps.str(v2, where+".store")
+				ref.Store = ps.secretText(v2, where+".store")
 			case "key":
-				ref.Key = ps.str(v2, where+".key")
+				ref.Key = ps.secretText(v2, where+".key")
 			case "field":
-				ref.Field = ps.str(v2, where+".field")
+				ref.Field = ps.secretText(v2, where+".field")
 			}
 		})
 		if v.Kind == yaml.MappingNode {

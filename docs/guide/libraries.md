@@ -160,3 +160,15 @@ cannot run templates, which come from a server's libraries.
 - Whoever can push to a library, or move its tags, changes what every pipeline that uses it runs.
   Protect its tags and branches on the Git host as you would a deployment script, and pin
   pipelines to tags or commits rather than branches where that matters.
+
+## Listing templates from the command line
+
+```sh
+launchway templates list                         # the libraries the server lists
+launchway templates list platform --version v3   # its templates, with each parameter's type
+```
+
+Each parameter shows its type, whether it is required, and `[names a secret]` when a step takes the
+store, key or field of its secret reference from it (`secrets: { TOKEN: { store: vault, key:
+{ param: app, format: "apps/%s/token" }, field: token } }`). The same data is in
+`GET /api/v1/libraries/{library}/templates` and the MCP tool `list_templates`.

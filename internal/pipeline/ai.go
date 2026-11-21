@@ -105,10 +105,6 @@ func (ps *parser) parseAIStep(k, v *yaml.Node, at string) *Step {
 	s := &Step{ID: k.Value, Line: k.Line, Kind: KindAI}
 	a := &AIStep{MaxTokens: DefaultAIMaxTokens}
 	s.AI = a
-	if ps.tmpl != nil {
-		ps.add(k, at+".kind", "an ai step cannot be in a template yet; write it in the pipeline that uses the template")
-		return s
-	}
 	if v.Kind == yaml.MappingNode {
 		for i := 0; i+1 < len(v.Content); i += 2 {
 			key := v.Content[i]
@@ -158,17 +154,17 @@ func (ps *parser) parseAIStep(k, v *yaml.Node, at string) *Step {
 		case "retry":
 			ps.parseRetry(s, n, where)
 		case "model":
-			a.Model = ps.str(n, where)
+			a.Model = ps.scalar(n, where)
 			if !modelNameRe.MatchString(a.Model) {
 				ps.add(n, where, "%q is not a model name; name one of the server's ai.models", a.Model)
 			}
 		case "instructions":
-			a.Instructions = ps.str(n, where)
+			a.Instructions = ps.scalar(n, where)
 			if len(a.Instructions) > MaxAIPromptBytes {
 				ps.add(n, where, "instructions are longer than %d KiB", MaxAIPromptBytes>>10)
 			}
 		case "prompt":
-			a.Prompt = ps.str(n, where)
+			a.Prompt = ps.scalar(n, where)
 			if len(a.Prompt) > MaxAIPromptBytes {
 				ps.add(n, where, "the prompt is longer than %d KiB", MaxAIPromptBytes>>10)
 			}
