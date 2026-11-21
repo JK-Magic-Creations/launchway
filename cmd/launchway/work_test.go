@@ -158,3 +158,49 @@ func TestWorkScopeFromEnvironment(t *testing.T) {
 		t.Fatalf("list: %q", s)
 	}
 }
+
+// An analyzer's findings go in as a batch, a person reviews the groups, and
+// the repository health check refuses a name that is not a repository.
+func TestWorkProposalsCommands(t *testing.T) {
+	hc := newHostedCLI(t)
+	hc.repo("acme/app")
+	var out bytes.Buffer
+	ada := hc.client("ada", "root", &out)
+	const proj = "project:acme/app"
+	batch := `{"source":"lint","run_id":"r1","complete":true,"proposals":[
+	 {"dedupe_key":"a","group_key":"unused","group_title":"Remove unused code ({n})","title":"a.go","severity":2},
+	 {"dedupe_key":"b","group_key":"unused","group_title":"Remove unused code ({n})","title":"b.go","severity":2},
+	 {"dedupe_key":"c","group_key":"naming","group_title":"Fix names ({n})","title":"c.go","severity":1}]}`
+	file := filepath.Join(t.TempDir(), "batch.json")
+	if err := os.WriteFile(file, []byte(batch), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if s := mustWork(t, ada, &out, "propose", "--from", file, "--scope", proj); !strings.Contains(s, "Received 3 findings") || !strings.Contains(s, "2 groups waiting") {
+		t.Fatalf("propose: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "proposals", "list", "--repo", "acme/app", "--state", "pending"); !strings.Contains(s, "unused") || !strings.Contains(s, "naming") {
+		t.Fatalf("list: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "proposals", "accept", "--repo", "acme/app", "--source", "lint", "unused", "--title-for", "unused=Clean up"); !strings.Contains(s, "1 items opened") {
+		t.Fatalf("accept: %q", s)
+	}
+	if _, err := runWork(t, ada, &out, "proposals", "dismiss", "--repo", "acme/app", "--source", "lint", "naming"); err == nil {
+		t.Error("dismissed without a reason")
+	}
+	if s := mustWork(t, ada, &out, "proposals", "dismiss", "--repo", "acme/app", "--source", "lint", "naming", "--reason", "house style"); !strings.Contains(s, "Dismissed 1") {
+		t.Fatalf("dismiss: %q", s)
+	}
+	if s := mustWork(t, ada, &out, "items", "list", "--repo", "acme/app", "--query", "Clean up"); !strings.Contains(s, "Clean up") {
+		t.Fatalf("the accepted group has no item: %q", s)
+	}
+	workStdin = strings.NewReader(`{"source":"lint","complete":true,"proposals":[]}`)
+	defer func() { workStdin = os.Stdin }()
+	if s := mustWork(t, ada, &out, "propose", "--from", "-", "--scope", proj); !strings.Contains(s, "Received 0") {
+		t.Fatalf("stdin: %q", s)
+	}
+	for _, args := range [][]string{{"propose", "--scope", proj}, {"proposals", "merge", "--repo", "acme/app", "--source", "lint", "a"}, {"health"}} {
+		if _, err := runWork(t, ada, &out, args...); err == nil {
+			t.Errorf("%v was accepted", args)
+		}
+	}
+}

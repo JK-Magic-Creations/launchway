@@ -419,6 +419,11 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `work.sample_complete` | `POST /api/v1/work/samples/{id}/complete`: a person looked at a merge an agent approved |
 | `work.import_stories` | `POST /api/v1/work/import/stories`: epics and stories imported (or previewed) |
 | `work.import_archive` | `POST /api/v1/work/import/archive`: a repository's archive promoted to live items (or previewed) |
+| `work.propose` | `POST /api/v1/work/proposals`: an analyzer's batch of findings (counts of new, known, fixed and waiting groups) |
+| `work.proposal_accept` | `POST /api/v1/work/proposals/accept`: a person opened the items of proposed groups |
+| `work.proposal_dismiss` | `POST /api/v1/work/proposals/dismiss`: proposed groups dismissed, with the reason |
+| `work.proposal_merge` | `POST /api/v1/work/proposals/merge`: proposed groups joined into one |
+| `work.health` | `POST /api/v1/work/health`: the repository health check ran and proposed what is missing |
 
 Each entry has these fields:
 

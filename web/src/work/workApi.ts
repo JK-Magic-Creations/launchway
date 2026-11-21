@@ -113,6 +113,11 @@ export interface InboxEntry { id: number; kind: string; item_id?: string; ref?: 
 export interface AgentWork { review: Item[]; recent: AgentLogEntry[] }
 export interface HomeWork { assigned: Item[]; assigned_total: number; unread: number; agents: AgentWork; samples: Sample[] }
 
+export interface Occurrence { dedupe_key: string; title: string; body?: string; labels?: string[]; priority?: string; severity: number; evidence?: string[] }
+export interface ProposalGroup { source: string; group: string; title: string; state: string; severity: number; count: number; unresolved: number; item?: string; occurrences: Occurrence[]; report_url?: string }
+export interface ProposeResult { received: number; new: number; updated: number; dismissed: number; fixed: number; waiting: number; opened: number; folded: number }
+export interface GroupEdit { title?: string; body?: string; priority?: string }
+
 const enc = encodeURIComponent;
 const sc = (s: string) => "scope=" + enc(s);
 const qs = (o: Record<string, string | number | boolean | undefined>) => {
@@ -173,6 +178,11 @@ export const workApi = {
   markRead: (ids: number[]) => call<{ ok: boolean }>("POST", `${B}/inbox/read`, { ids }),
   home: () => call<HomeWork>("GET", `${B}/home`),
 
+  proposals: (scope: string, state: string) => call<{ groups: ProposalGroup[] }>("GET", `${B}/proposals${qs({ scope, state })}`).then((r) => r.groups),
+  acceptProposals: (scope: string, source: string, groups: string[], edits?: Record<string, GroupEdit>) => call<ProposeResult>("POST", `${B}/proposals/accept`, { scope, source, groups, edits }),
+  dismissProposals: (scope: string, source: string, groups: string[], reason: string) => call<{ dismissed: number }>("POST", `${B}/proposals/dismiss`, { scope, source, groups, reason }),
+  mergeProposals: (scope: string, source: string, groups: string[], into: string) => call<{ merged: boolean }>("POST", `${B}/proposals/merge`, { scope, source, groups, into }),
+  health: (repository: string) => call<ProposeResult>("POST", `${B}/health`, { repository }),
   agents: () => call<{ agents: Agent[] }>("GET", `${B}/agents`).then((r) => r.agents),
   createAgent: (b: NewAgent) => call<{ agent: Agent; token: string; note: string }>("POST", `${B}/agents`, b),
   updateAgent: (name: string, p: AgentPatch) => call<Agent>("PATCH", `${B}/agents/${enc(name)}`, p),

@@ -145,6 +145,7 @@ as `work.settings`.
 | `classes` | Which agent classes (`small`, `medium`, `large`) may take items of each difficulty |
 | `difficulty_rules` | Set the difficulty of a new item by a `label` it carries or by a `min_estimate` it reaches; the first rule that fits wins. Added to those of farther levels |
 | `agents` | The [agent rules](#agent-rules) |
+| `proposals` | How analyzers may file work: `max_items` (the most new items one source opens in one project in one run; 0 means 10), `auto_accept` (a list of `{source, min_severity}`: sources whose findings of at least that severity become items without a review; severity is 0 to 4) and `reason` (required with `auto_accept`). See [proposals](#proposals) |
 
 ### Agent rules
 
@@ -207,3 +208,37 @@ skipping of tests always need a person, whatever these say.
 
 `source` is the level it comes from (`default`, `installation`, `organization`, `unit:name`,
 `project:owner/name`). `available` is `false` when `level` is above what the server acts on.
+
+## Proposals
+
+What an analyzer sends to `POST /api/v1/work/proposals` (the command `launchway work propose --from FILE`, the MCP tool `propose_work`). See [proposals from analysis](../guide/proposals-from-analysis.md).
+
+```json
+{
+  "scope": "project:acme/shop",
+  "source": "security-scan",
+  "run_id": "2026-11-21.3",
+  "report_url": "https://reports.example/acme/shop/3",
+  "complete": true,
+  "proposals": [
+    { "dedupe_key": "dep:lodash:CVE-2021-23337", "group_key": "vulnerable-dependencies",
+      "group_title": "Update {n} dependencies with known vulnerabilities",
+      "title": "lodash 4.17.20 (CVE-2021-23337)", "severity": 3 }
+  ]
+}
+```
+
+| Key | Meaning |
+|---|---|
+| `source` | The analyzer's name; required. It is the namespace of the dedupe keys and the group keys |
+| `run_id`, `report_url` | This run, and where the full report is; kept on the item's `proposed` event |
+| `complete` | The batch holds every finding of the source: findings left out are fixed. Without it, nothing is ticked off |
+| `proposals[].dedupe_key` | The same finding has the same key in every run |
+| `proposals[].group_key` | Findings with the same key become one item with a checklist. Without one, a finding is its own group |
+| `proposals[].group_title` | The item's title; `{n}` stands for the open occurrences |
+| `proposals[].title`, `body` | This occurrence (a line of the checklist) and what is wrong |
+| `proposals[].type`, `labels`, `priority` | Of the item; `type` is `issue`, `bug`, `story` or `task` |
+| `proposals[].severity` | 0 none, 1 low, 2 medium, 3 high, 4 critical |
+| `proposals[].evidence` | Links to what shows the finding |
+
+The answer counts `received`, `new`, `updated`, `dismissed`, `fixed`, `waiting` (groups), `opened`, `folded`, `synced`, `closed` and `reopened`. At most 5000 findings in one batch. Items made from proposals carry the labels `machine-proposed` and `source:NAME`, have the reporter `source:NAME`, and start with a `proposed` event.

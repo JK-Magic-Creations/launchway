@@ -806,6 +806,12 @@ token is offered the item routes only for the work it holds). The guides are [tr
 | `GET /api/v1/work/pull-reviews` | `signed-in` | — | The agents' reviews of a pull request (`?repo=&pull=`), each with whether it counts and, if not, why. |
 | `POST /api/v1/work/import/stories` | `signed-in` | `work.import_stories` | Imports epics and stories from the [stories JSON](work-format.md#stories-json) shape; `preview` and `update`. |
 | `POST /api/v1/work/import/archive` | `signed-in` | `work.import_archive` | Promotes a repository's read-only archive into live items; `preview` counts only. |
+| `GET /api/v1/work/proposals` | `signed-in` | — | The groups of findings analyzers proposed at a scope (`?scope=&state=`), each with its state, severity, open count, item and occurrences. |
+| `POST /api/v1/work/proposals` | `signed-in` | `work.propose` | An analyzer's batch (`{scope, source, run_id, report_url, complete, proposals}`): grouped by group key, capped, and held for a review unless the level lets the source file without one. Not for agent tokens. |
+| `POST /api/v1/work/proposals/accept` | `signed-in` | `work.proposal_accept` | Opens the items of proposed groups (`{scope, source, groups, edits}`), each with a checklist; `edits` changes a title, body or priority first. |
+| `POST /api/v1/work/proposals/dismiss` | `signed-in` | `work.proposal_dismiss` | Dismisses proposed groups with a reason (required); the findings are remembered and not proposed again. |
+| `POST /api/v1/work/proposals/merge` | `signed-in` | `work.proposal_merge` | Joins proposed groups of one source into the group named in `into`. |
+| `POST /api/v1/work/health` | `signed-in` | `work.health` | Checks a hosted repository (`{repository}`) for a README, license, owners file, pipeline file, protected default branch and tests, and proposes what is missing as one group. |
 
 ## MCP
 

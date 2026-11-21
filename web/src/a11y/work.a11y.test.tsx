@@ -8,7 +8,7 @@ import { workAnswers } from "../test/workFixtures";
 // The work pages, drawn whole (shell and page) with fixtures in both themes, and scanned by axe-core. Nothing here is listed in
 // baseline.json: these pages have no known findings, and the baseline may only shrink.
 const P = "/work/project%3Aacme%2Fshop";
-const PAGES = ["/work", `${P}/items`, `${P}/board`, `${P}/backlog`, `${P}/sprints`, `${P}/sprints/sp_1`, `${P}/charts`, `${P}/roadmap`, `${P}/milestones`, `${P}/settings`,
+const PAGES = ["/work", `${P}/items`, `${P}/board`, `${P}/backlog`, `${P}/sprints`, `${P}/sprints/sp_1`, `${P}/charts`, `${P}/roadmap`, `${P}/milestones`, `${P}/proposals`, `${P}/settings`,
   "/work/item/PAY-1", "/work/item/PAY-9", "/work/agents", "/work/inbox", "/repositories/acme/shop/pulls/1"];
 
 describe.each(["light", "dark"])("work pages, %s theme", (theme) => {
@@ -54,6 +54,12 @@ describe.each(["light", "dark"])("work pages, %s theme", (theme) => {
     fireEvent.click((await screen.findAllByRole("button", { name: "Register an agent" }))[0]!);
     await screen.findByRole("form", { name: "Register an agent" });
     await clean("register form");
+  }, 20000);
+  it("proposals with the dismiss dialog open", async () => {
+    await open(`${P}/proposals`);
+    fireEvent.click(await screen.findByRole("button", { name: "Dismiss Add a pipeline" }));
+    await screen.findByRole("dialog");
+    await clean("dismiss dialog");
   }, 20000);
   it("the autonomy settings with level 2 chosen", async () => {
     await open(`${P}/settings`);

@@ -1121,5 +1121,8 @@ reference, such as `PAY-12`.
 | `launchway work spend`, `autonomy clear-pause --reason TEXT`, `samples list\|complete` | What agents reported spending; letting autonomy resume; merges flagged for a look |
 | `launchway work agent me\|queue\|claim\|heartbeat\|hand-back\|request-review\|usage\|pull-review` | The calls an agent makes with its own token |
 | `launchway work import --format stories-json FILE [--preview] [--update]`, `--format archive --repository OWNER/NAME [--preview]` | The [imports](work-format.md) |
+| `launchway work propose --from FILE [--scope S\|--repo OWNER/NAME]` | Sends an analyzer's [batch of findings](work-format.md#proposals) (`-` reads standard input) |
+| `launchway work proposals list [--state S]`, `accept --source S GROUP... [--title-for GROUP=TEXT]`, `dismiss --source S GROUP... --reason TEXT`, `merge --source S GROUP... --into GROUP` | Reviewing [proposed work](../guide/proposals-from-analysis.md) |
+| `launchway work health --repo OWNER/NAME` | Checks a hosted repository's basics and proposes what is missing |
 
 The vertical bars in the table stand for "or": write one of the words.

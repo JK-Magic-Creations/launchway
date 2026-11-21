@@ -93,7 +93,7 @@ export function Blank({ title, children, action }: { title: string; children?: R
 
 // ---- pages ----
 
-const AREAS: [string, string][] = [["items", "Items"], ["board", "Board"], ["backlog", "Backlog"], ["sprints", "Sprints"], ["charts", "Charts"], ["roadmap", "Roadmap"], ["milestones", "Milestones"], ["settings", "Settings"]];
+const AREAS: [string, string][] = [["items", "Items"], ["board", "Board"], ["backlog", "Backlog"], ["sprints", "Sprints"], ["charts", "Charts"], ["roadmap", "Roadmap"], ["milestones", "Milestones"], ["proposals", "Proposals"], ["settings", "Settings"]];
 
 /** The links between the pages of one project's work. */
 export function ScopeNav({ scope, on }: { scope: string; on: string }) {

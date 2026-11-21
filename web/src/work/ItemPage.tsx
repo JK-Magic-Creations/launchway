@@ -25,6 +25,7 @@ export default function ItemPage({ itemRef }: { itemRef: string }) {
     <WorkPage scope={scope} on="items" eyebrow={<><Link href="/work">Work</Link> / <Link href={scopeHref(scope)}>{scopeLabel(scope)}</Link></>}
       title={<><span className="mono wk-ref">{it.ref}</span> {it.title}</>}
       sentence={<span className="wk-chips"><StateTag item={it} /><Prio p={it.priority} /><span className="faint">{it.type}</span>{it.blocked && <span className="wk-flag">blocked by {it.blocked_by?.join(", ")}</span>}</span>}>
+      {it.labels.includes("machine-proposed") && <p className="faint small wk-proposed">Proposed by {it.labels.find((l) => l.startsWith("source:"))?.slice(7) ?? "a tool"}. See <Link href={scopeHref(scope, "proposals")}>Proposals</Link>.</p>}
       <AgentBanner it={it} onTaken={item.reload} can={can("take_over")} />
       <div className="wk-cols">
         <div className="wk-main">

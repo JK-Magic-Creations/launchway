@@ -16,10 +16,11 @@ const Sprint = lz<{ scope: string; id: string }>(() => import("./Sprints").then(
 const Charts = lz<{ scope: string }>(() => import("./Charts"));
 const Roadmap = lz<{ scope: string }>(() => import("./Plan").then((m) => ({ default: m.Roadmap })));
 const Milestones = lz<{ scope: string }>(() => import("./Plan").then((m) => ({ default: m.Milestones })));
+const Proposals = lz<{ scope: string }>(() => import("./Proposals"));
 const Settings = lz<{ scope: string }>(() => import("./WorkSettings"));
 
 /** The scope pages, by the last part of the address. */
-const AREA: Record<string, React.ComponentType<{ scope: string }>> = { items: Items, board: Board, backlog: Backlog, sprints: Sprints, charts: Charts, roadmap: Roadmap, milestones: Milestones, settings: Settings };
+const AREA: Record<string, React.ComponentType<{ scope: string }>> = { items: Items, board: Board, backlog: Backlog, sprints: Sprints, charts: Charts, roadmap: Roadmap, milestones: Milestones, proposals: Proposals, settings: Settings };
 
 export default function WorkRoutes({ path }: { path: string }) {
   return <Suspense fallback={<div className="page"><div className="loading" role="status">Loading…</div></div>}>{pick(path)}</Suspense>;

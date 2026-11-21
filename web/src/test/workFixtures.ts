@@ -80,6 +80,10 @@ export function workAnswers(): Record<string, unknown> {
     [`${B}/sprints/sp_1`]: sprint(), [`${B}/sprints/sp_1/burndown`]: burndown(),
     [`${B}/charts/velocity`]: velocity(), [`${B}/charts/flow`]: flow(), [`${B}/charts/times`]: times(),
     [`${B}/roadmap`]: { rows: [{ kind: "epic", ref: "PAY-5", title: "Checkout rewrite", start_at: "2026-11-01T00:00:00Z", due_at: "2026-12-15T00:00:00Z", percent: 35, total: 8, done: 3 }, { kind: "milestone", title: "Release 1.5", due_at: "2026-12-01T00:00:00Z", percent: 40, total: 10, done: 4 }] },
+    [`${B}/proposals`]: { groups: [
+      { source: "health", group: "repository-hygiene", title: "Set up the repository basics ({n} left)", state: "pending", severity: 2, count: 3, unresolved: 2, report_url: "https://ci.example/report",
+        occurrences: [{ dedupe_key: "no-readme", title: "Add a README", body: "A new reader has nowhere to start.", severity: 1, evidence: ["https://ci.example/e1"] }, { dedupe_key: "no-license", title: "Add a LICENSE", severity: 1 }] },
+      { source: "health", group: "ci", title: "Add a pipeline", state: "pending", severity: 3, count: 1, unresolved: 1, occurrences: [] }] },
     [`${B}/milestones`]: { milestones: [milestone()] }, [`${B}/settings`]: settings(),
     [`${B}/agents`]: { agents: [agent(), agent({ id: "ag_2", name: "review-agent", disabled: true })] }, [`${B}/spend`]: { rows: [{ name: "docs-agent", kind: "agent", budget_cents: 1000, spent_cents: 245, remaining_cents: 755, spent_tokens: 12000, seconds: 1800 }], note: "what agents reported" },
     [`${B}/agents/docs-agent/actions`]: { agent: "docs-agent", actions: [{ at: "2026-11-21T08:00:00Z", item: "PAY-1", action: "claim", detail: "" }] },

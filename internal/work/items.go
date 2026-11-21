@@ -524,10 +524,21 @@ func (s *Store) insertNewChildren(ctx context.Context, tx DB, id string, in NewI
 }
 
 func (s *Store) insertNew(ctx context.Context, c Caller, p *newPlan) (string, error) {
+	var id string
+	err := s.tx(ctx, func(tx DB) error {
+		var err error
+		id, err = s.insertNewIn(ctx, tx, c, p)
+		return err
+	})
+	return id, err
+}
+
+// insertNewIn is insertNew inside a transaction already open.
+func (s *Store) insertNewIn(ctx context.Context, tx DB, c Caller, p *newPlan) (string, error) {
 	in, eff, start, due, created, closed, reporter, rkind, labels := p.in, p.eff, p.start, p.due, p.created, p.closed, p.reporter, p.rkind, p.labels
 	var id string
 	var err error
-	err = s.tx(ctx, func(tx DB) error {
+	err = func() error {
 		var n int
 		if in.Number > 0 {
 			if err := s.reserve(ctx, tx, in.Scope, in.Number); err != nil {
@@ -605,7 +616,7 @@ func (s *Store) insertNew(ctx context.Context, c Caller, p *newPlan) (string, er
 			}
 		}
 		return s.notifyAssigned(ctx, tx, c, id, in.Title, seen)
-	})
+	}()
 	return id, err
 }
 

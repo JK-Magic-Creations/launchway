@@ -347,4 +347,32 @@ CREATE TABLE work_review_samples (
   note        TEXT    NOT NULL DEFAULT ''
 );
 CREATE UNIQUE INDEX work_review_samples_pull ON work_review_samples(repo, pull);
+
+CREATE TABLE work_proposals (
+  id         TEXT    NOT NULL PRIMARY KEY,
+  scope_kind TEXT    NOT NULL,
+  scope_id   TEXT    NOT NULL,
+  source     TEXT    NOT NULL,
+  dedupe_key TEXT    NOT NULL,
+  group_key  TEXT    NOT NULL,
+  group_title TEXT   NOT NULL DEFAULT '',
+  title      TEXT    NOT NULL,
+  body       TEXT    NOT NULL DEFAULT '',
+  type       TEXT    NOT NULL DEFAULT 'issue',
+  labels     TEXT    NOT NULL DEFAULT '[]',
+  priority   TEXT    NOT NULL DEFAULT 'normal',
+  severity   INTEGER NOT NULL DEFAULT 0,
+  evidence   TEXT    NOT NULL DEFAULT '[]',
+  state      TEXT    NOT NULL DEFAULT 'pending',
+  item_id    TEXT    NOT NULL DEFAULT '',
+  run_id     TEXT    NOT NULL DEFAULT '',
+  report_url TEXT    NOT NULL DEFAULT '',
+  first_seen {{BIG}} NOT NULL,
+  last_seen  {{BIG}} NOT NULL,
+  resolved_at {{BIG}} NOT NULL DEFAULT 0,
+  dismissed_by TEXT  NOT NULL DEFAULT '',
+  dismissed_reason TEXT NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX work_proposals_key ON work_proposals(scope_kind, scope_id, source, dedupe_key);
+CREATE INDEX work_proposals_group ON work_proposals(scope_kind, scope_id, source, group_key);
 `}

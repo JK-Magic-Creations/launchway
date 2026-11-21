@@ -357,4 +357,10 @@ var rows = []Row{
 	{Route: "GET /api/v1/work/pull-reviews", MCP: "list_work_pull_reviews", CLI: "work agents reviews", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/work/import/stories", MCP: "import_work_stories", CLI: "work import --format stories-json", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/work/import/archive", MCP: "promote_archive", CLI: "work import --format archive", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "GET /api/v1/work/proposals", MCP: "list_work_proposals", CLI: "work proposals list", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/work/proposals", MCP: "propose_work", CLI: "work propose", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/work/proposals/accept", MCP: "accept_work_proposals", CLI: "work proposals accept", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/work/proposals/dismiss", MCP: "dismiss_work_proposals", CLI: "work proposals dismiss", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/work/proposals/merge", MCP: "merge_work_proposals", CLI: "work proposals merge", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "POST /api/v1/work/health", MCP: "run_repository_health", CLI: "work health", Terraform: "", Status: Equal, Reason: ""},
 }

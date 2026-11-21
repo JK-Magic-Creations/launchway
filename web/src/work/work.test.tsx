@@ -10,6 +10,7 @@ import Inbox from "./Inbox";
 import ItemList from "./ItemList";
 import ItemPage from "./ItemPage";
 import { SprintPage } from "./Sprints";
+import Proposals from "./Proposals";
 import WorkSettings from "./WorkSettings";
 
 const B = "/api/v1/work";
@@ -286,5 +287,43 @@ describe("the inbox", () => {
     expect(screen.getByText("PAY-1 was assigned to you")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Mark all read" }));
     await waitFor(() => expect(last(calls, "POST", B + "/inbox/read")?.body).toEqual({ ids: [1] }));
+  });
+});
+
+describe("proposals", () => {
+  it("lists groups, shows occurrences, and dismisses with a reason that says it is remembered", async () => {
+    const user = userEvent.setup();
+    const calls = serve({ ...get("/proposals"), ["POST " + B + "/proposals/dismiss"]: { dismissed: 1 } });
+    render(<Proposals scope={SCOPE} />);
+    expect(await screen.findByText("Set up the repository basics (2 left)")).toBeTruthy();
+    expect(screen.getAllByText(/proposed by health/).length).toBe(2);
+    await user.click(screen.getAllByRole("button", { name: /Show occurrences/ })[0]!);
+    expect(screen.getByRole("link", { name: "Evidence 1" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Dismiss Add a pipeline" }));
+    expect(screen.getByText(/not proposed again/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeDisabled();
+    await user.type(screen.getByLabelText("Why"), "Not for us");
+    await user.click(screen.getByRole("button", { name: "Dismiss" }));
+    await waitFor(() => expect(last(calls, "POST", B + "/proposals/dismiss")?.body).toEqual({ scope: SCOPE, source: "health", groups: ["ci"], reason: "Not for us" }));
+    await waitFor(() => expect(screen.getByTestId("proposals-live")).toHaveTextContent("Dismissed 1 findings."));
+  });
+  it("accepts all after saying how many items it makes, and accepts a selection", async () => {
+    const user = userEvent.setup();
+    const calls = serve({ ...get("/proposals"), ["POST " + B + "/proposals/accept"]: { opened: 2 } });
+    render(<Proposals scope={SCOPE} />);
+    await screen.findByText("Add a pipeline");
+    await user.click(screen.getByRole("button", { name: "Accept all" }));
+    expect(screen.getByText(/This makes/).textContent).toContain("2 items");
+    await user.click(screen.getByRole("button", { name: "Make 2 items" }));
+    await waitFor(() => expect(last(calls, "POST", B + "/proposals/accept")?.body).toMatchObject({ source: "health", groups: ["repository-hygiene", "ci"] }));
+    await user.click(await screen.findByRole("checkbox", { name: "Select Add a pipeline" }));
+    expect(screen.getByRole("button", { name: "Accept selected" })).toBeTruthy();
+  });
+  it("runs the repository check for a project", async () => {
+    const calls = serve({ ...get("/proposals"), ["POST " + B + "/health"]: { received: 2, new: 2, updated: 0, dismissed: 0, fixed: 0, waiting: 1, opened: 0, folded: 0 } });
+    render(<Proposals scope={SCOPE} />);
+    fireEvent.click((await screen.findAllByRole("button", { name: "Check this repository's basics" }))[0]!);
+    await waitFor(() => expect(last(calls, "POST", B + "/health")?.body).toEqual({ repository: "acme/shop" }));
+    expect(await screen.findByText(/Check finished\. 2 findings/)).toBeTruthy();
   });
 });

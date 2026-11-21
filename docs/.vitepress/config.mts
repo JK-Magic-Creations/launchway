@@ -231,6 +231,7 @@ export default defineConfig({
           { text: 'Tracking work', link: '/guide/tracking-work' },
           { text: 'Boards and sprints', link: '/guide/boards-and-sprints' },
           { text: 'Work and code', link: '/guide/work-and-code' },
+          { text: 'Proposals from analysis', link: '/guide/proposals-from-analysis' },
           { text: 'Working with agents', link: '/guide/working-with-agents' },
           { text: 'Keeping dependencies up to date', link: '/guide/dependency-updates' },
           { text: 'Webhooks and events', link: '/guide/webhooks' },

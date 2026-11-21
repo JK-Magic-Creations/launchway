@@ -71,14 +71,32 @@ type CloseRule struct {
 }
 
 // Settings configure work at one level. A field left empty is inherited.
+// ProposalRules say how analyzers may file work at a level.
+type ProposalRules struct {
+	// AutoAccept lists sources whose proposals become items without a review,
+	// from a minimum severity (0 to 4: none, low, medium, high, critical).
+	AutoAccept []AutoAccept `json:"auto_accept,omitempty"`
+	// MaxItems is the most new items one source may open in one project in
+	// one run (0: 10); the rest are folded into one summary item.
+	MaxItems int    `json:"max_items,omitempty"`
+	Reason   string `json:"reason,omitempty"` // required with auto_accept
+}
+
+// AutoAccept names a source and the least severity it may file without a review.
+type AutoAccept struct {
+	Source      string `json:"source"`
+	MinSeverity int    `json:"min_severity"`
+}
+
 type Settings struct {
-	Prefix      string       `json:"prefix,omitempty"`
-	Unit        string       `json:"estimate_unit,omitempty"` // points or hours
-	States      []State      `json:"states,omitempty"`
-	Transitions []Transition `json:"transitions,omitempty"`
-	Types       []TypeDef    `json:"types,omitempty"`
-	Fields      []FieldDef   `json:"fields,omitempty"`
-	Close       *CloseRule   `json:"close,omitempty"`
+	Proposals   *ProposalRules `json:"proposals,omitempty"`
+	Prefix      string         `json:"prefix,omitempty"`
+	Unit        string         `json:"estimate_unit,omitempty"` // points or hours
+	States      []State        `json:"states,omitempty"`
+	Transitions []Transition   `json:"transitions,omitempty"`
+	Types       []TypeDef      `json:"types,omitempty"`
+	Fields      []FieldDef     `json:"fields,omitempty"`
+	Close       *CloseRule     `json:"close,omitempty"`
 	// Agents: whether agents may work here at all, and what a person must do
 	// before an agent's work lands (see AgentRules).
 	Agents *AgentRules `json:"agents,omitempty"`
@@ -495,6 +513,9 @@ func (s Settings) merge(over Settings) Settings {
 	s.Fields = append(slices.Clone(s.Fields), over.Fields...)
 	if over.Close != nil {
 		s.Close = over.Close
+	}
+	if over.Proposals != nil {
+		s.Proposals = over.Proposals
 	}
 	if len(over.Environments) > 0 {
 		s.Environments = over.Environments

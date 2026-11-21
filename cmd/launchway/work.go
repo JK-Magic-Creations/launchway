@@ -16,7 +16,7 @@ import (
 
 const workUsage = `Usage:
   launchway work items list|show|create|update|move|rank|comment|link|unlink|code-link|history|attach|file|by-code|take-over
-  launchway work board|roadmap|release-notes|home|inbox|spend|import
+  launchway work board|roadmap|release-notes|home|inbox|spend|import|propose|health
   launchway work milestones list|create|update
   launchway work sprints list|show|create|update|start|complete|burndown
   launchway work charts velocity|flow|times
@@ -25,6 +25,7 @@ const workUsage = `Usage:
   launchway work agents list|show|create|update|disable|enable|delete|rotate-token|actions|reviews
   launchway work autonomy clear-pause
   launchway work samples list|complete
+  launchway work proposals list|accept|dismiss|merge
   launchway work agent me|queue|claim|heartbeat|hand-back|request-review|usage|pull-review
 
 Where work lives is a scope: --scope project:OWNER/NAME, unit:NAME (a Squadron), organization (the Wing)
@@ -103,6 +104,16 @@ For an agent's own scripts (sign in with the agent's token):
 Import:
   launchway work import --format stories-json FILE [--scope S] [--preview] [--update]   make items from a list of stories
   launchway work import --format archive --repository OWNER/NAME [--preview]            turn a repository's archived issues into items
+
+Proposals (analyzers send findings; the server groups and caps them; a person reviews them):
+  launchway work propose --from FILE [--scope S | --repo OWNER/NAME]   FILE is JSON, or - for standard input:
+                            {"source", "run_id", "report_url", "complete", "proposals": [{dedupe_key, group_key,
+                            group_title, title, body, type, labels, priority, severity 0-4, evidence}]}
+  launchway work proposals list [--state pending|accepted|folded|dismissed|fixed]
+  launchway work proposals accept --source S GROUP... [--title-for GROUP=TEXT ...]   open the items of the groups
+  launchway work proposals dismiss --source S GROUP... --reason TEXT                 never propose these findings again
+  launchway work proposals merge --source S GROUP... --into GROUP                    join groups into one
+  launchway work health --repo OWNER/NAME             check a hosted repository's basics and propose what is missing
 `
 
 // cmdWork is launchway work.
@@ -134,7 +145,7 @@ func (cl *client) work(args []string) error {
 }
 
 // workAlone are the commands that need nothing after their name.
-var workAlone = map[string]bool{"board": true, "roadmap": true, "home": true, "inbox": true, "spend": true, "release-notes": true, "import": true}
+var workAlone = map[string]bool{"board": true, "roadmap": true, "home": true, "inbox": true, "spend": true, "release-notes": true, "import": true, "propose": true, "health": true}
 
 // workGroups are the groups of work commands.
 var workGroups = map[string]func(*client, []string) error{
@@ -146,6 +157,9 @@ var workGroups = map[string]func(*client, []string) error{
 	"inbox":         (*client).workInbox,
 	"spend":         (*client).workSpend,
 	"import":        (*client).workImport,
+	"propose":       (*client).workPropose,
+	"proposals":     (*client).workProposals,
+	"health":        (*client).workHealth,
 	"milestones":    (*client).workMilestones,
 	"sprints":       (*client).workSprints,
 	"charts":        (*client).workCharts,

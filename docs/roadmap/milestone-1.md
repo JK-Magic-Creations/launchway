@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 33 available · 29 in progress · 57 planned · 119 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 33 available · 30 in progress · 57 planned · 120 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -50,7 +50,7 @@ flowchart TD
 |---|---|---|---|---|
 | [Host your code](#g-host-your-code) | 20 | 4 | 0 | 16 |
 | [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 1 | 6 |
-| [Work items and decisions](#g-work-items-and-decisions) | 19 | 10 | 1 | 8 |
+| [Work items and decisions](#g-work-items-and-decisions) | 20 | 10 | 2 | 8 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
 | [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
 | [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 5 | 0 | 0 | 5 |
@@ -511,6 +511,16 @@ Bring issues in from other trackers, or keep them in sync in both directions whi
 **Depends on:** Issues and work items.
 
 [Read the documentation](../reference/work-format.md) · [Area page](git-hosting.md)
+
+#### Proposals from analysis {#proposals-from-analysis}
+
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+
+Scans and checks send findings that are grouped into items with a checklist, capped, and held for a person to accept, with dismissed findings remembered and re-runs that tick off what is fixed. The route, the commands, the MCP tools and the repository health check (README, license, owners file, pipeline file, protected default branch, tests) are built. The security findings and code-quality checks do not send to it yet, and the health check does not count stale branches or look for very large files.
+
+**Depends on:** Issues and work items.
+
+[Read the documentation](../guide/proposals-from-analysis.md) · [Area page](git-hosting.md)
 
 #### Optional time tracking and due dates {#optional-time-tracking-and-due-dates}
 

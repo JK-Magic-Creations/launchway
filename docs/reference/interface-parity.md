@@ -304,6 +304,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/work/charts/velocity` | `get_work_chart` | `work charts velocity` | — | equal |
 | `PATCH /api/v1/work/comments/{id}` | `edit_work_comment` | `work items comment` | — | equal |
 | `GET /api/v1/work/comments/{id}/edits` | `get_work_comment_edits` | `work items history` | — | equal |
+| `POST /api/v1/work/health` | `run_repository_health` | `work health` | — | equal |
 | `GET /api/v1/work/home` | `get_work_home` | `work home` | — | equal |
 | `POST /api/v1/work/import/archive` | `promote_archive` | `work import --format archive` | — | equal |
 | `POST /api/v1/work/import/stories` | `import_work_stories` | `work import --format stories-json` | — | equal |
@@ -330,6 +331,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/work/milestones` | `list_work_milestones` | `work milestones list` | — | equal |
 | `POST /api/v1/work/milestones` | `create_work_milestone` | `work milestones create` | — | equal |
 | `PATCH /api/v1/work/milestones/{id}` | `update_work_milestone` | `work milestones update` | — | equal |
+| `GET /api/v1/work/proposals` | `list_work_proposals` | `work proposals list` | — | equal |
+| `POST /api/v1/work/proposals` | `propose_work` | `work propose` | — | equal |
+| `POST /api/v1/work/proposals/accept` | `accept_work_proposals` | `work proposals accept` | — | equal |
+| `POST /api/v1/work/proposals/dismiss` | `dismiss_work_proposals` | `work proposals dismiss` | — | equal |
+| `POST /api/v1/work/proposals/merge` | `merge_work_proposals` | `work proposals merge` | — | equal |
 | `GET /api/v1/work/pull-reviews` | `list_work_pull_reviews` | `work agents reviews` | — | equal |
 | `GET /api/v1/work/release-notes` | `release_notes` | `work release-notes` | — | equal |
 | `GET /api/v1/work/roadmap` | `get_work_roadmap` | `work roadmap` | — | equal |

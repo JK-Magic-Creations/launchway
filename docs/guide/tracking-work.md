@@ -220,6 +220,11 @@ Work comes in from two places, both repeatable without making copies:
 Both can be previewed first. Only a maintainer imports. The shapes are in the
 [work format reference](../reference/work-format.md). Importers for other trackers are not built.
 
+## Proposals from analysis
+
+A scan or a check does not file items one by one: it sends findings, which are grouped, capped and held for
+a person to accept. See [proposals from analysis](proposals-from-analysis.md).
+
 ## What is not here
 
 - No email, in or out.

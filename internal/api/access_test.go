@@ -231,6 +231,12 @@ var permissionTable = map[string]matrixRow{
 	"POST /api/v1/work/agent/pull-review":                {"POST", "/api/v1/work/agent/pull-review", `{}`, [6]int{401, 403, 403, 403, 403, 403}},
 	// BUG, not intended: with Git hosting off the handler dereferences s.Forge (work_agents.go workPullReviews) and answers 500.
 	"GET /api/v1/work/pull-reviews":                              {"GET", "/api/v1/work/pull-reviews?repo=o/x", "", [6]int{401, 404, 404, 404, 404, 404}},
+	"GET /api/v1/work/proposals":                                 {"GET", "/api/v1/work/proposals?scope=project:pay-api", "", [6]int{401, 404, 200, 200, 404, 200}},
+	"POST /api/v1/work/proposals":                                {"POST", "/api/v1/work/proposals", `{"scope":"project:pay-api","source":"lint","proposals":[]}`, [6]int{401, 403, 403, allowed, 403, allowed}},
+	"POST /api/v1/work/proposals/accept":                         {"POST", "/api/v1/work/proposals/accept", `{"scope":"project:pay-api","source":"lint","groups":["g"]}`, [6]int{401, 403, 403, allowed, 403, allowed}},
+	"POST /api/v1/work/proposals/dismiss":                        {"POST", "/api/v1/work/proposals/dismiss", `{"scope":"project:pay-api","source":"lint","groups":["g"],"reason":"x"}`, [6]int{401, 403, 403, allowed, 403, allowed}},
+	"POST /api/v1/work/proposals/merge":                          {"POST", "/api/v1/work/proposals/merge", `{"scope":"project:pay-api","source":"lint","groups":["g"],"into":"h"}`, [6]int{401, 403, 403, allowed, 403, allowed}},
+	"POST /api/v1/work/health":                                   {"POST", "/api/v1/work/health", `{"repository":"o/x"}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"POST /api/v1/work/import/stories":                           {"POST", "/api/v1/work/import/stories", `{"scope":"project:pay-api","items":[],"preview":true}`, [6]int{401, 403, 403, 403, 403, -1}},
 	"POST /api/v1/work/import/archive":                           {"POST", "/api/v1/work/import/archive", `{"repository":"o/x","preview":true}`, [6]int{401, 404, 404, 404, 404, 404}},
 	"GET /api/v1/repositories/{owner}/{name}/protected-branches": {"GET", "/api/v1/repositories/o/x/protected-branches", "", [6]int{401, 404, 404, 404, 404, 404}},

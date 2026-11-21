@@ -244,3 +244,12 @@
 @media (prefers-reduced-motion: no-preference) {
   .wk-card, .wk-ex, .wk-menu-list button { transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast); }
 }
+
+/* proposals */
+.wk-props { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.wk-prop { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+.wk-prop .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.wk-prop .head h2 { font-size: 16px; flex: 1 1 240px; }
+.wk-prop p { margin: 0; }
+.wk-dialog { max-width: 520px; width: calc(100% - 32px); padding: var(--sp-5); }
+.wk-proposed { font-size: var(--fs-small); }
