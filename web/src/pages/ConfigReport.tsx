@@ -102,7 +102,7 @@ function AnsibleView({ rep, run }: { rep: ConfigReport<AnsibleDocument>; run: st
           .map(([h, r]) => (
             <details key={`${t.name}-${h}`}>
               <summary>{t.name} on {h}</summary>
-              {r.diff!.map((d, i) => <pre key={i} className="cc-diff" tabIndex={0}>{d.text}</pre>)}
+              {r.diff!.map((d, i) => <pre key={i} className="cc-diff">{d.text}</pre>)}
             </details>
           ))))}
         <p className="faint small">Values of tasks marked <Mono>no_log</Mono> are never recorded, and credential-like text is removed before the report is stored.</p>

@@ -13,4 +13,4 @@ Launchway drives the tools; it does not reimplement them. **Ansible** configures
 
 Honest limits: Ansible cannot apply a saved plan the way OpenTofu can, so what you review is the check run, and a change can differ if the hosts change in between. Undoing a configuration change means applying the previous definition; some changes, such as a deleted database, cannot be undone by any code.
 
-Read more in [Ansible](/guide/ansible) and [Terraform and OpenTofu](/guide/terraform-opentofu).
+Read more in [Ansible](../../guide/ansible.md) and [Terraform and OpenTofu](../../guide/terraform-opentofu.md).
