@@ -78,8 +78,11 @@ func TestNoKindStoresASecretValue(t *testing.T) {
 	// Free-form maps of strings are where a value can hide; each is checked
 	// by the validation path or is documented not to be secret.
 	freeMaps := map[string]string{
-		"model.headers":         "checkHeaders refuses credential headers",
-		"project.pipeline.with": "template parameters; the pipeline reads secrets by reference only",
+		"model.headers":                      "checkHeaders refuses credential headers",
+		"project.pipeline.with":              "template parameters; the pipeline reads secrets by reference only",
+		"project.default_pipeline.with":      "template parameters; the pipeline reads secrets by reference only",
+		"organisation.default_pipeline.with": "template parameters; the pipeline reads secrets by reference only",
+		"unit.default_pipeline.with":         "template parameters; the pipeline reads secrets by reference only",
 	}
 	seenMaps := map[string]bool{}
 	for _, k := range kinds {

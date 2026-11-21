@@ -257,12 +257,19 @@ func (l Levels) check() error {
 type Organisation struct {
 	DisplayName string `yaml:"display_name" json:"display_name"`
 	Description string `yaml:"description" json:"description"`
+	// DefaultPipeline is a library template that every project of the
+	// organisation runs where its repository has no pipeline file and
+	// neither the project nor its unit says otherwise.
+	DefaultPipeline *config.ProjectPipelineConfig `yaml:"default_pipeline" json:"-"`
 }
 
 // Unit is a unit (kind unit).
 type Unit struct {
 	DisplayName string `yaml:"display_name" json:"display_name"`
 	Description string `yaml:"description" json:"description"`
+	// DefaultPipeline is the default of the unit's projects, in place of the
+	// organisation's.
+	DefaultPipeline *config.ProjectPipelineConfig `yaml:"default_pipeline" json:"-"`
 }
 
 // SignIn is the sign-in settings (kind sign-in): what the sign-in wizard

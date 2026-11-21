@@ -25,6 +25,16 @@ type ProjectPipelineConfig struct {
 	OnAsTrue *ProjectPipelineOn `yaml:"true"`
 }
 
+// ProjectDefaultPipelineConfig is what one project says about the default
+// pipeline of its unit or organisation.
+type ProjectDefaultPipelineConfig struct {
+	// Enabled is true unless it says false: the project then runs no
+	// default pipeline (a repository file still runs).
+	Enabled *bool `yaml:"enabled"`
+	// With replaces the default's values of these template parameters.
+	With map[string]string `yaml:"with"`
+}
+
 // ProjectLaneConfig is a configured pipeline's lane: the pipeline key lane,
 // with the same fields.
 type ProjectLaneConfig struct {

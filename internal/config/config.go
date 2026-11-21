@@ -607,6 +607,15 @@ type ProjectConfig struct {
 	// .launchway/pipeline.yaml: a template of a library. A file in the
 	// repository takes its place.
 	Pipeline *ProjectPipelineConfig `yaml:"pipeline"`
+	// DefaultPipeline tunes the default pipeline of the project's unit or
+	// organisation, which runs where the repository has no pipeline file
+	// and the project has no pipeline of its own: switch it off, or give
+	// some of its template's parameters other values.
+	DefaultPipeline *ProjectDefaultPipelineConfig `yaml:"default_pipeline"`
+	// PipelineFrom says which level's default pipeline the project got as
+	// its Pipeline ("organisation" or "unit <name>"); empty when it is its
+	// own. Set when the settings are composed, never read from a file.
+	PipelineFrom string `yaml:"-"`
 	// Schedules overrides the server's schedules setting for this project.
 	Schedules *SchedulesConfig `yaml:"schedules"`
 	// GitWebhook lets the project's Git host call a webhook that makes the
@@ -973,6 +982,7 @@ func (c *Config) SourceProjects() ([]source.Project, error) {
 			sp.Pipeline = &source.ProjectPipeline{Library: pp.Library, Version: pp.Version, Template: pp.Template, With: pp.With,
 				Supersede: pp.Supersede}
 			sp.Pipeline.Lane = pp.Lane.source()
+			sp.Pipeline.Default = p.PipelineFrom
 			if t := pp.On.Push; t != nil {
 				sp.Pipeline.On.Push = &pipeline.PushTrigger{Branches: t.Branches, Tags: t.Tags}
 			}

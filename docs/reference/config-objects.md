@@ -48,9 +48,9 @@ command line, the MCP server and the planned Terraform provider name them. For t
 | Sign-in | `sign-in` | How people sign in: `issuer`, `client_id`, `redirect_url`, `client_secret_env` (the name of the variable that holds the secret, never the secret), claims and the first administrators. Saved and checked here; `enabled` must stay `false`: switching sign-in on needs a successful test sign-in, which this version cannot do yet, so the bootstrap file stays the live sign-in and the way back in | none |
 | Secret store | `secret-stores` | The definition of a secret store pipelines may name: `type`, `projects`. Its address and credentials stay with the runners | `launchway_secret_store` |
 | Step resources | `step-resources` | The default CPU and memory by kind of step (`defaults`) and the most any step may ask for (`limits`). One object, named `step-resources` | `launchway_step_resources` |
-| Unit | `units` | A group of projects: `display_name`, `description` | `launchway_unit` |
+| Unit | `units` | A group of projects: `display_name`, `description`, and a [`default_pipeline`](#a-default-pipeline-for-every-repository) in place of the organisation's | `launchway_unit` |
 | Installation settings | `installation` | What the levels are called (`levels`), approvals, drafts, pull requests, schedules, loops, tests, findings, reports, artifact limits and where artifacts are kept (`artifacts`), the MCP endpoint (`mcp`), the role needed to manage runners (`runner_admin`), policy waivers, API token limits. One object, named `installation` | `launchway_installation` |
-| Organisation | `organisation` | `display_name` and `description`. One object, named `default` | `launchway_organisation` |
+| Organisation | `organisation` | `display_name` and `description`, and a [`default_pipeline`](#a-default-pipeline-for-every-repository). One object, named `default` | `launchway_organisation` |
 
 Secrets are never values: an AI model's `key` and a pipeline's secrets are references (`store`, `key`,
 `field`) to a store the runner can read, and sign-in's client secret is read from an environment
@@ -73,6 +73,42 @@ pipeline:
     pull_request: {}
   supersede: true
 ```
+
+## A default pipeline for every repository
+
+An organisation or a unit may name a library template that every project under it runs where its
+repository has no `.launchway/pipeline.yaml`: the same standard checks for each repository, with no
+file in any of them, and a repository created tomorrow is covered the day it is added. The setting
+`default_pipeline` takes the same keys as a project's `pipeline` (`library`, `version`, `template`,
+`with`, `on`, `supersede`, `lane`), and sits in the `organisation` object or in a `unit`:
+
+```yaml
+# launchway config set organisation default -f organisation.yaml
+display_name: Acme
+default_pipeline:
+  library: ci-templates
+  version: v3
+  template: service-ci
+  with: { lint_command: "ruff check ." }
+  "on":
+    push: { branches: [main, develop] }
+    pull_request: {}
+  supersede: true
+```
+
+Which pipeline a project runs, first match first:
+
+1. the repository's own `.launchway/pipeline.yaml` at the commit;
+2. the project's own `pipeline`;
+3. the default of the project's unit;
+4. the default of the organisation.
+
+A project changes the default it gets, without leaving it, with `default_pipeline` on the project:
+`enabled: false` runs no default (a repository file still runs), and `with` gives other values for
+some of the template's parameters; the rest stay as the default sets them. The default is checked
+with the rest of the configuration: a library or template that does not exist is refused when you
+save. Every run records where its pipeline came from: the run page and the push decisions say "the
+default pipeline of the organisation ran", and the run keeps the pipeline text it amounts to.
 
 ## Where artifacts are kept, and the MCP endpoint
 
