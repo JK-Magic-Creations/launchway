@@ -43,6 +43,7 @@ RUN go mod download
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY web/embed.go web/
+COPY deploy/helm/ deploy/helm/
 COPY --from=web /src/web/dist/ web/dist/
 ARG VERSION=dev
 ARG REVISION=

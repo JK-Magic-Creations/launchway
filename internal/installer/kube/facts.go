@@ -156,7 +156,12 @@ func can(ctx context.Context, cs kubernetes.Interface, ns, verb, group, res stri
 	return err == nil && r.Status.Allowed
 }
 
-func listNames(ctx context.Context, cs kubernetes.Interface, path string) []string {
+func listNames(ctx context.Context, cs kubernetes.Interface, path string) (names []string) {
+	defer func() {
+		if recover() != nil { // a discovery client with no REST client (a test double)
+			names = nil
+		}
+	}()
 	b, err := cs.Discovery().RESTClient().Get().AbsPath(path).DoRaw(ctx)
 	if err != nil {
 		return nil
