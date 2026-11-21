@@ -22,5 +22,5 @@ export default function RunsExplorer({ runs, now, me }: { runs: RunSummary[]; no
     };
   }), [runs, org, me]);
   const kinds = useMemo(() => [...new Set(runs.map((r) => r.event))].filter(Boolean).sort(), [runs]);
-  return <Explorer noun={{ singular: "Sortie", plural: "Sorties" }} items={items} collections={org.collections} onCollections={org.saveCollections} now={now} kinds={kinds} empty={<p>No Sortie matches.</p>} />;
+  return <Explorer noun={{ singular: "Sortie", plural: "Sorties" }} items={items} collections={org.collections} onCollections={org.saveCollections} now={now} kinds={kinds} strip={false} empty={<p>No Sortie matches.</p>} />;
 }

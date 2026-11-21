@@ -39,7 +39,7 @@ export default function PipelinesExplorer({ projects, runs, now, me, as = "pipel
     const last = p.last_run ?? rs[0] ?? null;
     const trend = trendOf(rs);
     return {
-      id: p.name, name: p.name, path: where.path, labels: where.labels, tone: p.error ? "bad" : toneOf(last),
+      id: p.name, name: p.name, path: where.path, labels: where.labels, tone: repos && p.error ? "bad" : toneOf(last),
       description: repos ? (p.error ? `Cannot reach the repository: ${p.error}` : `${p.url} · default branch ${p.default_branch}`) : undefined,
       kind: repos ? (hostName(p.url) || "local") : undefined,
       last: last ? { text: `${WORD[last.status] ?? last.status} · #${last.number}`, at: last.finished_at || last.created_at, href: `/runs/${last.id}` } : undefined,

@@ -88,9 +88,9 @@ export function ActivityPage() {
         <div className="pillbtns" role="group" aria-label="How to show them">
           {([["list", "List"], ["place", "By place"]] as const).map(([k, l]) => <button key={k} type="button" aria-pressed={by === k} onClick={() => setBy(k, "push")}>{l}</button>)}
         </div>
-        <div className="pillbtns" role="group" aria-label="Filter by state">
+        {by === "list" && <div className="pillbtns" role="group" aria-label="Filter by state">
           {FILTERS.map((f) => <button key={f.key} type="button" aria-pressed={status === f.key} onClick={() => setStatus(f.key, "push")}>{f.label}</button>)}
-        </div>
+        </div>}
         {(projects.data?.length ?? 0) > 1 && (
           <label className="select"><span className="visually-hidden">Project</span>
             <select value={project} onChange={(e) => setProject(e.target.value, "push")}>

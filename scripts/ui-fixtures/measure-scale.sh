@@ -35,10 +35,12 @@ def call(method, path, body=None):
     req = urllib.request.Request(base + path, method=method, data=json.dumps(body).encode() if body is not None else None, headers={"Content-Type": "application/json", "X-Launchway-CSRF": "1"})
     with urllib.request.urlopen(req, timeout=900) as r:
         t = r.read().decode(); return json.loads(t) if t else None
+import os
+repo = os.path.abspath(os.path.join(data, "..", "repos", "demo"))
 units = [f"squad{u:02d}" for u in range(40)]
 lines = ["objects:"]
 for u in units: lines.append(f"  - {{kind: unit, name: {u}, spec: {{display_name: {u}}}}}")
-for i in range(N): lines.append(f"  - {{kind: project, name: svc-{i:04d}, unit: {units[i % 40]}, spec: {{repo: repos/demo, branch: main, poll: 24h}}}}")
+for i in range(N): lines.append(f"  - {{kind: project, name: svc-{i:04d}, unit: {units[i % 40]}, spec: {{repo: {repo}, branch: main, poll: 24h}}}}")
 t0 = time.time(); call("POST", "/api/v1/config/import", {"text": "\n".join(lines) + "\n", "apply": True}); print(f"imported {N} projects in {time.time()-t0:.0f}s")
 time.sleep(5)
 now = int(time.time() * 1000)

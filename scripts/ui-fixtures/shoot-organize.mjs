@@ -11,6 +11,11 @@ const views = [
   ["pipelines-filtered", "/pipelines?q=led&result=bad", async () => {}],
   ["repositories", "/repositories", async () => {}],
   ["finder", "/", async (page) => { await page.keyboard.press("/"); await page.keyboard.type("ledg", { delay: 40 }); await page.waitForTimeout(700); }],
+  ["finder-empty", "/", async (page) => { await page.keyboard.press("/"); await page.waitForTimeout(700); }],
+  ["projects", "/projects", async () => {}],
+  ["sorties-place", "/activity?by=place&show=running", async () => {}],
+  ["arrange", "/", async (page) => { await page.getByText("Arrange", { exact: true }).click(); await page.waitForTimeout(300); }],
+  ["pipelines-collections", "/pipelines", async (page) => { await page.getByRole("button", { name: "Arrange for me" }).click(); await page.waitForTimeout(300); }],
 ];
 for (const scheme of ["light", "dark"]) {
   for (const [w, h] of [[1440, 900], [390, 844]]) {

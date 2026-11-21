@@ -12,10 +12,11 @@ the engine would have: most pipelines pass; 8 are truly failing; 6 failed and ar
 and then passed; 3 failed on someone else's feature branch; 10 are running; 2 wait for a decision. Names are
 invented. Standard library only.
 """
-import json, random, sqlite3, sys, time, urllib.request
+import json, os, random, sqlite3, sys, time, urllib.request
 
 url, data = sys.argv[1].rstrip("/"), sys.argv[2]
 random.seed(7)
+REPO = os.path.abspath(os.path.join(data, "..", "repos", "demo"))  # an absolute path: every project reads this one tiny repository
 now = int(time.time() * 1000)
 MIN, HOUR = 60_000, 3_600_000
 
@@ -44,7 +45,7 @@ objs = [{"kind": "organisation", "name": "default", "spec": {"display_name": "No
 for k, d in unit_display.items():
     objs.append({"kind": "unit", "name": k, "spec": {"display_name": d, "description": f"The {d} Squadron"}})
 for sq, n in names:
-    objs.append({"kind": "project", "name": n, "unit": sq, "spec": {"repo": "repos/demo", "branch": "main", "poll": "24h"}})
+    objs.append({"kind": "project", "name": n, "unit": sq, "spec": {"repo": REPO, "branch": "main", "poll": "24h"}})
 import io
 def yml(o, ind=0):
     pad = "  " * ind
@@ -135,6 +136,19 @@ for _, n in names:
         call("POST", "/api/v1/organize/pipelines/move", {"item": n, "folder": internal}); call("PUT", "/api/v1/organize/pipelines/labels", {"item": n, "labels": ["tier-3"]})
 for n in ("payments-ledger", "storefront-web-shop", "platform-auth"):
     call("POST", "/api/v1/me/favorites", {"item": f"project:{n}", "on": True})
+
+# 3b. The person's trail (what they opened and started) and two panels on their own Home.
+runs = call("GET", "/api/v1/runs?limit=60")
+mine = [r for r in runs if r["actor"] == "sam.rivera"][:3]
+for r in mine:
+    call("PUT", "/api/v1/activity", {"kind": "run", "obj": r["id"], "title": f"{r['project']} #{r['number']}", "href": f"/runs/{r['id']}", "action": "started", "state": "running"})
+for n in ("payments-ledger", "storefront-web-shop", "platform-auth"):
+    call("PUT", "/api/v1/activity", {"kind": "pipeline", "obj": n, "project": n, "title": f"History · {n}", "href": f"/projects/{n}/pipeline?view=history", "action": "viewed"})
+call("PUT", "/api/v1/me/layouts/home", {"panels": [
+    {"id": "p:runbook", "type": "note", "title": "On-call runbook", "size": 1, "settings": {"text": "**Paging order:** Payments, then Platform.\n\n- [Incident checklist](https://example.com/incidents)\n- [Status page](https://example.com/status)"}},
+    {"id": "p:failing", "type": "pinned", "title": "Failing pipelines", "size": 1, "settings": {"href": "/pipelines?result=bad"}},
+    {"id": "p:ledger", "type": "project", "title": "Ledger", "size": 1, "settings": {"project": "payments-ledger"}}],
+    "order": ["needs", "running", "favorites", "p:runbook", "p:failing", "p:ledger", "continue", "categories", "recent"]})
 
 # 4. Hosted repositories by owner.
 for owner, rs in {"payments": ["ledger", "checkout", "refunds", "invoicing"], "storefront": ["web-shop", "cart", "search", "catalog", "promo-engine"], "platform": ["api-gateway", "auth", "sdk-go", "sdk-js", "cli"],

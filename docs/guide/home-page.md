@@ -22,11 +22,21 @@ Cards for the Sorties in progress: the pipeline, the branch or pull request, the
 
 ## By category
 
-Your projects grouped by Squadron, each as a small card with the latest result on its default branch, what runs, and how many entries need you. A Squadron with something to look at opens by itself; the others stay closed until you open them. **Show all in the explorer** goes to the [explorer](organizing.md). Favorites come first.
+Your projects grouped by Squadron, each as a small card with the latest result on its default branch, what runs, and how many entries need you. Only a Squadron with something that needs a look opens by itself; the others show one line of health (how many need a look, how many run) until you open them, and each shows its six most urgent projects with a link to all of them. **Show all in the explorer** goes to the [explorer](organizing.md). Favorites come first.
 
 ## Recently finished
 
 A small strip of what finished lately, passed and failed alike, quiet on purpose.
+
+## Pick up where you left off
+
+A panel of what you started or opened lately: a Sortie you started, with what changed since you were there ("Sortie #9 has finished: it failed."), a pipeline or pull request you were in, with the exact view you had (the address keeps the tab, the filter, the step). Below it, **Recent history** is searchable and grouped by day.
+
+The trail is yours alone. It is kept on the server so it follows you across devices, but no one else can read it, administrators included, and it holds only what you could open: an entry for a project you can no longer see is hidden. It keeps 90 days (an administrator may set `retention_days` in the shared layout page `activity-settings`), **Pause history** stops it being written, **Clear my history** deletes it, and `launchway recent` and the MCP tool `recent` show it to you, and only to you.
+
+## Panels
+
+Home is a grid of panels in three columns. Besides the sections above you can add a **saved view** (a link to a filtered list, also made with **Pin to Home** on any explorer), a **project** status, and **notes and links** written in Markdown (only safe formatting is shown: links open in a new tab, and no raw HTML). **Arrange** adds, removes, resizes, hides and reorders panels, by drag or with the Up and Down buttons. **Arrange for me** changes only your Home; someone who may arrange at the Base also sees **Arrange for everyone**, which sets the default for everyone who has not arranged their own. A panel that a newer version made and this one does not know is shown as unavailable, never as an error.
 
 ## My work or everything
 

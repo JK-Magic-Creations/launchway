@@ -43,6 +43,8 @@ export interface ExplorerProps {
   now: number;
   /** Whether items have run results (pipelines do, repositories do not): without them the status filter, the result columns and the status icon are left out. */
   results?: boolean;
+  /** Whether each item shows a strip of recent results (a pipeline does; a single Sortie has none). */
+  strip?: boolean;
   /** Extra controls in the toolbar. */
   toolbar?: ReactNode;
   /** Shown above the tree: an explanation of what the folders are. */
@@ -261,7 +263,7 @@ export function Explorer(p: ExplorerProps) {
               {filtering && <button type="button" className="btn btn-sm" onClick={() => setUrl({ q: null, result: null, label: null, kind: null, fav: null, mine: null }, "push")}>Clear filters</button>}
             </div>
           ) : (
-            <Results results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging} meMode={meMode} inCollection={selected.startsWith("mine/c:")} onRemove={uncollect} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
+            <Results strip={p.strip !== false} results={hasResults} list={list} view={view} group={group} q={q} now={p.now} arranging={arranging} meMode={meMode} inCollection={selected.startsWith("mine/c:")} onRemove={uncollect} onMove={(it) => setMoving(it)} onFavorite={p.onFavorite} />
           )}
         </div>
       </div>
@@ -371,8 +373,8 @@ export function Hl({ text, q }: { text: string; q: string }) {
 
 interface Row { kind: "head" | "items"; title?: string; count?: number; items?: XItem[] }
 
-function Results({ results, list, view, group, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: {
-  meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; list: XItem[]; view: "cards" | "table"; group: (typeof GROUPS)[number]; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void;
+function Results({ strip, results, list, view, group, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: {
+  strip: boolean; meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; list: XItem[]; view: "cards" | "table"; group: (typeof GROUPS)[number]; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [geom, setGeom] = useState({ w: 0, h: 0, top: 0 });
@@ -419,7 +421,7 @@ function Results({ results, list, view, group, q, now, arranging, meMode, inColl
             <li key={"h" + first + i} className="xp-group" style={{ height: virtual ? rowH : undefined }}><h2>{r.title} <span className="faint">({r.count})</span></h2></li>
           ) : (
             <li key={"r" + first + i} className="xp-row" style={{ height: virtual ? rowH : undefined, gridTemplateColumns: view === "cards" ? `repeat(${cols}, 1fr)` : undefined }}>
-              {r.items!.map((it) => view === "cards" ? <Card key={it.id} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} />)}
+              {r.items!.map((it) => view === "cards" ? <Card key={it.id} strip={strip} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} /> : <TableRow key={it.id} strip={strip} results={results} it={it} q={q} now={now} arranging={arranging} meMode={meMode} inCollection={inCollection} onRemove={onRemove} onMove={onMove} onFavorite={onFavorite} />)}
             </li>
           ))}
         </ul>
@@ -428,7 +430,7 @@ function Results({ results, list, view, group, q, now, arranging, meMode, inColl
   );
 }
 
-interface ItemProps { meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
+interface ItemProps { strip: boolean; meMode: boolean; inCollection: boolean; onRemove: (it: XItem) => void; results: boolean; it: XItem; q: string; now: number; arranging: boolean; onMove: (it: XItem) => void; onFavorite?: (it: XItem, on: boolean) => void }
 
 function Strip({ history, name }: { history: Tone[]; name: string }) {
   if (history.length === 0) return <span className="faint small">no results yet</span>;
@@ -439,7 +441,7 @@ function Strip({ history, name }: { history: Tone[]; name: string }) {
 
 function Place({ it }: { it: XItem }) { return <span className="faint small xp-place">{it.path.length ? it.path.map((p) => p.label).join(" / ") : "Top level"}</span>; }
 
-function Card({ results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
+function Card({ strip, results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
   return (
     <article className={"xp-card " + it.tone} draggable={arranging} onDragStart={(e) => e.dataTransfer.setData("text/plain", it.id)} aria-label={it.name}>
       <header>
@@ -450,7 +452,7 @@ function Card({ results, it, q, now, arranging, meMode, inCollection, onRemove, 
       <Place it={it} />
       {it.description && <p className="small xp-desc"><Hl text={it.description} q={q} /></p>}
       {results && <p className="small">{it.last ? <>{it.last.href ? <a href={it.last.href} onClick={onLink}>{it.last.text}</a> : it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <> · <b>{it.running} running</b></>}</p>}
-      <div className="xp-foot">{results && <Strip history={it.history} name={it.name} />}
+      <div className="xp-foot">{results && strip && <Strip history={it.history} name={it.name} />}
         {it.labels.length > 0 && <span className="xp-labels">{it.labels.slice(0, 3).map((l) => <span key={l} className="vchip"><Hl text={l} q={q} /></span>)}</span>}
         <span className="xp-grow" />
         {(it.actions ?? []).slice(0, 2).map((a) => <a key={a.label} className="btn btn-sm" href={a.href} onClick={onLink}>{a.label}</a>)}
@@ -461,7 +463,7 @@ function Card({ results, it, q, now, arranging, meMode, inCollection, onRemove, 
   );
 }
 
-function TableRow({ results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
+function TableRow({ strip, results, it, q, now, arranging, meMode, inCollection, onRemove, onMove, onFavorite }: ItemProps) {
   return (
     <div className={"xp-trow " + it.tone} role="group" aria-label={it.name} draggable={arranging} onDragStart={(e) => e.dataTransfer.setData("text/plain", it.id)}>
       <span className="xp-tname">{results && <Status state={TONE_STATE[it.tone]} label={TONE_WORD[it.tone][0].toUpperCase() + TONE_WORD[it.tone].slice(1)} />}
@@ -469,7 +471,7 @@ function TableRow({ results, it, q, now, arranging, meMode, inCollection, onRemo
         {onFavorite && <button type="button" className="xp-star" aria-pressed={it.favorite} aria-label={`${it.favorite ? "Remove" : "Add"} ${it.name} ${it.favorite ? "from" : "to"} favorites`} onClick={() => onFavorite(it, !it.favorite)}>{it.favorite ? "★" : "☆"}</button>}</span>
       <Place it={it} />
       {results ? <span className="small">{it.last ? <>{it.last.text} <span className="faint">{ago(it.last.at, now)}</span></> : <span className="faint">Not run yet</span>}{it.running > 0 && <b> · {it.running} running</b>}</span> : <span className="small faint">{it.description}</span>}
-      {results ? <Strip history={it.history} name={it.name} /> : <span />}
+      {results && strip ? <Strip history={it.history} name={it.name} /> : <span />}
       <span className="xp-acts">{(it.actions ?? []).slice(0, 1).map((a) => <a key={a.label} className="btn btn-sm" href={a.href} onClick={onLink}>{a.label}</a>)}
         {arranging && <button type="button" className="btn btn-sm" onClick={() => onMove(it)} aria-label={meMode ? `Add ${it.name} to a collection` : `Move ${it.name} to…`}>{meMode ? "Add to collection…" : "Move to…"}</button>}
         {meMode && inCollection && <button type="button" className="btn btn-sm" onClick={() => onRemove(it)} aria-label={`Remove ${it.name} from this collection`}>Remove</button>}</span>

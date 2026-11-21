@@ -13,9 +13,13 @@ A pipeline or repository can sit in one folder. There are two ways to make folde
 
 **Labels** are free tags for groups that cut across folders, such as a team, a tier or a language. Anyone who may operate a project can label it; the label filter and the group-by choice use them.
 
+## My collections
+
+**Arrange for me** (on every explorer) makes your own groups, called collections. An item you add shows in the collection and still lives where it was for everyone else: nothing moves for anyone. Drag an item onto a collection, or use **Add to collection…**. Collections follow you across devices.
+
 ## Cards or table, search and filters
 
-Show the items as **Cards** (name, where it lives, last result with its age, a strip of recent results with a text alternative, what runs now, and the actions that exist) or as a compact **Table**. Search matches the name, description, labels and the place, forgives a typo, and marks what matched. Press **f** to jump to the filter box. You can filter by status, label, kind, favorites and "mine", sort, group by folder, label or status, and expand or collapse the whole tree.
+Show the items as **Cards** (name, where it lives, last result with its age, a strip of recent results with a text alternative, what runs now, and the actions that exist) or as a compact **Table**. Search matches the name, description, labels and the place, forgives a typo, and marks what matched. Press **f** to jump to the filter box (**/** is always the finder; **?** lists every shortcut). You can filter by status, label, kind, favorites and "mine", sort, group by folder, label or status, and expand or collapse the whole tree.
 
 Everything you choose is in the address, for example `/pipelines?q=ledger&result=bad&view=table`, so a link or a bookmark opens the same view and Back goes to the one before. **Copy link to this view** copies it.
 
@@ -23,7 +27,7 @@ Star an item to make it a favorite. Favorites are yours: they show first on Home
 
 ## Finding anything
 
-Press **/** (or choose the search field in the top bar) to open the finder. Before you type it offers your favorites. As you type it searches the pages and actions, and, on the server, the projects, repositories, folders and Sorties you may see: a Sortie is found by its number (`#412`), the start of its commit, or its branch. Results are ranked (exact name, then start of a name, then a word in it, then anywhere in it, then a near miss) and grouped by kind. The server only searches what you are allowed to read.
+Press **/** (or choose the search field in the top bar) to open the finder. Before you type it offers your favorites and what you opened lately. As you type it searches the pages and actions, the documentation (from the copy in the program, so it works offline) and, on the server, the projects, repositories, folders, open pull requests and Sorties you may see, and, if you may manage access, the people: a Sortie is found by its number (`#412`), the start of its commit, or its branch, a pull request by its number or title. Results are ranked (exact name, then start of a name, then a word in it, then anywhere in it, then a near miss) and grouped by kind. The server only searches what you are allowed to read.
 
 ## Layouts: a default for everyone, and your own
 
@@ -38,6 +42,10 @@ launchway organize import organization.json
 ```
 
 An import adds and updates what the document names and never deletes anything it leaves out.
+
+## Pinning a view to Home
+
+**Pin to Home** on any explorer makes a panel on your own Home that links back to the view exactly as you filtered it. See [the home page](home-page.md) for panels.
 
 ## From a script or an agent
 

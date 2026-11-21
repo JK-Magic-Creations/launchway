@@ -186,8 +186,8 @@ function Categories({ cats, openCats, onToggle, now }: { cats: HomeCategory[]; o
     <div>
       <div className="sh-h hm-cat-h"><h2 id="hm-categories">By category</h2><a href="/pipelines" onClick={onLink} className="btn btn-sm">Show all in the explorer</a></div>
       {cats.map((c) => {
-        // Only a category with something that needs a look opens by itself; the others show one line of health; a person's own choice wins.
-        const isOpen = openCats[c.id] ?? c.needs > 0;
+        // Only the two Squadrons with the most that needs a look open by themselves; the others show one line of health; a person's own choice wins.
+        const isOpen = openCats[c.id] ?? (c.needs > 0 && cats.filter((x) => x.needs > 0).indexOf(c) < 2);
         const shut = !isOpen;
         const sorted = [...c.projects].sort((a, b) => b.needs - a.needs || Number(b.last === "failed") - Number(a.last === "failed") || b.running - a.running || a.name.localeCompare(b.name));
         const label = c.kind === "unit" ? `${terms().label("unit")} ${c.label}` : c.label;

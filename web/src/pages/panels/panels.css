@@ -13,7 +13,7 @@
 .pn-err { color: var(--bad-ink); }
 .pn-skel { height: 72px; border-radius: var(--r1); background: linear-gradient(90deg, var(--sheet-2), var(--sheet-3), var(--sheet-2)); background-size: 200% 100%; animation: hm-sh 1.4s linear infinite; }
 .pn-ctl { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
-.ar-modes { display: flex; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+.ar-modes { display: flex; gap: 12px; margin: 8px 0; flex-wrap: wrap; border: 0; padding: 0; min-width: 0; }
 .ar-list { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .ar-list li { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 6px; border: 1px solid transparent; border-radius: var(--r1); }
 .ar-list li[draggable="true"] { cursor: grab; }
