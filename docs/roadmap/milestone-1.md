@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 32 in progress · 56 planned · 111 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 34 in progress · 54 planned · 111 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -49,7 +49,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Host your code](#g-host-your-code) | 20 | 4 | 4 | 12 |
-| [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 1 | 6 |
+| [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 3 | 4 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
 | [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
@@ -283,7 +283,7 @@ Open, review, discuss and merge changes inside Launchway, with branch rules that
 
 <p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back. Marking files as viewed is not built.
+Comment on lines and ranges, suggest a change the author can apply in one click, and resolve threads. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision. Review requests can be added and taken back, to people and to groups. Built on the review-depth branch, not on main yet: several suggestions applied as one commit, files marked viewed (remembered for you and lapsing when the file changes), keyboard shortcuts, a work-in-progress title that blocks a merge, and the pull requests that wait on you in Needs you and in the notification channels. Not built: a pending review kept as a draft between visits, comments on a whole file, a diff that hides whitespace, and a file tree.
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -301,9 +301,9 @@ Required approvals, stale-approval dismissal, blocked merges, linear history, pr
 
 #### Code owners {#code-owners}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Name who must review changes to which paths, using people or groups. Owners can be the group that owns the deployment Airfield, so the people who run a service review the changes to it.
+Name who must review changes to which paths, using people or groups. Built on the review-depth branch, not on main yet: a .launchway/owners file on the target branch maps path patterns to people and groups, is checked line by line with plain messages, shows who owns each changed file, asks the owners to review automatically (all of them, by turns, or whoever has the fewest open requests), and a branch rule can require an owner of every changed file to approve. Not built: owners that are a Squadron or the group that owns an environment, and the owners file checked when it is pushed.
 
 **Depends on:** Review with inline comments and suggestions.
 
@@ -321,9 +321,9 @@ Merge commit, squash and rebase, chosen per repository, and merge automatically 
 
 #### Merge queue {#merge-queue}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Queue approved changes and test the real merged result with the real pipeline before it lands. The Holding pattern is visible on each change, so people see where they stand and why a change was held back.
+Queue approved changes and test the real merged result with the real pipeline before it lands. Built on the review-depth branch, not on main yet: a branch rule can send merges through a serial queue. The entry at the front has its branch brought up to date with the target, is tested by the branch's own required checks on that head, and merges in order; one that fails, conflicts or changes is taken out with the reason and the person is told. The queue shows on each change. Not built: testing several entries on top of each other and splitting the batch when one fails.
 
 **Depends on:** Merge styles and auto-merge.
 
