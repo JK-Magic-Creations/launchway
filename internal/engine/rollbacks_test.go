@@ -230,6 +230,9 @@ func TestRollbackRunCannotBeResumedOrRerun(t *testing.T) {
 	if resume.Available || rerun.Available || resume.Reason == "" || !strings.Contains(resume.Reason, "Ask for the rollback again") {
 		t.Fatalf("%+v %+v", resume, rerun)
 	}
+	if d, _ := e.GetRun(sum.ID); d.Resume == nil || d.Resume.Allowed || d.Resume.Reason != resume.Reason {
+		t.Fatalf("the run's resume advice must say the same: %+v", d.Resume)
+	}
 	if err := e.Resume(sum.ID, "ann"); err == nil || err.Error() != "conflict: "+resume.Reason {
 		t.Fatalf("resume: %v", err)
 	}

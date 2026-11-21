@@ -67,7 +67,7 @@ describe("the rollback control follows what the server reports", () => {
     render(<RollbackControl action={a} unit={unit} />);
     expect(screen.getByRole("button", { name: "Roll back" })).toBeDisabled();
     expect(screen.getByText(/no deploy runner is serving target homelab/)).toBeInTheDocument();
-    expect(screen.getByText(/start or repair the deploy runner/)).toBeInTheDocument();
+    expect(screen.getByText(/[Ss]tart or repair the deploy runner/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Roll back to/ })).not.toBeInTheDocument();
   });
 

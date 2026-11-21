@@ -11,7 +11,7 @@
 .rb-targets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .rb-targets label { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: var(--r1); cursor: pointer; font-weight: 400; }
 .rb-targets label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-.rb-targets input { margin-top: 3px; }
+.modal .rb-targets input[type="radio"] { width: 16px; height: 16px; min-width: 16px; margin: 3px 0 0; padding: 0; flex: none; box-shadow: none; }
 .rb-targets .v { font-weight: 600; }
 .rb-targets .m { color: var(--ink-3); font-size: 12.5px; }
 .rb-then { margin: 0; padding: 10px 12px; border-radius: var(--r1); background: var(--sheet-2); font-size: 13.5px; }

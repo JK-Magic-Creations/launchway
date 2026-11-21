@@ -309,6 +309,10 @@ func (st *RunState) resumeAdvice() *ResumeAdvice {
 		return nil
 	}
 	a := &ResumeAdvice{Allowed: true, FirstFailed: st.firstFailedStep()}
+	if st.isRollbackRun() {
+		a.Allowed, a.Reason = false, st.rollbackRunRefusal()
+		return a
+	}
 	if id := st.openedDeployment(); id != "" {
 		a.Allowed, a.RerunFrom = false, st.rerunTarget(id)
 		a.Reason = fmt.Sprintf("%s made a deployment in this run, and a half-done deployment is never continued", id)

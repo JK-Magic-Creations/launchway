@@ -14,6 +14,9 @@ import "../rollback.css";
 
 const RB_NOTE = "A rollback restores the version only. It never restores a database or configuration.";
 
+/** A sentence from the server, ended with a full stop if it has none. */
+const stop = (s?: string) => (s ? s[0].toUpperCase() + s.slice(1) + (/[.!?)]$/.test(s) ? "" : ".") : "");
+
 interface Unit { project: string; service: string; environment: string }
 
 /** RollbackControl offers "Roll back to <version>" (and "Roll back to…" for an older one) where the server says it
@@ -42,7 +45,7 @@ export function RollbackControl({ action, unit, compact }: { action?: ServerActi
     const holder = /run #(\d+)/.exec(action.reason ?? "")?.[1];
     return (
       <div className="rb-control">
-        <p className="rb-why"><b>Cannot start yet.</b> {action.reason}</p>
+        <p className="rb-why"><b>Cannot start yet.</b> {stop(action.reason)}</p>
         <div className="row">
           <Button kind="bad" icon="rollback" {...sm} onClick={() => setOpen({ pick: false, queue: true })}>Queue the rollback{holder ? ` behind run #${holder}` : ""}</Button>
           {action.instead && <span className="faint small">or cancel that run first</span>}
@@ -54,7 +57,7 @@ export function RollbackControl({ action, unit, compact }: { action?: ServerActi
   return (
     <div className="rb-control">
       <Button {...sm} disabled title={action.reason}>Roll back</Button>
-      <p className="rb-why">Cannot roll back {where}: {action.reason}{action.would_help ? <> <span className="faint">To change that: {action.would_help}.</span></> : null}</p>
+      <p className="rb-why">Cannot roll back {where}: {stop(action.reason).replace(/^./, (c) => c.toLowerCase())}{action.would_help ? <> <span className="faint">To change that: {stop(action.would_help)}</span></> : null}</p>
     </div>
   );
 }
