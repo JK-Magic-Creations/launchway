@@ -1,9 +1,9 @@
 #!/bin/sh
-# Regenerates the screenshot tour in docs/images/tour/ and the README's
-# picture, docs/images/readme-hero.png, from a real running server with demo
-# data (see docs/demo.md).
+# Regenerates the screenshot tour in docs/images/tour/ and the pictures of the
+# README and the documentation's landing page (docs/public/images/landing/)
+# from a real running server with demo data (see docs/demo.md).
 #
-#   scripts/docs-screenshots.sh [--no-build] [--keep]
+#   scripts/docs-screenshots.sh [--no-build] [--keep] [--dark]
 #
 # It builds Launchway (make all), makes demo repositories and a demo
 # configuration in a temporary directory (scripts/docs/seed-demo.sh), starts
@@ -24,11 +24,13 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 port=${LAUNCHWAY_DOCS_PORT:-18160}
 build=1
 keep=0
+dark=0
 for a in "$@"; do
   case $a in
     --no-build) build=0 ;;
     --keep) keep=1 ;;
-    *) echo "usage: $0 [--no-build] [--keep]" >&2; exit 2 ;;
+    --dark) dark=1 ;;
+    *) echo "usage: $0 [--no-build] [--keep] [--dark]" >&2; exit 2 ;;
   esac
 done
 
@@ -101,13 +103,22 @@ npm install --prefix "$work/pw" --no-audit --no-fund --prefer-offline --loglevel
 echo "==> Taking the screenshots"
 out=$work/shots
 mkdir -p "$out"
-LAUNCHWAY_DOCS_URL=$url LAUNCHWAY_DOCS_OUT=$out LAUNCHWAY_DOCS_CHROME=$chrome LAUNCHWAY_DOCS_PW=$work/pw \
+LAUNCHWAY_DOCS_SCRUB=$work/demo LAUNCHWAY_DOCS_DARK=$dark LAUNCHWAY_DOCS_URL=$url LAUNCHWAY_DOCS_OUT=$out LAUNCHWAY_DOCS_CHROME=$chrome LAUNCHWAY_DOCS_PW=$work/pw \
   LAUNCHWAY_DOCS_RUNS=$work/demo/runs.env node "$root/scripts/docs/screenshots.mjs"
 
 echo "==> Making them smaller"
 mkdir -p "$root/docs/images/tour"
 python3 "$root/scripts/docs/shrink.py" "$out" "$root/docs/images/tour"
-mv "$root/docs/images/tour/readme-hero-light.png" "$root/docs/images/readme-hero.png"
+# The landing page and the README show a few of them from a folder the site serves as it is.
+land=$root/docs/public/images/landing
+mkdir -p "$land"
+rm -f "$land"/*.png
+mv "$root/docs/images/tour/readme-hero-light.png" "$land/run.png"
+cp "$root/docs/images/tour/run-tests-light.png" "$land/tests.png"
+cp "$root/docs/images/tour/run-security-light.png" "$land/security.png"
+cp "$root/docs/images/tour/approvals-light.png" "$land/approvals.png"
+cp "$root/docs/images/tour/pull-request-light.png" "$land/pull-request.png"
+cp "$root/docs/images/tour/home-light.png" "$land/home.png"
 if command -v ffmpeg >/dev/null 2>&1 && [ -d "$out/frames" ]; then
   mkdir -p "$root/docs/public/images/tour"
   echo "==> Making the animated tour"
@@ -115,5 +126,5 @@ if command -v ffmpeg >/dev/null 2>&1 && [ -d "$out/frames" ]; then
     -vf "scale=1080:-2" -c:v libvpx-vp9 -b:v 0 -crf 40 -pix_fmt yuv420p -an \
     "$root/docs/public/images/tour/start-a-run.webm"
 fi
-ls -l "$root/docs/images/tour" "$root/docs/images/readme-hero.png"
+ls -l "$root/docs/images/tour" "$land"
 echo "Done."

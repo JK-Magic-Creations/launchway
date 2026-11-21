@@ -1,7 +1,7 @@
 """Makes screenshots smaller: shrink.py SRC DST.
 
 Every SRC/*.png is written to DST with at most 256 colours, which keeps a
-screenshot of the UI sharp, at well under 250 KB. pngquant or oxipng are used
+screenshot of the UI sharp, at under 400 KB. pngquant or oxipng are used
 when installed; otherwise Pillow does it. DST's old PNG and WebM files are
 removed first, so a shot that is no longer taken does not linger.
 """
@@ -13,7 +13,7 @@ import sys
 
 from PIL import Image
 
-LIMIT = 250 * 1024
+LIMIT = 400 * 1024
 
 
 def shrink(src, dst):
@@ -42,7 +42,7 @@ def main():
         shrink(f, out)
         size = os.path.getsize(out)
         total += size
-        flag = "  (over 250 KB)" if size > LIMIT else ""
+        flag = "  (over 400 KB)" if size > LIMIT else ""
         print(f"{os.path.basename(f):40} {os.path.getsize(f) // 1024:5} KB -> {size // 1024:4} KB{flag}")
     print(f"{'total':40} {'':8}    {total // 1024:4} KB")
 

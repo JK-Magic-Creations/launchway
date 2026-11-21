@@ -11,6 +11,10 @@
 # demo-app's service), with plain shell; nothing is fetched from the network
 # but the images.
 set -eu
+# Nothing here may ask for a password or reach for an agent.
+GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false
+export GIT_TERMINAL_PROMPT GIT_ASKPASS
+unset SSH_ASKPASS
 here=$(cd "$(dirname "$0")/../.." && pwd)
 
 commit() {
@@ -299,7 +303,9 @@ config() {
 # file. No sign-in: listen on a loopback address only.
 listen: 127.0.0.1:8080
 data: data
-user: sam.rivera
+user: ana
+egress: { allow_local: true }
+forge: { hosting: true }
 
 projects:
   - name: demo-app
@@ -393,6 +399,71 @@ wait_head() {
   done
 }
 
+# ---------------------------------------------------------------- hosted repository
+
+# forge URL DIR: a repository hosted by the server itself, acme-flight/flight-api,
+# with a pipeline, a pull request with a review comment and checks, and a merge rule.
+forge() {
+  URL=$1
+  dir=$(cd "$2" && pwd)
+  # The demo server and its repositories are on this machine: say so.
+  api PUT /api/v1/config/installation/installation '{"spec":{"drafts":{"allow":"operator"},"forge":{"hosting":true},"egress":{"allow":["127.0.0.1"]}}}' >/dev/null
+  api POST /api/v1/repositories '{"owner":"acme-flight","name":"flight-api","description":"Booking and schedules for Acme Flight","default_branch":"main"}' >/dev/null
+  remote=$URL/git/acme-flight/flight-api.git
+  d=$dir/flight-api
+  mkdir -p "$d/.launchway" "$d/src"
+  cat > "$d/.launchway/pipeline.yaml" <<'YAML'
+pipeline: flight-api
+on:
+  push: { branches: [main] }
+  pull_request: {}
+steps:
+  lint:
+    description: Check the code style
+    image: docker.io/library/alpine:3.22
+    run: |
+      sleep 1
+      echo "checked 14 files, no style problems"
+  test:
+    description: Run the unit tests
+    image: docker.io/library/alpine:3.22
+    run: |
+      sleep 2
+      echo "ok  flightapi/booking   0.412s"
+      echo "ok  flightapi/schedule  0.221s"
+  scan:
+    description: Scan the dependencies
+    image: docker.io/library/alpine:3.22
+    run: |
+      sleep 1
+      echo "no known vulnerabilities in 23 dependencies"
+  build:
+    description: Build the service
+    image: docker.io/library/alpine:3.22
+    needs: [lint, test, scan]
+    run: echo "built flight-api 1.4.0"
+YAML
+  printf '# Flight API\n\nBooking and schedules for Acme Flight.\n' > "$d/README.md"
+  printf 'package flightapi\n\n// Book reserves a seat on a flight.\nfunc Book(flight, traveler string) error { return nil }\n' > "$d/src/booking.go"
+  (cd "$d" && git init -q -b main . && git add -A && commit "Start the booking API" "Ana Torres" ana.torres@example.com && git push -q "$remote" main)
+  api PUT /api/v1/config/projects/flight-api "{\"spec\":{\"repo\":\"$remote\",\"branch\":\"main\",\"poll\":\"5s\"}}" >/dev/null
+  api PUT /api/v1/repositories/acme-flight/flight-api/protected-branches '{"patterns":["main"]}' >/dev/null
+  api PUT /api/v1/repositories/acme-flight/flight-api/merge-rules '{"rules":[{"pattern":"main","required_approvals":1,"approval_role":"operator","required_checks":["flight-api/test"],"require_up_to_date":true,"require_resolved_threads":true,"no_self_approval":true,"allow_admin_bypass":false}]}' >/dev/null
+  wait_head flight-api "$d"
+  printf 'package flightapi\n\n// SelectSeat holds a seat for ten minutes.\nfunc SelectSeat(flight, seat string) error { return nil }\n' > "$d/src/seats.go"
+  (cd "$d" && git checkout -q -b seat-selection && git add -A && commit "Let travelers pick a seat" "Priya Shah" priya.shah@example.com && git push -q "$remote" seat-selection)
+  r=/api/v1/repositories/acme-flight/flight-api
+  api POST $r/pulls '{"title":"Let travelers pick a seat","body":"Adds seat selection to booking. A seat is held for ten minutes.\n\n- the new `SelectSeat` call\n- tests follow in the next change","source_branch":"seat-selection","target_branch":"main"}' >/dev/null
+  api POST $r/pulls/1/comments '{"body":"Should a held seat expire if the traveler closes the page? Ten minutes feels long.","path":"src/seats.go","line":3}' >/dev/null
+  api POST $r/pulls/1/reviews '{"verdict":"comment","body":"Looks good overall. One question inline."}' >/dev/null
+  i=0
+  until [ "$(api GET /api/v1/runs | json 'sum(1 for r in d if r["project"] == "flight-api" and r["status"] not in ("succeeded", "failed", "canceled"))')" = 0 ] &&
+        [ "$(api GET $r/pulls/1 | json 'sum(1 for c in d["readiness"]["checks"] if c["status"] in ("pending", "running"))')" = 0 ]; do
+    i=$((i + 1)); [ $i -gt 240 ] && { echo "the pull request's checks never finished" >&2; return 1; }
+    sleep 0.5
+  done
+}
+
 runs() {
   URL=$1
   dir=$(cd "$2" && pwd)
@@ -461,6 +532,7 @@ runs() {
   for r in "$w3" "$d1" "$f1" "$a2" "$r1"; do wait_for "$r" succeeded failed waiting; done
   wait_for "$a3" waiting
   wait_for "$p2" waiting
+  forge "$URL" "$dir"
   cat > "$dir/runs.env" <<EOF
 WEB_OK=$w1
 WEB_FAILED=$w2

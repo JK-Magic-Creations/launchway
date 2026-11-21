@@ -83,8 +83,12 @@ are stale. The wording follows the originality rule: no other product is named f
 
 ## Screenshots
 
-`scripts/docs-screenshots.sh` builds Launchway, starts a server with demo data, and captures the
-screenshots in `docs/images/tour/`. Run it after UI changes.
+`scripts/docs-screenshots.sh` builds Launchway, starts a throwaway server with demo data (a run with
+parallel steps, a failed run, a run waiting for approval, a hosted repository with a pull request),
+and captures the screenshots in `docs/images/tour/` and the ones the README and the landing page
+show in `docs/public/images/landing/`. Run it after UI changes, set `TMPDIR` to a folder with room
+for a build, and look at every picture before you commit. Details are in
+[the demo](../demo.md#make-the-screenshots-again).
 
 ## Publishing
 

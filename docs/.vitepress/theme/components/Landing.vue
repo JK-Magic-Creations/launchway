@@ -48,7 +48,9 @@ const tiles: Tile[] = [
 ]
 
 const shots = [
-  { src: '/images/landing/run.png', alt: 'A run in the Launchway web UI: the steps drawn as a graph, with the log of the selected step below.', caption: 'A run: the graph of steps and the log of the selected one.' },
+  { src: '/images/landing/run.png', alt: 'A run in the Launchway web UI: install, then unit-tests and audit side by side, then e2e and bundle, drawn as a graph, with the log of the selected step below.', caption: 'A run: the graph of steps and the log of the selected one.' },
+  { src: '/images/landing/home.png', alt: 'Home: three things that need a person, a failed run and two runs waiting for a decision, then the changes on their way to users.', caption: 'Home: what needs you, and every change on its way.' },
+  { src: '/images/landing/pull-request.png', alt: 'A pull request: checks that passed, and a box saying it cannot merge yet because it needs one more approval and a conversation is not resolved.', caption: 'A pull request, with its checks and the rule that holds the merge.' },
   { src: '/images/landing/tests.png', alt: 'The Tests tab of a run: totals, a pass rate, failed tests first, and a flaky test marked.', caption: 'Test results, with failures first and flaky tests marked.' },
   { src: '/images/landing/security.png', alt: 'The Security tab of a run: findings by severity from several scanners, marked new or still there.', caption: 'Security findings from any SARIF scanner, new and fixed across runs.' },
   { src: '/images/landing/approvals.png', alt: 'The Approvals page listing runs waiting for a decision, with the question each one asks.', caption: 'Approvals waiting for a person.' },
