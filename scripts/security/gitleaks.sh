@@ -31,6 +31,17 @@ jq -r '.[].Fingerprint' quality/gitleaks-baseline.json | sort -u > "$out/base"
 jq -r '.[].Fingerprint' "$out/found.json" | sort -u > "$out/now"
 new="$(comm -13 "$out/base" "$out/now" || true)"
 stale="$(comm -23 "$out/base" "$out/now" || true)"
+# A clone that holds only some branches (the hosted checkout has main alone) cannot judge an entry
+# whose commit it does not have; such an entry is judged where that commit exists.
+if [ -n "$stale" ]; then
+  keep=""
+  for fp in $stale; do
+    c="${fp%%:*}"
+    if git cat-file -e "$c^{commit}" 2>/dev/null; then keep="$keep$fp
+"; fi
+  done
+  stale="$(printf '%s' "$keep" | sed '/^$/d')"
+fi
 n="$(jq length "$out/found.json")"
 echo "gitleaks: $n findings, $(wc -l < "$out/base") in the baseline"
 if [ -n "$new" ]; then

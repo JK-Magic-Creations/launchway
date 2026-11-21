@@ -2,6 +2,7 @@ package mirror_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -201,11 +202,20 @@ func equal(a, b map[string]string) bool {
 
 func (w *world) mustSync(id string) mirror.Mirror {
 	w.t.Helper()
-	m, err := w.h.Mirrors.SyncNow(context.Background(), id)
-	if err != nil {
-		w.t.Fatalf("sync: %v", err)
+	// A running scheduler may hold the mirror at this moment (that is the product's rule, a mirror
+	// runs once at a time): wait until it lets go, then run it here.
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		m, err := w.h.Mirrors.SyncNow(context.Background(), id)
+		if errors.Is(err, mirror.ErrBusy) && time.Now().Before(deadline) {
+			time.Sleep(20 * time.Millisecond)
+			continue
+		}
+		if err != nil {
+			w.t.Fatalf("sync: %v", err)
+		}
+		return m
 	}
-	return m
 }
 
 // gitServer serves bare repositories under root over HTTP with git's own
