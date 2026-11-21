@@ -23,6 +23,24 @@ authors. For operators and platform engineers, and for developers who write pipe
   beyond one machine. **Protect the database and its backups**: it holds runs, logs and the audit
   trail. Anyone who can write to it can change who has done what.
 
+### With the Helm chart
+
+The chart ships these on by default; check that you have not switched one off.
+
+- [ ] **Sign-in is required.** The chart's default is built-in accounts (`auth.mode: local`); the first
+  administrator is made with a one-time setup code in a Secret. Do not set `auth.allow_anonymous` in a
+  cluster others can reach.
+- [ ] **Network policies are on** (`networkPolicy.enabled`): default deny for servers, runners and step pods.
+  Step pods can reach only DNS, the Launchway server and the internet over HTTP and HTTPS, never the
+  database, the Kubernetes API or the cloud metadata service. Add your own egress with `extraEgress`;
+  add your cluster API's address to `networkPolicy.steps.exceptCIDRs` if it is public.
+- [ ] **Encryption at rest is on** and the **root key is kept**: it is not deleted by `helm uninstall`.
+  Copy it outside the cluster and the database backups.
+- [ ] **No secret material in the rendered chart.** The install hook Job makes secrets in the cluster; a
+  GitOps repository or a rendered manifest never holds one.
+- [ ] **Pods are restricted** (non-root, read-only root filesystem, no capabilities, seccomp) and have
+  ephemeral-storage limits.
+
 ### Runners
 
 - [ ] **Enrol runners with join tokens** instead of the shared runner token, give each pool only the

@@ -22,7 +22,8 @@ type chartCase struct {
 }
 
 var chartCases = []chartCase{
-	{"server with the bundled database", "launchway", nil, []string{"postgresql.enabled=true"}},
+	{"server with only the address set", "launchway", nil, []string{"externalURL=https://launchway.example.com"}},
+	{"server with an Ingress and a Gateway route", "launchway", nil, []string{"externalURL=https://launchway.example.com", "ingress.enabled=true", "httpRoute.enabled=true", "httpRoute.parentRefs[0].name=gw"}},
 	{"server, high availability example", "launchway", []string{"launchway/examples/ha.yaml"}, nil},
 	{"runner, remote with network policy", "launchway-runner", []string{"launchway-runner/examples/remote.yaml", "launchway-runner/examples/networkpolicy.yaml"}, nil},
 	{"runner, deploy runner example", "launchway-runner", []string{"launchway-runner/examples/deploy-runner.yaml"}, nil},

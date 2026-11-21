@@ -8,7 +8,7 @@ operators. For EKS and GKE specifics, see [Install on Amazon EKS](install-eks.md
 
 > **Verified** on 2026-11-19 against commit f717337: `make image` (Podman) from a clean clone; the
 > image loaded into a kind cluster (Kubernetes 1.37, kind 0.33 on rootless Podman, Helm 4.3);
-> `helm install` with three servers, two runners and the development database; step pods in a
+> `helm install` with three servers, two runners and the bundled database; step pods in a
 > namespace enforcing Pod Security `restricted`; the UI and API through `kubectl port-forward`; a
 > pipeline whose two steps ran in one pod and shared a file; a server pod deleted while a
 > 90-second step ran (the run finished, every step on attempt 1); `helm upgrade` to four servers
@@ -145,30 +145,19 @@ The repository is then at `http://git-server.launchway.svc:8080/demo.git`. Its `
 quick two-step pipeline, and its `slow` branch has a step that takes 90 seconds, which is handy for
 watching a failover. This is for testing only.
 
-## Try it with the development database
+## Install the chart
 
-Write a values file. This one uses the image loaded into kind and the chart's single development
-PostgreSQL:
+The only required value is the address people will open. Write a values file; this one uses the
+image loaded into kind and the chart's bundled PostgreSQL (the default):
 
 ```yaml
 # try.yaml
+externalURL: http://launchway.test   # the address you will open; with no Ingress yet, port-forward to it
+
 image:
   repository: localhost/launchway
   tag: dev
   pullPolicy: Never          # the image was loaded into the cluster, not pushed
-
-postgresql:
-  enabled: true              # a single development database: for trying only
-
-config:
-  extraConfig:
-    auth:
-      allow_anonymous: true  # no sign-in: only for a cluster nobody else can reach
-  projects:
-    - name: demo
-      repo: http://git-server.launchway.svc:8080/demo.git
-      branch: main
-      poll: 10s
 
 server:
   replicas: 3
@@ -179,12 +168,9 @@ runner:
     namespace: launchway-steps
 ```
 
-> [!IMPORTANT]
-> A server without sign-in refuses to listen on anything but a loopback address, and in a pod it
-> listens on `0.0.0.0:8080`. So without either `auth.mode: oidc` or `auth.allow_anonymous: true`
-> the server pods fail to start, with `refusing to listen on 0.0.0.0:8080 without sign-in` in their
-> logs. `allow_anonymous` gives everyone who can reach the Service full rights; use it only on a
-> throwaway cluster.
+Sign-in is required from the first moment: the chart's default is built-in accounts, and a one-time
+setup code makes the first administrator (below). Nothing else needs setting; projects, Git hosting
+and runners are set up in the browser.
 
 Install the chart:
 
@@ -204,9 +190,26 @@ launchway-server-67bff96d4d-9kjq2       1/1     Running   0          64s
 launchway-server-67bff96d4d-xkdbm       1/1     Running   0          64s
 ```
 
+Before the servers start, a hook Job (`launchway bootstrap-secrets`) makes the Secrets the installation
+needs, only if they do not exist: the root key, the runner token, the database password and the setup
+code. It never changes an existing one, so `helm upgrade`, `helm template` and a GitOps controller
+that renders the chart leave them alone. Read the setup code to create the first administrator:
+
+```sh
+kubectl -n launchway get secret launchway-launchway-setup-code -o jsonpath='{.data.code}' | base64 -d; echo
+```
+
+> [!IMPORTANT]
+> The chart applies default-deny NetworkPolicies. They take effect where your cluster's network
+> plugin enforces them. The servers may reach DNS and the database only; add your Git hosts and
+> identity provider to `networkPolicy.server.extraEgress`, and Git hosts the runners clone to
+> `networkPolicy.runner.extraEgress`. Step pods may reach the Launchway server and the internet
+> over HTTP and HTTPS, never the database, the Kubernetes API or the cloud metadata service.
+> See [network policies](../reference/helm-values.md#network-policies).
+
 The servers wait for the database while it starts (each try is logged), so they should not restart.
-Without any database setting the install is refused with an explanation, because each server would
-otherwise keep its own SQLite file.
+With the bundled database switched off (`postgresql.enabled=false`) and none of your own named, the
+install is refused with an explanation, because each server would otherwise keep its own SQLite file.
 
 ## Open the UI and check the runners
 
@@ -309,7 +312,7 @@ kubectl -n launchway create secret generic launchway-database \
   --from-literal=url='postgres://launchway:PASSWORD@db.internal:5432/launchway?sslmode=verify-full'
 ```
 
-Then, instead of `postgresql.enabled`, set:
+Then set (this also switches the bundled database off):
 
 ```yaml
 database:
@@ -317,7 +320,7 @@ database:
   existingSecretKey: url
 ```
 
-Exactly one of `database.existingSecret`, `database.url` and `postgresql.enabled` must be set. The
+Set only one of `database.existingSecret` and `database.url`. The
 database user needs to create tables in the database, because servers apply schema migrations when
 they start (see [Back up, restore and upgrade](backup-restore-upgrade.md#upgrades)). The
 `deploy/helm/launchway/examples/ha.yaml` file is a production-shaped starting point: three servers
@@ -375,9 +378,12 @@ Whichever you use, raise the proxy's read timeout and turn off response bufferin
 `/api/v1/stream`, and set `config.extraConfig.server.trust_proxy: true` so that Launchway takes the
 client's address and the scheme from the proxy. Do not expose Launchway before sign-in is on.
 
-## Turn on sign-in
+## Turn on sign-in with an identity provider
 
-Sign-in uses your OpenID Connect provider. The client secret reaches the servers as an environment
+The chart's default is built-in accounts (`auth.mode: local`), with the first administrator made
+from the one-time setup code. To use your OpenID Connect provider instead, or to connect it later
+from the first-run guide in the browser, set `mode: oidc`. When an Ingress or HTTPRoute is enabled the
+chart already sets `server.trust_proxy`. Sign-in uses your OpenID Connect provider. The client secret reaches the servers as an environment
 variable from a Secret; the rest goes in `config.extraConfig`:
 
 ```sh
@@ -407,7 +413,7 @@ server:
         secretKeyRef: { name: launchway-oidc, key: client-secret }
 ```
 
-Remove `auth.allow_anonymous` when you add this. `access` must have at least one binding, or the
+`access` must have at least one binding, or the
 servers refuse to start. A server starts even if the provider cannot be reached yet; sign-in answers
 `502` and logs why until it can. Roles and bindings are explained in
 [Sign-in with OpenID Connect and roles](oidc-and-roles.md).
@@ -509,7 +515,17 @@ helm uninstall launchway -n launchway --wait
 kubectl delete namespace launchway launchway-steps
 ```
 
-`helm uninstall` deletes the development database and its volume with it.
+`helm uninstall` deletes the bundled database's volume with it. It does **not** delete the Secrets the
+install hook Job made: the root key (`launchway-launchway-root-key`), the runner token, the database
+password and the setup code are not owned by Helm, on purpose, because the root key is the only way
+to read the installation's secrets again. Copy the root key somewhere safe, and delete these Secrets
+only when you mean to destroy the installation's data:
+
+```sh
+kubectl -n launchway get secret launchway-launchway-root-key -o jsonpath='{.data.root\.key}' | base64 -d > root.key
+kubectl -n launchway delete secret -l app.kubernetes.io/part-of=launchway,app.kubernetes.io/component=secrets
+kubectl -n launchway delete serviceaccount,role,rolebinding,networkpolicy -l app.kubernetes.io/component=bootstrap
+```
 
 ## What next
 

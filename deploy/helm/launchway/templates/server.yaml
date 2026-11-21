@@ -80,11 +80,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: ["server", "--config", "/etc/launchway/launchway.yaml"]
           env:
-            - name: LAUNCHWAY_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "launchway.databaseSecretName" . }}
-                  key: {{ include "launchway.databaseSecretKey" . }}
+            {{- include "launchway.databaseEnv" . | nindent 12 }}
             - name: LAUNCHWAY_RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -107,6 +103,15 @@ spec:
                 secretKeyRef:
                   name: {{ include "launchway.deployPoolSecretName" . }}
                   key: {{ include "launchway.deployPoolSecretKey" . }}
+            {{- end }}
+            {{- with include "launchway.encryptionEnv" . | trim }}
+            {{- . | nindent 12 }}
+            {{- end }}
+            - name: LAUNCHWAY_EXTERNAL_URL
+              value: {{ .Values.externalURL | quote }}
+            {{- if eq (include "launchway.authMode" .) "local" }}
+            - name: LAUNCHWAY_SETUP_CODE_FILE
+              value: /etc/launchway-setup/code
             {{- end }}
             {{- with .Values.server.extraEnv }}
             {{- toYaml . | nindent 12 }}
@@ -150,6 +155,16 @@ spec:
               mountPath: /var/lib/launchway
             - name: tmp
               mountPath: /tmp
+            {{- if eq (include "launchway.authMode" .) "local" }}
+            - name: setup-code
+              mountPath: /etc/launchway-setup
+              readOnly: true
+            {{- end }}
+            {{- if include "launchway.encryptionSources" . | trim }}
+            - name: root-key
+              mountPath: /etc/launchway-keys
+              readOnly: true
+            {{- end }}
             {{- with .Values.server.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -165,6 +180,22 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 256Mi
+        {{- if eq (include "launchway.authMode" .) "local" }}
+        # The one-time code for the first administrator (made by the install hook Job). optional: the
+        # server reads the file only while no administrator exists, and starts without it.
+        - name: setup-code
+          secret:
+            secretName: {{ include "launchway.setupCodeSecretName" . }}
+            optional: true
+            defaultMode: 0440
+        {{- end }}
+        {{- with include "launchway.encryptionSources" . | trim }}
+        - name: root-key
+          projected:
+            defaultMode: 0440
+            sources:
+              {{- . | nindent 14 }}
+        {{- end }}
         {{- with .Values.server.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

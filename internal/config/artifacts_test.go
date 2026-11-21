@@ -65,7 +65,7 @@ findings: {max_upload_mib: 8, max_per_run: 100, max_per_project: 1000, max_compo
 // the server's file loads and says what was set, and the S3 credentials
 // come from a Secret, never the ConfigMap.
 func TestChartArtifactSettings(t *testing.T) {
-	def := renderChart(t, "postgresql: { enabled: true }\n")
+	def := renderChart(t, "database: { url: \"postgres://u@db/launchway\" }\n")
 	for _, key := range []string{"artifacts:", "findings:", "max_sbom_mib", "store:"} {
 		if strings.Contains(def["server"], key) {
 			t.Errorf("the default server configuration has %s:\n%s", key, def["server"])

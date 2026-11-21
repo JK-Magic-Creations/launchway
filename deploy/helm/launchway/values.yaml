@@ -1,8 +1,107 @@
-# Default values for the Launchway chart. See deploy/README.md for a walk-through and
-# examples/ha.yaml for a production-shaped example.
+# =============================================================================================
+# WHAT MOST PEOPLE SET. A working, secure installation needs ONE value:
 #
-# One of these is required, or the install fails:
-#   database.url, database.existingSecret, or postgresql.enabled=true (for trying the chart only).
+#   helm install launchway ./launchway -n launchway --create-namespace \
+#     --set externalURL=https://launchway.example.com
+#
+# Everything else has a safe default: sign-in required (built-in accounts, first administrator
+# made with a one-time setup code), encryption at rest on, a bundled PostgreSQL on an 8Gi
+# volume, default-deny NetworkPolicies, restricted pods. The chart makes the root key, the
+# runner token, the database password and the setup code ITSELF, once, and keeps them across
+# upgrades, `helm template` and GitOps syncs (a pre-install/pre-upgrade hook Job; see
+# docs/reference/helm-values.md). Nothing here needs Vault, an operator or an identity provider.
+#
+# externalURL (REQUIRED): the address people will open, scheme and host, no path.
+#   Unset, the install fails with a message that says so. It is not set below on purpose.
+#   externalURL: https://launchway.example.com
+#
+# Then, only if you need them (each is a block just below):
+#   database          your own PostgreSQL instead of the bundled one: database.url or existingSecret
+#   postgresql        the bundled database's volume size (8Gi) and storage class
+#   ingress / httpRoute   publish the address through an Ingress or a Gateway API route. Either
+#                     one also tells the servers they sit behind a proxy (trust_proxy).
+#   server.replicas   2 by default (high availability); 1 for a trial
+# =============================================================================================
+
+# ---------------------------------------------------------------------------------------------
+# The shared PostgreSQL database. Every server must use the same one. Choose ONE:
+#   - nothing (default): the chart runs a PostgreSQL of its own, postgresql.* below;
+#   - database.url or database.existingSecret: your own (managed or operator-run). The bundled
+#     database is then not created.
+# ---------------------------------------------------------------------------------------------
+database:
+  # -- A postgres:// URL. The chart stores it in a Secret of its own. Prefer existingSecret,
+  # so that the password is not in your values. Setting it switches the bundled database off.
+  url: ""
+  # -- The name of an existing Secret, in the release namespace, holding the URL. Setting it
+  # switches the bundled database off.
+  existingSecret: ""
+  # -- The key in existingSecret that holds the URL.
+  existingSecretKey: url
+
+# ---------------------------------------------------------------------------------------------
+# The bundled PostgreSQL: one pod on one volume, for a single installation that is backed up at
+# the volume (snapshots) or a trial. It is NOT highly available. For production at scale use a
+# managed or operator-run PostgreSQL and set database.* instead; the bundled one is then off.
+# Its password is made once by the install hook Job and kept; you never set it.
+# ---------------------------------------------------------------------------------------------
+postgresql:
+  # -- Run the bundled database. Ignored (off) when database.url or database.existingSecret is
+  # set. Set false only together with one of them.
+  enabled: true
+  image:
+    repository: docker.io/library/postgres
+    tag: 17.12-alpine
+    pullPolicy: IfNotPresent
+  database: launchway
+  username: launchway
+  # -- Rarely needed: a password of your choosing (letters, digits and . _ ~ - only). If empty
+  # (the default), the hook Job makes a random one once and keeps it across upgrades.
+  password: ""
+  persistence:
+    # -- The volume. With artifacts kept in the database (the default), the chart caps them well
+    # below this (half) and refuses a larger config.artifacts.database.maxTotalGiB.
+    size: 8Gi
+    # -- The StorageClass for the volume (default: the cluster's default).
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+      ephemeral-storage: 64Mi
+    limits:
+      memory: 512Mi
+      ephemeral-storage: 512Mi
+
+ingress:
+  # -- Publish externalURL through an Ingress. Sign-in is required, but keep Launchway off an
+  # untrusted network until you have read docs/security/hardening.md.
+  enabled: false
+  className: ""
+  annotations: {}
+  # -- Each host routes every path to the servers. Empty: the host of externalURL.
+  hosts: []
+  #  - launchway.example.com
+  tls: []
+  #  - secretName: launchway-tls
+  #    hosts: [launchway.example.com]
+
+httpRoute:
+  # -- Publish externalURL through a Gateway API HTTPRoute (gateway.networking.k8s.io/v1).
+  enabled: false
+  annotations: {}
+  # -- The Gateways to attach to.
+  parentRefs: []
+  #  - name: public
+  #    namespace: gateway-system
+  #    sectionName: https
+  # -- Empty: the host of externalURL.
+  hostnames: []
+
+
+# =============================================================================================
+# ADVANCED. Nothing below needs to be set for a working installation.
+# =============================================================================================
 
 # -- Overrides the chart name in resource names.
 nameOverride: ""
@@ -246,26 +345,92 @@ config:
   # starting (the pod logs say which key). listen, data, database, projects, tests, artifacts, reports,
   # findings, loops, schedules, policy, mcp, verification (delivery.verification) and ai (ai.*) are
   # set by the chart and may not appear here; runner.enabled may not be true.
-  extraConfig: {}
+  # The chart's default makes sign-in required, with built-in accounts: the first administrator
+  # is made with the one-time setup code in Secret <fullname>-setup-code (see NOTES). Set
+  # `auth: {mode: oidc, ...}` here to use an identity provider instead.
+  extraConfig:
+    auth:
+      mode: local
 
 # ---------------------------------------------------------------------------------------------
-# The shared PostgreSQL database. Every server must use the same one.
+# Encryption at rest: where the root key is held. Every secret the server stores (its signing and
+# sealing keys, the shared runner token, SSH host keys, webhook secrets) is sealed under a root
+# key that is NOT in the database, so a database dump or backup alone reveals none of them.
+# See docs/guide/encryption-at-rest.md. The chart passes these to the servers as environment
+# variables, so the configuration file does not change (a version before this one can still
+# read it).
+#
+# SECURE BY DEFAULT: the servers refuse to start without a root key. The default holder is a key
+# file in a Kubernetes Secret (<fullname>-root-key, key root.key) that the install hook Job makes
+# ONCE, only if it does not exist, and never changes: not on upgrade, not under helm template or
+# Argo CD (nothing in the rendered manifests is secret material, and two renders are identical). The
+# Secret is not owned by Helm, so helm uninstall and a GitOps prune KEEP it: losing it loses every
+# sealed secret. To use a key you made, set encryption.keyFile.existingSecret.
+# HONEST LIMIT: a Kubernetes Secret is only as protected as your cluster's own secret encryption
+# (etcd encryption at rest, who may read Secrets). It defeats a stolen database dump or backup,
+# not a cluster administrator. For more, use holder: transit (Vault or OpenBao).
+# KEEP A COPY of the key outside the cluster and outside the database's backups; without it a
+# restore cannot read any secret: kubectl -n NS get secret RELEASE-launchway-root-key -o jsonpath='{.data.root\.key}' | base64 -d
+#
+# Upgrading an installation that already holds secrets: the first server to start with the key
+# seals them in place. Servers of the previous release, still running during the rollout, cannot
+# read sealed values; for no sign-in failures during the rollout, upgrade first with
+# `encryption.holder: none`, then enable it, or scale to one server for the rollout.
 # ---------------------------------------------------------------------------------------------
-database:
-  # -- A postgres:// URL. The chart stores it in a Secret of its own. Prefer existingSecret,
-  # so that the password is not in your values.
-  url: ""
-  # -- The name of an existing Secret, in the release namespace, holding the URL.
-  existingSecret: ""
-  # -- The key in existingSecret that holds the URL.
-  existingSecretKey: url
+encryption:
+  # -- keyFile (default), env, passphrase, transit, or none. none runs NOT ENCRYPTED AT REST, with a
+  # warning at start, in `launchway doctor` and on the Settings page: only for a first upgrade step
+  # or a throwaway installation.
+  holder: keyFile
+  keyFile:
+    # -- Have the install hook Job make the key Secret, if it is absent, when existingSecret is
+    # empty. Set false only together with existingSecret.
+    generate: true
+    # -- The name of an existing Secret holding the key (32 random bytes, base64, as `launchway
+    # encryption init` writes). Prefer this in production: you made it, you hold the copy.
+    existingSecret: ""
+    # -- The key in the Secret that holds the key file's text.
+    existingSecretKey: root.key
+  env:
+    # -- holder: env. A Secret whose key holds the root key itself (base64). Visible to anyone who
+    # can read the pod's environment; prefer keyFile or transit.
+    existingSecret: ""
+    existingSecretKey: root.key
+  passphrase:
+    # -- holder: passphrase. A Secret holding the keystore file (made by `launchway encryption
+    # init --passphrase`) and one holding the passphrase. Not suitable for unattended restarts of
+    # several servers unless the passphrase Secret is mounted, as here.
+    keystoreSecret: ""
+    keystoreSecretKey: root.keystore
+    passphraseSecret: ""
+    passphraseSecretKey: passphrase
+  transit:
+    # -- holder: transit. Vault or OpenBao: the transit engine's key wraps the installation's keys
+    # and never leaves the service. The server needs only encrypt and decrypt on that key.
+    address: ""
+    mount: transit
+    key: launchway
+    namespace: ""
+    # -- Log in with a token held in a Secret: ...
+    tokenSecret: ""
+    tokenSecretKey: token
+    # -- ... or with Kubernetes auth, as this role.
+    role: ""
+    authPath: kubernetes
+    # -- A Secret holding the service's CA certificate (PEM), key ca.crt.
+    caSecret: ""
+  # -- During a root key replacement: a Secret holding the key being replaced, given beside the
+  # new one while `launchway encryption rewrap` runs. Remove it afterwards.
+  previousKey:
+    existingSecret: ""
+    existingSecretKey: root.key
 
 # ---------------------------------------------------------------------------------------------
 # The token runners present to servers. Servers and runners read it from the same Secret.
 # ---------------------------------------------------------------------------------------------
 runnerToken:
-  # -- The name of an existing Secret holding the token. If empty, the chart creates a Secret
-  # with a random token on first install and keeps the same token on every upgrade.
+  # -- The name of an existing Secret holding the token. If empty, the install hook Job makes a
+  # Secret with a random token if it is absent and keeps it on every upgrade.
   existingSecret: ""
   # -- The key in the Secret that holds the token.
   existingSecretKey: token
@@ -297,8 +462,11 @@ server:
     requests:
       cpu: 100m
       memory: 128Mi
+      ephemeral-storage: 512Mi
     limits:
       memory: 512Mi
+      # -- Scratch space: the data directory (dataVolume), /tmp and logs. Keep it above dataVolume.sizeLimit.
+      ephemeral-storage: 3Gi
   # -- The data directory holds mirrors of the projects' repositories: a cache that is
   # rebuilt when a pod starts. Size it to fit every project's repository.
   dataVolume:
@@ -367,30 +535,6 @@ ssh:
     # -- The port the Service offers (22 makes clone addresses git@host:owner/name.git).
     port: 22
     annotations: {}
-
-ingress:
-  # -- Expose the UI and API through an Ingress. There is no sign-in unless you configure it:
-  # do not expose Launchway to an untrusted network.
-  enabled: false
-  className: ""
-  annotations: {}
-  # -- Each host routes every path to the servers.
-  hosts: []
-  #  - launchway.example.com
-  tls: []
-  #  - secretName: launchway-tls
-  #    hosts: [launchway.example.com]
-
-httpRoute:
-  # -- Expose the UI and API through a Gateway API HTTPRoute (gateway.networking.k8s.io/v1).
-  enabled: false
-  annotations: {}
-  # -- The Gateways to attach to.
-  parentRefs: []
-  #  - name: public
-  #    namespace: gateway-system
-  #    sectionName: https
-  hostnames: []
 
 # ---------------------------------------------------------------------------------------------
 # Runners: `launchway runner` with the Kubernetes executor. Each run gets one pod in
@@ -563,8 +707,11 @@ runner:
     requests:
       cpu: 100m
       memory: 128Mi
+      ephemeral-storage: 2Gi
     limits:
       memory: 1Gi
+      # -- Keep it above dataVolume.sizeLimit.
+      ephemeral-storage: 12Gi
   # -- Runners clone each run's commit into this volume and copy it into the step pod.
   dataVolume:
     sizeLimit: 10Gi
@@ -613,30 +760,92 @@ securityContext:
     drop: [ALL]
 
 # ---------------------------------------------------------------------------------------------
-# A development PostgreSQL, for trying the chart only: one pod, no backups, no high
-# availability, no tuning. Use a managed or operator-run PostgreSQL in production and set
-# database.* instead.
+# NetworkPolicies: default deny, then exactly what each part needs. On by default (they take
+# effect only where the cluster's network plugin enforces them; if yours does not, they are
+# harmless). Each policy selects its pods by label, so nothing else in the namespace is affected.
+#   server       in: runners, step pods, deploy runner, and (with an Ingress or HTTPRoute) the
+#                proxy (ingressFrom). out: DNS, the database, and what extraEgress adds
+#                (Git hosts, an identity provider, webhooks, an S3 endpoint). NOT the Kubernetes API.
+#   runners      in: nothing. out: DNS, the server, the Kubernetes API (to start step pods), extraEgress.
+#   step pods    in: nothing. out: DNS, the Launchway server, and the internet over HTTP/HTTPS
+#                EXCEPT private ranges, link-local (cloud metadata, 169.254.0.0/16) and the
+#                cluster: never the database, the Kubernetes API or the metadata service.
+#   bundled database   in: the servers only. out: nothing.
+# The install hook Job has its own small policy (Kubernetes API, DNS).
 # ---------------------------------------------------------------------------------------------
-postgresql:
-  enabled: false
-  image:
-    repository: docker.io/library/postgres
-    tag: 17.12-alpine
-    pullPolicy: IfNotPresent
-  database: launchway
-  username: launchway
-  # -- If empty, a random password is generated once and kept across upgrades.
-  password: ""
-  persistence:
-    size: 1Gi
-    # -- The StorageClass for the volume (default: the cluster's default).
-    storageClass: ""
+networkPolicy:
+  # -- Create the policies. false: none are created and every pod may connect anywhere.
+  enabled: true
+  # -- DNS, allowed for every pod above. Set to your cluster's DNS pods.
+  dns:
+    enabled: true
+    namespace: kube-system
+    podLabels:
+      k8s-app: kube-dns
+  server:
+    # -- Who may reach the server port: a list of NetworkPolicyPeer objects (the namespace of
+    # your ingress controller or Gateway, for example). Empty: with an Ingress or HTTPRoute
+    # enabled, any source may reach the port (the proxy's namespace is not known to the chart);
+    # without one, only runners, step pods and the deploy runner can (port-forward still works).
+    ingressFrom: []
+    # -- More egress rules for the servers (NetworkPolicyEgressRule objects): Git hosts, an
+    # identity provider, webhook receivers, an S3 endpoint, the monitoring stores.
+    extraEgress: []
+  database:
+    # -- The database port, when the database is external and its address is not a URL in
+    # database.url (database.existingSecret).
+    port: 5432
+    # -- Addresses of an external database (CIDRs). Empty: any address on the port.
+    cidrs: []
+  runner:
+    # -- The Kubernetes API, which runners use to start and exec into step pods. Empty cidrs: any
+    # address on the ports. The API server is often not a pod: use the addresses of
+    # `kubectl get endpoints kubernetes`.
+    kubernetesAPI:
+      cidrs: []
+      ports: [443, 6443]
+    # -- More egress rules for the runner pods: Git hosts, secret stores, BuildKit, registries.
+    extraEgress: []
+  deployRunner:
+    # -- More egress rules for the deploy runner pods (Argo CD, GitOps repositories, metrics).
+    extraEgress: []
+  steps:
+    # -- Policy for step pods (the pods runners start for each run, in runner.kubernetes.namespace).
+    enabled: true
+    # -- Allow step pods to reach the internet (package registries, Git hosts, container
+    # registries) on `ports`, except the ranges below and `exceptCIDRs`. false: only DNS and the
+    # Launchway server, plus extraEgress.
+    internet: true
+    ports: [80, 443]
+    # -- More ranges step pods may NOT reach, added to the private, link-local and carrier-grade
+    # NAT ranges that are always excluded: your cluster's API server address if it is public, a
+    # public database or other service you do not want builds to reach.
+    exceptCIDRs: []
+    # -- Allow IPv6 internet access (everything except unique-local and link-local).
+    allowIPv6: false
+    # -- More egress rules for step pods (NetworkPolicyEgressRule objects): an internal Git
+    # server, a package mirror, a registry in the cluster.
+    extraEgress: []
+
+# ---------------------------------------------------------------------------------------------
+# The install hook Job. A pre-install and pre-upgrade hook runs `launchway bootstrap-secrets` with
+# the Launchway image and makes, only if absent, the root key, the runner token, the bundled
+# database's password, the setup code and (with the deploy runner) its pool token. It can only get
+# and create Secrets, and only gets the named ones. Never modifies an existing Secret.
+# ---------------------------------------------------------------------------------------------
+bootstrap:
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 10m
+      memory: 32Mi
+      ephemeral-storage: 16Mi
     limits:
-      memory: 512Mi
+      memory: 128Mi
+      ephemeral-storage: 64Mi
+  # -- How long the Job may run before it is failed (seconds).
+  activeDeadlineSeconds: 300
+  nodeSelector: {}
+  tolerations: []
 
 # ---------------------------------------------------------------------------------------------
 # Delivery: deploy and rollback steps (pipelines with kind: deploy). Off unless set. A deploy
@@ -766,8 +975,8 @@ delivery:
     # only an Application's operation and refresh annotation, never its spec.
     admissionPolicy:
       enabled: true
-    # -- The pool token. Generated on first install and kept on upgrade, unless an existing
-    # Secret is named.
+    # -- The pool token. Made by the install hook Job if absent and kept on upgrade, unless an
+    # existing Secret is named.
     poolToken:
       existingSecret: ""
       existingSecretKey: token

@@ -27,16 +27,28 @@ to verify them). Pin `image.digest` in production. To build your own from source
 release images; push to your registry and set `image.repository` and `image.tag`. Without
 internet access, use the air-gapped bundle (`make bundle`, `OFFLINE-INSTALL.md` inside).
 
-To try it, with the development database:
+To install, give it the address people will open. That is the only required value:
 
 ```sh
 helm install launchway deploy/helm/launchway -n launchway --create-namespace \
-  --set postgresql.enabled=true \
-  --set image.repository=registry.example.com/launchway --set image.tag=0.1.0
-kubectl -n launchway port-forward service/launchway 8080:8080    # then http://127.0.0.1:8080
+  --set externalURL=https://launchway.example.com
+kubectl -n launchway get secret launchway-launchway-setup-code -o jsonpath='{.data.code}' | base64 -d; echo
 ```
 
-For real use, create the database Secret first and start from
+The chart starts a secure installation by itself: sign-in required (built-in accounts; the first
+administrator is made with that one-time setup code), encryption at rest on, a bundled PostgreSQL on an
+8Gi volume, default-deny network policies, restricted pods. Open the address, enter the setup code and
+follow the guide in the browser. Until you publish the address (`ingress.enabled` or `httpRoute.enabled`),
+use `kubectl -n launchway port-forward service/launchway-launchway 8080:8080`.
+
+**Nothing secret is rendered by the chart.** A pre-install and pre-upgrade hook Job
+(`launchway bootstrap-secrets`) makes the root key, the runner token, the bundled database's password
+and the setup code once, only if they do not exist, and never changes them, so `helm template`, Argo CD
+and Flux render the same manifests every time. **The root key Secret
+(`<release>-launchway-root-key`) is kept when you uninstall**: copy it somewhere safe, because a restored
+database cannot be read without it (encryption at rest (`docs/guide/encryption-at-rest.md`, from the encryption work)).
+
+For production at scale, create the database Secret first and start from
 [`examples/ha.yaml`](helm/launchway/examples/ha.yaml):
 
 ```sh
@@ -51,12 +63,14 @@ helm install launchway deploy/helm/launchway -n launchway -f deploy/helm/launchw
 
 | Value | Why |
 |---|---|
-| `database.existingSecret` (+ `database.existingSecretKey`, default `url`), **or** `database.url`, **or** `postgresql.enabled=true` | Every server must use the same PostgreSQL database. Exactly one must be set, or the install fails with an explanation; the chart never lets replicas fall back to SQLite files of their own. |
-| `image.repository`, `image.tag` (or `image.digest`) | Where your image is. |
-| `config.projects` | The repositories to watch; each `repo` must be a URL that servers and runners can clone. |
+| `externalURL` | The address people open, such as `https://launchway.example.com`. The install fails without it. |
 
-Everything else has a working default. [`values.yaml`](helm/launchway/values.yaml) documents
-every value and `values.schema.json` rejects misspelt or mistyped ones.
+Everything else has a working, secure default: the database (bundled; or `database.existingSecret` /
+`database.url` for your own, which switches the bundled one off), the image, replicas, network
+policies, encryption. [`values.yaml`](helm/launchway/values.yaml) leads with the few values most people
+set and keeps the rest under an "ADVANCED" divider; `values.schema.json` rejects misspelt or
+mistyped ones. Projects, runners, Git hosting and sign-in are set up in the browser after the first
+sign-in.
 
 ### Configuration
 
@@ -70,7 +84,7 @@ The database URL and the runner token are not in the ConfigMap: they reach the s
 environment variables (`LAUNCHWAY_DATABASE`, `LAUNCHWAY_RUNNER_TOKEN`) from Secrets.
 
 The runner token is shared by servers and runners through a Secret. Name your own with
-`runnerToken.existingSecret`, or let the chart create one; it keeps the same token across
+`runnerToken.existingSecret`, or let the install hook Job make one; it keeps the same token across
 upgrades. Pods do not restart when a Secret you manage changes; run
 `kubectl rollout restart deployment -l app.kubernetes.io/instance=<release>` after rotating it,
 or after changing `database.url`.

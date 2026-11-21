@@ -23,11 +23,11 @@ The chart runs several servers against one PostgreSQL database, and runners that
 [run](../glossary.md#run) in a pod of a step namespace. It renders the
 [server configuration](server-config.md) into a ConfigMap from `config.*`, and the runners'
 [configuration file](runner-config.md) from `runner.*`. The database URL and the runner token
-reach the pods as environment variables from Secrets, never through a ConfigMap. Changing a
+reach the pods as environment variables from Secrets (made once by the install hook Job, below), never through a ConfigMap. Changing a
 ConfigMap restarts the pods.
 
 **The file the chart renders is bootstrap only** (see [what stays in the file](server-config.md#what-stays-in-the-file-and-what-moved)).
-With the default values it holds `listen`, `data` and the runner switch. A value that sets something
+With the default values it holds `listen`, `data`, the runner switch, `auth.mode: local` and, with the bundled database, the artifact cap derived from its volume. A value that sets something
 that now lives in the database (projects, libraries, environments, runner pools, policy, health
 sources, models, limits, the MCP endpoint, where artifacts are kept) is **imported once**, by the first
 server of a new installation to start, and ignored afterwards: each server logs the keys it ignores.
@@ -35,26 +35,59 @@ After that, change those settings in the web UI, with `launchway config`, the AP
 `values.schema.json` checks the types and ranges below when you install
 or upgrade.
 
-## Required values
+## The one required value, and the few you may want
 
-One of these is required, or the install fails with a message saying so:
-
-- `database.existingSecret` (with `database.existingSecretKey`): a Secret holding a `postgres://` URL;
-- `database.url`: a `postgres://` URL, stored in a Secret the chart makes;
-- `postgresql.enabled: true`: a development database, for trying the chart only.
-
-Only one of them may be set.
+A working, secure installation needs **one** value, the address people will open:
 
 <!-- validate-helm -->
 ```yaml
-postgresql:
-  enabled: true
+externalURL: https://launchway.example.com
 ```
 
-A production-shaped example (see also `deploy/helm/launchway/examples/ha.yaml`):
+Left out, the install fails with `missing property 'externalURL'`. The chart then starts with sign-in required
+(built-in accounts, the first administrator made with a one-time setup code), encryption at rest on, a bundled
+PostgreSQL on an 8Gi volume, default-deny network policies and restricted pods. Nothing else is assumed: no
+secrets manager, operator or identity provider. `values.yaml` leads with the same short list and keeps
+everything else below an "ADVANCED" divider.
+
+Beyond the address, most installations set at most:
+
+- `database.url` or `database.existingSecret`: a PostgreSQL of your own; the bundled one is then not created.
+- `postgresql.persistence.size` / `storageClass`: the bundled database's volume.
+- `ingress.*` or `httpRoute.*`: publish the address (the host defaults to the one in `externalURL`). Either also
+  tells the servers they sit behind a proxy (`trust_proxy`).
+- `server.replicas`: `2` by default; `1` for a trial.
+
+### Secrets the chart makes, and keeps
+
+A `helm template` of this chart holds **no secret material** and is byte-identical every time, so a GitOps
+controller that renders it cannot churn a key. The secrets are made by a **pre-install and pre-upgrade hook
+Job** (`bootstrap.*`) that runs `launchway bootstrap-secrets` with the Launchway image, with its own ServiceAccount,
+and a Role that can only `get` the named Secrets and `create` Secrets. Each Secret is created only if absent and never
+modified afterwards:
+
+| Secret (default name) | Key | Made when |
+|---|---|---|
+| `<fullname>-root-key` | `root.key` | `encryption.holder` is `keyFile` and `encryption.keyFile.existingSecret` is empty |
+| `<fullname>-runner-token` | `token` | `runnerToken.existingSecret` is empty |
+| `<fullname>-postgresql` | `password` | the bundled database is used and `postgresql.password` is empty |
+| `<fullname>-setup-code` | `code` | sign-in mode is `local` (the default) |
+| `<fullname>-deploy-pool-token` | `token` | `delivery.deployRunner.enabled` and no `poolToken.existingSecret` |
+
+**The root key Secret is kept when you uninstall.** It is not owned by Helm, so `helm uninstall` and a GitOps
+prune leave it (and the other Secrets) in place; without it, a restored database's secrets cannot be read.
+Copy it somewhere safe (see encryption at rest (`docs/guide/encryption-at-rest.md`, from the encryption work)). The hook's ServiceAccount, Role,
+RoleBinding and NetworkPolicy are hooks too and also remain; remove them with
+`kubectl -n NS delete serviceaccount,role,rolebinding,networkpolicy -l app.kubernetes.io/component=bootstrap`
+when you remove the installation for good, and delete the Secrets only when you mean to destroy its data.
+The servers read the one-time setup code from the file named by `LAUNCHWAY_SETUP_CODE_FILE`
+(the `<fullname>-setup-code` Secret, mounted as an optional file) and the address from `LAUNCHWAY_EXTERNAL_URL`.
+
+A production-shaped example with a database of your own (see also `deploy/helm/launchway/examples/ha.yaml`):
 
 <!-- validate-helm -->
 ```yaml
+externalURL: https://launchway.example.com
 database:
   existingSecret: launchway-database
 image:
@@ -98,6 +131,7 @@ runner:
 <!-- keys: helm -->
 | Value | Type | Default | Description |
 |---|---|---|---|
+| `externalURL` | string | none (required) | The address people open: `https://` or `http://`, a host, optional port, no path. Names the ingress and route host, is passed to the servers as `LAUNCHWAY_EXTERNAL_URL` and is shown in the install notes |
 | `nameOverride` | string | `""` | Overrides the chart name in resource names |
 | `fullnameOverride` | string | `""` | Overrides the full resource name prefix; default `<release>-launchway` |
 | `commonLabels` | map | `{}` | Labels added to every resource the chart creates |
@@ -168,17 +202,18 @@ file during an upgrade or after an aborted one. Unset values take the
 | `config.policy.waivers.maxDays` | integer or null | unset (30) | Written as `max_days` |
 | `config.policy.sources` | list or null | unset | Git sources: `{ name, library, version, path, projects, refresh, staleAfter }`; `staleAfter` is written as `stale_after`. The library comes from `config.extraConfig.libraries` |
 | `config.policy.policies` | list or null | unset | Policies, as in the [policy rules reference](policy-rules.md), written as they are |
-| `config.extraConfig` | map | `{}` | Any other top-level settings of the [server configuration](server-config.md), merged into the file as they are, so new settings need no chart change. `listen`, `data`, `database`, `projects`, `tests`, `artifacts`, `findings`, `loops`, `schedules` and `policy` are refused here, and `runner.enabled` may not be true. A typo stops the servers from starting; the pod log names the key |
+| `config.extraConfig.auth.mode` | string | `local` | Sign-in: `local` (built-in accounts; the first administrator is made with the one-time setup code) or `oidc` (an identity provider; set `auth.oidc.*` beside it). `none` is for throwaway clusters and needs `auth.allow_anonymous` |
+| `config.extraConfig` | map | `{auth: {mode: local}}` | Any other top-level settings of the [server configuration](server-config.md), merged into the file as they are, so new settings need no chart change. `listen`, `data`, `database`, `projects`, `tests`, `artifacts`, `findings`, `loops`, `schedules` and `policy` are refused here, and `runner.enabled` may not be true. A typo stops the servers from starting; the pod log names the key |
 
 ## Database and runner token
 
 <!-- keys: helm -->
 | Value | Type | Default | Description |
 |---|---|---|---|
-| `database.url` | string | `""` | A `postgres://` or `postgresql://` URL. The chart stores it in a Secret of its own. Prefer `existingSecret`, so the password is not in your values |
-| `database.existingSecret` | string | `""` | An existing Secret in the release namespace holding the URL |
+| `database.url` | string | `""` | A `postgres://` or `postgresql://` URL. The chart stores it in a Secret of its own and does not create the bundled database. Prefer `existingSecret`, so the password is not in your values |
+| `database.existingSecret` | string | `""` | An existing Secret in the release namespace holding the URL. The bundled database is not created |
 | `database.existingSecretKey` | string | `url` | The key in that Secret |
-| `runnerToken.existingSecret` | string | `""` | An existing Secret holding the runner token. Empty: the chart creates one with a random token on first install and keeps it on every upgrade |
+| `runnerToken.existingSecret` | string | `""` | An existing Secret holding the runner token. Empty: the install hook Job makes one with a random token if absent and keeps it on every upgrade |
 | `runnerToken.existingSecretKey` | string | `token` | The key in that Secret |
 
 ## Servers
@@ -194,7 +229,7 @@ number can run against the same database.
 | `server.strategy.rollingUpdate.maxSurge` | integer or string | `1` | |
 | `server.preStopSleepSeconds` | integer | `5` | How long a stopping server keeps serving after Kubernetes takes it out of the Service, before it is sent SIGTERM. After SIGTERM it reports not ready, waits `server.drain_delay` (set it in `config.extraConfig.server`), then gives requests in flight up to 15s |
 | `server.terminationGracePeriodSeconds` | integer | `30` | Time allowed to stop, including the above |
-| `server.resources` | object | requests `100m` CPU, `128Mi`; limit `512Mi` memory | Kubernetes resources of the server container |
+| `server.resources` | object | requests `100m` CPU, `128Mi` memory, `512Mi` ephemeral storage; limits `512Mi` memory, `3Gi` ephemeral storage | Kubernetes resources of the server container |
 | `server.dataVolume.sizeLimit` | quantity | `2Gi` | The data directory (an `emptyDir`) holds mirrors of the projects' repositories, rebuilt when a pod starts. Size it to fit them all |
 | `server.startupProbe` | object | `GET /healthz`, every 2s, 90 failures | Allows time for database migrations, which servers take in turn under a lock |
 | `server.livenessProbe` | object | `GET /healthz`, every 10s | |
@@ -224,15 +259,15 @@ number can run against the same database.
 | `service.type` | string | `ClusterIP` | `ClusterIP`, `NodePort` or `LoadBalancer` |
 | `service.port` | integer | `8080` | |
 | `service.annotations` | map | `{}` | |
-| `ingress.enabled` | boolean | `false` | Expose the UI and API through an Ingress. Turn on [sign-in](../howto/oidc-and-roles.md) before exposing Launchway to anyone |
+| `ingress.enabled` | boolean | `false` | Publish `externalURL` through an Ingress. Sign-in is required by default; read [hardening](../security/hardening.md) before exposing Launchway to an untrusted network |
 | `ingress.className` | string | `""` | |
 | `ingress.annotations` | map | `{}` | |
-| `ingress.hosts` | list | `[]` | Host names; each routes every path to the servers |
+| `ingress.hosts` | list | `[]` | Host names; each routes every path to the servers. Empty: the host of `externalURL` |
 | `ingress.tls` | list | `[]` | `[{ secretName, hosts }]` |
 | `httpRoute.enabled` | boolean | `false` | Expose them through a Gateway API HTTPRoute (`gateway.networking.k8s.io/v1`) |
 | `httpRoute.annotations` | map | `{}` | |
 | `httpRoute.parentRefs` | list | `[]` | The Gateways to attach to: `[{ name, namespace, sectionName }]` |
-| `httpRoute.hostnames` | list | `[]` | |
+| `httpRoute.hostnames` | list | `[]` | Empty: the host of `externalURL` |
 
 ## Git over SSH
 
@@ -336,7 +371,7 @@ Kubernetes API.
 | `runner.images.maxContextMiB` | integer or null | unset (2048) | |
 | `runner.images.maxImageMiB` | integer or null | unset (20480) | |
 | `runner.secretStores` | map | `{}` | Secret stores runners may read, as [`secrets`](runner-config.md#secrets). Mount token or certificate files with `extraVolumes`. There is no `env` store unless you define one |
-| `runner.resources` | object | requests `100m` CPU, `128Mi`; limit `1Gi` memory | |
+| `runner.resources` | object | requests `100m` CPU, `128Mi` memory, `2Gi` ephemeral storage; limits `1Gi` memory, `12Gi` ephemeral storage | Keep the ephemeral-storage limit above `runner.dataVolume.sizeLimit` |
 | `runner.dataVolume.sizeLimit` | quantity | `10Gi` | Runners clone each run's commit here and copy it into the step pod |
 | `runner.terminationGracePeriodSeconds` | integer | `60` | On SIGTERM a runner stops its steps (10s grace each) and hands them back to run again |
 | `runner.nodeSelector` | map | `{}` | |
@@ -365,24 +400,105 @@ Kubernetes API.
 | `podSecurityContext` | object | non-root, user and group 65532, `RuntimeDefault` seccomp | The pod security context of servers and runners. The image runs as user 65532 |
 | `securityContext` | object | no privilege escalation, read-only root filesystem, all capabilities dropped | The container security context of servers and runners |
 
-## Development PostgreSQL
+## Bundled PostgreSQL
 
-One PostgreSQL pod, for trying the chart only: no backups, no high availability. Use a managed or
-operator-run PostgreSQL in production.
+One PostgreSQL pod on one volume: the default, for a single installation that is backed up at the volume or a
+trial. It is not highly available. For production at scale use a managed or operator-run PostgreSQL and set
+`database.*`; the bundled one is then not created. Its password is made once by the install hook Job.
 
 <!-- keys: helm -->
 | Value | Type | Default | Description |
 |---|---|---|---|
-| `postgresql.enabled` | boolean | `false` | |
+| `postgresql.enabled` | boolean | `true` | Run the bundled database. Ignored (off) when `database.url` or `database.existingSecret` is set; set `false` only together with one of them |
 | `postgresql.image.repository` | string | `docker.io/library/postgres` | |
 | `postgresql.image.tag` | string | `17.12-alpine` | |
 | `postgresql.image.pullPolicy` | string | `IfNotPresent` | |
 | `postgresql.database` | string | `launchway` | |
 | `postgresql.username` | string | `launchway` | |
-| `postgresql.password` | string | `""` | Empty: a random password, generated once and kept |
-| `postgresql.persistence.size` | quantity | `1Gi` | |
+| `postgresql.password` | string | `""` | Letters, digits and `. _ ~ -` only. Empty (the default): the hook Job makes a random password once and keeps it |
+| `postgresql.persistence.size` | quantity | `8Gi` | The volume. With artifacts kept in the database (the default) the chart caps them at half of it, and refuses a larger `config.artifacts.database.maxTotalGiB` (more than three quarters of the volume) with a message saying so. Below `2Gi` it asks you to store artifacts elsewhere |
 | `postgresql.persistence.storageClass` | string | `""` | Default: the cluster's default StorageClass |
-| `postgresql.resources` | object | requests `50m` CPU, `128Mi`; limit `512Mi` memory | |
+| `postgresql.resources` | object | requests `50m` CPU, `128Mi`, `64Mi` ephemeral storage; limits `512Mi`, `512Mi` ephemeral storage | |
+
+## Encryption at rest
+
+Every secret the server stores is sealed under a root key that is not in the database. The servers refuse to start
+without one. See encryption at rest (`docs/guide/encryption-at-rest.md`, from the encryption work) for the holders and for rotating the key.
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `encryption.holder` | string | `keyFile` | Where the root key is held: `keyFile` (a Secret mounted as a file; made by the hook Job), `env`, `passphrase`, `transit` (Vault or OpenBao) or `none` (NOT encrypted at rest; a throwaway installation only) |
+| `encryption.keyFile.generate` | boolean | `true` | Let the hook Job make the key Secret, if absent, when `existingSecret` is empty. Set `false` only with `existingSecret` |
+| `encryption.keyFile.existingSecret` | string | `""` | A Secret you made that holds the key: 32 random bytes in base64, as `launchway encryption init` writes |
+| `encryption.keyFile.existingSecretKey` | string | `root.key` | The key in that Secret |
+| `encryption.env.existingSecret` | string | `""` | Holder `env`: a Secret whose key holds the root key itself (base64) |
+| `encryption.env.existingSecretKey` | string | `root.key` | |
+| `encryption.passphrase.keystoreSecret` | string | `""` | Holder `passphrase`: a Secret holding the keystore file |
+| `encryption.passphrase.keystoreSecretKey` | string | `root.keystore` | |
+| `encryption.passphrase.passphraseSecret` | string | `""` | A Secret holding the passphrase |
+| `encryption.passphrase.passphraseSecretKey` | string | `passphrase` | |
+| `encryption.transit.address` | string | `""` | Holder `transit`: the Vault or OpenBao address |
+| `encryption.transit.mount` | string | `transit` | The transit engine's mount |
+| `encryption.transit.key` | string | `launchway` | The transit key that wraps the installation's keys |
+| `encryption.transit.namespace` | string | `""` | A Vault namespace |
+| `encryption.transit.tokenSecret` | string | `""` | Log in with a token held in this Secret ... |
+| `encryption.transit.tokenSecretKey` | string | `token` | |
+| `encryption.transit.role` | string | `""` | ... or with Kubernetes auth, as this role |
+| `encryption.transit.authPath` | string | `kubernetes` | The Kubernetes auth mount |
+| `encryption.transit.caSecret` | string | `""` | A Secret holding the service's CA certificate (PEM), key `ca.crt` |
+| `encryption.previousKey.existingSecret` | string | `""` | During a root key replacement: a Secret holding the key being replaced. Remove it afterwards |
+| `encryption.previousKey.existingSecretKey` | string | `root.key` | |
+
+## Network policies
+
+On by default: a default-deny policy for each part, then exactly what it needs. They take effect only where the
+cluster's network plugin enforces NetworkPolicy. Each policy selects its pods by label, so nothing else in the
+namespace is affected.
+
+| Part | In | Out |
+|---|---|---|
+| Servers | runners, step pods, the deploy runner, and (with an Ingress or HTTPRoute) the proxy | DNS, the database, `networkPolicy.server.extraEgress`. Not the Kubernetes API |
+| Runners | nothing | DNS, the servers, the Kubernetes API (to start step pods), `networkPolicy.runner.extraEgress` |
+| Step pods | nothing | DNS, the Launchway server, and HTTP/HTTPS to the internet except private, link-local (cloud metadata), carrier-grade NAT and `exceptCIDRs` ranges. Never the database, the Kubernetes API or the metadata service |
+| Bundled database | the servers | nothing |
+
+Git hosts, an identity provider, webhook receivers and an S3 endpoint are not assumed: add them to
+`networkPolicy.server.extraEgress` (the servers) and `networkPolicy.runner.extraEgress` (runners that clone).
+Internal package mirrors or Git servers that step pods must reach go in `networkPolicy.steps.extraEgress`.
+If your cluster's API server has a public address, add it to `networkPolicy.steps.exceptCIDRs`.
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `networkPolicy.enabled` | boolean | `true` | Create the policies. `false`: none, and every pod may connect anywhere |
+| `networkPolicy.dns.enabled` | boolean | `true` | Allow DNS for every pod above |
+| `networkPolicy.dns.namespace` | string | `kube-system` | The namespace of the cluster DNS |
+| `networkPolicy.dns.podLabels.k8s-app` | string | `kube-dns` | The label of the DNS pods; add others with `--set` |
+| `networkPolicy.server.ingressFrom` | list | `[]` | Who may reach the server port: NetworkPolicyPeer objects, such as your ingress controller's namespace. Empty: with an Ingress or HTTPRoute on, any source; without one, only runners, step pods and the deploy runner (port-forward still works) |
+| `networkPolicy.server.extraEgress` | list | `[]` | More egress rules for the servers: Git hosts, an identity provider, webhook receivers, an S3 endpoint |
+| `networkPolicy.database.port` | integer | `5432` | The port of an external database whose address is not a URL in `database.url` |
+| `networkPolicy.database.cidrs` | list | `[]` | Addresses of an external database. Empty: any address on the port |
+| `networkPolicy.runner.kubernetesAPI.cidrs` | list | `[]` | The Kubernetes API addresses runners and the hook Job may reach (`kubectl get endpoints kubernetes`). Empty: any address on the ports |
+| `networkPolicy.runner.kubernetesAPI.ports` | list | `[443, 6443]` | |
+| `networkPolicy.runner.extraEgress` | list | `[]` | More egress rules for runner pods: Git hosts, secret stores, BuildKit, registries |
+| `networkPolicy.deployRunner.extraEgress` | list | `[]` | More egress rules for the deploy runner pods: Argo CD, GitOps repositories, metrics |
+| `networkPolicy.steps.enabled` | boolean | `true` | The step pod policy, in `runner.kubernetes.namespace` |
+| `networkPolicy.steps.internet` | boolean | `true` | Let step pods reach the internet on `ports`, except the ranges above. `false`: only DNS and the server, plus `extraEgress` |
+| `networkPolicy.steps.ports` | list | `[80, 443]` | |
+| `networkPolicy.steps.exceptCIDRs` | list | `[]` | More ranges step pods may not reach |
+| `networkPolicy.steps.allowIPv6` | boolean | `false` | Allow IPv6 internet (except unique-local and link-local) |
+| `networkPolicy.steps.extraEgress` | list | `[]` | More egress rules for step pods: an internal Git server, a package mirror, a registry |
+
+## Install hook Job
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `bootstrap.resources` | object | requests `10m` CPU, `32Mi`, `16Mi` ephemeral storage; limits `128Mi`, `64Mi` ephemeral storage | Kubernetes resources of the hook Job's container |
+| `bootstrap.activeDeadlineSeconds` | integer | `300` | The Job is failed after this long |
+| `bootstrap.nodeSelector` | map | `{}` | |
+| `bootstrap.tolerations` | list | `[]` | |
 
 ## Delivery
 
@@ -412,7 +528,7 @@ runs a release that knows them, and take them out before rolling back to one tha
 | `delivery.deployRunner.rbac.readDeployments` | boolean | `false` | Get on Deployments in the rollout namespaces, for rollouts that take their pod template from a Deployment (`workloadRef`) |
 | `delivery.deployRunner.rbac.controlRollouts` | map or null | `null` | Rollouts the deploy runner may promote, abort and retry, by namespace: `{ shop: [shop] }`. Each namespace must be in `rolloutNamespaces`. Unset, commands are not applied |
 | `delivery.deployRunner.admissionPolicy.enabled` | boolean | `true` | A ValidatingAdmissionPolicy (Kubernetes 1.30 or newer) letting the deploy runner change only an Application's operation and refresh annotation |
-| `delivery.deployRunner.poolToken.existingSecret` | string | `""` | A Secret holding the pool token. Empty: generated on first install and kept on upgrade |
+| `delivery.deployRunner.poolToken.existingSecret` | string | `""` | A Secret holding the pool token. Empty: made by the install hook Job if absent and kept on upgrade |
 | `delivery.deployRunner.poolToken.existingSecretKey` | string | `token` | |
 | `delivery.deployRunner.resources` | object | requests `50m` CPU, `64Mi`; limit `256Mi` memory | |
 | `delivery.deployRunner.healthPort` | integer | `8081` | |

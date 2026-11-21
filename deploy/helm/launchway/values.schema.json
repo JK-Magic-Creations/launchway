@@ -62,7 +62,13 @@
       }
     }
   },
+  "required": ["externalURL"],
   "properties": {
+    "externalURL": {
+      "type": "string",
+      "pattern": "^https?://[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?(:[0-9]{1,5})?/?$",
+      "description": "The address people open, such as https://launchway.example.com: scheme and host, no path."
+    },
     "nameOverride": { "type": "string" },
     "fullnameOverride": { "type": "string" },
     "commonLabels": { "$ref": "#/definitions/stringMap" },
@@ -271,6 +277,63 @@
         "url": { "type": "string", "pattern": "^((postgres|postgresql)://.+)?$" },
         "existingSecret": { "type": "string" },
         "existingSecretKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "encryption": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "holder": { "enum": ["keyFile", "env", "passphrase", "transit", "none"] },
+        "keyFile": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "generate": { "type": "boolean" },
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        },
+        "passphrase": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "keystoreSecret": { "type": "string" },
+            "keystoreSecretKey": { "type": "string", "minLength": 1 },
+            "passphraseSecret": { "type": "string" },
+            "passphraseSecretKey": { "type": "string", "minLength": 1 }
+          }
+        },
+        "transit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "address": { "type": "string", "pattern": "^(https?://.+)?$" },
+            "mount": { "type": "string" },
+            "key": { "type": "string" },
+            "namespace": { "type": "string" },
+            "tokenSecret": { "type": "string" },
+            "tokenSecretKey": { "type": "string", "minLength": 1 },
+            "role": { "type": "string" },
+            "authPath": { "type": "string" },
+            "caSecret": { "type": "string" }
+          }
+        },
+        "previousKey": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "existingSecretKey": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     },
     "runnerToken": {
@@ -543,7 +606,7 @@
         },
         "database": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
         "username": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
-        "password": { "type": "string" },
+        "password": { "type": "string", "pattern": "^[A-Za-z0-9._~-]*$" },
         "persistence": {
           "type": "object",
           "additionalProperties": false,
@@ -553,6 +616,80 @@
           }
         },
         "resources": { "$ref": "#/definitions/resources" }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "dns": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "namespace": { "type": "string", "minLength": 1 },
+            "podLabels": { "$ref": "#/definitions/stringMap" }
+          }
+        },
+        "server": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ingressFrom": { "$ref": "#/definitions/objectList" },
+            "extraEgress": { "$ref": "#/definitions/objectList" }
+          }
+        },
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "cidrs": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "runner": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kubernetesAPI": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "cidrs": { "type": "array", "items": { "type": "string" } },
+                "ports": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } }
+              }
+            },
+            "extraEgress": { "$ref": "#/definitions/objectList" }
+          }
+        },
+        "deployRunner": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "extraEgress": { "$ref": "#/definitions/objectList" } }
+        },
+        "steps": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "internet": { "type": "boolean" },
+            "ports": { "type": "array", "items": { "type": "integer", "minimum": 1, "maximum": 65535 } },
+            "exceptCIDRs": { "type": "array", "items": { "type": "string" } },
+            "allowIPv6": { "type": "boolean" },
+            "extraEgress": { "$ref": "#/definitions/objectList" }
+          }
+        }
+      }
+    },
+    "bootstrap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resources": { "$ref": "#/definitions/resources" },
+        "activeDeadlineSeconds": { "type": "integer", "minimum": 30 },
+        "nodeSelector": { "$ref": "#/definitions/stringMap" },
+        "tolerations": { "$ref": "#/definitions/objectList" }
       }
     },
     "delivery": {
