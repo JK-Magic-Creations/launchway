@@ -174,6 +174,12 @@ type StepState struct {
 	// why the last failed attempt failed: exit, timeout or infrastructure.
 	NotBefore int64
 	FailCause string
+	// WaitCode and WaitReason say why a queued step waits for room (schema
+	// 38), WaitSince when it first did and WaitTries how often it has been
+	// queued again for it.
+	WaitCode, WaitReason string
+	WaitSince            int64
+	WaitTries            int
 	// Approvals only.
 	Deadline  int64  // when a waiting approval is rejected because nobody decided
 	DecidedBy string // who approved or rejected it; empty if it expired
@@ -619,6 +625,15 @@ func (st *RunState) applyQueued(ev Event, s *StepState) {
 	s.Evidence = nil
 	s.Allowed = false
 	s.NotBefore = p.NotBefore
+	if p.WaitCode != "" {
+		if s.WaitCode == "" {
+			s.WaitSince, s.WaitTries = ev.At, 0
+		}
+		s.WaitCode, s.WaitReason = p.WaitCode, p.Reason
+		s.WaitTries++
+	} else {
+		s.WaitCode, s.WaitReason, s.WaitSince, s.WaitTries = "", "", 0, 0
+	}
 }
 
 // applyLeased folds StepLeased.

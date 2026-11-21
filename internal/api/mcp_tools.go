@@ -477,11 +477,11 @@ type stepBrief struct {
 	Attempt  int    `json:"attempt,omitempty"`
 	Duration string `json:"duration,omitempty"`
 	ExitCode *int   `json:"exit_code,omitempty"`
-	// Why says in words why the step is in this state, when that is not
-	// plain from the status.
+	// Why says in words why the step is in this state, when not plain from the status.
 	Why            string            `json:"why,omitempty"`
 	CauseKind      string            `json:"cause_kind,omitempty" jsonschema:"what kind of failure: analysis_failed, rollout_failed, sync_failed, timeout, script_exit, refused, runner_lost, command_failed or other"`
 	FailureCause   string            `json:"failure_cause,omitempty" jsonschema:"why the last failed attempt failed: exit, timeout or infrastructure"`
+	WaitingCode    string            `json:"waiting_code,omitempty" jsonschema:"a stable code for what a queued step waits for: quota_full, cluster_full, no_runner, runners_busy or retry_pause; the sentence is in why"`
 	NotBefore      string            `json:"retry_not_before,omitempty" jsonschema:"a step queued to be retried after a wait: when a runner may be given it"`
 	AllowedFailure bool              `json:"allowed_failure,omitempty" jsonschema:"the step failed for good and its pipeline allows that (on_failure: continue): the run goes on as if it had succeeded"`
 	Needs          []string          `json:"needs,omitempty"`

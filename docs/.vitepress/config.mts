@@ -206,6 +206,7 @@ export default defineConfig({
           { text: 'Overview', link: '/guide/' },
           { text: 'Pipelines', link: '/guide/pipelines' },
           { text: 'Triggers', link: '/guide/triggers' },
+          { text: 'Queues and limits', link: '/guide/queues' },
           { text: 'Editing pipelines', link: '/guide/editor' },
           { text: 'Shared libraries', link: '/guide/libraries' },
           { text: 'Approvals and re-runs', link: '/guide/approvals-and-reruns' },

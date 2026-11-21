@@ -100,13 +100,7 @@ func isQuotaError(err error) bool {
 }
 
 // quotaFull is the error for a step that cannot start because the step
-// namespace's quota is used up. It says so plainly, and counts as a failure
-// of the infrastructure (cause "infrastructure"), so retry.on and the retry
-// backoff apply: the quota frees up when other runs end.
-func quotaFull(pod string, err error) error {
-	msg := err.Error()
-	if i := strings.Index(msg, "exceeded quota"); i >= 0 {
-		msg = msg[i:]
-	}
-	return cannotStart("the step namespace's quota is full, so pod %s cannot start; it frees up when other runs end (%s)", pod, msg)
-}
+// namespace's quota is used up. A quota that frees up when other runs end is
+// a wait for room (see capacity.go), not a failure; a pod that asks for more
+// than the whole quota is a failure, at once.
+func quotaFull(pod string, err error) error { return quotaWait(pod, err) }

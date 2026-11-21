@@ -518,7 +518,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
             {step.runner && <span className="meta only-everything">on {step.runner}</span>}
             {(step as { workspace?: string }).workspace && <span className="meta only-everything" title="a fresh checkout shared with no other step">own workspace</span>}
-            {(step as { waiting_for?: string }).waiting_for && <span className="meta wait">{(step as { waiting_for?: string }).waiting_for}</span>}
+            {step.waiting_for && <span className="meta wait" data-code={step.waiting_code}>{step.waiting_for}</span>}
             {step.container && !step.container.startsWith("image-") && <span className="meta only-everything">in <strong>{step.container}</strong></span>}
             {step.image && <span className="meta mono only-everything">{step.image}</span>}
           </div>

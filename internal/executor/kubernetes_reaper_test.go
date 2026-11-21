@@ -169,10 +169,48 @@ func TestReaperStopsWhenTheServerCannotBeAsked(t *testing.T) {
 	}
 }
 
-// A step that cannot start because the namespace's quota is used up says so,
-// as an infrastructure cause (it can start once other runs end), and the
-// text names the quota rather than a raw API error.
-func TestQuotaFullIsAnInfrastructureFailure(t *testing.T) {
+// A step that cannot start because the namespace's quota is used up waits
+// for room (it is not a failure): the error says so in plain words, with the
+// numbers, and carries a stable code.
+func TestQuotaFullIsAWaitForRoom(t *testing.T) {
+	k := quotaRefusing(t, "exceeded quota: steps, requested: requests.cpu=500m, used: requests.cpu=7800m, limited: requests.cpu=8")
+	_, err := k.Run(context.Background(), quotaSpec(), func(string, string) {})
+	c, ok := AsCapacity(err)
+	if !ok || !errors.Is(err, ErrCapacity) || errors.Is(err, ErrCannotStart) || c.Code != WaitQuotaFull {
+		t.Fatalf("want a wait for room, got %v", err)
+	}
+	for _, want := range []string{"waiting for room in the step namespace", "7.8 CPU of 8 CPU already requested", "0.5 CPU more"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("missing %q in %v", want, err)
+		}
+	}
+	if k.busy["run_q"] != 0 {
+		t.Fatal("the run is still marked as executing a step")
+	}
+}
+
+// A single step that asks for more than the whole quota can never start: it
+// fails at once, with both numbers and what to change.
+func TestStepLargerThanTheWholeQuotaFailsAtOnce(t *testing.T) {
+	k := quotaRefusing(t, "exceeded quota: steps, requested: requests.cpu=10, used: requests.cpu=0, limited: requests.cpu=8")
+	_, err := k.Run(context.Background(), quotaSpec(), func(string, string) {})
+	if !errors.Is(err, ErrCannotStart) || errors.Is(err, ErrCapacity) {
+		t.Fatalf("want a start failure, got %v", err)
+	}
+	for _, want := range []string{"10 CPU", "8 CPU", "can never start", "raise the quota"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("missing %q in %v", want, err)
+		}
+	}
+}
+
+func quotaSpec() Spec {
+	return Spec{RunID: "run_q", WorkspaceID: "w", Workspace: "/nonexistent", Container: "c",
+		Containers: []ContainerSpec{{Name: "c", Image: "busybox"}}}
+}
+
+func quotaRefusing(t *testing.T, text string) *Kubernetes {
+	t.Helper()
 	k := kubeWith(KubernetesOptions{})
 	k.owner = "me"
 	k.startWait = time.Second
@@ -182,21 +220,7 @@ func TestQuotaFullIsAnInfrastructureFailure(t *testing.T) {
 	}
 	cs := k.client.(*fake.Clientset)
 	cs.PrependReactor("create", "pods", func(ktesting.Action) (bool, runtime.Object, error) {
-		return true, nil, apierrors.NewForbidden(schema.GroupResource{Resource: "pods"}, "launchway-run-r",
-			errors.New("exceeded quota: steps, requested: requests.cpu=500m, used: requests.cpu=6200m, limited: requests.cpu=8"))
+		return true, nil, apierrors.NewForbidden(schema.GroupResource{Resource: "pods"}, "launchway-run-r", errors.New(text))
 	})
-	s := Spec{RunID: "run_q", WorkspaceID: "w", Workspace: t.TempDir(), Container: "c",
-		Containers: []ContainerSpec{{Name: "c", Image: "busybox"}}}
-	_, err := k.Run(context.Background(), s, func(string, string) {})
-	if !errors.Is(err, ErrCannotStart) {
-		t.Fatalf("want a start failure, got %v", err)
-	}
-	for _, want := range []string{"quota is full", "exceeded quota", "requests.cpu=6200m"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Fatalf("missing %q in %v", want, err)
-		}
-	}
-	if k.busy["run_q"] != 0 {
-		t.Fatal("the run is still marked as executing a step")
-	}
+	return k
 }

@@ -635,7 +635,7 @@
     {
       "file": "internal/engine/engine.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 40 of func `(*Engine).Finish` is high (\u003e 30)",
+      "text": "cyclomatic complexity 39 of func `(*Engine).Finish` is high (\u003e 30)",
       "count": 1
     },
     {

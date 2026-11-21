@@ -64,6 +64,7 @@
         },
         "guide/pipelines",
         "guide/triggers",
+        "guide/queues",
         "guide/editor",
         "guide/libraries",
         "guide/approvals-and-reruns",

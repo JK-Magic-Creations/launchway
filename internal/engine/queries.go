@@ -92,6 +92,8 @@ type StepBrief struct {
 	Allowed bool `json:"allowed,omitempty"`
 	// Reason is why a failed step failed, in a plain sentence.
 	Reason string `json:"reason,omitempty"`
+	// Needs are the steps this one waits for (the graph's edges).
+	Needs []string `json:"needs,omitempty"`
 }
 
 // StepView is a step with its definition and current state.
@@ -146,6 +148,9 @@ type StepView struct {
 	Workspace      string                   `json:"workspace,omitempty"`
 	RunnerSelector *pipeline.RunnerSelector `json:"runner_selector,omitempty"`
 	WaitingFor     string                   `json:"waiting_for,omitempty"`
+	// WaitingCode is the stable code beside WaitingFor (quota_full,
+	// cluster_full, no_runner, runners_busy; see capacity_wait.go).
+	WaitingCode string `json:"waiting_code,omitempty"`
 	// WaitKind, for a waiting deploy or rollback step, is what it waits
 	// for: lock or observe. Empty for an approval.
 	WaitKind string `json:"wait_kind,omitempty"`
@@ -497,6 +502,7 @@ func (e *Engine) attachBriefs(runs []*RunSummary) error {
 		return err
 	}
 	rows.Close()
+	e.attachNeeds(runs)
 	if err := e.attachLanePositions(runs); err != nil {
 		return err
 	}
@@ -668,6 +674,7 @@ func (e *Engine) GetRun(id string) (*RunDetail, error) {
 			v.Kind, v.Message, v.Description = def.Kind, def.Message, def.Description
 			v.Group, v.Approvers = def.Group, def.Approvers
 			e.decorateOwnRunner(v, st, def)
+			e.decorateWait(v, st, def)
 			v.Environment, v.Deployment = def.Environment, def.Deployment
 			if dd := st.Pipeline.Step(def.Deployment); def.IsRollback() && dd != nil {
 				v.Environment = dd.Environment

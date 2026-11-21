@@ -57,6 +57,9 @@ func (l *stepLists) note(s *engine.StepView, sb *stepBrief, text *stepText) {
 	case engine.StepQueuedS:
 		l.queued = append(l.queued, s.ID)
 		sb.Why = "waiting for a runner to take it"
+		if s.WaitingFor != "" {
+			sb.Why, sb.WaitingCode = untrusted(s.WaitingFor, 400), s.WaitingCode
+		}
 		if s.NotBefore > time.Now().UnixMilli() {
 			sb.NotBefore = ts(s.NotBefore)
 			sb.Why = fmt.Sprintf("waiting to be retried (attempt %d of %d): a runner is given it from %s", s.Attempt, s.Retry+1, sb.NotBefore)

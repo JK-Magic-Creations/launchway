@@ -584,6 +584,16 @@ func (r *Runner) runStep(ctx context.Context, job *engine.Job, sys func(string, 
 		msg := mask.Mask(err.Error())
 		sys("%s. The step will be run again.", msg)
 		return engine.Result{Outcome: "lost", Cause: pipeline.CauseInfrastructure, Error: msg}, nil
+	case errors.Is(err, executor.ErrCapacity):
+		// No room yet: not a failure. The server queues the step again after a
+		// pause, and says on the run page what it waits for.
+		msg := mask.Mask(err.Error())
+		code := ""
+		if c, ok := executor.AsCapacity(err); ok {
+			code = c.Code
+		}
+		sys("%s. The step stays queued and is tried again.", msg)
+		return engine.Result{Outcome: engine.OutcomeWaiting, Cause: pipeline.CauseInfrastructure, Error: msg, WaitCode: code}, nil
 	case err != nil:
 		msg := mask.Mask(err.Error())
 		sys("Could not run the step: %s", msg)

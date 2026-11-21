@@ -164,6 +164,7 @@ type Installation struct {
 	PullRequests config.PullRequestsConfig `yaml:"pull_requests"`
 	Schedules    config.SchedulesConfig    `yaml:"schedules"`
 	Loops        config.LoopsConfig        `yaml:"loops"`
+	Queues       config.QueuesConfig       `yaml:"queues"`
 	Tests        config.TestsConfig        `yaml:"tests"`
 	Findings     config.FindingsConfig     `yaml:"findings"`
 	// Reports are the limits of reports.* (reports.origin stays in the

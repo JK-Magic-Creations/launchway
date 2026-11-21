@@ -449,7 +449,7 @@ export interface StepView {
   exit_code: number | null;
   error: string;
   skip_kind: string;
-  runner: string;
+  runner: string; waiting_for?: string; waiting_code?: string; // a queued step waits for this (a sentence, a stable code)
   outputs: Record<string, string>;
   /** A failed attempt's last lines of output, masked like the log. */
   excerpt: string;

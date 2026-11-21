@@ -57,6 +57,9 @@ type Config struct {
 	// PullRequests controls runs of pull requests, whose code may come from
 	// anyone who can open one. Each project may override it.
 	PullRequests PullRequestsConfig `yaml:"pull_requests"`
+	// Queues says how long steps wait for room, how many runs go at once and
+	// in what order the others wait. Each project may override it.
+	Queues QueuesConfig `yaml:"queues"`
 	// Tests limits what the server keeps of the test reports steps declare.
 	Tests TestsConfig `yaml:"tests"`
 	// Artifacts: where step files are kept; Findings: what is kept of findings; Forge: Git hosting.
@@ -624,6 +627,8 @@ type ProjectConfig struct {
 	// PullRequests overrides the server's pull_requests setting for this
 	// project.
 	PullRequests *PullRequestsConfig `yaml:"pull_requests"`
+	// Queues overrides the server's queues setting for this project.
+	Queues *QueuesConfig `yaml:"queues"`
 	// Push lets the pipeline editor commit to this repository. Without it,
 	// edited pipelines can be copied or downloaded, not saved.
 	Push *PushConfig `yaml:"push"`

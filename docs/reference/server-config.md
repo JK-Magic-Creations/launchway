@@ -38,7 +38,7 @@ the database, and nothing an administrator manages day to day.
 
 Everything else lives in the database: `projects`, `libraries`, `environments`, `runner_pools`,
 `runner_admin`, `auth.access` (role bindings), `auth.tokens`, `policy`, `verification`, `ai.models`,
-`approvals`, `drafts`, `pull_requests`, `schedules`, `loops`, `tests`, `findings`, `reports` (except
+`approvals`, `drafts`, `pull_requests`, `queues`, `schedules`, `loops`, `tests`, `findings`, `reports` (except
 `origin`), `artifacts` (limits, retention and where artifacts are kept) and `mcp`. The sections below
 that describe them document the **keys of the import format**: the keys a first start imports, that
 `launchway config export` writes and `launchway config import` reads. A server that starts with a
@@ -225,6 +225,7 @@ the highest role wins.
 | `projects[].drafts.allow` | text | the server's `drafts.allow` | Overrides [`drafts.allow`](#drafts-and-pull-requests) for this project |
 | `projects[].drafts.secrets` | boolean | the server's `drafts.secrets` | Overrides `drafts.secrets` for this project |
 | `projects[].pull_requests.secrets` | boolean | the server's `pull_requests.secrets` | Overrides `pull_requests.secrets` for this project |
+| `projects[].queues.max_wait` | duration or `off` | the server's `queues.max_wait` | Overrides `queues.max_wait` for this project |
 | `projects[].push.branch_prefix` | text | `launchway/` | Lets the pipeline editor save to the repository. Saves go to a new branch `<prefix><you>/<date-time>`. Letters, digits, `-`, `_`, `.` and `/`, at most 100 |
 | `projects[].push.allow_direct` | list of patterns | none | Branches that may be saved to directly |
 | `projects[].schedules.enabled` | boolean | the server's `schedules.enabled` | Turns this project's [schedules](pipeline.md#schedule) on or off |
@@ -305,6 +306,16 @@ these settings.
 | `drafts.allow` | text | `operator` | The role needed on a project to start a draft run there: `admin`, `operator` or `none` (nobody) |
 | `drafts.secrets` | boolean | `false` | Let steps of draft runs read secrets |
 | `pull_requests.secrets` | boolean | `false` | Let steps of pull-request runs read secrets, and image steps use pull credentials and build secrets |
+
+## Queues and limits
+
+How long a step waits for room. The guide [Queues and limits](../guide/queues.md) explains it. Each
+project may override these settings.
+
+<!-- keys: server -->
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `queues.max_wait` | duration or `off` | `60m` | The longest a step waits for room (the step namespace's quota, a node with space) before it fails with the reason and what to change. `off` waits for ever |
 
 ## Tests
 

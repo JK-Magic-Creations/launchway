@@ -148,6 +148,11 @@ type Payload struct {
 	// is given the step (Unix ms).
 	Cause     string `json:"cause,omitempty"`
 	NotBefore int64  `json:"not_before,omitempty"`
+	// WaitCode, on a step.queued of a step that waits for room (schema 38),
+	// is the stable code of the reason (see capacity_wait.go) and Reason the
+	// sentence; on the step.finished that gives up waiting it is the code of
+	// what the step was waiting for.
+	WaitCode string `json:"wait_code,omitempty"`
 
 	// run.lane_* (schema 24): the lane, and the run on the other side of it.
 	Lane *LaneEvent `json:"lane,omitempty"`

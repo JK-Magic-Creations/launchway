@@ -104,6 +104,7 @@ type Options struct {
 	// default build pool exists whether or not it is listed. Every server
 	// sharing a database must be given the same ones.
 	RunnerPools []RunnerPool
+	Queues      QueueSettings // queues and limits (schema 38)
 
 	// schema, for tests, makes the engine behave as a build that knows only
 	// the first schema migrations and their events; 0 means every one (or
@@ -311,7 +312,8 @@ type Result struct {
 	// Excerpt is, for a failed step, the last few lines it wrote: on stderr
 	// if it wrote any, else on stdout. The runner masks secrets in it as in
 	// the log; the server keeps at most MaxExcerptBytes of it.
-	Excerpt string `json:"excerpt,omitempty"`
+	Excerpt  string `json:"excerpt,omitempty"`
+	WaitCode string `json:"wait_code,omitempty"` // for the outcome waiting: why (quota_full, cluster_full); Error is the sentence
 	// Tests, for a step that declares test reports, is what the runner
 	// collected once the step ended, whether it passed or failed: nil if it
 	// collected nothing (a runner that does not know reports, or one that is
@@ -1195,12 +1197,9 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Outputs, p.Tests = nil, nil
 			p.Reason = "the runner refused the step: " + nonEmpty(res.Error, "its accept: section does not allow it")
-			def := c.st.Pipeline.Step(l.stepID)
-			retry, wait := c.retryDue(def, s, pipeline.CauseInfrastructure, true)
-			c.emitFailure(&p, res, retry)
-			if retry {
-				c.queueRetry(l.stepID, s, wait)
-			}
+			c.failAttempt(l.stepID, s, &p, res, pipeline.CauseInfrastructure, true)
+		case OutcomeWaiting:
+			c.waitForRoom(l, s, res)
 		case "lost":
 			if c.st.CancelRequested {
 				p.Reason = c.st.stoppedBecause()
@@ -1226,12 +1225,7 @@ func (e *Engine) Finish(leaseID string, res Result) error {
 			p.Outcome = string(StepFailed)
 			p.Reason = nonEmpty(res.Error, "the step failed")
 			p.Excerpt = CleanExcerpt(res.Excerpt)
-			def := c.st.Pipeline.Step(l.stepID)
-			retry, wait := c.retryDue(def, s, failureCause(res), false)
-			c.emitFailure(&p, res, retry)
-			if retry {
-				c.queueRetry(l.stepID, s, wait)
-			}
+			c.failAttempt(l.stepID, s, &p, res, failureCause(res), false)
 		}
 		c.advance()
 		return nil
@@ -1688,6 +1682,7 @@ func (c *cmd) persist() error {
 		{schemaReruns, c.persistSchema8},
 		{schemaFlow, func() error { return c.persistFlow(changed) }},
 		{schemaFlow, c.persistLanes},
+		{schemaQueues, func() error { return c.persistWaits(changed) }},
 		{schemaParity2, c.persistStepRunners},
 		{schemaParity2, func() error { return c.persistParity2(changed) }},
 		{schemaPullRequests, c.persistSchema9},
