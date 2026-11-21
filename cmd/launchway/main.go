@@ -85,6 +85,7 @@ Usage:
   launchway toggles list|get|create|set|rules|history|revert|keys|safeguards|plan|apply  feature toggles: roll a feature out to a share of users without a deployment
   launchway events   list|show|replay            what reached the server and what was decided about it; start one again
   launchway event-sources list|create|change|delete|test   incoming webhook sources: a signed address that starts a run
+  launchway run-triggers list|create|delete|allow|allowed|revoke   start a run when another project's run or launch ends
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
@@ -121,6 +122,7 @@ var commands = map[string]func([]string) error{
 	"caches":         cmdCaches,
 	"events":         cmdEvents,
 	"event-sources":  cmdEventSources,
+	"run-triggers":   cmdRunTriggers,
 	"variables":      cmdVariables,
 	"toggles":        cmdToggles,
 	"doctor":         cmdDoctor,

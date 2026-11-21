@@ -3893,6 +3893,208 @@ paths:
                 - projects
             x-launchway-access: project-operator
             x-launchway-audit: deployment.rollback
+    /api/v1/projects/{name}/run-trigger-allows:
+        get:
+            description: The projects this project allows to trigger on its results, and whether each may read step outputs.
+            operationId: get_api_v1_projects_name_run_trigger_allows
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: The projects this project allows to trigger on its results, and whether each may read step outputs.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        post:
+            description: Allows {"downstream_project", "share_outputs"}. The caller is an operator of this (the upstream) project.
+            operationId: post_api_v1_projects_name_run_trigger_allows
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Allows {"downstream_project", "share_outputs"}.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: run_trigger.allow
+    /api/v1/projects/{name}/run-trigger-allows/{downstream}:
+        delete:
+            description: Withdraws it; the downstream project's triggers stay and are refused, with the reason, until it is given again.
+            operationId: delete_api_v1_projects_name_run_trigger_allows_downstream
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: downstream
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Withdraws it; the downstream project's triggers stay and are refused, with the reason, until it is given again.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: run_trigger.revoke
+    /api/v1/projects/{name}/run-triggers:
+        get:
+            description: 'The project''s triggers on other projects'' results: each with its kind (run or launch), upstream_project, when, filter, ref and mapping. See [Triggers on results](../guide/result-triggers.md).'
+            operationId: get_api_v1_projects_name_run_triggers
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'The project''s triggers on other projects'' results: each with its kind (run or launch), upstream_project, when, filter, ref and mapping.'
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        post:
+            description: 'Makes a trigger: {"name", "upstream_project", "kind", "when", "upstream_pipeline", "filter", "ref", "mapping"}. 409 if the upstream project has not allowed this one, or if it would make a cycle; 400 for an expression that cannot be read. The caller must be able to read the upstream project.'
+            operationId: post_api_v1_projects_name_run_triggers
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Makes a trigger: {"name", "upstream_project", "kind", "when", "upstream_pipeline", "filter", "ref", "mapping"}.'
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: run_trigger.create
+    /api/v1/projects/{name}/run-triggers/{trigger}:
+        delete:
+            description: Removes a trigger.
+            operationId: delete_api_v1_projects_name_run_triggers_trigger
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: trigger
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Removes a trigger.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: run_trigger.delete
     /api/v1/projects/{name}/runs:
         post:
             description: Starts a Sortie. Answers 201 with the Sortie.

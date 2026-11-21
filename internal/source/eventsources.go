@@ -292,21 +292,42 @@ func (m *Manager) dryRun(ctx context.Context, project string, src engine.EventSo
 
 // startFromSource creates the run for an event already recorded as eventID.
 func (m *Manager) startFromSource(ctx context.Context, project string, src engine.EventSource, eventID string, given map[string]string, key string, res *SourceResult) (*SourceResult, error) {
-	trig := triggerOf(src)
+	var forget func()
+	if key != "" {
+		forget = func() { m.eng.ForgetKey(project, "src:"+src.ID, key) }
+	}
+	return m.startOnEvent(ctx, startSpec{Project: project, Ref: src.Ref, EventID: eventID, Trigger: triggerOf(src), Event: pipeline.EventWebhook,
+		Actor: "source:" + src.Name, Webhook: src.Name, Given: given, Forget: forget}, res)
+}
+
+// startSpec says what run an already recorded event starts.
+type startSpec struct {
+	Project, Ref, EventID string
+	Trigger               string // the decision's trigger name
+	Event                 string // the run's event: webhook or manual
+	Actor, Webhook        string
+	Given                 map[string]string
+	Forget                func() // called when no run could be made
+}
+
+// startOnEvent creates the run for an event already recorded: the decision
+// "started" (or the error) is added to that event, in the run's transaction
+// when it starts.
+func (m *Manager) startOnEvent(ctx context.Context, sp startSpec, res *SourceResult) (*SourceResult, error) {
 	fail := func(decision, reason string, problems ...string) (*SourceResult, error) {
-		if key != "" {
-			m.eng.ForgetKey(project, "src:"+src.ID, key)
+		if sp.Forget != nil {
+			sp.Forget()
 		}
 		res.Status, res.Reason, res.Problems = decision, reason, problems
-		return res, m.eng.AddDecision(eventID, engine.EventDecision{Trigger: trig, Decision: decision, Reason: reason + strings.Join(prefixed(problems), "")})
+		return res, m.eng.AddDecision(sp.EventID, engine.EventDecision{Trigger: sp.Trigger, Decision: decision, Reason: reason + strings.Join(prefixed(problems), "")})
 	}
-	pp := m.c().projects[project]
+	pp := m.c().projects[sp.Project]
 	if pp == nil {
 		return fail(engine.DecError, "the project is not watched by this server")
 	}
 	pp.mu.Lock()
 	defer pp.mu.Unlock()
-	r, pl, libs, vals, rec, err := m.preparedFor(ctx, pp, src, given)
+	r, pl, libs, vals, rec, err := m.preparedFor(ctx, pp, engine.EventSource{Ref: sp.Ref}, sp.Given)
 	if err != nil {
 		var ie pipeline.InputErrors
 		if errors.As(err, &ie) {
@@ -314,10 +335,10 @@ func (m *Manager) startFromSource(ctx context.Context, project string, src engin
 		}
 		return fail(engine.DecError, "no run could be made: "+redact.URLs(err.Error()))
 	}
-	t := trigger(r, pipeline.EventWebhook, "source:"+src.Name)
-	t.Inputs, t.Webhook = vals, src.Name
-	nr := engine.NewRun{Project: project, Pipeline: pl, Trigger: t, Source: engine.Source{Kind: "git", URL: pp.URL, Libraries: libs}}
-	nr.EventID = eventID
+	t := trigger(r, sp.Event, sp.Actor)
+	t.Inputs, t.Webhook = vals, sp.Webhook
+	nr := engine.NewRun{Project: sp.Project, Pipeline: pl, Trigger: t, Source: engine.Source{Kind: "git", URL: pp.URL, Libraries: libs}}
+	nr.EventID = sp.EventID
 	run, err := m.createRun(ctx, nr, rec)
 	if err != nil {
 		return fail(engine.DecError, "the run could not be created: "+redact.URLs(err.Error()))

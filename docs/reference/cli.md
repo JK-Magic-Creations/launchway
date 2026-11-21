@@ -807,6 +807,21 @@ launchway events replay EVENT
 
 `list` prints each event with a line for every decision and its reason. `show` adds the payload as kept. `replay` starts the run the event asked for again, at the same commit and with the same inputs, for operators; only verified events can be replayed, and the new event points back to the first. The same are `GET /api/v1/events`, `GET /api/v1/events/{id}` and `POST /api/v1/events/{id}/replay` in the [HTTP API](http-api.md) and the MCP tools `list_events`, `get_event` and `replay_event`.
 
+## launchway run-triggers
+
+Start a run of one project when another project's run or launch ends. See [Triggers on results](../guide/result-triggers.md).
+
+```text
+launchway run-triggers list PROJECT [--json]
+launchway run-triggers create PROJECT --name NAME --on UPSTREAM [--launch] [--when RESULT] [--pipeline NAME] [--filter EXPR] [--ref REF] [--map INPUT=EXPRESSION ...]
+launchway run-triggers delete PROJECT NAME
+launchway run-triggers allow UPSTREAM DOWNSTREAM [--share-outputs]
+launchway run-triggers allowed UPSTREAM [--json]
+launchway run-triggers revoke UPSTREAM DOWNSTREAM
+```
+
+`allow`, `allowed` and `revoke` are the upstream project's (its operators decide who may trigger on it); `create`, `list` and `delete` are the downstream project's. The same are the `run-triggers` and `run-trigger-allows` routes of the [HTTP API](http-api.md) and the MCP tools `list_run_triggers`, `create_run_trigger`, `delete_run_trigger`, `list_run_trigger_allows`, `allow_run_triggers` and `revoke_run_triggers`.
+
 ## launchway event-sources
 
 Incoming webhook sources of a project. See [Event sources](../guide/event-sources.md).

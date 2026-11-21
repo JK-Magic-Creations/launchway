@@ -146,6 +146,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/projects/{name}/registry/tag` | `delete_registry_image` | `registry delete` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/rollback` | `get_rollback_options` | `deployments options` | — | equal |
 | `POST /api/v1/projects/{name}/rollbacks` | `rollback_deployment` | `deployments rollback` | — | equal |
+| `GET /api/v1/projects/{name}/run-trigger-allows` | `list_run_trigger_allows` | `run-triggers allowed` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/run-trigger-allows` | `allow_run_triggers` | `run-triggers allow` | `not needed by terraform` | equal |
+| `DELETE /api/v1/projects/{name}/run-trigger-allows/{downstream}` | `revoke_run_triggers` | `run-triggers revoke` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/run-triggers` | `list_run_triggers` | `run-triggers list` | `not needed by terraform` | equal |
+| `POST /api/v1/projects/{name}/run-triggers` | `create_run_trigger` | `run-triggers create` | `not needed by terraform` | equal |
+| `DELETE /api/v1/projects/{name}/run-triggers/{trigger}` | `delete_run_trigger` | `run-triggers delete` | `not needed by terraform` | equal |
 | `POST /api/v1/projects/{name}/runs` | `start_run` | `runs start` | — | equal |
 | `GET /api/v1/projects/{name}/schedules` | `get_project` | `projects get` | — | equal |
 | `GET /api/v1/projects/{name}/security` | `get_security_findings` | — | — | gap: launchway has no findings command yet |

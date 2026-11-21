@@ -13,8 +13,8 @@ or started when you did not expect it, the event log says why, in words.
 | `webhook` | A webhook trigger was called |
 | `event_source` | An event source of the project received a call (see [Event sources](event-sources.md)) |
 | `manual` | A person, a token or an agent started a run, or re-ran one |
-| `run_result` | Another project's run ended |
-| `launch_result` | Another project's launch ended |
+| `run_result` | Another project's run ended (see [Triggers on results](result-triggers.md)) |
+| `launch_result` | Another project's launch ended (see [Triggers on results](result-triggers.md)) |
 
 Each event records when it arrived, whether its sender was **verified** (a signed webhook is; a call with a wrong
 signature is recorded too, as not verified), a one-line summary, the ref and commit it was about, and a small
