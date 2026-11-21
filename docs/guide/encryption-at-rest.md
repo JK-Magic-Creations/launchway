@@ -88,9 +88,16 @@ launchway doctor encryption
 Git over SSH and webhook secrets **refuse to turn on until a root key exists**, and say how to create
 one. A server that has no key never makes one by itself in an installation that already holds secrets.
 
-Servers of the release before this one, still running while you roll out, cannot read sealed values
-(sign-in on those servers fails until they are replaced). Roll all servers to this release first, then
-configure the key; or scale to one server for the rollout.
+A server that has no key, or is of the release before this one, cannot read values another server has
+sealed: sign-in state, links to hosted reports and Git run tokens differ between the two kinds of server
+(sign-in and report links fail when a request lands on the wrong one), Git over SSH has no host key on
+the old servers, and webhook secrets and addresses cannot be opened (a delivery from an old server
+fails, and five failures in a row turn the hook off). That lasts from the moment the first server with
+the key starts until the last server without it stops: the length of the rollout. Rolling to this
+release first and configuring the key afterwards only moves the overlap to the second rollout. To have
+none, turn the key on with `server.strategy.rollingUpdate.maxSurge: 0` and `maxUnavailable: "100%"` for
+that one rollout (a short outage, then set it back), or scale to one server. Going back to the
+release before, once values are sealed, needs a restored backup: it cannot read them.
 
 ## Where the root key lives
 
