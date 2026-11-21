@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 5 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 1 available · 0 in progress · 14 planned · 15 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 2 available · 0 in progress · 13 planned · 15 capabilities</p>
 
 One connected picture of code, dependencies, images and deployments, so you always know what runs where and can fix it safely.
 
@@ -48,7 +48,7 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Know what you run](#g-know-what-you-run) | 10 | 1 | 0 | 9 |
-| [Fix it safely](#g-fix-it-safely) | 5 | 0 | 0 | 5 |
+| [Fix it safely](#g-fix-it-safely) | 5 | 1 | 0 | 4 |
 
 ### Know what you run {#g-know-what-you-run}
 
@@ -166,13 +166,13 @@ Off by default and turned on per zone: updates open as changes, pass tests and c
 
 #### Built-in dependency updates {#built-in-dependency-updates}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Keep common ecosystems' dependencies current, as ordinary reviewable pull requests. Updates carry their release notes and test results.
+Launchway finds outdated and vulnerable dependencies in a repository and proposes the updates as ordinary reviewable pull requests, so no outside update robot is needed. Available for Go modules, npm, Python manifests, container base images, and the workflow files a repository still carries. Known vulnerabilities are matched against OSV data (a mirror directory works offline), security fixes come first and are not held back, other versions wait three days after release, and a limit keeps a burst of pull requests from flooding the pipeline. Lock files are written by the ecosystem's own tool in a step container, never on the server. Launchway's own repository uses it. Coming, not available yet: Maven and Gradle, Cargo, .NET, Helm charts and Terraform providers; changelog excerpts in the pull request; settings edited in the web interface (today they are the repository's file and the levels' settings); automatic merging.
 
 **Depends on:** Pull requests on the built-in host.
 
-[Area page](software-graph.md)
+[Read the documentation](../guide/dependency-updates.md) · [Area page](software-graph.md)
 
 #### Image refresh and patching of base images {#image-refresh-and-patching-of-base-images}
 
