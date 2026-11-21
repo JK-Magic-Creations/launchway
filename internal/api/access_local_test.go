@@ -30,6 +30,7 @@ func init() {
 		"POST /api/v1/account/recovery-codes":        signed("POST", "/api/v1/account/recovery-codes"),
 		"POST /api/v1/account/sign-out-everywhere":   signed("POST", "/api/v1/account/sign-out-everywhere"),
 		"GET /api/v1/users":                          {"GET", "/api/v1/users", "", [6]int{401, 403, 403, 403, 403, 200}},
+		"POST /api/v1/auth/setup-now":                admin("POST", "/api/v1/auth/setup-now", 404),
 		"POST /api/v1/users":                         admin("POST", "/api/v1/users", 404),
 		"POST /api/v1/users/{name}/reset":            admin("POST", "/api/v1/users/someone/reset", 404),
 		"POST /api/v1/users/{name}":                  admin("POST", "/api/v1/users/someone", 404),

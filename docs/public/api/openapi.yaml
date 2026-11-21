@@ -1298,6 +1298,32 @@ paths:
             tags:
                 - auth
             x-launchway-access: public
+    /api/v1/auth/setup-now:
+        post:
+            description: 'Only on an installation that runs with no sign-in on an address others can reach: issues a one-time setup code (answered once) and records that the servers'' next start runs with built-in accounts. 404 elsewhere; needs the [CSRF header](#csrf-header).'
+            operationId: post_api_v1_auth_setup_now
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: 'Only on an installation that runs with no sign-in on an address others can reach: issues a one-time setup code (answered once) and records that the servers'' next start runs with built-in accounts.'
+            tags:
+                - auth
+            x-launchway-access: admin
+            x-launchway-audit: auth.setup_now
     /api/v1/cache-policy:
         get:
             description: 'The installation''s policy: enabled, max_project_gib, max_entry_gib, idle_days, max_age_days, and source (default until an administrator sets one).'

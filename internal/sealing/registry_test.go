@@ -141,7 +141,7 @@ func TestRegisteredColumnsAreOnlyWrittenBySealingCode(t *testing.T) {
 				t.Errorf("%s writes %s.%s, a column that holds secrets (%s), and is not one of its writers: seal the value with internal/sealing and list the file in Registry, or use an existing writer", rel, c.Table, c.Column, c.Why)
 				continue
 			}
-			if !strings.Contains(src, ".Seal(") {
+			if !strings.Contains(src, ".Seal(") && !strings.Contains(src, ".SealRow(") {
 				t.Errorf("%s writes %s.%s but never calls Seal", rel, c.Table, c.Column)
 			}
 		}

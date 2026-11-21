@@ -56,6 +56,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/auth/link/complete` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
 | `POST /api/v1/auth/local/second-factor` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
 | `POST /api/v1/auth/local/signin` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
+| `POST /api/v1/auth/setup-now` | — | — | — | exempt: asks an installation that runs with no sign-in for built-in accounts: a credential flow done from the warning on the page; the console covers it as launchway users setup-code and auth.mode |
 | `GET /api/v1/cache-policy` | `get_cache_policy` | `caches policy get` | `not needed by terraform` | equal |
 | `PUT /api/v1/cache-policy` | `set_cache_policy` | `caches policy set` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
 | `GET /api/v1/components` | — | — | — | gap: the component inventory is UI only so far |

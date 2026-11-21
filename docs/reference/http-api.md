@@ -177,6 +177,7 @@ Sign-ins, failed sign-ins and sign-outs are recorded in the audit trail as `auth
 | `GET /api/v1/info` | `public` | — | The server's version and schema, and whether sign-in is on. |
 | `GET /api/v1/me` | `signed-in` | — | Who the caller is and what they may do. |
 | `GET /api/v1/setup` | `public` | — | Whether this installation still waits for its first administrator, and when the setup code expires. |
+| `POST /api/v1/auth/setup-now` | `admin` | `auth.setup_now` | Only on an installation that runs with no sign-in on an address others can reach: issues a one-time setup code (answered once) and records that the servers' next start runs with built-in accounts. `404` elsewhere; needs the [CSRF header](#csrf-header). |
 | `POST /api/v1/setup/begin` | `public` | — | First-run step one: the one-time setup code, the administrator's name and password. Answers a second-factor secret (an `otpauth` address) and a sealed `pending` value. Needs the [CSRF header](#csrf-header). |
 | `POST /api/v1/setup/complete` | `public` | — | First-run step two: the `pending` value and a code from the authenticator. Creates the administrator, signs them in and returns ten recovery codes once. |
 | `POST /api/v1/auth/local/signin` | `public` | — | Built-in sign-in, step one: user name and password. Answers `signed_in`, or `second_factor` with a short-lived `ticket`. Locks an account with backoff after repeated failures (`429`, `Retry-After`). |

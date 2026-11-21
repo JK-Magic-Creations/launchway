@@ -329,6 +329,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `runner.identity_refused` | a runner with the shared or a pool token said it is an enrolled runner; only that runner, with its own identity, may say so. The request is refused with 403 and the detail names the claimed runner and the path |
 | `auth.sign_in` | `GET /auth/callback`: a sign-in that succeeded (with the groups the provider gave) or failed (with why) |
 | `auth.sign_out` | `POST /auth/logout`, for a session that existed |
+| `auth.setup_now` | `POST /api/v1/auth/setup-now`: sign-in was asked for on an installation that ran with none; the servers' next start uses built-in accounts |
 | `auth.local.password_changed` | `POST /api/v1/account/password`: someone changed their own password (their other sessions end) |
 | `auth.local.second_factor_begin` | `POST /api/v1/account/second-factor`: someone started adding an authenticator |
 | `auth.local.second_factor_added` | `POST /api/v1/account/second-factor/confirm`: the authenticator was proven with a code |

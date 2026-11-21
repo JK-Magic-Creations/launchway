@@ -3,6 +3,7 @@ package parity
 // The rows were drafted from the route table and are kept by hand.
 
 var rows = []Row{
+	{Route: "POST /api/v1/auth/setup-now", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "asks an installation that runs with no sign-in for built-in accounts: a credential flow done from the warning on the page; the console covers it as launchway users setup-code and auth.mode"},
 	{Route: "POST /api/v1/setup/begin", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users"},
 	{Route: "POST /api/v1/setup/complete", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users"},
 	{Route: "POST /api/v1/auth/local/signin", MCP: "", CLI: "", Terraform: "", Status: Exempt, Reason: "sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users"},
