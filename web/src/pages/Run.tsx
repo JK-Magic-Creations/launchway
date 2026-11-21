@@ -1,3 +1,5 @@
+import { EXPLAIN } from "../learn/links";
+import { LearnLink } from "../learn/LearnLink";
 import { RunHeader, storedDensity, saveDensity, type Density } from "../components/RunHeader";
 import { RunLine } from "../components/RunLine";
 import { whyWaiting } from "../components/whyWaiting";
@@ -509,7 +511,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {rerun && step.status !== "failed" && <RerunButton run={run} step={step} />}
         </div>
       </div>
-      {why && <div className={"note why " + (why.kind === "person" ? "warn" : "")} role="status"><Icon name={why.kind === "person" ? "pause" : "clock"} size="s" /><span><b>Why it waits.</b> {why.text}</span></div>}
+      {why && <div className={"note why " + (why.kind === "person" ? "warn" : "")} role="status"><Icon name={why.kind === "person" ? "pause" : "clock"} size="s" /><span><b>Why it waits.</b> {why.text} <LearnLink to={why.kind === "environment" ? EXPLAIN.lock : why.kind === "person" ? EXPLAIN.clearance : EXPLAIN.waits} /></span></div>}
       {reused && <ReusedNote run={run} step={step} />}
       {deploys && <DeploymentPanel run={run} step={step} />}
       {step.kind === "verify" && <VerificationPanel run={run} step={step} list={verifications.list} reload={verifications.reload} />}

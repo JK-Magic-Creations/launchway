@@ -25,6 +25,12 @@ COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
 RUN npm run build
+# The documentation, rendered from docs/ into the web UI's files (the Learn area): the binary
+# carries the documentation of exactly the release it is. Diagrams are drawn already (docs/.vitepress/diagrams).
+WORKDIR /src
+COPY docs/ docs/
+COPY scripts/docs/ scripts/docs/
+RUN cd docs && npm ci --no-audit --no-fund && cd .. && node scripts/docs/build-learn.mjs
 
 # ---- the binary ----
 FROM ${GO_IMAGE} AS build

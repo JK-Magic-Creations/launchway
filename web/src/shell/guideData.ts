@@ -94,6 +94,18 @@ export const GUIDE: Record<string, GuideEntry> = {
     title: "{Logbook}",
     text: "Every sign-in and every change, with who did it and when. Search for a person, an action or an object.",
   },
+  "/learn": {
+    title: "Learn",
+    text: "The documentation of the release you are running, here in the product. Choose a path, or search. Nothing leaves this server.",
+  },
+  "/learn/:a": {
+    title: "Learn",
+    text: "You are reading the documentation of this release. The contents are on the left, and the headings of the page on the right.",
+  },
+  "/learn/:a/:b": {
+    title: "Learn",
+    text: "You are reading the documentation of this release. The contents are on the left, and the headings of the page on the right.",
+  },
   "/kit": {
     title: "The design kit",
     text: "The parts every Launchway screen is built from, in light and dark. Change the theme with the moon button and look at each part in both.",

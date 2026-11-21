@@ -1,3 +1,4 @@
+import { KeyHelp } from "../learn/LearnLink";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, type LibraryOverrides, type PipelineFile, type Problem, type Project, type Ref, type SaveResult } from "../api";
 import { ago, shortSha } from "../format";
@@ -78,6 +79,7 @@ export function EditPipelinePage({ name }: { name: string }) {
   const [overrides, setOverrides] = useState<LibraryOverrides>({});
   const [copied, setCopied] = useState(false);
   const editor = useRef<PipelineEditorHandle>(null);
+  const [cursorLine, setCursorLine] = useState("");
   const me = useMe();
 
   useEffect(() => {
@@ -244,12 +246,13 @@ export function EditPipelinePage({ name }: { name: string }) {
           <div className="editor-bar">
             <span className="faint small">{checking ? "Checking…" : valid ? "No problems" : problems.length ? `${problems.length} problem${problems.length === 1 ? "" : "s"}` : ""}</span>
             <span className="editor-bar-actions">
+              <KeyHelp line={cursorLine} />
               <button type="button" className="btn btn-sm" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
               <button type="button" className="btn btn-sm" onClick={download}>Download</button>
               <button type="button" className="btn btn-sm" disabled={!dirty} onClick={discard}>Discard edits</button>
             </span>
           </div>
-          <PipelineEditor ref={editor} text={text} onChange={setText} problems={problems} label={`${file.path} on ${file.ref}`} />
+          <PipelineEditor ref={editor} text={text} onChange={setText} problems={problems} label={`${file.path} on ${file.ref}`} onCursorLine={setCursorLine} />
         </section>
         <PipelinePreview res={res} error={checkErr} onJump={(l) => editor.current?.goToLine(l)}
           notes={<DraftNote project={project} />} />

@@ -216,6 +216,11 @@ export const PAGES: PageInfo[] = [
   page("/library/templates/:library/:name", "library", "templates", (p) => `Template ${p.name}`,
     (p) => [{ label: "Templates", href: "/library/templates" }, { label: p.library }, { label: p.name }]),
 
+  // The Learn area is not an eleventh area: it is help, reached from the top bar, the Guide and the pages' own links.
+  page("/learn", "home", undefined, () => "Learn", () => []),
+  page("/learn/:a", "home", undefined, () => "Learn", () => []),
+  page("/learn/:a/:b", "home", undefined, () => "Learn", () => []),
+
   page("/kit", "settings", undefined, () => "Design kit", () => [{ label: "Design kit" }]),
 
   page("/settings", "settings", "overview", () => "Settings", () => []),
@@ -298,8 +303,14 @@ export function redirectFor(path: string, search = ""): string | null {
   return null;
 }
 
-/** The section a path belongs to; none for an address no page owns. */
+/** Whether an address is in the Learn area (the documentation inside the product). */
+export function isLearn(path: string): boolean {
+  return path === "/learn" || path.startsWith("/learn/");
+}
+
+/** The section a path belongs to; none for an address no page owns, and none for Learn, which is not an area. */
 export function sectionOf(path: string): SectionId | null {
+  if (isLearn(path)) return null;
   return locate(path)?.info.section ?? null;
 }
 

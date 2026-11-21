@@ -23,6 +23,7 @@ export function SignInPage({ next }: { next: string }) {
         <p className="sub">Sign in with your account to see and run pipelines.</p>
         {error && <div className="errorbox" role="alert">{ERRORS[error] ?? "The sign-in did not work. Please try again."}</div>}
         <a className="btn btn-primary btn-wide" href={href}>Sign in with single sign-on</a>
+        <p className="hint signin-learn">New to Launchway? <a href="/learn/start-here">Read how it works</a>, no sign-in needed.</p>
       </div>
     </main>
   );

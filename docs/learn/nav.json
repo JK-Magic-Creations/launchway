@@ -1,0 +1,228 @@
+{
+  "sections": [
+    {
+      "id": "start",
+      "title": "Start here",
+      "blurb": "What Launchway is, in a few minutes.",
+      "items": [
+        "start-here",
+        "start/overview",
+        "start/quick-start",
+        "start/concepts",
+        "start/architecture",
+        "paths/developer",
+        "paths/operator",
+        "paths/security-reviewer",
+        "paths/decision-maker"
+      ]
+    },
+    {
+      "id": "concepts",
+      "title": "Concepts",
+      "blurb": "The ideas behind Launchway, each with a picture.",
+      "items": [
+        {
+          "slug": "concepts",
+          "title": "Overview"
+        },
+        "concepts/launch-line",
+        "concepts/pipelines-and-runs",
+        "concepts/templates-and-libraries",
+        "concepts/variables",
+        "concepts/environments-and-deployments",
+        "concepts/approvals",
+        "concepts/high-availability"
+      ]
+    },
+    {
+      "id": "tutorials",
+      "title": "Tutorials",
+      "blurb": "Learn by doing, one small win at a time.",
+      "items": [
+        {
+          "slug": "tutorials",
+          "title": "Overview"
+        },
+        "tutorials/first-pipeline",
+        "tutorials/tests-and-reports",
+        "tutorials/security-scans",
+        "tutorials/build-and-sign-image",
+        "tutorials/deploy-with-approval",
+        "tutorials/policy-gates",
+        "tutorials/pull-requests",
+        "tutorials/library-templates"
+      ]
+    },
+    {
+      "id": "guides",
+      "title": "Guides",
+      "blurb": "How each part of Launchway works, in depth.",
+      "items": [
+        {
+          "slug": "guide",
+          "title": "Overview"
+        },
+        "guide/pipelines",
+        "guide/triggers",
+        "guide/editor",
+        "guide/libraries",
+        "guide/approvals-and-reruns",
+        "guide/test-reports",
+        "guide/artifacts",
+        "guide/build-caches",
+        "artifacts",
+        "guide/security-findings",
+        "guide/images",
+        "guide/deployments",
+        "guide/policies",
+        "guide/verification",
+        "guide/ai",
+        "guide/secrets",
+        "guide/configuration",
+        "guide/access",
+        "guide/runner-identity",
+        "guide/agents",
+        "guide/high-availability",
+        "guide/commands"
+      ]
+    },
+    {
+      "id": "howto",
+      "title": "How-to",
+      "blurb": "Steps for one job: install, connect, add, back up.",
+      "items": [
+        {
+          "slug": "howto",
+          "title": "Overview"
+        },
+        "howto/install-laptop",
+        "howto/install-single-server",
+        "howto/install-kubernetes",
+        "howto/install-eks",
+        "howto/install-gke",
+        "howto/setup-first-run",
+        "howto/connect-repository",
+        "howto/add-runner",
+        "howto/add-environment",
+        "howto/add-policy",
+        "howto/add-health-source",
+        "howto/add-ai-model",
+        "howto/connect-runner",
+        "howto/oidc-and-roles",
+        "howto/secrets",
+        "howto/backup-restore-upgrade",
+        "howto/self-deploy",
+        "howto/monitoring",
+        "howto/troubleshooting"
+      ]
+    },
+    {
+      "id": "reference",
+      "title": "Reference",
+      "blurb": "Every key, flag, route and setting.",
+      "items": [
+        {
+          "slug": "reference",
+          "title": "Overview"
+        },
+        "reference/pipeline",
+        "reference/server-config",
+        "reference/runner-config",
+        "reference/helm-values",
+        "reference/cli",
+        "reference/http-api",
+        "reference/config-objects",
+        "reference/interface-parity",
+        "reference/events",
+        "reference/roles",
+        "reference/policy-rules",
+        "reference/environment-variables"
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "blurb": "The trust model, hardening and the supply chain.",
+      "items": [
+        {
+          "slug": "security",
+          "title": "Overview"
+        },
+        "security/trust-model",
+        "security/hardening",
+        "security/supply-chain",
+        "security/verify-downloads",
+        "security/controls-and-compliance",
+        "security/reporting"
+      ]
+    },
+    {
+      "id": "words",
+      "title": "Words and answers",
+      "blurb": "The glossary and common questions.",
+      "items": [
+        "glossary",
+        "faq"
+      ]
+    }
+  ],
+  "paths": [
+    {
+      "id": "new",
+      "title": "I am new to Launchway",
+      "who": "You have not used it before.",
+      "steps": [
+        "start-here",
+        "concepts/launch-line",
+        "concepts/pipelines-and-runs",
+        "tutorials/first-pipeline",
+        "concepts/approvals",
+        "glossary"
+      ]
+    },
+    {
+      "id": "write",
+      "title": "I write pipelines",
+      "who": "You turn builds and releases into steps.",
+      "steps": [
+        "guide/pipelines",
+        "reference/pipeline",
+        "guide/editor",
+        "concepts/templates-and-libraries",
+        "concepts/variables",
+        "guide/libraries",
+        "tutorials/tests-and-reports"
+      ]
+    },
+    {
+      "id": "operate",
+      "title": "I deploy and operate",
+      "who": "You get changes to where they run, and keep them healthy.",
+      "steps": [
+        "concepts/environments-and-deployments",
+        "guide/deployments",
+        "concepts/approvals",
+        "tutorials/deploy-with-approval",
+        "guide/verification",
+        "guide/approvals-and-reruns",
+        "howto/troubleshooting"
+      ]
+    },
+    {
+      "id": "admin",
+      "title": "I administer Launchway",
+      "who": "You set it up and look after it for others.",
+      "steps": [
+        "howto/setup-first-run",
+        "guide/access",
+        "howto/oidc-and-roles",
+        "concepts/high-availability",
+        "howto/backup-restore-upgrade",
+        "guide/policies",
+        "security/hardening",
+        "guide/configuration",
+        "howto/monitoring"
+      ]
+    }
+  ]
+}

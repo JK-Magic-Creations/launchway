@@ -31,3 +31,6 @@
 .rm-when.when-next { background: var(--vp-c-brand-soft); color: var(--vp-c-brand-1); }
 .dark .rm-when.when-now { color: #f2a65a; }
 .vp-doc h4 { margin-top: 28px; }
+
+/* A link to a page of the product itself ([text](app:/route)): there is nothing to open on this site. */
+.app-route { border-bottom: 1px dotted var(--vp-c-text-3); cursor: help; }

@@ -16,6 +16,7 @@ export function Launcher({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
           <button type="button" className="iconbtn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
         </div>
       </div>
+      <p className="lg-learn"><a href="/learn" onClick={go}><Icon name="book" size="s" />New here? Learn how Launchway works</a><span className="faint small"> The documentation of this release, in the product.</span></p>
       <div className="lg-grid">
         {visibleSections(ctx).map((s) => {
           const tabs = visibleTabs(s, ctx);

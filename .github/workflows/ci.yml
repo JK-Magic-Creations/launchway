@@ -34,6 +34,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Build the web UI
         run: cd web && npm ci --no-audit --no-fund && npm run build
+      - name: Build the documentation into the binary (the Learn area)
+        run: make learn
       - name: Vet and test (SQLite)
         run: |
           go vet ./...

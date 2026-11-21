@@ -1,3 +1,5 @@
+import { EXPLAIN } from "../learn/links";
+import { LearnLink } from "../learn/LearnLink";
 import type { ReactNode } from "react";
 import type { RunDetail, StepView } from "../api";
 import { AllowedFailureBadge } from "./AllowedFailures";
@@ -67,7 +69,7 @@ export function RunHeader({ run, now, done, live, density, onDensity, select, wa
             {overridden.length > 0 && <span className="badge-override" title="Started with another version of a library than the pipeline names">Library override</span>}
             <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
           </div>
-          <p className="sentence" aria-live="polite">{runSentence(run, now)}</p>
+          <p className="sentence" aria-live="polite">{runSentence(run, now)}{run.status === "failed" && <> <LearnLink to={EXPLAIN.stopped} /></>}</p>
         </div>
         <div className="acts">
           <DensityToggle value={density} onChange={onDensity} />

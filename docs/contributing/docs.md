@@ -30,6 +30,28 @@ make docs-serve    # a live preview at http://127.0.0.1:5173/launchway/
 The built site is in `docs/.vitepress/dist`. After `npm ci` has run once, the build needs no
 network access.
 
+## The documentation inside the product
+
+The same sources are shipped in the Launchway binary and shown in its **Learn** area, so every
+installation has the documentation of exactly the release it runs, offline.
+`scripts/docs/build-learn.mjs` renders the pages (with the site's own Markdown renderer) into
+`web/dist/learn-content` as gzipped JSON plus a prebuilt search index; Go's `embed` takes them along
+with the web UI. `make build` and the image build run it; it needs no browser and no network.
+
+- Which pages are in Learn, and in what order, is `docs/learn/nav.json`. A page that is in no
+  section, or a section naming a page that does not exist, fails the build. The roadmap, the
+  contributing pages and the demo stay on the public site only.
+- Link to a page of the product with `[Waiting for a decision](app:/activity/approvals)`. In Learn it
+  is a link; on this site it is the plain text. A test (`web/src/learn/docs.test.ts`) fails when the
+  route is not a page of the product, and when any link from the product into Learn names a page or a
+  heading that does not exist.
+- A `<!-- try -->` line before a ```` ```yaml ```` block gives the block a "Try it in the editor"
+  button in the product, which opens the pipeline in the playground.
+- Mermaid diagrams are drawn at build time as SVG, light and dark, and kept in
+  `docs/.vitepress/diagrams`. After adding or changing a diagram run `make docs-diagrams-cache`
+  (needs a Chromium: `LAUNCHWAY_DOCS_CHROME=/path/to/chrome`) and commit the new files;
+  `make learn-check` (part of `make docs` and `make check`) fails when one is missing or unused.
+
 ## Checks
 
 - **Dead links**: the site build fails on a link to a page that does not exist.

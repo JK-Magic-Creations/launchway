@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { api, ApiError, SIGNED_OUT, type Me } from "./api";
 import { MeContext } from "./auth";
 import { useApprovals } from "./live";
@@ -7,7 +7,11 @@ import { useOverview } from "./configApi";
 import { ErrorBox } from "./components/ui";
 import { InstallationProvider } from "./guided/facts";
 import { Frame } from "./shell/Frame";
+import { isLearn } from "./nav/model";
 
+
+// Loaded only when someone not signed in opens Learn: the first page needs none of it.
+const PublicLearn = lazy(() => import("./learn/PublicLearn").then((m) => ({ default: m.PublicLearn })));
 
 type Who = { state: "loading" } | { state: "out"; next: string } | { state: "in"; me: Me } | { state: "error"; error: unknown };
 
@@ -31,6 +35,8 @@ export function App() {
 
   if (who.state === "loading") return <div className="page"><div className="loading">Loading…</div></div>;
   if (who.state === "error") return <div className="page"><ErrorBox error={who.error} /></div>;
+  // The documentation needs no sign-in: it is the public text of this release, and shows nothing of this installation.
+  if (who.state === "out" && isLearn(location.pathname)) return <Suspense fallback={<div className="page"><div className="loading">Loading…</div></div>}><PublicLearn /></Suspense>;
   if (who.state === "out") return <SignInPage next={who.next} />;
   return (
     <MeContext.Provider value={who.me}>

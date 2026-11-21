@@ -58,11 +58,12 @@ build_web_container() {
 	tmp=$(mktemp -d)
 	trap 'rm -rf "$tmp"' EXIT
 	# Only what Git tracks, so that a stray file cannot change the bundle.
-	git ls-files -z web | tar --null -T - -cf - | tar -xf - -C "$tmp"
+	# The documentation (docs/) is built into the same files: it is what the product's Learn area shows.
+	git ls-files -z web docs scripts/docs | tar --null -T - -cf - | tar -xf - -C "$tmp"
 	rm -rf "$tmp/web/dist"
-	"$ctr" run --rm --network=host -v "$tmp/web:/src/web:Z" -w /src/web \
+	"$ctr" run --rm --network=host -v "$tmp:/src:Z" -w /src/web \
 		-e npm_config_update_notifier=false -e npm_config_fund=false -e npm_config_audit=false \
-		"$NODE_IMAGE" sh -c 'npm ci --no-audit --no-fund --loglevel=error && npm run build'
+		"$NODE_IMAGE" sh -c '(cd ../docs && npm ci --no-audit --no-fund --loglevel=error) && npm ci --no-audit --no-fund --loglevel=error && npm run build && node ../scripts/docs/build-learn.mjs'
 	find web/dist -mindepth 1 ! -name .keep -exec rm -rf {} +
 	cp -R "$tmp/web/dist/." web/dist/
 	rm -rf "$tmp"
@@ -71,8 +72,8 @@ build_web_container() {
 
 case ${WEB_BUILD:-container} in
 container) build_web_container ;;
-local) (cd web && npm ci --no-audit --no-fund && npm run build) ;;
-skip) [ -f web/dist/index.html ] || { echo "build.sh: WEB_BUILD=skip but web/dist/index.html is missing" >&2; exit 1; } ;;
+local) (cd docs && npm ci --no-audit --no-fund) && (cd web && npm ci --no-audit --no-fund && npm run build) && node scripts/docs/build-learn.mjs ;;
+skip) [ -f web/dist/index.html ] && [ -f web/dist/learn-content/manifest.json.gz ] || { echo "build.sh: WEB_BUILD=skip but web/dist/index.html is missing" >&2; exit 1; } ;;
 *) echo "build.sh: WEB_BUILD must be container, local or skip" >&2; exit 2 ;;
 esac
 
