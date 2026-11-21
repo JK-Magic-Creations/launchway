@@ -9,6 +9,9 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
+	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
+	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
+	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
 )
 
 // Launchway's own Git hosting (forge.hosting; see internal/forge/hosting).
@@ -33,6 +36,13 @@ type ForgeHosting struct {
 	Git               *githttp.Handler
 	RunTokens         githttp.RunTokens
 	AllowInsecureHTTP bool
+	// Keys holds SSH keys and deploy keys, Rules the protected branches, SSH
+	// says whether and where Git over SSH is served.
+	Keys  *sshkeys.Store
+	Rules *refrules.Store
+	SSH   SSHInfo
+	// Hooks sends webhooks (nil: none).
+	Hooks *webhooks.Service
 }
 
 // The access classes of repositories. A repository's roles come from the
@@ -55,13 +65,13 @@ func repoSubject(owner, name string) string { return owner + "/" + name }
 
 // forgeRoutes are the routes of repositories.
 func (s *Server) forgeRoutes() []route {
-	return append(append(s.gitRoutes(), s.compatRoutes()...), []route{
+	return append(append(append(s.gitRoutes(), s.compatRoutes()...), s.keyRoutes()...), append(s.hookRoutes(), []route{
 		{"GET /api/v1/repositories", signedIn, "", s.listRepos},
 		{"POST /api/v1/repositories", administer, "repository.create", s.createRepo},
 		{"GET /api/v1/repositories/{owner}/{name}", repoRead, "", s.getRepo},
 		{"PATCH /api/v1/repositories/{owner}/{name}", repoAdmin, "repository.update", s.updateRepo},
 		{"DELETE /api/v1/repositories/{owner}/{name}", repoAdmin, "repository.delete", s.deleteRepo},
-	}...)
+	}...)...)
 }
 
 func (s *Server) forgeOn(w http.ResponseWriter) bool {
@@ -138,6 +148,7 @@ func (s *Server) createRepo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setAudit(r, got.Path, "visibility "+string(got.Visibility))
+	s.emitRepository(r.Context(), identityFrom(r).User, got, "created", nil)
 	writeJSON(w, http.StatusCreated, got)
 }
 
@@ -162,6 +173,7 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 	path := repoSubject(r.PathValue("owner"), r.PathValue("name"))
 	ctx, p := r.Context(), s.Forge.Provider
 	var changes []string
+	renamedFrom := ""
 	if _, err := p.Repositories().Get(ctx, path); err != nil {
 		s.failForge(w, err)
 		return
@@ -199,6 +211,7 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 			s.failForge(w, err)
 			return
 		}
+		renamedFrom = path
 		path = repoSubject(owner, name)
 		changes = append(changes, "renamed to "+path)
 	}
@@ -208,15 +221,22 @@ func (s *Server) applyUpdate(w http.ResponseWriter, r *http.Request, in repoUpda
 		s.failForge(w, err)
 		return
 	}
+	if renamedFrom != "" {
+		s.emitRepository(ctx, identityFrom(r).User, got, "renamed", map[string]string{"old_path": renamedFrom})
+	}
 	writeJSON(w, http.StatusOK, got)
 }
 
 func (s *Server) deleteRepo(w http.ResponseWriter, r *http.Request) {
 	path := repoSubject(r.PathValue("owner"), r.PathValue("name"))
 	setAudit(r, path, "moved to the trash")
+	gone, _ := s.Forge.Provider.Repositories().Get(r.Context(), path)
 	if err := s.Forge.Provider.Repositories().Delete(r.Context(), path); err != nil {
 		s.failForge(w, err)
 		return
+	}
+	if gone.ID != "" {
+		s.emitRepository(r.Context(), identityFrom(r).User, gone, "deleted", nil)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

@@ -46,6 +46,9 @@ type Options struct {
 	MaxPerHome int
 	// CreatesPerMinute caps how fast repositories are made, in all (0: 60).
 	CreatesPerMinute int
+	// SSHPrefix is what an SSH clone address starts with when Git over SSH is
+	// on ("ssh://git@host:2222/" or "git@host:"); empty when it is off.
+	SSHPrefix string
 	// CredentialTTL is how long Access.Credential's secret lasts (default 1h).
 	CredentialTTL time.Duration
 	Minter        Minter
@@ -115,10 +118,14 @@ func (p *Provider) full(path string) string {
 }
 
 func (p *Provider) cloneOf(path string) forge.CloneAddresses {
-	if p.o.BaseURL == "" {
-		return forge.CloneAddresses{}
+	var c forge.CloneAddresses
+	if p.o.BaseURL != "" {
+		c.HTTPS = strings.TrimSuffix(p.o.BaseURL, "/") + "/git/" + path + ".git"
 	}
-	return forge.CloneAddresses{HTTPS: strings.TrimSuffix(p.o.BaseURL, "/") + "/git/" + path + ".git"}
+	if p.o.SSHPrefix != "" {
+		c.SSH = p.o.SSHPrefix + path + ".git"
+	}
+	return c
 }
 
 func (p *Provider) rateOK() bool {

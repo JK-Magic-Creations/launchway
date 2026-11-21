@@ -85,7 +85,8 @@ Usage:
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway doctor   [database]                 would this installation survive losing its database?
-  launchway repos    list|get|create|update|delete   hosted Git repositories (installation setting forge.hosting)
+  launchway repos    list|get|create|update|delete|deploy-keys|protected-branches   hosted Git repositories (installation setting forge.hosting)
+  launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
   launchway version
 
 The pipeline file defaults to .launchway/pipeline.yaml. runner and run take
@@ -151,6 +152,8 @@ func main() {
 		err = cmdDoctor(args)
 	case "repos":
 		err = cmdRepos(args)
+	case "keys":
+		err = cmdKeys(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":

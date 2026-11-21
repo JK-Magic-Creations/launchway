@@ -15,12 +15,16 @@ import (
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
 	"github.com/jk-magic-creations/launchway/internal/blobstore"
+	"github.com/jk-magic-creations/launchway/internal/egress"
 	"github.com/jk-magic-creations/launchway/internal/engine"
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/githttp"
 	"github.com/jk-magic-creations/launchway/internal/forge/providers/launchway"
+	"github.com/jk-magic-creations/launchway/internal/forge/refrules"
+	"github.com/jk-magic-creations/launchway/internal/forge/sshkeys"
 	"github.com/jk-magic-creations/launchway/internal/forge/storage"
 	"github.com/jk-magic-creations/launchway/internal/forge/store"
+	"github.com/jk-magic-creations/launchway/internal/forge/webhooks"
 	"github.com/jk-magic-creations/launchway/internal/gitexec"
 )
 
@@ -54,6 +58,11 @@ type Options struct {
 	Every      time.Duration
 	CacheBytes int64
 	Log        *slog.Logger
+	// Egress judges the addresses webhooks are sent to (default egress.Default,
+	// which the installation's egress.allow configures). Hooks tunes
+	// retries and the delivery client; zero values are the defaults.
+	Egress *egress.Guard
+	Hooks  webhooks.Options
 }
 
 // Hosting is hosting, set up.
@@ -64,8 +73,13 @@ type Hosting struct {
 	Connection forge.Connection
 	// RunTokens makes and checks the read-only tokens of runs.
 	RunTokens githttp.RunTokens
-	o         Options
-	log       *slog.Logger
+	// Keys is the SSH and deploy keys, Rules the protected branches.
+	Keys  *sshkeys.Store
+	Rules *refrules.Store
+	// Hooks sends the webhooks of repositories.
+	Hooks *webhooks.Service
+	o     Options
+	log   *slog.Logger
 }
 
 // New refuses (with the reason) when this server cannot host: git too old,
@@ -121,7 +135,40 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 	if po.Minter == nil {
 		po.Minter = rt
 	}
-	return &Hosting{Store: sto, Forge: fs, Provider: launchway.New(conn, fs, sto, po), Connection: conn, RunTokens: rt, o: o, log: o.Log}, nil
+	db := o.Engine.Database()
+	hk := o.Hooks
+	hk.DB, hk.Log = db, o.Log
+	if hk.Sealer == nil {
+		seal, err := o.Engine.SharedValue("webhook_secret_seal", auth.NewKey())
+		if err != nil {
+			return nil, fmt.Errorf("the key for webhook secrets: %w", err)
+		}
+		if hk.Sealer, err = auth.NewSealer(seal, "webhook-secret"); err != nil {
+			return nil, err
+		}
+	}
+	if hk.Client == nil {
+		g := o.Egress
+		if g == nil {
+			g = egress.Default
+		}
+		hk.Client = g.HTTPClient(10 * time.Second)
+	}
+	if hk.OnDisabled == nil {
+		eng := o.Engine
+		hk.OnDisabled = func(h webhooks.Hook, reason string) {
+			target := h.Repository
+			if target == "" {
+				target = h.Owner
+			}
+			if err := eng.Audit(engine.AuditEntry{At: time.Now().UnixMilli(), User: "system", Action: "webhook.disable", Target: target, Outcome: "ok",
+				Detail: "webhook " + h.Name + ": " + reason}); err != nil {
+				o.Log.Error("writing the audit trail", "action", "webhook.disable", "err", err)
+			}
+		}
+	}
+	return &Hosting{Store: sto, Forge: fs, Provider: launchway.New(conn, fs, sto, po), Connection: conn, RunTokens: rt,
+		Keys: sshkeys.New(db), Rules: refrules.New(db), Hooks: webhooks.New(hk), o: o, log: o.Log}, nil
 }
 
 // Resolve finds a live repository by its owner and name.
@@ -133,6 +180,7 @@ func (h *Hosting) Resolve(ctx context.Context, path string) (forge.Repository, e
 // retired or abandoned, verify a sample, and evict old caches. Each server
 // does its own; the storage's leases keep two from repacking one repository.
 func (h *Hosting) Start(ctx context.Context) {
+	go h.Hooks.Run(ctx)
 	every := h.o.Every
 	if every <= 0 {
 		every = 15 * time.Minute

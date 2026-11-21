@@ -108,6 +108,11 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/repositories/{owner}/{name}` | `delete_repository` | `repos delete` | `planned: launchway_repository` | equal |
 | `GET /api/v1/repositories/{owner}/{name}` | `get_repository` | `repos get` | `planned: launchway_repository` | equal |
 | `PATCH /api/v1/repositories/{owner}/{name}` | `update_repository` | `repos update` | `planned: launchway_repository` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/deploy-keys` | `list_deploy_keys` | `repos deploy-keys list` | `planned: launchway_deploy_key` | equal |
+| `POST /api/v1/repositories/{owner}/{name}/deploy-keys` | `add_deploy_key` | `repos deploy-keys add` | `planned: launchway_deploy_key` | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/deploy-keys/{id}` | `delete_deploy_key` | `repos deploy-keys delete` | `planned: launchway_deploy_key` | equal |
+| `GET /api/v1/repositories/{owner}/{name}/protected-branches` | `get_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
+| `PUT /api/v1/repositories/{owner}/{name}/protected-branches` | `set_protected_branches` | `repos protected-branches` | `planned: launchway_branch_protection` | equal |
 | `GET /api/v1/run-limits` | `get_run_limits` | `run-limits get` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `PUT /api/v1/run-limits` | `set_run_limits` | `run-limits set` | — | exempt: MCP and CLI manage the installation limits; they are held in a table of their own, so Terraform cannot yet (backlog: make them a configuration kind) |
 | `GET /api/v1/runner-join-tokens` | — | — | — | gap: join tokens are made from the UI wizard or the CLI; no MCP tool and no CLI list yet |
@@ -156,6 +161,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/variables` | `get_run_variables` | `variables run` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
 | `GET /api/v1/settings/approvals` | — | — | — | exempt: a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator |
+| `GET /api/v1/ssh` | `get_ssh_info` | `keys host` | — | equal |
 | `GET /api/v1/step-resources` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
 | `GET /api/v1/step-resources/defaults/{kind}` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
 | `PUT /api/v1/step-resources/defaults/{kind}` | `set_step_resource_default` | `step-resources set-default` | `launchway_step_resources` | equal |
@@ -168,6 +174,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `DELETE /api/v1/tokens/{id}` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `GET /api/v1/user` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
 | `POST /api/v1/user/repos` | — | — | — | exempt: a compatibility call that tools written for other Git hosts send; the same operations are the repository tools and commands |
+| `GET /api/v1/user/ssh-keys` | `list_ssh_keys` | `keys list` | — | equal |
+| `POST /api/v1/user/ssh-keys` | `add_ssh_key` | `keys add` | — | equal |
+| `DELETE /api/v1/user/ssh-keys/{id}` | `delete_ssh_key` | `keys delete` | — | equal |
 | `POST /api/v1/validate` | `validate_pipeline` | `validate` | — | equal |
 | `GET /api/v1/variables` | `list_variables` | `variables list` | `planned: data source launchway_variables` | equal |
 | `DELETE /api/v1/variables/{name}` | `delete_variable` | `variables delete` | `planned: resource launchway_variable` | equal |

@@ -158,6 +158,15 @@ type RPC struct {
 	// GitProtocol is the value of the Git-Protocol header, passed as GIT_PROTOCOL
 	// so protocol version 2 works for fetch.
 	GitProtocol string
+	// Stream serves the SSH way: one long-lived git process that reads and
+	// writes the whole conversation (git upload-pack, git receive-pack), not
+	// one stateless-rpc request. Advertise is unused with it.
+	Stream bool
+	// Policy, when set, decides before any ref moves whether a push may do
+	// what it asks: it is called with the refs of the push, once, from the
+	// pre-receive hook, and an error refuses the whole push with its text.
+	// It is the one place a rule about refs is enforced, for every transport.
+	Policy func(ctx context.Context, updates []RefUpdate) error
 }
 
 func (r RPC) env() []string {
