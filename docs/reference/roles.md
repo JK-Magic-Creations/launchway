@@ -105,6 +105,36 @@ Every route belongs to one class. [The HTTP API reference](http-api.md) gives ea
 | `repo-admin` | `admin` on the repository: may rename, archive, change who reads it and delete it. |
 | `admin` | `admin` on every project. |
 
+## Work tracking
+
+The work routes (`/api/v1/work/…`) are open to anyone signed in; the server then decides, from the role on the
+Project the work belongs to, what the person may see and do. The call matrix below shows them all as `signed-in`.
+
+| Level of right | Role on the Project | What it allows |
+|---|---|---|
+| **Read** | `viewer` | See items, boards, sprints, milestones, charts, the roadmap, agents and the spend view; search; read release notes |
+| **Write** | `operator` | Create and change items; comment, link, attach files; reorder the backlog; make and start sprints and milestones; take work over from an agent; save views |
+| **Maintain** | `admin` of the Project | Change how work is set up (workflow, types, fields, the close rule, agent rules and the autonomy policy); register, change, switch off and rotate the token of agents; clear a pause; look at flagged merges; import stories and promote an archive; change whether an item is confidential; report on someone's behalf; see confidential items |
+
+A few more rules sit on top:
+
+- **Confidential items** are seen by the people who maintain the scope, the reporter and the assignees, and nobody else.
+- **Only a person** registers or switches off an agent, changes settings, clears a pause, or takes work over. An
+  agent token never does any of these.
+- An agent token sees and changes only the Projects it was registered for, and only the work it holds.
+- **Closing work in another Project** from a pull request needs the operator role there, held through a
+  binding that names the person; a binding granted to a group does not yet allow it.
+
+For work above a Project the right is worked out from the Projects below it:
+
+| Scope of the work | Read or write | Maintain |
+|---|---|---|
+| A Project | The role on that Project | `admin` on that Project |
+| A Squadron | The role on any Project of the Squadron | `admin` on every Project of the Squadron (and it must have some) |
+| A Wing or the Base | The role on any Project | `admin` of every Project |
+
+The guides are [tracking work](../guide/tracking-work.md) and [working with agents](../guide/working-with-agents.md).
+
 ## Who may make which call
 
 Generated from the route table. "yes" means a person with that role on the project (or, for `admin`-class calls, on every project) passes the class check; the last column is what the handler checks on top.

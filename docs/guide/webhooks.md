@@ -18,6 +18,7 @@ once, inside the server, and starts the pipeline directly (see [Pipelines start 
 | `repository` | The repository was created, renamed (including a move to another owner) or deleted | `action` says which |
 | `pull_request` | A pull request changes | `action` says how: `opened`, `edited`, `synchronize` (new commits), `closed`, `reopened`, `merged`, `converted_to_draft`, `ready_for_review`, `review_requested`, `commented`, `auto_merge_enabled`, `auto_merge_disabled`; `number` and `pull_request` say which one |
 | `pull_request_review` | A review is submitted or dismissed | `action` is `review_submitted` or `review_dismissed`; `changes` has the verdict or the reason |
+| `work_item` | Work changes: an item is assigned to an agent, an agent asks for review or hands it back, or an item moves | `action` is `agent.assigned`, `agent.review_requested`, `agent.handed_back` or `state`; `work` has the item's `ref`, `title` and `state` and the details. See [work item events](../reference/events.md#work-item-events) |
 | `ping` | You asked for a test delivery | Always delivered, whatever the hook chose |
 
 ## Adding one

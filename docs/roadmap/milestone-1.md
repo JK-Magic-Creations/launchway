@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 28 in progress · 60 planned · 111 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 33 available · 29 in progress · 57 planned · 119 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -50,7 +50,7 @@ flowchart TD
 |---|---|---|---|---|
 | [Host your code](#g-host-your-code) | 20 | 4 | 0 | 16 |
 | [Review and merge changes](#g-review-and-merge-changes) | 10 | 3 | 1 | 6 |
-| [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
+| [Work items and decisions](#g-work-items-and-decisions) | 19 | 10 | 1 | 8 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
 | [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
 | [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 5 | 0 | 0 | 5 |
@@ -259,7 +259,7 @@ Send repository events to chat tools and any web address, with a delivery log, r
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. Sending mail is optional and off until configured. Email is planned: there is no mail sender in Launchway yet. The same preferences will cover review, work item and pipeline events.
+An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email. Sending mail is optional and off until configured. Email is planned: there is no mail sender in Launchway yet. The same preferences will cover review, work item and pipeline events. The in-product inbox for work (assigned, mentioned, unblocked, review needed) is built; email is not, because Launchway has no mail sender.
 
 **Depends on:** Built-in Git hosting.
 
@@ -374,39 +374,119 @@ Track work, decisions and releases next to the code.
 
 #### Issues and work items {#issues-and-work-items}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it. An item also traces to commits, runs and deployments, so the question which environment a request reached has a one-click answer.
+Track issues, bugs, stories, tasks and epics next to the code, with a workflow you can change, labels, assignees, estimates, acceptance criteria, comments, attachments, search and an inbox. Items are named like PAY-12 and live in a Project or at a level above it. Naming an item in a commit or pull request links them, and the item shows where its fix is running. Email is not sent: you are told in the inbox and on Home, and other systems can listen with a webhook.
 
 **Depends on:** Built-in Git hosting.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/tracking-work.md) · [Area page](git-hosting.md)
 
 #### Labels, milestones and templates for work {#labels-milestones-and-templates-for-work}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Colored and exclusive labels, milestones with progress, and templates and forms for new items. Labels and milestones are shared across projects at the levels you choose.
+Labels, milestones with progress, a template for each item type and custom fields. Labels are plain, lower-case words, not colored or exclusive. Milestones belong to the level they are made at. Forms for new items are not built.
 
 **Depends on:** Issues and work items.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/tracking-work.md) · [Area page](git-hosting.md)
 
 #### Dependencies and parent items {#dependencies-and-parent-items}
 
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Mark that one item blocks another, and group items under a parent. A blocked item drops out of the list of what is ready next, for people and for agents. A link that would make a cycle is refused, and the answer names the chain.
+
+**Depends on:** Issues and work items.
+
+[Read the documentation](../guide/tracking-work.md) · [Area page](git-hosting.md)
+
+#### Boards, backlog order and sprints {#boards-backlog-order-and-sprints}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+A board with a column for each state of your workflow, lanes by assignee, epic or priority, limits that warn, one backlog order, and sprints with capacity advice, carry-over and charts. The board is the same data as the list, drawn differently. Every move can be made by dragging, from a menu or from the keyboard. Limits and capacity advice only warn. Cards do not yet show where each change is running; the item page does.
+
+**Depends on:** Issues and work items.
+
+[Read the documentation](../guide/boards-and-sprints.md) · [Area page](git-hosting.md)
+
+#### Where the fix is running {#where-the-fix-is-running}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+After a change merges, its item says where it is running: merged, on dev since 14:02, not yet on prod. It is read from real deployments: an environment has the fix when a deployment's commit is the merged commit or a descendant of it. A change is closed by a person's merge only; an agent's merge leaves the item in review, and work in another project is not closed without the right to change it.
+
+**Depends on:** Issues and work items.
+
+[Read the documentation](../guide/work-and-code.md) · [Area page](git-hosting.md)
+
+#### Charts from the history {#charts-from-the-history}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Burndown, velocity, cumulative flow, and cycle and lead time, each with its numbers in a table. Every chart is computed from what happened to each item, not from stored totals, so a correction to the record corrects the chart.
+
+**Depends on:** Issues and work items.
+
+[Read the documentation](../guide/boards-and-sprints.md) · [Area page](git-hosting.md)
+
+#### Import stories and promote an archive {#import-stories-and-promote-an-archive}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Bring epics and stories in from a file, or turn a repository's read-only archive of another server's issues into live items with the same numbers. Both are repeatable without making copies, and both can be previewed. A repository's archive stays readable.
+
+**Depends on:** Issues and work items.
+
+[Read the documentation](../reference/work-format.md) · [Area page](git-hosting.md)
+
+#### Work for agents {#work-for-agents}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Assign work to a registered agent, which claims it on a lease, works, and hands it back for a person to review. No particular agent product is integrated: the interface is the product. The server enforces what an agent cannot do (finish work, approve its own change, leave its projects), and a reference agent shows the loop. A person can switch an agent off or take its work over at any time.
+
+**Depends on:** Issues and work items.
+
+[Read the documentation](../guide/working-with-agents.md) · [Area page](ai.md)
+
+#### Autonomy levels and independent review {#autonomy-levels-and-independent-review}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Choose how far an agent goes alone: propose only, a person approves and merges (the default), or auto-merge of listed small changes when every required check passed. A different agent's review can count where you allow it. Pipelines, branch rules, owners files, quarantine files and deleted or skipped tests always need a person. Autonomy pauses itself after reverted changes until a person clears it. Merges an agent approved can be sampled for a person to look at afterwards.
+
+**Depends on:** Work for agents.
+
+[Read the documentation](../guide/working-with-agents.md#the-autonomy-policy) · [Area page](ai.md)
+
+#### Agents that launch {#agents-that-launch}
+
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Mark that one item blocks another, and group items under a parent. A blocked item drops out of the list of what is ready next, for people and for agents.
+Autonomy levels 3 and 4: agents launching to non-production environments, and then to production, through the normal delivery gates. The levels can be written down and are stored, but the server does not act on them yet: it treats them as level 2. A failed delivery of an agent's change also does not yet count toward the pause rule.
+
+**Depends on:** Autonomy levels and independent review.
+
+[Area page](ai.md)
+
+#### Closing work across projects by group {#closing-work-across-projects-by-group}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Let a pull request close work in another project when the person who merged holds the right through a group, not only through a binding that names them. Until then closing across projects needs a direct binding, and an agent never closes work at all.
 
 **Depends on:** Issues and work items.
 
 [Area page](git-hosting.md)
 
-#### Boards that show delivery {#boards-that-show-delivery}
+#### Attachments in object storage {#attachments-in-object-storage}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production. The board is the same data as the list, drawn differently.
+Keep the files on an item in an object store instead of the database. Files are kept in the database today, up to 10 MB each and 50 to an item.
 
 **Depends on:** Issues and work items.
 
@@ -426,31 +506,31 @@ A question, the options, a recommendation, what it blocks, and the answer with w
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Bring issues in from other trackers, or keep them in sync in both directions while you switch. Six trackers are supported equally. A dry run reports counts before anything is written.
+Bring issues in from other trackers, or keep them in sync in both directions while you switch. The importers for other trackers are not built, and neither is sync. What is built is a stories file (epics and stories with acceptance criteria and dependencies) and the promotion of a repository's read-only archive into live items, both previewed first.
 
 **Depends on:** Issues and work items.
 
-[Area page](git-hosting.md)
+[Read the documentation](../reference/work-format.md) · [Area page](git-hosting.md)
 
 #### Optional time tracking and due dates {#optional-time-tracking-and-due-dates}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Estimates, timers and due dates, off until a project turns them on. Time joins the delivery chain, so effort can be read next to lead time.
+Estimates, timers and due dates, off until a project turns them on. Estimates (points or hours) and start and due dates are built. Timers are not.
 
 **Depends on:** Issues and work items.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/tracking-work.md) · [Area page](git-hosting.md)
 
 #### Confidential items and links to the code {#confidential-items-and-links-to-the-code}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Items visible only to chosen people, and branches started from an item that carry its reference. Confidentiality uses the same permission model as everything else, so nothing leaks across a boundary. The branch name needs no typing to stay traceable.
+Items visible only to chosen people, and links from an item to its commits, pull requests and runs. Confidentiality uses the same permission model as everything else, so nothing leaks across a boundary. Naming an item in a commit message, a branch or a pull request links them. Branches started from an item that carry its reference are not built.
 
 **Depends on:** Issues and work items.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/work-and-code.md) · [Area page](git-hosting.md)
 
 #### A wiki per repository {#a-wiki-per-repository}
 
@@ -476,7 +556,7 @@ Publish a static site from a branch of a repository, built by a pipeline. The si
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached. A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.
+Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached. Release notes grouped by type are built as a function, an API route, an MCP tool and a command. Tags, drafts, attachments and evidence of what was deployed are not.
 
 **Depends on:** Issues and work items.
 

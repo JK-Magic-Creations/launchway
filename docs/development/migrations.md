@@ -507,6 +507,16 @@ variable name or a file path), never as a value. Older servers ignore the tables
 a project is watched depends on them: if the rows cannot be written the watcher says so once and goes
 on. The migration lives in its own file because `db.go` is over the size limit.
 
+Schema 56 brings work tracking (`internal/work`, `internal/engine/schema56.go`), additive: only new tables, all
+beginning `work_`: scopes and their settings and counters, items, labels, assignees, watchers, criteria, links, code links,
+comments and their edits, attachments, events (the history), milestones, sprints and what each committed to, saved
+views, the inbox, agents, claims, the agent log and usage, agent changes and reviews, review samples and the autonomy
+pause state. Money and time are whole numbers (estimates in thousandths, times in milliseconds). An older
+server ignores the tables. The startup check covers them (`schema_markers_work.go`). Schemas 40 to 55 were
+empty stand-ins on the branch where this was built, until the work they stand for is merged; a development
+database started by that branch image may have recorded them, and the startup check names what is missing
+if it has not.
+
 ## Writing a migration
 
 1. Append a new entry to `migrations`; never edit one that has shipped. Write in the comment what

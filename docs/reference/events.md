@@ -227,6 +227,38 @@ valid. When servers share a PostgreSQL database, each server publishes the chang
 as well, so a client may connect to any of them. A reverse proxy in front of Launchway must not
 buffer this path.
 
+## Work item events
+
+Work tracking sends one more event to the [webhooks](../guide/webhooks.md) of a repository: `work_item`. It
+is delivered like every other event: the same headers, the same `X-Launchway-Signature-256` signature
+over the raw body, the same delivery log and redelivery. It is sent for items of that repository's Project,
+and only to hooks that ask for `work_item` in their events. These are not run events and not Logbook entries; the Logbook has
+its own rows for what people change (see the audit actions that start with `work.`).
+
+`action` says what happened, and `work` carries the item and the details:
+
+| `action` | Sent when | Fields of `work` besides `kind`, `ref`, `title` and `state` |
+|---|---|---|
+| `agent.assigned` | An item is assigned to an agent | `agent` |
+| `agent.review_requested` | An agent finished and asked for review | `agent` |
+| `agent.handed_back` | An agent gave the item back, or its lease ran out | `agent`, `reason` |
+| `state` | An item moved to another state, by anyone | `from`, `to` |
+
+```json
+{
+  "event": "work_item",
+  "delivery": "d_0b1c…",
+  "at": "2026-11-21T14:02:11Z",
+  "repository": {"path": "acme/shop", "owner": "acme", "name": "shop"},
+  "sender": {"name": "launchway"},
+  "action": "agent.review_requested",
+  "work": {"kind": "agent.review_requested", "ref": "SHOP-12", "title": "Fix the typo in the guide", "state": "in_review", "agent": "docs"}
+}
+```
+
+Items of a level above a Project (a Squadron, a Wing or the Base) have no repository and send no event.
+Email is not sent for any of these.
+
 ## Audit trail
 
 The Logbook records who did what: every call that changes something, allowed or refused, every
@@ -352,6 +384,41 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `user.change` | `POST /api/v1/users/{name}`: a role change, an account turned off or on |
 | `user.delete` | `DELETE /api/v1/users/{name}` |
 | `user.sign_out` | `POST /api/v1/users/{name}/sign-out`: every session of that person ended |
+| `work.create` | `POST /api/v1/work/items`: a work item was created |
+| `work.update` | `PATCH /api/v1/work/items/{ref}`: an item was changed (state, assignees, labels, fields, and so on) |
+| `work.rank` | `POST /api/v1/work/items/{ref}/rank`: an item was put at a place in the backlog order |
+| `work.move` | `POST /api/v1/work/items/{ref}/move`: a card was moved to a state, optionally before another item |
+| `work.take_over` | `POST /api/v1/work/items/{ref}/take-over`: a person took work from an agent |
+| `work.comment` | `POST /api/v1/work/items/{ref}/comments` |
+| `work.comment_edit` | `PATCH /api/v1/work/comments/{id}`: the earlier text is kept |
+| `work.link` | `POST /api/v1/work/items/{ref}/links`: blocks, relates or duplicates |
+| `work.unlink` | `DELETE /api/v1/work/links/{id}` |
+| `work.code_link` | `POST /api/v1/work/items/{ref}/code`: a commit, branch, pull request or run was tied to an item by hand or by an agent |
+| `work.attach` | `POST /api/v1/work/items/{ref}/attachments` |
+| `work.view_save` | `POST /api/v1/work/views` |
+| `work.view_delete` | `DELETE /api/v1/work/views/{id}` |
+| `work.milestone_create` | `POST /api/v1/work/milestones` |
+| `work.milestone_update` | `PATCH /api/v1/work/milestones/{id}` |
+| `work.sprint_create` | `POST /api/v1/work/sprints` |
+| `work.sprint_update` | `PATCH /api/v1/work/sprints/{id}` |
+| `work.sprint_start` | `POST /api/v1/work/sprints/{id}/start`: records what the sprint committed to |
+| `work.sprint_complete` | `POST /api/v1/work/sprints/{id}/complete`: with where unfinished items carry over to |
+| `work.settings` | `PUT /api/v1/work/settings`: how work is set up at a level, including the agent rules and autonomy policy |
+| `work.inbox_read` | `POST /api/v1/work/inbox/read` |
+| `work.agent_create` | `POST /api/v1/work/agents`: an agent was registered (its token is never recorded) |
+| `work.agent_update` | `PATCH /api/v1/work/agents/{name}`: limits, owner, budgets, class, or the kill switch |
+| `work.agent_delete` | `DELETE /api/v1/work/agents/{name}` |
+| `work.agent_rotate` | `POST /api/v1/work/agents/{name}/rotate-token` |
+| `work.agent_claim` | `POST /api/v1/work/agent/claim`: an agent took an item on a lease |
+| `work.agent_heartbeat` | `POST /api/v1/work/agent/items/{ref}/heartbeat` |
+| `work.agent_hand_back` | `POST /api/v1/work/agent/items/{ref}/hand-back`: with the agent's reason |
+| `work.agent_request_review` | `POST /api/v1/work/agent/items/{ref}/request-review` |
+| `work.agent_usage` | `POST /api/v1/work/agent/items/{ref}/usage`: tokens, cents and seconds the agent reported |
+| `work.agent_pull_review` | `POST /api/v1/work/agent/pull-review`: an agent's structured review of a pull request |
+| `work.autonomy_clear_pause` | `POST /api/v1/work/autonomy/clear-pause`: a person let autonomy resume, with the reason |
+| `work.sample_complete` | `POST /api/v1/work/samples/{id}/complete`: a person looked at a merge an agent approved |
+| `work.import_stories` | `POST /api/v1/work/import/stories`: epics and stories imported (or previewed) |
+| `work.import_archive` | `POST /api/v1/work/import/archive`: a repository's archive promoted to live items (or previewed) |
 
 Each entry has these fields:
 

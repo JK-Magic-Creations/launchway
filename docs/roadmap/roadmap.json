@@ -262,6 +262,18 @@
       "title": "Queues, limits and path filters",
       "value": "Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted.",
       "link": "guide/queues"
+    },
+    {
+      "theme": "Work",
+      "title": "Tracking work, planned and followed",
+      "value": "Issues, bugs, stories, tasks and epics with a workflow, links, boards, sprints, charts and an inbox, tied to the pull requests and deployments that carry them out.",
+      "link": "guide/tracking-work"
+    },
+    {
+      "theme": "Work",
+      "title": "Agents that take work",
+      "value": "Assign work to a registered agent that claims it on a lease and hands it back for review, with autonomy levels, independent review and budgets, enforced by the server.",
+      "link": "guide/working-with-agents"
     }
   ],
   "milestones": [
@@ -480,7 +492,7 @@
               "status": "planned",
               "title": "Notifications and email",
               "value": "An inbox, watching and muting, and email for mentions, reviews and failures, including replying by email.",
-              "detail": "Sending mail is optional and off until configured. Email is planned: there is no mail sender in Launchway yet. The same preferences will cover review, work item and pipeline events.",
+              "detail": "Sending mail is optional and off until configured. Email is planned: there is no mail sender in Launchway yet. The same preferences will cover review, work item and pipeline events. The in-product inbox for work (assigned, mentioned, unblocked, review needed) is built; email is not, because Launchway has no mail sender.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             }
@@ -576,34 +588,107 @@
           "blurb": "Track work, decisions and releases next to the code.",
           "items": [
             {
-              "status": "planned",
+              "status": "available",
               "title": "Issues and work items",
-              "value": "Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it.",
-              "detail": "An item also traces to commits, runs and deployments, so the question which environment a request reached has a one-click answer.",
+              "value": "Track issues, bugs, stories, tasks and epics next to the code, with a workflow you can change, labels, assignees, estimates, acceptance criteria, comments, attachments, search and an inbox.",
+              "detail": "Items are named like PAY-12 and live in a Project or at a level above it. Naming an item in a commit or pull request links them, and the item shows where its fix is running. Email is not sent: you are told in the inbox and on Home, and other systems can listen with a webhook.",
               "needs": "Built-in Git hosting.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/tracking-work"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Labels, milestones and templates for work",
-              "value": "Colored and exclusive labels, milestones with progress, and templates and forms for new items.",
-              "detail": "Labels and milestones are shared across projects at the levels you choose.",
+              "value": "Labels, milestones with progress, a template for each item type and custom fields.",
+              "detail": "Labels are plain, lower-case words, not colored or exclusive. Milestones belong to the level they are made at. Forms for new items are not built.",
               "needs": "Issues and work items.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/tracking-work"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Dependencies and parent items",
               "value": "Mark that one item blocks another, and group items under a parent.",
-              "detail": "A blocked item drops out of the list of what is ready next, for people and for agents.",
+              "detail": "A blocked item drops out of the list of what is ready next, for people and for agents. A link that would make a cycle is refused, and the answer names the chain.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting",
+              "link": "guide/tracking-work"
+            },
+            {
+              "status": "available",
+              "title": "Boards, backlog order and sprints",
+              "value": "A board with a column for each state of your workflow, lanes by assignee, epic or priority, limits that warn, one backlog order, and sprints with capacity advice, carry-over and charts.",
+              "detail": "The board is the same data as the list, drawn differently. Every move can be made by dragging, from a menu or from the keyboard. Limits and capacity advice only warn. Cards do not yet show where each change is running; the item page does.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting",
+              "link": "guide/boards-and-sprints"
+            },
+            {
+              "status": "available",
+              "title": "Where the fix is running",
+              "value": "After a change merges, its item says where it is running: merged, on dev since 14:02, not yet on prod.",
+              "detail": "It is read from real deployments: an environment has the fix when a deployment's commit is the merged commit or a descendant of it. A change is closed by a person's merge only; an agent's merge leaves the item in review, and work in another project is not closed without the right to change it.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting",
+              "link": "guide/work-and-code"
+            },
+            {
+              "status": "available",
+              "title": "Charts from the history",
+              "value": "Burndown, velocity, cumulative flow, and cycle and lead time, each with its numbers in a table.",
+              "detail": "Every chart is computed from what happened to each item, not from stored totals, so a correction to the record corrects the chart.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting",
+              "link": "guide/boards-and-sprints"
+            },
+            {
+              "status": "available",
+              "title": "Import stories and promote an archive",
+              "value": "Bring epics and stories in from a file, or turn a repository's read-only archive of another server's issues into live items with the same numbers.",
+              "detail": "Both are repeatable without making copies, and both can be previewed. A repository's archive stays readable.",
+              "needs": "Issues and work items.",
+              "area": "git-hosting",
+              "link": "reference/work-format"
+            },
+            {
+              "status": "available",
+              "title": "Work for agents",
+              "value": "Assign work to a registered agent, which claims it on a lease, works, and hands it back for a person to review.",
+              "detail": "No particular agent product is integrated: the interface is the product. The server enforces what an agent cannot do (finish work, approve its own change, leave its projects), and a reference agent shows the loop. A person can switch an agent off or take its work over at any time.",
+              "needs": "Issues and work items.",
+              "area": "ai",
+              "link": "guide/working-with-agents"
+            },
+            {
+              "status": "available",
+              "title": "Autonomy levels and independent review",
+              "value": "Choose how far an agent goes alone: propose only, a person approves and merges (the default), or auto-merge of listed small changes when every required check passed. A different agent's review can count where you allow it.",
+              "detail": "Pipelines, branch rules, owners files, quarantine files and deleted or skipped tests always need a person. Autonomy pauses itself after reverted changes until a person clears it. Merges an agent approved can be sampled for a person to look at afterwards.",
+              "needs": "Work for agents.",
+              "area": "ai",
+              "link": "guide/working-with-agents#the-autonomy-policy"
+            },
+            {
+              "status": "planned",
+              "title": "Agents that launch",
+              "value": "Autonomy levels 3 and 4: agents launching to non-production environments, and then to production, through the normal delivery gates.",
+              "detail": "The levels can be written down and are stored, but the server does not act on them yet: it treats them as level 2. A failed delivery of an agent's change also does not yet count toward the pause rule.",
+              "needs": "Autonomy levels and independent review.",
+              "area": "ai"
+            },
+            {
+              "status": "planned",
+              "title": "Closing work across projects by group",
+              "value": "Let a pull request close work in another project when the person who merged holds the right through a group, not only through a binding that names them.",
+              "detail": "Until then closing across projects needs a direct binding, and an agent never closes work at all.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
             },
             {
               "status": "planned",
-              "title": "Boards that show delivery",
-              "value": "A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production.",
-              "detail": "The board is the same data as the list, drawn differently.",
+              "title": "Attachments in object storage",
+              "value": "Keep the files on an item in an object store instead of the database.",
+              "detail": "Files are kept in the database today, up to 10 MB each and 50 to an item.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
             },
@@ -619,25 +704,28 @@
               "status": "planned",
               "title": "Import and sync from other trackers",
               "value": "Bring issues in from other trackers, or keep them in sync in both directions while you switch.",
-              "detail": "Six trackers are supported equally. A dry run reports counts before anything is written.",
+              "detail": "The importers for other trackers are not built, and neither is sync. What is built is a stories file (epics and stories with acceptance criteria and dependencies) and the promotion of a repository's read-only archive into live items, both previewed first.",
               "needs": "Issues and work items.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "reference/work-format"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Optional time tracking and due dates",
               "value": "Estimates, timers and due dates, off until a project turns them on.",
-              "detail": "Time joins the delivery chain, so effort can be read next to lead time.",
+              "detail": "Estimates (points or hours) and start and due dates are built. Timers are not.",
               "needs": "Issues and work items.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/tracking-work"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Confidential items and links to the code",
-              "value": "Items visible only to chosen people, and branches started from an item that carry its reference.",
-              "detail": "Confidentiality uses the same permission model as everything else, so nothing leaks across a boundary. The branch name needs no typing to stay traceable.",
+              "value": "Items visible only to chosen people, and links from an item to its commits, pull requests and runs.",
+              "detail": "Confidentiality uses the same permission model as everything else, so nothing leaks across a boundary. Naming an item in a commit message, a branch or a pull request links them. Branches started from an item that carry its reference are not built.",
               "needs": "Issues and work items.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/work-and-code"
             },
             {
               "status": "planned",
@@ -659,7 +747,7 @@
               "status": "planned",
               "title": "Releases with notes and evidence",
               "value": "Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached.",
-              "detail": "A release is a signed record of what was actually deployed, with its images, provenance and approvals attached automatically.",
+              "detail": "Release notes grouped by type are built as a function, an API route, an MCP tool and a command. Tags, drafts, attachments and evidence of what was deployed are not.",
               "needs": "Issues and work items.",
               "area": "git-hosting"
             }
@@ -5613,6 +5701,7 @@
   "whatChanged": {
     "date": "21 November 2026",
     "items": [
+      "New: work tracking. Issues, stories and epics, boards, sprints and charts, links to code and to where a fix is running, and agents that take work on a lease and hand it back for review. Not built: autonomy levels 3 and 4, email, importers for other trackers.",
       "The hosted service now starts with small teams: sign up and go, with a passkey or authenticator app and recovery codes, and no text-message codes.",
       "Three ways to run one product are described, with easy, previewed moves between them: fully hosted, hosted with your own machines (including files that stay on your machines behind an encrypted relay, with copies on two machines), and self-hosted.",
       "Hosted size ceilings with notices and nothing held hostage, a hosted service that is never public file storage, the wall between Bases proven by tests, and outsiders let in stage by stage.",

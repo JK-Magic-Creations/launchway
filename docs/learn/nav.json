@@ -31,6 +31,7 @@
         "concepts/variables",
         "concepts/environments-and-deployments",
         "concepts/approvals",
+        "concepts/tracking-work",
         "concepts/high-availability"
       ]
     },
@@ -86,6 +87,10 @@
         "guide/git-over-ssh",
         "guide/pull-requests",
         "guide/pull-request-trust",
+        "guide/tracking-work",
+        "guide/boards-and-sprints",
+        "guide/work-and-code",
+        "guide/working-with-agents",
         "guide/dependency-updates",
         "guide/webhooks",
         "guide/secrets",
@@ -151,6 +156,8 @@
         "reference/interface-parity",
         "reference/accessibility-conformance",
         "reference/archive-format",
+        "reference/work-format",
+        "reference/work-queries",
         "reference/events",
         "reference/roles",
         "reference/policy-rules",

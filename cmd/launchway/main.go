@@ -89,6 +89,8 @@ Usage:
   launchway pr       list|view|create|checkout|diff|comment|review|merge|close|reopen|edit|revert|apply|settings|rules   pull requests and code review on hosted repositories
   launchway deps     list|check|update|ignore   what a repository depends on, what is newer or vulnerable
   launchway updates  preview|run|settings   Launchway's own dependency updates, proposed as pull requests
+  launchway work     items|board|sprints|milestones|agents ...   work tracking: items, boards, sprints, roadmap, agents
+                                                (launchway work, for more)
   launchway keys     list|add|delete|host             your SSH keys for Git over SSH, and the server's host key fingerprints
   launchway version
 
@@ -118,6 +120,7 @@ var commands = map[string]func([]string) error{
 	"doctor":         cmdDoctor,
 	"users":          cmdUsers,
 	"install":        cmdInstall,
+	"work":           cmdWork,
 }
 
 func main() {

@@ -42,6 +42,7 @@ After what is already in flight, in this order.
 
 **What changed in the roadmap, 21 November 2026.**
 
+- New: work tracking. Issues, stories and epics, boards, sprints and charts, links to code and to where a fix is running, and agents that take work on a lease and hand it back for review. Not built: autonomy levels 3 and 4, email, importers for other trackers.
 - The hosted service now starts with small teams: sign up and go, with a passkey or authenticator app and recovery codes, and no text-message codes.
 - Three ways to run one product are described, with easy, previewed moves between them: fully hosted, hosted with your own machines (including files that stay on your machines behind an encrypted relay, with copies on two machines), and self-hosted.
 - Hosted size ceilings with notices and nothing held hostage, a hosted service that is never public file storage, the wall between Bases proven by tests, and outsiders let in stage by stage.
@@ -105,6 +106,8 @@ compliance items provide controls and evidence.
 | Pipelines drawn the way they run | Steps that run together appear side by side on the run page, drawn from their dependencies. |
 | Rollback after a successful deployment | Return to the last stable state even after a rollout has succeeded, with the consequence shown first and a Logbook entry. ([more](guide/rollback-after-success.md)) |
 | Queues, limits and path filters | Steps wait for room instead of failing, runs are limited and ordered fairly, documentation-only pushes skip the heavy steps, and untrusted pull requests run restricted. ([more](guide/queues.md)) |
+| Tracking work, planned and followed | Issues, bugs, stories, tasks and epics with a workflow, links, boards, sprints, charts and an inbox, tied to the pull requests and deployments that carry them out. ([more](guide/tracking-work.md)) |
+| Agents that take work | Assign work to a registered agent that claims it on a lease and hands it back for review, with autonomy levels, independent review and budgets, enforced by the server. ([more](guide/working-with-agents.md)) |
 
 ## Milestone 1: Host your code and run your pipelines in one place (Now)
 
@@ -154,14 +157,22 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [Issues and work items](roadmap/milestone-1.md#issues-and-work-items) | Planned | Track work next to the code, with labels, milestones, assignees and links between items, and link every change to the reason for it. |
-| [Labels, milestones and templates for work](roadmap/milestone-1.md#labels-milestones-and-templates-for-work) | Planned | Colored and exclusive labels, milestones with progress, and templates and forms for new items. |
-| [Dependencies and parent items](roadmap/milestone-1.md#dependencies-and-parent-items) | Planned | Mark that one item blocks another, and group items under a parent. |
-| [Boards that show delivery](roadmap/milestone-1.md#boards-that-show-delivery) | Planned | A board with custom columns whose cards show where the change is: in review, building, in a test environment, in production. |
+| [Issues and work items](roadmap/milestone-1.md#issues-and-work-items) | Available | Track issues, bugs, stories, tasks and epics next to the code, with a workflow you can change, labels, assignees, estimates, acceptance criteria, comments, attachments, search and an inbox. ([docs](guide/tracking-work.md)) |
+| [Labels, milestones and templates for work](roadmap/milestone-1.md#labels-milestones-and-templates-for-work) | Available | Labels, milestones with progress, a template for each item type and custom fields. ([docs](guide/tracking-work.md)) |
+| [Dependencies and parent items](roadmap/milestone-1.md#dependencies-and-parent-items) | Available | Mark that one item blocks another, and group items under a parent. ([docs](guide/tracking-work.md)) |
+| [Boards, backlog order and sprints](roadmap/milestone-1.md#boards-backlog-order-and-sprints) | Available | A board with a column for each state of your workflow, lanes by assignee, epic or priority, limits that warn, one backlog order, and sprints with capacity advice, carry-over and charts. ([docs](guide/boards-and-sprints.md)) |
+| [Where the fix is running](roadmap/milestone-1.md#where-the-fix-is-running) | Available | After a change merges, its item says where it is running: merged, on dev since 14:02, not yet on prod. ([docs](guide/work-and-code.md)) |
+| [Charts from the history](roadmap/milestone-1.md#charts-from-the-history) | Available | Burndown, velocity, cumulative flow, and cycle and lead time, each with its numbers in a table. ([docs](guide/boards-and-sprints.md)) |
+| [Import stories and promote an archive](roadmap/milestone-1.md#import-stories-and-promote-an-archive) | Available | Bring epics and stories in from a file, or turn a repository's read-only archive of another server's issues into live items with the same numbers. ([docs](reference/work-format.md)) |
+| [Work for agents](roadmap/milestone-1.md#work-for-agents) | Available | Assign work to a registered agent, which claims it on a lease, works, and hands it back for a person to review. ([docs](guide/working-with-agents.md)) |
+| [Autonomy levels and independent review](roadmap/milestone-1.md#autonomy-levels-and-independent-review) | Available | Choose how far an agent goes alone: propose only, a person approves and merges (the default), or auto-merge of listed small changes when every required check passed. A different agent's review can count where you allow it. ([docs](guide/working-with-agents.md#the-autonomy-policy)) |
+| [Agents that launch](roadmap/milestone-1.md#agents-that-launch) | Planned | Autonomy levels 3 and 4: agents launching to non-production environments, and then to production, through the normal delivery gates. |
+| [Closing work across projects by group](roadmap/milestone-1.md#closing-work-across-projects-by-group) | Planned | Let a pull request close work in another project when the person who merged holds the right through a group, not only through a binding that names them. |
+| [Attachments in object storage](roadmap/milestone-1.md#attachments-in-object-storage) | Planned | Keep the files on an item in an object store instead of the database. |
 | [Decision records](roadmap/milestone-1.md#decision-records) | Planned | A question, the options, a recommendation, what it blocks, and the answer with who gave it and when. |
-| [Import and sync from other trackers](roadmap/milestone-1.md#import-and-sync-from-other-trackers) | Planned | Bring issues in from other trackers, or keep them in sync in both directions while you switch. |
-| [Optional time tracking and due dates](roadmap/milestone-1.md#optional-time-tracking-and-due-dates) | Planned | Estimates, timers and due dates, off until a project turns them on. |
-| [Confidential items and links to the code](roadmap/milestone-1.md#confidential-items-and-links-to-the-code) | Planned | Items visible only to chosen people, and branches started from an item that carry its reference. |
+| [Import and sync from other trackers](roadmap/milestone-1.md#import-and-sync-from-other-trackers) | Planned | Bring issues in from other trackers, or keep them in sync in both directions while you switch. ([docs](reference/work-format.md)) |
+| [Optional time tracking and due dates](roadmap/milestone-1.md#optional-time-tracking-and-due-dates) | In progress | Estimates, timers and due dates, off until a project turns them on. ([docs](guide/tracking-work.md)) |
+| [Confidential items and links to the code](roadmap/milestone-1.md#confidential-items-and-links-to-the-code) | Available | Items visible only to chosen people, and links from an item to its commits, pull requests and runs. ([docs](guide/work-and-code.md)) |
 | [A wiki per repository](roadmap/milestone-1.md#a-wiki-per-repository) | Planned | A wiki that is itself a Git repository, with history, linked live to pipelines and deployments. |
 | [Static pages](roadmap/milestone-1.md#static-pages) | Planned | Publish a static site from a branch of a repository, built by a pipeline. |
 | [Releases with notes and evidence](roadmap/milestone-1.md#releases-with-notes-and-evidence) | Planned | Releases with tags, notes, attachments and drafts, with notes grouped by work item and marked with where each change reached. |

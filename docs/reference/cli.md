@@ -1082,3 +1082,44 @@ launchway templates list [LIBRARY] [--version V] [--json]
 Without a library, the libraries the server lists; with one, its templates and each parameter's type,
 default, and `[names a secret]` when a step takes a secret reference's store, key or field from it. The
 same data is `GET /api/v1/libraries/{library}/templates` and the MCP tool `list_templates`.
+
+## launchway work
+
+Work tracking from the command line: items, boards, sprints, charts, settings, views, the inbox, and agents.
+Every command calls one route of the [HTTP API](http-api.md#work-tracking) as the signed-in person, or, with
+`launchway work agent`, as an agent holding its own `lwa_` token. The guides are
+[tracking work](../guide/tracking-work.md), [boards and sprints](../guide/boards-and-sprints.md),
+[work and code](../guide/work-and-code.md) and [working with agents](../guide/working-with-agents.md).
+
+Where work lives is a **scope**: `--scope project:OWNER/NAME`, `unit:NAME` (a Squadron), `organization` (the Wing)
+or `installation` (the Base). `--repo OWNER/NAME` means `--scope project:OWNER/NAME`. Without either, the
+environment variable `LAUNCHWAY_WORK_SCOPE` is used. Every command takes `--json`. An item is named by its
+reference, such as `PAY-12`.
+
+| Command | What it does |
+|---|---|
+| `launchway work items list [--query Q] [--sort S] [--desc] [--limit N] [--offset N] [--parent REF]` | Finds items; the [query language](work-queries.md) |
+| `launchway work items show REF` | One item with its links, code, delivery, files and comments |
+| `launchway work items create TITLE [--type T] [--body TEXT] [--priority P] [--estimate N] [--parent REF] [--milestone T] [--sprint N] [--label L] [--assignee A] [--criterion TEXT] [--confidential] …` | Creates an item |
+| `launchway work items update REF [--title T] [--state S] [--add-label L] [--add-assignee A] [--expected-version N] …` | Changes an item; a field left out keeps its value |
+| `launchway work items move REF STATE [--before REF]` | Moves an item to another state |
+| `launchway work items rank REF top\|bottom\|before OTHER\|after OTHER` | Reorders the backlog |
+| `launchway work items comment REF TEXT`, `comment --edit ID TEXT` | Adds a comment, or edits one you wrote |
+| `launchway work items link REF blocks\|relates\|duplicates OTHER`, `unlink LINK_ID` | Links items |
+| `launchway work items code-link REF --kind K --code-repo OWNER/NAME --ref X` | Ties a commit, branch, pull request or run to an item |
+| `launchway work items by-code --kind K --code-repo OWNER/NAME --ref X` | The items tied to a piece of code |
+| `launchway work items history REF`, `attach REF FILE`, `file ID`, `take-over REF` | History, files (10 MiB at most), and taking work from an agent |
+| `launchway work board [--query Q] [--lanes L] [--sprint NAME]` | The board of a scope |
+| `launchway work milestones list\|create\|update` | Milestones |
+| `launchway work sprints list\|show\|create\|update\|start\|complete\|burndown` | Sprints; `complete --carry-to NAME` |
+| `launchway work charts velocity\|flow\|times` | The charts |
+| `launchway work roadmap`, `release-notes [--since D] [--until D]` | The roadmap rows, and the work finished between two dates |
+| `launchway work settings show`, `settings set FILE` | How work is set up at the scope, and replacing it with a [JSON file](work-format.md#settings) |
+| `launchway work views list\|save\|delete` | Saved queries |
+| `launchway work inbox [--unread] [--read]`, `home` | What happened to work you follow, and what needs you |
+| `launchway work agents list\|show\|create\|update\|disable\|enable\|delete\|rotate-token\|actions\|reviews` | Registering and managing agents (`create` prints the token once; `disable` is the kill switch) |
+| `launchway work spend`, `autonomy clear-pause --reason TEXT`, `samples list\|complete` | What agents reported spending; letting autonomy resume; merges flagged for a look |
+| `launchway work agent me\|queue\|claim\|heartbeat\|hand-back\|request-review\|usage\|pull-review` | The calls an agent makes with its own token |
+| `launchway work import --format stories-json FILE [--preview] [--update]`, `--format archive --repository OWNER/NAME [--preview]` | The [imports](work-format.md) |
+
+The vertical bars in the table stand for "or": write one of the words.

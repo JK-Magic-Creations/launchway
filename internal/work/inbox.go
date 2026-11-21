@@ -6,8 +6,7 @@ import (
 )
 
 // Inbox entry kinds. Email is not part of the product; these appear in the
-// person's inbox and the home page, and reach a channel through the
-// notification channels the installation already has.
+// person's inbox and on the home page.
 const (
 	InboxAssigned  = "assigned"
 	InboxMentioned = "mentioned"

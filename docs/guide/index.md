@@ -26,6 +26,10 @@ key and setting see the [reference](../reference/index.md).
 | [AI models](ai.md) | Optional models for steps, verdict explanations and failed steps |
 | [Git over SSH](git-over-ssh.md) | SSH keys, deploy keys, host key fingerprints, protected branches, certificates, limits |
 | [Pull requests and code review](pull-requests.md) | Opening, reviewing and merging changes on hosted repositories; merge rules; checks |
+| [Tracking work](tracking-work.md) | Items, types, workflow, labels, links, acceptance criteria, confidential items, comments, attachments, search, the inbox |
+| [Boards and sprints](boards-and-sprints.md) | Boards, lanes, limits, the backlog, sprints and capacity advice, milestones, the roadmap, charts |
+| [Work and code](work-and-code.md) | Naming work in commits and pull requests, closing rules, where the fix is running, release notes |
+| [Working with agents](working-with-agents.md) | Assigning work to agents, registering them, the loop, what the server enforces, autonomy, independent review, budgets |
 | [Webhooks and events](webhooks.md) | Repository and owner webhooks, signed deliveries, the delivery log, redelivery, turning off, pipelines on push |
 | [Secrets](secrets.md) | Secret references, stores, masking |
 | [Upgrading](upgrading.md) | From the release before: the root key, sealing, sign-in, values to check, rolling back |

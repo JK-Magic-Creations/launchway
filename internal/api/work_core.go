@@ -63,7 +63,7 @@ func (s *Server) workChain(sc work.Scope) []work.Scope {
 func (s *Server) workCaller(r *http.Request) work.Caller {
 	id := identityFrom(r)
 	via := "api"
-	if _, ok := r.Context().Value(mcpIdentityKey).(*identity); ok {
+	if _, ok := r.Context().Value(mcpIdentityKey).(*identity); ok || r.Header.Get("X-Launchway-Via") == "mcp" {
 		via = "mcp"
 	} else if v := r.Header.Get("X-Launchway-Via"); v == "cli" || v == "ui" {
 		via = v

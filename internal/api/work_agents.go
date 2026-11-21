@@ -385,6 +385,9 @@ func (s *Server) agentPullReview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) workPullReviews(w http.ResponseWriter, r *http.Request) {
+	if !s.forgeOn(w) {
+		return
+	}
 	q := r.URL.Query()
 	repo, err := s.Forge.Provider.Repositories().Get(r.Context(), q.Get("repo"))
 	if err != nil {

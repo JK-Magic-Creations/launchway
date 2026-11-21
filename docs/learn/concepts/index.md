@@ -11,6 +11,7 @@ a word in the product is unfamiliar. The [glossary](../../glossary.md) lists eve
 | [Variables](variables.md) | Where does a step get its settings and secrets from? |
 | [Environments and deployments](environments-and-deployments.md) | What is a place my software runs, and how does a change get there safely? |
 | [Approvals](approvals.md) | How does a person say go or no-go? |
+| [Tracking work with people and agents](tracking-work.md) | How is work planned, done and followed, by people and by agents? |
 | [High availability](high-availability.md) | What happens when a server, a runner or the database fails? |
 
 ## The words Launchway uses

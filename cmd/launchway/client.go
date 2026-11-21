@@ -181,10 +181,18 @@ func newClient(c credentials, out io.Writer) *client {
 // rawText is a request body sent as it is, not as JSON: a pipeline file.
 type rawText string
 
+// rawBytes is a request body sent as it is, with its media type: a file.
+type rawBytes struct {
+	data        []byte
+	contentType string
+}
+
 func (cl *client) call(method, path string, body, v any) error {
 	var rd io.Reader
 	if raw, ok := body.(rawText); ok {
 		rd = strings.NewReader(string(raw))
+	} else if rb, ok := body.(rawBytes); ok {
+		rd = bytes.NewReader(rb.data)
 	} else if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
@@ -206,6 +214,8 @@ func (cl *client) call(method, path string, body, v any) error {
 	req.Header.Set("X-Launchway-CSRF", "1")
 	if _, raw := body.(rawText); raw {
 		req.Header.Set("Content-Type", "text/plain")
+	} else if rb, ok := body.(rawBytes); ok {
+		req.Header.Set("Content-Type", rb.contentType)
 	} else if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
