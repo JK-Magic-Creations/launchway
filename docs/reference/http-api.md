@@ -448,6 +448,7 @@ in the message.
 
 | Route | Access | Audit | What it does |
 |---|---|---|---|
+| `GET /api/v1/encryption` | `admin` | — | Encryption at rest: `{"encrypted", "dump_alone_cannot_reveal_secrets", "root_key_holder": {"kind", "where", "strength", "reachable"}, "keys", "columns", "secrets_sealed", "secrets_remaining", "migration": {"state", ...}, "warnings", "advice", "not_yet_encrypted", "summary"}`. Never any key material. Read-only: the root key is a bootstrap setting held outside the database, and `launchway encryption` rotates or replaces it where the key is. `409` with code `no_root_key` is what a request for something that stores secrets (a webhook with a secret) gets on a server with no root key |
 | `GET /api/v1/run-limits` | `signed-in` | — | `{"max_run_timeout", "updated_at", "updated_by"}`. An empty `max_run_timeout` is not set: pipelines may ask for up to `720h`. |
 | `PUT /api/v1/run-limits` | `admin` | `run_limits.set` | Replaces the limits: `{"max_run_timeout": "48h"}`; empty or left out removes the limit. `400` for a duration that does not read or is outside `1m` to `720h`. |
 ## Build caches

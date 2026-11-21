@@ -77,6 +77,7 @@ Usage:
   launchway health-sources | models             what verify and ai steps may name
   launchway runners  list|join-token|revoke|rotate  runners, and join tokens to enrol them
   launchway step-resources get|set-limits|set-default  the default CPU and memory of steps, and their limits
+  launchway encryption init|status|rotate|rewrap     the root key and encryption at rest (launchway encryption, for more)
   launchway config   list|get|set|create|delete|restore|history|export|import|apply ...
                                                 configuration kept in the database (launchway config, for more)
   launchway projects|libraries|environments|policies|runner-pools|role-bindings|policy-sources|units|secret-stores ...
@@ -155,6 +156,8 @@ func main() {
 		err = cmdDoctor(args)
 	case "repos", "keys":
 		err = cmdHosting(os.Args[1], args)
+	case "encryption":
+		err = cmdEncryption(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":

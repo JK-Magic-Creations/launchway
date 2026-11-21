@@ -41,6 +41,10 @@ type Report struct {
 	Warnings           []string              `json:"warnings"`
 	Advice             []string              `json:"advice"`
 	NotYetCovered      []string              `json:"not_yet_encrypted"`
+	// ConfiguredHolder is set when a root key is configured but this
+	// database has not been sealed with it yet (the next start of a server
+	// does that).
+	ConfiguredHolder string `json:"configured_but_unused_holder,omitempty"`
 	// Summary is the status in one plain sentence.
 	Summary string `json:"summary"`
 }
@@ -96,6 +100,9 @@ func (s *Service) Report(ctx context.Context) (Report, error) {
 		}
 		r.Keys, r.Holder = &ks, &ks.Holder
 	}
+	if s.configured != "" && !s.Encrypted() {
+		r.ConfiguredHolder = s.configured
+	}
 	r.Migration = s.migration(ctx, r.Remaining)
 	r.CredentialAddress, _ = s.countCredentialAddresses(ctx)
 	r.DumpAloneIsUseless = r.Encrypted && r.Remaining == 0 && r.Migration.State == "complete"
@@ -141,7 +148,10 @@ func (s *Service) migration(ctx context.Context, remaining int) Migration {
 }
 
 func (s *Service) advise(r *Report) {
-	if !r.Encrypted {
+	if !r.Encrypted && r.ConfiguredHolder != "" {
+		r.Summary = fmt.Sprintf("A %s root key is configured, but no server has started with it yet, so %d stored secrets are still in the clear. Start (or restart) a server: it seals them in place.", r.ConfiguredHolder, r.Remaining)
+		r.Warnings = append(r.Warnings, r.Summary)
+	} else if !r.Encrypted {
 		r.Summary = "NOT ENCRYPTED AT REST: this server has no root key, so its signing keys, the shared runner token" +
 			" and (if used) SSH host keys and webhook secrets are stored in the clear in the database. A copy of the database reveals them."
 		r.Warnings = append(r.Warnings, r.Summary, keyring.HowToCreateARootKey)

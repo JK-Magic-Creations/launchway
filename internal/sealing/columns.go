@@ -56,12 +56,12 @@ func legacySealer(ctx context.Context, s *Service, name, purpose string) (*auth.
 var (
 	metaColumn = Column{
 		Table: "meta", Column: "value", Key: "key", Where: "key LIKE 'shared:%'", Purpose: keyring.PurposeTokens,
-		Writers: []string{"internal/sealing/service.go", "internal/sealing/migrate.go"},
+		Writers: []string{"internal/sealing/service.go"},
 		Why:     "the signing and sealing keys every server shares (login state, report links, Git run tokens) and the shared runner token",
 	}
 	hostKeysColumn = Column{
 		Table: "ssh_host_keys", Column: "sealed", Key: "algo", Purpose: keyring.PurposeSecrets,
-		Writers: []string{"internal/forge/sshkeys/hostkeys.go", "internal/sealing/migrate.go"},
+		Writers: []string{"internal/forge/sshkeys/hostkeys.go"},
 		Why:     "the private host keys of the Git over SSH server",
 		legacy: func(ctx context.Context, s *Service, stored string) ([]byte, error) {
 			sl, err := legacySealer(ctx, s, "ssh_host_key_seal", "ssh-host-key")
@@ -77,7 +77,7 @@ var (
 	}
 	webhooksColumn = Column{
 		Table: "repo_webhooks", Column: "secret_sealed", Key: "id", Purpose: keyring.PurposeSecrets,
-		Writers: []string{"internal/forge/webhooks/store.go", "internal/sealing/migrate.go"},
+		Writers: []string{"internal/forge/webhooks/store.go"},
 		Why:     "the secrets that sign webhook deliveries",
 		legacy: func(ctx context.Context, s *Service, stored string) ([]byte, error) {
 			sl, err := legacySealer(ctx, s, "webhook_secret_seal", "webhook-secret")
@@ -109,59 +109,50 @@ var Registry = []Column{webhooksColumn, hostKeysColumn, metaColumn}
 // TestSchemaSecretColumnsAreRegistered holds every column that looks
 // secret to either this list or Registry.
 var NotSecret = map[string]string{
-	"sessions.token_hash":                 "SHA-256 of 256 random bits",
-	"api_tokens.hash":                     "SHA-256 of 256 random bits",
-	"runner_join_tokens.hash":             "SHA-256 of 256 random bits",
-	"runner_access_tokens.hash":           "SHA-256 of 256 random bits",
-	"runner_identities.public_key":        "a public key",
-	"runner_identities.join_token":        "the join token's id, not the token",
-	"ssh_keys.public":                     "a public key",
-	"ssh_host_keys.public":                "a public key",
-	"forge_connections.cred_env":          "the name of an environment variable",
-	"forge_connections.cred_file":         "a file path",
-	"repo_mirrors.cred_env":               "the name of an environment variable",
-	"repo_mirrors.cred_file":              "a file path",
-	"runner_assertions.token_id":          "an identifier",
-	"artifact_blobs.blob_key":             "the object's name in the store",
-	"cache_entries.blob_key":              "the object's name in the store",
-	"blob_chunks.key":                     "the object's name in the store",
-	"blob_objects.key":                    "the object's name in the store",
-	"encryption_keks.wrapped":             "wrapped by the root key, useless without it",
-	"encryption_deks.wrapped":             "wrapped by a key-encryption key, useless without it",
-	"repo_hook_deliveries.secret_present": "a flag, not the secret",
-	"ssh_keys.key_type":                   "the algorithm name",
-	"variables.secret":                    "a flag saying a variable is a reference to a secret",
-	"runner_pools.token_hash":             "SHA-256 of 256 random bits",
-	"runner_pool_tokens.hash":             "SHA-256 of 256 random bits",
-	"verifications.secret":                "a flag",
-	"findings.secret":                     "a flag saying a finding is a secret was found; the secret itself is never stored",
-	"findings.secret_kind":                "the kind of secret found, never the secret",
-	"steps.secrets":                       "the names of the secrets a step uses, never values",
-	"step_secrets.name":                   "a secret's name",
-	"step_secrets.store":                  "a secret store's name",
-	"step_secrets.field":                  "a field name",
-	"project_secrets.name":                "a secret's name",
-	"deployments.token":                   "an identifier of the deployment, not a credential",
-	"runs.token_id":                       "an identifier",
-	"audit.target":                        "a name",
-	"push_decisions.token":                "an identifier",
-	"approvals.token":                     "an identifier",
-	"config_objects.spec":                 "references only: addresses with credentials and secret headers are refused when written (internal/settings)",
-	"config_changes.spec":                 "references only: addresses with credentials and secret headers are refused when written",
-	"config_revisions.spec":               "references only",
-	"config_imports.keys":                 "names of settings",
-	"repo_mirrors.url":                    "addresses with credentials are refused when written; the doctor counts any that remain",
-	"repo_webhooks.url":                   "addresses with credentials are refused when written; the doctor counts any that remain",
-	"forge_connections.base_url":          "addresses with credentials are refused when written; the doctor counts any that remain",
-	"repo_webhooks.disabled_reason":       "a message, never the secret",
-	"ssh_host_keys.fingerprint":           "a public fingerprint",
-	"ssh_keys.fingerprint":                "a public fingerprint",
-	"ssh_keys.last_used_from":             "an address",
-	"runners.auth":                        "how a runner authenticates (a word)",
-	"runner_identities.key_created_at":    "a time",
-	"encryption_state.value":              "the installation id and migration progress; no key material",
-	"push_decisions.detail":               "a message",
-	"artifacts.sha256":                    "a digest of public content",
+	// Hashes of random values, or of public content: a fast hash is right for 256 random bits, and nothing can be recovered from it.
+	"sessions.id_hash":             "SHA-256 of a 256-bit random session id",
+	"api_tokens.hash":              "SHA-256 of a 256-bit random token",
+	"runner_access_tokens.hash":    "SHA-256 of a 256-bit random token",
+	"runner_join_tokens.hash":      "SHA-256 of a 256-bit random token",
+	"deployments.pod_hash":         "a digest of a pod template, not a credential",
+	"runs.pipeline_hash":           "a digest of the pipeline text",
+	"webhook_deliveries.body_hash": "a digest of a received body, kept to detect repeats",
+	"artifact_blobs.hash_state":    "the state of a running digest of public content",
+	"caches.hash_state":            "the state of a running digest of cache content",
+
+	// References to where a secret lives, and public keys: never the secret.
+	"forge_connections.cred_env":   "the name of an environment variable",
+	"forge_connections.cred_file":  "a file path",
+	"repo_mirrors.cred_env":        "the name of an environment variable",
+	"repo_mirrors.cred_file":       "a file path",
+	"runner_identities.public_key": "a public key; the private half stays on the runner",
+	"runner_identities.join_token": "the join token's id, not the token (whose hash is runner_join_tokens.hash)",
+	"findings.secret":              "a flag saying a finding is a secret that was found; the secret itself is never stored",
+
+	// Names, identifiers and keys of rows, not secrets.
+	"blob_objects.key":         "the object's name in the blob store",
+	"artifact_blobs.store_key": "the object's name in the blob store",
+	"blob_uploads.key":         "the object's name in the blob store",
+	"caches.blob_key":          "the object's name in the blob store",
+	"caches.key":               "the cache's key as the pipeline names it",
+	"repo_packs.blob_key":      "the object's name in the blob store",
+	"deployments.snapshot_key": "the name of a stored snapshot",
+	"lane_holders.lane_key":    "the name of a lane",
+	"lane_waiting.lane_key":    "the name of a lane",
+	"runs.lane_key":            "the name of a lane",
+	"sbom_components.name_key": "a normalized component name",
+	"schedule_fires.sched_key": "the name of a schedule",
+	"schedule_seen.sched_key":  "the name of a schedule",
+	"step_inputs.origin_key":   "where an input came from",
+	"test_cases.test_key":      "a test's identity",
+	"encryption_state.key":     "the name of a fact (the table holds the installation id and migration progress, no key material)",
+	"meta.key":                 "the name of a meta row",
+
+	// Counts.
+	"ai_explanations.input_tokens":  "a count of model tokens",
+	"ai_explanations.output_tokens": "a count of model tokens",
+	"ai_usage.input_tokens":         "a count of model tokens",
+	"ai_usage.output_tokens":        "a count of model tokens",
 }
 
 // Box seals and opens one registered column's values, each bound to its row.

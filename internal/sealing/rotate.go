@@ -48,3 +48,55 @@ func (s *Service) Rewrap(ctx context.Context) (int, error) {
 	}
 	return s.kr.Rewrap(ctx)
 }
+
+// Drill is the result of VerifyAll.
+type Drill struct {
+	Opened int      `json:"opened"`
+	Failed int      `json:"failed"`
+	Errors []string `json:"errors,omitempty"`
+}
+
+// VerifyAll opens every sealed secret in the registry, reading only. It
+// proves that this root key and this database belong together: the restore
+// drill (`launchway doctor encryption --restore-drill`). Nothing is changed.
+func (s *Service) VerifyAll(ctx context.Context) (Drill, error) {
+	var d Drill
+	if !s.Encrypted() {
+		return d, keyring.ErrNoRootKey
+	}
+	for _, c := range Registry {
+		where := ""
+		if c.Where != "" {
+			where = " AND (" + c.Where + ")"
+		}
+		rs, err := s.db.Query(ctx, "SELECT "+c.Key+", "+c.Column+" FROM "+c.Table+" WHERE "+c.Column+" LIKE ?"+where, keyring.Prefix+"%")
+		if err != nil {
+			if isMissingTable(err) {
+				continue
+			}
+			return d, err
+		}
+		type row struct{ k, v string }
+		var rows []row
+		for rs.Next() {
+			var r row
+			if err := rs.Scan(&r.k, &r.v); err != nil {
+				rs.Close()
+				return d, err
+			}
+			rows = append(rows, r)
+		}
+		rs.Close()
+		for _, r := range rows {
+			plain, err := s.keys.Open(ctx, c.binding(r.k), r.v)
+			keyring.Zero(plain)
+			if err != nil {
+				d.Failed++
+				d.Errors = append(d.Errors, c.Table+"."+c.Column+" "+r.k+": "+err.Error())
+				continue
+			}
+			d.Opened++
+		}
+	}
+	return d, nil
+}

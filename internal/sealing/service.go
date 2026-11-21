@@ -60,7 +60,11 @@ type Service struct {
 	instance string
 	wait     time.Duration
 	auditFn  func(context.Context, keyring.Event)
-	passes   atomic.Int64 // migration passes this process ran (tests)
+	// Set by Inspect: a root key is configured but unused, or the database
+	// has not been upgraded to the schema with the key tables.
+	configured  string
+	notUpgraded bool
+	passes      atomic.Int64 // migration passes this process ran (tests)
 	// sealedRows counts the rows this process sealed (tests).
 	sealedRows atomic.Int64
 }
@@ -109,6 +113,44 @@ func Start(ctx context.Context, o Options) (*Service, error) {
 	if err := s.migrateAtStart(ctx); err != nil {
 		return nil, err
 	}
+	return s, nil
+}
+
+// Inspect is Start for a tool that only reads (`launchway doctor`): it never
+// creates keys and never seals anything. A root key that is configured but
+// has not been used yet is reported as such; one that is in use is opened, so
+// a wrong key shows.
+func Inspect(ctx context.Context, o Options) (*Service, error) {
+	s := &Service{db: o.DB, kdb: locked{o.DB}, log: o.Log, now: o.Now, instance: o.Instance, wait: o.Wait, auditFn: o.Audit}
+	if s.log == nil {
+		s.log = slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+	if s.now == nil {
+		s.now = time.Now
+	}
+	s.keys = keyring.Disabled{}
+	var n int
+	if err := o.DB.QueryRow(ctx, `SELECT count(*) FROM encryption_keks`).Scan(&n); err != nil {
+		if isMissingTable(err) {
+			s.notUpgraded = true
+			return s, nil // not yet migrated to the schema that has the key tables
+		}
+		return nil, fmt.Errorf("reading the encryption state: %w", err)
+	}
+	if o.Holder != nil {
+		s.configured = o.Holder.Kind()
+	}
+	switch {
+	case n == 0:
+		return s, nil
+	case o.Holder == nil:
+		return nil, ErrDatabaseEncrypted
+	}
+	kr, err := keyring.Open(ctx, s.kdb, o.Holder, keyring.Options{Previous: o.Previous, Now: o.Now})
+	if err != nil {
+		return nil, err
+	}
+	s.kr, s.keys = kr, kr
 	return s, nil
 }
 

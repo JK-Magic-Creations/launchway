@@ -68,6 +68,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/v1/connections` | `add_connection` | `repos connection add` | — | equal |
 | `DELETE /api/v1/connections/{name}` | `remove_connection` | `repos connection remove` | — | equal |
 | `GET /api/v1/deployments` | `get_deployments` | — | — | gap: launchway has no deployments command yet |
+| `GET /api/v1/encryption` | `get_encryption_status` | `encryption status` | — | exempt: a read-only report of the root key and sealing progress; nothing to configure, since the root key is a bootstrap setting held outside the database |
 | `GET /api/v1/environments` | `list_config (kind environments)` | `environments list` | `launchway_environment` | equal |
 | `GET /api/v1/health-sources` | `list_config (kind health-sources)` | `health-sources` | `launchway_health_source` | equal |
 | `GET /api/v1/images` | `list_images` | — | — | gap: launchway has no images command yet |

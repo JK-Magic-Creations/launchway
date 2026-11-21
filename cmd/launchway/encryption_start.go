@@ -82,12 +82,28 @@ func openRootKeys(e config.EncryptionConfig, getenv func(string) string, prompt 
 	return rk, nil
 }
 
+// withDefaultKey makes the root key file in the data directory the configured
+// one when nothing else is (see defaultKeyFile), for the commands that run on
+// the server host.
+func withDefaultKey(cfg *config.Config) config.EncryptionConfig {
+	e := cfg.Encryption
+	if r, err := e.Resolve(os.Getenv); err == nil && r.Kind == "" && config.FileExists(config.DefaultKeyFile(cfg.Data)) {
+		e.KeyFile = config.DefaultKeyFile(cfg.Data)
+	}
+	return e
+}
+
 // promptPassphrase asks for the keystore's passphrase on the terminal.
 func promptPassphrase() ([]byte, error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) { //nolint:gosec // a file descriptor
 		return nil, errors.New("the keystore needs its passphrase: set encryption.passphrase_file (or LAUNCHWAY_KEYSTORE_PASSPHRASE_FILE); there is no terminal to ask on")
 	}
 	fmt.Fprint(os.Stderr, "Passphrase for the Launchway keystore: ")
+	return promptPassphraseQuiet()
+}
+
+// promptPassphraseQuiet reads a line from the terminal without echo.
+func promptPassphraseQuiet() ([]byte, error) {
 	b, err := term.ReadPassword(int(os.Stdin.Fd())) //nolint:gosec // a file descriptor
 	fmt.Fprintln(os.Stderr)
 	return b, err
@@ -114,8 +130,8 @@ func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*s
 		return nil, err
 	}
 	o := sealing.Options{DB: eng.Database(), Log: log, Audit: auditEncryption(eng), Instance: instanceName()}
-	if rk.kind == "" && !cfg.Encryption.NoGenerate {
-		if rk, err = generateForNewInstallation(ctx, cfg, eng, log); err != nil {
+	if rk.kind == "" {
+		if rk, err = defaultKeyFile(ctx, cfg, eng, log); err != nil {
 			return nil, err
 		}
 	}
@@ -137,25 +153,33 @@ func instanceName() string {
 	return fmt.Sprintf("%s-%d", host, os.Getpid())
 }
 
-// generateForNewInstallation makes a key file for an installation that has
-// never held a secret (a new database), so that it is encrypted at rest from
-// its first start. An installation that already holds secrets is not
-// touched: it runs not encrypted until an operator creates a key on purpose.
-func generateForNewInstallation(ctx context.Context, cfg *config.Config, eng *engine.Engine, log *slog.Logger) (*rootKeys, error) {
+// defaultKeyFile is what happens when no root key holder is configured. The
+// key file in the data directory (<data>/root.key) is used if it is there: it
+// is the one a new installation generated at its first start. If it is not,
+// an installation that has never held a secret (a new database) generates it,
+// so that it is encrypted at rest from its first start, unless told not to.
+// An installation that already holds secrets is not touched: it runs not
+// encrypted until an operator creates a key on purpose.
+func defaultKeyFile(ctx context.Context, cfg *config.Config, eng *engine.Engine, log *slog.Logger) (*rootKeys, error) {
 	none := &rootKeys{}
-	fresh, err := sealing.IsFresh(ctx, eng.Database())
-	if err != nil {
-		return nil, err
-	}
-	if !fresh {
-		return none, nil
-	}
 	path := config.DefaultKeyFile(cfg.Data)
 	if !config.FileExists(path) {
+		if cfg.Encryption.NoGenerate {
+			return none, nil
+		}
+		fresh, err := sealing.IsFresh(ctx, eng.Database())
+		if err != nil {
+			return nil, err
+		}
+		if !fresh {
+			return none, nil
+		}
 		if err := keyring.WriteKeyFile(path); err != nil {
 			return nil, fmt.Errorf("making a root key for this new installation: %w", err)
 		}
 		log.Warn("a root key was generated for this new installation, because none was configured. Keep a copy of it somewhere other than the database's backups: without it a restore cannot read any secret. For production, move it off this volume and set encryption.key_file", "key_file", path)
+	} else {
+		log.Info("using the root key file in the data directory; for production, keep the key off this volume and set encryption.key_file", "key_file", path)
 	}
 	h, err := keyring.OpenKeyFile(path)
 	if err != nil {

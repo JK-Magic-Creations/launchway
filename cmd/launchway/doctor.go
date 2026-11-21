@@ -17,6 +17,7 @@ import (
 const doctorUsage = `Usage:
   launchway doctor [database|git] [--config launchway.yaml] [--json]
   launchway doctor ssh [--address HOST:PORT] [--config launchway.yaml]
+  launchway doctor encryption [--restore-drill] [--config launchway.yaml] [--json]
 
 Checks an installation and says what it finds in plain words. With no section
 it runs both.
@@ -24,6 +25,9 @@ it runs both.
   database   whether this installation would survive the loss of its database,
              and what would be lost
   ssh        whether Git over SSH is reachable, and which host keys it presents
+  encryption whether stored secrets are encrypted at rest: the root key holder, key versions, how many
+             secrets are sealed, and whether a copy of the database alone could reveal one. Exit 1 when it could.
+             --restore-drill opens every sealed secret to prove the key and the database belong together
 `
 
 // exitOn ends the program for an error from a command.
@@ -82,6 +86,9 @@ func cmdDoctor(args []string) error {
 	if len(args) > 0 && args[0] == "ssh" {
 		return doctorSSH(args[1:])
 	}
+	if len(args) > 0 && args[0] == "encryption" {
+		return doctorEncryption(args[1:])
+	}
 	section := ""
 	if len(args) > 0 && (args[0] == "database" || args[0] == "git") {
 		section, args = args[0], args[1:]
@@ -133,6 +140,11 @@ func cmdDoctor(args []string) error {
 	}
 	if gr != nil {
 		for _, l := range gr.lines() {
+			fmt.Println(l)
+		}
+	}
+	if section == "" {
+		for _, l := range encryptionBrief(ctx, cfg, wait) {
 			fmt.Println(l)
 		}
 	}
