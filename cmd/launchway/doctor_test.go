@@ -47,3 +47,21 @@ func TestDoctorDatabaseSaysASingleDatabaseIsNotHighlyAvailable(t *testing.T) {
 		}
 	}
 }
+
+// The git section names the installed git and whether Git hosting can use it.
+func TestDoctorGitNamesTheVersion(t *testing.T) {
+	out, err := captureStdout(t, func() error { return cmdDoctor([]string{"git"}) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(out, "Git: ") {
+		t.Fatalf("output = %q", out)
+	}
+	if !strings.Contains(out, "hosting can be turned on") && !strings.Contains(out, "needs git") {
+		t.Errorf("it neither says hosting can be turned on nor what is needed: %q", out)
+	}
+	out, err = captureStdout(t, func() error { return cmdDoctor([]string{"git", "--json"}) })
+	if err != nil || !strings.Contains(out, `"hosting_minimum"`) || !strings.Contains(out, `"hosting"`) {
+		t.Fatalf("json = %q, %v", out, err)
+	}
+}

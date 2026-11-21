@@ -37,8 +37,10 @@ steps:
       mkdir -p reports
       status=0
       go test -count=1 -json ./... > reports/go-test.json || status=$?
-      # One line per package in the log; every test is in the Tests tab.
-      sed -n 's/.*"Action":"\(pass\|fail\|skip\)","Package":"\([^"]*\)","Elapsed":\([0-9.]*\)}$/\1  \2  \3s/p' reports/go-test.json
+      # One line per package in the log, and for each failure its name and the last lines of
+      # its output (scripts/ci/go-test-summary.sh); every test, with its whole output, is in
+      # the Tests tab.
+      sh scripts/ci/go-test-summary.sh reports/go-test.json
       exit $status
     reports:
       tests: reports/go-test.json

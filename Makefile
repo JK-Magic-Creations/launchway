@@ -3,7 +3,7 @@ LDFLAGS := -s -w -X main.version=$(VERSION)
 
 .PHONY: all web build learn learn-check docs-diagrams-cache image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality test-s3 \
 	tools release-local release-reproduce release-images vulncheck license-check lint-scripts lint-workflows \
-	charts-sync test-install test-runner-chart bundle test-bundle
+	charts-sync test-install test-runner-chart bundle test-bundle test-git-compat
 
 all: web build
 
@@ -49,6 +49,12 @@ test:
 	go vet ./...
 	go test -race -timeout 30m ./...
 	cd web && npx tsc --noEmit
+
+# Runs the Git hosting tests (internal/forge/storage, internal/forge/storagespike) on the oldest git
+# Launchway supports, in a container (Podman or Docker; skips with a message when neither exists).
+# Not part of make check: it takes minutes. docs/development/quality-gates.md, "The oldest supported git".
+test-git-compat:
+	sh scripts/git-compat/run.sh
 
 # Runs the engine, source and API tests against PostgreSQL. Each test gets a
 # schema of its own. A throwaway server:

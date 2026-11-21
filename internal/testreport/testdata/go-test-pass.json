@@ -1,0 +1,6 @@
+{"Time":"2026-11-14T10:26:00.000100+00:00","Action":"start","Package":"example.com/app/ok"}
+{"Time":"2026-11-14T10:26:00.000200+00:00","Action":"run","Package":"example.com/app/ok","Test":"TestA"}
+{"Time":"2026-11-14T10:26:00.000300+00:00","Action":"output","Package":"example.com/app/ok","Test":"TestA","Output":"=== RUN   TestA\n"}
+{"Time":"2026-11-14T10:26:00.000400+00:00","Action":"pass","Package":"example.com/app/ok","Test":"TestA","Elapsed":0}
+{"Time":"2026-11-14T10:26:00.000500+00:00","Action":"output","Package":"example.com/app/ok","Output":"PASS\n"}
+{"Time":"2026-11-14T10:26:00.000600+00:00","Action":"pass","Package":"example.com/app/ok","Elapsed":0.041}

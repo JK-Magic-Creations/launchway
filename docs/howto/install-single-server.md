@@ -18,6 +18,8 @@ servers on Kubernetes, see [Install on Kubernetes](install-kubernetes.md).
 
 - A Linux server with a fixed name, for example `launchway.example.com`, and a TLS certificate for it.
 - To build from source: Go 1.27 or later, Node 24 or later, Git and `make`.
+- Git 2.38 or newer on the server, if you turn on Launchway's own Git hosting (the container image has it;
+  `launchway doctor git` checks a server). Everything else works with any git.
 - To build the container image instead: Podman (or Docker) only.
 - For steps in containers on this server: Podman or Docker. Steps can also run on other machines;
   see [Connect a runner](connect-runner.md).

@@ -114,6 +114,27 @@ In `web/`:
   `bundle-budget.json`. Shrink with `React.lazy` per route; when the bundle gets smaller, run
   `npm run size:update` (it never raises the budget).
 
+## The oldest supported git
+
+Git hosting runs the real `git` binary, and git changes between releases in ways a test on one
+version never sees: git 2.47 reports an extra `HEAD` line to the `reference-transaction` hook for a
+push to the checked-out branch, and a hosting server built on git 2.56 passed every test while
+Launchway's own pipeline, in an image with git 2.47, failed 72. So the hosting tests also run
+against the oldest git Launchway supports (the minimum in `internal/forge/hosting/gitcheck.go`,
+stated in [Hosted repository storage](forge-storage.md#git-version)):
+
+```sh
+make test-git-compat   # internal/forge/storage and internal/forge/storagespike on the minimum git
+```
+
+The target compiles the two packages in the Go image the pipeline uses, then runs them in an image
+that has only the minimum git, built from the release tarball by `scripts/git-compat/Dockerfile`
+(its checksum is pinned; the first run builds the image, a few minutes). It uses Podman or Docker
+(`CONTAINER=docker` to choose), and when neither is installed it says so and skips. It is not part
+of `make check` because of the time and the container; run it when you change anything in
+`internal/forge/storage`, and add it to a pipeline step on a runner that has a container tool.
+When you raise the minimum, change `MinGit`, `GIT_VERSION` and `GIT_SHA256` together.
+
 ## Updating a baseline legitimately
 
 A baseline moves in one direction.

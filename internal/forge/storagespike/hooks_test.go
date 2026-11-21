@@ -76,7 +76,9 @@ func readUpdates(r io.Reader) []RefUpdate {
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
 		f := strings.Fields(sc.Text())
-		if len(f) == 3 {
+		// Git before about 2.50 adds a line for HEAD when the branch it points at is
+		// updated; HEAD is not a ref of the repository (see storage.realRefUpdates).
+		if len(f) == 3 && strings.HasPrefix(f[2], "refs/") {
 			ups = append(ups, RefUpdate{Old: f[0], New: f[1], Name: f[2]})
 		}
 	}

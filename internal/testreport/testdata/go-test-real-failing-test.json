@@ -1,0 +1,10 @@
+{"Time":"2026-11-21T08:40:00Z","Action":"start","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage"}
+{"Time":"2026-11-21T08:40:00Z","Action":"run","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Test":"TestQuotas"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Test":"TestQuotas","Output":"=== RUN   TestQuotas\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Test":"TestQuotas","Output":"server rep1: git update-ref: fatal: multiple updates for 'refs/heads/main' (including one via symref 'HEAD') are not allowed\n"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Test":"TestQuotas","Output":"    storage_test.go:502: clone from http://127.0.0.1:38809: fatal: the remote end hung up unexpectedly fatal: the remote end hung up unexpectedly\n","OutputType":"error"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Test":"TestQuotas","Output":"--- FAIL: TestQuotas (1.73s)\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Test":"TestQuotas","Elapsed":1.73}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Output":"FAIL\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"output","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Output":"FAIL\tgithub.com/jk-magic-creations/launchway/internal/forge/storage\t1.765s\n","OutputType":"frame"}
+{"Time":"2026-11-21T08:40:00Z","Action":"fail","Package":"github.com/jk-magic-creations/launchway/internal/forge/storage","Elapsed":1.7650000000000001}
