@@ -160,6 +160,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/repositories/{owner}/{name}/pulls/{number}/patch` | `get_pull_request` | `pr diff` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/revert` | `revert_pull_request` | `pr revert` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests` | `review_pull_request` | `pr review` | — | equal |
+| `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}` | `review_pull_request` | `pr review` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews` | `review_pull_request` | `pr review` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss` | `review_pull_request` | `pr review` | — | equal |
 | `POST /api/v1/repositories/{owner}/{name}/stop-mirroring` | `stop_mirroring` | `repos mirror stop` | — | equal |

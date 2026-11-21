@@ -24,7 +24,7 @@ const prUsage = `Usage:
                                                           the patch, the changed files, or the changes since a revision you reviewed
   launchway pr comment N [-R OWNER/NAME] --body TEXT [--path P --line L [--start-line S]] [--reply-to ID]
                       [--edit ID] [--resolve ID] [--reopen ID] [--delete ID]   comment on the conversation or on a line; manage a comment
-  launchway pr review N [-R OWNER/NAME] (--approve | --request-changes | --comment) [--body TEXT]
+  launchway pr review N [-R OWNER/NAME] (--approve | --request-changes | --comment) [--body TEXT] [--request A,B | --unrequest A,B]
                       [--dismiss ID --reason TEXT] [--request USER,USER]   review, dismiss a review, ask people to review
   launchway pr merge N [-R OWNER/NAME] [--merge | --squash | --rebase] [--delete-branch] [--message M]
                       [--auto] [--bypass-reason TEXT]       merge it (or have it merge itself when the rules pass; --auto=false turns that off)
@@ -588,6 +588,7 @@ func (cl *client) prReview(args []string) error {
 	dismiss := f.fs.String("dismiss", "", "the ID of a review to dismiss (with --reason)")
 	reason := f.fs.String("reason", "", "why it is dismissed")
 	request := f.fs.String("request", "", "people to ask to review, comma separated")
+	unrequest := f.fs.String("unrequest", "", "people to take off the list of those asked to review, comma separated")
 	if err := f.parse(args); err != nil {
 		return err
 	}
@@ -609,6 +610,14 @@ func (cl *client) prReview(args []string) error {
 			return err
 		}
 		fmt.Fprintf(cl.out, "Asked %s to review.\n", strings.Join(splitList(*request), ", "))
+		return nil
+	case *unrequest != "":
+		for _, name := range splitList(*unrequest) {
+			if err := cl.call("DELETE", base+"/review-requests/"+url.PathEscape(name), nil, nil); err != nil {
+				return err
+			}
+		}
+		fmt.Fprintf(cl.out, "No longer asking %s to review.\n", strings.Join(splitList(*unrequest), ", "))
 		return nil
 	}
 	verdict := ""

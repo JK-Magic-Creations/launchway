@@ -54,3 +54,7 @@
 .pr-reviewbox fieldset.events { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .pr-reviewbox fieldset.events legend { float: none; }
 .diff-split td:last-child { padding-right: 8px; }
+.pr-people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.pr-people li { display: inline-flex; align-items: center; gap: 6px; }
+.pr-people-add { display: flex; gap: 6px; margin-top: 6px; }
+.pr-people-add input { min-width: 0; flex: 1; }

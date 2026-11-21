@@ -519,16 +519,16 @@ func updatePullComment(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, 
 
 type reviewPullIn struct {
 	repoNumberIn
-	Action    string   `json:"action,omitempty" jsonschema:"submit (default), dismiss or request"`
+	Action    string   `json:"action,omitempty" jsonschema:"submit (default), dismiss, request or unrequest"`
 	Verdict   string   `json:"verdict,omitempty" jsonschema:"for submit: comment, approve or request_changes"`
 	Body      string   `json:"body,omitempty" jsonschema:"for submit: the summary, Markdown"`
 	ReviewID  string   `json:"review_id,omitempty" jsonschema:"for dismiss: the review's ID"`
 	Reason    string   `json:"reason,omitempty" jsonschema:"for dismiss: why it is dismissed"`
-	Reviewers []string `json:"reviewers,omitempty" jsonschema:"for request: the people to ask"`
+	Reviewers []string `json:"reviewers,omitempty" jsonschema:"for request: the people to ask; for unrequest: the people to take off the list"`
 }
 
 type reviewOut struct {
-	Done    string `json:"done" jsonschema:"what was done: submitted, dismissed or requested"`
+	Done    string `json:"done" jsonschema:"what was done: submitted, dismissed, requested or unrequested"`
 	ID      string `json:"id,omitempty" jsonschema:"the review's ID, for a submitted review"`
 	Verdict string `json:"verdict,omitempty" jsonschema:"the verdict, for a submitted review"`
 }
@@ -558,8 +558,22 @@ func reviewPullRequest(ctx context.Context, c *mcpCall, _ *mcp.CallToolRequest, 
 			return reviewOut{}, err
 		}
 		return reviewOut{Done: "requested"}, c.apiJSON(ctx, "review_pull_request", http.MethodPost, p, map[string]any{"reviewers": in.Reviewers}, nil)
+	case "unrequest":
+		if len(in.Reviewers) == 0 {
+			return reviewOut{}, errors.New("name the people to take off the list in reviewers")
+		}
+		for _, name := range in.Reviewers {
+			p, err := in.path("/review-requests/" + url.PathEscape(name))
+			if err != nil {
+				return reviewOut{}, err
+			}
+			if err := c.apiJSON(ctx, "review_pull_request", http.MethodDelete, p, nil, nil); err != nil {
+				return reviewOut{}, err
+			}
+		}
+		return reviewOut{Done: "unrequested"}, nil
 	}
-	return reviewOut{}, errors.New("action is submit, dismiss or request")
+	return reviewOut{}, errors.New("action is submit, dismiss, request or unrequest")
 }
 
 type pullSettingsOut struct {

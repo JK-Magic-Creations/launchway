@@ -919,7 +919,7 @@ launchway pr create --title T [--body B | --body-file F] [--head BRANCH] [--base
 launchway pr checkout N
 launchway pr diff N [--name-only] [--file PATH] [--since REVISION] [--full]
 launchway pr comment N --body TEXT [--path P --line L [--start-line S]] [--reply-to ID] [--edit ID] [--resolve ID] [--reopen ID] [--delete ID]
-launchway pr review N (--approve | --request-changes | --comment) [--body TEXT] [--dismiss ID --reason TEXT] [--request USER,USER]
+launchway pr review N (--approve | --request-changes | --comment) [--body TEXT] [--dismiss ID --reason TEXT] [--request USER,USER | --unrequest USER,USER]
 launchway pr merge N [--merge | --squash | --rebase] [--delete-branch] [--message M] [--auto] [--bypass-reason TEXT]
 launchway pr close N
 launchway pr reopen N

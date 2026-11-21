@@ -185,6 +185,37 @@ func TestPullRequestThroughTheAPI(t *testing.T) {
 	if r := ada.do("PUT", api+"/merge-rules", `{"rules":[{"pattern":"main","required_approvals":1,"no_self_approval":true,"allow_admin_bypass":false}]}`); r.status != 200 {
 		t.Fatalf("%d %s", r.status, r.body)
 	}
+	// The rules answer says what each person may do with them, and never offers signed commits.
+	for who, want := range map[*browser]bool{ada: true, otto: false} {
+		var rules struct {
+			Actions []struct {
+				Name      string `json:"name"`
+				Available bool   `json:"available"`
+				Reason    string `json:"reason"`
+			} `json:"actions"`
+		}
+		who.get(api + "/merge-rules").json(t, &rules)
+		got := map[string]bool{}
+		for _, a := range rules.Actions {
+			got[a.Name] = a.Available
+			if !a.Available && a.Reason == "" {
+				t.Errorf("action %s is unavailable without a reason", a.Name)
+			}
+		}
+		if got["edit_rules"] != want || got["edit_settings"] != want || got["require_signed_commits"] {
+			t.Errorf("rule actions: %v, want edit %v", got, want)
+		}
+	}
+	// Asking someone to review, then taking them off the list.
+	if r := ada.do("POST", prURL+"/review-requests", `{"reviewers":["vic"]}`); r.status != 200 {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	if r := ada.do("DELETE", prURL+"/review-requests/nobody", ""); r.status != 404 {
+		t.Fatalf("removing someone not asked: %d %s", r.status, r.body)
+	}
+	if r := ada.do("DELETE", prURL+"/review-requests/vic", ""); r.status != 200 || strings.Contains(string(r.body), `"vic"`) {
+		t.Fatalf("removing a review request: %d %s", r.status, r.body)
+	}
 	pr = waitMergeable(t, otto, prURL, pulls.MergeClean)
 	if ok, why := pr.action("merge"); ok || why != "needs 1 more approval" {
 		t.Fatalf("merge action: %v %q", ok, why)

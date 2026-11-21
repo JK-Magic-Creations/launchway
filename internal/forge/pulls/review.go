@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -281,6 +282,18 @@ func (s *Service) RequestReview(ctx context.Context, repoID string, p PullReques
 	np, _ := s.Store.ByID(ctx, p.ID)
 	s.emit(ctx, "review_requested", repoID, np, by, map[string]string{"reviewers": strings.Join(names, ",")})
 	return nil
+}
+
+// RemoveReviewRequest takes a person off the list of those asked to review. It
+// changes nothing else: a review the person already gave stays.
+func (s *Service) RemoveReviewRequest(ctx context.Context, repoID string, p PullRequest, by, name string) error {
+	if p.State != Open {
+		return conflict("this pull request is %s", p.State)
+	}
+	if !slices.Contains(p.Reviewers, name) {
+		return fmt.Errorf("%w: %s has not been asked to review this pull request", ErrNotFound, name)
+	}
+	return s.Store.RemovePerson(ctx, p.ID, "reviewer", name)
 }
 
 // dismissStale dismisses approvals of an older head when the repository's

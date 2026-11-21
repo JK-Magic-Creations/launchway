@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/jk-magic-creations/launchway/internal/auth"
+	"github.com/jk-magic-creations/launchway/internal/engine"
+	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/pulls"
 )
 
@@ -281,6 +283,27 @@ func (s *Server) pullRequestReview(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, v)
 }
 
+func (s *Server) pullUnrequestReview(w http.ResponseWriter, r *http.Request) {
+	repo, p, ok := s.pullTarget(w, r)
+	if !ok {
+		return
+	}
+	name := r.PathValue("reviewer")
+	if err := s.Forge.Pulls.RemoveReviewRequest(r.Context(), repo.ID, p, identityFrom(r).User, name); err != nil {
+		s.failPull(w, err)
+		return
+	}
+	setAudit(r, repo.Path, fmt.Sprintf("#%d review no longer requested from %s", p.Number, name))
+	np, _ := s.Forge.Pulls.Store.ByID(r.Context(), p.ID)
+	np.Repository = repo.Path
+	v, err := s.viewPull(r, repo, np)
+	if err != nil {
+		s.failPull(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, v)
+}
+
 func (s *Server) getPullSettings(w http.ResponseWriter, r *http.Request) {
 	if !s.pullsOn(w) {
 		return
@@ -336,7 +359,24 @@ func (s *Server) getMergeRules(w http.ResponseWriter, r *http.Request) {
 		s.failPull(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"rules": rules})
+	writeJSON(w, http.StatusOK, map[string]any{"rules": rules, "actions": s.ruleActions(identityFrom(r), repo)})
+}
+
+// ruleActions says what this person may do with the merge rules and the pull
+// request settings of a repository, so that no interface offers what cannot
+// work: who may edit them, and the one rule the server refuses.
+func (s *Server) ruleActions(id *identity, repo forge.Repository) []engine.Action {
+	admin := s.authorize(id, auth.AdministerProject, repo.Path)
+	why := "you need the admin role on " + repo.Path
+	acts := []engine.Action{
+		{Name: "edit_rules", Available: admin, Who: "admin"},
+		{Name: "edit_settings", Available: admin, Who: "admin"},
+		{Name: "require_signed_commits", Available: false, Who: "admin", Reason: "signed commits are not checked yet, so a rule that asks for them is refused"},
+	}
+	if !admin {
+		acts[0].Reason, acts[1].Reason = why, why
+	}
+	return acts
 }
 
 func (s *Server) setMergeRules(w http.ResponseWriter, r *http.Request) {

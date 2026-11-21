@@ -121,6 +121,9 @@ export function pullFixtures(): Record<string, unknown> {
   const patch = "diff --git a/price.go b/price.go\n--- a/price.go\n+++ b/price.go\n@@ -1,3 +1,4 @@\n func Round(x float64) float64 {\n-\treturn x\n+\treturn math.Round(x*100) / 100\n }\n+// done\n";
   const thread = { id: "pcm_1", path: "price.go", line: 3, side: "new", outdated: false, resolved: false, comments: [{ id: "pcm_1", thread_id: "pcm_1", author: "grace", body: "Why not `math.Floor`?", path: "price.go", line: 3, side: "new", created_at: "2026-11-20T10:30:00Z" }] };
   return {
+    [`${base}/merge-rules`]: { rules: [{ pattern: "main", required_approvals: 1, approval_role: "operator", required_checks: ["ci/test"], require_up_to_date: true, require_resolved_threads: false, no_self_approval: true, require_signed_commits: false, allow_admin_bypass: false }],
+      actions: [{ name: "edit_rules", available: true }, { name: "edit_settings", available: true }, { name: "require_signed_commits", available: false, reason: "signed commits are not checked yet, so a rule that asks for them is refused" }] },
+    [`${base}/pull-settings`]: { allow_merge: true, allow_squash: true, allow_rebase: false, default_method: "merge", delete_branch_after_merge: false, dismiss_stale_approvals: true, merge_message_template: "", squash_message_template: "" },
     [`${base}/pulls`]: { items: [pull], total: 1 },
     [`${base}/pulls/1`]: pull,
     [`${base}/pulls/1/conversation`]: { comments: [{ id: "pcm_2", author: "ada", body: "Ready when you are.", created_at: "2026-11-20T10:10:00Z" }], threads: [thread],

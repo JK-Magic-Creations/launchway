@@ -9,6 +9,7 @@ import { Tabs } from "../kit/Tabs";
 import { Markdown } from "../markdown";
 import { pullsApi, type Comment, type Conversation, type FileChange, type Patch, type Pull, type Thread } from "../pullsApi";
 import { pullHref, stateChip } from "./PullRequests";
+import { PullList } from "./PullPeople";
 import "../styles/pulls.css";
 
 /** The pull request as a change on the launch line: opened, checked, reviewed, merged. */
@@ -340,9 +341,12 @@ export function PullRequestPage({ path, number }: { path: string; number: number
           </div>
         </div>
         <aside className="pr-side" aria-label="Details">
-          <div><h3>Reviewers</h3>{pull.requested_reviewers.length ? pull.requested_reviewers.join(", ") : <span className="faint">None asked</span>}</div>
-          <div><h3>Assignees</h3>{pull.assignees.length ? pull.assignees.join(", ") : <span className="faint">None</span>}</div>
-          <div><h3>Labels</h3>{pull.labels.length ? pull.labels.map((l) => <Chip key={l}>{l}</Chip>) : <span className="faint">None</span>}</div>
+          <PullList title="Reviewers" noun="reviewer" none="None asked" items={pull.requested_reviewers} editable={can("request_review")}
+            onAdd={(n) => run("people", () => pullsApi.requestReview(path, number, [n]))} onRemove={(n) => run("people", () => pullsApi.unrequestReview(path, number, n))} />
+          <PullList title="Assignees" noun="assignee" none="None" items={pull.assignees} editable={can("edit")}
+            onAdd={(n) => run("people", () => pullsApi.update(path, number, { assignees: [...pull.assignees, n] }))} onRemove={(n) => run("people", () => pullsApi.update(path, number, { assignees: pull.assignees.filter((a) => a !== n) }))} />
+          <PullList title="Labels" noun="label" none="None" chip items={pull.labels} editable={can("edit")}
+            onAdd={(n) => run("people", () => pullsApi.update(path, number, { labels: [...pull.labels, n] }))} onRemove={(n) => run("people", () => pullsApi.update(path, number, { labels: pull.labels.filter((l) => l !== n) }))} />
           <div><h3>Fetch</h3><Mono>git fetch origin {pull.fetch_ref}</Mono></div>
           <div><h3>Behind the target</h3>{pull.mergeability.behind} commit{pull.mergeability.behind === 1 ? "" : "s"}</div>
         </aside>

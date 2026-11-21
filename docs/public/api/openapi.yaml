@@ -3844,7 +3844,7 @@ paths:
             x-launchway-audit: webhook.test
     /api/v1/repositories/{owner}/{name}/merge-rules:
         get:
-            description: 'The merge rules of the protected branches: approvals (count, role), required checks, up to date, resolved threads, no self-approval, administrator bypass.'
+            description: 'The merge rules of the protected branches: approvals (count, role), required checks, up to date, resolved threads, no self-approval, administrator bypass. Also actions: edit_rules and edit_settings (available to administrators of the repository, with the reason when not) and require_signed_commits (never available yet), so an interface offers only what can work.'
             operationId: get_api_v1_repositories_owner_name_merge_rules
             parameters:
                 - in: path
@@ -4897,6 +4897,54 @@ paths:
                 - repositories
             x-launchway-access: repo-operator
             x-launchway-audit: pull.review_request
+    /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}:
+        delete:
+            description: Takes one person off the list of those asked to review (a review they already gave stays); 404 if they were not asked, 409 if the pull request is not open. Answers with the pull request.
+            operationId: delete_api_v1_repositories_owner_name_pulls_number_review_requests_reviewer
+            parameters:
+                - in: path
+                  name: owner
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: number
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: reviewer
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Takes one person off the list of those asked to review (a review they already gave stays); 404 if they were not asked, 409 if the pull request is not open.
+            tags:
+                - repositories
+            x-launchway-access: repo-operator
+            x-launchway-audit: pull.review_unrequest
     /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews:
         post:
             description: 'Submits a review: {"verdict": "comment", "approve" or "request_changes", "body", "comments": [...]}. The reviewer''s role is recorded with it; a rule may count only approvals of a role.'

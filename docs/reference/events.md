@@ -301,6 +301,7 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `pull.review` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews`; the detail: pull request #N and the verdict |
 | `pull.review_dismiss` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss`; the detail: pull request #N, the review and the reason |
 | `pull.review_request` | `POST /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests`; the detail: pull request #N and the people asked |
+| `pull.review_unrequest` | `DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}`; the detail: pull request #N and the person taken off the list |
 | `repository.pull_settings` | `PUT /api/v1/repositories/{owner}/{name}/pull-settings`; the detail: the allowed methods and the default |
 | `repository.merge_rules` | `PUT /api/v1/repositories/{owner}/{name}/merge-rules`; the detail: the patterns and what they require |
 | `pull.auto_merge` | A pull request merged by auto-merge once its rules passed; made by the server, for the person who turned it on |

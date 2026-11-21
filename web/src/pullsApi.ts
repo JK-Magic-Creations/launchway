@@ -34,6 +34,15 @@ export interface BranchComparison {
   mergeability: Pull["mergeability"];
 }
 
+export interface MergeRule {
+  pattern: string; required_approvals: number; approval_role: string; required_checks: string[]; require_up_to_date: boolean;
+  require_resolved_threads: boolean; no_self_approval: boolean; require_signed_commits: boolean; allow_admin_bypass: boolean;
+}
+export interface PullSettings {
+  allow_merge: boolean; allow_squash: boolean; allow_rebase: boolean; default_method: string; delete_branch_after_merge: boolean;
+  dismiss_stale_approvals: boolean; merge_message_template: string; squash_message_template: string;
+}
+
 const enc = encodeURIComponent;
 const base = (path: string) => `/api/v1/repositories/${path.split("/").map(enc).join("/")}`;
 const qs = (o: Record<string, string | number | boolean | undefined>) => {
@@ -60,5 +69,11 @@ export const pullsApi = {
   updateComment: (path: string, n: number, id: string, b: { body?: string; resolved?: boolean }) => call<Comment>("PATCH", `${base(path)}/pulls/${n}/comments/${enc(id)}`, b),
   applySuggestion: (path: string, n: number, id: string) => call<{ commit: string }>("POST", `${base(path)}/pulls/${n}/comments/${enc(id)}/apply`, {}),
   review: (path: string, n: number, b: { verdict: string; body: string }) => call<Review>("POST", `${base(path)}/pulls/${n}/reviews`, b),
+  requestReview: (path: string, n: number, reviewers: string[]) => call<Pull>("POST", `${base(path)}/pulls/${n}/review-requests`, { reviewers }),
+  unrequestReview: (path: string, n: number, reviewer: string) => call<Pull>("DELETE", `${base(path)}/pulls/${n}/review-requests/${enc(reviewer)}`),
+  rules: (path: string) => call<{ rules: MergeRule[]; actions: Action[] }>("GET", `${base(path)}/merge-rules`),
+  setRules: (path: string, rules: MergeRule[]) => call<{ rules: MergeRule[]; actions: Action[] }>("PUT", `${base(path)}/merge-rules`, { rules }),
+  settings: (path: string) => call<PullSettings>("GET", `${base(path)}/pull-settings`),
+  setSettings: (path: string, b: Partial<PullSettings>) => call<PullSettings>("PUT", `${base(path)}/pull-settings`, b),
   dismiss: (path: string, n: number, id: string, reason: string) => call<void>("POST", `${base(path)}/pulls/${n}/reviews/${enc(id)}/dismiss`, { reason }),
 };

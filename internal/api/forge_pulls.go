@@ -44,6 +44,7 @@ func (s *Server) pullRoutes() []route {
 		{"POST " + prBase + "/pulls/{number}/reviews", repoRead, "pull.review", s.pullReview},
 		{"POST " + prBase + "/pulls/{number}/reviews/{id}/dismiss", repoWrite, "pull.review_dismiss", s.pullDismiss},
 		{"POST " + prBase + "/pulls/{number}/review-requests", repoWrite, "pull.review_request", s.pullRequestReview},
+		{"DELETE " + prBase + "/pulls/{number}/review-requests/{reviewer}", repoWrite, "pull.review_unrequest", s.pullUnrequestReview},
 		{"GET " + prBase + "/compare", repoRead, "", s.compareBranches},
 		{"GET " + prBase + "/pull-settings", repoRead, "", s.getPullSettings},
 		{"PUT " + prBase + "/pull-settings", repoAdmin, "repository.pull_settings", s.setPullSettings},

@@ -203,6 +203,7 @@ var rows = []Row{
 	{Route: "POST /api/v1/repositories/{owner}/{name}/pulls/{number}/reviews/{id}/dismiss", MCP: "review_pull_request", CLI: "pr review", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "POST /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests", MCP: "review_pull_request", CLI: "pr review", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/compare", MCP: "compare_branches", CLI: "pr create", Terraform: "", Status: Equal, Reason: ""},
+	{Route: "DELETE /api/v1/repositories/{owner}/{name}/pulls/{number}/review-requests/{reviewer}", MCP: "review_pull_request", CLI: "pr review", Terraform: "", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/pull-settings", MCP: "get_pull_settings", CLI: "pr settings", Terraform: "planned: launchway_repository_merge_settings", Status: Equal, Reason: ""},
 	{Route: "PUT /api/v1/repositories/{owner}/{name}/pull-settings", MCP: "set_pull_settings", CLI: "pr settings", Terraform: "planned: launchway_repository_merge_settings", Status: Equal, Reason: ""},
 	{Route: "GET /api/v1/repositories/{owner}/{name}/merge-rules", MCP: "get_pull_settings", CLI: "pr rules", Terraform: "planned: launchway_merge_rule", Status: Equal, Reason: ""},
