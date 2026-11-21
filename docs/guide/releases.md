@@ -1,6 +1,6 @@
 # Making a release
 
-A release is more than a tag with a zip. It is the unit that is versioned, cleared, promoted from Airfield to Airfield and reported on: a version, the commit and annotated tag it was made from, notes, Cargo (files with checksums), the image digests its Sortie built, and a record of who did each step. This page is about making one. [Promoting a release](promoting-releases.md) is about moving it through the Airfields, [Release checklists, windows and freezes](release-checklists.md) about what must be true first, and [Measuring delivery](measuring-delivery.md) about what it tells you afterwards.
+A release is more than a tag with a zip. It is the thing that is versioned, cleared, promoted from Airfield to Airfield and reported on: a version, the commit and annotated tag it was made from, notes, Cargo (files with checksums), the image digests its Sortie built, and a record of who did each step. This page is about making one. [Promoting a release](promoting-releases.md) is about moving it through the Airfields, [Release checklists, windows and freezes](release-checklists.md) about what must be true first, and [Measuring delivery](measuring-delivery.md) about what it tells you afterwards.
 
 You can do everything here from the web interface (Deployments, then Releases), the command line (`launchway release ...`), the HTTP API, or through an agent (the `*_release*` tools); they are the same operations with the same permissions.
 

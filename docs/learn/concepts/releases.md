@@ -1,6 +1,6 @@
 # Releases
 
-A **release** is the unit you version, clear, promote and report on. It is not a tag with a zip: it is a
+A **release** is the thing you version, clear, promote and report on. It is not a tag with a zip: it is a
 version, the commit and annotated tag it was made from, notes, Cargo (files with their checksums), the image
 digests its Sortie built, and a record of who did each step.
 
