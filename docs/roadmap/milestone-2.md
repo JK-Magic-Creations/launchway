@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 2 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 0 in progress · 23 planned · 23 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 2 available · 0 in progress · 28 planned · 30 capabilities</p>
 
 Pipelines can be as dynamic as real code needs, and a team running an automation server can move its jobs without losing what it relies on.
 
@@ -49,6 +49,7 @@ flowchart TD
 | [Write pipelines your way](#g-write-pipelines-your-way) | 15 | 0 | 0 | 15 |
 | [Design visually](#g-design-visually) | 4 | 0 | 0 | 4 |
 | [Move off a self-hosted automation server](#g-move-off-a-self-hosted-automation-server) | 4 | 0 | 0 | 4 |
+| [Share and reuse across projects](#g-share-and-reuse-across-projects) | 7 | 2 | 0 | 5 |
 
 ### Write pipelines your way {#g-write-pipelines-your-way}
 
@@ -275,6 +276,74 @@ Guidance and checks that show runners on any machine, in any network, replace th
 
 **Depends on:** Runner identity and pools.
 
+
+### Share and reuse across projects {#g-share-and-reuse-across-projects}
+
+The right amount of sharing at the right level, with the fewest new ideas to learn: a template is an interface, code is what runs, and a nearer level always wins.
+
+#### Templates and flight plans by level {#templates-and-flight-plans-by-level}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Set a template or a flight plan at the organization or unit and every project beneath it uses it. Today a flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.
+
+[Read the documentation](../guide/libraries.md)
+
+#### Overrides, locks and the hierarchy view {#overrides-locks-and-the-hierarchy-view}
+
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
+
+Declare a variable lower down to override it, let a level above lock it, and see where each value comes from while building a pipeline. Today the hierarchy shows each variable’s source, what it overrides and what is locked, and every run records the values it used.
+
+[Read the documentation](../guide/variables.md)
+
+#### Templates that read like code {#templates-that-read-like-code}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A template says what it needs and offers, can be built on another, and a project fills in or overrides only what is open. You will be able to see at a glance what a template fixes and what it leaves open, the way an interface and a class work in code.
+
+**Depends on:** Shared pipeline templates and flight plans.
+
+[Area page](pipelines.md)
+
+#### Language starters {#language-starters}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants. Everything in a starter can be overridden; the default simply guides. Starters arrive for the most common languages first.
+
+**Depends on:** Templates that read like code.
+
+[Area page](pipelines.md)
+
+#### Light environments and services {#light-environments-and-services}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Environments and services as short lists with sensible defaults, not another set of ideas to learn before anything works. You will be able to start with one environment and grow, with locks and defaults coming from the level above.
+
+[Area page](pipelines.md)
+
+#### Shared connections {#shared-connections}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A connection to a registry, a cluster or a cloud set up once at a level and used below it, with its use shown. Secrets stay where they are; only the name of the connection is shared.
+
+**Depends on:** Overrides, locks and the hierarchy view.
+
+[Area page](pipelines.md)
+
+#### See what is shared and who uses it {#see-what-is-shared-and-who-uses-it}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+For any template, library or connection, a list of every project that uses it and what would change if it changed. A change to something shared is previewed before it is applied.
+
+**Depends on:** Templates and flight plans by level.
+
+[Area page](pipelines.md)
 
 ## What done means
 

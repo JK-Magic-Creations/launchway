@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Beyond · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 0 in progress · 9 planned · 9 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 0 in progress · 8 planned · 8 capabilities</p>
 
 Ideas that grow naturally from one connected platform. Planned, but behind everything above.
 
@@ -17,7 +17,6 @@ These are ideas that grow from one connected platform. They are planned, but the
 ## What you will be able to do
 
 - You see what each service costs next to what it delivers.
-- A pipeline step breaks a pre-production environment on purpose and checks that verification notices.
 - A new engineer finds a service, its owner, its docs and its last deployment in one directory.
 
 ## How it fits together
@@ -26,8 +25,6 @@ These are ideas that grow from one connected platform. They are planned, but the
 flowchart TD
   Graph[("Software graph")] --> Cost["Cost by service"]
   Graph --> Portal["Service catalogue"]
-  Verify["Verification"] --> Chaos["Chaos steps"]
-  Graph --> Chaos
 ```
 
 *Each idea reuses data the earlier milestones already hold.*
@@ -38,7 +35,7 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Operate what you ship](#g-operate-what-you-ship) | 9 | 0 | 0 | 9 |
+| [Operate what you ship](#g-operate-what-you-ship) | 8 | 0 | 0 | 8 |
 
 ### Operate what you ship {#g-operate-what-you-ship}
 
@@ -51,15 +48,6 @@ Ideas that grow naturally from one connected platform.
 See what each service, team and environment costs to run, next to what it delivers. Includes the cost of runner pools.
 
 **Depends on:** The software graph.
-
-
-#### Chaos testing {#chaos-testing}
-
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
-
-Deliberately break things in a pre-production environment as a pipeline step, and see whether verification notices. Built-in host experiments and well-known chaos tools are supported.
-
-**Depends on:** Inject delays and errors safely.
 
 
 #### A developer portal and service catalogue {#a-developer-portal-and-service-catalogue}
@@ -132,7 +120,8 @@ This milestone is done when all of these are true.
 ## What is deliberately not in it
 
 - Anything earlier in the roadmap.
+- Chaos testing, which has moved into Milestone 8.
 
 ---
 
-[← Milestone 7: Hosted service](milestone-7.md)
+[← Milestone 12: Security and trust](milestone-12.md)

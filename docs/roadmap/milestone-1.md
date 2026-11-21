@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 2 available · 11 in progress · 66 planned · 79 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 10 available · 10 in progress · 59 planned · 79 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -40,7 +40,7 @@ flowchart TD
 
 *A change from push to merge. The built-in host and a connected host look the same to the pipeline engine.*
 
-**Builds on:** nothing; this is where it starts. **Leads to:** [Milestone 2: Pipeline power](milestone-2.md), [Milestone 3: Delivery depth](milestone-3.md), [Milestone 4: Registry](milestone-4.md), [Milestone 6: AI helper](milestone-6.md), [Milestone 7: Hosted service](milestone-7.md).
+**Builds on:** nothing; this is where it starts. **Leads to:** [Milestone 2: Pipeline power](milestone-2.md), [Milestone 3: Delivery depth](milestone-3.md), [Milestone 4: Registry](milestone-4.md), [Milestone 6: AI helper](milestone-6.md), [Milestone 7: Hosted service](milestone-7.md), [Milestone 12: Security and trust](milestone-12.md).
 
 **Go deeper:** [Git hosting and change review](git-hosting.md) · [Pipelines and flow control](pipelines.md) · [The guided interface](guided-interface.md).
 
@@ -48,16 +48,16 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Host your code](#g-host-your-code) | 20 | 0 | 2 | 18 |
-| [Review and merge changes](#g-review-and-merge-changes) | 10 | 0 | 0 | 10 |
+| [Host your code](#g-host-your-code) | 20 | 4 | 0 | 16 |
+| [Review and merge changes](#g-review-and-merge-changes) | 10 | 0 | 3 | 7 |
 | [Work items and decisions](#g-work-items-and-decisions) | 11 | 0 | 0 | 11 |
 | [People and access on the host](#g-people-and-access-on-the-host) | 6 | 0 | 1 | 5 |
-| [Move your repositories in](#g-move-your-repositories-in) | 4 | 0 | 2 | 2 |
+| [Move your repositories in](#g-move-your-repositories-in) | 4 | 1 | 1 | 2 |
 | [Keep your Git host, if you prefer](#g-keep-your-git-host-if-you-prefer) | 5 | 0 | 0 | 5 |
 | [Pipelines that match what teams expect from hosted CI](#g-pipelines-that-match-what-teams-expect-from-hosted-ci) | 7 | 2 | 1 | 4 |
-| [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 0 | 3 | 6 |
+| [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 1 | 5 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
-| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 5 | 0 | 2 | 3 |
+| [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 5 | 0 | 3 | 2 |
 
 ### Host your code {#g-host-your-code}
 
@@ -65,13 +65,13 @@ Launchway stores your repositories and serves them, so one product and a databas
 
 #### Built-in Git hosting {#built-in-git-hosting}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost. A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the base every other hosting item stands on.
+Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost. A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a run.
 
 **Depends on:** A database; the shared blob store that already exists.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/git-over-ssh.md) · [Area page](git-hosting.md)
 
 #### Safe storage and failover for repositories {#safe-storage-and-failover-for-repositories}
 
@@ -85,13 +85,13 @@ If a server or the database fails over, every acknowledged push is still there. 
 
 #### Git over SSH {#git-over-ssh}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Clone, fetch and push over SSH with your own keys, beside HTTPS. User keys and per-repository read-only deploy keys are listed and revocable in one place, the server proves itself with a protected host key that stays the same across servers, and SSH uses the same permissions, limits and audit as HTTPS. Run-scoped read-only credentials mean a pipeline holds a credential only while it runs.
+Clone, fetch and push over SSH with your own keys, beside HTTPS. User keys and per-repository read-only deploy keys are listed and revocable in one place, the server proves itself with a protected host key that stays the same across servers, and SSH uses the same permissions, limits and audit as HTTPS. Run-scoped read-only credentials mean a pipeline holds a credential only while it runs. Today there are user keys, deploy keys, and a key page in the interface.
 
 **Depends on:** Built-in Git hosting.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/git-over-ssh.md) · [Area page](git-hosting.md)
 
 #### Create, rename, archive and set visibility {#create-rename-archive-and-set-visibility}
 
@@ -175,9 +175,9 @@ A deleted repository goes to a trash and can come back within a set time. Delete
 
 #### Mirrors in and out {#mirrors-in-and-out}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Pull a repository from another host on a schedule, or push every change to another host as a safety copy. Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace.
+Pull a repository from another host on a schedule, or push every change to another host as a safety copy. Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace. Today both directions work, and a stale mirror is flagged.
 
 **Depends on:** Built-in Git hosting.
 
@@ -245,13 +245,13 @@ Contributor activity, commit graphs, languages, topics and a repository picture.
 
 #### Webhooks to other tools {#webhooks-to-other-tools}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Send repository events to chat tools and any web address, with a delivery log, retries and test deliveries. One notification channel set is shared with pipelines and approvals. Payloads are signed, and compatible shapes are offered so existing tools keep working.
+Send repository events to chat tools and any web address, with a delivery log, retries and test deliveries. One notification channel set is shared with pipelines and approvals. Payloads are signed, and compatible shapes are offered so existing tools keep working. Today every delivery is logged with its result.
 
 **Depends on:** Built-in Git hosting.
 
-[Area page](git-hosting.md)
+[Read the documentation](../guide/webhooks.md) · [Area page](git-hosting.md)
 
 #### Notifications and email {#notifications-and-email}
 
@@ -269,9 +269,9 @@ Pull requests that show the run, the tests and the policy verdict on one page.
 
 #### Pull requests on the built-in host {#pull-requests-on-the-built-in-host}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass. A pull request page shows its pipeline run, tests, coverage change, findings, policy verdict, preview environment and deployment together, with no round trip through a webhook. Expected results are written in the same step that accepts the push, so a change never looks mergeable before its checks exist.
+Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass. A pull request page shows its pipeline run, tests, coverage change, findings, policy verdict, preview environment and deployment together, with no round trip through a webhook. Expected results are written in the same step that accepts the push, so a change never looks mergeable before its checks exist. Pull requests and code review are being built now.
 
 **Depends on:** Built-in Git hosting.
 
@@ -279,7 +279,7 @@ Open, review, discuss and merge changes inside Launchway, with branch rules that
 
 #### Review with inline comments and suggestions {#review-with-inline-comments-and-suggestions}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
 Comment on lines and ranges, suggest a change the author can apply in one click, and mark files as viewed. Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision.
 
@@ -289,9 +289,9 @@ Comment on lines and ranges, suggest a change the author can apply in one click,
 
 #### Branch rules and protected tags {#branch-rules-and-protected-tags}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move. The page says in plain words why a change cannot land yet and what would unblock it. A tag pinned by a template resolves to a commit and is recorded on the run.
+Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move. The page says in plain words why a change cannot land yet and what would unblock it. A tag pinned by a template resolves to a commit and is recorded on the run. Today protected branches have a first version (blocked pushes and a plain reason); required approvals arrive with pull requests.
 
 **Depends on:** Pull requests on the built-in host.
 
@@ -550,9 +550,9 @@ A tested path from another Git host, so switching is a step and not a leap.
 
 #### Move your repositories in {#move-your-repositories-in}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch. Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time.
+Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch. Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time. Today a connection to another host lists its repositories, and each can be imported or mirrored.
 
 **Depends on:** Built-in Git hosting.
 
@@ -697,9 +697,9 @@ Everything by clicking, with every page saying what it is for and what to do nex
 
 #### Follow a change on its launch line {#follow-a-change-on-its-launch-line}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-A single line that shows one change traveling from idea to running software, with each station opening its evidence. Choose a station and its review, tests, image, place or decision opens underneath. This is the page that answers where is my change and is it all right.
+A single line that shows one change traveling from idea to running software, with each station opening its evidence. Choose a station and its review, tests, image, place or decision opens underneath. This is the page that answers where is my change and is it all right. Today the interface is organized around it: Home, Activity, Pipelines, Code, Deployments, Images and Settings.
 
 **Depends on:** The guided interface.
 
@@ -707,7 +707,7 @@ A single line that shows one change traveling from idea to running software, wit
 
 #### A Home that tells you what to do next {#a-home-that-tells-you-what-to-do-next}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
 One sentence about what needs you, rows with one recommended action each, and a checklist that disappears as you finish it. When nothing needs anyone it becomes a calm all-clear page with the board of changes in flight.
 
@@ -753,7 +753,7 @@ A search box that finds pages and starts guided actions such as turn a toggle of
 
 #### Decision cards that read on a phone {#decision-cards-that-read-on-a-phone}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
 An approval is a card with what, who, risk, evidence and what happens next, readable in seconds. Reject needs a reason. A decision can be undone until it has acted.
 
@@ -815,9 +815,9 @@ Every kind of setting managed as code, each new kind shipping with its resource,
 
 #### Database failover and no lost push {#database-failover-and-no-lost-push}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-High availability that covers the database and repository storage as well as the servers. Failover is rehearsed in tests with writes in flight.
+High availability that covers the database and repository storage as well as the servers. Failover is rehearsed in tests with writes in flight. Today the application side rides through an outage; the database side is Milestone 10.
 
 
 #### Launchway builds and deploys itself {#launchway-builds-and-deploys-itself}
