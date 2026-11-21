@@ -11,7 +11,7 @@ shrink. It never grows to make a change pass.
 Run all the fast gates with one command:
 
 ```sh
-make check        # formatting, vet, lint, architecture, size ratchet, web lint, type check, web tests
+make check        # formatting, vet, lint, architecture, originality, size ratchet, web lint, type check, web tests
 make check-all    # the above, plus the bundle budget and the Go tests with the coverage floors
 ```
 
@@ -23,6 +23,7 @@ make check-all    # the above, plus the bundle budget and the Go tests with the 
 | Vet | `make vet` | `go vet` reports anything | none |
 | Go lint | `make lint` | a finding appears that is not in the baseline | `quality/lint-baseline.json` |
 | Architecture | `make arch` | a package imports one it may not | table in `internal/archtest/arch_test.go` |
+| Originality | `make originality` | a comparison or an unlisted product name appears in code or docs | deny-list and allow-list in `internal/archtest/originality_test.go` |
 | Size | `make ratchet` | a file over 1,000 lines or a function over 150 lines is new or grew | `quality/size-baseline.json` |
 | Coverage | `make coverage-check` | a package's coverage is below its floor | `quality/coverage-floor.json` |
 | Web lint | `make web-lint` | `eslint` or `tsc` reports something new | `web/eslint-suppressions.json` |
