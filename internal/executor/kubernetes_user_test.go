@@ -26,9 +26,22 @@ func TestKubePodGivesTheStepUserAnAccountEntry(t *testing.T) {
 	if sc == nil || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation || len(sc.Capabilities.Drop) != 1 || sc.Capabilities.Drop[0] != "ALL" {
 		t.Errorf("init security context %+v", sc)
 	}
-	if init.Command[0] != "sh" || init.Command[len(init.Command)-4] != "1000" || init.Command[len(init.Command)-3] != "1000" ||
-		init.Command[len(init.Command)-2] != stepUserName || init.Command[len(init.Command)-1] != stepHome {
+	if n := len(init.Command); init.Command[0] != "sh" || init.Command[n-6] != "/launchway-user" || init.Command[n-5] != "1000" ||
+		init.Command[n-4] != "1000" || init.Command[n-3] != stepUserName || init.Command[n-2] != stepHome || init.Command[n-1] != "python." {
 		t.Errorf("init command arguments %v", init.Command[3:])
+	}
+	// The init container's own command, run against an EMPTY directory standing for the volume, must make exactly the
+	// files the step container mounts. (It once wrote into a directory per container that nothing had made, so every
+	// step on a real cluster failed in its init container while the unit test, which made the directory, passed.)
+	volRoot := t.TempDir()
+	args := append([]string{}, init.Command[1:]...)
+	for i, a := range args {
+		if a == "/launchway-user" {
+			args[i] = volRoot
+		}
+	}
+	if b, err := exec.Command(init.Command[0], args...).CombinedOutput(); err != nil {
+		t.Fatalf("the init command failed on an empty volume: %v\n%s", err, b)
 	}
 
 	// The step container mounts the two files read-only over /etc/passwd and /etc/group; the service and the helper do not.
@@ -42,8 +55,14 @@ func TestKubePodGivesTheStepUserAnAccountEntry(t *testing.T) {
 			etc = append(etc, m)
 		}
 	}
-	if len(etc) != 2 || !etc[0].ReadOnly || !etc[1].ReadOnly || etc[0].SubPath != "python/passwd" || etc[1].MountPath != "/etc/group" || etc[1].SubPath != "python/group" {
+	if len(etc) != 2 || !etc[0].ReadOnly || !etc[1].ReadOnly || etc[0].SubPath != "python.passwd" || etc[1].MountPath != "/etc/group" || etc[1].SubPath != "python.group" {
 		t.Errorf("step container /etc mounts %+v", etc)
+	}
+	for _, m := range etc {
+		b, err := os.ReadFile(filepath.Join(volRoot, m.SubPath))
+		if err != nil || !strings.Contains(string(b), stepUserName+":x:1000:") {
+			t.Errorf("the init command did not make %s, which the step mounts at %s: %v %q", m.SubPath, m.MountPath, err, b)
+		}
 	}
 	for _, name := range []string{"db", helperName} {
 		if _, has := mountsOf(byName[name])["/etc/passwd"]; has {
