@@ -77,14 +77,37 @@ func TestBurstOfAutomationPullRequestsIsHeldAndTheMainBuildGoes(t *testing.T) {
 	if d, _ := e.GetRun(main.ID); d.Queue == nil || d.Queue.Held {
 		t.Fatalf("the main build is held: %+v", d.Queue)
 	}
-	// Only the runs that go have steps to take.
-	j := take(t, e)
+	// End one of the two automation runs that go (the main build's step could
+	// be the one taken first, and its end frees no automation place).
+	j := takeRun(t, e, runs[0].ID)
 	ok(t, e, j, nil)
-	if got := heldNumbers(t, e); fmt.Sprint(got) != "[4 5 6 7 8]" {
+	// Exactly one held run started, and the main build was not held back.
+	if got := heldNumbers(t, e); len(got) != 5 {
 		t.Fatalf("after one ended, held %v", got)
 	}
 	if d, _ := e.GetRun(runs[2].ID); d.Queue.Held {
-		t.Fatal("run 3 should have started")
+		t.Fatal("run 3, the oldest held, should have started")
+	}
+}
+
+// Held runs that arrived in the same instant (the clock does not move here, and
+// in a real burst many arrive within one millisecond) go in the order they
+// arrived, whatever their random ids sort like.
+func TestHeldRunsOfOneInstantGoInArrivalOrder(t *testing.T) {
+	e, _ := queueEngine(t, QueueSettings{})
+	for i := 1; i <= 12; i++ {
+		prRun(t, e, i, true)
+	}
+	for next := 3; next <= 12; next++ {
+		// Whichever of the running runs ends, exactly the oldest held one goes.
+		ok(t, e, take(t, e), nil)
+		var want []int
+		for n := next + 1; n <= 12; n++ {
+			want = append(want, n)
+		}
+		if held := heldNumbers(t, e); fmt.Sprint(held) != fmt.Sprint(want) {
+			t.Fatalf("after run %d went, held %v, want %v", next, held, want)
+		}
 	}
 }
 
