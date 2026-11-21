@@ -10,7 +10,7 @@
     "internal/engine/artifacts.go": 1211,
     "internal/engine/control.go": 1067,
     "internal/engine/db.go": 1560,
-    "internal/engine/engine.go": 2195,
+    "internal/engine/engine.go": 2187,
     "internal/engine/testqueries.go": 1226,
     "internal/engine/verify.go": 1442,
     "internal/pipeline/template.go": 1247,

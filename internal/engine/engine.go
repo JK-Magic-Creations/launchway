@@ -378,9 +378,8 @@ func Open(o Options) (*Engine, error) {
 	if o.RunnerTimeout == 0 {
 		o.RunnerTimeout = 3 * o.LeaseTTL
 	}
-	if o.Now == nil {
-		o.Now = time.Now
-	}
+	clk := &dbClock{}
+	o.Now = clk.wrap(o.Now)
 	if o.Logger == nil {
 		o.Logger = slog.Default()
 	}
@@ -406,6 +405,7 @@ func Open(o Options) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
+	db.clk = clk
 	e := &Engine{
 		db: db, hub: o.Hub, log: o.Logger, ttl: o.LeaseTTL, runnerTimeout: o.RunnerTimeout, maxLost: o.MaxLost, now: o.Now,
 		schema:     known,
@@ -1377,14 +1377,6 @@ func (e *Engine) reaper(ctx context.Context) {
 				e.PruneTriggers(now.Add(-7 * 24 * time.Hour).UnixMilli())
 			}
 		}
-	}
-}
-
-func (e *Engine) markAlive() {
-	unlock := e.writeLock()
-	defer unlock()
-	if err := setAlive(e.db, e.now()); err != nil {
-		e.log.Error("recording that this server is alive", "err", err)
 	}
 }
 

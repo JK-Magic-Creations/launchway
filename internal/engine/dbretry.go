@@ -250,6 +250,7 @@ type retryConf struct {
 	// sleepFn and nowFn replace time.Sleep and time.Now in tests.
 	sleepFn func(time.Duration)
 	nowFn   func() time.Time
+	clk     *dbClock // the database's time (dbclock.go)
 }
 
 func (d *dbx) clock() time.Time {
