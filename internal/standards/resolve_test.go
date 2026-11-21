@@ -104,7 +104,7 @@ func TestALockHoldsAgainstEveryLevelBelowAndTheFile(t *testing.T) {
 		t.Errorf("exemptions count though they are locked above: %+v", e.Exemptions)
 	}
 	joined := strings.Join(e.Notices, "\n")
-	for _, want := range []string{"the state of the check \"Secrets in the repository's history\"", "locked by the Wing acme", "the security team requires it", "the switch that turns Standing orders off", "exemptions"} {
+	for _, want := range []string{"the state of the check \"Secrets in the repository's history\"", "locked by the Wing", "the security team requires it", "the switch that turns Standing orders off", "exemptions"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("no notice mentioning %q in:\n%s", want, joined)
 		}

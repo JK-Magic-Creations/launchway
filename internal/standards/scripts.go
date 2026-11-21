@@ -40,7 +40,7 @@ cp /tmp/r.sarif .standing/vuln-deps.sarif
 
 const goModules = `find . -name go.mod -not -path './.standing/*' -not -path '*/vendor/*' -not -path '*/node_modules/*' | head -20`
 
-const goEnv = `export GOFLAGS=-buildvcs=false GOMODCACHE=/workspace/.standing/cache/gomod GOCACHE=/workspace/.standing/cache/gobuild
+const goEnv = `export GOFLAGS="-buildvcs=false -modcacherw" GOMODCACHE=/workspace/.standing/cache/gomod GOCACHE=/workspace/.standing/cache/gobuild
 `
 
 const scriptVulnReachGo = scriptPrelude + goEnv + `n=0; bad=0

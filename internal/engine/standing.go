@@ -48,6 +48,8 @@ func (c *cmd) enrichFindings(step string, list []storedFinding, rules []findings
 	seen := map[string]int{}
 	for i := range list {
 		list[i].std = standards.NormalizeOne(check, list[i].Finding, byRule[list[i].Tool+"\x00"+list[i].RuleID], seen)
+		// What is shown is the path in the repository, not where the tool saw it in its container.
+		list[i].Finding.File = list[i].std.File
 	}
 }
 
@@ -111,6 +113,7 @@ func (c *cmd) gateEvidence(def *pipeline.Step) (*gateEvidence, error) {
 	st := c.st
 	ev := &gateEvidence{ran: map[string]bool{}, baseline: map[string]bool{}, decisions: map[string]standards.Decision{}}
 	var ts []triple
+	seenFP := map[string]bool{}
 	for _, need := range def.Needs {
 		nd, s := st.Pipeline.Step(need), st.Steps[need]
 		if nd == nil || s == nil {
@@ -126,7 +129,10 @@ func (c *cmd) gateEvidence(def *pipeline.Step) (*gateEvidence, error) {
 			if c.schema12 != nil {
 				if k := c.schema12.findings[stepAttempt{need, s.Attempt}]; k != nil {
 					for _, f := range k.list {
-						ev.findings = append(ev.findings, f.std)
+						if key := f.std.Check + "\x00" + f.std.Fingerprint; !seenFP[key] {
+							seenFP[key] = true
+							ev.findings = append(ev.findings, f.std)
+						}
 					}
 					ev.ran[check] = true
 					continue
@@ -167,7 +173,10 @@ func (c *cmd) gateEvidence(def *pipeline.Step) (*gateEvidence, error) {
 			if adv != "" {
 				f.Advisories = strings.Split(adv, ",")
 			}
-			ev.findings = append(ev.findings, f)
+			if k := f.Check + "\x00" + f.Fingerprint; !seenFP[k] {
+				seenFP[k] = true
+				ev.findings = append(ev.findings, f)
+			}
 		}
 		rows.Close()
 		if err := rows.Err(); err != nil {

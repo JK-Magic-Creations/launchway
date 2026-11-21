@@ -165,7 +165,10 @@ func (s *Service) Inspect(ctx context.Context, req source.InspectRequest, p *pip
 	pol := standards.PolicyOf(eff, s.now())
 	pol.DefaultBranchRun = req.OnDefaultBranch
 	since := req.Since
-	if since == "" && req.Event == pipeline.EventPullRequest && req.DefaultBranch != "" {
+	if !s.Eng.StandingInspected(req.Project) {
+		since = "" // the first inspection reads every commit
+	}
+	if since == "" && s.Eng.StandingInspected(req.Project) && req.Event == pipeline.EventPullRequest && req.DefaultBranch != "" {
 		if out, err := gitexec.Output(ctx, gitexec.Spec{GitDir: req.GitDir, Args: []string{"rev-parse", "--verify", "-q", "refs/heads/" + req.DefaultBranch}}); err == nil {
 			since = strings.TrimSpace(out)
 		}

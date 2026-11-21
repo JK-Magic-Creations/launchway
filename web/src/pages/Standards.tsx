@@ -164,7 +164,7 @@ export function ProjectStandardsPage({ name }: { name: string }) {
   }, [e]);
   const enc = encodeURIComponent(name);
   return (
-    <div className="page page-wide st">
+    <div className="page page-wide sto">
       <ProjectHead name={name} on="standards" title={<>Standing orders of {name}</>}
         sentence={<>The checks every repository gets, on by default: what runs on <strong>{name}</strong>, why, and how to change it. Nothing here needs a change to the repository.</>} />
       <ErrorBox error={error} />
@@ -328,7 +328,7 @@ export function SettingsStandardsPage() {
   const off = !!draft.off;
   const lockOf = (key: string) => draft.locks?.[key] !== undefined;
   return (
-    <div className="page page-wide st">
+    <div className="page page-wide sto">
       <PageHead eyebrow="Settings" title="Standing orders" sentence="The same checks for every repository, on by default. Choose a level to see which repositories have which checks, and to change what the level says. A level can lock a value so nothing below it weakens it." />
       <div className="toolbar st-level" role="group" aria-label="Level">
         {LEVELS.map((l) => <button key={l} type="button" className={"chip" + (level === l ? " chip-on" : "")} aria-pressed={level === l} onClick={() => { setLevel(l); setScope(""); }}>{w[l] ?? l}</button>)}

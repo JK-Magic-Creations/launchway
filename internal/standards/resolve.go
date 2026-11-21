@@ -161,7 +161,7 @@ func (in ResolveInput) where(src Source) string {
 		return "the default"
 	case src.Level == LevelFile:
 		return "the repository file " + FilePath
-	case src.Scope != "":
+	case src.Scope != "" && src.Level != LevelOrganization:
 		return "the " + in.word(src.Level) + " " + src.Scope
 	}
 	return "the " + in.word(src.Level)

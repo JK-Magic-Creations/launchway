@@ -105,8 +105,8 @@ func TestEveryRunGainsTheInspectionWithNoChangeToTheRepository(t *testing.T) {
 	if err := json.Unmarshal(g.Gate.Policy, &pol); err != nil || pol.DefaultBranchRun || pol.FailOn != "high" {
 		t.Fatalf("%+v %v", pol, err)
 	}
-	if st := q.Step("inspect-secrets"); st.Env["LAUNCHWAY_STANDING_SINCE"] == "" {
-		t.Error("a pull request's secret scan was not limited to what the change added (it should read from the default branch's tip)")
+	if st := q.Step("inspect-secrets"); st.Env["LAUNCHWAY_STANDING_SINCE"] != "" {
+		t.Error("the first Inspection of a project must read every commit; it was limited to part of the history")
 	}
 	if len(q.Steps) != 1+len(pol.Checks)+1 {
 		t.Errorf("%d steps for %d checks", len(q.Steps), len(pol.Checks))
@@ -154,7 +154,7 @@ func TestLevelsFileAndLocksTogether(t *testing.T) {
 		t.Fatal(err)
 	}
 	joined := strings.Join(eff.Notices, "\n")
-	if !strings.Contains(joined, "locked by the Wing default") || !strings.Contains(joined, "the security team requires it") {
+	if !strings.Contains(joined, "locked by the Wing") || !strings.Contains(joined, "the security team requires it") {
 		t.Errorf("the settings page would not say why:\n%s", joined)
 	}
 	// A project with the single off switch turned on (and a reason) gets no Inspection...

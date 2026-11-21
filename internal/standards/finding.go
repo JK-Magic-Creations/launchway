@@ -157,6 +157,9 @@ func kindOf(check string, f findings.Finding) Kind {
 func osvDetails(n *Finding, f findings.Finding, r findings.Rule) {
 	if m := pkgRe.FindStringSubmatch(f.Message); m != nil {
 		n.Package, n.Version = m[1], m[2]
+		if i := strings.Index(n.Title, " (also known as"); i > 0 {
+			n.Title = n.Title[:i] + "."
+		}
 		if m[4] != "" {
 			for _, a := range aliasRe.FindAllStringSubmatch(m[4], -1) {
 				n.Advisories = append(n.Advisories, a[1])
@@ -288,15 +291,22 @@ func versionParts(v string) []int {
 // key is the fingerprint: stable when the code around a finding moves.
 func key(n Finding, seen map[string]int) string {
 	var base string
-	if (n.Kind == KindVulnerability || n.Kind == KindLicense) && n.Package != "" {
+	keyedByPackage := (n.Kind == KindVulnerability || n.Kind == KindLicense) && n.Package != ""
+	if keyedByPackage {
 		base = strings.Join([]string{n.Tool, n.Rule, n.File, n.Package}, "\x00")
 	} else {
 		msg := digitsRe.ReplaceAllString(strings.ToLower(strings.TrimSpace(n.Title)), "#")
 		base = strings.Join([]string{n.Tool, n.Rule, n.File, msg}, "\x00")
 	}
-	seen[base]++
-	if seen[base] > 1 {
-		base += "\x00#" + strconv.Itoa(seen[base])
+	// Two reports of one package and one advisory are one finding; two of the
+	// same text in one file are told apart by their order.
+	if keyedByPackage {
+		seen[base] = 1
+	} else {
+		seen[base]++
+		if seen[base] > 1 {
+			base += "\x00#" + strconv.Itoa(seen[base])
+		}
 	}
 	sum := sha256.Sum256([]byte(base))
 	return hex.EncodeToString(sum[:16])

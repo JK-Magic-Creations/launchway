@@ -613,6 +613,7 @@ func (e *Engine) StandingsKnown() bool { return e.knows(schemaStandings) }
 // gives each its standing; it also counts them in the checks.
 func (e *Engine) inspectionFindings(ts []triple, decisions map[string]standards.Decision, out *RunInspection, isNew, gating map[string]bool, idx map[string]int) ([]InspectionFinding, error) {
 	var all []InspectionFinding
+	seen := map[string]bool{}
 	for len(ts) > 0 {
 		n := min(len(ts), 20)
 		cond, args := findingTripleFilter(ts[:n])
@@ -632,6 +633,11 @@ func (e *Engine) inspectionFindings(ts []triple, decisions map[string]standards.
 			}
 			if adv != "" {
 				f.Advisories = strings.Split(adv, ",")
+			}
+			if k := f.Step + "\x00" + f.Fingerprint; seen[k] {
+				continue // the same package and advisory reported twice is one finding
+			} else {
+				seen[k] = true
 			}
 			standingOf(&f, decisions, out, isNew)
 			f.Gating = gating[f.Fingerprint] && f.Standing == standards.StandingNew || gating[f.Fingerprint] && out.DefaultBranch
@@ -670,4 +676,17 @@ func standingOf(f *InspectionFinding, decisions map[string]standards.Decision, o
 	default:
 		f.Standing = standards.StandingExisting
 	}
+}
+
+// StandingInspected says the project's default branch has been inspected at
+// least once, so a baseline exists to compare changes with.
+func (e *Engine) StandingInspected(project string) bool {
+	if !e.knows(schemaStandings) {
+		return false
+	}
+	var n int
+	if err := e.db.QueryRow(`SELECT count(*) FROM standing_verdicts WHERE project = ? AND default_branch = 1`, project).Scan(&n); err != nil {
+		return false
+	}
+	return n > 0
 }

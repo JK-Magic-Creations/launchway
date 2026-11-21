@@ -43,7 +43,7 @@
 .sf-check { display: inline-flex; gap: 6px; align-items: center; }
 @media (max-width: 560px) { .sf-dl > div { grid-template-columns: 1fr; gap: 0; } }
 
-.st-h { margin: 22px 0 8px; }
+.sto .st-h { margin: 22px 0 8px; }
 .st-table th[scope="row"], .st-gate th[scope="row"], .st-edit-table th[scope="row"] { font-weight: 600; text-align: left; vertical-align: top; }
 .st-ct { display: block; }
 .st-why { display: block; font-weight: 400; color: var(--text-2); font-size: 13.5px; max-width: 60ch; margin: 2px 0; }
@@ -91,3 +91,5 @@
 .st-edit legend { font-weight: 700; padding: 0 6px; }
 .st-form { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
 .st-switch, .st-lockl { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+.sto th[scope="row"] { text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--text); font-weight: 600; }
+.sto .st-why, .sto .st-hint { text-transform: none; }
