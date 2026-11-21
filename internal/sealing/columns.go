@@ -134,6 +134,9 @@ var ExplainedColumns = func() map[string]string {
 // explained is ExplainedColumns as written: a column and the reason.
 var explained = []struct{ column, why string }{
 	// Hashes of random values, or of public content: a fast hash is right for 256 random bits, and nothing can be recovered from it.
+	{"graph_nodes.key", "the natural key of a node (a repository path, a package name, an image name): an identifier"},
+	{"graph_overrides.from_key", "a repository path: an identifier"},
+	{"graph_overrides.to_key", "a repository path: an identifier"},
 	{"sessions.id_hash", "SHA-256 of a 256-bit random session id"},
 	{"api_tokens.hash", "SHA-256 of a 256-bit random token"},
 	{"runner_access_tokens.hash", "SHA-256 of a 256-bit random token"},
