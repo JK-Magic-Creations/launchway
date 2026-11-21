@@ -185,6 +185,60 @@
       "title": "A public documentation site and roadmap",
       "value": "Enterprise-level documentation with diagrams, security guidance, a graphical roadmap with drill-down pages, and a local demo.",
       "link": "start/overview"
+    },
+    {
+      "theme": "Platform",
+      "title": "Launchway’s own words",
+      "value": "Two built-in sets of words (aviation-flavored and plain business names), a rename for any word, and the same words in the interface, documentation and messages.",
+      "link": "guide/words"
+    },
+    {
+      "theme": "Platform",
+      "title": "Learn, inside the product",
+      "value": "The documentation of the release you are running, with pictures and an offline search, opened from the interface with no separate website.",
+      "link": "learn/start-here"
+    },
+    {
+      "theme": "Platform",
+      "title": "Variables at levels",
+      "value": "The same variable declared at a nearer level overrides the one above, with locks from above and a hierarchy view that shows where each value comes from.",
+      "link": "guide/variables"
+    },
+    {
+      "theme": "Platform",
+      "title": "Shared pipeline templates and flight plans",
+      "value": "A template or a flight plan set once for an organization or unit, used by every project beneath it, with deploy, verify and approval steps included.",
+      "link": "guide/libraries"
+    },
+    {
+      "theme": "Platform",
+      "title": "Rides through outages",
+      "value": "Database errors are retried, runner writes are safe to repeat, a runner keeps its logs and results while the server is away, and a doctor command checks the database.",
+      "link": "guide/high-availability"
+    },
+    {
+      "theme": "Platform",
+      "title": "Accessible by design",
+      "value": "Automated scans, contrast tests and keyboard journeys run on every change, with a published conformance statement and a quality bar for the API, the agent endpoint and the command line.",
+      "link": "guide/accessibility"
+    },
+    {
+      "theme": "Pipelines",
+      "title": "A failed step says why",
+      "value": "Every failed step states its reason and cause with the evidence, can be re-run from that step, and the actions offered are only those that can work.",
+      "link": "guide/approvals-and-reruns"
+    },
+    {
+      "theme": "Pipelines",
+      "title": "A push starts a run",
+      "value": "A push to a hosted repository starts the matching pipeline, with markers to skip a run, and a minimum Git version checked at install.",
+      "link": "guide/triggers"
+    },
+    {
+      "theme": "Security",
+      "title": "Security scans as gates",
+      "value": "Vulnerability, secret, dependency, image, chart and manifest scanning, fuzzing, an SBOM and security headers run on every change, backed by a security policy and a threat model.",
+      "link": "security/how-launchway-is-scanned"
     }
   ],
   "milestones": [
@@ -241,12 +295,13 @@
           "blurb": "Launchway stores your repositories and serves them, so one product and a database are enough.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Built-in Git hosting",
               "value": "Launchway stores your repositories and serves them over HTTPS and SSH, with storage designed so that no acknowledged push is ever lost.",
-              "detail": "A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the base every other hosting item stands on.",
+              "detail": "A push, over HTTPS or SSH, is acknowledged only once it is durable, and any server in a group can serve any repository because servers keep nothing that matters on their own disks. This is the base every other hosting item stands on. Today repositories are served over HTTPS and SSH, and a push starts a run.",
               "needs": "A database; the shared blob store that already exists.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/git-over-ssh"
             },
             {
               "status": "planned",
@@ -257,12 +312,13 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Git over SSH",
               "value": "Clone, fetch and push over SSH with your own keys, beside HTTPS.",
-              "detail": "User keys and per-repository read-only deploy keys are listed and revocable in one place, the server proves itself with a protected host key that stays the same across servers, and SSH uses the same permissions, limits and audit as HTTPS. Run-scoped read-only credentials mean a pipeline holds a credential only while it runs.",
+              "detail": "User keys and per-repository read-only deploy keys are listed and revocable in one place, the server proves itself with a protected host key that stays the same across servers, and SSH uses the same permissions, limits and audit as HTTPS. Run-scoped read-only credentials mean a pipeline holds a credential only while it runs. Today there are user keys, deploy keys, and a key page in the interface.",
               "needs": "Built-in Git hosting.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/git-over-ssh"
             },
             {
               "status": "planned",
@@ -329,10 +385,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Mirrors in and out",
               "value": "Pull a repository from another host on a schedule, or push every change to another host as a safety copy.",
-              "detail": "Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace.",
+              "detail": "Status, last error and lag show on the home page and raise an alert, so a stale mirror is noticed. A pull mirror lets teams move over at their own pace. Today both directions work, and a stale mirror is flagged.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
@@ -385,12 +441,13 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Webhooks to other tools",
               "value": "Send repository events to chat tools and any web address, with a delivery log, retries and test deliveries.",
-              "detail": "One notification channel set is shared with pipelines and approvals. Payloads are signed, and compatible shapes are offered so existing tools keep working.",
+              "detail": "One notification channel set is shared with pipelines and approvals. Payloads are signed, and compatible shapes are offered so existing tools keep working. Today every delivery is logged with its result.",
               "needs": "Built-in Git hosting.",
-              "area": "git-hosting"
+              "area": "git-hosting",
+              "link": "guide/webhooks"
             },
             {
               "status": "planned",
@@ -407,15 +464,15 @@
           "blurb": "Pull requests that show the run, the tests and the policy verdict on one page.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Pull requests on the built-in host",
               "value": "Open, review, discuss and merge changes inside Launchway, with branch rules that block a merge until required checks pass.",
-              "detail": "A pull request page shows its pipeline run, tests, coverage change, findings, policy verdict, preview environment and deployment together, with no round trip through a webhook. Expected results are written in the same step that accepts the push, so a change never looks mergeable before its checks exist.",
+              "detail": "A pull request page shows its pipeline run, tests, coverage change, findings, policy verdict, preview environment and deployment together, with no round trip through a webhook. Expected results are written in the same step that accepts the push, so a change never looks mergeable before its checks exist. Pull requests and code review are being built now.",
               "needs": "Built-in Git hosting.",
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Review with inline comments and suggestions",
               "value": "Comment on lines and ranges, suggest a change the author can apply in one click, and mark files as viewed.",
               "detail": "Comments stay attached to the right lines when new revisions are pushed. Reviewers choose approve, request changes or comment, and the verdict belongs to a revision.",
@@ -423,10 +480,10 @@
               "area": "git-hosting"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Branch rules and protected tags",
               "value": "Required approvals, stale-approval dismissal, blocked merges, linear history, protected branches and tags that cannot move.",
-              "detail": "The page says in plain words why a change cannot land yet and what would unblock it. A tag pinned by a template resolves to a commit and is recorded on the run.",
+              "detail": "The page says in plain words why a change cannot land yet and what would unblock it. A tag pinned by a template resolves to a commit and is recorded on the run. Today protected branches have a first version (blocked pushes and a plain reason); required approvals arrive with pull requests.",
               "needs": "Pull requests on the built-in host.",
               "area": "git-hosting"
             },
@@ -640,10 +697,10 @@
           "blurb": "A tested path from another Git host, so switching is a step and not a leap.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Move your repositories in",
               "value": "Import repositories, issues, pull requests, labels, milestones, releases and wikis from another Git host, and keep a mirror back while you switch.",
-              "detail": "Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time.",
+              "detail": "Counts are reported one for one and a dry run shows what would happen first. Moving can be done a team at a time. Today a connection to another host lists its repositories, and each can be imported or mirrored.",
               "needs": "Built-in Git hosting."
             },
             {
@@ -771,15 +828,15 @@
           "blurb": "Everything by clicking, with every page saying what it is for and what to do next.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Follow a change on its launch line",
               "value": "A single line that shows one change traveling from idea to running software, with each station opening its evidence.",
-              "detail": "Choose a station and its review, tests, image, place or decision opens underneath. This is the page that answers where is my change and is it all right.",
+              "detail": "Choose a station and its review, tests, image, place or decision opens underneath. This is the page that answers where is my change and is it all right. Today the interface is organized around it: Home, Activity, Pipelines, Code, Deployments, Images and Settings.",
               "needs": "The guided interface.",
               "area": "guided-interface"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A Home that tells you what to do next",
               "value": "One sentence about what needs you, rows with one recommended action each, and a checklist that disappears as you finish it.",
               "detail": "When nothing needs anyone it becomes a calm all-clear page with the board of changes in flight.",
@@ -817,7 +874,7 @@
               "area": "guided-interface"
             },
             {
-              "status": "planned",
+              "status": "available",
               "title": "Decision cards that read on a phone",
               "value": "An approval is a card with what, who, risk, evidence and what happens next, readable in seconds.",
               "detail": "Reject needs a reason. A decision can be undone until it has acted.",
@@ -873,10 +930,10 @@
               "link": "reference/config-objects#terraform"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Database failover and no lost push",
               "value": "High availability that covers the database and repository storage as well as the servers.",
-              "detail": "Failover is rehearsed in tests with writes in flight."
+              "detail": "Failover is rehearsed in tests with writes in flight. Today the application side rides through an outage; the database side is Milestone 10."
             },
             {
               "status": "in-progress",
@@ -1135,6 +1192,65 @@
               "needs": "Runner identity and pools."
             }
           ]
+        },
+        {
+          "name": "Share and reuse across projects",
+          "blurb": "The right amount of sharing at the right level, with the fewest new ideas to learn: a template is an interface, code is what runs, and a nearer level always wins.",
+          "items": [
+            {
+              "status": "available",
+              "title": "Templates and flight plans by level",
+              "value": "Set a template or a flight plan at the organization or unit and every project beneath it uses it.",
+              "detail": "Today a flight plan can be bound at a level and a project can override what the level allows. A solo developer never has to open any of this.",
+              "link": "guide/libraries"
+            },
+            {
+              "status": "available",
+              "title": "Overrides, locks and the hierarchy view",
+              "value": "Declare a variable lower down to override it, let a level above lock it, and see where each value comes from while building a pipeline.",
+              "detail": "Today the hierarchy shows each variable’s source, what it overrides and what is locked, and every run records the values it used.",
+              "link": "guide/variables"
+            },
+            {
+              "status": "planned",
+              "title": "Templates that read like code",
+              "value": "A template says what it needs and offers, can be built on another, and a project fills in or overrides only what is open.",
+              "detail": "You will be able to see at a glance what a template fixes and what it leaves open, the way an interface and a class work in code.",
+              "needs": "Shared pipeline templates and flight plans.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Language starters",
+              "value": "Starter templates for common languages that set up best practice, naming standards and help for your AI coding assistants.",
+              "detail": "Everything in a starter can be overridden; the default simply guides. Starters arrive for the most common languages first.",
+              "needs": "Templates that read like code.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Light environments and services",
+              "value": "Environments and services as short lists with sensible defaults, not another set of ideas to learn before anything works.",
+              "detail": "You will be able to start with one environment and grow, with locks and defaults coming from the level above.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "Shared connections",
+              "value": "A connection to a registry, a cluster or a cloud set up once at a level and used below it, with its use shown.",
+              "detail": "Secrets stay where they are; only the name of the connection is shared.",
+              "needs": "Overrides, locks and the hierarchy view.",
+              "area": "pipelines"
+            },
+            {
+              "status": "planned",
+              "title": "See what is shared and who uses it",
+              "value": "For any template, library or connection, a list of every project that uses it and what would change if it changed.",
+              "detail": "A change to something shared is previewed before it is applied.",
+              "needs": "Templates and flight plans by level.",
+              "area": "pipelines"
+            }
+          ]
         }
       ]
     },
@@ -1221,12 +1337,13 @@
               "area": "delivery"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Rollout control inside a run",
               "value": "A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station.",
-              "detail": "Verification tests run between steps, and the run keeps the evidence.",
+              "detail": "Verification tests run between steps, and the run keeps the evidence. Today the commands shown are the ones that really work, and a failed command says so.",
               "needs": "Argo CD in depth.",
-              "area": "delivery"
+              "area": "delivery",
+              "link": "guide/deployments"
             },
             {
               "status": "planned",
@@ -1264,7 +1381,7 @@
               "status": "planned",
               "title": "Post-deploy watch and incidents",
               "value": "Keep watching after release, roll back automatically, and tie incidents to the change that caused them.",
-              "detail": "An incident links back to the commit, run and setting change nearest to it.",
+              "detail": "An incident links back to the commit, run and setting change nearest to it. The watch, the stable state and the automatic return are detailed in Milestone 8.",
               "needs": "Verification after a deploy.",
               "area": "delivery"
             },
@@ -1283,12 +1400,13 @@
           "blurb": "Why did it fail, in one sentence, then every resource behind it.",
           "items": [
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Why did it fail to deploy",
               "value": "A failed application opens with a diagnosis in one sentence, the evidence behind it and one recommended action.",
-              "detail": "Each piece of evidence is a button that opens the resource where it shows: manifest, events or log. AI can help word the diagnosis, but the evidence is always facts.",
+              "detail": "Each piece of evidence is a button that opens the resource where it shows: manifest, events or log. AI can help word the diagnosis, but the evidence is always facts. Today a failed deployment opens with a one-sentence diagnosis; the full catalog of causes grows with the Argo CD work in Milestone 8.",
               "needs": "Argo CD in depth.",
-              "area": "delivery"
+              "area": "delivery",
+              "link": "guide/deployments"
             },
             {
               "status": "planned",
@@ -1315,10 +1433,10 @@
               "area": "delivery"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Fix actions with their consequence",
               "value": "Roll a setting back, retry an update or open the failing pod, each saying in words what will happen.",
-              "detail": "Every action is a guided change that can be undone and is audited.",
+              "detail": "Every action is a guided change that can be undone and is audited. Today the server reports which actions can work, so no button is offered that cannot.",
               "needs": "Why did it fail to deploy.",
               "area": "delivery"
             }
@@ -1459,13 +1577,6 @@
             },
             {
               "status": "planned",
-              "title": "Database change steps",
-              "value": "Apply database schema changes as a pipeline step, with a plan and a rollback where the tool supports it.",
-              "detail": "Changes pass the same gates as other deploys.",
-              "area": "delivery"
-            },
-            {
-              "status": "planned",
               "title": "Packer builds as a first-class step",
               "value": "Run image builds with their results, logs and artifacts attached to the run.",
               "detail": "Output images go to the registry or the image store with provenance.",
@@ -1481,7 +1592,7 @@
               "status": "planned",
               "title": "Feature toggles",
               "value": "A built-in toggle service that applications and agents read, per environment, with percentage and client-type rollouts.",
-              "detail": "It speaks an open protocol, so existing applications can read it with no Launchway library.",
+              "detail": "It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.",
               "area": "traffic"
             },
             {
@@ -2291,6 +2402,130 @@
           ]
         },
         {
+          "name": "A hosted service that never holds your network or secrets",
+          "blurb": "Before the first outside customer. The hosted side coordinates; a small program on your side, the Detachment, does the work.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "The Detachment",
+              "value": "One small program on your side starts your runners, looks things up in your secret store and reads your clusters, metrics, logs and DNS.",
+              "detail": "It only calls out. Nothing is opened into your network.",
+              "needs": "Runners on your machines.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "The boundary, data kind by data kind",
+              "value": "A published table says what stays with you, what crosses and what the hosted side may see, such as names, states, counts and timings.",
+              "detail": "Secrets, traffic, logs and code never cross by default.",
+              "needs": "The Detachment.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Screens drawn from your data, not stored hosted",
+              "value": "The pages you read are drawn in your browser from data fetched live from your Detachment over an encrypted channel.",
+              "detail": "Even the operator of the hosted service cannot see your traffic.",
+              "needs": "The Detachment.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Your logs, artifacts and audit stay with you",
+              "value": "Build logs, test reports, artifacts and an audit log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold.",
+              "detail": "The hosted service keeps a separate record of what it did.",
+              "needs": "The Detachment.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Least privilege grants",
+              "value": "You grant access to your systems from none upward, each step showing what it adds.",
+              "detail": "Monitoring data is a permission, never a raw pass-through.",
+              "needs": "The Detachment.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Updates you control",
+              "value": "Signed updates with a pin, a window and a rollback; your Detachment checks the signature and your policy before accepting.",
+              "detail": "The hosted side cannot make it run new code.",
+              "needs": "The Detachment.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Works when the hosted service is unreachable",
+              "value": "Your Detachment keeps working for what it can, then catches up.",
+              "detail": "Your runs are not hostage to an outage.",
+              "needs": "The Detachment.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Verify the promise yourself",
+              "value": "Ways to check the boundary: the wire format is closed, a canary test shows nothing leaks, and you can inspect what the Detachment sends.",
+              "detail": "Staff cannot read anything stored hosted without your approved, time-limited session.",
+              "needs": "The boundary, data kind by data kind.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Self-hosted is the same shape",
+              "value": "The same Detachment serves a self-hosted installation, so moving between them is a configuration change.",
+              "detail": "Leaving is complete: export, move, destroy the hosted copy with a recorded key destruction.",
+              "needs": "The Detachment.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Air-gapped and restricted networks",
+              "value": "An offline bundle and a customer-run relay for networks with no outside access.",
+              "detail": "It later includes the interface served by your own Detachment.",
+              "needs": "The Detachment.",
+              "area": "hosted-service"
+            }
+          ]
+        },
+        {
+          "name": "A protected demonstration",
+          "blurb": "Before the first outside visitor. Anyone can try every feature while the operator’s systems stay protected.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "A demonstration world",
+              "value": "A visitor gets sample repositories, a simulated cluster and metrics, a rollout, a failing deployment and a moving traffic map, with nothing real behind them.",
+              "detail": "It is built from the same fixtures the product’s own tests use.",
+              "needs": "A public demo.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Isolated by construction",
+              "value": "The demonstration runs apart from everything else, runs no code a visitor brings, and has a kill switch.",
+              "detail": "A visitor never gets sight of the operator’s own network.",
+              "needs": "A public demo.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "Easy to try, hard to abuse",
+              "value": "Sign-up is quick, with limits and cost guards against misuse.",
+              "detail": "A visitor can connect their own Detachment later.",
+              "needs": "A public demo.",
+              "area": "hosted-service"
+            },
+            {
+              "status": "planned",
+              "title": "The whole product, safely",
+              "value": "DNS, chaos, databases, virtual machines and the edge fill in after the first world, each as a fixture with a conformance test.",
+              "detail": "Every feature can be seen without risk.",
+              "needs": "A demonstration world.",
+              "area": "hosted-service"
+            }
+          ]
+        },
+        {
           "name": "Identity, audit and compliance",
           "blurb": "The controls enterprises and regulated teams ask for.",
           "items": [
@@ -2320,10 +2555,10 @@
               "detail": "Entries are chained so a gap shows."
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "Retention, legal hold and encryption at rest",
               "value": "Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted.",
-              "detail": "A hold overrides cleanup."
+              "detail": "A hold overrides cleanup. Encryption at rest with a key held outside the database is being built now (see Milestone 12)."
             },
             {
               "status": "planned",
@@ -2343,6 +2578,1472 @@
       ]
     },
     {
+      "id": "m8",
+      "number": 8,
+      "when": "next",
+      "name": "Zero-downtime delivery for anything, with Argo CD as a first-class citizen",
+      "short": "Zero downtime",
+      "promise": "Every deployment, whatever it is made of, brings the new version up beside the old one, proves it, moves traffic or work over in steps you can see and control, keeps watching afterward and returns to the last good state by itself if things get worse.",
+      "audience": "Enterprises that cannot afford to be hurt by a release yet want to deploy continuously, and any team that wants to see what is deployed and why something failed.",
+      "what": "Milestone 8 gives delivery one model for everything: a plan, a mover that shifts traffic or work, proofs that say whether it is safe, controls you can press, and a record of the last stable state. The same model serves web services on Kubernetes, virtual machines behind a load balancer, serverless functions, queue workers and scheduled jobs. Argo CD becomes a first-class part of it: every application and its whole tree in one place, a plain sentence saying why something failed, and safe control. Everything is on by default and your team stays in charge; Launchway proposes changes and never rewrites your application.",
+      "scenarios": [
+        "You describe a service in a few plain questions and get a plan with a picture. It is rehearsed in a safe environment, and written to Git for review.",
+        "A release reaches 5 percent of users, then 25, and each step shows the traffic you intended next to the traffic that actually arrived.",
+        "Thirty minutes after a release has reached everyone, error rates climb. Launchway sees it, returns to the last stable state, and the Logbook says who and what decided.",
+        "You switch on a feature toggle, errors rise, and Launchway switches it back off and tells you which toggle it was.",
+        "You open one page and see every Argo CD application, its parent and children, and a sentence saying why one of them cannot sync.",
+        "A rollout command that cannot work is never offered as a button."
+      ],
+      "diagram": "flowchart TD\n  Plan[\"Plan<br/>what to roll out\"] --> Shift[\"Shifter<br/>moves traffic or work\"]\n  Shift --> Proof[\"Proof<br/>is it safe\"]\n  Proof -->|pass| Next[\"Next step\"]\n  Proof -->|worse| Back[\"Return\"]\n  Next --> Watch[\"The watch<br/>after the last step\"]\n  Watch -->|worse| Back\n  Watch -->|steady| Stable[\"Stable state<br/>version, settings, toggles\"]\n  Back --> Stable\n  Control[\"Controls<br/>pause, go, stop\"] -.-> Shift",
+      "diagramNote": "One journey for every kind of deployment. Only the shifter changes: a traffic split, a load balancer pool, a queue reader or a function alias.",
+      "done": [
+        "The same plan runs a progressive rollout on Kubernetes, with every Argo Rollouts strategy covered and shown.",
+        "A seeded bad release is stopped and returned within the time the plan states, and a seeded good one is promoted, in the rehearsal environment and in the automated tests.",
+        "After the last step, the watch returns to the last stable state when signals worsen, and a rollback after a success works from the interface, the API, the agent endpoint and the command line.",
+        "A toggle that causes errors is switched back automatically, and a configuration or secret change can be rolled and returned by a plan.",
+        "Every Argo CD application and its tree are visible, with a plain-language diagnosis for the common failures.",
+        "No control is offered that cannot work, and every control says what it will do and who may press it."
+      ],
+      "notIncluded": [
+        "Making a change that is not backward compatible safe: Launchway warns and proposes, and cannot repair the design.",
+        "Guaranteeing full nines for a whole system from a rollout alone.",
+        "Replacing Argo CD or copying its screens: Launchway adds context and links to the original where it shows more.",
+        "Silently editing an application: every change is a proposal you accept, edit or decline."
+      ],
+      "buildsOn": [
+        "m3"
+      ],
+      "deepDives": [
+        {
+          "title": "Zero-downtime delivery",
+          "area": "zero-downtime"
+        },
+        {
+          "title": "How the build is ordered",
+          "area": "build-order"
+        }
+      ],
+      "groups": [
+        {
+          "name": "One model for every deployment",
+          "blurb": "First phase. A plan, a shifter, a proof, controls and a stable state, the same for every kind of workload.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Delivery plans",
+              "value": "Describe how a release rolls out as a plan kept in Git: the steps, how much at each, what to check and how careful to be.",
+              "detail": "You will be able to read a plan as a picture, review it like code, and reuse a standard plan from your organization.",
+              "needs": "Rollout control inside a run.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Shifters",
+              "value": "The part of a plan that moves traffic or work to the new version: a traffic split, a load balancer pool, a queue reader or a function alias.",
+              "detail": "One interface lets every kind of workload take the same journey and show the same controls.",
+              "needs": "Delivery plans.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Proofs",
+              "value": "Checks that say whether a step is safe: metrics, test transactions, network health and database health, each with a verdict in a sentence.",
+              "detail": "A proof says not enough data rather than pass when a signal is too thin to judge.",
+              "needs": "Delivery plans; guarded queries for monitoring data.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "in-progress",
+              "title": "Guarded queries for monitoring data",
+              "value": "Questions put to a metrics or log store pass through a guarded layer that limits what can be asked and how much comes back.",
+              "detail": "Today the layer is being built. The rule is that monitoring data is a permission you grant and never a raw pass-through, and every proof and watch stands on it.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "The stable state",
+              "value": "For each environment Launchway records the version, settings, secret versions, toggles and routes that were known to work.",
+              "detail": "The last good state is always one click, or one automatic decision, away.",
+              "needs": "Delivery plans.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Controls with consequences",
+              "value": "Go, go all the way, pause, resume, stop and go back, try again, skip a step, set the amount by hand, restart and scale.",
+              "detail": "Each button says in a sentence what it will do and who may press it, and each press is recorded in the Logbook.",
+              "needs": "Delivery plans.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Safeguards on by default",
+              "value": "Every protection starts on and your team can tune or turn it off per project and environment; only a level above can require one.",
+              "detail": "You stay in charge, and Launchway says plainly when a safeguard has been relaxed.",
+              "needs": "Variables at levels.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Rollout readiness scan",
+              "value": "Launchway reads your application and tells you what stands in the way of a safe rollout, with changes it proposes.",
+              "detail": "You accept, edit or decline each proposal; nothing is edited silently.",
+              "needs": "Delivery plans.",
+              "area": "zero-downtime"
+            }
+          ]
+        },
+        {
+          "name": "Rollouts: every strategy, with an assistant",
+          "blurb": "First phase. Complete coverage of Argo Rollouts, created, seen and controlled from one panel.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Every rollout strategy",
+              "value": "Canary and blue-green, with all the step types, several analyses at once and experiments, created and shown in Launchway.",
+              "detail": "Today Launchway reads a rollout; this makes it create and edit the files in Git, with every field accounted for.",
+              "needs": "Rollout control inside a run.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "An assistant for creating a rollout",
+              "value": "A few plain questions (what is it, how do users reach it, how do we know it is healthy, how careful, who must clear it) produce a plan, a picture and files in Git.",
+              "detail": "The proposal is rehearsed before it ever touches production.",
+              "needs": "Delivery plans.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "The rollout panel",
+              "value": "One panel shows the line of steps, where traffic really goes next to where it is meant to go, every check as it measures, old and new side by side, and events in time order.",
+              "detail": "You will be able to see “10 percent intended, 9.4 percent measured” and what changed just before.",
+              "needs": "Every rollout strategy.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Rehearsal environments",
+              "value": "Try a rollout in a short-lived environment with a traffic generator and injected faults before it reaches production.",
+              "detail": "Rehearsal is a feature of the product, not only of its tests.",
+              "needs": "An assistant for creating a rollout.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Return to any earlier version",
+              "value": "Choose an earlier version and return to it, with what that will change spelled out first.",
+              "detail": "A return by Git revert is the default; the engine’s own history is the emergency exit.",
+              "needs": "The stable state.",
+              "area": "zero-downtime"
+            }
+          ]
+        },
+        {
+          "name": "Guarded after the deploy, and back to stable by itself",
+          "blurb": "First phase. The release is not finished when the last step is; the watch carries on and can return.",
+          "items": [
+            {
+              "status": "in-progress",
+              "title": "Roll back after a successful deployment",
+              "value": "An emergency button that returns to the last stable state even after a rollout has succeeded.",
+              "detail": "Today this is being built, with the same consequence text and Logbook entry as every other control.",
+              "needs": "The stable state.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "The watch",
+              "value": "After the last step, keep watching for a set time (30 minutes, for example) against a baseline of how the service normally behaves.",
+              "detail": "The watch is the existing verification running after the final shift, with a plain “starting the return” decision if signals worsen.",
+              "needs": "Proofs; the stable state.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Automatic return to stable",
+              "value": "If error rates or other signals worsen during the watch, Launchway returns to the last stable state and says why.",
+              "detail": "A cause outside the release, such as a failing dependency, is detected and does not trigger a pointless return.",
+              "needs": "The watch.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Extend, end or override the watch",
+              "value": "Lengthen a watch during a risky week, end it early, or override a return, each with a reason on the record.",
+              "detail": "Production may require a person other than the one who started the release.",
+              "needs": "The watch.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "One timeline of what changed",
+              "value": "Deployments, toggles, configuration and secrets on a single timeline, so what changed before it broke has an answer.",
+              "detail": "It is the first place to look when a proof fails.",
+              "needs": "The watch.",
+              "area": "zero-downtime"
+            }
+          ]
+        },
+        {
+          "name": "Levers: toggles, configuration and secrets",
+          "blurb": "Second phase. Everything that can change behavior without a new build is versioned, rolled out and returnable.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "A toggle service in the model",
+              "value": "Toggles are known to Launchway, rolled out in steps by a plan and returned with the rest of the stable state.",
+              "detail": "It speaks an open protocol, so existing applications read toggles with no Launchway library.",
+              "needs": "Feature toggles.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Kill switches and automatic toggle-back",
+              "value": "A toggle marked as a kill switch is switched off at once, and a toggle that caused errors is switched back automatically.",
+              "detail": "Launchway names the toggle and shows the errors that led to the decision.",
+              "needs": "The watch; a toggle service in the model.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Stale-toggle hygiene",
+              "value": "A list of toggles nobody has changed for a long time, with a suggestion to remove them.",
+              "detail": "Removing a toggle is a pull request.",
+              "needs": "A toggle service in the model.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Configuration and secrets as rollouts",
+              "value": "A change to configuration or to a secret’s version is rolled out by a plan and can be returned.",
+              "detail": "Secrets stay in their store; Launchway moves the reference and the version.",
+              "needs": "Secrets with an external store.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Drift detection for settings",
+              "value": "Find configuration that differs between what is declared and what runs, and between environments.",
+              "detail": "Drift is a finding with its cause, not an alarm without context.",
+              "needs": "Configuration and secrets as rollouts.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Revert the latest change",
+              "value": "When something breaks, one action reverts the most recent change on the timeline, whatever kind it was.",
+              "detail": "The action says what it will undo before you press it.",
+              "needs": "One timeline of what changed.",
+              "area": "zero-downtime"
+            }
+          ]
+        },
+        {
+          "name": "Hosts, serverless and other workloads",
+          "blurb": "Later phases. The same journey for virtual machines, bootable hosts, functions and workloads that are not web requests.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Hosts and pools",
+              "value": "Pools of virtual machines or hosts deployed in batches behind a load balancer, with draining first.",
+              "detail": "The first load balancer supported is a popular open-source one, then one cloud balancer.",
+              "needs": "Shifters.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Test transactions to a not-yet-live host",
+              "value": "Send test requests to a new host before any user reaches it, and read the result as a proof.",
+              "detail": "The host goes live only when its proofs pass.",
+              "needs": "Hosts and pools.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Fleets of bootable-image hosts",
+              "value": "Roll a new host image across a fleet in batches with a watch and a return.",
+              "detail": "It joins the image work in Milestone 3.",
+              "needs": "Hosts and pools.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Serverless and managed container services",
+              "value": "Shift traffic between function versions and managed services using aliases and revisions, with proofs per version.",
+              "detail": "Provider interfaces are tested against emulators in the automated tests.",
+              "needs": "Delivery plans.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Queue and stream consumers",
+              "value": "Roll out a new version of a worker that reads a queue, by moving which copies read which part, and prove it with lag.",
+              "detail": "A seeded backlog tests that the new version keeps up.",
+              "needs": "Hosts and pools.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Long-lived connections and TCP",
+              "value": "Drain connections that stay open for hours, and shift plain network services safely.",
+              "detail": "It says honestly what cannot be made seamless.",
+              "needs": "Hosts and pools.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Scheduled and batch jobs",
+              "value": "Roll out a job that must run exactly once with a hand-over rather than an overlap.",
+              "detail": "The plan changes shape and the answer is a short, controlled pause, not a claim of zero.",
+              "needs": "Hosts and pools.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Safe changes to stateful services",
+              "value": "Expand-then-contract steps for data, with a check that the old and new versions can both read what is written.",
+              "detail": "It leans on the database work in Milestone 10.",
+              "needs": "Hosts and pools.",
+              "area": "zero-downtime"
+            }
+          ]
+        },
+        {
+          "name": "Argo CD, first class",
+          "blurb": "First phase for seeing and diagnosing, later for control and creating. Launchway does not replace Argo CD; it adds what no single Argo CD screen knows.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "See every application and its tree",
+              "value": "All applications from root to leaf, with a problem rolled up so a parent that looks fine while its children are not stands out first.",
+              "detail": "You will be able to switch between a tree, a table and a by-environment view of the same nodes.",
+              "needs": "Argo CD in depth.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Every application in context",
+              "value": "For each application: which change made it what it is, which run wrote that change, which version runs where and who owns it.",
+              "detail": "It also lists the same service in other environments side by side.",
+              "needs": "See every application and its tree.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "A problem in one sentence",
+              "value": "A diagnosis such as “Argo CD cannot build this application: a link points outside its folder”, with the evidence and the next step.",
+              "detail": "When the cause is unknown it says so and what access would let it see more. A catalog of known causes is tested against real incidents.",
+              "needs": "See every application and its tree.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Every item and its logs",
+              "value": "Open any resource to see its events, manifest, desired against live, and logs including the previous container.",
+              "detail": "Secrets appear by name only, and the access Launchway has is stated in a self-check.",
+              "needs": "A problem in one sentence.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Safe sync and control",
+              "value": "Sync with a preview, refresh, stop a stuck sync, run a resource action, and pause automatic sync during an incident with a banner and a reminder.",
+              "detail": "A button appears only if it will work, and each press is recorded.",
+              "needs": "See every application and its tree.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Create and change through Git",
+              "value": "An assistant writes an Application, an ApplicationSet or a Project into Git and opens a pull request, showing what will be created.",
+              "detail": "Nothing is changed with a click against the cluster.",
+              "needs": "Pull requests on the built-in host.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Adopt existing applications",
+              "value": "Discover the applications you already have and map them to projects and environments without changing them.",
+              "detail": "Discovery is opt-in and read-only.",
+              "needs": "See every application and its tree.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Rollouts, sync and environments in one view",
+              "value": "A joined timeline of a sync and its rollout, and a matrix of what version runs in each environment.",
+              "detail": "Notification rules and Argo CD’s own notices appear in the same place.",
+              "needs": "Every rollout strategy.",
+              "area": "delivery"
+            },
+            {
+              "status": "planned",
+              "title": "Other deployment engines",
+              "value": "The same panels over another GitOps engine or plain apply and Helm, through an adapter.",
+              "detail": "Argo CD is never required.",
+              "needs": "Safe sync and control.",
+              "area": "delivery"
+            }
+          ]
+        },
+        {
+          "name": "Prove it: chaos, performance and temporary capacity",
+          "blurb": "First phase for the first runner, later for more tools. Each is a plan or a proof, so they add no new concepts.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Chaos experiments as plans",
+              "value": "A controlled, authorized experiment that injects a fault, checks that steady state holds, and restores everything afterward.",
+              "detail": "Breaching a proof is the abort condition, and a fault is never left on: it expires even if Launchway itself fails.",
+              "needs": "The watch.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Chaos authorization and safety",
+              "value": "Experiments are off until switched on, allowed only where declared, bounded in what they can reach, and cleared by someone other than the starter.",
+              "detail": "Production may require a lock from a level above.",
+              "needs": "Chaos experiments as plans.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Game days and the scorecard",
+              "value": "Scheduled game days, rehearsals with a fault, and a scorecard of what the system survived.",
+              "detail": "Findings such as “never survived losing a replica” join the findings list.",
+              "needs": "Chaos experiments as plans.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Performance tests as proofs",
+              "value": "Run a load test from the repository as a step and get a report with percentiles, throughput, errors and the saturation of the system under test.",
+              "detail": "A built-in constant-rate runner needs no install; popular open-source load tools run as separate containers.",
+              "needs": "Proofs.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Baselines and regression detection",
+              "value": "Compare a release with the last one and fail a promotion on a real regression, with repeats and noise handling.",
+              "detail": "It says not enough data rather than pass when a test is too short or too small.",
+              "needs": "Performance tests as proofs.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Temporary capacity for tests",
+              "value": "Raise a namespace’s quota or a workload’s size for the length of a test, then always restore what was there.",
+              "detail": "Previous values are recorded in the stable state, so a failure mid-test still restores them.",
+              "needs": "Delivery plans.",
+              "area": "zero-downtime"
+            },
+            {
+              "status": "planned",
+              "title": "Performance gates in preflight",
+              "value": "Require a passing performance result before a promotion to production, advisory until a level makes it required.",
+              "detail": "Tests run only against environments declared for performance or not production.",
+              "needs": "Baselines and regression detection.",
+              "area": "zero-downtime"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "m9",
+      "number": 9,
+      "when": "next",
+      "name": "Network and traffic you can see, from the edge to the workload",
+      "short": "Network and traffic",
+      "promise": "For every application, Launchway answers one question: can it receive and serve requests right now, from where its users are, and if not, at which step does the route break?",
+      "audience": "Operators and platform teams who today learn that the network is the problem by elimination, after an hour in four different tools.",
+      "what": "Milestone 9 draws the route a request takes, from the edge provider through DNS, the gateway or load balancer, the firewall and the network policy to the service and its workloads, and shows the problems along it, worst first. It also learns what each application really depends on, handles several sites and failover, manages DNS records as part of a deployment, and understands service meshes, Istio most deeply. Everything is optional: Launchway sees only what you give it access to, says what it cannot see, and never captures the contents of traffic.",
+      "scenarios": [
+        "Users in one region cannot reach an application. The path view shows the request reaching the gateway and stopping at a network policy, with the policy named.",
+        "You set up a connection to a metrics store and a cluster, and a setup assistant discovers what it can see and shows what each extra permission would add.",
+        "A deployment that needs a new name creates its DNS record, shows the difference first, and checks that every nameserver agrees afterward.",
+        "You ask to send only some clients to a new version, and Launchway shows which routing rule will match, in a plain explanation, before you apply it.",
+        "A site fails and traffic moves to the other one as rehearsed, with the lag and the order of events shown."
+      ],
+      "diagram": "flowchart TD\n  User[\"Users\"] --> Edge[\"Edge provider\"]\n  Edge --> DNS[\"DNS\"]\n  DNS --> GW[\"Gateway or load balancer\"]\n  GW --> FW[\"Firewall and network policy\"]\n  FW --> Svc[\"Service\"]\n  Svc --> Work[\"Workloads and machines\"]\n  Work --> Dep[\"What the app calls\"]\n  Sources[\"Optional sources<br/>metrics, flows, mesh, probes\"] -.-> Findings[\"Findings<br/>worst first\"]\n  Findings -.-> GW",
+      "diagramNote": "The route of a request, and where findings come from. A step with no source is drawn dotted and labeled not observed.",
+      "done": [
+        "The path view shows the route for a sample application, built from sources Launchway was given, with unobserved steps clearly marked.",
+        "The findings list detects the common failures, replayed from real incidents as tests, and states a cause only when the evidence supports one.",
+        "DNS records owned by a deployment are created, checked and kept in step, and records it does not own are never touched.",
+        "Istio objects are read and explained, and a route for a subset of clients can be proposed and rolled out.",
+        "Sites and failover are shown and rehearsed."
+      ],
+      "notIncluded": [
+        "Capturing the contents of traffic: Launchway sees addresses, names, ports, protocols, counts and timings only.",
+        "Replacing a mesh console, a firewall console or a protection service: Launchway shows their state and links to them.",
+        "Changing firewalls, DHCP or resolver settings, or DNS records Launchway does not own.",
+        "Issuing certificates itself in the first phases; it reads the certificate manager and shows the challenge state."
+      ],
+      "buildsOn": [
+        "m3"
+      ],
+      "deepDives": [
+        {
+          "title": "Network and traffic",
+          "area": "network"
+        },
+        {
+          "title": "Live traffic, protection and reliability",
+          "area": "traffic"
+        }
+      ],
+      "groups": [
+        {
+          "name": "Can my application be reached?",
+          "blurb": "First phase. The route, the places on it, the findings, and the proof that feeds delivery.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "The request path",
+              "value": "For any application, the chain from the edge to the workload, each step marked healthy, broken or not observed.",
+              "detail": "Machines and sites appear beside Kubernetes places, and a dotted link never gets an invented number.",
+              "needs": "A live traffic map.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "The findings list",
+              "value": "Network problems in a plain sentence, worst first, each with its evidence and what was and could not be checked.",
+              "detail": "A cause is stated only when the evidence supports one; otherwise it says cause unknown.",
+              "needs": "The request path.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Dependencies learned from traffic",
+              "value": "What each application really calls, and what changed with the last version.",
+              "detail": "It joins what was declared with what was observed, and shows both.",
+              "needs": "The request path.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "A network proof for delivery",
+              "value": "Deliveries ask whether the new version is really receiving and answering traffic, and use the answer as a proof.",
+              "detail": "It is the same answer a person opens when a proof fails.",
+              "needs": "Proofs.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Probes from where users are",
+              "value": "HTTP, TCP, DNS and certificate probes from the cluster and, where you allow it, from outside.",
+              "detail": "Probes show whether the problem is the application or the route.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Setup assistant and the access ladder",
+              "value": "An assistant discovers what it can see, and each permission you grant, from none upward, shows what it would add.",
+              "detail": "Nothing is required, and the interface lists what it cannot see with “granting this would add that”.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Privacy and retention for network data",
+              "value": "Addresses, names, ports, protocols, counts and timings only, kept for a time you choose.",
+              "detail": "Payloads are never captured.",
+              "area": "network"
+            }
+          ]
+        },
+        {
+          "name": "Sources: bring what you already have",
+          "blurb": "Phases follow popularity. Each source is an optional adapter that widens the picture; none is required.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Pod networks and gateways",
+              "value": "Read flows and routes from the popular pod network, Gateway API and Envoy-based gateways first.",
+              "detail": "The generic mapping works for anything that exposes standard metrics.",
+              "needs": "The request path.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Edge providers",
+              "value": "Read the state of an edge provider’s protection and routing, with a read-only token scoped to what you choose.",
+              "detail": "Each scope says what it adds.",
+              "needs": "Sources: pod networks and gateways.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Firewalls, routers and switches",
+              "value": "Read exported flows, logs and rules from devices outside Kubernetes, and flag drift between what is declared and what is configured.",
+              "detail": "Launchway reads and never changes a device.",
+              "needs": "Pod networks and gateways.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Cloud flow logs and load balancers",
+              "value": "Read the flow logs and balancers of the major clouds as sources.",
+              "detail": "It shows the same path view for traffic that never touches Kubernetes.",
+              "needs": "Pod networks and gateways.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Hosts and virtual machines as sources",
+              "value": "A small host agent, where you allow one, reports flows from machines that are not on any mesh.",
+              "detail": "A machine outside the mesh still appears on the map.",
+              "needs": "Pod networks and gateways.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "A store for flow history",
+              "value": "Keep flow history in a store that scales for large installations, beside the built-in default.",
+              "detail": "The built-in store needs nothing extra.",
+              "needs": "Pod networks and gateways.",
+              "area": "network"
+            }
+          ]
+        },
+        {
+          "name": "Sites, failover and protection",
+          "blurb": "Second and third phases. For enterprises with more than one site.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Sites and failover view",
+              "value": "Several sites as places, with where traffic goes now, where it would go on failure, and replication lag.",
+              "detail": "Failover findings say what would break.",
+              "needs": "The request path.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Rehearsed failover",
+              "value": "Practice a site failover as an authorized, bounded exercise with a watch and a way back.",
+              "detail": "Never on by default.",
+              "needs": "Sites and failover view.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Protection and stability signals",
+              "value": "Rate limiting, signs of abuse and stability signals in the same view as the traffic.",
+              "detail": "It shows the state of your protection service and links to it.",
+              "needs": "The request path.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Fault injection in the traffic map",
+              "value": "Inject delays and errors on one connection, with a bound and an automatic stop.",
+              "detail": "It shares its safety rules with chaos experiments.",
+              "needs": "Chaos authorization and safety.",
+              "area": "network"
+            }
+          ]
+        },
+        {
+          "name": "DNS as part of deployment",
+          "blurb": "First read-only, then writing records a deployment owns, then shifting traffic with DNS.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "DNS view",
+              "value": "Zones and records with who owns each, how they resolve from several vantage points, and whether secondary servers agree.",
+              "detail": "Records changed outside Launchway show as findings.",
+              "needs": "Probes from where users are.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Records a deployment owns",
+              "value": "A deployment declares the records it needs; Launchway shows the difference, asks for clearance, creates them and keeps them in step.",
+              "detail": "It never touches a record it does not own, and ownership markers prevent two controllers from fighting.",
+              "needs": "DNS view.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "DNS servers and providers",
+              "value": "Authoritative servers, starting with PowerDNS, then standard dynamic update, then the popular cloud DNS services.",
+              "detail": "Access is limited to one zone, created with least privilege.",
+              "needs": "Records a deployment owns.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Cutover with a TTL strategy",
+              "value": "Lower the record’s cache time, add the new target with a small weight, prove it, shift, then restore the cache time.",
+              "detail": "Launchway states what DNS cannot promise: caches keep old answers.",
+              "needs": "Records a deployment owns.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "The DNS proof",
+              "value": "A check that the answer is what was declared from each vantage point and that the secondaries agree.",
+              "detail": "It joins the other proofs in a plan.",
+              "needs": "Cutover with a TTL strategy.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Split-horizon and certificates",
+              "value": "Different answers inside and outside, and a view of certificate challenge readiness next to each name.",
+              "detail": "Launchway reads the certificate manager; it does not issue certificates in the first phases.",
+              "needs": "DNS view.",
+              "area": "network"
+            }
+          ]
+        },
+        {
+          "name": "Service meshes, Istio deepest",
+          "blurb": "Phases by popularity. A mesh is a source and a shifter; “no mesh” is a supported state.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Mesh support matrix and readiness check",
+              "value": "For each popular mesh, what Launchway can observe, shift, and check, with a readiness scan of your configuration.",
+              "detail": "Mesh features switch on only when a mesh is detected and an administrator allows it.",
+              "needs": "Service mesh support including VMs.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Gateway API as the default path",
+              "value": "Routes and weights through the standard Gateway API, which works with or without a mesh.",
+              "detail": "It is the default way to shift traffic.",
+              "needs": "Mesh support matrix and readiness check.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Deep Istio understanding",
+              "value": "Read virtual services, destination rules and subsets, and see in one view how a request is routed, with an explanation of which rule matches first.",
+              "detail": "Sidecar and ambient modes are both read.",
+              "needs": "Mesh support matrix and readiness check.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Route a subset of clients or requests",
+              "value": "An assistant helps send only certain clients, headers or a mirror of traffic to a new version, and previews the result before it is applied.",
+              "detail": "It coexists with a running rollout without fighting over weights.",
+              "needs": "Deep Istio understanding.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Per-subset proofs",
+              "value": "Request metrics for each subset become proofs, so a canary for one group of clients is judged on that group.",
+              "detail": "It uses the same proof verdicts as everywhere else.",
+              "needs": "Route a subset of clients or requests.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Tetrate as a named integration",
+              "value": "Read both layers of a Tetrate-managed Istio mesh, map its hierarchy to Launchway’s levels, and propose changes at the right layer.",
+              "detail": "It later serves as a shifter for rollouts and across clusters.",
+              "needs": "Deep Istio understanding.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Other popular meshes",
+              "value": "The same observing, shifting and checking for the other popular meshes in turn.",
+              "detail": "Each is a separate adapter and ships when it passes the shared tests.",
+              "needs": "Mesh support matrix and readiness check.",
+              "area": "network"
+            },
+            {
+              "status": "planned",
+              "title": "Virtual machines on a mesh",
+              "value": "Show machines that join a mesh and give instructions and a checked proposal for onboarding another.",
+              "detail": "Onboarding is a runbook step, not a hidden change.",
+              "needs": "Deep Istio understanding.",
+              "area": "network"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "m10",
+      "number": 10,
+      "when": "next",
+      "name": "Databases that stay up, and database changes delivered like code",
+      "short": "Databases",
+      "promise": "Launchway keeps working when a database machine fails, loses no work it has acknowledged, and treats a change to your own databases as a first-class, checked, reversible part of a release.",
+      "audience": "Teams that run Launchway for many people and teams whose releases include changes to their data.",
+      "what": "Milestone 10 has two halves. The first makes Launchway’s own database highly available: one writer at a time, always with a copy guaranteed to be up to date, and software that promotes that copy automatically while Launchway waits, retries and buffers. The second treats a customer’s database as a known thing in an environment: a change set is checked before it runs, a backup is taken first, a standard tool applies it, and proofs watch the database during and after. Launchway is honest about limits: rollback for data means roll forward, a compensating change or a restore.",
+      "scenarios": [
+        "A database machine dies mid-push. Launchway serves again within a minute, no acknowledged push is lost, and no step is run twice.",
+        "You open a change set in a pull request and see the SQL it will run, what it will lock and whether it removes something a running version still uses.",
+        "A change runs through test, then production, only if its checksum is unchanged since you cleared it.",
+        "Two environments drift apart and Launchway shows exactly where."
+      ],
+      "diagram": "flowchart TD\n  Change[\"Change set<br/>in Git\"] --> Pre[\"Preflight<br/>what it runs, locks, removes\"]\n  Pre --> Backup[\"Backup or snapshot\"]\n  Backup --> Run[\"Standard tool applies it\"]\n  Run --> Proof[\"Proofs watch the database\"]\n  Proof -->|pass| Promote[\"Promote to the next environment\"]\n  Proof -->|fail| Plan[\"Roll forward, compensate or restore\"]",
+      "diagramNote": "A database change as a plan like any other. Launchway never claims a data rollback it cannot do.",
+      "done": [
+        "A seeded database failure is survived with no acknowledged work lost, measured and published.",
+        "A change set is checked, backed up, applied by a standard tool, watched and promoted with its checksum verified.",
+        "The Databases list shows each database in each environment, its state and its drift."
+      ],
+      "notIncluded": [
+        "Making a long table rewrite zero-downtime by tooling alone: Launchway says so before running and proposes an online method.",
+        "Claiming a data rollback it cannot do.",
+        "An active-active multi-writer database as the default: it would trade correctness for speed."
+      ],
+      "buildsOn": [
+        "m8"
+      ],
+      "deepDives": [
+        {
+          "title": "Databases",
+          "area": "databases"
+        }
+      ],
+      "groups": [
+        {
+          "name": "Launchway’s own database stays up",
+          "blurb": "Near term. One writer at a time with a guaranteed up-to-date copy and automatic promotion.",
+          "items": [
+            {
+              "status": "in-progress",
+              "title": "Retries and buffering through a database failover",
+              "value": "Transient database errors are retried inside a stall budget, writes are safe to repeat, and runners spool logs and results while the server is away.",
+              "detail": "Today the first parts exist: store retries, repeat-safe runner writes, a runner spool and a database doctor. The rest is covered by the failure-injection tests.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "A highly available database mode",
+              "value": "One chart setting gives one primary and two copies, with the primary not reporting a write as done until a copy has it.",
+              "detail": "Launchway rides through up to two minutes without re-running a step or losing a log line.",
+              "needs": "Retries and buffering through a database failover.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Backups and point-in-time recovery",
+              "value": "Continuous archiving, point-in-time restore and an automatic restore drill that includes stored files.",
+              "detail": "A restore that has not been tested is not counted.",
+              "needs": "A highly available database mode.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "The database status page and doctor",
+              "value": "Whether the database is writable, how far behind the copies are, and what a failover would cost, in plain words.",
+              "detail": "The doctor measures instead of guessing.",
+              "needs": "A highly available database mode.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Failure-injection tests and game days",
+              "value": "Kill the primary, partition the network, slow a copy and fail an ambiguous commit, then check an acknowledgment ledger for lost work.",
+              "detail": "A game day is rehearsed on a production-like installation.",
+              "needs": "A highly available database mode.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Large files in their own database",
+              "value": "Keep large stored files in a separate database or store so replication stays fast.",
+              "detail": "The wizard asks the question that matters and explains it.",
+              "needs": "A highly available database mode.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Second site, rehearsed promotion",
+              "value": "A standby installation in another site with a deliberate, rehearsed promotion and the replication lag on the status page.",
+              "detail": "Automatic cross-site promotion is avoided to prevent split-brain.",
+              "needs": "A highly available database mode.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Synchronous copy across sites",
+              "value": "Where the round trip allows, wait for the second site before reporting a write done.",
+              "detail": "The doctor measures the round trip and recommends.",
+              "needs": "Second site, rehearsed promotion.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Cells for very large installations",
+              "value": "Independent installations each owning a set of organizations, with a small directory above them.",
+              "detail": "Not scheduled until a customer needs it.",
+              "needs": "Second site, rehearsed promotion.",
+              "area": "databases"
+            }
+          ]
+        },
+        {
+          "name": "Database changes as a delivery step",
+          "blurb": "First phase. A change set is a plan like any other.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Databases in environments",
+              "value": "A database is a known connection in an environment, with its engine, version and state.",
+              "detail": "Credentials are least-privilege and audited.",
+              "needs": "Shared connections.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "A database change step with Liquibase",
+              "value": "Apply a change set from your repository with Liquibase first, with dry run, apply and status.",
+              "detail": "Other standard tools sit behind the same interface.",
+              "needs": "Databases in environments.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Preflight and clearance",
+              "value": "See what the change will run and lock, and clear it; the clearance is void if the file changes afterward.",
+              "detail": "A checksum is carried through every promotion.",
+              "needs": "A database change step with Liquibase.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Promotion through environments",
+              "value": "Move a change set from test to production only when it passed, unchanged.",
+              "detail": "It uses the same approvals as other releases.",
+              "needs": "Preflight and clearance.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "A Databases list and review page",
+              "value": "One list of every database and change, with a review page for each.",
+              "detail": "It is also available in the API, the agent endpoint, the command line and Terraform.",
+              "needs": "Databases in environments.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Backward-compatibility lint",
+              "value": "Warn when a change removes or renames something a running version still uses.",
+              "detail": "It depends on knowing which versions are running.",
+              "needs": "Preflight and clearance.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Lock and size estimates",
+              "value": "Estimate how long a change will lock a table and how large it is, from the engine’s own facts, before running.",
+              "detail": "Launchway proposes an online method when a rewrite would block.",
+              "needs": "Preflight and clearance.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Backup before change",
+              "value": "Take a backup or snapshot before a change using your operator’s own mechanism, with the PostgreSQL operator most used on Kubernetes first.",
+              "detail": "A restore is always a person’s decision.",
+              "needs": "A database change step with Liquibase.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Database proofs and the watch",
+              "value": "Watch the database during and after a change and, for changes marked reversible, propose a compensating change.",
+              "detail": "Automatic compensation is off by default.",
+              "needs": "Proofs.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Drift between environments",
+              "value": "Show where one environment’s schema differs from another’s and from Git.",
+              "detail": "Drift is a finding with the exact difference.",
+              "needs": "Promotion through environments.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "More change tools and online changes",
+              "value": "Other standard change tools and online-change methods for large tables, behind the same interface.",
+              "detail": "A customer’s own tool image can be used.",
+              "needs": "A database change step with Liquibase.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Masked and preview databases",
+              "value": "Short-lived databases for preview environments, with masking guidance for production-like data.",
+              "detail": "Documented first, built if teams ask.",
+              "needs": "More change tools and online changes.",
+              "area": "databases"
+            },
+            {
+              "status": "planned",
+              "title": "Database maintenance plans",
+              "value": "Upgrades, vacuuming and restore drills as plans, with the engine’s estimators.",
+              "detail": "It starts with PostgreSQL and widens.",
+              "needs": "Backup before change.",
+              "area": "databases"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "m11",
+      "number": 11,
+      "when": "next",
+      "name": "Kubernetes, autoscaling, serverless and virtual machines, seen as one",
+      "short": "Kubernetes and VMs",
+      "promise": "Launchway shows each workload in the context of the change that made it, answers why it is not healthy in one sentence across delivery, autoscaling, nodes, network and virtual machines, and delivers every kind of workload the same safe way.",
+      "audience": "Application developers, on-call operators, platform engineers, security officers and managers, each of whom gets their own point of view on the same facts.",
+      "what": "Milestone 11 starts from the change, not from the list of cluster objects. It adds clusters and a fleet view, a model of workloads that covers every common kind, a catalog of reasons something is unhealthy, autoscaling as a first-class view with advice that arrives as proposals, serverless including on-premises, and virtual machines on Kubernetes with full lifecycle and delivery. Raw depth in specialist tools stays in those tools, linked from the exact object. Launchway helps and does not take over: right-sizing, scaling and upgrade advice arrive as Git proposals.",
+      "scenarios": [
+        "An on-call engineer opens a workload and reads one sentence: the new version cannot start because a node has no room, and the autoscaler cannot add one.",
+        "A developer sees only their service, with its rollouts, scaling and logs; a manager sees delivery flow and cost by team.",
+        "A scaling view shows why a workload is not scaling and proposes a change as a pull request.",
+        "A virtual machine’s disk import fails, and Launchway says the source address returned an error.",
+        "A virtual machine is released with the same plan, proofs and return as a container."
+      ],
+      "diagram": "flowchart TD\n  Change[\"A change\"] --> App[\"Application and team\"]\n  App --> Work[\"Workloads<br/>containers, functions, virtual machines\"]\n  Work --> Scale[\"Scaling\"]\n  Work --> Health[\"Why is it unhealthy\"]\n  Cluster[\"Clusters and fleet\"] --> Work\n  Health --> Fix[\"Proposal in Git\"]\n  Scale --> Fix",
+      "diagramNote": "Everything starts from the change and its owner, and arrives at a proposal you can review.",
+      "done": [
+        "A cluster registered with read access shows its health, capacity, nodes, namespaces and quotas, and every workload of the common kinds.",
+        "The catalog of reasons something is unhealthy is tested on seeded failures.",
+        "Autoscaling is shown with its causes and interactions, and right-sizing arrives as a proposal.",
+        "Virtual machines on Kubernetes can be seen, created through Git, and delivered with the same plan and proofs."
+      ],
+      "notIncluded": [
+        "Editing live objects by hand: Git is where change happens, with a deep link for the rare emergency.",
+        "Writing a policy engine or a metrics store, or building a Kubernetes distribution.",
+        "Managing hypervisors that are not on Kubernetes beyond listing them as hosts."
+      ],
+      "buildsOn": [
+        "m8"
+      ],
+      "deepDives": [
+        {
+          "title": "Kubernetes and virtual machines",
+          "area": "kubernetes-vms"
+        }
+      ],
+      "groups": [
+        {
+          "name": "Clusters, fleet and workloads",
+          "blurb": "First phase after the Argo CD work. Observe before anything else.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Clusters and the fleet",
+              "value": "Register a cluster and see its health, capacity, versions, nodes, namespaces and quotas, with the fleet at a glance.",
+              "detail": "The first level of access is read-only, and the interface says what a higher level would add.",
+              "needs": "See every application and its tree.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "A model for every workload kind",
+              "value": "Deployments, rollouts, jobs, stateful sets and more under one model with desired against live, logs, events and a shell where policy allows.",
+              "detail": "Today Launchway reads four kinds of object; this widens it to the core set.",
+              "needs": "Clusters and the fleet.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Why is it not healthy",
+              "value": "A catalog of reasons, across delivery, scaling, nodes, network and machines, answered in one sentence with the change that came just before.",
+              "detail": "It is tested against seeded failures and says so when it cannot tell.",
+              "needs": "A model for every workload kind.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Perspectives",
+              "value": "A switcher gives a developer, an operator, a platform engineer, a security officer and a manager each their own start page.",
+              "detail": "The switcher changes the view, never what a person is allowed to do.",
+              "needs": "Clusters and the fleet.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Upgrade readiness",
+              "value": "Which applications use deprecated interfaces before a cluster upgrade, listed by application and owner.",
+              "detail": "Findings arrive as proposals.",
+              "needs": "Clusters and the fleet.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Cost, policy and backup in context",
+              "value": "Cost by application and team, policy results and backup status, read from the tools that own them.",
+              "detail": "Deep screens stay in those tools and are linked.",
+              "needs": "Clusters and the fleet.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Fleet lifecycle and node upgrades",
+              "value": "Plans for node maintenance and cluster upgrades, and an adapter for the tool that provisions clusters.",
+              "detail": "Edge and air-gapped bundles come in the same phase.",
+              "needs": "Clusters and the fleet.",
+              "area": "kubernetes-vms"
+            }
+          ]
+        },
+        {
+          "name": "Autoscaling and serverless",
+          "blurb": "Second phase. Scaling is explained, not just configured.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "The scaling view",
+              "value": "For each workload, what scales it, why it is or is not scaling, and how the horizontal, vertical, event-driven and node scalers interact.",
+              "detail": "It names conflicts, such as two scalers acting on the same field.",
+              "needs": "A model for every workload kind.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "An assistant for “make this scale”",
+              "value": "A few questions produce a scaling setup, proposed through Git.",
+              "detail": "It supports the standard horizontal scaler and KEDA.",
+              "needs": "The scaling view.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Right-sizing proposals",
+              "value": "Observed use against requested size, with a proposal to change it.",
+              "detail": "Nothing is changed silently.",
+              "needs": "The scaling view.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Serverless on-premises and in the cloud",
+              "value": "Knative revisions as a shifter with per-revision proofs, and eventing shown on the map.",
+              "detail": "Function frameworks come later.",
+              "needs": "Shifters.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Scaling during a rollout and a test",
+              "value": "A rollout and a performance test understand the autoscaler and ask it for headroom instead of fighting it.",
+              "detail": "It uses the temporary capacity step in Milestone 8.",
+              "needs": "Temporary capacity for tests.",
+              "area": "kubernetes-vms"
+            }
+          ]
+        },
+        {
+          "name": "Virtual machines on Kubernetes",
+          "blurb": "After autoscaling, or before it if virtual machines matter more to you. KubeVirt first.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "See and create virtual machines through Git",
+              "value": "A virtual machine is a workload like any other: seen with its state and created by a change in Git.",
+              "detail": "Disks, interfaces and run strategy are all shown.",
+              "needs": "A model for every workload kind.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Disks, imports and snapshots",
+              "value": "Import, clone and upload progress, failed imports with the reason, and snapshots and restores.",
+              "detail": "A reason such as “the source returned an error” appears in the interface.",
+              "needs": "See and create virtual machines through Git.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Live migration and access",
+              "value": "Watch and control live migration, and open a console or an access session with the right permissions.",
+              "detail": "Stuck migrations are explained.",
+              "needs": "See and create virtual machines through Git.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "One list of all virtual machines and hosts",
+              "value": "Machines on Kubernetes and elsewhere in one inventory with what runs on each.",
+              "detail": "Other hypervisors appear as hosts.",
+              "needs": "See and create virtual machines through Git.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Virtual machine delivery",
+              "value": "Release a machine with the same plan, proofs, watch and return as a container.",
+              "detail": "It reuses the host pools of Milestone 8.",
+              "needs": "Hosts and pools.",
+              "area": "kubernetes-vms"
+            },
+            {
+              "status": "planned",
+              "title": "Maintenance and hypervisor migration",
+              "value": "Drain and upgrade nodes with virtual machines moved safely, and move machines between environments.",
+              "detail": "Maintenance is a plan with a watch.",
+              "needs": "Virtual machine delivery.",
+              "area": "kubernetes-vms"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "m12",
+      "number": 12,
+      "when": "next",
+      "name": "Security and trust: encrypted at rest, its own vault, and honest certification",
+      "short": "Security and trust",
+      "promise": "Everything Launchway holds is encrypted at rest with a key kept outside the database, an installation needs the fewest possible extra tools, and what is claimed about security is only what is true that day.",
+      "audience": "Anyone who runs Launchway for a team that cares about security, and anyone evaluating it for a regulated environment.",
+      "what": "Milestone 12 raises the foundation. A root key kept outside the database protects a small hierarchy of keys that protects every secret and stored file, so a database copy alone is useless. Launchway gets its own vault, and every built-in is optional: you can use a popular backend instead. Scans become gates with a stated policy, and the certification path is written down in an honest order.",
+      "scenarios": [
+        "Someone gets a copy of the database. Without the installation key it is unreadable.",
+        "You rotate the installation key and nothing goes down.",
+        "A team with no other secret store keeps its secrets in Launchway’s vault, sealed by the same key hierarchy.",
+        "The doctor says plainly what is encrypted, what is not and how to fix it.",
+        "A signed release carries its provenance and an SBOM that anyone can verify."
+      ],
+      "diagram": "flowchart TD\n  Root[\"Installation key<br/>outside the database\"] --> Keys[\"Small hierarchy of keys\"]\n  Keys --> Secrets[\"Secrets and tokens\"]\n  Keys --> Files[\"Stored files, logs, caches\"]\n  Keys --> Vault[\"Built-in vault\"]\n  Backend[\"Or a popular backend\"] -.-> Root\n  Backend -.-> Vault",
+      "diagramNote": "One root key, a few keys under it, and an option to use a backend you already run.",
+      "done": [
+        "Every secret and stored file is encrypted at rest, and a database dump alone cannot be read.",
+        "Rotation and re-encryption happen without downtime, and an existing installation migrates without breaking.",
+        "The built-in vault and the popular-backend adapters pass the same tests.",
+        "Every scan the security community recommends runs as a gate with an expiring exception process."
+      ],
+      "notIncluded": [
+        "Claiming certifications that have not been earned.",
+        "Keeping a key in the same database it protects."
+      ],
+      "buildsOn": [
+        "m1"
+      ],
+      "deepDives": [
+        {
+          "title": "Security and trust",
+          "area": "security-trust"
+        }
+      ],
+      "groups": [
+        {
+          "name": "Encryption at rest",
+          "blurb": "First phase, in progress.",
+          "items": [
+            {
+              "status": "in-progress",
+              "title": "An installation key and a key hierarchy",
+              "value": "A root key held outside the database protects a small hierarchy of keys that protect every secret and every stored file.",
+              "detail": "Today the key library and the first adapter are being built; the default needs nothing installed (a key file or a passphrase-unsealed store).",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Key sources you choose",
+              "value": "Take the installation key from a mounted secret, a passphrase, a cloud key service, a vault’s transit service, a hardware module or a platform chip.",
+              "detail": "Each is an adapter behind one interface.",
+              "needs": "An installation key and a key hierarchy.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Encrypt stored secrets and tokens",
+              "value": "Move the keys that sit in plaintext in the database today into encryption under the hierarchy.",
+              "detail": "Reads work with both old and new forms during the move.",
+              "needs": "An installation key and a key hierarchy.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Encrypt stored files, logs and caches",
+              "value": "Artifacts, caches, repository data and logs are encrypted as streams, re-encrypted lazily.",
+              "detail": "Large files are never loaded whole.",
+              "needs": "Encrypt stored secrets and tokens.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Rotation without downtime",
+              "value": "Rotate keys, re-wrap them and re-encrypt over time while Launchway keeps serving.",
+              "detail": "Backups and restores keep working across rotations.",
+              "needs": "Encrypt stored files, logs and caches.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "The doctor reports encryption plainly",
+              "value": "A plain report of what is encrypted, what is not, and the one step to fix each gap.",
+              "detail": "It never says encrypted when it is not.",
+              "needs": "Encrypt stored secrets and tokens.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Tamper-evident audit trail",
+              "value": "The audit trail forms a chain so a deletion or an edit shows.",
+              "detail": "The chain head can be exported for safekeeping.",
+              "needs": "Encrypt stored secrets and tokens.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Transport and sign-in hardening",
+              "value": "Built-in transport encryption, refusal of unencrypted database connections, and sign-in rate limits with lockout.",
+              "detail": "Safe defaults are on and your team can tune them.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Customer-held keys and deletion by key destruction",
+              "value": "For the hosted service, keep logs and artifacts under a key you hold, and prove deletion by destroying it.",
+              "detail": "Leaving is complete.",
+              "needs": "Rotation without downtime.",
+              "area": "security-trust"
+            }
+          ]
+        },
+        {
+          "name": "Launchway’s own vault",
+          "blurb": "After encryption at rest. A minimum to install, and always optional.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "A built-in secret store",
+              "value": "Keep secrets in Launchway with policies and an audit trail, sealed by the same key hierarchy.",
+              "detail": "It shares the database’s high availability.",
+              "needs": "An installation key and a key hierarchy.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Popular backends instead",
+              "value": "Use a popular secret backend instead, with the same behavior through one interface and a published parity matrix.",
+              "detail": "Vault and OpenBao work today for runners; this widens it.",
+              "needs": "A built-in secret store.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Workload identity and dynamic credentials",
+              "value": "Short-lived credentials issued to a run for the time it needs them.",
+              "detail": "A step never holds a long-lived secret.",
+              "needs": "A built-in secret store.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Built in by default, a backend by choice",
+              "value": "Every dependency has a built-in default and a popular external option, with the trade-offs written down.",
+              "detail": "The only things required remain a database and Git.",
+              "area": "security-trust"
+            }
+          ]
+        },
+        {
+          "name": "The security program",
+          "blurb": "Ongoing. Scans are gates, releases are verifiable and the program is written down.",
+          "items": [
+            {
+              "status": "available",
+              "title": "Security scans as a program",
+              "value": "Code, dependency, secret, image, chart and manifest scanning, fuzzing and security headers run on every change.",
+              "detail": "Gates have a stated policy and an expiring exception process.",
+              "link": "security/how-launchway-is-scanned"
+            },
+            {
+              "status": "available",
+              "title": "A security policy and threat model",
+              "value": "A published policy for reporting a problem and a written threat model that shows what Launchway defends against.",
+              "detail": "Both are kept current with the code.",
+              "link": "security/threat-model"
+            },
+            {
+              "status": "planned",
+              "title": "A hardening guide and installation benchmark",
+              "value": "A guide and an automated check for how to harden an installation, in the style of a standard benchmark.",
+              "detail": "The doctor runs the check.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Penetration testing and incident response",
+              "value": "Independent testing, a response runbook and a public summary of what was found.",
+              "detail": "Scheduled after encryption at rest and the vault ship.",
+              "needs": "The security program.",
+              "area": "security-trust"
+            }
+          ]
+        },
+        {
+          "name": "Certification, in an honest order",
+          "blurb": "Practices first, then certificates earned. Launchway never claims one it has not earned.",
+          "items": [
+            {
+              "status": "planned",
+              "title": "Open source security badges and a scorecard",
+              "value": "The open-source security best-practices badge and a public scorecard with a target.",
+              "detail": "Some checks need people and time and will lag honestly.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Build provenance, level two now and three next",
+              "value": "Signed provenance for every release, then a build platform that isolates runs and keeps signing keys from build steps.",
+              "detail": "Anyone can verify it.",
+              "area": "security-trust",
+              "link": "security/supply-chain"
+            },
+            {
+              "status": "planned",
+              "title": "An independent security audit",
+              "value": "A specialist firm audits the server, sign-in, runner protocol, encryption and chart defaults, and a summary is published.",
+              "detail": "It follows encryption at rest and the vault.",
+              "needs": "An installation key and a key hierarchy.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "A validated cryptographic build",
+              "value": "A build variant that uses a validated cryptographic module, claimed only for that variant.",
+              "detail": "The default build never claims it.",
+              "needs": "Rotation without downtime.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Hosted service attestation",
+              "value": "An independent report on the hosted service’s controls, then a longer-period report.",
+              "detail": "It follows once the hosted service has run.",
+              "needs": "Hosted service that holds nothing sensitive.",
+              "area": "security-trust"
+            },
+            {
+              "status": "planned",
+              "title": "Responsibility matrix for regulated customers",
+              "value": "A table of which payment-card and health-data requirements Launchway’s features help you meet and which remain yours.",
+              "detail": "Launchway supports compliance work; it is not a certification.",
+              "area": "security-trust",
+              "link": "security/controls-and-compliance"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "beyond",
       "number": 0,
       "when": "later",
@@ -2353,16 +4054,16 @@
       "what": "These are ideas that grow from one connected platform. They are planned, but they come after everything above.",
       "scenarios": [
         "You see what each service costs next to what it delivers.",
-        "A pipeline step breaks a pre-production environment on purpose and checks that verification notices.",
         "A new engineer finds a service, its owner, its docs and its last deployment in one directory."
       ],
-      "diagram": "flowchart TD\n  Graph[(\"Software graph\")] --> Cost[\"Cost by service\"]\n  Graph --> Portal[\"Service catalogue\"]\n  Verify[\"Verification\"] --> Chaos[\"Chaos steps\"]\n  Graph --> Chaos",
+      "diagram": "flowchart TD\n  Graph[(\"Software graph\")] --> Cost[\"Cost by service\"]\n  Graph --> Portal[\"Service catalogue\"]",
       "diagramNote": "Each idea reuses data the earlier milestones already hold.",
       "done": [
         "Each item is its own small, optional feature that is off until chosen."
       ],
       "notIncluded": [
-        "Anything earlier in the roadmap."
+        "Anything earlier in the roadmap.",
+        "Chaos testing, which has moved into Milestone 8."
       ],
       "buildsOn": [
         "m5"
@@ -2379,13 +4080,6 @@
               "value": "See what each service, team and environment costs to run, next to what it delivers.",
               "detail": "Includes the cost of runner pools.",
               "needs": "The software graph."
-            },
-            {
-              "status": "planned",
-              "title": "Chaos testing",
-              "value": "Deliberately break things in a pre-production environment as a pipeline step, and see whether verification notices.",
-              "detail": "Built-in host experiments and well-known chaos tools are supported.",
-              "needs": "Inject delays and errors safely."
             },
             {
               "status": "planned",
@@ -2464,6 +4158,43 @@
     {
       "title": "Honest status",
       "value": "An item is available only when it is merged, tested and documented. Order is by value and is not a schedule."
+    },
+    {
+      "title": "Security first",
+      "value": "Everything Launchway holds is encrypted at rest, every part runs with least privilege, and the secure choice is the default."
+    },
+    {
+      "title": "Help, never enforce or overwrite",
+      "value": "Launchway explains, proposes and previews. It never rewrites your application or infrastructure silently; you accept, edit or decline."
+    },
+    {
+      "title": "Safeguards on, the team in charge",
+      "value": "Every protection starts on and your team may tune or turn it off. Only a level above you, such as the organization for production, can require one."
+    },
+    {
+      "title": "Never a button that does not work",
+      "value": "An action that cannot work here is absent or shown unavailable with the reason. A risky action that is allowed asks first, in plain words."
+    },
+    {
+      "title": "Everything optional, with built-in defaults",
+      "value": "Each capability has a built-in default and a popular backend you can use instead, so an installation needs the fewest tools."
+    },
+    {
+      "title": "The hosted service holds nothing sensitive",
+      "value": "Your network and your secrets stay with you, seen only through a small program that runs on your side."
+    },
+    {
+      "title": "Accessible to everyone",
+      "value": "Automated checks hold every screen, and the API, agent endpoint and command line, to a top-tier standard for keyboard, screen reader and contrast."
     }
-  ]
+  ],
+  "whatChanged": {
+    "date": "21 November 2026",
+    "items": [
+      "Statuses now reflect what has been built: hosting over HTTPS and SSH, mirrors and import, webhooks, protected branches (a first version), variables at levels, failures that say why, the Learn area and the accessibility and security gates.",
+      "Five new milestones: zero-downtime delivery with Argo CD (8), network and traffic (9), databases (10), Kubernetes and virtual machines (11), and security and trust (12).",
+      "The hosted service milestone now describes a service that never holds your network or secrets, and a protected demonstration.",
+      "A new section, How we build, states the principles every item is held to, and a page shows the order of the build."
+    ]
+  }
 }

@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 3 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 0 in progress · 60 planned · 60 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-next">Next</span> 0 available · 3 in progress · 56 planned · 59 capabilities</p>
 
 See and control everything you run, whether it is an application in a cluster, a virtual machine or an image-based host, and deliver to it safely.
 
@@ -42,7 +42,7 @@ flowchart TD
 
 *One plan, many targets, and a watch loop that can send a change back.*
 
-**Builds on:** [Milestone 1: Host and run](milestone-1.md). **Leads to:** [Milestone 5: Software graph](milestone-5.md).
+**Builds on:** [Milestone 1: Host and run](milestone-1.md). **Leads to:** [Milestone 5: Software graph](milestone-5.md), [Milestone 8: Zero downtime](milestone-8.md), [Milestone 9: Network and traffic](milestone-9.md).
 
 **Go deeper:** [Delivery: applications, rollouts and hosts](delivery.md) · [Live traffic, protection and reliability](traffic.md).
 
@@ -50,10 +50,10 @@ flowchart TD
 
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
-| [Applications and rollouts](#g-applications-and-rollouts) | 11 | 0 | 0 | 11 |
-| [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 0 | 0 | 5 |
+| [Applications and rollouts](#g-applications-and-rollouts) | 11 | 0 | 1 | 10 |
+| [Debug a deployment, then see everything](#g-debug-a-deployment-then-see-everything) | 5 | 0 | 2 | 3 |
 | [Where it deploys](#g-where-it-deploys) | 12 | 0 | 0 | 12 |
-| [Infrastructure as code](#g-infrastructure-as-code) | 6 | 0 | 0 | 6 |
+| [Infrastructure as code](#g-infrastructure-as-code) | 5 | 0 | 0 | 5 |
 | [Runtime configuration](#g-runtime-configuration) | 6 | 0 | 0 | 6 |
 | [Watch and protect](#g-watch-and-protect) | 10 | 0 | 0 | 10 |
 | [Change and insight](#g-change-and-insight) | 7 | 0 | 0 | 7 |
@@ -105,13 +105,13 @@ Use an Argo CD that Launchway runs for you, or connect one you already have. Bot
 
 #### Rollout control inside a run {#rollout-control-inside-a-run}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station. Verification tests run between steps, and the run keeps the evidence.
+A pipeline watches a rollout, pauses at gates, promotes or aborts, and shows each step of the rollout as a station. Verification tests run between steps, and the run keeps the evidence. Today the commands shown are the ones that really work, and a failed command says so.
 
 **Depends on:** Argo CD in depth.
 
-[Area page](delivery.md)
+[Read the documentation](../guide/deployments.md) · [Area page](delivery.md)
 
 #### A single pane of glass {#a-single-pane-of-glass}
 
@@ -157,7 +157,7 @@ Move a version from one environment to the next with checks and approvals in bet
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-Keep watching after release, roll back automatically, and tie incidents to the change that caused them. An incident links back to the commit, run and setting change nearest to it.
+Keep watching after release, roll back automatically, and tie incidents to the change that caused them. An incident links back to the commit, run and setting change nearest to it. The watch, the stable state and the automatic return are detailed in Milestone 8.
 
 **Depends on:** Verification after a deploy.
 
@@ -179,13 +179,13 @@ Why did it fail, in one sentence, then every resource behind it.
 
 #### Why did it fail to deploy {#why-did-it-fail-to-deploy}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-A failed application opens with a diagnosis in one sentence, the evidence behind it and one recommended action. Each piece of evidence is a button that opens the resource where it shows: manifest, events or log. AI can help word the diagnosis, but the evidence is always facts.
+A failed application opens with a diagnosis in one sentence, the evidence behind it and one recommended action. Each piece of evidence is a button that opens the resource where it shows: manifest, events or log. AI can help word the diagnosis, but the evidence is always facts. Today a failed deployment opens with a one-sentence diagnosis; the full catalog of causes grows with the Argo CD work in Milestone 8.
 
 **Depends on:** Argo CD in depth.
 
-[Area page](delivery.md)
+[Read the documentation](../guide/deployments.md) · [Area page](delivery.md)
 
 #### A timeline of changes and symptoms {#a-timeline-of-changes-and-symptoms}
 
@@ -219,9 +219,9 @@ Container logs now and from before the last restart, with search, follow, a time
 
 #### Fix actions with their consequence {#fix-actions-with-their-consequence}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Roll a setting back, retry an update or open the failing pod, each saying in words what will happen. Every action is a guided change that can be undone and is audited.
+Roll a setting back, retry an update or open the failing pod, each saying in words what will happen. Every action is a guided change that can be undone and is audited. Today the server reports which actions can work, so no button is offered that cannot.
 
 **Depends on:** Why did it fail to deploy.
 
@@ -385,14 +385,6 @@ A real step with per-node results where Chef reports them, check mode before app
 
 [Area page](delivery.md)
 
-#### Database change steps {#database-change-steps}
-
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
-
-Apply database schema changes as a pipeline step, with a plan and a rollback where the tool supports it. Changes pass the same gates as other deploys.
-
-[Area page](delivery.md)
-
 #### Packer builds as a first-class step {#packer-builds-as-a-first-class-step}
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
@@ -409,7 +401,7 @@ Settings, keys and toggles managed together, per zone and environment.
 
 <p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
 
-A built-in toggle service that applications and agents read, per environment, with percentage and client-type rollouts. It speaks an open protocol, so existing applications can read it with no Launchway library.
+A built-in toggle service that applications and agents read, per environment, with percentage and client-type rollouts. It speaks an open protocol, so existing applications can read it with no Launchway library. How toggles join the zero-downtime model is in Milestone 8.
 
 [Area page](traffic.md)
 

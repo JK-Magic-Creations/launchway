@@ -2,7 +2,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Areas › Hosted service · <a href="../roadmap-list.html">as a list</a></p>
 
-Launchway as a service, with the controls enterprises and regulated teams ask for. **Status:** planned, in [Milestone 7](milestone-7.md). A local demo already runs from the [quick start](../start/quick-start.md).
+Launchway as a service, with the controls enterprises and regulated teams ask for. **Status:** planned, in [Milestone 7](milestone-7.md), which also covers a protected demonstration that never shows the operator's own systems. A local demo already runs from the [quick start](../start/quick-start.md).
 
 ## Two ways to run steps
 
@@ -15,6 +15,27 @@ flowchart TD
 ```
 
 With runners on your own servers or clusters, code and secrets stay inside your network.
+
+## What stays with you, and what never crosses
+
+```mermaid
+flowchart TD
+  subgraph H["Hosted service"]
+    Acc["Accounts and billing"]
+    Conf["Configuration and approvals"]
+    Coord["Coordination and status"]
+  end
+  subgraph C["Your side: the Detachment"]
+    Run["Runners"]
+    Sec["Your secret store"]
+    Net["Your clusters, metrics, logs, DNS"]
+    Keep["Your logs and audit"]
+  end
+  C -->|"calls out only"| H
+  Never["Never crosses: secrets, traffic,<br/>logs, code, database contents"] -.-> H
+```
+
+The hosted service is the control plane: it remembers who you are, what you have configured and what should happen next. Your side does the work and holds the data. It sees names, states, counts and timings, and the pages you read are drawn in your browser from data fetched live from your Detachment. It has no way to open a connection into your network.
 
 ## Isolation layers for hosted steps
 

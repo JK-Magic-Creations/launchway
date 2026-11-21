@@ -100,11 +100,12 @@ const more = (i) => (i.link ? ` <a class="more" href="${esc(href(i.link))}">Read
 const counts = (c) => `${c.available} available · ${c['in-progress']} in progress · ${c.planned} planned`
 
 const allMilestoneItems = src.milestones.flatMap(itemsOf)
-const totals = count([...src.available.map(() => ({ status: 'available' })), ...allMilestoneItems.filter((i) => i.status !== 'available')])
+const totals = count([...src.available.map(() => ({ status: 'available' })), ...allMilestoneItems])
 const capCount = src.available.length + allMilestoneItems.length
 const byId = Object.fromEntries(src.milestones.map((m) => [m.id, m]))
 
 const AREAS = [
+  ['build-order', 'How the build is ordered', 'The phases, from what exists today to the longer plans, in one picture.'],
   ['git-hosting', 'Built-in Git hosting and change review', 'How a push travels, how it is kept safe, and how a change is reviewed and merged.'],
   ['pipelines', 'Pipelines and flow control', 'How a run is planned, ordered and controlled, and how custom and generated steps fit.'],
   ['registry', 'The built-in registry', 'Images, charts and other artifacts from build to running, with policy at both ends.'],
@@ -114,6 +115,11 @@ const AREAS = [
   ['ai', 'AI as an optional helper', 'The gateway, local models, spending limits and the protected path.'],
   ['hosted-service', 'The hosted service and sandboxed runners', 'Isolation layers, runners on your machines and the public demo.'],
   ['guided-interface', 'The guided interface', 'Follow a change on its launch line, and the overview, focus and detail pattern.'],
+  ['zero-downtime', 'Zero-downtime delivery', 'One model for every deployment: a plan, a shifter, proofs, controls and the last stable state, with the watch afterward.'],
+  ['network', 'Network and traffic', 'The path of a request from the edge to a workload, where findings come from, DNS and service meshes.'],
+  ['databases', 'Databases', 'Keeping Launchway\u2019s own database up, and delivering changes to yours.'],
+  ['kubernetes-vms', 'Kubernetes and virtual machines', 'Clusters, workloads, autoscaling, serverless and virtual machines, starting from the change.'],
+  ['security-trust', 'Security and trust', 'Encryption at rest, the built-in vault, scans as gates and an honest path to certification.'],
 ]
 
 // The big picture: one change travelling from idea to running software, with what surrounds it.
@@ -218,6 +224,15 @@ ${g.items.map((i) => `      <li class="card st-${i.status}" data-status="${i.sta
 </section>`
 }
 
+const wc = src.whatChanged
+const whatChangedHtml = wc ? `<section class="what-changed" aria-labelledby="h-changed">
+    <h2 id="h-changed">What changed in the roadmap</h2>
+    <p class="wc-date">${esc(wc.date)}</p>
+    <ul>
+${wc.items.map((x) => `      <li>${esc(x)}</li>`).join('\n')}
+    </ul>
+  </section>` : ''
+
 const body = `<main id="content">
   <p class="eyebrow">Roadmap</p>
   <h1>Where Launchway is going</h1>
@@ -225,6 +240,8 @@ const body = `<main id="content">
 ${src.vision.map((v) => `    <li>${esc(v)}</li>`).join('\n')}
   </ol>
   <p class="asof">As of ${src.updated}. Items are ordered by value, in milestones marked Now, Next and Later. There are no dates: plans change, and an item moves to Available only when it is merged, tested and documented. Read it at three levels: this page, a detail page for each milestone, and a page for each large area.</p>
+
+${whatChangedHtml}
 
   <div class="stats" aria-label="Where things stand">
     <div class="stat st-available"><b>${totals.available}</b><span>${chip('available')}</span></div>
@@ -277,7 +294,7 @@ ${availableHtml}
 ${src.milestones.map(milestoneHtml).join('\n\n')}
 
   <section class="principles" aria-labelledby="h-throughout">
-    <div class="sec-head"><h2 id="h-throughout">Throughout, not a milestone</h2><span class="sec-note">The standard every item is held to.</span></div>
+    <div class="sec-head"><h2 id="h-throughout">How we build</h2><span class="sec-note">Throughout, not a milestone: the standard every item is held to.</span></div>
     <ul class="grid principles-grid">
 ${src.principles.map((x) => `      <li class="card"><h4>${esc(x.title)}</h4><p>${esc(x.value)}</p></li>`).join('\n')}
     </ul>
@@ -303,6 +320,8 @@ items are drawn on the [roadmap](./public/roadmap.html), and each milestone has 
 
 ${src.vision.join(' ')}
 
+${wc ? `**What changed in the roadmap, ${wc.date}.**\n\n${wc.items.map((x) => `- ${x}`).join('\n')}\n` : ''}
+
 Order is by value, not a schedule, and plans change. An item is **available** only when it is on the
 main branch, tested and documented. Launchway is not certified against any compliance standard;
 compliance items provide controls and evidence.
@@ -323,7 +342,9 @@ ${m.groups.map((g) => `### ${g.name}
 |---|---|---|
 ${g.items.map((i) => row(i, m)).join('\n')}
 `).join('\n')}`).join('\n')}
-## Throughout, not a milestone
+## How we build
+
+Throughout, not a milestone: the standard every item is held to.
 
 ${src.principles.map((x) => `- **${x.title}.** ${x.value}`).join('\n')}
 `

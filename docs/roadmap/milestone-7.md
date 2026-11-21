@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 7 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 0 in progress · 15 planned · 15 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-later">Later</span> 0 available · 1 in progress · 28 planned · 29 capabilities</p>
 
 Use Launchway without running it, on a plan that follows your choices, with the controls enterprises and regulated teams ask for.
 
@@ -44,7 +44,9 @@ flowchart TD
 | Group | Capabilities | Available | In progress | Planned |
 |---|---|---|---|---|
 | [Hosted service and demo](#g-hosted-service-and-demo) | 8 | 0 | 0 | 8 |
-| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 0 | 0 | 7 |
+| [A hosted service that never holds your network or secrets](#g-a-hosted-service-that-never-holds-your-network-or-secrets) | 10 | 0 | 0 | 10 |
+| [A protected demonstration](#g-a-protected-demonstration) | 4 | 0 | 0 | 4 |
+| [Identity, audit and compliance](#g-identity-audit-and-compliance) | 7 | 0 | 1 | 6 |
 
 ### Hosted service and demo {#g-hosted-service-and-demo}
 
@@ -128,6 +130,154 @@ Several organizations on one installation, isolated from each other, with the le
 
 [Area page](hosted-service.md)
 
+### A hosted service that never holds your network or secrets {#g-a-hosted-service-that-never-holds-your-network-or-secrets}
+
+Before the first outside customer. The hosted side coordinates; a small program on your side, the Detachment, does the work.
+
+#### The Detachment {#the-detachment}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+One small program on your side starts your runners, looks things up in your secret store and reads your clusters, metrics, logs and DNS. It only calls out. Nothing is opened into your network.
+
+**Depends on:** Runners on your machines.
+
+[Area page](hosted-service.md)
+
+#### The boundary, data kind by data kind {#the-boundary-data-kind-by-data-kind}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A published table says what stays with you, what crosses and what the hosted side may see, such as names, states, counts and timings. Secrets, traffic, logs and code never cross by default.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Screens drawn from your data, not stored hosted {#screens-drawn-from-your-data-not-stored-hosted}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The pages you read are drawn in your browser from data fetched live from your Detachment over an encrypted channel. Even the operator of the hosted service cannot see your traffic.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Your logs, artifacts and audit stay with you {#your-logs-artifacts-and-audit-stay-with-you}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Build logs, test reports, artifacts and an audit log you own are kept on your side by default; storing them hosted is a per-organization choice with a key you hold. The hosted service keeps a separate record of what it did.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Least privilege grants {#least-privilege-grants}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+You grant access to your systems from none upward, each step showing what it adds. Monitoring data is a permission, never a raw pass-through.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Updates you control {#updates-you-control}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Signed updates with a pin, a window and a rollback; your Detachment checks the signature and your policy before accepting. The hosted side cannot make it run new code.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Works when the hosted service is unreachable {#works-when-the-hosted-service-is-unreachable}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Your Detachment keeps working for what it can, then catches up. Your runs are not hostage to an outage.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Verify the promise yourself {#verify-the-promise-yourself}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Ways to check the boundary: the wire format is closed, a canary test shows nothing leaks, and you can inspect what the Detachment sends. Staff cannot read anything stored hosted without your approved, time-limited session.
+
+**Depends on:** The boundary, data kind by data kind.
+
+[Area page](hosted-service.md)
+
+#### Self-hosted is the same shape {#self-hosted-is-the-same-shape}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The same Detachment serves a self-hosted installation, so moving between them is a configuration change. Leaving is complete: export, move, destroy the hosted copy with a recorded key destruction.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+#### Air-gapped and restricted networks {#air-gapped-and-restricted-networks}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+An offline bundle and a customer-run relay for networks with no outside access. It later includes the interface served by your own Detachment.
+
+**Depends on:** The Detachment.
+
+[Area page](hosted-service.md)
+
+### A protected demonstration {#g-a-protected-demonstration}
+
+Before the first outside visitor. Anyone can try every feature while the operator’s systems stay protected.
+
+#### A demonstration world {#a-demonstration-world}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+A visitor gets sample repositories, a simulated cluster and metrics, a rollout, a failing deployment and a moving traffic map, with nothing real behind them. It is built from the same fixtures the product’s own tests use.
+
+**Depends on:** A public demo.
+
+[Area page](hosted-service.md)
+
+#### Isolated by construction {#isolated-by-construction}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+The demonstration runs apart from everything else, runs no code a visitor brings, and has a kill switch. A visitor never gets sight of the operator’s own network.
+
+**Depends on:** A public demo.
+
+[Area page](hosted-service.md)
+
+#### Easy to try, hard to abuse {#easy-to-try-hard-to-abuse}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+Sign-up is quick, with limits and cost guards against misuse. A visitor can connect their own Detachment later.
+
+**Depends on:** A public demo.
+
+[Area page](hosted-service.md)
+
+#### The whole product, safely {#the-whole-product-safely}
+
+<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+
+DNS, chaos, databases, virtual machines and the edge fill in after the first world, each as a fixture with a conformance test. Every feature can be seen without risk.
+
+**Depends on:** A demonstration world.
+
+[Area page](hosted-service.md)
+
 ### Identity, audit and compliance {#g-identity-audit-and-compliance}
 
 The controls enterprises and regulated teams ask for.
@@ -164,9 +314,9 @@ An audit trail nobody can quietly edit, streamed to your security tools. Entries
 
 #### Retention, legal hold and encryption at rest {#retention-legal-hold-and-encryption-at-rest}
 
-<p class="rm-meta"><span class="rm-chip st-planned"><span aria-hidden="true">○</span> Planned</span></p>
+<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
 
-Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted. A hold overrides cleanup.
+Choose how long data is kept, prove deletion, and encrypt logs and artifacts with rotating keys; encrypted by default when hosted. A hold overrides cleanup. Encryption at rest with a key held outside the database is being built now (see Milestone 12).
 
 
 #### A compliance pack for PCI DSS and HIPAA {#a-compliance-pack-for-pci-dss-and-hipaa}
@@ -200,4 +350,4 @@ This milestone is done when all of these are true.
 
 ---
 
-[← Milestone 6: AI helper](milestone-6.md) · [Beyond: Beyond →](beyond.md)
+[← Milestone 6: AI helper](milestone-6.md) · [Milestone 8: Zero downtime →](milestone-8.md)
