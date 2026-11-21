@@ -591,3 +591,30 @@ func (e *Engine) ReleaseProject(id string) (string, error) {
 	}
 	return p, err
 }
+
+// PublicReleasesAllowed says whether this installation allows public content:
+// downloads of a release's files with no sign-in. It is off until an
+// administrator of every project turns it on, and a project still has to ask
+// for it in its own settings, and a release at publication.
+func (e *Engine) PublicReleasesAllowed() (bool, error) {
+	if err := e.needReleases(); err != nil {
+		return false, err
+	}
+	var pub int
+	err := e.db.QueryRow(`SELECT public FROM release_settings WHERE project = ''`).Scan(&pub)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	return pub == 1, err
+}
+
+// SetPublicReleasesAllowed turns the installation's permission for public release downloads on or off.
+func (e *Engine) SetPublicReleasesAllowed(allow bool, actor string) error {
+	if err := e.needReleases(); err != nil {
+		return err
+	}
+	_, err := e.db.Exec(`INSERT INTO release_settings(project, scheme, tag_prefix, public, changelog, updated_at, updated_by) VALUES('', 'semver', '', ?, '', ?, ?)
+		ON CONFLICT(project) DO UPDATE SET public = excluded.public, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+		b2i(allow), e.now().UnixMilli(), actor)
+	return err
+}

@@ -3183,6 +3183,940 @@ paths:
             tags:
                 - projects
             x-launchway-access: project-viewer
+    /api/v1/projects/{name}/release-gates:
+        get:
+            description: Handled by GET /api/v1/projects/{name}/release-gates; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_release_gates
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/release-gates; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/release-gates/{airfield}:
+        put:
+            description: Handled by PUT /api/v1/projects/{name}/release-gates/{airfield}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: put_api_v1_projects_name_release_gates_airfield
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: airfield
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by PUT /api/v1/projects/{name}/release-gates/{airfield}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.gate
+    /api/v1/projects/{name}/release-returns:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/release-returns; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_release_returns
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/release-returns; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.return
+    /api/v1/projects/{name}/release-settings:
+        get:
+            description: Handled by GET /api/v1/projects/{name}/release-settings; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_release_settings
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/release-settings; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: Handled by PUT /api/v1/projects/{name}/release-settings; the HTTP API reference does not describe this route in a row of its own.
+            operationId: put_api_v1_projects_name_release_settings
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by PUT /api/v1/projects/{name}/release-settings; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.settings
+    /api/v1/projects/{name}/releases:
+        get:
+            description: Handled by GET /api/v1/projects/{name}/releases; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_releases
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/releases; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.create
+    /api/v1/projects/{name}/releases/{version}:
+        delete:
+            description: Handled by DELETE /api/v1/projects/{name}/releases/{version}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: delete_api_v1_projects_name_releases_version
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by DELETE /api/v1/projects/{name}/releases/{version}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.delete
+        get:
+            description: Handled by GET /api/v1/projects/{name}/releases/{version}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_releases_version
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/releases/{version}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        patch:
+            description: Handled by PATCH /api/v1/projects/{name}/releases/{version}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: patch_api_v1_projects_name_releases_version
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by PATCH /api/v1/projects/{name}/releases/{version}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.edit
+    /api/v1/projects/{name}/releases/{version}/assets:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/assets; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_assets
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/assets; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.asset.add
+    /api/v1/projects/{name}/releases/{version}/assets/{asset}:
+        delete:
+            description: Handled by DELETE /api/v1/projects/{name}/releases/{version}/assets/{asset}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: delete_api_v1_projects_name_releases_version_assets_asset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: asset
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by DELETE /api/v1/projects/{name}/releases/{version}/assets/{asset}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.asset.remove
+        get:
+            description: Handled by GET /api/v1/projects/{name}/releases/{version}/assets/{asset}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_releases_version_assets_asset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: asset
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/releases/{version}/assets/{asset}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+        put:
+            description: Handled by PUT /api/v1/projects/{name}/releases/{version}/assets/{asset}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: put_api_v1_projects_name_releases_version_assets_asset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: asset
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by PUT /api/v1/projects/{name}/releases/{version}/assets/{asset}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.asset.add
+    /api/v1/projects/{name}/releases/{version}/candidate:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/candidate; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_candidate
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/candidate; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.candidate
+    /api/v1/projects/{name}/releases/{version}/changelog:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/changelog; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_changelog
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/changelog; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.changelog
+    /api/v1/projects/{name}/releases/{version}/checklist:
+        get:
+            description: Handled by GET /api/v1/projects/{name}/releases/{version}/checklist; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_releases_version_checklist
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/releases/{version}/checklist; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/releases/{version}/clearances:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/clearances; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_clearances
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/clearances; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.clearance
+    /api/v1/projects/{name}/releases/{version}/notes:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/notes; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_notes
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/notes; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.notes
+    /api/v1/projects/{name}/releases/{version}/plan:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/plan; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_plan
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/plan; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.plan
+    /api/v1/projects/{name}/releases/{version}/promote:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/promote; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_promote
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/promote; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.promote
+    /api/v1/projects/{name}/releases/{version}/publish:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/publish; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_publish
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/publish; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.publish
+    /api/v1/projects/{name}/releases/{version}/yank:
+        post:
+            description: Handled by POST /api/v1/projects/{name}/releases/{version}/yank; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_projects_name_releases_version_yank
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/projects/{name}/releases/{version}/yank; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-operator
+            x-launchway-audit: release.yank
+    /api/v1/projects/{name}/releases/compare:
+        get:
+            description: Handled by GET /api/v1/projects/{name}/releases/compare; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_releases_compare
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/releases/compare; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/releases/next:
+        get:
+            description: Handled by GET /api/v1/projects/{name}/releases/next; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_releases_next
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/releases/next; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
+    /api/v1/projects/{name}/releases/notes:
+        get:
+            description: Handled by GET /api/v1/projects/{name}/releases/notes; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_projects_name_releases_notes
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/projects/{name}/releases/notes; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - projects
+            x-launchway-access: project-viewer
     /api/v1/projects/{name}/rollback:
         get:
             description: 'What a service can be rolled back to in an environment after its deployment succeeded: ?environment= (required), ?service=. Answers the plan: what runs now (current), the lock holder if any (holder), and the rollback action as the server reports it (available, or reason, instead and would_help; targets, the earlier successful deployments, each with the deployments it reverts, its consequence and suggestions; queueable, emergency, requires_approval). Without the operator role on the project (and the environment) the action says so and offers no targets. See [rollback after success](../guide/rollback-after-success.md).'
@@ -3562,6 +4496,372 @@ paths:
             summary: 'The runs held back by a limit on concurrent runs, or by an operator, in the order they will go, limited to the projects the caller may read (?project= for one): each with its run, number, project, pipeline, class, position, code (automation_limit, kind_limit, pipeline_limit, project_limit or held_by_operator), reason, the numbers of the runs it waits behind, and actions.'
             tags:
                 - queue
+            x-launchway-access: signed-in
+    /api/v1/release-calendar:
+        get:
+            description: Handled by GET /api/v1/release-calendar; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_release_calendar
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/release-calendar; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-calendar
+            x-launchway-access: signed-in
+    /api/v1/release-formations:
+        get:
+            description: Handled by GET /api/v1/release-formations; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_release_formations
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/release-formations; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+        post:
+            description: Handled by POST /api/v1/release-formations; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_release_formations
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/release-formations; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+            x-launchway-audit: release.formation.create
+    /api/v1/release-formations/{id}:
+        get:
+            description: Handled by GET /api/v1/release-formations/{id}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_release_formations_id
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/release-formations/{id}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+    /api/v1/release-formations/{id}/advance:
+        post:
+            description: Handled by POST /api/v1/release-formations/{id}/advance; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_release_formations_id_advance
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/release-formations/{id}/advance; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+            x-launchway-audit: release.formation.advance
+    /api/v1/release-formations/{id}/promote:
+        post:
+            description: Handled by POST /api/v1/release-formations/{id}/promote; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_release_formations_id_promote
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/release-formations/{id}/promote; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-formations
+            x-launchway-access: signed-in
+            x-launchway-audit: release.formation.promote
+    /api/v1/release-freezes:
+        get:
+            description: Handled by GET /api/v1/release-freezes; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_release_freezes
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/release-freezes; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-freezes
+            x-launchway-access: signed-in
+        post:
+            description: Handled by POST /api/v1/release-freezes; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_release_freezes
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/release-freezes; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-freezes
+            x-launchway-access: signed-in
+            x-launchway-audit: release.freeze
+    /api/v1/release-freezes/{id}/cancel:
+        post:
+            description: Handled by POST /api/v1/release-freezes/{id}/cancel; the HTTP API reference does not describe this route in a row of its own.
+            operationId: post_api_v1_release_freezes_id_cancel
+            parameters:
+                - in: path
+                  name: id
+                  required: true
+                  schema:
+                    type: string
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by POST /api/v1/release-freezes/{id}/cancel; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-freezes
+            x-launchway-access: signed-in
+            x-launchway-audit: release.freeze.cancel
+    /api/v1/release-installation:
+        get:
+            description: Handled by GET /api/v1/release-installation; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_release_installation
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/release-installation; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-installation
+            x-launchway-access: signed-in
+        put:
+            description: Handled by PUT /api/v1/release-installation; the HTTP API reference does not describe this route in a row of its own.
+            operationId: put_api_v1_release_installation
+            parameters:
+                - $ref: '#/components/parameters/Csrf'
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by PUT /api/v1/release-installation; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-installation
+            x-launchway-access: admin
+            x-launchway-audit: release.installation
+    /api/v1/release-matrix:
+        get:
+            description: Handled by GET /api/v1/release-matrix; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_release_matrix
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/release-matrix; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-matrix
+            x-launchway-access: signed-in
+    /api/v1/release-report:
+        get:
+            description: Handled by GET /api/v1/release-report; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_release_report
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/release-report; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - release-report
+            x-launchway-access: signed-in
+    /api/v1/releases:
+        get:
+            description: Handled by GET /api/v1/releases; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_api_v1_releases
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "401":
+                    $ref: '#/components/responses/Error'
+                "403":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            summary: Handled by GET /api/v1/releases; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - releases
             x-launchway-access: signed-in
     /api/v1/repos/{owner}/{name}:
         delete:
@@ -8766,6 +10066,44 @@ paths:
             summary: The [MCP](../guide/agents.md) endpoint (Streamable HTTP, stateless).
             tags:
                 - mcp
+            x-launchway-access: public
+    /public/releases/{name}/{version}/{asset}:
+        get:
+            description: Handled by GET /public/releases/{name}/{version}/{asset}; the HTTP API reference does not describe this route in a row of its own.
+            operationId: get_public_releases_name_version_asset
+            parameters:
+                - in: path
+                  name: name
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: version
+                  required: true
+                  schema:
+                    type: string
+                - in: path
+                  name: asset
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: Success. The body is described in the HTTP API reference (docs/reference/http-api.md).
+                "400":
+                    $ref: '#/components/responses/Error'
+                "404":
+                    $ref: '#/components/responses/Error'
+                "429":
+                    $ref: '#/components/responses/Error'
+                "500":
+                    $ref: '#/components/responses/Error'
+                "503":
+                    $ref: '#/components/responses/Error'
+            security: []
+            summary: Handled by GET /public/releases/{name}/{version}/{asset}; the HTTP API reference does not describe this route in a row of its own.
+            tags:
+                - public
             x-launchway-access: public
     /readyz:
         get:

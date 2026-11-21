@@ -724,3 +724,6 @@ func (e *Engine) eventsFreezes(ctx context.Context, n *Notifier) ([]notify.Event
 	}
 	return out, nil
 }
+
+// AirfieldKnown returns nil if the Airfield exists.
+func (e *Engine) AirfieldKnown(name string) error { return e.checkAirfield(name) }
