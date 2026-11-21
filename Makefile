@@ -1,7 +1,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: all web build learn learn-check docs-diagrams-cache image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality test-s3 \
+.PHONY: test-like-ci prepush all web build learn learn-check docs-diagrams-cache image chart-lint test test-postgres test-vault test-containers test-kubernetes test-argo test-verify test-local-model run demo clean originality test-s3 \
 	tools release-local release-reproduce release-images vulncheck license-check lint-scripts lint-workflows \
 	charts-sync test-install test-runner-chart bundle test-bundle test-git-compat
 
@@ -49,6 +49,18 @@ test:
 	go vet ./...
 	go test -race -timeout 30m ./...
 	cd web && npx tsc --noEmit
+
+# Runs the pipeline's own test step, in its image, as a numeric user with no account entry, on a copy
+# of the committed tree (scripts/ci/test-like-ci.sh). Minutes; docs/development/quality-gates.md,
+# "Before you push".
+test-like-ci:
+	sh scripts/ci/test-like-ci.sh
+
+# Everything to run before a push, in order: the fast gates, the docs build, the pipeline's test step.
+prepush:
+	$(MAKE) check
+	$(MAKE) docs
+	$(MAKE) test-like-ci
 
 # Runs the Git hosting tests (internal/forge/storage, internal/forge/storagespike) on the oldest git
 # Launchway supports, in a container (Podman or Docker; skips with a message when neither exists).

@@ -28,7 +28,9 @@ make test-s3            # a real S3-compatible server, for the artifact store
 - Changing the database schema, or adding an event type? Read
   [Writing a migration](docs/development/migrations.md) first: servers of two versions share one
   database during every upgrade, and a rollback must keep working.
-- Run `make check` and `make test` before pushing.
+- Run `make prepush` before pushing: `make check`, `make docs`, then `make test-like-ci`, the pipeline's own
+  test step in its image as a user with no account entry, on a copy of what you committed
+  ([Before you push](docs/development/quality-gates.md#before-you-push)). `make test` is the quick local run.
 - Write messages and UI text in plain words.
 
 ## Engineering standard and quality gates
