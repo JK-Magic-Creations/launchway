@@ -62,7 +62,6 @@
       }
     }
   },
-  "required": ["externalURL"],
   "properties": {
     "externalURL": {
       "type": "string",

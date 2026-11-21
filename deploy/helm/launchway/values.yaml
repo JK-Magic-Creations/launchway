@@ -11,8 +11,10 @@
 # upgrades, `helm template` and GitOps syncs (a pre-install/pre-upgrade hook Job; see
 # docs/reference/helm-values.md). Nothing here needs Vault, an operator or an identity provider.
 #
-# externalURL (REQUIRED): the address people will open, scheme and host, no path.
-#   Unset, the install fails with a message that says so. It is not set below on purpose.
+# externalURL (REQUIRED for a new installation with built-in accounts, or with ingress/httpRoute): the
+#   address people will open, scheme and host, no path. Unset where it is required, the install fails
+#   with a message that says so. An installation that already runs with auth.mode oidc or none, and
+#   publishes nothing through this chart, keeps working without it. It is not set below on purpose.
 #   externalURL: https://launchway.example.com
 #
 # Then, only if you need them (each is a block just below):
@@ -361,11 +363,11 @@ config:
 # read it).
 #
 # SECURE BY DEFAULT: the servers refuse to start without a root key. The default holder is a key
-# file in a Kubernetes Secret that the install hook Job (`launchway bootstrap-secrets`, a Helm
-# pre-install/pre-upgrade hook; Argo CD runs it as PreSync) creates ONCE, only if it is absent, and
-# never changes or deletes. Nothing in the rendered manifests is key material, so `helm template`
-# is the same every time, under Helm and under GitOps. To bring your own key, set
-# encryption.keyFile.existingSecret and the Job makes none.
+# file in a Kubernetes Secret (<fullname>-root-key, key root.key) that the install hook Job makes
+# ONCE, only if it does not exist, and never changes: not on upgrade, not under helm template or
+# Argo CD (nothing in the rendered manifests is secret material, and two renders are identical). The
+# Secret is not owned by Helm, so helm uninstall and a GitOps prune KEEP it: losing it loses every
+# sealed secret. To use a key you made, set encryption.keyFile.existingSecret.
 # HONEST LIMIT: a Kubernetes Secret is only as protected as your cluster's own secret encryption
 # (etcd encryption at rest, who may read Secrets). It defeats a stolen database dump or backup,
 # not a cluster administrator. For more, use holder: transit (Vault or OpenBao).
@@ -373,8 +375,8 @@ config:
 # restore cannot read any secret: kubectl -n NS get secret RELEASE-launchway-root-key -o jsonpath='{.data.root\.key}' | base64 -d
 #
 # Upgrading an installation that already holds secrets: the servers seal them in place once no
-# server of the previous release has been seen for a while (see docs/guide/upgrading.md), so the
-# default rolling update needs no special setting.
+# server of the previous release has been seen for 45 seconds (LAUNCHWAY_SEAL_QUIET_SECONDS), so
+# the default rolling update needs no special setting. See docs/guide/upgrading.md.
 # ---------------------------------------------------------------------------------------------
 encryption:
   # -- keyFile (default), env, passphrase, transit, or none. none runs NOT ENCRYPTED AT REST, with a
@@ -385,155 +387,6 @@ encryption:
     # -- Have the install hook Job make the key Secret, if it is absent, when existingSecret is
     # empty. Set false only together with existingSecret.
     generate: true
-    # -- The name of an existing Secret holding the key (32 random bytes, base64, as `launchway
-    # encryption init` writes). Prefer this in production: you made it, you hold the copy.
-    existingSecret: ""
-    # -- The key in the Secret that holds the key file's text.
-    existingSecretKey: root.key
-  env:
-    # -- holder: env. A Secret whose key holds the root key itself (base64). Visible to anyone who
-    # can read the pod's environment; prefer keyFile or transit.
-    existingSecret: ""
-    existingSecretKey: root.key
-  passphrase:
-    # -- holder: passphrase. A Secret holding the keystore file (made by `launchway encryption
-    # init --passphrase`) and one holding the passphrase. Not suitable for unattended restarts of
-    # several servers unless the passphrase Secret is mounted, as here.
-    keystoreSecret: ""
-    keystoreSecretKey: root.keystore
-    passphraseSecret: ""
-    passphraseSecretKey: passphrase
-  transit:
-    # -- holder: transit. Vault or OpenBao: the transit engine's key wraps the installation's keys
-    # and never leaves the service. The server needs only encrypt and decrypt on that key.
-    address: ""
-    mount: transit
-    key: launchway
-    namespace: ""
-    # -- Log in with a token held in a Secret: ...
-    tokenSecret: ""
-    tokenSecretKey: token
-    # -- ... or with Kubernetes auth, as this role.
-    role: ""
-    authPath: kubernetes
-    # -- A Secret holding the service's CA certificate (PEM), key ca.crt.
-    caSecret: ""
-  # -- During a root key replacement: a Secret holding the key being replaced, given beside the
-  # new one while `launchway encryption rewrap` runs. Remove it afterwards.
-  previousKey:
-    existingSecret: ""
-    existingSecretKey: root.key
-
-# ---------------------------------------------------------------------------------------------
-# Encryption at rest: where the root key is held. Every secret the server stores (its signing and
-# sealing keys, the shared runner token, SSH host keys, webhook secrets) is sealed under a root
-# key that is NOT in the database, so a database dump or backup alone reveals none of them.
-# See docs/guide/encryption-at-rest.md. The chart passes these to the servers as environment
-# variables, so the configuration file does not change (a version before this one can still
-# read it).
-#
-# SECURE BY DEFAULT: the servers refuse to start without a root key. The default holder is a key
-# file the chart generates in a Kubernetes Secret on first install and keeps on every upgrade
-# (the Secret is never deleted by helm uninstall: it carries helm.sh/resource-policy: keep). That needs a
-# live `helm install` or `helm upgrade`: rendered without a cluster (helm template, Argo CD) the chart
-# refuses to generate one, because the key would change at every render; under GitOps create the Secret
-# once and set encryption.keyFile.existingSecret.
-# HONEST LIMIT: a Kubernetes Secret is only as protected as your cluster's own secret encryption
-# (etcd encryption at rest, who may read Secrets). It defeats a stolen database dump or backup,
-# not a cluster administrator. For more, use holder: transit (Vault or OpenBao).
-# KEEP A COPY of the key outside the cluster and outside the database's backups; without it a
-# restore cannot read any secret: kubectl -n NS get secret RELEASE-launchway-root-key -o jsonpath='{.data.root\.key}' | base64 -d
-#
-# Upgrading an installation that already holds secrets: the first server to start with the key
-# seals them in place. Servers of the previous release, still running during the rollout, cannot
-# read sealed values; for no sign-in failures during the rollout, upgrade first with
-# `encryption.holder: none`, then enable it, or scale to one server for the rollout.
-# ---------------------------------------------------------------------------------------------
-encryption:
-  # -- keyFile (default), env, passphrase, transit, or none. none runs NOT ENCRYPTED AT REST, with a
-  # warning at start, in `launchway doctor` and on the Settings page: only for a first upgrade step
-  # or a throwaway installation.
-  holder: keyFile
-  keyFile:
-    # -- Have the hook Job create the key Secret (once, if absent) when existingSecret is empty.
-    generate: true
-    # -- The name of an existing Secret holding the key (32 random bytes, base64, as `launchway
-    # encryption init` writes). Prefer this in production: you made it, you hold the copy.
-    existingSecret: ""
-    # -- The key in the Secret that holds the key file's text.
-    existingSecretKey: root.key
-  env:
-    # -- holder: env. A Secret whose key holds the root key itself (base64). Visible to anyone who
-    # can read the pod's environment; prefer keyFile or transit.
-    existingSecret: ""
-    existingSecretKey: root.key
-  passphrase:
-    # -- holder: passphrase. A Secret holding the keystore file (made by `launchway encryption
-    # init --passphrase`) and one holding the passphrase. Not suitable for unattended restarts of
-    # several servers unless the passphrase Secret is mounted, as here.
-    keystoreSecret: ""
-    keystoreSecretKey: root.keystore
-    passphraseSecret: ""
-    passphraseSecretKey: passphrase
-  transit:
-    # -- holder: transit. Vault or OpenBao: the transit engine's key wraps the installation's keys
-    # and never leaves the service. The server needs only encrypt and decrypt on that key.
-    address: ""
-    mount: transit
-    key: launchway
-    namespace: ""
-    # -- Log in with a token held in a Secret: ...
-    tokenSecret: ""
-    tokenSecretKey: token
-    # -- ... or with Kubernetes auth, as this role.
-    role: ""
-    authPath: kubernetes
-    # -- A Secret holding the service's CA certificate (PEM), key ca.crt.
-    caSecret: ""
-  # -- During a root key replacement: a Secret holding the key being replaced, given beside the
-  # new one while `launchway encryption rewrap` runs. Remove it afterwards.
-  previousKey:
-    existingSecret: ""
-    existingSecretKey: root.key
-
-# ---------------------------------------------------------------------------------------------
-# Encryption at rest: where the root key is held. Every secret the server stores (its signing and
-# sealing keys, the shared runner token, SSH host keys, webhook secrets) is sealed under a root
-# key that is NOT in the database, so a database dump or backup alone reveals none of them.
-# See docs/guide/encryption-at-rest.md. The chart passes these to the servers as environment
-# variables, so the configuration file does not change (a version before this one can still
-# read it).
-#
-# SECURE BY DEFAULT: the servers refuse to start without a root key. The default holder is a key
-# file the chart generates in a Kubernetes Secret on first install and keeps on every upgrade
-# (the Secret is never deleted by helm uninstall: it carries helm.sh/resource-policy: keep). That needs a
-# live `helm install` or `helm upgrade`: rendered without a cluster (helm template, Argo CD) the chart
-# refuses to generate one, because the key would change at every render; under GitOps create the Secret
-# once and set encryption.keyFile.existingSecret.
-# HONEST LIMIT: a Kubernetes Secret is only as protected as your cluster's own secret encryption
-# (etcd encryption at rest, who may read Secrets). It defeats a stolen database dump or backup,
-# not a cluster administrator. For more, use holder: transit (Vault or OpenBao).
-# KEEP A COPY of the key outside the cluster and outside the database's backups; without it a
-# restore cannot read any secret: kubectl -n NS get secret RELEASE-launchway-root-key -o jsonpath='{.data.root\.key}' | base64 -d
-#
-# Upgrading an installation that already holds secrets: the first server to start with the key
-# seals them in place. Servers of the previous release, still running during the rollout, cannot
-# read sealed values; for no sign-in failures during the rollout, upgrade first with
-# `encryption.holder: none`, then enable it, or scale to one server for the rollout.
-# ---------------------------------------------------------------------------------------------
-encryption:
-  # -- keyFile (default), env, passphrase, transit, or none. none runs NOT ENCRYPTED AT REST, with a
-  # warning at start, in `launchway doctor` and on the Settings page: only for a first upgrade step
-  # or a throwaway installation.
-  holder: keyFile
-  keyFile:
-    # -- Have the hook Job create the key Secret (once, if absent) when existingSecret is empty.
-    generate: true
-    # -- Render a generated key even when the chart cannot see the cluster (helm template, Argo CD, a
-    # dry run). Only for linting and tests: such a render makes a different key every time, so
-    # applying it would replace the real key and lock the installation out of its sealed secrets.
-    # Under GitOps (Argo CD, Flux with helm template) set existingSecret instead.
-    allowOfflineGeneration: false
     # -- The name of an existing Secret holding the key (32 random bytes, base64, as `launchway
     # encryption init` writes). Prefer this in production: you made it, you hold the copy.
     existingSecret: ""

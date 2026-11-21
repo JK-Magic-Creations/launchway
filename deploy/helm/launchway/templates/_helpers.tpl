@@ -133,7 +133,13 @@ database's URL is never a stored value: the servers build it from the Secret tha
 {{- if and .Values.database.url (not (regexMatch "^postgres(ql)?://" .Values.database.url)) -}}
 {{- fail "\n\ndatabase.url must be a postgres:// or postgresql:// URL: several servers cannot share a SQLite file.\n" -}}
 {{- end -}}
+{{- /* The address is required where the chart needs it: a new installation with built-in accounts
+       (links in invitations), or an Ingress or route to name. An installation that already runs
+       with its own sign-in (auth.mode oidc, or none behind a private gateway) and publishes
+       nothing through this chart keeps working with the values it has. */ -}}
+{{- if or (eq (include "launchway.authMode" .) "local") .Values.ingress.enabled .Values.httpRoute.enabled -}}
 {{- $_ := include "launchway.externalHost" . -}}
+{{- end -}}
 {{- include "launchway.validateStorage" . -}}
 {{- include "launchway.validateAI" . -}}
 {{- end -}}

@@ -107,8 +107,10 @@ spec:
             {{- with include "launchway.encryptionEnv" . | trim }}
             {{- . | nindent 12 }}
             {{- end }}
+            {{- with .Values.externalURL }}
             - name: LAUNCHWAY_EXTERNAL_URL
-              value: {{ .Values.externalURL | quote }}
+              value: {{ . | quote }}
+            {{- end }}
             {{- if eq (include "launchway.authMode" .) "local" }}
             - name: LAUNCHWAY_SETUP_CODE_FILE
               value: /etc/launchway-setup/code

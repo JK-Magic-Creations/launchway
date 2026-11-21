@@ -133,6 +133,9 @@ func cmdDoctor(args []string) error {
 	}
 	if *asJSON {
 		out := map[string]any{"database": st, "assessment": as, "stall_budget": budget.String()}
+		if f := signInFinding(cfg); len(f) > 0 {
+			out["sign_in"] = f
+		}
 		if gr != nil {
 			out["git"] = gr
 		}
@@ -144,6 +147,9 @@ func cmdDoctor(args []string) error {
 		}
 	}
 	if section == "" {
+		for _, l := range signInFinding(cfg) {
+			fmt.Println(l)
+		}
 		for _, l := range encryptionBrief(ctx, cfg, wait) {
 			fmt.Println(l)
 		}

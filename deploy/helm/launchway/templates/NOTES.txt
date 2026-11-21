@@ -1,7 +1,7 @@
 {{- include "launchway.validate" . -}}
 {{- $fn := include "launchway.fullname" . -}}
 1. Wait for the pods:  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ $fn }}-server{{ if include "launchway.bundledDB" . | trim }} deploy/{{ include "launchway.postgresqlName" . }}{{ end }}
-2. Open {{ .Values.externalURL }}{{ if not (or .Values.ingress.enabled .Values.httpRoute.enabled) }}  (nothing publishes it yet: either turn on ingress or httpRoute, or for now run  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $fn }} 8080:{{ .Values.service.port }}  and open http://127.0.0.1:8080){{ end }}
+2. Open {{ .Values.externalURL | default "the address you publish it at" }}{{ if not (or .Values.ingress.enabled .Values.httpRoute.enabled) }}  (nothing publishes it yet: either turn on ingress or httpRoute, or for now run  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $fn }} 8080:{{ .Values.service.port }}  and open http://127.0.0.1:8080){{ end }}
 {{- if eq (include "launchway.authMode" .) "local" }}
 3. Read your one-time setup code:  kubectl -n {{ .Release.Namespace }} get secret {{ include "launchway.setupCodeSecretName" . }} -o jsonpath='{.data.code}' | base64 -d; echo
 4. Enter it on the first page to create the first administrator, then follow the setup guide in the browser.

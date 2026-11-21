@@ -49,10 +49,14 @@ type Server struct {
 	// TrustProxy believes X-Forwarded-Proto and X-Forwarded-For, as set by a
 	// reverse proxy that every client must go through.
 	TrustProxy bool
-	UI         fs.FS // the built web UI; may be nil
-	Version    string
-	Log        *slog.Logger
-	Now        func() time.Time // for tests
+	// OpenInstall is set when the server runs with no sign-in on an address
+	// others can reach (auth.mode none with allow_anonymous). It is warned
+	// about on every page; see signin_request.go.
+	OpenInstall bool
+	UI          fs.FS // the built web UI; may be nil
+	Version     string
+	Log         *slog.Logger
+	Now         func() time.Time // for tests
 	// StreamPing is how often the live stream sends a keep-alive and checks
 	// that the caller is still signed in; default 15s.
 	StreamPing time.Duration
@@ -609,6 +613,9 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 		s.localInfo(out)
 	} else {
 		out["auth_mode"], out["actor"], out["projects"] = "none", s.Actor, len(s.projects())
+		if s.OpenInstall {
+			out["sign_in_off"] = s.signInOffWarning()
+		}
 	}
 	writeJSON(w, http.StatusOK, out)
 }

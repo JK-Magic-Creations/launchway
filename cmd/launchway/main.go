@@ -185,6 +185,10 @@ func cmdServer(args []string) error {
 	}
 	defer eng.Close()
 	logStore(eng, log)
+	authOpts, openInstall, err := su.settleSignIn(eng)
+	if err != nil {
+		return err
+	}
 
 	// Everything but the bootstrap settings is kept in the database
 	// (schema 23): the file's copies are imported once, then ignored.
@@ -223,7 +227,7 @@ func cmdServer(args []string) error {
 	}
 	eng.SetTOTPBox(secretsSvc.TOTP()) // authenticator secrets of built-in accounts are stored sealed
 	srv := &api.Server{Engine: eng, Projects: mgr, RunnerToken: token, Secrets: secretsSvc, Actor: cfg.User, Auth: authOpts,
-		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin}
+		TrustProxy: cfg.Server.TrustProxy, UI: web.FS(), Version: version, Log: log, ReportsOrigin: su.reportsOrigin, OpenInstall: openInstall}
 	if store.Available() {
 		srv.Settings = store
 	}

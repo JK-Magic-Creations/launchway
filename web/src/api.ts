@@ -888,6 +888,8 @@ export interface Me {
   roles: Record<string, Role>;
   /** The MCP endpoint for agents: whether it is on, its path, and the OAuth resource if the provider's tokens work there. */
   mcp?: { enabled: boolean; path: string; oauth_resource?: string };
+  /** Present only while this installation runs with no sign-in on an address others can reach. */
+  sign_in_off?: { warning: string; next: string; requested_at?: number };
 }
 
 export interface ApiToken { id: string; name: string; created_at: number; expires_at: number; last_used: number }
@@ -940,6 +942,7 @@ export async function call<T>(method: string, path: string, body?: unknown, opts
 export const api = {
   info: () => call<{ version: string; auth_mode: "none" | "oidc" | "local"; actor?: string }>("GET", "/api/v1/info"),
   me: () => call<Me>("GET", "/api/v1/me"),
+  setupSignInNow: () => call<{ setup_code: string; next: string }>("POST", "/api/v1/auth/setup-now", {}),
   logout: () => call<void>("POST", "/auth/logout"),
   runs: (q: { project?: string; status?: string; lane?: string; limit?: number } = {}, background = false) => {
     const p = new URLSearchParams();

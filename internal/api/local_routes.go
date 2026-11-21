@@ -33,6 +33,9 @@ func (s *Server) localRoutes() []route {
 		{"POST /api/v1/account/recovery-codes", signedIn, "auth.local.recovery_codes_renewed", s.newRecoveryCodes},
 		{"POST /api/v1/account/sign-out-everywhere", signedIn, "auth.sign_out_everywhere", s.signOutEverywhere},
 
+		// An installation without sign-in asks for it from the warning on every page.
+		{"POST /api/v1/auth/setup-now", administer, "auth.setup_now", s.setupSignInNow},
+
 		{"GET /api/v1/users", administer, "", s.listUsers},
 		{"POST /api/v1/users", administer, "user.invite", s.inviteUser},
 		{"POST /api/v1/users/{name}/reset", administer, "user.reset", s.resetUser},

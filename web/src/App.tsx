@@ -14,6 +14,7 @@ import { isLearn } from "./nav/model";
 // Loaded only when someone not signed in opens Learn: the first page needs none of it.
 const SetupPage = lazy(() => import("./pages/LocalAuth").then((m) => ({ default: m.SetupPage })));
 const AcceptPage = lazy(() => import("./pages/LocalAuth").then((m) => ({ default: m.AcceptPage })));
+const NoSignInBanner = lazy(() => import("./pages/NoSignIn").then((m) => ({ default: m.NoSignInBanner })));
 const PublicLearn = lazy(() => import("./learn/PublicLearn").then((m) => ({ default: m.PublicLearn })));
 
 type Who = { state: "loading" } | { state: "setup" } | { state: "accept" } | { state: "out"; next: string } | { state: "in"; me: Me } | { state: "error"; error: unknown };
@@ -71,6 +72,7 @@ function Shell({ me }: { me: Me }) {
   if (!overview && !error) return <div className="page"><div className="loading">Loading…</div></div>;
   return (
     <InstallationProvider me={me} approvals={approvals.list ?? []}>
+      {me.sign_in_off && <Suspense fallback={null}><NoSignInBanner off={me.sign_in_off} /></Suspense>}
       <Frame me={me} approvals={approvals} />
     </InstallationProvider>
   );

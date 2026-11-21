@@ -470,7 +470,7 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	if m := s.mcpOpts(); m != nil && m.OAuth != nil {
 		agents["oauth_resource"] = m.OAuth.Resource
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	view := map[string]any{
 		"user": id.User, "groups": groups, "auth_mode": mode, "via": id.Via,
 		"admin":   s.authorize(id, auth.Administer, ""),
 		"runners": s.authorize(id, auth.ReadAny, ""),
@@ -479,7 +479,11 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		// Whether this server hosts Git repositories (forge.hosting), so the UI offers
 		// what hosting makes work (importing repositories, a repository's mirrors) only then.
 		"hosting": s.Forge != nil,
-	})
+	}
+	if s.Auth == nil && s.OpenInstall {
+		view["sign_in_off"] = s.signInOffWarning()
+	}
+	writeJSON(w, http.StatusOK, view)
 }
 
 // ---- the audit trail ----
