@@ -1,0 +1,6 @@
+{
+  "comment": "Browser-scan findings that still exist, as \"<path>|<rule>\" (any width or theme). The list may only shrink: a finding not listed fails the build, and so does a listed one that no longer occurs. Fix the page instead of adding a line.",
+  "findings": [
+    "/activity/approvals|definition-list"
+  ]
+}
