@@ -10,6 +10,7 @@ These are read by the `launchway` binary itself: the server, a runner, or the co
 
 | Variable | Read by | What it does |
 |---|---|---|
+| `LAUNCHWAY_SETUP_CODE_FILE` | `launchway server` | A file holding the one-time setup code of a new installation, instead of `auth.local.setup_code_file`. The chart mounts the Secret `<release>-setup-code` there. Without either, the server makes a code and prints it once in its start-up message. |
 | `LAUNCHWAY_DATABASE` | `launchway server` | The database to use, instead of `database:` in the configuration. A SQLite file path, or a `postgres://` URL. Surrounding white space is ignored. Without it, and without `database:`, the server uses `launchway.db` in its data directory. |
 | `LAUNCHWAY_RUNNER_TOKEN` | `launchway server` | The token runners must send. When set, it wins over the token kept in the database, and the start-up banner says `Runner token for other machines: LAUNCHWAY_RUNNER_TOKEN` instead of a file path. |
 | `LAUNCHWAY_RUNNER_TOKEN` | `launchway runner` | The runner token, when `--token` is not given. Not together with a join token. |

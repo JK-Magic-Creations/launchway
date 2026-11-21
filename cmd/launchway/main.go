@@ -402,7 +402,7 @@ func serverAuth(cfg *config.Config) (*api.Auth, error) {
 			}
 		}
 		out.Local = &api.LocalAuth{Required: cfg.Auth.Mode == config.AuthLocal, SecondFactor: cfg.Auth.Local.SecondFactorRule(),
-			SetupCodeFile: cfg.Auth.Local.SetupCodeFile, SetupTTL: ttl}
+			SetupCodeFile: nonEmptyStr(os.Getenv("LAUNCHWAY_SETUP_CODE_FILE"), cfg.Auth.Local.SetupCodeFile), SetupTTL: ttl}
 	}
 	if cfg.Auth.Mode == config.AuthLocal {
 		return out, nil
