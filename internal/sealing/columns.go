@@ -171,6 +171,7 @@ var explained = []struct{ column, why string }{
 	{"schedule_seen.sched_key", "the name of a schedule"},
 	{"step_inputs.origin_key", "where an input came from"},
 	{"test_cases.test_key", "a test's identity"},
+	{"notifications.event_key", "the identity of the event a notification is about (run, kind), kept so that no message is sent twice; never a credential"},
 	{"encryption_state.key", "the name of a fact (the table holds the installation id and migration progress, no key material)"},
 	{"meta.key", "the name of a meta row"},
 
