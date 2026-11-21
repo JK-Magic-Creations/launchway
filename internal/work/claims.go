@@ -55,7 +55,7 @@ func (s *Store) returnItem(ctx context.Context, tx DB, by Actor, itemID, agent, 
 	if err != nil {
 		return nil
 	}
-	eff, err := s.settingsCached(ctx, it.Scope)
+	eff, err := s.settingsCachedIn(ctx, tx, it.Scope)
 	if err != nil {
 		return err
 	}
@@ -285,7 +285,7 @@ func (s *Store) claimTx(ctx context.Context, tx DB, a *Agent, itemID string, lea
 	if err != nil {
 		return err
 	}
-	eff, err := s.settingsCached(ctx, cur.Scope)
+	eff, err := s.settingsCachedIn(ctx, tx, cur.Scope)
 	if err != nil {
 		return err
 	}

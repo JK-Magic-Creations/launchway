@@ -183,6 +183,32 @@ func (s *Store) Prefix(ctx context.Context, sc Scope) (string, error) {
 	return p, err
 }
 
+// prefixIn is Prefix reading through db (a transaction, when one is open).
+func (s *Store) prefixIn(ctx context.Context, db DB, sc Scope) (string, error) {
+	s.mu.Lock()
+	if p, ok := s.prefixes[sc]; ok {
+		s.mu.Unlock()
+		return p, nil
+	}
+	s.mu.Unlock()
+	var p string
+	err := db.QueryRow(ctx, `SELECT prefix FROM work_scopes WHERE scope_kind = ? AND scope_id = ?`, sc.Kind, sc.ID).Scan(&p)
+	if isNoRows(err) {
+		if err = s.ensureScope(ctx, db, sc); err == nil {
+			err = db.QueryRow(ctx, `SELECT prefix FROM work_scopes WHERE scope_kind = ? AND scope_id = ?`, sc.Kind, sc.ID).Scan(&p)
+		}
+	}
+	if err == nil {
+		s.mu.Lock()
+		if s.prefixes == nil {
+			s.prefixes = map[Scope]string{}
+		}
+		s.prefixes[sc] = p
+		s.mu.Unlock()
+	}
+	return p, err
+}
+
 func (s *Store) prefixUncached(ctx context.Context, sc Scope) (string, error) {
 	var p string
 	err := s.db.QueryRow(ctx, `SELECT prefix FROM work_scopes WHERE scope_kind = ? AND scope_id = ?`, sc.Kind, sc.ID).Scan(&p)

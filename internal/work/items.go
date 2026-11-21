@@ -29,7 +29,11 @@ func (s *Store) chain(sc Scope) []Scope {
 
 // Settings returns what is in force for a scope.
 func (s *Store) Settings(ctx context.Context, sc Scope) (*Effective, error) {
-	return s.Resolve(ctx, s.chain(sc))
+	return s.settingsIn(ctx, s.db, sc)
+}
+
+func (s *Store) settingsIn(ctx context.Context, db DB, sc Scope) (*Effective, error) {
+	return s.resolveIn(ctx, db, s.chain(sc))
 }
 
 // NewItem is what creating an item takes.
@@ -174,12 +178,12 @@ func (s *Store) hydrate(ctx context.Context, db DB, items []*Item, full bool) er
 	}
 	// Names that live elsewhere, and the ref.
 	for _, it := range items {
-		p, err := s.Prefix(ctx, it.Scope)
+		p, err := s.prefixIn(ctx, db, it.Scope)
 		if err != nil {
 			return err
 		}
 		it.Ref = fmt.Sprintf("%s-%d", p, it.Number)
-		eff, err := s.settingsCached(ctx, it.Scope)
+		eff, err := s.settingsCachedIn(ctx, db, it.Scope)
 		if err != nil {
 			return err
 		}
@@ -198,7 +202,7 @@ func (s *Store) hydrate(ctx context.Context, db DB, items []*Item, full bool) er
 			var pn int
 			var pk, pid string
 			if db.QueryRow(ctx, `SELECT number, scope_kind, scope_id FROM work_items WHERE id = ?`, it.ParentID).Scan(&pn, &pk, &pid) == nil {
-				pp, _ := s.Prefix(ctx, Scope{Kind: pk, ID: pid})
+				pp, _ := s.prefixIn(ctx, db, Scope{Kind: pk, ID: pid})
 				it.ParentRef = fmt.Sprintf("%s-%d", pp, pn)
 			}
 		}
@@ -215,13 +219,19 @@ func (s *Store) hydrate(ctx context.Context, db DB, items []*Item, full bool) er
 // settingsCached resolves a scope's settings, remembering them for a moment
 // (settings change rarely, and a list asks for the same scope many times).
 func (s *Store) settingsCached(ctx context.Context, sc Scope) (*Effective, error) {
+	return s.settingsCachedIn(ctx, s.db, sc)
+}
+
+// settingsCachedIn reads through db when it must, so that inside a transaction
+// nothing waits on another connection.
+func (s *Store) settingsCachedIn(ctx context.Context, db DB, sc Scope) (*Effective, error) {
 	s.mu.Lock()
 	if e, ok := s.cache[sc]; ok && s.now().Before(e.until) {
 		s.mu.Unlock()
 		return e.eff, nil
 	}
 	s.mu.Unlock()
-	eff, err := s.Settings(ctx, sc)
+	eff, err := s.settingsIn(ctx, db, sc)
 	if err != nil {
 		return nil, err
 	}
@@ -449,7 +459,7 @@ func (s *Store) prepareNew(ctx context.Context, c Caller, in NewItem) (*newPlan,
 	if !c.canWrite(in.Scope) {
 		return nil, forbidden("you may not add work to %s", in.Scope)
 	}
-	eff, err := s.Settings(ctx, in.Scope)
+	eff, err := s.settingsCached(ctx, in.Scope)
 	if err != nil {
 		return nil, err
 	}
@@ -734,14 +744,14 @@ func (s *Store) hydrateBlockers(ctx context.Context, db DB, byID map[string]*Ite
 		return err
 	}
 	for _, b := range blks {
-		eff, err := s.settingsCached(ctx, b.sc)
+		eff, err := s.settingsCachedIn(ctx, db, b.sc)
 		if err != nil {
 			return err
 		}
 		if eff.Closed(b.state) {
 			continue
 		}
-		p, err := s.Prefix(ctx, b.sc)
+		p, err := s.prefixIn(ctx, db, b.sc)
 		if err != nil {
 			return err
 		}

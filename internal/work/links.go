@@ -126,7 +126,7 @@ func (s *Store) refOf(ctx context.Context, db DB, id string) string {
 	if db.QueryRow(ctx, `SELECT scope_kind, scope_id, number FROM work_items WHERE id = ?`, id).Scan(&k, &sid, &n) != nil {
 		return id
 	}
-	p, _ := s.Prefix(ctx, Scope{Kind: k, ID: sid})
+	p, _ := s.prefixIn(ctx, db, Scope{Kind: k, ID: sid})
 	return fmt.Sprintf("%s-%d", p, n)
 }
 

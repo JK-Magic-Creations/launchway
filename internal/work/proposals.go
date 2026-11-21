@@ -128,7 +128,11 @@ func (s *Store) Propose(ctx context.Context, c Caller, sc Scope, b Batch) (*Prop
 		return nil, err
 	}
 	res := &ProposeResult{Received: len(b.Proposals)}
-	err := s.tx(ctx, func(tx DB) error {
+	eff, err := s.primeFor(ctx, sc)
+	if err != nil {
+		return nil, err
+	}
+	err = s.tx(ctx, func(tx DB) error {
 		*res = ProposeResult{Received: len(b.Proposals)}
 		if err := s.ensureScope(ctx, tx, sc); err != nil {
 			return err
@@ -136,7 +140,7 @@ func (s *Store) Propose(ctx context.Context, c Caller, sc Scope, b Batch) (*Prop
 		if err := s.upsertProposals(ctx, tx, sc, b, res); err != nil {
 			return err
 		}
-		return s.reconcile(ctx, tx, sc, b, res)
+		return s.reconcile(ctx, tx, sc, eff, b, res)
 	})
 	return res, err
 }
@@ -252,11 +256,7 @@ func (s *Store) autoAccepts(eff *Effective, source string, severity int) bool {
 // reconcile brings items in line with the proposals of a source: items that
 // exist are synced; groups that may be filed without a review are opened, up to
 // the cap, and the rest fold into the summary item.
-func (s *Store) reconcile(ctx context.Context, tx DB, sc Scope, b Batch, res *ProposeResult) error {
-	eff, err := s.Settings(ctx, sc)
-	if err != nil {
-		return err
-	}
+func (s *Store) reconcile(ctx context.Context, tx DB, sc Scope, eff *Effective, b Batch, res *ProposeResult) error {
 	groups, err := s.groupsOf(ctx, tx, sc, b.Source)
 	if err != nil {
 		return err
@@ -362,4 +362,15 @@ func (g *group) title() string {
 		}
 	}
 	return t
+}
+
+// primeFor reads what a transaction will need from other connections (the
+// settings in force and the scope's prefix) before it begins: inside a
+// transaction on SQLite, which holds the write lock, nothing else may wait on
+// another connection.
+func (s *Store) primeFor(ctx context.Context, sc Scope) (*Effective, error) {
+	if _, err := s.Prefix(ctx, sc); err != nil {
+		return nil, err
+	}
+	return s.settingsCached(ctx, sc)
 }

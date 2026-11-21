@@ -127,12 +127,12 @@ func (s *Store) AcceptProposals(ctx context.Context, c Caller, sc Scope, source 
 		return nil, err
 	}
 	res := &ProposeResult{}
-	err := s.tx(ctx, func(tx DB) error {
+	eff, err := s.primeFor(ctx, sc)
+	if err != nil {
+		return nil, err
+	}
+	err = s.tx(ctx, func(tx DB) error {
 		*res = ProposeResult{}
-		eff, err := s.Settings(ctx, sc)
-		if err != nil {
-			return err
-		}
 		gs, reports, err := s.allGroups(ctx, tx, sc, false)
 		if err != nil {
 			return err

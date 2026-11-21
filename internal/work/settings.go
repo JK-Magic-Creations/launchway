@@ -556,8 +556,12 @@ func (s Settings) merge(over Settings) Settings {
 
 // GetSettings reads the settings stored at one scope (empty if none).
 func (s *Store) GetSettings(ctx context.Context, sc Scope) (Settings, error) {
+	return s.getSettingsIn(ctx, s.db, sc)
+}
+
+func (s *Store) getSettingsIn(ctx context.Context, db DB, sc Scope) (Settings, error) {
 	var raw string
-	err := s.db.QueryRow(ctx, `SELECT settings FROM work_scopes WHERE scope_kind = ? AND scope_id = ?`, sc.Kind, sc.ID).Scan(&raw)
+	err := db.QueryRow(ctx, `SELECT settings FROM work_scopes WHERE scope_kind = ? AND scope_id = ?`, sc.Kind, sc.ID).Scan(&raw)
 	var out Settings
 	if isNoRows(err) {
 		return out, nil
@@ -609,11 +613,15 @@ func (s *Store) PutSettings(ctx context.Context, sc Scope, st Settings, actor Ac
 // (project, unit, organization, installation: nearest first), with the
 // defaults underneath.
 func (s *Store) Resolve(ctx context.Context, chain []Scope) (*Effective, error) {
+	return s.resolveIn(ctx, s.db, chain)
+}
+
+func (s *Store) resolveIn(ctx context.Context, db DB, chain []Scope) (*Effective, error) {
 	eff := Settings{Unit: "points", States: DefaultStates(), Transitions: DefaultTransitions(), Types: DefaultTypes()}
 	cr := DefaultClose()
 	eff.Close = &cr
 	for i := len(chain) - 1; i >= 0; i-- {
-		st, err := s.GetSettings(ctx, chain[i])
+		st, err := s.getSettingsIn(ctx, db, chain[i])
 		if err != nil {
 			return nil, err
 		}
@@ -621,7 +629,7 @@ func (s *Store) Resolve(ctx context.Context, chain []Scope) (*Effective, error) 
 	}
 	e := &Effective{Settings: eff, Chain: chain}
 	for i := len(chain) - 1; i >= 0; i-- {
-		st, _ := s.GetSettings(ctx, chain[i])
+		st, _ := s.getSettingsIn(ctx, db, chain[i])
 		if st.Agents != nil && st.Agents.Autonomy != nil {
 			e.AutonomySource = chain[i]
 		}
