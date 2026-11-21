@@ -32,6 +32,10 @@ const TemplatesPage = lz(() => import("../pages/Library"), "TemplatesPage");
 const TemplatePage = lz(() => import("../pages/TemplatePage"), "TemplatePage");
 const ImagesPage = lz(() => import("../pages/Images"), "ImagesPage");
 const ComponentsPage = lz(() => import("../pages/Components"), "ComponentsPage");
+const PipelinesPage = lz(() => import("../pages/Pipelines"), "PipelinesPage");
+const KitPage = lz(() => import("../pages/Kit"), "KitPage");
+const ComingPage = lz(() => import("../shell/Coming"), "ComingPage");
+const ImagesSwitch = lz(() => import("../pages/ImagesSwitch"), "ImagesSwitch");
 const SettingsPage = lz(() => import("../pages/Settings"), "SettingsPage");
 const AccessPage = lz(() => import("../pages/Settings"), "AccessPage");
 const RunnersPage = lz(() => import("../pages/Runners"), "RunnersPage");
@@ -70,8 +74,13 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/library": return <LibraryPage />;
     case "/library/templates": return <TemplatesPage />;
     case "/library/templates/:library/:name": return <TemplatePage key={p.library + "/" + p.name} library={p.library} name={p.name} />;
-    case "/library/images": return <ImagesPage />;
-    case "/library/components": return <ComponentsPage />;
+    case "/images": return <><ImagesSwitch on="images" /><ImagesPage /></>;
+    case "/images/components": return <><ImagesSwitch on="components" /><ComponentsPage /></>;
+    case "/pipelines": return <PipelinesPage />;
+    case "/kit": return <KitPage />;
+    case "/code/:page": case "/images/:page": case "/traffic": case "/traffic/:page": case "/changes": case "/changes/:page":
+    case "/deployments/hosts": case "/deployments/machine-images":
+      return <ComingPage path={path.length > 1 ? path.replace(/\/+$/, "") : path} />;
     case "/settings": return <SettingsPage />;
     case "/settings/runners": return <RunnersPage />;
     case "/settings/access": return <AccessPage />;

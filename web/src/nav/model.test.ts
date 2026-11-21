@@ -5,20 +5,27 @@ import { breadcrumbs, locate, NO_FACTS, pageTitle, redirectFor, sectionOf, SECTI
 const facts = (over: Partial<Facts> = {}): Facts => ({ ...NO_FACTS, ...over });
 
 describe("sections", () => {
-  it("has the six sections in the order of doing things", () => {
-    expect(SECTIONS.map((s) => s.label)).toEqual(["Home", "Projects", "Deployments", "Activity", "Library", "Settings"]);
+  it("has the ten areas, in the order of a change's journey", () => {
+    expect(SECTIONS.map((s) => s.label)).toEqual(["Home", "Code", "Pipelines", "Images", "Deployments", "Traffic", "Changes", "Activity", "Library", "Settings"]);
   });
-  it("hides the library until a library or a run exists", () => {
-    const ids = (f: Facts) => visibleSections({ me: me(), facts: f }).map((s) => s.id);
-    expect(ids(facts())).not.toContain("library");
-    expect(ids(facts({ libraries: 1 }))).toContain("library");
-    expect(ids(facts({ runs: 3 }))).toContain("library");
+  it("groups them: Home, then build, then run and watch, then elsewhere", () => {
+    expect(SECTIONS.map((s) => s.group)).toEqual([0, 1, 1, 1, 2, 2, 2, 3, 3, 3]);
   });
-  it("shows the applications tab only when an application has been seen", () => {
+  it("keeps all ten visible, also for a new installation", () => {
+    expect(visibleSections({ me: me(), facts: facts() })).toHaveLength(10);
+  });
+  it("gives every area a sentence for hover, the launcher and the Guide", () => {
+    for (const s of SECTIONS) expect(s.promise.length, s.id).toBeGreaterThan(20);
+  });
+  it("shows the applications page only when an application has been seen", () => {
     const tabs = (n: number | null) => visibleTabs(section("deployments"), { me: me(), facts: facts({ applications: n }) }).map((t) => t.id);
-    expect(tabs(null)).toEqual(["overview", "environments"]);
-    expect(tabs(0)).toEqual(["overview", "environments"]);
+    expect(tabs(null)).toEqual(["overview", "environments", "hosts", "machine-images"]);
     expect(tabs(2)).toContain("applications");
+  });
+  it("marks the pages that are not built yet", () => {
+    expect(section("traffic").tabs.every((t) => t.soon)).toBe(true);
+    expect(section("changes").tabs.every((t) => t.soon)).toBe(true);
+    expect(section("activity").tabs.some((t) => t.soon)).toBe(false);
   });
   it("hides what a person may not use", () => {
     const tabs = (m: ReturnType<typeof me>) => visibleTabs(section("settings"), { me: m, facts: facts() }).map((t) => t.id);
@@ -26,7 +33,11 @@ describe("sections", () => {
     expect(tabs(me())).toEqual(["overview", "runners", "access", "rules", "audit", "config"]);
   });
   it("never lists a tab twice or without an address", () => {
-    for (const s of SECTIONS) for (const t of s.tabs) expect(t.href.startsWith("/")).toBe(true);
+    for (const s of SECTIONS) {
+      const hrefs = s.tabs.map((t) => t.href);
+      expect(new Set(hrefs).size).toBe(hrefs.length);
+      for (const t of s.tabs) expect(t.href.startsWith("/")).toBe(true);
+    }
   });
 });
 
@@ -37,7 +48,9 @@ describe("where pages sit", () => {
       ["/projects/x/tests", "projects"], ["/projects/x/security", "projects"], ["/projects/x/caches", "projects"], ["/playground", "projects"],
       ["/activity", "activity"], ["/activity/approvals", "activity"], ["/runs/abc", "activity"],
       ["/deployments", "deployments"], ["/deployments/environments", "deployments"], ["/deployments/applications/a", "deployments"],
-      ["/library/templates/lib/t", "library"], ["/library/images", "library"], ["/library/components", "library"],
+      ["/library/templates/lib/t", "library"], ["/images", "images"], ["/images/components", "images"], ["/images/charts", "images"],
+      ["/pipelines", "pipelines"], ["/traffic", "traffic"], ["/traffic/protection", "traffic"], ["/changes", "changes"], ["/changes/freezes", "changes"],
+      ["/deployments/hosts", "deployments"], ["/code/files", "projects"], ["/kit", "settings"],
       ["/settings/runners", "settings"], ["/settings/access/keys", "settings"], ["/settings/rules", "settings"], ["/settings/audit", "settings"],
       ["/config", "settings"], ["/config/wizard/add-runner", "settings"], ["/config/projects/x", "settings"], ["/config/projects", "settings"], ["/config/projects/new", "settings"],
     ];
@@ -57,13 +70,13 @@ describe("where pages sit", () => {
 describe("breadcrumbs", () => {
   it("links every step back except the page itself", () => {
     expect(breadcrumbs("/projects/shop-api/pipeline/edit")).toEqual([
-      { label: "Projects", href: "/projects" }, { label: "shop-api", href: "/projects/shop-api" }, { label: "Pipeline", href: "/projects/shop-api/pipeline" }, { label: "Edit" },
+      { label: "Code", href: "/projects" }, { label: "shop-api", href: "/projects/shop-api" }, { label: "Pipeline", href: "/projects/shop-api/pipeline" }, { label: "Edit" },
     ]);
   });
   it("lets a page give its thing's real name", () => {
     expect(breadcrumbs("/runs/abcdef123456", "Run #12 of shop-api").at(-1)).toEqual({ label: "Run #12 of shop-api" });
   });
-  it("is just the section on the section's own page", () => { expect(breadcrumbs("/projects")).toEqual([{ label: "Projects" }]); });
+  it("is just the section on the section's own page", () => { expect(breadcrumbs("/projects")).toEqual([{ label: "Code" }]); });
   it("names the template's library", () => {
     expect(breadcrumbs("/library/templates/platform/go-service").map((c) => c.label)).toEqual(["Library", "Templates", "platform", "go-service"]);
   });
@@ -72,12 +85,15 @@ describe("breadcrumbs", () => {
 describe("old addresses", () => {
   it("sends each of the old menu's addresses to its new place and keeps the query", () => {
     expect(redirectFor("/approvals")).toBe("/activity/approvals");
-    expect(redirectFor("/images", "?digest=sha256:1")).toBe("/library/images?digest=sha256:1");
+    expect(redirectFor("/library/images", "?digest=sha256:1")).toBe("/images?digest=sha256:1");
+    expect(redirectFor("/library/components", "?name=x")).toBe("/images/components?name=x");
+    expect(redirectFor("/components")).toBe("/images/components");
     expect(redirectFor("/policy/")).toBe("/settings/rules");
   });
   it("leaves current addresses alone", () => {
     expect(redirectFor("/projects")).toBeNull();
     expect(redirectFor("/runs/x")).toBeNull();
+    expect(redirectFor("/images")).toBeNull();
   });
   it("only moves to addresses that have a page", () => {
     for (const [, to] of MOVED) expect(locate(to), to).not.toBeNull();

@@ -1,23 +1,34 @@
 import type { ReactNode } from "react";
 import type { Approval, Me, Project, RunSummary, Runner } from "../api";
+import type { LaunchLineView } from "../api/launch";
 import { useMe } from "../auth";
 import { EntityLink, Linked } from "../components/EntityLink";
 import { Link, StatusPill } from "../components/ui";
 import { ago } from "../format";
-import { attention, checklist, nextStep, type Attention, type CheckItem, type AppRow } from "../guided/derive";
+import { checklist, nextStep, type CheckItem, type AppRow } from "../guided/derive";
 import { useInstallation } from "../guided/facts";
+import { headline, needsYou, type Need } from "../guided/needs";
+import { useImageCount, useLaunchLines } from "../guided/useLaunchLines";
+import { Icon } from "../kit/Icon";
+import { LaunchLine, toStations } from "../kit/LaunchLine";
+import { LinkButton, PageHead, Sheet } from "../kit/layout";
+import { Status, StateChip, type State } from "../kit/Status";
 import { useNow } from "../live";
+import { onLink } from "../router";
+import { Explore } from "./HomeExplore";
 
 /** Home answers one question: what should I do next? A new installation sees what to set up, in order;
- * a busy one sees what needs it today. Everything on it comes from the server's own state. */
+ * a busy one sees what needs it today, then the changes on their way. Everything on it comes from the server's own state. */
 export function HomePage() {
   const me = useMe();
   const inst = useInstallation();
   const now = useNow(30000);
+  const lines = useLaunchLines();
+  const images = useImageCount(inst.projects);
   if (!me) return null;
   if (!inst.loaded) return <div className="page"><div className="loading">Loading…</div></div>;
   return <Home me={me} projects={inst.projects} runs={inst.runs} runners={inst.runners} environments={inst.environments}
-    applications={inst.applications} approvals={inst.approvals} now={now} />;
+    applications={inst.applications} approvals={inst.approvals} now={now} lines={lines ?? []} images={images} />;
 }
 
 export interface HomeProps {
@@ -29,35 +40,39 @@ export interface HomeProps {
   applications: AppRow[];
   approvals: Approval[];
   now: number;
+  /** The launch lines of the latest runs; empty until they are known. */
+  lines?: LaunchLineView[];
+  /** Different images found, or null while it is not known. */
+  images?: number | null;
 }
 
-export function Home({ me, projects, runs, runners, environments, applications, approvals, now }: HomeProps) {
+export function Home({ me, projects, runs, runners, environments, applications, approvals, now, lines = [], images = null }: HomeProps) {
   const items = me.admin ? checklist(me, { projects, runners, runs, environments }) : [];
   const next = nextStep(items);
-  const needs = attention({ projects, approvals, runners, applications, me });
+  const needs = needsYou({ projects, approvals, runners, applications, me }, lines, now);
   const finished = items.length > 0 && next.item === null;
   const fresh = items.length > 0 && next.done === 0 && runs.length === 0;
+  const onTheirWay = lines.filter((l) => l.tone !== "ok" && l.tone !== "idle").length;
+  const h = headline(needs.length, onTheirWay);
   return (
-    <div className="page">
-      <header className="page-head">
-        <div>
-          <h1>Home</h1>
-          <p className="sub">{fresh ? "Welcome. Launchway builds, tests and deploys your software. Let us get you started." : "What needs you today, and what to do next."}</p>
-        </div>
-        {me.admin && projects.length > 0 && <Link href="/config/wizard/connect-repository" className="btn btn-primary">Add a project</Link>}
-      </header>
+    <div className="page home">
+      <PageHead eyebrow={me.user ? `Hello, ${me.user}` : undefined} title={fresh ? "Welcome" : h.title}
+        sentence={fresh ? "Launchway builds, tests and deploys your software. Let us get you started." : h.sentence}
+        actions={me.admin && projects.length > 0 ? <LinkButton href="/config/wizard/connect-repository" kind="pri" icon="plus">Add a project</LinkButton> : undefined} />
 
       {next.item && <NextStepCard item={next.item} done={next.done} total={next.total} />}
       {finished && <div className="callout callout-ok guided-allset" role="status"><strong>You are all set up.</strong> Projects, a runner, a first run and an environment are in place.</div>}
 
-      <Attention list={needs} />
+      <NeedsSheet list={needs} />
+
+      <ChangesOnTheirWay lines={lines} runs={runs} now={now} />
 
       {items.length > 0 && next.item && <Checklist items={items} done={next.done} />}
       {!me.admin && projects.length === 0 && (
         <div className="card"><h2 className="h-sm">Nothing to show yet</h2><p className="sub">No project has been added. An administrator adds the first one.</p></div>
       )}
 
-      <LatestRuns runs={runs} now={now} />
+      <Explore projects={projects} applications={applications} environments={environments} approvals={approvals} images={images} />
     </div>
   );
 }
@@ -100,21 +115,41 @@ export function Checklist({ items, done }: { items: CheckItem[]; done: number })
   );
 }
 
-export function Attention({ list }: { list: Attention[] }) {
+/** The things that need a person: one plain sentence and one action each. Quiet when there are none. */
+export function NeedsSheet({ list }: { list: Need[] }) {
   return (
-    <section className="card" aria-labelledby="attn-h">
-      <h2 id="attn-h" className="h-sm">Needs your attention</h2>
-      {list.length === 0 ? <p className="faint">Nothing needs you.</p> : (
-        <ul className="guided-attn">
-          {list.map((a) => (
-            <li key={a.key} className={`guided-attn-${a.tone}`}>
-              <span className="guided-attn-text"><strong><Linked text={a.title} entities={a.entities} /></strong><span className="faint"><Linked text={a.detail} entities={a.detailEntities ?? []} /></span></span>
-              <Link href={a.href} className="btn btn-sm">{a.button}</Link>
-            </li>
-          ))}
-        </ul>
-      )}
+    <section className="sheet" aria-label="Needs your attention">
+      <div className="sh-h"><h2>Needs you</h2><div className="r">{list.length > 0 && <StateChip state="wait">{String(list.length)}</StateChip>}</div></div>
+      {list.length === 0 ? <p className="sh-b faint">Nothing needs you.</p> : list.map((a) => (
+        <div key={a.key} className={`need ${a.tone}`}>
+          <div className={`ico-tile ${a.tone}`}><Icon name={a.icon} /></div>
+          <div className="tx">
+            <div className="ti"><Linked text={a.title} entities={a.entities} /></div>
+            <div className="ds"><Linked text={a.detail} entities={a.detailEntities ?? a.entities} /></div>
+          </div>
+          <div className="acts"><LinkButton href={a.href} sm kind={a.tone === "warn" ? "pri" : undefined}>{a.button}</LinkButton></div>
+        </div>
+      ))}
     </section>
+  );
+}
+
+const TONE: Record<string, State> = { bad: "bad", wait: "wait", run: "run", ok: "ok", idle: "skip" };
+
+/** The changes on their way: each recent run as a launch line from the commit to the places it goes.
+ * Before the lines are known, the latest runs are listed instead. */
+export function ChangesOnTheirWay({ lines, runs, now }: { lines: LaunchLineView[]; runs: RunSummary[]; now: number }): ReactNode {
+  if (lines.length === 0) return <LatestRuns runs={runs} now={now} />;
+  return (
+    <Sheet title="Changes on their way" actions={<span className="faint small">Each dot is a place a change has to pass</span>}>
+      {lines.map((l) => (
+        <a key={l.run} href={`/runs/${l.run}`} onClick={onLink} className={`brow ${l.tone === "bad" ? "bad" : l.tone === "wait" ? "wait" : ""}`}>
+          <div className="ct"><b>{l.message || `Run #${l.number}`}</b><span>{l.project} · run #{l.number}{l.actor ? ` · ${l.actor}` : ""} · {ago(l.created_at, now)}</span></div>
+          <LaunchLine stations={toStations(l.stations)} compact />
+          <div className="now"><Status state={TONE[l.tone] ?? "skip"} /><span>{l.now}</span></div>
+        </a>
+      ))}
+    </Sheet>
   );
 }
 

@@ -68,3 +68,51 @@ describe("Home on a busy installation", () => {
     expect(within(screen.getByRole("region", { name: "Latest runs" })).getAllByRole("listitem")).toHaveLength(2);
   });
 });
+
+describe("Home, v2", () => {
+  const line = (over: Partial<import("../api/launch").LaunchLineView> = {}): import("../api/launch").LaunchLineView => ({
+    run: "run_412", number: 412, project: "shop-api", message: "Round refunds per line item", actor: "Priya", ref: "refs/heads/main", sha: "a41f9c2a", status: "failed",
+    created_at: 1_000, finished_at: 9_000, tone: "bad", now: "Stopped at tests. unit-tests ended with exit code 1",
+    stations: [
+      { key: "commit", label: "Commit", state: "done", detail: "a41f9c2a" }, { key: "checks", label: "Checks", state: "done", detail: "Passed" },
+      { key: "tests", label: "Tests", state: "failed", detail: "unit-tests ended with exit code 1" }, { key: "package", label: "Package", state: "idle", detail: "Not started" },
+    ], ...over,
+  });
+  const base = () => props({
+    projects: [project({ last_run: run({ id: "run_412", number: 412, status: "failed" }) })], runs: [run({ id: "run_412", number: 412, status: "failed" })],
+    runners: [runner()], environments: [environment()], me: me({ auth_mode: "oidc" }),
+  });
+  it("says how many things need you, and says where a failed run stopped", () => {
+    render(<Home {...base()} lines={[line()]} images={2} />);
+    expect(screen.getByRole("heading", { level: 1, name: "1 thing needs you" })).toBeInTheDocument();
+    const need = screen.getByRole("region", { name: "Needs your attention" });
+    expect(within(need).getByText(/stopped at tests/)).toBeInTheDocument();
+    expect(within(need).getByText(/unit-tests ended with exit code 1/)).toBeInTheDocument();
+    expect(within(need).getByRole("link", { name: "See what went wrong" })).toHaveAttribute("href", "/runs/run_412");
+  });
+  it("draws each recent change as a launch line with one sentence", () => {
+    render(<Home {...base()} lines={[line()]} images={2} />);
+    const sheet = screen.getByRole("heading", { name: "Changes on their way" }).closest("section")!;
+    expect(within(sheet).getByRole("img", { name: /Tests: failed/ })).toBeInTheDocument();
+    expect(within(sheet).getByText("Stopped at tests. unit-tests ended with exit code 1")).toBeInTheDocument();
+    expect(within(sheet).getByRole("link", { name: /Round refunds per line item/ })).toHaveAttribute("href", "/runs/run_412");
+  });
+  it("is calm when nothing needs a person: All clear", () => {
+    render(<Home {...props({ projects: [project({ last_run: run({ status: "succeeded" }) })], runs: [run()], runners: [runner()], environments: [environment()], me: me({ auth_mode: "oidc" }) })} />);
+    expect(screen.getByRole("heading", { level: 1, name: "All clear" })).toBeInTheDocument();
+    expect(screen.getByText("Nothing needs you.")).toBeInTheDocument();
+  });
+  it("shows the Explore strip with live counts from what the server holds", () => {
+    render(<Home {...base()} lines={[line()]} images={7} />);
+    const strip = screen.getByRole("region", { name: "Explore" });
+    expect(within(strip).getByRole("link", { name: /Images/ })).toHaveTextContent("7");
+    expect(within(strip).getByRole("link", { name: /Code/ })).toHaveTextContent("1project");
+    expect(within(strip).getByRole("link", { name: /Pipelines/ })).toHaveTextContent("1 stopped");
+    expect(within(strip).getByRole("link", { name: /Waiting/ })).toHaveTextContent("Nothing waits");
+    expect(within(strip).getByRole("link", { name: /Traffic/ })).toHaveTextContent("Coming");
+  });
+  it("counts decisions waiting", () => {
+    render(<Home {...base()} approvals={[approval(), approval({ step_id: "b", run_id: "run_9" })]} />);
+    expect(within(screen.getByRole("region", { name: "Explore" })).getByRole("link", { name: /Waiting/ })).toHaveTextContent("2decisions");
+  });
+});

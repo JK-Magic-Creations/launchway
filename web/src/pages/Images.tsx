@@ -93,7 +93,7 @@ export function ImagesPage() {
     const q = new URLSearchParams();
     q.set(by, t.value);
     if (by === "repository" && t.tag) q.set("tag", t.tag);
-    navigate(`/library/images?${q.toString()}`);
+    navigate(`/images?${q.toString()}`);
   };
 
   const choose = (b: By) => { setBy(b); setProblem(""); if (b !== by) { setValue(""); setTag(""); } };

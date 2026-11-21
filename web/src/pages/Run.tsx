@@ -1,16 +1,19 @@
-import { AllowedFailureBadge } from "../components/AllowedFailures";
+import { RunHeader, storedDensity, saveDensity, type Density } from "../components/RunHeader";
+import { RunLine } from "../components/RunLine";
+import { whyWaiting } from "../components/whyWaiting";
 import { RerunButton, RerunFailedButton } from "../components/Rerun";
 import { RunFlowBanners } from "../components/RunFlow";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, type AttemptInputs, type DeploymentView, type InputVar, type LogLine, type RunDetail, type RunEvent, type RunPipelineText, type StepView } from "../api";
 import { ago, clock, duration, elapsed, refLabel, shortSha, starterLabel } from "../format";
+import { Icon } from "../kit/Icon";
 import { useNow, useStream } from "../live";
 import { canOperate, useMe } from "../auth";
 import { Graph } from "../components/Graph";
 import { LogView } from "../components/LogView";
 import { BranchIcon, CommitIcon, ErrorBox, Link, Mono, StatusPill, shownStatus, stepLabel } from "../components/ui";
 import { deploymentOf, DeploymentPanel, DeploymentSummary, environmentOf, freshness, phaseLabel, shortPhase, verdictLabel } from "../components/Deployment";
-import { LibraryList, TemplateFacts } from "../components/Libraries";
+import { TemplateFacts } from "../components/Libraries";
 import { openInEditor } from "./EditPipeline";
 import { TestsTab } from "./RunTests";
 import { TestCounts, failing } from "../components/Tests";
@@ -25,7 +28,6 @@ import { CopyValue, serious, seriousLabel } from "../components/Security";
 import { ImagesTab, imageSteps } from "./RunImages";
 import { PolicyTab } from "./RunPolicy";
 import { useRunVerifications, VerificationPanel, VerificationsTab, VerificationSummaryRows } from "../components/Verification";
-import { EntityLink } from "../components/EntityLink";
 import { FailurePanel } from "../components/FailurePanel";
 import { explainFailure } from "../guided/derive";
 import { useCrumbLabel } from "../nav/crumbs";
@@ -68,6 +70,8 @@ export function RunPage({ id }: { id: string }) {
   const [testStep, setTestStepState] = useState(() => new URLSearchParams(location.search).get("tests_step") ?? "");
   const setTab = useCallback((t: Tab) => { setTabState(t); setQuery({ tab: t === "graph" ? "" : t }); }, []);
   const setTestStep = useCallback((s: string) => { setTestStepState(s); setQuery({ tests_step: s }); }, []);
+  const [density, setDensity] = useState<Density>(storedDensity);
+  const changeDensity = useCallback((d: Density) => { setDensity(d); saveDensity(d); }, []);
   const [busy, setBusy] = useState(false);
   const [actionErr, setActionErr] = useState<unknown>(null);
   const logSink = useRef<((step: string, attempt: number, lines: LogLine[]) => void) | null>(null);
@@ -220,61 +224,11 @@ export function RunPage({ id }: { id: string }) {
   const shownTab: Tab = (tab === "images" && !images.length) || (tab === "verification" && !verifySteps.length) ? "graph" : tab;
 
   return (
-    <div className="page page-wide">
+    <div className={"page page-wide run-page dens-" + density}>
 
-      <header className="run-head">
-        <div className="run-head-main">
-          <div className="run-title-row">
-            {run.cancel_requested && !done ? <StatusPill status={run.status} label="Canceling" />
-              : run.lane?.state === "waiting" && !done ? <StatusPill status="waiting" label="Waiting for lane" />
-              : waitingStep ? <StatusPill status="waiting" label="Waiting for approval" />
-              : verifyWaiting ? <StatusPill status="waiting" label="Waiting for a person" />
-              : deploying ? <StatusPill status={shownStatus(deploying)} label={stepLabel({ ...deploying, environment: environmentOf(run, deploying) }, deployingPhase(run, deploying))} />
-              : <StatusPill status={run.status} />}
-            <AllowedFailureBadge run={run} onSelect={select} />
-            {run.draft && <span className="badge-draft" title="Pipeline text from the editor, not from Git">Draft</span>}
-            {overridden.length > 0 && <span className="badge-override" title="Started with another version of a library than the pipeline names">Library override</span>}
-            <h1>{run.message || run.pipeline}</h1>
-          </div>
-          <div className="run-meta">
-            <span className="meta"><strong><EntityLink kind="project" name={run.project} /></strong> #{run.number}</span>
-            {refLabel(run) && <span className="meta" title={run.ref}><BranchIcon />{refLabel(run)}</span>}
-            {run.sha && <span className="meta mono" title={run.sha}><CommitIcon />{shortSha(run.sha)}</span>}
-            <span className="meta">{starterLabel(run)}</span>
-            {run.lane && <span className="meta" title="This run's pipeline has a lane: its runs take turns">lane {run.lane.label}</span>}
-            <span className="meta" title={clock(run.created_at)}>{ago(run.created_at, now)}</span>
-            {run.started_at > 0 && <span className="meta">took {elapsed(run.started_at, run.finished_at, now)}</span>}
-            {!done && !run.cancel_requested && (run.deadline_at ?? 0) > 0 && (
-              <span className="meta" title={`The pipeline's timeout cancels the run at ${clock(run.deadline_at!)}. Time spent waiting for an approval does not count.`}>
-                times out in {duration(Math.max(0, run.deadline_at! - now))}</span>
-            )}
-            {run.cancel_requested && run.cancel_reason && <span className="meta">{run.cancel_reason}</span>}
-            <span className={"live live-sm " + (live ? "live-on" : "")}><span className="dot" />{live ? "live" : "…"}</span>
-          </div>
-          {(run.rerun_of || run.reruns.length > 0) && (
-            <div className="run-meta">
-              {run.rerun_of && (
-                <span className="meta rerun-of">
-                  Re-run of <Link href={`/runs/${run.rerun_of}?step=${encodeURIComponent(run.rerun_from ?? "")}`}>#{run.rerun_of_number}</Link> from <strong>{(run.rerun_froms?.length ? run.rerun_froms : [run.rerun_from]).join(", ")}</strong>
-                </span>
-              )}
-              {run.reruns.length > 0 && (
-                <span className="meta">
-                  Re-run as {run.reruns.map((r, i) => (
-                    <span key={r.id}>{i > 0 && ", "}<Link href={`/runs/${r.id}`}>#{r.number}</Link> from {(r.froms?.length ? r.froms : [r.from]).join(", ")}</span>
-                  ))}
-                </span>
-              )}
-            </div>
-          )}
-          {(libraries.length > 0 || run.graph.origin) && (
-            <div className="run-meta">
-              {libraries.length > 0 && <><span className="meta">Libraries</span><LibraryList libraries={libraries} /></>}
-              {run.graph.origin && <span className="meta">pipeline configured on the server</span>}
-            </div>
-          )}
-        </div>
-        <div className="run-actions">
+      <RunHeader run={run} now={now} done={done} live={live} density={density} onDensity={changeDensity} select={select} setTab={setTab}
+        waitingStep={waitingStep} verifyWaiting={verifyWaiting} deploying={deploying} deployingPhase={deploying ? deployingPhase(run, deploying) : undefined}
+        actions={<>
           {mayOperate && !done && !run.cancel_requested && (
             <button type="button" className="btn btn-danger-outline" disabled={busy} onClick={() => act(() => api.cancel(run.id))}>Cancel run</button>
           )}
@@ -286,8 +240,7 @@ export function RunPage({ id }: { id: string }) {
               {firstFailed ? `Resume from ${firstFailed.id}` : "Resume"}
             </button>
           )}
-        </div>
-      </header>
+        </>} />
       <ErrorBox error={actionErr} />
 
       {run.needs_newer_server && (
@@ -405,9 +358,13 @@ export function RunPage({ id }: { id: string }) {
 
       {shownTab === "graph" && (
         <>
-          <section className="card card-flush">
-            <Graph levels={loopView.levels} steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} />
+          <section className="sheet runline-sheet" aria-label="The pipeline of this run">
+            <div className="sh-h"><h2>The pipeline</h2><div className="r"><span className="faint small">Choose a step to see it below</span></div></div>
+            <div className="sh-b"><RunLine run={run} selected={selected} onSelect={select} now={now} /></div>
           </section>
+          {density === "everything" && <section className="card card-flush only-everything" aria-label="Dependency graph">
+            <Graph levels={loopView.levels} steps={loopView.steps} groups={run.graph.groups} selected={loopView.nodeOf(selected)} onSelect={select} now={now} phases={phases} />
+          </section>}
           {loop && <LoopPanel run={run} loop={loop} selected={selected} onSelect={select} />}
           {step && (step.kind === "approval"
             ? <ApprovalPanel run={run} step={step} now={now} mayDecide={mayOperate} rerun={mayRerun} />
@@ -482,6 +439,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
     return () => { sink.current = null; };
   }, [step.id, attempt, sink]);
 
+  const why = whyWaiting(run, step, now);
   const isLive = following && (step.status === "running" || step.status === "leased");
   const deploys = step.kind === "deploy" || step.kind === "rollback" || step.kind === "rollout";
   const build = step.kind === "image" ? run.graph.steps.find((g) => g.id === step.id)?.image_build : undefined;
@@ -496,11 +454,9 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
   const secrets = Object.entries(step.secrets ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const empty = !loaded ? "Loading…"
     : reused ? `Not run in this run: reused from #${step.reused_from_number}, where its log is.`
-    : step.status === "pending" ? "Waiting for the steps it needs."
-    : step.status === "queued" ? "Waiting for a runner."
+    : step.status === "pending" || step.status === "queued" || step.status === "leased" ? why?.text ?? "Waiting."
     : step.status === "skipped" ? step.error || "Skipped."
-    : deploys && step.status === "waiting" && step.wait_kind === "lock" ? `Waiting for ${env}'s lock: nothing is deployed yet.`
-    : deploys && step.status === "waiting" ? "The deploy runner's part is done; the step waits for what deploy runners observe (above)."
+    : deploys && step.status === "waiting" ? why?.text ?? "Waiting."
     : step.kind === "ai" && step.status === "succeeded" ? "No output: the answer is above."
     : step.status === "canceled" && step.attempt === 0 ? "Canceled before it started."
     : "No output.";
@@ -531,9 +487,9 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
               <span className="meta" title="Why the last attempt failed">cause: {step.failure_cause}</span>
             )}
             {step.exit_code !== null && step.exit_code !== undefined && <span className="meta">exit code {step.exit_code}</span>}
-            {step.runner && <span className="meta">on {step.runner}</span>}
-            {step.container && !step.container.startsWith("image-") && <span className="meta">in <strong>{step.container}</strong></span>}
-            {step.image && <span className="meta mono">{step.image}</span>}
+            {step.runner && <span className="meta only-everything">on {step.runner}</span>}
+            {step.container && !step.container.startsWith("image-") && <span className="meta only-everything">in <strong>{step.container}</strong></span>}
+            {step.image && <span className="meta mono only-everything">{step.image}</span>}
           </div>
         </div>
         <div className="steppanel-actions">
@@ -548,6 +504,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
           {rerun && step.status !== "failed" && <RerunButton run={run} step={step} />}
         </div>
       </div>
+      {why && <div className={"note why " + (why.kind === "person" ? "warn" : "")} role="status"><Icon name={why.kind === "person" ? "pause" : "clock"} size="s" /><span><b>Why it waits.</b> {why.text}</span></div>}
       {reused && <ReusedNote run={run} step={step} />}
       {deploys && <DeploymentPanel run={run} step={step} />}
       {step.kind === "verify" && <VerificationPanel run={run} step={step} list={verifications.list} reload={verifications.reload} />}
@@ -581,7 +538,7 @@ function StepPanel({ run, step, now, sink, rerun, showTests, showImages, showPol
       {step.status === "failed" && following && !reused && <ExplainFailure run={run} step={step} />}
       {step.kind === "image" && <ImageResult run={run} step={step} showImages={showImages} />}
       {!(deploys && step.attempt === 0) && step.kind !== "verify" && <LogView lines={lines} live={isLive} empty={empty} />}
-      <div className="stepinfo">
+      <div className="stepinfo only-everything">
         {step.run && (
           <details>
             <summary>Script</summary>

@@ -1,5 +1,5 @@
 {
-  "comment": "Bundle size budget in bytes (raw). Lower it when the bundle shrinks: npm run size:update. Raising it needs a reason in the pull request. Raised 2026-11-20 when the configuration area and wizards (feat/config-db) and the guided interface joined: every page is a lazy chunk, the first page loads index (about 83 kB gzipped).",
-  "js_bytes": 860000,
-  "css_bytes": 120000
+  "comment": "Bundle size budget in bytes (raw). Lower it when the bundle shrinks: npm run size:update. Raising it needs a reason in the pull request. Raised 2026-11-20 when the configuration area and wizards (feat/config-db) and the guided interface joined: every page is a lazy chunk, the first page loads index (about 83 kB gzipped). Raised 2026-11-20 for the v2 interface (feat/ui-v2): the shell, the icon set (64 inline drawings, about 8 kB), the component kit, the Home read model, the launch line, the run page's living line and wait reasons, and about 28 kB of CSS for the new tokens and kit. Fonts are woff2 files, not counted here (about 130 kB, served from the binary).",
+  "js_bytes": 940000,
+  "css_bytes": 150000
 }

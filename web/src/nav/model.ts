@@ -4,8 +4,10 @@
 
 import type { Me } from "../api";
 import { match } from "../router";
+import type { IconName } from "../kit/Icon";
+import { comingTitle } from "../shell/comingData";
 
-export type SectionId = "home" | "projects" | "deployments" | "activity" | "library" | "settings";
+export type SectionId = "home" | "projects" | "pipelines" | "images" | "deployments" | "traffic" | "changes" | "activity" | "library" | "settings";
 
 /** What the navigation needs to know about the installation to decide what to
  * show. A number is null until it is known; unknown counts as nothing to show. */
@@ -23,65 +25,102 @@ export const NO_FACTS: Facts = { projects: null, runs: null, runners: null, envi
 
 export interface Ctx { me: Me; facts: Facts }
 
-export interface Tab { id: string; label: string; href: string; show?: (c: Ctx) => boolean }
+export interface Tab {
+  id: string; label: string; href: string; show?: (c: Ctx) => boolean;
+  icon?: IconName;
+  /** The page does not exist yet: it is an honest "coming" page that says what it will do. */
+  soon?: boolean;
+}
 
 export interface Section {
   id: SectionId;
   label: string;
   href: string;
-  /** One sentence: what the section is for. Shown on the section's own page and in the menu's tooltip. */
+  /** The icon in the launcher and on the phone's bottom bar. */
+  icon: IconName;
+  /** The group on the top route: groups are separated by a thin divider. */
+  group: 0 | 1 | 2 | 3;
+  /** One sentence: what the area is for. Shown on hover, in the launcher and in the Guide. */
   promise: string;
+  /** The pages inside the area, shown as the left column. An area with none has no left column. */
   tabs: Tab[];
+  /** The word under the area's name in the left column. */
+  side?: string;
   show?: (c: Ctx) => boolean;
 }
 
 const has = (n: number | null) => (n ?? 0) > 0;
 
+/** The ten areas, in the order of a change's journey, then the places visited less often (docs 42, section 17). */
 export const SECTIONS: Section[] = [
-  { id: "home", label: "Home", href: "/", promise: "What should I do next?", tabs: [] },
+  { id: "home", label: "Home", href: "/", icon: "home", group: 0, promise: "What needs you now, the changes on their way, and a map of everything Launchway holds.", tabs: [] },
+  { id: "projects", label: "Code", href: "/projects", icon: "code", group: 1, promise: "Repositories and projects: files, commits, branches and reviews.", tabs: [] },
+  { id: "pipelines", label: "Pipelines", href: "/pipelines", icon: "graph", group: 1, promise: "The steps that build, test and release your software, and how their runs went.", tabs: [] },
+  { id: "images", label: "Images", href: "/images", icon: "package", group: 1, promise: "Container images, Helm charts and files your pipelines build, with what is in them.", tabs: [] },
   {
-    id: "projects", label: "Projects", href: "/projects", promise: "Your applications.",
-    tabs: [],
-  },
-  {
-    id: "deployments", label: "Deployments", href: "/deployments", promise: "What is running, where, and is it healthy?",
+    id: "deployments", label: "Deployments", href: "/deployments", icon: "deploy", group: 2, side: "What is running, and where.",
+    promise: "What is running where: applications, environments, hosts and machine images.",
     tabs: [
-      { id: "overview", label: "Overview", href: "/deployments" },
-      { id: "environments", label: "Environments", href: "/deployments/environments" },
+      { id: "overview", label: "Overview", href: "/deployments", icon: "deploy" },
+      { id: "environments", label: "Environments", href: "/deployments/environments", icon: "list" },
       // Appears when a deploy runner has seen an Argo CD application.
-      { id: "applications", label: "Applications", href: "/deployments/applications", show: ({ facts }) => has(facts.applications) },
+      { id: "applications", label: "Applications", href: "/deployments/applications", icon: "graph", show: ({ facts }) => has(facts.applications) },
+      { id: "hosts", label: "Hosts", href: "/deployments/hosts", icon: "server", soon: true },
+      { id: "machine-images", label: "Machine images", href: "/deployments/machine-images", icon: "package", soon: true },
     ],
   },
   {
-    id: "activity", label: "Activity", href: "/activity", promise: "What happened, and what is waiting for me?",
+    id: "traffic", label: "Traffic", href: "/traffic", icon: "flow", group: 2, side: "How requests flow, and how they are protected.",
+    promise: "How requests flow between services, and what protects and watches them.",
     tabs: [
-      { id: "runs", label: "Runs", href: "/activity" },
-      { id: "approvals", label: "Approvals", href: "/activity/approvals" },
+      { id: "map", label: "Traffic map", href: "/traffic", icon: "flow", soon: true },
+      { id: "protection", label: "Protection", href: "/traffic/protection", icon: "shield", soon: true },
+      { id: "reliability", label: "Reliability", href: "/traffic/reliability", icon: "clock", soon: true },
+      { id: "toggles", label: "Toggles", href: "/traffic/toggles", icon: "bolt", soon: true },
     ],
   },
   {
-    id: "library", label: "Library", href: "/library", promise: "The building blocks, to look things up.",
-    // Quiet until there is something in it: a library the server reads, or a run that could have built something.
-    show: ({ facts }) => has(facts.libraries) || has(facts.runs),
+    id: "changes", label: "Changes", href: "/changes", icon: "calendar", group: 2, side: "Planned, approved and done.",
+    promise: "Change management: what is changing, when, why, who approved it and how it went.",
     tabs: [
-      { id: "templates", label: "Templates", href: "/library/templates", show: ({ facts }) => has(facts.libraries) },
-      { id: "images", label: "Images", href: "/library/images" },
-      { id: "components", label: "Components", href: "/library/components" },
+      { id: "calendar", label: "Calendar", href: "/changes", icon: "calendar", soon: true },
+      { id: "records", label: "Change records", href: "/changes/records", icon: "list", soon: true },
+      { id: "freezes", label: "Freeze windows", href: "/changes/freezes", icon: "freeze", soon: true },
+      { id: "rules", label: "Approval rules", href: "/changes/rules", icon: "gate", soon: true },
+      { id: "tickets", label: "Ticket system", href: "/changes/tickets", icon: "ticket", soon: true },
     ],
   },
   {
-    id: "settings", label: "Settings", href: "/settings", promise: "Set up once.",
+    id: "activity", label: "Activity", href: "/activity", icon: "activity", group: 3, side: "Runs and decisions.",
+    promise: "Every run, and everything waiting for a person to decide.",
     tabs: [
-      { id: "overview", label: "Overview", href: "/settings" },
-      { id: "runners", label: "Runners", href: "/settings/runners", show: ({ me }) => me.runners },
-      { id: "access", label: "People and access", href: "/settings/access" },
-      { id: "rules", label: "Rules", href: "/settings/rules", show: ({ me }) => me.runners },
-      { id: "audit", label: "Audit trail", href: "/settings/audit", show: ({ me }) => me.admin },
-      { id: "config", label: "Configuration", href: "/config", show: ({ me }) => me.admin },
+      { id: "runs", label: "Runs", href: "/activity", icon: "activity" },
+      { id: "approvals", label: "Waiting for a decision", href: "/activity/approvals", icon: "gate" },
+    ],
+  },
+  {
+    id: "library", label: "Library", href: "/library", icon: "library", group: 3, side: "Templates for pipelines.",
+    promise: "Ready-made templates and steps for pipelines.",
+    tabs: [
+      { id: "templates", label: "Templates", href: "/library/templates", icon: "graph", show: ({ facts }) => has(facts.libraries) },
+    ],
+  },
+  {
+    id: "settings", label: "Settings", href: "/settings", icon: "settings", group: 3, side: "Set up once, then rarely.",
+    promise: "People, runners, rules, signal sources, configuration and the audit trail.",
+    tabs: [
+      { id: "overview", label: "Overview", href: "/settings", icon: "settings" },
+      { id: "runners", label: "Runners", href: "/settings/runners", icon: "server", show: ({ me }) => me.runners },
+      { id: "access", label: "People and access", href: "/settings/access", icon: "users" },
+      { id: "rules", label: "Rules", href: "/settings/rules", icon: "shield", show: ({ me }) => me.runners },
+      { id: "audit", label: "Audit trail", href: "/settings/audit", icon: "clock", show: ({ me }) => me.admin },
+      { id: "config", label: "Configuration", href: "/config", icon: "globe", show: ({ me }) => me.admin },
     ],
   },
 ];
 
+/** The areas shown. All ten are always there: the owner asked for Traffic and Changes by name, and an
+ * area whose features are not built yet says so on its own page instead of vanishing (docs 42, section 17). */
 export function visibleSections(c: Ctx): Section[] {
   return SECTIONS.filter((s) => !s.show || s.show(c));
 }
@@ -116,7 +155,9 @@ function page(pattern: string, section: SectionId, tab: string | undefined, titl
 export const PAGES: PageInfo[] = [
   page("/", "home", undefined, () => "Home", () => []),
 
-  page("/projects", "projects", undefined, () => "Projects", () => []),
+  page("/projects", "projects", undefined, () => "Code", () => []),
+  page("/code/:page", "projects", undefined, (p) => comingTitle("/code/" + p.page), (p) => [{ label: comingTitle("/code/" + p.page) }]),
+  page("/pipelines", "pipelines", undefined, () => "Pipelines", () => []),
   page("/projects/:name", "projects", undefined, (p) => p.name, (p) => [{ label: p.name }]),
   page("/projects/:name/pipeline", "projects", undefined, (p) => `Pipeline of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}` }, { label: "Pipeline" }]),
   page("/projects/:name/pipeline/edit", "projects", undefined, (p) => `Edit the pipeline of ${p.name}`,
@@ -130,6 +171,8 @@ export const PAGES: PageInfo[] = [
   page("/deployments/environments", "deployments", "environments", () => "Environments", () => [{ label: "Environments" }]),
   page("/deployments/environments/:name", "deployments", "environments", (p) => `Environment ${p.name}`,
     (p) => [{ label: "Environments", href: "/deployments/environments" }, { label: p.name }]),
+  page("/deployments/hosts", "deployments", "hosts", () => "Hosts", () => [{ label: "Hosts" }]),
+  page("/deployments/machine-images", "deployments", "machine-images", () => "Machine images", () => [{ label: "Machine images" }]),
   page("/deployments/applications", "deployments", "applications", () => "Applications", () => [{ label: "Applications" }]),
   page("/deployments/applications/:name", "deployments", "applications", (p) => `Application ${p.name}`,
     (p) => [{ label: "Applications", href: "/deployments/applications" }, { label: p.name }]),
@@ -138,12 +181,21 @@ export const PAGES: PageInfo[] = [
   page("/activity/approvals", "activity", "approvals", () => "Approvals", () => [{ label: "Approvals" }]),
   page("/runs/:id", "activity", "runs", (p) => `Run ${p.id}`, (p) => [{ label: "Runs", href: "/activity" }, { label: `Run ${p.id.slice(0, 8)}` }]),
 
+  page("/images", "images", undefined, () => "Images", () => []),
+  page("/images/components", "images", undefined, () => "Components", () => [{ label: "Components" }]),
+  page("/images/:page", "images", undefined, (p) => comingTitle("/images/" + p.page), (p) => [{ label: comingTitle("/images/" + p.page) }]),
+
+  page("/traffic", "traffic", "map", () => "Traffic map", () => []),
+  page("/traffic/:page", "traffic", undefined, (p) => comingTitle("/traffic/" + p.page), (p) => [{ label: comingTitle("/traffic/" + p.page) }]),
+  page("/changes", "changes", "calendar", () => "Calendar", () => []),
+  page("/changes/:page", "changes", undefined, (p) => comingTitle("/changes/" + p.page), (p) => [{ label: comingTitle("/changes/" + p.page) }]),
+
   page("/library", "library", undefined, () => "Library", () => []),
   page("/library/templates", "library", "templates", () => "Templates", () => [{ label: "Templates" }]),
   page("/library/templates/:library/:name", "library", "templates", (p) => `Template ${p.name}`,
     (p) => [{ label: "Templates", href: "/library/templates" }, { label: p.library }, { label: p.name }]),
-  page("/library/images", "library", "images", () => "Images", () => [{ label: "Images" }]),
-  page("/library/components", "library", "components", () => "Components", () => [{ label: "Components" }]),
+
+  page("/kit", "settings", undefined, () => "Design kit", () => [{ label: "Design kit" }]),
 
   page("/settings", "settings", "overview", () => "Settings", () => []),
   page("/settings/runners", "settings", "runners", () => "Runners", () => [{ label: "Runners" }]),
@@ -210,8 +262,10 @@ export const MOVED: [from: string, to: string][] = [
   ["/agents", "/settings/access/agents"],
   ["/audit", "/settings/audit"],
   ["/policy", "/settings/rules"],
-  ["/components", "/library/components"],
-  ["/images", "/library/images"],
+  // The registry became its own area, Images (docs 42, section 17).
+  ["/components", "/images/components"],
+  ["/library/images", "/images"],
+  ["/library/components", "/images/components"],
 ];
 
 /** The new address for an old one, or null if the address is not an old one. */
