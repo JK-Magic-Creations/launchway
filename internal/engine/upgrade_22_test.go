@@ -76,7 +76,7 @@ func TestUpgradeFromSchema22AndBack(t *testing.T) {
 	}
 	t.Cleanup(func() { older.Close() })
 	got, err := older.Schema(context.Background())
-	if err != nil || got.Database != schemaCache || got.Code != schemaResources || !got.Compatible() {
+	if err != nil || got.Database != schemaParity2 || got.Code != schemaResources || !got.Compatible() {
 		t.Fatalf("the schema-22 build's view: %+v %v", got, err)
 	}
 	if c := strings.Count(log.String(), "running against a database written by a newer version"); c != 1 {

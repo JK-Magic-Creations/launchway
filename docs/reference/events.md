@@ -80,6 +80,7 @@ oldest schema whose servers understand it.
 | Type | Schema | Written when | Main fields in `data` |
 |---|---|---|---|
 | `step.waiting` | 4 | an approval step starts waiting for a person | `step`, `attempt`, `deadline` (when it is rejected if nobody decides, Unix milliseconds) |
+| `step.approval_recorded` | 27 | one of several people approves an approval that asks for more than one approval (`approvers.count`, or an environment's `min_approvals`); the step goes on waiting until enough have | `step`, `attempt`, `actor`, `comment` |
 | `step.approved` | 4 | a person approves it; the step succeeds | `step`, `attempt`, `actor`, `comment` |
 | `step.rejected` | 4 | a person rejects it, nobody decides in time, or the deployment it names failed | `step`, `attempt`, `actor` (`launchway` when the server rejected it), `comment`, `reason` (such as `nobody decided within 24h`) |
 
