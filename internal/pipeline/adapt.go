@@ -94,9 +94,7 @@ func (ps *parser) parseAdapt(s *Step, key string, n *yaml.Node, at string) {
 			}
 		}
 	case "replace":
-		for _, st := range ps.parseAdded(n, at) {
-			a.Replace = append(a.Replace, st)
-		}
+		a.Replace = append(a.Replace, ps.parseAdded(n, at)...)
 	}
 }
 

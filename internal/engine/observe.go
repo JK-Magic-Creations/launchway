@@ -310,6 +310,18 @@ func watchVersion(items []WatchItem) string {
 
 // watchKey names one watch of a step: its deployment, attempt and the
 // commit it waits for.
+// splitWatchKey is watchKey undone. A step of a template has a "/" in its id
+// (ci/deliver[environment=dev]/deploy), so the step is everything between
+// the run and the last two parts.
+func splitWatchKey(key string) []string {
+	parts := strings.Split(key, "/")
+	if len(parts) <= 5 {
+		return parts
+	}
+	n := len(parts)
+	return []string{parts[0], parts[1], strings.Join(parts[2:n-2], "/"), parts[n-2], parts[n-1]}
+}
+
 func watchKey(dep, runID, step string, attempt int, commit string) string {
 	return dep + "/" + runID + "/" + step + "/" + strconv.Itoa(attempt) + "/" + commit
 }
@@ -431,7 +443,7 @@ func (e *Engine) Observe(r RunnerInfo, targets []string, obs []Observation) ([]O
 
 func (e *Engine) observe(r RunnerInfo, held []string, o Observation) (ObserveResult, error) {
 	res := ObserveResult{Key: o.Key}
-	parts := strings.Split(o.Key, "/")
+	parts := splitWatchKey(o.Key)
 	if len(parts) != 5 {
 		res.Reason = "not a watch key"
 		return res, nil

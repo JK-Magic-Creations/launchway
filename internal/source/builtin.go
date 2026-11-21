@@ -183,12 +183,12 @@ func writeStarters(dir string) error {
 		}
 		dst := filepath.Join(dir, p)
 		if d.IsDir() {
-			return os.MkdirAll(dst, 0o755)
+			return os.MkdirAll(dst, 0o750)
 		}
 		b, err := starters.File(p)
 		if err != nil {
 			return err
 		}
-		return os.WriteFile(dst, b, 0o644)
+		return os.WriteFile(dst, b, 0o600)
 	})
 }

@@ -459,25 +459,11 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		if !stepIDRe.MatchString(k.Value) {
 			ps.add(k, at, "%q is not a valid step name: use lower-case letters, digits, hyphens and underscores", k.Value)
 		}
-		if kind := mappingValue(v, "kind"); kind == KindDeploy || kind == KindRollback || kind == KindRolloutStep {
-			p.Steps = append(p.Steps, ps.parseDeployStep(k, v, at, kind))
-			continue
-		}
-		if mappingValue(v, "kind") == KindImage {
-			p.Steps = append(p.Steps, ps.parseImageStep(k, v, at))
-			continue
-		}
-		if mappingValue(v, "kind") == KindVerify {
-			p.Steps = append(p.Steps, ps.parseVerifyStep(k, v, at))
-			continue
-		}
-		if mappingValue(v, "kind") == KindAI {
-			p.Steps = append(p.Steps, ps.parseAIStep(k, v, at))
+		if special, ok := ps.parseSpecialStep(k, v, at); ok {
+			p.Steps = append(p.Steps, special)
 			continue
 		}
 		s := &Step{ID: k.Value, Line: k.Line}
-		var secretsNode, kindNode, timeoutNode *yaml.Node
-		var timeout time.Duration
 		keys := map[string]*yaml.Node{} // the keys written, for checks that depend on the kind
 		vals := map[string]*yaml.Node{} // and their values
 		ps.cur = s
@@ -485,78 +471,11 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 		if ps.tmpl != nil {
 			known = append(append([]string{}, stepKeys...), "if")
 		}
+		var sc stepScan
 		ps.eachKey(v, at, known, func(k2, v2 *yaml.Node) {
 			keys[k2.Value] = k2
 			vals[k2.Value] = v2
-			where := at + "." + k2.Value
-			switch k2.Value {
-			case "for_each":
-				s.ForEach = ps.parseForEach(v2, where)
-			case "kind":
-				kindNode = v2
-				s.Kind = ps.str(v2, where)
-			case "container":
-				s.Container = ps.str(v2, where)
-			case "image":
-				ps.curField = "image"
-				s.Image = ps.scalar(v2, where)
-				ps.curField = ""
-			case "run":
-				s.Run = ps.str(v2, where)
-			case "needs":
-				s.Needs = ps.strList(v2, where)
-				s.NeedsLine = v2.Line
-			case "when":
-				s.When = ps.parseWhen(v2, where)
-			case "env":
-				s.Env = ps.parseEnv(v2, where)
-			case "secrets":
-				secretsNode = v2
-				s.Secrets = ps.parseSecrets(v2, where)
-			case "retry":
-				ps.parseRetry(s, v2, where)
-			case "timeout":
-				d, err := time.ParseDuration(ps.scalar(v2, where))
-				if err != nil {
-					ps.add(v2, where, "write a duration such as 30s, 10m or 1h")
-				} else {
-					timeoutNode, timeout = v2, d
-					s.timeoutSet = true
-				}
-			case "on_failure", "runner":
-				ps.parseRunStepFlow(s, k2.Value, v2, where)
-			case "reports":
-				s.Reports = ps.parseReports(v2, where)
-			case "resources":
-				s.Resources = ps.parseResources(v2, where)
-				s.resourcesLine = v2.Line
-			case "artifacts", "cache":
-				ps.parseKept(s, k2.Value, v2, where) // files for the run's later steps, or caches for later runs
-			case "fetch":
-				s.Fetch = ps.parseFetch(v2, where)
-			case "uses":
-				s.Uses = ps.str(v2, where)
-				s.usesLine = v2.Line
-			case "with":
-				s.With, s.withLines = ps.parseWith(v2, where)
-			case "skip", "extend", "replace":
-				ps.parseAdapt(s, k2.Value, v2, where)
-			case "if":
-				s.ifTest = ps.parseIf(v2, where)
-			case "message":
-				s.Message = strings.TrimSpace(ps.scalar(v2, where))
-			case "deployment":
-				s.Deployment = ps.str(v2, where)
-				s.deploymentLine = v2.Line
-			case "description":
-				s.Description = strings.TrimSpace(ps.str(v2, where))
-				switch {
-				case strings.ContainsAny(s.Description, "\r\n"):
-					ps.add(v2, where, "a description is one line; put longer notes in a comment")
-				case utf8.RuneCountInString(s.Description) > MaxDescriptionLen:
-					ps.add(v2, where, "the description is longer than %d characters", MaxDescriptionLen)
-				}
-			}
+			ps.parseStepKey(s, &sc, k2, v2, at+"."+k2.Value)
 		})
 		ps.parseLoopSettings(s, at, keys, vals)
 		ps.cur = nil
@@ -566,29 +485,122 @@ func (ps *parser) parseSteps(n *yaml.Node, p *Pipeline) {
 			ps.parseUseStep(at, s, keys)
 		case s.Kind == "" || s.Kind == KindStep:
 			s.Kind = "" // the default is not written into the graph
-			ps.parseRunStep(k, at, s, p, keys, secretsNode)
+			ps.parseRunStep(k, at, s, p, keys, sc.secretsNode)
 		case s.Kind == KindApproval:
 			ps.parseApproval(k, at, s, keys, vals)
 		case s.Kind == "analysis":
-			ps.add(kindNode, at+".kind", "write kind: verify: Launchway judges the metrics and logs itself (see verify steps)")
+			ps.add(sc.kindNode, at+".kind", "write kind: verify: Launchway judges the metrics and logs itself (see verify steps)")
 		case kindsNotYet[s.Kind]:
-			ps.add(kindNode, at+".kind", "kind %q is not supported yet (release, promote, analysis and input steps arrive in a later milestone)", s.Kind)
+			ps.add(sc.kindNode, at+".kind", "kind %q is not supported yet (release, promote, analysis and input steps arrive in a later milestone)", s.Kind)
 		default:
-			ps.add(kindNode, at+".kind", "unknown kind %q; use step, approval, image, deploy, rollout, rollback, verify or ai", s.Kind)
+			ps.add(sc.kindNode, at+".kind", "unknown kind %q; use step, approval, image, deploy, rollout, rollback, verify or ai", s.Kind)
 		}
 		def, most := DefaultTimeout, MaxTimeout
 		if s.IsApproval() {
 			def, most = DefaultApprovalTimeout, MaxApprovalTimeout
 		}
 		s.Timeout = Duration(def)
-		if timeoutNode != nil {
-			if timeout < time.Second || timeout > most {
-				ps.add(timeoutNode, at+".timeout", "timeout must be between 1s and %s", Duration(most).Short())
+		if sc.timeoutNode != nil {
+			if sc.timeout < time.Second || sc.timeout > most {
+				ps.add(sc.timeoutNode, at+".timeout", "timeout must be between 1s and %s", Duration(most).Short())
 			} else {
-				s.Timeout = Duration(timeout)
+				s.Timeout = Duration(sc.timeout)
 			}
 		}
 		p.Steps = append(p.Steps, s)
+	}
+}
+
+// stepScan holds the nodes of one step that are checked after all its keys are read.
+type stepScan struct {
+	secretsNode, kindNode, timeoutNode *yaml.Node
+	timeout                            time.Duration
+}
+
+// parseSpecialStep parses the kinds of step that have their own parser.
+func (ps *parser) parseSpecialStep(k, v *yaml.Node, at string) (*Step, bool) {
+	switch mappingValue(v, "kind") {
+	case KindDeploy, KindRollback, KindRolloutStep:
+		return ps.parseDeployStep(k, v, at, mappingValue(v, "kind")), true
+	case KindImage:
+		return ps.parseImageStep(k, v, at), true
+	case KindVerify:
+		return ps.parseVerifyStep(k, v, at), true
+	case KindAI:
+		return ps.parseAIStep(k, v, at), true
+	}
+	return nil, false
+}
+
+// parseStepKey reads one key of a step.
+func (ps *parser) parseStepKey(s *Step, sc *stepScan, k2, v2 *yaml.Node, where string) {
+	switch k2.Value {
+	case "for_each":
+		s.ForEach = ps.parseForEach(v2, where)
+	case "kind":
+		sc.kindNode = v2
+		s.Kind = ps.str(v2, where)
+	case "container":
+		s.Container = ps.str(v2, where)
+	case "image":
+		ps.curField = "image"
+		s.Image = ps.scalar(v2, where)
+		ps.curField = ""
+	case "run":
+		s.Run = ps.str(v2, where)
+	case "needs":
+		s.Needs = ps.strList(v2, where)
+		s.NeedsLine = v2.Line
+	case "when":
+		s.When = ps.parseWhen(v2, where)
+	case "env":
+		s.Env = ps.parseEnv(v2, where)
+	case "secrets":
+		sc.secretsNode = v2
+		s.Secrets = ps.parseSecrets(v2, where)
+	case "retry":
+		ps.parseRetry(s, v2, where)
+	case "timeout":
+		d, err := time.ParseDuration(ps.scalar(v2, where))
+		if err != nil {
+			ps.add(v2, where, "write a duration such as 30s, 10m or 1h")
+		} else {
+			sc.timeoutNode, sc.timeout = v2, d
+			s.timeoutSet = true
+		}
+	case "on_failure", "runner":
+		ps.parseRunStepFlow(s, k2.Value, v2, where)
+	case "reports":
+		s.Reports = ps.parseReports(v2, where)
+	case "resources":
+		s.Resources = ps.parseResources(v2, where)
+		s.resourcesLine = v2.Line
+	case "artifacts", "cache":
+		ps.parseKept(s, k2.Value, v2, where) // files for the run's later steps, or caches for later runs
+	case "fetch":
+		s.Fetch = ps.parseFetch(v2, where)
+	case "uses":
+		s.Uses = ps.str(v2, where)
+		s.usesLine = v2.Line
+	case "with":
+		s.With, s.withLines = ps.parseWith(v2, where)
+	case "skip", "extend", "replace":
+		ps.parseAdapt(s, k2.Value, v2, where)
+	case "if":
+		s.ifTest = ps.parseIf(v2, where)
+	case "message":
+		s.Message = strings.TrimSpace(ps.scalar(v2, where))
+	case "deployment":
+		s.Deployment = ps.str(v2, where)
+		s.deploymentLine = v2.Line
+	case "description":
+		s.Description = strings.TrimSpace(ps.str(v2, where))
+		switch {
+		case strings.ContainsAny(s.Description, "\r\n"):
+			ps.add(v2, where, "a description is one line; put longer notes in a comment")
+		case utf8.RuneCountInString(s.Description) > MaxDescriptionLen:
+			ps.add(v2, where, "the description is longer than %d characters", MaxDescriptionLen)
+		}
 	}
 }
 
