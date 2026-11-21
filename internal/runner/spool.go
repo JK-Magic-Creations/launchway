@@ -496,6 +496,9 @@ func (r *Runner) deliverSpool(ctx context.Context, s *stepSpool) bool {
 	// heartbeats did; an answer of "gone" shows up in the calls below.
 	_, _ = r.Client.Heartbeat(ctx, s.st.Lease)
 	if err := s.Drain(ctx); err != nil {
+		if ctx.Err() != nil {
+			return false // the runner is stopping: what is kept stays for the next start
+		}
 		if errors.Is(err, ErrLeaseLost) {
 			log.Warn("the server no longer has this step's lease; dropping what was spooled")
 			s.remove()
