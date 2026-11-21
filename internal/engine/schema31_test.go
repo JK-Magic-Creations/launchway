@@ -30,7 +30,7 @@ func TestSchema31UpgradesFrom29AndOlderBuildsLeaveItBe(t *testing.T) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaSSH)
+	checkMarkers(t, cur, schemaPulls)
 	if _, err := cur.db.Exec(`INSERT INTO ssh_keys(id, kind, owner, name, key_type, public, fingerprint) VALUES('k1','user','ada','laptop','ssh-ed25519','AAAA','SHA256:x')`); err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestSchema31UpgradesFrom29AndOlderBuildsLeaveItBe(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer older.Close()
-	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaSSH || info.Code != schemaVariables || !info.Compatible() {
+	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaPulls || info.Code != schemaVariables || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	var n int
@@ -76,7 +76,7 @@ func TestSchema31UpgradesFrom30KeepingMirrors(t *testing.T) {
 	if !strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, schemaSSH)) || strings.Contains(log.String(), fmt.Sprintf(`applied a database migration" schema=%d `, schemaMirror)) {
 		t.Errorf("only migration %d should apply:\n%s", schemaSSH, log.String())
 	}
-	checkMarkers(t, cur, schemaSSH)
+	checkMarkers(t, cur, schemaPulls)
 	var n int
 	if err := cur.db.QueryRow(`SELECT count(*) FROM repo_mirrors`).Scan(&n); err != nil || n != 1 {
 		t.Fatalf("the mirror did not survive: %d %v", n, err)
