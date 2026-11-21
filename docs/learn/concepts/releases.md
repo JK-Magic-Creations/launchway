@@ -29,5 +29,5 @@ The [release report](app:/deployments/releases/report) works out how often you l
 reach each Airfield, how many launches fail or are returned to base, and how long it takes to restore service,
 from the deployments Launchway already records.
 
-Read more: [Making a release](../guide/releases.md), [Promoting a release](../guide/promoting-releases.md),
-[Release checklists, windows and freezes](../guide/release-checklists.md), [Measuring delivery](../guide/measuring-delivery.md).
+Read more: [Making a release](../../guide/releases.md), [Promoting a release](../../guide/promoting-releases.md),
+[Release checklists, windows and freezes](../../guide/release-checklists.md), [Measuring delivery](../../guide/measuring-delivery.md).
