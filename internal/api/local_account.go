@@ -96,7 +96,6 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.audit(r, a.Username, "auth.local.password_changed", "ok", "other sessions were ended")
 	writeJSON(w, http.StatusOK, map[string]any{"changed": true, "next": "Your other signed-in browsers were signed out."})
 }
 
@@ -166,7 +165,6 @@ func (s *Server) secondFactorConfirm(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.audit(r, a.Username, "auth.local.second_factor_added", "ok", "")
 	writeJSON(w, http.StatusOK, map[string]any{"second_factor": true, "recovery_codes": codes,
 		"next": "Save the recovery codes somewhere safe; each works once. They are not shown again."})
 }
@@ -194,7 +192,6 @@ func (s *Server) secondFactorRemove(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.audit(r, a.Username, "auth.local.second_factor_removed", "ok", "")
 	writeJSON(w, http.StatusOK, map[string]any{"second_factor": false})
 }
 
@@ -216,12 +213,15 @@ func (s *Server) newRecoveryCodes(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.audit(r, a.Username, "auth.local.recovery_codes_renewed", "ok", "the old codes stopped working")
 	writeJSON(w, http.StatusOK, map[string]any{"recovery_codes": codes})
 }
 
 func (s *Server) signOutEverywhere(w http.ResponseWriter, r *http.Request) {
 	id := identityFrom(r)
+	if !s.localOn() {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "built-in accounts are not turned on here", "code": "local_off"})
+		return
+	}
 	if id.Via != viaSession {
 		writeErr(w, http.StatusBadRequest, "only a browser sign-in can be ended this way; revoke an API token from the tokens page")
 		return
@@ -232,6 +232,5 @@ func (s *Server) signOutEverywhere(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, s.cookie(r, sessionCookie, "", "/", 0))
-	s.audit(r, id.User, "auth.sign_out_everywhere", "ok", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ended": n})
 }

@@ -188,6 +188,9 @@ func (s *Server) guard(rt route) http.Handler {
 		if rt.audit != "" {
 			entry = &engine.AuditEntry{At: s.Now().UnixMilli(), User: id.User, Source: s.clientAddr(r),
 				Action: rt.audit, Target: r.PathValue("id")}
+			if entry.Target == "" && strings.HasPrefix(r.URL.Path, "/api/v1/users/") {
+				entry.Target = r.PathValue("name") // the person an administrator acted on
+			}
 		}
 		deny := func(code int, msg string) {
 			writeErr(w, code, msg)

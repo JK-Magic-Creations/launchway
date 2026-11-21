@@ -98,7 +98,6 @@ func (s *Server) issueLink(w http.ResponseWriter, r *http.Request, name, kind, r
 		s.fail(w, err)
 		return
 	}
-	s.audit(r, identityFrom(r).User, "user."+kind, "ok", detail)
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, map[string]any{"username": name, "path": "/accept?token=" + token, "expires_at": now + ttlMs,
 		"next": "Send this link to the person by a channel you trust. It works once and is not shown again."})
@@ -235,7 +234,6 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.audit(r, identityFrom(r).User, "user.delete", "ok", name)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -253,6 +251,5 @@ func (s *Server) signOutUser(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.audit(r, identityFrom(r).User, "user.sign_out", "ok", name)
 	writeJSON(w, http.StatusOK, map[string]any{"ended": n})
 }

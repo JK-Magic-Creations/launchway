@@ -104,7 +104,7 @@ func TestFirstAdministerWithSetupCode(t *testing.T) {
 		}
 	}
 	var info map[string]any
-	b.get(e.srv.URL + "/api/v1/info").json(t, &info)
+	b.get(e.srv.URL+"/api/v1/info").json(t, &info)
 	if info["auth_mode"] != "local" || info["setup_required"] != true {
 		t.Fatalf("info %v", info)
 	}
@@ -345,7 +345,7 @@ func TestSetupCodeFileExpiryAndNewCode(t *testing.T) {
 		t.Fatalf("an expired code: %d %v", st, out)
 	}
 	var status map[string]any
-	b.get(e.srv.URL + "/api/v1/setup").json(t, &status)
+	b.get(e.srv.URL+"/api/v1/setup").json(t, &status)
 	if status["required"] != true || status["code_expired"] != true {
 		t.Fatalf("status %v", status)
 	}

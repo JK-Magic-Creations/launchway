@@ -38,12 +38,24 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `POST /api/runner/v2/join` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /api/runner/v2/rotate` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
 | `POST /api/runner/v2/token` | — | — | — | exempt: sign-in, health checks, the MCP endpoint itself, the runner enrolment handshake or hosted files: not an operation on configuration or runs |
+| `GET /api/v1/account` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `POST /api/v1/account/password` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `POST /api/v1/account/recovery-codes` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `DELETE /api/v1/account/second-factor` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `POST /api/v1/account/second-factor` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `POST /api/v1/account/second-factor/confirm` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
+| `POST /api/v1/account/sign-out-everywhere` | — | — | — | exempt: a person changes their own password and second factor in the browser, proving who they are again; a token or agent acts as a token, not as the person |
 | `GET /api/v1/admin/tokens` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `DELETE /api/v1/admin/tokens/{id}` | — | — | — | gap: API tokens are made in the UI today; an MCP token must not make tokens; CLI and provider resource planned |
 | `GET /api/v1/ai/models` | `list_config (kind models)` | `models` | `launchway_model` | equal |
 | `GET /api/v1/approvals` | `list_approvals` | — | — | gap: launchway has no approvals command yet |
 | `GET /api/v1/artifact-store` | — | `blobs status` | — | gap: blobs status reads the database directly; no MCP tool |
 | `GET /api/v1/audit` | — | — | — | gap: the audit trail is read in the UI; no MCP tool or CLI command yet |
+| `POST /api/v1/auth/link` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
+| `POST /api/v1/auth/link/begin` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
+| `POST /api/v1/auth/link/complete` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
+| `POST /api/v1/auth/local/second-factor` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
+| `POST /api/v1/auth/local/signin` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
 | `GET /api/v1/cache-policy` | `get_cache_policy` | `caches policy get` | `not needed by terraform` | equal |
 | `PUT /api/v1/cache-policy` | `set_cache_policy` | `caches policy set` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
 | `GET /api/v1/components` | — | — | — | gap: the component inventory is UI only so far |
@@ -214,6 +226,9 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/runs/{id}/variables` | `get_run_variables` | `variables run` | `not needed by terraform` | equal |
 | `GET /api/v1/runs/{id}/verifications` | `get_verification` | `verifications show` | — | equal |
 | `GET /api/v1/settings/approvals` | — | — | — | exempt: a read of one installation setting (approvals.allow_self), which get_config and the installation configuration kind give in full; the page needs it as a signed-in person, not an administrator |
+| `GET /api/v1/setup` | — | `users setup-code` | — | exempt: the first-run page asks it before anyone can sign in; the console command issues the code |
+| `POST /api/v1/setup/begin` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
+| `POST /api/v1/setup/complete` | — | — | — | exempt: sign-in, first-run setup and one-time links: credential flows done in a browser; the console covers them as launchway users |
 | `GET /api/v1/ssh` | `get_ssh_info` | `keys host` | — | equal |
 | `GET /api/v1/step-resources` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
 | `GET /api/v1/step-resources/defaults/{kind}` | `get_step_resources` | `step-resources get` | `launchway_step_resources` | equal |
@@ -230,6 +245,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/user/ssh-keys` | `list_ssh_keys` | `keys list` | — | equal |
 | `POST /api/v1/user/ssh-keys` | `add_ssh_key` | `keys add` | — | equal |
 | `DELETE /api/v1/user/ssh-keys/{id}` | `delete_ssh_key` | `keys delete` | — | equal |
+| `GET /api/v1/users` | `list_users` | `users list` | — | equal |
+| `POST /api/v1/users` | — | — | — | exempt: sign-in and account recovery are done in the browser or at the server console, by the person concerned or an administrator at the keyboard; an API token or agent must not be able to create or recover people |
+| `DELETE /api/v1/users/{name}` | — | — | — | exempt: sign-in and account recovery are done in the browser or at the server console, by the person concerned or an administrator at the keyboard; an API token or agent must not be able to create or recover people |
+| `POST /api/v1/users/{name}` | — | — | — | exempt: sign-in and account recovery are done in the browser or at the server console, by the person concerned or an administrator at the keyboard; an API token or agent must not be able to create or recover people |
+| `POST /api/v1/users/{name}/reset` | — | `users reset` | — | exempt: sign-in and account recovery are done in the browser or at the server console, by the person concerned or an administrator at the keyboard; an API token or agent must not be able to create or recover people |
+| `POST /api/v1/users/{name}/sign-out` | — | — | — | exempt: sign-in and account recovery are done in the browser or at the server console, by the person concerned or an administrator at the keyboard; an API token or agent must not be able to create or recover people |
 | `POST /api/v1/validate` | `validate_pipeline` | `validate` | — | equal |
 | `GET /api/v1/variables` | `list_variables` | `variables list` | `planned: data source launchway_variables` | equal |
 | `DELETE /api/v1/variables/{name}` | `delete_variable` | `variables delete` | `planned: resource launchway_variable` | equal |

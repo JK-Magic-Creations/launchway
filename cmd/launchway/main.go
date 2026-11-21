@@ -85,6 +85,7 @@ Usage:
   launchway run-limits get|set                         the longest run timeout a pipeline may ask for
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
+  launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
   launchway doctor   [database|ssh]             would this installation survive losing its database? is Git over SSH reachable?
   launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
   launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step

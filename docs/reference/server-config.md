@@ -31,7 +31,7 @@ the database, and nothing an administrator manages day to day.
 |---|---|
 | `listen`, `data`, `database`, `database_wait`, `resilience.stall_budget`, `user` | Where the server runs and how it reaches the database |
 | `server.trust_proxy`, `server.drain_delay` | How it sits behind a proxy or load balancer |
-| `auth.mode`, `auth.oidc`, `auth.idle_timeout`, `auth.session_lifetime`, `auth.allow_anonymous` | Sign-in must work before anyone can change anything |
+| `auth.mode`, `auth.local`, `auth.oidc`, `auth.idle_timeout`, `auth.session_lifetime`, `auth.allow_anonymous` | Sign-in must work before anyone can change anything |
 | `auth.admins` | The first administrators, and the way back in if the role bindings lock everyone out |
 | `runner` (the built-in runner and its secret stores, the AI secret stores) | Process settings of the machine the server runs on |
 | `reports.origin` | The address the server is reached at |
@@ -159,7 +159,7 @@ See [Set up sign-in and roles](../howto/oidc-and-roles.md) and [Roles](roles.md)
 <!-- keys: server -->
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| `auth.mode` | text | `none` | `none`: no sign-in, everyone acts as `user` with full rights. `oidc`: sign in with an OpenID Connect provider |
+| `auth.mode` | text | `local` when `listen` is not a loopback address, else `none` | `local`: built-in accounts (a password and a second factor, created at first run with a one-time setup code). `oidc`: sign in with an OpenID Connect provider. `none`: no sign-in, everyone acts as `user` with full rights; only for a loopback address |
 | `auth.allow_anonymous` | boolean | `false` | Lets a server with `mode: none` listen on an address other than loopback, when something in front already decides who may reach it |
 | `auth.idle_timeout` | duration | `8h` | A session nobody has used this long ends. At least `1m`; at most `session_lifetime` |
 | `auth.session_lifetime` | duration | `24h` | Every session ends this long after sign-in. At least `1m` |
@@ -174,6 +174,10 @@ Required with `mode: oidc`: `issuer`, `client_id`, `redirect_url` and one of
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `auth.oidc.issuer` | URL | | The provider's issuer, exactly as in its discovery document. `http` or `https` |
+| `auth.local.enabled` | yes/no | `false` | With `auth.mode: oidc`, also let people sign in with built-in accounts (the break-glass administrator survives a provider outage). Always on with `auth.mode: local` |
+| `auth.local.require_second_factor` | text | `admins` | Who must set up a second factor (an authenticator app) before an account is created: `admins`, `all` or `off` |
+| `auth.local.setup_code_file` | path | | A file holding the one-time setup code for a new installation (the chart mounts a Secret here). Without it the server makes a code and writes it to its log once |
+| `auth.local.setup_code_ttl` | duration | `24h` | How long a setup code works; `launchway users setup-code` issues a new one |
 | `auth.oidc.client_id` | text | | The client ID registered with the provider |
 | `auth.oidc.client_secret_env` | variable name | | An environment variable holding the client secret |
 | `auth.oidc.client_secret_file` | path | | Or a file holding it |
