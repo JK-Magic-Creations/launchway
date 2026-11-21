@@ -27,6 +27,19 @@ export const GUIDE: Record<string, GuideEntry> = {
     text: "A project is one piece of software, kept in a Git repository. Open one to see its pipeline, its runs and where it is running.",
     does: [{ icon: "plus", label: "Add a project", href: "/config/wizard/connect-repository" }],
   },
+  "/repositories/:owner/:name/pulls": {
+    title: "Pull requests",
+    text: "A pull request is a change on its way from one branch to another. Each row says who wants what merged where, and whether it merges cleanly. Open one to review it and see what it needs.",
+  },
+  "/repositories/:owner/:name/pulls/new": {
+    title: "A new pull request",
+    text: "Choose the branch with the changes and the branch they go into. You see the commits and whether it merges cleanly before you open it.",
+  },
+  "/repositories/:owner/:name/pulls/:number": {
+    title: "A pull request",
+    text: "The change, its conversation and its files. The box at the top says in one sentence what it still needs, such as a review or a passing check, and offers only what you can do now. Press j and k to move between files, n and p between comments.",
+    does: [{ icon: "activity", label: "See every run", href: "/activity" }],
+  },
   "/projects/:name": {
     title: "A project",
     text: "Everything about one piece of software: what it is, where it comes from, who uses it, what happened to it and what you can do with it.",

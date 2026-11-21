@@ -65,7 +65,8 @@ func Validate(p string) error {
 	return nil
 }
 
-// Set replaces a repository's protected branches with patterns.
+// Set replaces a repository's protected branches with patterns. A pattern that
+// stays keeps its merge rules (internal/forge/pulls).
 func (s *Store) Set(ctx context.Context, repoID string, patterns []string, by string) error {
 	seen := map[string]bool{}
 	var clean []string
@@ -82,10 +83,29 @@ func (s *Store) Set(ctx context.Context, repoID string, patterns []string, by st
 	if len(clean) > 100 {
 		return fmt.Errorf("at most 100 protected branch patterns")
 	}
-	if _, err := s.db.Exec(ctx, `DELETE FROM branch_rules WHERE repo_id = ?`, repoID); err != nil {
+	// A pattern that stays keeps its row (and the merge rules on it); one that
+	// goes is deleted; a new one is added.
+	have, err := s.Patterns(ctx, repoID)
+	if err != nil {
 		return err
 	}
+	keep := map[string]bool{}
 	for _, p := range clean {
+		keep[p] = true
+	}
+	had := map[string]bool{}
+	for _, p := range have {
+		had[p] = true
+		if !keep[p] {
+			if _, err := s.db.Exec(ctx, `DELETE FROM branch_rules WHERE repo_id = ? AND pattern = ?`, repoID, p); err != nil {
+				return err
+			}
+		}
+	}
+	for _, p := range clean {
+		if had[p] {
+			continue
+		}
 		if _, err := s.db.Exec(ctx, `INSERT INTO branch_rules(id, repo_id, pattern, push_role, created_at, created_by) VALUES(?,?,?,?,?,?)`,
 			ids.New("rul"), repoID, p, "admin", s.now().UnixMilli(), by); err != nil {
 			return err

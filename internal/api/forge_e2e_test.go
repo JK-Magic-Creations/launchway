@@ -56,7 +56,10 @@ func hostedEnvWith(t *testing.T, o envOpts, ho hosting.Options, go_ githttp.Opti
 		t.Fatal(err)
 	}
 	go_.Backend, go_.Log = h.Store, quiet()
-	e.api.Forge = &ForgeHosting{Provider: h.Provider, Git: githttp.New(go_), RunTokens: h.RunTokens, Mirrors: h.Mirrors, Keys: h.Keys, Rules: h.Rules, Hooks: h.Hooks}
+	e.api.Forge = &ForgeHosting{Provider: h.Provider, Git: githttp.New(go_), RunTokens: h.RunTokens, Mirrors: h.Mirrors, Keys: h.Keys, Rules: h.Rules, Hooks: h.Hooks,
+		Pulls: h.Pulls, RepoByID: h.Forge.Repository}
+	e.api.WirePulls()
+	t.Cleanup(h.Pulls.Stop)
 	return e, h
 }
 

@@ -1,0 +1,64 @@
+// Calls for pull requests. They mirror internal/api/forge_pulls*.go.
+
+import { call } from "./api";
+
+export interface Action { name: string; available: boolean; reason?: string; risk?: string; suggestion?: string }
+export interface Check { name: string; status: string; required: boolean; run_id?: string; project?: string; run_number?: number }
+export interface Readiness {
+  can_merge: boolean; why?: string; can_bypass?: boolean; approvals: number; changes_requested_by: string[]; open_threads: number;
+  checks: Check[]; methods: string[]; default_method: string; blockers: { code: string; why: string }[];
+}
+export interface Pull {
+  id: string; number: number; repository?: string; title: string; body: string; author: string; source_branch: string; target_branch: string;
+  state: "open" | "merged" | "closed"; draft: boolean; labels: string[]; assignees: string[]; requested_reviewers: string[];
+  head_sha: string; base_sha: string; merge_base?: string; merge_commit?: string; merge_method?: string; merged_by?: string; reverts?: number;
+  auto_merge?: string; linked_runs: string[]; created_at: string; updated_at: string; merged_at?: string; closed_at?: string; revisions: number;
+  mergeability: { state: "clean" | "conflicts" | "checking" | "unknown"; conflicting_files?: string[]; behind: number; ahead: number; reason?: string };
+  // Present in the full view only.
+  readiness?: Readiness; actions?: Action[]; fetch_ref?: string; your_role?: string;
+}
+export interface FileChange { path: string; old_path?: string; status: string; additions: number; deletions: number; binary: boolean; similarity?: number; too_large?: boolean }
+export interface Patch { path?: string; diff: string; truncated?: boolean; held?: boolean; binary?: boolean; bytes: number }
+export interface Commit { sha: string; author: string; authored_at: string; subject: string; body?: string }
+export interface Comment {
+  id: string; review_id?: string; thread_id?: string; author: string; body: string; path?: string; commit_sha?: string; side?: string; line?: number; start_line?: number;
+  has_suggestion?: boolean; applied_commit?: string; outdated?: boolean; resolved?: boolean; resolved_by?: string; deleted?: boolean; created_at: string;
+}
+export interface Thread { id: string; path: string; line: number; start_line?: number; side: string; outdated: boolean; resolved: boolean; resolved_by?: string; comments: Comment[] }
+export interface Review { id: string; author: string; verdict: "comment" | "approve" | "request_changes"; body?: string; commit_sha: string; state: string; dismissed_reason?: string; created_at: string; stale?: boolean }
+export interface Revision { seq: number; head_sha: string; base_sha: string; forced: boolean; actor?: string; created_at: string }
+export interface Conversation { comments: Comment[]; threads: Thread[]; reviews: Review[]; revisions: Revision[] }
+export interface BranchComparison {
+  base: string; head: string; ahead: number; behind: number; commits: Commit[]; existing_pull?: number;
+  changes: { files: FileChange[]; total: number; additions: number; deletions: number };
+  mergeability: Pull["mergeability"];
+}
+
+const enc = encodeURIComponent;
+const base = (path: string) => `/api/v1/repositories/${path.split("/").map(enc).join("/")}`;
+const qs = (o: Record<string, string | number | boolean | undefined>) => {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(o)) if (v !== undefined && v !== "" && v !== false) p.set(k, String(v === true ? 1 : v));
+  const s = p.toString();
+  return s ? "?" + s : "";
+};
+
+export const pullsApi = {
+  list: (path: string, q: { state?: string; author?: string; reviewer?: string; label?: string }) =>
+    call<{ items: Pull[]; total: number }>("GET", `${base(path)}/pulls${qs(q)}`),
+  get: (path: string, n: number) => call<Pull>("GET", `${base(path)}/pulls/${n}`),
+  files: (path: string, n: number, since?: number) => call<{ files: FileChange[]; total: number; additions: number; deletions: number }>("GET", `${base(path)}/pulls/${n}/files${qs({ limit: 500, since })}`),
+  patch: (path: string, n: number, file: string, full: boolean, since?: number) => call<Patch>("GET", `${base(path)}/pulls/${n}/patch${qs({ path: file, full, since })}`),
+  commits: (path: string, n: number) => call<{ items: Commit[] }>("GET", `${base(path)}/pulls/${n}/commits`).then((r) => r.items),
+  conversation: (path: string, n: number) => call<Conversation>("GET", `${base(path)}/pulls/${n}/conversation`),
+  compare: (path: string, head: string, target?: string) => call<BranchComparison>("GET", `${base(path)}/compare${qs({ head, base: target })}`),
+  create: (path: string, b: { title: string; body: string; source_branch: string; target_branch?: string; draft?: boolean }) => call<Pull>("POST", `${base(path)}/pulls`, b),
+  update: (path: string, n: number, b: Record<string, unknown>) => call<Pull>("PATCH", `${base(path)}/pulls/${n}`, b),
+  merge: (path: string, n: number, b: { method?: string; delete_branch?: boolean; expect_head?: string; bypass_reason?: string }) => call<{ pull: Pull; commit: string }>("POST", `${base(path)}/pulls/${n}/merge`, b),
+  revert: (path: string, n: number) => call<Pull>("POST", `${base(path)}/pulls/${n}/revert`, {}),
+  comment: (path: string, n: number, b: { body: string; path?: string; line?: number; start_line?: number; reply_to?: string }) => call<Comment>("POST", `${base(path)}/pulls/${n}/comments`, b),
+  updateComment: (path: string, n: number, id: string, b: { body?: string; resolved?: boolean }) => call<Comment>("PATCH", `${base(path)}/pulls/${n}/comments/${enc(id)}`, b),
+  applySuggestion: (path: string, n: number, id: string) => call<{ commit: string }>("POST", `${base(path)}/pulls/${n}/comments/${enc(id)}/apply`, {}),
+  review: (path: string, n: number, b: { verdict: string; body: string }) => call<Review>("POST", `${base(path)}/pulls/${n}/reviews`, b),
+  dismiss: (path: string, n: number, id: string, reason: string) => call<void>("POST", `${base(path)}/pulls/${n}/reviews/${enc(id)}/dismiss`, { reason }),
+};

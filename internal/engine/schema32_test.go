@@ -39,7 +39,7 @@ func TestUpgradeFromSchema29ToRollbackAndBack(t *testing.T) {
 			t.Errorf("migration %d was not applied:\n%s", v, log.String())
 		}
 	}
-	checkMarkers(t, cur, schemaRollback)
+	checkMarkers(t, cur, schemaPulls)
 	for _, tb := range []string{"rollbacks", "rollback_reverts"} {
 		var n int
 		if err := cur.db.QueryRow(`SELECT count(*) FROM ` + tb).Scan(&n); err != nil || n != 0 {
@@ -71,10 +71,10 @@ func TestUpgradeFromSchema29ToRollbackAndBack(t *testing.T) {
 	var olderLog syncBuffer
 	older, err := openAs(t, addr, clk, schemaVariables, &olderLog)
 	if err != nil {
-		t.Fatalf("a build of schema 29 on a database of 32: %v\n%s", err, olderLog.String())
+		t.Fatalf("a build of schema 29 on a database of 33: %v\n%s", err, olderLog.String())
 	}
 	defer older.Close()
-	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaRollback || info.Code != schemaVariables || !info.Compatible() {
+	if info, err := older.Schema(context.Background()); err != nil || info.Database != schemaPulls || info.Code != schemaVariables || !info.Compatible() {
 		t.Fatalf("%+v %v", info, err)
 	}
 	if d, err := older.GetRun(sum.ID); err != nil || !d.NeedsNewerServer {
@@ -86,7 +86,7 @@ func TestUpgradeFromSchema29ToRollbackAndBack(t *testing.T) {
 }
 
 // A database of schema 31 (mirrors, SSH keys and hooks present, with rows)
-// upgrades to 32 and applies only the rollback migration: what it holds
+// upgrades in one start through 32 (rollbacks) and 33 (pull requests): what it holds
 // stays, and the two tables are new and empty.
 func TestSchema32UpgradesFrom31ApplyingOnlyItself(t *testing.T) {
 	t.Setenv(schemaCheckSkipEnv, "")
@@ -114,7 +114,7 @@ func TestSchema32UpgradesFrom31ApplyingOnlyItself(t *testing.T) {
 			t.Errorf("migration %d, already applied, was applied again", v)
 		}
 	}
-	checkMarkers(t, cur, schemaRollback)
+	checkMarkers(t, cur, schemaPulls)
 	var n int
 	if err := cur.db.QueryRow(`SELECT count(*) FROM ssh_keys`).Scan(&n); err != nil || n != 1 {
 		t.Fatalf("the key did not survive: %d %v", n, err)

@@ -16,7 +16,8 @@ once, inside the server, and starts the pipeline directly (see [Pipelines start 
 | `create` | A branch or tag was created | Sent with the first `push` of that ref |
 | `delete` | A branch or tag was deleted | |
 | `repository` | The repository was created, renamed (including a move to another owner) or deleted | `action` says which |
-| `pull_request`, `pull_request_review` | Reserved | You can choose them now; nothing sends them until pull requests exist |
+| `pull_request` | A pull request changes | `action` says how: `opened`, `edited`, `synchronize` (new commits), `closed`, `reopened`, `merged`, `converted_to_draft`, `ready_for_review`, `review_requested`, `commented`, `auto_merge_enabled`, `auto_merge_disabled`; `number` and `pull_request` say which one |
+| `pull_request_review` | A review is submitted or dismissed | `action` is `review_submitted` or `review_dismissed`; `changes` has the verdict or the reason |
 | `ping` | You asked for a test delivery | Always delivered, whatever the hook chose |
 
 ## Adding one
