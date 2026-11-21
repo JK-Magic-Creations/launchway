@@ -11,6 +11,7 @@ import { EmptyState, PageHead, Sheet } from "../kit/layout";
 import { Status, stateOf, type State } from "../kit/Status";
 import { RateText, TrendStrip } from "../kit/Trend";
 import { useNow, useStream } from "../live";
+import { approx } from "../estimate";
 import { onLink } from "../router";
 
 const QueuePanel = lazy(() => import("./QueuePanel"));
@@ -136,7 +137,7 @@ export function RunRow({ r, line, now }: { r: RunSummary; line?: LaunchLineView;
       <div className="ct">
         <b>{r.message || r.pipeline}</b>
         <span>{r.project} · run #{r.number}{where ? ` · ${where}` : ""}{r.sha ? ` · ${shortSha(r.sha)}` : ""}</span>
-        <span>{starterLabel(r)} · {ago(r.created_at, now)}{r.draft ? " · draft" : ""}{r.rerun_of_number ? ` · re-run of #${r.rerun_of_number}` : ""}</span>
+        <span>{starterLabel(r)} · {ago(r.created_at, now)}{r.status === "running" && r.estimate?.known && (r.estimate.remaining_ms ?? 0) > 0 ? ` · about ${approx(Math.max(0, r.estimate.remaining_ms! - (now - r.estimate.as_of)))} left` : ""}{r.draft ? " · draft" : ""}{r.rerun_of_number ? ` · re-run of #${r.rerun_of_number}` : ""}</span>
       </div>
       <LaunchLine stations={stations} compact />
       <div className="now"><Status state={TONE[tone] ?? "skip"} /><span>{sentence}</span>

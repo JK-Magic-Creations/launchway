@@ -22,7 +22,7 @@ import (
 	"github.com/jk-magic-creations/launchway/internal/testdb"
 )
 
-// These tests measure what a person watching a Sortie sees: how long after a
+// These tests measure what a person watching a run sees: how long after a
 // step prints a line it can be read through the public stream.
 
 type seen struct {

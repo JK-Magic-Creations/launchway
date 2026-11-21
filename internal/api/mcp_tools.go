@@ -476,6 +476,7 @@ type stepBrief struct {
 	Status   string `json:"status" jsonschema:"pending, queued, leased, running, waiting, succeeded, failed, skipped or canceled"`
 	Attempt  int    `json:"attempt,omitempty"`
 	Duration string `json:"duration,omitempty"`
+	Usual    string `json:"usual,omitempty" jsonschema:"what the step usually takes, from earlier runs of the same step (empty: no history)"`
 	ExitCode *int   `json:"exit_code,omitempty"`
 	// Why says in words why the step is in this state, when not plain from the status.
 	Why            string            `json:"why,omitempty"`
@@ -512,7 +513,7 @@ func (c *mcpCall) run(ctx context.Context, tool, id string) (*engine.RunDetail, 
 
 // describeRun says what a run is doing, in words an agent can act on.
 func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
-	out := runOut{Run: c.brief(&d.RunSummary), Steps: []stepBrief{}, Actions: c.actionsOf(d)}
+	out := runOut{Run: c.brief(&d.RunSummary), Steps: []stepBrief{}, Actions: c.actionsOf(d), Estimate: d.Estimate, EstimateText: d.Estimate.Sentence()}
 	if len(d.Levels) <= 50 {
 		out.Order = d.Levels
 	}
@@ -528,6 +529,7 @@ func (c *mcpCall) describeRun(d *engine.RunDetail) runOut {
 			}
 			sb.Duration = dur(end - s.StartedAt)
 		}
+		sb.Usual = s.Estimate.Usual()
 		if len(s.Outputs) > 0 && len(s.Outputs) <= 20 {
 			sb.Outputs = map[string]string{}
 			for k, v := range s.Outputs {

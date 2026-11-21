@@ -1,0 +1,20 @@
+/* Time estimates and the live log's status line. Loaded with the run page only. */
+.est-line { margin: 4px 0 0; color: var(--text-2); font-size: 14px; }
+.est-line b { color: var(--text); font-weight: 600; }
+.est-line details { display: inline; }
+.est-line summary { display: inline; cursor: pointer; color: var(--accent-ink); margin-left: 6px; }
+.est-detail { margin: 6px 0 0; max-width: 62ch; font-size: 13px; color: var(--text-2); }
+.est-step { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; font-size: 13px; color: var(--text-2); }
+.est-bar { flex: 0 0 120px; height: 6px; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--border-strong); overflow: hidden; }
+.est-bar > span { display: block; height: 100%; background: var(--accent); }
+.est-bar.slow > span { background: var(--warn); }
+@media (prefers-reduced-motion: no-preference) { .est-bar > span { transition: width .8s linear; } }
+.est-slow { margin: 8px 0; padding: 8px 12px; border-radius: var(--radius); background: var(--warn-wash); color: var(--warn-ink); border: 1px solid var(--warn); font-size: 13px; }
+.est-slow a { color: inherit; text-decoration: underline; }
+.est-sub { display: block; font-size: 11.5px; color: var(--text-2); }
+.log-status { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding: 6px 16px 0 70px; color: var(--log-dim); font-family: Inter, sans-serif; font-size: 12px; }
+.log-status .dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; }
+@media (prefers-reduced-motion: no-preference) { .log-status .dot { animation: pulse 1.4s infinite; } }
+.log-status.quiet .dot { background: #fbbf24; animation: none; }
+.log-note { margin: 0 0 8px 70px; color: var(--log-dim); font-family: Inter, sans-serif; font-size: 12px; max-width: 70ch; }
+.log-paused { color: var(--log-dim); }

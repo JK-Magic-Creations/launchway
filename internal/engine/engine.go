@@ -114,6 +114,8 @@ type Options struct {
 
 // Engine is safe for concurrent use.
 type Engine struct {
+	// hist caches what earlier runs took, for time estimates (estimate.go).
+	hist          historyCache
 	db            *dbx
 	hub           *hub.Hub
 	log           *slog.Logger

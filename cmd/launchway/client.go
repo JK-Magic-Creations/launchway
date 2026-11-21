@@ -619,6 +619,9 @@ func (cl *client) show(args []string) error {
 	}
 	fmt.Fprintf(cl.out, "  %s/runs/%s\n\n", cl.c.Server, r.ID)
 	printRunStages(cl.out, &r)
+	if line := r.Estimate.Sentence(); line != "" {
+		fmt.Fprintf(cl.out, "%s\n\n", line)
+	}
 	fmt.Fprintln(cl.out, "Steps:")
 	defer printActions(cl.out, r.Actions)
 	for _, s := range r.StepList {
@@ -647,6 +650,9 @@ func (cl *client) show(args []string) error {
 			line += ": " + s.Reason
 		} else if s.Error != "" {
 			line += ": " + s.Error
+		}
+		if u := s.Estimate.Usual(); u != "" && !terminal(r.Status) && (s.Status == "running" || s.Status == "queued" || s.Status == "pending" || s.Status == "leased") {
+			line += " [" + u + "]"
 		}
 		fmt.Fprintln(cl.out, line)
 		if s.Cause != nil {

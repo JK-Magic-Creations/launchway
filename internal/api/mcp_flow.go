@@ -128,13 +128,15 @@ type runOut struct {
 	Run runBrief `json:"run"`
 	// Summary says in words what state the run is in, why, and what can be
 	// done next.
-	Summary     string          `json:"summary"`
-	NextActions []string        `json:"next_actions,omitempty" jsonschema:"tool calls that make sense now"`
-	Actions     []engine.Action `json:"actions,omitempty" jsonschema:"what this caller may do with the run now, as the server computes it: available, or why not and what to do instead"`
-	Steps       []stepBrief     `json:"steps"`
-	StepsCut    int             `json:"steps_not_listed,omitempty"`
-	Order       [][]string      `json:"order,omitempty" jsonschema:"the steps in the order they can run: each list may run in parallel once the lists before it are done"`
-	TimedOut    bool            `json:"timed_out,omitempty" jsonschema:"wait_for_run only: the run is still going"`
+	Summary      string              `json:"summary"`
+	Estimate     *engine.RunEstimate `json:"estimate,omitempty" jsonschema:"how long the run is expected to take: the time left, per-step history, what is not counted (people, queues); estimate_text says it in words"`
+	EstimateText string              `json:"estimate_text,omitempty"`
+	NextActions  []string            `json:"next_actions,omitempty" jsonschema:"tool calls that make sense now"`
+	Actions      []engine.Action     `json:"actions,omitempty" jsonschema:"what this caller may do with the run now, as the server computes it: available, or why not and what to do instead"`
+	Steps        []stepBrief         `json:"steps"`
+	StepsCut     int                 `json:"steps_not_listed,omitempty"`
+	Order        [][]string          `json:"order,omitempty" jsonschema:"the steps in the order they can run: each list may run in parallel once the lists before it are done"`
+	TimedOut     bool                `json:"timed_out,omitempty" jsonschema:"wait_for_run only: the run is still going"`
 }
 
 // actionsOf is what the caller may do with the run, the role applied as on

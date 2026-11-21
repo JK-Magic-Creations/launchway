@@ -1,5 +1,6 @@
 import type { StepView } from "../api";
 import { elapsed } from "../format";
+import { approx } from "../estimate";
 import { groupStatus, nodeName, type RNode } from "../graph/model";
 import { terms } from "../terms";
 import { ImageIcon } from "./Images";
@@ -19,7 +20,11 @@ export function stepSub(s: StepView, now: number, phases?: Record<string, string
     case "pending": return "Not started";
     case "queued": return "Waiting for a runner";
     case "leased": return `Starting${t}`;
-    case "running": return `Running${t}`;
+    case "running": {
+      const e = s.estimate;
+      const of = e?.enough && e.typical_ms ? ` of about ${approx(e.typical_ms)}` : "";
+      return `Running${t}${of}`;
+    }
     case "succeeded":
       return s.kind === "approval" ? `${terms().say("{clearance}")} from ${s.decided_by}` : `Passed${t}`;
     case "failed":
