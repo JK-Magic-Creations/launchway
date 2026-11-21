@@ -15,6 +15,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `PUT /api/runner/v1/artifacts/chunk` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/artifacts/commit` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/artifacts/download` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/caches/begin` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `PUT /api/runner/v1/caches/chunk` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/caches/commit` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/caches/discard` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/caches/download` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
+| `POST /api/runner/v1/caches/lookup` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/command-done` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/commands` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
 | `POST /api/runner/v1/deploy/lease` | — | — | — | exempt: the runner protocol: only runners call it, with their own credentials |
@@ -38,6 +44,8 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/approvals` | `list_approvals` | — | — | gap: launchway has no approvals command yet |
 | `GET /api/v1/artifact-store` | — | `blobs status` | — | gap: blobs status reads the database directly; no MCP tool |
 | `GET /api/v1/audit` | — | — | — | gap: the audit trail is read in the UI; no MCP tool or CLI command yet |
+| `GET /api/v1/cache-policy` | `get_cache_policy` | `caches policy get` | `not needed by terraform` | equal |
+| `PUT /api/v1/cache-policy` | `set_cache_policy` | `caches policy set` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
 | `GET /api/v1/components` | — | — | — | gap: the component inventory is UI only so far |
 | `GET /api/v1/config` | `get_config_overview` | `config overview` | — | equal |
 | `POST /api/v1/config/apply` | `apply_config` | `config apply` | — | equal |
@@ -67,6 +75,12 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/policies` | `list_config (kind policies)` | `policy list` | `launchway_policy` | equal |
 | `GET /api/v1/projects` | `list_projects` | `projects list` | — | equal |
 | `GET /api/v1/projects/{name}` | `get_project` | `projects get` | — | equal |
+| `DELETE /api/v1/projects/{name}/cache-policy` | `set_cache_policy` | `caches policy clear` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
+| `GET /api/v1/projects/{name}/cache-policy` | `get_cache_policy` | `caches policy get` | `not needed by terraform` | equal |
+| `PUT /api/v1/projects/{name}/cache-policy` | `set_cache_policy` | `caches policy set` | — | exempt: MCP and CLI manage the cache policy; it is held in a table of its own, so Terraform cannot yet (backlog: make it a configuration kind) |
+| `DELETE /api/v1/projects/{name}/caches` | `delete_cache` | `caches delete` | `not needed by terraform` | equal |
+| `GET /api/v1/projects/{name}/caches` | `list_caches` | `caches list` | `not needed by terraform` | equal |
+| `DELETE /api/v1/projects/{name}/caches/{id}` | `delete_cache` | `caches delete` | `not needed by terraform` | equal |
 | `GET /api/v1/projects/{name}/coverage` | — | `runs coverage` | — | gap: no MCP tool reads coverage yet |
 | `POST /api/v1/projects/{name}/draft-runs` | `start_run (pipeline_text)` | — | — | gap: launchway runs start has no flag for a draft run yet |
 | `POST /api/v1/projects/{name}/git-hook` | — | — | — | exempt: called by Git hosts and other systems with their own proof, not by people |
