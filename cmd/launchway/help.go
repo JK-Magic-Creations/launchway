@@ -34,12 +34,17 @@ func exitAfter(err error, helping bool) {
 
 // helpTexts are the commands whose arguments are not parsed as flags only: asking for help prints this, and runs nothing.
 var helpTexts = map[string]string{
-	"validate": `Usage: launchway validate [file] [--project NAME]
+	"validate": `Usage: launchway validate [file] [--project NAME] [--library NAME=DIRECTORY ...] [--resolved]
 
 Checks a pipeline file (default .launchway/pipeline.yaml) and prints each problem with its file, line and
 path, one per line. Exits 0 if the file is valid, 1 if it has problems. With --project NAME the server you
 are signed in to checks it for that project as well: its libraries, the limits the installation sets, and
 what the project must have for the pipeline to work.
+
+With --library NAME=DIRECTORY (once for each library the pipeline uses) the templates are expanded from those
+directories, with no server: the same parse and expansion a server does, so the same problems come out, each
+with the file and line of the template it is in. --resolved prints the resolved pipeline as JSON. Which
+libraries and environments a server allows is the server's to say: add --project against a server for that.
 `,
 	"graph": `Usage: launchway graph [file]
 
