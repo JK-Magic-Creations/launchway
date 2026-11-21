@@ -148,13 +148,15 @@ function FileView({ f, path, n, conv, mode, since, me, canApply, reload, onError
 
 /** Where the pull request is in the branch's merge queue, and the run that is testing it. */
 function QueueBox({ pull }: { pull: Pull }) {
+  const why = pull.readiness?.can_merge ? "" : pull.readiness?.why;
   const q = pull.queue;
   const live = q && q.state !== "removed" && q.state !== "merged";
   return (
     <div className="pr-queue" role="group" aria-label="Merge queue">
       <h3>Merge queue</h3>
       {live && <p role="status">Number {q.position} in the queue for {pull.target_branch}, {q.state === "testing" ? "being tested on the branch's latest commit" : "waiting its turn"}.{" "}
-        {(q.runs ?? []).map((id) => <Link key={id} href={`/runs/${id}`}>the run testing it</Link>)}</p>}
+        {(q.runs ?? []).map((id) => <Link key={id} href={`/runs/${id}`}>the run testing it</Link>)}
+        {q.position === 1 && why ? ` It merges when this is met: ${why}.` : ""}</p>}
       {q?.state === "removed" && <p role="status">It was taken out of the queue: {q.reason}.</p>}
       {!q && <p className="faint">{pull.target_branch} merges through a queue: pull requests are brought up to date, tested and merged one at a time.</p>}
     </div>
@@ -295,7 +297,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
               {can("update_branch") && <Button sm onClick={() => run("update", () => pullsApi.updateBranch(path, number))}>Update the branch</Button>}
               {can("mark_ready") && <Button sm onClick={() => run("ready", () => pullsApi.update(path, number, { draft: false }))}>Mark ready for review</Button>}
               {can("mark_draft") && <Button sm onClick={() => run("draft", () => pullsApi.update(path, number, { draft: true }))}>Convert to draft</Button>}
-              {can("auto_merge") && pull.state === "open" && <Button sm onClick={() => run("auto", () => pullsApi.update(path, number, { auto_merge: method || "merge" }))}>Merge when the rules pass</Button>}
+              {can("auto_merge") && pull.state === "open" && !(rd?.queue && pull.queue && pull.queue.state !== "removed") && <Button sm onClick={() => run("auto", () => pullsApi.update(path, number, { auto_merge: method || "merge" }))}>Merge when the rules pass</Button>}
               {can("cancel_auto_merge") && <Button sm onClick={() => run("auto", () => pullsApi.update(path, number, { auto_merge: "" }))}>Turn off auto-merge</Button>}
               {can("close") && <Button sm onClick={() => run("close", () => pullsApi.update(path, number, { state: "closed" }))}>Close</Button>}
               {can("reopen") && <Button sm onClick={() => run("reopen", () => pullsApi.update(path, number, { state: "open" }))}>Reopen</Button>}

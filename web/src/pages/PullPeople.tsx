@@ -56,7 +56,7 @@ export function PullList({ title, items, editable, noun, none, chip, onAdd, onRe
       </ul>
       {editable && (
         <form className="pr-people-add" onSubmit={(e) => { e.preventDefault(); const v = text.trim(); if (v) run(async () => { await onAdd(v); setText(""); }); }} aria-label={`Add to ${title.toLowerCase()}`}>
-          <input value={text} aria-label={`Add a ${noun}`} placeholder={noun === "label" ? "bug" : "user name"} onChange={(e) => setText(e.target.value)} />
+          <input value={text} aria-label={`Add a ${noun}`} placeholder={noun === "label" ? "bug" : noun === "group" ? "group name" : "user name"} onChange={(e) => setText(e.target.value)} />
           <button type="submit" className="btn btn-sm" disabled={busy || !text.trim()}>Add</button>
         </form>
       )}
