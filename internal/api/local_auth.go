@@ -74,8 +74,11 @@ func (s *Server) localInfo(out map[string]any) {
 	out["auth_mode"] = "local"
 	if s.Auth.OIDC != nil {
 		out["auth_mode"] = "oidc"
-		out["local"] = true
 	}
+	if s.Auth.Local == nil {
+		return
+	}
+	out["local"] = s.Auth.OIDC != nil
 	if s.Auth.Local.Required {
 		out["setup_required"] = s.setupPending()
 	}

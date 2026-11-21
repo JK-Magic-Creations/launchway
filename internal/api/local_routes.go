@@ -1,5 +1,15 @@
 package api
 
+// routes is every route of the server, from each file that lists some.
+func (s *Server) routes() []route {
+	var all []route
+	for _, part := range [][]route{s.mainRoutes(), s.laterRoutes(), s.configRoutes(), s.flowRoutes(), s.cacheRoutes(), s.launchRoutes(),
+		s.approvalSettingsRoutes(), s.forgeRoutes(), s.rollbackRoutes(), s.localRoutes()} {
+		all = append(all, part...)
+	}
+	return all
+}
+
 // The routes of built-in accounts (local_*.go). The sign-in, setup and link
 // routes are public: they are how someone becomes signed in, and each checks
 // its own secret (a password, the setup code, a one-time link) and is

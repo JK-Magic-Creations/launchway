@@ -132,15 +132,6 @@ type route struct {
 	handler http.HandlerFunc
 }
 
-func (s *Server) routes() []route {
-	var all []route
-	for _, part := range [][]route{s.mainRoutes(), s.laterRoutes(), s.configRoutes(), s.flowRoutes(), s.cacheRoutes(), s.launchRoutes(),
-		s.approvalSettingsRoutes(), s.forgeRoutes(), s.rollbackRoutes(), s.localRoutes()} {
-		all = append(all, part...)
-	}
-	return all
-}
-
 func (s *Server) mainRoutes() []route {
 	return []route{
 		// Health checks for load balancers and orchestrators.
@@ -611,10 +602,8 @@ func (s *Server) info(w http.ResponseWriter, r *http.Request) {
 	} else {
 		out["schema"] = map[string]int{"code": schema.Code}
 	}
-	if s.Auth != nil && s.Auth.Local != nil {
+	if s.Auth != nil {
 		s.localInfo(out)
-	} else if s.Auth != nil {
-		out["auth_mode"] = "oidc"
 	} else {
 		out["auth_mode"], out["actor"], out["projects"] = "none", s.Actor, len(s.projects())
 	}
