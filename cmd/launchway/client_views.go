@@ -56,28 +56,10 @@ type runView struct {
 		AllowedFailure bool `json:"allowed_failure"`
 		// NotBefore is when a retry that waits is handed to a runner;
 		// FailureCause why the last attempt failed.
-		NotBefore    int64  `json:"not_before"`
-		FailureCause string `json:"failure_cause"`
-		Retry        int    `json:"retry"`
-		Caches       []struct {
-			Name     string `json:"name"`
-			Result   string `json:"result"`
-			Restored string `json:"restored"`
-			Bytes    int64  `json:"bytes"`
-			Scope    string `json:"scope"`
-			Reason   string `json:"reason"`
-			Key      string `json:"key"`
-			// EntryKey, Generation and AgeSeconds are the entry restored.
-			EntryKey        string `json:"entry_key"`
-			Generation      int    `json:"generation"`
-			AgeSeconds      int64  `json:"age_seconds"`
-			MaxAgeSeconds   int64  `json:"max_age_seconds"`
-			SavedGeneration int    `json:"saved_generation"`
-			KeyParts        []struct {
-				Label string `json:"label"`
-				Value string `json:"value"`
-			} `json:"key_parts"`
-		} `json:"caches"`
+		NotBefore    int64       `json:"not_before"`
+		FailureCause string      `json:"failure_cause"`
+		Retry        int         `json:"retry"`
+		Caches       []cacheView `json:"caches"`
 		// Runner is the runner that took the step; Workspace is set for a
 		// step with a workspace of its own; WaitingFor says what a queued
 		// step waits for when no runner may take it.
@@ -110,4 +92,25 @@ func runRef(r runView) string {
 
 func terminal(status string) bool {
 	return status == "succeeded" || status == "failed" || status == "canceled"
+}
+
+// cacheView is what one build cache of a step did, as a run's JSON says.
+type cacheView struct {
+	Name     string `json:"name"`
+	Result   string `json:"result"`
+	Restored string `json:"restored"`
+	Bytes    int64  `json:"bytes"`
+	Scope    string `json:"scope"`
+	Reason   string `json:"reason"`
+	Key      string `json:"key"`
+	// EntryKey, Generation and AgeSeconds are the entry restored.
+	EntryKey        string `json:"entry_key"`
+	Generation      int    `json:"generation"`
+	AgeSeconds      int64  `json:"age_seconds"`
+	MaxAgeSeconds   int64  `json:"max_age_seconds"`
+	SavedGeneration int    `json:"saved_generation"`
+	KeyParts        []struct {
+		Label string `json:"label"`
+		Value string `json:"value"`
+	} `json:"key_parts"`
 }

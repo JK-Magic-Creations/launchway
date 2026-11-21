@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 )
@@ -51,21 +52,12 @@ func (e *Engine) cacheBase(q querier, cc *cacheContext, id string) *cacheRowT {
 // are of an older generation: a restore takes the newest, so they only take
 // room. Their bytes stay for the grace period, for a download in flight.
 func endOlderGenerations(tx *txx, r *cacheRowT, now int64) error {
-	rows, err := tx.Query(`SELECT id FROM caches WHERE project = ? AND scope = ? AND pipeline = ? AND name = ? AND key = ? AND platform = ?
+	old, err := queryAll(tx, func(rows *sql.Rows) (string, error) {
+		var id string
+		return id, rows.Scan(&id)
+	}, `SELECT id FROM caches WHERE project = ? AND scope = ? AND pipeline = ? AND name = ? AND key = ? AND platform = ?
 		AND status = ? AND generation < ?`, r.Project, r.Scope, r.Pipeline, r.Name, r.Key, r.Platform, cacheKept, r.Generation)
 	if err != nil {
-		return err
-	}
-	var old []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return err
-		}
-		old = append(old, id)
-	}
-	if err := rows.Close(); err != nil {
 		return err
 	}
 	for _, id := range old {

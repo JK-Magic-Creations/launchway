@@ -109,6 +109,12 @@ func cacheNamespace(pipelineName string, c *pipeline.Cache) string {
 	return "pipeline:" + pipelineName
 }
 
+// sensitive says whether the step declares the named cache sensitive.
+func (cc *cacheContext) sensitive(name string) bool {
+	d := cc.declared(name)
+	return d != nil && d.Sensitive
+}
+
 // declared is the cache the step declares under the name, or nil.
 func (cc *cacheContext) declared(name string) *pipeline.Cache {
 	for _, c := range cc.def.Cache {
@@ -194,10 +200,10 @@ func (e *Engine) cacheFor(leaseID, name string) (*cacheContext, error) {
 // which reads no cache of the project's.
 func (e *Engine) imageCacheScope(st *RunState) (scope string, write, noProtected bool) {
 	s := e.scopesOf(st)
-	switch {
-	case s.write == "":
+	switch s.write {
+	case "":
 		return "", false, false
-	case s.write == cacheScopeDefault:
+	case cacheScopeDefault:
 		return "", true, false
 	}
 	untrusted := st.Trigger.Event == pipeline.EventPullRequest

@@ -652,36 +652,7 @@ func (cl *client) show(args []string) error {
 			}
 		}
 		for _, c := range s.Caches {
-			what := strings.ReplaceAll(c.Result, "_", " ")
-			if c.Result == "saved" && c.Restored != "" {
-				what = "saved (restored: " + c.Restored + ")"
-			}
-			if c.Bytes > 0 {
-				what += ", " + byteText(c.Bytes)
-			}
-			if c.Scope != "" {
-				what += ", scope " + c.Scope
-			}
-			if c.Reason != "" {
-				what += ": " + c.Reason
-			}
-			fmt.Fprintf(cl.out, "             cache %s: %s\n", c.Name, what)
-			if c.EntryKey != "" {
-				used := "entry restored"
-				if c.Result == "expired" {
-					used = "entry found too old"
-				}
-				fmt.Fprintf(cl.out, "               %s: key %s, generation %d, %s old (a cache may be %s)\n", used, c.EntryKey, c.Generation, durationText(c.AgeSeconds), durationText(c.MaxAgeSeconds))
-			}
-			if c.SavedGeneration > 0 {
-				fmt.Fprintf(cl.out, "               saved generation %d\n", c.SavedGeneration)
-			}
-			if c.Key != "" {
-				fmt.Fprintf(cl.out, "               key %s, made of:\n", c.Key)
-				for _, p := range c.KeyParts {
-					fmt.Fprintf(cl.out, "                 %s: %s\n", p.Label, p.Value)
-				}
-			}
+			cl.printCache(c)
 		}
 	}
 	return nil
@@ -963,4 +934,38 @@ func durationText(s int64) string {
 		return fmt.Sprintf("%d minutes", int(d.Minutes()))
 	}
 	return "under 2 minutes"
+}
+
+// printCache says what one build cache of a step did.
+func (cl *client) printCache(c cacheView) {
+	what := strings.ReplaceAll(c.Result, "_", " ")
+	if c.Result == "saved" && c.Restored != "" {
+		what = "saved (restored: " + c.Restored + ")"
+	}
+	if c.Bytes > 0 {
+		what += ", " + byteText(c.Bytes)
+	}
+	if c.Scope != "" {
+		what += ", scope " + c.Scope
+	}
+	if c.Reason != "" {
+		what += ": " + c.Reason
+	}
+	fmt.Fprintf(cl.out, "             cache %s: %s\n", c.Name, what)
+	if c.EntryKey != "" {
+		used := "entry restored"
+		if c.Result == "expired" {
+			used = "entry found too old"
+		}
+		fmt.Fprintf(cl.out, "               %s: key %s, generation %d, %s old (a cache may be %s)\n", used, c.EntryKey, c.Generation, durationText(c.AgeSeconds), durationText(c.MaxAgeSeconds))
+	}
+	if c.SavedGeneration > 0 {
+		fmt.Fprintf(cl.out, "               saved generation %d\n", c.SavedGeneration)
+	}
+	if c.Key != "" {
+		fmt.Fprintf(cl.out, "               key %s, made of:\n", c.Key)
+		for _, p := range c.KeyParts {
+			fmt.Fprintf(cl.out, "                 %s: %s\n", p.Label, p.Value)
+		}
+	}
 }

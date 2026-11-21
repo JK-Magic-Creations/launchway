@@ -67,13 +67,7 @@ func (ps *parser) parseCaches(n *yaml.Node, at string) []*Cache {
 				keyNode = v
 				c.Key = ps.cacheKey(v, w, idx, scalar)
 			case "fallback":
-				switch f := ps.str(v, w); f {
-				case CacheFallbackNone:
-				case CacheFallbackLatest:
-					c.Fallback = f
-				default:
-					ps.add(v, w, "fallback is none (the default) or latest")
-				}
+				c.Fallback = ps.cacheChoice(v, w, "fallback is none (the default) or latest", CacheFallbackNone, CacheFallbackLatest)
 			case "sensitive":
 				c.Sensitive = ps.bool(v, w)
 			case "share":
@@ -81,13 +75,7 @@ func (ps *parser) parseCaches(n *yaml.Node, at string) []*Cache {
 			case "max_age":
 				c.MaxAge = ps.cacheAge(v, w)
 			case "save":
-				switch f := ps.str(v, w); f {
-				case CacheSaveSuccess:
-				case CacheSaveAlways, CacheSaveNever:
-					c.Save = f
-				default:
-					ps.add(v, w, "save is success (the default), always or never")
-				}
+				c.Save = ps.cacheChoice(v, w, "save is success (the default), always or never", CacheSaveSuccess, CacheSaveAlways, CacheSaveNever)
 			}
 		})
 		if pathsNode == nil {
@@ -189,6 +177,22 @@ func (ps *parser) cacheKey(v *yaml.Node, where, idx string, scalar func(*yaml.No
 		}
 	})
 	return k
+}
+
+// cacheChoice reads one of the choices, the first of which is the default and
+// is stored as empty.
+func (ps *parser) cacheChoice(v *yaml.Node, where, problem string, choices ...string) string {
+	got := ps.str(v, where)
+	for i, c := range choices {
+		if got == c {
+			if i == 0 {
+				return ""
+			}
+			return got
+		}
+	}
+	ps.add(v, where, "%s", problem)
+	return ""
 }
 
 // cacheAge reads a duration written as 7d, 36h or 90m; a day is 24 hours.

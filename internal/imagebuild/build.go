@@ -208,21 +208,9 @@ func Build(ctx context.Context, cfg *Config, req Request) (*Result, error) {
 			return res, fmt.Errorf("registry %s has no credentials to push with (images.registries.%s.credentials)", t.Registry, t.Registry)
 		}
 	}
-	cacheWrite := false
-	if req.Cache != nil {
-		rc, err := cfg.Registry(req.Cache.Registry)
-		if err != nil {
-			return res, err
-		}
-		// The protected cache is written only by a run that pushes (a
-		// default-branch run); another scope's by a run the server lets
-		// write it. Nothing a pull request or a branch builds ever lands in
-		// the protected cache.
-		wants := req.CacheWrite && (req.CacheScope != "" || req.Push)
-		cacheWrite = wants && rc.Credentials != nil && rc.MayPush(req.Project, req.Cache.Repository)
-		if wants && !cacheWrite {
-			log(fmt.Sprintf("The cache %s/%s is only read: project %s may not push there", rc.Host, req.Cache.Repository, req.Project))
-		}
+	cacheWrite, err := mayWriteCache(cfg, req, log)
+	if err != nil {
+		return res, err
 	}
 	hosts, err := rs.builderHosts(ctx, cacheWrite)
 	if err != nil {
@@ -704,6 +692,26 @@ func (rs *registrySet) builderHosts(ctx context.Context, cacheWrite bool) (map[s
 		hosts[trimHost(rc.Host)] = r.hostAuth()
 	}
 	return hosts, nil
+}
+
+// mayWriteCache says whether this build exports its registry cache. The
+// protected cache is written only by a run that pushes (a default-branch
+// run); another scope's by a run the server lets write it. Nothing a pull
+// request or a branch builds ever lands in the protected cache.
+func mayWriteCache(cfg *Config, req Request, log func(string)) (bool, error) {
+	if req.Cache == nil {
+		return false, nil
+	}
+	rc, err := cfg.Registry(req.Cache.Registry)
+	if err != nil {
+		return false, err
+	}
+	wants := req.CacheWrite && (req.CacheScope != "" || req.Push)
+	write := wants && rc.Credentials != nil && rc.MayPush(req.Project, req.Cache.Repository)
+	if wants && !write {
+		log(fmt.Sprintf("The cache %s/%s is only read: project %s may not push there", rc.Host, req.Cache.Repository, req.Project))
+	}
+	return write, nil
 }
 
 // loadSigning reads the key to sign with: the runner's own, or the one the

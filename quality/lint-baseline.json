@@ -1163,13 +1163,13 @@
     {
       "file": "internal/imagebuild/build.go",
       "linter": "funlen",
-      "text": "Function 'Build' has too many statements (279 \u003e 100)",
+      "text": "Function 'Build' has too many statements (276 \u003e 100)",
       "count": 1
     },
     {
       "file": "internal/imagebuild/build.go",
       "linter": "gocyclo",
-      "text": "cyclomatic complexity 117 of func `Build` is high (\u003e 30)",
+      "text": "cyclomatic complexity 113 of func `Build` is high (\u003e 30)",
       "count": 1
     },
     {

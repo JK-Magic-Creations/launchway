@@ -76,27 +76,15 @@ func (e *Engine) BeginCache(ctx context.Context, leaseID string, in BeginCache) 
 	if err != nil {
 		return nil, err
 	}
-	switch {
-	case !cc.limits.enabled:
-		return nil, fmt.Errorf("%w: caching is turned off for this project (cache policy)", ErrForbidden)
-	case cc.scopes.write == "":
-		return nil, fmt.Errorf("%w: %s", ErrForbidden, cc.scopes.whyNone)
-	case in.Bytes > cc.limits.maxEntry:
-		return nil, fmt.Errorf("%w: this cache is %s; an entry may hold at most %s (cache policy max_entry_gib)",
-			ErrQuota, cacheBytesText(in.Bytes), cacheBytesText(cc.limits.maxEntry))
-	case in.Bytes > cc.limits.maxProject:
-		return nil, fmt.Errorf("%w: this cache is %s; a project may keep at most %s of caches (cache policy max_project_gib)",
-			ErrQuota, cacheBytesText(in.Bytes), cacheBytesText(cc.limits.maxProject))
+	if err := cc.refuseBegin(in); err != nil {
+		return nil, err
 	}
 	store, err := e.storeOrErr()
 	if err != nil {
 		return nil, err
 	}
 	project, scope, ns := cc.st.Project, cc.scopes.write, cc.namespace(in.Name)
-	sensitive := 0
-	if d := cc.declared(in.Name); d != nil && d.Sensitive {
-		sensitive = 1
-	}
+	sensitive := boolInt(cc.sensitive(in.Name))
 	same := func(r *cacheRowT) bool {
 		return r.CreatedRun == cc.l.runID && r.CreatedStep == cc.l.stepID && r.CreatedAttempt == cc.l.attempt && r.SHA256 == in.SHA256 && r.Bytes == in.Bytes
 	}
@@ -109,20 +97,7 @@ func (e *Engine) BeginCache(ctx context.Context, leaseID string, in BeginCache) 
 		}
 		return r, err
 	}
-	// What an entry of this key already there means: carry on with this
-	// attempt's own upload, save the next generation (the step started from
-	// the newest entry), or find that it exists.
-	decide := func(r *cacheRowT) (gen int, answer *BegunCache) {
-		switch {
-		case r == nil:
-			return 1, nil
-		case r.Status == cacheUploading && same(r):
-			return 0, &BegunCache{ID: r.ID, Scope: scope, Received: r.Received, ChunkBytes: ArtifactChunkBytes, Generation: r.Generation}
-		case r.Status == cacheKept && in.Base == r.ID:
-			return r.Generation + 1, nil
-		}
-		return 0, existsAnswer(r, scope)
-	}
+	decide := func(r *cacheRowT) (int, *BegunCache) { return decideGeneration(r, r != nil && same(r), in.Base, scope) }
 	if r, err := existing(e.db); err != nil {
 		return nil, err
 	} else if _, answer := decide(r); answer != nil && answer.ID == "" {
@@ -434,4 +409,38 @@ func (e *Engine) CommitCache(ctx context.Context, leaseID, id string) (*Committe
 		return nil, err
 	}
 	return out, nil
+}
+
+// refuseBegin is why this run may not save the declared entry (caching is off,
+// the run has no scope to write, the entry is over the limits), or nil.
+func (cc *cacheContext) refuseBegin(in BeginCache) error {
+	switch {
+	case !cc.limits.enabled:
+		return fmt.Errorf("%w: caching is turned off for this project (cache policy)", ErrForbidden)
+	case cc.scopes.write == "":
+		return fmt.Errorf("%w: %s", ErrForbidden, cc.scopes.whyNone)
+	case in.Bytes > cc.limits.maxEntry:
+		return fmt.Errorf("%w: this cache is %s; an entry may hold at most %s (cache policy max_entry_gib)",
+			ErrQuota, cacheBytesText(in.Bytes), cacheBytesText(cc.limits.maxEntry))
+	case in.Bytes > cc.limits.maxProject:
+		return fmt.Errorf("%w: this cache is %s; a project may keep at most %s of caches (cache policy max_project_gib)",
+			ErrQuota, cacheBytesText(in.Bytes), cacheBytesText(cc.limits.maxProject))
+	}
+	return nil
+}
+
+// decideGeneration says what an entry of the key already there (r, or nil)
+// means for a save that started from base: carry on with this attempt's own
+// upload (same), save the next generation (the step started from the newest
+// entry), or find that it exists.
+func decideGeneration(r *cacheRowT, same bool, base, scope string) (gen int, answer *BegunCache) {
+	switch {
+	case r == nil:
+		return 1, nil
+	case r.Status == cacheUploading && same:
+		return 0, &BegunCache{ID: r.ID, Scope: scope, Received: r.Received, ChunkBytes: ArtifactChunkBytes, Generation: r.Generation}
+	case r.Status == cacheKept && base == r.ID:
+		return r.Generation + 1, nil
+	}
+	return 0, existsAnswer(r, scope)
 }

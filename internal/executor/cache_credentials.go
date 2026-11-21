@@ -109,7 +109,7 @@ var credentialRules = []credentialRule{
 	{match: globIn("pip.conf", "pip.ini"), content: regexp.MustCompile(`(?i)(://[^/\s:@]+:[^/\s@$]+@|password` + val + `)`), why: "a pip configuration with credentials in an index URL"},
 	{match: baseIn("settings.xml"), content: regexp.MustCompile(`(?s)<(password|passphrase|privateKey)>\s*[^\s<$]`), why: "a Maven settings.xml with a server password"},
 	{match: baseIn("gradle.properties"), content: regexp.MustCompile(`(?mi)^[^#\n]*(password|token|secret|apikey|api_key)[^=:\n]*` + val), why: "a gradle.properties with a password or token"},
-	{match: baseIn("auth.json"), content: regexp.MustCompile(`(github-oauth|gitlab-token|http-basic|bitbucket-oauth|bearer)`), why: "a Composer auth.json with a token"},
+	{match: baseIn("auth.json"), content: regexp.MustCompile(`(-oauth|-token|http-basic|bearer)`), why: "a Composer auth.json with a token"},
 	{match: inDir(".docker", "config.json"), content: regexp.MustCompile(`"(auth|identitytoken|registrytoken)"\s*:\s*"[^"]`), why: "a Docker config with registry credentials"},
 	{match: inDir(".aws", "credentials", "config"), content: regexp.MustCompile(`(?i)(aws_secret_access_key|aws_session_token)` + val), why: "AWS credentials"},
 	{match: inDir(".cargo", "credentials", "credentials.toml"), content: regexp.MustCompile(`(?m)^\s*token\s*=`), why: "a Cargo registry token"},

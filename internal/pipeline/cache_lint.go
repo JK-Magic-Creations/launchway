@@ -16,7 +16,7 @@ const (
 	CodeCacheWholeHome   = "cache-whole-tool-home"
 	CodeCacheNoLock      = "cache-key-without-lock"
 	CodeCacheFallback    = "cache-fallback-without-max-age"
-	CodeCacheCredentials = "cache-credential-path"
+	CodeCacheCredentials = "cache-credential-path" //nolint:gosec // the name of a warning, not a credential
 	CodeCacheSaveAlways  = "cache-save-always"
 )
 
@@ -74,80 +74,100 @@ func CacheWarnings(p *Pipeline) Problems {
 	return out
 }
 
-func warnCache(s *Step, c *Cache, add func(code, format string, a ...any)) {
-	refreshes := strings.Contains(s.Run, " -U") || strings.Contains(s.Run, "--update-snapshots") || strings.Contains(s.Run, "--refresh-dependencies") ||
-		strings.Contains(s.Run, "lastUpdated")
-	dependency := false
-	var outputs, homes, creds []string
-	for _, raw := range c.Paths {
+// pathKinds says what the paths of a cache hold.
+type pathKinds struct {
+	outputs, homes, creds []string
+	dependency            bool
+}
+
+func classifyPaths(paths []string) pathKinds {
+	var k pathKinds
+	for _, raw := range paths {
 		p := cleanCachePath(raw)
 		for _, seg := range strings.Split(p, "/") {
 			if outputDirs[seg] {
-				outputs = append(outputs, raw)
+				k.outputs = append(k.outputs, raw)
 				break
 			}
 		}
-		if hasSegment(p, ".gradle/build-cache") || strings.Contains(p, "build-cache") {
-			outputs = append(outputs, raw)
+		if strings.Contains(p, "build-cache") {
+			k.outputs = append(k.outputs, raw)
 		}
 		for _, h := range toolHomes {
 			if p == h || path.Base(p) == h && !strings.Contains(path.Dir(p), "repository") {
-				homes = append(homes, raw)
+				k.homes = append(k.homes, raw)
 				break
 			}
 		}
 		for _, h := range dependencyHints {
 			if hasSegment(p, h) {
-				dependency = true
+				k.dependency = true
 			}
 		}
-		for _, d := range credentialDirs {
-			if p == d || strings.HasPrefix(p, d+"/") && !downloadsOnly(d, strings.TrimPrefix(p, d+"/")) {
-				creds = append(creds, raw)
-				break
-			}
-		}
-		if p == "." || p == "*" || p == "**" || p == "" {
-			creds = append(creds, raw)
+		if holdsCredentials(p) {
+			k.creds = append(k.creds, raw)
 		}
 	}
+	return k
+}
+
+// holdsCredentials reports whether a cleaned path is, or is inside, a place
+// where tools leave credentials, other than where they keep downloads.
+func holdsCredentials(p string) bool {
+	if p == "." || p == "*" || p == "**" || p == "" {
+		return true
+	}
+	for _, d := range credentialDirs {
+		if p == d || strings.HasPrefix(p, d+"/") && !downloadsOnly(d, strings.TrimPrefix(p, d+"/")) {
+			return true
+		}
+	}
+	return false
+}
+
+// lockedKey reports whether the key is made of a file that pins versions.
+func lockedKey(c *Cache) bool {
+	for _, f := range c.Key.Files {
+		base := strings.ToLower(path.Base(f))
+		for _, l := range lockFiles {
+			if base == l || strings.HasSuffix(base, l) {
+				return true
+			}
+		}
+		if strings.HasPrefix(base, "requirements") && strings.Contains(base, "lock") {
+			return true
+		}
+	}
+	return false
+}
+
+func warnCache(s *Step, c *Cache, add func(code, format string, a ...any)) {
+	refreshes := strings.Contains(s.Run, " -U") || strings.Contains(s.Run, "--update-snapshots") || strings.Contains(s.Run, "--refresh-dependencies") ||
+		strings.Contains(s.Run, "lastUpdated")
+	k := classifyPaths(c.Paths)
 	name := "cache " + c.Name
-	if len(outputs) > 0 {
+	if len(k.outputs) > 0 {
 		add(CodeCacheOutputs, "%s keeps build output (%s). What a build wrote depends on the commit that made it: restored into another commit it is stale output, and tools that decide by file time or name may keep it. Cache what is downloaded instead (the package manager's own download cache, such as .npm, .cache/pip or .m2/repository) and let the build recreate its output",
-			name, strings.Join(dedupe(outputs), ", "))
+			name, strings.Join(dedupe(k.outputs), ", "))
 	}
-	if len(homes) > 0 && !refreshes {
+	if len(k.homes) > 0 && !refreshes {
 		add(CodeCacheWholeHome, "%s keeps all of %s. A tool's whole home holds not only downloads but its record of what it asked for and what was not found (Maven's maven-metadata and .lastUpdated files, Gradle's resolution state), so a snapshot or a version published since can be missed. Cache only the downloaded artifacts (.m2/repository), and either run Maven with -U (Gradle with --refresh-dependencies) or delete the *.lastUpdated and maven-metadata-*.xml files before the cache is saved",
-			name, strings.Join(dedupe(homes), ", "))
+			name, strings.Join(dedupe(k.homes), ", "))
 	}
-	if dependency {
-		locked := false
-		for _, f := range c.Key.Files {
-			base := strings.ToLower(path.Base(f))
-			for _, l := range lockFiles {
-				if base == l || strings.HasSuffix(base, l) {
-					locked = true
-				}
-			}
-			if strings.HasPrefix(base, "requirements") && strings.Contains(base, "lock") {
-				locked = true
-			}
+	if k.dependency && !lockedKey(c) {
+		have := "no files"
+		if len(c.Key.Files) > 0 {
+			have = strings.Join(c.Key.Files, ", ")
 		}
-		if !locked {
-			have := "no files"
-			if len(c.Key.Files) > 0 {
-				have = strings.Join(c.Key.Files, ", ")
-			}
-			add(CodeCacheNoLock, "%s keeps downloaded dependencies and its key is made of %s, none of them a lock file. A manifest does not say which versions were resolved, so the entry is kept while a version it would pick today is different. Put a lock file in key.files (package-lock.json, yarn.lock, poetry.lock, Cargo.lock, go.sum, ...) and install from it (npm ci, pip install -r a pinned file); where the tool has none, as Maven has not, set a short max_age so the cache is rebuilt",
-				name, have)
-		}
+		add(CodeCacheNoLock, "%s keeps downloaded dependencies and its key is made of %s, none of them a lock file. A manifest does not say which versions were resolved, so the entry is kept while a version it would pick today is different. Put a lock file in key.files (package-lock.json, yarn.lock, poetry.lock, Cargo.lock, go.sum, ...) and install from it (npm ci, pip install -r a pinned file); where the tool has none, as Maven has not, set a short max_age so the cache is rebuilt",
+			name, have)
 	}
 	if c.Fallback == CacheFallbackLatest && c.MaxAge == 0 {
 		add(CodeCacheFallback, "%s uses fallback: latest without max_age. A fallback starts from the newest entry of the name, however its key differs, and what was saved from it is the next fallback: it grows, and keeps what dependencies dropped, until the cache policy's maximum age ends the chain. Set max_age (for example 7d) so that the cache is rebuilt from nothing on a schedule you chose", name)
 	}
-	if len(creds) > 0 {
+	if len(k.creds) > 0 {
 		add(CodeCacheCredentials, "%s keeps %s, where tools commonly leave credentials (a settings.xml, .npmrc, docker or cloud login). A cache is restored by every run that may read it, so a credential in one reaches them all; the cache is not saved at all if a file that looks like one is found. Narrow the path to the downloads (.m2/repository, .npm/_cacache) and use short-lived credentials that are not written to the workspace",
-			name, strings.Join(dedupe(creds), ", "))
+			name, strings.Join(dedupe(k.creds), ", "))
 	}
 	if c.Save == CacheSaveAlways {
 		add(CodeCacheSaveAlways, "%s has save: always, so what a failed step left, possibly half-installed or corrupt, is saved and restored by the next run. Use the default save: success unless a failed run's downloads are known to be worth keeping", name)

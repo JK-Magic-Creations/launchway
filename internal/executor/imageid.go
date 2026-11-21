@@ -60,12 +60,13 @@ func ResolveImage(ctx context.Context, ex Executor, ref string) ImageIdentity {
 // engine has none (as running the step would).
 func (c *Container) ResolveImage(ctx context.Context, ref string) (string, string, error) {
 	inspect := func() (string, error) {
-		out, err := exec.CommandContext(ctx, c.Bin, "image", "inspect", "--format", "{{.Id}}", ref).Output()
+		out, err := exec.CommandContext(ctx, c.Bin, "image", "inspect", "--format", "{{.Id}}", ref).Output() //nolint:gosec // the runner's own container binary and an image reference from the pipeline, as the step itself runs it
 		return strings.TrimSpace(string(out)), err
 	}
 	id, err := inspect()
 	if err != nil || id == "" {
-		if perr := exec.CommandContext(ctx, c.Bin, "pull", "--quiet", ref).Run(); perr != nil {
+		perr := exec.CommandContext(ctx, c.Bin, "pull", "--quiet", ref).Run() //nolint:gosec // the runner's own container binary and an image reference from the pipeline, as the step itself runs it
+		if perr != nil {
 			return "", "", fmt.Errorf("pulling %s: %w", ref, perr)
 		}
 		if id, err = inspect(); err != nil {
