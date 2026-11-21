@@ -119,6 +119,6 @@ func NewRandomKey() ([]byte, error) {
 const (
 	strengthKeyFile = "A copy of the database or a backup reveals no secret. Whoever can read this file on the server, or the Kubernetes Secret that holds it, can open them. In a cluster the Secret is only as protected as the cluster's own secret encryption (etcd encryption), which Launchway cannot see."
 	strengthEnv     = "A copy of the database reveals no secret. The key sits in the process environment, which administrators of the host or container runtime can read; prefer a key file or a service for production."
-	strengthPass    = "A copy of the database reveals no secret, and the root key is not stored: it is unlocked by a passphrase at start. A server restarted unattended cannot start without the passphrase file."
+	strengthPhrase  = "A copy of the database reveals no secret, and the root key is not stored: it is unlocked by a passphrase at start. A server restarted unattended cannot start without the passphrase file."
 	strengthTransit = "The root key never leaves the Vault or OpenBao transit service; every unwrap is logged there, and revoking the server's access makes every secret unreadable at once."
 )

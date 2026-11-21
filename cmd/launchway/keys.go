@@ -48,8 +48,11 @@ func (k keyView) line() string {
 
 // cmdHosting runs the commands of Git hosting: repos and keys.
 func cmdHosting(name string, args []string) error {
-	if name == "keys" {
+	switch name {
+	case "keys":
 		return cmdKeys(args)
+	case "encryption":
+		return cmdEncryption(args)
 	}
 	return cmdRepos(args)
 }

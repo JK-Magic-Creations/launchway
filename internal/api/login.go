@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/subtle"
 	"net/http"
 	"net/url"
@@ -40,13 +41,13 @@ type loginState struct {
 
 // loginSealer returns the sealer for login cookies, creating the shared key
 // the first time any server needs it.
-func (s *Server) loginSealer() (*auth.Sealer, error) {
+func (s *Server) loginSealer(ctx context.Context) (*auth.Sealer, error) {
 	s.sealerMu.Lock()
 	defer s.sealerMu.Unlock()
 	if s.sealer != nil {
 		return s.sealer, nil
 	}
-	key, err := s.sharedSecret("login_state_key")
+	key, err := s.sharedSecret(ctx, "login_state_key")
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusNotFound, "sign-in is off on this server (auth.mode: none)")
 		return
 	}
-	sealer, err := s.loginSealer()
+	sealer, err := s.loginSealer(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return
@@ -113,7 +114,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		fail("expired", "no sign-in was in progress in this browser")
 		return
 	}
-	sealer, err := s.loginSealer()
+	sealer, err := s.loginSealer(r.Context())
 	if err != nil {
 		s.fail(w, err)
 		return

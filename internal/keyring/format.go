@@ -66,7 +66,7 @@ const (
 func (b Binding) aad(installation string, v uint32) []byte {
 	out := []byte("launchway/seal/v1")
 	for _, f := range []string{installation, b.Purpose, b.Org, b.Table, b.Column, b.Row} {
-		out = binary.BigEndian.AppendUint32(out, uint32(len(f)))
+		out = binary.BigEndian.AppendUint32(out, uint32(len(f))) //nolint:gosec // a binding field is a short name, far below 2^32 bytes
 		out = append(out, f...)
 	}
 	return binary.BigEndian.AppendUint32(out, v)

@@ -35,11 +35,11 @@ func doctorEncryption(args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), wait+2*time.Minute)
 	defer cancel()
-	rk, err := openRootKeys(withDefaultKey(cfg), os.Getenv, promptPassphrase)
+	rk, err := openRootKeys(ctx, withDefaultKey(cfg), os.Getenv, promptPassphrase)
 	if err != nil {
 		return fmt.Errorf("the root key cannot be used: %w", err)
 	}
-	db, err := engine.OpenInspected(cfg.DatabaseAddr(), wait)
+	db, err := engine.OpenInspected(cfg.DatabaseAddr(), wait) //nolint:contextcheck // connecting has its own timeouts
 	if err != nil {
 		return fmt.Errorf("the database cannot be reached, so nothing can be said about encryption: %w", err)
 	}
@@ -87,11 +87,11 @@ func doctorEncryption(args []string) error {
 // the one-sentence state, with the warnings, never an error that hides the
 // rest of the report.
 func encryptionBrief(ctx context.Context, cfg *config.Config, wait time.Duration) []string {
-	rk, err := openRootKeys(withDefaultKey(cfg), os.Getenv, nil)
+	rk, err := openRootKeys(ctx, withDefaultKey(cfg), os.Getenv, nil)
 	if err != nil {
 		return []string{"Encryption at rest: the root key cannot be used: " + err.Error()}
 	}
-	db, err := engine.OpenInspected(cfg.DatabaseAddr(), wait)
+	db, err := engine.OpenInspected(cfg.DatabaseAddr(), wait) //nolint:contextcheck // connecting has its own timeouts
 	if err != nil {
 		return []string{"Encryption at rest: not checked, the database cannot be reached"}
 	}

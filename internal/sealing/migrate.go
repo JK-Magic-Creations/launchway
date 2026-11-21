@@ -2,6 +2,7 @@ package sealing
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -184,22 +185,17 @@ func (s *Service) pass(ctx context.Context, reseal bool) (Result, error) {
 			if c.Where != "" {
 				where = " AND (" + c.Where + ")"
 			}
-			rs, err := s.db.Query(ctx, fmt.Sprintf(`SELECT %s, %s FROM %s WHERE %s > ?%s ORDER BY %s LIMIT %d`,
-				c.Key, c.Column, c.Table, c.Key, where, c.Key, batch), cursor)
-			if err != nil {
-				return res, err
-			}
 			var rows []row
-			for rs.Next() {
+			err := eachRow(ctx, s.db, fmt.Sprintf(`SELECT %s, %s FROM %s WHERE %s > ?%s ORDER BY %s LIMIT %d`,
+				c.Key, c.Column, c.Table, c.Key, where, c.Key, batch), []any{cursor}, func(rs *sql.Rows) error {
 				var r row
 				if err := rs.Scan(&r.key, &r.val); err != nil {
-					rs.Close()
-					return res, err
+					return err
 				}
 				rows = append(rows, r)
-			}
-			rs.Close()
-			if err := rs.Err(); err != nil {
+				return nil
+			})
+			if err != nil {
 				return res, err
 			}
 			for _, r := range rows {

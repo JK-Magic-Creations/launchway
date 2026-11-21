@@ -31,7 +31,7 @@ type rootKeys struct {
 // openRootKeys opens the holders the configuration and environment name. It
 // checks files and the transit settings; it does not contact the service.
 // prompt reads a passphrase when the keystore has no passphrase file.
-func openRootKeys(e config.EncryptionConfig, getenv func(string) string, prompt func() ([]byte, error)) (*rootKeys, error) {
+func openRootKeys(ctx context.Context, e config.EncryptionConfig, getenv func(string) string, prompt func() ([]byte, error)) (*rootKeys, error) {
 	e = e.Overlay(getenv)
 	r, err := e.Resolve(getenv)
 	if err != nil {
@@ -55,7 +55,7 @@ func openRootKeys(e config.EncryptionConfig, getenv func(string) string, prompt 
 			err = errors.New("the keystore needs its passphrase: set encryption.passphrase_file (or LAUNCHWAY_KEYSTORE_PASSPHRASE_FILE), or start the server in a terminal to be asked")
 		}
 		if err == nil {
-			rk.primary, err = keyring.OpenKeystore(r.Keystore, pass)
+			rk.primary, err = keyring.OpenKeystore(ctx, r.Keystore, pass)
 			keyring.Zero(pass)
 		}
 	case "transit":
@@ -126,7 +126,7 @@ func auditEncryption(eng *engine.Engine) func(context.Context, keyring.Event) {
 // refuses to start.
 func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*sealing.Service, error) {
 	cfg, log := su.cfg, su.log
-	rk, err := openRootKeys(withDefaultKey(cfg), os.Getenv, promptPassphrase)
+	rk, err := openRootKeys(ctx, withDefaultKey(cfg), os.Getenv, promptPassphrase)
 	if err != nil {
 		return nil, err
 	}
@@ -187,4 +187,15 @@ func defaultKeyFile(ctx context.Context, cfg *config.Config, eng *engine.Engine,
 		return nil, err
 	}
 	return &rootKeys{kind: "key_file", primary: h}, nil
+}
+
+// secretsAndToken unlocks the root key and then reads the runner token the
+// servers share, which is kept sealed once a root key is in use.
+func (su *serverSetup) secretsAndToken(eng *engine.Engine) (*sealing.Service, string, error) {
+	svc, err := su.startSecrets(context.Background(), eng)
+	if err != nil {
+		return nil, "", err
+	}
+	token, err := config.RunnerToken(su.cfg.Data, svc)
+	return svc, token, err
 }

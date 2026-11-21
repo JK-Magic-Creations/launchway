@@ -1,6 +1,7 @@
 package sealing
 
 import (
+	"database/sql"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -13,7 +14,7 @@ import (
 )
 
 // secretLooking matches column names that may hold a secret. A column that
-// matches must be in Registry (sealed) or in NotSecret (with the reason), so
+// matches must be in Registry (sealed) or in ExplainedColumns (with the reason), so
 // that new code that adds a secret-looking column cannot slip past: it fails
 // here until someone decides.
 var secretLooking = regexp.MustCompile(`(?i)(secret|token|passw|credential|cred_|private|sealed|seal|api_?key|signing|hmac|hash|cert|(^|_)key$)`)
@@ -26,18 +27,16 @@ func schemaColumns(t *testing.T, e *engine.Engine) []string {
 	if db.Postgres() {
 		q = `SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = current_schema()`
 	}
-	rs, err := db.Query(ctx, q)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rs.Close()
 	var out []string
-	for rs.Next() {
+	if err := eachRow(ctx, db, q, nil, func(rs *sql.Rows) error {
 		var tb, c string
 		if err := rs.Scan(&tb, &c); err != nil {
-			t.Fatal(err)
+			return err
 		}
 		out = append(out, tb+"."+c)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 	sort.Strings(out)
 	return out
@@ -58,24 +57,24 @@ func TestSchemaSecretColumnsAreRegistered(t *testing.T) {
 		if registered[col] {
 			continue
 		}
-		if _, ok := NotSecret[col]; !ok {
-			t.Errorf("the column %s looks like it may hold a secret. If it does, seal it through internal/sealing and add it to Registry (internal/sealing/columns.go); if it does not, add it to NotSecret there with the reason", col)
+		if _, ok := ExplainedColumns[col]; !ok {
+			t.Errorf("the column %s looks like it may hold a secret. If it does, seal it through internal/sealing and add it to Registry (internal/sealing/columns.go); if it does not, add it to ExplainedColumns there with the reason", col)
 		}
 	}
 	for col := range registered {
 		if !all[col] {
 			t.Errorf("Registry names %s, which is not a column of the schema", col)
 		}
-		if why, dup := NotSecret[col]; dup {
+		if why, dup := ExplainedColumns[col]; dup {
 			t.Errorf("%s is both registered and listed as not secret (%s)", col, why)
 		}
 	}
-	for col, why := range NotSecret {
+	for col, why := range ExplainedColumns {
 		if !all[col] {
-			t.Errorf("NotSecret names %s (%s), which is not a column of the schema: delete the entry", col, why)
+			t.Errorf("ExplainedColumns names %s (%s), which is not a column of the schema: delete the entry", col, why)
 		}
 		if strings.TrimSpace(why) == "" {
-			t.Errorf("NotSecret %s has no reason", col)
+			t.Errorf("ExplainedColumns %s has no reason", col)
 		}
 	}
 }

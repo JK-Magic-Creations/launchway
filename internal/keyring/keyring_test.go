@@ -16,13 +16,13 @@ import (
 type testDB struct{ *sql.DB }
 
 func (d testDB) Exec(ctx context.Context, q string, a ...any) (sql.Result, error) {
-	return d.DB.ExecContext(ctx, q, a...)
+	return d.ExecContext(ctx, q, a...)
 }
 func (d testDB) Query(ctx context.Context, q string, a ...any) (*sql.Rows, error) {
-	return d.DB.QueryContext(ctx, q, a...)
+	return d.QueryContext(ctx, q, a...)
 }
 func (d testDB) QueryRow(ctx context.Context, q string, a ...any) *sql.Row {
-	return d.DB.QueryRowContext(ctx, q, a...)
+	return d.QueryRowContext(ctx, q, a...)
 }
 
 func newDB(t *testing.T) testDB {
@@ -332,25 +332,25 @@ func TestEnvHolder(t *testing.T) {
 
 func TestPassphraseKeystore(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "ks.json")
-	if err := CreateKeystore(p, []byte("short")); err == nil {
+	if err := CreateKeystore(ctx, p, []byte("short")); err == nil {
 		t.Fatal("a short passphrase was accepted")
 	}
 	pass := []byte("correct horse battery staple")
-	if err := CreateKeystore(p, pass); err != nil {
+	if err := CreateKeystore(ctx, p, pass); err != nil {
 		t.Fatal(err)
 	}
-	if err := CreateKeystore(p, pass); err == nil {
+	if err := CreateKeystore(ctx, p, pass); err == nil {
 		t.Fatal("overwrote a keystore")
 	}
-	h1, err := OpenKeystore(p, pass)
+	h1, err := OpenKeystore(ctx, p, pass)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := OpenKeystore(p, []byte("wrong passphrase here")); err == nil {
+	if _, err := OpenKeystore(ctx, p, []byte("wrong passphrase here")); err == nil {
 		t.Fatal("a wrong passphrase unlocked the keystore")
 	}
 	// The same keystore unlocks to the same root key: a value wrapped by one opens with the other.
-	h2, _ := OpenKeystore(p, pass)
+	h2, _ := OpenKeystore(ctx, p, pass)
 	w, _ := h1.Wrap(ctx, mustKey(t), []byte("aad"))
 	if _, err := h2.Unwrap(ctx, w, []byte("aad")); err != nil {
 		t.Fatal(err)

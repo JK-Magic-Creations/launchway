@@ -197,24 +197,21 @@ func (s *Service) advise(r *Report) {
 func (s *Service) countCredentialAddresses(ctx context.Context) (int, error) {
 	n := 0
 	for _, c := range []struct{ table, col string }{{"repo_mirrors", "url"}, {"repo_webhooks", "url"}, {"forge_connections", "base_url"}} {
-		rs, err := s.db.Query(ctx, fmt.Sprintf(`SELECT %s FROM %s WHERE %s LIKE '%%://%%@%%'`, c.col, c.table, c.col))
-		if err != nil {
-			if isMissingTable(err) {
-				continue
-			}
-			return n, err
-		}
-		for rs.Next() {
+		err := eachRow(ctx, s.db, fmt.Sprintf(`SELECT %s FROM %s WHERE %s LIKE '%%://%%@%%'`, c.col, c.table, c.col), nil, func(rs *sql.Rows) error {
 			var a string
-			if rs.Scan(&a) == nil {
-				if u, err := url.Parse(a); err == nil && u.User != nil {
-					if _, hasPass := u.User.Password(); hasPass || u.Scheme == "http" || u.Scheme == "https" {
-						n++
-					}
+			if err := rs.Scan(&a); err != nil {
+				return err
+			}
+			if u, err := url.Parse(a); err == nil && u.User != nil {
+				if _, hasPass := u.User.Password(); hasPass || u.Scheme == "http" || u.Scheme == "https" {
+					n++
 				}
 			}
+			return nil
+		})
+		if err != nil && !isMissingTable(err) {
+			return n, err
 		}
-		rs.Close()
 	}
 	return n, nil
 }

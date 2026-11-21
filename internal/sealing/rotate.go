@@ -2,6 +2,7 @@ package sealing
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/jk-magic-creations/launchway/internal/keyring"
 )
@@ -69,24 +70,22 @@ func (s *Service) VerifyAll(ctx context.Context) (Drill, error) {
 		if c.Where != "" {
 			where = " AND (" + c.Where + ")"
 		}
-		rs, err := s.db.Query(ctx, "SELECT "+c.Key+", "+c.Column+" FROM "+c.Table+" WHERE "+c.Column+" LIKE ?"+where, keyring.Prefix+"%")
+		type row struct{ k, v string }
+		var rows []row
+		err := eachRow(ctx, s.db, "SELECT "+c.Key+", "+c.Column+" FROM "+c.Table+" WHERE "+c.Column+" LIKE ?"+where, []any{keyring.Prefix + "%"}, func(rs *sql.Rows) error {
+			var r row
+			if err := rs.Scan(&r.k, &r.v); err != nil {
+				return err
+			}
+			rows = append(rows, r)
+			return nil
+		})
 		if err != nil {
 			if isMissingTable(err) {
 				continue
 			}
 			return d, err
 		}
-		type row struct{ k, v string }
-		var rows []row
-		for rs.Next() {
-			var r row
-			if err := rs.Scan(&r.k, &r.v); err != nil {
-				rs.Close()
-				return d, err
-			}
-			rows = append(rows, r)
-		}
-		rs.Close()
 		for _, r := range rows {
 			plain, err := s.keys.Open(ctx, c.binding(r.k), r.v)
 			keyring.Zero(plain)

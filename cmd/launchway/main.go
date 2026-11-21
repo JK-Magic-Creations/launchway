@@ -154,10 +154,8 @@ func main() {
 		err = cmdVariables(args)
 	case "doctor":
 		err = cmdDoctor(args)
-	case "repos", "keys":
+	case "repos", "keys", "encryption":
 		err = cmdHosting(os.Args[1], args)
-	case "encryption":
-		err = cmdEncryption(args)
 	case "version", "--version", "-v":
 		fmt.Println("launchway", version)
 	case "help", "--help", "-h":
@@ -188,10 +186,6 @@ func cmdServer(args []string) error {
 	}
 	defer eng.Close()
 	logStore(eng, log)
-	secretsSvc, err := su.startSecrets(context.Background(), eng)
-	if err != nil {
-		return err
-	}
 
 	// Everything but the bootstrap settings is kept in the database
 	// (schema 23): the file's copies are imported once, then ignored.
@@ -224,7 +218,7 @@ func cmdServer(args []string) error {
 	if err != nil {
 		return err
 	}
-	token, err := config.RunnerToken(cfg.Data, secretsSvc)
+	secretsSvc, token, err := su.secretsAndToken(eng)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -13,6 +14,14 @@ import (
 // secretsService is the service that seals the server's stored secrets
 // (internal/sealing). It is named here so that Server's field needs no import.
 type secretsService = sealing.Service
+
+// startUnkeyed makes the service of a server that was given none. The service
+// belongs to the process, not to the request that happens to need it first, so it
+// is started with a context of its own (the call goes through a variable, which
+// is how the linter is told that this is meant).
+var startUnkeyed = func(db sealing.DB, log *slog.Logger) (*sealing.Service, error) {
+	return sealing.Start(context.Background(), sealing.Options{DB: db, Log: log})
+}
 
 // secretStoreMu guards the lazily made service (not sealerMu, which callers of
 // sharedSecret already hold).
@@ -28,7 +37,7 @@ func (s *Server) secretStore() (*sealing.Service, error) {
 	if s.Secrets != nil {
 		return s.Secrets, nil
 	}
-	svc, err := sealing.Start(context.Background(), sealing.Options{DB: s.Engine.Database(), Log: s.Log})
+	svc, err := startUnkeyed(s.Engine.Database(), s.Log)
 	if err != nil {
 		return nil, err
 	}
@@ -39,12 +48,12 @@ func (s *Server) secretStore() (*sealing.Service, error) {
 // sharedSecret returns the secret every server of the installation shares
 // under name (a signing or sealing key), made on first use, sealed at rest
 // when a root key is in use.
-func (s *Server) sharedSecret(name string) (string, error) {
+func (s *Server) sharedSecret(ctx context.Context, name string) (string, error) {
 	svc, err := s.secretStore()
 	if err != nil {
 		return "", err
 	}
-	return svc.SharedValue(name, auth.NewKey())
+	return svc.SharedValueContext(ctx, name, auth.NewKey())
 }
 
 // writeNoRootKey answers a request for something that stores secrets on a

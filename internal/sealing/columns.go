@@ -100,59 +100,68 @@ var (
 // New code that stores a secret in the database adds its column here, in the
 // same change. TestSchemaSecretColumnsAreRegistered fails on a column whose
 // name looks like it holds a secret and that is neither here nor explained in
-// NotSecret.
+// ExplainedColumns.
 var Registry = []Column{webhooksColumn, hostKeysColumn, metaColumn}
 
-// NotSecret lists columns whose names look like they hold a secret, and why
+// ExplainedColumns lists columns whose names look like they hold a secret, and why
 // they do not: a hash of a random value (a fast hash is right for 256 random
 // bits), a public key, an identifier, or a reference to where a secret lives.
 // TestSchemaSecretColumnsAreRegistered holds every column that looks
 // secret to either this list or Registry.
-var NotSecret = map[string]string{
+var ExplainedColumns = func() map[string]string {
+	out := make(map[string]string, len(explained))
+	for _, e := range explained {
+		out[e.column] = e.why
+	}
+	return out
+}()
+
+// explained is ExplainedColumns as written: a column and the reason.
+var explained = []struct{ column, why string }{
 	// Hashes of random values, or of public content: a fast hash is right for 256 random bits, and nothing can be recovered from it.
-	"sessions.id_hash":             "SHA-256 of a 256-bit random session id",
-	"api_tokens.hash":              "SHA-256 of a 256-bit random token",
-	"runner_access_tokens.hash":    "SHA-256 of a 256-bit random token",
-	"runner_join_tokens.hash":      "SHA-256 of a 256-bit random token",
-	"deployments.pod_hash":         "a digest of a pod template, not a credential",
-	"runs.pipeline_hash":           "a digest of the pipeline text",
-	"webhook_deliveries.body_hash": "a digest of a received body, kept to detect repeats",
-	"artifact_blobs.hash_state":    "the state of a running digest of public content",
-	"caches.hash_state":            "the state of a running digest of cache content",
+	{"sessions.id_hash", "SHA-256 of a 256-bit random session id"},
+	{"api_tokens.hash", "SHA-256 of a 256-bit random token"},
+	{"runner_access_tokens.hash", "SHA-256 of a 256-bit random token"},
+	{"runner_join_tokens.hash", "SHA-256 of a 256-bit random token"},
+	{"deployments.pod_hash", "a digest of a pod template, not a credential"},
+	{"runs.pipeline_hash", "a digest of the pipeline text"},
+	{"webhook_deliveries.body_hash", "a digest of a received body, kept to detect repeats"},
+	{"artifact_blobs.hash_state", "the state of a running digest of public content"},
+	{"caches.hash_state", "the state of a running digest of cache content"},
 
 	// References to where a secret lives, and public keys: never the secret.
-	"forge_connections.cred_env":   "the name of an environment variable",
-	"forge_connections.cred_file":  "a file path",
-	"repo_mirrors.cred_env":        "the name of an environment variable",
-	"repo_mirrors.cred_file":       "a file path",
-	"runner_identities.public_key": "a public key; the private half stays on the runner",
-	"runner_identities.join_token": "the join token's id, not the token (whose hash is runner_join_tokens.hash)",
-	"findings.secret":              "a flag saying a finding is a secret that was found; the secret itself is never stored",
+	{"forge_connections.cred_env", "the name of an environment variable"},
+	{"forge_connections.cred_file", "a file path"},
+	{"repo_mirrors.cred_env", "the name of an environment variable"},
+	{"repo_mirrors.cred_file", "a file path"},
+	{"runner_identities.public_key", "a public key; the private half stays on the runner"},
+	{"runner_identities.join_token", "the join token's id, not the token (whose hash is runner_join_tokens.hash)"},
+	{"findings.secret", "a flag saying a finding is a secret that was found; the secret itself is never stored"},
 
 	// Names, identifiers and keys of rows, not secrets.
-	"blob_objects.key":         "the object's name in the blob store",
-	"artifact_blobs.store_key": "the object's name in the blob store",
-	"blob_uploads.key":         "the object's name in the blob store",
-	"caches.blob_key":          "the object's name in the blob store",
-	"caches.key":               "the cache's key as the pipeline names it",
-	"repo_packs.blob_key":      "the object's name in the blob store",
-	"deployments.snapshot_key": "the name of a stored snapshot",
-	"lane_holders.lane_key":    "the name of a lane",
-	"lane_waiting.lane_key":    "the name of a lane",
-	"runs.lane_key":            "the name of a lane",
-	"sbom_components.name_key": "a normalized component name",
-	"schedule_fires.sched_key": "the name of a schedule",
-	"schedule_seen.sched_key":  "the name of a schedule",
-	"step_inputs.origin_key":   "where an input came from",
-	"test_cases.test_key":      "a test's identity",
-	"encryption_state.key":     "the name of a fact (the table holds the installation id and migration progress, no key material)",
-	"meta.key":                 "the name of a meta row",
+	{"blob_objects.key", "the object's name in the blob store"},
+	{"artifact_blobs.store_key", "the object's name in the blob store"},
+	{"blob_uploads.key", "the object's name in the blob store"},
+	{"caches.blob_key", "the object's name in the blob store"},
+	{"caches.key", "the cache's key as the pipeline names it"},
+	{"repo_packs.blob_key", "the object's name in the blob store"},
+	{"deployments.snapshot_key", "the name of a stored snapshot"},
+	{"lane_holders.lane_key", "the name of a lane"},
+	{"lane_waiting.lane_key", "the name of a lane"},
+	{"runs.lane_key", "the name of a lane"},
+	{"sbom_components.name_key", "a normalized component name"},
+	{"schedule_fires.sched_key", "the name of a schedule"},
+	{"schedule_seen.sched_key", "the name of a schedule"},
+	{"step_inputs.origin_key", "where an input came from"},
+	{"test_cases.test_key", "a test's identity"},
+	{"encryption_state.key", "the name of a fact (the table holds the installation id and migration progress, no key material)"},
+	{"meta.key", "the name of a meta row"},
 
 	// Counts.
-	"ai_explanations.input_tokens":  "a count of model tokens",
-	"ai_explanations.output_tokens": "a count of model tokens",
-	"ai_usage.input_tokens":         "a count of model tokens",
-	"ai_usage.output_tokens":        "a count of model tokens",
+	{"ai_explanations.input_tokens", "a count of model tokens"},
+	{"ai_explanations.output_tokens", "a count of model tokens"},
+	{"ai_usage.input_tokens", "a count of model tokens"},
+	{"ai_usage.output_tokens", "a count of model tokens"},
 }
 
 // Box seals and opens one registered column's values, each bound to its row.

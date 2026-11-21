@@ -141,7 +141,7 @@ func New(ctx context.Context, o Options) (*Hosting, error) {
 			return nil, err
 		}
 	}
-	key, err := sec.SharedValue("git_run_token_key", auth.NewKey())
+	key, err := sec.SharedValueContext(ctx, "git_run_token_key", auth.NewKey())
 	if err != nil {
 		return nil, fmt.Errorf("the key for run tokens: %w", err)
 	}

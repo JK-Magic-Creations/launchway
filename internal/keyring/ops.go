@@ -22,7 +22,7 @@ func (k *Keyring) maxKEKVersion(ctx context.Context) (uint32, error) {
 	if err := k.db.QueryRow(ctx, `SELECT MAX(version) FROM encryption_keks WHERE retired_at = 0`).Scan(&v); err != nil {
 		return 0, err
 	}
-	return uint32(v.Int64), nil
+	return u32(v.Int64), nil
 }
 
 // RotateKEK creates the next key-encryption key version (wrapped by the
@@ -178,7 +178,7 @@ func (k *Keyring) DataKeys(ctx context.Context) ([]DEKRow, error) {
 		if err := rs.Scan(&d.Purpose, &d.Org, &v, &kv, &d.CreatedAt); err != nil {
 			return nil, err
 		}
-		d.Version, d.KEKVersion = uint32(v), uint32(kv)
+		d.Version, d.KEKVersion = u32(v), u32(kv)
 		out = append(out, d)
 	}
 	return out, rs.Err()
@@ -187,9 +187,9 @@ func (k *Keyring) DataKeys(ctx context.Context) ([]DEKRow, error) {
 // NewestVersion is the newest data key version for a purpose and
 // organization (0 if there is none yet).
 func (k *Keyring) NewestVersion(ctx context.Context, purpose, org string) (uint32, error) {
-	var max sql.NullInt64
-	err := k.db.QueryRow(ctx, `SELECT MAX(version) FROM encryption_deks WHERE purpose = ? AND org = ?`, purpose, org).Scan(&max)
-	return uint32(max.Int64), err
+	var top sql.NullInt64
+	err := k.db.QueryRow(ctx, `SELECT MAX(version) FROM encryption_deks WHERE purpose = ? AND org = ?`, purpose, org).Scan(&top)
+	return u32(top.Int64), err
 }
 
 // KEKInfo describes a key-encryption key without its value.

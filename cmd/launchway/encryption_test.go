@@ -179,22 +179,22 @@ func TestWrongKeyAndMissingKeyRefuseToStart(t *testing.T) {
 
 func TestConfigurationOfSeveralHoldersIsRefused(t *testing.T) {
 	t.Setenv(config.EnvRootKey, mustRead(t, writeKey(t)))
-	_, err := openRootKeys(config.EncryptionConfig{KeyFile: writeKey(t)}, os.Getenv, nil)
+	_, err := openRootKeys(context.Background(), config.EncryptionConfig{KeyFile: writeKey(t)}, os.Getenv, nil)
 	if err == nil || !strings.Contains(err.Error(), "encryption.holder") {
 		t.Fatalf("%v", err)
 	}
-	rk, err := openRootKeys(config.EncryptionConfig{KeyFile: writeKey(t), Holder: "key_file"}, os.Getenv, nil)
+	rk, err := openRootKeys(context.Background(), config.EncryptionConfig{KeyFile: writeKey(t), Holder: "key_file"}, os.Getenv, nil)
 	if err != nil || rk.kind != "key_file" {
 		t.Fatalf("%v", err)
 	}
-	rk, err = openRootKeys(config.EncryptionConfig{}, os.Getenv, nil)
+	rk, err = openRootKeys(context.Background(), config.EncryptionConfig{}, os.Getenv, nil)
 	if err != nil || rk.kind != "env" {
 		t.Fatalf("the environment holder: %v", err)
 	}
 	// A world-readable key file is refused at start.
 	p := writeKey(t)
 	_ = os.Chmod(p, 0o644)
-	if _, err := openRootKeys(config.EncryptionConfig{KeyFile: p}, func(string) string { return "" }, nil); err == nil || !strings.Contains(err.Error(), "every user") {
+	if _, err := openRootKeys(context.Background(), config.EncryptionConfig{KeyFile: p}, func(string) string { return "" }, nil); err == nil || !strings.Contains(err.Error(), "every user") {
 		t.Fatalf("%v", err)
 	}
 }
@@ -225,7 +225,7 @@ func TestEncryptionInitNeverOverwrites(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	rk, err := openRootKeys(config.EncryptionConfig{Keystore: ks, PassphraseFile: pf}, func(string) string { return "" }, nil)
+	rk, err := openRootKeys(context.Background(), config.EncryptionConfig{Keystore: ks, PassphraseFile: pf}, func(string) string { return "" }, nil)
 	if err != nil || rk.kind != "passphrase" {
 		t.Fatalf("%v", err)
 	}

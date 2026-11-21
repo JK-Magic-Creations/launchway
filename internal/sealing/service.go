@@ -206,7 +206,11 @@ const metaRowPrefix = "shared:"
 // root key is in use. It is for secrets; every server sharing the database
 // gets the same value.
 func (s *Service) SharedValue(key, proposed string) (string, error) {
-	ctx := context.Background()
+	return s.SharedValueContext(context.Background(), key, proposed)
+}
+
+// SharedValueContext is SharedValue for a caller that has a context.
+func (s *Service) SharedValueContext(ctx context.Context, key, proposed string) (string, error) {
 	row := metaRowPrefix + key
 	stored := proposed
 	if s.Encrypted() {

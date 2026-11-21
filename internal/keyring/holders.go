@@ -39,7 +39,7 @@ func FromKey(kind, where string, key []byte) (Holder, error) {
 	case "env":
 		why = strengthEnv
 	case "passphrase":
-		why = strengthPass
+		why = strengthPhrase
 	}
 	return &localHolder{kind: kind, where: where, why: why, key: append([]byte(nil), key...)}, nil
 }
@@ -159,7 +159,7 @@ func ksDerive(pass, salt []byte, t, m uint32, p uint8) []byte {
 
 // CreateKeystore writes a new passphrase keystore file (mode 0600), refusing
 // to replace one.
-func CreateKeystore(path string, passphrase []byte) error {
+func CreateKeystore(ctx context.Context, path string, passphrase []byte) error {
 	if len(passphrase) < 12 {
 		return errors.New("the passphrase must be at least 12 characters")
 	}
@@ -172,7 +172,7 @@ func CreateKeystore(path string, passphrase []byte) error {
 		return err
 	}
 	h := &localHolder{key: ksDerive(passphrase, salt, ksTime, ksMemory, ksThreads)}
-	wrapped, err := h.Wrap(context.Background(), root, []byte("launchway keystore v1"))
+	wrapped, err := h.Wrap(ctx, root, []byte("launchway keystore v1"))
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func CreateKeystore(path string, passphrase []byte) error {
 }
 
 // OpenKeystore unlocks a passphrase keystore file with the passphrase.
-func OpenKeystore(path string, passphrase []byte) (Holder, error) {
+func OpenKeystore(ctx context.Context, path string, passphrase []byte) (Holder, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, fmt.Errorf("the keystore file: %w", err)
@@ -221,7 +221,7 @@ func OpenKeystore(path string, passphrase []byte) (Holder, error) {
 		return nil, fmt.Errorf("%s is damaged", path)
 	}
 	h := &localHolder{key: ksDerive(passphrase, salt, ks.Time, ks.MemoryK, ks.Threads)}
-	root, err := h.Unwrap(context.Background(), wrapped, []byte("launchway keystore v1"))
+	root, err := h.Unwrap(ctx, wrapped, []byte("launchway keystore v1"))
 	if err != nil {
 		return nil, errors.New("the passphrase does not unlock the keystore " + path)
 	}

@@ -6,6 +6,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"os"
@@ -33,39 +34,35 @@ func dumpAll(t *testing.T, e *engine.Engine, addr string) []byte {
 		return out.Bytes()
 	}
 	db := e.Database()
-	rs, err := db.Query(ctx, `SELECT table_name, column_name, data_type FROM information_schema.columns
-		WHERE table_schema = current_schema() AND data_type IN ('text', 'character varying', 'character', 'bytea')`)
-	if err != nil {
-		t.Fatal(err)
-	}
 	type col struct{ table, column, typ string }
 	var cols []col
-	for rs.Next() {
+	if err := eachRow(ctx, db, `SELECT table_name, column_name, data_type FROM information_schema.columns
+		WHERE table_schema = current_schema() AND data_type IN ('text', 'character varying', 'character', 'bytea')`, nil, func(rs *sql.Rows) error {
 		var c col
 		if err := rs.Scan(&c.table, &c.column, &c.typ); err != nil {
-			t.Fatal(err)
+			return err
 		}
 		cols = append(cols, c)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
-	rs.Close()
 	for _, c := range cols {
 		sel := `SELECT "` + c.column + `"::text FROM "` + c.table + `"`
 		if c.typ == "bytea" {
 			sel = `SELECT encode("` + c.column + `", 'escape') FROM "` + c.table + `"`
 		}
-		r, err := db.Query(ctx, sel)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for r.Next() {
+		if err := eachRow(ctx, db, sel, nil, func(r *sql.Rows) error {
 			var v sqlNullString
 			if err := r.Scan(&v); err != nil {
-				t.Fatal(err)
+				return err
 			}
 			out.WriteString(v.S)
 			out.WriteByte('\n')
+			return nil
+		}); err != nil {
+			t.Fatal(err)
 		}
-		r.Close()
 	}
 	return out.Bytes()
 }
@@ -185,7 +182,11 @@ func privateScalar(t *testing.T, der []byte) []byte {
 	case ed25519.PrivateKey:
 		return k.Seed()
 	case *ecdsa.PrivateKey:
-		return k.D.Bytes()
+		d, err := k.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d
 	case *rsa.PrivateKey:
 		return k.D.Bytes()[:32]
 	}

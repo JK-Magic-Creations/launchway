@@ -110,12 +110,12 @@ type localTool struct {
 	eng  *engine.Engine
 }
 
-func openLocalTool(cfgPath string) (*localTool, error) {
+func openLocalTool(ctx context.Context, cfgPath string) (*localTool, error) {
 	cfg, err := config.LoadBootstrap(cfgPath)
 	if err != nil {
 		return nil, err
 	}
-	keys, err := openRootKeys(withDefaultKey(cfg), os.Getenv, promptPassphrase)
+	keys, err := openRootKeys(ctx, withDefaultKey(cfg), os.Getenv, promptPassphrase)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (l *localTool) service(ctx context.Context) (*sealing.Service, error) {
 	if l.keys.kind == "" {
 		return nil, keyring.ErrNoRootKey
 	}
-	if err := l.openEngine(); err != nil {
+	if err := l.openEngine(); err != nil { //nolint:contextcheck // the engine opens its own connection with its own timeouts
 		return nil, err
 	}
 	return sealing.Start(ctx, sealing.Options{DB: l.eng.Database(), Holder: l.keys.primary, Previous: l.keys.previous,
@@ -173,7 +173,7 @@ func encryptionInit(args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := keyring.CreateKeystore(path, p); err != nil {
+		if err := keyring.CreateKeystore(context.Background(), path, p); err != nil {
 			return err
 		}
 		keyring.Zero(p)
@@ -230,7 +230,7 @@ func encryptionRotate(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return usageErr("%v", err)
 	}
-	l, err := openLocalTool(*cfgPath)
+	l, err := openLocalTool(context.Background(), *cfgPath)
 	if err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func encryptionRewrap(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return usageErr("%v", err)
 	}
-	l, err := openLocalTool(*cfgPath)
+	l, err := openLocalTool(context.Background(), *cfgPath)
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 )
@@ -208,7 +209,7 @@ func (k *Keyring) listKEKs(ctx context.Context) ([]kekRow, error) {
 		if err := rs.Scan(&v, &r.Holder, &r.Wrapped, &r.CreatedAt, &r.Retired); err != nil {
 			return nil, err
 		}
-		r.Version = uint32(v)
+		r.Version = u32(v)
 		out = append(out, r)
 	}
 	return out, rs.Err()
@@ -263,6 +264,15 @@ func (k *Keyring) unwrapKEK(ctx context.Context, r kekRow) (key []byte, viaPrevi
 		}
 	}
 	return nil, false, &ErrWrongKey{Detail: "this database's keys are held by a " + r.Holder + " root key, but this server is configured with a " + k.primary.Kind() + " one"}
+}
+
+// u32 reads a version number stored as a 64-bit integer; versions start at 1
+// and a value outside the range of a uint32 cannot have been written by this package.
+func u32(v int64) uint32 {
+	if v < 0 || v > math.MaxUint32 {
+		return 0
+	}
+	return uint32(v) //nolint:gosec // range checked above
 }
 
 // Enabled is true: a keyring is open.
@@ -333,7 +343,7 @@ func (k *Keyring) dek(ctx context.Context, purpose, org string, version uint32) 
 	if err != nil {
 		return nil, err
 	}
-	kek, err := k.kekByVersion(ctx, uint32(kv))
+	kek, err := k.kekByVersion(ctx, u32(kv))
 	if err != nil {
 		return nil, err
 	}
@@ -358,12 +368,12 @@ func (k *Keyring) newestDEK(ctx context.Context, purpose, org string) (uint32, [
 	l, ok := k.latest[lk]
 	k.mu.Unlock()
 	if !ok || k.now().Sub(l.at) > latestTTL {
-		var max sql.NullInt64
-		if err := k.db.QueryRow(ctx, `SELECT MAX(version) FROM encryption_deks WHERE purpose = ? AND org = ?`, purpose, org).Scan(&max); err != nil {
+		var top sql.NullInt64
+		if err := k.db.QueryRow(ctx, `SELECT MAX(version) FROM encryption_deks WHERE purpose = ? AND org = ?`, purpose, org).Scan(&top); err != nil {
 			return 0, nil, err
 		}
-		v := uint32(max.Int64)
-		if !max.Valid {
+		v := u32(top.Int64)
+		if !top.Valid {
 			if err := k.createDEK(ctx, purpose, org, 1); err != nil {
 				return 0, nil, err
 			}
