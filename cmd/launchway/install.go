@@ -111,3 +111,5 @@ func cmdInstall(args []string) error {
 	}
 	return err
 }
+
+func init() { helpTexts["install"] = installHelp } // help needs no cluster and no server
