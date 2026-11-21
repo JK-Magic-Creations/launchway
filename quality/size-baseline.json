@@ -28,7 +28,7 @@
     "internal/pipeline/verify.go:parser.parseVerifyStep": 216,
     "internal/policy/evaluate.go:judge": 227,
     "internal/policy/parse.go:parser.rule": 188,
-    "internal/runner/runner.go:Runner.execute": 152,
+    "internal/runner/runner.go:Runner.execute": 151,
     "internal/verify/source/source.go:openOne": 207
   }
 }

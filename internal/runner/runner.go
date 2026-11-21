@@ -59,10 +59,17 @@ type Runner struct {
 	// operating system and architecture (linux/amd64) unless a test says
 	// otherwise.
 	CachePlatform string
+	// SpoolMaxBytes and SpoolMaxAge bound the log lines a step keeps on the
+	// runner's disk while the server cannot be reached; zero means the
+	// defaults (see spool.go).
+	SpoolMaxBytes int64
+	SpoolMaxAge   time.Duration
 
-	wsMu     sync.Mutex
-	wsLocks  map[string]*sync.Mutex
-	reapKick chan struct{} // asks the reaper to look now (see reapSoon)
+	spoolActive activeSteps   // steps this process is running
+	spoolKick   chan struct{} // asks the spool delivery to look now
+	wsMu        sync.Mutex
+	wsLocks     map[string]*sync.Mutex
+	reapKick    chan struct{} // asks the reaper to look now (see reapSoon)
 	// One fetch at a time per library mirror; see libraryRepo.
 	libMu    sync.Mutex
 	libLocks map[string]*sync.Mutex
@@ -85,6 +92,7 @@ func (r *Runner) Run(ctx context.Context) error {
 	}
 	r.wsLocks = map[string]*sync.Mutex{}
 	r.reapKick = make(chan struct{}, 1)
+	r.spoolKick = make(chan struct{}, 1)
 	if r.Info.Accept == nil && !r.Accept.Empty() {
 		r.Info.Accept = r.Accept // the server leaves it out of work it refuses
 	}
@@ -113,6 +121,7 @@ func (r *Runner) Run(ctx context.Context) error {
 	}
 	r.Log.Info("runner started", "name", r.Info.Name, "executor", r.Exec.Name(), "concurrency", r.Concurrency, "server", r.Client.Server)
 	go r.collectGarbage(ctx)
+	go r.deliverSpools(ctx)
 
 	slots := make(chan struct{}, r.Concurrency)
 	var wg sync.WaitGroup
@@ -240,14 +249,22 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	}
 
 	logs := &logBuffer{}
+	sp := r.newSpool(job)
+	r.spoolActive.add(job.LeaseID)
+	defer r.spoolActive.done(job.LeaseID)
 	sys := func(format string, args ...any) { logs.add("system", fmt.Sprintf(format, args...)) }
 	flush := func() {
 		for {
 			batch := logs.take(engine.MaxLogBatch)
 			if len(batch) == 0 {
+				if err := sp.Drain(report); err != nil && !errors.Is(err, ErrLeaseLost) {
+					log.Warn("delivering kept logs", "err", err)
+				} else if err != nil {
+					stopWith(false, true)
+				}
 				return
 			}
-			if err := r.Client.Logs(report, job.LeaseID, batch); err != nil {
+			if err := sp.Send(report, batch); err != nil {
 				if errors.Is(err, ErrLeaseLost) {
 					stopWith(false, true)
 				} else {
@@ -339,34 +356,63 @@ func (r *Runner) execute(parent context.Context, job *engine.Job) {
 	if wasLost {
 		return
 	}
+	if !sp.Done() {
+		// Lines are still waiting for the server: the result goes after them.
+		r.keepResult(log, sp, res)
+		return
+	}
 	for i := 0; i < 5; i++ {
-		err := r.Client.Finish(report, job.LeaseID, res)
-		if errors.Is(err, ErrTooLarge) && res.Findings != nil {
-			log.Warn("the server refused the step's SARIF files as too large; reporting the result without them", "err", err)
-			res.Findings = &engine.CollectedReports{Files: []engine.ReportFile{},
-				Notes: append(res.Findings.Notes, "the server refused the SARIF files as too large, so none were kept")}
-			continue
-		}
-		if errors.Is(err, ErrTooLarge) && res.Coverage != nil && len(res.Coverage.Files) > 0 {
-			log.Warn("the server refused the step's coverage reports as too large; reporting the result without them", "err", err)
-			res.Coverage = &engine.CollectedReports{Files: []engine.ReportFile{},
-				Notes: append(res.Coverage.Notes, "the server refused the coverage reports as too large, so none were kept")}
-			continue
-		}
-		if errors.Is(err, ErrTooLarge) && res.Tests != nil {
-			// The server would not take the report files; the outcome
-			// matters more. Report it without them.
-			log.Warn("the server refused the step's report files as too large; reporting the result without them", "err", err)
-			res.Tests = &engine.CollectedReports{Files: []engine.ReportFile{},
-				Notes: append(res.Tests.Notes, "the server refused the report files as too large, so none were kept")}
-			continue
-		}
+		err := r.reportResult(report, log, job.LeaseID, &res)
 		if err == nil || errors.Is(err, ErrLeaseLost) {
 			r.finished(log, res)
 			return
 		}
+		if isOutage(err) {
+			// The step's outcome is kept and delivered when the server
+			// answers; it is not given up after a few tries.
+			r.keepResult(log, sp, res)
+			return
+		}
 		log.Warn("reporting the result failed; retrying", "err", err)
 		time.Sleep(time.Duration(i+1) * time.Second)
+	}
+}
+
+// keepResult spools a step's result and wakes the delivery.
+func (r *Runner) keepResult(log *slog.Logger, sp *stepSpool, res engine.Result) {
+	sp.markOutage()
+	if err := sp.SaveResult(res); err != nil {
+		log.Error("could not keep the result on disk; it is lost if the runner stops", "err", err)
+		return
+	}
+	log.Warn("the server could not be reached; the result is kept and will be delivered when it answers")
+	select {
+	case r.spoolKick <- struct{}{}:
+	default:
+	}
+}
+
+// reportResult sends a step's result. A server that refuses report files as
+// too large gets the result without them: the outcome matters more.
+func (r *Runner) reportResult(ctx context.Context, log *slog.Logger, lease string, res *engine.Result) error {
+	for {
+		err := r.Client.Finish(ctx, lease, *res)
+		switch {
+		case errors.Is(err, ErrTooLarge) && res.Findings != nil:
+			log.Warn("the server refused the step's SARIF files as too large; reporting the result without them", "err", err)
+			res.Findings = &engine.CollectedReports{Files: []engine.ReportFile{},
+				Notes: append(res.Findings.Notes, "the server refused the SARIF files as too large, so none were kept")}
+		case errors.Is(err, ErrTooLarge) && res.Coverage != nil && len(res.Coverage.Files) > 0:
+			log.Warn("the server refused the step's coverage reports as too large; reporting the result without them", "err", err)
+			res.Coverage = &engine.CollectedReports{Files: []engine.ReportFile{},
+				Notes: append(res.Coverage.Notes, "the server refused the coverage reports as too large, so none were kept")}
+		case errors.Is(err, ErrTooLarge) && res.Tests != nil:
+			log.Warn("the server refused the step's report files as too large; reporting the result without them", "err", err)
+			res.Tests = &engine.CollectedReports{Files: []engine.ReportFile{},
+				Notes: append(res.Tests.Notes, "the server refused the report files as too large, so none were kept")}
+		default:
+			return err
+		}
 	}
 }
 

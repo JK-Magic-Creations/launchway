@@ -125,7 +125,7 @@ func (c *Client) call(ctx context.Context, path string, in, out any) (int, error
 		if out != nil && resp.StatusCode == http.StatusConflict {
 			_ = json.Unmarshal(data, out) // a conflict may say where to carry on
 		}
-		return resp.StatusCode, fmt.Errorf("%s: %s (HTTP %d)", path, e.Error, resp.StatusCode)
+		return resp.StatusCode, &httpError{code: resp.StatusCode, msg: fmt.Sprintf("%s: %s (HTTP %d)", path, e.Error, resp.StatusCode)}
 	}
 	if out != nil {
 		if err := json.Unmarshal(data, out); err != nil {

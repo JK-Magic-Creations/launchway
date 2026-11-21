@@ -540,7 +540,7 @@ func cmdRunner(args []string) error {
 		Info: engine.RunnerInfo{ID: id, Name: o.Name, Executor: ex.Name(), Version: version, Labels: o.Labels,
 			OS: runtime.GOOS, Arch: runtime.GOARCH},
 		DataDir: o.Data, Concurrency: o.Concurrency, Secrets: secretStores, Reports: reportLimits, Images: o.Images,
-		Accept: o.Accept, Remote: true}
+		Accept: o.Accept, Remote: true, SpoolMaxBytes: o.Spool.Bytes(), SpoolMaxAge: o.Spool.Age()}
 	if o.HealthListen != "" {
 		ln, err := net.Listen("tcp", o.HealthListen)
 		if err != nil {

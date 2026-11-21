@@ -651,8 +651,8 @@ type RunnerSettings struct {
 	Executor    string                     `yaml:"executor"` // auto, container, podman, docker, host or kubernetes
 	Kubernetes  executor.KubernetesOptions `yaml:"kubernetes"`
 	Secrets     secrets.Config             `yaml:"secrets"` // secret stores, by name
-	// Reports limits the report files collected after each step.
-	Reports ReportsConfig `yaml:"reports"`
+	Reports     ReportsConfig              `yaml:"reports"` // limits the report files collected after each step
+	Spool       SpoolConfig                `yaml:"spool"`   // what the runner keeps on disk while the server cannot be reached
 	// Images lets the runner take image steps: the builders it sends builds
 	// to, and the registries it pushes to (see internal/imagebuild). Unset,
 	// the runner takes no image steps.
@@ -726,7 +726,7 @@ func LoadRunner(path string) (*RunnerFile, error) {
 	if c.CAFile != "" && !filepath.IsAbs(c.CAFile) {
 		c.CAFile = filepath.Join(base, c.CAFile)
 	}
-	if err := c.Accept.Check(); err != nil {
+	if err := errors.Join(c.Accept.Check(), c.Spool.Check()); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if c.Deploy != nil {
@@ -810,8 +810,8 @@ func (c *Config) Validate(path string) error {
 	if _, err := c.TestLimits(); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
-	if _, err := c.Runner.Reports.Limits(); err != nil {
-		return fmt.Errorf("%s: runner.%w", path, err)
+	if err := c.Runner.CheckLimits(); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	if err := c.Runner.Images.Check(); err != nil {
 		return fmt.Errorf("%s: runner.%w", path, err)

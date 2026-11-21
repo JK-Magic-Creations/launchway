@@ -264,6 +264,7 @@ func startBuiltinRunner(runnerCtx, ctx context.Context, cfg *config.Config, ln n
 		Info:    engine.RunnerInfo{ID: runnerID, Name: host + " (built in)", Executor: ex.Name(), Version: version},
 		DataDir: filepath.Join(cfg.Data, "runner"), Concurrency: cfg.Runner.Concurrency, Log: log,
 		Secrets: secretStores, Reports: reportLimits, Images: cfg.Runner.Images,
+		SpoolMaxBytes: cfg.Runner.Spool.Bytes(), SpoolMaxAge: cfg.Runner.Spool.Age(),
 	}
 	if cfg.Runner.AIEnabled() {
 		r.AI = &ai.Client{}
