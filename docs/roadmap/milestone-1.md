@@ -4,7 +4,7 @@
 
 <p class="rm-crumbs"><a href="../roadmap.html">Roadmap</a> › Milestone 1 · <a href="../roadmap-list.html">as a list</a></p>
 
-<p class="rm-meta"><span class="rm-when when-now">Now</span> 20 available · 31 in progress · 60 planned · 111 capabilities</p>
+<p class="rm-meta"><span class="rm-when when-now">Now</span> 23 available · 28 in progress · 60 planned · 111 capabilities</p>
 
 A team can keep its repositories in Launchway, review and merge there, and run every pipeline it has, with everything a hosted CI service offers and nothing else to install.
 
@@ -59,7 +59,7 @@ flowchart TD
 | [A guided interface a complete beginner can use](#g-a-guided-interface-a-complete-beginner-can-use) | 9 | 3 | 1 | 5 |
 | [Move your existing pipelines over](#g-move-your-existing-pipelines-over) | 2 | 0 | 0 | 2 |
 | [Foundations that finish alongside](#g-foundations-that-finish-alongside) | 6 | 1 | 3 | 2 |
-| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 0 | 9 | 3 |
+| [Install Launchway in minutes](#g-install-launchway-in-minutes) | 12 | 3 | 6 | 3 |
 
 ### Host your code {#g-host-your-code}
 
@@ -1022,7 +1022,7 @@ One command and a few plain questions on a laptop, a server or Kubernetes, then 
 
 #### A few values and nothing else {#a-few-values-and-nothing-else}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
 The chart starts a secure working installation from about ten lines or fewer: the address, the database choice and high availability on or off. Being built. Everything else is a secure default or is set in the product after first sign-in.
 
@@ -1030,17 +1030,17 @@ The chart starts a secure working installation from about ten lines or fewer: th
 
 #### Secrets made once and kept {#secrets-made-once-and-kept}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. Being built. It also holds when a GitOps controller renders the chart.
+The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. Rehearsed on a throwaway cluster: the install hook Job made the root key once and left the runner token and the database password it found; installing again, and upgrading with unchanged values, kept them.
 
 [Area page](installing.md)
 
 #### Secure by default in the chart {#secure-by-default-in-the-chart}
 
-<p class="rm-meta"><span class="rm-chip st-in-progress"><span aria-hidden="true">◐</span> In progress</span></p>
+<p class="rm-meta"><span class="rm-chip st-available"><span aria-hidden="true">✓</span> Available</span></p>
 
-Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed. Being built.
+Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed. Sign-in is required, secrets are sealed under a root key, the network policies deny by default and the pods run restricted; checked in a rehearsal on a throwaway cluster, fresh and as an upgrade with unchanged values.
 
 [Area page](installing.md)
 

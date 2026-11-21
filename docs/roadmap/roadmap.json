@@ -1142,24 +1142,24 @@
           "blurb": "One command and a few plain questions on a laptop, a server or Kubernetes, then a guided first sign-in in the browser. Nothing else is assumed to be installed.",
           "items": [
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "A few values and nothing else",
               "value": "The chart starts a secure working installation from about ten lines or fewer: the address, the database choice and high availability on or off.",
               "detail": "Being built. Everything else is a secure default or is set in the product after first sign-in.",
               "area": "installing"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Secrets made once and kept",
               "value": "The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades.",
-              "detail": "Being built. It also holds when a GitOps controller renders the chart.",
+              "detail": "Rehearsed on a throwaway cluster: the install hook Job made the root key once and left the runner token and the database password it found; installing again, and upgrading with unchanged values, kept them.",
               "area": "installing"
             },
             {
-              "status": "in-progress",
+              "status": "available",
               "title": "Secure by default in the chart",
               "value": "Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed.",
-              "detail": "Being built.",
+              "detail": "Sign-in is required, secrets are sealed under a root key, the network policies deny by default and the pods run restricted; checked in a rehearsal on a throwaway cluster, fresh and as an upgrade with unchanged values.",
               "area": "installing"
             },
             {
@@ -5621,7 +5621,8 @@
       "Statuses corrected against the code: only what is on the main branch is Available. Encryption at rest, built-in accounts, the guided installer, queueing and limits, path filters, restricted pull requests, deploy health checks, GitOps write-back, notifications, offline validation and dependency updates are built and in final integration.",
       "New: a short, honest “Where Launchway stands today” section, and the order we are building in.",
       "Steps that cannot start for lack of room now wait with a reason, runs have limits and a fair order, triggers and steps have path filters, and pull requests from automation accounts run restricted until a maintainer approves.",
-      "Delivery gaps closed: a built-in health proof for verify steps, GitOps write-back races, tags with digests and hosted repositories, notifications, template defaults and offline validate."
+      "Delivery gaps closed: a built-in health proof for verify steps, GitOps write-back races, tags with digests and hosted repositories, notifications, template defaults and offline validate.",
+      "Install and upgrade: `launchway install` for a laptop, a server or Kubernetes, a first-run guide in the web interface, secrets the chart makes once and keeps, encryption of stored secrets under a root key, and built-in dependency updates are in this build; waiting for room, limits, path filters and restricted pull requests as well."
     ]
   },
   "standsToday": {

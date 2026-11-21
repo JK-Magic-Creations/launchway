@@ -51,6 +51,7 @@ After what is already in flight, in this order.
 - New: a short, honest “Where Launchway stands today” section, and the order we are building in.
 - Steps that cannot start for lack of room now wait with a reason, runs have limits and a fair order, triggers and steps have path filters, and pull requests from automation accounts run restricted until a maintainer approves.
 - Delivery gaps closed: a built-in health proof for verify steps, GitOps write-back races, tags with digests and hosted repositories, notifications, template defaults and offline validate.
+- Install and upgrade: `launchway install` for a laptop, a server or Kubernetes, a first-run guide in the web interface, secrets the chart makes once and keeps, encryption of stored secrets under a root key, and built-in dependency updates are in this build; waiting for room, limits, path filters and restricted pull requests as well.
 
 
 Order is by value, not a schedule, and plans change. An item is **available** only when it is on the
@@ -267,9 +268,9 @@ A team can keep its repositories in Launchway, review and merge there, and run e
 
 | Item | Status | What it gives you |
 |---|---|---|
-| [A few values and nothing else](roadmap/milestone-1.md#a-few-values-and-nothing-else) | In progress | The chart starts a secure working installation from about ten lines or fewer: the address, the database choice and high availability on or off. |
-| [Secrets made once and kept](roadmap/milestone-1.md#secrets-made-once-and-kept) | In progress | The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. |
-| [Secure by default in the chart](roadmap/milestone-1.md#secure-by-default-in-the-chart) | In progress | Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed. |
+| [A few values and nothing else](roadmap/milestone-1.md#a-few-values-and-nothing-else) | Available | The chart starts a secure working installation from about ten lines or fewer: the address, the database choice and high availability on or off. |
+| [Secrets made once and kept](roadmap/milestone-1.md#secrets-made-once-and-kept) | Available | The chart creates the root key, the database password and the first administrator’s setup once, and keeps them across upgrades. |
+| [Secure by default in the chart](roadmap/milestone-1.md#secure-by-default-in-the-chart) | Available | Default-deny network policies, restricted pods and no public exposure come with the chart, so no folder of hand-written policy files is needed. |
 | [One-time setup code and built-in accounts](roadmap/milestone-1.md#one-time-setup-code-and-built-in-accounts) | In progress | A new installation requires sign-in from the first moment and offers a built-in first administrator with a second step. |
 | [One command, three targets](roadmap/milestone-1.md#one-command-three-targets) | In progress | launchway install asks the same few plain questions for a laptop, a single server or Kubernetes, and ends by printing the address and the one-time step. |
 | [Asks before it touches a cluster](roadmap/milestone-1.md#asks-before-it-touches-a-cluster) | In progress | On Kubernetes the installer shows the cluster it will change and asks by name, then writes a small values file and runs Helm, or writes files to commit where a GitOps controller manages the cluster. |
