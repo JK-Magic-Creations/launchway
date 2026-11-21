@@ -116,7 +116,12 @@ Levels nobody uses stay hidden: with no squadron there is no squadron column, pi
 
 There is exactly one wing today. The tables carry an `org` column in their keys, so
 several wings (tenants) can be added later without rewriting them; nothing isolates
-tenants from each other yet, and this release does not claim to.
+tenants from each other yet, and this release does not claim to. The limit is in the code, not the
+tables: the configuration store reads and writes only the one organization, the `organisation`
+kind accepts only the name `default`, and project names, runs, repositories and tokens are
+unique across the installation. To organize many repositories, use one wing and
+[squadrons](#levels): any number of units (never nested), each holding the projects of one team or
+product line.
 
 ## Upgrading and rolling back
 

@@ -31,6 +31,12 @@ command line, the MCP server and the planned Terraform provider name them. For t
   object; claiming one the UI manages needs `take_ownership` too.
 - **Units.** Objects that can be defined at a level carry a `unit`; empty is the organization. A
   project's `unit` is the unit it belongs to.
+  The `unit` is a field of the stored object beside its `spec`, never a key inside the spec:
+  `launchway config set project NAME -f project.yaml --unit platform` attaches (or moves) a project,
+  and `--unit ""` takes it out of its unit; over the API it is the `unit` in the body of
+  `PUT /api/v1/config/{kind}/{name}`. Moving a project changes which roles, libraries, policies,
+  environments, runner pools and secret stores defined at a unit apply to it, from the next run; its
+  runs, repository and history stay where they are. Changing it needs an administrator of the installation.
 
 ## The kinds
 
