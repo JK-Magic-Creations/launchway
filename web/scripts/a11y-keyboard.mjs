@@ -2,6 +2,7 @@
 // roles, states and announcements, from the accessibility tree (ariaSnapshot) and the live regions. No mouse is used:
 // every step is a key press. Run through scripts/a11y-server.sh.
 import assert from "node:assert/strict";
+import { writeFileSync } from "node:fs";
 import { launch, server } from "./a11y-lib.mjs";
 
 const { url, runs } = server();
@@ -203,5 +204,6 @@ await journey("a session that ends is announced and signing in again is offered,
 
 await browser.close();
 const failed = results.filter((r) => !r.ok);
+if (process.env.LAUNCHWAY_A11Y_KEYBOARD_REPORT) writeFileSync(process.env.LAUNCHWAY_A11Y_KEYBOARD_REPORT, JSON.stringify({ results }, null, 1));
 console.log(`${results.length - failed.length} of ${results.length} journeys passed`);
 if (failed.length) process.exit(1);

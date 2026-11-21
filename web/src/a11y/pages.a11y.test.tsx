@@ -6,7 +6,7 @@ import { scan } from "../test/axe";
 import baseline from "./baseline.json";
 
 // Every routed page of the interface, drawn whole (shell and page) with fixtures, in both themes, and scanned
-// by axe-core. See docs/development/accessibility-design.md for what each scan can and cannot see.
+// by axe-core. See docs/contributing/design-principles.md; the browser pass (make web-a11y) covers what jsdom cannot.
 const PAGES = [
   "/", "/projects", "/projects/shop-api", "/projects/shop-api/pipeline", "/projects/shop-api/tests", "/projects/shop-api/variables",
   "/pipelines", "/activity", "/activity/approvals", "/runs/run_7", "/deployments", "/deployments/environments",

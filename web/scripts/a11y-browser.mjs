@@ -12,7 +12,8 @@ import { AXE_TAGS, axeSource, dir, launch, server } from "./a11y-lib.mjs";
 
 const { url, runs } = server();
 const baselinePath = join(dir, "..", "a11y-browser-baseline.json");
-const baseline = new Set(JSON.parse(readFileSync(baselinePath, "utf8")).findings);
+// LAUNCHWAY_A11Y_NO_BASELINE=1 counts every finding, for measuring a build from before the baseline existed.
+const baseline = new Set(process.env.LAUNCHWAY_A11Y_NO_BASELINE ? [] : JSON.parse(readFileSync(baselinePath, "utf8")).findings);
 const seen = new Set();
 
 const PAGES = [
@@ -22,6 +23,7 @@ const PAGES = [
   ["Applications", "/deployments/applications"], ["Environments", "/deployments/environments"], ["Images", "/images"],
   ["Library", "/library"], ["Settings", "/settings"], ["Runners", "/settings/runners"], ["People and access", "/settings/access"],
   ["Variables", "/settings/variables"], ["Rules", "/settings/rules"], ["Learn", "/learn"], ["A Learn page", "/learn/concepts/launch-line"],
+  ["Accessibility guide", "/learn/guide/accessibility"], ["Conformance statement", "/learn/reference/accessibility-conformance"],
   ["Configuration", "/config"], ["First-run wizard", "/config/wizard/connect-repository"], ["Design kit", "/kit"],
   ["Sign-in", "/signin", { signedOut: true }],
 ];
@@ -59,10 +61,11 @@ for (const [name, path, opt = {}] of PAGES) {
         }, AXE_TAGS);
         for (const v of res) {
           const key = `${path.replace(runs.RUN_FAILED, ":failed").replace(runs.RUN_OK, ":ok").replace(runs.RUN_WAITING, ":waiting")}|${v.rule}`;
-          results.push({ page: name, path, view: vname, theme, ...v });
+          results.push({ page: name, path, view: vname, theme, baselined: baseline.has(key), ...v });
           if (baseline.has(key)) { seen.add(key); continue; }
           failures.push(`${name} ${vname} ${theme}: ${v.rule} (${v.impact}) ${v.help}\n      ${v.nodes.slice(0, 3).map((n) => `${n.target}: ${n.why ?? ""}`).join("\n      ")}`);
         }
+        if (shots) await page.screenshot({ path: join(shots, `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${vname}-${theme}.png`) });
         // Reflow (1.4.10): no horizontal scrolling of the page at 320 px wide.
         if (vname === "390" && theme === "light") {
           await page.setViewportSize({ width: 320, height: 800 });
@@ -80,10 +83,6 @@ for (const [name, path, opt = {}] of PAGES) {
             .map((e) => e.tagName.toLowerCase() + "." + e.className).slice(0, 5));
           results.push({ page: name, path, view: vname, theme, rule: "text-spacing", cut });
           if (cut.length) failures.push(`${name}: text is cut off with the 1.4.12 text spacing: ${cut.join(", ")}`);
-        }
-        if (shots && vname === "1440") {
-          await page.setViewportSize(viewport);
-          await page.screenshot({ path: join(shots, `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${vname}-${theme}.png`) });
         }
       } catch (e) {
         failures.push(`${name} ${vname} ${theme}: ${e.message.split("\n")[0]}`);
@@ -120,7 +119,7 @@ for (const theme of THEMES) {
 }
 await browser.close();
 
-for (const k of baseline) if (!seen.has(k)) failures.push(`baseline line no longer occurs, delete it from web/a11y-browser-baseline.json: ${k}`);
+for (const k of baseline) if (!seen.has(k) && !process.env.LAUNCHWAY_A11Y_NO_BASELINE) failures.push(`baseline line no longer occurs, delete it from web/a11y-browser-baseline.json: ${k}`);
 if (process.env.LAUNCHWAY_A11Y_REPORT) writeFileSync(process.env.LAUNCHWAY_A11Y_REPORT, JSON.stringify({ pages: PAGES.map((p) => p[0]), views: VIEWS.map((v) => v[0]), themes: THEMES, results, failures }, null, 1));
 for (const n of notes) console.log(n);
 console.log(`${PAGES.length} pages x ${VIEWS.length} widths x ${THEMES.length} themes scanned: ${results.filter((r) => r.rule !== "reflow" && r.rule !== "text-spacing" && r.rule !== "focus-visible").length} axe findings, ${failures.length} failures`);

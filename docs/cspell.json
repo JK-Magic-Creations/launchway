@@ -13,7 +13,7 @@
     "/\\]\\([^)]*\\)/g",
     "/https?:\\/\\/\\S+/g",
     "/<[^>]+>/g",
-    "/sha256:[0-9a-f\u2026]+/g"
+    "/sha256:[0-9a-f…]+/g"
   ],
   "words": [
     "applicationsets",
@@ -93,6 +93,9 @@
     "VitePress",
     "Wingman",
     "xunit",
-    "zstd"
+    "zstd",
+    "WCAG",
+    "VPAT",
+    "hoverable"
   ]
 }

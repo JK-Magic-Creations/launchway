@@ -83,6 +83,7 @@
         "guide/access",
         "guide/runner-identity",
         "guide/agents",
+        "guide/accessibility",
         "guide/high-availability",
         "guide/commands"
       ]
@@ -134,6 +135,7 @@
         "reference/http-api",
         "reference/config-objects",
         "reference/interface-parity",
+        "reference/accessibility-conformance",
         "reference/events",
         "reference/roles",
         "reference/policy-rules",
