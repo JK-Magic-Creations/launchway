@@ -58,7 +58,7 @@ then checks, and for each thing that is missing offers a way forward instead of 
 | A way in (Ingress class, Gateway API) | Offers the ones it found, or a **port-forward** now and says how to set up an address later. |
 | TLS | cert-manager issuer, a Secret you have, or plain http on a private network with a warning. |
 | A host name | Asks; if its DNS is not ready, the port-forward serves until it is. |
-| Network policies enforced by the cluster's network plugin | Says plainly that the shipped lockdown will be installed but will not take effect. |
+| Network policies enforced by the cluster's network plugin | Says plainly that the shipped lock-down will be installed but will not take effect. |
 | Pod security, image pull, room | Reports the namespace's level, explains a pull failure in plain words with the fix (a pull secret, a mirror, `kind load`), warns when the cluster looks short of CPU or memory. |
 | Argo CD or Flux | Offers to write the values file and an `Application` or `HelmRelease` for you to commit, and apply nothing. |
 

@@ -43,7 +43,7 @@ designed and shown as "coming" in the menu: a small Kubernetes on the machine, a
 
 *Evaluated: k3s (Apache-2.0).* One binary and a systemd service; it brings the things the installer otherwise
 asks about: a default storage class (local-path), an Ingress class (Traefik), and a network plugin that
-enforces `NetworkPolicy` (an embedded kube-router controller), so the shipped lockdown takes effect. It
+enforces `NetworkPolicy` (an embedded kube-router controller), so the shipped lock-down takes effect. It
 needs root and ports 6443 and 10250, and it changes the machine, so it is built last and tested only in a
 throwaway virtual machine or privileged container.
 
