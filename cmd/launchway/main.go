@@ -86,7 +86,8 @@ Usage:
   launchway caches   list|delete|policy         build caches: what is kept, deleting, how much is kept
   launchway variables list|effective|set|delete|lock|unlock  variables set at a level; the nearest setting wins
   launchway users    list|setup-code|reset NAME|unlock NAME   built-in accounts, from the server's console
-  launchway doctor   [database|ssh]             would this installation survive losing its database? is Git over SSH reachable?
+  launchway install  [--answers FILE] [--dry-run] [--uninstall]   the guided installer: this machine or a Kubernetes cluster
+  launchway doctor   [database|ssh|security]             would this installation survive losing its database? is Git over SSH reachable?
   launchway repos    list|get|create|update|delete|deploy-keys|hooks|protected-branches   hosted Git repositories (installation setting forge.hosting)
   launchway repos    connection|import|verify|mirror  bring repositories in from other servers, keep them in step
   launchway pr       list|view|create|checkout|diff|comment|review|merge|close|reopen|edit|revert|apply|settings|rules   pull requests and code review on hosted repositories
@@ -117,6 +118,7 @@ var commands = map[string]func([]string) error{
 	"variables":      cmdVariables,
 	"doctor":         cmdDoctor,
 	"users":          cmdUsers,
+	"install":        cmdInstall,
 }
 
 func main() {

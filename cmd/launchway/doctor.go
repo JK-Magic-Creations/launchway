@@ -17,6 +17,7 @@ import (
 const doctorUsage = `Usage:
   launchway doctor [database|git] [--config launchway.yaml] [--json]
   launchway doctor ssh [--address HOST:PORT] [--config launchway.yaml]
+  launchway doctor security [--url ADDRESS] [--config launchway.yaml]
 
 Checks an installation and says what it finds in plain words. With no section
 it runs both.
@@ -24,6 +25,7 @@ it runs both.
   database   whether this installation would survive the loss of its database,
              and what would be lost
   ssh        whether Git over SSH is reachable, and which host keys it presents
+  security   the plain security checklist: sign-in, encryption in transit and at rest, exposure
 `
 
 // exitOn ends the program for an error from a command.
@@ -78,6 +80,9 @@ func cmdDoctor(args []string) error {
 	if len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
 		fmt.Print(doctorUsage)
 		return nil
+	}
+	if len(args) > 0 && args[0] == "security" {
+		return doctorSecurity(args[1:])
 	}
 	if len(args) > 0 && args[0] == "ssh" {
 		return doctorSSH(args[1:])
