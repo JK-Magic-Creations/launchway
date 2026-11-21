@@ -147,4 +147,4 @@ set -e
 if [ ! -f "$report" ]; then
   say "no run report was written (the playbook did not start, or it was stopped)"
 fi
-exit $rc
+exit "$rc"
