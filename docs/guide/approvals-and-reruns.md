@@ -22,11 +22,11 @@ steps:
 
 An approval takes `needs`, `when`, `message` and `timeout`, and runs nothing, so it has no image or
 script. When its needs have succeeded it waits, and every pending clearance is listed on the
-**Waiting for a decision** page. **Go** lets the steps after it run. **No-go**, or nobody deciding before the
+**Waiting for a decision** page. **Approve** (recorded as Go) lets the steps after it run. **Reject** (recorded as No-go), or nobody deciding before the
 timeout, fails it: the steps after it are skipped, and resuming the run asks again. Each decision
 is kept with the run: who made it, when, and their comment.
 
-In the web UI an approval is a **clearance**, answered with **Go** or **No-go** (the plain set says Approve and Reject; see [the words Launchway uses](words.md)). The pipeline key stays `kind: approval` and the API paths stay `approve` and `reject` in every set. Decide in the web UI, with the command line (below), or over the API with `POST /api/v1/runs/{id}/steps/{step}/approve` (or
+In the web UI an approval is a **clearance**, answered with the buttons **Approve** and **Reject**, which are recorded as Go and No-go (the plain set records Approve and Reject; see [the words Launchway uses](words.md)). The pipeline key stays `kind: approval` and the API paths stay `approve` and `reject` in every set. Decide in the web UI, with the command line (below), or over the API with `POST /api/v1/runs/{id}/steps/{step}/approve` (or
 `/reject`) and an optional `{"comment": "..."}`. `launchway run` asks in the terminal, and rejects
 the approval if there is no terminal to ask in.
 

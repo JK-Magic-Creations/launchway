@@ -23,7 +23,7 @@ Two rules keep this safe:
 | **Preflight** | Checks | The checks made before a deploy |
 | **Checklist** | Checklist | The list of things that must be true before a change goes on |
 | **Clearance** | Approval | A person decides whether a change may go on |
-| **Go** / **No-go** | Approve / Reject | The two answers to a clearance. Go lets the run continue; No-go fails the step and skips what follows |
+| **Go** / **No-go** | Approve / Reject | The two recorded answers to a clearance. Go lets the run continue; No-go fails the step and skips what follows. The buttons say Approve and Reject in both sets |
 | **Hold** | Freeze | A time when changes may not go out |
 | **Flight plan** | Starter pipeline | The ready-made pipeline for a kind of project |
 | **Logbook** | Audit trail | The record of who did what, and when |

@@ -61,7 +61,7 @@ Every word above is a default that an installation can rename. Words everyone kn
 | `assistant-in-screens` | fails the check | the guide ({guide}: Wingman); 'assistant' stays only for a third-party AI assistant that connects through MCP |
 | `hardcoded-product-word` | fails the check | the terms system: {guide}, {unit}, {preflight}, {clearance}, {logbook}, {flight_plan}, {payload}, {no_go} |
 | `hardcoded-level-word` | review list | the terms system when the level is meant ({organization}, {installation}); ordinary use (an organization's identity provider; installing software) may stay and goes on the allow list |
-| `level-capitalized-mid-sentence` | review list | lower case in the middle of a sentence |
+| `level-capitalized-mid-sentence` | fails the check | lower case in the middle of a sentence |
 | `approval-for-clearance` | review list | clearance for the thing a person gives; approval stays for pull-request reviews and the step key |
 | `template-ambiguity` | review list | flight plan (a whole ready-made pipeline) or step template (a reusable part) |
 <!-- /vocabulary:checks -->

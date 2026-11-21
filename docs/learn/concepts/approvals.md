@@ -23,8 +23,8 @@ sequenceDiagram
 2. When the run reaches it, the run pauses. The launch line shows an amber station.
 3. The request appears under [Waiting for a decision](app:/activity/approvals), and as "Waiting for you" on Home
    for the people allowed to decide.
-4. A person reads what the run will do and says **Go** or **No-go** (Approve or Reject in the plain
-   set of words). If nobody decides before the deadline
+4. A person reads what the run will do and presses **Approve** or **Reject**, recorded as Go or No-go (the plain
+   set of words records Approve or Reject). If nobody decides before the deadline
    the step sets, it is rejected.
 5. The decision is recorded in the Logbook (the audit trail) with the person's name. Go, and the run
    goes on; No-go, and it stops.

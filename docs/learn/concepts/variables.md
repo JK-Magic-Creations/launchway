@@ -36,8 +36,8 @@ runs. The value is not written to the pipeline, the database or the log. See [Se
 
 ## Variables set at a level
 
-The places above are inside one pipeline. A variable can also be set once at a **level**: the Base,
-a Wing, a Squadron or a project. Everything below gets it. A nearer level can set the same name to
+The places above are inside one pipeline. A variable can also be set once at a **level**: the base,
+a wing, a squadron or a project. Everything below gets it. A nearer level can set the same name to
 override it, and a level above can lock it so nothing below can change it.
 
 ```mermaid

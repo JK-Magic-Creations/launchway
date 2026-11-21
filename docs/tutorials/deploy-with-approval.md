@@ -400,7 +400,7 @@ rollout.
 The deployment holds `staging`'s lock: another run of the shop waits until this one is done.
 You could press **Promote** here; instead, decide the approval. Open **Waiting for a decision** and click the
 question (or press **Decide** on the run). The clearance step shows what it guards, with an
-optional comment; press **Go** (labeled **Approve** in the plain set).
+optional comment; press **Approve** (recorded as Go).
 
 The `promote` step promotes the rollout and waits until it is healthy; `rollback` is skipped
 (*every step it needs succeeded*). The run succeeds, and the panel of `promote` shows the command

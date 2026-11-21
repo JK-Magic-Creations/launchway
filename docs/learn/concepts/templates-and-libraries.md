@@ -36,8 +36,8 @@ moves to the new version. Every run records the exact commit of the library it u
 answer "what did this run use?". Browse the templates your installation knows in the
 [Library](app:/library/templates). The page of each template shows its inputs and outputs.
 
-Libraries are registered at a **level**. There are four: the Base (your installation), the Wing
-(an organization), an optional Squadron (a team or a department), and the project. An installation can
+Libraries are registered at a **level**. There are four: the base (your installation), the wing
+(an organization), an optional squadron (a team or a department), and the project. An installation can
 [rename them](../../guide/words.md). What you register at a level is available to
 everything below it. See [Configuration and levels](../../guide/configuration.md#levels).
 

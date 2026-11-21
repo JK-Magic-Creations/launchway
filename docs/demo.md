@@ -53,7 +53,7 @@ the address in a browser, then try these:
 - **Resume it.** `smoke-test` fails on its first attempt on purpose. Press *Resume from smoke-test*:
   only that step and the ones after it run again.
 - **Approve it.** The run then waits before `deploy-dev`. Open **Waiting for a decision**, then the run, and
-  give it **Go**.
+  press **Approve**.
 - **Run the feature branch.** Start a run of `feature/new-button`: a unit test fails and the
   security scan finds one more problem, shown as new.
 - **Use the library.** Start a run of `demo-lib-app`: the library's `release` template is drawn as

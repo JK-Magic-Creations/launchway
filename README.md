@@ -56,3 +56,7 @@ server. Launchway is early software.
 
 Launchway is free software under the [GNU Affero General Public License, version 3](LICENSE).
 [LICENSING.md](LICENSING.md) explains what that means for you.
+
+## Words
+
+Launchway's own words (Base, Wing, Squadron, Wingman, Clearance, Logbook and the rest) are listed in the [vocabulary](docs/reference/vocabulary.md); every one can be renamed. These are ordinary words used descriptively. Launchway is not affiliated with or endorsed by any military service.

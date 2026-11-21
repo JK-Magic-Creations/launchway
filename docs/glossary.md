@@ -48,6 +48,9 @@ for the targets of its [runner pool](#runner-pool). It never runs a script.
 ### Deploy target
 A cluster a deploy runner serves, named in its configuration and in the server's environments.
 
+### Detachment
+The default word for the agent on a customer's side that does the work and holds the data, so the hosted service holds nothing sensitive. Planned: see [the hosted service](roadmap/hosted-service.md). Not called a connector or a relay.
+
 ### Deployment
 The record of one deploy step's change to an [environment](#environment): version, commit,
 observations and outcome.
@@ -77,7 +80,7 @@ Deploying by committing the desired version to a Git repository that a tool (her
 to the cluster.
 
 ### Go and No-go
-The two answers to a [clearance](#clearance): Go lets the run continue, No-go fails the step and skips what follows. The plain business words are *Approve* and *Reject*; the API paths stay `approve` and `reject`.
+The two answers to a [clearance](#clearance): Go lets the run continue, No-go fails the step and skips what follows. The buttons say *Approve* and *Reject* in both sets, and the plain business set records them under those words too; the API paths stay `approve` and `reject`.
 
 ### Health source
 A monitoring system (Prometheus, Loki, ClickHouse, Elasticsearch, PostgreSQL or a JSON API) that a
