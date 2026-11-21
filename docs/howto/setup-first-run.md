@@ -39,3 +39,29 @@ cancelling at any step leaves nothing behind.
 The same thing from the command line: `launchway config check-signin ...` checks the answers and
 `launchway config set sign-in sign-in -f signin.yaml` saves them;
 `launchway config set installation installation -f terms.yaml` chooses the words (a `terms:` entry, see [the words](../guide/words.md)).
+
+## After the first administrator: the setup guide
+
+Once the first administrator exists, the browser opens the **setup guide** (Settings, Setup guide). Each step can
+be skipped and taken up again, each asks the server what can be done now (so a step that cannot work says why
+instead of offering a button that fails), and each has a short note from the helper (Wingman, in the aviation
+words) and a link into Learn.
+
+1. **How people sign in.** Keep built-in accounts, or connect an identity provider. The provider is tested
+   before anything is switched: you complete a real sign-in at the provider in a second window, and the result
+   (who the provider said signed in, with which groups) is recorded in the Logbook. Nothing about how people
+   sign in changes from the guide, because a server reads its provider only when it starts: after a good test the
+   guide shows the exact setting to add and says that the built-in administrator stays as the way back in.
+2. **Encryption and the root key.** What is protected, in plain words, and a guarded way to take a recovery copy
+   of the root key: you type your password and a code from your authenticator again, choose a passphrase (typed
+   twice), and receive a file in which the key is locked with that passphrase. Launchway records that a copy was
+   taken and when, never the copy and never the passphrase.
+3. **A runner.** Whether one is connected, and how to add another.
+4. **Git hosting.** Turn it on (a restart is needed, because the server reads the setting only when it starts)
+   and what Git over SSH needs.
+5. **Bring in your repositories.** A server to import from (its address and token; the token is pasted once and
+   kept in a file only the server can read, or you name an environment variable), the repositories found,
+   all or some, then each copied and compared with its source ref by ref, with a retry for any that failed.
+   The same for a whole server from a script: `launchway repos import-all --connection NAME`.
+6. **Your first pipeline**, from a starter, for one repository.
+7. **Finish**: the plain security checklist (the same as `launchway doctor security`) and what to do next.

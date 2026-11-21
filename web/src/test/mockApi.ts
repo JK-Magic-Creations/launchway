@@ -40,6 +40,9 @@ export function installServer(overrides: Record<string, unknown> = {}, who = me(
     "/api/v1/policies": { catalogue: [], sources: [], recent: [], max_waiver_days: 30 },
     "/api/v1/waivers": { waivers: [], waive_projects: [], rules: {} },
     "/api/v1/config/history": { changes: [] },
+    "/api/v1/setup-guide": guideFixture(),
+    "/api/v1/signin/test": { tested: false },
+    "/api/v1/encryption/root-key-copy": { taken: false, can_take: true },
     ...forgeFixtures(),
     ...rollbackFixtures(detail),
     ...pullFixtures(),
@@ -139,5 +142,29 @@ export function pullFixtures(): Record<string, unknown> {
     [`${base}/pulls/1/commits`]: { items: [{ sha: "a".repeat(40), author: "Ada", authored_at: "2026-11-20T10:00:00Z", subject: "Round prices" }] },
     [`${base}/compare`]: { base: "main", head: "fix-rounding", ahead: 1, behind: 0, commits: [{ sha: "a".repeat(40), author: "Ada", authored_at: "2026-11-20T10:00:00Z", subject: "Round prices" }],
       changes: { files: [], total: 1, additions: 2, deletions: 1 }, mergeability: { state: "clean", behind: 0, ahead: 1 } },
+  };
+}
+
+/** The first-run guide: what the server says about each step, with the actions available now and the reason for each that is not. */
+export function guideFixture() {
+  const act = (name: string, available: boolean, reason?: string, would_help?: string) => ({ name, available, who: "admin", ...(available ? {} : { reason, would_help }) });
+  return {
+    kubernetes: false,
+    steps: [
+      { id: "sign-in", title: "How people sign in", state: "todo", summary: "People sign in with built-in accounts (a password and an authenticator).",
+        actions: [act("test_provider", true), act("keep_built_in", true), act("switch_provider_on", false, "Switching the provider on is a setting in the server's own file and takes a restart.", "Test the provider here first.")] },
+      { id: "encryption", title: "Encryption and the root key", state: "todo", summary: "Stored secrets are encrypted under a root key held outside the database. No recovery copy has been taken yet.",
+        actions: [act("download_root_key_copy", true)] },
+      { id: "runner", title: "A runner", state: "done", summary: "1 runner is connected and can take work.", actions: [act("make_join_token", true)] },
+      { id: "git-hosting", title: "Git hosting", state: "todo", summary: "Git hosting is off.", actions: [act("turn_on_hosting", true)] },
+      { id: "import", title: "Bring in your repositories", state: "unavailable", summary: "Importing needs Git hosting, which is off.",
+        actions: [act("add_connection", false, "Git hosting is off.", "Turn on Git hosting first (step 6) and restart."), act("paste_token", false, "Git hosting is off."), act("import", false, "Git hosting is off.")] },
+      { id: "pipeline", title: "Your first pipeline", state: "todo", summary: "Make a first pipeline from a starter for one of your repositories.", actions: [act("start_wizard", true)] },
+    ],
+    checklist: [
+      { id: "sign-in", state: "ok", title: "Sign-in is required", detail: "People must sign in (built-in accounts) before they can see or do anything." },
+      { id: "tls", state: "attention", title: "Traffic is encrypted in transit", detail: "The address is plain http." },
+      { id: "encryption", state: "ok", title: "Stored secrets are encrypted", detail: "Secrets in the database are sealed under a root key kept outside it." },
+    ],
   };
 }

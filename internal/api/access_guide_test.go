@@ -12,6 +12,6 @@ func init() {
 	permissionTable["GET /auth/signin-test"] = matrixRow{"GET", "/auth/signin-test", "", [6]int{200, 200, 200, 200, 200, 200}}
 	permissionTable["GET /api/v1/encryption/root-key-copy"] = admin("GET", "/api/v1/encryption/root-key-copy", "", 200)
 	permissionTable["POST /api/v1/encryption/root-key-copy"] = admin("POST", "/api/v1/encryption/root-key-copy", "{}", 409)
-	permissionTable["POST /api/v1/connections/token"] = admin("POST", "/api/v1/connections/token", `{"name":"old","kind":"gitea"}`, 404)
+	permissionTable["POST /api/v1/connections/token"] = admin("POST", "/api/v1/connections/token", `{"name":"old","kind":"plain"}`, 404)
 	publicRoutes = append(publicRoutes, "GET /auth/signin-test")
 }

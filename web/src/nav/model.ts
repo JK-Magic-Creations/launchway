@@ -188,6 +188,7 @@ export const PAGES: PageInfo[] = [
   page("/projects/:name/security", "pipelines", undefined, (p) => `Security of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Security" }]),
   page("/projects/:name/caches", "pipelines", undefined, (p) => `Caches of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Build caches" }]),
   page("/projects/:name/variables", "pipelines", undefined, (p) => `Variables of ${p.name}`, (p) => [{ label: p.name, href: `/projects/${enc(p.name)}/pipeline` }, { label: "Variables" }]),
+  page("/setup/guide", "settings", "guide", () => "Setup guide", () => [{ label: "Setup guide" }]),
   page("/repositories/import", "settings", "import", () => "Import repositories", () => [{ label: "Import repositories" }]),
   page("/repositories/:owner/:name", "projects", undefined, (p) => p.owner + "/" + p.name, (p) => [{ label: p.owner + "/" + p.name }]),
   page("/repositories/:owner/:name/mirrors", "projects", undefined, (p) => `Mirrors of ${p.owner}/${p.name}`,

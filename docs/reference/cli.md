@@ -861,6 +861,26 @@ launchway repos mirror stop OWNER/NAME [--final-sync]
 
 A credential is a **reference**: `--credential-env` names an environment variable of the server and `--credential-file` a file on the server; the token itself is never given to the command, stored in the repository's record, shown or logged. An address is `https` or `http`, without a user name or password in it; an internal address (loopback, private, link-local, cloud metadata) is refused unless the server's `forge.mirror_allow` lists it. The same operations are the routes under `/api/v1/repositories/{owner}/{name}/mirrors` in the [HTTP API](http-api.md#mirrors-git-hosting), and the MCP tools `list_mirrors`, `set_mirror`, `sync_mirror` and `stop_mirroring`.
 
+## launchway install
+
+The guided installer. It asks where Launchway should run, a few plain questions with defaults, shows what it
+is about to do, and does it. See [Install Launchway in ten minutes](../howto/install-in-ten-minutes.md).
+
+```text
+launchway install [--answers FILE] [--set KEY=VALUE ...] [--target this-machine|kubernetes]
+                  [--dry-run] [--yes] [--non-interactive] [--transcript FILE] [--no-browser]
+                  [--kubeconfig FILE] [--context NAME] [--namespace NAME] [--image REF]
+launchway install --uninstall [...]
+launchway install bundle --output FILE        (not built yet)
+launchway doctor security [--url ADDRESS] [--config launchway.yaml]
+```
+
+`--answers` is a YAML file of `key: value`; every question prints its key in the transcript. `--dry-run` shows the
+summary and changes nothing. `--yes` skips the last "go ahead?". `--uninstall` states what it removes and what it
+keeps: the root key and your data are kept unless you answer, in so many words, to delete the data. The transcript
+(`launchway-install.log` by default) records the questions and answers and never a secret. `launchway doctor
+security` prints the plain security checklist the installer ends with.
+
 ## launchway repos import, verify and connection
 
 Getting existing repositories into Launchway before anything is switched over. Everything here needs the admin role and is recorded in the audit trail.

@@ -24,11 +24,11 @@ const modulePath = "github.com/jk-magic-creations/launchway/"
 // (TestTableHasNoStaleEdges makes the table shrink as the code is cleaned up).
 // Edges the audit calls harmful may not be added at all: see forbidden below.
 var allowedImports = map[string][]string{
-	"cmd/launchway":                      {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/bootstrap", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/localauth", "internal/pipeline", "internal/runner", "internal/secrets", "internal/settings", "internal/source", "internal/verify/source"},
+	"cmd/launchway":                      {"internal/ai", "internal/api", "internal/auth", "internal/blobstore", "internal/bootstrap", "internal/config", "internal/deploy/argocd", "internal/egress", "internal/engine", "internal/executor", "internal/forge", "internal/forge/githttp", "internal/forge/hosting", "internal/forge/providers/launchway", "internal/forge/storage", "internal/forge/webhooks", "internal/gitexec", "internal/imagebuild", "internal/installer", "internal/installer/kube", "internal/localauth", "internal/pipeline", "internal/runner", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/verify/source"},
 	"internal/accept":                    {},
 	"internal/ai":                        {"internal/pipeline"},
 	"internal/ai/aitest":                 {},
-	"internal/api":                       {"internal/ai", "internal/auth", "internal/engine", "internal/forge", "internal/localauth", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/gitssh", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/webhooks", "internal/hub", "internal/ids", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/secrets", "internal/settings", "internal/source", "internal/verify"},
+	"internal/api":                       {"internal/ai", "internal/auth", "internal/engine", "internal/forge", "internal/localauth", "internal/forge/githttp", "internal/forge/mirror", "internal/forge/gitssh", "internal/forge/pulls", "internal/forge/refrules", "internal/forge/sshkeys", "internal/forge/webhooks", "internal/hub", "internal/ids", "internal/pipeline", "internal/policy", "internal/redact", "internal/resources", "internal/runnerauth", "internal/secrets", "internal/securitycheck", "internal/settings", "internal/source", "internal/verify"},
 	"internal/auth":                      {},
 	"internal/blobstore":                 {},
 	"internal/bootstrap":                 {},
@@ -64,6 +64,8 @@ var allowedImports = map[string][]string{
 	"internal/gitexec":                   {"internal/redact"},
 	"internal/hub":                       {},
 	"internal/ids":                       {},
+	"internal/installer":                 {"internal/localauth"},
+	"internal/installer/kube":            {"internal/installer"},
 	"internal/imagebuild":                {"internal/findings", "internal/pipeline"},
 	"internal/imagebuild/imagetest":      {},
 	"internal/parity":                    {},
@@ -71,6 +73,7 @@ var allowedImports = map[string][]string{
 	"internal/policy":                    {},
 	"internal/redact":                    {},
 	"internal/resources":                 {},
+	"internal/securitycheck":             {},
 	"internal/runner":                    {"internal/accept", "internal/ai", "internal/deploy/argocd", "internal/engine", "internal/executor", "internal/gitexec", "internal/imagebuild", "internal/pipeline", "internal/redact", "internal/runnerauth", "internal/secrets", "internal/verify", "internal/verify/source"},
 	"internal/runnerauth":                {},
 	"internal/sbom":                      {"internal/findings/jsonscan"},

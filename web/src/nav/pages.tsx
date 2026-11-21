@@ -60,6 +60,7 @@ const AuditPage = lz(() => import("../pages/Audit"), "AuditPage");
 const ConfigHomePage = lz(() => import("../pages/ConfigHome"), "ConfigHomePage");
 const ConfigListPage = lz(() => import("../pages/ConfigList"), "ConfigListPage");
 const ConfigObjectPage = lz(() => import("../pages/ConfigObject"), "ConfigObjectPage");
+const SetupGuidePage = lz(() => import("../pages/SetupGuide"), "SetupGuidePage");
 const WizardPage = lz(() => import("../pages/wizards/Wizards"), "WizardPage");
 
 /** The page for an address. The key makes a page that shows one thing start afresh for another. */
@@ -77,6 +78,7 @@ export function PageFor({ path, approvals }: { path: string; approvals: Approval
     case "/projects/:name/security": return <ProjectSecurityPage key={p.name} name={p.name} />;
     case "/projects/:name/caches": return <ProjectCachesPage key={p.name} name={p.name} />;
     case "/projects/:name/variables": return <ProjectVariablesPage key={p.name} name={p.name} />;
+    case "/setup/guide": return <SetupGuidePage />;
     case "/repositories/import": return <ImportRepositoriesPage />;
     case "/repositories/:owner/:name": return <RepositoryPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} tab="overview" />;
     case "/repositories/:owner/:name/pulls": return <PullRequestsPage key={p.owner + "/" + p.name} path={p.owner + "/" + p.name} />;
