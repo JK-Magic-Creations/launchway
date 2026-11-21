@@ -643,6 +643,14 @@ func TestInjectionCampaign(t *testing.T) {
 		if r.Acked {
 			ack = append(ack, ackedPush{"refs/heads/main", sha})
 		} else {
+			if f.Action == "kill" {
+				// The fault ends the server's process; the push can fail a moment before the
+				// process is gone, so wait for it to be gone, not for the check to be lucky.
+				select {
+				case <-s.done:
+				case <-time.After(10 * time.Second): // the fault was not reached; the server lives
+				}
+			}
 			select {
 			case <-s.done: // the server died: start it again
 				srv[i%2] = s.Restart()

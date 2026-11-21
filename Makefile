@@ -229,13 +229,13 @@ license-check: tools
 		--ignore github.com/jk-magic-creations/launchway \
 		--ignore github.com/in-toto/attestation --ignore github.com/in-toto/in-toto-golang
 
-# shellcheck on the packaging, release and test scripts (installed, or in a container).
+# shellcheck on the packaging, release and test scripts, always the pinned version in a container, so a
+# hosted runner's own (newer) shellcheck cannot report findings that a laptop does not.
 SHELLCHECK_IMAGE := docker.io/koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d
 SHELL_SCRIPTS = $(shell git ls-files -co --exclude-standard 'packaging/*.sh' 'deploy/test/install/*.sh' \
 	'deploy/test/runner-chart/*.sh' 'deploy/test/bundle/*.sh' 'scripts/charts-sync.sh')
 lint-scripts:
-	if command -v shellcheck >/dev/null 2>&1; then shellcheck $(SHELL_SCRIPTS); \
-	else $(CONTAINER) run --rm --security-opt label=disable -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) $(SHELL_SCRIPTS); fi
+	$(CONTAINER) run --rm --security-opt label=disable -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK_IMAGE) $(SHELL_SCRIPTS)
 
 lint-workflows: tools
 	$(TOOLS)/actionlint
