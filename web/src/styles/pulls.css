@@ -58,3 +58,5 @@
 .pr-people li { display: inline-flex; align-items: center; gap: 6px; }
 .pr-people-add { display: flex; gap: 6px; margin-top: 6px; }
 .pr-people-add input { min-width: 0; flex: 1; }
+.pr-runline { margin: 8px 0 14px; }
+.pr-runline-head { font-size: var(--fs-small); margin-bottom: 4px; }

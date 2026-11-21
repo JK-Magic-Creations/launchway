@@ -1,5 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { launchApi, type LaunchLineView } from "../api/launch";
+import { Link } from "../components/ui";
+import { LaunchLine, toStations } from "../kit/LaunchLine";
 import { Chip } from "../kit/Status";
+
+/** The launch line of the latest run of a pull request, the same line the Home and Activity pages draw (the kit's
+ * LaunchLine, through its public props), with the run's number, its state in words and a link to it. It sits under
+ * the pull request's own four stations rather than replacing them: those say where the change stands in review and
+ * merge, which a run knows nothing about; this one says what the pipeline did with this exact commit. The line is
+ * fetched again while the run is not finished, so it moves as the run does. */
+export function PullRunLine({ runId, head }: { runId: string | undefined; head: string }) {
+  const [line, setLine] = useState<LaunchLineView | null>(null);
+  const [failed, setFailed] = useState(false);
+  const finished = line ? ["succeeded", "failed", "canceled", "cancelled"].includes(line.status) : false;
+  useEffect(() => {
+    if (!runId) { setLine(null); return; }
+    let alive = true;
+    const load = () => launchApi.line(runId).then((l) => { if (alive) { setLine(l); setFailed(false); } }).catch(() => { if (alive) setFailed(true); });
+    load();
+    if (finished) return () => { alive = false; };
+    const t = window.setInterval(load, 5000);
+    return () => { alive = false; window.clearInterval(t); };
+  }, [runId, head, finished]);
+  if (!runId) return <p className="faint small pr-runline">No run has started for this pull request yet.</p>;
+  if (!line) return failed ? <p className="faint small pr-runline">The latest run, <Link href={`/runs/${runId}`}>{runId}</Link>, cannot be shown here.</p> : null;
+  return (
+    <section className="pr-runline" aria-label="Latest run">
+      <div className="pr-runline-head"><span>Latest run: <Link href={`/runs/${line.run}`}>#{line.number} of {line.project}</Link> <span className="faint">{line.now}</span></span></div>
+      <LaunchLine stations={toStations(line.stations)} label={`The pipeline's launch line for run #${line.number}`} />
+    </section>
+  );
+}
 
 /** One editable list of the pull request's side panel: reviewers, assignees or labels. Each item has a button that
  * removes it, and a box adds more, but only when the server's `actions` say this person may (`editable`), so a viewer

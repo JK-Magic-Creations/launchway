@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/http"
 	"time"
 
 	"testing"
@@ -125,6 +126,15 @@ steps:
 	l := lines[0]
 	if l.Tone != "wait" || l.Now != "Approval: Waiting for a decision: Carry on?" {
 		t.Errorf("tone %q now %q stations %+v", l.Tone, l.Now, l.Stations)
+	}
+	// One run by its ID, which the pull request page uses for its latest run; an unknown one is a 404.
+	var one []LaunchLine
+	getJSON(t, e.srv.URL+"/api/v1/launch-lines?run="+id, &one)
+	if len(one) != 1 || one[0].Run != id || one[0].Tone != "wait" {
+		t.Errorf("the line of one run: %+v", one)
+	}
+	if resp, err := http.Get(e.srv.URL + "/api/v1/launch-lines?run=run_nope"); err != nil || resp.StatusCode != http.StatusNotFound {
+		t.Errorf("an unknown run: %v %v", resp, err)
 	}
 }
 

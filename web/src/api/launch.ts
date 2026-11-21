@@ -34,6 +34,8 @@ export interface LaunchLineView {
 }
 
 export const launchApi = {
+  /** The line of one run (what the pull request page shows for its latest run). */
+  line: (run: string) => call<LaunchLineView[]>("GET", `/api/v1/launch-lines?run=${encodeURIComponent(run)}`).then((l) => l[0] ?? null),
   lines: (limit = 12, background = false, project = "") =>
     call<LaunchLineView[]>("GET", `/api/v1/launch-lines?limit=${limit}${project ? "&project=" + encodeURIComponent(project) : ""}`, undefined, { background }),
 };

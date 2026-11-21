@@ -124,6 +124,8 @@ export function pullFixtures(): Record<string, unknown> {
     [`${base}/merge-rules`]: { rules: [{ pattern: "main", required_approvals: 1, approval_role: "operator", required_checks: ["ci/test"], require_up_to_date: true, require_resolved_threads: false, no_self_approval: true, require_signed_commits: false, allow_admin_bypass: false }],
       actions: [{ name: "edit_rules", available: true }, { name: "edit_settings", available: true }, { name: "require_signed_commits", available: false, reason: "signed commits are not checked yet, so a rule that asks for them is refused" }] },
     [`${base}/pull-settings`]: { allow_merge: true, allow_squash: true, allow_rebase: false, default_method: "merge", delete_branch_after_merge: false, dismiss_stale_approvals: true, merge_message_template: "", squash_message_template: "" },
+    "/api/v1/launch-lines": [{ run: "run_7", number: 7, project: "shop-api", message: "Round prices", actor: "ada", ref: "fix-rounding", sha: "a".repeat(40), status: "running", created_at: 1_700_000_000_000, finished_at: 0,
+      stations: [{ key: "commit", label: "Commit", state: "done", detail: "a1b2c3d" }, { key: "checks", label: "Checks", state: "running", detail: "lint" }, { key: "tests", label: "Tests", state: "idle", detail: "" }], tone: "run", now: "Checks: running" }],
     [`${base}/pulls`]: { items: [pull], total: 1 },
     [`${base}/pulls/1`]: pull,
     [`${base}/pulls/1/conversation`]: { comments: [{ id: "pcm_2", author: "ada", body: "Ready when you are.", created_at: "2026-11-20T10:10:00Z" }], threads: [thread],

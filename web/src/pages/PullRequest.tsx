@@ -9,7 +9,7 @@ import { Tabs } from "../kit/Tabs";
 import { Markdown } from "../markdown";
 import { pullsApi, type Comment, type Conversation, type FileChange, type Patch, type Pull, type Thread } from "../pullsApi";
 import { pullHref, stateChip } from "./PullRequests";
-import { PullList } from "./PullPeople";
+import { PullList, PullRunLine } from "./PullPeople";
 import "../styles/pulls.css";
 
 /** The pull request as a change on the launch line: opened, checked, reviewed, merged. */
@@ -227,6 +227,7 @@ export function PullRequestPage({ path, number }: { path: string; number: number
         <Link href={pullHref(path)}>All pull requests</Link>
       </div>
       <LaunchLine stations={stations(pull)} label={`Where pull request #${pull.number} is on the launch line`} />
+      <PullRunLine runId={pull.linked_runs[pull.linked_runs.length - 1]} head={pull.head_sha} />
       <ErrorBox error={error} />
       <div className="pr-grid">
         <div>
