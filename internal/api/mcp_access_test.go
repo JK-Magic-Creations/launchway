@@ -72,10 +72,21 @@ var mcpPermissionTable = map[string]mcpRow{
 	"create_repository": {map[string]any{"name": "x"}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mNotFound}},
 	// Build caches: viewers list, operators delete, only an administrator is
 	// offered the tool that changes the policy.
-	"list_caches":      {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
-	"delete_cache":     {map[string]any{"project": "pay-api", "id": "cch_nope"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
-	"get_cache_policy": {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
-	"set_cache_policy": {map[string]any{"idle_days": 9}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
+	// Variables at levels: viewers read; operators set at a project they operate;
+	// locking needs the admin role, which the API decides (tools run in name
+	// order, so otto's set_variable follows his refused lock and ada's lock
+	// finds his variable).
+	"get_effective_variables": {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"list_variables":          {map[string]any{"level": "installation"}, false, [5]string{mRefused, mOK, mOK, mOK, mOK}},
+	"get_run_variables":       {map[string]any{"run": "{pay}"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"set_variable":            {map[string]any{"name": "x", "level": "project", "scope": "pay-api", "type": "string", "value": "v"}, false, [5]string{mUnlisted, mUnlisted, mOK, mNotFound, mOK}},
+	"delete_variable":         {map[string]any{"name": "gone", "level": "project", "scope": "pay-api"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"lock_variable":           {map[string]any{"name": "x", "level": "project", "scope": "pay-api", "reason": "fixed"}, false, [5]string{mUnlisted, mUnlisted, mRefused, mNotFound, mOK}},
+	"unlock_variable":         {map[string]any{"name": "x", "level": "project", "scope": "pay-api"}, false, [5]string{mUnlisted, mUnlisted, mRefused, mNotFound, mOK}},
+	"list_caches":             {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"delete_cache":            {map[string]any{"project": "pay-api", "id": "cch_nope"}, false, [5]string{mUnlisted, mUnlisted, mNotFound, mNotFound, mNotFound}},
+	"get_cache_policy":        {map[string]any{"project": "pay-api"}, false, [5]string{mNotFound, mOK, mOK, mNotFound, mOK}},
+	"set_cache_policy":        {map[string]any{"idle_days": 9}, false, [5]string{mUnlisted, mUnlisted, mUnlisted, mUnlisted, mOK}},
 	// Step resources: anyone reads; only an administrator is offered the
 	// tools that change them, as the API refuses everyone else.
 	"get_step_resources":       {nil, false, [5]string{mOK, mOK, mOK, mOK, mOK}},

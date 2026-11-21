@@ -380,3 +380,22 @@ func (in ResolveInput) sourcePhrase(s Source) string {
 	}
 	return p
 }
+
+// Variables returns the variable service of a server: the store in the
+// engine's database and the levels as the configuration has them. Without
+// the configuration in the database, the file's projects are all there is,
+// each outside any unit.
+func (s *Service) Variables() *VariableService {
+	return NewVariableService(NewVariableStore(s.eng), func() (*Layout, error) {
+		if s.Available() {
+			return s.Levels()
+		}
+		lay := &Layout{Levels: DefaultLevels, ProjectUnit: map[string]string{}, Units: []UnitView{}}
+		if s.boot != nil {
+			for _, p := range s.boot.Projects {
+				lay.ProjectUnit[p.Name] = ""
+			}
+		}
+		return lay, nil
+	})
+}

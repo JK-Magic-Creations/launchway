@@ -264,6 +264,10 @@ Calls are recorded with sign-in off too, as the configured `user`.
 | `cache.delete` | `DELETE /api/v1/projects/{name}/caches/{id}` and `DELETE /api/v1/projects/{name}/caches?name=` (also `launchway caches delete`); the target is the entry or the cache name and the detail says how much was ended |
 | `cache_policy.set` | `PUT /api/v1/cache-policy` (also `launchway caches policy set`); the detail holds the policy before and after |
 | `cache_policy.set_project` | `PUT /api/v1/projects/{name}/cache-policy`; the detail holds the policy before and after |
+| `variable.set` | `PUT /api/v1/variables/{name}` (also `launchway variables set`); the target names the level, scope, name and environment. The variable's own history (who, old to new, a secret only as its reference) is kept apart from this trail |
+| `variable.delete` | `DELETE /api/v1/variables/{name}` (also `launchway variables delete`) |
+| `variable.lock` | `PUT /api/v1/variables/{name}/lock` (also `launchway variables lock`); the detail is the reason |
+| `variable.unlock` | `DELETE /api/v1/variables/{name}/lock` (also `launchway variables unlock`) |
 | `cache_policy.clear_project` | `DELETE /api/v1/projects/{name}/cache-policy` |
 | `repository.create` | `POST /api/v1/repositories`; the target is the repository's path, the detail its visibility |
 | `repository.update` | `PATCH /api/v1/repositories/{owner}/{name}`; the detail lists what changed (visibility, default branch, archived, a rename) |

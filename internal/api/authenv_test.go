@@ -166,6 +166,7 @@ func setupAuth(t *testing.T, o envOpts) *authEnv {
 	s := &Server{Engine: eng, Projects: mgr, RunnerToken: "runner-secret", Log: quiet(), Now: o.clk.Now,
 		TrustProxy: o.trustProxy, StreamPing: o.ping, Drafts: o.drafts, WaiveRole: o.waiveRole, MCP: o.mcp}
 	s.Settings = testSettings(t, eng)
+	s.Variables = testVariables(eng)
 	srv := httptest.NewUnstartedServer(nil)
 	redirect := o.redirectURL
 	if redirect == "" {

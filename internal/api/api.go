@@ -72,9 +72,9 @@ type Server struct {
 	// make join tokens, revoke and rotate runners (runner_admin); nil means
 	// admin, NoRole nobody.
 	RunnersRole *auth.Role
-	// Settings is the configuration kept in the database (schema 23),
-	// served under /api/v1/config; nil on a server that keeps none.
-	Settings *settings.Service
+	// Settings is the configuration kept in the database (schema 23), under /api/v1/config; nil if none.
+	Settings  *settings.Service
+	Variables *settings.VariableService // variables set at levels (schema 29)
 
 	sealerMu  sync.Mutex
 	sealer    *auth.Sealer // seals the state of sign-ins in progress

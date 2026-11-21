@@ -75,7 +75,7 @@ func wantsVariables(pl *pipeline.Pipeline) bool {
 // bindVariables asks for the variables in effect for the run being made.
 func (m *Manager) bindVariables(ctx context.Context, project string, pl *pipeline.Pipeline, given map[string]string) (pipeline.Variables, string, error) {
 	src := m.variables()
-	if src == nil || !wantsVariables(pl) {
+	if src == nil || project == "" || !wantsVariables(pl) {
 		return nil, "", nil
 	}
 	env := environmentOf(pl, given)
@@ -116,4 +116,23 @@ func (m *Manager) createRun(ctx context.Context, nr engine.NewRun, rec *varRecor
 		m.record(ctx, run.ID, rec)
 	}
 	return run, err
+}
+
+// CheckFor is Check for a project: the variables in effect for it are bound,
+// so that a locked variable the file tries to override, or a variable a
+// template needs that nothing sets, is reported as a run would report it.
+func (m *Manager) CheckFor(ctx context.Context, project, text string, overrides map[string]string) (*pipeline.Pipeline, error) {
+	pl, err := pipeline.Parse([]byte(text))
+	if err != nil {
+		return nil, err
+	}
+	vars, _, err := m.bindVariables(ctx, project, pl, nil)
+	if err != nil {
+		return nil, err
+	}
+	if pl, err = m.preview(pl); err != nil {
+		return nil, err
+	}
+	pl, _, _, err = m.expandVars(ctx, pl, overrides, checkFresh, vars)
+	return pl, err
 }
