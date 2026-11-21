@@ -273,6 +273,42 @@ launchway graph | head -8
 
 A file with problems is reported as for `validate`, with exit code `1`.
 
+### launchway graph, the software graph
+
+With one of the words below, `launchway graph` asks the software graph instead (see [the guide](../guide/software-graph.md)).
+Every answer is for you alone: nothing you may not read is listed, followed or counted. A node is named `kind:key`
+(`repository:team/app`, `package:go:example.com/lib`, `image:registry.example/team/app`, `deployment:prod/shop/api`).
+Questions take `--depth`, `--nodes`, `--as-of TIME` (RFC 3339) or `--commit SHA -R OWNER/NAME`, and `--json`; an answer that
+stopped short says which limit it reached.
+
+| Command | What it does |
+|---|---|
+| `launchway graph summary` | what you may read of the graph and when each source last read |
+| `launchway graph search TEXT [--kind K]` | find nodes by a part of a name |
+| `launchway graph show REF` | one node and the edges directly around it |
+| `launchway graph impact REF` | what is affected if it changes: the way to each thing, by owner, with the deployments |
+| `launchway graph where REF` | the Airfields and digests where a repository, package, commit or image runs |
+| `launchway graph contents REF` | what is in a deployment, image or component: images, packages and versions, commits |
+| `launchway graph path FROM TO` | how two nodes are connected |
+| `launchway graph order [-R OWNER/NAME]... [--upstream]` | the order repositories are built in; cycles with their path; overrides marked |
+| `launchway graph rebuild-set -R OWNER/NAME` | what must be built again after a push to it, in order |
+| `launchway graph overrides` | the corrections to the order |
+| `launchway graph override add --kind before\|ignore\|pin --from A --to B --reason TEXT [--value V]` | add a correction; a reason is required |
+| `launchway graph override remove ID` | take one away |
+| `launchway graph needs REF` | what a component or repository needs, declared and inferred |
+| `launchway graph placement REF` | which machines and platforms satisfy it, near misses and gaps |
+| `launchway graph spec REF... [--headroom PERCENT] [--format json\|yaml]` | a machine specification for components that run together |
+| `launchway graph reach REF` | which deployments run a version of a package that has an advisory |
+| `launchway graph propose-requirements -R OWNER/NAME --file FILE` | open a pull request that changes `.launchway/requirements.yaml` |
+| `launchway graph refresh -R OWNER/NAME` | read one repository again |
+| `launchway graph rescan`, `launchway graph rebuild` | administrators: read everything again; clear the graph and read everything again |
+
+```sh
+launchway graph order -R team/app --upstream
+launchway graph impact package:go:example.com/lib
+launchway graph spec repository:team/app --format yaml
+```
+
 ## launchway login
 
 Checks an API token with the server and stores it with the server's address.

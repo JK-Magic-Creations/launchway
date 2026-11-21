@@ -99,7 +99,7 @@ A gap is something an interface lacks today; the number may only go down. An exe
 | `GET /api/v1/graph/contents` | `graph_contents` | `graph contents` | — | equal |
 | `GET /api/v1/graph/impact` | `graph_impact` | `graph impact` | — | equal |
 | `GET /api/v1/graph/needs` | `graph_requirements` | `graph needs` | — | equal |
-| `GET /api/v1/graph/neighbours` | `get_graph_node` | `graph show` | — | equal: the node's edges are in the same answer as the node; the UI's expansion calls neighbours with a depth |
+| `GET /api/v1/graph/neighbours` | `get_graph_node` | `graph show` | — | equal: the node's edges are in the same answer as the node; the page's expansion asks for what is next to a node, to a depth |
 | `GET /api/v1/graph/node` | `get_graph_node` | `graph show` | — | equal |
 | `GET /api/v1/graph/order` | `graph_build_order` | `graph order` | — | equal |
 | `GET /api/v1/graph/overrides` | `list_graph_overrides` | `graph overrides` | — | equal |

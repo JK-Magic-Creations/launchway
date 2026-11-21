@@ -2893,18 +2893,40 @@
           "items": [
             {
               "status": "available",
+              "title": "What software needs, and what can run it",
+              "value": "Write what a component needs in one small file, or let Launchway infer it and say so; see which machines satisfy it and what is missing.",
+              "detail": "Launchway can write a neutral machine specification for components that run together. Nothing is provisioned from it yet.",
+              "link": "reference/requirements-file"
+            },
+            {
+              "status": "available",
+              "title": "Build order across repositories",
+              "value": "Repositories are ordered providers first, cycles are shown with their path, and you can correct the order with a reason.",
+              "detail": "The list of what must be built again after a push is available from the command line and the API; starting those builds by itself is planned.",
+              "link": "guide/software-graph"
+            },
+            {
+              "status": "available",
+              "title": "One graph from code to where it runs",
+              "value": "See what depends on what, what is built from what, what is affected by a change and where it runs, as a table or a picture.",
+              "detail": "Built from manifests, Containerfiles, pipelines, the results of Sorties and Launches, in the database Launchway already has. Every answer holds only what you may read, and says when it is not the whole answer.",
+              "link": "guide/software-graph"
+            },
+            {
+              "status": "available",
               "title": "Findings and SBOMs per run",
               "value": "The starting point already works: findings and components recorded for every Sortie.",
               "detail": "Components are recorded as bills of materials and findings are kept with the Sortie.",
               "link": "guide/security-findings"
             },
             {
-              "status": "planned",
+              "status": "in-progress",
               "title": "What is deployed where",
               "value": "Link every deployed image back to its commit, its components and its findings, including on hosts Launchway only observes.",
-              "detail": "Facts are keyed by image digest and by deployment, so one query can answer across Git, the Depot, scans and the deploy engine.",
-              "needs": "Built-in Depot.",
-              "area": "software-graph"
+              "detail": "The first slice is in: facts are keyed by image digest and by deployment, and one question can span repositories, packages, images and deployments (see the graph guide). Hosts Launchway only observes, and a continuous observer, are still to come.",
+              "needs": "Built-in Depot (registry).",
+              "area": "software-graph",
+              "link": "guide/software-graph"
             },
             {
               "status": "planned",
@@ -2968,6 +2990,22 @@
               "detail": "The list becomes a set of proposed fixes.",
               "needs": "What is deployed where.",
               "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "Machines and platforms in the graph",
+              "value": "Machines with their discovered facts, clusters, serverless runtimes, databases and queues, so every placement question has real answers.",
+              "detail": "The adapters and their tests are in place; they are filled in as host inventory, the built-in registry and configuration as code arrive.",
+              "needs": "Host inventory.",
+              "area": "software-graph"
+            },
+            {
+              "status": "planned",
+              "title": "Build downstream repositories in order",
+              "value": "After a push, start the builds of what depends on it, in order, each once.",
+              "detail": "The list is available today; the trigger is not.",
+              "needs": "One graph from code to where it runs.",
+              "area": "dependency-order"
             }
           ]
         },

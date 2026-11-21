@@ -369,7 +369,7 @@ var rows = []Row{
 	{Route: "GET /api/v1/graph", MCP: "graph_summary", CLI: "graph summary", Status: Equal},
 	{Route: "GET /api/v1/graph/search", MCP: "search_graph", CLI: "graph search", Status: Equal},
 	{Route: "GET /api/v1/graph/node", MCP: "get_graph_node", CLI: "graph show", Status: Equal},
-	{Route: "GET /api/v1/graph/neighbours", MCP: "get_graph_node", CLI: "graph show", Status: Equal, Reason: "the node's edges are in the same answer as the node; the UI's expansion calls neighbours with a depth"},
+	{Route: "GET /api/v1/graph/neighbours", MCP: "get_graph_node", CLI: "graph show", Status: Equal, Reason: "the node's edges are in the same answer as the node; the page's expansion asks for what is next to a node, to a depth"},
 	{Route: "GET /api/v1/graph/path", MCP: "graph_path", CLI: "graph path", Status: Equal},
 	{Route: "GET /api/v1/graph/impact", MCP: "graph_impact", CLI: "graph impact", Status: Equal},
 	{Route: "GET /api/v1/graph/where", MCP: "graph_where_running", CLI: "graph where", Status: Equal},

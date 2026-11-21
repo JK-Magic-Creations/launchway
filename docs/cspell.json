@@ -19,7 +19,7 @@
   "words": [
     "overwatch",
     "rulebook", "renameable", "Renameable", "organisation", "nogo",
-    "Valkey", "Dockerfiles",
+    "Valkey", "Containerfile", "Containerfiles", "Dockerfiles", "millicores",
     "skopeo",
     "bestpractices", "COEP", "errcheck", "golangci", "gosec", "HSTS", "keylessly", "kubeconform", "shellcheck", "Subresource", "Syft", "Tetrate", "Liquibase", "Virt", "bootable", "cutover",
     "applicationsets", "blocklist",

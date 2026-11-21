@@ -37,6 +37,8 @@
         "concepts/review-and-the-merge-queue",
         "concepts/releases",
         "concepts/high-availability"
+        "concepts/high-availability",
+        "concepts/software-graph"
       ]
     },
     {
@@ -109,6 +111,7 @@
         "guide/pull-requests",
         "guide/pull-request-trust",
         "guide/dependency-updates",
+        "guide/software-graph",
         "guide/webhooks",
         "guide/secrets",
         "guide/encryption-at-rest",
@@ -165,6 +168,7 @@
         "reference/pipeline",
         "reference/server-config",
         "reference/dependency-updates",
+        "reference/requirements-file",
         "reference/runner-config",
         "reference/helm-values",
         "reference/cli",
