@@ -40,7 +40,11 @@ const tiles: Tile[] = [
   { title: 'Runner identities and pools', text: 'Runners enrol with join tokens and their own keys, serve only the projects of their pool, and limit what they accept.', link: '/guide/runner-identity', status: 'available' },
   { title: 'Built-in artifact storage', text: 'Artifacts and hosted reports are kept in the database: several servers, nothing else to run.', link: '/artifacts', status: 'available' },
   { title: 'An endpoint for AI agents', text: 'MCP tools to write and check pipelines, start and watch runs and diagnose failures, with a token\'s rights.', link: '/guide/agents', status: 'available' },
-  { title: 'Hosted control plane', text: 'Organisations and a management API for everything.', link: '/roadmap', status: 'planned' },
+  { title: 'Guided interface and wizards', text: 'Six sections, a Home page that says what to do next, and wizards that ask plain questions and explain each option.', link: '/howto/setup-first-run', status: 'available' },
+  { title: 'Configuration in the database', text: 'Projects, runner pools, environments and policies are objects with history and audit, never a file to hand-edit.', link: '/guide/configuration', status: 'available' },
+  { title: 'Flow control and caches', text: 'Conditions, retries, lanes, re-runs from any step, and build caches that keep dependencies between runs.', link: '/reference/pipeline#when', status: 'available' },
+  { title: 'Built-in Git hosting', text: 'Host repositories in Launchway and review changes there: the first milestone, being built now.', link: '/roadmap', status: 'in progress' },
+  { title: 'Hosted service', text: 'Launchway as a service, with organisations, a free tier and a public demo: planned.', link: '/roadmap', status: 'planned' },
 ]
 
 const shots = [
@@ -112,6 +116,15 @@ const shots = [
           <p>{{ t.text }}</p>
         </a>
       </div>
+    </section>
+
+    <section class="lw-section" aria-labelledby="lw-next">
+      <h2 id="lw-next">Where it is going</h2>
+      <p>First, one place to host your code and run your pipelines. Then deeper pipeline power, delivery and
+        GitOps depth, a built-in registry, a software graph with automated patching, optional AI helpers, and a
+        hosted service with a public demo. Each item says whether it is available, in progress or planned.</p>
+      <p><a :href="withBase('/roadmap.html')" target="_self">See the roadmap</a> or read it
+        <a :href="page('/roadmap-list')">as a list</a>.</p>
     </section>
 
     <section class="lw-section" aria-labelledby="lw-see">

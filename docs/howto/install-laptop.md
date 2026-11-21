@@ -1,8 +1,8 @@
 # Install on a laptop
 
 Build Launchway from source on your own computer, to write and run pipelines locally and to try
-the server. For developers. There are no published binaries or packages yet; signed releases are
-[in progress](../roadmap-list.md).
+the server. For developers. No release has been published yet, so you build from source; the signed release
+machinery is built and described in [verifying downloads](../security/verify-downloads.md).
 
 > **Verified** on 2026-11-19 against commit f717337: every command below on Linux (Fedora, Go
 > 1.27.4, Node 26, Podman 5) from a fresh clone. **Not verified:** macOS, Windows (WSL), Docker.
