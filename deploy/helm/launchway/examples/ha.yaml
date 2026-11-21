@@ -87,3 +87,18 @@ runner:
       address: https://vault.example.com:8200
       role: launchway-runner
       keys: ["ci/*"]
+
+# Encryption at rest. The default (a root key Secret the chart makes and keeps) already refuses to start
+# a server without a key; production should hold the key itself, or keep it in Vault or OpenBao.
+#   openssl rand -base64 32 > root.key; chmod 600 root.key        # then keep a copy outside the cluster
+#   kubectl -n launchway create secret generic launchway-root-key --from-file=root.key
+# encryption:
+#   keyFile:
+#     existingSecret: launchway-root-key
+# or, with the key never leaving Vault or OpenBao (transit engine, key "launchway"):
+# encryption:
+#   holder: transit
+#   transit:
+#     address: https://vault.internal:8200
+#     key: launchway
+#     role: launchway          # Kubernetes auth

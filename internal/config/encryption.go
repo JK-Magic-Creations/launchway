@@ -65,7 +65,36 @@ const (
 	EnvRootKeyPreviousFile = "LAUNCHWAY_ROOT_KEY_PREVIOUS_FILE"
 	EnvRootKeyPrevious     = "LAUNCHWAY_ROOT_KEY_PREVIOUS"
 	EnvPassphraseFile      = "LAUNCHWAY_KEYSTORE_PASSPHRASE_FILE"
+	EnvKeystoreFile        = "LAUNCHWAY_KEYSTORE_FILE"
+	EnvRequire             = "LAUNCHWAY_ENCRYPTION_REQUIRE"
 )
+
+// Overlay returns the settings with the environment applied: the holder and
+// the transit connection can be given by variables (LAUNCHWAY_ENCRYPTION_HOLDER,
+// LAUNCHWAY_TRANSIT_ADDRESS, _MOUNT, _KEY, _NAMESPACE, _CA_FILE, _TOKEN_ENV,
+// _TOKEN_FILE, _ROLE, _AUTH_PATH, _JWT_FILE), so the Helm chart can configure
+// a holder without adding keys to the configuration file, which a server of
+// the release before refuses.
+func (e EncryptionConfig) Overlay(getenv func(string) string) EncryptionConfig {
+	set := func(dst *string, name string) {
+		if v := strings.TrimSpace(getenv(name)); v != "" {
+			*dst = v
+		}
+	}
+	set(&e.Holder, "LAUNCHWAY_ENCRYPTION_HOLDER")
+	t := &e.Transit
+	set(&t.Address, "LAUNCHWAY_TRANSIT_ADDRESS")
+	set(&t.Mount, "LAUNCHWAY_TRANSIT_MOUNT")
+	set(&t.Key, "LAUNCHWAY_TRANSIT_KEY")
+	set(&t.Namespace, "LAUNCHWAY_TRANSIT_NAMESPACE")
+	set(&t.CAFile, "LAUNCHWAY_TRANSIT_CA_FILE")
+	set(&t.TokenEnv, "LAUNCHWAY_TRANSIT_TOKEN_ENV")
+	set(&t.TokenFile, "LAUNCHWAY_TRANSIT_TOKEN_FILE")
+	set(&t.Role, "LAUNCHWAY_TRANSIT_ROLE")
+	set(&t.AuthPath, "LAUNCHWAY_TRANSIT_AUTH_PATH")
+	set(&t.JWTFile, "LAUNCHWAY_TRANSIT_JWT_FILE")
+	return e
+}
 
 func (e *EncryptionConfig) relativeTo(base string) {
 	for _, p := range []*string{&e.KeyFile, &e.PreviousKeyFile, &e.Keystore, &e.PassphraseFile, &e.Transit.CAFile, &e.Transit.TokenFile, &e.Transit.JWTFile} {
@@ -98,6 +127,9 @@ func (e EncryptionConfig) Resolve(getenv func(string) string) (Resolved, error) 
 	if v := getenv(EnvPassphraseFile); v != "" {
 		r.PassphraseFile = v
 	}
+	if v := getenv(EnvKeystoreFile); v != "" {
+		r.Keystore = v
+	}
 	set := map[string]bool{
 		"key_file":   r.KeyFile != "",
 		"env":        strings.TrimSpace(getenv(EnvRootKey)) != "",
@@ -127,7 +159,7 @@ func (e EncryptionConfig) Resolve(getenv func(string) string) (Resolved, error) 
 	default:
 		return r, fmt.Errorf("encryption.holder %q is not known; use key_file, env, passphrase or transit", e.Holder)
 	}
-	if r.Kind == "" && e.Require {
+	if r.Kind == "" && (e.Require || getenv(EnvRequire) == "true") {
 		return r, errors.New("encryption.require is set but no root key holder is configured: " + holderNeeds["key_file"])
 	}
 	return r, nil

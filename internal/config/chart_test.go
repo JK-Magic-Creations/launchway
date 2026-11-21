@@ -698,7 +698,7 @@ runner:
 // the database once and ignored after), only what a server needs before it
 // can read the database.
 func TestChartDefaultWritesBootstrapKeysOnly(t *testing.T) {
-	bootstrap := map[string]bool{"listen": true, "data": true, "database": true, "database_wait": true, "user": true, "server": true, "auth": true, "runner": true}
+	bootstrap := map[string]bool{"encryption": true, "listen": true, "data": true, "database": true, "database_wait": true, "user": true, "server": true, "auth": true, "runner": true}
 	for _, values := range []string{"postgresql: { enabled: true }\n", "database: { url: \"postgres://u@db/launchway\" }\n"} {
 		f := renderChart(t, values)["server"]
 		var doc map[string]any

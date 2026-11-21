@@ -108,6 +108,9 @@ spec:
                   name: {{ include "launchway.deployPoolSecretName" . }}
                   key: {{ include "launchway.deployPoolSecretKey" . }}
             {{- end }}
+            {{- with include "launchway.encryptionEnv" . | trim }}
+            {{- . | nindent 12 }}
+            {{- end }}
             {{- with .Values.server.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -150,6 +153,11 @@ spec:
               mountPath: /var/lib/launchway
             - name: tmp
               mountPath: /tmp
+            {{- if include "launchway.encryptionSources" . | trim }}
+            - name: root-key
+              mountPath: /etc/launchway-keys
+              readOnly: true
+            {{- end }}
             {{- with .Values.server.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -165,6 +173,13 @@ spec:
         - name: tmp
           emptyDir:
             sizeLimit: 256Mi
+        {{- with include "launchway.encryptionSources" . | trim }}
+        - name: root-key
+          projected:
+            defaultMode: 0440
+            sources:
+              {{- . | nindent 14 }}
+        {{- end }}
         {{- with .Values.server.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

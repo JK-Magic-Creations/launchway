@@ -181,6 +181,35 @@ file during an upgrade or after an aborted one. Unset values take the
 | `runnerToken.existingSecret` | string | `""` | An existing Secret holding the runner token. Empty: the chart creates one with a random token on first install and keeps it on every upgrade |
 | `runnerToken.existingSecretKey` | string | `token` | The key in that Secret |
 
+## Encryption at rest
+
+See [Encryption at rest](../guide/encryption-at-rest.md). The chart passes the holder to the servers as environment variables, so the configuration file gains no key. By default the servers refuse to start without a root key, and the chart makes one.
+
+<!-- keys: helm -->
+| Value | Type | Default | Description |
+|---|---|---|---|
+| `encryption.holder` | `keyFile`, `env`, `passphrase`, `transit` or `none` | `keyFile` | Where the root key is held. `none` runs not encrypted at rest, with a warning at start, in `launchway doctor` and on the Settings page |
+| `encryption.keyFile.generate` | boolean | `true` | With no `existingSecret`, make a key Secret on first install and keep it on every upgrade. It is annotated `helm.sh/resource-policy: keep`, so `helm uninstall` leaves it. Only as strong as the cluster's own Secret encryption: it defeats a stolen database dump, not a cluster administrator |
+| `encryption.keyFile.existingSecret` | string | `""` | An existing Secret holding the key file's text (32 random bytes, base64). Prefer this in production |
+| `encryption.keyFile.existingSecretKey` | string | `root.key` | The key in that Secret |
+| `encryption.env.existingSecret` | string | `""` | `holder: env`: a Secret whose key holds the root key itself |
+| `encryption.env.existingSecretKey` | string | `root.key` | The key in that Secret |
+| `encryption.passphrase.keystoreSecret` | string | `""` | `holder: passphrase`: a Secret holding the keystore file |
+| `encryption.passphrase.keystoreSecretKey` | string | `root.keystore` | The key in that Secret |
+| `encryption.passphrase.passphraseSecret` | string | `""` | A Secret holding the passphrase, so that restarts are unattended |
+| `encryption.passphrase.passphraseSecretKey` | string | `passphrase` | The key in that Secret |
+| `encryption.transit.address` | URL | `""` | `holder: transit`: the Vault or OpenBao address. The transit key never leaves the service |
+| `encryption.transit.mount` | string | `transit` | Where the transit engine is mounted |
+| `encryption.transit.key` | string | `launchway` | The transit key; the servers need only `encrypt` and `decrypt` on it |
+| `encryption.transit.namespace` | string | `""` | Sent as `X-Vault-Namespace` |
+| `encryption.transit.tokenSecret` | string | `""` | A Secret holding a token to log in with (or use `role`) |
+| `encryption.transit.tokenSecretKey` | string | `token` | The key in that Secret |
+| `encryption.transit.role` | string | `""` | Log in with Kubernetes auth as this role |
+| `encryption.transit.authPath` | string | `kubernetes` | Where Kubernetes auth is mounted |
+| `encryption.transit.caSecret` | string | `""` | A Secret holding the service's CA certificate, key `ca.crt` |
+| `encryption.previousKey.existingSecret` | string | `""` | During a root key replacement: a Secret holding the key being replaced, beside the new one while `launchway encryption rewrap` runs. Remove it afterwards |
+| `encryption.previousKey.existingSecretKey` | string | `root.key` | The key in that Secret |
+
 ## Servers
 
 Servers serve the API and web UI and run the engine. They keep nothing that matters on disk; any

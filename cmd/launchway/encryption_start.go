@@ -32,6 +32,7 @@ type rootKeys struct {
 // checks files and the transit settings; it does not contact the service.
 // prompt reads a passphrase when the keystore has no passphrase file.
 func openRootKeys(e config.EncryptionConfig, getenv func(string) string, prompt func() ([]byte, error)) (*rootKeys, error) {
+	e = e.Overlay(getenv)
 	r, err := e.Resolve(getenv)
 	if err != nil {
 		return nil, err
@@ -86,7 +87,7 @@ func openRootKeys(e config.EncryptionConfig, getenv func(string) string, prompt 
 // one when nothing else is (see defaultKeyFile), for the commands that run on
 // the server host.
 func withDefaultKey(cfg *config.Config) config.EncryptionConfig {
-	e := cfg.Encryption
+	e := cfg.Encryption.Overlay(os.Getenv)
 	if r, err := e.Resolve(os.Getenv); err == nil && r.Kind == "" && config.FileExists(config.DefaultKeyFile(cfg.Data)) {
 		e.KeyFile = config.DefaultKeyFile(cfg.Data)
 	}
@@ -125,7 +126,7 @@ func auditEncryption(eng *engine.Engine) func(context.Context, keyring.Event) {
 // refuses to start.
 func (su *serverSetup) startSecrets(ctx context.Context, eng *engine.Engine) (*sealing.Service, error) {
 	cfg, log := su.cfg, su.log
-	rk, err := openRootKeys(cfg.Encryption, os.Getenv, promptPassphrase)
+	rk, err := openRootKeys(withDefaultKey(cfg), os.Getenv, promptPassphrase)
 	if err != nil {
 		return nil, err
 	}
