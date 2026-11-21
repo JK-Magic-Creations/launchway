@@ -327,8 +327,7 @@ To see exactly what the chart will create, render the values file and lint it:
 
 ```sh
 helm lint deploy/helm/launchway -f deploy/helm/launchway/examples/gke.yaml
-helm template launchway deploy/helm/launchway -n launchway -f deploy/helm/launchway/examples/gke.yaml \
-  --set encryption.keyFile.allowOfflineGeneration=true   # a render without a cluster cannot keep the generated key: for reading only
+helm template launchway deploy/helm/launchway -n launchway -f deploy/helm/launchway/examples/gke.yaml
 ```
 
 ## What next

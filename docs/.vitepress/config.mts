@@ -226,6 +226,7 @@ export default defineConfig({
           { text: 'Webhooks and events', link: '/guide/webhooks' },
           { text: 'Secrets', link: '/guide/secrets' },
           { text: 'Encryption at rest', link: '/guide/encryption-at-rest' },
+          { text: 'Upgrading', link: '/guide/upgrading' },
           { text: 'Configuration and levels', link: '/guide/configuration' },
           { text: 'The words Launchway uses', link: '/guide/words' },
           { text: 'Sign-in and access', link: '/guide/access' },

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/keyring"
@@ -48,16 +49,15 @@ type SecretBox interface {
 }
 
 // SetTOTPBox gives the engine the box that seals local_accounts.totp_secret.
-func (e *Engine) SetTOTPBox(b SecretBox) {
-	e.totpMu.Lock()
-	e.totpBox = b
-	e.totpMu.Unlock()
-}
+func (e *Engine) SetTOTPBox(b SecretBox) { totpBoxes.Store(e, b) }
+
+// totpBoxes holds each engine's box (kept beside the accounts code, not in the Engine struct).
+var totpBoxes sync.Map // *Engine -> SecretBox
 
 func (e *Engine) totpBoxNow() SecretBox {
-	e.totpMu.RLock()
-	defer e.totpMu.RUnlock()
-	return e.totpBox
+	b, _ := totpBoxes.Load(e)
+	sb, _ := b.(SecretBox)
+	return sb
 }
 
 // TOTPSealing says whether a second factor can be stored: a root key is in use.

@@ -88,16 +88,19 @@ launchway doctor encryption
 Git over SSH and webhook secrets **refuse to turn on until a root key exists**, and say how to create
 one. A server that has no key never makes one by itself in an installation that already holds secrets.
 
-A server that has no key, or is of the release before this one, cannot read values another server has
-sealed: sign-in state, links to hosted reports and Git run tokens differ between the two kinds of server
-(sign-in and report links fail when a request lands on the wrong one), Git over SSH has no host key on
-the old servers, and webhook secrets and addresses cannot be opened (a delivery from an old server
-fails, and five failures in a row turn the hook off). That lasts from the moment the first server with
-the key starts until the last server without it stops: the length of the rollout. Rolling to this
-release first and configuring the key afterwards only moves the overlap to the second rollout. To have
-none, turn the key on with `server.strategy.rollingUpdate.maxSurge: 0` and `maxUnavailable: "100%"` for
-that one rollout (a short outage, then set it back), or scale to one server. Going back to the
-release before, once values are sealed, needs a restored backup: it cannot read them.
+A server of the release before this one cannot read values a newer server has sealed: sign-in state, links
+to hosted reports and Git run tokens, SSH host keys, and webhook secrets and addresses. A rolling update
+runs both at once, so **the servers do not seal what already exists while an older server is running**.
+A server that finds secrets in the clear serves at once (it reads them as before), writes only sealed
+values for anything new, and seals the rest once no server of an older release has been seen for 45
+seconds (`LAUNCHWAY_SEAL_QUIET_SECONDS`; `0` seals at start). An older server is seen because it holds
+database connections that do not name themselves; this build names its own (`application_name=launchway`).
+No setting is needed for the rollout, and there is no window in which an older server meets a sealed value.
+`launchway doctor encryption` says "waiting for older servers" while it waits. Where a connection pooler
+hides the connection names the server says so and seals at start instead; then use
+`server.strategy.rollingUpdate.maxSurge: 0` with `maxUnavailable: "100%"` for that one rollout.
+Going back to the release before is clean until the sealing has finished, and needs the backup taken
+before the upgrade afterwards: see [Upgrading](upgrading.md).
 
 ## Where the root key lives
 
@@ -118,19 +121,15 @@ holder may be configured; two at once are refused.
 
 ## With the Helm chart
 
-By default the chart makes a `<release>-launchway-root-key` Secret on first install, **keeps it on every
-upgrade and on `helm uninstall`** (`helm.sh/resource-policy: keep`), mounts it for the servers, and sets
-`LAUNCHWAY_ENCRYPTION_REQUIRE` so that a server refuses to start without it. The configuration file does
-not change, so the release before can still read it. In production, make the Secret yourself and name it
-in `encryption.keyFile.existingSecret`, or use `encryption.holder: transit`. `encryption.holder: none`
-runs not encrypted, with the warning: only as a first upgrade step.
-
-**Under GitOps the chart cannot generate the key.** Generating and keeping the Secret needs the chart to
-see the cluster (`lookup`), which a live `helm install` or `helm upgrade` can and `helm template` (what
-Argo CD runs) cannot: rendered without a cluster, a generated key would be a different one at every
-render, and the next sync would replace the real key and lock the installation out of every sealed secret.
-So rendered without a cluster the chart **refuses** to generate a key and says what to do. Make the Secret
-once, outside the chart, and name it:
+By default the chart's install hook Job (`launchway bootstrap-secrets`, a Helm pre-install and pre-upgrade
+hook; Argo CD runs it as PreSync) creates the `<release>-launchway-root-key` Secret **once, only if it is
+absent**, and never changes or deletes it. Nothing in the rendered manifests is key material, so
+`helm template` is the same every time, under Helm and under GitOps, and the Secret is not owned by Helm:
+`helm uninstall` and a GitOps prune keep it. The servers mount it and set `LAUNCHWAY_ENCRYPTION_REQUIRE`, so
+a server refuses to start without it. The configuration file does not change, so the release before can
+still read it. To bring your own key, make the Secret and name it in `encryption.keyFile.existingSecret`
+(the Job then makes none); or use `encryption.holder: transit`. `encryption.holder: none` is an explicit
+opt-out: it runs not encrypted, with the warning.
 
 ```sh
 openssl rand -base64 32 > root.key; chmod 600 root.key
@@ -138,8 +137,10 @@ kubectl -n launchway create secret generic launchway-root-key --from-file=root.k
 # keep a copy of root.key outside the cluster, then set encryption.keyFile.existingSecret: launchway-root-key
 ```
 
-(or sync it from your secret manager, or use the `transit` holder). `encryption.keyFile.allowOfflineGeneration`
-exists only so that linting and tests can render the chart; never apply output rendered that way.
+Second factors of built-in accounts follow the same rule: an authenticator secret is stored sealed, so a
+second factor can only be set up where a root key is in use (a fresh install always has one). With no
+root key an administrator, who must have a second factor, cannot be created until encryption is on, or
+`auth.local.require_second_factor` is explicitly `off`. Recovery codes are stored as salted Argon2id hashes.
 
 ## When the key is missing or wrong
 

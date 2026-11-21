@@ -1,0 +1,14 @@
+# The shape of an installation made with the chart before the install hook Job (no externalURL, its own sign-in
+# provider, existing Secrets, servers run elsewhere): it must render unchanged with this chart.
+config:
+  extraConfig:
+    auth:
+      mode: oidc
+      oidc: {issuer: https://idp.example.com/, client_id: launchway, client_secret_env: OIDC_SECRET, redirect_url: https://launchway.example.com/auth/callback}
+      access: [{group: admins, role: admin}]
+database: {existingSecret: launchway-database, existingSecretKey: url}
+runnerToken: {existingSecret: launchway-runner-token, existingSecretKey: token}
+server:
+  replicas: 0
+  extraEnv: [{name: OIDC_SECRET, valueFrom: {secretKeyRef: {name: oidc, key: client-secret}}}]
+postgresql: {enabled: false}

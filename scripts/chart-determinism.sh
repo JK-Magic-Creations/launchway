@@ -26,7 +26,11 @@ check() { # name, helm arguments...
 		echo "chart-determinism: FAIL $name: the render holds a Secret; secrets are made by the hook Job" >&2
 		status=1
 	fi
-	# No hook Job means no secrets at all: the default render must have one.
+	# No hook Job means no secrets at all: the default render must have one, and the root key is its.
+	if [ "$name" = default ] && ! grep -q 'LAUNCHWAY_BOOTSTRAP_ROOT_KEY' "$tmp/a.yaml"; then
+		echo "chart-determinism: FAIL $name: the hook Job does not make the root key" >&2
+		status=1
+	fi
 	if [ "$name" = default ] && ! grep -q 'helm.sh/hook": pre-install,pre-upgrade' "$tmp/a.yaml"; then
 		echo "chart-determinism: FAIL $name: no pre-install/pre-upgrade hook found" >&2
 		status=1
@@ -39,6 +43,13 @@ check own-database-url --set externalURL=https://launchway.example.com --set dat
 check high-availability -f "$chart/examples/ha.yaml"
 check deploy-runner --set externalURL=https://launchway.example.com --set delivery.environments[0].name=prod --set delivery.environments[0].target=prod --set delivery.environments[0].projects[0]=shop \
 	--set delivery.deployRunner.enabled=true --set delivery.deployRunner.target=prod --set delivery.deployRunner.applications[0].projects[0]=shop --set delivery.deployRunner.applications[0].names[0]=shop --set delivery.deployRunner.repos.control.url=http://example.invalid/control.git
+# The encryption value sets: each renders offline, the same every time, with no Secret material.
+check encryption-existing-key --set externalURL=https://launchway.example.com --set encryption.keyFile.existingSecret=my-root-key
+check encryption-env --set externalURL=https://launchway.example.com --set encryption.holder=env --set encryption.env.existingSecret=my-env-key
+check encryption-passphrase --set externalURL=https://launchway.example.com --set encryption.holder=passphrase --set encryption.passphrase.keystoreSecret=ks --set encryption.passphrase.passphraseSecret=pp
+check encryption-transit --set externalURL=https://launchway.example.com --set encryption.holder=transit --set encryption.transit.address=https://bao.example:8200 --set encryption.transit.key=lw --set encryption.transit.tokenSecret=bao-token
+check encryption-none --set externalURL=https://launchway.example.com --set encryption.holder=none
+check existing-install-values -f scripts/testdata/existing-install-values.yaml
 # No template may generate randomness or read the cluster: both break the rule above.
 if grep -rnE '(randAlphaNum|randBytes|randAlpha|randNumeric|randAscii|genPrivateKey|genCA|genSelfSignedCert) *[0-9("]|[^a-zA-Z]lookup +"' "$chart/templates"; then
 	echo "chart-determinism: FAIL a template generates values or reads the cluster (above)" >&2

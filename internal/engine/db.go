@@ -60,14 +60,13 @@ func isPostgres(addr string) bool {
 func openDB(addr string, wait time.Duration, known int, log *slog.Logger) (*dbx, SchemaInfo, error) {
 	var d *dbx
 	if isPostgres(addr) {
-		addr = withApplicationName(addr)
-		db, err := sql.Open("pgx", addr)
+		db, err := sql.Open("pgx", withApplicationName(addr))
 		if err != nil {
 			return nil, SchemaInfo{}, err
 		}
 		db.SetMaxOpenConns(20)
 		db.SetMaxIdleConns(10)
-		d = &dbx{DB: db, pg: true, dsn: addr}
+		d = &dbx{DB: db, pg: true, dsn: withApplicationName(addr)}
 	} else {
 		q := url.Values{}
 		// busy_timeout comes first: switching to WAL needs a lock, and without

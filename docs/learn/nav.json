@@ -85,6 +85,7 @@
         "guide/webhooks",
         "guide/secrets",
         "guide/encryption-at-rest",
+        "guide/upgrading",
         "guide/configuration",
         "guide/access",
         "guide/runner-identity",

@@ -113,8 +113,6 @@ type Options struct {
 
 // Engine is safe for concurrent use.
 type Engine struct {
-	totpMu        sync.RWMutex
-	totpBox       SecretBox // seals local_accounts.totp_secret (SetTOTPBox)
 	db            *dbx
 	hub           *hub.Hub
 	log           *slog.Logger

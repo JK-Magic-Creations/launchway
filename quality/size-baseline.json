@@ -3,7 +3,7 @@
   "max_file_lines": 1000,
   "max_func_lines": 150,
   "files": {
-    "internal/api/api.go": 1050,
+    "internal/api/api.go": 1032,
     "internal/api/mcp_tools.go": 1346,
     "internal/engine/artifacts.go": 1211,
     "internal/engine/control.go": 1028,
@@ -18,7 +18,7 @@
     "internal/engine/artifacts.go:Engine.BeginArtifact": 199,
     "internal/engine/testqueries.go:Engine.RunTestCases": 194,
     "internal/engine/testqueries.go:Engine.TestOverview": 165,
-    "internal/imagebuild/build.go:Build": 431,
+    "internal/imagebuild/build.go:Build": 426,
     "internal/pipeline/parse.go:parser.parseSteps": 153,
     "internal/pipeline/verify.go:parser.parseVerifyStep": 212,
     "internal/policy/evaluate.go:judge": 227,

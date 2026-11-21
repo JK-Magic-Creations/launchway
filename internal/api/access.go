@@ -480,8 +480,8 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		// what hosting makes work (importing repositories, a repository's mirrors) only then.
 		"hosting": s.Forge != nil,
 	}
-	if s.Auth == nil && s.OpenInstall {
-		view["sign_in_off"] = s.signInOffWarning()
+	if s.Auth == nil {
+		s.addSignInOff(view)
 	}
 	writeJSON(w, http.StatusOK, view)
 }

@@ -48,11 +48,8 @@ type Server struct {
 	Drafts *auth.DraftRules
 	// TrustProxy believes X-Forwarded-Proto and X-Forwarded-For, as set by a
 	// reverse proxy that every client must go through.
-	TrustProxy bool
-	// OpenInstall is set when the server runs with no sign-in on an address
-	// others can reach (auth.mode none with allow_anonymous). It is warned
-	// about on every page; see signin_request.go.
-	OpenInstall bool
+	TrustProxy  bool
+	OpenInstall bool  // no sign-in on a reachable address; see signin_request.go
 	UI          fs.FS // the built web UI; may be nil
 	Version     string
 	Log         *slog.Logger
@@ -595,30 +592,6 @@ func (s *Server) runInfos(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---- UI and CLI API ----
-
-// info is public. With sign-in on it says only what is needed to sign in.
-// The schema versions (this build's, and the database's) are included, so
-// that an upgrade or its rollback can be checked; the database's is left
-// out if it cannot be read.
-func (s *Server) info(w http.ResponseWriter, r *http.Request) {
-	out := map[string]any{"version": s.Version}
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	defer cancel()
-	if schema, err := s.Engine.Schema(ctx); err == nil {
-		out["schema"] = schema
-	} else {
-		out["schema"] = map[string]int{"code": schema.Code}
-	}
-	if s.Auth != nil {
-		s.localInfo(out)
-	} else {
-		out["auth_mode"], out["actor"], out["projects"] = "none", s.Actor, len(s.projects())
-		if s.OpenInstall {
-			out["sign_in_off"] = s.signInOffWarning()
-		}
-	}
-	writeJSON(w, http.StatusOK, out)
-}
 
 func (s *Server) projects() []source.ProjectStatus {
 	if s.Projects == nil {

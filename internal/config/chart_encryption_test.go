@@ -34,7 +34,7 @@ func TestChartEncryptsAtRestByDefault(t *testing.T) {
 	if failed {
 		t.Fatal(out)
 	}
-	for _, want := range []string{"name: t-launchway-root-key", "root-key=t-launchway-root-key", "LAUNCHWAY_BOOTSTRAP_ROOT_KEY",
+	for _, want := range []string{"name: t-launchway-root-key", "LAUNCHWAY_BOOTSTRAP_ROOT_KEY",
 		"name: LAUNCHWAY_ENCRYPTION_REQUIRE", `value: "true"`, "name: LAUNCHWAY_ROOT_KEY_FILE", "value: /etc/launchway-keys/root.key",
 		"mountPath: /etc/launchway-keys", "defaultMode: 0440"} {
 		if !strings.Contains(out, want) {
@@ -107,7 +107,7 @@ func TestChartRootKeyIsMadeByTheHookAndRendersTheSameOffline(t *testing.T) {
 		t.Error("no pre-install/pre-upgrade hook for the key")
 	}
 	out, failed := helmOut(t, "encryption: { keyFile: { existingSecret: my-key } }")
-	if failed || strings.Contains(out, "root-key=") || strings.Contains(out, "LAUNCHWAY_BOOTSTRAP_ROOT_KEY") || !strings.Contains(out, "name: my-key") {
+	if failed || strings.Contains(out, "LAUNCHWAY_BOOTSTRAP_ROOT_KEY") || !strings.Contains(out, "name: my-key") {
 		t.Fatalf("an existing Secret must render, with no key made by the hook:\n%s", out)
 	}
 	if out, failed := helmOut(t, "encryption: { holder: none }"); failed || strings.Contains(out, "LAUNCHWAY_BOOTSTRAP_ROOT_KEY") {

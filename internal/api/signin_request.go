@@ -67,3 +67,10 @@ func (s *Server) setupSignInNow(w http.ResponseWriter, r *http.Request) {
 		"next":       "Keep this code. Restart the servers (for the Helm chart: kubectl rollout restart deploy/<release>-server, or roll the Rollout), or set auth.mode: local in the configuration. They then ask for this code on the first page and make the first administrator. Until they restart, nothing changes.",
 	})
 }
+
+// addSignInOff adds the warning to a response of an open installation.
+func (s *Server) addSignInOff(out map[string]any) {
+	if s.OpenInstall {
+		out["sign_in_off"] = s.signInOffWarning()
+	}
+}

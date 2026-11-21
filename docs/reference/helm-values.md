@@ -44,7 +44,7 @@ A working, secure installation needs **one** value, the address people will open
 externalURL: https://launchway.example.com
 ```
 
-Left out, the install fails with `missing property 'externalURL'`. The chart then starts with sign-in required
+Left out of a new installation with built-in accounts (or with `ingress` or `httpRoute`), the install fails and says so; an installation that already has its own sign-in (`auth.mode: oidc`, or an explicit `none`) and publishes nothing through the chart needs none. The chart then starts with sign-in required
 (built-in accounts, the first administrator made with a one-time setup code), encryption at rest on, a bundled
 PostgreSQL on an 8Gi volume, default-deny network policies and restricted pods. Nothing else is assumed: no
 secrets manager, operator or identity provider. `values.yaml` leads with the same short list and keeps
@@ -131,7 +131,7 @@ runner:
 <!-- keys: helm -->
 | Value | Type | Default | Description |
 |---|---|---|---|
-| `externalURL` | string | none (required) | The address people open: `https://` or `http://`, a host, optional port, no path. Names the ingress and route host, is passed to the servers as `LAUNCHWAY_EXTERNAL_URL` and is shown in the install notes |
+| `externalURL` | string | none (required for built-in accounts, `ingress` and `httpRoute`) | The address people open: `https://` or `http://`, a host, optional port, no path. Names the ingress and route host, is passed to the servers as `LAUNCHWAY_EXTERNAL_URL` and is shown in the install notes |
 | `nameOverride` | string | `""` | Overrides the chart name in resource names |
 | `fullnameOverride` | string | `""` | Overrides the full resource name prefix; default `<release>-launchway` |
 | `commonLabels` | map | `{}` | Labels added to every resource the chart creates |
@@ -215,36 +215,6 @@ file during an upgrade or after an aborted one. Unset values take the
 | `database.existingSecretKey` | string | `url` | The key in that Secret |
 | `runnerToken.existingSecret` | string | `""` | An existing Secret holding the runner token. Empty: the install hook Job makes one with a random token if absent and keeps it on every upgrade |
 | `runnerToken.existingSecretKey` | string | `token` | The key in that Secret |
-
-## Encryption at rest
-
-See [Encryption at rest](../guide/encryption-at-rest.md). The chart passes the holder to the servers as environment variables, so the configuration file gains no key. By default the servers refuse to start without a root key, and the chart makes one.
-
-<!-- keys: helm -->
-| Value | Type | Default | Description |
-|---|---|---|---|
-| `encryption.holder` | `keyFile`, `env`, `passphrase`, `transit` or `none` | `keyFile` | Where the root key is held. `none` runs not encrypted at rest, with a warning at start, in `launchway doctor` and on the Settings page |
-| `encryption.keyFile.generate` | boolean | `true` | With no `existingSecret`, make a key Secret on first install and keep it on every upgrade. It is annotated `helm.sh/resource-policy: keep`, so `helm uninstall` leaves it. Needs a live `helm install` or `helm upgrade`: rendered without a cluster (`helm template`, Argo CD) the chart refuses to generate a key, because it would differ at every render; under GitOps create the Secret once and set `existingSecret`. Only as strong as the cluster's own Secret encryption: it defeats a stolen database dump, not a cluster administrator |
-| `encryption.keyFile.allowOfflineGeneration` | boolean | `false` | Render a generated key even when the chart cannot see the cluster. Only for linting and tests: such a render makes a different key every time, so applying it would replace the real key and lock the installation out of its sealed secrets |
-| `encryption.keyFile.existingSecret` | string | `""` | An existing Secret holding the key file's text (32 random bytes, base64). Prefer this in production |
-| `encryption.keyFile.existingSecretKey` | string | `root.key` | The key in that Secret |
-| `encryption.env.existingSecret` | string | `""` | `holder: env`: a Secret whose key holds the root key itself |
-| `encryption.env.existingSecretKey` | string | `root.key` | The key in that Secret |
-| `encryption.passphrase.keystoreSecret` | string | `""` | `holder: passphrase`: a Secret holding the keystore file |
-| `encryption.passphrase.keystoreSecretKey` | string | `root.keystore` | The key in that Secret |
-| `encryption.passphrase.passphraseSecret` | string | `""` | A Secret holding the passphrase, so that restarts are unattended |
-| `encryption.passphrase.passphraseSecretKey` | string | `passphrase` | The key in that Secret |
-| `encryption.transit.address` | URL | `""` | `holder: transit`: the Vault or OpenBao address. The transit key never leaves the service |
-| `encryption.transit.mount` | string | `transit` | Where the transit engine is mounted |
-| `encryption.transit.key` | string | `launchway` | The transit key; the servers need only `encrypt` and `decrypt` on it |
-| `encryption.transit.namespace` | string | `""` | Sent as `X-Vault-Namespace` |
-| `encryption.transit.tokenSecret` | string | `""` | A Secret holding a token to log in with (or use `role`) |
-| `encryption.transit.tokenSecretKey` | string | `token` | The key in that Secret |
-| `encryption.transit.role` | string | `""` | Log in with Kubernetes auth as this role |
-| `encryption.transit.authPath` | string | `kubernetes` | Where Kubernetes auth is mounted |
-| `encryption.transit.caSecret` | string | `""` | A Secret holding the service's CA certificate, key `ca.crt` |
-| `encryption.previousKey.existingSecret` | string | `""` | During a root key replacement: a Secret holding the key being replaced, beside the new one while `launchway encryption rewrap` runs. Remove it afterwards |
-| `encryption.previousKey.existingSecretKey` | string | `root.key` | The key in that Secret |
 
 ## Servers
 
