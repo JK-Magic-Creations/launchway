@@ -662,6 +662,8 @@ launchway repos import --connection oldgit --dry-run          # what would be ma
 launchway repos import --connection oldgit                    # copy and check each; every one a pull mirror
 launchway repos verify --against oldgit                       # exit 0: every ref equal
 launchway repos mirror stop acme/shop --final-sync            # per repository, at the cut-over: it becomes the primary
+launchway repos mirror add acme/shop --direction push --url https://git.corp.example/acme/shop.git --credential-env OLDGIT_TOKEN
+                                                              # optional: keep the old server an exact copy while people move
 ```
 
 ## launchway version

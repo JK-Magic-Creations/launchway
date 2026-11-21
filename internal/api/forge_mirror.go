@@ -109,8 +109,7 @@ func (s *Server) createMirror(w http.ResponseWriter, r *http.Request) {
 	case "", mirror.Pull:
 		m, err = ms.SetPull(r.Context(), path, in.Spec, identityFrom(r).User)
 	case mirror.Push:
-		writeErr(w, http.StatusNotImplemented, "push mirrors are not available yet")
-		return
+		m, err = ms.SetPush(r.Context(), path, in.Spec, identityFrom(r).User)
 	default:
 		writeErr(w, http.StatusBadRequest, `direction must be "pull" or "push"`)
 		return

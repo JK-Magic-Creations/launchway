@@ -106,7 +106,9 @@ func New(db store.DB, st *store.Store, sto Storage, conn forge.Connection, o Opt
 	if o.Server == "" {
 		o.Server = "server"
 	}
-	return &Service{db: db, st: st, sto: sto, conn: conn, o: o, wake: make(chan struct{}, 1), alerted: map[string]bool{}}
+	svc := &Service{db: db, st: st, sto: sto, conn: conn, o: o, wake: make(chan struct{}, 1), alerted: map[string]bool{}}
+	svc.onChange = svc.Pushed
+	return svc
 }
 
 func (s *Service) now() time.Time { return s.o.Now() }
@@ -447,6 +449,11 @@ func (s *Service) run(ctx context.Context, m Mirror) error {
 	ctx, cancel := context.WithTimeout(ctx, s.o.MaxDuration)
 	defer cancel()
 	started := s.now()
+	if m.Direction == Push {
+		gen, refs, err := s.runPush(ctx, m)
+		s.finishPush(ctx, m, started, gen, refs, err)
+		return err
+	}
 	refs, err := s.runPull(ctx, m)
 	s.finishPull(ctx, m, started, refs, err)
 	return err

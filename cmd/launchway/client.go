@@ -193,7 +193,7 @@ func (cl *client) call(method, path string, body, v any) error {
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	resp, err := cl.http.Do(req)
+	resp, err := cl.http.Do(req) //nolint:gosec // G704: the address is the server the person logged in to, never a value from a response
 	if err != nil {
 		return apiErr("cannot reach %s: %v", cl.c.Server, err)
 	}

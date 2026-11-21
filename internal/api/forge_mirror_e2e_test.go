@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jk-magic-creations/launchway/internal/forge"
 	"github.com/jk-magic-creations/launchway/internal/forge/egress"
@@ -133,4 +134,54 @@ func TestPullMirrorThroughTheAPI(t *testing.T) {
 			t.Errorf("a secret in the audit trail: %+v", a)
 		}
 	}
+}
+
+// A push to a hosted repository is copied to its push mirror, asynchronously.
+func TestPushMirrorThroughTheAPIFollowsAcceptedPushes(t *testing.T) {
+	e := mirrorEnv(t)
+	e.api.Forge.Mirrors.Start(t.Context())
+	ada := e.signIn(t, "ada")
+	repos := e.srv.URL + "/api/v1/repositories"
+	ada.do("POST", repos, `{"owner":"acme","name":"app"}`)
+	off := filepath.Join(t.TempDir(), "off.git")
+	mustGit(t, filepath.Dir(off), "init", "-q", "--bare", off)
+	r := ada.do("POST", repos+"/acme/app/mirrors", `{"direction":"push","url":"file://`+off+`"}`)
+	var v mirror.View
+	r.json(t, &v)
+	if r.status != 201 || v.Direction != "push" {
+		t.Fatalf("%d %s", r.status, r.body)
+	}
+	tok := e.tokenFor(t, "ada", "git")
+	src := work(t)
+	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/acme/app.git", tok), "HEAD:refs/heads/main")
+	want := strings.TrimSpace(mustGit(t, src, "rev-parse", "HEAD"))
+	waitFor(t, "the push to reach the off-site copy", func() bool {
+		out, err := git(t, off, "rev-parse", "refs/heads/main")
+		return err == nil && strings.TrimSpace(out) == want
+	})
+	commit(t, src, "b.txt", "two\n", "second")
+	mustGit(t, src, "push", "-q", withToken(e.srv.URL, "/acme/app.git", tok), "HEAD:refs/heads/main")
+	want = strings.TrimSpace(mustGit(t, src, "rev-parse", "HEAD"))
+	waitFor(t, "the second push", func() bool {
+		out, err := git(t, off, "rev-parse", "refs/heads/main")
+		return err == nil && strings.TrimSpace(out) == want
+	})
+	var page forge.Page[mirror.View]
+	ada.get(repos+"/acme/app/mirrors").json(t, &page)
+	if len(page.Items) != 1 || page.Items[0].State != "ok" || page.Items[0].Behind {
+		t.Errorf("%+v", page.Items)
+	}
+	if r := ada.do("DELETE", repos+"/acme/app/mirrors/"+v.ID, ""); r.status != 204 {
+		t.Errorf("remove: %d %s", r.status, r.body)
+	}
+}
+
+func waitFor(t *testing.T, what string, ok func() bool) {
+	t.Helper()
+	for deadline := time.Now().Add(20 * time.Second); time.Now().Before(deadline); time.Sleep(50 * time.Millisecond) {
+		if ok() {
+			return
+		}
+	}
+	t.Fatalf("timed out waiting for %s", what)
 }

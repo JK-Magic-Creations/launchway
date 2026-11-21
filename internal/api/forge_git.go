@@ -291,6 +291,10 @@ func (s *Server) gitPushed(r *http.Request, id *identity, run *githttp.RunClaim,
 		e.Detail = strings.TrimPrefix(e.Detail+"; "+strings.Join(refs, ", "), "; ")
 	}
 	s.record(e)
+	// An accepted push is copied to the repository's push mirrors.
+	if rr := res.Receive; rr != nil && rr.Committed && s.Forge != nil && s.Forge.Mirrors != nil {
+		s.Forge.Mirrors.Pushed(r.Context(), repo.ID)
+	}
 }
 
 func short(sha string) string {
